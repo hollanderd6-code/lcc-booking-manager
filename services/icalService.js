@@ -149,23 +149,23 @@ function normalizeIcalUrls(icalUrls) {
  * Récupère toutes les réservations iCal d'un logement
  * en parcourant toutes ses URLs iCal.
  */
-async function fetchReservations(property, supabase = null) {
+async function fetchReservations(property, pool = null) {
   const results = [];
 
   if (!property || !Array.isArray(property.icalUrls) || property.icalUrls.length === 0) {
     return results;
   }
 
-  // Charger les UIDs bloqués depuis la DB (si supabase fourni)
+  // Charger les UIDs bloqués depuis la DB (si pool pg fourni)
   const blockedUids = new Set();
-  if (supabase) {
+  if (pool) {
     try {
-      const { data } = await supabase
-        .from('ical_blocked_uids')
-        .select('uid')
-        .or(`property_id.eq.${property.id},property_id.is.null`);
-      if (Array.isArray(data)) {
-        data.forEach(row => blockedUids.add(row.uid));
+      const result = await pool.query(
+        'SELECT uid FROM ical_blocked_uids WHERE property_id = $1 OR property_id IS NULL',
+        [property.id]
+      );
+      if (result.rows) {
+        result.rows.forEach(row => blockedUids.add(row.uid));
       }
       if (blockedUids.size > 0) {
         console.log(`🚫 ${blockedUids.size} UID(s) bloqué(s) pour ${property.name}`);
