@@ -5085,7 +5085,7 @@ if (cancelledReservations.length > 0) {
             ['cancelled', reservation.uid]
           );
           
-          // Envoyer la notification
+          // Envoyer la notification au compte principal
           await sendCancelledReservationNotification(
             reservation.userId || 1,
             cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
@@ -5093,6 +5093,21 @@ if (cancelledReservations.length > 0) {
             reservation.start,
             reservation.end
           );
+
+          // ✅ Notif sous-comptes : annulation de réservation
+          try {
+            const _gN = cleanGuestName(reservation.guestName, reservation.platform || reservation.source);
+            const _pN = reservation.propertyName || '';
+            const _start = (reservation.start || '').slice(0, 10);
+            const _end   = (reservation.end   || '').slice(0, 10);
+            await sendNotificationToSubAccountsOf(
+              reservation.userId || 1, 'can_view_calendar',
+              '\u274C R\u00E9servation annul\u00E9e \u2014 ' + _pN,
+              _gN + ' \u00B7 ' + _start + ' \u2192 ' + _end,
+              { type: 'reservation_cancelled', propertyId: String(reservation.propertyId || '') },
+              'notif_sub_reservation_cancelled'
+            );
+          } catch (_e) { console.error('Notif sous-comptes annulation iCal:', _e.message); }
           
           console.log(`Notification annulation envoyee pour ${reservation.propertyName} (${reservation.uid})`);
         } else if (dbCheck.rows.length > 0 && dbCheck.rows[0].status === 'cancelled') {
