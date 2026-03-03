@@ -1535,7 +1535,8 @@ async function getCleanerAssignmentsMapForUser(userId) {
       c.name  AS cleaner_name,
       c.email AS cleaner_email,
       c.phone AS cleaner_phone,
-      c.is_active AS cleaner_active
+      c.is_active AS cleaner_active,
+      c.sub_account_id AS cleaner_sub_account_id
     FROM cleaning_assignments ca
     LEFT JOIN cleaners c ON c.id = ca.cleaner_id
     WHERE ca.user_id = $1
@@ -1552,14 +1553,15 @@ async function getCleanerAssignmentsMapForUser(userId) {
       cleanerId: row.cleaner_id,
       name: row.cleaner_name,
       email: row.cleaner_email,
-      phone: row.cleaner_phone
+      phone: row.cleaner_phone,
+      sub_account_id: row.cleaner_sub_account_id
     };
   }
 
   // Compléter avec les cleaners par défaut pour les logements sans assignation
   try {
     const defaults = await pool.query(
-      `SELECT pdc.property_id, pdc.cleaner_id, c.name, c.email, c.phone, c.is_active
+      `SELECT pdc.property_id, pdc.cleaner_id, c.name, c.email, c.phone, c.is_active, c.sub_account_id
        FROM property_default_cleaners pdc
        LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
        WHERE pdc.user_id = $1`,
@@ -1574,7 +1576,8 @@ async function getCleanerAssignmentsMapForUser(userId) {
           cleanerId: row.cleaner_id,
           name: row.name,
           email: row.email,
-          phone: row.phone
+          phone: row.phone,
+          sub_account_id: row.sub_account_id
         };
       }
     }
@@ -1805,6 +1808,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
       const cleanerEmail = assignment.email;
       const cleanerPhone = assignment.phone;
       const cleanerName  = assignment.name || 'partenaire ménage';
+      const cleanerSubAccountId = assignment.sub_account_id;
 
       const propertyName =
         res.propertyName ||
@@ -1885,6 +1889,33 @@ L'équipe Boostinghost`;
   }
 
   await Promise.all(tasks);
+
+  // ✅ NOTIFICATIONS PUSH aux cleaners sous-comptes
+  for (const [userId, userReservations] of byUser.entries()) {
+    let assignmentsMap = {};
+    try { assignmentsMap = await getCleanerAssignmentsMapForUser(userId); } catch(e) { continue; }
+    for (const res of userReservations) {
+      const assignment = assignmentsMap[res.propertyId];
+      if (!assignment || !assignment.sub_account_id) continue;
+      const propertyName = res.propertyName || (res.property && res.property.name) || 'Votre logement';
+      try {
+        const tokenRes = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE sub_account_id = $1 AND fcm_token IS NOT NULL',
+          [assignment.sub_account_id]
+        );
+        if (tokenRes.rows.length > 0) {
+          const tokens = tokenRes.rows.map(r => r.fcm_token);
+          await sendNotificationToMultiple(
+            tokens,
+            '🧹 Nouveau ménage assigné',
+            `${propertyName} — Vous avez un ménage à effectuer`,
+            { type: 'cleaning_assigned', property_name: propertyName }
+          );
+          console.log(`✅ Push ménage envoyé au sous-compte ${assignment.sub_account_id}`);
+        }
+      } catch(e) { console.error('❌ Push ménage sous-compte:', e.message); }
+    }
+  }
 }
 /**
  * Envoie chaque jour un planning de ménage pour "demain"
