@@ -9562,10 +9562,17 @@ app.put('/api/cleaning/default-cleaner/:propertyId',
       const { propertyId } = req.params;
       const { cleanerId } = req.body;
 
-      // Vérifier que le logement existe
-      const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+      // Vérifier que le logement existe (comparaison souple string/int)
+      const property = PROPERTIES.find(p => String(p.id) === String(propertyId) && String(p.userId) === String(userId));
       if (!property) {
-        return res.status(404).json({ error: 'Logement non trouvé' });
+        // Fallback DB si le cache PROPERTIES est désynchronisé
+        const propCheck = await pool.query(
+          'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
+          [propertyId, userId]
+        );
+        if (propCheck.rows.length === 0) {
+          return res.status(404).json({ error: 'Logement non trouvé' });
+        }
       }
 
       if (!cleanerId) {
