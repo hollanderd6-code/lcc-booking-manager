@@ -7026,7 +7026,7 @@ try {
   console.warn('Erreur injection risk/checklist modal', e);
 }
 
-    // 5️⃣ Gestion du ménage — même clé que cleaning.html : propertyId_start_end
+    // 5️⃣ Gestion du ménage — clé identique à cleaning.html : propertyId_start_end
     try {
       let statusText = 'Pas encore assigné';
       try {
@@ -7037,7 +7037,6 @@ try {
         if (resp.ok) {
           const data = await resp.json();
           const assignments = Array.isArray(data.assignments) ? data.assignments : [];
-          // Clé identique à cleaning.html : propertyId_YYYY-MM-DD_YYYY-MM-DD
           const startStr = (booking.start || booking.startDate || '').slice(0, 10);
           const endStr   = (booking.end   || booking.endDate   || '').slice(0, 10);
           const cleaningKey = propertyId && startStr && endStr
