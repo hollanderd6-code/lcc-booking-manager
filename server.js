@@ -6061,51 +6061,42 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
     
     // ✅ ENVOYER NOTIFICATION D'ANNULATION
     if (deleted && deletedReservation) {
-      if (await shouldSendNotification(user.id, 'notif_reservation_cancelled')) {
+      // cancelDate déclaré ici pour être accessible partout dans ce bloc
+      const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'short'
+      });
+
+      // Notif compte principal
       try {
         const tokensResult = await pool.query(
           'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
           [user.id]
         );
-        
         if (tokensResult.rows.length > 0) {
-          const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'short'
-          });
-          
-          // ✅ GROUPER TOUS LES TOKENS
           const fcmTokens = tokensResult.rows.map(row => row.fcm_token);
-          
           await sendNotificationToMultiple(
             fcmTokens,
             '❌ Réservation annulée',
             `${propertyName} - ${cancelDate}`,
-            {
-              type: 'reservation_cancelled',
-              reservation_id: uid,
-              property_name: propertyName
-            }
+            { type: 'reservation_cancelled', reservation_id: uid, property_name: propertyName }
           );
-          
           console.log(`✅ Notification annulation groupée envoyée à ${fcmTokens.length} appareil(s)`);
         }
-
-        // ✅ Notif sous-comptes annulation (indépendant du token principal)
-        try {
-          await sendNotificationToSubAccountsOf(
-            user.id, 'can_view_calendar',
-            '❌ Réservation annulée',
-            propertyName + ' - ' + cancelDate,
-            { type: 'reservation_cancelled', reservation_id: uid },
-            'notif_sub_reservation_cancelled'
-          );
-        } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
       } catch (notifError) {
-        console.error('❌ Erreur notification:', notifError.message);
-        // On continue, la suppression a réussi
+        console.error('❌ Erreur notification annulation principal:', notifError.message);
       }
-      } // end shouldSendNotification
+
+      // ✅ Notif sous-comptes annulation (toujours, indépendant du principal)
+      try {
+        await sendNotificationToSubAccountsOf(
+          user.id, 'can_view_calendar',
+          '❌ Réservation annulée',
+          propertyName + ' - ' + cancelDate,
+          { type: 'reservation_cancelled', reservation_id: uid },
+          'notif_sub_reservation_cancelled'
+        );
+      } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
     }
     
     // ✅ Forcer la resynchronisation
@@ -9124,6 +9115,25 @@ app.get('/api/cleaning/assignments',
       [userId]
     );
 
+    // ✅ Aussi charger les cleaners par défaut (property_default_cleaners)
+    // et les exposer comme assignations virtuelles par logement
+    let defaultRows = [];
+    try {
+      const defaultsResult = await pool.query(
+        `SELECT 
+          pdc.property_id,
+          pdc.cleaner_id,
+          c.name as cleaner_name,
+          c.phone as cleaner_phone,
+          c.email as cleaner_email
+        FROM property_default_cleaners pdc
+        LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
+        WHERE pdc.user_id = $1`,
+        [userId]
+      );
+      defaultRows = defaultsResult.rows;
+    } catch(e) { console.error('Erreur defaults cleaning:', e.message); }
+
     // Enrichir avec les infos des properties depuis PROPERTIES (en mémoire)
     const enrichedAssignments = result.rows.map(assignment => {
       const property = PROPERTIES.find(p => p.id === assignment.property_id);
@@ -9134,8 +9144,41 @@ app.get('/api/cleaning/assignments',
       };
     });
 
+    // ✅ Pour chaque logement avec cleaner par défaut, générer des assignations virtuelles
+    // couvrant toutes les réservations non encore assignées spécifiquement
+    const specificKeys = new Set(enrichedAssignments.map(a => a.reservation_key));
+
+    // Récupérer toutes les réservations du user pour construire les clés manquantes
+    let virtualAssignments = [];
+    try {
+      const resaResult = await pool.query(
+        `SELECT uid, property_id, start_date, end_date FROM reservations
+         WHERE user_id = $1 AND status NOT IN ('cancelled')`,
+        [userId]
+      );
+      for (const resa of resaResult.rows) {
+        const startStr = String(resa.start_date).slice(0, 10);
+        const endStr   = String(resa.end_date).slice(0, 10);
+        const key = `${resa.property_id}_${startStr}_${endStr}`;
+        if (specificKeys.has(key)) continue; // déjà une assignation spécifique
+        const def = defaultRows.find(d => String(d.property_id) === String(resa.property_id));
+        if (!def) continue;
+        virtualAssignments.push({
+          reservation_key: key,
+          property_id: resa.property_id,
+          cleaner_id: def.cleaner_id,
+          cleaner_name: def.cleaner_name,
+          cleaner_phone: def.cleaner_phone,
+          cleaner_email: def.cleaner_email,
+          is_default: true
+        });
+      }
+    } catch(e) { console.error('Erreur virtual assignments:', e.message); }
+
+    const allAssignments = [...enrichedAssignments, ...virtualAssignments];
+
     // ✅ Filtrer par propriétés accessibles si sous-compte
-    const filteredAssignments = filterByAccessibleProperties(enrichedAssignments, req);
+    const filteredAssignments = filterByAccessibleProperties(allAssignments, req);
 
     res.json({ 
       success: true, 
