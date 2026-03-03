@@ -8428,7 +8428,7 @@ let cleaningChecklists = [];
         <div class="notes-content" id="modalNotes"></div>
       </div>
     </div>
-    <div class="checklist-modal-footer">
+    <div class="checklist-modal-footer" id="modalFooter">
       <button class="btn btn-ghost" onclick="closeChecklistModal()">Fermer</button>
       <button class="btn btn-primary" onclick="downloadChecklistPDF()">
         <i class="fas fa-download"></i> Télécharger PDF
@@ -8775,7 +8775,7 @@ function populateChecklistModal(checklist) {
   document.getElementById('modalChecklistCleaner').textContent = `Par ${checklist.cleaner_name || 'N/A'}`;
   
   // Status
-  const isCompleted = checklist.is_validated || checklist.completed_at;
+  const isCompleted = checklist.is_validated || checklist.owner_status === 'validated';
   const statusEl = document.getElementById('modalChecklistStatus');
   statusEl.className = 'checklist-modal-status ' + (isCompleted ? 'status-completed' : 'status-pending');
   statusEl.innerHTML = `
@@ -8816,6 +8816,59 @@ function populateChecklistModal(checklist) {
     document.getElementById('modalNotes').textContent = checklist.notes;
   } else {
     document.getElementById('modalNotesSection').style.display = 'none';
+  }
+
+  // Bouton valider — visible uniquement si en attente
+  const footer = document.getElementById('modalFooter');
+  const existingBtn = document.getElementById('btnValidateChecklist');
+  if (existingBtn) existingBtn.remove();
+
+  if (!isCompleted) {
+    const validateBtn = document.createElement('button');
+    validateBtn.id = 'btnValidateChecklist';
+    validateBtn.className = 'btn btn-success';
+    validateBtn.style.cssText = 'background:#10b981;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;';
+    validateBtn.innerHTML = '<i class="fas fa-check"></i> Valider le ménage';
+    validateBtn.onclick = () => validateChecklist(checklist.id);
+    footer.insertBefore(validateBtn, footer.firstChild);
+  }
+
+  // Garder une ref à la checklist courante
+  window._currentChecklistId = checklist.id;
+}
+
+async function validateChecklist(checklistId) {
+  const btn = document.getElementById('btnValidateChecklist');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validation...'; }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/cleaning/checklists/${checklistId}/validate`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Erreur serveur');
+    }
+
+    // Mettre à jour le statut dans le modal
+    const statusEl = document.getElementById('modalChecklistStatus');
+    if (statusEl) {
+      statusEl.className = 'checklist-modal-status status-completed';
+      statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Checklist validée';
+    }
+    if (btn) btn.remove();
+
+    // Rafraîchir la liste
+    loadCleaningChecklists();
+
+    showToast('✅ Ménage validé — le cleaner a été notifié', 'success');
+  } catch(e) {
+    console.error('Erreur validation:', e);
+    showToast('Erreur : ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Valider le ménage'; }
   }
 }
 
