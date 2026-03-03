@@ -81,13 +81,11 @@ function mapEventToReservation(ev, source) {
   const summary = (ev.summary || '').toString();
   const summaryLower = summary.toLowerCase();
 
-  // 🚫 AIRBNB : ignorer les blocages automatiques "Not available"
-  // Ce sont des créneaux bloqués par Airbnb (chevauchements, maintenance...)
-  // et non de vraies réservations voyageurs
-  if (source === 'AIRBNB' && summaryLower.includes('not available')) {
-    console.log(`⏭️ iCal AIRBNB ignoré (Not available) : ${ev.uid}`);
-    return null;
-  }
+  // ⚠️ AIRBNB "Not available" : blocages automatiques (pas de vraies résas voyageurs)
+  // On les GARDE dans le flux iCal pour que la détection d'annulation fonctionne
+  // (quand une vraie résa disparaît du flux, cancelledForProperty la détecte)
+  // mais on les marque isBlock=true pour ne PAS les insérer en DB comme résas voyageurs
+  const isAirbnbBlock = source === 'AIRBNB' && summaryLower.includes('not available');
   
   // ✅ Pour Booking : "CLOSED - Not available" = vraie réservation
   // On garde ces événements et on les marque comme réservations Booking
@@ -109,6 +107,7 @@ function mapEventToReservation(ev, source) {
     platform: source,
     type: 'ical',          // pour distinguer des MANUEL / BLOCK
     guestName,
+    isBlock: isAirbnbBlock || false,  // true = blocage automatique, ne pas sauver en DB
     rawSummary: ev.summary || '',
     rawDescription: ev.description || ''
   };
