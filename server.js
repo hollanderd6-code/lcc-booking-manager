@@ -4941,6 +4941,7 @@ const cancelledForProperty = fetchedEmpty ? [] : oldIcalReservations.filter(r =>
         );
       }
       
+      console.log("🔍 [Sync]", property.name, "oldIcalReservations:", oldIcalReservations.length, "newIcalReservations:", newIcalReservations.length, "cancelledForProperty:", cancelledForProperty.length);
       if (cancelledForProperty.length > 0) {
         cancelledReservations.push(
           ...cancelledForProperty.map(r => ({
@@ -5074,6 +5075,7 @@ console.log(
     }
 
     // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT DANS LES 3 PROCHAINS MOIS)
+    console.log("🔍 [Annulation] cancelledReservations.length:", cancelledReservations.length, JSON.stringify(cancelledReservations.map(r=>({uid:r.uid,start:r.start,userId:r.userId}))));
 if (cancelledReservations.length > 0) {
   // Filtrer pour ne garder que les reservations dans les 3 prochains mois
   const now = new Date();
