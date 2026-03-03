@@ -7028,35 +7028,35 @@ try {
 
     // 5️⃣ Gestion du ménage – lecture directe API
     try {
-      const reservationKey = booking.uid || booking.reservationKey || String(booking.id || '');
       let statusText = 'Pas encore assigné';
 
-      if (reservationKey) {
-        try {
-          const token = localStorage.getItem('lcc_token');
-          const resp = await fetch(`${API_URL}/api/cleaning/assignments`, {
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-          if (resp.ok) {
-            const data = await resp.json();
-            // data.assignments est un tableau [{reservation_key, cleaner_id, ...}]
-            const assignments = Array.isArray(data.assignments) ? data.assignments : [];
-            const match = assignments.find(a => a.reservation_key === reservationKey);
-            const cleanerId = match ? match.cleaner_id : null;
-            if (cleanerId) {
-              const cleaners = await loadCleaners();
-              const cleaner = cleaners.find(c => String(c.id) === String(cleanerId));
-              if (cleaner) {
-                statusText = 'Assigné à ' + (cleaner.name || cleaner.email || cleanerId);
-              }
-            }
-          }
-        } catch(apiErr) {
-          console.warn('⚠️ Impossible de charger les assignments depuis l\'API:', apiErr.message);
-        }
-      }
+      try {
+        const token = localStorage.getItem('lcc_token');
+        const resp = await fetch(`${API_URL}/api/cleaning/assignments`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const assignments = Array.isArray(data.assignments) ? data.assignments : [];
 
-      console.log('🧹 Statut ménage (app.html) :', { reservationKey, statusText });
+          // Construire la clé au même format que cleaning.html : propertyId_start_end
+          const pid = propertyId;
+          const startStr = (booking.start || booking.startDate || '').slice(0, 10);
+          const endStr   = (booking.end   || booking.endDate   || '').slice(0, 10);
+          const cleaningKey = pid && startStr && endStr ? `${pid}_${startStr}_${endStr}` : null;
+
+          const match = cleaningKey
+            ? assignments.find(a => a.reservation_key === cleaningKey)
+            : null;
+
+          if (match) {
+            // cleaner_name est déjà dans la réponse API (JOIN cleaners)
+            statusText = 'Assigné à ' + (match.cleaner_name || match.cleaner_id);
+          }
+        }
+      } catch(apiErr) {
+        console.warn('⚠️ Impossible de charger les assignments:', apiErr.message);
+      }
 
       // Injection / mise à jour du bloc "Ménage"
       let group = detailsContent.querySelector('[data-cleaning-info="1"]');
