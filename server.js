@@ -1535,8 +1535,7 @@ async function getCleanerAssignmentsMapForUser(userId) {
       c.name  AS cleaner_name,
       c.email AS cleaner_email,
       c.phone AS cleaner_phone,
-      c.is_active AS cleaner_active,
-      c.sub_account_id AS cleaner_sub_account_id
+      c.is_active AS cleaner_active
     FROM cleaning_assignments ca
     LEFT JOIN cleaners c ON c.id = ca.cleaner_id
     WHERE ca.user_id = $1
@@ -1553,15 +1552,14 @@ async function getCleanerAssignmentsMapForUser(userId) {
       cleanerId: row.cleaner_id,
       name: row.cleaner_name,
       email: row.cleaner_email,
-      phone: row.cleaner_phone,
-      sub_account_id: row.cleaner_sub_account_id
+      phone: row.cleaner_phone
     };
   }
 
   // Compléter avec les cleaners par défaut pour les logements sans assignation
   try {
     const defaults = await pool.query(
-      `SELECT pdc.property_id, pdc.cleaner_id, c.name, c.email, c.phone, c.is_active, c.sub_account_id
+      `SELECT pdc.property_id, pdc.cleaner_id, c.name, c.email, c.phone, c.is_active
        FROM property_default_cleaners pdc
        LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
        WHERE pdc.user_id = $1`,
@@ -1576,8 +1574,7 @@ async function getCleanerAssignmentsMapForUser(userId) {
           cleanerId: row.cleaner_id,
           name: row.name,
           email: row.email,
-          phone: row.phone,
-          sub_account_id: row.sub_account_id
+          phone: row.phone
         };
       }
     }
@@ -1758,52 +1755,136 @@ Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
  * on envoie un email + (optionnel) un WhatsApp à ce cleaner.
  */
 async function notifyCleanersAboutNewBookings(newReservations) {
-  if (!newReservations || newReservations.length === 0) return;
+  const useBrevo = !!process.env.BREVO_API_KEY;
+  const transporter = useBrevo ? null : getEmailTransporter();
 
-  for (const res of newReservations) {
-    // Accepter userId/propertyId sous toutes leurs formes
-    const userId = res.userId || res.user_id;
-    const propertyId = res.propertyId || res.property_id;
-    if (!userId || !propertyId) {
-      console.log('ℹ️ [ménage] userId ou propertyId manquant dans la réservation, skip');
-      continue;
-    }
-
-    let assignmentsMap = {};
-    try { assignmentsMap = await getCleanerAssignmentsMapForUser(userId); } catch(e) {
-      console.error('❌ [ménage] getCleanerAssignmentsMapForUser:', e.message); continue;
-    }
-
-    const assignment = assignmentsMap[propertyId];
-    if (!assignment) {
-      console.log(`ℹ️ [ménage] Aucun cleaner assigné au logement ${propertyId}`);
-      continue;
-    }
-    if (!assignment.sub_account_id) {
-      console.log(`ℹ️ [ménage] Cleaner ${assignment.cleanerId} sans sous-compte lié`);
-      continue;
-    }
-
-    const propertyName = res.propertyName || res.property_name || 'Votre logement';
-    try {
-      const tokenRes = await pool.query(
-        'SELECT fcm_token FROM user_fcm_tokens WHERE sub_account_id = $1 AND fcm_token IS NOT NULL',
-        [assignment.sub_account_id]
-      );
-      if (tokenRes.rows.length > 0) {
-        const tokens = tokenRes.rows.map(r => r.fcm_token);
-        await sendNotificationToMultiple(
-          tokens,
-          '🧹 Nouveau ménage assigné',
-          `${propertyName} — Vous avez un ménage à effectuer`,
-          { type: 'cleaning_assigned', property_name: propertyName }
-        );
-        console.log(`✅ Push ménage envoyé au sous-compte ${assignment.sub_account_id}`);
-      } else {
-        console.log(`ℹ️ Sous-compte ${assignment.sub_account_id} sans token FCM`);
-      }
-    } catch(e) { console.error('❌ Push ménage sous-compte:', e.message); }
+  if (!useBrevo && !transporter) {
+    console.log(
+      '⚠️  Ni email (Brevo/SMTP) ni WhatsApp configurés, aucune notification ménage envoyée'
+    );
+    return;
   }
+
+  if (!newReservations || newReservations.length === 0) {
+    return;
+  }
+
+  const from = process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>';
+  const tasks = [];
+
+  // On groupe par user, pour ne pas requêter 50 fois la base
+  const byUser = new Map();
+  for (const res of newReservations) {
+    if (!res.userId || !res.propertyId) continue;
+    if (!byUser.has(res.userId)) {
+      byUser.set(res.userId, []);
+    }
+    byUser.get(res.userId).push(res);
+  }
+
+  for (const [userId, userReservations] of byUser.entries()) {
+    let assignmentsMap = {};
+    try {
+      assignmentsMap = await getCleanerAssignmentsMapForUser(userId);
+    } catch (err) {
+      console.error('Erreur récupération assignations ménage pour user', userId, err);
+      continue;
+    }
+
+    if (!assignmentsMap || Object.keys(assignmentsMap).length === 0) {
+      continue;
+    }
+
+    for (const res of userReservations) {
+      const assignment = assignmentsMap[res.propertyId];
+      if (!assignment) {
+        // Aucun cleaner assigné à ce logement → rien à envoyer
+        continue;
+      }
+
+      const cleanerEmail = assignment.email;
+      const cleanerPhone = assignment.phone;
+      const cleanerName  = assignment.name || 'partenaire ménage';
+
+      const propertyName =
+        res.propertyName ||
+        (res.property && res.property.name) ||
+        'Votre logement';
+
+      const guest =
+        res.guestName ||
+        res.guest_name ||
+        res.guest ||
+        res.name ||
+        'Un voyageur';
+
+      const start = formatDateForEmail(
+        res.start || res.startDate || res.checkIn || res.checkin
+      );
+      const end = formatDateForEmail(
+        res.end || res.endDate || res.checkOut || res.checkout
+      );
+
+      const hello = cleanerName ? `Bonjour ${cleanerName},` : 'Bonjour,';
+
+            // Email
+      if ((useBrevo || transporter) && cleanerEmail) {
+        const subject = `🧹 Nouveau ménage à prévoir – ${propertyName}`;
+        const textBody = `${hello}
+
+Un nouveau séjour vient d'être réservé pour le logement ${propertyName}.
+
+Voyageur : ${guest}
+Séjour  : du ${start} au ${end}
+Ménage à prévoir : le ${end} après le départ des voyageurs
+(heure exacte de check-out à confirmer avec la conciergerie).
+
+Merci beaucoup,
+L'équipe Boostinghost`;
+
+        const htmlBody = `
+          <p>${hello}</p>
+          <p>Un nouveau séjour vient d'être réservé pour le logement <strong>${propertyName}</strong>.</p>
+          <ul>
+            <li><strong>Voyageur :</strong> ${guest}</li>
+            <li><strong>Séjour :</strong> du ${start} au ${end}</li>
+            <li><strong>Ménage à prévoir :</strong> le ${end} après le départ des voyageurs</li>
+          </ul>
+          <p style="font-size:13px;color:#6b7280;">
+            Heure exacte de check-out à confirmer avec la conciergerie.
+          </p>
+        `;
+
+        tasks.push(
+          (useBrevo
+            ? sendEmailViaBrevo({
+                to: cleanerEmail,
+                subject,
+                text: textBody,
+                html: htmlBody
+              })
+            : transporter.sendMail({
+                from,
+                to: cleanerEmail,
+                subject,
+                text: textBody,
+                html: htmlBody
+              })
+          )
+            .then(() => {
+              console.log(
+                `📧 Notification ménage envoyée à ${cleanerEmail} (resa uid=${res.uid || res.id})`
+              );
+            })
+            .catch((err) => {
+              console.error('❌ Erreur envoi email notification ménage :', err);
+            })
+        );
+      }
+    }
+  }
+
+  await Promise.all(tasks);
 }
 /**
  * Envoie chaque jour un planning de ménage pour "demain"
@@ -5151,7 +5232,26 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
     
     console.log('✅ Logement trouvé:', property.name);
-    
+
+    // ✅ Vérification chevauchement de dates
+    const overlapCheck = await pool.query(
+      `SELECT uid, guest_name, start_date, end_date FROM reservations
+       WHERE property_id = $1
+         AND status != 'cancelled'
+         AND start_date < $3
+         AND end_date > $2`,
+      [propertyId, start, end]
+    );
+    if (overlapCheck.rows.length > 0) {
+      const existing = overlapCheck.rows[0];
+      const s = new Date(existing.start_date).toLocaleDateString('fr-FR');
+      const e = new Date(existing.end_date).toLocaleDateString('fr-FR');
+      console.log(`❌ Chevauchement détecté: ${existing.uid} (${s} → ${e})`);
+      return res.status(409).json({
+        error: `Ces dates sont déjà prises (${s} → ${e} — ${existing.guest_name || 'Réservation existante'})`
+      });
+    }
+
     const uid = 'manual_' + Date.now();
     const userId = user.id; 
     const reservation = {
@@ -5278,15 +5378,6 @@ console.log('✅ Ajouté à MANUAL_RESERVATIONS');
         } catch (pushError) {
           console.error('❌ Erreur notification push:', pushError.message);
         }
-
-        // ✅ Notification push cleaner sous-compte assigné
-        try {
-          await notifyCleanersAboutNewBookings([{
-            userId: user.id,
-            propertyId: propertyId,
-            propertyName: property.name
-          }]);
-        } catch(e) { console.error('❌ Notif ménage manuelle:', e.message); }
         
       } catch (notifError) {
         console.error('❌ Erreur notifications:', notifError.message);
@@ -5741,6 +5832,25 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     
     const property = propertyCheck.rows[0];
     console.log('✅ Logement trouvé:', property.name);
+
+    // ✅ Vérification chevauchement de dates
+    const overlapCheck = await pool.query(
+      `SELECT uid, guest_name, start_date, end_date FROM reservations
+       WHERE property_id = $1
+         AND status != 'cancelled'
+         AND start_date < $3
+         AND end_date > $2`,
+      [propertyId, checkIn, checkOut]
+    );
+    if (overlapCheck.rows.length > 0) {
+      const existing = overlapCheck.rows[0];
+      const s = new Date(existing.start_date).toLocaleDateString('fr-FR');
+      const e = new Date(existing.end_date).toLocaleDateString('fr-FR');
+      console.log(`❌ Chevauchement détecté: ${existing.uid}`);
+      return res.status(409).json({
+        error: `Ces dates sont déjà prises (${s} → ${e} — ${existing.guest_name || 'Réservation existante'})`
+      });
+    }
     
     // 4. CRÉATION DE LA RÉSERVATION
     // ✅ CORRECTION : UID unique avec timestamp + random pour éviter les doublons
@@ -5750,9 +5860,6 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     
     const reservation = {
       uid: uid,
-      userId: user.id,
-      propertyId: propertyId,
-      propertyName: property.name,
       start: checkIn,
       end: checkOut,
       source: platform || 'MANUEL',
@@ -8313,7 +8420,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 
     // Vérifier que le cleaner appartient bien à l'utilisateur
     const cleanerResult = await pool.query(
-      `SELECT id, name, email, phone, sub_account_id
+      `SELECT id, name, email, phone
        FROM cleaners
        WHERE id = $1 AND user_id = $2`,
       [cleanerId, user.id]
@@ -9493,17 +9600,10 @@ app.put('/api/cleaning/default-cleaner/:propertyId',
       const { propertyId } = req.params;
       const { cleanerId } = req.body;
 
-      // Vérifier que le logement existe (comparaison souple string/int)
-      const property = PROPERTIES.find(p => String(p.id) === String(propertyId) && String(p.userId) === String(userId));
+      // Vérifier que le logement existe
+      const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
       if (!property) {
-        // Fallback DB si le cache PROPERTIES est désynchronisé
-        const propCheck = await pool.query(
-          'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
-          [propertyId, userId]
-        );
-        if (propCheck.rows.length === 0) {
-          return res.status(404).json({ error: 'Logement non trouvé' });
-        }
+        return res.status(404).json({ error: 'Logement non trouvé' });
       }
 
       if (!cleanerId) {
@@ -14407,17 +14507,6 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
               
               console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
             }
-
-            // ✅ Notif sous-comptes : annulation
-            try {
-              await sendNotificationToSubAccountsOf(
-                user.id, 'can_view_calendar',
-                '❌ Réservation annulée',
-                `${property.name} - ${cancelDate}`,
-                { type: 'reservation_cancelled', reservation_id: uid, property_name: property.name },
-                'notif_sub_reservation_cancelled'
-              );
-            } catch(_e) { console.error('Notif sous-comptes annulation sync:', _e.message); }
           }
         } catch (notifError) {
           console.error('❌ Erreur notification annulation:', notifError.message);
@@ -15267,13 +15356,13 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
       console.log(`📱 [sous-compte ${subAccountId}] Enregistrement token FCM (${deviceType})`);
 
       // Le token FCM peut déjà exister (même iPhone = même token pour compte principal et sous-compte)
-      // On utilise ON CONFLICT ON CONSTRAINT pour mettre à jour la ligne existante
+      // On utilise ON CONFLICT sur fcm_token pour mettre à jour la ligne existante
       await pool.query(
         `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
          VALUES ($1, NULL, $2, $3, NOW(), NOW())
-         ON CONFLICT ON CONSTRAINT idx_user_fcm_tokens_sub_device
+         ON CONFLICT (fcm_token)
          DO UPDATE SET
-           fcm_token = EXCLUDED.fcm_token,
+           sub_account_id = EXCLUDED.sub_account_id,
            updated_at = NOW()`,
         [subAccountId, token, deviceType]
       );
