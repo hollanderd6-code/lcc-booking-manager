@@ -3061,26 +3061,32 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
     if (box) box.style.display = 'none';
   }
 
-  function saveDefaultCleaner(propertyId) {
+  async function saveDefaultCleaner(propertyId) {
     var select = document.getElementById('defaultCleanerSelect');
     if (!select) return;
     var cleanerId = select.value || null;
     var currentDefault = defaultCleanersMap[propertyId];
+    // ✅ Guard assoupli : on skip uniquement si cleanerId identique ET déjà en map
     if (!cleanerId && !currentDefault) return;
-    if (cleanerId && currentDefault && currentDefault.cleanerId === cleanerId) return;
+    if (cleanerId && currentDefault && String(currentDefault.cleanerId) === String(cleanerId)) return;
     var token = localStorage.getItem('lcc_token');
-    fetch(API_URL + '/api/cleaning/default-cleaner/' + propertyId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ cleanerId: cleanerId })
-    }).then(function(res) { if (res.ok) return res.json(); }).then(function(data) {
+    try {
+      var res = await fetch(API_URL + '/api/cleaning/default-cleaner/' + propertyId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ cleanerId: cleanerId })
+      });
+      var data = res.ok ? await res.json() : null;
       if (data) {
         if (cleanerId) { defaultCleanersMap[propertyId] = data.default || { cleanerId: cleanerId }; }
         else { delete defaultCleanersMap[propertyId]; }
         console.log('✅ Cleaner par défaut sauvegardé pour', propertyId);
       }
-    }).catch(function(e) { console.error('Erreur save:', e); });
+    } catch(e) { console.error('Erreur save cleaner:', e); }
   }
+
+  // ✅ Exposer globalement pour settings-6.js
+  window.saveDefaultCleanerExternal = saveDefaultCleaner;
 
   // DÉTECTION MODALE : interval simple toutes les 300ms
   setInterval(function() {
@@ -3145,21 +3151,8 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
     if (needsInjection) injectCleanerBadges();
   }, 1000);
 
-  // SAVE : écouter le submit
-  function setupFormListener() {
-    var form = document.getElementById('propertyForm');
-    if (form) {
-      form.addEventListener('submit', function() {
-        var pid = document.getElementById('propertyId');
-        var propertyId = pid ? pid.value : null;
-        if (propertyId) { setTimeout(function() { saveDefaultCleaner(propertyId); }, 800); }
-      });
-      console.log('🧹 Listener submit installé');
-    } else { setTimeout(setupFormListener, 500); }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupFormListener);
-  } else { setupFormListener(); }
+  // ✅ Le save est maintenant géré directement dans saveProperty (settings-6.js)
+  //    via window.saveDefaultCleanerExternal — plus besoin du listener submit ici
 
   // Init
   Promise.all([loadCleanersList(), loadDefaultCleaners()]).then(function() {
