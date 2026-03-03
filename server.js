@@ -8712,13 +8712,19 @@ if (reservation_key && reservation_key !== null) {
   
   console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
   
-  // Ne garder que les réservations avec départ futur ou aujourd'hui
-  if (endDate < todayStr) continue;
+  // Ne garder que les réservations du mois en cours et du mois suivant
+  const now = new Date();
+  const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
+  if (endDate < todayStr || endDate > endOfNextMonth) continue;
   
   // Trouver la réservation complète dans reservationsStore
+  // r.start/r.end peuvent être des objets Date PostgreSQL ou des strings ISO complètes
+  // On normalise en YYYY-MM-DD pour la comparaison
   const propertyReservations = reservationsStore.properties[property_id] || [];
   const reservation = propertyReservations.find(r => {
-    const rKey = `${property_id}_${r.start}_${r.end}`;
+    const rStart = String(r.start || '').slice(0, 10);
+    const rEnd   = String(r.end   || '').slice(0, 10);
+    const rKey = `${property_id}_${rStart}_${rEnd}`;
     return rKey === reservation_key;
   });
   
@@ -8745,7 +8751,9 @@ const propertyName = property?.name || property?.title || property?.label || pro
           const endStr = String(r.end).slice(0, 10);
           if (endStr < todayStr) return;
           
-          const reservationKey = `${property_id}_${r.start}_${r.end}`;
+          const rStart = String(r.start || '').slice(0, 10);
+          const rEnd   = String(r.end   || '').slice(0, 10);
+          const reservationKey = `${property_id}_${rStart}_${rEnd}`;
           const propertyName = r.propertyName || (r.property && r.property.name) || property_id;
           const guestName = r.guestName || r.name || '';
           
