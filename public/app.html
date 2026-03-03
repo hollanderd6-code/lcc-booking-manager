@@ -4533,7 +4533,42 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       console.error('Erreur chargement LCC_PROPERTIES:', e);
     }
 
-    return reservations.map((r, index) => {
+    // Deduplique : supprime les reservations entierement incluses dans une autre
+    // plus longue sur le meme logement (evite les doublons Airbnb parasites)
+    function getResPropertyId(r) {
+      return String(r.propertyId || r.property_id || (r.property && r.property.id) || r.propertyKey || r.propId || "");
+    }
+    function toMs(v) {
+      if (!v) return null;
+      const s = String(v).trim();
+      // ISO format
+      if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(s)) return new Date(s + "T12:00:00").getTime();
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d.getTime();
+    }
+    const dedupedReservations = reservations.filter(function(r) {
+      const rPropId = getResPropertyId(r);
+      if (!rPropId) return true;
+      const rStart = toMs(r.start || r.startDate);
+      const rEnd   = toMs(r.end   || r.endDate);
+      if (rStart === null || rEnd === null) return true;
+      // Cette reservation est-elle entierement contenue dans une autre plus longue ?
+      const isSubsumed = reservations.some(function(other) {
+        if (other === r) return false;
+        if (getResPropertyId(other) !== rPropId) return false;
+        const oStart = toMs(other.start || other.startDate);
+        const oEnd   = toMs(other.end   || other.endDate);
+        if (oStart === null || oEnd === null) return false;
+        const otherDuration = oEnd - oStart;
+        const thisDuration  = rEnd - rStart;
+        // other est plus longue ET contient completement r
+        return otherDuration > thisDuration && oStart <= rStart && oEnd >= rEnd;
+      });
+      if (isSubsumed) console.log("🔁 Resa doublon filtree:", r.uid || r.id, rPropId, (r.start||r.startDate), "->", (r.end||r.endDate));
+      return !isSubsumed;
+    });
+
+    return dedupedReservations.map((r, index) => {
       // Si propertyName existe déjà et n'est pas vide, on garde
       if (r.propertyName && r.propertyName.trim()) {
         return r;
@@ -4878,6 +4913,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
             </div>
             ${list.map(r => {
               const platform = (r.src || '').toLowerCase();
+              const platformLabel = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking.com' : platform.includes('abritel') ? 'Abritel' : platform.includes('gite') ? 'Gites.fr' : (platform.includes('manuel') || platform === '') ? 'Direct' : (r.src || 'Direct');
               const dotColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : platform.includes('abritel') ? '#0096D6' : platform.includes('gite') ? '#2E7D32' : '#F97316';
               const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
               const score = r.riskScore != null ? `${r.riskScore}/100` : '';
@@ -4890,7 +4926,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                       <div style="font-weight:900;">${score}</div>
                     </div>
                     <div style="opacity:.8; margin-top:2px;">
-                      ${r.prop ? r.prop + ' • ' : ''}${r.src ? r.src : ''}${r.src ? ' • ' : ''}${r.startStr} → ${r.endStr}
+                      ${r.prop ? r.prop + ' • ' : ''}${platformLabel} • ${r.startStr} → ${r.endStr}
                     </div>
                     ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
                   </div>
