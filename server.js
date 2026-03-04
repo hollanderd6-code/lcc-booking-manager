@@ -4920,7 +4920,7 @@ const fetchedEmpty = newIcalReservations.length === 0 && oldIcalReservations.len
       const unnotifiedUids = new Set();
       try {
         const unnotifiedRows = await pool.query(
-          'SELECT uid FROM reservations WHERE property_id = $1 AND notified_at IS NULL AND status != 'cancelled'',
+          "SELECT uid FROM reservations WHERE property_id = $1 AND notified_at IS NULL AND status != 'cancelled'",
           [property.id]
         );
         unnotifiedRows.rows.forEach(r => unnotifiedUids.add(r.uid));
