@@ -2059,9 +2059,7 @@ function formatDateFr(dateStr) {
       }
 
       function saveLocalData() {
-        // On ne sauvegarde plus les cleaners en localStorage
-        // Ils sont maintenant gérés uniquement via l'API
-        localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(assignments));
+        // Plus de sauvegarde en localStorage — tout est géré via l'API
       }
 
       // Charge les assignations ménage depuis le backend et les injecte dans "assignments"
