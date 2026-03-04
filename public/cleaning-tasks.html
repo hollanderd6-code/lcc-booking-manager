@@ -1237,7 +1237,7 @@ async function handleLogin() {
     
   } catch (err) {
     console.error('Login error:', err);
-    showLoginError('Erreur réseau');
+    showLoginError('Erreur: ' + (err.message || err.toString()));
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-arrow-right"></i> Accéder à mes tâches';
