@@ -3963,7 +3963,7 @@ function populateEditBookingProperties(selectedPropertyId) {
       props = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
     }
   } catch (e) {
-    console.warn('Impossible de lire la liste des logements pour l’édition', e);
+    console.warn('Impossible de lire la liste des logements pour l'édition', e);
   }
 
   select.innerHTML = '';
@@ -3995,7 +3995,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   if (selectedPropertyId) {
     select.value = String(selectedPropertyId);
     if (select.selectedIndex === -1) {
-      // au cas où l’ID ne matche pas une option
+      // au cas où l'ID ne matche pas une option
       select.selectedIndex = 0;
     }
   } else {
@@ -4077,10 +4077,10 @@ function populateEditBookingProperties(selectedPropertyId) {
 
           if (!todaysDepartures.length) {
             contentEl.innerHTML =
-              '<p class="empty-state" style="margin:8px 0;">Aucun départ à nettoyer aujourd’hui.</p>';
+              '<p class="empty-state" style="margin:8px 0;">Aucun départ à nettoyer aujourd'hui.</p>';
           } else {
             let html =
-              '<div class="detail-group"><label>Départs à nettoyer aujourd’hui</label><div class="detail-value">';
+              '<div class="detail-group"><label>Départs à nettoyer aujourd'hui</label><div class="detail-value">';
             todaysDepartures.forEach((r) => {
               const key = getReservationKey(r);
               const assignedId = key && assignments ? assignments[key] : null;
@@ -4686,7 +4686,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       merged.forEach(iv => { nightsBooked += (iv[1] - iv[0]) / (1000 * 60 * 60 * 24); });
     });
 
-    // taux d’occupation
+    // taux d'occupation
     let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
     if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
     if (occupancy > 100) occupancy = 100;
@@ -4901,7 +4901,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     console.log('📊 Results found:', rows.length, 'movements today');
 
     if (!rows.length) {
-      content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd’hui.</div>`;
+      content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd'hui.</div>`;
     } else {
       const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
       const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
@@ -5667,7 +5667,7 @@ window.LCC_PROPERTIES = properties;
         });
       }
 
-      // ⚙️ Bouton paramètres : simple toast pour l’instant
+      // ⚙️ Bouton paramètres : simple toast pour l'instant
       var settingsBtn = document.getElementById('calendarSettingsBtn');
       if (settingsBtn) {
         settingsBtn.addEventListener('click', function () {
@@ -5898,6 +5898,7 @@ window.LCC_PROPERTIES = properties;
           row.appendChild(createCalendarCell(p, d));
           d.setDate(d.getDate() + 1);
         }
+        console.log('🗓️ Ligne créée pour:', p.id, '- cellules:', row.children.length);
 
         grid.appendChild(row);
       }
@@ -7187,7 +7188,7 @@ function handleEditBooking() {
         props = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
       }
     } catch (e) {
-      console.warn('Impossible de lire la liste des logements pour l’édition', e);
+      console.warn('Impossible de lire la liste des logements pour l'édition', e);
     }
 
     propertySelect.innerHTML = '';
@@ -7225,7 +7226,7 @@ function handleEditBooking() {
     }
   }
 
-  // === Afficher le modal d’édition ===
+  // === Afficher le modal d'édition ===
   editModal.style.display = 'flex';
   setTimeout(() => editModal.classList.add('active'), 10);
 
@@ -7305,7 +7306,7 @@ document.addEventListener('click', function(e) {
     booking.type === 'block' ||
     booking.source === 'BLOCK';
 
-  // Est-ce une réservation venant d’un iCal (Airbnb / Booking.com) ?
+  // Est-ce une réservation venant d'un iCal (Airbnb / Booking.com) ?
   const rawSource = (booking.source || booking.platform || '').toLowerCase();
   const isFromIcal =
     rawSource.includes('airbnb') ||
@@ -7463,7 +7464,7 @@ const editBookingForm = document.getElementById('editBookingForm');
 if (editBookingForm) {
   editBookingForm.addEventListener('submit', async function (e) {
     e.preventDefault();
-    console.log('✏️ Soumission du formulaire d’édition');
+    console.log('✏️ Soumission du formulaire d'édition');
 
     if (!currentBookingData) {
       alert('Impossible de trouver les données de la réservation');
@@ -7483,9 +7484,9 @@ if (editBookingForm) {
       return;
     }
 
-    // Pour l’instant on gère surtout le cas BLOCAGE
+    // Pour l'instant on gère surtout le cas BLOCAGE
     if (!isBlock) {
-      alert("Pour l’instant, ce formulaire permet surtout de déplacer / modifier les blocages manuels. Les autres réservations resteront sur le même logement.");
+      alert("Pour l'instant, ce formulaire permet surtout de déplacer / modifier les blocages manuels. Les autres réservations resteront sur le même logement.");
       // tu pourras étendre plus tard si tu veux
       // return ici si tu veux vraiment empêcher toute édition sur les autres types
       // return;
@@ -7509,7 +7510,7 @@ if (editBookingForm) {
     }
 
     try {
-      // 1️⃣ On supprime l’ancien blocage (sur l’ancien logement)
+      // 1️⃣ On supprime l'ancien blocage (sur l'ancien logement)
       console.log('🧨 Édition blocage - ancien logement:', currentBookingData.propertyId, 'nouveau:', propertyId);
 
       const deleteRes = await fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
@@ -7556,7 +7557,7 @@ if (editBookingForm) {
         console.log('📥 Réponse création blocage:', createRes.status, createBody);
 
         if (!createRes.ok) {
-          throw new Error(createBody.error || 'Erreur lors de l’enregistrement (' + createRes.status + ')');
+          throw new Error(createBody.error || 'Erreur lors de l'enregistrement (' + createRes.status + ')');
         }
       }
 
@@ -9279,7 +9280,7 @@ if (window.Capacitor) {
       const btn = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
       if (btn) { btn.click(); return; }
 
-      console.warn('FAB: impossible d’ouvrir la modale (fonction et bouton introuvables).');
+      console.warn('FAB: impossible d'ouvrir la modale (fonction et bouton introuvables).');
     });
   })();
 </script>
