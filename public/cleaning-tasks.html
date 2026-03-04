@@ -1029,6 +1029,12 @@ html[data-theme-v3="1"] .top-bar {
   </button>
   
   <div class="login-error" id="loginError">Code PIN incorrect</div>
+
+  <div style="margin-top:24px;">
+    <a href="https://www.boostinghost.fr/app.html" style="display:inline-flex; align-items:center; gap:6px; color:#888; font-size:13px; text-decoration:none;">
+      <i class="fas fa-arrow-left"></i> Retour au dashboard
+    </a>
+  </div>
 </div>
 
 <!-- ========== APP SCREEN ========== -->
@@ -1131,9 +1137,13 @@ const _origin = window.location.origin;
 const _href = window.location.href;
 console.log('🌐 origin:', _origin, 'href:', _href);
 
-const API_URL = _origin.includes('localhost')
+// Capacitor iOS charge en capacitor://localhost → on force boostinghost.fr
+// Sur web normal → on utilise l'origin dynamique
+const API_URL = _origin.includes('localhost') && !_origin.includes('capacitor')
   ? 'http://localhost:3001'
-  : 'https://www.boostinghost.fr';
+  : _origin.includes('capacitor') || _origin.includes('ionic')
+    ? 'https://www.boostinghost.fr'
+    : _origin;
 
 console.log('🔗 API_URL:', API_URL);
 
