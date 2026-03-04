@@ -5908,6 +5908,7 @@ window.LCC_PROPERTIES = properties;
     function createCalendarCell(property, dateObj) {
       var cell = document.createElement('div');
       cell.className = 'calendar-cell';
+      cell.setAttribute('onclick', 'void(0)'); // Fix Safari: div sans onclick ignorent les clicks
       cell.setAttribute('data-property-id', property.id);
 
       var y = dateObj.getFullYear();
