@@ -1127,11 +1127,15 @@ html[data-theme-v3="1"] .top-bar {
 // CLEANING TASKS APP — LOGIC
 // ==========================================
 
-const API_URL = window.location.origin.includes('localhost')
+const _origin = window.location.origin;
+const _href = window.location.href;
+console.log('🌐 origin:', _origin, 'href:', _href);
+
+const API_URL = _origin.includes('localhost')
   ? 'http://localhost:3001'
-  : window.location.origin.includes('boostinghost') || window.location.origin.includes('render')
-    ? window.location.origin
-    : 'https://www.boostinghost.fr';
+  : 'https://www.boostinghost.fr';
+
+console.log('🔗 API_URL:', API_URL);
 
 let currentPin = null;
 let cleanerData = null;
