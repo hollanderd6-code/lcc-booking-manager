@@ -2579,6 +2579,16 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   .fab-add-resa { background: #1A7A5E !important; }
 }
 </style>
+
+/* ── Cacher barre noire sur mobile ── */
+@media (max-width: 768px) {
+  #bhTopBar, .bh-demo-nav {
+    display: none !important;
+  }
+  body {
+    padding-top: 0 !important;
+  }
+}
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
