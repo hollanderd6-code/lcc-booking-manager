@@ -2114,88 +2114,9 @@ function formatDateFr(dateStr) {
       // ✅ Migration : pousse les assignations localStorage vers DB
       // S'exécute au chargement pour rattraper les assignations jamais sauvées en DB
       async function migrateLocalAssignmentsToDB() {
-        const token = localStorage.getItem('lcc_token');
-        if (!token) return;
-
-        const localAssignments = JSON.parse(localStorage.getItem(STORAGE_ASSIGN) || '{}');
-        const localKeys = Object.keys(localAssignments);
-        if (localKeys.length === 0) return;
-
-        // Récupérer les assignations déjà en DB
-        let dbKeys = new Set();
-        try {
-          const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
-            headers: { Authorization: 'Bearer ' + token }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            (data.assignments || []).forEach(row => { if (row.reservation_key) dbKeys.add(row.reservation_key); });
-          }
-        } catch(e) { return; }
-
-        // Trouver les assignations locales absentes de la DB
-        const toMigrate = localKeys.filter(key => !dbKeys.has(key) && localAssignments[key]);
-        if (toMigrate.length === 0) {
-          console.log('✅ Aucune migration necessaire');
-          return;
-        }
-
-        console.log('🔄 Migration de ' + toMigrate.length + ' assignation(s) localStorage vers DB...');
-        let migrated = 0;
-
-        for (const key of toMigrate) {
-          const cleanerId = localAssignments[key];
-          if (!cleanerId) continue;
-
-          // Extraire propertyId : tout sauf les 2 derniers segments séparés par _
-          const parts = key.split('_');
-          if (parts.length < 3) continue;
-          const propertyId = parts.slice(0, parts.length - 2).join('_');
-
-          // Normaliser les dates de la clé en ISO (gère format texte "Wed Apr 08" et ISO)
-          const rawStart = parts[parts.length - 2];
-          const rawEnd   = parts[parts.length - 1];
-          const isoStart = normalizeDateToISO(rawStart);
-          const isoEnd   = normalizeDateToISO(rawEnd);
-
-          // Ignorer si la date de fin est dans le passé
-          const todayStr = new Date().toISOString().slice(0, 10);
-          if (isoEnd && isoEnd < todayStr) continue;
-
-          // Reconstruire la clé en ISO
-          const normalizedKey = (isoStart && isoEnd)
-            ? propertyId + '_' + isoStart + '_' + isoEnd
-            : key;
-
-          // Ignorer si la clé normalisée est déjà en DB
-          if (dbKeys.has(normalizedKey)) continue;
-
-          try {
-            const r = await fetch(`${API_URL}/api/cleaning/assignments`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-              body: JSON.stringify({ reservationKey: normalizedKey, propertyId, cleanerId })
-            });
-            if (r.ok) {
-              migrated++;
-              // Mettre à jour le localStorage avec la clé normalisée
-              if (normalizedKey !== key) {
-                localAssignments[normalizedKey] = cleanerId;
-                delete localAssignments[key];
-              }
-            } else {
-              const err = await r.json().catch(() => ({}));
-              console.warn('Migration echouee pour ' + normalizedKey + ':', err.error || r.status);
-            }
-          } catch(e) {
-            console.warn('Erreur migration ' + normalizedKey + ':', e.message);
-          }
-        }
-
-        // Mettre à jour le localStorage avec les clés normalisées
-        localStorage.setItem(STORAGE_ASSIGN, JSON.stringify(localAssignments));
-
-        console.log('✅ Migration terminee : ' + migrated + '/' + toMigrate.length + ' assignations migrees en DB');
+        // Migration terminée — on vide juste le localStorage pour éviter les doublons
+        localStorage.removeItem(STORAGE_ASSIGN);
+        console.log('✅ localStorage assignations vidé');
       }
 
       // ✅ Cleaners par défaut par logement (chargé depuis settings)
