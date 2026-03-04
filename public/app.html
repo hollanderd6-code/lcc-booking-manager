@@ -8989,17 +8989,17 @@ if (document.readyState === 'loading') {
 
     /* Titre page en Instrument Serif */
     var titles = {
-      app:      'Tableau de <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">bord</em>',
-      messages: 'Mes <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">messages</em>',
-      settings: 'Mes <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">logements</em>',
-      deposits: 'Gestion des <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">cautions</em>',
-      factures: 'Factures <em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">clients</em>',
-      welcome:  "Livret d'<em style="font-style:italic;color:#1A7A5E;font-family:'Instrument Serif',serif;">accueil</em>"
+      app:      "Tableau de <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>bord</em>",
+      messages: "Mes <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>messages</em>",
+      settings: "Mes <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>logements</em>",
+      deposits: "Gestion des <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>cautions</em>",
+      factures: "Factures <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>clients</em>",
+      welcome:  "Livret d'<em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>accueil</em>"
     };
     var titleEl = document.querySelector('h1.page-title, .page-title');
     if (titleEl && titles[curPage] && !titleEl.querySelector('em')) {
       titleEl.innerHTML = titles[curPage];
-      titleEl.style.cssText += ';font-family:'Instrument Serif',Georgia,serif !important;';
+      titleEl.style.cssText += ';font-family:"Instrument Serif",Georgia,serif !important;';
     }
 
     /* Forcer couleur du nom sidebar — inline style sur l'élément lui-même */
