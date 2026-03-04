@@ -4915,7 +4915,21 @@ const fetchedEmpty = newIcalReservations.length === 0 && oldIcalReservations.len
       const newIds = new Set(newIcalReservations.map(r => r.uid));
 
       // ➕ Nouvelles réservations (vraies résas uniquement, pas les blocages)
-      const trulyNewReservations = newIcalReal.filter(r => !oldIds.has(r.uid));
+      // Double vérification en DB : ne notifier que les résas créées récemment (< 10 min)
+      // Evite les doublons de notifs après redémarrage serveur (oldIcalReservations vide)
+      const recentlyCreatedUids = new Set();
+      try {
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const recentRows = await pool.query(
+          'SELECT uid FROM reservations WHERE property_id =  AND created_at >= ',
+          [property.id, tenMinutesAgo]
+        );
+        recentRows.rows.forEach(r => recentlyCreatedUids.add(r.uid));
+      } catch(e) { console.error('Erreur check recent UIDs:', e.message); }
+
+      const trulyNewReservations = newIcalReal.filter(r =>
+        !oldIds.has(r.uid) && recentlyCreatedUids.has(r.uid)
+      );
       
       // ➖ Réservations annulées (présentes dans old mais plus dans new, ET FUTURES)
       const now = new Date();
