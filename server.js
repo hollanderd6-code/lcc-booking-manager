@@ -12206,8 +12206,32 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
       return res.status(404).json({ error: 'Aucun client Stripe trouve' });
     }
 
-    const customerId = result.rows[0].stripe_customer_id;
+    let customerId = result.rows[0].stripe_customer_id;
     const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+
+    // Vérifier que le customer existe encore dans Stripe
+    try {
+      await stripe.customers.retrieve(customerId);
+    } catch (stripeErr) {
+      if (stripeErr.code === 'resource_missing') {
+        // Customer supprimé ou invalide → en créer un nouveau
+        console.log(`[portal] Customer Stripe invalide (${customerId}), création d'un nouveau...`);
+        const newCustomer = await stripe.customers.create({
+          email: user.email,
+          name: user.name || user.email,
+          metadata: { user_id: String(user.id) }
+        });
+        customerId = newCustomer.id;
+        // Mettre à jour la BDD
+        await pool.query(
+          'UPDATE subscriptions SET stripe_customer_id = $1 WHERE user_id = $2',
+          [customerId, user.id]
+        );
+        console.log(`[portal] Nouveau customer créé: ${customerId}`);
+      } else {
+        throw stripeErr;
+      }
+    }
 
     // Créer la session du portail
     const session = await stripe.billingPortal.sessions.create({
