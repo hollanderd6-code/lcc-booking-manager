@@ -4915,20 +4915,19 @@ const fetchedEmpty = newIcalReservations.length === 0 && oldIcalReservations.len
       const newIds = new Set(newIcalReservations.map(r => r.uid));
 
       // ➕ Nouvelles réservations (vraies résas uniquement, pas les blocages)
-      // Double vérification en DB : ne notifier que les résas créées récemment (< 10 min)
-      // Evite les doublons de notifs après redémarrage serveur (oldIcalReservations vide)
-      const recentlyCreatedUids = new Set();
+      // On notifie uniquement les résas pas encore notifiées (notified_at IS NULL)
+      // Evite les doublons après redémarrage serveur
+      const unnotifiedUids = new Set();
       try {
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const recentRows = await pool.query(
-          'SELECT uid FROM reservations WHERE property_id = $1 AND created_at >= $2',
-          [property.id, tenMinutesAgo]
+        const unnotifiedRows = await pool.query(
+          'SELECT uid FROM reservations WHERE property_id = $1 AND notified_at IS NULL AND status != 'cancelled'',
+          [property.id]
         );
-        recentRows.rows.forEach(r => recentlyCreatedUids.add(r.uid));
-      } catch(e) { console.error('Erreur check recent UIDs:', e.message); }
+        unnotifiedRows.rows.forEach(r => unnotifiedUids.add(r.uid));
+      } catch(e) { console.error('Erreur check unnotified UIDs:', e.message); }
 
       const trulyNewReservations = newIcalReal.filter(r =>
-        !oldIds.has(r.uid) && recentlyCreatedUids.has(r.uid)
+        !oldIds.has(r.uid) && unnotifiedUids.has(r.uid)
       );
       
       // ➖ Réservations annulées (présentes dans old mais plus dans new, ET FUTURES)
@@ -5086,6 +5085,18 @@ console.log(
       } catch (err) {
         console.error('Erreur lors de l envoi des notifications menage:', err);
       }
+
+      // Marquer les résas comme notifiées en DB pour éviter les doublons
+      try {
+        const uidsToMark = newReservations.map(r => r.uid).filter(Boolean);
+        if (uidsToMark.length > 0) {
+          await pool.query(
+            'UPDATE reservations SET notified_at = NOW() WHERE uid = ANY()',
+            [uidsToMark]
+          );
+          console.log('✅ ' + uidsToMark.length + ' résa(s) marquées notifiées');
+        }
+      } catch(e) { console.error('Erreur marquage notified_at:', e.message); }
     }
 
     // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT DANS LES 3 PROCHAINS MOIS)
