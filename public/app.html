@@ -1615,9 +1615,10 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     }
 
     .booking-block:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      /* transform: translateY(-2px); -- supprime le scintillement Safari (le deplacement reclenche hover en boucle) */
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
       z-index: 10;
+      filter: brightness(1.08);
     }
     /* === HOTFIX CALENDRIER MOBILE & DESKTOP === */
 /* On laisse le scroll horizontal au wrapper, 
