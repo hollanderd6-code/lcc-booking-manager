@@ -6553,32 +6553,20 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
     .catch(err => console.log('Erreur chargement logements:', err));
   }
   
+  // Listener sur document entier — fonctionne peu importe quand le calendrier se rend
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.booking-block')) return;
+    const cell = e.target.closest('.calendar-cell');
+    if (!cell) return;
+    const date = cell.getAttribute('data-date');
+    const row = cell.closest('.calendar-row, [data-property-id]');
+    const propertyId = row ? row.getAttribute('data-property-id') : null;
+    console.log('📅 Clic cellule:', date, propertyId);
+    if (date) window.openBlockModal(date, propertyId);
+  });
+
   document.addEventListener('DOMContentLoaded', function() {
     loadPropertiesInBlockModal();
-    
-    // Rendre les cellules cliquables
-    setTimeout(function() {
-      const calendarBody = document.querySelector('.calendar-body, .calendar-grid');
-      
-      if (calendarBody) {
-        calendarBody.addEventListener('click', function(e) {
-          if (e.target.closest('.booking-block')) return;
-          
-          const cell = e.target.closest('.calendar-cell');
-          if (cell) {
-            const date = cell.getAttribute('data-date');
-            const row = cell.closest('.calendar-row, [data-property-id]');
-            const propertyId = row ? row.getAttribute('data-property-id') : null;
-            
-            console.log('📅 Clic sur cellule - Date:', date, 'PropertyId:', propertyId);
-            
-            if (date) {
-              openBlockModal(date, propertyId);
-            }
-          }
-        });
-      }
-    }, 1000);
   });
   
   window.openBlockModal = function openBlockModal(date, propertyId) {
