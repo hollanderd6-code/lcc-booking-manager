@@ -217,6 +217,39 @@ async function fetchReservations(property, pool = null) {
     }
   }
 
+  // ✅ Filtrer les blocs iCal qui chevauchent des résas manuelles/directes en DB
+  // Evite les faux blocs Airbnb générés quand une résa directe est détectée
+  if (pool && results.length > 0) {
+    try {
+      const manualRes = await pool.query(
+        "SELECT start_date, end_date FROM reservations WHERE property_id = \$1 AND source IN ('MANUEL', 'DIRECT') AND status != 'cancelled'",
+        [property.id]
+      );
+      if (manualRes.rows.length > 0) {
+        const before = results.length;
+        results.forEach(r => {
+          if (r.isBlock) return; // déjà marqué
+          const rStart = new Date(r.start);
+          const rEnd   = new Date(r.end);
+          for (const m of manualRes.rows) {
+            const mStart = new Date(m.start_date);
+            const mEnd   = new Date(m.end_date);
+            // Chevauchement : le bloc iCal est entièrement contenu dans la résa manuelle
+            if (rStart >= mStart && rEnd <= mEnd && r.source === 'AIRBNB') {
+              r.isBlock = true;
+              console.log('⚠️ Bloc Airbnb chevauche résa directe, ignoré : ' + r.uid);
+              break;
+            }
+          }
+        });
+        const filtered = results.filter(r => !r.isBlock).length;
+        if (filtered < before) console.log('🚫 ' + (before - filtered) + ' bloc(s) Airbnb filtrés (chevauchement résa directe)');
+      }
+    } catch(e) {
+      console.warn('⚠️ Erreur filtre chevauchement:', e.message);
+    }
+  }
+
   return results;
 }
 
