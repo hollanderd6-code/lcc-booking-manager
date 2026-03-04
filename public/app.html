@@ -3491,10 +3491,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       flex-direction: column;
       transition: right 0.25s ease;
       border-left: 1px solid var(--border-color);
+      pointer-events: none; /* Fix Safari : empêche le panel hors-écran d'avaler les clics */
     }
 
     .notifications-panel.open {
       right: 0;
+      pointer-events: auto; /* Réactivé quand le panel est visible */
     }
 
     .notifications-header {
