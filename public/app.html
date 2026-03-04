@@ -4277,7 +4277,8 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
             thisWeekCheckouts.forEach(r => {
               const property = properties.find(p => p.id === r.propertyId);
               const checkoutDate = new Date(r.endDate);
-              const daysFromNow = Math.ceil((checkoutDate - today) / (1000 * 60 * 60 * 24));
+              checkoutDate.setHours(0, 0, 0, 0); // Normaliser à minuit heure locale (fix Safari UTC)
+              const daysFromNow = Math.round((checkoutDate - today) / (1000 * 60 * 60 * 24));
               
               let timeText = '';
               if (daysFromNow === 0) timeText = 'Aujourd\'hui';
