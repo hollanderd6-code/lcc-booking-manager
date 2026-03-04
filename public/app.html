@@ -5920,8 +5920,11 @@ window.LCC_PROPERTIES = properties;
       if (isToday(dateObj)) cell.classList.add('today');
 
       cell.addEventListener('click', function(ev) {
-        if (!ev.target.classList.contains('booking-block')) {
-          // Ici on pourrait ouvrir le modal de nouvelle réservation si nécessaire
+        if (ev.target.closest('.booking-block')) return; // laisser le booking-block gérer
+        const date = cell.getAttribute('data-date');
+        const propId = cell.getAttribute('data-property-id');
+        if (date && typeof openBlockModal === 'function') {
+          openBlockModal(date, propId);
         }
       });
 
