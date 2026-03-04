@@ -4921,7 +4921,7 @@ const fetchedEmpty = newIcalReservations.length === 0 && oldIcalReservations.len
       try {
         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const recentRows = await pool.query(
-          'SELECT uid FROM reservations WHERE property_id =  AND created_at >= ',
+          'SELECT uid FROM reservations WHERE property_id = $1 AND created_at >= $2',
           [property.id, tenMinutesAgo]
         );
         recentRows.rows.forEach(r => recentlyCreatedUids.add(r.uid));
@@ -8701,7 +8701,7 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     
     // Récupérer aussi les logements où ce cleaner est le cleaner par défaut
     const defaultPropertiesResult = await pool.query(
-      'SELECT property_id FROM property_default_cleaners WHERE cleaner_id =  AND user_id = ',
+      'SELECT property_id FROM property_default_cleaners WHERE cleaner_id = $1 AND user_id = $2',
       [cleaner.id, cleaner.user_id]
     );
 
