@@ -987,13 +987,21 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .booking-block.end {
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
-  right: -10px; /* Déborde sur la case du checkout, cohérent avec .single */
+  right: -10px;
+  pointer-events: none; /* Fix Safari : la partie qui deborde ne capte plus les clics */
 }
 
-/* Réservation d’une seule nuit (start + end dans la même cellule) */
+/* Reservation d’une seule nuit (start + end dans la meme cellule) */
 .booking-block.single {
   border-radius: 999px;
-  right: -8px; /* ✅ RÉDUIT pour éviter fusion */
+  right: -8px;
+  pointer-events: none; /* Fix Safari : idem */
+}
+
+/* Fix Safari : .start et blocs du milieu restent cliquables */
+.booking-block.start,
+.booking-block:not(.end):not(.single) {
+  pointer-events: auto;
 }
 
     /* Platform Icons */
@@ -3491,12 +3499,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       flex-direction: column;
       transition: right 0.25s ease;
       border-left: 1px solid var(--border-color);
-      pointer-events: none; /* Fix Safari : empêche le panel hors-écran d'avaler les clics */
+      pointer-events: none; /* Fix Safari : panel hors-ecran ne capte pas les clics */
     }
 
     .notifications-panel.open {
       right: 0;
-      pointer-events: auto; /* Réactivé quand le panel est visible */
+      pointer-events: auto;
     }
 
     .notifications-header {
