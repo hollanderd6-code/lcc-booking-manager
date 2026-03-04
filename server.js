@@ -5823,8 +5823,26 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
    // Enrichir les réservations avec les données des conversations
     filteredProps.forEach(property => {
-      const propertyReservations = reservationsStore.properties[property.id] || [];
-      
+      const allPropertyReservations = reservationsStore.properties[property.id] || [];
+
+      // Filtrer les blocs Airbnb qui chevauchent des résas manuelles/directes
+      const manualReservations = allPropertyReservations.filter(r =>
+        r.source === 'MANUEL' || r.source === 'DIRECT' || r.type === 'manual'
+      );
+      const propertyReservations = allPropertyReservations.filter(r => {
+        if ((r.source !== 'AIRBNB' && r.platform !== 'Airbnb') || r.type === 'manual') return true;
+        const rStart = new Date(r.start || r.startDate);
+        const rEnd   = new Date(r.end || r.endDate);
+        const durationDays = (rEnd - rStart) / (1000 * 60 * 60 * 24);
+        if (durationDays > 60) return false; // bloc longue durée
+        for (const m of manualReservations) {
+          const mStart = new Date(m.start || m.startDate);
+          const mEnd   = new Date(m.end || m.endDate);
+          if (rStart >= mStart && rEnd <= mEnd) return false; // contenu dans résa directe
+        }
+        return true;
+      });
+
       propertyReservations.forEach((reservation, index) => {
         // Préparer la clé de recherche avec normalisation
         const startDate = new Date(reservation.start || reservation.checkIn).toISOString().split('T')[0];
