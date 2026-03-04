@@ -3654,7 +3654,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   </style>
 <!-- Script auth + user + logout -->
 <script>
-  // Vérifier l'abonnement au chargement de la page
+  // Vérifier l\'abonnement au chargement de la page
   (async function checkSubscriptionAccess() {
     const token = localStorage.getItem('lcc_token');
     const accountType = localStorage.getItem('lcc_account_type');
@@ -3667,11 +3667,11 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     // ✅ SOUS-COMPTES : Accès direct sans vérification
     if (accountType === 'sub') {
       console.log('✅ Sous-compte détecté, accès autorisé sans vérification');
-      return; // On sort de la fonction, pas de vérification d'abonnement
+      return; // On sort de la fonction, pas de vérification d\'abonnement
     }
 
     // ========================================
-    // À PARTIR D'ICI : UNIQUEMENT COMPTES PRINCIPAUX
+    // À PARTIR D\'ICI : UNIQUEMENT COMPTES PRINCIPAUX
     // ========================================
 
     // ✅ DÉTECTER SI ON VIENT DE STRIPE
@@ -3692,12 +3692,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       // Masquer après 5 secondes
       setTimeout(() => successBanner.remove(), 5000);
       
-      // ✅ ATTENDRE QUE LE WEBHOOK S'EXÉCUTE
+      // ✅ ATTENDRE QUE LE WEBHOOK S\'EXÉCUTE
       console.log('⏳ Paiement détecté, attente de la confirmation...');
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
-    // ✅ SOUS-COMPTES : Skip toute la vérification d'abonnement
+    // ✅ SOUS-COMPTES : Skip toute la vérification d\'abonnement
     if (accountType === 'sub') {
       console.log('✅ Sous-compte, pas de vérification abonnement');
       return;
@@ -3719,7 +3719,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
       const data = await res.json();
 
-      // ✅ SI ON VIENT DE STRIPE ET QUE C'EST TOUJOURS EXPIRÉ, RÉESSAYER
+      // ✅ SI ON VIENT DE STRIPE ET QUE C\'EST TOUJOURS EXPIRÉ, RÉESSAYER
       if (sessionId && (data.status === 'expired' || data.status === 'canceled' || 
           (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0))) {
         
@@ -3742,19 +3742,19 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
           }
         }
         
-        // Nettoyer l'URL
+        // Nettoyer l\'URL
         window.history.replaceState({}, document.title, '/app.html');
         return;
       }
 
-      // Vérifier si l'abonnement est expiré (sans session_id)
+      // Vérifier si l\'abonnement est expiré (sans session_id)
       if (!sessionId && (data.status === 'expired' || data.status === 'canceled' || 
           (data.status === 'trial' && data.daysRemaining !== null && data.daysRemaining < 0))) {
         window.location.href = '/subscription-expired.html';
         return;
       }
 
-      // Nettoyer l'URL si session_id présent et abonnement OK
+      // Nettoyer l\'URL si session_id présent et abonnement OK
       if (sessionId) {
         window.history.replaceState({}, document.title, '/app.html');
       }
@@ -3868,7 +3868,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     }
     
     function getGuestInitial(reservation) {
-      // Si on a l'initiale construite par le serveur
+      // Si on a l\'initiale construite par le serveur
       if (reservation && reservation.guest_initial && reservation.guest_initial !== 'V') {
         return reservation.guest_initial;
       }
@@ -3963,7 +3963,7 @@ function populateEditBookingProperties(selectedPropertyId) {
       props = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
     }
   } catch (e) {
-    console.warn('Impossible de lire la liste des logements pour l'édition', e);
+    console.warn('Impossible de lire la liste des logements pour l\'édition', e);
   }
 
   select.innerHTML = '';
@@ -3995,7 +3995,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   if (selectedPropertyId) {
     select.value = String(selectedPropertyId);
     if (select.selectedIndex === -1) {
-      // au cas où l'ID ne matche pas une option
+      // au cas où l\'ID ne matche pas une option
       select.selectedIndex = 0;
     }
   } else {
@@ -4017,7 +4017,7 @@ function populateEditBookingProperties(selectedPropertyId) {
           opt.value = String(p.id != null ? p.id : index);
           opt.textContent = p.name || ('Logement ' + (index + 1));
           nrPropertySelect.appendChild(opt);
-              // Ménages du jour : ouverture d'un modal avec le détail des départs à nettoyer
+              // Ménages du jour : ouverture d\'un modal avec le détail des départs à nettoyer
       try {
         const cleaningCard = document.getElementById('kpiCleaningTodayCard');
         const modal = document.getElementById('cleaningTodayModal');
@@ -4077,10 +4077,10 @@ function populateEditBookingProperties(selectedPropertyId) {
 
           if (!todaysDepartures.length) {
             contentEl.innerHTML =
-              '<p class="empty-state" style="margin:8px 0;">Aucun départ à nettoyer aujourd'hui.</p>';
+              '<p class="empty-state" style="margin:8px 0;">Aucun départ à nettoyer aujourd\'hui.</p>';
           } else {
             let html =
-              '<div class="detail-group"><label>Départs à nettoyer aujourd'hui</label><div class="detail-value">';
+              '<div class="detail-group"><label>Départs à nettoyer aujourd\'hui</label><div class="detail-value">';
             todaysDepartures.forEach((r) => {
               const key = getReservationKey(r);
               const assignedId = key && assignments ? assignments[key] : null;
@@ -4162,7 +4162,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
 
       /* Notifications */
       
-      // Gestion du panneau d'activité
+      // Gestion du panneau d\'activité
       const notificationsBtn = document.getElementById('notificationsBtn');
       const notificationsPanel = document.getElementById('notificationsPanel');
       const notificationsCloseBtn = document.getElementById('notificationsCloseBtn');
@@ -4171,7 +4171,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
         notificationsBtn.addEventListener('click', async function() {
           notificationsPanel.classList.toggle('open');
           
-          // Charger les données d'activité
+          // Charger les données d\'activité
           if (notificationsPanel.classList.contains('open')) {
             await loadActivityData();
           }
@@ -4184,7 +4184,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
         });
       }
       
-      // Fonction pour charger les données d'activité
+      // Fonction pour charger les données d\'activité
       async function loadActivityData() {
         const token = localStorage.getItem('lcc_token');
         if (!token) return;
@@ -4201,7 +4201,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
           const reservations = data.reservations || [];
           const properties = window.LCC_PROPERTIES || allProperties || [];
       
-          // === AUJOURD'HUI : Check-in/Check-out ===
+          // === AUJOURD\'HUI : Check-in/Check-out ===
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           
@@ -4233,7 +4233,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                   <div class="activity-content">
                     <div class="activity-title">Check-in : ${window.cleanGuestName(r, r.source || r.platform)}</div>
                     <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
-                    <div class="activity-time">Aujourd'hui</div>
+                    <div class="activity-time">Aujourd\'hui</div>
                   </div>
                 </div>
               `;
@@ -4249,7 +4249,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                   <div class="activity-content">
                     <div class="activity-title">Check-out : ${window.cleanGuestName(r, r.source || r.platform)}</div>
                     <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
-                    <div class="activity-time">Aujourd'hui</div>
+                    <div class="activity-time">Aujourd\'hui</div>
                   </div>
                 </div>
               `;
@@ -4445,12 +4445,12 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     if (!v) return null;
     const s = String(v);
     
-    // Si c'est déjà au format ISO (YYYY-MM-DD)
+    // Si c\'est déjà au format ISO (YYYY-MM-DD)
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
       return s.slice(0, 10);
     }
     
-    // Si c'est au format français (DD/MM/YYYY)
+    // Si c\'est au format français (DD/MM/YYYY)
     const frMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
     if (frMatch) {
       return `${frMatch[3]}-${frMatch[2]}-${frMatch[1]}`; // Convertir en ISO
@@ -4486,7 +4486,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     return `${year}-${month}-${day}`;
   }
   
-  // Fonction pour formater n'importe quelle date en string local (sans problème de timezone)
+  // Fonction pour formater n\'importe quelle date en string local (sans problème de timezone)
   function toLocalDateString(date) {
     const d = new Date(date);
     const year = d.getFullYear();
@@ -4571,12 +4571,12 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     });
 
     return dedupedReservations.map((r, index) => {
-      // Si propertyName existe déjà et n'est pas vide, on garde
+      // Si propertyName existe déjà et n\'est pas vide, on garde
       if (r.propertyName && r.propertyName.trim()) {
         return r;
       }
 
-      // CAS SPÉCIAL : si r.property est un objet avec le nom dedans, on l'utilise directement !
+      // CAS SPÉCIAL : si r.property est un objet avec le nom dedans, on l\'utilise directement !
       if (r.property && typeof r.property === 'object' && r.property.name) {
         return { ...r, propertyName: r.property.name };
       }
@@ -4606,7 +4606,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
         };
       }
 
-      // Fallback: extraire un nom lisible de l'ID
+      // Fallback: extraire un nom lisible de l\'ID
       let readableName = propertyId;
       if (propertyId.includes('-')) {
         const parts = propertyId.split('_');
@@ -4686,7 +4686,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       merged.forEach(iv => { nightsBooked += (iv[1] - iv[0]) / (1000 * 60 * 60 * 24); });
     });
 
-    // taux d'occupation
+    // taux d\'occupation
     let occupancy = Math.round((nightsBooked / (totalNightsPossible || 1)) * 100);
     if (!isFinite(occupancy) || occupancy < 0) occupancy = 0;
     if (occupancy > 100) occupancy = 100;
@@ -4731,7 +4731,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
           color = value >= 1 ? '#10B981' : '#000000';
           break;
           
-        case 'occupancy': // Taux d'occupation (en %)
+        case 'occupancy': // Taux d\'occupation (en %)
           if (value <= 30) color = '#EF4444'; // Rouge
           else if (value <= 50) color = '#F59E0B'; // Orange
           else if (value <= 70) color = '#FBBF24'; // Jaune
@@ -4886,7 +4886,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
 
         return {
           type: isIn && isOut ? 'inout' : (isIn ? 'in' : 'out'),
-          who: window.cleanGuestName(r),  // ✅ Passer l'objet complet
+          who: window.cleanGuestName(r),  // ✅ Passer l\'objet complet
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           startStr: formatDateFR(s),
@@ -4901,7 +4901,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     console.log('📊 Results found:', rows.length, 'movements today');
 
     if (!rows.length) {
-      content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd'hui.</div>`;
+      content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd\'hui.</div>`;
     } else {
       const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
       const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
@@ -4981,7 +4981,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
           end,
           startStr: formatDateFR(dateOnlyStr(rawStart)),
           endStr: formatDateFR(dateOnlyStr(rawEnd)),
-          who: window.cleanGuestName(r),  // ✅ Passer l'objet complet
+          who: window.cleanGuestName(r),  // ✅ Passer l\'objet complet
           prop: r.propertyName || 'Logement',
           src: r.source || r.platform || '',
           riskLevel: r.riskLevel || 'green',
@@ -5087,7 +5087,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     now.setHours(0, 0, 0, 0); // Début de la journée actuelle
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    // Filtrer uniquement les réservations à partir d'aujourd'hui jusqu'à la fin du mois
+    // Filtrer uniquement les réservations à partir d\'aujourd\'hui jusqu\'à la fin du mois
     const monthRes = (bookings || []).filter(r => {
       const rawS = r.startDate || r.start;
       const rawE = r.endDate || r.end;
@@ -5095,7 +5095,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
       const s = parseDateSafe(rawS);
       const e = parseDateSafe(rawE);
       if (!s || !e) return false;
-      // La réservation se termine après aujourd'hui ET commence avant la fin du mois
+      // La réservation se termine après aujourd\'hui ET commence avant la fin du mois
       return e >= now && s < monthEnd;
     });
 
@@ -5285,7 +5285,7 @@ window.LCC_PROPERTIES = properties;
 <script>
   // ============================================
   // CALENDRIER MODERNE - Vue tableau par logement
-  // S'alimente via window.renderModernCalendar(reservations, properties)
+  // S\'alimente via window.renderModernCalendar(reservations, properties)
   // ============================================
   (function() {
     'use strict';
@@ -5372,8 +5372,8 @@ window.LCC_PROPERTIES = properties;
       recommendations.push('Demander photo d\'identité par message');
     }
     
-    // CRITÈRE 6: Checklist non validée (si on a l'info)
-    // Note: On pourrait enrichir avec l'historique du logement
+    // CRITÈRE 6: Checklist non validée (si on a l\'info)
+    // Note: On pourrait enrichir avec l\'historique du logement
     if (window.cleaningChecklists) {
       var recentChecklists = window.cleaningChecklists.filter(function(c) {
         return c.property_id === booking.propertyId && !c.is_validated;
@@ -5579,7 +5579,7 @@ window.LCC_PROPERTIES = properties;
         renderPropertyList();
         renderCalendar();
         
-        // S'assurer que le scroll vers aujourd'hui se fait après le rendu
+        // S\'assurer que le scroll vers aujourd\'hui se fait après le rendu
                 
         // Mettre à jour le KPI des risques APRÈS que le DOM soit complètement chargé
         console.log('⏰ Programmation du setTimeout pour updateTopRisksKpi dans 500ms...');
@@ -5667,7 +5667,7 @@ window.LCC_PROPERTIES = properties;
         });
       }
 
-      // ⚙️ Bouton paramètres : simple toast pour l'instant
+      // ⚙️ Bouton paramètres : simple toast pour l\'instant
       var settingsBtn = document.getElementById('calendarSettingsBtn');
       if (settingsBtn) {
         settingsBtn.addEventListener('click', function () {
@@ -5976,9 +5976,9 @@ function riskColor(level) {
         var endDate = new Date(b.endDate);
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
 
-        // Nuits : du jour d'arrivée au jour AVANT le checkout
+        // Nuits : du jour d\'arrivée au jour AVANT le checkout
         // Les dates API sont en UTC minuit (ex: 2026-03-01T00:00:00.000Z)
-        // On lit en UTC pour éviter le décalage Paris UTC+1 qui ferait glisser d'un jour
+        // On lit en UTC pour éviter le décalage Paris UTC+1 qui ferait glisser d\'un jour
         var startDay = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
         var endDay   = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
 
@@ -5989,12 +5989,12 @@ function riskColor(level) {
         var lastNight = new Date(endDay.getTime() - 24 * 60 * 60 * 1000);
 
         // ✅ CORRECTION : Ne plus filtrer les réservations passées
-        // On garde toutes les réservations pour l'historique
+        // On garde toutes les réservations pour l\'historique
         // Ancien code : if (lastNight < range.start || startDay > range.end) continue;
         
         // Nouveau : on affiche seulement si la réservation est visible dans la plage
         if (startDay > range.end) continue; // Trop dans le futur
-        // On garde les réservations passées pour l'historique
+        // On garde les réservations passées pour l\'historique
 
         var cells = [];
         var cur = new Date(startDay.getTime());
@@ -6216,7 +6216,7 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
         setTimeout(function() { isPropertyScrolling = false; }, 10);
       });
 
-      // Scroll horizontal vers aujourd'hui
+      // Scroll horizontal vers aujourd\'hui
       var todayHeader = document.querySelector('#daysHeader .day-header.today');
       if (todayHeader) {
         var daysHeader = document.getElementById('daysHeader');
@@ -6690,7 +6690,7 @@ function findReservationForBlock(bookingBlock) {
     bookings = window.calendarState.bookings;
     console.log('🎯 Utilisation de window.calendarState.bookings avec', bookings.length, 'réservations');
   }
-  // Fallback: réservations brutes si calendarState n'est pas disponible
+  // Fallback: réservations brutes si calendarState n\'est pas disponible
   else if (Array.isArray(window.LCC_RESERVATIONS) && window.LCC_RESERVATIONS.length) {
     bookings = window.LCC_RESERVATIONS;
     console.log('⚠️ Fallback sur LCC_RESERVATIONS');
@@ -6716,7 +6716,7 @@ function findReservationForBlock(bookingBlock) {
       return idStr === rid || idStr === uid || idStr === rkey;
     });
 
-    // 2) Fallback : data-booking-id est juste l'INDEX dans le tableau
+    // 2) Fallback : data-booking-id est juste l\'INDEX dans le tableau
     if (!found) {
       const idx = parseInt(idStr, 10);
       if (!Number.isNaN(idx) && bookings[idx]) {
@@ -7006,7 +7006,7 @@ try {
         // Stratégie 2: Match par checkout_date (formats variés)
         const checkoutDate = booking.checkoutDate || booking.checkout || booking.end || booking.endDate;
         if (checkoutDate && c.checkout_date) {
-          // Normaliser les dates (enlever l'heure)
+          // Normaliser les dates (enlever l\'heure)
           const normalizeDate = (d) => {
             if (!d) return null;
             if (typeof d === 'string') {
@@ -7136,7 +7136,7 @@ try {
         valueEl.textContent = statusText;
       }
     } catch (e) {
-      console.warn("Erreur lors de l'injection des infos ménage dans le modal", e);
+      console.warn("Erreur lors de l\'injection des infos ménage dans le modal", e);
     }
 
     // 6️⃣ Ouverture du modal et datasets utiles
@@ -7188,7 +7188,7 @@ function handleEditBooking() {
         props = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
       }
     } catch (e) {
-      console.warn('Impossible de lire la liste des logements pour l'édition', e);
+      console.warn('Impossible de lire la liste des logements pour l\'édition', e);
     }
 
     propertySelect.innerHTML = '';
@@ -7226,7 +7226,7 @@ function handleEditBooking() {
     }
   }
 
-  // === Afficher le modal d'édition ===
+  // === Afficher le modal d\'édition ===
   editModal.style.display = 'flex';
   setTimeout(() => editModal.classList.add('active'), 10);
 
@@ -7306,7 +7306,7 @@ document.addEventListener('click', function(e) {
     booking.type === 'block' ||
     booking.source === 'BLOCK';
 
-  // Est-ce une réservation venant d'un iCal (Airbnb / Booking.com) ?
+  // Est-ce une réservation venant d\'un iCal (Airbnb / Booking.com) ?
   const rawSource = (booking.source || booking.platform || '').toLowerCase();
   const isFromIcal =
     rawSource.includes('airbnb') ||
@@ -7333,7 +7333,7 @@ document.addEventListener('click', function(e) {
   const token = localStorage.getItem('lcc_token');
   if (!token) {
     window.deletingInProgress = false;
-    alert("Impossible de supprimer : jeton d'authentification introuvable. Reconnecte-toi.");
+    alert("Impossible de supprimer : jeton d\'authentification introuvable. Reconnecte-toi.");
     return;
   }
 
@@ -7464,7 +7464,7 @@ const editBookingForm = document.getElementById('editBookingForm');
 if (editBookingForm) {
   editBookingForm.addEventListener('submit', async function (e) {
     e.preventDefault();
-    console.log('✏️ Soumission du formulaire d'édition');
+    console.log('✏️ Soumission du formulaire d\'édition');
 
     if (!currentBookingData) {
       alert('Impossible de trouver les données de la réservation');
@@ -7484,9 +7484,9 @@ if (editBookingForm) {
       return;
     }
 
-    // Pour l'instant on gère surtout le cas BLOCAGE
+    // Pour l\'instant on gère surtout le cas BLOCAGE
     if (!isBlock) {
-      alert("Pour l'instant, ce formulaire permet surtout de déplacer / modifier les blocages manuels. Les autres réservations resteront sur le même logement.");
+      alert("Pour l\'instant, ce formulaire permet surtout de déplacer / modifier les blocages manuels. Les autres réservations resteront sur le même logement.");
       // tu pourras étendre plus tard si tu veux
       // return ici si tu veux vraiment empêcher toute édition sur les autres types
       // return;
@@ -7510,7 +7510,7 @@ if (editBookingForm) {
     }
 
     try {
-      // 1️⃣ On supprime l'ancien blocage (sur l'ancien logement)
+      // 1️⃣ On supprime l\'ancien blocage (sur l\'ancien logement)
       console.log('🧨 Édition blocage - ancien logement:', currentBookingData.propertyId, 'nouveau:', propertyId);
 
       const deleteRes = await fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
@@ -7557,7 +7557,7 @@ if (editBookingForm) {
         console.log('📥 Réponse création blocage:', createRes.status, createBody);
 
         if (!createRes.ok) {
-          throw new Error(createBody.error || 'Erreur lors de l'enregistrement (' + createRes.status + ')');
+          throw new Error(createBody.error || 'Erreur lors de l\'enregistrement (' + createRes.status + ')');
         }
       }
 
@@ -7649,7 +7649,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
       }
 
       // =========================
-      // 1) MODAL TAUX D'OCCUPATION
+      // 1) MODAL TAUX D\'OCCUPATION
       // =========================
       (function initOccupancyModal() {
         const kpiCard = document.getElementById('kpiOccupancyCard');
@@ -7664,7 +7664,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
             <div class="modal-overlay" id="occupancyDetailsOverlay"></div>
             <div class="modal-content">
               <div class="modal-header">
-                <h2>Détail du taux d'occupation</h2>
+                <h2>Détail du taux d\'occupation</h2>
                 <button class="modal-close" id="closeOccupancyDetailsModal">
                   <i class="fas fa-times"></i>
                 </button>
@@ -7704,7 +7704,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
               null;
             if (!pid) return;
 
-            // Calcul par union d'intervalles (évite le double-comptage iCal)
+            // Calcul par union d\'intervalles (évite le double-comptage iCal)
             const intervals = [];
             (reservations || []).forEach(function (r) {
               if (!r.start || !r.end) return;
@@ -7760,7 +7760,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
           if (!detailed.length) {
             contentEl.innerHTML = `
               <p class="detail-value">
-                Aucun logement actif trouvé pour calculer le taux d'occupation.
+                Aucun logement actif trouvé pour calculer le taux d\'occupation.
               </p>
             `;
           } else {
@@ -7772,7 +7772,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
               + '<div class="detail-value">';
 
             detailed.forEach(function (item) {
-  // On arrondit le nombre de nuits pour l'affichage
+  // On arrondit le nombre de nuits pour l\'affichage
   var nights = Math.round(item.nightsBooked);
   if (!isFinite(nights) || nights < 0) nights = 0;
 
@@ -7933,7 +7933,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
                 const deposit = r.deposit;
                 const amount = (deposit.amountCents / 100).toFixed(2);
                 
-                // Calculer la date d'expiration (+7 jours depuis createdAt)
+                // Calculer la date d\'expiration (+7 jours depuis createdAt)
                 let expirationText = 'N/A';
                 if (deposit.createdAt) {
                   const created = new Date(deposit.createdAt);
@@ -8009,7 +8009,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
   })();
 </script>
 <script>
-  // Vérifier le statut de l'abonnement au chargement
+  // Vérifier le statut de l\'abonnement au chargement
   async function checkSubscriptionStatus() {
     const token = localStorage.getItem('lcc_token');
     if (!token) return;
@@ -8029,11 +8029,11 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
           const messageSpan = document.getElementById('alertMessage');
           
           if (data.daysRemaining === 0) {
-            messageSpan.textContent = "⏰ Votre essai gratuit se termine aujourd'hui ! Choisissez votre abonnement pour continuer.";
+            messageSpan.textContent = "⏰ Votre essai gratuit se termine aujourd\'hui ! Choisissez votre abonnement pour continuer.";
           } else if (data.daysRemaining === 1) {
-            messageSpan.textContent = "⏰ Plus qu'1 jour d'essai gratuit ! Choisissez votre abonnement pour continuer.";
+            messageSpan.textContent = "⏰ Plus qu'1 jour d\'essai gratuit ! Choisissez votre abonnement pour continuer.";
           } else {
-            messageSpan.textContent = `⏰ Plus que ${data.daysRemaining} jours d'essai gratuit ! Choisissez votre abonnement pour continuer.`;
+            messageSpan.textContent = `⏰ Plus que ${data.daysRemaining} jours d\'essai gratuit ! Choisissez votre abonnement pour continuer.`;
           }
           
           alertDiv.style.display = 'block';
@@ -8260,7 +8260,7 @@ html[data-theme-v3="1"] .sidebar .nav-section {
 
       let properties = [];
 
-      // 1) D'abord depuis la variable globale
+      // 1) D\'abord depuis la variable globale
       if (Array.isArray(window.LCC_PROPERTIES) && window.LCC_PROPERTIES.length) {
         properties = window.LCC_PROPERTIES;
       } else {
@@ -8296,7 +8296,7 @@ html[data-theme-v3="1"] .sidebar .nav-section {
       console.log('➕ Clic sur + (correctif)');
       fillProperties();
 
-      // Dates par défaut : aujourd'hui si vide
+      // Dates par défaut : aujourd\'hui si vide
       const today = new Date().toISOString().slice(0, 10);
       if (startInput && !startInput.value) startInput.value = today;
       if (endInput && !endInput.value) endInput.value = today;
@@ -8370,7 +8370,7 @@ html[data-theme-v3="1"] .sidebar .nav-section {
 
         const token = localStorage.getItem('lcc_token');
         if (!token) {
-          alert("⚠️ Impossible d'enregistrer : vous n'êtes pas authentifié (token manquant).");
+          alert("⚠️ Impossible d\'enregistrer : vous n\'êtes pas authentifié (token manquant).");
           return;
         }
 
@@ -8398,7 +8398,7 @@ html[data-theme-v3="1"] .sidebar .nav-section {
           }
         } catch (err) {
           console.error('❌ Erreur réseau sur /reservations/manual', err);
-          alert("❌ Erreur réseau lors de l'enregistrement : " + err.message);
+          alert("❌ Erreur réseau lors de l\'enregistrement : " + err.message);
         }
       });
     }
@@ -8534,7 +8534,7 @@ function renderCleaningChecklists() {
     return;
   }
   
-  // ✅ Prioriser : aujourd'hui, J-1, J-2, puis le reste récent (max 7 jours)
+  // ✅ Prioriser : aujourd\'hui, J-1, J-2, puis le reste récent (max 7 jours)
   function localDateStr(d){
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -8554,11 +8554,11 @@ function renderCleaningChecklists() {
   
   const day1Str = daysAgo(1);
   const day2Str = daysAgo(2);
-  const day7Str = daysAgo(2); // limite: aujourd'hui, hier, avant-hierr
+  const day7Str = daysAgo(2); // limite: aujourd\'hui, hier, avant-hierr
   
   // Extraire la date de checkout de chaque checklist
   function getCheckoutStr(checklist) {
-    // D'abord checkout_date brut
+    // D\'abord checkout_date brut
     if (checklist.checkout_date) {
       return String(checklist.checkout_date).slice(0, 10);
     }
@@ -8594,7 +8594,7 @@ function renderCleaningChecklists() {
     // Ignorer > 7 jours
   });
   
-  // Construire la liste triée par priorité : en attente d'abord, puis par date
+  // Construire la liste triée par priorité : en attente d\'abord, puis par date
   const sortByPending = (a, b) => {
     const aPending = (!a.is_validated && !a.owner_status) || a.owner_status === 'pending' ? 0 : 1;
     const bPending = (!b.is_validated && !b.owner_status) || b.owner_status === 'pending' ? 0 : 1;
@@ -8605,7 +8605,7 @@ function renderCleaningChecklists() {
   yesterdayChecklists.sort(sortByPending);
   day2Checklists.sort(sortByPending);
   
-  // Fusionner : aujourd'hui d'abord, puis hier, puis J-2, puis le reste — max 8
+  // Fusionner : aujourd\'hui d\'abord, puis hier, puis J-2, puis le reste — max 8
   const prioritized = [
     ...todayChecklists,
     ...yesterdayChecklists,
@@ -8767,7 +8767,7 @@ async function openChecklistDetails(checklistId) {
   const checklist = cleaningChecklists.find(c => c.id == checklistId);
   if (!checklist) return;
   
-  // Récupérer les détails complets depuis l'API
+  // Récupérer les détails complets depuis l\'API
   try {
     const token = localStorage.getItem('lcc_token');
     const response = await fetch(`${API_URL}/api/cleaning/checklists/${checklistId}`, {
@@ -9025,7 +9025,7 @@ if (document.readyState === 'loading') {
       titleEl.style.cssText += ';font-family:"Instrument Serif",Georgia,serif !important;';
     }
 
-    /* Forcer couleur du nom sidebar — inline style sur l'élément lui-même */
+    /* Forcer couleur du nom sidebar — inline style sur l\'élément lui-même */
     var nameEl = document.getElementById('sidebarUserName');
     if (nameEl) { nameEl.style.color = '#0D1117'; nameEl.style.fontWeight = '600'; }
     var compEl = document.getElementById('sidebarUserCompany');
@@ -9045,7 +9045,7 @@ if (document.readyState === 'loading') {
     }
   }
 
-  /* Lancer après le DOM + après l'injection sidebar */
+  /* Lancer après le DOM + après l\'injection sidebar */
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function(){
       setTimeout(applyV3Styles, 100);
@@ -9237,14 +9237,14 @@ async function clearNotificationBadge() {
   }
 }
 
-// Effacer le badge quand l'app est ouverte
+// Effacer le badge quand l\'app est ouverte
 if (window.Capacitor) {
   // Au chargement de la page
   window.addEventListener('load', () => {
     clearNotificationBadge();
   });
 
-  // Quand l'app revient au premier plan
+  // Quand l\'app revient au premier plan
   document.addEventListener('resume', () => {
     clearNotificationBadge();
   });
@@ -9276,11 +9276,11 @@ if (window.Capacitor) {
         return;
       }
 
-      // Fallback: cliquer le bouton desktop si la fonction n'existe pas
+      // Fallback: cliquer le bouton desktop si la fonction n\'existe pas
       const btn = document.getElementById('addBookingBtn') || document.getElementById('newReservationBtn');
       if (btn) { btn.click(); return; }
 
-      console.warn('FAB: impossible d'ouvrir la modale (fonction et bouton introuvables).');
+      console.warn('FAB: impossible d\'ouvrir la modale (fonction et bouton introuvables).');
     });
   })();
 </script>
@@ -9522,7 +9522,7 @@ if (window.Capacitor) {
   } else {
     applyFix();
   }
-  // Et aussi après 500ms et 1500ms pour s'assurer que le JS tiers n'écrase pas
+  // Et aussi après 500ms et 1500ms pour s\'assurer que le JS tiers n\'écrase pas
   setTimeout(applyFix, 500);
   setTimeout(applyFix, 1500);
 })();
@@ -9671,43 +9671,43 @@ html[data-theme-v3="1"] .booking-block.gites,   .booking-block.gites   { backgro
 
 const STORAGE_KEY = 'LCC_PROPERTY_ORDER';
 
-// Récupère l'ordre sauvegardé [id, id, id, ...]
+// Récupère l\'ordre sauvegardé [id, id, id, ...]
 function getSavedOrder() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
   catch(e) { return null; }
 }
 
-// Applique l'ordre sauvegardé à un tableau de propriétés
+// Applique l\'ordre sauvegardé à un tableau de propriétés
 function applyPropertyOrder(props) {
   const order = getSavedOrder();
   if (!order || !order.length) return props;
   const ordered = [];
-  // D'abord les props dans l'ordre sauvegardé
+  // D\'abord les props dans l\'ordre sauvegardé
   order.forEach(id => {
     const p = props.find(x => String(x.id) === String(id));
     if (p) ordered.push(p);
   });
-  // Puis les nouvelles props pas encore dans l'ordre (ajoutées après)
+  // Puis les nouvelles props pas encore dans l\'ordre (ajoutées après)
   props.forEach(p => {
     if (!ordered.find(x => String(x.id) === String(p.id))) ordered.push(p);
   });
   return ordered;
 }
 
-// Intercepte renderModernCalendar pour injecter l'ordre
+// Intercepte renderModernCalendar pour injecter l\'ordre
 (function() {
   const _orig = window.renderModernCalendar;
   if (typeof _orig !== 'function') return;
   window.renderModernCalendar = function(reservations, properties) {
-    // On appelle l'original mais on patch state.properties après
+    // On appelle l\'original mais on patch state.properties après
     _orig.call(this, reservations, properties);
     // state est dans la closure — on doit re-trier via le render
-    // On utilise une autre approche : patcher avant l'appel
+    // On utilise une autre approche : patcher avant l\'appel
   };
   // Meilleure approche : patcher directement state après chargement
   window.renderModernCalendar = function(reservations, properties) {
     _orig.call(this, reservations, properties);
-    // Après l'appel, state.properties est peuplé — on réapplique l'ordre
+    // Après l\'appel, state.properties est peuplé — on réapplique l\'ordre
     if (window._calendarState) {
       window._calendarState.properties = applyPropertyOrder(window._calendarState.properties);
       // Re-render silencieux
@@ -9733,7 +9733,7 @@ function applyPropertyOrder(props) {
     if (attempts > 30) clearInterval(interval);
   }, 300);
 
-  // Observe les changements du calendrier pour réappliquer l'ordre
+  // Observe les changements du calendrier pour réappliquer l\'ordre
   const observer = new MutationObserver(function() {
     setTimeout(reapplyOrderToDOM, 50);
   });
@@ -9745,7 +9745,7 @@ function applyPropertyOrder(props) {
   });
 })();
 
-// Réapplique l'ordre sauvegardé aux DOM rows du calendrier + property list
+// Réapplique l\'ordre sauvegardé aux DOM rows du calendrier + property list
 let _reapplying = false;
 function reapplyOrderToDOM() {
   if (_reapplying) return;
@@ -9794,7 +9794,7 @@ function openReorderModal() {
 
   reorderList.innerHTML = '';
 
-  // Récupère les propriétés dans l'ordre actuel du DOM
+  // Récupère les propriétés dans l\'ordre actuel du DOM
   const items = Array.from(list.querySelectorAll('.property-item[data-property-id]'));
   items.forEach(function(item) {
     const id = item.getAttribute('data-property-id');
@@ -9860,7 +9860,7 @@ function savePropertyOrder() {
 function resetPropertyOrder() {
   localStorage.removeItem(STORAGE_KEY);
   closeReorderModal();
-  // Recharge le calendrier pour remettre l'ordre d'origine
+  // Recharge le calendrier pour remettre l\'ordre d\'origine
   if (typeof window.loadData === 'function') window.loadData();
   else window.location.reload();
 }
@@ -9907,7 +9907,7 @@ document.getElementById('reorderModal').addEventListener('click', function(e) {
   if (e.target === this) closeReorderModal();
 });
 
-// Applique l'ordre au premier chargement
+// Applique l\'ordre au premier chargement
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() { reapplyOrderToDOM(); }, 800);
   setTimeout(function() { reapplyOrderToDOM(); }, 2000);
