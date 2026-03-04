@@ -5909,37 +5909,30 @@ window.LCC_PROPERTIES = properties;
     function createCalendarCell(property, dateObj) {
       var cell = document.createElement('div');
       cell.className = 'calendar-cell';
-      cell.setAttribute('onclick', 'void(0)'); // Fix Safari: div sans onclick ignorent les clicks
       cell.setAttribute('data-property-id', property.id);
 
       var y = dateObj.getFullYear();
       var m = String(dateObj.getMonth() + 1).padStart(2, '0');
       var d = String(dateObj.getDate()).padStart(2, '0');
-      cell.setAttribute('data-date', y + '-' + m + '-' + d);
+      var dateStr = y + '-' + m + '-' + d;
+      cell.setAttribute('data-date', dateStr);
 
       var dow = dateObj.getDay();
       if (dow === 0 || dow === 6) cell.classList.add('weekend');
       if (isToday(dateObj)) cell.classList.add('today');
 
-      cell.addEventListener('click', function(ev) {
-        console.log('🔥 CELL CLICK - target:', ev.target.tagName, ev.target.className);
-        console.log('🔥 CELL CLICK - cell date:', cell.getAttribute('data-date'));
-        const blockHit = ev.target.closest('.booking-block');
-        console.log('🔥 blockHit:', blockHit ? 'OUI ' + blockHit.className : 'NON');
-        if (blockHit) {
-          const inCell = cell.contains(blockHit);
-          console.log('🔥 blockHit in cell:', inCell);
-          if (inCell) return;
-        }
-        const date = cell.getAttribute('data-date');
-        const propId = cell.getAttribute('data-property-id');
-        console.log('🔥 Ouverture modal date:', date, 'prop:', propId);
-        if (date && typeof openBlockModal === 'function') {
-          openBlockModal(date, propId);
+      // Fix Safari: utiliser onclick directement sur l'élément
+      cell.onclick = function(ev) {
+        console.log('🔥 CELL ONCLICK - date:', dateStr);
+        var blockHit = ev.target.closest ? ev.target.closest('.booking-block') : null;
+        if (blockHit && cell.contains(blockHit)) return;
+        console.log('🔥 Ouverture modal date:', dateStr, 'prop:', property.id);
+        if (typeof window.openBlockModal === 'function') {
+          window.openBlockModal(dateStr, property.id);
         } else {
-          console.log('🔥 openBlockModal type:', typeof openBlockModal);
+          console.log('🔥 openBlockModal introuvable, type:', typeof window.openBlockModal);
         }
-      });
+      };
 
       return cell;
     }
@@ -6569,12 +6562,9 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
       
       if (calendarBody) {
         calendarBody.addEventListener('click', function(e) {
-          const blockHit = e.target.closest('.booking-block');
+          if (e.target.closest('.booking-block')) return;
+          
           const cell = e.target.closest('.calendar-cell');
-          
-          // Si on clique sur un bloc qui appartient à cette cellule, ne pas ouvrir le modal
-          if (blockHit && cell && cell.contains(blockHit)) return;
-          
           if (cell) {
             const date = cell.getAttribute('data-date');
             const row = cell.closest('.calendar-row, [data-property-id]');
