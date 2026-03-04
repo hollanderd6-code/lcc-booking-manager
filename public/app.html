@@ -8116,7 +8116,7 @@ html[data-theme-v3="1"] main.main-content {
     margin-bottom: 0 !important;
   }
 
-  /* Compenser la hauteur du header fixe (72px) dans le contenu */
+  /* Compenser la hauteur du header fixe dans le contenu */
   html[data-theme-v3="1"] .page-content {
     padding-top: 72px !important;
   }
@@ -9937,6 +9937,26 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() { reapplyOrderToDOM(); }, 800);
   setTimeout(function() { reapplyOrderToDOM(); }, 2000);
 });
+</script>
+
+<script>
+(function adjustPageContentPadding() {
+  function apply() {
+    var header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
+    var pageContent = document.querySelector('.page-content');
+    if (header && pageContent && window.innerWidth > 768) {
+      var h = header.getBoundingClientRect().height;
+      if (h > 0) pageContent.style.setProperty('padding-top', h + 'px', 'important');
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply);
+  } else {
+    apply();
+  }
+  setTimeout(apply, 100);
+  window.addEventListener('resize', apply);
+})();
 </script>
 </body>
 </html>
