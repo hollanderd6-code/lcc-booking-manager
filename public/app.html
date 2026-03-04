@@ -5920,7 +5920,11 @@ window.LCC_PROPERTIES = properties;
       if (isToday(dateObj)) cell.classList.add('today');
 
       cell.addEventListener('click', function(ev) {
-        if (ev.target.closest('.booking-block')) return; // laisser le booking-block gérer
+        const blockHit = ev.target.closest('.booking-block');
+        if (blockHit) {
+          // Vérifier si le bloc est dans CETTE cellule (pas un débordement d'une cellule voisine)
+          if (cell.contains(blockHit)) return;
+        }
         const date = cell.getAttribute('data-date');
         const propId = cell.getAttribute('data-property-id');
         if (date && typeof openBlockModal === 'function') {
@@ -6556,9 +6560,12 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
       
       if (calendarBody) {
         calendarBody.addEventListener('click', function(e) {
-          if (e.target.closest('.booking-block')) return;
-          
+          const blockHit = e.target.closest('.booking-block');
           const cell = e.target.closest('.calendar-cell');
+          
+          // Si on clique sur un bloc qui appartient à cette cellule, ne pas ouvrir le modal
+          if (blockHit && cell && cell.contains(blockHit)) return;
+          
           if (cell) {
             const date = cell.getAttribute('data-date');
             const row = cell.closest('.calendar-row, [data-property-id]');
@@ -6575,7 +6582,7 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
     }, 1000);
   });
   
-  function openBlockModal(date, propertyId) {
+  window.openBlockModal = function openBlockModal(date, propertyId) {
     const modal = document.getElementById('blockModal');
     const startDate = document.getElementById('blockStartDate');
     const endDate = document.getElementById('blockEndDate');
@@ -8636,9 +8643,16 @@ function renderCleaningChecklists() {
     const formattedDate = checkoutDateStr ? formatChecklistDate(checkoutDateStr) : 'Date inconnue';
     
     // Label de fraîcheur
+    const tomorrowDate = new Date(today);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = localDateStr(tomorrowDate);
     let freshLabel = '';
-    if (checkoutDateStr >= todayStr) {
+    if (checkoutDateStr === todayStr) {
       freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#fee2e2; color:#dc2626; font-weight:700; margin-left:6px;">Aujourd\'hui</span>';
+    } else if (checkoutDateStr === tomorrowStr) {
+      freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#dcfce7; color:#16a34a; font-weight:700; margin-left:6px;">Demain</span>';
+    } else if (checkoutDateStr > tomorrowStr) {
+      // date future (après demain) — pas de badge
     } else if (checkoutDateStr >= day1Str) {
       freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#fef3c7; color:#b45309; font-weight:700; margin-left:6px;">Hier</span>';
     } else if (checkoutDateStr >= day2Str) {
