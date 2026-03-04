@@ -85,7 +85,19 @@ function mapEventToReservation(ev, source) {
   // On les GARDE dans le flux iCal pour que la détection d'annulation fonctionne
   // (quand une vraie résa disparaît du flux, cancelledForProperty la détecte)
   // mais on les marque isBlock=true pour ne PAS les insérer en DB comme résas voyageurs
-  const isAirbnbBlock = source === 'AIRBNB' && summaryLower.includes('not available');
+  // Durée de l'événement en jours
+  const startMoment = moment(ev.start);
+  const endMoment = moment(ev.end);
+  const durationDays = endMoment.diff(startMoment, 'days');
+
+  // Blocage Airbnb si : 'not available' OU durée > 60 jours (bloc de disponibilité)
+  const isAirbnbBlock = source === 'AIRBNB' && (
+    summaryLower.includes('not available') ||
+    durationDays > 60
+  );
+  if (isAirbnbBlock && durationDays > 60) {
+    console.log("⚠️ Bloc Airbnb longue durée détecté (" + durationDays + "j): " + summary);
+  }
   
   // ✅ Pour Booking : "CLOSED - Not available" = vraie réservation
   // On garde ces événements et on les marque comme réservations Booking
