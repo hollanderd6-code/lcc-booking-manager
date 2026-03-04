@@ -2421,7 +2421,7 @@ function formatDateFr(dateStr) {
               </button>
             </div>
             ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
-            ${taskUrl ? `<div style="font-size:12px; margin-top:8px;"><a href="${taskUrl}" target="_blank" style="color: #667eea; text-decoration: none;"><i class="fas fa-external-link-alt"></i> Lien d'accès aux tâches</a></div>` : ''}
+            ${taskUrl ? `<div style="margin-top:10px;"><a href="${taskUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:#ede9fe; color:#7c3aed; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; -webkit-tap-highlight-color:transparent;"><i class="fas fa-external-link-alt"></i> Accéder aux tâches</a></div>` : ''}
             ${c.pin_code ? `<div style="font-size:12px; margin-top:4px; display:flex; gap:8px; flex-wrap:wrap;">
               <span style="color:var(--text-secondary);"><i class="fas fa-qrcode"></i> PIN: <strong>${c.pin_code}</strong></span>
             </div>` : ''}
