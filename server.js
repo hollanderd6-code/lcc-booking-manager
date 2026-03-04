@@ -5407,6 +5407,16 @@ if (!MANUAL_RESERVATIONS[propertyId]) {
 }
 MANUAL_RESERVATIONS[propertyId].push(reservation);
 console.log('✅ Ajouté à MANUAL_RESERVATIONS');
+
+// 🔥 AJOUTER AUSSI DANS reservationsStore pour que cleaning-tasks le voie immédiatement
+if (!reservationsStore.properties[propertyId]) {
+  reservationsStore.properties[propertyId] = [];
+}
+// Eviter les doublons
+if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
+  reservationsStore.properties[propertyId].push(reservation);
+  console.log('✅ Ajouté à reservationsStore');
+}
     setImmediate(() => syncAllCalendars());
     // Réponse au client AVANT les notifications
     res.status(201).json({
