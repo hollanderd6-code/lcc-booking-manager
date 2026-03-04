@@ -6555,6 +6555,11 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
   
   // Listener sur document entier — fonctionne peu importe quand le calendrier se rend
   document.addEventListener('click', function(e) {
+    // Log TOUT clic pour diagnostic
+    var inCalendar = e.target.closest('#calendarGrid, .calendar-grid, .calendar-grid-wrapper');
+    if (inCalendar) {
+      console.log('🖱️ CLIC dans calendrier - target:', e.target.tagName, e.target.className);
+    }
     if (e.target.closest('.booking-block')) return;
     const cell = e.target.closest('.calendar-cell');
     if (!cell) return;
