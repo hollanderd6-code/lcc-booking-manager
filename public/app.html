@@ -8969,6 +8969,11 @@ if (document.readyState === 'loading') {
     'gap:6px','padding:0 16px','height:40px','box-sizing:border-box'
   ].join(';');
 
+  /* Masquer sur mobile */
+  var mobileStyle = document.createElement('style');
+  mobileStyle.textContent = '@media (max-width: 768px) { #bhDemoNav { display: none !important; } body { padding-top: 0 !important; } }';
+  document.head.appendChild(mobileStyle);
+
   var html = '<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-right:4px;flex-shrink:0;">Vue</span>';
   PAGES.forEach(function(p){
     var active = p.p === curPage || curPath === p.h.toLowerCase();
