@@ -9724,13 +9724,13 @@ function applyPropertyOrder(props) {
   }, 300);
 
   // Observe les changements du calendrier pour réappliquer l\'ordre
-  const observer = new MutationObserver(function() {
-    setTimeout(reapplyOrderToDOM, 50);
-  });
+  // On n'observe PAS calendarGrid : le MutationObserver déclenchait
+  // reapplyOrderToDOM() à chaque clic sur une cellule, cassant les listeners
   document.addEventListener('DOMContentLoaded', function() {
-    const grid = document.getElementById('calendarGrid');
     const list = document.getElementById('propertyList');
-    if (grid) observer.observe(grid, { childList: true });
+    const observer = new MutationObserver(function() {
+      setTimeout(reapplyOrderToDOM, 50);
+    });
     if (list) observer.observe(list, { childList: true });
   });
 })();
