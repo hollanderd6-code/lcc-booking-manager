@@ -8699,16 +8699,44 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
       [cleaner.id]
     );
     
-    if (assignmentsResult.rows.length === 0) {
+    // Récupérer aussi les logements où ce cleaner est le cleaner par défaut
+    const defaultPropertiesResult = await pool.query(
+      'SELECT property_id FROM property_default_cleaners WHERE cleaner_id =  AND user_id = ',
+      [cleaner.id, cleaner.user_id]
+    );
+
+    const now = new Date();
+    const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
+    const todayStr = now.toISOString().slice(0, 10);
+
+    // Construire une map des assignations explicites (reservation_key → true) pour éviter les doublons
+    const explicitKeys = new Set(assignmentsResult.rows.map(a => a.reservation_key).filter(Boolean));
+
+    // Ajouter les résas futures des logements par défaut (sans assignation explicite)
+    const defaultAssignments = [];
+    for (const row of defaultPropertiesResult.rows) {
+      const propId = row.property_id;
+      const propReservations = reservationsStore.properties[propId] || [];
+      for (const r of propReservations) {
+        const rEnd = String(r.end || '').slice(0, 10);
+        const rStart = String(r.start || '').slice(0, 10);
+        if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
+        const rKey = propId + '_' + rStart + '_' + rEnd;
+        if (explicitKeys.has(rKey)) continue; // déjà dans les assignations explicites
+        defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
+      }
+    }
+
+    const allAssignments = [...assignmentsResult.rows, ...defaultAssignments];
+
+    if (allAssignments.length === 0) {
       return res.json({ tasks: [], cleaner: { id: cleaner.id, name: cleaner.name } });
     }
-    
-    const todayStr = new Date().toISOString().slice(0, 10);
-    
-    // Construire la liste des tâches uniquement pour les réservations assignées
+
+    // Construire la liste des tâches
     const tasks = [];
-    
-    for (const assignment of assignmentsResult.rows) {
+
+    for (const assignment of allAssignments) {
       const { reservation_key, property_id } = assignment;
       console.log('🔍 Assignment:', { reservation_key, property_id });
   console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
