@@ -5920,15 +5920,22 @@ window.LCC_PROPERTIES = properties;
       if (isToday(dateObj)) cell.classList.add('today');
 
       cell.addEventListener('click', function(ev) {
+        console.log('🔥 CELL CLICK - target:', ev.target.tagName, ev.target.className);
+        console.log('🔥 CELL CLICK - cell date:', cell.getAttribute('data-date'));
         const blockHit = ev.target.closest('.booking-block');
+        console.log('🔥 blockHit:', blockHit ? 'OUI ' + blockHit.className : 'NON');
         if (blockHit) {
-          // Vérifier si le bloc est dans CETTE cellule (pas un débordement d'une cellule voisine)
-          if (cell.contains(blockHit)) return;
+          const inCell = cell.contains(blockHit);
+          console.log('🔥 blockHit in cell:', inCell);
+          if (inCell) return;
         }
         const date = cell.getAttribute('data-date');
         const propId = cell.getAttribute('data-property-id');
+        console.log('🔥 Ouverture modal date:', date, 'prop:', propId);
         if (date && typeof openBlockModal === 'function') {
           openBlockModal(date, propId);
+        } else {
+          console.log('🔥 openBlockModal type:', typeof openBlockModal);
         }
       });
 
