@@ -9508,7 +9508,7 @@ app.put('/api/cleaning/checklists/:id/validate',
         }
 
         // Si cleaner est un sous-compte → notif sur son token de sous-compte
-        const cleanerSubRow = await pool.query('SELECT uft.fcm_token FROM cleaners c JOIN sub_accounts sa ON sa.id = c.sub_account_id JOIN user_fcm_tokens uft ON uft.sub_account_id = sa.id WHERE c.id =  AND uft.fcm_token IS NOT NULL', [cl.cleaner_id]);
+        const cleanerSubRow = await pool.query('SELECT uft.fcm_token FROM cleaners c JOIN sub_accounts sa ON sa.id = c.sub_account_id JOIN user_fcm_tokens uft ON uft.sub_account_id = sa.id WHERE c.id = $1 AND uft.fcm_token IS NOT NULL', [cl.cleaner_id]);
         for (const row of cleanerSubRow.rows) {
           await sendNotification(
             row.fcm_token,
@@ -9518,8 +9518,18 @@ app.put('/api/cleaning/checklists/:id/validate',
           );
         }
         if (cleanerSubRow.rows.length > 0) console.log(`📱 Notif validation envoyée au sous-compte cleaner`);
+
+        // 🔔 Notif sous-comptes manager (can_view_cleaning) — checklist validée
+        await sendNotificationToSubAccountsOf(
+          userId, 'can_view_cleaning',
+          '✅ Ménage validé — ' + propertyName,
+          'Le ménage du ' + checkoutFmt + ' a été validé.',
+          { type: 'cleaning_validated', checklistId: String(id), propertyId: cl.property_id },
+          'notif_sub_cleaning_completed'
+        );
+        console.log(`📨 Notif validation envoyée aux sous-comptes managers`);
       } catch(notifErr) {
-        console.error('❌ Erreur notif validation cleaner:', notifErr.message);
+        console.error('❌ Erreur notif validation cleaner:', notifErr.message, notifErr.stack?.split('\n')[1]);
       }
 
       res.json({ success: true, checklist: result.rows[0] });
