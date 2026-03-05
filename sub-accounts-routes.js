@@ -235,7 +235,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           notif_sub_cleaning_completed = $28,
           notif_sub_deposit_paid = $29,
           notif_sub_payment_received = $30,
-          notif_sub_new_message = $31
+          notif_sub_new_message = $31,
+          notif_sub_daily_summary = $32
         WHERE sub_account_id = $16
       `, [
         finalPermissions.can_view_calendar,
@@ -268,7 +269,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         notifications.notif_sub_cleaning_completed || false,
         notifications.notif_sub_deposit_paid || false,
         notifications.notif_sub_payment_received || false,
-        notifications.notif_sub_new_message || false
+        notifications.notif_sub_new_message || false,
+        notifications.notif_sub_daily_summary || false
       ]);
 
       if (propertyIds && propertyIds.length > 0) {
@@ -442,7 +444,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
              notif_sub_cleaning_completed = $28,
              notif_sub_deposit_paid = $29,
              notif_sub_payment_received = $30,
-             notif_sub_new_message = $31
+             notif_sub_new_message = $31,
+             notif_sub_daily_summary = $32
          WHERE sub_account_id = $16`,
         [
           finalPermissions.can_view_calendar,
@@ -475,7 +478,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           notifications.notif_sub_cleaning_completed || false,
           notifications.notif_sub_deposit_paid || false,
           notifications.notif_sub_payment_received || false,
-          notifications.notif_sub_new_message || false
+          notifications.notif_sub_new_message || false,
+          notifications.notif_sub_daily_summary || false
         ]
       );
       
@@ -559,6 +563,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
           sp.notif_sub_deposit_paid,
           sp.notif_sub_payment_received,
           sp.notif_sub_new_message,
+          sp.notif_sub_daily_summary,
           
           -- Propriétés accessibles (array de TEXT/VARCHAR, pas INTEGER)
           COALESCE(
@@ -594,7 +599,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
         notif_sub_cleaning_completed: row.notif_sub_cleaning_completed || false,
         notif_sub_deposit_paid: row.notif_sub_deposit_paid || false,
         notif_sub_payment_received: row.notif_sub_payment_received || false,
-        notif_sub_new_message: row.notif_sub_new_message || false
+        notif_sub_new_message: row.notif_sub_new_message || false,
+        notif_sub_daily_summary: row.notif_sub_daily_summary || false
       }));
 
       res.json({
@@ -747,7 +753,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
             notif_sub_cleaning_completed: subAccount.notif_sub_cleaning_completed || false,
             notif_sub_deposit_paid: subAccount.notif_sub_deposit_paid || false,
             notif_sub_payment_received: subAccount.notif_sub_payment_received || false,
-            notif_sub_new_message: subAccount.notif_sub_new_message || false
+            notif_sub_new_message: subAccount.notif_sub_new_message || false,
+            notif_sub_daily_summary: subAccount.notif_sub_daily_summary || false
           }
         }
       });
