@@ -4449,25 +4449,21 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
     if (!v) return null;
     const s = String(v);
     
-    // Format ISO YYYY-MM-DD ou YYYY-MM-DDTHH:... → toujours prendre les 10 premiers chars
-    // IMPORTANT: ne JAMAIS passer par new Date() car UTC→local décale d'un jour en France
+    // Si c\'est déjà au format ISO (YYYY-MM-DD)
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
       return s.slice(0, 10);
     }
     
-    // Format français DD/MM/YYYY
+    // Si c\'est au format français (DD/MM/YYYY)
     const frMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
     if (frMatch) {
-      return `${frMatch[3]}-${frMatch[2]}-${frMatch[1]}`;
+      return `${frMatch[3]}-${frMatch[2]}-${frMatch[1]}`; // Convertir en ISO
     }
     
-    // Dernier recours : parser mais extraire en local
+    // Sinon essayer de parser comme date
     const d = new Date(s);
     if (!isNaN(d.getTime())) {
-      const y = d.getFullYear();
-      const m = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
-      return `${y}-${m}-${dd}`;
+      return d.toISOString().slice(0, 10);
     }
     
     return s.slice(0, 10);
@@ -4509,16 +4505,10 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
   }
   function parseDateSafe(v) {
     if (!v) return null;
+    // if "YYYY-MM-DD", create local date (avoids timezone surprises)
     const s = String(v);
-    // YYYY-MM-DD → date locale, pas de décalage UTC
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
       const [y,m,dd] = s.split('-').map(Number);
-      return new Date(y, m-1, dd, 0, 0, 0, 0);
-    }
-    // YYYY-MM-DDTHH:... → extraire juste la partie date et créer en local
-    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
-      const datePart = s.slice(0, 10);
-      const [y,m,dd] = datePart.split('-').map(Number);
       return new Date(y, m-1, dd, 0, 0, 0, 0);
     }
     const d = new Date(v);
