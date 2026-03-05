@@ -1492,22 +1492,46 @@ async function shouldSendNotification(userId, prefKey) {
 // requiredPermission : colonne permission (ex: 'can_view_calendar')
 // notifColumn (optionnel) : colonne notif_sub_* à vérifier en plus
 // ============================================================
-async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn) {
+async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn, propertyId) {
   data = data || {};
+  // Extraire propertyId depuis data si non fourni explicitement
+  const resolvedPropertyId = propertyId || data.propertyId || null;
   try {
-    console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn);
+    console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn, '| propertyId:', resolvedPropertyId);
 
-    let q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
-       FROM user_fcm_tokens uft
-       JOIN sub_accounts sa ON sa.id = uft.sub_account_id
-       JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
-       WHERE sa.parent_user_id = $1
-         AND sa.is_active = TRUE
-         AND uft.sub_account_id IS NOT NULL
-         AND uft.fcm_token IS NOT NULL
-         AND sap.` + requiredPermission + ` = TRUE`;
-    if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
-    const result = await pool.query(q, [parentUserId]);
+    let q, params;
+    if (resolvedPropertyId) {
+      // Filtrer : le sous-compte doit avoir accès au logement concerné
+      // Si sub_account_properties est vide pour ce sous-compte → accès à tout
+      q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
+         FROM user_fcm_tokens uft
+         JOIN sub_accounts sa ON sa.id = uft.sub_account_id
+         JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
+         WHERE sa.parent_user_id = $1
+           AND sa.is_active = TRUE
+           AND uft.sub_account_id IS NOT NULL
+           AND uft.fcm_token IS NOT NULL
+           AND sap.` + requiredPermission + ` = TRUE
+           AND (
+             NOT EXISTS (SELECT 1 FROM sub_account_properties WHERE sub_account_id = sa.id)
+             OR EXISTS (SELECT 1 FROM sub_account_properties WHERE sub_account_id = sa.id AND property_id = $2)
+           )`;
+      if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
+      params = [parentUserId, resolvedPropertyId];
+    } else {
+      q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
+         FROM user_fcm_tokens uft
+         JOIN sub_accounts sa ON sa.id = uft.sub_account_id
+         JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
+         WHERE sa.parent_user_id = $1
+           AND sa.is_active = TRUE
+           AND uft.sub_account_id IS NOT NULL
+           AND uft.fcm_token IS NOT NULL
+           AND sap.` + requiredPermission + ` = TRUE`;
+      if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
+      params = [parentUserId];
+    }
+    const result = await pool.query(q, params);
     console.log('🔍 [SubNotif] rows found:', result.rows.length);
 
     if (result.rows.length === 0) {
@@ -5487,7 +5511,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
                 user.id, 'can_view_calendar',
                 '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + property.name,
                 property.name + ' \u00B7 ' + checkInDate + ' au ' + checkOutDate,
-                { type: 'new_reservation', reservation_id: uid },
+                { type: 'new_reservation', reservation_id: uid, propertyId: String(propertyId) },
                 'notif_sub_new_reservation'
               );
             } catch(_e) { console.error('Notif sous-comptes r\u00E9sa manuelle:', _e.message); }
@@ -6181,10 +6205,7 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
           user.id, 'can_view_calendar',
           '❌ Réservation annulée',
           propertyName + ' - ' + cancelDate,
-          { type: 'reservation_cancelled', reservation_id: uid },
-          'notif_sub_reservation_cancelled'
-        );
-      } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
+          { type: 'reservation_cancelled', reservation_id: uid, propertyId: String(deletedReservation?.property_id || '') },
     }
     
     // ✅ Forcer la resynchronisation
@@ -14810,10 +14831,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
               user.id, 'can_view_calendar',
               '❌ Réservation annulée — ' + property.name,
               property.name + ' - ' + cancelDate,
-              { type: 'reservation_cancelled', reservation_id: uid },
-              'notif_sub_reservation_cancelled'
-            );
-          } catch(_e) { console.error('Notif sous-comptes annulation delete:', _e.message); }
+              { type: 'reservation_cancelled', reservation_id: uid, propertyId: String(deletedReservation?.property_id || property?.id || '') },
 
         } catch (notifError) {
           console.error('❌ Erreur notification annulation:', notifError.message);
