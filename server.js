@@ -9577,7 +9577,7 @@ app.put('/api/cleaning/checklists/:id/validate',
         const checkoutFmt = cl.checkout_date ? new Date(cl.checkout_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
 
         // Token FCM du cleaner (via user_fcm_tokens lié au cleaner)
-        const cleanerRow = await pool.query('SELECT c.user_id, c.name, uft.fcm_token FROM cleaners c LEFT JOIN user_fcm_tokens uft ON uft.user_id = c.user_id WHERE c.id =  LIMIT 1', [cl.cleaner_id]);
+        const cleanerRow = await pool.query('SELECT c.user_id, c.name, uft.fcm_token FROM cleaners c LEFT JOIN user_fcm_tokens uft ON uft.user_id = c.user_id WHERE c.id = $1 LIMIT 1', [cl.cleaner_id]);
         if (cleanerRow.rows.length > 0 && cleanerRow.rows[0].fcm_token) {
           await sendNotification(
             cleanerRow.rows[0].fcm_token,
