@@ -1492,46 +1492,22 @@ async function shouldSendNotification(userId, prefKey) {
 // requiredPermission : colonne permission (ex: 'can_view_calendar')
 // notifColumn (optionnel) : colonne notif_sub_* à vérifier en plus
 // ============================================================
-async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn, propertyId) {
+async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn) {
   data = data || {};
-  // Extraire propertyId depuis data si non fourni explicitement
-  const resolvedPropertyId = propertyId || data.propertyId || null;
   try {
-    console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn, '| propertyId:', resolvedPropertyId);
+    console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn);
 
-    let q, params;
-    if (resolvedPropertyId) {
-      // Filtrer : le sous-compte doit avoir accès au logement concerné
-      // Si sub_account_properties est vide pour ce sous-compte → accès à tout
-      q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
-         FROM user_fcm_tokens uft
-         JOIN sub_accounts sa ON sa.id = uft.sub_account_id
-         JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
-         WHERE sa.parent_user_id = $1
-           AND sa.is_active = TRUE
-           AND uft.sub_account_id IS NOT NULL
-           AND uft.fcm_token IS NOT NULL
-           AND sap.` + requiredPermission + ` = TRUE
-           AND (
-             NOT EXISTS (SELECT 1 FROM sub_account_properties WHERE sub_account_id = sa.id)
-             OR EXISTS (SELECT 1 FROM sub_account_properties WHERE sub_account_id = sa.id AND property_id = $2)
-           )`;
-      if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
-      params = [parentUserId, resolvedPropertyId];
-    } else {
-      q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
-         FROM user_fcm_tokens uft
-         JOIN sub_accounts sa ON sa.id = uft.sub_account_id
-         JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
-         WHERE sa.parent_user_id = $1
-           AND sa.is_active = TRUE
-           AND uft.sub_account_id IS NOT NULL
-           AND uft.fcm_token IS NOT NULL
-           AND sap.` + requiredPermission + ` = TRUE`;
-      if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
-      params = [parentUserId];
-    }
-    const result = await pool.query(q, params);
+    let q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
+       FROM user_fcm_tokens uft
+       JOIN sub_accounts sa ON sa.id = uft.sub_account_id
+       JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
+       WHERE sa.parent_user_id = $1
+         AND sa.is_active = TRUE
+         AND uft.sub_account_id IS NOT NULL
+         AND uft.fcm_token IS NOT NULL
+         AND sap.` + requiredPermission + ` = TRUE`;
+    if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
+    const result = await pool.query(q, [parentUserId]);
     console.log('🔍 [SubNotif] rows found:', result.rows.length);
 
     if (result.rows.length === 0) {
@@ -5511,7 +5487,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
                 user.id, 'can_view_calendar',
                 '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + property.name,
                 property.name + ' \u00B7 ' + checkInDate + ' au ' + checkOutDate,
-                { type: 'new_reservation', reservation_id: uid, propertyId: String(propertyId) },
+                { type: 'new_reservation', reservation_id: uid },
                 'notif_sub_new_reservation'
               );
             } catch(_e) { console.error('Notif sous-comptes r\u00E9sa manuelle:', _e.message); }
@@ -6205,7 +6181,7 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
           user.id, 'can_view_calendar',
           '❌ Réservation annulée',
           propertyName + ' - ' + cancelDate,
-          { type: 'reservation_cancelled', reservation_id: uid, propertyId: String(deletedReservation?.property_id || '') },
+          { type: 'reservation_cancelled', reservation_id: uid },
           'notif_sub_reservation_cancelled'
         );
       } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
@@ -9601,7 +9577,7 @@ app.put('/api/cleaning/checklists/:id/validate',
         const checkoutFmt = cl.checkout_date ? new Date(cl.checkout_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
 
         // Token FCM du cleaner (via user_fcm_tokens lié au cleaner)
-        const cleanerRow = await pool.query('SELECT c.user_id, c.name, uft.fcm_token FROM cleaners c LEFT JOIN user_fcm_tokens uft ON uft.user_id = c.user_id WHERE c.id = $1 LIMIT 1', [cl.cleaner_id]);
+        const cleanerRow = await pool.query('SELECT c.user_id, c.name, uft.fcm_token FROM cleaners c LEFT JOIN user_fcm_tokens uft ON uft.user_id = c.user_id WHERE c.id =  LIMIT 1', [cl.cleaner_id]);
         if (cleanerRow.rows.length > 0 && cleanerRow.rows[0].fcm_token) {
           await sendNotification(
             cleanerRow.rows[0].fcm_token,
@@ -14834,10 +14810,11 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
               user.id, 'can_view_calendar',
               '❌ Réservation annulée — ' + property.name,
               property.name + ' - ' + cancelDate,
-              { type: 'reservation_cancelled', reservation_id: uid, propertyId: String(deletedReservation?.property_id || property?.id || '') },
+              { type: 'reservation_cancelled', reservation_id: uid },
               'notif_sub_reservation_cancelled'
             );
           } catch(_e) { console.error('Notif sous-comptes annulation delete:', _e.message); }
+
         } catch (notifError) {
           console.error('❌ Erreur notification annulation:', notifError.message);
         }
@@ -15940,161 +15917,152 @@ console.log('CRON job messages arrivee configure (tous les jours a 7h)');
 // CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
 // ============================================
 cron.schedule('0 8 * * *', async () => {
-  console.log('========================================');
-  console.log('🔔 CRON 8H: Envoi des notifications quotidiennes');
-  console.log(`🕐 Heure serveur: ${new Date().toISOString()}`);
-  console.log(`🕐 Heure Paris: ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}`);
-  console.log('========================================');
+  console.log('======================================== CRON 8H ========================================');
+  console.log('CRON 8H: Envoi des notifications quotidiennes');
+  console.log('Heure Paris: ' + new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }));
   try {
-    // Recuperer tous les utilisateurs avec token FCM
-    const usersResult = await pool.query(
-      `SELECT DISTINCT u.id 
-       FROM users u 
-       JOIN user_fcm_tokens t ON u.id = t.user_id 
-       WHERE t.fcm_token IS NOT NULL`
-    );
-    
-    console.log(`🔔 ${usersResult.rows.length} utilisateur(s) avec token FCM`);
-    
-    for (const user of usersResult.rows) {
-      // Recuperer TOUS les tokens de l'utilisateur
-      const tokensResult = await pool.query(
-        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
-        [user.id]
-      );
-      
-      if (tokensResult.rows.length === 0) continue;
-      
-      // ✅ Date Paris correcte — toISOString() est toujours UTC, on utilise Intl.DateTimeFormat
-      // fr-CA retourne "YYYY-MM-DD" nativement, contrairement à fr-FR qui retourne "DD/MM/YYYY"
-      const todayStr = new Intl.DateTimeFormat('fr-CA', {
-        timeZone: 'Europe/Paris',
-        year: 'numeric', month: '2-digit', day: '2-digit'
-      }).format(new Date()); // ex: "2026-02-24" - toujours en heure Paris
-      
-      // Arrivees du jour
+    const todayStr = new Intl.DateTimeFormat('fr-CA', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
+
+    // Fonction helper : envoyer le resume quotidien a un destinataire
+    // parentUserId : proprietaire des logements (pour la requete SQL)
+    // tokens       : [{fcm_token}]
+    // allowedPropertyIds : null = tous les logements, sinon filtre
+    // notifUserId  : id utilise pour shouldSendNotification
+    async function sendDailySummaryTo(parentUserId, tokens, allowedPropertyIds, notifUserId) {
+      const propertyFilter = (allowedPropertyIds && allowedPropertyIds.length > 0)
+        ? 'AND p.id = ANY($3::text[])'
+        : '';
+      const params = (allowedPropertyIds && allowedPropertyIds.length > 0)
+        ? [parentUserId, todayStr, allowedPropertyIds]
+        : [parentUserId, todayStr];
+
+      // Arrivees
       const arrivalsResult = await pool.query(
-        `SELECT DISTINCT ON (r.id) 
-          r.id, r.uid, r.property_id, r.start_date, r.end_date,
-          r.source, r.platform, r.status,
-          
+        `SELECT DISTINCT ON (r.id)
+          r.id, r.property_id, r.start_date,
           COALESCE(
-            NULLIF(TRIM(COALESCE(c.guest_first_name, '') || ' ' || COALESCE(c.guest_last_name, '')), ''),
+            NULLIF(TRIM(COALESCE(c.guest_first_name,'') || ' ' || COALESCE(c.guest_last_name,'')), ''),
             r.guest_name,
             'Voyageur ' || COALESCE(r.source, 'direct')
           ) as guest_name,
-          
-          COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
-          
-          CASE 
-            WHEN c.guest_first_name IS NOT NULL AND c.guest_first_name != ''
-            THEN LEFT(UPPER(c.guest_first_name), 1)
-            ELSE 'V'
-          END as guest_initial,
-          
-          p.name as property_name,
-          p.color as property_color
-          
+          p.name as property_name
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
-         LEFT JOIN conversations c ON (
-           c.property_id = r.property_id 
-           AND DATE(c.reservation_start_date) = DATE(r.start_date)
-         )
-         WHERE p.user_id = $1 
+         LEFT JOIN conversations c ON (c.property_id = r.property_id AND DATE(c.reservation_start_date) = DATE(r.start_date))
+         WHERE p.user_id = $1
          AND DATE(r.start_date) = $2
          AND r.status != 'cancelled'
+         ${propertyFilter}
          ORDER BY r.id`,
-        [user.id, todayStr]
+        params
       );
-      
       const arrivalsCount = arrivalsResult.rows.length;
-      const arrivalsText = arrivalsCount > 0 
+      const arrivalsText = arrivalsCount > 0
         ? arrivalsResult.rows.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join(', ')
-        : 'Aucune arrivée prévue';
-      
-      console.log(`🔔 User ${user.id}: ${arrivalsCount} arrivée(s) - ${arrivalsText}`);
-      
-      // Envoyer a TOUS les appareils
-      if (await shouldSendNotification(user.id, 'notif_daily_summary')) {
-      for (const token of tokensResult.rows) {
-        try {
-          await sendNotification(
-            token.fcm_token,
-            `📥 ${arrivalsCount} arrivée(s) aujourd'hui`,
-            arrivalsText,
-            { type: 'daily_arrivals', count: arrivalsCount.toString() }
-          );
-        } catch (notifErr) {
-          console.error(`❌ Erreur envoi notif arrivées (token ${token.fcm_token.substring(0, 20)}...):`, notifErr.message);
+        : 'Aucune arrivee prevue';
+
+      console.log('CRON 8H user ' + parentUserId + ' (notif:' + notifUserId + '): ' + arrivalsCount + ' arrivee(s)');
+
+      if (await shouldSendNotification(notifUserId, 'notif_daily_summary')) {
+        for (const token of tokens) {
+          try {
+            await sendNotification(token.fcm_token,
+              arrivalsCount + ' arrivee(s) aujourd\'hui',
+              arrivalsText,
+              { type: 'daily_arrivals', count: arrivalsCount.toString() });
+          } catch (e) { console.error('Erreur notif arrivees:', e.message); }
         }
       }
-      } // end shouldSendNotification arrivées
-      
-      // Departs du jour
+
+      // Departs
       const departuresResult = await pool.query(
-        `SELECT DISTINCT ON (r.id) 
-          r.id, r.uid, r.property_id, r.start_date, r.end_date,
-          r.source, r.platform, r.status,
-          
-          COALESCE(
-            NULLIF(TRIM(COALESCE(c.guest_first_name, '') || ' ' || COALESCE(c.guest_last_name, '')), ''),
-            r.guest_name,
-            'Voyageur ' || COALESCE(r.source, 'direct')
-          ) as guest_name,
-          
-          COALESCE(c.guest_phone, r.guest_phone) as guest_phone,
-          
-          CASE 
-            WHEN c.guest_first_name IS NOT NULL AND c.guest_first_name != ''
-            THEN LEFT(UPPER(c.guest_first_name), 1)
-            ELSE 'V'
-          END as guest_initial,
-          
-          p.name as property_name,
-          p.color as property_color
-          
+        `SELECT DISTINCT ON (r.id)
+          r.id, r.property_id,
+          p.name as property_name
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
-         LEFT JOIN conversations c ON (
-           c.property_id = r.property_id 
-           AND DATE(c.reservation_start_date) = DATE(r.start_date)
-         )
-         WHERE p.user_id = $1 
+         WHERE p.user_id = $1
          AND DATE(r.end_date) = $2
          AND r.status != 'cancelled'
+         ${propertyFilter}
          ORDER BY r.id`,
-        [user.id, todayStr]
+        params
       );
-      
-      // ✅ DÉDUPLIQUER les logements pour éviter les doublons
-      const uniqueProperties = [...new Set(departuresResult.rows.map(d => d.property_name))];
-      const departuresCount = uniqueProperties.length; // Nombre de LOGEMENTS uniques
+      const uniqueProps = [...new Set(departuresResult.rows.map(d => d.property_name))];
+      const departuresCount = uniqueProps.length;
       const departuresText = departuresCount > 0
-        ? `Ménages à prévoir : ${uniqueProperties.join(', ')}`
-        : 'Aucun départ prévu';
-      
-      console.log(`🔔 User ${user.id}: ${departuresCount} départ(s) unique(s) - ${departuresText}`);
-      
-      // Envoyer a TOUS les appareils
-      if (await shouldSendNotification(user.id, 'notif_daily_summary')) {
-      for (const token of tokensResult.rows) {
-        try {
-          await sendNotification(
-            token.fcm_token,
-            `📤 ${departuresCount} départ(s) aujourd'hui`,
-            departuresText,
-            { type: 'daily_departures', count: departuresCount.toString() }
-          );
-        } catch (notifErr) {
-          console.error(`❌ Erreur envoi notif départs (token ${token.fcm_token.substring(0, 20)}...):`, notifErr.message);
+        ? 'Menages a prevoir : ' + uniqueProps.join(', ')
+        : 'Aucun depart prevu';
+
+      console.log('CRON 8H user ' + parentUserId + ' (notif:' + notifUserId + '): ' + departuresCount + ' depart(s)');
+
+      if (await shouldSendNotification(notifUserId, 'notif_daily_summary')) {
+        for (const token of tokens) {
+          try {
+            await sendNotification(token.fcm_token,
+              departuresCount + ' depart(s) aujourd\'hui',
+              departuresText,
+              { type: 'daily_departures', count: departuresCount.toString() });
+          } catch (e) { console.error('Erreur notif departs:', e.message); }
         }
       }
-      } // end shouldSendNotification
-      
-      console.log(`✅ Notifications quotidiennes envoyées à user ${user.id} (${tokensResult.rows.length} appareil(s))`);
+      console.log('Resume quotidien envoye (' + tokens.length + ' token(s))');
     }
-    
+
+    // 1. Comptes principaux (tokens sans sub_account_id)
+    const usersResult = await pool.query(
+      `SELECT DISTINCT u.id
+       FROM users u
+       JOIN user_fcm_tokens t ON u.id = t.user_id
+       WHERE t.fcm_token IS NOT NULL AND t.sub_account_id IS NULL`
+    );
+    console.log('CRON 8H: ' + usersResult.rows.length + ' compte(s) principal(aux)');
+
+    for (const user of usersResult.rows) {
+      const tokensResult = await pool.query(
+        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1 AND sub_account_id IS NULL',
+        [user.id]
+      );
+      if (tokensResult.rows.length === 0) continue;
+      await sendDailySummaryTo(user.id, tokensResult.rows, null, user.id);
+    }
+
+    // 2. Sous-comptes : filtres par logements autorises
+    const subAccountsResult = await pool.query(
+      `SELECT sa.id as sub_account_id, sa.parent_user_id, uft.fcm_token
+       FROM sub_accounts sa
+       JOIN user_fcm_tokens uft ON uft.sub_account_id = sa.id
+       JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id
+       WHERE sa.is_active = TRUE
+         AND uft.fcm_token IS NOT NULL
+         AND sap.notif_sub_daily_summary = TRUE`
+    );
+    console.log('CRON 8H: ' + subAccountsResult.rows.length + ' sous-compte(s) avec notif activee');
+
+    // Grouper par sub_account_id
+    const subByAccount = {};
+    for (const row of subAccountsResult.rows) {
+      if (!subByAccount[row.sub_account_id]) {
+        subByAccount[row.sub_account_id] = { parentUserId: row.parent_user_id, tokens: [] };
+      }
+      subByAccount[row.sub_account_id].tokens.push({ fcm_token: row.fcm_token });
+    }
+
+    for (const [subAccountId, data] of Object.entries(subByAccount)) {
+      const propRows = await pool.query(
+        'SELECT property_id FROM sub_account_properties WHERE sub_account_id = $1',
+        [subAccountId]
+      );
+      const allowedPropertyIds = propRows.rows.map(r => r.property_id);
+      // Aucun logement assigne = acces total
+      const filter = allowedPropertyIds.length > 0 ? allowedPropertyIds : null;
+      console.log('CRON 8H sous-compte ' + subAccountId + ' logements: ' + (filter ? filter.join(',') : 'TOUS'));
+      await sendDailySummaryTo(data.parentUserId, data.tokens, filter, subAccountId);
+    }
+
     console.log('✅ CRON 8H terminé: Notifications quotidiennes envoyées');
   } catch (error) {
     console.error('❌ ERREUR CRON 8H notifications:', error);
