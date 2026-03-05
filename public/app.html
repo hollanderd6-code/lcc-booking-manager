@@ -7020,38 +7020,22 @@ try {
           return true;
         }
         
-        // Stratégie 2: Match par checkout_date (formats variés)
+        // Stratégie 2: Match par property_id + checkout_date (les deux obligatoires)
+        const bookingPropId = booking.propertyId || booking.property_id || (booking.property && booking.property.id);
+        const checklistPropId = c.property_id;
         const checkoutDate = booking.checkoutDate || booking.checkout || booking.end || booking.endDate;
-        if (checkoutDate && c.checkout_date) {
-          // Normaliser les dates (enlever l\'heure)
+
+        if (bookingPropId && checklistPropId && bookingPropId === checklistPropId && checkoutDate && c.checkout_date) {
           const normalizeDate = (d) => {
             if (!d) return null;
-            if (typeof d === 'string') {
-              return d.split('T')[0]; // Format ISO
-            }
-            if (d instanceof Date) {
-              return d.toISOString().split('T')[0];
-            }
+            if (typeof d === 'string') return d.split('T')[0];
+            if (d instanceof Date) return d.toISOString().split('T')[0];
             return null;
           };
-          
           const bookingDateNorm = normalizeDate(checkoutDate);
           const checklistDateNorm = normalizeDate(c.checkout_date);
-          
           if (bookingDateNorm === checklistDateNorm) {
-            console.log('✅ Match par checkout_date:', bookingDateNorm);
-            return true;
-          }
-        }
-        
-        // Stratégie 3: Match par property + checkout_date
-        const bookingPropId = booking.propertyId || booking.property_id;
-        const checklistPropId = c.property_id;
-        if (bookingPropId && checklistPropId && bookingPropId === checklistPropId) {
-          const bookingDateNorm = (booking.checkoutDate || booking.checkout || booking.end || '').split('T')[0];
-          const checklistDateNorm = (c.checkout_date || '').split('T')[0];
-          if (bookingDateNorm === checklistDateNorm) {
-            console.log('✅ Match par property_id + checkout_date');
+            console.log('✅ Match par property_id + checkout_date:', bookingPropId, bookingDateNorm);
             return true;
           }
         }
