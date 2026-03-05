@@ -316,7 +316,9 @@ function getSidebarHTML() {
 
 
   function injectMobileTitle() {
-    if (window.innerWidth > 1024) return;
+    // Considérer iPad et tablettes tactiles comme mobile (pointer:coarse = écran tactile)
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    if (window.innerWidth > 1400 && !isTouch) return;
     if (document.getElementById('bh-mobile-page-title')) return;
 
     // Lire le titre depuis data-title ou page
