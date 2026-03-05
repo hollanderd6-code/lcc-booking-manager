@@ -6206,6 +6206,9 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
           '❌ Réservation annulée',
           propertyName + ' - ' + cancelDate,
           { type: 'reservation_cancelled', reservation_id: uid, propertyId: String(deletedReservation?.property_id || '') },
+          'notif_sub_reservation_cancelled'
+        );
+      } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
     }
     
     // ✅ Forcer la resynchronisation
@@ -14832,7 +14835,9 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
               '❌ Réservation annulée — ' + property.name,
               property.name + ' - ' + cancelDate,
               { type: 'reservation_cancelled', reservation_id: uid, propertyId: String(deletedReservation?.property_id || property?.id || '') },
-
+              'notif_sub_reservation_cancelled'
+            );
+          } catch(_e) { console.error('Notif sous-comptes annulation delete:', _e.message); }
         } catch (notifError) {
           console.error('❌ Erreur notification annulation:', notifError.message);
         }
