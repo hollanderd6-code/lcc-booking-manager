@@ -6744,6 +6744,8 @@ app.post('/api/sync', authenticateAny, async (req, res) => {
 
   try {
     const result = await syncAllCalendars();
+    // ✅ Recharger aussi les réservations manuelles/directes depuis la DB
+    await loadReservationsFromDB();
     const userProps = getUserProperties(userId);
 
     res.json({
