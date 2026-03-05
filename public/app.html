@@ -8484,9 +8484,13 @@ async function loadCleaningChecklists() {
     if (window.RESERVATIONS && window.RESERVATIONS.length > 0) {
       cleaningChecklists.forEach(function(cl) {
         if (cl.guest_name && cl.guest_name.trim() !== '') return; // Déjà rempli
-        
+
         // Chercher la réservation correspondante
         var match = window.RESERVATIONS.find(function(r) {
+          // Stratégie 1 : reservation_key exact (le plus fiable)
+          var rKey = r.uid || r.id || r.reservationKey || '';
+          if (cl.reservation_key && rKey && cl.reservation_key === rKey) return true;
+          // Stratégie 2 : property_id + checkout_date (fallback)
           var rPropertyId = r.propertyId || (r.property && r.property.id) || '';
           var rEnd = String(r.end || '').slice(0, 10);
           var clCheckout = cl.checkout_date ? String(cl.checkout_date).slice(0, 10) : '';
