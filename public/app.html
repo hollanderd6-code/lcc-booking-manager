@@ -33,11 +33,14 @@ html[data-theme-v3="1"] .sidebar {
   left: 0 !important; bottom: 0 !important;
   height: auto !important;
 }
+/* Mobile : sticky sous la barre dark (pas de barre dark sur mobile en pratique) */
+@media (max-width: 768px) {
 html[data-theme-v3="1"] header.main-header {
   position: sticky !important;
-  top: 0 !important; /* body a déjà padding-top:40px — sticky à 0 = collé sous la barre dark */
+  top: 0 !important;
   z-index: 50 !important;
   margin-top: 0 !important;
+}
 }
 html[data-theme-v3="1"] main.main-content {
   padding-top: 0 !important;
@@ -9015,10 +9018,12 @@ if (document.readyState === 'loading') {
   function applyV3Styles() {
     var isMobile = window.innerWidth <= 768;
 
-    /* Header sticky top:40px — desktop seulement */
+    /* Header sticky/fixed — CSS s'en charge sur desktop, on gère seulement mobile */
     var header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
-    if (header && !isMobile) {
-      header.style.cssText += ';position:sticky !important;top:40px !important;z-index:50 !important;background:#FAF8F5 !important;border-bottom:1px solid rgba(13,17,23,.09) !important;box-shadow:none !important;';
+    if (header && isMobile) {
+      header.style.cssText += ';position:sticky !important;top:0 !important;z-index:50 !important;background:#FAF8F5 !important;border-bottom:1px solid rgba(13,17,23,.09) !important;box-shadow:0 1px 4px rgba(0,0,0,.06) !important;padding-top:10px !important;padding-bottom:10px !important;';
+      var subtitle = header.querySelector('.page-subtitle');
+      if (subtitle) subtitle.style.display = 'none';
     }
 
     /* Sidebar top:40px — desktop seulement */
