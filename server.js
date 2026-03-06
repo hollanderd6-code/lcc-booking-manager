@@ -13238,9 +13238,12 @@ app.post('/api/invoice/create',
            .text(`${total.toFixed(2)} €`, totX+120, y+10, { width: 88, align: 'right' });
 
         // Pied de page
-        doc.rect(0, H-36, W, 36).fill(GREEN);
-        doc.font('Helvetica').fontSize(8).fillColor('white')
-           .text(emitterName, mg, H-22, { width: W-mg*2, align: 'center' });
+        doc.rect(0, H-44, W, 44).fill(GREEN);
+        // Texte centré
+        doc.font('Helvetica').fontSize(8).fillColor('rgba(255,255,255,0.7)')
+           .text('Facture générée grâce à', mg, H-34, { width: W-mg*2, align: 'center' });
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('white')
+           .text('BoostingHost.fr', mg, H-22, { width: W-mg*2, align: 'center' });
 
         doc.end();
         stream.on('finish', resolve);
@@ -13332,11 +13335,10 @@ app.post('/api/invoice/create',
           </div>
 
           <!-- Pied de page -->
-          <div style="background:#f3f4f6; padding:16px 32px; border-radius:0 0 8px 8px; text-align:center;">
-            <p style="margin:0; font-size:12px; color:#6b7280;">
-              ${emitterNameEmail}
-              ${user.email ? ' · ' + user.email : ''}
-            </p>
+          <div style="background:#1A7A5E; padding:16px 32px; border-radius:0 0 8px 8px; text-align:center;">
+            <p style="margin:0 0 4px; font-size:11px; color:rgba(255,255,255,0.7);">Facture générée grâce à</p>
+            <p style="margin:0; font-size:13px; font-weight:700; color:white; letter-spacing:0.5px;">BoostingHost.fr</p>
+            <p style="margin:6px 0 0; font-size:11px; color:rgba(255,255,255,0.6);">La solution de gestion pour les conciergeries</p>
           </div>
 
         </div>
