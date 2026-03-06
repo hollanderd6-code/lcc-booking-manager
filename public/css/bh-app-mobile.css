@@ -4,7 +4,7 @@
    Ce fichier remplace TOUS les blocs @media inline du fichier HTML
    ================================================================ */
 
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
 
   /* ────────────────────────────────────────────────
      1. LAYOUT GÉNÉRAL
@@ -400,8 +400,7 @@
    DESKTOP : cacher les éléments mobile-only
 ──────────────────────────────────────────────── */
 
-/* Desktop souris uniquement (pointer:fine) — iPad et tablettes tactiles exclus */
-@media (min-width: 769px) and (pointer: fine) {
+@media (min-width: 1367px) {
   .mobile-header,
   .mobile-tabs,
   .mobile-menu-btn {
