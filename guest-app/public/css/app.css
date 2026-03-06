@@ -92,6 +92,35 @@ body {
   box-sizing: border-box;
 }
 
+/* iPad : container plus large */
+@media (min-width: 600px) {
+  .container {
+    max-width: 560px;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+  .card {
+    padding: 40px 36px;
+  }
+  .pin-digit {
+    width: 72px !important;
+    max-width: 72px;
+    height: 72px;
+    font-size: 28px;
+  }
+}
+
+/* Fix inputs date Safari — rectangles coupés */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 52px;
+  color: var(--text);
+  display: block;
+}
+input[type="date"]::-webkit-datetime-edit { color: var(--text); }
+input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; }
+
 .header {
   padding: 24px 0;
   text-align: center;
