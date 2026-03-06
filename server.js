@@ -13039,6 +13039,52 @@ app.post('/api/owner-invoices/:id/credit-note',
 // NOTE : Cette route utilise l'API Brevo au lieu de SMTP
 // car Render bloque parfois le port 587
 
+
+// ============================================
+// GET - Historique des factures
+// ============================================
+app.get('/api/invoice/history',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT invoice_number, file_path, created_at
+       FROM invoice_download_tokens
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 100`,
+      [userId]
+    );
+
+    // Enrichir avec les métadonnées stockées dans file_path (on stocke aussi client/property)
+    const invoices = result.rows.map(row => {
+      let meta = {};
+      try { meta = JSON.parse(row.file_path || '{}'); } catch(e) {}
+      return {
+        invoiceNumber: row.invoice_number,
+        createdAt: row.created_at,
+        clientName: meta.clientName || '',
+        clientEmail: meta.clientEmail || '',
+        propertyName: meta.propertyName || '',
+        checkinDate: meta.checkinDate || '',
+        checkoutDate: meta.checkoutDate || '',
+        total: meta.total || 0
+      };
+    });
+
+    res.json({ invoices });
+  } catch (err) {
+    console.error('Erreur /api/invoice/history:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/invoice/create',
   authenticateAny,
   requirePermission(pool, 'can_manage_invoices'),
@@ -13261,13 +13307,21 @@ app.post('/api/invoice/create',
       await generateInvoicePdfToFile(pdfPath);
       const pdfBuffer = fs.readFileSync(pdfPath);
 
-      // Insérer un token pour le compteur de numérotation (pas utilisé pour download)
+      // Insérer un token pour le compteur de numérotation + historique
       try {
         const _token = crypto.randomBytes(32).toString('hex');
         const _expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        const _meta = JSON.stringify({
+          clientName: clientName || '',
+          clientEmail: clientEmail || '',
+          propertyName: propertyName || '',
+          checkinDate: checkinDate || '',
+          checkoutDate: checkoutDate || '',
+          total: (parseFloat(rentAmount||0) + parseFloat(touristTaxAmount||0) + parseFloat(cleaningFee||0))
+        });
         await pool.query(
           `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at) VALUES ($1, $2, $3, $4, $5)`,
-          [_token, userId, invoiceNumber, pdfPath, _expires]
+          [_token, userId, invoiceNumber, _meta, _expires]
         );
       } catch(e) { /* ignore */ }
 
