@@ -115,10 +115,23 @@ input[type="date"] {
   -webkit-appearance: none;
   appearance: none;
   min-height: 52px;
+  height: 52px;
+  line-height: 52px;
+  padding: 0 16px !important;
   color: var(--text);
   display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
-input[type="date"]::-webkit-datetime-edit { color: var(--text); }
+input[type="date"]::-webkit-datetime-edit { 
+  color: var(--text);
+  line-height: normal;
+  padding: 14px 0;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  height: 52px;
+  line-height: 52px;
+}
 input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; }
 
 .header {
