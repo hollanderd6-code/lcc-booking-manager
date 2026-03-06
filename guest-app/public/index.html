@@ -51,7 +51,7 @@
               <i class="fas fa-calendar-check"></i>
               Date d'arrivée
             </label>
-            <input type="date" id="checkinDate" required>
+            <input type="date" id="checkinDate" required placeholder="JJ/MM/AAAA" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
           </div>
 
           <!-- Date de départ (optionnel) -->
@@ -60,7 +60,7 @@
               <i class="fas fa-calendar-xmark"></i>
               Date de départ <span class="optional">(optionnel)</span>
             </label>
-            <input type="date" id="checkoutDate">
+            <input type="date" id="checkoutDate" placeholder="JJ/MM/AAAA" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
             <small>Peut aider à identifier votre réservation plus précisément</small>
           </div>
 
