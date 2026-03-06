@@ -60,9 +60,21 @@ html[data-theme-v3="1"] body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Décalage body pour la demo-nav */
-html[data-theme-v3="1"] body {
-  padding-top: 40px !important;
+/* Décalage body pour la demo-nav — desktop souris uniquement */
+@media (pointer: fine) {
+  html[data-theme-v3="1"] body {
+    padding-top: 40px !important;
+  }
+}
+
+/* Barre noire cachée sur tactile (iPad, iPhone) */
+@media (pointer: coarse) {
+  html[data-theme-v3="1"] .bh-demo-nav {
+    display: none !important;
+  }
+  html[data-theme-v3="1"] body {
+    padding-top: 0 !important;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -496,7 +508,7 @@ html[data-theme-v3="1"] .main-content {
 /* ─────────────────────────────────────────────────────────────
    MAIN HEADER (topbar)
 ───────────────────────────────────────────────────────────── */
-@media (min-width: 769px) {
+@media (min-width: 769px) and (pointer: fine) {
   html[data-theme-v3="1"] header.main-header {
     display: flex !important;
     align-items: center !important;
@@ -690,8 +702,8 @@ html[data-theme-v3="1"] .page-content {
 /* ─────────────────────────────────────────────────────────────
    KPI GRID
 ───────────────────────────────────────────────────────────── */
-/* ── KPI GRID : desktop uniquement ── */
-@media (min-width: 769px) {
+/* ── KPI GRID : desktop souris uniquement ── */
+@media (min-width: 769px) and (pointer: fine) {
   html[data-theme-v3="1"] .kpi-grid {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
@@ -893,7 +905,7 @@ html[data-theme-v3="1"] .kpi-card--clickable:hover {
 /* 1ère carte featured dark */
 /* First KPI card: same style as others (no dark background) */
 
-@media (min-width: 769px) {
+@media (min-width: 769px) and (pointer: fine) {
   html[data-theme-v3="1"] .kpi-header {
     display: flex !important;
     align-items: center !important;
