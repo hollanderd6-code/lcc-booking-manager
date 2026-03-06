@@ -29,6 +29,8 @@
 
   // ─── Barre noire demo-nav ─────────────────────────────────────
   function buildNav() {
+    // Ne pas injecter la barre noire sur les appareils tactiles (iPad, iPhone)
+    if (window.matchMedia('(pointer: coarse)').matches) return;
     var currentPage = getCurrentPage();
     var currentPath = window.location.pathname.toLowerCase();
 
