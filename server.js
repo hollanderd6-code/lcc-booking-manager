@@ -13253,11 +13253,14 @@ app.post('/api/invoice/create',
         const pdfBuffer = fs.readFileSync(pdfPath);
         const cloudinaryResult = await new Promise((resolve, reject) => {
           cloudinary.uploader.upload_stream(
-            { folder: 'lcc-invoices', public_id: invoiceNumber, resource_type: 'raw', format: 'pdf' },
+            { folder: 'lcc-invoices', public_id: invoiceNumber, resource_type: 'raw', format: 'pdf', type: 'upload', access_mode: 'public' },
             (error, result) => error ? reject(error) : resolve(result)
           ).end(pdfBuffer);
         });
-        pdfUrl = cloudinaryResult.secure_url;
+        // Transformer l'URL pour forcer téléchargement PDF avec bon Content-Type
+        const rawUrl = cloudinaryResult.secure_url;
+        // Remplacer /raw/upload/ par /raw/upload/fl_attachment/ pour forcer le Content-Type
+        pdfUrl = rawUrl.replace('/raw/upload/', '/raw/upload/fl_attachment/');
         console.log('✅ PDF facture uploadé Cloudinary:', pdfUrl);
       } catch(e) {
         console.error('❌ Erreur upload PDF Cloudinary:', e.message);
