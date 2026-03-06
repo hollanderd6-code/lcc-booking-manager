@@ -13275,40 +13275,77 @@ app.post('/api/invoice/create',
         pdfUrl = `${origin}/api/invoice/download/${token}`;
       }
 
+      // Formater les dates pour l'email
+      const checkinFr  = checkinDate  ? new Date(checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
+      const checkoutFr = checkoutDate ? new Date(checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}) : '';
+      const emitterNameEmail = ownerInfo
+        ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.trim())
+        : (user.company || 'Ma Conciergerie');
+
       const emailHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #111827;">Facture N° ${invoiceNumber}</h2>
-          <p><strong>De :</strong> ${profile.company || 'Conciergerie'}</p>
-          <p><strong>Pour :</strong> ${clientName}</p>
-          <p><strong>Logement :</strong> ${propertyName}</p>
-          ${propertyAddress ? `<p><strong>Adresse :</strong> ${propertyAddress}</p>` : ''}
-          ${checkinDate && checkoutDate ? `<p><strong>Séjour :</strong> Du ${new Date(checkinDate).toLocaleDateString('fr-FR')} au ${new Date(checkoutDate).toLocaleDateString('fr-FR')} (${nights} nuit${nights > 1 ? 's' : ''})</p>` : ''}
-          
-          <h3 style="margin-top: 24px; color: #374151;">Détails de la facture</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            ${rentAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Loyer</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
-            ${touristTaxAmount > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Taxes de séjour</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(touristTaxAmount).toFixed(2)} €</td></tr>` : ''}
-            ${cleaningFee > 0 ? `<tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">Frais de ménage</td><td style="text-align: right; padding: 8px; border-bottom: 1px solid #e5e7eb;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
-          </table>
-          
-          <p style="margin-top: 16px; font-weight: 600;">Sous-total : ${subtotal.toFixed(2)} €</p>
-          ${vatAmount > 0 ? `<p style="font-weight: 600;">TVA (${vatRate}%) : ${vatAmount.toFixed(2)} €</p>` : ''}
-          <h3 style="font-size: 20px; color: #10B981; margin-top: 24px;">TOTAL TTC : ${total.toFixed(2)} €</h3>
-          
-          <div style="background: #ecfdf5; border: 2px solid #10B981; border-radius: 8px; padding: 16px; margin-top: 24px; text-align: center;">
-            <p style="color: #10B981; font-weight: bold; margin: 0; font-size: 18px;">✓ FACTURE ACQUITTÉE</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
+
+          <!-- En-tête -->
+          <div style="background: #1A7A5E; padding: 28px 32px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; color: white; font-size: 22px;">${emitterNameEmail}</h1>
+            <p style="margin: 6px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">Facture N° ${invoiceNumber}</p>
           </div>
 
-          <div style="margin-top: 18px; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; text-align:center;">
-            <p style="margin:0; color:#166534; font-weight:600;">📎 La facture PDF est jointe à cet email</p>
+          <!-- Corps -->
+          <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
+
+            <p style="font-size: 16px; margin: 0 0 24px;">Bonjour <strong>${clientName}</strong>,</p>
+            <p style="font-size: 15px; margin: 0 0 24px; line-height: 1.6;">
+              Veuillez trouver ci-joint votre facture pour votre séjour à <strong>${propertyName}</strong>
+              ${checkinDate && checkoutDate ? ` du <strong>${checkinFr}</strong> au <strong>${checkoutFr}</strong>` : ''}.
+            </p>
+
+            <!-- Récap séjour -->
+            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+              <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <tr>
+                  <td style="padding:6px 0; color:#6b7280;">Logement</td>
+                  <td style="padding:6px 0; font-weight:600; text-align:right;">${propertyName}</td>
+                </tr>
+                ${checkinDate && checkoutDate ? `
+                <tr>
+                  <td style="padding:6px 0; color:#6b7280;">Séjour</td>
+                  <td style="padding:6px 0; font-weight:600; text-align:right;">${checkinFr} → ${checkoutFr}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0; color:#6b7280;">Durée</td>
+                  <td style="padding:6px 0; font-weight:600; text-align:right;">${nights} nuit${nights > 1 ? 's' : ''}</td>
+                </tr>` : ''}
+                ${rentAmount > 0 ? `<tr><td style="padding:6px 0; color:#6b7280; border-top:1px solid #e5e7eb;">Loyer</td><td style="padding:6px 0; text-align:right; border-top:1px solid #e5e7eb;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
+                ${touristTaxAmount > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">Taxe de séjour</td><td style="padding:6px 0; text-align:right;">${parseFloat(touristTaxAmount).toFixed(2)} €</td></tr>` : ''}
+                ${cleaningFee > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">Frais de ménage</td><td style="padding:6px 0; text-align:right;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
+                ${vatAmount > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">TVA (${vatRate}%)</td><td style="padding:6px 0; text-align:right;">${vatAmount.toFixed(2)} €</td></tr>` : ''}
+              </table>
+              <div style="border-top:2px solid #1A7A5E; margin-top:12px; padding-top:12px; display:flex; justify-content:space-between;">
+                <span style="font-weight:700; font-size:16px;">TOTAL TTC</span>
+                <span style="font-weight:700; font-size:16px; color:#1A7A5E;">${total.toFixed(2)} €</span>
+              </div>
+            </div>
+
+            <!-- Pièce jointe -->
+            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:16px; text-align:center; margin-bottom:24px;">
+              <p style="margin:0; color:#166534; font-weight:600; font-size:15px;">📎 Votre facture PDF est jointe à cet email</p>
+            </div>
+
+            <p style="font-size:14px; color:#6b7280; line-height:1.6;">
+              Pour toute question, n'hésitez pas à nous contacter.<br>
+              Cordialement,
+            </p>
           </div>
 
-          <p style="font-size: 12px; color: #6b7280; margin-top: 32px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px;">
-            ${profile.company || 'Ma Conciergerie'}<br>
-            ${profile.address || ''} ${profile.postalCode || ''} ${profile.city || ''}<br>
-            ${profile.siret ? 'SIRET : ' + profile.siret + '<br>' : ''}
-            ${user.email || ''}
-          </p>
+          <!-- Pied de page -->
+          <div style="background:#f3f4f6; padding:16px 32px; border-radius:0 0 8px 8px; text-align:center;">
+            <p style="margin:0; font-size:12px; color:#6b7280;">
+              ${emitterNameEmail}
+              ${user.email ? ' · ' + user.email : ''}
+            </p>
+          </div>
+
         </div>
       `;
 
@@ -13318,7 +13355,7 @@ app.post('/api/invoice/create',
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
           to: clientEmail,
-          subject: `Facture ${invoiceNumber} - ${propertyName}`,
+          subject: `Facture ${invoiceNumber} – Séjour à ${propertyName}${checkinDate ? ' du ' + new Date(checkinDate).toLocaleDateString('fr-FR') : ''}`,
           html: emailHtml,
           attachments: [{
             filename: `${invoiceNumber}.pdf`,
