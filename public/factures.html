@@ -1331,12 +1331,13 @@ html[data-theme-v3="1"] .btn-ghost {
           </div>
 
           <div class="invoice-section">
-            <h3>Facturer à</h3>
+            <h3>Facturé à</h3>
             <div class="invoice-section-content">
               <strong>${clientName}</strong><br>
+              ${document.getElementById('clientEmail').value ? document.getElementById('clientEmail').value + '<br>' : ''}
               ${document.getElementById('clientAddress').value ? document.getElementById('clientAddress').value + '<br>' : ''}
-              ${document.getElementById('clientPostalCode').value || ''} ${document.getElementById('clientCity').value || ''}
-              ${document.getElementById('isCompany').checked && document.getElementById('clientSiret').value ? '<br>SIRET: ' + document.getElementById('clientSiret').value : ''}
+              ${(document.getElementById('clientPostalCode').value || document.getElementById('clientCity').value) ? (document.getElementById('clientPostalCode').value || '') + ' ' + (document.getElementById('clientCity').value || '') + '<br>' : ''}
+              ${document.getElementById('isCompany').checked && document.getElementById('clientSiret').value ? 'SIRET: ' + document.getElementById('clientSiret').value : ''}
             </div>
           </div>
 
