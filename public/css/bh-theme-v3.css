@@ -60,21 +60,9 @@ html[data-theme-v3="1"] body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Décalage body pour la demo-nav — desktop souris uniquement */
-@media (pointer: fine) {
-  html[data-theme-v3="1"] body {
-    padding-top: 40px !important;
-  }
-}
-
-/* Barre noire cachée sur tactile (iPad, iPhone) */
-@media (pointer: coarse) {
-  html[data-theme-v3="1"] .bh-demo-nav {
-    display: none !important;
-  }
-  html[data-theme-v3="1"] body {
-    padding-top: 0 !important;
-  }
+/* Décalage body pour la demo-nav */
+html[data-theme-v3="1"] body {
+  padding-top: 40px !important;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -491,6 +479,7 @@ html[data-theme-v3="1"] .sidebar #logoutBtn i {
    MAIN CONTENT
 ───────────────────────────────────────────────────────────── */
 html[data-theme-v3="1"] .main-content {
+  margin-left: var(--sidebar-w-v3) !important;
   background: var(--cream) !important;
   flex: 1 !important;
   min-height: calc(100vh - 40px) !important;
@@ -498,17 +487,10 @@ html[data-theme-v3="1"] .main-content {
   flex-direction: column !important;
 }
 
-/* Décalage sidebar : desktop souris uniquement (pas iPad/tablettes) */
-@media (pointer: fine) {
-  html[data-theme-v3="1"] .main-content {
-    margin-left: var(--sidebar-w-v3) !important;
-  }
-}
-
 /* ─────────────────────────────────────────────────────────────
    MAIN HEADER (topbar)
 ───────────────────────────────────────────────────────────── */
-@media (min-width: 769px) and (pointer: fine) {
+@media (min-width: 1367px) {
   html[data-theme-v3="1"] header.main-header {
     display: flex !important;
     align-items: center !important;
@@ -702,8 +684,8 @@ html[data-theme-v3="1"] .page-content {
 /* ─────────────────────────────────────────────────────────────
    KPI GRID
 ───────────────────────────────────────────────────────────── */
-/* ── KPI GRID : desktop souris uniquement ── */
-@media (min-width: 769px) and (pointer: fine) {
+/* ── KPI GRID : desktop uniquement ── */
+@media (min-width: 1367px) {
   html[data-theme-v3="1"] .kpi-grid {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
@@ -723,8 +705,8 @@ html[data-theme-v3="1"] .page-content {
   }
 }
 
-/* ── KPI GRID : mobile + tactile — 1 colonne, label gauche / valeur droite ── */
-@media (max-width: 768px), (pointer: coarse) {
+/* ── KPI GRID : mobile — 1 colonne, label gauche / valeur droite ── */
+@media (max-width: 1366px) {
   /* Reset body padding-top (demo-nav masquée sur mobile) */
   html[data-theme-v3="1"] body {
     padding-top: 0 !important;
@@ -905,7 +887,7 @@ html[data-theme-v3="1"] .kpi-card--clickable:hover {
 /* 1ère carte featured dark */
 /* First KPI card: same style as others (no dark background) */
 
-@media (min-width: 769px) and (pointer: fine) {
+@media (min-width: 1367px) {
   html[data-theme-v3="1"] .kpi-header {
     display: flex !important;
     align-items: center !important;
@@ -1714,7 +1696,7 @@ html[data-theme-v3="1"] header.main-header {
 }
 
 /* Sur mobile : le header doit se placer sous le mobile-header fixe (60px) */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   html[data-theme-v3="1"] header.main-header,
   html[data-theme-v3="1"] #bhMainHeader {
     margin-top: 60px !important;
