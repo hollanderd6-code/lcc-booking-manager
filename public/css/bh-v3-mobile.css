@@ -513,3 +513,98 @@
     padding-right: 14px !important;
   }
 }
+
+/* ══ FALLBACK SAFARI IPAD — hover:none aussi fiable que pointer:coarse ══ */
+@media (hover: none) {
+  .bh-demo-nav,
+  nav.bh-demo-nav,
+  div.bh-demo-nav,
+  html[data-theme-v3="1"] .bh-demo-nav {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+  body,
+  html[data-theme-v3="1"] body {
+    padding-top: 0 !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   IPAD — étend le layout mobile jusqu'à 1366px
+   Plus simple que pointer:coarse / hover:none
+   Un iPad fait max 1366px (Pro 12.9")
+   Un vrai desktop ne fera jamais < 1200px avec une souris
+   sans avoir la sidebar de toute façon
+══════════════════════════════════════════════════════ */
+@media (min-width: 769px) and (max-width: 1366px) {
+
+  /* Barre noire — cachée */
+  .bh-demo-nav,
+  html[data-theme-v3="1"] .bh-demo-nav {
+    display: none !important;
+  }
+  body,
+  html[data-theme-v3="1"] body {
+    padding-top: 0 !important;
+  }
+
+  /* Sidebar — cachée */
+  .sidebar,
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay {
+    display: none !important;
+  }
+
+  /* Main content — pleine largeur */
+  .main-content,
+  html[data-theme-v3="1"] .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Mobile header — visible */
+  .mobile-header,
+  html[data-theme-v3="1"] .mobile-header {
+    display: flex !important;
+  }
+
+  /* Bottom tabs — visible */
+  .mobile-tabs,
+  html[data-theme-v3="1"] .mobile-tabs {
+    display: flex !important;
+  }
+
+  /* Header desktop — caché */
+  html[data-theme-v3="1"] .main-header,
+  html[data-theme-v3="1"] header.main-header {
+    display: none !important;
+  }
+
+  /* KPI — 1 colonne */
+  html[data-theme-v3="1"] .kpi-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-card {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    padding: 16px 20px !important;
+    border-radius: 16px !important;
+    background: var(--cream-warm, #F5F0E8) !important;
+    border: 1px solid var(--border-warm-v3, rgba(200,184,154,0.4)) !important;
+  }
+
+  /* Page content padding */
+  .page-content,
+  html[data-theme-v3="1"] .page-content {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    padding-bottom: 90px !important;
+  }
+}
