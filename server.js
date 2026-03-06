@@ -6277,14 +6277,26 @@ function parsePropertyBody(req) {
   // ✅ FormData simple : les champs sont directement dans req.body
   const body = req.body || {};
   
-  // Si icalUrls est une string JSON, la parser
-  if (body.icalUrls && typeof body.icalUrls === 'string') {
-    try {
-      body.icalUrls = JSON.parse(body.icalUrls);
-    } catch (e) {
-      console.error('Erreur parse icalUrls:', e);
-      body.icalUrls = [];
+  // Parser tous les champs JSON string envoyés via FormData
+  const jsonFields = ['icalUrls', 'amenities', 'houseRules', 'practicalInfo'];
+  for (const field of jsonFields) {
+    if (body[field] && typeof body[field] === 'string') {
+      try {
+        body[field] = JSON.parse(body[field]);
+      } catch (e) {
+        console.error(`Erreur parse ${field}:`, e);
+        body[field] = field === 'icalUrls' ? [] : {};
+      }
     }
+  }
+
+  // Mapper practicalInfo → practical_info pour cohérence snake_case
+  if (body.practicalInfo !== undefined && body.practical_info === undefined) {
+    body.practical_info = body.practicalInfo;
+  }
+  // Mapper houseRules → house_rules
+  if (body.houseRules !== undefined && body.house_rules === undefined) {
+    body.house_rules = body.houseRules;
   }
   
   return body;
@@ -6744,8 +6756,6 @@ app.post('/api/sync', authenticateAny, async (req, res) => {
 
   try {
     const result = await syncAllCalendars();
-    // ✅ Recharger aussi les réservations manuelles/directes depuis la DB
-    await loadReservationsFromDB();
     const userProps = getUserProperties(userId);
 
     res.json({
