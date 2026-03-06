@@ -479,12 +479,18 @@ html[data-theme-v3="1"] .sidebar #logoutBtn i {
    MAIN CONTENT
 ───────────────────────────────────────────────────────────── */
 html[data-theme-v3="1"] .main-content {
-  margin-left: var(--sidebar-w-v3) !important;
   background: var(--cream) !important;
   flex: 1 !important;
   min-height: calc(100vh - 40px) !important;
   display: flex !important;
   flex-direction: column !important;
+}
+
+/* Décalage sidebar : desktop souris uniquement (pas iPad/tablettes) */
+@media (pointer: fine) {
+  html[data-theme-v3="1"] .main-content {
+    margin-left: var(--sidebar-w-v3) !important;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
