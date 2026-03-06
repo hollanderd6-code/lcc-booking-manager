@@ -1,14 +1,14 @@
 /* bh-shared.mobile-fixes.css — correctifs responsive globaux */
 
 /* 1) Evite que le header soit “coupé” sous le mobile-header */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   .main-content {
     padding-top: 90px !important; /* hauteur mobile header + marge */
   }
 }
 
 /* 2) Le menu doit pouvoir s’ouvrir sur welcome (certaines pages forçaient display:none) */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   body .sidebar {
     display: flex !important;
   }
