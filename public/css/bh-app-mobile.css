@@ -400,7 +400,8 @@
    DESKTOP : cacher les éléments mobile-only
 ──────────────────────────────────────────────── */
 
-@media (min-width: 769px) {
+/* Desktop souris uniquement (pointer:fine) — iPad et tablettes tactiles exclus */
+@media (min-width: 769px) and (pointer: fine) {
   .mobile-header,
   .mobile-tabs,
   .mobile-menu-btn {
