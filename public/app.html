@@ -20,7 +20,7 @@
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css"> 
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
-<link rel="stylesheet" href="/css/bh-theme-v3.css?v=4"> 
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=4">  
 <script>
   // Activation permanente du thème V3
   document.documentElement.setAttribute('data-theme-v3','1');
@@ -34,7 +34,7 @@ html[data-theme-v3="1"] .sidebar {
   height: auto !important;
 }
 /* Mobile : sticky sous la barre dark (pas de barre dark sur mobile en pratique) */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
 html[data-theme-v3="1"] header.main-header {
   position: sticky !important;
   top: 0 !important;
@@ -148,7 +148,7 @@ html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 /* Masquer la barre dark sur mobile */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar { top: 0 !important; }
@@ -383,7 +383,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   .header-actions .btn-icon,
   .header-actions .theme-toggle {
     width: 40px;
@@ -1170,7 +1170,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       }
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 1366px) {
       .view-tab span {
         display: none;
       }
@@ -1581,7 +1581,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       transform: scale(0.95);
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 1366px) {
       .fab {
         bottom: 24px;
         right: 24px;
@@ -1938,7 +1938,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   .checklist-modal {
     max-height: 95vh;
     margin: 0;
@@ -2121,7 +2121,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   .cleaning-checklists-widget {
     padding: var(--spacing-lg);
   }
@@ -2201,7 +2201,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 
 /* --- 2. CONFIGURATION SPÉCIALE MOBILE (< 768px) --- */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
 
   /* A. Empêcher toute la page de glisser horizontalement */
   html, body {
@@ -2322,7 +2322,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
     <style>
 /* Correction scroll horizontal calendrier mobile */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   
   /* 1. Permettre le scroll horizontal sur la grille */
   .calendar-grid-wrapper {
@@ -2351,7 +2351,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
 <style id="mobile-scroll-fix">
 /* ✅ FIX FINAL : 1 seul scroll horizontal (mobile friendly) */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   .calendar-container .calendar-grid-wrapper{
     overflow-x: auto !important;
     overflow-y: visible !important;
@@ -2414,7 +2414,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
    MOBILE MASTER — source unique, injectée directement dans le HTML
    Appliquée EN DERNIER dans le <head> pour écraser tout le reste
    ================================================================ */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
 
   /* 1. LAYOUT */
   html, body { overflow-x: hidden !important; }
@@ -3228,7 +3228,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       display: inline-flex;
     }
     
-    @media (max-width: 768px) {
+    @media (max-width: 1366px) {
       .hide-on-mobile {
         display: none;
       }
@@ -8063,7 +8063,7 @@ html[data-theme-v3="1"] body {
 }
 
 /* ── Masquer mobile-header sur desktop ── */
-@media (min-width: 769px) {
+@media (min-width: 1367px) {
   html[data-theme-v3="1"] .mobile-header,
   html[data-theme-v3="1"] .mobile-menu-btn {
     display: none !important;
@@ -8082,7 +8082,7 @@ html[data-theme-v3="1"] main.main-content {
    top: 40px  = juste sous la barre dark
    left: 248px = juste à droite de la sidebar
 ══════════════════════════════════════ */
-@media (min-width: 769px) {
+@media (min-width: 1367px) {
   html[data-theme-v3="1"] header.main-header,
   html[data-theme-v3="1"] #bhMainHeader {
     position: fixed !important;
@@ -8962,7 +8962,7 @@ if (document.readyState === 'loading') {
 
   /* Masquer sur mobile */
   var mobileStyle = document.createElement('style');
-  mobileStyle.textContent = '@media (max-width: 768px) { #bhDemoNav { display: none !important; } body { padding-top: 0 !important; } }';
+  mobileStyle.textContent = '@media (max-width: 1366px) { #bhDemoNav { display: none !important; } body { padding-top: 0 !important; } }';
   document.head.appendChild(mobileStyle);
 
   var html = '<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-right:4px;flex-shrink:0;">Vue</span>';
@@ -9612,7 +9612,7 @@ if (window.Capacitor) {
 <!-- ✅ KPI logements actifs : chiffre noir desktop, sous-texte vert desktop -->
 <style>
 /* Desktop : chiffre noir, sous-texte vert */
-@media (min-width: 769px) {
+@media (min-width: 1367px) {
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value,
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-value,
   html[data-theme-v3="1"] #kpiPropertiesValue { color: #1e293b !important; }
@@ -9621,7 +9621,7 @@ if (window.Capacitor) {
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: #1A7A5E !important; font-weight: 600 !important; }
 }
 /* Mobile : sous-texte même couleur que les autres */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub--green,
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green,
   #kpiPropertiesCard .kpi-sub--green { 
