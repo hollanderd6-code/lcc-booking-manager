@@ -13078,97 +13078,165 @@ app.post('/api/invoice/create',
     const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
     const total = subtotal + vatAmount;
 
-    
-
-    
-// Générer un PDF simple (serveur) avec PDFKit
+    // Récupérer les infos du propriétaire du logement si disponible
+    let ownerInfo = null;
+    try {
+      const propResult = await pool.query(
+        'SELECT owner_id FROM properties WHERE name = $1 AND user_id = $2',
+        [propertyName, userId]
+      );
+      const ownerId = propResult.rows[0]?.owner_id;
+      if (ownerId) {
+        const ownerResult = await pool.query(
+          'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
+          [ownerId, userId]
+        );
+        ownerInfo = ownerResult.rows[0] || null;
+      }
+    } catch(e) {
+      console.error('Erreur récupération propriétaire pour PDF:', e.message);
+    }
+// Générer un PDF professionnel avec PDFKit
     async function generateInvoicePdfToFile(outputPath) {
       return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const doc = new PDFDocument({ size: 'A4', margin: 0 });
         const stream = fs.createWriteStream(outputPath);
         doc.pipe(stream);
 
-        doc.fontSize(20).text(`FACTURE ${invoiceNumber}`, { align: 'center' });
-        doc.moveDown();
+        const W = 595, H = 842, mg = 50;
+        const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
+        const LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
 
-        doc.fontSize(12).text(`Émetteur : ${user.company || 'Conciergerie'}`);
-        if (user.email) doc.text(`Email : ${user.email}`);
-        doc.moveDown();
+        const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.trim()) : (user.company || 'Ma Conciergerie');
+        const emitterAddr  = ownerInfo?.address || '';
+        const emitterCP    = ownerInfo?.postal_code || '';
+        const emitterCity  = ownerInfo?.city || '';
+        const emitterEmail = ownerInfo?.email || user.email || '';
+        const emitterSiret = ownerInfo?.siret || '';
 
-        doc.fontSize(12).text(`Client : ${clientName}`);
-        if (clientAddress) doc.text(`Adresse : ${clientAddress}`);
-        const cityLine = `${clientPostalCode || ''} ${clientCity || ''}`.trim();
-        if (cityLine) doc.text(cityLine);
-        if (clientSiret) doc.text(`SIRET : ${clientSiret}`);
-        doc.moveDown();
+        // Bande verte haut
+        doc.rect(0, 0, W, 8).fill(GREEN);
 
-        doc.text(`Logement : ${propertyName}`);
-        if (propertyAddress) doc.text(`Adresse : ${propertyAddress}`);
+        // Nom émetteur
+        let y = 32;
+        doc.font('Helvetica-Bold').fontSize(20).fillColor(DARK).text(emitterName, mg, y, { width: 310 });
+        y += 28;
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+        if (emitterAddr)  { doc.text(emitterAddr, mg, y);  y += 13; }
+        if (emitterCP || emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, y); y += 13; }
+        if (emitterEmail) { doc.text(emitterEmail, mg, y); y += 13; }
+        if (emitterSiret) { doc.text(`SIRET : ${emitterSiret}`, mg, y); y += 13; }
 
+        // Bloc FACTURE droite
+        const bx = W - mg - 185, by = 28;
+        doc.rect(bx, by, 185, 90).fill(LIGHT);
+        doc.font('Helvetica-Bold').fontSize(20).fillColor(GREEN).text('FACTURE', bx+14, by+10);
+        doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(`N° ${invoiceNumber}`, bx+14, by+38);
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, bx+14, by+54);
         if (checkinDate && checkoutDate) {
           const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
           const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
-          doc.text(`Séjour : du ${ci} au ${co} (${nights} nuit${nights > 1 ? 's' : ''})`);
+          doc.text(`Du ${ci} au ${co}`, bx+14, by+68);
+          doc.text(`${nights} nuit${nights>1?'s':''}`, bx+14, by+81);
         }
 
-        doc.moveDown();
-        doc.fontSize(13).text('Détails', { underline: true });
-        doc.moveDown(0.5);
+        // Séparateur
+        y = 142;
+        doc.rect(mg, y, W-mg*2, 1).fill(BORDER);
+        y += 18;
 
-        const addLine = (label, value) => {
-          doc.fontSize(12).text(`${label} : ${Number(value).toFixed(2)} €`);
+        // Deux colonnes
+        const colW = (W - mg*2 - 24) / 2;
+        const col2 = mg + colW + 24;
+
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN);
+        doc.text('ÉMIS PAR', mg, y);
+        doc.text('FACTURÉ À', col2, y);
+        y += 14;
+
+        doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK);
+        doc.text(emitterName, mg, y, { width: colW });
+        doc.text(clientName,  col2, y, { width: colW });
+        y += 16;
+
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+        let yL = y, yR = y;
+        if (emitterAddr)  { doc.text(emitterAddr, mg, yL, { width: colW }); yL += 13; }
+        if (emitterCP||emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, yL); yL += 13; }
+        if (emitterEmail) { doc.text(emitterEmail, mg, yL); yL += 13; }
+        if (clientAddress) { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
+        const cpCity = `${clientPostalCode||''} ${clientCity||''}`.trim();
+        if (cpCity)        { doc.text(cpCity, col2, yR); yR += 13; }
+        if (clientEmail)   { doc.text(clientEmail, col2, yR); yR += 13; }
+        if (clientSiret)   { doc.text(`SIRET : ${clientSiret}`, col2, yR); yR += 13; }
+
+        y = Math.max(yL, yR) + 22;
+
+        // Logement
+        doc.rect(mg, y, W-mg*2, 1).fill(BORDER);
+        y += 14;
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('LOGEMENT', mg, y);
+        y += 14;
+        doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(propertyName, mg, y);
+        y += 15;
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+        if (propertyAddress) { doc.text(propertyAddress, mg, y); y += 13; }
+        if (checkinDate && checkoutDate) {
+          const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
+          const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
+          doc.text(`Séjour du ${ci} au ${co} · ${nights} nuit${nights>1?'s':''}`, mg, y); y += 13;
+        }
+        y += 18;
+
+        // Tableau header
+        doc.rect(mg, y, W-mg*2, 28).fill(GREEN);
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('white')
+           .text('DESCRIPTION', mg+12, y+9, { width: 300 })
+           .text('MONTANT', W-mg-90, y+9, { width: 78, align: 'right' });
+        y += 28;
+
+        let alt = false;
+        const addRow = (label, amount) => {
+          if (parseFloat(amount||0) <= 0) return;
+          if (alt) doc.rect(mg, y, W-mg*2, 26).fill('#F9FAFB');
+          doc.font('Helvetica').fontSize(10).fillColor(DARK).text(label, mg+12, y+7, { width: 300 });
+          doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(`${Number(amount).toFixed(2)} €`, W-mg-90, y+7, { width: 78, align: 'right' });
+          doc.rect(mg, y+26, W-mg*2, 0.5).fill(BORDER);
+          y += 26; alt = !alt;
         };
-// ✅ Download facture PDF via token expirant
-app.get('/api/invoice/download/:token', async (req, res) => {
-  try {
-    const { token } = req.params;
+        addRow('Loyer', rentAmount);
+        addRow('Taxe de séjour', touristTaxAmount);
+        addRow('Frais de ménage', cleaningFee);
+        y += 18;
 
-    const r = await pool.query(
-      `SELECT file_path, invoice_number, expires_at
-       FROM invoice_download_tokens
-       WHERE token = $1`,
-      [token]
-    );
+        // Totaux
+        const totW = 220, totX = W - mg - totW;
+        doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 8;
+        doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+           .text('Sous-total HT', totX, y, { width: 120 })
+           .text(`${subtotal.toFixed(2)} €`, totX+120, y, { width: 88, align: 'right' });
+        y += 16;
+        if (vatAmount > 0) {
+          doc.text(`TVA (${vatRate}%)`, totX, y, { width: 120 })
+             .text(`${vatAmount.toFixed(2)} €`, totX+120, y, { width: 88, align: 'right' });
+          y += 16;
+        }
+        doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 6;
+        doc.rect(totX, y, totW, 36).fill(GREEN);
+        doc.font('Helvetica-Bold').fontSize(13).fillColor('white')
+           .text('TOTAL TTC', totX+12, y+10, { width: 108 })
+           .text(`${total.toFixed(2)} €`, totX+120, y+10, { width: 88, align: 'right' });
 
-    if (!r.rowCount) return res.status(404).send('Lien invalide.');
-
-    const row = r.rows[0];
-    if (new Date(row.expires_at).getTime() < Date.now()) {
-      return res.status(410).send('Lien expiré.');
-    }
-
-    const absolutePath = path.resolve(row.file_path);
-    if (!fs.existsSync(absolutePath)) {
-      return res.status(404).send('Fichier introuvable.');
-    }
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${row.invoice_number}.pdf"`
-    );
-
-    fs.createReadStream(absolutePath).pipe(res);
-  } catch (err) {
-    console.error('❌ Erreur download invoice:', err);
-    res.status(500).send('Erreur serveur.');
-  }
-});
-
-        if (parseFloat(rentAmount || 0) > 0) addLine('Loyer', rentAmount);
-        if (parseFloat(touristTaxAmount || 0) > 0) addLine('Taxes de séjour', touristTaxAmount);
-        if (parseFloat(cleaningFee || 0) > 0) addLine('Frais de ménage', cleaningFee);
-
-        doc.moveDown();
-        doc.fontSize(12).text(`Sous-total : ${subtotal.toFixed(2)} €`);
-        if (vatAmount > 0) doc.text(`TVA (${vatRate}%) : ${vatAmount.toFixed(2)} €`);
-        doc.fontSize(16).text(`TOTAL TTC : ${total.toFixed(2)} €`, { underline: true });
+        // Pied de page
+        doc.rect(0, H-36, W, 36).fill(GREEN);
+        doc.font('Helvetica').fontSize(8).fillColor('white')
+           .text(emitterName, mg, H-22, { width: W-mg*2, align: 'center' });
 
         doc.end();
-
         stream.on('finish', resolve);
         stream.on('error', reject);
       });
+    }
     }
 
 // Si sendEmail est true, envoyer l'email via API Brevo
