@@ -12318,7 +12318,7 @@ app.get('/api/owner-clients/:id', async (req, res) => {
 
     const result = await pool.query(
       'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
-      [req.params.id, userId]
+      [req.params.id, user.id]
     );
 
     if (result.rows.length === 0) {
