@@ -11,7 +11,7 @@
    📱 BOTTOM NAVIGATION - Mobile uniquement
    ============================================ */
 
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   
   /* Container de la bottom bar */
   .mobile-tabs {
@@ -314,7 +314,7 @@
    Pour les utilisateurs qui préfèrent moins d'animations
    ============================================ */
 
-@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+@media (max-width: 1366px) and (prefers-reduced-motion: reduce) {
   .mobile-tabs,
   .mobile-tabs .tab-btn,
   .mobile-tabs .tab-btn i,
@@ -333,7 +333,7 @@
 
 
 /* ── Menu "Plus" — fond beige cohérent ── */
-@media (max-width: 768px) {
+@media (max-width: 1366px) {
   .bottom-sheet-content {
     background: #F5F0E8 !important;
     background-color: #F5F0E8 !important;
