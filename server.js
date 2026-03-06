@@ -10735,9 +10735,9 @@ userId: userId
         newAccessInstructions,
         newOwnerId,
         newChatPin,
-        newAmenities,
-        newHouseRules,
-        newPracticalInfo,
+        typeof newAmenities === 'string' ? newAmenities : JSON.stringify(newAmenities || {}),
+        typeof newHouseRules === 'string' ? newHouseRules : JSON.stringify(newHouseRules || {}),
+        typeof newPracticalInfo === 'string' ? newPracticalInfo : JSON.stringify(newPracticalInfo || {}),
         newAutoResponsesEnabled,
         newArrivalMessage,  // ✅ NOUVEAU
         propertyId,
