@@ -13243,7 +13243,7 @@ app.post('/api/invoice/create',
         doc.font('Helvetica').fontSize(8).fillColor('rgba(255,255,255,0.7)')
            .text('Facture générée grâce à', mg, H-34, { width: W-mg*2, align: 'center' });
         doc.font('Helvetica-Bold').fontSize(10).fillColor('white')
-           .text('BoostingHost.fr', mg, H-22, { width: W-mg*2, align: 'center' });
+           .text('Boostinghost.fr', mg, H-22, { width: W-mg*2, align: 'center' });
 
         doc.end();
         stream.on('finish', resolve);
@@ -13317,10 +13317,12 @@ app.post('/api/invoice/create',
                 ${cleaningFee > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">Frais de ménage</td><td style="padding:6px 0; text-align:right;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
                 ${vatAmount > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">TVA (${vatRate}%)</td><td style="padding:6px 0; text-align:right;">${vatAmount.toFixed(2)} €</td></tr>` : ''}
               </table>
-              <div style="border-top:2px solid #1A7A5E; margin-top:12px; padding-top:12px; display:flex; justify-content:space-between;">
-                <span style="font-weight:700; font-size:16px;">TOTAL TTC</span>
-                <span style="font-weight:700; font-size:16px; color:#1A7A5E;">${total.toFixed(2)} €</span>
-              </div>
+              <table style="width:100%; border-top:2px solid #1A7A5E; margin-top:12px; border-collapse:collapse;">
+                <tr>
+                  <td style="padding-top:12px; font-weight:700; font-size:16px;">TOTAL TTC</td>
+                  <td style="padding-top:12px; font-weight:700; font-size:16px; color:#1A7A5E; text-align:right;">${total.toFixed(2)} €</td>
+                </tr>
+              </table>
             </div>
 
             <!-- Pièce jointe -->
@@ -13337,8 +13339,8 @@ app.post('/api/invoice/create',
           <!-- Pied de page -->
           <div style="background:#1A7A5E; padding:16px 32px; border-radius:0 0 8px 8px; text-align:center;">
             <p style="margin:0 0 4px; font-size:11px; color:rgba(255,255,255,0.7);">Facture générée grâce à</p>
-            <p style="margin:0; font-size:13px; font-weight:700; color:white; letter-spacing:0.5px;">BoostingHost.fr</p>
-            <p style="margin:6px 0 0; font-size:11px; color:rgba(255,255,255,0.6);">La solution de gestion pour les conciergeries</p>
+            <p style="margin:0; font-size:13px; font-weight:700; color:white; letter-spacing:0.5px;">Boostinghost.fr</p>
+            <p style="margin:6px 0 0; font-size:11px; color:rgba(255,255,255,0.6);">La solution de gestion pour les propriétaires et conciergeries</p>
           </div>
 
         </div>
