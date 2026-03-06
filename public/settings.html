@@ -3173,7 +3173,7 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
 (function() {
   var origRender = window.renderProperties;
   function updateCount() {
-    var items = document.querySelectorAll('#propertiesGrid .property-card');
+    var items = document.querySelectorAll('#propertiesGrid .property-card:not(.property-card-add)');
     var el = document.getElementById('propertiesCount');
     if (el) el.textContent = items.length + ' LOGEMENT' + (items.length > 1 ? 'S' : '') + ' ACTIF' + (items.length > 1 ? 'S' : '');
   }
@@ -3197,7 +3197,7 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
   // Update count dynamically
   var grid = document.getElementById('propertiesGrid');
   function updateCount() {
-    var items = document.querySelectorAll('#propertiesGrid .property-card');
+    var items = document.querySelectorAll('#propertiesGrid .property-card:not(.property-card-add)');
     var el = document.getElementById('propertiesCount');
     if (el) el.textContent = items.length + ' LOGEMENT' + (items.length > 1 ? 'S' : '') + ' ACTIF' + (items.length > 1 ? 'S' : '');
   }
