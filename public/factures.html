@@ -1243,17 +1243,26 @@ html[data-theme-v3="1"] .btn-ghost {
         try {
           const select = document.getElementById('propertyName');
           const selectedOption = select.options[select.selectedIndex];
-          const ownerId = selectedOption?.dataset?.ownerId || propertiesByName[propertyName]?.owner_id || propertiesByName[propertyName]?.ownerId;
+          const prop = propertiesByName[propertyName];
+          const ownerId = selectedOption?.dataset?.ownerId || prop?.owner_id || prop?.ownerId;
           
-          if (!ownerId) return null;
+          console.log('🏠 Logement:', propertyName, '→ owner_id:', ownerId);
+          if (!ownerId) {
+            console.warn('⚠️ Pas de owner_id pour ce logement');
+            return null;
+          }
 
-          const res = await fetch('/api/owner-clients', {
+          // Appel direct sur l'ID du proprio
+          const res = await fetch('/api/owner-clients/' + ownerId, {
             headers: { 'Authorization': 'Bearer ' + token }
           });
-          if (!res.ok) return null;
-          const data = await res.json();
-          const clients = data.clients || data || [];
-          return clients.find(c => String(c.id) === String(ownerId)) || null;
+          if (!res.ok) {
+            console.warn('⚠️ owner-clients/' + ownerId + ' → ' + res.status);
+            return null;
+          }
+          const owner = await res.json();
+          console.log('✅ Proprio trouvé:', owner);
+          return owner;
         } catch (e) {
           console.error('Erreur récupération propriétaire:', e);
           return null;
