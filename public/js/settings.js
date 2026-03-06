@@ -546,7 +546,7 @@ function openEditPropertyModal(propertyId) {
   // ===== CHARGER LES NOUVELLES DONNÉES (ÉQUIPEMENTS, RÈGLES, INFOS) =====
   try {
     // Équipements
-    const amenities = property.amenities 
+    const amenities = property.amenities
       ? (typeof property.amenities === 'string' ? JSON.parse(property.amenities) : property.amenities)
       : {};
     
@@ -568,8 +568,8 @@ function openEditPropertyModal(propertyId) {
       document.getElementById('amenityClimatisation').checked = amenities.climatisation || false;
     
     // Règles
-    const rules = property.house_rules
-      ? (typeof property.house_rules === 'string' ? JSON.parse(property.house_rules) : property.house_rules)
+    const rules = (property.house_rules || property.houseRules)
+      ? (() => { const v = property.house_rules || property.houseRules; return typeof v === 'string' ? JSON.parse(v) : v; })()
       : {};
     
     if (document.getElementById('ruleAnimaux')) 
@@ -582,8 +582,8 @@ function openEditPropertyModal(propertyId) {
       document.getElementById('ruleEnfants').checked = rules.enfants !== undefined ? rules.enfants : false;
     
     // Infos pratiques
-    const practical = property.practical_info
-      ? (typeof property.practical_info === 'string' ? JSON.parse(property.practical_info) : property.practical_info)
+    const practical = (property.practical_info || property.practicalInfo)
+      ? (() => { const v = property.practical_info || property.practicalInfo; return typeof v === 'string' ? JSON.parse(v) : v; })()
       : {};
     
     if (document.getElementById('practicalParking')) 
