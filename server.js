@@ -13117,7 +13117,7 @@ app.post('/api/invoice/create',
         const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
         const LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
 
-        const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.trim()) : (user.company || 'Ma Conciergerie');
+        const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (user.company || 'Ma Conciergerie');
         const emitterAddr  = ownerInfo?.address || '';
         const emitterCP    = ownerInfo?.postal_code || '';
         const emitterCity  = ownerInfo?.city || '';
@@ -13272,7 +13272,7 @@ app.post('/api/invoice/create',
       const checkinFr  = checkinDate  ? new Date(checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
       const checkoutFr = checkoutDate ? new Date(checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}) : '';
       const emitterNameEmail = ownerInfo
-        ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.trim())
+        ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim())
         : (user.company || 'Ma Conciergerie');
 
       const emailHtml = `
