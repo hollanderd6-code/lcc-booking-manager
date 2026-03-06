@@ -674,6 +674,16 @@ async function sendEmail(mailOptions) {
         sendSmtpEmail.to = [mailOptions.to];
       }
       
+      // Pièces jointes (ex: PDF facture)
+      if (mailOptions.attachments && mailOptions.attachments.length > 0) {
+        sendSmtpEmail.attachment = mailOptions.attachments.map(att => ({
+          name: att.filename,
+          content: Buffer.isBuffer(att.content)
+            ? att.content.toString('base64')
+            : Buffer.from(att.content).toString('base64')
+        }));
+      }
+
       await apiInstance.sendTransacEmail(sendSmtpEmail);
       console.log('✅ Email envoyé via Brevo API à:', mailOptions.to);
       return { success: true };
@@ -13247,6 +13257,16 @@ app.post('/api/invoice/create',
       const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}.pdf`);
       await generateInvoicePdfToFile(pdfPath);
       const pdfBuffer = fs.readFileSync(pdfPath);
+
+      // Insérer un token pour le compteur de numérotation (pas utilisé pour download)
+      try {
+        const _token = crypto.randomBytes(32).toString('hex');
+        const _expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        await pool.query(
+          `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at) VALUES ($1, $2, $3, $4, $5)`,
+          [_token, userId, invoiceNumber, pdfPath, _expires]
+        );
+      } catch(e) { /* ignore */ }
 
       // Formater les dates pour l'email
       const checkinFr  = checkinDate  ? new Date(checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
