@@ -6,6 +6,36 @@
   <title>Boostinghost Guest</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="css/app.css">
+  <style>
+    .date-wrapper {
+      position: relative;
+    }
+    .date-wrapper input[type="date"] {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    .date-display {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      background: white;
+      box-sizing: border-box;
+      color: var(--text-light);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: inherit;
+    }
+    .date-display.has-value { color: var(--text); }
+    .date-display i { color: var(--primary); font-size: 14px; }
+  </style>
 </head>
 <body>
   
@@ -13,7 +43,6 @@
   <div id="pinScreen" class="screen active">
     <div class="container">
       
-      <!-- Header -->
       <div class="header">
         <div class="logo">
           <div class="logo-icon">B</div>
@@ -21,7 +50,6 @@
         </div>
       </div>
 
-      <!-- Card -->
       <div class="card">
         <div class="card-icon">
           <i class="fas fa-lock"></i>
@@ -51,16 +79,28 @@
               <i class="fas fa-calendar-check"></i>
               Date d'arrivée
             </label>
-            <input type="date" id="checkinDate" required placeholder="JJ/MM/AAAA" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
+            <div class="date-wrapper">
+              <div class="date-display" id="checkinDisplay">
+                <span>Sélectionner une date</span>
+                <i class="fas fa-calendar"></i>
+              </div>
+              <input type="date" id="checkinDate" required onchange="updateDateDisplay('checkinDate','checkinDisplay')">
+            </div>
           </div>
 
-          <!-- Date de départ (optionnel) -->
+          <!-- Date de départ -->
           <div class="form-group">
             <label>
               <i class="fas fa-calendar-xmark"></i>
               Date de départ <span class="optional">(optionnel)</span>
             </label>
-            <input type="date" id="checkoutDate" placeholder="JJ/MM/AAAA" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
+            <div class="date-wrapper">
+              <div class="date-display" id="checkoutDisplay">
+                <span>Sélectionner une date</span>
+                <i class="fas fa-calendar"></i>
+              </div>
+              <input type="date" id="checkoutDate" onchange="updateDateDisplay('checkoutDate','checkoutDisplay')">
+            </div>
             <small>Peut aider à identifier votre réservation plus précisément</small>
           </div>
 
@@ -80,13 +120,11 @@
             </select>
           </div>
 
-          <!-- Error message -->
           <div id="errorMessage" class="error-box" style="display: none;">
             <i class="fas fa-exclamation-circle"></i>
             <span id="errorText"></span>
           </div>
 
-          <!-- Submit button -->
           <button type="submit" class="btn-verify" id="verifyBtn">
             <i class="fas fa-check"></i>
             Vérifier et accéder au chat
@@ -106,7 +144,6 @@
   <div id="chatScreen" class="screen">
     <div class="chat-container">
       
-      <!-- Header Chat -->
       <div class="chat-header">
         <button class="btn-back" id="btnBack">
           <i class="fas fa-arrow-left"></i>
@@ -117,7 +154,6 @@
         </div>
       </div>
 
-      <!-- Messages -->
       <div class="messages-container" id="messagesContainer">
         <div class="loading">
           <i class="fas fa-spinner fa-spin"></i>
@@ -125,19 +161,13 @@
         </div>
       </div>
 
-      <!-- Input avec bouton photo -->
       <div class="chat-input-container">
-        <textarea 
-          id="messageInput" 
-          placeholder="Écrivez votre message..."
-          rows="1"></textarea>
-        
+        <textarea id="messageInput" placeholder="Écrivez votre message..." rows="1"></textarea>
         <div class="input-actions">
           <button type="button" id="photoBtn" class="btn-photo" title="Envoyer une photo">
             <i class="fas fa-image"></i>
           </button>
         </div>
-        
         <button id="sendBtn" class="btn-send" title="Envoyer">
           <i class="fas fa-paper-plane"></i>
         </button>
@@ -146,6 +176,17 @@
     </div>
   </div>
 
+  <script>
+    function updateDateDisplay(inputId, displayId) {
+      var input = document.getElementById(inputId);
+      var display = document.getElementById(displayId);
+      if (input.value) {
+        var d = new Date(input.value + 'T00:00:00');
+        display.querySelector('span').textContent = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        display.classList.add('has-value');
+      }
+    }
+  </script>
   <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
   <script src="js/app.js"></script>
 </body>
