@@ -746,6 +746,28 @@ html[data-theme-v3="1"] .btn-ghost {
   font-family: 'DM Sans', sans-serif !important;
   font-weight: 600 !important;
 }
+
+/* ===== HISTORIQUE FACTURES ===== */
+.history-section { margin-top: 32px; }
+.history-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.history-title { font-size:18px; font-weight:700; color:#1a2e1a; display:flex; align-items:center; gap:8px; }
+.history-title i { color:#1A7A5E; }
+.history-empty { text-align:center; padding:40px 20px; color:#9ca3af; font-size:14px; }
+.history-empty i { font-size:32px; margin-bottom:10px; display:block; }
+.history-table { width:100%; border-collapse:collapse; font-size:14px; }
+.history-table thead th { background:#f3f4f6; padding:10px 14px; text-align:left; font-weight:600; color:#374151; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; }
+.history-table thead th:first-child { border-radius:8px 0 0 8px; }
+.history-table thead th:last-child { border-radius:0 8px 8px 0; }
+.history-table tbody tr { border-bottom:1px solid #f3f4f6; transition:background 0.15s; }
+.history-table tbody tr:hover { background:#f9fafb; }
+.history-table tbody td { padding:12px 14px; color:#374151; vertical-align:middle; }
+.history-table tbody td:first-child { font-weight:600; color:#1A7A5E; }
+.history-resend-btn { background:none; border:1px solid #1A7A5E; color:#1A7A5E; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; transition:all 0.15s; }
+.history-resend-btn:hover { background:#1A7A5E; color:white; }
+@media (max-width:1366px) {
+  .history-table thead th:nth-child(3), .history-table tbody td:nth-child(3) { display:none; }
+}
+
 </style>
 <script src="/js/auth-fetch.js"></script>
 <style>
@@ -1045,6 +1067,21 @@ html[data-theme-v3="1"] .btn-ghost {
 </div>
 </div>
 </div><!-- /.invoice-grid -->
+
+<!-- HISTORIQUE -->
+<div class="history-section">
+  <div class="history-header">
+    <div class="history-title"><i class="fas fa-history"></i> Historique des factures</div>
+    <button onclick="loadInvoiceHistory()" style="background:none;border:none;color:#1A7A5E;cursor:pointer;font-size:13px;"><i class="fas fa-sync-alt"></i> Actualiser</button>
+  </div>
+  <div class="card">
+    <div class="card-body" style="padding:0;overflow:hidden;border-radius:12px;">
+      <div id="historyContent">
+        <div class="history-empty"><i class="fas fa-file-invoice"></i>Chargement...</div>
+      </div>
+    </div>
+  </div>
+</div>
 </div><!-- /.page-content -->
 </main>
 </div>
@@ -1447,6 +1484,7 @@ html[data-theme-v3="1"] .btn-ghost {
             invoiceNumber = result.invoiceNumber || '';
 
             alert("✅ Facture " + (invoiceNumber || '') + " créée et envoyée par email !");
+            loadInvoiceHistory(); // Rafraîchir historique
 
             if (invoiceNumber) {
               generateInvoice(); // Régénérer avec le bon numéro
@@ -1482,6 +1520,84 @@ html[data-theme-v3="1"] .btn-ghost {
           el.addEventListener('change', generateInvoice);
         }
       });
+
+
+      // ===== HISTORIQUE DES FACTURES =====
+      window.loadInvoiceHistory = async function() {
+        const container = document.getElementById('historyContent');
+        if (!container) return;
+        container.innerHTML = '<div class="history-empty"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>';
+        
+        try {
+          const res = await fetch('/api/invoice/history', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          const data = await res.json();
+          const invoices = data.invoices || [];
+          
+          if (invoices.length === 0) {
+            container.innerHTML = '<div class="history-empty"><i class="fas fa-file-invoice"></i>Aucune facture envoyée pour le moment</div>';
+            return;
+          }
+
+          const rows = invoices.map(inv => {
+            const date = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'}) : '—';
+            const checkin = inv.checkinDate ? new Date(inv.checkinDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : '';
+            const checkout = inv.checkoutDate ? new Date(inv.checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : '';
+            const sejour = checkin && checkout ? checkin + ' → ' + checkout : '—';
+            const total = inv.total ? parseFloat(inv.total).toFixed(2) + ' €' : '—';
+            const resendBtn = inv.clientEmail 
+              ? `<button class="history-resend-btn" onclick="resendInvoice('${inv.invoiceNumber}', '${inv.clientEmail}')"><i class="fas fa-paper-plane"></i> Renvoyer</button>`
+              : '—';
+            return `<tr>
+              <td>${inv.invoiceNumber || '—'}</td>
+              <td>${date}</td>
+              <td>${inv.propertyName || '—'}</td>
+              <td>${inv.clientName || '—'}</td>
+              <td>${sejour}</td>
+              <td style="font-weight:600;">${total}</td>
+              <td>${resendBtn}</td>
+            </tr>`;
+          }).join('');
+
+          container.innerHTML = `
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>N° Facture</th>
+                  <th>Date</th>
+                  <th>Logement</th>
+                  <th>Client</th>
+                  <th>Séjour</th>
+                  <th>Total</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>`;
+        } catch(e) {
+          container.innerHTML = '<div class="history-empty"><i class="fas fa-exclamation-circle"></i>Erreur de chargement</div>';
+        }
+      };
+
+      window.resendInvoice = async function(invoiceNumber, email) {
+        if (!confirm('Renvoyer la facture ' + invoiceNumber + ' à ' + email + ' ?')) return;
+        try {
+          const res = await fetch('/api/invoice/resend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ invoiceNumber })
+          });
+          const data = await res.json();
+          if (res.ok) alert('✅ Facture renvoyée à ' + email);
+          else alert('⚠️ ' + (data.error || 'Erreur'));
+        } catch(e) {
+          alert('❌ Erreur réseau');
+        }
+      };
+
+      // Charger l'historique au démarrage
+      loadInvoiceHistory();
 
       // Init
       loadProperties();
