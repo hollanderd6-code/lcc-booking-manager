@@ -13299,14 +13299,8 @@ app.post('/api/invoice/create',
             <p style="color: #10B981; font-weight: bold; margin: 0; font-size: 18px;">✓ FACTURE ACQUITTÉE</p>
           </div>
 
-          <div style="margin-top: 18px; text-align: center;">
-            <a href="${pdfUrl}"
-              style="display:inline-block; padding:12px 18px; background:#111827; color:#fff; text-decoration:none; border-radius:10px; font-weight:700;">
-              Télécharger la facture (PDF)
-            </a>
-            <div style="font-size:12px; color:#6b7280; margin-top:10px;">
-              Lien valable 24h.
-            </div>
+          <div style="margin-top: 18px; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; text-align:center;">
+            <p style="margin:0; color:#166534; font-weight:600;">📎 La facture PDF est jointe à cet email</p>
           </div>
 
           <p style="font-size: 12px; color: #6b7280; margin-top: 32px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px;">
@@ -13318,13 +13312,19 @@ app.post('/api/invoice/create',
         </div>
       `;
 
-      // Envoyer via transporter (utilise automatiquement Brevo API avec nettoyage)
+      // Envoyer via transporter avec PDF en pièce jointe
       try {
+        const pdfBuffer = fs.readFileSync(pdfPath);
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
           to: clientEmail,
           subject: `Facture ${invoiceNumber} - ${propertyName}`,
-          html: emailHtml
+          html: emailHtml,
+          attachments: [{
+            filename: `${invoiceNumber}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf'
+          }]
         });
         
         console.log('✅ Email facture client envoyé à:', clientEmail);
