@@ -175,8 +175,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   border-radius: 24px;
   padding: 32px 24px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  overflow-x: hidden;
+  overflow: hidden;
   max-width: 100%;
+  /* Fix Safari — forcer les enfants à rester dans la card */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card-icon {
@@ -249,7 +252,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   transition: all 0.2s ease;
   background: white;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden;
+  display: block;
+  /* Fix Safari iOS — empêche le débordement */
+  -webkit-box-sizing: border-box;
+  min-width: 0;
 }
 
 .form-group input:focus,
