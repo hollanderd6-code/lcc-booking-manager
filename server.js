@@ -13063,8 +13063,14 @@ app.post('/api/invoice/create',
       sendEmail
     } = req.body;
 
-    // Générer le numéro de facture
-    const invoiceNumber = 'FACT-' + Date.now();
+    // Générer le numéro de facture lisible : FACT-2026-001
+    const yearStr = new Date().getFullYear();
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM invoice_download_tokens WHERE user_id = $1 AND EXTRACT(YEAR FROM created_at) = $2`,
+      [userId, yearStr]
+    ).catch(() => ({ rows: [{ count: 0 }] }));
+    const seq = String(parseInt(countResult.rows[0].count) + 1).padStart(3, '0');
+    const invoiceNumber = `FACT-${yearStr}-${seq}`;
     const invoiceId = 'inv_' + Date.now();
 
     // Calculer les montants
