@@ -11655,7 +11655,7 @@ app.post('/api/deposits',
       metadata: {
         deposit_id: deposit.id,
         reservation_uid: reservationUid,
-        user_id: user.id
+        user_id: userId
       },
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
