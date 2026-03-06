@@ -13243,37 +13243,10 @@ app.post('/api/invoice/create',
     if (sendEmail && clientEmail) {
       const profile = user;
 
-      // 1) Générer le fichier PDF en local temporaire
+      // 1) Générer le fichier PDF
       const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}.pdf`);
       await generateInvoicePdfToFile(pdfPath);
-
-      // 2) Uploader sur Cloudinary pour URL persistante (survit aux redéploiements)
-      let pdfUrl = null;
-      try {
-        const pdfBuffer = fs.readFileSync(pdfPath);
-        const cloudinaryResult = await new Promise((resolve, reject) => {
-          cloudinary.uploader.upload_stream(
-            { folder: 'lcc-invoices', public_id: invoiceNumber, resource_type: 'raw', format: 'pdf', type: 'upload', access_mode: 'public' },
-            (error, result) => error ? reject(error) : resolve(result)
-          ).end(pdfBuffer);
-        });
-        // Transformer l'URL pour forcer téléchargement PDF avec bon Content-Type
-        const rawUrl = cloudinaryResult.secure_url;
-        // Remplacer /raw/upload/ par /raw/upload/fl_attachment/ pour forcer le Content-Type
-        pdfUrl = rawUrl.replace('/raw/upload/', '/raw/upload/fl_attachment/');
-        console.log('✅ PDF facture uploadé Cloudinary:', pdfUrl);
-      } catch(e) {
-        console.error('❌ Erreur upload PDF Cloudinary:', e.message);
-        // Fallback : token local
-        const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        await pool.query(
-          `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at) VALUES ($1, $2, $3, $4, $5)`,
-          [token, userId, invoiceNumber, pdfPath, expiresAt]
-        );
-        const origin = new URL(process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).origin;
-        pdfUrl = `${origin}/api/invoice/download/${token}`;
-      }
+      const pdfBuffer = fs.readFileSync(pdfPath);
 
       // Formater les dates pour l'email
       const checkinFr  = checkinDate  ? new Date(checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
@@ -13351,7 +13324,6 @@ app.post('/api/invoice/create',
 
       // Envoyer via transporter avec PDF en pièce jointe
       try {
-        const pdfBuffer = fs.readFileSync(pdfPath);
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
           to: clientEmail,
