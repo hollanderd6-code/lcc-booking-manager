@@ -2075,6 +2075,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
   /* ── 12. BOTTOM TABS ── */
   .mobile-tabs {
+    display: flex !important;
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
@@ -2091,7 +2092,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 <script>
 /* ── MESSAGES MOBILE: navigation liste ↔ chat ── */
 (function() {
-  if (window.innerWidth > 768) return;
+  if (window.innerWidth > 1366) return;
 
   function init() {
     var split = document.querySelector('.msgs-split');
