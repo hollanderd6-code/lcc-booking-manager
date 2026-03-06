@@ -13237,7 +13237,6 @@ app.post('/api/invoice/create',
         stream.on('error', reject);
       });
     }
-    }
 
 // Si sendEmail est true, envoyer l'email via API Brevo
 
