@@ -13438,6 +13438,15 @@ app.put('/api/owner-invoices/:id',
     res.json({ success: true, message: 'Facture modifiée' });
 
 
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erreur modification facture:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
+  }
+
 // Télécharger une facture PDF via token expirant
 app.get('/api/invoice/download/:token', async (req, res) => {
   try {
@@ -13476,14 +13485,6 @@ app.get('/api/invoice/download/:token', async (req, res) => {
     res.status(500).send('Erreur serveur.');
   }
 });
-
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Erreur modification facture:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  } finally {
-    client.release();
-  }
 });
 
 // 7. SUPPRIMER UNE FACTURE BROUILLON
