@@ -3023,7 +3023,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     overflow-y: visible !important;
     height: auto !important;
     padding: 0 14px 90px !important;
-    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
     max-width: 100% !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -3051,6 +3051,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
   /* 3. BOUTONS HEADER DESKTOP → cacher */
   .fp-header-btns, #bhHeader { display: none !important; }
+  html[data-theme-v3="1"] .top-bar { display: none !important; }
 
   /* 4. DASHBOARD HEADER */
   .dashboard-header { margin-bottom: 16px !important; }
