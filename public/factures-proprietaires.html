@@ -2052,8 +2052,6 @@ window.markOwnerInvoicePaid = async function (id) {
   }
 
   // Surtout : on NE re-render PAS toute la liste ici
-  const totalEl = document.querySelector(`[data-total-for="${id}"]`);
-  if (totalEl) totalEl.textContent = calculateLineTotal(p).toFixed(2) + ' €';
   updatePreview();
 };
 
@@ -2103,7 +2101,7 @@ window.markOwnerInvoicePaid = async function (id) {
             <input type="text" class="form-control" value="${p.description}" oninput="updatePrestation('${p.id}','description',this.value)">
           </div>
           ${inputs}
-          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;" data-total-for="${p.id}">
+          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;">
             ${calculateLineTotal(p).toFixed(2)} €
           </div>
         </div>
@@ -2396,41 +2394,40 @@ function getSelectedProperties() {
 }
   // --- SAVE ---
   window.createInvoice = async function(send) {
-    const clientId = document.getElementById('invoiceClientId').value;
-    if (!clientId) return alert('Veuillez sélectionner un client');
+    const clientIdRaw = document.getElementById('invoiceClientId').value;
+    console.log('🔍 clientIdRaw:', clientIdRaw, '| type:', typeof clientIdRaw);
+    if(!clientIdRaw) return alert('Veuillez sélectionner un client');
 
     const issueDate = document.getElementById('invoiceIssueDate').value;
     const dueDate = document.getElementById('invoiceDueDate').value;
-
     if (!issueDate) return alert("Veuillez renseigner la date d'émission");
     if (!dueDate) return alert("Veuillez renseigner la date d'échéance");
     if (prestations.length === 0) return alert('Veuillez ajouter au moins une prestation');
 
-    const items = prestations.map(p => ({
-      itemType: p.type,
-      description: p.description,
-      rentalAmount: p.rentalAmount,
-      commissionRate: p.commissionRate,
-      quantity: p.quantity,
-      unitPrice: p.unitPrice,
-      total: calculateLineTotal(p),
-      isDebours: p.isDebours
-    }));
+    // Envoyer clientId comme string pour éviter NaN via parseInt
+    const clientId = clientIdRaw;
 
     const data = {
-      clientId: parseInt(clientId),
+      clientId: isNaN(parseInt(clientId)) ? clientId : parseInt(clientId),
       periodStart: document.getElementById('invoicePeriodStart').value,
       periodEnd: document.getElementById('invoicePeriodEnd').value,
-      issueDate,
-      dueDate,
-      items,
+      issueDate: document.getElementById('invoiceIssueDate').value,
+      dueDate: document.getElementById('invoiceDueDate').value,
+      items: prestations.map(p => ({
+        itemType: p.type,
+        description: p.description,
+        rentalAmount: p.rentalAmount,
+        commissionRate: p.commissionRate,
+        quantity: p.quantity,
+        unitPrice: p.unitPrice,
+        total: calculateLineTotal(p),
+        isDebours: p.isDebours
+      })),
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
-      vatRate: parseFloat(document.getElementById('invoiceVatRate').value) || 0,
+      vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
       propertyIds: getSelectedProperties(),
       sendEmail: send
     };
-
-    console.log('📤 PAYLOAD items:', items.length, '| clientId:', data.clientId, '| issueDate:', issueDate, '| dueDate:', dueDate);
 
     try {
       const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
@@ -2441,20 +2438,18 @@ function getSelectedProperties() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
-        alert('Facture enregistrée !');
+        alert('[OK] Facture enregistrée !');
         prestations = [];
         prestationCounter = 0;
-        addPrestation('commission');
         renderEditorPrestations();
         switchTab('dashboard');
         loadInvoices();
       } else {
         const err = await res.json();
-        console.error('❌ Erreur serveur:', err);
-        alert('Erreur : ' + err.error + (err.debug ? '\nDébug: ' + JSON.stringify(err.debug) : ''));
+        alert('Erreur : ' + err.error);
       }
     } catch (err) {
-      console.error('❌ Erreur réseau:', err);
+      console.error(err);
       alert('Erreur serveur');
     }
   };
@@ -2470,7 +2465,6 @@ function getSelectedProperties() {
     editingInvoiceId = null;
     prestations = [];
     prestationCounter = 0;
-    addPrestation('commission');
     
     document.getElementById('invoiceClientId').value = '';
     // ✅ FIX iOS
