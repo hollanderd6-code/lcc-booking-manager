@@ -2701,6 +2701,7 @@ app.use('/guest-app', express.static(path.join(__dirname, 'guest-app')));
 let reservationsStore = {
   properties: {},
   lastSync: null,
+  serverJustStarted: true, // ✅ Flag : vrai jusqu'au 2e sync
   syncStatus: 'idle'
 };
 
@@ -5155,6 +5156,7 @@ console.log(
   }
 
   reservationsStore.lastSync = new Date();
+  reservationsStore.serverJustStarted = false; // ✅ Plus de premier démarrage
   reservationsStore.syncStatus = 'idle';
 
  // Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
@@ -5192,7 +5194,7 @@ console.log(
 
     // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT DANS LES 3 PROCHAINS MOIS)
     console.log("🔍 [Annulation] cancelledReservations.length:", cancelledReservations.length, JSON.stringify(cancelledReservations.map(r=>({uid:r.uid,start:r.start,userId:r.userId}))));
-if (!isFirstSync && cancelledReservations.length > 0) {
+if (!reservationsStore.serverJustStarted && cancelledReservations.length > 0) {
   // Filtrer pour ne garder que les reservations dans les 3 prochains mois
   const now = new Date();
   const threeMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
