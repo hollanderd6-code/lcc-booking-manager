@@ -1652,68 +1652,70 @@ async function loadInvoices() {
         statusClass = 'invoice-badge-paid';
       }
 
+      const eid = inv.id;
+
       let actionsHtml = '';
-
       if (inv.is_credit_note) {
-        actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoiceReadOnly('" + inv.id + "')">Voir la facture</button>' +
-          '<button type="button" onclick="downloadOwnerInvoice('" + inv.id + "')">Télécharger (PDF)</button>' +
-          '<button type="button" onclick="sendOwnerInvoice('" + inv.id + "')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice('" + inv.id + "')" style="color:#b91c1c;">Supprimer</button>';
+        actionsHtml = [
+          `<button type="button" data-action="view" data-id="${eid}">Voir la facture</button>`,
+          `<button type="button" data-action="download" data-id="${eid}">Télécharger (PDF)</button>`,
+          `<button type="button" data-action="send" data-id="${eid}">Envoyer par email</button>`,
+          `<button type="button" data-action="delete" data-id="${eid}" style="color:#b91c1c;">Supprimer</button>`
+        ].join('');
       } else if (status === 'draft') {
-        actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoiceReadOnly('" + inv.id + "')">Voir la facture</button>' +
-          '<button type="button" onclick="finalizeOwnerInvoice('" + inv.id + "')">Passer en “Facturée”</button>' +
-          '<button type="button" onclick="sendOwnerInvoice('" + inv.id + "')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice('" + inv.id + "')" style="color:#b91c1c;">Supprimer le brouillon</button>';
+        actionsHtml = [
+          `<button type="button" data-action="view" data-id="${eid}">Voir la facture</button>`,
+          `<button type="button" data-action="finalize" data-id="${eid}">Passer en Facturée</button>`,
+          `<button type="button" data-action="send" data-id="${eid}">Envoyer par email</button>`,
+          `<button type="button" data-action="delete" data-id="${eid}" style="color:#b91c1c;">Supprimer le brouillon</button>`
+        ].join('');
       } else {
-        let paidBtn = '';
-        if (status !== 'paid') {
-          paidBtn = '<button type="button" onclick="markOwnerInvoicePaid('" + inv.id + "')">Marquer comme encaissée</button>';
-        }
-
-        actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoiceReadOnly('" + inv.id + "')">Voir la facture</button>' +
-          paidBtn +
-          '<button type="button" onclick="createOwnerCreditNote('" + inv.id + "')">Créer un avoir</button>' +
-          '<button type="button" onclick="downloadOwnerInvoice('" + inv.id + "')">Télécharger (PDF)</button>' +
-          '<button type="button" onclick="sendOwnerInvoice('" + inv.id + "')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice('" + inv.id + "')" style="color:#b91c1c;">Supprimer</button>';
+        const paidBtn = status !== 'paid'
+          ? `<button type="button" data-action="markpaid" data-id="${eid}">Marquer comme encaissée</button>`
+          : '';
+        actionsHtml = [
+          `<button type="button" data-action="view" data-id="${eid}">Voir la facture</button>`,
+          paidBtn,
+          `<button type="button" data-action="creditnote" data-id="${eid}">Créer un avoir</button>`,
+          `<button type="button" data-action="download" data-id="${eid}">Télécharger (PDF)</button>`,
+          `<button type="button" data-action="send" data-id="${eid}">Envoyer par email</button>`,
+          `<button type="button" data-action="delete" data-id="${eid}" style="color:#b91c1c;">Supprimer</button>`
+        ].join('');
       }
 
       const issueDate = formatDate(inv.issue_date);
 
-      const cardHtml =
-        '<div class="invoice-card">' +
-          '<div class="invoice-card-header">' +
-            '<div class="invoice-card-number">' + numberDisplay + '</div>' +
-            '<span class="invoice-card-badge ' + statusClass + '">' + statusLabel + '</span>' +
-          '</div>' +
-          '<div class="invoice-card-body">' +
-            '<div class="invoice-info-grid">' +
-              '<div class="invoice-info-item">' +
-                '<div class="invoice-info-label">Client</div>' +
-                '<div class="invoice-info-value">' + (inv.client_name || '-') + '</div>' +
-              '</div>' +
-              '<div class="invoice-info-item">' +
-                '<div class="invoice-info-label">Date</div>' +
-                '<div class="invoice-info-value">' + issueDate + '</div>' +
-              '</div>' +
-              '<div class="invoice-info-item">' +
-                '<div class="invoice-info-label">Montant TTC</div>' +
-                '<div class="invoice-info-value amount">' + formatMoney(total) + '</div>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="invoice-card-footer">' +
-            '<button type="button" class="invoice-card-actions-btn" onclick="toggleInvoiceActions('" + inv.id + "', this)">' +
-              '<i class="fas fa-ellipsis-v"></i> Actions' +
-            '</button>' +
-            '<div class="invoice-actions-menu" id="invoice-actions-' + inv.id + '">' +
-              actionsHtml +
-            '</div>' +
-          '</div>' +
-        '</div>';
+      const cardHtml = `
+        <div class="invoice-card">
+          <div class="invoice-card-header">
+            <div class="invoice-card-number">${numberDisplay}</div>
+            <span class="invoice-card-badge ${statusClass}">${statusLabel}</span>
+          </div>
+          <div class="invoice-card-body">
+            <div class="invoice-info-grid">
+              <div class="invoice-info-item">
+                <div class="invoice-info-label">Client</div>
+                <div class="invoice-info-value">${inv.client_name || '-'}</div>
+              </div>
+              <div class="invoice-info-item">
+                <div class="invoice-info-label">Date</div>
+                <div class="invoice-info-value">${issueDate}</div>
+              </div>
+              <div class="invoice-info-item">
+                <div class="invoice-info-label">Montant TTC</div>
+                <div class="invoice-info-value amount">${formatMoney(total)}</div>
+              </div>
+            </div>
+          </div>
+          <div class="invoice-card-footer">
+            <button type="button" class="invoice-card-actions-btn" data-action="toggle" data-id="${eid}">
+              <i class="fas fa-ellipsis-v"></i> Actions
+            </button>
+            <div class="invoice-actions-menu" id="invoice-actions-${eid}">
+              ${actionsHtml}
+            </div>
+          </div>
+        </div>`;
 
       container.innerHTML += cardHtml;
     });
@@ -1755,6 +1757,27 @@ window.toggleInvoiceActions = function (id, btn) {
 
   menu.classList.add('open');
 };
+
+// Listener délégué pour les boutons data-action dans les menus de factures
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-action][data-id]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const id = btn.dataset.id;
+  if (action === 'toggle') {
+    window.toggleInvoiceActions(id, btn);
+    return;
+  }
+  // Fermer le menu
+  document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
+  if (action === 'view')       window.viewOwnerInvoiceReadOnly(id);
+  else if (action === 'download')  window.downloadOwnerInvoice(id);
+  else if (action === 'send')      window.sendOwnerInvoice(id);
+  else if (action === 'delete')    window.deleteOwnerInvoice(id);
+  else if (action === 'finalize')  window.finalizeOwnerInvoice(id);
+  else if (action === 'markpaid')  window.markOwnerInvoicePaid(id);
+  else if (action === 'creditnote') window.createOwnerCreditNote(id);
+});
 
 // Fermer le menu si on clique ailleurs dans la page
 document.addEventListener('click', function(e) {
