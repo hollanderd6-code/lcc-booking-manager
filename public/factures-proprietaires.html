@@ -731,6 +731,15 @@ html[data-theme-v3="1"] .modal-content {
 
   /* Clients liste */
   .clients-list { gap: 10px !important; }
+
+  /* Compacter le header pour que les onglets soient visibles d'emblée */
+  .dashboard-header { margin-bottom: 8px !important; }
+  .page-subtitle { display: none !important; }
+  .page-title { font-size: 16px !important; margin: 0 !important; }
+  .stats-row { gap: 8px !important; margin-bottom: 8px !important; }
+  .stat-card { padding: 8px 10px !important; }
+  .stat-label { font-size: 10px !important; }
+  .stat-value { font-size: 16px !important; }
   
   /* Modal full screen */
   .modal-content {
@@ -1518,8 +1527,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadUserProfile().catch(e => console.error('[ERROR] Profil:', e)),
   ]);
 
-  // Forcer le scroll en haut (loadClients peut déclencher un scroll parasite)
-  window.scrollTo(0, 0);
+  // Forcer le scroll en haut après tous les chargements (mobile scroll parasite)
+  const forceTop = () => { window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; };
+  forceTop();
+  setTimeout(forceTop, 50);
+  setTimeout(forceTop, 200);
+  setTimeout(forceTop, 600);
 
   // Profil émetteur (APRÈS loadUserProfile)
   loadEmitterProfile();
