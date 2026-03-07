@@ -1656,29 +1656,29 @@ async function loadInvoices() {
 
       if (inv.is_credit_note) {
         actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoiceReadOnly(' + inv.id + ')">Voir la facture</button>' +
-          '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
-          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
+          '<button type="button" onclick="viewOwnerInvoiceReadOnly('" + inv.id + "')">Voir la facture</button>' +
+          '<button type="button" onclick="downloadOwnerInvoice('" + inv.id + "')">Télécharger (PDF)</button>' +
+          '<button type="button" onclick="sendOwnerInvoice('" + inv.id + "')">Envoyer par email</button>' +
+          '<button type="button" onclick="deleteOwnerInvoice('" + inv.id + "')" style="color:#b91c1c;">Supprimer</button>';
       } else if (status === 'draft') {
         actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoiceReadOnly(' + inv.id + ')">Voir la facture</button>' +
-          '<button type="button" onclick="finalizeOwnerInvoice(' + inv.id + ')">Passer en “Facturée”</button>' +
-          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer le brouillon</button>';
+          '<button type="button" onclick="viewOwnerInvoiceReadOnly('" + inv.id + "')">Voir la facture</button>' +
+          '<button type="button" onclick="finalizeOwnerInvoice('" + inv.id + "')">Passer en “Facturée”</button>' +
+          '<button type="button" onclick="sendOwnerInvoice('" + inv.id + "')">Envoyer par email</button>' +
+          '<button type="button" onclick="deleteOwnerInvoice('" + inv.id + "')" style="color:#b91c1c;">Supprimer le brouillon</button>';
       } else {
         let paidBtn = '';
         if (status !== 'paid') {
-          paidBtn = '<button type="button" onclick="markOwnerInvoicePaid(' + inv.id + ')">Marquer comme encaissée</button>';
+          paidBtn = '<button type="button" onclick="markOwnerInvoicePaid('" + inv.id + "')">Marquer comme encaissée</button>';
         }
 
         actionsHtml =
-          '<button type="button" onclick="viewOwnerInvoiceReadOnly(' + inv.id + ')">Voir la facture</button>' +
+          '<button type="button" onclick="viewOwnerInvoiceReadOnly('" + inv.id + "')">Voir la facture</button>' +
           paidBtn +
-          '<button type="button" onclick="createOwnerCreditNote(' + inv.id + ')">Créer un avoir</button>' +
-          '<button type="button" onclick="downloadOwnerInvoice(' + inv.id + ')">Télécharger (PDF)</button>' +
-          '<button type="button" onclick="sendOwnerInvoice(' + inv.id + ')">Envoyer par email</button>' +
-          '<button type="button" onclick="deleteOwnerInvoice(' + inv.id + ')" style="color:#b91c1c;">Supprimer</button>';
+          '<button type="button" onclick="createOwnerCreditNote('" + inv.id + "')">Créer un avoir</button>' +
+          '<button type="button" onclick="downloadOwnerInvoice('" + inv.id + "')">Télécharger (PDF)</button>' +
+          '<button type="button" onclick="sendOwnerInvoice('" + inv.id + "')">Envoyer par email</button>' +
+          '<button type="button" onclick="deleteOwnerInvoice('" + inv.id + "')" style="color:#b91c1c;">Supprimer</button>';
       }
 
       const issueDate = formatDate(inv.issue_date);
@@ -1706,7 +1706,7 @@ async function loadInvoices() {
             '</div>' +
           '</div>' +
           '<div class="invoice-card-footer">' +
-            '<button type="button" class="invoice-card-actions-btn" onclick="toggleInvoiceActions(' + inv.id + ', this)">' +
+            '<button type="button" class="invoice-card-actions-btn" onclick="toggleInvoiceActions('" + inv.id + "', this)">' +
               '<i class="fas fa-ellipsis-v"></i> Actions' +
             '</button>' +
             '<div class="invoice-actions-menu" id="invoice-actions-' + inv.id + '">' +
@@ -2394,21 +2394,11 @@ function getSelectedProperties() {
 }
   // --- SAVE ---
   window.createInvoice = async function(send) {
-    const clientIdRaw = document.getElementById('invoiceClientId').value;
-    console.log('🔍 clientIdRaw:', clientIdRaw, '| type:', typeof clientIdRaw);
-    if(!clientIdRaw) return alert('Veuillez sélectionner un client');
-
-    const issueDate = document.getElementById('invoiceIssueDate').value;
-    const dueDate = document.getElementById('invoiceDueDate').value;
-    if (!issueDate) return alert("Veuillez renseigner la date d'émission");
-    if (!dueDate) return alert("Veuillez renseigner la date d'échéance");
-    if (prestations.length === 0) return alert('Veuillez ajouter au moins une prestation');
-
-    // Envoyer clientId comme string pour éviter NaN via parseInt
-    const clientId = clientIdRaw;
+    const clientId = document.getElementById('invoiceClientId').value;
+    if(!clientId) return alert('Veuillez sélectionner un client');
 
     const data = {
-      clientId: isNaN(parseInt(clientId)) ? clientId : parseInt(clientId),
+      clientId: parseInt(clientId),
       periodStart: document.getElementById('invoicePeriodStart').value,
       periodEnd: document.getElementById('invoicePeriodEnd').value,
       issueDate: document.getElementById('invoiceIssueDate').value,
