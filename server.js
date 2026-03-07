@@ -12924,25 +12924,20 @@ app.get('/api/owner-invoices/:id',
     const invoice = invResult.rows[0];
 
     // Lignes
-    const itemsResult = await pool.query(
-      'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index',
-      [invoiceId]
-    );
-
     // Récupérer les logements liés
-    const propertiesResult = await pool.query(
-      `SELECT p.id, p.name, p.address 
-       FROM owner_invoice_properties oip
-       JOIN properties p ON p.id = oip.property_id
-       WHERE oip.invoice_id = $1`,
-      [invoiceId]
-    );
+const propertiesResult = await pool.query(
+  `SELECT p.id, p.name, p.address 
+   FROM owner_invoice_properties oip
+   JOIN properties p ON p.id = oip.property_id
+   WHERE oip.invoice_id = $1`,
+  [invoiceId]
+);
 
-    res.json({
-      invoice,
-      items: itemsResult.rows,
-      properties: propertiesResult.rows
-    });
+res.json({
+  invoice,
+  items: itemsResult.rows,
+  properties: propertiesResult.rows
+});
 
   } catch (err) {
     console.error('Erreur lecture facture propriétaire:', err);
@@ -13054,9 +13049,14 @@ app.post('/api/owner-invoices/:id/credit-note',
     const credit = insertResult.rows[0];
     const creditId = credit.id;
 
-    // Générer un numéro d'avoir type A-2025-0007
+    // Générer un numéro d'avoir séquentiel A-YYYY-XXXX
     const year = new Date().getFullYear();
-    const creditNumber = `A-${year}-${String(creditId).padStart(4, '0')}`;
+    const seqRes = await client.query(
+      `SELECT COUNT(*) as cnt FROM owner_invoices WHERE user_id = $1 AND is_credit_note = TRUE AND EXTRACT(YEAR FROM created_at) = $2`,
+      [orig.user_id, year]
+    );
+    const seq = parseInt(seqRes.rows[0].cnt || 0) + 1;
+    const creditNumber = `A-${year}-${String(seq).padStart(4, '0')}`;
 
     await client.query(
       'UPDATE owner_invoices SET invoice_number = $1 WHERE id = $2',
@@ -14097,48 +14097,92 @@ app.post('/api/owner-invoices/:id/finalize',
 });
 
 // 8. ENVOYER UN BROUILLON
-// ============================================
-// FONCTION ENVOI EMAIL FACTURE PROPRIÉTAIRE
-// ============================================
+
+// ============================================================
+// ENVOI EMAIL FACTURE PROPRIÉTAIRE
+// ============================================================
 async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, periodStart, periodEnd, totalTtc, items, userCompany, userEmail }) {
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '';
-  const formatMoney = (n) => parseFloat(n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  if (!clientEmail) throw new Error('Email client manquant');
 
-  const itemsHtml = (items || []).map(it => `
-    <tr>
-      <td style="padding:8px; border-bottom:1px solid #eee;">${it.description || ''}</td>
-      <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${it.quantity || 1}</td>
-      <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">${formatMoney(it.unit_price_ht)}</td>
-      <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">${it.vat_rate || 0}%</td>
-      <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">${formatMoney(it.total_ttc)}</td>
-    </tr>`).join('');
+  const period = (periodStart || periodEnd)
+    ? `Période du ${periodStart ? new Date(periodStart+'T00:00:00').toLocaleDateString('fr-FR') : '?'} au ${periodEnd ? new Date(periodEnd+'T00:00:00').toLocaleDateString('fr-FR') : '?'}`
+    : '';
 
-  const html = `
-    <div style="font-family:Arial,sans-serif; max-width:600px; margin:0 auto;">
-      <h2 style="color:#1A7A5E;">Facture ${invoiceNumber || ''}</h2>
-      <p>Bonjour ${clientName || ''},</p>
-      <p>Veuillez trouver ci-dessous votre facture${periodStart ? ` pour la période du ${formatDate(periodStart)} au ${formatDate(periodEnd)}` : ''}.</p>
-      <table style="width:100%; border-collapse:collapse; margin:20px 0;">
-        <thead>
-          <tr style="background:#f3f4f6;">
-            <th style="padding:8px; text-align:left;">Description</th>
-            <th style="padding:8px; text-align:center;">Qté</th>
-            <th style="padding:8px; text-align:right;">PU HT</th>
-            <th style="padding:8px; text-align:right;">TVA</th>
-            <th style="padding:8px; text-align:right;">Total TTC</th>
-          </tr>
-        </thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-      <p style="text-align:right; font-size:18px; font-weight:bold; color:#1A7A5E;">Total TTC : ${formatMoney(totalTtc)}</p>
-      <p style="color:#666; font-size:12px;">Cordialement,<br>${userCompany || 'La Conciergerie'}</p>
-    </div>`;
+  let itemsRows = '';
+  (items || []).forEach(item => {
+    const total = parseFloat(item.total || 0);
+    const qty   = parseFloat(item.quantity || 1);
+    const pu    = parseFloat(item.unit_price || 0);
+    itemsRows += `
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:12px 8px;font-size:13px;">${item.description || 'Prestation'}</td>
+        <td style="padding:12px 8px;text-align:center;font-size:13px;">${qty}</td>
+        <td style="padding:12px 8px;text-align:right;font-size:13px;">${pu.toFixed(2)} €</td>
+        <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:600;">${total.toFixed(2)} €</td>
+      </tr>`;
+  });
 
-  await smtpTransporter.sendMail({
-    from: process.env.EMAIL_USER,
+  const ttc = parseFloat(totalTtc || 0);
+  const fromEmail = process.env.EMAIL_FROM || userEmail || 'noreply@boostinghost.fr';
+  const fromName  = userCompany || 'Boostinghost';
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"/><title>Facture ${invoiceNumber || ''}</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:'Inter',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08);overflow:hidden;">
+  <!-- Header -->
+  <tr><td style="background:#1A7A5E;padding:28px 40px;text-align:center;">
+    <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:.02em;">FACTURE</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.8);margin-top:6px;">N° ${invoiceNumber || 'BROUILLON'}</div>
+  </td></tr>
+  <!-- Body -->
+  <tr><td style="padding:32px 40px;">
+    <p style="margin:0 0 8px;font-size:15px;color:#374151;">Bonjour <strong>${clientName || ''}</strong>,</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Veuillez trouver ci-dessous votre facture.</p>
+    ${period ? `<p style="margin:0 0 24px;font-size:13px;color:#6b7280;">${period}</p>` : ''}
+    <!-- Table items -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;">
+      <thead>
+        <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+          <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;font-weight:600;">Description</th>
+          <th style="padding:10px 8px;text-align:center;font-size:11px;text-transform:uppercase;color:#6b7280;font-weight:600;">Qté</th>
+          <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;color:#6b7280;font-weight:600;">P.U. HT</th>
+          <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;color:#6b7280;font-weight:600;">Total HT</th>
+        </tr>
+      </thead>
+      <tbody>${itemsRows}</tbody>
+    </table>
+    <!-- Total -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td></td>
+        <td width="220" style="padding:14px 0;border-top:3px solid #111827;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size:16px;font-weight:700;color:#111827;">TOTAL TTC</td>
+              <td align="right" style="font-size:18px;font-weight:700;color:#1A7A5E;">${ttc.toFixed(2)} €</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+  <!-- Footer -->
+  <tr><td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
+    <p style="margin:0;font-size:12px;color:#9ca3af;">Facture générée par <strong style="color:#1A7A5E;">${fromName}</strong> via <a href="https://boostinghost.fr" style="color:#1A7A5E;text-decoration:none;">boostinghost.fr</a></p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+  await sendEmail({
+    from: `${fromName} <${fromEmail}>`,
     to: clientEmail,
-    replyTo: userEmail || process.env.EMAIL_USER,
-    subject: `Facture ${invoiceNumber || ''} - ${userCompany || 'La Conciergerie'}`,
+    subject: `Votre facture ${invoiceNumber || ''} – ${fromName}`,
     html
   });
 }
@@ -14165,9 +14209,10 @@ app.post('/api/owner-invoices/:id/send',
 
     const invoice = invoiceResult.rows[0];
 
-    if (invoice.status === 'draft') {
-      return res.status(400).json({ error: 'Vous devez d\'abord valider cette facture avant de l\'envoyer' });
+    if (invoice.status === 'paid') {
+      return res.status(400).json({ error: 'Cette facture est déjà payée' });
     }
+    // Permet l'envoi depuis draft ou invoiced
 
     // Récupérer les items
     const itemsResult = await pool.query(
