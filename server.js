@@ -14311,6 +14311,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
     </div>
   `;
 
+  // Envoi au client
   await sendEmail({
     from: fromDisplay,
     to: clientEmail,
@@ -14322,6 +14323,36 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
       contentType: 'application/pdf'
     }]
   });
+
+  // Copie à l'émetteur
+  if (userEmail) {
+    const copyHtml = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#111827;">
+        <div style="background:#1A7A5E;padding:20px 32px;border-radius:8px 8px 0 0;">
+          <h2 style="margin:0;color:white;font-size:18px;">📋 Copie — Facture envoyée</h2>
+        </div>
+        <div style="background:#fff;padding:24px 32px;border:1px solid #e5e7eb;border-top:none;">
+          <p style="margin:0 0 16px;font-size:14px;color:#374151;">
+            La facture <strong>${invoiceNumber || ''}</strong> a bien été envoyée à <strong>${clientName}</strong> (${clientEmail}).
+          </p>
+          <p style="margin:0;font-size:13px;color:#6b7280;">Le PDF est joint à cet email pour vos archives.</p>
+        </div>
+        <div style="background:#f9fafb;padding:12px 32px;border-radius:0 0 8px 8px;border:1px solid #e5e7eb;border-top:none;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#9ca3af;">Boostinghost.fr — gestion locative</p>
+        </div>
+      </div>`;
+    await sendEmail({
+      from: fromDisplay,
+      to: userEmail,
+      subject: `[Copie] Facture ${invoiceNumber || ''} envoyée à ${clientName}`,
+      html: copyHtml,
+      attachments: [{
+        filename: `${invoiceNumber || 'facture'}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
+    });
+  }
 }
 
 
