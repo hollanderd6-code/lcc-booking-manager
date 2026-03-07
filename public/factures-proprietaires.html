@@ -741,10 +741,37 @@ html[data-theme-v3="1"] .modal-content {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    max-height: 90vh !important;
+    max-height: 88vh !important;
     overflow-y: auto !important;
+    padding-top: 0 !important;
   }
   .modal-overlay { align-items: flex-end !important; }
+  /* Header sticky du modal — couvre le padding et reste visible */
+  .modal-content .modal-sticky-header {
+    position: sticky !important;
+    top: 0 !important;
+    background: white !important;
+    z-index: 20 !important;
+    padding: 16px 20px 12px !important;
+    margin: 0 -24px 12px !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  .modal-close-btn {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 22px !important;
+    background: #f3f4f6 !important;
+    border-radius: 50% !important;
+    border: none !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
 
   /* Masquer les boutons fixes du header */
   .fp-header-btns { display: none !important; }
@@ -1388,9 +1415,9 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="modal-overlay" id="clientModal">
 <div class="modal-content">
-<div style="display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; z-index:10; padding:16px 0 12px; margin:-16px 0 12px;">
+<div class="modal-sticky-header" style="display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; z-index:10; padding:16px 20px 12px; margin:-24px -24px 12px; border-bottom:1px solid #f3f4f6;">
 <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
-<button onclick="closeClientModal()" style="border:none; background:#f3f4f6; border-radius:50%; width:36px; height:36px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">×</button>
+<button onclick="closeClientModal()" class="modal-close-btn" style="border:none; background:#f3f4f6; border-radius:50%; width:44px; height:44px; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1;">×</button>
 </div>
 <div style="display:flex; gap:16px; margin-bottom:16px;">
 <label><input checked="" name="clientType" onchange="toggleClientType()" type="radio" value="individual"/> Particulier</label>
