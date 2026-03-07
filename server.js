@@ -13298,8 +13298,22 @@ app.get('/api/invoice/download-by-number/:invoiceNumber',
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Facture introuvable' });
 
+    const rawFilePath = result.rows[0].file_path || '{}';
+    console.log('📄 download-by-number meta raw:', rawFilePath.substring(0, 200));
+    
     let meta = {};
-    try { meta = JSON.parse(result.rows[0].file_path || '{}'); } catch(e) {}
+    try { 
+      meta = JSON.parse(rawFilePath);
+    } catch(e) {
+      // Ancien format : c'était un chemin de fichier, pas du JSON
+      console.warn('⚠️ file_path non JSON (ancien format):', rawFilePath);
+      meta = { invoiceNumber };
+    }
+    
+    // S'assurer que invoiceNumber est dans meta
+    if (!meta.invoiceNumber) meta.invoiceNumber = invoiceNumber;
+    
+    console.log('📄 meta parsé:', JSON.stringify(meta).substring(0, 300));
 
     const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     const user = profileResult.rows[0];
