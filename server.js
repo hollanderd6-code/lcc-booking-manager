@@ -13278,6 +13278,48 @@ app.post('/api/invoice/resend',
   }
 });
 
+
+// ============================================
+// POST - Générer et télécharger PDF directement
+// (données passées en body, pas de lecture BDD)
+// ============================================
+app.post('/api/invoice/generate-pdf',
+  authenticateAny,
+  async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = profileResult.rows[0];
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const data = req.body;
+    const invoiceNumber = data.invoiceNumber || 'FACT-XXX';
+
+    // Récupérer ownerInfo si ownerId fourni
+    let ownerInfo = null;
+    if (data.ownerId) {
+      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [data.ownerId, userId]);
+      if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
+    }
+
+    const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_direct.pdf`);
+    await generateInvoicePdf(pdfPath, data, user, ownerInfo);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoiceNumber}.pdf"`);
+    const stream = fs.createReadStream(pdfPath);
+    stream.pipe(res);
+    stream.on('end', () => { try { fs.unlinkSync(pdfPath); } catch(e) {} });
+  } catch (err) {
+    console.error('Erreur generate-pdf:', err);
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
+  }
+});
+
 // ============================================
 // GET - Télécharger une facture par numéro
 // ============================================
