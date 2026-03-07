@@ -964,6 +964,69 @@ html[data-theme-v3="1"] .modal-content {
   }
 }
 
+
+/* ============================================================
+   STYLES CARTES FACTURES — inline fallback (invoices-cards-style.css)
+   ============================================================ */
+.invoices-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.invoice-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #1A7A5E;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.invoice-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.invoice-card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px 10px; border-bottom: 1px solid #f3f4f6;
+}
+.invoice-card-number { font-weight: 700; font-size: 14px; color: #1A7A5E; }
+.invoice-card-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.invoice-badge-draft  { background: #f3f4f6; color: #6b7280; }
+.invoice-badge-sent   { background: #dbeafe; color: #1e40af; }
+.invoice-badge-invoiced { background: #fef3c7; color: #92400e; }
+.invoice-badge-paid   { background: #dcfce7; color: #166534; }
+.invoice-badge-credit { background: #fce7f3; color: #9d174d; }
+.invoice-card-body { padding: 14px 16px; }
+.invoice-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.invoice-info-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+.invoice-info-value { font-size: 13px; color: #374151; font-weight: 500; }
+.invoice-info-value.amount { font-size: 15px; font-weight: 700; color: #1A7A5E; }
+.invoice-card-footer {
+  padding: 10px 16px; border-top: 1px solid #f3f4f6;
+  display: flex; align-items: center; gap: 8px;
+}
+.invoice-card-actions-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border: 1px solid #d1d5db; border-radius: 10px;
+  background: rgba(255,255,255,.6); font-size: 13px; font-weight: 600;
+  cursor: pointer; color: #374151;
+}
+.invoice-card-actions-btn:hover { background: white; }
+.invoice-actions-menu {
+  position: absolute; bottom: calc(100% + 6px); left: 0; right: 0;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+  box-shadow: 0 -4px 20px rgba(15,23,42,.12); padding: 4px;
+  min-width: 180px; display: none; z-index: 9999;
+}
+.invoice-actions-menu.open { display: block; }
+.invoice-actions-menu button {
+  width: 100%; padding: 9px 12px; background: transparent;
+  border: none; text-align: left; font-size: 13px; border-radius: 6px; cursor: pointer;
+}
+.invoice-actions-menu button:hover { background: #f3f4f6; }
+
 /* ── Tout le blanc → beige ── */
 html[data-theme-v3="1"] .tab-content,
 html[data-theme-v3="1"] .tab-panel,
@@ -1975,17 +2038,6 @@ window.deleteOwnerInvoice = async function (id) {
     const vatAmount = parseFloat(inv.vat_amount || 0);
     const totalTtc = parseFloat(inv.total_ttc || 0);
     
-    // Coordonnées émetteur depuis profil
-    const ep = window.emitterProfile || {};
-    const up = window.userProfile || {};
-    const senderName = ep.company || up.company || up.firstName && (up.firstName + ' ' + (up.lastName || '')).trim() || 'Votre entreprise';
-    const addrParts = [];
-    if (ep.address) addrParts.push(ep.address);
-    if (ep.postalCode || ep.city) addrParts.push((ep.postalCode || '') + ' ' + (ep.city || ''));
-    if (ep.siret) addrParts.push('SIRET : ' + ep.siret);
-    if (up.email) addrParts.push(up.email);
-    const senderAddress = addrParts.join('<br>');
-
     // Coordonnées émetteur
     const ep = window.emitterProfile || {};
     const up = window.userProfile || {};
