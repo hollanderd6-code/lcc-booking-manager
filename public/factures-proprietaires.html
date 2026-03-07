@@ -1208,9 +1208,9 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="modal-overlay" id="clientModal">
 <div class="modal-content">
-<div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; position:sticky; top:-24px; background:white; z-index:10; padding:16px 0 12px; margin-top:-24px; border-bottom:1px solid #e5e7eb;">
 <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
-<button onclick="closeClientModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
+<button onclick="closeClientModal()" style="border:none; background:#f3f4f6; border-radius:50%; width:32px; height:32px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">×</button>
 </div>
 <div style="display:flex; gap:16px; margin-bottom:16px;">
 <label><input checked="" name="clientType" onchange="toggleClientType()" type="radio" value="individual"/> Particulier</label>
@@ -2052,9 +2052,6 @@ window.markOwnerInvoicePaid = async function (id) {
   }
 
   // Surtout : on NE re-render PAS toute la liste ici
-  // Mettre à jour le total affiché dans la carte
-  const totalEl = document.querySelector(`[data-total-for="${id}"]`);
-  if (totalEl) totalEl.textContent = calculateLineTotal(p).toFixed(2) + ' €';
   updatePreview();
 };
 
@@ -2104,7 +2101,7 @@ window.markOwnerInvoicePaid = async function (id) {
             <input type="text" class="form-control" value="${p.description}" oninput="updatePrestation('${p.id}','description',this.value)">
           </div>
           ${inputs}
-          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;" data-total-for="${p.id}">
+          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;">
             ${calculateLineTotal(p).toFixed(2)} €
           </div>
         </div>
