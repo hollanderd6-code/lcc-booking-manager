@@ -12761,16 +12761,15 @@ app.post('/api/owner-invoices',
       internalNotes
     } = req.body;
 
-    if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
-      console.error('❌ Validation owner-invoice échouée:', {
-        clientId, issueDate, dueDate,
-        itemsIsArray: Array.isArray(items),
-        itemsLength: items?.length,
-        bodyKeys: Object.keys(req.body)
-      });
+    // clientId peut être un integer ou une string selon le navigateur
+    const clientIdVal = parseInt(clientId) || clientId;
+    console.log('📥 owner-invoice POST body:', { clientId, clientIdVal, issueDate, dueDate, itemsLength: items?.length });
+
+    if (!clientIdVal || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
+      console.error('❌ Validation échouée:', { clientId, clientIdVal, issueDate: !!issueDate, dueDate: !!dueDate, itemsLength: items?.length });
       return res.status(400).json({ 
         error: 'Données facture incomplètes',
-        debug: { clientId: !!clientId, issueDate: !!issueDate, dueDate: !!dueDate, itemsLength: items?.length }
+        debug: { clientId: !!clientIdVal, issueDate: !!issueDate, dueDate: !!dueDate, itemsLength: items?.length }
       });
     }
 
@@ -12834,7 +12833,7 @@ app.post('/api/owner-invoices',
       RETURNING *
     `, [
       userId,
-      clientId,
+      clientIdVal,
       periodStart || null,
       periodEnd || null,
       issueDate,
