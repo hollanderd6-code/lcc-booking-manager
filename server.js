@@ -12854,12 +12854,12 @@ app.post('/api/owner-invoices',
       const item = items[i];
       await client.query(`
         INSERT INTO owner_invoice_items (
-          invoice_id, item_type, description,
+          id, invoice_id, item_type, description,
           rental_amount, commission_rate,
           quantity, unit_price, total,
           order_index, is_debours
         ) VALUES (
-          $1,$2,$3,
+          gen_random_uuid(),$1,$2,$3,
           $4,$5,
           $6,$7,$8,
           $9,$10
@@ -13075,12 +13075,13 @@ app.post('/api/owner-invoices/:id/credit-note',
     // Copier les lignes en négatif
     await client.query(`
       INSERT INTO owner_invoice_items (
-        invoice_id, item_type, description,
+        id, invoice_id, item_type, description,
         rental_amount, commission_rate,
         quantity, unit_price, total,
         order_index, is_debours
       )
       SELECT
+        gen_random_uuid(),
         $1,
         item_type,
         description,
