@@ -13042,6 +13042,164 @@ app.post('/api/owner-invoices/:id/credit-note',
 
 
 // ============================================
+// FONCTION GLOBALE - Génération PDF facture
+// ============================================
+async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
+  const {
+    clientName = '', clientEmail = '', clientAddress = '', clientPostalCode = '',
+    clientCity = '', clientSiret = '', propertyName = '', propertyAddress = '',
+    checkinDate = '', checkoutDate = '', nights = 0,
+    rentAmount = 0, touristTaxAmount = 0, cleaningFee = 0,
+    vatRate = 0, invoiceNumber = ''
+  } = data;
+
+  const subtotal = parseFloat(rentAmount || 0) + parseFloat(touristTaxAmount || 0) + parseFloat(cleaningFee || 0);
+  const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
+  const total = subtotal + vatAmount;
+
+  const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (user?.company || 'Ma Conciergerie');
+  const emitterAddr  = ownerInfo?.address || '';
+  const emitterCP    = ownerInfo?.postal_code || '';
+  const emitterCity  = ownerInfo?.city || '';
+  const emitterEmail = ownerInfo?.email || user?.email || '';
+  const emitterSiret = ownerInfo?.siret || '';
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 0 });
+    const stream = fs.createWriteStream(outputPath);
+    doc.pipe(stream);
+
+    const W = 595, H = 842, mg = 50;
+    const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
+    const LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
+
+    // Bande verte haut
+    doc.rect(0, 0, W, 8).fill(GREEN);
+
+    // Nom émetteur
+    let y = 32;
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(DARK).text(emitterName, mg, y, { width: 310 });
+    y += 28;
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    if (emitterAddr)  { doc.text(emitterAddr, mg, y);  y += 13; }
+    if (emitterCP || emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, y); y += 13; }
+    if (emitterEmail) { doc.text(emitterEmail, mg, y); y += 13; }
+    if (emitterSiret) { doc.text(`SIRET : ${emitterSiret}`, mg, y); y += 13; }
+
+    // Bloc FACTURE droite
+    const bx = W - mg - 185, by = 28;
+    doc.rect(bx, by, 185, 90).fill(LIGHT);
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(GREEN).text('FACTURE', bx+14, by+10);
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(`N° ${invoiceNumber}`, bx+14, by+38);
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, bx+14, by+54);
+    if (checkinDate && checkoutDate) {
+      const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
+      const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
+      doc.text(`Du ${ci} au ${co}`, bx+14, by+68);
+      doc.text(`${nights} nuit${nights>1?'s':''}`, bx+14, by+81);
+    }
+
+    // Séparateur
+    y = 142;
+    doc.rect(mg, y, W-mg*2, 1).fill(BORDER);
+    y += 18;
+
+    // Deux colonnes
+    const colW = (W - mg*2 - 24) / 2;
+    const col2 = mg + colW + 24;
+
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN);
+    doc.text('ÉMIS PAR', mg, y);
+    doc.text('FACTURÉ À', col2, y);
+    y += 14;
+
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK);
+    doc.text(emitterName, mg, y, { width: colW });
+    doc.text(clientName,  col2, y, { width: colW });
+    y += 16;
+
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    let yL = y, yR = y;
+    if (emitterAddr)  { doc.text(emitterAddr, mg, yL, { width: colW }); yL += 13; }
+    if (emitterCP||emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, yL); yL += 13; }
+    if (emitterEmail) { doc.text(emitterEmail, mg, yL); yL += 13; }
+    if (clientAddress) { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
+    const cpCity = `${clientPostalCode||''} ${clientCity||''}`.trim();
+    if (cpCity)        { doc.text(cpCity, col2, yR); yR += 13; }
+    if (clientEmail)   { doc.text(clientEmail, col2, yR); yR += 13; }
+    if (clientSiret)   { doc.text(`SIRET : ${clientSiret}`, col2, yR); yR += 13; }
+
+    y = Math.max(yL, yR) + 22;
+
+    // Logement
+    doc.rect(mg, y, W-mg*2, 1).fill(BORDER);
+    y += 14;
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('LOGEMENT', mg, y);
+    y += 14;
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(propertyName, mg, y);
+    y += 15;
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    if (propertyAddress) { doc.text(propertyAddress, mg, y); y += 13; }
+    if (checkinDate && checkoutDate) {
+      const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
+      const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
+      doc.text(`Séjour du ${ci} au ${co} · ${nights} nuit${nights>1?'s':''}`, mg, y); y += 13;
+    }
+    y += 18;
+
+    // Tableau header
+    doc.rect(mg, y, W-mg*2, 28).fill(GREEN);
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('white')
+       .text('DESCRIPTION', mg+12, y+9, { width: 300 })
+       .text('MONTANT', W-mg-90, y+9, { width: 78, align: 'right' });
+    y += 28;
+
+    let alt = false;
+    const addRow = (label, amount) => {
+      if (parseFloat(amount||0) <= 0) return;
+      if (alt) doc.rect(mg, y, W-mg*2, 26).fill('#F9FAFB');
+      doc.font('Helvetica').fontSize(10).fillColor(DARK).text(label, mg+12, y+7, { width: 300 });
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(`${Number(amount).toFixed(2)} €`, W-mg-90, y+7, { width: 78, align: 'right' });
+      doc.rect(mg, y+26, W-mg*2, 0.5).fill(BORDER);
+      y += 26; alt = !alt;
+    };
+    addRow('Loyer', rentAmount);
+    addRow('Taxe de séjour', touristTaxAmount);
+    addRow('Frais de ménage', cleaningFee);
+    y += 18;
+
+    // Totaux
+    const totW = 220, totX = W - mg - totW;
+    doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 8;
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+       .text('Sous-total HT', totX, y, { width: 120 })
+       .text(`${subtotal.toFixed(2)} €`, totX+120, y, { width: 88, align: 'right' });
+    y += 16;
+    if (vatAmount > 0) {
+      doc.text(`TVA (${vatRate}%)`, totX, y, { width: 120 })
+         .text(`${vatAmount.toFixed(2)} €`, totX+120, y, { width: 88, align: 'right' });
+      y += 16;
+    }
+    doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 6;
+    doc.rect(totX, y, totW, 36).fill(GREEN);
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('white')
+       .text('TOTAL TTC', totX+12, y+10, { width: 108 })
+       .text(`${total.toFixed(2)} €`, totX+120, y+10, { width: 88, align: 'right' });
+
+    // Pied de page
+    doc.rect(0, H-44, W, 44).fill(GREEN);
+    doc.font('Helvetica').fontSize(8).fillColor('rgba(255,255,255,0.7)')
+       .text('Facture générée grâce à', mg, H-34, { width: W-mg*2, align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('white')
+       .text('Boostinghost.fr', mg, H-22, { width: W-mg*2, align: 'center' });
+
+    doc.end();
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+  });
+}
+
+// ============================================
 // POST - Renvoyer une facture par numéro
 // ============================================
 app.post('/api/invoice/resend',
@@ -13096,7 +13254,7 @@ app.post('/api/invoice/resend',
       vatRate: meta.vatRate, invoiceNumber
     };
 
-    await generateInvoicePdfToFile(pdfPath, savedVars, user, ownerInfo);
+    await generateInvoicePdf(pdfPath, savedVars, user, ownerInfo);
     const pdfBuffer = fs.readFileSync(pdfPath);
 
     const checkinFr  = meta.checkinDate  ? new Date(meta.checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
@@ -13153,7 +13311,7 @@ app.get('/api/invoice/download-by-number/:invoiceNumber',
     }
 
     const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_dl.pdf`);
-    await generateInvoicePdfToFile(pdfPath, meta, user, ownerInfo);
+    await generateInvoicePdf(pdfPath, meta, user, ownerInfo);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${invoiceNumber}.pdf"`);
@@ -13278,32 +13436,16 @@ app.post('/api/invoice/create',
     } catch(e) {
       console.error('Erreur récupération propriétaire pour PDF:', e.message);
     }
-// Générer un PDF professionnel avec PDFKit
-    async function generateInvoicePdfToFile(outputPath, dataOverride, userOverride, ownerOverride) {
-      // Support appel externe avec données passées en paramètre
-      const _d = dataOverride || {};
-      const _u = userOverride || user;
-      const _o = ownerOverride !== undefined ? ownerOverride : ownerInfo;
-      const clientName = _d.clientName !== undefined ? _d.clientName : clientName;
-      const clientEmail = _d.clientEmail !== undefined ? _d.clientEmail : clientEmail;
-      const clientAddress = _d.clientAddress !== undefined ? _d.clientAddress : clientAddress;
-      const clientPostalCode = _d.clientPostalCode !== undefined ? _d.clientPostalCode : clientPostalCode;
-      const clientCity = _d.clientCity !== undefined ? _d.clientCity : clientCity;
-      const clientSiret = _d.clientSiret !== undefined ? _d.clientSiret : clientSiret;
-      const propertyName = _d.propertyName !== undefined ? _d.propertyName : propertyName;
-      const propertyAddress = _d.propertyAddress !== undefined ? _d.propertyAddress : propertyAddress;
-      const checkinDate = _d.checkinDate !== undefined ? _d.checkinDate : checkinDate;
-      const checkoutDate = _d.checkoutDate !== undefined ? _d.checkoutDate : checkoutDate;
-      const nights = _d.nights !== undefined ? _d.nights : nights;
-      const rentAmount = _d.rentAmount !== undefined ? _d.rentAmount : rentAmount;
-      const touristTaxAmount = _d.touristTaxAmount !== undefined ? _d.touristTaxAmount : touristTaxAmount;
-      const cleaningFee = _d.cleaningFee !== undefined ? _d.cleaningFee : cleaningFee;
-      const vatRate = _d.vatRate !== undefined ? _d.vatRate : vatRate;
-      const invoiceNumber = _d.invoiceNumber !== undefined ? _d.invoiceNumber : invoiceNumber;
-      const subtotal = parseFloat(rentAmount || 0) + parseFloat(touristTaxAmount || 0) + parseFloat(cleaningFee || 0);
-      const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
-      const total = subtotal + vatAmount;
-      return new Promise((resolve, reject) => {
+// Générer un PDF professionnel avec PDFKit - délègue à la fonction globale
+    async function generateInvoicePdfToFile(outputPath) {
+      return generateInvoicePdf(outputPath, {
+        clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret,
+        propertyName, propertyAddress, checkinDate, checkoutDate, nights,
+        rentAmount, touristTaxAmount, cleaningFee, vatRate, invoiceNumber
+      }, user, ownerInfo);
+    }
+    // PLACEHOLDER - corps géré par la fonction globale
+    if (false) { return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ size: 'A4', margin: 0 });
         const stream = fs.createWriteStream(outputPath);
         doc.pipe(stream);
@@ -13443,8 +13585,7 @@ app.post('/api/invoice/create',
         doc.end();
         stream.on('finish', resolve);
         stream.on('error', reject);
-      });
-    }
+      }); } // fin if(false) placeholder
 
 // Si sendEmail est true, envoyer l'email via API Brevo
 
