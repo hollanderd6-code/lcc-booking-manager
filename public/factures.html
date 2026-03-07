@@ -1508,12 +1508,45 @@ html[data-theme-v3="1"] .btn-ghost {
       };
 
       // Télécharger PDF (force le download)
-      window.downloadPDF = function() {
-        if (currentInvoiceId && invoiceNumber) {
-          window.downloadInvoiceByNumber(invoiceNumber);
-        } else {
+      window.downloadPDF = async function() {
+        if (!invoiceNumber) {
           alert('Veuillez d\'abord envoyer la facture pour pouvoir la télécharger.');
+          return;
         }
+        try {
+          // Récupérer toutes les données du formulaire courant
+          const data = {
+            invoiceNumber,
+            clientName: document.getElementById('clientName').value,
+            clientEmail: document.getElementById('clientEmail').value,
+            clientAddress: document.getElementById('clientAddress').value,
+            clientPostalCode: document.getElementById('clientPostalCode').value,
+            clientCity: document.getElementById('clientCity').value,
+            clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
+            propertyName: document.getElementById('propertyName').value,
+            propertyAddress: getSelectedPropertyAddress(),
+            checkinDate: document.getElementById('checkinDate').value,
+            checkoutDate: document.getElementById('checkoutDate').value,
+            nights: calculateNights(),
+            rentAmount: document.getElementById('rentAmount').value,
+            touristTaxAmount: document.getElementById('touristTaxAmount').value,
+            cleaningFee: document.getElementById('cleaningFee').value,
+            vatRate: document.getElementById('withVat').checked ? document.getElementById('vatRate').value : 0,
+            ownerId: document.getElementById('propertyName').dataset?.ownerId || null
+          };
+          const res = await fetch('/api/invoice/generate-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify(data)
+          });
+          if (!res.ok) { alert('Erreur téléchargement'); return; }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = invoiceNumber + '.pdf';
+          document.body.appendChild(a); a.click();
+          document.body.removeChild(a); URL.revokeObjectURL(url);
+        } catch(e) { alert('Erreur : ' + e.message); }
       };
 
       // Auto-update preview
