@@ -1208,9 +1208,9 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="modal-overlay" id="clientModal">
 <div class="modal-content">
-<div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; position:sticky; top:0; background:#fff; z-index:10; padding:16px 0 12px; margin-top:-16px;">
 <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
-<button onclick="closeClientModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
+<button onclick="closeClientModal()" style="border:none; background:#f3f4f6; border-radius:50%; width:36px; height:36px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">×</button>
 </div>
 <div style="display:flex; gap:16px; margin-bottom:16px;">
 <label><input checked="" name="clientType" onchange="toggleClientType()" type="radio" value="individual"/> Particulier</label>
@@ -1782,7 +1782,7 @@ document.addEventListener('click', function(e) {
 // Fermer le menu si on clique ailleurs dans la page
 document.addEventListener('click', function(e) {
   // Vérifier si le clic est en dehors d'un menu ou d'un bouton "..."
-  if (!e.target.closest('.invoice-row-actions')) {
+  if (!e.target.closest('.invoice-row-actions') && !e.target.closest('.invoice-card-actions-btn') && !e.target.closest('.invoice-actions-menu')) {
     document.querySelectorAll('.invoice-actions-menu.open')
       .forEach(m => m.classList.remove('open'));
   }
