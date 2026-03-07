@@ -1166,7 +1166,7 @@ html[data-theme-v3="1"] .invoice-paper {
   Logement(s) : <strong><span id="previewProperties">--</span></strong>
 </p>
 <table class="paper-table">
-<thead><tr><th>Description</th><th style="width:100px; text-align:center;">Qté / Base</th><th style="width:90px; text-align:right;">Prix / Taux</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
+<thead><tr><th>Description</th><th style="width:80px; text-align:center;">Base/Qté</th><th style="width:80px; text-align:right;">Prix/%</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
 <tbody id="previewBody"></tbody>
 </table>
 <div class="paper-totals">
@@ -1420,10 +1420,7 @@ async function loadUserProfile() {
         logoPreview.style.display = 'block';
       }
     }
-
-    // Mettre à jour emitterProfile et la preview avec les données chargées
     if (window.updateEmitterProfile) window.updateEmitterProfile();
-    
   } catch (e) {
     console.error('Erreur chargement profil:', e);
   }
@@ -1515,7 +1512,7 @@ window.openStatsModal = function(type) {
         '</tr></thead><tbody>';
       filtered.forEach(function(inv) {
         const dateStr = formatDate(inv.issue_date);
-        const num = inv.invoice_number || ('#' + inv.id);
+        const num = inv.invoice_number || 'Brouillon';
         const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
         htmlContent += '<tr>' +
           '<td style="padding:4px 4px;">' + num + '</td>' +
@@ -1543,13 +1540,14 @@ window.openStatsModal = function(type) {
         '<th style="text-align:right; padding:6px 4px;">Montant</th>' +
         '</tr></thead><tbody>';
       filtered.forEach(function(inv) {
-        const num = inv.invoice_number || ('#' + inv.id);
+        const num = inv.invoice_number || 'Brouillon';
         const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
         const status = inv.status || '';
+        const statusLabel = status === 'sent' ? 'Envoyée' : status === 'invoiced' ? 'Facturée' : status === 'paid' ? 'Payée' : status;
         htmlContent += '<tr>' +
           '<td style="padding:4px 4px;">' + num + '</td>' +
           '<td style="padding:4px 4px;">' + (inv.client_name || '') + '</td>' +
-          '<td style="padding:4px 4px;">' + status + '</td>' +
+          '<td style="padding:4px 4px;">' + statusLabel + '</td>' +
           '<td style="padding:4px 4px; text-align:right;">' + total + '</td>' +
         '</tr>';
       });
@@ -1768,8 +1766,7 @@ document.addEventListener('click', function(e) {
 document.addEventListener('click', function(e) {
   // Vérifier si le clic est en dehors d'un menu ou d'un bouton "..."
   if (!e.target.closest('.invoice-row-actions') && !e.target.closest('.invoice-card-actions-btn') && !e.target.closest('.invoice-actions-menu')) {
-    document.querySelectorAll('.invoice-actions-menu.open')
-      .forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
   }
 });
 
@@ -2466,8 +2463,6 @@ function getSelectedProperties() {
     prestations = [];
     prestationCounter = 0;
     addPrestation('commission');
-    const numEl = document.getElementById('previewInvoiceNumber');
-    if (numEl) numEl.textContent = 'N° BROUILLON';
     
     document.getElementById('invoiceClientId').value = '';
     // ✅ FIX iOS
@@ -2520,10 +2515,6 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     // Activer le mode lecture seule
     isReadOnlyMode = true;
     editingInvoiceId = inv.id;
-
-    // Mettre à jour le numéro de facture dans la preview
-    const numEl = document.getElementById('previewInvoiceNumber');
-    if (numEl) numEl.textContent = 'N° ' + (inv.invoice_number || 'BROUILLON');
     
     // Afficher la bannière et désactiver les contrôles
     document.getElementById('editorSidebar').classList.add('readonly');
