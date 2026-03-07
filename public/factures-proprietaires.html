@@ -1152,7 +1152,7 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="paper-meta">
 <div class="paper-title" style="margin:0; font-size:32px; font-weight:800;">FACTURE</div>
-<div class="paper-number" style="color:#6b7280;">N° BROUILLON</div>
+<div class="paper-number" id="previewInvoiceNumber" style="color:#6b7280;">N° BROUILLON</div>
 <div style="margin-top:8px; font-size:12px; color:#4b5563;">Date : <span id="previewDate">-</span></div>
 </div>
 </div>
@@ -1166,7 +1166,7 @@ html[data-theme-v3="1"] .invoice-paper {
   Logement(s) : <strong><span id="previewProperties">--</span></strong>
 </p>
 <table class="paper-table">
-<thead><tr><th>Description</th><th style="width:80px; text-align:center;">Base/Qté</th><th style="width:80px; text-align:right;">Prix/%</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
+<thead><tr><th>Description</th><th style="width:100px; text-align:center;">Qté / Base</th><th style="width:90px; text-align:right;">Prix / Taux</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
 <tbody id="previewBody"></tbody>
 </table>
 <div class="paper-totals">
@@ -1420,6 +1420,9 @@ async function loadUserProfile() {
         logoPreview.style.display = 'block';
       }
     }
+
+    // Mettre à jour emitterProfile et la preview avec les données chargées
+    if (window.updateEmitterProfile) window.updateEmitterProfile();
     
   } catch (e) {
     console.error('Erreur chargement profil:', e);
@@ -1735,16 +1738,9 @@ async function loadInvoices() {
 window.toggleInvoiceActions = function (id, btn) {
   const menu = document.getElementById('invoice-actions-' + id);
   if (!menu) return;
-
   const wasOpen = menu.classList.contains('open');
-
-  // Fermer tous les autres menus ouverts
-  document.querySelectorAll('.invoice-actions-menu.open')
-    .forEach(m => m.classList.remove('open'));
-
-  if (!wasOpen) {
-    menu.classList.add('open');
-  }
+  document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) menu.classList.add('open');
 };
 
 // Listener délégué pour les boutons data-action dans les menus de factures
@@ -2470,6 +2466,8 @@ function getSelectedProperties() {
     prestations = [];
     prestationCounter = 0;
     addPrestation('commission');
+    const numEl = document.getElementById('previewInvoiceNumber');
+    if (numEl) numEl.textContent = 'N° BROUILLON';
     
     document.getElementById('invoiceClientId').value = '';
     // ✅ FIX iOS
@@ -2522,6 +2520,10 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     // Activer le mode lecture seule
     isReadOnlyMode = true;
     editingInvoiceId = inv.id;
+
+    // Mettre à jour le numéro de facture dans la preview
+    const numEl = document.getElementById('previewInvoiceNumber');
+    if (numEl) numEl.textContent = 'N° ' + (inv.invoice_number || 'BROUILLON');
     
     // Afficher la bannière et désactiver les contrôles
     document.getElementById('editorSidebar').classList.add('readonly');
