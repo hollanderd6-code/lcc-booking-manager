@@ -12761,15 +12761,9 @@ app.post('/api/owner-invoices',
       internalNotes
     } = req.body;
 
-    console.log('📥 owner-invoice POST:', { clientId, issueDate, dueDate, itemsLength: items?.length });
-
     if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Données facture incomplètes', debug: { clientId: !!clientId, issueDate: !!issueDate, dueDate: !!dueDate, itemsLength: items?.length } });
+      return res.status(400).json({ error: 'Données facture incomplètes' });
     }
-
-    const { v4: uuidv4 } = require('uuid');
-    const newInvoiceId = uuidv4();
-    const clientIdVal = clientId; // UUID string
 
     await client.query('BEGIN');
 
@@ -12800,7 +12794,6 @@ app.post('/api/owner-invoices',
     // Création de la facture (brouillon)
     const invoiceResult = await client.query(`
       INSERT INTO owner_invoices (
-        id,
         user_id,
         client_id,
         period_start,
@@ -12824,16 +12817,15 @@ app.post('/api/owner-invoices',
         $1,$2,$3,$4,$5,$6,
         $7,$8,
         $9,$10,$11,
-        $12,$13,$14,$15,$16,
-        $17,$18,
-        $19,
+        $12,$13,$14,$15,
+        $16,$17,
+        $18,
         NOW()
       )
       RETURNING *
     `, [
-      newInvoiceId,
       userId,
-      clientIdVal,
+      clientId,
       periodStart || null,
       periodEnd || null,
       issueDate,
@@ -12860,18 +12852,17 @@ app.post('/api/owner-invoices',
       const item = items[i];
       await client.query(`
         INSERT INTO owner_invoice_items (
-          id, invoice_id, item_type, description,
+          invoice_id, item_type, description,
           rental_amount, commission_rate,
           quantity, unit_price, total,
           order_index, is_debours
         ) VALUES (
-          $1,$2,$3,$4,
-          $5,$6,
-          $7,$8,$9,
-          $10,$11
+          $1,$2,$3,
+          $4,$5,
+          $6,$7,$8,
+          $9,$10
         )
       `, [
-        uuidv4(),
         invoiceId,
         item.itemType,
         item.description,
@@ -12933,20 +12924,25 @@ app.get('/api/owner-invoices/:id',
     const invoice = invResult.rows[0];
 
     // Lignes
-    // Récupérer les logements liés
-const propertiesResult = await pool.query(
-  `SELECT p.id, p.name, p.address 
-   FROM owner_invoice_properties oip
-   JOIN properties p ON p.id = oip.property_id
-   WHERE oip.invoice_id = $1`,
-  [invoiceId]
-);
+    const itemsResult = await pool.query(
+      'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index',
+      [invoiceId]
+    );
 
-res.json({
-  invoice,
-  items: itemsResult.rows,
-  properties: propertiesResult.rows
-});
+    // Récupérer les logements liés
+    const propertiesResult = await pool.query(
+      `SELECT p.id, p.name, p.address 
+       FROM owner_invoice_properties oip
+       JOIN properties p ON p.id = oip.property_id
+       WHERE oip.invoice_id = $1`,
+      [invoiceId]
+    );
+
+    res.json({
+      invoice,
+      items: itemsResult.rows,
+      properties: propertiesResult.rows
+    });
 
   } catch (err) {
     console.error('Erreur lecture facture propriétaire:', err);
@@ -14101,6 +14097,52 @@ app.post('/api/owner-invoices/:id/finalize',
 });
 
 // 8. ENVOYER UN BROUILLON
+// ============================================
+// FONCTION ENVOI EMAIL FACTURE PROPRIÉTAIRE
+// ============================================
+async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, periodStart, periodEnd, totalTtc, items, userCompany, userEmail }) {
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '';
+  const formatMoney = (n) => parseFloat(n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+  const itemsHtml = (items || []).map(it => `
+    <tr>
+      <td style="padding:8px; border-bottom:1px solid #eee;">${it.description || ''}</td>
+      <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${it.quantity || 1}</td>
+      <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">${formatMoney(it.unit_price_ht)}</td>
+      <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">${it.vat_rate || 0}%</td>
+      <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">${formatMoney(it.total_ttc)}</td>
+    </tr>`).join('');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif; max-width:600px; margin:0 auto;">
+      <h2 style="color:#1A7A5E;">Facture ${invoiceNumber || ''}</h2>
+      <p>Bonjour ${clientName || ''},</p>
+      <p>Veuillez trouver ci-dessous votre facture${periodStart ? ` pour la période du ${formatDate(periodStart)} au ${formatDate(periodEnd)}` : ''}.</p>
+      <table style="width:100%; border-collapse:collapse; margin:20px 0;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="padding:8px; text-align:left;">Description</th>
+            <th style="padding:8px; text-align:center;">Qté</th>
+            <th style="padding:8px; text-align:right;">PU HT</th>
+            <th style="padding:8px; text-align:right;">TVA</th>
+            <th style="padding:8px; text-align:right;">Total TTC</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <p style="text-align:right; font-size:18px; font-weight:bold; color:#1A7A5E;">Total TTC : ${formatMoney(totalTtc)}</p>
+      <p style="color:#666; font-size:12px;">Cordialement,<br>${userCompany || 'La Conciergerie'}</p>
+    </div>`;
+
+  await smtpTransporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: clientEmail,
+    replyTo: userEmail || process.env.EMAIL_USER,
+    subject: `Facture ${invoiceNumber || ''} - ${userCompany || 'La Conciergerie'}`,
+    html
+  });
+}
+
 app.post('/api/owner-invoices/:id/send',
   authenticateAny,
   requirePermission(pool, 'can_manage_invoices'),
@@ -14123,8 +14165,8 @@ app.post('/api/owner-invoices/:id/send',
 
     const invoice = invoiceResult.rows[0];
 
-    if (invoice.status !== 'draft') {
-      return res.status(400).json({ error: 'Cette facture a déjà été envoyée' });
+    if (invoice.status === 'draft') {
+      return res.status(400).json({ error: 'Vous devez d\'abord valider cette facture avant de l\'envoyer' });
     }
 
     // Récupérer les items
