@@ -739,13 +739,19 @@ html[data-theme-v3="1"] .modal-content {
     border-radius: 20px 20px 0 0 !important;
     position: fixed !important;
     bottom: 0 !important;
+    top: auto !important;
     left: 0 !important;
     right: 0 !important;
-    max-height: 75vh !important;
+    height: auto !important;
+    max-height: 60vh !important;
     overflow-y: auto !important;
-    padding-top: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
   }
-  .modal-overlay { align-items: flex-end !important; }
+  .modal-overlay {
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+  }
   /* Header sticky du modal — toujours visible en haut du bottom-sheet */
   .modal-content .modal-sticky-header {
     position: sticky !important;
