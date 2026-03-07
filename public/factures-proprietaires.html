@@ -1966,7 +1966,14 @@ document.addEventListener('click', function(e) {
   }
   // Fermer le menu
   document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
-  if (action === 'view')       window.viewOwnerInvoiceReadOnly(id);
+  if (action === 'view') {
+    const invToView = (window.ownerInvoices || []).find(i => i.id === id);
+    if (invToView && invToView.status === 'draft') {
+      window.editOwnerInvoiceDraft(id);
+    } else {
+      window.viewOwnerInvoiceReadOnly(id);
+    }
+  }
   else if (action === 'download')  window.downloadOwnerInvoice(id);
   else if (action === 'send')      window.sendOwnerInvoice(id);
   else if (action === 'delete')    window.deleteOwnerInvoice(id);
@@ -2798,6 +2805,63 @@ function getSelectedProperties() {
       }
     }, 100);
   };
+window.editOwnerInvoiceDraft = async function(id) {
+  try {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!res.ok) return alert(json.error || 'Erreur lors du chargement du brouillon');
+
+    const inv = json.invoice;
+    const items = json.items || [];
+
+    // Mode édition (pas lecture seule)
+    isReadOnlyMode = false;
+    editingInvoiceId = inv.id;
+    const sidebar = document.getElementById('editorSidebar');
+    if (sidebar) sidebar.classList.remove('readonly');
+    const banner = document.getElementById('readonlyBanner');
+    if (banner) banner.style.display = 'none';
+
+    const _numEl = document.getElementById('previewInvoiceNumber');
+    if (_numEl) _numEl.textContent = 'N° BROUILLON';
+
+    const clientSelect = document.getElementById('invoiceClientId');
+    if (clientSelect) clientSelect.value = inv.client_id || '';
+    if (inv.issue_date) document.getElementById('invoiceIssueDate').value = inv.issue_date.slice(0,10);
+    if (inv.due_date) document.getElementById('invoiceDueDate').value = inv.due_date.slice(0,10);
+    if (inv.period_start) document.getElementById('invoicePeriodStart').value = inv.period_start.slice(0,10);
+    if (inv.period_end) document.getElementById('invoicePeriodEnd').value = inv.period_end.slice(0,10);
+    document.getElementById('invoiceVatApplicable').checked = !!inv.vat_applicable;
+    document.getElementById('invoiceVatRate').value = inv.vat_rate || 20;
+
+    prestations = [];
+    prestationCounter = 0;
+    items.forEach(item => {
+      prestationCounter++;
+      prestations.push({
+        id: 'p' + prestationCounter,
+        type: item.item_type,
+        description: item.description || '',
+        rentalAmount: parseFloat(item.rental_amount) || 0,
+        commissionRate: parseFloat(item.commission_rate) || 0,
+        quantity: parseFloat(item.quantity) || 0,
+        unitPrice: parseFloat(item.unit_price) || 0,
+        isDebours: item.is_debours
+      });
+    });
+
+    renderEditorPrestations();
+    updatePreview();
+    switchTab('create');
+
+  } catch (err) {
+    console.error(err);
+    alert('Erreur serveur lors du chargement du brouillon');
+  }
+};
+
 window.viewOwnerInvoiceReadOnly = async function(id) {
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
