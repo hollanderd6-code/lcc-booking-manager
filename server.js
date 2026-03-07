@@ -12923,7 +12923,12 @@ app.get('/api/owner-invoices/:id',
 
     const invoice = invResult.rows[0];
 
-    // Lignes
+    // Lignes de la facture
+    const itemsResult = await pool.query(
+      'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index',
+      [invoiceId]
+    );
+
     // Récupérer les logements liés
 const propertiesResult = await pool.query(
   `SELECT p.id, p.name, p.address 
