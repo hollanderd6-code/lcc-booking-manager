@@ -4960,7 +4960,26 @@ async function syncAllCalendars() {
       const reservations = await icalService.fetchReservations(property, pool);
 
       // Ancien état (iCal + manuelles) :
-      const previousAllReservations = reservationsStore.properties[property.id] || [];
+      let previousAllReservations = reservationsStore.properties[property.id] || [];
+
+      // ✅ FIX : Au premier sync (redémarrage serveur), charger l'état depuis la DB
+      // pour éviter de détecter toutes les résas existantes comme "annulées"
+      if (isFirstSync || previousAllReservations.length === 0) {
+        try {
+          const dbRes = await pool.query(
+            `SELECT uid, source, type, start_date as start, end_date as end, status
+             FROM reservations
+             WHERE property_id = $1 AND status NOT IN ('cancelled', 'completed')`,
+            [property.id]
+          );
+          if (dbRes.rows.length > 0) {
+            previousAllReservations = dbRes.rows;
+            console.log(\`📦 [Sync] \${property.name}: \${dbRes.rows.length} résas chargées depuis DB pour comparaison\`);
+          }
+        } catch (dbErr) {
+          console.error('⚠️ Erreur chargement résas DB pour comparaison:', dbErr.message);
+        }
+      }
 
       // On ne regarde que les résas iCal (pas les manuelles ni les blocages)
       const oldIcalReservations = previousAllReservations.filter(r =>
