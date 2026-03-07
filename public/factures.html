@@ -1509,7 +1509,11 @@ html[data-theme-v3="1"] .btn-ghost {
 
       // Télécharger PDF (force le download)
       window.downloadPDF = function() {
-        window.print();
+        if (currentInvoiceId && invoiceNumber) {
+          window.downloadInvoiceByNumber(invoiceNumber);
+        } else {
+          alert('Veuillez d\'abord envoyer la facture pour pouvoir la télécharger.');
+        }
       };
 
       // Auto-update preview
@@ -1548,7 +1552,8 @@ html[data-theme-v3="1"] .btn-ghost {
             const total = inv.total ? parseFloat(inv.total).toFixed(2) + ' €' : '—';
             const resendBtn = inv.clientEmail 
               ? `<button class="history-resend-btn" onclick="resendInvoice('${inv.invoiceNumber}', '${inv.clientEmail}')"><i class="fas fa-paper-plane"></i> Renvoyer</button>`
-              : '—';
+              : '';
+            const dlBtn = `<button class="history-resend-btn" style="margin-left:6px;border-color:#6366f1;color:#6366f1;" onclick="downloadInvoiceByNumber('${inv.invoiceNumber}')"><i class="fas fa-download"></i> PDF</button>`;
             return `<tr>
               <td>${inv.invoiceNumber || '—'}</td>
               <td>${date}</td>
@@ -1556,7 +1561,7 @@ html[data-theme-v3="1"] .btn-ghost {
               <td>${inv.clientName || '—'}</td>
               <td>${sejour}</td>
               <td style="font-weight:600;">${total}</td>
-              <td>${resendBtn}</td>
+              <td style='white-space:nowrap;'>${resendBtn}${dlBtn}</td>
             </tr>`;
           }).join('');
 
@@ -1578,6 +1583,21 @@ html[data-theme-v3="1"] .btn-ghost {
         } catch(e) {
           container.innerHTML = '<div class="history-empty"><i class="fas fa-exclamation-circle"></i>Erreur de chargement</div>';
         }
+      };
+
+      window.downloadInvoiceByNumber = async function(invoiceNumber) {
+        try {
+          const res = await fetch('/api/invoice/download-by-number/' + invoiceNumber, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (!res.ok) { alert('Erreur téléchargement'); return; }
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = invoiceNumber + '.pdf';
+          document.body.appendChild(a); a.click();
+          document.body.removeChild(a); URL.revokeObjectURL(url);
+        } catch(e) { alert('Erreur : ' + e.message); }
       };
 
       window.resendInvoice = async function(invoiceNumber, email) {
