@@ -2402,9 +2402,20 @@ function getSelectedProperties() {
     const issueDate = document.getElementById('invoiceIssueDate').value;
     const dueDate = document.getElementById('invoiceDueDate').value;
 
-    if (!issueDate) return alert('Veuillez renseigner la date d\'émission');
-    if (!dueDate) return alert('Veuillez renseigner la date d\'échéance');
+    if (!issueDate) return alert("Veuillez renseigner la date d'émission");
+    if (!dueDate) return alert("Veuillez renseigner la date d'échéance");
     if (prestations.length === 0) return alert('Veuillez ajouter au moins une prestation');
+
+    const items = prestations.map(p => ({
+      itemType: p.type,
+      description: p.description,
+      rentalAmount: p.rentalAmount,
+      commissionRate: p.commissionRate,
+      quantity: p.quantity,
+      unitPrice: p.unitPrice,
+      total: calculateLineTotal(p),
+      isDebours: p.isDebours
+    }));
 
     const data = {
       clientId: parseInt(clientId),
@@ -2412,23 +2423,14 @@ function getSelectedProperties() {
       periodEnd: document.getElementById('invoicePeriodEnd').value,
       issueDate,
       dueDate,
-      items: prestations.map(p => ({
-        itemType: p.type,
-        description: p.description,
-        rentalAmount: p.rentalAmount,
-        commissionRate: p.commissionRate,
-        quantity: p.quantity,
-        unitPrice: p.unitPrice,
-        total: calculateLineTotal(p),
-        isDebours: p.isDebours
-      })),
+      items,
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
-      vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
+      vatRate: parseFloat(document.getElementById('invoiceVatRate').value) || 0,
       propertyIds: getSelectedProperties(),
       sendEmail: send
     };
 
-    console.log('📤 createInvoice payload:', JSON.stringify(data, null, 2));
+    console.log('📤 PAYLOAD items:', items.length, '| clientId:', data.clientId, '| issueDate:', issueDate, '| dueDate:', dueDate);
 
     try {
       const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
@@ -2449,7 +2451,7 @@ function getSelectedProperties() {
       } else {
         const err = await res.json();
         console.error('❌ Erreur serveur:', err);
-        alert('Erreur : ' + (err.error || JSON.stringify(err)));
+        alert('Erreur : ' + err.error + (err.debug ? '\nDébug: ' + JSON.stringify(err.debug) : ''));
       }
     } catch (err) {
       console.error('❌ Erreur réseau:', err);
