@@ -2052,6 +2052,8 @@ window.markOwnerInvoicePaid = async function (id) {
   }
 
   // Surtout : on NE re-render PAS toute la liste ici
+  const totalEl = document.querySelector(`[data-total-for="${id}"]`);
+  if (totalEl) totalEl.textContent = calculateLineTotal(p).toFixed(2) + ' €';
   updatePreview();
 };
 
@@ -2101,7 +2103,7 @@ window.markOwnerInvoicePaid = async function (id) {
             <input type="text" class="form-control" value="${p.description}" oninput="updatePrestation('${p.id}','description',this.value)">
           </div>
           ${inputs}
-          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;">
+          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;" data-total-for="${p.id}">
             ${calculateLineTotal(p).toFixed(2)} €
           </div>
         </div>
@@ -2395,7 +2397,7 @@ function getSelectedProperties() {
   // --- SAVE ---
   window.createInvoice = async function(send) {
     const clientId = document.getElementById('invoiceClientId').value;
-    if(!clientId) return alert('Veuillez sélectionner un client');
+    if (!clientId) return alert('Veuillez sélectionner un client');
 
     const issueDate = document.getElementById('invoiceIssueDate').value;
     const dueDate = document.getElementById('invoiceDueDate').value;
@@ -2426,6 +2428,8 @@ function getSelectedProperties() {
       sendEmail: send
     };
 
+    console.log('📤 createInvoice payload:', JSON.stringify(data, null, 2));
+
     try {
       const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
       const method = editingInvoiceId ? 'PUT' : 'POST';
@@ -2435,18 +2439,20 @@ function getSelectedProperties() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
-        alert('[OK] Facture enregistrée !');
+        alert('Facture enregistrée !');
         prestations = [];
         prestationCounter = 0;
+        addPrestation('commission');
         renderEditorPrestations();
         switchTab('dashboard');
         loadInvoices();
       } else {
         const err = await res.json();
-        alert('Erreur : ' + err.error);
+        console.error('❌ Erreur serveur:', err);
+        alert('Erreur : ' + (err.error || JSON.stringify(err)));
       }
     } catch (err) {
-      console.error(err);
+      console.error('❌ Erreur réseau:', err);
       alert('Erreur serveur');
     }
   };
