@@ -86,9 +86,10 @@
     .paper-header { display: flex; justify-content: space-between; margin-bottom: 40px; }
     .paper-logo-img { max-height: 60px; max-width: 180px; object-fit: contain; display: block; margin-bottom: 8px; }
     
-    .paper-table { width: 100%; border-collapse: collapse; margin-top: 32px; }
-    .paper-table th { text-align: left; padding: 12px 8px; border-bottom: 2px solid #e5e7eb; font-size: 11px; text-transform: uppercase; color: #6b7280; font-weight: 600; }
-    .paper-table td { padding: 16px 8px; border-bottom: 1px solid #f3f4f6; font-size: 13px; vertical-align: top; }
+    .paper-table { width: 100%; border-collapse: collapse; margin-top: 24px; table-layout: fixed; }
+    .paper-table th { text-align: left; padding: 10px 8px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; font-size: 11px; text-transform: uppercase; color: #6b7280; font-weight: 600; }
+    .paper-table td { padding: 14px 8px; border-bottom: 1px solid #f3f4f6; font-size: 13px; vertical-align: top; word-break: break-word; }
+    .paper-table colgroup col:first-child { width: auto; }
     .paper-totals { display: flex; justify-content: flex-end; margin-top: 32px; }
     .totals-box { width: 260px; }
     .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: #4b5563; }
@@ -1245,34 +1246,40 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="invoice-preview-container">
 <div class="invoice-paper">
-<div class="paper-header">
-<div>
-<div id="paperLogoContainer" style="width:80px;height:80px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
-<img id="previewLogoImg" style="display:none;width:100%;height:100%;object-fit:contain;"/>
-<i class="fas fa-image" id="previewLogoPlaceholder" style="color:#9ca3af;font-size:24px;"></i>
+<!-- HEADER CENTRÉ style factures.html -->
+<div style="text-align:center;margin-bottom:40px;padding-bottom:24px;border-bottom:3px solid #111827;">
+  <div id="paperLogoContainer" style="margin:0 auto 12px;width:72px;height:72px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
+    <img id="previewLogoImg" style="display:none;width:100%;height:100%;object-fit:contain;"/>
+    <i class="fas fa-image" id="previewLogoPlaceholder" style="color:#9ca3af;font-size:20px;"></i>
+  </div>
+  <strong id="previewSenderName" style="font-size:22px;font-weight:700;color:#111827;display:block;">Votre Entreprise</strong>
+  <div id="previewSenderAddress" style="font-size:13px;color:#6b7280;margin-top:4px;line-height:1.6;">Adresse...</div>
+  <div id="previewInvoiceNumber" style="margin-top:14px;font-size:16px;font-weight:600;color:#111827;">N° BROUILLON</div>
+  <div style="font-size:13px;color:#6b7280;margin-top:4px;">Date : <span id="previewDate">-</span></div>
 </div>
-<div id="paperSenderInfo" style="margin-top:10px;">
-<strong id="previewSenderName" style="font-size:16px; color:#111827;">Votre Entreprise</strong>
-<div class="paper-sender-address" id="previewSenderAddress">Adresse...</div>
-</div>
-</div>
-<div class="paper-meta">
-<div class="paper-title" style="margin:0; font-size:32px; font-weight:800;">FACTURE</div>
-<div class="paper-number" id="previewInvoiceNumber" style="color:#6b7280;">N° BROUILLON</div>
-<div style="margin-top:8px; font-size:12px; color:#4b5563;">Date : <span id="previewDate">-</span></div>
-</div>
-</div>
-<div class="paper-client" style="margin-bottom:40px; padding:20px; background:#f9fafb; border-radius:8px;">
-<div style="font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase;">Facturé à</div>
-<div id="previewClientName" style="font-weight:700; font-size:16px; margin-top:4px;">Sélectionnez un client...</div>
-<div id="previewClientDetails" style="font-size:13px; color:#4b5563;"></div>
+<!-- SECTION FACTURÉ À -->
+<div style="margin-bottom:28px;">
+  <h3 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:12px;">Facturé à</h3>
+  <div id="previewClientName" style="font-weight:700;font-size:15px;color:#111827;">Sélectionnez un client...</div>
+  <div id="previewClientDetails" style="font-size:13px;color:#4b5563;margin-top:4px;line-height:1.6;"></div>
 </div>
 <div style="font-size:12px; color:#6b7280; margin-bottom:10px;">Période : <span id="previewPeriod">-</span></div>
 <p style="font-size:13px;color:#6b7280;margin:16px 0;display:none;">
   Logement(s) : <strong><span id="previewProperties">--</span></strong>
 </p>
-<table class="paper-table">
-<thead><tr><th>Description</th><th style="width:80px; text-align:center;">Base/Qté</th><th style="width:80px; text-align:right;">Prix/%</th><th style="width:100px; text-align:right;">Total HT</th></tr></thead>
+<table class="paper-table" style="table-layout:fixed;width:100%;">
+<colgroup>
+  <col style="width:auto;"/>
+  <col style="width:90px;"/>
+  <col style="width:100px;"/>
+  <col style="width:110px;"/>
+</colgroup>
+<thead><tr>
+  <th>Description</th>
+  <th style="text-align:center;">Qté / Base</th>
+  <th style="text-align:right;">Prix / Taux</th>
+  <th style="text-align:right;">Total HT</th>
+</tr></thead>
 <tbody id="previewBody"></tbody>
 </table>
 <div class="paper-totals">
@@ -1284,6 +1291,10 @@ html[data-theme-v3="1"] .invoice-paper {
   TVA non applicable, art. 293 B du CGI
 </div>
 </div>
+</div>
+<!-- FOOTER PAPER -->
+<div style="text-align:center;margin-top:32px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;">
+  Facture générée via <strong style="color:#1A7A5E;">boostinghost.fr</strong> — logiciel de gestion locative
 </div>
 </div>
 </div>
@@ -1977,79 +1988,86 @@ window.deleteOwnerInvoice = async function (id) {
     if (up.email) addrParts.push(up.email);
     const senderAddress = addrParts.join('<br>');
 
+    // Coordonnées émetteur
+    const ep = window.emitterProfile || {};
+    const up = window.userProfile || {};
+    const senderName = ep.company || up.company || (up.firstName ? (up.firstName + ' ' + (up.lastName || '')).trim() : 'Votre entreprise');
+    const addrParts = [];
+    if (ep.address) addrParts.push(ep.address);
+    if (ep.postalCode || ep.city) addrParts.push(((ep.postalCode||'') + ' ' + (ep.city||'')).trim());
+    if (ep.siret) addrParts.push('SIRET : ' + ep.siret);
+    if (up.email) addrParts.push(up.email);
+    const senderAddress = addrParts.join('<br>');
+    const issDate = inv.issue_date ? formatDate(inv.issue_date) : new Date().toLocaleDateString('fr-FR');
+    const dueDate = inv.due_date ? formatDate(inv.due_date) : '';
+    const periodStart = inv.period_start ? formatDate(inv.period_start) : '';
+    const periodEnd = inv.period_end ? formatDate(inv.period_end) : '';
+
     tempContainer.innerHTML = `
-  <div id="tempInvoicePaper" style="background:white;width:210mm;padding:20mm;font-family:'Inter',sans-serif;color:#1f2937;box-sizing:border-box;">
-    <div style="text-align:center;margin-bottom:32px;padding-bottom:24px;border-bottom:3px solid #111827;">
-      <h2 style="font-size:24px;font-weight:700;margin:0 0 8px 0;color:#111827;">${senderName}</h2>
-      <div style="font-size:13px;color:#6b7280;margin-top:4px;line-height:1.6;">${senderAddress}</div>
-      <div style="margin-top:16px;font-size:16px;font-weight:600;">FACTURE N° ${inv.invoice_number || 'BROUILLON'}</div>
-      <div style="font-size:13px;color:#6b7280;margin-top:4px;">Date : ${formatDate(inv.issue_date)}</div>
+  <div id="tempInvoicePaper" style="background:white;width:210mm;padding:20mm;font-family:'Inter',Arial,sans-serif;color:#1f2937;box-sizing:border-box;font-size:13px;">
+
+    <!-- HEADER CENTRÉ -->
+    <div style="text-align:center;margin-bottom:40px;padding-bottom:24px;border-bottom:3px solid #111827;">
+      <h2 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#111827;">${senderName}</h2>
+      <div style="font-size:12px;color:#6b7280;line-height:1.8;">${senderAddress}</div>
+      <div style="margin-top:16px;font-size:16px;font-weight:600;color:#111827;">FACTURE N° ${inv.invoice_number || 'BROUILLON'}</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px;">Date : ${issDate}${dueDate ? ' &nbsp;·&nbsp; Échéance : ' + dueDate : ''}</div>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:28px;">
-      <div>
-        <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;" id="pdfSenderInfo">
-          ${window.userProfile && window.userProfile.company ? window.userProfile.company : (window.emitterProfile && window.emitterProfile.company ? window.emitterProfile.company : 'Votre entreprise')}
-          ${window.emitterProfile && window.emitterProfile.address ? '<br>' + window.emitterProfile.address : ''}
-          ${window.emitterProfile && (window.emitterProfile.postalCode || window.emitterProfile.city) ? '<br>' + (window.emitterProfile.postalCode || '') + ' ' + (window.emitterProfile.city || '') : ''}
-          ${window.emitterProfile && window.emitterProfile.siret ? '<br>SIRET : ' + window.emitterProfile.siret : ''}
-          ${window.userProfile && window.userProfile.email ? '<br>' + window.userProfile.email : ''}
-        </p>
-      </div>
-      <div style="text-align:right;">
-        <h1 style="margin:0 0 8px 0;font-size:28px;font-weight:800;">FACTURE</h1>
-        <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;">
-          N° ${inv.invoice_number || 'BROUILLON'}<br>
-          Date : ${formatDate(inv.issue_date, 'fr-FR')}<br>
-          Échéance : ${formatDate(inv.due_date, 'fr-FR')}
-        </p>
-      </div>
-    </div>
-    
+
+    <!-- SECTION FACTURÉ À -->
     <div style="margin-bottom:28px;">
-      <h3 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:12px;">Facturé à</h3>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:10px;">Facturé à</div>
       <div style="font-size:14px;line-height:1.6;color:#111827;">
         <strong>${clientName}</strong>
         ${client && client.email ? '<br>' + client.email : ''}
         ${client && client.address ? '<br>' + client.address : ''}
-        ${client && (client.postal_code || client.city) ? '<br>' + (client.postal_code || '') + ' ' + (client.city || '') : ''}
+        ${client && (client.postal_code || client.city) ? '<br>' + ((client.postal_code||'') + ' ' + (client.city||'')).trim() : ''}
       </div>
     </div>
-    
-    <table style="width:100%;border-collapse:collapse;margin-top:25px;">
+
+    ${periodStart && periodEnd ? '<div style="margin-bottom:24px;font-size:12px;color:#6b7280;">Période : du <strong>' + periodStart + '</strong> au <strong>' + periodEnd + '</strong></div>' : ''}
+
+    <!-- TABLEAU ITEMS -->
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+      <colgroup>
+        <col style="width:auto;"/>
+        <col style="width:60px;"/>
+        <col style="width:90px;"/>
+        <col style="width:100px;"/>
+      </colgroup>
       <thead>
-        <tr style="border-bottom:2px solid #e5e7eb;">
-          <th style="text-align:left;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">DESCRIPTION</th>
-          <th style="text-align:center;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">QTÉ</th>
+        <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+          <th style="text-align:left;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">Description</th>
+          <th style="text-align:center;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">Qté</th>
           <th style="text-align:right;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">P.U. HT</th>
-          <th style="text-align:right;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">TOTAL HT</th>
+          <th style="text-align:right;padding:10px 8px;font-size:10px;text-transform:uppercase;color:#6b7280;font-weight:600;">Total HT</th>
         </tr>
       </thead>
-      <tbody>
-        ${itemsHtml}
-      </tbody>
+      <tbody>${itemsHtml}</tbody>
     </table>
-    
-    <div style="display:flex;justify-content:flex-end;margin-top:30px;">
-      <div style="width:220px;">
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#4b5563;">
+
+    <!-- TOTAUX -->
+    <div style="display:flex;justify-content:flex-end;margin-top:24px;">
+      <div style="width:240px;">
+        <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:13px;color:#4b5563;border-top:1px solid #e5e7eb;">
           <span>Total HT</span>
           <span style="font-weight:600;">${subtotal.toFixed(2)} €</span>
         </div>
-        ${vatAmount > 0 ? `
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#4b5563;">
-          <span>TVA (${inv.vat_rate}%)</span>
-          <span style="font-weight:600;">${vatAmount.toFixed(2)} €</span>
-        </div>
-        ` : ''}
-        <div style="display:flex;justify-content:space-between;padding:12px 0 8px 0;font-size:16px;font-weight:700;color:#10B981;border-top:2px solid #e5e7eb;margin-top:8px;">
-          <span>Total TTC</span>
+        ${vatAmount > 0 ? '<div style="display:flex;justify-content:space-between;padding:7px 0;font-size:13px;color:#4b5563;"><span>TVA (' + inv.vat_rate + '%)</span><span style=\"font-weight:600;\">' + vatAmount.toFixed(2) + ' €</span></div>' : ''}
+        <div style="display:flex;justify-content:space-between;padding:12px 0 8px;font-size:17px;font-weight:700;color:#1A7A5E;border-top:3px solid #111827;margin-top:6px;">
+          <span>TOTAL TTC</span>
           <span>${totalTtc.toFixed(2)} €</span>
         </div>
+        ${!vatAmount ? '<div style=\"font-size:11px;color:#6b7280;margin-top:4px;\">TVA non applicable - Art. 293B du CGI</div>' : ''}
       </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="text-align:center;margin-top:40px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;">
+      Facture générée via <strong style="color:#1A7A5E;">boostinghost.fr</strong> — logiciel de gestion locative
     </div>
   </div>
 `;
-    
     const invoiceElement = document.getElementById('tempInvoicePaper');
     const filename = `${inv.invoice_number || 'facture'}.pdf`;
     
