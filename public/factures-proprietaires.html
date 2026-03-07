@@ -1418,32 +1418,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const d2 = new Date(); d2.setDate(d2.getDate()+30);
   document.getElementById('invoiceDueDate').value = toYMD(d2);
   
-  // Charger les données une par une pour éviter le blocage
-  try {
-    console.log('[LOAD] Chargement des clients...');
-    await loadClients();
-    console.log('[OK] Clients chargés');
-  } catch(e) {
-    console.error('[ERROR] Erreur clients:', e);
-  }
+  // Charger en parallèle — loadInvoices ne dépend pas de loadClients
+  // loadClients doit juste finir avant qu'on crée une facture (pas urgent)
   
-  try {
-    console.log('[LOAD] Chargement des factures...');
-    await loadInvoices();
-    console.log('[OK] Factures chargées');
-  } catch(e) {
-    console.error('[ERROR] Erreur factures:', e);
-  }
-  
-  try {
-    console.log('[LOAD] Chargement du profil...');
-    await loadUserProfile();
-    console.log('[OK] Profil chargé');
-  } catch(e) {
-    console.error('[ERROR] Erreur profil:', e);
-  }
-  
-  // Profil émetteur (APRÈS loadUserProfile pour ne pas écraser le logo)
+  // 1. Lancer tout en parallèle
+  const [_inv, _cli, _prof] = await Promise.allSettled([
+    loadInvoices().catch(e => console.error('[ERROR] Factures:', e)),
+    loadClients().catch(e => console.error('[ERROR] Clients:', e)),
+    loadUserProfile().catch(e => console.error('[ERROR] Profil:', e)),
+  ]);
+
+  // Profil émetteur (APRÈS loadUserProfile)
   loadEmitterProfile();
   
   // Ajout d'une ligne par défaut
@@ -1703,11 +1688,24 @@ window.closeStatsModal = function() {
 
 async function loadInvoices() {
   console.log('🔍 loadInvoices() - Début...');
+  // Afficher message de chargement
+  const container = document.getElementById('invoicesCardsGrid');
+  if (container) container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;"><i class="fas fa-spinner fa-spin" style="margin-right:8px;color:#1A7A5E;"></i>Chargement des factures...</div>';
+  
+  // Timeout 20s pour Render cold start
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+    if (container) container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;"><p style="color:#dc2626;font-weight:600;">⏱ Délai dépassé</p><p style="color:#6b7280;font-size:13px;margin-top:8px;">Le serveur met du temps à démarrer. <a href="javascript:loadInvoices()" style="color:#1A7A5E;font-weight:600;">Réessayer</a></p></div>';
+  }, 20000);
+  
   try {
     console.log('📡 Appel API /api/owner-invoices...');
     const res = await fetch(API_BASE + '/api/owner-invoices', {
-      headers: { Authorization: 'Bearer ' + token }
+      headers: { Authorization: 'Bearer ' + token },
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     console.log('📡 Réponse reçue, status:', res.status);
     
     const data = await res.json();
@@ -1718,7 +1716,6 @@ async function loadInvoices() {
     
     window.ownerInvoices = invs;
 
-    const container = document.getElementById('invoicesCardsGrid');
     console.log('📍 Container trouvé:', !!container);
 
     if (invs.length === 0) {
@@ -1842,10 +1839,11 @@ async function loadInvoices() {
     document.getElementById('statsPending').textContent = formatMoney(totalPending);
     console.log('[OK] loadInvoices() - Terminé avec succès');
   } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') return; // timeout déjà géré
     console.error('[ERROR] loadInvoices() - Erreur:', e);
-    const container = document.getElementById('invoicesCardsGrid');
     if (container) {
-      container.innerHTML = '<div style="padding:40px; text-align:center; grid-column: 1 / -1; color:#dc2626;">Erreur lors du chargement des factures. Veuillez réessayer.</div>';
+      container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;"><p style="color:#dc2626;font-weight:600;">Erreur de chargement</p><p style="font-size:13px;color:#6b7280;margin-top:8px;"><a href="javascript:loadInvoices()" style="color:#1A7A5E;font-weight:600;">Réessayer</a></p></div>';
     }
   }
 }
