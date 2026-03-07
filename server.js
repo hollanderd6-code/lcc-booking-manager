@@ -5192,7 +5192,7 @@ console.log(
 
     // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT DANS LES 3 PROCHAINS MOIS)
     console.log("🔍 [Annulation] cancelledReservations.length:", cancelledReservations.length, JSON.stringify(cancelledReservations.map(r=>({uid:r.uid,start:r.start,userId:r.userId}))));
-if (cancelledReservations.length > 0) {
+if (!isFirstSync && cancelledReservations.length > 0) {
   // Filtrer pour ne garder que les reservations dans les 3 prochains mois
   const now = new Date();
   const threeMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
