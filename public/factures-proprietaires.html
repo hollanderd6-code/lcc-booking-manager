@@ -649,6 +649,112 @@ html[data-theme-v3="1"] .modal-content {
 }
 </style>
 <style>
+
+/* ============================================================
+   MOBILE OPTIMIZATIONS — factures-proprietaires
+   ============================================================ */
+@media (max-width: 1366px) {
+  /* Header mobile */
+  .mobile-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #F5F2EC;
+    border-bottom: 1px solid rgba(200,184,154,.4);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  /* Tabs scrollables */
+  .nav-tabs {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none !important; }
+  .nav-tab { flex-shrink: 0 !important; white-space: nowrap !important; }
+
+  /* Stats row — 2 colonnes sur mobile */
+  .stats-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+  .stat-card { padding: 14px !important; }
+  .stat-value { font-size: 18px !important; }
+
+  /* Cartes factures full-width */
+  .invoices-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .invoice-card { width: 100% !important; }
+  .invoice-card-number { font-size: 13px !important; word-break: break-all !important; }
+
+  /* Éditeur — single column */
+  .invoice-editor-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+  .editor-sidebar {
+    position: static !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(200,184,154,.4) !important;
+  }
+  /* Masquer aperçu sur mobile */
+  .invoice-preview-container { display: none !important; }
+
+  /* Inputs plus grands pour le touch */
+  .form-control {
+    font-size: 16px !important;
+    padding: 12px !important;
+    min-height: 44px !important;
+  }
+  select.form-control { min-height: 44px !important; }
+
+  /* Boutons full-width dans l'éditeur */
+  .editor-section:last-child .btn {
+    width: 100% !important;
+    padding: 14px !important;
+    font-size: 15px !important;
+    min-height: 48px !important;
+  }
+
+  /* Clients liste */
+  .clients-list { gap: 10px !important; }
+  
+  /* Modal full screen */
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+  .modal-overlay { align-items: flex-end !important; }
+
+  /* Masquer les boutons fixes du header */
+  .fp-header-btns { display: none !important; }
+
+  /* Padding général */
+  html[data-theme-v3="1"] .main-content {
+    padding: 12px !important;
+    padding-bottom: 100px !important;
+  }
+}
+
 /* DÉSACTIVER PULL-TO-REFRESH iOS */
 @media (max-width: 1366px) {
   /* Empêcher le pull-to-refresh sur iOS */
@@ -1847,7 +1953,6 @@ window.deleteOwnerInvoice = async function (id) {
       const total = parseFloat(item.total || 0);
       
       itemsHtml += `
-        <tr>
     <tr style="border-bottom:1px solid #f3f4f6;">
       <td style="padding:14px 8px;">${desc}</td>
       <td style="padding:14px 8px;text-align:center;">${qty}</td>
@@ -1861,15 +1966,33 @@ window.deleteOwnerInvoice = async function (id) {
     const vatAmount = parseFloat(inv.vat_amount || 0);
     const totalTtc = parseFloat(inv.total_ttc || 0);
     
+    // Coordonnées émetteur depuis profil
+    const ep = window.emitterProfile || {};
+    const up = window.userProfile || {};
+    const senderName = ep.company || up.company || up.firstName && (up.firstName + ' ' + (up.lastName || '')).trim() || 'Votre entreprise';
+    const addrParts = [];
+    if (ep.address) addrParts.push(ep.address);
+    if (ep.postalCode || ep.city) addrParts.push((ep.postalCode || '') + ' ' + (ep.city || ''));
+    if (ep.siret) addrParts.push('SIRET : ' + ep.siret);
+    if (up.email) addrParts.push(up.email);
+    const senderAddress = addrParts.join('<br>');
+
     tempContainer.innerHTML = `
   <div id="tempInvoicePaper" style="background:white;width:210mm;padding:20mm;font-family:'Inter',sans-serif;color:#1f2937;box-sizing:border-box;">
-    <div style="display:flex;justify-content:space-between;margin-bottom:40px;">
+    <div style="text-align:center;margin-bottom:32px;padding-bottom:24px;border-bottom:3px solid #111827;">
+      <h2 style="font-size:24px;font-weight:700;margin:0 0 8px 0;color:#111827;">${senderName}</h2>
+      <div style="font-size:13px;color:#6b7280;margin-top:4px;line-height:1.6;">${senderAddress}</div>
+      <div style="margin-top:16px;font-size:16px;font-weight:600;">FACTURE N° ${inv.invoice_number || 'BROUILLON'}</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:4px;">Date : ${formatDate(inv.issue_date)}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:28px;">
       <div>
-        <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;">
-          Votre conciergerie<br>
-          123 Rue de la République<br>
-          75000 Paris<br>
-          contact@boostinghost.fr
+        <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;" id="pdfSenderInfo">
+          ${window.userProfile && window.userProfile.company ? window.userProfile.company : (window.emitterProfile && window.emitterProfile.company ? window.emitterProfile.company : 'Votre entreprise')}
+          ${window.emitterProfile && window.emitterProfile.address ? '<br>' + window.emitterProfile.address : ''}
+          ${window.emitterProfile && (window.emitterProfile.postalCode || window.emitterProfile.city) ? '<br>' + (window.emitterProfile.postalCode || '') + ' ' + (window.emitterProfile.city || '') : ''}
+          ${window.emitterProfile && window.emitterProfile.siret ? '<br>SIRET : ' + window.emitterProfile.siret : ''}
+          ${window.userProfile && window.userProfile.email ? '<br>' + window.userProfile.email : ''}
         </p>
       </div>
       <div style="text-align:right;">
@@ -1882,11 +2005,14 @@ window.deleteOwnerInvoice = async function (id) {
       </div>
     </div>
     
-    <div style="margin-bottom:30px;">
-      <p style="margin:0 0 4px 0;font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;">Facturé à</p>
-      <p style="margin:0;font-size:13px;line-height:1.6;color:#4b5563;">
+    <div style="margin-bottom:28px;">
+      <h3 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:12px;">Facturé à</h3>
+      <div style="font-size:14px;line-height:1.6;color:#111827;">
         <strong>${clientName}</strong>
-      </p>
+        ${client && client.email ? '<br>' + client.email : ''}
+        ${client && client.address ? '<br>' + client.address : ''}
+        ${client && (client.postal_code || client.city) ? '<br>' + (client.postal_code || '') + ' ' + (client.city || '') : ''}
+      </div>
     </div>
     
     <table style="width:100%;border-collapse:collapse;margin-top:25px;">
@@ -1978,6 +2104,24 @@ window.deleteOwnerInvoice = async function (id) {
   } catch (err) {
     console.error(err);
     alert('Erreur lors du téléchargement');
+  }
+};
+
+
+window.createOwnerCreditNote = async function(id) {
+  if (!confirm('Créer un avoir pour cette facture ?')) return;
+  try {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/credit-note', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    const json = await res.json();
+    if (!res.ok) return alert(json.error || 'Erreur création avoir');
+    alert('Avoir créé avec succès');
+    loadInvoices();
+  } catch(e) {
+    console.error(e);
+    alert('Erreur serveur');
   }
 };
 
@@ -2405,7 +2549,7 @@ function getSelectedProperties() {
     if(!clientId) return alert('Veuillez sélectionner un client');
 
     const data = {
-      clientId: parseInt(clientId),
+      clientId: clientId, // UUID string, pas parseInt
       periodStart: document.getElementById('invoicePeriodStart').value,
       periodEnd: document.getElementById('invoicePeriodEnd').value,
       issueDate: document.getElementById('invoiceIssueDate').value,
@@ -2463,6 +2607,8 @@ function getSelectedProperties() {
     prestations = [];
     prestationCounter = 0;
     addPrestation('commission');
+    const _numElNew = document.getElementById('previewInvoiceNumber');
+    if (_numElNew) _numElNew.textContent = 'N° BROUILLON';
     
     document.getElementById('invoiceClientId').value = '';
     // ✅ FIX iOS
@@ -2515,6 +2661,8 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     // Activer le mode lecture seule
     isReadOnlyMode = true;
     editingInvoiceId = inv.id;
+    const _numEl = document.getElementById('previewInvoiceNumber');
+    if (_numEl) _numEl.textContent = 'N° ' + (inv.invoice_number || 'BROUILLON');
     
     // Afficher la bannière et désactiver les contrôles
     document.getElementById('editorSidebar').classList.add('readonly');
