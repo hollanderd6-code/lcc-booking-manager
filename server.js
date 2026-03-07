@@ -13040,6 +13040,132 @@ app.post('/api/owner-invoices/:id/credit-note',
 // car Render bloque parfois le port 587
 
 
+
+// ============================================
+// POST - Renvoyer une facture par numéro
+// ============================================
+app.post('/api/invoice/resend',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_invoices'),
+  async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { invoiceNumber } = req.body;
+    if (!invoiceNumber) return res.status(400).json({ error: 'invoiceNumber requis' });
+
+    // Récupérer les métadonnées
+    const result = await pool.query(
+      `SELECT file_path FROM invoice_download_tokens WHERE user_id = $1 AND invoice_number = $2 ORDER BY created_at DESC LIMIT 1`,
+      [userId, invoiceNumber]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Facture introuvable' });
+
+    let meta = {};
+    try { meta = JSON.parse(result.rows[0].file_path || '{}'); } catch(e) {}
+
+    if (!meta.clientEmail) return res.status(400).json({ error: 'Email client introuvable pour cette facture' });
+
+    // Récupérer profil utilisateur
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = profileResult.rows[0];
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Récupérer owner si dispo
+    let ownerInfo = null;
+    if (meta.ownerId) {
+      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [meta.ownerId, userId]);
+      if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
+    }
+
+    // Régénérer le PDF
+    const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_resend.pdf`);
+    
+    // Reconstituer les variables pour generateInvoicePdfToFile
+    const savedVars = {
+      clientName: meta.clientName, clientEmail: meta.clientEmail,
+      clientAddress: meta.clientAddress, clientPostalCode: meta.clientPostalCode,
+      clientCity: meta.clientCity, clientSiret: meta.clientSiret,
+      propertyName: meta.propertyName, propertyAddress: meta.propertyAddress,
+      checkinDate: meta.checkinDate, checkoutDate: meta.checkoutDate,
+      nights: meta.nights, rentAmount: meta.rentAmount,
+      touristTaxAmount: meta.touristTaxAmount, cleaningFee: meta.cleaningFee,
+      vatRate: meta.vatRate, invoiceNumber
+    };
+
+    await generateInvoicePdfToFile(pdfPath, savedVars, user, ownerInfo);
+    const pdfBuffer = fs.readFileSync(pdfPath);
+
+    const checkinFr  = meta.checkinDate  ? new Date(meta.checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
+    const checkoutFr = meta.checkoutDate ? new Date(meta.checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}) : '';
+    const emitterName = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.trim()) : (user.company || 'Ma Conciergerie');
+    const total = parseFloat(meta.total || 0);
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+      to: meta.clientEmail,
+      subject: `Facture ${invoiceNumber} – Séjour à ${meta.propertyName || ''}${meta.checkinDate ? ' du ' + new Date(meta.checkinDate).toLocaleDateString('fr-FR') : ''}`,
+      html: `<p>Bonjour ${meta.clientName || ''},</p><p>Veuillez trouver ci-joint votre facture <strong>${invoiceNumber}</strong>${meta.propertyName ? ' pour votre séjour à ' + meta.propertyName : ''}${checkinFr ? ' du ' + checkinFr + ' au ' + checkoutFr : ''}.</p><p>Cordialement,<br>${emitterName}</p>`,
+      attachments: [{ filename: `${invoiceNumber}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
+    });
+
+    try { fs.unlinkSync(pdfPath); } catch(e) {}
+    res.json({ success: true, message: `Facture renvoyée à ${meta.clientEmail}` });
+  } catch (err) {
+    console.error('Erreur /api/invoice/resend:', err);
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// GET - Télécharger une facture par numéro
+// ============================================
+app.get('/api/invoice/download-by-number/:invoiceNumber',
+  authenticateAny,
+  async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { invoiceNumber } = req.params;
+
+    const result = await pool.query(
+      `SELECT file_path FROM invoice_download_tokens WHERE user_id = $1 AND invoice_number = $2 ORDER BY created_at DESC LIMIT 1`,
+      [userId, invoiceNumber]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Facture introuvable' });
+
+    let meta = {};
+    try { meta = JSON.parse(result.rows[0].file_path || '{}'); } catch(e) {}
+
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = profileResult.rows[0];
+
+    let ownerInfo = null;
+    if (meta.ownerId) {
+      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [meta.ownerId, userId]);
+      if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
+    }
+
+    const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_dl.pdf`);
+    await generateInvoicePdfToFile(pdfPath, meta, user, ownerInfo);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoiceNumber}.pdf"`);
+    const stream = fs.createReadStream(pdfPath);
+    stream.pipe(res);
+    stream.on('end', () => { try { fs.unlinkSync(pdfPath); } catch(e) {} });
+  } catch (err) {
+    console.error('Erreur download-by-number:', err);
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
+  }
+});
+
 // ============================================
 // GET - Historique des factures
 // ============================================
@@ -13153,7 +13279,30 @@ app.post('/api/invoice/create',
       console.error('Erreur récupération propriétaire pour PDF:', e.message);
     }
 // Générer un PDF professionnel avec PDFKit
-    async function generateInvoicePdfToFile(outputPath) {
+    async function generateInvoicePdfToFile(outputPath, dataOverride, userOverride, ownerOverride) {
+      // Support appel externe avec données passées en paramètre
+      const _d = dataOverride || {};
+      const _u = userOverride || user;
+      const _o = ownerOverride !== undefined ? ownerOverride : ownerInfo;
+      const clientName = _d.clientName !== undefined ? _d.clientName : clientName;
+      const clientEmail = _d.clientEmail !== undefined ? _d.clientEmail : clientEmail;
+      const clientAddress = _d.clientAddress !== undefined ? _d.clientAddress : clientAddress;
+      const clientPostalCode = _d.clientPostalCode !== undefined ? _d.clientPostalCode : clientPostalCode;
+      const clientCity = _d.clientCity !== undefined ? _d.clientCity : clientCity;
+      const clientSiret = _d.clientSiret !== undefined ? _d.clientSiret : clientSiret;
+      const propertyName = _d.propertyName !== undefined ? _d.propertyName : propertyName;
+      const propertyAddress = _d.propertyAddress !== undefined ? _d.propertyAddress : propertyAddress;
+      const checkinDate = _d.checkinDate !== undefined ? _d.checkinDate : checkinDate;
+      const checkoutDate = _d.checkoutDate !== undefined ? _d.checkoutDate : checkoutDate;
+      const nights = _d.nights !== undefined ? _d.nights : nights;
+      const rentAmount = _d.rentAmount !== undefined ? _d.rentAmount : rentAmount;
+      const touristTaxAmount = _d.touristTaxAmount !== undefined ? _d.touristTaxAmount : touristTaxAmount;
+      const cleaningFee = _d.cleaningFee !== undefined ? _d.cleaningFee : cleaningFee;
+      const vatRate = _d.vatRate !== undefined ? _d.vatRate : vatRate;
+      const invoiceNumber = _d.invoiceNumber !== undefined ? _d.invoiceNumber : invoiceNumber;
+      const subtotal = parseFloat(rentAmount || 0) + parseFloat(touristTaxAmount || 0) + parseFloat(cleaningFee || 0);
+      const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
+      const total = subtotal + vatAmount;
       return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ size: 'A4', margin: 0 });
         const stream = fs.createWriteStream(outputPath);
@@ -13163,12 +13312,12 @@ app.post('/api/invoice/create',
         const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
         const LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
 
-        const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (user.company || 'Ma Conciergerie');
-        const emitterAddr  = ownerInfo?.address || '';
-        const emitterCP    = ownerInfo?.postal_code || '';
-        const emitterCity  = ownerInfo?.city || '';
-        const emitterEmail = ownerInfo?.email || user.email || '';
-        const emitterSiret = ownerInfo?.siret || '';
+        const emitterName  = _o ? (_o.company_name || `${_o.first_name||''} ${_o.last_name||''}`.replace(/\s+/g, ' ').trim()) : (_u.company || 'Ma Conciergerie');
+        const emitterAddr  = _o?.address || '';
+        const emitterCP    = _o?.postal_code || '';
+        const emitterCity  = _o?.city || '';
+        const emitterEmail = _o?.email || _u.email || '';
+        const emitterSiret = _o?.siret || '';
 
         // Bande verte haut
         doc.rect(0, 0, W, 8).fill(GREEN);
@@ -13311,13 +13460,25 @@ app.post('/api/invoice/create',
       try {
         const _token = crypto.randomBytes(32).toString('hex');
         const _expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        const _total = parseFloat(rentAmount||0) + parseFloat(touristTaxAmount||0) + parseFloat(cleaningFee||0);
         const _meta = JSON.stringify({
           clientName: clientName || '',
           clientEmail: clientEmail || '',
+          clientAddress: clientAddress || '',
+          clientPostalCode: clientPostalCode || '',
+          clientCity: clientCity || '',
+          clientSiret: clientSiret || '',
           propertyName: propertyName || '',
+          propertyAddress: propertyAddress || '',
           checkinDate: checkinDate || '',
           checkoutDate: checkoutDate || '',
-          total: (parseFloat(rentAmount||0) + parseFloat(touristTaxAmount||0) + parseFloat(cleaningFee||0))
+          nights: nights || 0,
+          rentAmount: rentAmount || 0,
+          touristTaxAmount: touristTaxAmount || 0,
+          cleaningFee: cleaningFee || 0,
+          vatRate: vatRate || 0,
+          total: _total,
+          invoiceNumber: invoiceNumber
         });
         await pool.query(
           `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at) VALUES ($1, $2, $3, $4, $5)`,
