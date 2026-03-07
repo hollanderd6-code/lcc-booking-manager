@@ -4974,7 +4974,7 @@ async function syncAllCalendars() {
           );
           if (dbRes.rows.length > 0) {
             previousAllReservations = dbRes.rows;
-            console.log(\`📦 [Sync] \${property.name}: \${dbRes.rows.length} résas chargées depuis DB pour comparaison\`);
+            console.log(`📦 [Sync] ${property.name}: ${dbRes.rows.length} résas chargées depuis DB pour comparaison`);
           }
         } catch (dbErr) {
           console.error('⚠️ Erreur chargement résas DB pour comparaison:', dbErr.message);
