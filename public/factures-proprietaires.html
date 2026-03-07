@@ -1843,7 +1843,8 @@ async function loadInvoices() {
         totalPending += total;
       }
 
-      const numberDisplay = inv.invoice_number || 'Brouillon';
+      const rawNum = inv.invoice_number || '';
+      const numberDisplay = (!rawNum || rawNum.startsWith('Brouillon') || rawNum.startsWith('brouillon')) ? 'Brouillon' : rawNum;
 
       let statusLabel = status;
       let statusClass = 'invoice-badge-draft';
