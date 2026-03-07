@@ -14079,11 +14079,19 @@ app.post('/api/owner-invoices/:id/finalize',
       return res.status(400).json({ error: 'Seuls les brouillons peuvent être validés.' });
     }
 
-    // Générer un numéro si absent
+    // Générer un numéro séquentiel propre
     let invoiceNumber = invoice.invoice_number;
-    if (!invoiceNumber) {
+    if (!invoiceNumber || invoiceNumber.startsWith('Brouillon')) {
       const year = new Date().getFullYear();
-      invoiceNumber = `P-${year}-${String(invoice.id).padStart(4, '0')}`;
+      const seqRes = await pool.query(
+        `SELECT COUNT(*) as cnt FROM owner_invoices
+         WHERE user_id = $1 AND invoice_number IS NOT NULL
+         AND invoice_number != '' AND invoice_number NOT LIKE 'Brouillon%'
+         AND is_credit_note = FALSE`,
+        [userId]
+      );
+      const seq = String(parseInt(seqRes.rows[0].cnt || 0) + 1).padStart(4, '0');
+      invoiceNumber = `FACT-${year}-${seq}`;
     }
 
     const updateResult = await pool.query(
