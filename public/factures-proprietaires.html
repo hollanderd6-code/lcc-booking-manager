@@ -758,13 +758,18 @@ html[data-theme-v3="1"] .modal-content {
     top: 0 !important;
     background: white !important;
     z-index: 20 !important;
-    padding: 16px 20px 14px !important;
-    margin: 0 0 12px 0 !important;
+    padding: 18px 20px 14px !important;
+    margin: 0 !important;
     border-bottom: 1px solid #f3f4f6 !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
     border-radius: 20px 20px 0 0 !important;
+  }
+  /* Padding du contenu sous le header */
+  .modal-content > *:not(.modal-sticky-header) {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
   }
   .modal-close-btn {
     width: 44px !important;
