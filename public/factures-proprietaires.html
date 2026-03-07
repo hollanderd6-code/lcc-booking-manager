@@ -1208,9 +1208,9 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="modal-overlay" id="clientModal">
 <div class="modal-content">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; position:sticky; top:-24px; background:white; z-index:10; padding:16px 0 12px; margin-top:-24px; border-bottom:1px solid #e5e7eb;">
+<div style="display:flex; justify-content:space-between; margin-bottom:20px;">
 <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
-<button onclick="closeClientModal()" style="border:none; background:#f3f4f6; border-radius:50%; width:32px; height:32px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">×</button>
+<button onclick="closeClientModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
 </div>
 <div style="display:flex; gap:16px; margin-bottom:16px;">
 <label><input checked="" name="clientType" onchange="toggleClientType()" type="radio" value="individual"/> Particulier</label>
@@ -2397,12 +2397,19 @@ function getSelectedProperties() {
     const clientId = document.getElementById('invoiceClientId').value;
     if(!clientId) return alert('Veuillez sélectionner un client');
 
+    const issueDate = document.getElementById('invoiceIssueDate').value;
+    const dueDate = document.getElementById('invoiceDueDate').value;
+
+    if (!issueDate) return alert('Veuillez renseigner la date d\'émission');
+    if (!dueDate) return alert('Veuillez renseigner la date d\'échéance');
+    if (prestations.length === 0) return alert('Veuillez ajouter au moins une prestation');
+
     const data = {
       clientId: parseInt(clientId),
       periodStart: document.getElementById('invoicePeriodStart').value,
       periodEnd: document.getElementById('invoicePeriodEnd').value,
-      issueDate: document.getElementById('invoiceIssueDate').value,
-      dueDate: document.getElementById('invoiceDueDate').value,
+      issueDate,
+      dueDate,
       items: prestations.map(p => ({
         itemType: p.type,
         description: p.description,
@@ -2455,6 +2462,7 @@ function getSelectedProperties() {
     editingInvoiceId = null;
     prestations = [];
     prestationCounter = 0;
+    addPrestation('commission');
     
     document.getElementById('invoiceClientId').value = '';
     // ✅ FIX iOS
