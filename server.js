@@ -14119,91 +14119,184 @@ app.post('/api/owner-invoices/:id/finalize',
 // ============================================================
 // ENVOI EMAIL FACTURE PROPRIÉTAIRE
 // ============================================================
-async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, periodStart, periodEnd, totalTtc, items, userCompany, userEmail }) {
+async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret }) {
   if (!clientEmail) throw new Error('Email client manquant');
 
-  const period = (periodStart || periodEnd)
-    ? `Période du ${periodStart ? new Date(periodStart+'T00:00:00').toLocaleDateString('fr-FR') : '?'} au ${periodEnd ? new Date(periodEnd+'T00:00:00').toLocaleDateString('fr-FR') : '?'}`
-    : '';
+  const periodStartFr = periodStart ? new Date(periodStart + 'T00:00:00').toLocaleDateString('fr-FR') : '';
+  const periodEndFr   = periodEnd   ? new Date(periodEnd   + 'T00:00:00').toLocaleDateString('fr-FR') : '';
+  const period = (periodStartFr || periodEndFr) ? `du ${periodStartFr} au ${periodEndFr}` : '';
 
-  let itemsRows = '';
-  (items || []).forEach(item => {
-    const total = parseFloat(item.total || 0);
-    const qty   = parseFloat(item.quantity || 1);
-    const pu    = parseFloat(item.unit_price || 0);
-    itemsRows += `
-      <tr style="border-bottom:1px solid #f3f4f6;">
-        <td style="padding:12px 8px;font-size:13px;">${item.description || 'Prestation'}</td>
-        <td style="padding:12px 8px;text-align:center;font-size:13px;">${qty}</td>
-        <td style="padding:12px 8px;text-align:right;font-size:13px;">${pu.toFixed(2)} €</td>
-        <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:600;">${total.toFixed(2)} €</td>
-      </tr>`;
+  const fromEmail  = process.env.EMAIL_FROM || userEmail || 'noreply@boostinghost.fr';
+  const fromName   = userCompany || 'Boostinghost';
+  const ttc        = parseFloat(totalTtc || 0);
+  const vatAmt     = parseFloat(vatAmount || 0);
+  const ht         = ttc - vatAmt;
+
+  // ── Générer le PDF en mémoire avec PDFKit ──
+  const pdfBuffer = await new Promise((resolve, reject) => {
+    const chunks = [];
+    const doc = new PDFDocument({ size: 'A4', margin: 0 });
+    doc.on('data', c => chunks.push(c));
+    doc.on('end',  () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const W = 595, H = 842, mg = 50;
+    const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
+    const LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
+
+    // Bande verte haut
+    doc.rect(0, 0, W, 8).fill(GREEN);
+
+    // Émetteur (gauche)
+    let y = 32;
+    doc.font('Helvetica-Bold').fontSize(18).fillColor(DARK).text(fromName, mg, y, { width: 290 });
+    y += 26;
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    if (userAddress)                    { doc.text(userAddress, mg, y, { width: 290 }); y += 13; }
+    if (userPostalCode || userCity)     { doc.text(((userPostalCode||'') + ' ' + (userCity||'')).trim(), mg, y); y += 13; }
+    if (userEmail)                      { doc.text(userEmail, mg, y); y += 13; }
+    if (userSiret)                      { doc.text('SIRET : ' + userSiret, mg, y); y += 13; }
+
+    // Bloc FACTURE (droite)
+    const bx = W - mg - 185, by = 28;
+    doc.rect(bx, by, 185, period ? 100 : 80).fill(LIGHT);
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(GREEN).text('FACTURE', bx+14, by+10);
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text('N° ' + (invoiceNumber || 'BROUILLON'), bx+14, by+38);
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+       .text('Date : ' + new Date().toLocaleDateString('fr-FR'), bx+14, by+54);
+    if (period) doc.text('Période : ' + period, bx+14, by+68, { width: 157 });
+
+    // Séparateur
+    y = Math.max(y, by + (period ? 110 : 90)) + 12;
+    doc.rect(mg, y, W - mg*2, 1).fill(BORDER);
+    y += 16;
+
+    // Bloc client
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('FACTURÉ À', mg, y);
+    y += 14;
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(DARK).text(clientName || '', mg, y);
+    y += 16;
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(clientEmail, mg, y);
+    y += 22;
+
+    // Tableau items
+    doc.rect(mg, y, W - mg*2, 28).fill(GREEN);
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('white')
+       .text('DESCRIPTION',  mg+12,    y+9, { width: 240 })
+       .text('BASE',         mg+255,   y+9, { width: 70,  align: 'right' })
+       .text('TAUX/QTÉ',     mg+330,   y+9, { width: 70,  align: 'right' })
+       .text('TOTAL HT',     mg+405,   y+9, { width: 90,  align: 'right' });
+    y += 28;
+
+    let alt = false;
+    (items || []).forEach(item => {
+      const total = parseFloat(item.total || 0);
+      let baseDisp, rateDisp;
+      if (item.item_type === 'commission') {
+        baseDisp = parseFloat(item.rental_amount || 0).toFixed(2) + ' EUR';
+        rateDisp = parseFloat(item.commission_rate || 0) + ' %';
+      } else {
+        baseDisp = parseFloat(item.unit_price || 0).toFixed(2) + ' EUR';
+        rateDisp = String(item.quantity || 1);
+      }
+      if (alt) doc.rect(mg, y, W - mg*2, 26).fill('#F9FAFB');
+      doc.font('Helvetica').fontSize(10).fillColor(DARK)
+         .text(item.description || 'Prestation', mg+12,  y+7, { width: 240 })
+         .text(baseDisp,                          mg+255, y+7, { width: 70,  align: 'right' })
+         .text(rateDisp,                          mg+330, y+7, { width: 70,  align: 'right' })
+         .text(total.toFixed(2) + ' EUR',         mg+405, y+7, { width: 90,  align: 'right' });
+      doc.rect(mg, y+26, W - mg*2, 0.5).fill(BORDER);
+      y += 26; alt = !alt;
+    });
+    y += 18;
+
+    // Totaux
+    const totW = 220, totX = W - mg - totW;
+    doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 8;
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+       .text('Total HT', totX, y, { width: 120 })
+       .text(ht.toFixed(2) + ' EUR', totX+120, y, { width: 88, align: 'right' });
+    y += 16;
+    if (vatAmt > 0) {
+      doc.text('TVA (' + (vatRate||0) + '%)', totX, y, { width: 120 })
+         .text(vatAmt.toFixed(2) + ' EUR', totX+120, y, { width: 88, align: 'right' });
+      y += 16;
+    } else {
+      doc.font('Helvetica').fontSize(8).fillColor(GRAY)
+         .text('TVA non applicable - Art. 293B CGI', totX, y, { width: 208 });
+      y += 14;
+    }
+    doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 6;
+    doc.rect(totX, y, totW, 36).fill(GREEN);
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('white')
+       .text('TOTAL TTC', totX+12, y+10, { width: 108 })
+       .text(ttc.toFixed(2) + ' EUR', totX+120, y+10, { width: 88, align: 'right' });
+
+    // Pied de page
+    doc.rect(0, H-44, W, 44).fill(GREEN);
+    doc.font('Helvetica').fontSize(8).fillColor('rgba(255,255,255,0.7)')
+       .text('Facture générée grâce à', mg, H-34, { width: W-mg*2, align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('white')
+       .text('Boostinghost.fr', mg, H-22, { width: W-mg*2, align: 'center' });
+
+    doc.end();
   });
 
-  const ttc = parseFloat(totalTtc || 0);
-  const fromEmail = process.env.EMAIL_FROM || userEmail || 'noreply@boostinghost.fr';
-  const fromName  = userCompany || 'Boostinghost';
-
-  const html = `<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="utf-8"/><title>Facture ${invoiceNumber || ''}</title></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:'Inter',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08);overflow:hidden;">
-  <!-- Header -->
-  <tr><td style="background:#1A7A5E;padding:28px 40px;text-align:center;">
-    <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:.02em;">FACTURE</div>
-    <div style="font-size:14px;color:rgba(255,255,255,.8);margin-top:6px;">N° ${invoiceNumber || 'BROUILLON'}</div>
-  </td></tr>
-  <!-- Body -->
-  <tr><td style="padding:32px 40px;">
-    <p style="margin:0 0 8px;font-size:15px;color:#374151;">Bonjour <strong>${clientName || ''}</strong>,</p>
-    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Veuillez trouver ci-dessous votre facture.</p>
-    ${period ? `<p style="margin:0 0 24px;font-size:13px;color:#6b7280;">${period}</p>` : ''}
-    <!-- Table items -->
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;">
-      <thead>
-        <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
-          <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;font-weight:600;">Description</th>
-          <th style="padding:10px 8px;text-align:center;font-size:11px;text-transform:uppercase;color:#6b7280;font-weight:600;">Qté</th>
-          <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;color:#6b7280;font-weight:600;">P.U. HT</th>
-          <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;color:#6b7280;font-weight:600;">Total HT</th>
-        </tr>
-      </thead>
-      <tbody>${itemsRows}</tbody>
-    </table>
-    <!-- Total -->
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-      <tr>
-        <td></td>
-        <td width="220" style="padding:14px 0;border-top:3px solid #111827;">
-          <table width="100%" cellpadding="0" cellspacing="0">
+  // ── Template email HTML (identique à invoice/create) ──
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
+      <div style="background: #1A7A5E; padding: 28px 32px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; color: white; font-size: 22px;">${fromName}</h1>
+        <p style="margin: 6px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">Facture N° ${invoiceNumber || 'BROUILLON'}</p>
+      </div>
+      <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; margin: 0 0 16px;">Bonjour <strong>${clientName || ''}</strong>,</p>
+        <p style="font-size: 15px; margin: 0 0 24px; line-height: 1.6;">
+          Veuillez trouver ci-joint votre facture${period ? ` pour la période <strong>${period}</strong>` : ''}.
+        </p>
+        <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            ${(items||[]).map(item => {
+              const total = parseFloat(item.total || 0);
+              return `<tr>
+                <td style="padding:6px 0; color:#6b7280;">${item.description || 'Prestation'}</td>
+                <td style="padding:6px 0; font-weight:600; text-align:right;">${total.toFixed(2)} €</td>
+              </tr>`;
+            }).join('')}
+            ${vatAmt > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">TVA (${vatRate}%)</td><td style="padding:6px 0; text-align:right;">${vatAmt.toFixed(2)} €</td></tr>` : ''}
+          </table>
+          <table style="width:100%; border-top:2px solid #1A7A5E; margin-top:12px; border-collapse:collapse;">
             <tr>
-              <td style="font-size:16px;font-weight:700;color:#111827;">TOTAL TTC</td>
-              <td align="right" style="font-size:18px;font-weight:700;color:#1A7A5E;">${ttc.toFixed(2)} €</td>
+              <td style="padding-top:12px; font-weight:700; font-size:16px;">TOTAL TTC</td>
+              <td style="padding-top:12px; font-weight:700; font-size:16px; color:#1A7A5E; text-align:right;">${ttc.toFixed(2)} €</td>
             </tr>
           </table>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
-  <!-- Footer -->
-  <tr><td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
-    <p style="margin:0;font-size:12px;color:#9ca3af;">Facture générée par <strong style="color:#1A7A5E;">${fromName}</strong> via <a href="https://boostinghost.fr" style="color:#1A7A5E;text-decoration:none;">boostinghost.fr</a></p>
-  </td></tr>
-</table>
-</td></tr>
-</table>
-</body></html>`;
+        </div>
+        <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:16px; text-align:center; margin-bottom:24px;">
+          <p style="margin:0; color:#166534; font-weight:600;">📎 Votre facture PDF est jointe à cet email</p>
+        </div>
+        <p style="font-size:14px; color:#6b7280;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement,<br><strong>${fromName}</strong></p>
+      </div>
+      <div style="background:#1A7A5E; padding:16px 32px; border-radius:0 0 8px 8px; text-align:center;">
+        <p style="margin:0 0 4px; font-size:11px; color:rgba(255,255,255,0.7);">Facture générée grâce à</p>
+        <p style="margin:0; font-size:13px; font-weight:700; color:white;">Boostinghost.fr</p>
+      </div>
+    </div>
+  `;
 
   await sendEmail({
     from: `${fromName} <${fromEmail}>`,
     to: clientEmail,
     subject: `Votre facture ${invoiceNumber || ''} – ${fromName}`,
-    html
+    html: emailHtml,
+    attachments: [{
+      filename: `${invoiceNumber || 'facture'}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf'
+    }]
   });
 }
+
 
 app.post('/api/owner-invoices/:id/send',
   authenticateAny,
@@ -14245,26 +14338,48 @@ app.post('/api/owner-invoices/:id/send',
     );
 
     // Envoyer email
-    if (invoice.client_email) {
-      try {
-        // Récupérer le profil pour l'email
-        const profileResult = await pool.query('SELECT company, email FROM users WHERE id = $1', [userId]);
-        const profile = profileResult.rows[0] || {};
+    // Récupérer le profil complet + email du client via JOIN
+    const profileResult = await pool.query(
+      'SELECT company, email, address, postal_code, city, siret FROM users WHERE id = $1',
+      [userId]
+    );
+    const profile = profileResult.rows[0] || {};
 
+    const clientResult = await pool.query(
+      'SELECT * FROM owner_clients WHERE id = $1',
+      [invoice.client_id]
+    );
+    const client = clientResult.rows[0] || {};
+    const clientEmail = client.email || '';
+    const clientName  = client.company_name || ((client.first_name || '') + ' ' + (client.last_name || '')).trim();
+
+    if (clientEmail) {
+      try {
         await sendOwnerInvoiceEmail({
-          invoiceNumber: invoice.invoice_number,
-          clientName: invoice.client_name,
-          clientEmail: invoice.client_email,
-          periodStart: invoice.period_start,
-          periodEnd: invoice.period_end,
-          totalTtc: invoice.total_ttc,
-          items: itemsResult.rows,
-          userCompany: profile.company,
-          userEmail: profile.email
+          invoiceNumber:  invoice.invoice_number,
+          clientName,
+          clientEmail,
+          periodStart:    invoice.period_start,
+          periodEnd:      invoice.period_end,
+          totalTtc:       invoice.total_ttc,
+          vatAmount:      invoice.vat_amount,
+          vatRate:        invoice.vat_rate,
+          vatApplicable:  invoice.vat_applicable,
+          items:          itemsResult.rows,
+          userCompany:    profile.company,
+          userEmail:      profile.email,
+          userAddress:    profile.address,
+          userPostalCode: profile.postal_code,
+          userCity:       profile.city,
+          userSiret:      profile.siret
         });
+        console.log('✅ Email facture propriétaire envoyé à:', clientEmail);
       } catch (emailErr) {
-        console.error('Erreur envoi email:', emailErr);
+        console.error('❌ Erreur envoi email facture propriétaire:', emailErr);
+        // On ne bloque pas la réponse si l'email échoue
       }
+    } else {
+      console.warn('⚠️ Pas d email client pour la facture', invoice.id);
     }
 
     res.json({ success: true, message: 'Facture envoyée' });
