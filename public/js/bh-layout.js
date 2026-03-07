@@ -415,3 +415,67 @@ function getSidebarHTML() {
   };
 
 })();
+// ============================================================
+// Remplacer tous les alert() natifs par showToast
+// ============================================================
+window.alert = (msg) => window.showToast ? showToast(String(msg)) : console.warn('[alert]', msg);
+
+// ============================================================
+// showToast — notification toast globale Boostinghost
+// Usage :
+//   showToast('Facture envoyée avec succès')
+//   showToast('Erreur lors de l\'envoi', 'error')
+//   showToast('Brouillon sauvegardé', 'info')
+// ============================================================
+window.showToast = function(message, type = 'success', duration = 4000) {
+  // Supprimer un toast existant
+  const existing = document.getElementById('bh-toast');
+  if (existing) existing.remove();
+
+  const colors = {
+    success: { bg: '#1A7A5E', icon: 'fa-check-circle' },
+    error:   { bg: '#dc2626', icon: 'fa-times-circle'  },
+    info:    { bg: '#2563eb', icon: 'fa-info-circle'   },
+    warning: { bg: '#d97706', icon: 'fa-exclamation-circle' }
+  };
+  const { bg, icon } = colors[type] || colors.success;
+
+  const toast = document.createElement('div');
+  toast.id = 'bh-toast';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: ${bg};
+    color: white;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,.2);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 320px;
+    animation: bhToastIn .25s ease;
+  `;
+  toast.innerHTML = `<i class="fas ${icon}" style="font-size:17px;flex-shrink:0;"></i><span>${message}</span>`;
+
+  // Inject keyframes once
+  if (!document.getElementById('bh-toast-style')) {
+    const style = document.createElement('style');
+    style.id = 'bh-toast-style';
+    style.textContent = `
+      @keyframes bhToastIn  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes bhToastOut { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(12px); } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'bhToastOut .25s ease forwards';
+    setTimeout(() => toast.remove(), 260);
+  }, duration);
+};
