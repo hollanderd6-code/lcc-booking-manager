@@ -12761,17 +12761,15 @@ app.post('/api/owner-invoices',
       internalNotes
     } = req.body;
 
-    // clientId peut être un integer ou une string selon le navigateur
-    const clientIdVal = parseInt(clientId) || clientId;
-    console.log('📥 owner-invoice POST body:', { clientId, clientIdVal, issueDate, dueDate, itemsLength: items?.length });
+    console.log('📥 owner-invoice POST:', { clientId, issueDate, dueDate, itemsLength: items?.length });
 
-    if (!clientIdVal || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
-      console.error('❌ Validation échouée:', { clientId, clientIdVal, issueDate: !!issueDate, dueDate: !!dueDate, itemsLength: items?.length });
-      return res.status(400).json({ 
-        error: 'Données facture incomplètes',
-        debug: { clientId: !!clientIdVal, issueDate: !!issueDate, dueDate: !!dueDate, itemsLength: items?.length }
-      });
+    if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Données facture incomplètes', debug: { clientId: !!clientId, issueDate: !!issueDate, dueDate: !!dueDate, itemsLength: items?.length } });
     }
+
+    const { v4: uuidv4 } = require('uuid');
+    const newInvoiceId = uuidv4();
+    const clientIdVal = clientId; // UUID string
 
     await client.query('BEGIN');
 
@@ -12800,8 +12798,11 @@ app.post('/api/owner-invoices',
     const totalTtc = netHt + subtotalDebours + vatAmount;
 
     // Création de la facture (brouillon)
+    const { v4: uuidv4 } = require('uuid');
+    const newInvoiceId = uuidv4();
     const invoiceResult = await client.query(`
       INSERT INTO owner_invoices (
+        id,
         user_id,
         client_id,
         period_start,
@@ -12825,13 +12826,14 @@ app.post('/api/owner-invoices',
         $1,$2,$3,$4,$5,$6,
         $7,$8,
         $9,$10,$11,
-        $12,$13,$14,$15,
-        $16,$17,
-        $18,
+        $12,$13,$14,$15,$16,
+        $17,$18,
+        $19,
         NOW()
       )
       RETURNING *
     `, [
+      newInvoiceId,
       userId,
       clientIdVal,
       periodStart || null,
