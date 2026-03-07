@@ -12762,7 +12762,16 @@ app.post('/api/owner-invoices',
     } = req.body;
 
     if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Données facture incomplètes' });
+      console.error('❌ Validation owner-invoice échouée:', {
+        clientId, issueDate, dueDate,
+        itemsIsArray: Array.isArray(items),
+        itemsLength: items?.length,
+        bodyKeys: Object.keys(req.body)
+      });
+      return res.status(400).json({ 
+        error: 'Données facture incomplètes',
+        debug: { clientId: !!clientId, issueDate: !!issueDate, dueDate: !!dueDate, itemsLength: items?.length }
+      });
     }
 
     await client.query('BEGIN');
