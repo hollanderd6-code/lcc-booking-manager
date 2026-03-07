@@ -127,18 +127,18 @@
 }
 /* LES 3 PETITS POINTS*/
 .invoice-actions-menu {
-  position: fixed;              /* au lieu de absolute */
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
   right: 0;
-  top: 0;
-  margin-top: 0;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(15,23,42,0.15);
+  box-shadow: 0 -4px 20px rgba(15,23,42,0.15);
   padding: 4px;
   min-width: 180px;
   display: none;
-  z-index: 9999;                /* passe au-dessus de la carte */
+  z-index: 9999;
 }
 
 
@@ -1208,7 +1208,7 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="modal-overlay" id="clientModal">
 <div class="modal-content">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; position:sticky; top:0; background:#fff; z-index:10; padding:16px 0 12px; margin-top:-16px;">
+<div style="display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; z-index:10; padding:16px 0 12px; margin:-16px 0 12px;">
 <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
 <button onclick="closeClientModal()" style="border:none; background:#f3f4f6; border-radius:50%; width:36px; height:36px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">×</button>
 </div>
@@ -1707,7 +1707,7 @@ async function loadInvoices() {
               </div>
             </div>
           </div>
-          <div class="invoice-card-footer">
+          <div class="invoice-card-footer" style="position:relative;">
             <button type="button" class="invoice-card-actions-btn" data-action="toggle" data-id="${eid}">
               <i class="fas fa-ellipsis-v"></i> Actions
             </button>
@@ -1742,20 +1742,9 @@ window.toggleInvoiceActions = function (id, btn) {
   document.querySelectorAll('.invoice-actions-menu.open')
     .forEach(m => m.classList.remove('open'));
 
-  if (wasOpen) {
-    // si celui-là était déjà ouvert, on le referme et basta
-    return;
+  if (!wasOpen) {
+    menu.classList.add('open');
   }
-
-  // On calcule la position du bouton dans la fenêtre
-  const rect = btn.getBoundingClientRect();
-
-  // Positionner le menu juste sous le bouton, aligné à droite
-  const approxWidth = 200; // largeur approximative du menu
-  menu.style.top = (rect.bottom + 8) + 'px';
-  menu.style.left = (rect.right - approxWidth) + 'px';
-
-  menu.classList.add('open');
 };
 
 // Listener délégué pour les boutons data-action dans les menus de factures
