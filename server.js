@@ -12798,8 +12798,6 @@ app.post('/api/owner-invoices',
     const totalTtc = netHt + subtotalDebours + vatAmount;
 
     // Création de la facture (brouillon)
-    const { v4: uuidv4 } = require('uuid');
-    const newInvoiceId = uuidv4();
     const invoiceResult = await client.query(`
       INSERT INTO owner_invoices (
         id,
