@@ -2052,6 +2052,9 @@ window.markOwnerInvoicePaid = async function (id) {
   }
 
   // Surtout : on NE re-render PAS toute la liste ici
+  // Mettre à jour le total affiché dans la carte
+  const totalEl = document.querySelector(`[data-total-for="${id}"]`);
+  if (totalEl) totalEl.textContent = calculateLineTotal(p).toFixed(2) + ' €';
   updatePreview();
 };
 
@@ -2101,7 +2104,7 @@ window.markOwnerInvoicePaid = async function (id) {
             <input type="text" class="form-control" value="${p.description}" oninput="updatePrestation('${p.id}','description',this.value)">
           </div>
           ${inputs}
-          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;">
+          <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;" data-total-for="${p.id}">
             ${calculateLineTotal(p).toFixed(2)} €
           </div>
         </div>
@@ -2455,7 +2458,6 @@ function getSelectedProperties() {
     editingInvoiceId = null;
     prestations = [];
     prestationCounter = 0;
-    addPrestation('commission');
     
     document.getElementById('invoiceClientId').value = '';
     // ✅ FIX iOS
