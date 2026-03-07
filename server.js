@@ -14136,7 +14136,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
   const vatAmt     = parseFloat(vatAmount || 0);
   const ht         = ttc - vatAmt;
 
-  // ── Générer le PDF en mémoire avec PDFKit ──
+  // ── Générer le PDF en mémoire avec PDFKit (style référence) ──
   const pdfBuffer = await new Promise((resolve, reject) => {
     const chunks = [];
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
@@ -14144,104 +14144,127 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
     doc.on('end',  () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const W = 595, H = 842, mg = 50;
-    const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
-    const LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
+    const W = 595, H = 842, mg = 45;
+    const GREEN = '#1A7A5E', DARK = '#1f2937', GRAY = '#6B7280', LIGHT = '#f9fafb', BORDER = '#e5e7eb';
 
-    // Bande verte haut
-    doc.rect(0, 0, W, 8).fill(GREEN);
+    let y = mg;
 
-    // Émetteur (gauche)
-    let y = 32;
-    doc.font('Helvetica-Bold').fontSize(18).fillColor(DARK).text(fromName, mg, y, { width: 290 });
-    y += 26;
+    // ── HEADER : titre gauche ──────────────────────────────────
+    const invTitle = (invoiceNumber || '').startsWith('A-') ? 'AVOIR' : 'FACTURE';
+    doc.font('Helvetica-Bold').fontSize(22).fillColor(GREEN)
+       .text(invTitle + ' ' + (invoiceNumber || 'BROUILLON'), mg, y, { width: 320 });
+    doc.font('Helvetica').fontSize(10).fillColor(GRAY)
+       .text(new Date().toLocaleDateString('fr-FR'), mg, y + 28);
+
+    // Ligne verte séparatrice
+    doc.rect(mg, y + 44, W - mg*2, 2).fill(GREEN);
+    y += 56;
+
+    // ── DEUX COLONNES : Émetteur | Destinataire ────────────────
+    const colW = (W - mg*2 - 12) / 2;
+    const col2 = mg + colW + 12;
+    const boxH = 100;
+
+    // Cadre émetteur
+    doc.rect(mg, y, colW, boxH).stroke(BORDER);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN)
+       .text('ÉMETTEUR', mg+10, y+10);
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK)
+       .text(fromName, mg+10, y+22, { width: colW-20 });
     doc.font('Helvetica').fontSize(9).fillColor(GRAY);
-    if (userAddress)                    { doc.text(userAddress, mg, y, { width: 290 }); y += 13; }
-    if (userPostalCode || userCity)     { doc.text(((userPostalCode||'') + ' ' + (userCity||'')).trim(), mg, y); y += 13; }
-    if (userEmail)                      { doc.text(userEmail, mg, y); y += 13; }
-    if (userSiret)                      { doc.text('SIRET : ' + userSiret, mg, y); y += 13; }
+    let ey = y + 36;
+    if (userAddress)              { doc.text(userAddress, mg+10, ey, { width: colW-20 }); ey += 13; }
+    if (userPostalCode||userCity) { doc.text(((userPostalCode||'')+' '+(userCity||'')).trim(), mg+10, ey); ey += 13; }
+    if (userSiret)                { doc.text('SIRET : '+userSiret, mg+10, ey); ey += 11; }
+    if (userEmail)                { doc.text(userEmail, mg+10, ey); }
 
-    // Bloc FACTURE (droite)
-    const bx = W - mg - 185, by = 28;
-    doc.rect(bx, by, 185, period ? 100 : 80).fill(LIGHT);
-    doc.font('Helvetica-Bold').fontSize(20).fillColor(GREEN).text('FACTURE', bx+14, by+10);
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text('N° ' + (invoiceNumber || 'BROUILLON'), bx+14, by+38);
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-       .text('Date : ' + new Date().toLocaleDateString('fr-FR'), bx+14, by+54);
-    if (period) doc.text('Période : ' + period, bx+14, by+68, { width: 157 });
+    // Cadre destinataire
+    doc.rect(col2, y, colW, boxH).stroke(BORDER);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN)
+       .text('DESTINATAIRE', col2+10, y+10);
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK)
+       .text(clientName || '', col2+10, y+22, { width: colW-20 });
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    let cy2 = y + 36;
+    if (clientEmail) { doc.text(clientEmail, col2+10, cy2, { width: colW-20 }); cy2 += 13; }
 
-    // Séparateur
-    y = Math.max(y, by + (period ? 110 : 90)) + 12;
-    doc.rect(mg, y, W - mg*2, 1).fill(BORDER);
-    y += 16;
+    y += boxH + 16;
 
-    // Bloc client
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('FACTURÉ À', mg, y);
-    y += 14;
-    doc.font('Helvetica-Bold').fontSize(12).fillColor(DARK).text(clientName || '', mg, y);
-    y += 16;
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(clientEmail, mg, y);
-    y += 22;
+    // Période / échéance
+    if (period) {
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+         .text('Période : ' + period, mg, y);
+      y += 16;
+    }
 
-    // Tableau items
-    doc.rect(mg, y, W - mg*2, 28).fill(GREEN);
+    // ── TABLEAU ITEMS ──────────────────────────────────────────
+    // Header
+    const colDesc = 230, colBase = 90, colRate = 80, colTot = W - mg*2 - colDesc - colBase - colRate;
+    doc.rect(mg, y, W-mg*2, 26).fill(GREEN);
     doc.font('Helvetica-Bold').fontSize(9).fillColor('white')
-       .text('DESCRIPTION',  mg+12,    y+9, { width: 240 })
-       .text('BASE',         mg+255,   y+9, { width: 70,  align: 'right' })
-       .text('TAUX/QTÉ',     mg+330,   y+9, { width: 70,  align: 'right' })
-       .text('TOTAL HT',     mg+405,   y+9, { width: 90,  align: 'right' });
-    y += 28;
+       .text('DESCRIPTION', mg+8,  y+8, { width: colDesc })
+       .text('BASE',        mg+colDesc+colBase-8, y+8, { width: colBase, align: 'right' })
+       .text('TAUX/QTÉ',   mg+colDesc+colBase+colRate-8, y+8, { width: colRate, align: 'right' })
+       .text('TOTAL HT',   mg+colDesc+colBase+colRate+colTot-8, y+8, { width: colTot, align: 'right' });
+    y += 26;
 
     let alt = false;
     (items || []).forEach(item => {
       const total = parseFloat(item.total || 0);
       let baseDisp, rateDisp;
       if (item.item_type === 'commission') {
-        baseDisp = parseFloat(item.rental_amount || 0).toFixed(2) + ' EUR';
+        baseDisp = parseFloat(item.rental_amount || 0).toFixed(2) + ' €';
         rateDisp = parseFloat(item.commission_rate || 0) + ' %';
       } else {
-        baseDisp = parseFloat(item.unit_price || 0).toFixed(2) + ' EUR';
+        baseDisp = parseFloat(item.unit_price || 0).toFixed(2) + ' €';
         rateDisp = String(item.quantity || 1);
       }
-      if (alt) doc.rect(mg, y, W - mg*2, 26).fill('#F9FAFB');
+      if (alt) doc.rect(mg, y, W-mg*2, 24).fill(LIGHT);
       doc.font('Helvetica').fontSize(10).fillColor(DARK)
-         .text(item.description || 'Prestation', mg+12,  y+7, { width: 240 })
-         .text(baseDisp,                          mg+255, y+7, { width: 70,  align: 'right' })
-         .text(rateDisp,                          mg+330, y+7, { width: 70,  align: 'right' })
-         .text(total.toFixed(2) + ' EUR',         mg+405, y+7, { width: 90,  align: 'right' });
-      doc.rect(mg, y+26, W - mg*2, 0.5).fill(BORDER);
-      y += 26; alt = !alt;
+         .text(item.description || 'Prestation', mg+8,  y+6, { width: colDesc })
+         .text(baseDisp, mg+colDesc+colBase-8,              y+6, { width: colBase, align: 'right' })
+         .text(rateDisp, mg+colDesc+colBase+colRate-8,      y+6, { width: colRate, align: 'right' })
+         .text(total.toFixed(2)+' €', mg+colDesc+colBase+colRate+colTot-8, y+6, { width: colTot, align: 'right' });
+      doc.rect(mg, y+24, W-mg*2, 0.5).fill(BORDER);
+      y += 24; alt = !alt;
     });
-    y += 18;
+    y += 12;
 
-    // Totaux
-    const totW = 220, totX = W - mg - totW;
-    doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 8;
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-       .text('Total HT', totX, y, { width: 120 })
-       .text(ht.toFixed(2) + ' EUR', totX+120, y, { width: 88, align: 'right' });
+    // ── TOTAUX (droite) ────────────────────────────────────────
+    const totW = 200, totX = W - mg - totW;
+    doc.font('Helvetica').fontSize(10).fillColor(GRAY)
+       .text('Total HT', totX, y)
+       .text(ht.toFixed(2)+' €', totX+100, y, { width: totW-100, align: 'right' });
     y += 16;
     if (vatAmt > 0) {
-      doc.text('TVA (' + (vatRate||0) + '%)', totX, y, { width: 120 })
-         .text(vatAmt.toFixed(2) + ' EUR', totX+120, y, { width: 88, align: 'right' });
-      y += 16;
+      doc.text('TVA (' + (vatRate||0) + '%)', totX, y)
+         .text(vatAmt.toFixed(2)+' €', totX+100, y, { width: totW-100, align: 'right' });
+      y += 14;
     } else {
       doc.font('Helvetica').fontSize(8).fillColor(GRAY)
-         .text('TVA non applicable - Art. 293B CGI', totX, y, { width: 208 });
-      y += 14;
+         .text('TVA non applicable, art. 293 B du CGI', totX, y, { width: totW });
+      y += 12;
     }
-    doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 6;
-    doc.rect(totX, y, totW, 36).fill(GREEN);
-    doc.font('Helvetica-Bold').fontSize(13).fillColor('white')
-       .text('TOTAL TTC', totX+12, y+10, { width: 108 })
-       .text(ttc.toFixed(2) + ' EUR', totX+120, y+10, { width: 88, align: 'right' });
+    doc.rect(totX, y, totW, 1.5).fill(GREEN); y += 5;
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(GREEN)
+       .text('Total', totX, y+2)
+       .text(ttc.toFixed(2)+' €', totX+100, y+2, { width: totW-100, align: 'right' });
+    y += 26;
 
-    // Pied de page
-    doc.rect(0, H-44, W, 44).fill(GREEN);
-    doc.font('Helvetica').fontSize(8).fillColor('rgba(255,255,255,0.7)')
-       .text('Facture générée grâce à', mg, H-34, { width: W-mg*2, align: 'center' });
-    doc.font('Helvetica-Bold').fontSize(10).fillColor('white')
-       .text('Boostinghost.fr', mg, H-22, { width: W-mg*2, align: 'center' });
+    // ── CONDITIONS ─────────────────────────────────────────────
+    doc.rect(mg, y, W-mg*2, 1).fill(BORDER); y += 8;
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('CONDITIONS', mg, y); y += 12;
+    doc.font('Helvetica').fontSize(9).fillColor(DARK)
+       .text('Conditions de règlement : 30 jours', mg, y); y += 12;
+    doc.text('Mode de règlement : Virement bancaire', mg, y); y += 12;
+    doc.text("Intérêts de retard : 3× taux légal", mg, y); y += 20;
+
+    // ── FOOTER ─────────────────────────────────────────────────
+    doc.rect(mg, H-36, W-mg*2, 1).fill(BORDER);
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+       .text('Facture générée via ', mg, H-28, { continued: true })
+       .font('Helvetica-Bold').fillColor(GREEN).text('boostinghost.fr', { continued: true })
+       .font('Helvetica').fillColor(GRAY).text(' — logiciel de gestion locative', { align: 'left' });
 
     doc.end();
   });
