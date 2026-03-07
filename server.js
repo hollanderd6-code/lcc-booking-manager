@@ -14126,8 +14126,12 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
   const periodEndFr   = periodEnd   ? new Date(periodEnd   + 'T00:00:00').toLocaleDateString('fr-FR') : '';
   const period = (periodStartFr || periodEndFr) ? `du ${periodStartFr} au ${periodEndFr}` : '';
 
-  const fromEmail  = process.env.EMAIL_FROM || userEmail || 'noreply@boostinghost.fr';
   const fromName   = userCompany || 'Boostinghost';
+  // EMAIL_FROM peut déjà être au format "Nom <email@domain.com>" — ne pas re-wrapper
+  const rawFrom = process.env.EMAIL_FROM || userEmail || 'noreply@boostinghost.fr';
+  const fromMatch = rawFrom.match(/^(.+?)\s*<(.+?)>$/);
+  const fromEmail  = fromMatch ? fromMatch[2].trim() : rawFrom.trim();
+  const fromDisplay = fromMatch ? rawFrom : `${fromName} <${fromEmail}>`;
   const ttc        = parseFloat(totalTtc || 0);
   const vatAmt     = parseFloat(vatAmount || 0);
   const ht         = ttc - vatAmt;
@@ -14285,7 +14289,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
   `;
 
   await sendEmail({
-    from: `${fromName} <${fromEmail}>`,
+    from: fromDisplay,
     to: clientEmail,
     subject: `Votre facture ${invoiceNumber || ''} – ${fromName}`,
     html: emailHtml,
