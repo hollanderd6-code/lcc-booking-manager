@@ -12794,6 +12794,7 @@ app.post('/api/owner-invoices',
     // Création de la facture (brouillon)
     const invoiceResult = await client.query(`
       INSERT INTO owner_invoices (
+        id,
         user_id,
         client_id,
         period_start,
@@ -12814,6 +12815,7 @@ app.post('/api/owner-invoices',
         status,
         created_at
       ) VALUES (
+        gen_random_uuid(),
         $1,$2,$3,$4,$5,$6,
         $7,$8,
         $9,$10,$11,
@@ -12995,6 +12997,7 @@ app.post('/api/owner-invoices/:id/credit-note',
     // Créer la facture d'avoir (statut "invoiced" directement)
     const insertResult = await client.query(`
       INSERT INTO owner_invoices (
+        id,
         user_id,
         client_id,
         period_start,
@@ -13018,6 +13021,7 @@ app.post('/api/owner-invoices/:id/credit-note',
         created_at
       )
       VALUES (
+        gen_random_uuid(),
         $1,$2,$3,$4,
         CURRENT_DATE,
         $5,
