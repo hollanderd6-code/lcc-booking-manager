@@ -12547,39 +12547,7 @@ app.delete('/api/owner-clients/:id', async (req, res) => {
   }
 });
 
-// 5. SUPPRIMER UN CLIENT
-app.delete('/api/owner-clients/:id', async (req, res) => {
-  try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
-
-    // Vérifier qu'il n'y a pas de factures liées
-    const checkInvoices = await pool.query(
-      'SELECT COUNT(*) as count FROM owner_invoices WHERE client_id = $1',
-      [req.params.id]
-    );
-
-    if (parseInt(checkInvoices.rows[0].count) > 0) {
-      return res.status(400).json({ 
-        error: 'Impossible de supprimer : ce client a des factures associées' 
-      });
-    }
-
-    const result = await pool.query(
-      'DELETE FROM owner_clients WHERE id = $1 AND user_id = $2 RETURNING *',
-      [req.params.id, userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Client non trouvé' });
-    }
-
-    res.json({ message: 'Client supprimé' });
-  } catch (err) {
-    console.error('Erreur suppression client:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+// Route DELETE owner-clients dédupliquée (supprimée)
 
 // ============================================
 // ROUTES API V2 - FACTURATION PROPRIÉTAIRES
