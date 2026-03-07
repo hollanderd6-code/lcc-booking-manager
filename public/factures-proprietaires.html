@@ -1448,6 +1448,9 @@ html[data-theme-v3="1"] .invoice-paper {
 <div><label style="font-size:12px;">CP</label><input class="form-control" id="clientPostalCode" type="text"/></div>
 <div><label style="font-size:12px;">Ville</label><input class="form-control" id="clientCity" type="text"/></div>
 </div>
+<div id="deleteClientSection" style="display:none; margin-bottom:12px;">
+  <button onclick="deleteClient()" style="width:100%; padding:12px; background:white; color:#ef4444; border:2px solid #ef4444; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">🗑️ Supprimer ce client</button>
+</div>
 <button class="btn btn-primary" onclick="saveClient()" style="width:100%;">Enregistrer</button>
 </div>
 </div>
@@ -2937,6 +2940,8 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
   // --- CLIENT MODAL ---
   window.openClientModal = function() {
+  const delSection = document.getElementById('deleteClientSection');
+  if (delSection) delSection.style.display = 'none';
     editingClientId = null;
 
     const titleEl = document.getElementById('clientModalTitle');
@@ -2956,6 +2961,8 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   };
   window.editClient = function(clientId) {
   console.log('[DEBUG] editClient appelé avec ID:', clientId);
+  const delSection = document.getElementById('deleteClientSection');
+  if (delSection) delSection.style.display = 'block';
   console.log('[DATA] Liste des clients:', clients);
   
   const client = clients.find(c => c.id == clientId);
@@ -3009,6 +3016,27 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     const t = document.querySelector('input[name="clientType"]:checked').value;
     document.getElementById('individualFields').style.display = t==='individual'?'block':'none';
     document.getElementById('businessFields').style.display = t==='business'?'block':'none';
+  };
+
+  window.deleteClient = async function() {
+    if (!editingClientId) return;
+    if (!confirm('Supprimer ce client ? Cette action est irréversible.')) return;
+    try {
+      const res = await fetch('/api/owner-clients/' + editingClientId, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        return alert(json.error || 'Erreur lors de la suppression');
+      }
+      alert('Client supprimé.');
+      closeClientModal();
+      await loadClients();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur serveur');
+    }
   };
 
   window.saveClient = async function() {
