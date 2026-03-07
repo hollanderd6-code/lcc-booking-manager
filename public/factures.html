@@ -764,8 +764,21 @@ html[data-theme-v3="1"] .btn-ghost {
 .history-table tbody td:first-child { font-weight:600; color:#1A7A5E; }
 .history-resend-btn { background:none; border:1px solid #1A7A5E; color:#1A7A5E; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; transition:all 0.15s; }
 .history-resend-btn:hover { background:#1A7A5E; color:white; }
-@media (max-width:1366px) {
-  .history-table thead th:nth-child(3), .history-table tbody td:nth-child(3) { display:none; }
+/* Cartes mobile */
+.history-card { border-bottom:1px solid #f3f4f6; padding:14px 16px; }
+.history-card:last-child { border-bottom:none; }
+.history-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.history-card-num { font-weight:700; color:#1A7A5E; font-size:14px; }
+.history-card-total { font-weight:700; color:#111827; font-size:15px; }
+.history-card-mid { font-size:13px; color:#374151; margin-bottom:4px; }
+.history-card-bottom { font-size:12px; color:#9ca3af; margin-bottom:10px; }
+.history-card-actions { display:flex; gap:8px; }
+.history-card-actions .history-resend-btn { flex:1; text-align:center; padding:7px 0; }
+@media (min-width:700px) {
+  .history-card { display:none; }
+}
+@media (max-width:699px) {
+  .history-table { display:none; }
 }
 
 </style>
@@ -1583,17 +1596,30 @@ html[data-theme-v3="1"] .btn-ghost {
             const resendBtn = inv.clientEmail 
               ? `<button class="history-resend-btn" onclick="resendInvoice('${inv.invoiceNumber}', '${inv.clientEmail}')"><i class="fas fa-paper-plane"></i> Renvoyer</button>`
               : '';
-            const dlBtn = `<button class="history-resend-btn" style="margin-left:6px;border-color:#6366f1;color:#6366f1;" onclick="downloadInvoiceByNumber('${inv.invoiceNumber}')"><i class="fas fa-download"></i> PDF</button>`;
-            return `<tr>
+            const dlBtn = `<button class="history-resend-btn" style="border-color:#6366f1;color:#6366f1;" onclick="downloadInvoiceByNumber('${inv.invoiceNumber}')"><i class="fas fa-download"></i> PDF</button>`;
+            
+            const tableRow = `<tr>
               <td>${inv.invoiceNumber || '—'}</td>
               <td>${date}</td>
               <td>${inv.propertyName || '—'}</td>
               <td>${inv.clientName || '—'}</td>
               <td>${sejour}</td>
               <td style="font-weight:600;">${total}</td>
-              <td style='white-space:nowrap;'>${resendBtn}${dlBtn}</td>
+              <td style='white-space:nowrap;'>${resendBtn} ${dlBtn}</td>
             </tr>`;
-          }).join('');
+
+            const card = `<div class="history-card">
+              <div class="history-card-top">
+                <span class="history-card-num">${inv.invoiceNumber || '—'}</span>
+                <span class="history-card-total">${total}</span>
+              </div>
+              <div class="history-card-mid">${inv.clientName || '—'} · ${inv.propertyName || '—'}</div>
+              <div class="history-card-bottom">${sejour} · ${date}</div>
+              <div class="history-card-actions">${resendBtn}${dlBtn}</div>
+            </div>`;
+
+            return { tableRow, card };
+          });
 
           container.innerHTML = `
             <table class="history-table">
@@ -1608,8 +1634,9 @@ html[data-theme-v3="1"] .btn-ghost {
                   <th>Action</th>
                 </tr>
               </thead>
-              <tbody>${rows}</tbody>
-            </table>`;
+              <tbody>${rows.map(r => r.tableRow).join('')}</tbody>
+            </table>
+            <div class="history-cards">${rows.map(r => r.card).join('')}</div>`;
         } catch(e) {
           container.innerHTML = '<div class="history-empty"><i class="fas fa-exclamation-circle"></i>Erreur de chargement</div>';
         }
