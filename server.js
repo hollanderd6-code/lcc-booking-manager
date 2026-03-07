@@ -2163,6 +2163,37 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
               }
             } catch (nErr) { console.error('❌ Notif sous-comptes paiement:', nErr.message); }
 
+            // 🔔 Notif compte principal : paiement reçu
+            try {
+              const pmtRow2 = await pool.query(
+                `SELECT p.user_id, r.guest_name, pr.name as property_name, p.amount_cents
+                 FROM payments p
+                 LEFT JOIN properties pr ON pr.id = p.property_id
+                 LEFT JOIN reservations r ON r.uid = p.reservation_uid
+                 WHERE p.id = $1 OR p.stripe_session_id = $2
+                 LIMIT 1`,
+                [paymentId, session.id]
+              );
+              if (pmtRow2.rows.length > 0) {
+                const { user_id, guest_name, property_name, amount_cents } = pmtRow2.rows[0];
+                const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
+                const guestLabel = guest_name || 'Voyageur';
+                const propLabel = property_name ? ` — ${property_name}` : '';
+                const tokensRes = await pool.query(
+                  'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+                  [user_id]
+                );
+                for (const tok of tokensRes.rows) {
+                  await sendNotification(
+                    tok.fcm_token,
+                    `💳 Paiement reçu${propLabel}`,
+                    `${guestLabel} a payé${amt ? ' ' + amt : ''}`,
+                    { type: 'payment_received', paymentId: String(paymentId || '') }
+                  );
+                }
+              }
+            } catch (nErr2) { console.error('❌ Notif principale paiement:', nErr2.message); }
+
           } catch (err) {
             console.error('Erreur mise a jour payment:', err);
           }
@@ -2220,6 +2251,37 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
                 );
               }
             } catch (nErr) { console.error('❌ Notif sous-comptes caution:', nErr.message); }
+
+            // 🔔 Notif compte principal : caution autorisée
+            try {
+              const depRow2 = await pool.query(
+                `SELECT d.user_id, r.guest_name, pr.name as property_name, d.amount_cents
+                 FROM deposits d
+                 LEFT JOIN properties pr ON pr.id = d.property_id
+                 LEFT JOIN reservations r ON r.uid = d.reservation_uid
+                 WHERE d.id = $1 OR d.stripe_session_id = $2
+                 LIMIT 1`,
+                [depositId, session.id]
+              );
+              if (depRow2.rows.length > 0) {
+                const { user_id, guest_name, property_name, amount_cents } = depRow2.rows[0];
+                const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
+                const guestLabel = guest_name || 'Voyageur';
+                const propLabel = property_name ? ` — ${property_name}` : '';
+                const tokensRes = await pool.query(
+                  'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+                  [user_id]
+                );
+                for (const tok of tokensRes.rows) {
+                  await sendNotification(
+                    tok.fcm_token,
+                    `🛡️ Caution autorisée${propLabel}`,
+                    `${guestLabel} a validé sa caution${amt ? ' de ' + amt : ''}`,
+                    { type: 'deposit_paid', depositId: String(depositId || '') }
+                  );
+                }
+              }
+            } catch (nErr2) { console.error('❌ Notif principale caution:', nErr2.message); }
 
             // 📨 ENVOYER MESSAGE AUTOMATIQUE : CAUTION AUTORISÉE
             if (depositStatus === 'authorized') {
