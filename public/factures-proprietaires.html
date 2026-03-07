@@ -1518,6 +1518,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadUserProfile().catch(e => console.error('[ERROR] Profil:', e)),
   ]);
 
+  // Forcer le scroll en haut (loadClients peut déclencher un scroll parasite)
+  window.scrollTo(0, 0);
+
   // Profil émetteur (APRÈS loadUserProfile)
   loadEmitterProfile();
   
@@ -1995,12 +1998,7 @@ window.sendOwnerInvoice = async function (id) {
       console.error(json);
       return alert(json.error || 'Erreur lors de l\'envoi');
     }
-    // Notification visuelle propre
-const notif = document.createElement('div');
-notif.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1A7A5E;color:white;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.18);z-index:99999;display:flex;align-items:center;gap:10px;';
-notif.innerHTML = '<i class="fas fa-check-circle" style="font-size:18px;"></i> Facture envoyée avec succès';
-document.body.appendChild(notif);
-setTimeout(() => notif.remove(), 4000);
+    showToast('Facture envoyée avec succès');
     loadInvoices();
   } catch (e) {
     console.error(e);
