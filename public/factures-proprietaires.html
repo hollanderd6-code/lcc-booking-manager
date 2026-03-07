@@ -1494,8 +1494,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Profil émetteur (APRÈS loadUserProfile)
   loadEmitterProfile();
   
-  // Ajout d'une ligne par défaut
-  addPrestation('commission');
+  // Ajout d'une ligne par défaut (seulement si vide)
+  if (prestations.length === 0) addPrestation('commission');
   
   // Attendre que le DOM soit prêt avant d'appeler updatePreview
   setTimeout(() => updatePreview(), 100);
@@ -1809,7 +1809,7 @@ async function loadInvoices() {
         totalPending += total;
       }
 
-      const numberDisplay = inv.invoice_number || ('Brouillon #' + inv.id);
+      const numberDisplay = inv.invoice_number || 'Brouillon';
 
       let statusLabel = status;
       let statusClass = 'invoice-badge-draft';
@@ -1951,6 +1951,11 @@ document.addEventListener('click', function(e) {
 
 // Envoyer la facture (brouillon -> envoyée)
 window.sendOwnerInvoice = async function (id) {
+  // Vérifier que la facture est finalisée avant d'envoyer
+  const inv = (window.ownerInvoices || []).find(i => i.id === id);
+  if (inv && inv.status === 'draft') {
+    return alert("Veuillez d'abord finaliser la facture (Passer en Facturée) avant de l'envoyer.");
+  }
   if (!confirm('Envoyer cette facture au client ?')) return;
 
   try {
@@ -2020,15 +2025,21 @@ window.deleteOwnerInvoice = async function (id) {
     let itemsHtml = '';
     items.forEach(item => {
       const desc = item.description || 'Prestation';
-      const qty = item.quantity || 1;
-      const price = parseFloat(item.unit_price || 0);
       const total = parseFloat(item.total || 0);
-      
+      let qtyDisplay, priceDisplay;
+      if (item.item_type === 'commission') {
+        // Commission : Base loyer × taux%
+        qtyDisplay = parseFloat(item.rental_amount || 0).toFixed(2) + ' €';
+        priceDisplay = parseFloat(item.commission_rate || 0) + ' %';
+      } else {
+        qtyDisplay = item.quantity || 1;
+        priceDisplay = parseFloat(item.unit_price || 0).toFixed(2) + ' €';
+      }
       itemsHtml += `
     <tr style="border-bottom:1px solid #f3f4f6;">
       <td style="padding:14px 8px;">${desc}</td>
-      <td style="padding:14px 8px;text-align:center;">${qty}</td>
-      <td style="padding:14px 8px;text-align:right;">${price.toFixed(2)} €</td>
+      <td style="padding:14px 8px;text-align:center;">${qtyDisplay}</td>
+      <td style="padding:14px 8px;text-align:right;">${priceDisplay}</td>
       <td style="padding:14px 8px;text-align:right;font-weight:600;">${total.toFixed(2)} €</td>
     </tr>
       `;
@@ -2514,8 +2525,12 @@ if (window.userProfile && window.userProfile.logoUrl) {
       const lineTotal = calculateLineTotal(p);
       totalHT += lineTotal;
       
-      let qtyDisplay = p.type === 'commission' ? `${p.rentalAmount}€` : p.quantity;
-      let priceDisplay = p.type === 'commission' ? `${p.commissionRate}%` : `${p.unitPrice}€`;
+      let qtyDisplay = p.type === 'commission'
+        ? parseFloat(p.rentalAmount||0).toFixed(2) + ' €'
+        : p.quantity;
+      let priceDisplay = p.type === 'commission'
+        ? parseFloat(p.commissionRate||0) + ' %'
+        : parseFloat(p.unitPrice||0).toFixed(2) + ' €';
 
       tbody.innerHTML += `
         <tr>
