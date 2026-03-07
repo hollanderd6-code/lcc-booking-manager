@@ -731,15 +731,6 @@ html[data-theme-v3="1"] .modal-content {
 
   /* Clients liste */
   .clients-list { gap: 10px !important; }
-
-  /* Compacter le header pour que les onglets soient visibles d'emblée */
-  .dashboard-header { margin-bottom: 8px !important; }
-  .page-subtitle { display: none !important; }
-  .page-title { font-size: 16px !important; margin: 0 !important; }
-  .stats-row { gap: 8px !important; margin-bottom: 8px !important; }
-  .stat-card { padding: 8px 10px !important; }
-  .stat-label { font-size: 10px !important; }
-  .stat-value { font-size: 16px !important; }
   
   /* Modal full screen */
   .modal-content {
@@ -755,18 +746,19 @@ html[data-theme-v3="1"] .modal-content {
     padding-top: 0 !important;
   }
   .modal-overlay { align-items: flex-end !important; }
-  /* Header sticky du modal — couvre le padding et reste visible */
+  /* Header sticky du modal — toujours visible en haut du bottom-sheet */
   .modal-content .modal-sticky-header {
     position: sticky !important;
     top: 0 !important;
     background: white !important;
     z-index: 20 !important;
-    padding: 16px 20px 12px !important;
-    margin: 0 -24px 12px !important;
+    padding: 16px 20px 14px !important;
+    margin: 0 0 12px 0 !important;
     border-bottom: 1px solid #f3f4f6 !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
+    border-radius: 20px 20px 0 0 !important;
   }
   .modal-close-btn {
     width: 44px !important;
@@ -1424,7 +1416,7 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="modal-overlay" id="clientModal">
 <div class="modal-content">
-<div class="modal-sticky-header" style="display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; z-index:10; padding:16px 20px 12px; margin:-24px -24px 12px; border-bottom:1px solid #f3f4f6;">
+<div class="modal-sticky-header" style="display:flex; justify-content:space-between; align-items:center;">
 <h3 id="clientModalTitle" style="margin:0;">Nouveau Client</h3>
 <button onclick="closeClientModal()" class="modal-close-btn" style="border:none; background:#f3f4f6; border-radius:50%; width:44px; height:44px; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1;">×</button>
 </div>
@@ -1527,12 +1519,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadUserProfile().catch(e => console.error('[ERROR] Profil:', e)),
   ]);
 
-  // Forcer le scroll en haut après tous les chargements (mobile scroll parasite)
-  const forceTop = () => { window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; };
-  forceTop();
-  setTimeout(forceTop, 50);
-  setTimeout(forceTop, 200);
-  setTimeout(forceTop, 600);
+  // Forcer le scroll en haut (loadClients peut déclencher un scroll parasite)
+  window.scrollTo(0, 0);
 
   // Profil émetteur (APRÈS loadUserProfile)
   loadEmitterProfile();
