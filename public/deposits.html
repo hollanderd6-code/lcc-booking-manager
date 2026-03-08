@@ -1018,7 +1018,7 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
     }
 
     try {
-      const res = await fetch('/api/subscription/status', {
+      const res = await fetch(API_BASE + '/subscription/status', {
         headers: { 'Authorization': 'Bearer ' + token }
       });
 
@@ -2660,7 +2660,7 @@ async function checkStripeConnectStatus() {
   }
   
   try {
-    const res = await fetch('/api/stripe/status', {
+    const res = await fetch(API_BASE + '/stripe/status', {
       headers: {
         'Authorization': 'Bearer ' + token
       }
@@ -2987,7 +2987,7 @@ async function loadPropertiesForPaymentsHistoryFilter() {
   if (!select || select.options.length > 1) return;
   try {
     const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch(API_BASE + '/properties', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return;
     const data = await res.json();
     (data.properties || []).forEach(p => {
@@ -3235,7 +3235,7 @@ async function loadPropertiesForPaymentsFilter() {
   
   try {
     const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/properties', {
+    const res = await fetch(API_BASE + '/properties', {
       headers: {
         'Authorization': 'Bearer ' + token
       }
