@@ -2120,6 +2120,10 @@ function copyDepositLinkByUid(uid) {
             <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
               <i class="fas fa-copy"></i> Copier le lien
             </button>
+            ${d.status === 'pending' ? `
+            <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditDepositModal('${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-pen"></i> Modifier</button>
+            <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelDepositLink('${d.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
+            ` : ''}
           `;
         } else if (!d) {
           actionsHtml = `
@@ -2279,6 +2283,75 @@ function copyDepositLinkByUid(uid) {
     // ============================================
     // CRÉATION CAUTION
     // ============================================
+async function cancelDepositLink(depositId, reservationUid) {
+  const ok = await bhConfirm('Annuler ce lien de caution ?', 'Le lien Stripe sera expiré et le voyageur ne pourra plus l\'utiliser. Vous pourrez en créer un nouveau.', 'Annuler le lien', 'Garder', 'danger');
+  if (!ok) return;
+  try {
+    const res = await fetch(API_BASE + '/deposits/' + depositId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'annulation');
+    showToast('✅ Lien de caution annulé. Vous pouvez en créer un nouveau.');
+    await loadReservationsWithDeposits();
+  } catch (e) {
+    console.error('Erreur cancelDepositLink:', e);
+    showToast('❌ ' + (e.message || 'Impossible d\'annuler le lien'), 'error');
+  }
+}
+
+async function cancelPaymentLink(paymentId, reservationUid) {
+  const ok = await bhConfirm('Annuler ce lien de paiement ?', 'Le lien Stripe sera expiré et le voyageur ne pourra plus l\'utiliser. Vous pourrez en créer un nouveau.', 'Annuler le lien', 'Garder', 'danger');
+  if (!ok) return;
+  try {
+    const res = await fetch(API_BASE + '/payments/' + paymentId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'annulation');
+    const idx = allPayments.findIndex(r => r.reservationUid === reservationUid);
+    if (idx !== -1) allPayments[idx].payment = null;
+    renderPaymentsTable();
+    showToast('✅ Lien de paiement annulé. Vous pouvez en créer un nouveau.');
+  } catch (e) {
+    console.error('Erreur cancelPaymentLink:', e);
+    showToast('❌ ' + (e.message || 'Impossible d\'annuler le lien'), 'error');
+  }
+}
+
+function openEditDepositModal(reservationUid) {
+  const r = allReservationsWithDeposits.find(x => x.reservationUid === reservationUid);
+  if (!r || !r.deposit) return;
+  currentReservationForDeposit = r;
+  const label = document.getElementById('depositModalReservationLabel');
+  if (label) label.textContent = `${r.propertyName || 'Logement'} – ${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}`;
+  const amountInput = document.getElementById('depositAmount');
+  if (amountInput) amountInput.value = (r.deposit.amountCents / 100).toFixed(2);
+  // Passer en mode modification
+  const modal = document.getElementById('depositModal');
+  if (modal) {
+    modal.dataset.editDepositId = r.deposit.id;
+    modal.style.display = 'flex';
+  }
+}
+
+function openEditPaymentModal(reservationUid) {
+  const r = allPayments.find(x => x.reservationUid === reservationUid);
+  if (!r || !r.payment) return;
+  currentReservationForPayment = r;
+  const label = document.getElementById('paymentModalReservationLabel');
+  if (label) label.textContent = `${r.propertyName || 'Logement'} – ${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}`;
+  const amountInput = document.getElementById('paymentAmount');
+  if (amountInput) amountInput.value = (r.payment.amountCents / 100).toFixed(2);
+  const modal = document.getElementById('paymentModal');
+  if (modal) {
+    modal.dataset.editPaymentId = r.payment.id;
+    modal.style.display = 'flex';
+  }
+}
+
 async function createDeposit() {
   const errorEl = document.getElementById('depositError');
   errorEl.textContent = '';
@@ -2771,8 +2844,12 @@ function renderPaymentsTable() {
     let actionHtml = '';
     if (p && p.checkoutUrl) {
       const safeUrl2 = (p.checkoutUrl || '').replace(/'/g, "\'");
-      actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeUrl2}').then(()=>alert('Lien copié !')).catch(()=>alert('${safeUrl2}'))">
-        <i class="fas fa-copy"></i> Copier le lien</button>`;
+      actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeUrl2}').then(()=>showToast('Lien copié !')).catch(()=>showToast('${safeUrl2}'))">
+        <i class="fas fa-copy"></i> Copier le lien</button>
+        ${p.status === 'pending' ? `
+        <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditPaymentModal('${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-pen"></i> Modifier</button>
+        <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelPaymentLink('${p.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
+        ` : ''}`;
     } else {
       actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); openPaymentModalByUid('${r.reservationUid}')">
         <i class="fas fa-plus"></i> Créer un paiement</button>`;
