@@ -1728,7 +1728,7 @@ async function copyExistingDepositMessage(reservation) {
     // Vérifier et rafraîchir le lien si la session Stripe a expiré
     try {
       const token = localStorage.getItem('lcc_token');
-      const refreshRes = await fetch(API_BASE + '/api/deposits/' + depositId + '/refresh-link', {
+      const refreshRes = await fetch(API_BASE + '/deposits/' + depositId + '/refresh-link', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token }
       });
