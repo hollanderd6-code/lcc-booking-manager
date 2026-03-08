@@ -1716,12 +1716,35 @@ async function copyExistingDepositMessage(reservation) {
     return;
   }
 
-  const checkoutUrl = reservation.deposit.checkoutUrl;
+  const depositId = reservation.deposit.id;
+  let checkoutUrl = reservation.deposit.checkoutUrl;
+
+  // Vérifier et rafraîchir le lien si la session Stripe a expiré
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const refreshRes = await fetch(API_BASE + '/api/deposits/' + depositId + '/refresh-link', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (refreshRes.ok) {
+      const refreshData = await refreshRes.json();
+      if (refreshData.checkoutUrl) {
+        checkoutUrl = refreshData.checkoutUrl;
+        if (refreshData.refreshed) {
+          console.log('🔄 Lien de caution régénéré (session expirée)');
+          // Mettre à jour en mémoire
+          reservation.deposit.checkoutUrl = checkoutUrl;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Impossible de vérifier le lien Stripe, utilisation du lien existant:', e);
+  }
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
       await navigator.clipboard.writeText(checkoutUrl);
-      alert("Lien de caution copié");
+      alert("Lien de caution copié ✅");
     } catch (e) {
       alert("Impossible de copier automatiquement, copiez le lien manuellement :\n\n" + checkoutUrl);
     }
