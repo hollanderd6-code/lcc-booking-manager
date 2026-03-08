@@ -1711,22 +1711,48 @@ function formatExpirationDate(createdAt) {
     }
 
 async function copyExistingDepositMessage(reservation) {
-  if (!reservation || !reservation.deposit || !reservation.deposit.checkoutUrl) {
+  if (!reservation || !reservation.deposit) {
     alert('Aucun lien de caution disponible pour ce séjour.');
     return;
   }
 
-  const checkoutUrl = reservation.deposit.checkoutUrl;
+  const depositId = reservation.deposit.id;
+  let checkoutUrl = reservation.deposit.checkoutUrl || '';
+  const token = localStorage.getItem('lcc_token');
+
+  // Régénérer le lien si la session Stripe est expirée
+  if (depositId) {
+    try {
+      const refreshRes = await fetch(API_BASE + '/deposits/' + depositId + '/refresh-link', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        if (data.checkoutUrl) {
+          checkoutUrl = data.checkoutUrl;
+          reservation.deposit.checkoutUrl = checkoutUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Impossible de vérifier le lien:', e);
+    }
+  }
+
+  if (!checkoutUrl) {
+    alert('Aucun lien de caution disponible.');
+    return;
+  }
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
       await navigator.clipboard.writeText(checkoutUrl);
-      alert("Lien de caution copié");
+      alert("Lien de caution copié ✅");
     } catch (e) {
-      alert("Impossible de copier automatiquement, copiez le lien manuellement :\n\n" + checkoutUrl);
+      alert("Copiez manuellement :\n\n" + checkoutUrl);
     }
   } else {
-    alert("Votre navigateur ne supporte pas la copie automatique. Voici le lien :\n\n" + checkoutUrl);
+    alert("Voici le lien :\n\n" + checkoutUrl);
   }
 }
 
@@ -2155,7 +2181,7 @@ function copyDepositLinkByUid(uid) {
                 ${d.checkoutUrl ? `
                 <div class="detail-row" onclick="event.stopPropagation()">
                   <span class="detail-label">Lien de paiement</span>
-                  <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); navigator.clipboard.writeText('${d.checkoutUrl}').then(()=>alert('Lien copié !')).catch(()=>alert('${d.checkoutUrl}'))">
+                  <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
                     <i class="fas fa-copy"></i> Copier
                   </button>
                 </div>` : ''}
