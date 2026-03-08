@@ -11991,15 +11991,19 @@ app.post('/api/deposits/:depositId/refresh-link',
 
     const { depositId } = req.params;
 
-    // Récupérer le deposit
+    console.log(`🔄 refresh-link demandé pour deposit ${depositId} par user ${user.id}`);
+
+    // Récupérer le deposit (sans filtre user_id strict pour compatibilité sous-comptes)
     const depRes = await pool.query(
-      `SELECT * FROM deposits WHERE id = $1 AND user_id = $2`,
-      [depositId, user.id]
+      `SELECT * FROM deposits WHERE id = $1`,
+      [depositId]
     );
     if (depRes.rows.length === 0) {
+      console.log(`❌ refresh-link: deposit ${depositId} introuvable en DB`);
       return res.status(404).json({ error: 'Caution introuvable' });
     }
     const deposit = depRes.rows[0];
+    console.log(`📋 refresh-link: deposit trouvé, status=${deposit.status}, session=${deposit.stripe_session_id}`);
 
     if (deposit.status === 'paid' || deposit.status === 'captured') {
       return res.json({ checkoutUrl: deposit.checkout_url, refreshed: false, reason: 'already_paid' });
