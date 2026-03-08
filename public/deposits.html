@@ -2712,13 +2712,17 @@ async function loadPayments() {
   
   try {
     const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/reservations-with-payments', {
+    const res = await fetch(API_BASE + '/reservations-with-payments', {
       headers: {
         'Authorization': 'Bearer ' + token
       }
     });
     
-    if (!res.ok) throw new Error('Erreur API');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error('❌ reservations-with-payments:', res.status, errData);
+      throw new Error(errData.error || 'Erreur API ' + res.status);
+    }
     
     const data = await res.json();
     allPayments = data;
