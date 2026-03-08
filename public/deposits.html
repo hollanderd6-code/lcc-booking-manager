@@ -1457,7 +1457,7 @@ Actualiser
 <div class="modal" id="depositModal">
 <div class="modal-content">
 <div class="modal-header">
-<h2>Nouvelle caution</h2>
+<h2 id="depositModalTitle">Nouvelle caution</h2>
 <button class="modal-close" id="depositModalClose">
 <i class="fas fa-times"></i>
 </button>
@@ -1493,6 +1493,7 @@ Actualiser
     console.log('📱 [DEPOSITS] API_BASE:', API_BASE);
 
     let currentReservationForDeposit = null;
+    let currentDepositIdToEdit = null; // null = création, string = modification
     let allReservationsWithDeposits = [];
     let allProperties = [];
 
@@ -1684,6 +1685,10 @@ function formatExpirationDate(createdAt) {
 
     function openDepositModal(reservation) {
       currentReservationForDeposit = reservation;
+      currentDepositIdToEdit = null;
+
+      document.getElementById('depositModalTitle').textContent = 'Nouvelle caution';
+      document.getElementById('depositCreateBtn').textContent = 'Générer le lien';
       
       const label = document.getElementById('depositModalReservationLabel');
       label.textContent = `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
@@ -1692,6 +1697,28 @@ function formatExpirationDate(createdAt) {
       const defaultAmount = getDefaultDepositAmount(reservation.propertyId);
       amountInput.value = defaultAmount !== null ? defaultAmount : '';
       
+      document.getElementById('depositError').textContent = '';
+      document.getElementById('depositModal').classList.add('active');
+    }
+
+    function openEditDepositModal(uid) {
+      const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
+      if (!reservation || !reservation.deposit) {
+        alert('Caution introuvable');
+        return;
+      }
+      currentReservationForDeposit = reservation;
+      currentDepositIdToEdit = reservation.deposit.id;
+
+      document.getElementById('depositModalTitle').textContent = 'Modifier la caution';
+      document.getElementById('depositCreateBtn').textContent = 'Mettre à jour le lien';
+
+      const label = document.getElementById('depositModalReservationLabel');
+      label.textContent = `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
+
+      const amountInput = document.getElementById('depositAmount');
+      amountInput.value = reservation.deposit.amountCents ? (reservation.deposit.amountCents / 100) : '';
+
       document.getElementById('depositError').textContent = '';
       document.getElementById('depositModal').classList.add('active');
     }
@@ -1708,6 +1735,7 @@ function formatExpirationDate(createdAt) {
     function closeDepositModal() {
       document.getElementById('depositModal').classList.remove('active');
       currentReservationForDeposit = null;
+      currentDepositIdToEdit = null;
     }
 
 async function copyExistingDepositMessage(reservation) {
@@ -2113,10 +2141,15 @@ function copyDepositLinkByUid(uid) {
         } else if (isAirbnb) {
           actionsHtml = '<div class="card-hint">Caution gérée par Airbnb</div>';
         } else if (d && d.checkoutUrl) {
+          const isPending = d.status === 'pending';
           actionsHtml = `
             <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
               <i class="fas fa-copy"></i> Copier le lien
             </button>
+            ${isPending ? `
+            <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditDepositModal('${r.reservationUid}')" style="margin-top:6px;">
+              <i class="fas fa-pen"></i> Modifier
+            </button>` : ''}
           `;
         } else if (!d) {
           actionsHtml = `
@@ -2289,6 +2322,7 @@ async function createDeposit() {
   }
 
   const reservation = currentReservationForDeposit;
+  const isEditMode = !!currentDepositIdToEdit;
 
   try {
     const defaultsRaw = localStorage.getItem('lcc_deposit_defaults') || '{}';
@@ -2302,22 +2336,37 @@ async function createDeposit() {
   }
 
   try {
-    const res = await fetch(API_BASE + '/deposits', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
-      },
-      body: JSON.stringify({
-        reservationUid: reservation.reservationUid,
-        amount: amountValue
-      })
-    });
+    let res, data;
 
-    const data = await res.json();
+    if (isEditMode) {
+      // Modification d'une caution existante
+      res = await fetch(API_BASE + '/deposits/' + currentDepositIdToEdit, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+        },
+        body: JSON.stringify({ amount: amountValue })
+      });
+    } else {
+      // Création d'une nouvelle caution
+      res = await fetch(API_BASE + '/deposits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+        },
+        body: JSON.stringify({
+          reservationUid: reservation.reservationUid,
+          amount: amountValue
+        })
+      });
+    }
+
+    data = await res.json();
     console.log('🔍 Réponse serveur caution:', data);
     if (!res.ok) {
-      throw new Error(data.error || data.message || JSON.stringify(data) || 'Erreur lors de la création de la caution');
+      throw new Error(data.error || data.message || JSON.stringify(data) || 'Erreur lors de la ' + (isEditMode ? 'modification' : 'création') + ' de la caution');
     }
 
     const checkoutUrl = data.checkoutUrl || data.checkout_url || data.url || data.link;
@@ -2327,11 +2376,11 @@ async function createDeposit() {
     await loadReservationsWithDeposits();
 
     if (checkoutUrl) {
-      showLinkModal('Caution créée ✅', checkoutUrl);
+      showLinkModal(isEditMode ? 'Caution modifiée ✅' : 'Caution créée ✅', checkoutUrl);
     }
   } catch (e) {
     console.error('Erreur createDeposit:', e);
-    errorEl.textContent = e.message || 'Erreur lors de la création de la caution.';
+    errorEl.textContent = e.message || 'Erreur lors de la ' + (isEditMode ? 'modification' : 'création') + ' de la caution.';
   }
 }
 
