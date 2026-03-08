@@ -16012,7 +16012,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           ` : ''}
         </div>` : ''}
         <div class="footer">
-          <div class="footer-logo"><span class="footer-dot"></span>Propulsé par BoostingHost<span class="footer-dot"></span></div>
+          <div class="footer-logo"><span class="footer-dot"></span>Propulsé par Boostinghost.fr<span class="footer-dot"></span></div>
         </div>
       </div>
       ${d.contactPhone ? `<a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hôte"><i class="fas fa-phone"></i></a>` : ''}
