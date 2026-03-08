@@ -11978,6 +11978,84 @@ app.get('/api/payments', authenticateAny, requirePermission(pool, 'can_view_paym
   }
 });
 
+// ============================================
+// POST - Rafraîchir le lien de PAIEMENT si session Stripe expirée
+// ============================================
+app.post('/api/payments/:paymentId/refresh-link',
+  authenticateAny,
+  async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { paymentId } = req.params;
+    console.log(`🔄 refresh-link paiement demandé pour ${paymentId} par user ${user.id}`);
+
+    const payRes = await pool.query(
+      `SELECT * FROM payments WHERE id = $1`,
+      [paymentId]
+    );
+    if (payRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Paiement introuvable' });
+    }
+    const payment = payRes.rows[0];
+    console.log(`📋 refresh-link paiement: status=${payment.status}, session=${payment.stripe_session_id}, amount=${payment.amount_cents}`);
+
+    if (payment.status === 'paid' || payment.status === 'completed') {
+      return res.json({ checkoutUrl: payment.checkout_url, refreshed: false, reason: 'already_paid' });
+    }
+
+    // Vérifier si la session Stripe est encore valide
+    let needsRefresh = false;
+    if (payment.stripe_session_id) {
+      try {
+        const session = await stripe.checkout.sessions.retrieve(payment.stripe_session_id);
+        if (session.status === 'expired' || session.status === 'complete') needsRefresh = true;
+      } catch (e) {
+        needsRefresh = true;
+      }
+    } else {
+      needsRefresh = true;
+    }
+
+    if (!needsRefresh) {
+      return res.json({ checkoutUrl: payment.checkout_url, refreshed: false });
+    }
+
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+
+    const sessionParams = {
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: { name: `Paiement séjour`, description: `Paiement de location` },
+          unit_amount: payment.amount_cents
+        },
+        quantity: 1
+      }],
+      metadata: { payment_id: paymentId, user_id: String(user.id) },
+      success_url: `${appUrl}/payment-success.html?paymentId=${paymentId}`,
+      cancel_url: `${appUrl}/payment-cancel.html?paymentId=${paymentId}`
+    };
+
+    const newSession = await stripe.checkout.sessions.create(sessionParams);
+
+    await pool.query(
+      `UPDATE payments SET stripe_session_id = $1, checkout_url = $2, status = 'pending', updated_at = NOW() WHERE id = $3`,
+      [newSession.id, newSession.url, paymentId]
+    );
+
+    console.log(`✅ Lien paiement régénéré pour ${paymentId}`);
+    return res.json({ checkoutUrl: newSession.url, refreshed: true });
+
+  } catch (err) {
+    console.error('Erreur refresh-link paiement:', err);
+    res.status(500).json({ error: 'Erreur serveur: ' + err.message });
+  }
+});
+
 // POST - Capturer une caution (débiter le client)
 // ============================================
 // POST - Rafraîchir le lien de paiement si session Stripe expirée
@@ -12031,6 +12109,7 @@ app.post('/api/deposits/:depositId/refresh-link',
     // Recréer une nouvelle session Stripe
     const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
     const amountCents = deposit.amount_cents;
+    console.log(`💰 refresh-link: amount_cents en DB = ${amountCents} (soit ${amountCents/100}€)`);
 
     const sessionParams = {
       mode: 'payment',
