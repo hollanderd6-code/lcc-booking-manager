@@ -1441,7 +1441,7 @@ Actualiser
 <div class="modal" id="paymentModal">
 <div class="modal-content">
 <div class="modal-header">
-<h2>Nouveau paiement</h2>
+<h2 id="paymentModalTitle">Nouveau paiement</h2>
 <button class="modal-close" id="paymentModalClose"><i class="fas fa-times"></i></button>
 </div>
 <div class="modal-body">
@@ -1493,7 +1493,7 @@ Actualiser
     console.log('📱 [DEPOSITS] API_BASE:', API_BASE);
 
     let currentReservationForDeposit = null;
-    let currentDepositIdToEdit = null; // null = création, string = modification
+    let currentDepositIdToEdit = null;
     let allReservationsWithDeposits = [];
     let allProperties = [];
 
@@ -1689,7 +1689,7 @@ function formatExpirationDate(createdAt) {
 
       document.getElementById('depositModalTitle').textContent = 'Nouvelle caution';
       document.getElementById('depositCreateBtn').textContent = 'Générer le lien';
-      
+
       const label = document.getElementById('depositModalReservationLabel');
       label.textContent = `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
       
@@ -1703,14 +1703,11 @@ function formatExpirationDate(createdAt) {
 
     function openEditDepositModal(uid) {
       const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
-      if (!reservation || !reservation.deposit) {
-        alert('Caution introuvable');
-        return;
-      }
+      if (!reservation || !reservation.deposit) { alert('Caution introuvable'); return; }
       currentReservationForDeposit = reservation;
       currentDepositIdToEdit = reservation.deposit.id;
 
-      document.getElementById('depositModalTitle').textContent = 'Modifier la caution';
+      document.getElementById('depositModalTitle').textContent = '✏️ Modifier la caution';
       document.getElementById('depositCreateBtn').textContent = 'Mettre à jour le lien';
 
       const label = document.getElementById('depositModalReservationLabel');
@@ -2141,15 +2138,14 @@ function copyDepositLinkByUid(uid) {
         } else if (isAirbnb) {
           actionsHtml = '<div class="card-hint">Caution gérée par Airbnb</div>';
         } else if (d && d.checkoutUrl) {
-          const isPending = d.status === 'pending';
           actionsHtml = `
             <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
               <i class="fas fa-copy"></i> Copier le lien
             </button>
-            ${isPending ? `
-            <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditDepositModal('${r.reservationUid}')" style="margin-top:6px;">
-              <i class="fas fa-pen"></i> Modifier
-            </button>` : ''}
+            ${d.status === 'pending' ? `
+            <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditDepositModal('${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-pen"></i> Modifier</button>
+            <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelDepositLink('${d.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
+            ` : ''}
           `;
         } else if (!d) {
           actionsHtml = `
@@ -2309,6 +2305,43 @@ function copyDepositLinkByUid(uid) {
     // ============================================
     // CRÉATION CAUTION
     // ============================================
+async function cancelDepositLink(depositId, reservationUid) {
+  if (!confirm('Annuler ce lien de caution ?\n\nLe lien Stripe sera expiré et le voyageur ne pourra plus l\'utiliser. Vous pourrez en créer un nouveau.')) return;
+  try {
+    const res = await fetch(API_BASE + '/deposits/' + depositId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'annulation');
+    await loadReservationsWithDeposits();
+    alert('✅ Lien de caution annulé. Vous pouvez en créer un nouveau.');
+  } catch (e) {
+    console.error('Erreur cancelDepositLink:', e);
+    alert('Erreur : ' + (e.message || 'Impossible d\'annuler le lien'));
+  }
+}
+
+async function cancelPaymentLink(paymentId, reservationUid) {
+  if (!confirm('Annuler ce lien de paiement ?\n\nLe lien Stripe sera expiré et le voyageur ne pourra plus l\'utiliser. Vous pourrez en créer un nouveau.')) return;
+  try {
+    const res = await fetch(API_BASE + '/payments/' + paymentId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'annulation');
+    // Mettre à jour localement
+    const idx = allPayments.findIndex(r => r.reservationUid === reservationUid);
+    if (idx !== -1) allPayments[idx].payment = null;
+    renderPaymentsTable();
+    alert('✅ Lien de paiement annulé. Vous pouvez en créer un nouveau.');
+  } catch (e) {
+    console.error('Erreur cancelPaymentLink:', e);
+    alert('Erreur : ' + (e.message || 'Impossible d\'annuler le lien'));
+  }
+}
+
 async function createDeposit() {
   const errorEl = document.getElementById('depositError');
   errorEl.textContent = '';
@@ -2336,34 +2369,24 @@ async function createDeposit() {
   }
 
   try {
-    let res, data;
+    const url = isEditMode
+      ? API_BASE + '/deposits/' + currentDepositIdToEdit
+      : API_BASE + '/deposits';
 
-    if (isEditMode) {
-      // Modification d'une caution existante
-      res = await fetch(API_BASE + '/deposits/' + currentDepositIdToEdit, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
-        },
-        body: JSON.stringify({ amount: amountValue })
-      });
-    } else {
-      // Création d'une nouvelle caution
-      res = await fetch(API_BASE + '/deposits', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
-        },
-        body: JSON.stringify({
-          reservationUid: reservation.reservationUid,
-          amount: amountValue
-        })
-      });
-    }
+    const body = isEditMode
+      ? { amount: amountValue }
+      : { reservationUid: reservation.reservationUid, amount: amountValue };
 
-    data = await res.json();
+    const res = await fetch(url, {
+      method: isEditMode ? 'PUT' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
     console.log('🔍 Réponse serveur caution:', data);
     if (!res.ok) {
       throw new Error(data.error || data.message || JSON.stringify(data) || 'Erreur lors de la ' + (isEditMode ? 'modification' : 'création') + ' de la caution');
@@ -2817,8 +2840,15 @@ function renderPaymentsTable() {
     let actionHtml = '';
     if (p && p.checkoutUrl) {
       const safeUrl2 = (p.checkoutUrl || '').replace(/'/g, "\'");
-      actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeUrl2}').then(()=>alert('Lien copié !')).catch(()=>alert('${safeUrl2}'))">
-        <i class="fas fa-copy"></i> Copier le lien</button>`;
+      actionHtml = `
+        <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeUrl2}').then(()=>alert('Lien copié !')).catch(()=>alert('${safeUrl2}'))">
+          <i class="fas fa-copy"></i> Copier le lien
+        </button>
+        ${p.status === 'pending' ? `
+        <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditPaymentModal('${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-pen"></i> Modifier</button>
+        <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelPaymentLink('${p.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
+        ` : ''}
+      `;
     } else {
       actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); openPaymentModalByUid('${r.reservationUid}')">
         <i class="fas fa-plus"></i> Créer un paiement</button>`;
@@ -3077,10 +3107,33 @@ let currentReservationForPayment = null;
 
 function openPaymentModal(reservation) {
   currentReservationForPayment = reservation;
+  currentPaymentIdToEdit = null;
+
+  document.getElementById('paymentModalTitle').textContent = 'Nouveau paiement';
+  document.getElementById('paymentCreateBtn').textContent = 'Générer le lien';
+
   const label = document.getElementById('paymentModalReservationLabel');
   label.textContent = `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
   document.getElementById('paymentAmount').value = '';
   document.getElementById('paymentDescription').value = '';
+  document.getElementById('paymentError').textContent = '';
+  document.getElementById('paymentModal').classList.add('active');
+}
+
+function openEditPaymentModal(uid) {
+  const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid)
+    || (typeof allPayments !== 'undefined' ? allPayments.find(r => r.reservationUid === uid) : null);
+  if (!reservation || !reservation.payment) { alert('Paiement introuvable'); return; }
+  currentReservationForPayment = reservation;
+  currentPaymentIdToEdit = reservation.payment.id;
+
+  document.getElementById('paymentModalTitle').textContent = '✏️ Modifier le paiement';
+  document.getElementById('paymentCreateBtn').textContent = 'Mettre à jour le lien';
+
+  const label = document.getElementById('paymentModalReservationLabel');
+  label.textContent = `${reservation.propertyName || 'Logement'} – ${formatDateFr(reservation.startDate)} → ${formatDateFr(reservation.endDate)}`;
+  document.getElementById('paymentAmount').value = reservation.payment.amountCents ? (reservation.payment.amountCents / 100) : '';
+  document.getElementById('paymentDescription').value = reservation.payment.description || '';
   document.getElementById('paymentError').textContent = '';
   document.getElementById('paymentModal').classList.add('active');
 }
@@ -3097,6 +3150,7 @@ function openPaymentModalByUid(uid) {
 function closePaymentModal() {
   document.getElementById('paymentModal').classList.remove('active');
   currentReservationForPayment = null;
+  currentPaymentIdToEdit = null;
 }
 
 async function createPayment() {
@@ -3113,25 +3167,30 @@ async function createPayment() {
 
   const description = document.getElementById('paymentDescription').value || '';
   const reservation = currentReservationForPayment;
+  const isEditMode = !!currentPaymentIdToEdit;
 
   try {
-    const res = await fetch(API_BASE + '/payments', {
-      method: 'POST',
+    const url = isEditMode
+      ? API_BASE + '/payments/' + currentPaymentIdToEdit
+      : API_BASE + '/payments';
+
+    const body = isEditMode
+      ? { amount: amountValue }
+      : { reservationUid: reservation.reservationUid, amount: amountValue, description };
+
+    const res = await fetch(url, {
+      method: isEditMode ? 'PUT' : 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
       },
-      body: JSON.stringify({
-        reservationUid: reservation.reservationUid,
-        amount: amountValue,
-        description: description
-      })
+      body: JSON.stringify(body)
     });
 
     const data = await res.json();
     console.log('🔍 Réponse serveur paiement:', data);
     if (!res.ok) {
-      throw new Error(data.error || data.message || JSON.stringify(data) || 'Erreur lors de la création du paiement');
+      throw new Error(data.error || data.message || JSON.stringify(data) || 'Erreur lors de la ' + (isEditMode ? 'modification' : 'création') + ' du paiement');
     }
 
     const checkoutUrl = data.checkoutUrl || data.checkout_url || data.url || data.link || data.payment_url;
@@ -3142,7 +3201,7 @@ async function createPayment() {
     // Injecter dans allPayments
     const uid = reservation.reservationUid;
     const newPayment = {
-      id: paymentObj.id || ('pay_' + Date.now()),
+      id: paymentObj.id || reservation.payment?.id || ('pay_' + Date.now()),
       amountCents: Math.round(amountValue * 100),
       status: 'pending',
       checkoutUrl: checkoutUrl || null,
@@ -3155,8 +3214,6 @@ async function createPayment() {
     if (idx !== -1) {
       allPayments[idx].payment = newPayment;
     } else {
-      // La réservation n'est pas encore dans allPayments (ex: premier chargement raté)
-      // On l'ajoute manuellement
       allPayments.push({
         reservationUid: uid,
         propertyId: reservation.propertyId || '',
@@ -3172,11 +3229,11 @@ async function createPayment() {
     renderPaymentsTable();
 
     if (checkoutUrl) {
-      showLinkModal('Lien de paiement créé ✅', checkoutUrl);
+      showLinkModal(isEditMode ? 'Paiement modifié ✅' : 'Lien de paiement créé ✅', checkoutUrl);
     }
   } catch (e) {
     console.error('Erreur createPayment:', e);
-    errorEl.textContent = e.message || 'Erreur lors de la création du paiement.';
+    errorEl.textContent = e.message || 'Erreur lors de la ' + (isEditMode ? 'modification' : 'création') + ' du paiement.';
   }
 }
 
