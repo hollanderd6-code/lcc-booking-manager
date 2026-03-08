@@ -2191,7 +2191,7 @@ function copyDepositLinkByUid(uid) {
                 ${d.checkoutUrl ? `
                 <div class="detail-row" onclick="event.stopPropagation()">
                   <span class="detail-label">Lien de paiement</span>
-                  <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); navigator.clipboard.writeText('${d.checkoutUrl}').then(()=>alert('Lien copié !')).catch(()=>alert('${d.checkoutUrl}'))">
+                  <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
                     <i class="fas fa-copy"></i> Copier
                   </button>
                 </div>` : ''}
@@ -2804,7 +2804,7 @@ function renderPaymentsTable() {
     let actionHtml = '';
     if (p && p.checkoutUrl) {
       const safeUrl2 = (p.checkoutUrl || '').replace(/'/g, "\'");
-      actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeUrl2}').then(()=>alert('Lien copié !')).catch(()=>alert('${safeUrl2}'))">
+      actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
         <i class="fas fa-copy"></i> Copier le lien</button>`;
     } else {
       actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); openPaymentModalByUid('${r.reservationUid}')">
