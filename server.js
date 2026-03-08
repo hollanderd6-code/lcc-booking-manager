@@ -12050,16 +12050,12 @@ app.post('/api/deposits/:depositId/release',
       return res.status(404).json({ error: 'Caution introuvable' });
     }
 
-    const success = await releaseDeposit(depositId);
-    
-    if (!success) {
-      return res.status(500).json({ error: 'Erreur lors de la libération' });
-    }
+    await releaseDeposit(depositId);
 
     res.json({ message: 'Caution libérée avec succès' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/release:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
 // ============================================
