@@ -1719,26 +1719,39 @@ async function copyExistingDepositMessage(reservation) {
   const depositId = reservation.deposit.id;
   let checkoutUrl = reservation.deposit.checkoutUrl;
 
-  // Vérifier et rafraîchir le lien si la session Stripe a expiré
-  try {
-    const token = localStorage.getItem('lcc_token');
-    const refreshRes = await fetch(API_BASE + '/api/deposits/' + depositId + '/refresh-link', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (refreshRes.ok) {
-      const refreshData = await refreshRes.json();
-      if (refreshData.checkoutUrl) {
-        checkoutUrl = refreshData.checkoutUrl;
-        if (refreshData.refreshed) {
-          console.log('🔄 Lien de caution régénéré (session expirée)');
-          // Mettre à jour en mémoire
-          reservation.deposit.checkoutUrl = checkoutUrl;
+  console.log('🔍 copyExistingDepositMessage - depositId:', depositId, 'checkoutUrl:', checkoutUrl);
+
+  if (!depositId) {
+    console.error('❌ deposit.id manquant dans', reservation.deposit);
+    // Pas de depositId, on copie quand même l'URL existante
+  } else {
+    // Vérifier et rafraîchir le lien si la session Stripe a expiré
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const refreshRes = await fetch(API_BASE + '/api/deposits/' + depositId + '/refresh-link', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      console.log('🔄 refresh-link status:', refreshRes.status);
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        console.log('🔄 refresh-link response:', refreshData);
+        if (refreshData.checkoutUrl) {
+          checkoutUrl = refreshData.checkoutUrl;
+          if (refreshData.refreshed) {
+            console.log('✅ Lien régénéré avec succès');
+            reservation.deposit.checkoutUrl = checkoutUrl;
+          } else {
+            console.log('ℹ️ Lien encore valide, pas de régénération:', refreshData.reason || '');
+          }
         }
+      } else {
+        const errData = await refreshRes.json().catch(() => ({}));
+        console.error('❌ refresh-link erreur:', refreshRes.status, errData);
       }
+    } catch (e) {
+      console.warn('⚠️ Impossible de vérifier le lien Stripe:', e);
     }
-  } catch (e) {
-    console.warn('Impossible de vérifier le lien Stripe, utilisation du lien existant:', e);
   }
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
