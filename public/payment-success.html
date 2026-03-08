@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Paiement confirmé</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #F5F2EC;
+      --green: #1A7A5E;
+      --green-light: #e8f5f1;
+      --text-primary: #1a1a2e;
+      --text-secondary: #6b7280;
+    }
+
+    body {
+      background: var(--cream);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.08);
+    }
+
+    .icon-wrap {
+      width: 80px;
+      height: 80px;
+      background: var(--green-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .checkmark {
+      width: 40px;
+      height: 40px;
+      stroke: var(--green);
+      stroke-width: 3;
+      fill: none;
+      stroke-dasharray: 60;
+      stroke-dashoffset: 60;
+      animation: draw 0.5s 0.3s ease forwards;
+    }
+
+    @keyframes draw {
+      to { stroke-dashoffset: 0; }
+    }
+
+    h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 28px;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .amount-box {
+      background: var(--green-light);
+      border-radius: 14px;
+      padding: 16px 24px;
+      margin-bottom: 32px;
+      display: none;
+    }
+
+    .amount-box.visible { display: block; }
+
+    .amount-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+
+    .amount-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .btn-close {
+      display: inline-block;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 32px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.1s;
+      width: 100%;
+    }
+
+    .btn-close:hover { background: #155f49; transform: translateY(-1px); }
+    .btn-close:active { transform: translateY(0); }
+
+    .footer-note {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrap">
+      <svg class="checkmark" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+
+    <h1>Paiement confirmé ✨</h1>
+    <p class="subtitle">Votre paiement a bien été reçu.<br>Merci pour votre règlement.</p>
+
+    <div class="amount-box" id="amountBox">
+      <div class="amount-label">Montant payé</div>
+      <div class="amount-value" id="amountValue">—</div>
+    </div>
+
+    <button class="btn-close" onclick="window.close()">Fermer cette page</button>
+    <p class="footer-note">Vous pouvez fermer cette fenêtre.</p>
+  </div>
+
+  <script>
+    // Récupérer le session_id dans l'URL pour afficher le montant si possible
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+
+    if (sessionId) {
+      // Optionnel : récupérer les détails depuis l'API
+      fetch('/api/payment-session-details?session_id=' + sessionId)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.amountTotal) {
+            const amount = (data.amountTotal / 100).toFixed(2).replace('.', ',') + ' €';
+            document.getElementById('amountValue').textContent = amount;
+            document.getElementById('amountBox').classList.add('visible');
+          }
+        })
+        .catch(() => {}); // Silencieux si pas de route
+    }
+  </script>
+</body>
+</html>
