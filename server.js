@@ -11740,6 +11740,7 @@ app.post('/api/deposits',
         reservation_uid: reservationUid,
         user_id: userId
       },
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
     };
@@ -12018,6 +12019,7 @@ app.post('/api/deposits/:depositId/refresh-link', authenticateAny, async (req, r
       line_items: [{ price_data: { currency: 'eur', product_data: { name: 'Caution séjour', description: 'Caution de sécurité' }, unit_amount: deposit.amount_cents }, quantity: 1 }],
       payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId } },
       metadata: { deposit_id: depositId, user_id: String(user.id) },
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
       success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`
     });
