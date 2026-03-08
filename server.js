@@ -11785,6 +11785,203 @@ await pool.query(`
 });
 
 // ============================================
+// PUT - Modifier une caution existante (changer le montant)
+// Expire l'ancienne session Stripe et en recrée une nouvelle
+// ============================================
+app.put('/api/deposits/:depositId',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_deposits'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const { depositId } = req.params;
+    const { amount } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Montant invalide' });
+
+    const { rows } = await pool.query('SELECT * FROM deposits WHERE id = $1 AND user_id = $2', [depositId, userId]);
+    if (!rows.length) return res.status(404).json({ error: 'Caution introuvable' });
+
+    const existing = rows[0];
+    if (existing.status !== 'pending') {
+      return res.status(400).json({ error: 'Impossible de modifier une caution déjà traitée (statut : ' + existing.status + ')' });
+    }
+
+    // Expirer l'ancienne session Stripe
+    if (existing.stripe_session_id) {
+      try {
+        await stripe.checkout.sessions.expire(existing.stripe_session_id);
+        console.log(`✅ Session Stripe ${existing.stripe_session_id} expirée`);
+      } catch (expireErr) {
+        console.warn('⚠️ Impossible d\'expirer la session Stripe:', expireErr.message);
+      }
+    }
+
+    const amountCents = Math.round(amount * 100);
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{ price_data: { currency: 'eur', product_data: { name: `Caution séjour`, description: `Caution modifiée – ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
+      payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid } },
+      metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid, user_id: String(userId) },
+      success_url: `${appUrl}/caution-success.html?depositId=${existing.id}`,
+      cancel_url: `${appUrl}/caution-cancel.html?depositId=${existing.id}`
+    });
+
+    await pool.query('UPDATE deposits SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
+    console.log(`✅ Caution ${existing.id} modifiée : ${existing.amount_cents} → ${amountCents} cents`);
+    return res.json({ deposit: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: session.url }, checkoutUrl: session.url });
+  } catch (err) {
+    console.error('Erreur modification caution:', err);
+    return res.status(500).json({ error: 'Erreur lors de la modification : ' + (err.message || 'Erreur interne') });
+  }
+});
+
+// ============================================
+// DELETE - Annuler un lien de caution (expire la session Stripe + reset status)
+// ============================================
+app.delete('/api/deposits/:depositId',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_deposits'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { depositId } = req.params;
+    const { rows } = await pool.query('SELECT * FROM deposits WHERE id = $1 AND user_id = $2', [depositId, userId]);
+    if (!rows.length) return res.status(404).json({ error: 'Caution introuvable' });
+
+    const existing = rows[0];
+    if (existing.status !== 'pending') {
+      return res.status(400).json({ error: 'Seuls les liens en attente peuvent être annulés' });
+    }
+
+    // Expirer la session Stripe
+    if (existing.stripe_session_id && stripe) {
+      try {
+        await stripe.checkout.sessions.expire(existing.stripe_session_id);
+      } catch (e) {
+        console.warn('⚠️ Session déjà expirée:', e.message);
+      }
+    }
+
+    // Reset en BDD : supprimer le lien mais garder la trace
+    await pool.query('UPDATE deposits SET status = $1, checkout_url = NULL, stripe_session_id = NULL, updated_at = NOW() WHERE id = $2', ['cancelled', depositId]);
+    console.log(`✅ Lien caution ${depositId} annulé`);
+    return res.json({ message: 'Lien de caution annulé' });
+  } catch (err) {
+    console.error('Erreur DELETE /api/deposits:', err);
+    return res.status(500).json({ error: err.message || 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// PUT - Modifier un paiement existant (changer le montant)
+// ============================================
+app.put('/api/payments/:paymentId',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_payments'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+    if (!user.stripeAccountId) return res.status(400).json({ error: 'Compte Stripe non connecté', needsStripeConnect: true });
+
+    const { paymentId } = req.params;
+    const { amount, description } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Montant invalide' });
+
+    const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1 AND user_id = $2', [paymentId, user.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Paiement introuvable' });
+
+    const existing = rows[0];
+    if (existing.status !== 'pending') {
+      return res.status(400).json({ error: 'Impossible de modifier un paiement déjà traité (statut : ' + existing.status + ')' });
+    }
+
+    if (existing.stripe_session_id) {
+      try {
+        await stripe.checkout.sessions.expire(existing.stripe_session_id, {}, { stripeAccount: user.stripeAccountId });
+      } catch (e) {
+        console.warn('⚠️ Impossible d\'expirer session paiement:', e.message);
+      }
+    }
+
+    const amountCents = Math.round(amount * 100);
+    const platformFee = Math.round(amountCents * 0.08);
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{ price_data: { currency: 'eur', product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
+      payment_intent_data: { application_fee_amount: platformFee, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
+      metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
+      success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`
+    }, { stripeAccount: user.stripeAccountId });
+
+    await pool.query('UPDATE payments SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
+    console.log(`✅ Paiement ${existing.id} modifié : ${existing.amount_cents} → ${amountCents} cents`);
+    return res.json({ payment: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: session.url }, checkoutUrl: session.url });
+  } catch (err) {
+    console.error('Erreur modification paiement:', err);
+    return res.status(500).json({ error: 'Erreur lors de la modification : ' + (err.message || 'Erreur interne') });
+  }
+});
+
+// ============================================
+// DELETE - Annuler un lien de paiement
+// ============================================
+app.delete('/api/payments/:paymentId',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_payments'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { paymentId } = req.params;
+    const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1 AND user_id = $2', [paymentId, user.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Paiement introuvable' });
+
+    const existing = rows[0];
+    if (existing.status !== 'pending') {
+      return res.status(400).json({ error: 'Seuls les paiements en attente peuvent être annulés' });
+    }
+
+    if (existing.stripe_session_id && stripe && user.stripeAccountId) {
+      try {
+        await stripe.checkout.sessions.expire(existing.stripe_session_id, {}, { stripeAccount: user.stripeAccountId });
+      } catch (e) {
+        console.warn('⚠️ Session paiement déjà expirée:', e.message);
+      }
+    }
+
+    await pool.query('UPDATE payments SET status = $1, checkout_url = NULL, stripe_session_id = NULL, updated_at = NOW() WHERE id = $2', ['canceled', paymentId]);
+    console.log(`✅ Lien paiement ${paymentId} annulé`);
+    return res.json({ message: 'Lien de paiement annulé' });
+  } catch (err) {
+    console.error('Erreur DELETE /api/payments:', err);
+    return res.status(500).json({ error: err.message || 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // POST - Créer un PAIEMENT de location (Stripe Connect avec commission 8%)
 // ============================================
 app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_payments'), loadSubAccountData(pool), async (req, res) => {
