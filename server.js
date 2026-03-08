@@ -4440,10 +4440,18 @@ async function captureDeposit(depositId, amountCents = null) {
     const depositData = deposit.rows[0];
     
     if (!depositData.stripe_payment_intent_id) {
-      throw new Error('Pas de Payment Intent associé');
+      throw new Error('Pas de Payment Intent associé - caution manuelle non débit possible');
     }
 
-    // Capturer via Stripe
+    // Vérifier l'état réel du PI depuis Stripe avant de capturer
+    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
+    console.log(`PI Stripe status avant capture: ${pi.status}`);
+    
+    if (pi.status !== 'requires_capture') {
+      throw new Error(`Impossible de débiter : la caution est dans l'état "${pi.status}" côté Stripe (expiré ou déjà traité)`);
+    }
+
+    // Capturer via Stripe (compte plateforme - pas de stripeAccount)
     const capture = await stripe.paymentIntents.capture(
       depositData.stripe_payment_intent_id,
       amountCents ? { amount_to_capture: amountCents } : {}
@@ -4451,13 +4459,13 @@ async function captureDeposit(depositId, amountCents = null) {
 
     // Mettre à jour en base
     await updateDepositStatus(depositId, 'captured', {
-      stripeChargeId: capture.charges.data[0]?.id
+      stripeChargeId: capture.charges?.data[0]?.id
     });
 
     return true;
   } catch (error) {
     console.error('❌ Erreur captureDeposit:', error);
-    return false;
+    throw error; // On throw pour que la route renvoie le vrai message d'erreur
   }
 }
 
@@ -4465,51 +4473,53 @@ async function captureDeposit(depositId, amountCents = null) {
  * Libérer une caution (annuler l'autorisation)
  */
 async function releaseDeposit(depositId) {
-  try {
-    const deposit = await pool.query('SELECT * FROM deposits WHERE id = $1', [depositId]);
-    
-    if (deposit.rows.length === 0) {
-      throw new Error('Deposit introuvable');
-    }
-
-    const depositData = deposit.rows[0];
-    
-    // CAS 1 : Caution AVEC Stripe Payment Intent
-    if (depositData.stripe_payment_intent_id) {
-      console.log(`Liberation caution Stripe ${depositId}`);
-      
-      // Si la caution a ete capturee, il faut faire un REFUND
-      if (depositData.status === 'captured' || depositData.status === 'paid') {
-        console.log(`Creation refund pour ${depositData.stripe_payment_intent_id}`);
-        
-        const refund = await stripe.refunds.create({
-          payment_intent: depositData.stripe_payment_intent_id,
-        });
-        
-        console.log(`Refund cree : ${refund.id}`);
-        
-      } else if (depositData.status === 'authorized') {
-        // Si la caution est seulement autorisee, on peut annuler
-        console.log(`Annulation Payment Intent ${depositData.stripe_payment_intent_id}`);
-        await stripe.paymentIntents.cancel(depositData.stripe_payment_intent_id);
-      }
-    } 
-    // CAS 2 : Caution MANUELLE (sans Stripe)
-    else {
-      console.log(`Liberation caution manuelle ${depositId} (pas de Stripe Payment Intent)`);
-    }
-
-    // Mettre a jour en base (dans tous les cas)
-    await updateDepositStatus(depositId, 'released');
-    
-    console.log(`Caution ${depositId} liberee avec succes`);
-    return true;
-    
-  } catch (error) {
-    console.error('Erreur releaseDeposit:', error);
-    console.error('Stack:', error.stack);
-    return false;
+  const deposit = await pool.query('SELECT * FROM deposits WHERE id = $1', [depositId]);
+  
+  if (deposit.rows.length === 0) {
+    throw new Error('Deposit introuvable');
   }
+
+  const depositData = deposit.rows[0];
+  
+  // CAS 1 : Caution AVEC Stripe Payment Intent
+  if (depositData.stripe_payment_intent_id) {
+    console.log(`Liberation caution Stripe ${depositId} (status: ${depositData.status})`);
+    
+    try {
+      // Récupérer l'état réel du PI depuis Stripe
+      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
+      console.log(`PI Stripe status: ${pi.status}`);
+      
+      if (pi.status === 'requires_capture') {
+        // Autorisation active → annuler
+        console.log(`Annulation PI ${pi.id}`);
+        await stripe.paymentIntents.cancel(pi.id);
+        
+      } else if (pi.status === 'succeeded') {
+        // Déjà capturé → rembourser
+        console.log(`Remboursement PI ${pi.id}`);
+        await stripe.refunds.create({ payment_intent: pi.id });
+        
+      } else {
+        // PI déjà canceled, expired, etc. → rien à faire côté Stripe
+        console.log(`PI ${pi.id} déjà dans état terminal (${pi.status}), mise à jour BDD seulement`);
+      }
+    } catch (stripeError) {
+      // Stripe peut échouer si le PI est expiré ou déjà traité
+      // Dans ce cas on met quand même released en BDD car la caution n'est plus active
+      console.warn(`⚠️ Erreur Stripe lors release (ignorée, mise à jour BDD quand même):`, stripeError.message);
+    }
+  } 
+  // CAS 2 : Caution MANUELLE (sans Stripe)
+  else {
+    console.log(`Liberation caution manuelle ${depositId} (pas de Stripe Payment Intent)`);
+  }
+
+  // Mettre à jour en base dans TOUS les cas (même si Stripe a échoué)
+  await updateDepositStatus(depositId, 'released');
+  
+  console.log(`✅ Caution ${depositId} liberee avec succes`);
+  return true;
 }
 // ============================================
 // GESTION DES CHECKLISTS EN POSTGRESQL
@@ -12006,20 +12016,14 @@ app.post('/api/deposits/:depositId/capture',
       return res.status(404).json({ error: 'Caution introuvable' });
     }
 
-    const success = await captureDeposit(depositId, amountCents);
+    await captureDeposit(depositId, amountCents);
     
-    if (!success) {
-      return res.status(500).json({ error: 'Erreur lors de la capture' });
-    }
-
     res.json({ message: 'Caution capturée avec succès' });
   } catch (err) {
     console.error('Erreur POST /api/deposits/capture:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
-
-// POST - Libérer une caution (annuler l'autorisation)
 app.post('/api/deposits/:depositId/release', 
   authenticateAny,
   requirePermission(pool, 'can_manage_deposits'),
@@ -15792,7 +15796,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     const title = d.propertyName || "Mon Livret d'Accueil";
     const coverPhoto = (d.photos && d.photos.cover) ? d.photos.cover : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop';
     
-    // 3. Génération du HTML "Design Premium"
+    // 3. Génération du HTML "Design Moderne"
     const html = `
     <!DOCTYPE html>
     <html lang="fr">
@@ -15800,32 +15804,31 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${title}</title>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
       <style>
         :root {
-          --green: #1A7A5E;
-          --green-light: #e8f5f1;
-          --green-dark: #155f49;
-          --cream: #F5F2EC;
-          --beige: #EDE8DF;
-          --text: #1a1a2e;
-          --text-soft: #6b7280;
+          --primary: #2563eb;
+          --text: #1e293b;
+          --bg: #f8fafc;
           --card: #ffffff;
-          --border: rgba(200,184,154,.35);
         }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        
         body {
-          font-family: 'DM Sans', sans-serif;
-          background: var(--cream);
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          background: var(--bg);
           color: var(--text);
           line-height: 1.6;
-          padding-bottom: 5rem;
+          padding-bottom: 4rem;
         }
+
+        /* HERO HEADER */
         .hero {
           position: relative;
-          height: 65vh;
-          min-height: 420px;
+          height: 60vh;
+          min-height: 400px;
           background-image: url('${coverPhoto}');
           background-size: cover;
           background-position: center;
@@ -15833,206 +15836,265 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .hero-overlay {
           position: absolute;
           inset: 0;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 70%, rgba(0,0,0,0.75) 100%);
+          background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7));
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
-          padding: 2.5rem 1.5rem;
+          padding: 2rem;
         }
-        .hero-content { max-width: 680px; margin: 0 auto; width: 100%; color: white; }
-        .hero-eyebrow {
-          font-size: 11px; font-weight: 600; letter-spacing: .14em;
-          text-transform: uppercase; color: rgba(255,255,255,.6);
-          margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
-        }
-        .hero-eyebrow::before {
-          content: ''; display: inline-block; width: 24px; height: 2px;
-          background: var(--green); border-radius: 2px;
+        .hero-content {
+          max-width: 800px;
+          margin: 0 auto;
+          width: 100%;
+          color: white;
         }
         .hero h1 {
-          font-family: 'Instrument Serif', serif;
-          font-size: clamp(1.8rem, 5vw, 2.8rem);
-          font-weight: 400; margin-bottom: 0.6rem; line-height: 1.2;
+          font-size: 2.5rem;
+          font-weight: 800;
+          margin-bottom: 0.5rem;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        .hero-address { font-size: 14px; color: rgba(255,255,255,.7); display: flex; align-items: center; gap: 6px; }
-        .hero-address i { color: var(--green); font-size: 12px; }
-        .container { max-width: 680px; margin: -2.5rem auto 0; padding: 0 1rem; position: relative; z-index: 10; }
+        .hero p {
+          font-size: 1.1rem;
+          opacity: 0.9;
+        }
+
+        /* CONTAINER */
+        .container {
+          max-width: 800px;
+          margin: -3rem auto 0;
+          padding: 0 1rem;
+          position: relative;
+          z-index: 10;
+        }
+
+        /* CARDS */
         .card {
-          background: var(--card); border-radius: 20px; padding: 1.5rem;
-          margin-bottom: 1rem; border: 1px solid var(--border);
-          box-shadow: 0 2px 12px rgba(0,0,0,.05);
+          background: var(--card);
+          border-radius: 16px;
+          padding: 1.5rem;
+          margin-bottom: 1.5rem;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+          border: 1px solid rgba(0,0,0,0.05);
         }
+        
         .section-title {
-          font-size: 15px; font-weight: 700; margin-bottom: 1rem;
-          display: flex; align-items: center; gap: 10px; color: var(--green);
+          font-size: 1.25rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          color: var(--primary);
         }
-        .section-title .icon {
-          width: 32px; height: 32px; background: var(--green-light);
-          border-radius: 9px; display: flex; align-items: center;
-          justify-content: center; font-size: 14px; flex-shrink: 0;
-        }
-        .welcome-text { font-size: 15px; color: #374151; line-height: 1.7; }
+
+        /* GRID INFO CLÉS */
         .key-info-grid {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 10px; margin-bottom: 1rem;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
         }
         .info-item {
-          background: var(--card); border: 1px solid var(--border);
-          padding: 1rem 1.1rem; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.04);
+          background: #eff6ff;
+          padding: 1rem;
+          border-radius: 12px;
         }
-        .info-label { font-size: 11px; color: var(--text-soft); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
-        .info-value { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+        .info-label { font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-value { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-top: 0.25rem; }
+        
+        /* WIFI CARD */
         .wifi-card {
-          background: linear-gradient(135deg, #0D1117 0%, #1A3A2E 100%);
-          color: white; text-align: center; padding: 1.8rem 1.5rem; border: none;
+          background: #1e293b;
+          color: white;
+          text-align: center;
+          padding: 2rem;
+        }
+        .wifi-icon { font-size: 2rem; margin-bottom: 1rem; color: #60a5fa; }
+        .wifi-ssid { font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .wifi-pass { font-family: monospace; font-size: 1.4rem; background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; }
+
+        /* LISTES (Restaurants, Pièces) */
+        .list-item {
+          border-bottom: 1px solid #f1f5f9;
+          padding: 1rem 0;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .item-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+        .item-title { font-weight: 700; font-size: 1.1rem; }
+        .item-meta { font-size: 0.9rem; color: #64748b; }
+        .item-desc { color: #475569; font-size: 0.95rem; }
+
+        /* GALERIE */
+        .gallery {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: 0.5rem;
+          margin-top: 1rem;
+        }
+        .gallery img {
+          width: 100%;
+          height: 120px;
+          object-fit: cover;
+          border-radius: 8px;
           cursor: pointer;
+          transition: transform 0.2s;
         }
-        .wifi-icon-wrap {
-          width: 52px; height: 52px; background: rgba(255,255,255,.1); border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 22px; color: #4ADE80; margin: 0 auto 14px;
+        .gallery img:hover { transform: scale(1.02); }
+
+        /* FOOTER */
+        .footer {
+          text-align: center;
+          color: #94a3b8;
+          font-size: 0.9rem;
+          margin-top: 3rem;
         }
-        .wifi-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.45); margin-bottom: 4px; }
-        .wifi-ssid { font-size: 16px; font-weight: 600; color: white; margin-bottom: 12px; }
-        .wifi-pass-wrap {
-          display: inline-flex; align-items: center; gap: 12px;
-          background: rgba(255,255,255,.1); border-radius: 12px; padding: 10px 18px;
-          cursor: pointer; transition: background .15s;
-        }
-        .wifi-pass-wrap:hover { background: rgba(255,255,255,.16); }
-        .wifi-pass { font-family: 'Courier New', monospace; font-size: 1.3rem; font-weight: 700; letter-spacing: .06em; color: white; }
-        .wifi-copy-hint { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 10px; }
-        .list-item { border-bottom: 1px solid var(--beige); padding: 1rem 0; }
-        .list-item:first-child { padding-top: 0; }
-        .list-item:last-child { border-bottom: none; padding-bottom: 0; }
-        .item-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 8px; }
-        .item-title { font-weight: 700; font-size: 15px; color: var(--text); }
-        .item-meta { font-size: 13px; color: var(--text-soft); white-space: nowrap; }
-        .item-desc { color: #4b5563; font-size: 14px; line-height: 1.6; }
-        .item-address { font-size: 12px; color: var(--text-soft); margin-top: 5px; display: flex; align-items: center; gap: 5px; }
-        .item-address i { color: var(--green); }
-        .sub-title {
-          font-size: 12px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .08em; color: var(--text-soft);
-          margin: 1.2rem 0 0.8rem; display: flex; align-items: center; gap: 6px;
-        }
-        .sub-title:first-child { margin-top: 0; }
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 1rem; }
-        .gallery img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; cursor: pointer; transition: transform .2s, box-shadow .2s; border: 1px solid var(--border); }
-        .gallery img:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
-        .rules-section { margin-bottom: 1rem; }
-        .rules-section:last-child { margin-bottom: 0; }
-        .rules-section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--green); margin-bottom: 6px; }
-        .rules-text { font-size: 14px; color: #374151; line-height: 1.7; }
-        .footer { text-align: center; margin-top: 2.5rem; padding: 1.5rem; }
-        .footer-logo { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-soft); font-weight: 500; }
-        .footer-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); display: inline-block; }
+        
+        /* BOUTTON CONTACT */
         .fab {
-          position: fixed; bottom: 1.5rem; right: 1.5rem;
-          background: var(--green); color: white;
-          width: 56px; height: 56px; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 1.3rem; box-shadow: 0 4px 16px rgba(26,122,94,.4);
-          text-decoration: none; z-index: 100; transition: transform .2s, background .2s;
+          position: fixed;
+          bottom: 2rem;
+          right: 2rem;
+          background: #25d366; /* Couleur WhatsApp/Tel */
+          color: white;
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+          text-decoration: none;
+          z-index: 100;
+          transition: transform 0.2s;
         }
-        .fab:hover { transform: scale(1.08); background: var(--green-dark); }
-        @media(max-width: 480px) {
-          .hero { height: 55vh; min-height: 320px; }
-          .card { border-radius: 16px; padding: 1.2rem; }
-          .key-info-grid { grid-template-columns: 1fr 1fr; }
-        }
+        .fab:hover { transform: scale(1.1); }
       </style>
     </head>
     <body>
+
       <div class="hero">
         <div class="hero-overlay">
           <div class="hero-content">
-            <div class="hero-eyebrow">Livret d'accueil</div>
             <h1>${title}</h1>
-            ${(d.address || d.city) ? `<div class="hero-address"><i class="fas fa-map-marker-alt"></i> ${[d.address, d.postalCode, d.city].filter(Boolean).join(' ')}</div>` : ''}
+            <p><i class="fas fa-map-marker-alt"></i> ${d.address || ''} ${d.postalCode || ''} ${d.city || ''}</p>
           </div>
         </div>
       </div>
+
       <div class="container">
+      
         <div class="card">
-          <div class="section-title"><div class="icon">👋</div><span>Bienvenue</span></div>
-          <p class="welcome-text">${(d.welcomeDescription || 'Bienvenue chez nous ! Passez un excellent séjour.').replace(/\n/g, '<br>')}</p>
+          <div class="section-title"><i class="fas fa-hand-sparkles"></i> Bienvenue</div>
+          <p>${(d.welcomeDescription || 'Bienvenue chez nous ! Passez un excellent séjour.').replace(/\n/g, '<br>')}</p>
         </div>
+
         <div class="key-info-grid">
           <div class="info-item">
             <div class="info-label">Arrivée</div>
-            <div class="info-value">Dès ${d.checkinTime || '15h00'}</div>
+            <div class="info-value">${d.accessInstructions ? 'Voir instructions' : 'Dès 15h'}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Départ</div>
             <div class="info-value">Avant ${d.checkoutTime || '11h00'}</div>
           </div>
-          ${d.keyboxCode ? `<div class="info-item"><div class="info-label">Boîte à clés</div><div class="info-value" style="font-family:'Courier New',monospace;letter-spacing:.05em;">${d.keyboxCode}</div></div>` : ''}
+          ${d.keyboxCode ? `
+          <div class="info-item">
+            <div class="info-label">Boîte à clés</div>
+            <div class="info-value">${d.keyboxCode}</div>
+          </div>` : ''}
         </div>
+
+        <br>
+
         ${d.wifiSSID ? `
         <div class="card wifi-card">
-          <div class="wifi-icon-wrap"><i class="fas fa-wifi"></i></div>
-          <div class="wifi-label">Réseau Wi-Fi</div>
+          <div class="wifi-icon"><i class="fas fa-wifi"></i></div>
           <div class="wifi-ssid">${d.wifiSSID}</div>
-          <div class="wifi-pass-wrap">
-            <i class="fas fa-lock" style="font-size:13px;color:rgba(255,255,255,.5);"></i>
-            <span class="wifi-pass">${d.wifiPassword || 'Sans mot de passe'}</span>
-            <i class="fas fa-copy" style="font-size:12px;color:rgba(255,255,255,.4);"></i>
-          </div>
-          <div class="wifi-copy-hint">Appuyez pour copier le mot de passe</div>
+          <div class="wifi-pass">${d.wifiPassword || 'Pas de mot de passe'}</div>
         </div>` : ''}
+
         ${d.accessInstructions ? `
         <div class="card">
-          <div class="section-title"><div class="icon">🔑</div><span>Accès au logement</span></div>
-          <p class="welcome-text">${d.accessInstructions.replace(/\n/g, '<br>')}</p>
-          ${d.photos && d.photos.entrance && d.photos.entrance.length > 0 ? `<div class="gallery">${d.photos.entrance.map(url => `<img src="${url}" onclick="window.open(this.src)" loading="lazy">`).join('')}</div>` : ''}
+          <div class="section-title"><i class="fas fa-key"></i> Accès au logement</div>
+          <p>${d.accessInstructions.replace(/\n/g, '<br>')}</p>
+          ${d.photos && d.photos.entrance ? `
+            <div class="gallery">
+              ${d.photos.entrance.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}
+            </div>
+          ` : ''}
         </div>` : ''}
+
         ${d.rooms && d.rooms.length > 0 ? `
         <div class="card">
-          <div class="section-title"><div class="icon">🛋️</div><span>Le logement</span></div>
-          ${d.rooms.map(room => `<div class="list-item"><div class="item-title">${room.name}</div>${room.description ? `<p class="item-desc" style="margin-top:4px;">${room.description}</p>` : ''}</div>`).join('')}
-          ${d.photos && d.photos.roomPhotos && d.photos.roomPhotos.length > 0 ? `<div class="gallery">${d.photos.roomPhotos.map(url => `<img src="${url}" onclick="window.open(this.src)" loading="lazy">`).join('')}</div>` : ''}
+          <div class="section-title"><i class="fas fa-bed"></i> Le Logement</div>
+          ${d.rooms.map((room, i) => `
+            <div class="list-item">
+              <div class="item-header">
+                <div class="item-title">${room.name}</div>
+              </div>
+              <p class="item-desc">${room.description}</p>
+              ${d.photos && d.photos.roomPhotos ? `
+                 ` : ''}
+            </div>
+          `).join('')}
+          
+          ${d.photos && d.photos.roomPhotos && d.photos.roomPhotos.length > 0 ? `
+            <div class="gallery" style="margin-top:1rem; border-top:1px dashed #e2e8f0; padding-top:1rem;">
+               ${d.photos.roomPhotos.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}
+            </div>
+          ` : ''}
         </div>` : ''}
-        ${(d.importantRules || d.checkoutInstructions) ? `
+
         <div class="card">
-          <div class="section-title"><div class="icon">📋</div><span>Règles & départ</span></div>
-          ${d.importantRules ? `<div class="rules-section"><div class="rules-section-label">À savoir</div><p class="rules-text">${d.importantRules.replace(/\n/g, '<br>')}</p></div>` : ''}
-          ${d.checkoutInstructions ? `<div class="rules-section"><div class="rules-section-label">Au départ</div><p class="rules-text">${d.checkoutInstructions.replace(/\n/g, '<br>')}</p></div>` : ''}
-        </div>` : ''}
+           <div class="section-title"><i class="fas fa-clipboard-check"></i> Règles & Départ</div>
+           ${d.importantRules ? `<p><strong>À savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
+           ${d.checkoutInstructions ? `<p><strong>Au départ :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p>` : ''}
+        </div>
+
         ${(d.restaurants?.length > 0 || d.places?.length > 0) ? `
         <div class="card">
-          <div class="section-title"><div class="icon">🗺️</div><span>Guide local</span></div>
+          <div class="section-title"><i class="fas fa-map-signs"></i> Guide Local</div>
+          
           ${d.restaurants && d.restaurants.length > 0 ? `
-            <div class="sub-title">🍽️ Restaurants & bars</div>
-            ${d.restaurants.map(resto => `<div class="list-item"><div class="item-header"><div class="item-title">${resto.name}</div>${resto.phone ? `<div class="item-meta"><a href="tel:${resto.phone}" style="color:var(--green);text-decoration:none;">${resto.phone}</a></div>` : ''}</div>${resto.description ? `<p class="item-desc">${resto.description}</p>` : ''}${resto.address ? `<div class="item-address"><i class="fas fa-location-dot"></i>${resto.address}</div>` : ''}</div>`).join('')}
+            <h4 style="margin:1rem 0 0.5rem 0; color:#64748b;">🍽️ Restaurants</h4>
+            ${d.restaurants.map(resto => `
+              <div class="list-item">
+                <div class="item-header">
+                  <div class="item-title">${resto.name}</div>
+                  <div class="item-meta">${resto.phone || ''}</div>
+                </div>
+                <p class="item-desc">${resto.description}</p>
+                ${resto.address ? `<small style="color:#94a3b8"><i class="fas fa-location-arrow"></i> ${resto.address}</small>` : ''}
+              </div>
+            `).join('')}
           ` : ''}
+
           ${d.places && d.places.length > 0 ? `
-            <div class="sub-title">🏞️ À visiter</div>
-            ${d.places.map(place => `<div class="list-item"><div class="item-title">${place.name}</div>${place.description ? `<p class="item-desc" style="margin-top:4px;">${place.description}</p>` : ''}</div>`).join('')}
+            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">🏞️ À visiter</h4>
+            ${d.places.map(place => `
+              <div class="list-item">
+                <div class="item-title">${place.name}</div>
+                <p class="item-desc">${place.description}</p>
+              </div>
+            `).join('')}
           ` : ''}
         </div>` : ''}
+
         <div class="footer">
-          <div class="footer-logo"><span class="footer-dot"></span>Propulsé par Boostinghost.fr<span class="footer-dot"></span></div>
+          <p>Livret propulsé par BoostingHost</p>
         </div>
+
       </div>
-      ${d.contactPhone ? `<a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hôte"><i class="fas fa-phone"></i></a>` : ''}
-      <script>
-        document.querySelectorAll('.wifi-pass-wrap').forEach(el => {
-          el.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const pass = this.querySelector('.wifi-pass')?.textContent;
-            if (pass && navigator.clipboard) {
-              navigator.clipboard.writeText(pass).then(() => {
-                const hint = this.closest('.wifi-card')?.querySelector('.wifi-copy-hint');
-                if (hint) { hint.textContent = '✓ Copié !'; hint.style.color = '#4ADE80'; setTimeout(() => { hint.textContent = 'Appuyez pour copier le mot de passe'; hint.style.color = ''; }, 2000); }
-              });
-            }
-          });
-        });
-      </script>
+
+      ${d.contactPhone ? `
+      <a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hôte">
+        <i class="fas fa-phone"></i>
+      </a>` : ''}
+
     </body>
     </html>
-    `
+    `;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
 return res.send(html);
