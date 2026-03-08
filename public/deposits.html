@@ -1711,13 +1711,13 @@ function formatExpirationDate(createdAt) {
     }
 
 async function copyExistingDepositMessage(reservation) {
-  if (!reservation || !reservation.deposit || !reservation.deposit.checkoutUrl) {
+  if (!reservation || !reservation.deposit) {
     alert('Aucun lien de caution disponible pour ce séjour.');
     return;
   }
 
   const depositId = reservation.deposit.id;
-  let checkoutUrl = reservation.deposit.checkoutUrl;
+  let checkoutUrl = reservation.deposit.checkoutUrl || '';
 
   console.log('🔍 copyExistingDepositMessage - depositId:', depositId, 'checkoutUrl:', checkoutUrl);
 
@@ -2148,7 +2148,8 @@ function copyDepositLinkByUid(uid) {
           }
         } else if (isAirbnb) {
           actionsHtml = '<div class="card-hint">Caution gérée par Airbnb</div>';
-        } else if (d && d.checkoutUrl) {
+        } else if (d && (d.checkoutUrl || d.status === 'pending')) {
+          // Pending sans URL = lien expiré, le refresh-link va en recréer un
           actionsHtml = `
             <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
               <i class="fas fa-copy"></i> Copier le lien
