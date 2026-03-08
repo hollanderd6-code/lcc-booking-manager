@@ -3121,8 +3121,7 @@ function openPaymentModal(reservation) {
 }
 
 function openEditPaymentModal(uid) {
-  const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid)
-    || (typeof allPayments !== 'undefined' ? allPayments.find(r => r.reservationUid === uid) : null);
+  const reservation = allPayments.find(r => r.reservationUid === uid);
   if (!reservation || !reservation.payment) { alert('Paiement introuvable'); return; }
   currentReservationForPayment = reservation;
   currentPaymentIdToEdit = reservation.payment.id;
