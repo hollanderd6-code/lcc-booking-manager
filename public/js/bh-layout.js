@@ -479,3 +479,88 @@ window.showToast = function(message, type = 'success', duration = 4000) {
     setTimeout(() => toast.remove(), 260);
   }, duration);
 };
+
+// ============================================================
+// bhConfirm — Modale de confirmation custom (remplace confirm())
+// Usage :
+//   const ok = await bhConfirm('Supprimer cet élément ?')
+//   const ok = await bhConfirm('Titre', 'Message détaillé', 'Confirmer', 'Annuler', 'danger')
+// ============================================================
+window.bhConfirm = function(title, message, confirmLabel, cancelLabel, variant) {
+  message = message || '';
+  confirmLabel = confirmLabel || 'Confirmer';
+  cancelLabel = cancelLabel || 'Annuler';
+  variant = variant || 'default';
+
+  return new Promise(function(resolve) {
+    var existing = document.getElementById('bh-confirm-overlay');
+    if (existing) existing.remove();
+
+    var confirmColor = variant === 'danger' ? '#dc2626' : '#1A7A5E';
+    var confirmHover = variant === 'danger' ? '#b91c1c' : '#155f49';
+    var iconHtml = variant === 'danger'
+      ? '<div style="width:44px;height:44px;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><i class="fas fa-exclamation-triangle" style="color:#dc2626;font-size:18px;"></i></div>'
+      : '<div style="width:44px;height:44px;background:#e8f5f1;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><i class="fas fa-question-circle" style="color:#1A7A5E;font-size:18px;"></i></div>';
+
+    if (!document.getElementById('bh-confirm-style')) {
+      var s = document.createElement('style');
+      s.id = 'bh-confirm-style';
+      s.textContent = [
+        '#bh-confirm-overlay{position:fixed;inset:0;z-index:999999;background:rgba(13,17,23,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;animation:bhCfIn .15s ease;}',
+        '@keyframes bhCfIn{from{opacity:0}to{opacity:1}}',
+        '@keyframes bhCfSlide{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}',
+        '#bh-confirm-box{background:white;border-radius:20px;padding:28px 24px 24px;max-width:360px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.18);text-align:center;animation:bhCfSlide .18s cubic-bezier(0.175,0.885,0.32,1.275);}',
+        '#bh-confirm-title{font-family:"Instrument Serif",Georgia,serif;font-size:20px;font-weight:400;color:#0D1117;margin-bottom:8px;line-height:1.3;}',
+        '#bh-confirm-message{font-family:"DM Sans",sans-serif;font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;}',
+        '#bh-confirm-actions{display:flex;gap:10px;}',
+        '.bh-confirm-btn{flex:1;height:42px;border-radius:12px;font-family:"DM Sans",sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:background .15s,transform .1s;}',
+        '.bh-confirm-btn:active{transform:scale(.98);}',
+        '#bh-confirm-cancel{background:#F5F2EC;color:#374151;border:1px solid rgba(200,184,154,.5)!important;}',
+        '#bh-confirm-cancel:hover{background:#EDE8DF;}'
+      ].join('');
+      document.head.appendChild(s);
+    }
+
+    var overlay = document.createElement('div');
+    overlay.id = 'bh-confirm-overlay';
+    overlay.innerHTML = '<div id="bh-confirm-box">' + iconHtml +
+      '<div id="bh-confirm-title">' + title + '</div>' +
+      (message ? '<div id="bh-confirm-message">' + message + '</div>' : '') +
+      '<div id="bh-confirm-actions">' +
+        '<button class="bh-confirm-btn" id="bh-confirm-cancel">' + cancelLabel + '</button>' +
+        '<button class="bh-confirm-btn" id="bh-confirm-ok" style="background:' + confirmColor + ';color:white;">' + confirmLabel + '</button>' +
+      '</div></div>';
+
+    document.body.appendChild(overlay);
+
+    var okBtn = document.getElementById('bh-confirm-ok');
+    var cancelBtn = document.getElementById('bh-confirm-cancel');
+
+    okBtn.onmouseover = function() { okBtn.style.background = confirmHover; };
+    okBtn.onmouseout  = function() { okBtn.style.background = confirmColor; };
+
+    function close(result) {
+      overlay.style.opacity = '0';
+      overlay.style.transition = 'opacity .15s';
+      setTimeout(function() { if (overlay.parentNode) overlay.remove(); }, 150);
+      resolve(result);
+    }
+
+    okBtn.onclick    = function() { close(true); };
+    cancelBtn.onclick = function() { close(false); };
+    overlay.onclick  = function(e) { if (e.target === overlay) close(false); };
+
+    function onKey(e) { if (e.key === 'Escape') { close(false); document.removeEventListener('keydown', onKey); } }
+    document.addEventListener('keydown', onKey);
+    setTimeout(function() { if (okBtn) okBtn.focus(); }, 50);
+  });
+};
+
+// Patch window.confirm : remplace les confirm() natifs par bhConfirm
+// IMPORTANT : les appels existants doivent être migrés vers await bhConfirm()
+// pour que la valeur de retour soit respectée.
+// Ce patch évite l'alerte moche du navigateur en cas d'appel non migré.
+window.confirm = function(msg) {
+  window.bhConfirm(msg || '', '', 'Confirmer', 'Annuler', 'danger');
+  return false;
+};
