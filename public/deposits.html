@@ -1765,6 +1765,51 @@ function copyDepositMessageByUid(uid) {
   copyExistingDepositMessage(reservation);
 }
 
+async function copyPaymentLinkByUid(uid) {
+  const reservation = allPayments.find(r => r.reservationUid === uid);
+  if (!reservation || !reservation.payment) {
+    alert('Paiement introuvable.');
+    return;
+  }
+
+  const paymentId = reservation.payment.id;
+  let checkoutUrl = reservation.payment.checkoutUrl || '';
+  const token = localStorage.getItem('lcc_token');
+
+  // Régénérer si pas d'URL
+  try {
+    const refreshRes = await fetch(API_BASE + '/payments/' + paymentId + '/refresh-link', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (refreshRes.ok) {
+      const data = await refreshRes.json();
+      if (data.checkoutUrl) {
+        checkoutUrl = data.checkoutUrl;
+        reservation.payment.checkoutUrl = checkoutUrl;
+      }
+    }
+  } catch (e) {
+    console.warn('Impossible de vérifier le lien paiement:', e);
+  }
+
+  if (!checkoutUrl) {
+    alert('Aucun lien de paiement disponible.');
+    return;
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(checkoutUrl);
+      alert('Lien de paiement copié ✅');
+    } catch (e) {
+      alert('Copiez manuellement :\n\n' + checkoutUrl);
+    }
+  } else {
+    alert('Voici le lien :\n\n' + checkoutUrl);
+  }
+}
+
 function copyDepositLinkByUid(uid) {
   const reservation = allReservationsWithDeposits.find(r => r.reservationUid === uid);
   if (!reservation) {
@@ -2792,9 +2837,8 @@ function renderPaymentsTable() {
 
     // Footer
     let actionHtml = '';
-    if (p && p.checkoutUrl) {
-      const safeUrl2 = (p.checkoutUrl || '').replace(/'/g, "\'");
-      actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeUrl2}').then(()=>alert('Lien copié !')).catch(()=>alert('${safeUrl2}'))">
+    if (p && (p.checkoutUrl || p.status === 'pending')) {
+      actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); copyPaymentLinkByUid('${r.reservationUid}')">
         <i class="fas fa-copy"></i> Copier le lien</button>`;
     } else {
       actionHtml = `<button class="btn btn-primary btn-card" onclick="event.stopPropagation(); openPaymentModalByUid('${r.reservationUid}')">
