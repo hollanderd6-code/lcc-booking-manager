@@ -2143,6 +2143,7 @@ function copyDepositLinkByUid(uid) {
               <i class="fas fa-copy"></i> Copier le lien
             </button>
             ${d.status === 'pending' ? `
+            <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); renewDepositLink('${d.id}', ${d.amountCents / 100}, '${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-redo"></i> Renouveler</button>
             <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditDepositModal('${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-pen"></i> Modifier</button>
             <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelDepositLink('${d.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
             ` : ''}
@@ -2305,6 +2306,54 @@ function copyDepositLinkByUid(uid) {
     // ============================================
     // CRÉATION CAUTION
     // ============================================
+async function renewDepositLink(depositId, amount, reservationUid) {
+  try {
+    const btn = event.target.closest('button');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renouvellement…'; }
+
+    const res = await fetch(API_BASE + '/deposits/' + depositId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
+      body: JSON.stringify({ amount })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors du renouvellement');
+
+    const checkoutUrl = data.checkoutUrl || data.checkout_url;
+    await loadReservationsWithDeposits();
+    if (checkoutUrl) showLinkModal('Lien de caution renouvelé ✅', checkoutUrl);
+  } catch (e) {
+    console.error('Erreur renewDepositLink:', e);
+    alert('Erreur : ' + (e.message || 'Impossible de renouveler le lien'));
+  }
+}
+
+async function renewPaymentLink(paymentId, amount, reservationUid) {
+  try {
+    const btn = event.target.closest('button');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renouvellement…'; }
+
+    const res = await fetch(API_BASE + '/payments/' + paymentId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
+      body: JSON.stringify({ amount })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors du renouvellement');
+
+    const checkoutUrl = data.checkoutUrl || data.checkout_url;
+    const idx = allPayments.findIndex(r => r.reservationUid === reservationUid);
+    if (idx !== -1 && allPayments[idx].payment) {
+      allPayments[idx].payment.checkoutUrl = checkoutUrl;
+    }
+    renderPaymentsTable();
+    if (checkoutUrl) showLinkModal('Lien de paiement renouvelé ✅', checkoutUrl);
+  } catch (e) {
+    console.error('Erreur renewPaymentLink:', e);
+    alert('Erreur : ' + (e.message || 'Impossible de renouveler le lien'));
+  }
+}
+
 async function cancelDepositLink(depositId, reservationUid) {
   if (!confirm('Annuler ce lien de caution ?\n\nLe lien Stripe sera expiré et le voyageur ne pourra plus l\'utiliser. Vous pourrez en créer un nouveau.')) return;
   try {
@@ -2845,6 +2894,7 @@ function renderPaymentsTable() {
           <i class="fas fa-copy"></i> Copier le lien
         </button>
         ${p.status === 'pending' ? `
+        <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); renewPaymentLink('${p.id}', ${p.amountCents / 100}, '${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-redo"></i> Renouveler</button>
         <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditPaymentModal('${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-pen"></i> Modifier</button>
         <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelPaymentLink('${p.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
         ` : ''}
