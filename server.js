@@ -11775,6 +11775,109 @@ await pool.query(`
 });
 
 // ============================================
+// PUT - Modifier une caution existante (changer le montant)
+// Expire la session Stripe existante et en recrée une nouvelle
+// ============================================
+app.put('/api/deposits/:depositId',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_deposits'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount 
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const { depositId } = req.params;
+    const { amount } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Montant invalide' });
+    }
+
+    // Récupérer la caution existante
+    const { rows } = await pool.query(
+      'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
+      [depositId, userId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Caution introuvable' });
+
+    const existing = rows[0];
+
+    // Vérifier que la caution est encore en attente (pas encore payée)
+    if (existing.status !== 'pending') {
+      return res.status(400).json({ error: 'Impossible de modifier une caution déjà traitée (statut : ' + existing.status + ')' });
+    }
+
+    // Expirer l'ancienne session Stripe si elle existe
+    if (existing.stripe_session_id) {
+      try {
+        await stripe.checkout.sessions.expire(existing.stripe_session_id);
+        console.log(`✅ Session Stripe ${existing.stripe_session_id} expirée`);
+      } catch (expireErr) {
+        // La session peut déjà être expirée ou complète, on continue
+        console.warn('⚠️ Impossible d\'expirer la session Stripe (peut-être déjà expirée):', expireErr.message);
+      }
+    }
+
+    const amountCents = Math.round(amount * 100);
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+
+    // Recréer une nouvelle session Stripe avec le nouveau montant
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `Caution séjour`,
+            description: `Caution modifiée – ${new Date().toLocaleDateString('fr-FR')}`
+          },
+          unit_amount: amountCents
+        },
+        quantity: 1
+      }],
+      payment_intent_data: {
+        capture_method: 'manual',
+        metadata: {
+          deposit_id: existing.id,
+          reservation_uid: existing.reservation_uid
+        }
+      },
+      metadata: {
+        deposit_id: existing.id,
+        reservation_uid: existing.reservation_uid,
+        user_id: String(userId)
+      },
+      success_url: `${appUrl}/caution-success.html?depositId=${existing.id}`,
+      cancel_url: `${appUrl}/caution-cancel.html?depositId=${existing.id}`
+    });
+
+    // Mettre à jour en BDD
+    await pool.query(`
+      UPDATE deposits 
+      SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW()
+      WHERE id = $4
+    `, [amountCents, session.id, session.url, existing.id]);
+
+    console.log(`✅ Caution ${existing.id} modifiée : ${existing.amount_cents} → ${amountCents} cents`);
+
+    return res.json({
+      deposit: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: session.url },
+      checkoutUrl: session.url
+    });
+
+  } catch (err) {
+    console.error('Erreur modification caution:', err);
+    return res.status(500).json({ error: 'Erreur lors de la modification : ' + (err.message || 'Erreur interne') });
+  }
+});
+
+// ============================================
 // POST - Créer un PAIEMENT de location (Stripe Connect avec commission 8%)
 // ============================================
 app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_payments'), loadSubAccountData(pool), async (req, res) => {
