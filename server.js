@@ -2104,19 +2104,31 @@ const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecretPlatform = process.env.STRIPE_WEBHOOK_SECRET_PLATFORM;
 
-  if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET manquant');
+  if (!webhookSecret && !webhookSecretPlatform) {
+    console.error('Aucun STRIPE_WEBHOOK_SECRET configuré');
     return res.status(500).send('Webhook secret not configured');
   }
 
   let event;
 
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  } catch (err) {
-    console.error('Erreur verification webhook:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+  // Essayer les deux secrets (comptes connectés + compte plateforme)
+  const secrets = [webhookSecret, webhookSecretPlatform].filter(Boolean);
+  let lastError;
+
+  for (const secret of secrets) {
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, secret);
+      break; // Succès, on arrête
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!event) {
+    console.error('Erreur verification webhook:', lastError?.message);
+    return res.status(400).send(`Webhook Error: ${lastError?.message}`);
   }
 
   console.log('✅ Webhook Stripe reçu:', event.type);
