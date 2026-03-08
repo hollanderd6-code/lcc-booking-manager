@@ -11998,8 +11998,14 @@ app.post('/api/deposits/:depositId/refresh-link', authenticateAny, async (req, r
     if (!needsRefresh) {
       try {
         const session = await stripe.checkout.sessions.retrieve(deposit.stripe_session_id);
+        console.log(`🔍 Session Stripe ${deposit.stripe_session_id} status: ${session.status}`);
         if (session.status === 'expired' || session.status === 'complete') needsRefresh = true;
-      } catch (e) { needsRefresh = true; }
+        else needsRefresh = true; // ✅ Forcer régénération dans tous les cas non-open
+        if (session.status === 'open') needsRefresh = false; // Seulement garder si vraiment actif
+      } catch (e) {
+        console.log(`⚠️ Session Stripe introuvable, régénération forcée`);
+        needsRefresh = true;
+      }
     }
 
     if (!needsRefresh) return res.json({ checkoutUrl: deposit.checkout_url, refreshed: false });
