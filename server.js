@@ -11979,6 +11979,56 @@ app.get('/api/payments', authenticateAny, requirePermission(pool, 'can_view_paym
 });
 
 // POST - Capturer une caution (débiter le client)
+app.post('/api/deposits/:depositId/refresh-link', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { depositId } = req.params;
+    const depRes = await pool.query('SELECT * FROM deposits WHERE id = $1', [depositId]);
+    if (depRes.rows.length === 0) return res.status(404).json({ error: 'Caution introuvable' });
+
+    const deposit = depRes.rows[0];
+    if (deposit.status === 'paid' || deposit.status === 'captured') {
+      return res.json({ checkoutUrl: deposit.checkout_url, refreshed: false });
+    }
+
+    // Vérifier si la session Stripe est expirée
+    let needsRefresh = !deposit.stripe_session_id;
+    if (!needsRefresh) {
+      try {
+        const session = await stripe.checkout.sessions.retrieve(deposit.stripe_session_id);
+        if (session.status === 'expired' || session.status === 'complete') needsRefresh = true;
+      } catch (e) { needsRefresh = true; }
+    }
+
+    if (!needsRefresh) return res.json({ checkoutUrl: deposit.checkout_url, refreshed: false });
+
+    // Créer une nouvelle session
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+    const newSession = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{ price_data: { currency: 'eur', product_data: { name: 'Caution séjour', description: 'Caution de sécurité' }, unit_amount: deposit.amount_cents }, quantity: 1 }],
+      payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId } },
+      metadata: { deposit_id: depositId, user_id: String(user.id) },
+      success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
+      cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`
+    });
+
+    await pool.query(
+      "UPDATE deposits SET stripe_session_id = $1, checkout_url = $2, status = 'pending', updated_at = NOW() WHERE id = $3",
+      [newSession.id, newSession.url, depositId]
+    );
+
+    console.log(`✅ Lien caution régénéré pour ${depositId}`);
+    res.json({ checkoutUrl: newSession.url, refreshed: true });
+  } catch (err) {
+    console.error('Erreur refresh-link:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/deposits/:depositId/capture', 
   authenticateAny,
   requirePermission(pool, 'can_manage_deposits'),
