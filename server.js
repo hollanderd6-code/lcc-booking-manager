@@ -11980,6 +11980,58 @@ app.get('/api/payments', authenticateAny, requirePermission(pool, 'can_view_paym
 });
 
 // POST - Capturer une caution (débiter le client)
+app.post('/api/payments/:paymentId/refresh-link', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { paymentId } = req.params;
+    const payRes = await pool.query('SELECT * FROM payments WHERE id = $1', [paymentId]);
+    if (payRes.rows.length === 0) return res.status(404).json({ error: 'Paiement introuvable' });
+
+    const payment = payRes.rows[0];
+    if (payment.status === 'paid' || payment.status === 'succeeded') {
+      return res.json({ checkoutUrl: payment.checkout_url, refreshed: false });
+    }
+
+    // Vérifier si la session Stripe est encore valide
+    let needsRefresh = !payment.stripe_session_id;
+    if (!needsRefresh) {
+      try {
+        const session = await stripe.checkout.sessions.retrieve(payment.stripe_session_id);
+        console.log(`🔍 Session paiement ${payment.stripe_session_id} status: ${session.status}`);
+        if (session.status !== 'open') needsRefresh = true;
+      } catch (e) { needsRefresh = true; }
+    }
+
+    if (!needsRefresh) return res.json({ checkoutUrl: payment.checkout_url, refreshed: false });
+
+    // Créer une nouvelle session
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+    const description = payment.description || 'Paiement séjour';
+    const newSession = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{ price_data: { currency: 'eur', product_data: { name: description }, unit_amount: payment.amount_cents }, quantity: 1 }],
+      metadata: { payment_id: paymentId, user_id: String(user.id) },
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+      success_url: `${appUrl}/payment-success.html?paymentId=${paymentId}`,
+      cancel_url: `${appUrl}/payment-cancel.html?paymentId=${paymentId}`
+    });
+
+    await pool.query(
+      "UPDATE payments SET stripe_session_id = $1, checkout_url = $2, updated_at = NOW() WHERE id = $3",
+      [newSession.id, newSession.url, paymentId]
+    );
+
+    console.log(`✅ Lien paiement régénéré pour ${paymentId}`);
+    res.json({ checkoutUrl: newSession.url, refreshed: true });
+  } catch (err) {
+    console.error('Erreur refresh-link paiement:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/deposits/:depositId/refresh-link', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
