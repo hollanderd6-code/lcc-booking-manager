@@ -558,6 +558,13 @@
   border-radius: 18px !important;
   text-align: center !important;
 }
+
+.message.bot .message-bubble a,
+.message.owner .message-bubble a {
+  color: #2563EB !important;
+  text-decoration: underline !important;
+  font-weight: 500;
+}
   
 
 /* ===== WHATSAPP PUR (sans avatar + collé aux bords + statuts) ===== */
@@ -1111,22 +1118,25 @@
         .replace(/"/g, '&quot;');
       
       // Regex pour détecter les URLs
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urlRegex = /(https?:\/\/[^\s&]+)/g;
       
       const linked = escaped.replace(urlRegex, function(url) {
         // Nettoyer les caractères de ponctuation en fin d'URL
         let cleanUrl = url.replace(/[.,;:!?)]+$/, '');
+        // Décoder les &amp; dans l'URL pour qu'elle soit valide
+        const rawUrl = cleanUrl.replace(/&amp;/g, '&');
         
         // Si c'est un lien Stripe (caution), afficher un bouton
-        if (cleanUrl.includes('checkout.stripe.com') || cleanUrl.includes('caution')) {
-          return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="deposit-link-btn">💳 Autoriser la caution</a>`;
+        if (rawUrl.includes('checkout.stripe.com') || rawUrl.includes('caution')) {
+          return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" class="deposit-link-btn">💳 Autoriser la caution</a>`;
         }
         
-        // Sinon, lien normal
-        return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>`;
+        // Lien normal — cliquable et bleu
+        return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563EB;text-decoration:underline;word-break:break-all;">${cleanUrl}</a>`;
       });
       
-      return linked;
+      // Convertir les sauts de ligne en <br>
+      return linked.replace(/\n/g, '<br>');
     }
 
     function appendMessage(message) {
