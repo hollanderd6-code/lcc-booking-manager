@@ -3237,21 +3237,26 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     .modal {
       display: none;
       position: fixed;
-      inset: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100vw;
+      height: 100vh;
       background: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
+      z-index: 9999;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
 
     .modal-dialog {
-      width: 90%;
-      max-width: 600px;
-      max-height: 90vh;
+      position: relative;
+      width: 92%;
+      max-width: 560px;
+      max-height: 85vh;
       overflow-y: auto;
       background: var(--bg-primary);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-xl);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      margin: auto;
     }
     
     .modal.active {
@@ -3300,7 +3305,16 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     .modal-body {
       padding: var(--spacing-lg);
       overflow-y: auto;
-      max-height: calc(90vh - 80px);
+    }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      border-radius: 0 0 16px 16px;
     }
     
     .loading-overlay {
