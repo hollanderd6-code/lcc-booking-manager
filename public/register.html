@@ -29,7 +29,7 @@
         Configurez votre espace pour gérer vos logements et réservations.
       </p>
 
-      <form class="auth-form" id="registerForm">
+      <form class="auth-form" id="registerForm" novalidate>
         <div class="form-group">
           <label for="company">Nom de la conciergerie / structure <span style="font-weight:400;color:#888;font-size:13px;">(optionnel)</span></label>
           <div class="input-with-icon">
@@ -181,18 +181,23 @@
       const confirm = document.getElementById('regPasswordConfirm').value;
       const terms = document.getElementById('terms').checked;
 
+      if (!firstName || !lastName || !email || !password || !confirm) {
+        showToast("Veuillez remplir tous les champs obligatoires.", 'error');
+        return;
+      }
+
       if (!terms) {
-        alert("Vous devez accepter les conditions générales d'utilisation.");
+        showToast("Vous devez accepter les conditions générales d'utilisation.", 'error');
         return;
       }
 
       if (password !== confirm) {
-        alert("Les mots de passe ne correspondent pas.");
+        showToast("Les mots de passe ne correspondent pas.", 'error');
         return;
       }
 
       if (password.length < 6) {
-        alert("Le mot de passe doit contenir au moins 6 caractères.");
+        showToast("Le mot de passe doit contenir au moins 6 caractères.", 'error');
         return;
       }
 
@@ -228,14 +233,51 @@
             </div>
           `;
         } else {
-          alert(data.error || 'Erreur lors de l\'inscription');
+          showToast(data.error || "Erreur lors de l'inscription", 'error');
         }
 
       } catch (err) {
         console.error(err);
-        alert("Erreur réseau lors de la création du compte.");
+        showToast("Erreur réseau lors de la création du compte.", 'error');
       }
     });
+
+    function showToast(message, type = 'error') {
+      const existing = document.getElementById('bh-toast');
+      if (existing) existing.remove();
+
+      const color = type === 'error' ? '#DC2626' : '#1A7A5E';
+      const icon  = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
+
+      const toast = document.createElement('div');
+      toast.id = 'bh-toast';
+      toast.style.cssText = `
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        background: #fff; color: #1C1C1C;
+        border-left: 4px solid ${color};
+        border-radius: 10px; padding: 14px 20px;
+        display: flex; align-items: center; gap: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        font-family: 'DM Sans', Arial, sans-serif; font-size: 14px;
+        z-index: 9999; max-width: 90vw; width: 380px;
+        animation: toastIn .25s ease;
+      `;
+      toast.innerHTML = `
+        <i class="fas ${icon}" style="color:${color};font-size:18px;flex-shrink:0;"></i>
+        <span style="flex:1;">${message}</span>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;margin-left:4px;">×</button>
+      `;
+
+      if (!document.getElementById('bh-toast-style')) {
+        const style = document.createElement('style');
+        style.id = 'bh-toast-style';
+        style.textContent = `@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }`;
+        document.head.appendChild(style);
+      }
+
+      document.body.appendChild(toast);
+      setTimeout(() => toast?.remove(), 5000);
+    }
 </script>
 
   <style>
