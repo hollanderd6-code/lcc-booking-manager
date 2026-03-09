@@ -3557,11 +3557,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
     });
-    // Si l'onglet subscription est actif au chargement
-    const hash = window.location.search;
-    if (hash.includes('tab=subscription')) {
-      setTimeout(loadInvoices, 300);
-    }
+    // Si l'onglet subscription est actif au chargement (URL ou onglet par défaut)
+    setTimeout(function() {
+      const activePane = document.querySelector('.tab-pane.active[data-tab="subscription"]');
+      if (activePane) {
+        loadInvoices();
+      }
+    }, 400);
   });
 })();
 </script>
