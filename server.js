@@ -7495,6 +7495,77 @@ function generateVerificationToken() {
 }
 
 // ============================================
+// HELPER : Template HTML commun pour tous les emails Boostinghost
+// ============================================
+function bhEmailTemplate({ icon, title, subtitle, bodyHtml, footerNote }) {
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{margin:0;padding:0;background:#E8E4DC;font-family:Arial,Helvetica,sans-serif;}
+    .wrap{max-width:600px;margin:0 auto;padding:32px 16px;}
+    .header{background:#1A7A5E;border-radius:12px 12px 0 0;padding:36px 40px 28px;text-align:center;position:relative;overflow:hidden;}
+    .header::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.06);}
+    .header::after{content:'';position:absolute;bottom:-40px;left:-40px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.04);}
+    .header-icon{display:inline-block;width:52px;height:52px;line-height:52px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);border-radius:12px;font-size:24px;margin-bottom:14px;}
+    .header h1{margin:0 0 6px;color:#fff;font-size:24px;font-weight:700;letter-spacing:-0.3px;}
+    .header p{margin:0;color:rgba(255,255,255,0.72);font-size:14px;}
+    .body{background:#fff;padding:36px 40px;border-left:1px solid #DDD8CE;border-right:1px solid #DDD8CE;}
+    .footer-bar{background:#1C2B25;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;}
+    .footer-bar p{margin:0 0 4px;font-size:11px;color:rgba(255,255,255,0.38);}
+    .footer-bar a{color:rgba(255,255,255,0.38);text-decoration:none;}
+    .footer-name{font-size:13px;font-weight:700;color:rgba(255,255,255,0.65);letter-spacing:1.5px;margin-bottom:8px !important;}
+    .btn{display:inline-block;background:#1A7A5E;color:#fff !important;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:0.2px;}
+    .cta-block{background:#F5F2EC;border:1px solid #DDD8CE;border-radius:10px;padding:24px;text-align:center;margin:24px 0;}
+    .cta-block p{margin:0 0 14px;font-size:13px;color:#777;}
+    .info-card{background:#F5F2EC;border-left:3px solid #1A7A5E;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0;font-size:14px;color:#444;}
+    .info-card strong{color:#1A7A5E;}
+    .alert-card{background:#FEF9EC;border-left:3px solid #D97706;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0;font-size:14px;color:#92400E;}
+    .danger-card{background:#FEF2F2;border-left:3px solid #DC2626;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0;font-size:14px;color:#991B1B;}
+    .success-card{background:#F0F8F5;border-left:3px solid #1A7A5E;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0;font-size:14px;color:#166534;}
+    .plan-badge{display:inline-block;background:#1A7A5E;color:#fff;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:8px;}
+    .amount-big{font-size:36px;font-weight:800;color:#1A7A5E;line-height:1.1;margin:4px 0;}
+    .amount-sub{font-size:13px;color:#888;margin:0;}
+    .feat-row{display:table;width:100%;padding:10px 0;border-bottom:1px solid #F0EBE1;}
+    .feat-row:last-child{border-bottom:none;}
+    .feat-icon{display:table-cell;width:36px;vertical-align:middle;font-size:18px;}
+    .feat-text{display:table-cell;vertical-align:middle;font-size:14px;color:#444;padding-left:4px;}
+    .feat-text strong{color:#1C1C1C;}
+    .divider{border:none;border-top:2px solid #F0EBE1;margin:24px 0;}
+    .link-fallback{font-size:12px;color:#999;word-break:break-all;}
+    .link-fallback a{color:#1A7A5E;}
+    p{margin:0 0 14px;font-size:15px;color:#333;line-height:1.65;}
+    ul{margin:0 0 14px;padding-left:20px;}
+    ul li{font-size:14px;color:#444;line-height:1.8;}
+    .signoff{font-size:14px;color:#888;margin-top:24px;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="header-icon">${icon}</div>
+    <h1>${title}</h1>
+    ${subtitle ? `<p>${subtitle}</p>` : ''}
+  </div>
+  <div class="body">
+    ${bodyHtml}
+    <p class="signoff">L'équipe Boostinghost</p>
+  </div>
+  <div class="footer-bar">
+    <p class="footer-name">BOOSTINGHOST</p>
+    ${footerNote ? `<p>${footerNote}</p>` : ''}
+    <p>© ${year} Boostinghost · Tous droits réservés</p>
+    <p><a href="mailto:support@boostinghost.com">support@boostinghost.com</a></p>
+  </div>
+</div>
+</body>
+</html>`;
+}
+
+// ============================================
 // Fonction helper : Envoyer l'email de vérification
 // ============================================
 async function sendVerificationEmail(email, firstName, token) {
@@ -7504,68 +7575,25 @@ async function sendVerificationEmail(email, firstName, token) {
   const mailOptions = {
     from: EMAIL_FROM,
     to: email,
-    subject: '✅ Vérifiez votre adresse email - Boostinghost',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-          .button { display: inline-block; background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🎉 Bienvenue sur Boostinghost !</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${firstName || 'nouveau membre'},</p>
-            
-            <p>Merci de vous être inscrit sur <strong>Boostinghost</strong> !</p>
-            
-            <p>Pour activer votre compte et commencer à utiliser notre plateforme de gestion de locations courte durée, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
-            
-            <div style="text-align: center;">
-              <a href="${verificationUrl}" class="button">
-                ✅ Vérifier mon email
-              </a>
-            </div>
-            
-            <p style="color: #6b7280; font-size: 13px; margin-top: 20px;">
-              Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
-              <a href="${verificationUrl}" style="color: #10b981;">${verificationUrl}</a>
-            </p>
-            
-            <p style="margin-top: 30px;">
-              <strong>Ce lien est valide pendant 24 heures.</strong>
-            </p>
-            
-            <p>Une fois votre email vérifié, vous aurez accès à :</p>
-            <ul>
-              <li>✅ Calendrier unifié</li>
-              <li>✅ Synchronisation iCal (Airbnb, Booking)</li>
-              <li>✅ Gestion des messages</li>
-              <li>✅ Livret d'accueil personnalisé</li>
-              <li>✅ Gestion du ménage</li>
-              <li>✅ Et bien plus encore !</li>
-            </ul>
-            
-            <p>À très bientôt sur Boostinghost ! 🚀</p>
-          </div>
-          <div class="footer">
-            <p>Cet email a été envoyé automatiquement par Boostinghost.</p>
-            <p>Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>
-          </div>
+    subject: 'Vérifiez votre adresse email — Boostinghost',
+    html: bhEmailTemplate({
+      icon: '✉️',
+      title: 'Confirmez votre email',
+      subtitle: 'Une dernière étape avant de démarrer',
+      footerNote: 'Si vous n\'avez pas créé de compte, ignorez cet email.',
+      bodyHtml: `
+        <p>Bonjour <strong>${firstName || 'nouveau membre'}</strong>,</p>
+        <p>Merci de vous être inscrit sur Boostinghost. Pour activer votre compte, cliquez sur le bouton ci-dessous :</p>
+        <div class="cta-block">
+          <p>Lien valide pendant <strong>24 heures</strong></p>
+          <a href="${verificationUrl}" class="btn">Vérifier mon adresse email →</a>
         </div>
-      </body>
-      </html>
-    `
+        <div class="info-card">
+          Une fois vérifié, vous accéderez à : calendrier unifié, messages automatiques IA, gestion du ménage, cautions Stripe, livrets d'accueil et bien plus.
+        </div>
+        <p class="link-fallback">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}">${verificationUrl}</a></p>
+      `
+    })
   };
 
   try {
@@ -7616,103 +7644,38 @@ async function sendWelcomeEmail(email, firstName) {
   const mailOptions = {
     from: EMAIL_FROM,
     to: email,
-    subject: '🎉 Bienvenue sur Boostinghost !',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .feature { padding: 12px 0; display: flex; align-items: start; }
-          .feature-icon { color: #10b981; margin-right: 12px; font-size: 20px; }
-          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0; font-size: 32px;">🎉 Bienvenue !</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${firstName},</p>
-            
-            <p><strong>Votre compte Boostinghost est maintenant actif !</strong></p>
-            
-            <p>Pour démarrer, choisissez le plan qui vous convient et profitez de <strong>14 jours d'essai gratuit</strong> sans carte bancaire.</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="button">
-                🚀 Choisir mon plan
-              </a>
-            </div>
-            
-            <h3 style="color: #111827; margin-top: 30px;">✨ Nos plans :</h3>
-            
-            <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin: 12px 0;">
-              <strong>Solo - 14,90€/mois</strong> (1-3 logements)<br>
-              <span style="color: #6b7280; font-size: 14px;">Pour propriétaires individuels</span>
-            </div>
-            
-            <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 12px 0; border: 2px solid #10b981;">
-              <strong>Pro - 49€/mois</strong> (4-15 logements)<br>
-              <span style="color: #6b7280; font-size: 14px;">Pour conciergeries</span>
-            </div>
-            
-            <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin: 12px 0;">
-              <strong>Business - 99€/mois</strong> (16-50 logements)<br>
-              <span style="color: #6b7280; font-size: 14px;">Pour grosses conciergeries</span>
-            </div>
-            
-            <h3 style="color: #111827; margin-top: 30px;">📦 Tout inclus dans tous les plans :</h3>
-            
-            <div class="feature">
-              <span class="feature-icon">📅</span>
-              <div><strong>Calendrier unifié</strong> - Synchronisation iCal Airbnb & Booking</div>
-            </div>
-            
-            <div class="feature">
-              <span class="feature-icon">🤖</span>
-              <div><strong>Messages automatiques IA</strong> - Réponses intelligentes</div>
-            </div>
-            
-            <div class="feature">
-              <span class="feature-icon">🔐</span>
-              <div><strong>Serrures connectées</strong> - Codes d'accès Igloohome</div>
-            </div>
-            
-            <div class="feature">
-              <span class="feature-icon">🧹</span>
-              <div><strong>Gestion du ménage</strong> - Planning et suivi</div>
-            </div>
-            
-            <div class="feature">
-              <span class="feature-icon">💰</span>
-              <div><strong>Facturation</strong> - Voyageurs & propriétaires</div>
-            </div>
-            
-            <p style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #10b981;">
-              💡 <strong>Besoin d'aide ?</strong><br>
-              Notre équipe est là : <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a>
-            </p>
-            
-            <p>À très bientôt sur Boostinghost ! 🚀</p>
-            
-            <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
-              L'équipe Boostinghost
-            </p>
-          </div>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} Boostinghost. Tous droits réservés.</p>
-          </div>
+    subject: 'Bienvenue sur Boostinghost !',
+    html: bhEmailTemplate({
+      icon: '⚡',
+      title: 'Bienvenue sur Boostinghost',
+      subtitle: 'Votre outil de gestion locative, enfin simple.',
+      bodyHtml: `
+        <p>Bonjour <strong>${firstName}</strong>,</p>
+        <p>Votre compte est actif. Choisissez le plan qui vous convient et profitez de <strong style="color:#1A7A5E">14 jours d'essai gratuit</strong> — sans carte bancaire.</p>
+        <div class="cta-block">
+          <p>Démarrez dès maintenant</p>
+          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="btn">Choisir mon plan →</a>
         </div>
-      </body>
-      </html>
-    `
+        <hr class="divider">
+        <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Nos formules</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:24px;">
+          <tr><td style="padding:10px 12px;border-radius:6px;background:#FAFAF8;border:1px solid #E8E3DA;"><strong>Solo</strong> · 1–3 logements</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-left:none;">14,90 €/mois</td></tr>
+          <tr><td style="padding:10px 12px;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:6px;"><strong>Pro</strong> · 4–15 logements <span style="background:#1A7A5E;color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;">Populaire</span></td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1A7A5E;background:#F0F8F5;border:1.5px solid #1A7A5E;border-left:none;">49 €/mois</td></tr>
+          <tr><td style="padding:10px 12px;border-radius:6px;background:#FAFAF8;border:1px solid #E8E3DA;"><strong>Business</strong> · 16–50 logements</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-left:none;">99 €/mois</td></tr>
+        </table>
+        <hr class="divider">
+        <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Tout inclus dans chaque plan</p>
+        <div class="feat-row"><span class="feat-icon">📅</span><span class="feat-text"><strong>Calendrier unifié</strong> — Synchro iCal Airbnb &amp; Booking</span></div>
+        <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text"><strong>Messages automatiques IA</strong> — Réponses intelligentes à vos voyageurs</span></div>
+        <div class="feat-row"><span class="feat-icon">🔑</span><span class="feat-text"><strong>Serrures connectées</strong> — Codes Igloohome automatiques</span></div>
+        <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong> — Planning, checklists et suivi</span></div>
+        <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements</strong> — Liens Stripe en quelques secondes</span></div>
+        <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong> — Voyageurs &amp; propriétaires</span></div>
+        <div class="info-card" style="margin-top:24px;">
+          Une question ? Réponse rapide : <strong><a href="mailto:support@boostinghost.com" style="color:#1A7A5E;">support@boostinghost.com</a></strong>
+        </div>
+      `
+    })
   };
 
   await transporter.sendMail(mailOptions);
@@ -7729,75 +7692,33 @@ async function sendTrialStartedEmail(email, firstName, plan, amount) {
   const mailOptions = {
     from: EMAIL_FROM,
     to: email,
-    subject: '🎉 Votre essai gratuit de 14 jours a commencé !',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .card { background: #f0fdf4; padding: 24px; border-radius: 8px; margin: 24px 0; border: 2px solid #10b981; }
-          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0; font-size: 32px;">🎉 C'est parti !</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${firstName},</p>
-            
-            <p><strong>Votre essai gratuit du plan ${planName} est maintenant actif pour 14 jours !</strong></p>
-            
-            <div class="card">
-              <p style="margin: 0 0 8px 0; color: #047857; font-size: 14px; font-weight: 600;">VOTRE PLAN</p>
-              <p style="margin: 0 0 16px 0; font-size: 28px; font-weight: 800; color: #10b981;">Plan ${planName}</p>
-              <p style="margin: 0; font-size: 16px; color: #374151;">
-                ✨ <strong>14 jours gratuits</strong><br>
-                <span style="font-size: 14px; color: #6b7280;">Puis ${price}€/mois</span>
-              </p>
-            </div>
-            
-            <p><strong>Profitez de toutes les fonctionnalités sans aucune limitation :</strong></p>
-            <ul>
-              <li>📅 Calendrier unifié (synchro iCal)</li>
-              <li>🤖 Messages automatiques IA</li>
-              <li>🔐 Serrures connectées Igloohome</li>
-              <li>🧹 Gestion des ménages</li>
-              <li>💰 Facturation voyageurs & propriétaires</li>
-              <li>🛡️ Cautions & décomptes</li>
-              <li>📖 Livrets d'accueil</li>
-            </ul>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="button">
-                🚀 Accéder à mon espace
-              </a>
-            </div>
-            
-            <p style="padding: 16px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
-              ⚠️ <strong>Important</strong> : À la fin de l'essai, votre abonnement démarrera automatiquement. Vous pouvez annuler à tout moment depuis vos paramètres.
-            </p>
-            
-            <p style="margin-top: 30px;">Besoin d'aide ? Notre équipe est là : support@boostinghost.com</p>
-            
-            <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
-              L'équipe Boostinghost
-            </p>
-          </div>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} Boostinghost</p>
-          </div>
+    subject: `Votre essai gratuit ${planName} a démarré — 14 jours pour tout découvrir`,
+    html: bhEmailTemplate({
+      icon: '🚀',
+      title: 'C\'est parti !',
+      subtitle: `Essai gratuit Plan ${planName} · 14 jours`,
+      bodyHtml: `
+        <p>Bonjour <strong>${firstName}</strong>,</p>
+        <p>Votre essai gratuit est actif. Vous avez accès à toutes les fonctionnalités sans aucune limitation pendant 14 jours.</p>
+        <div style="background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:10px;padding:20px 24px;text-align:center;margin:20px 0;">
+          <p class="plan-badge">Plan ${planName}</p>
+          <p class="amount-big">Gratuit</p>
+          <p class="amount-sub">pendant 14 jours · puis <strong>${price} €/mois</strong></p>
         </div>
-      </body>
-      </html>
-    `
+        <div class="feat-row"><span class="feat-icon">📅</span><span class="feat-text"><strong>Calendrier unifié</strong> — Synchro iCal Airbnb &amp; Booking</span></div>
+        <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text"><strong>Messages automatiques IA</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">🔑</span><span class="feat-text"><strong>Serrures Igloohome</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements Stripe</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong></span></div>
+        <div class="cta-block" style="margin-top:24px;">
+          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="btn">Accéder à mon espace →</a>
+        </div>
+        <div class="alert-card">
+          À la fin de l'essai, votre abonnement démarrera automatiquement à <strong>${price} €/mois</strong>. Vous pouvez annuler à tout moment depuis vos paramètres.
+        </div>
+      `
+    })
   };
 
   await transporter.sendMail(mailOptions);
@@ -7814,61 +7735,26 @@ async function sendTrialReminder7Days(email, firstName, plan, amount) {
   const mailOptions = {
     from: EMAIL_FROM,
     to: email,
-    subject: '⏰ Plus qu\'une semaine d\'essai gratuit',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">⏰ Plus qu'une semaine !</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${firstName},</p>
-            
-            <p>Il vous reste <strong>7 jours</strong> d'essai gratuit sur votre plan <strong>${planName}</strong> !</p>
-            
-            <p>C'est le moment idéal pour :</p>
-            <ul>
-              <li>✅ Finaliser la configuration de vos logements</li>
-              <li>✅ Tester les messages automatiques IA</li>
-              <li>✅ Configurer vos serrures connectées</li>
-              <li>✅ Organiser votre planning de ménage</li>
-            </ul>
-            
-            <p style="padding: 16px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 24px 0;">
-              📅 <strong>Dans 7 jours</strong>, votre abonnement passera automatiquement à <strong>${price}€/mois</strong>.<br>
-              <span style="font-size: 14px; color: #6b7280;">Vous pouvez annuler ou changer de plan à tout moment.</span>
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
-                Gérer mon abonnement
-              </a>
-            </div>
-            
-            <p style="color: #6b7280; font-size: 14px;">
-              Profitez au maximum de votre semaine restante !
-            </p>
-          </div>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} Boostinghost</p>
-          </div>
+    subject: `Plus qu'une semaine d'essai — Plan ${planName}`,
+    html: bhEmailTemplate({
+      icon: '⏰',
+      title: 'Plus qu\'une semaine !',
+      subtitle: `Il vous reste 7 jours sur le Plan ${planName}`,
+      bodyHtml: `
+        <p>Bonjour <strong>${firstName}</strong>,</p>
+        <p>C'est le bon moment pour finaliser votre configuration avant la fin de l'essai.</p>
+        <div class="feat-row"><span class="feat-icon">🏠</span><span class="feat-text">Terminer la configuration de vos logements</span></div>
+        <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text">Tester les messages automatiques IA</span></div>
+        <div class="feat-row"><span class="feat-icon">🔑</span><span class="feat-text">Configurer vos serrures connectées</span></div>
+        <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text">Organiser votre planning de ménage</span></div>
+        <div class="alert-card" style="margin-top:20px;">
+          Dans <strong>7 jours</strong>, votre abonnement passera à <strong>${price} €/mois</strong>. Vous pouvez annuler ou changer de plan à tout moment.
         </div>
-      </body>
-      </html>
-    `
+        <div class="cta-block">
+          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
+        </div>
+      `
+    })
   };
 
   await transporter.sendMail(mailOptions);
@@ -7885,62 +7771,28 @@ async function sendTrialReminder3Days(email, firstName, plan, amount) {
   const mailOptions = {
     from: EMAIL_FROM,
     to: email,
-    subject: '🔔 Plus que 3 jours d\'essai gratuit !',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 6px; margin: 20px 0; }
-          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">🔔 Plus que 3 jours !</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${firstName},</p>
-            
-            <div class="alert">
-              <strong>⚠️ Attention !</strong><br>
-              Votre essai gratuit se termine dans <strong>3 jours</strong>.
-            </div>
-            
-            <p>Votre plan <strong>${planName}</strong> sera automatiquement activé à <strong>${price}€/mois</strong>.</p>
-            
-            <p><strong>Vous souhaitez :</strong></p>
-            <ul>
-              <li>✅ Continuer avec ce plan ? Aucune action nécessaire !</li>
-              <li>🔄 Changer de plan ? Modifiez-le dès maintenant</li>
-              <li>❌ Annuler ? Faites-le avant la fin de l'essai</li>
-            </ul>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
-                Gérer mon abonnement
-              </a>
-            </div>
-            
-            <p style="padding: 16px; background: #f0fdf4; border-radius: 6px; border-left: 4px solid #10b981;">
-              💡 <strong>Vous aimez Boostinghost ?</strong><br>
-              Passez à l'année et économisez 17% !
-            </p>
-          </div>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} Boostinghost</p>
-          </div>
+    subject: `Plus que 3 jours d'essai — Plan ${planName}`,
+    html: bhEmailTemplate({
+      icon: '🔔',
+      title: 'Plus que 3 jours !',
+      subtitle: `Votre essai Plan ${planName} se termine bientôt`,
+      bodyHtml: `
+        <p>Bonjour <strong>${firstName}</strong>,</p>
+        <div class="alert-card">
+          Votre essai gratuit se termine dans <strong>3 jours</strong>. Le plan <strong>${planName}</strong> sera automatiquement activé à <strong>${price} €/mois</strong>.
         </div>
-      </body>
-      </html>
-    `
+        <p style="font-weight:700;margin-bottom:8px;">Que voulez-vous faire ?</p>
+        <div class="feat-row"><span class="feat-icon">✅</span><span class="feat-text"><strong>Continuer</strong> — Aucune action requise, l'abonnement démarre automatiquement</span></div>
+        <div class="feat-row"><span class="feat-icon">🔄</span><span class="feat-text"><strong>Changer de plan</strong> — Modifiez-le dès maintenant depuis vos paramètres</span></div>
+        <div class="feat-row"><span class="feat-icon">✕</span><span class="feat-text"><strong>Annuler</strong> — Faites-le avant la fin de l'essai</span></div>
+        <div class="cta-block" style="margin-top:20px;">
+          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
+        </div>
+        <div class="info-card">
+          Passez à l'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !
+        </div>
+      `
+    })
   };
 
   await transporter.sendMail(mailOptions);
@@ -7957,55 +7809,27 @@ async function sendTrialReminder1Day(email, firstName, plan, amount) {
   const mailOptions = {
     from: EMAIL_FROM,
     to: email,
-    subject: '🚨 Dernier jour d\'essai gratuit !',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-          .button { display: inline-block; background: #10b981; color: white !important; padding: 16px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; font-size: 18px; }
-          .alert { background: #fee2e2; border-left: 4px solid #ef4444; padding: 20px; border-radius: 6px; margin: 20px 0; }
-          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0; font-size: 32px;">🚨 Dernier jour !</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${firstName},</p>
-            
-            <div class="alert">
-              <strong style="font-size: 18px;">⏰ Votre essai gratuit se termine demain !</strong><br><br>
-              Votre plan <strong>${planName}</strong> sera automatiquement activé à <strong>${price}€/mois</strong>.
-            </div>
-            
-            <p><strong>Vous voulez annuler ?</strong> Faites-le maintenant :</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
-                Gérer mon abonnement
-              </a>
-            </div>
-            
-            <p style="text-align: center; padding: 20px; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
-              <strong>Vous restez avec nous ? Merci ! 🙏</strong><br>
-              <span style="font-size: 14px; color: #6b7280;">Votre paiement de ${price}€ sera effectué automatiquement demain.</span>
-            </p>
-          </div>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} Boostinghost</p>
-          </div>
+    subject: `Dernier jour — votre essai ${planName} se termine demain`,
+    html: bhEmailTemplate({
+      icon: '🚨',
+      title: 'Dernier jour !',
+      subtitle: `Votre essai Plan ${planName} se termine demain`,
+      bodyHtml: `
+        <p>Bonjour <strong>${firstName}</strong>,</p>
+        <div class="danger-card">
+          <strong>Votre essai gratuit se termine demain.</strong><br>
+          Le plan <strong>${planName}</strong> sera automatiquement activé à <strong>${price} €/mois</strong>.
         </div>
-      </body>
-      </html>
-    `
+        <p>Vous souhaitez annuler ? Faites-le maintenant depuis vos paramètres :</p>
+        <div class="cta-block">
+          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
+        </div>
+        <div class="success-card" style="text-align:center;">
+          <strong>Vous restez avec nous ? Merci !</strong><br>
+          Votre paiement de <strong>${price} €</strong> sera effectué automatiquement demain.
+        </div>
+      `
+    })
   };
 
   await transporter.sendMail(mailOptions);
@@ -8022,78 +7846,33 @@ async function sendSubscriptionConfirmedEmail(email, firstName, plan, amount) {
   const mailOptions = {
     from: EMAIL_FROM,
     to: email,
-    subject: '✅ Abonnement confirmé - Merci !',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-          .button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .card { background: #f0fdf4; padding: 24px; border-radius: 8px; margin: 20px 0; border: 2px solid #10b981; }
-          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0; font-size: 32px;">✅ Abonnement confirmé !</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${firstName},</p>
-            
-            <p><strong>Merci pour votre confiance ! 🎉</strong></p>
-            
-            <p>Votre abonnement Boostinghost est maintenant actif.</p>
-            
-            <div class="card">
-              <p style="margin: 0 0 8px 0; color: #047857; font-size: 14px; font-weight: 600;">VOTRE PLAN</p>
-              <p style="margin: 0 0 16px 0; font-size: 28px; font-weight: 800; color: #10b981;">Plan ${planName}</p>
-              <p style="margin: 0; font-size: 18px; color: #111827;">
-                <strong>${price}€</strong> <span style="font-size: 14px; color: #6b7280;">/ mois</span>
-              </p>
-            </div>
-            
-            <p><strong>Vous avez accès à :</strong></p>
-            <ul>
-              <li>✅ Calendrier unifié (synchro iCal)</li>
-              <li>✅ Messages automatiques IA</li>
-              <li>✅ Serrures connectées Igloohome</li>
-              <li>✅ Gestion des ménages</li>
-              <li>✅ Facturation voyageurs & propriétaires</li>
-              <li>✅ Cautions & décomptes</li>
-              <li>✅ Livrets d'accueil</li>
-              <li>✅ Support ${plan === 'business' ? 'téléphone' : plan === 'pro' ? 'prioritaire' : 'email'}</li>
-            </ul>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="button">
-                Accéder à mon espace
-              </a>
-            </div>
-            
-            <p style="padding: 16px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b; margin-top: 30px;">
-              💡 <strong>Astuce</strong> : Passez à l'abonnement annuel et économisez 17% (2 mois gratuits) !
-            </p>
-            
-            <p style="margin-top: 30px;">Merci encore et bonne gestion ! 🚀</p>
-            
-            <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
-              L'équipe Boostinghost
-            </p>
-          </div>
-          <div class="footer">
-            <p>Questions ? Contactez-nous : support@boostinghost.com</p>
-            <p>© ${new Date().getFullYear()} Boostinghost. Tous droits réservés.</p>
-          </div>
+    subject: `Abonnement ${planName} confirmé — merci !`,
+    html: bhEmailTemplate({
+      icon: '✅',
+      title: 'Abonnement confirmé !',
+      subtitle: `Merci pour votre confiance`,
+      bodyHtml: `
+        <p>Bonjour <strong>${firstName}</strong>,</p>
+        <p>Votre abonnement Boostinghost est maintenant actif.</p>
+        <div style="background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:10px;padding:20px 24px;text-align:center;margin:20px 0;">
+          <p class="plan-badge">Plan ${planName}</p>
+          <p class="amount-big">${price} €<span style="font-size:18px;font-weight:400;color:#666;">/mois</span></p>
         </div>
-      </body>
-      </html>
-    `
+        <div class="feat-row"><span class="feat-icon">📅</span><span class="feat-text"><strong>Calendrier unifié</strong> — Synchro iCal Airbnb &amp; Booking</span></div>
+        <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text"><strong>Messages automatiques IA</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">🔑</span><span class="feat-text"><strong>Serrures Igloohome</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements Stripe</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong></span></div>
+        <div class="feat-row"><span class="feat-icon">💬</span><span class="feat-text"><strong>Support ${plan === 'business' ? 'téléphone' : plan === 'pro' ? 'prioritaire' : 'email'}</strong></span></div>
+        <div class="cta-block" style="margin-top:24px;">
+          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="btn">Accéder à mon espace →</a>
+        </div>
+        <div class="info-card">
+          Passez à l'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !
+        </div>
+      `
+    })
   };
 
   await transporter.sendMail(mailOptions);
@@ -8115,65 +7894,28 @@ async function sendRenewalReminderEmail(email, firstName, plan, amount, renewalD
   const mailOptions = {
     from: EMAIL_FROM,
     to: email,
-    subject: '🔄 Prochain renouvellement dans 3 jours',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-          .button { display: inline-block; background: #3b82f6; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-          .card { background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6; }
-          .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">🔄 Rappel de renouvellement</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour ${firstName},</p>
-            
-            <p>Votre abonnement <strong>Plan ${planName}</strong> sera automatiquement renouvelé dans <strong>3 jours</strong>.</p>
-            
-            <div class="card">
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e40af; font-weight: 600;">PROCHAIN PRÉLÈVEMENT</p>
-              <p style="margin: 0 0 16px 0; font-size: 32px; font-weight: 800; color: #3b82f6;">${price}€</p>
-              <p style="margin: 0; font-size: 14px; color: #6b7280;">
-                Date : <strong>${formattedDate}</strong>
-              </p>
-            </div>
-            
-            <p>Aucune action n'est nécessaire de votre part. Le paiement sera effectué automatiquement.</p>
-            
-            <p style="padding: 16px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
-              💡 <strong>Passez à l'année</strong> et économisez 17% (2 mois gratuits) !
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="button">
-                Gérer mon abonnement
-              </a>
-            </div>
-            
-            <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
-              Merci de votre confiance !<br>
-              L'équipe Boostinghost
-            </p>
-          </div>
-          <div class="footer">
-            <p>Questions ? Contactez-nous : support@boostinghost.com</p>
-            <p>© ${new Date().getFullYear()} Boostinghost</p>
-          </div>
+    subject: `Renouvellement dans 3 jours — Plan ${planName}`,
+    html: bhEmailTemplate({
+      icon: '🔄',
+      title: 'Renouvellement dans 3 jours',
+      subtitle: `Plan ${planName} · ${price} €`,
+      bodyHtml: `
+        <p>Bonjour <strong>${firstName}</strong>,</p>
+        <p>Votre abonnement <strong>Plan ${planName}</strong> sera automatiquement renouvelé dans 3 jours.</p>
+        <div style="background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:10px;padding:20px 24px;text-align:center;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1A7A5E;">Prochain prélèvement</p>
+          <p class="amount-big">${price} €</p>
+          <p class="amount-sub">Le <strong>${formattedDate}</strong></p>
         </div>
-      </body>
-      </html>
-    `
+        <p>Aucune action requise — le paiement sera effectué automatiquement.</p>
+        <div class="info-card">
+          Passez à l'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !
+        </div>
+        <div class="cta-block">
+          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
+        </div>
+      `
+    })
   };
 
   await transporter.sendMail(mailOptions);
@@ -8251,55 +7993,25 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     await sendEmail({
       from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
       to: user.email,
-      subject: '🔑 Réinitialisation de votre mot de passe - Boostinghost',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
-            .button { display: inline-block; background: #10b981; color: white !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; margin: 20px 0; }
-            .warning { background: #fef3c7; padding: 16px; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 20px 0; }
-            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0; font-size: 26px;">🔑 Réinitialisation de mot de passe</h1>
-            </div>
-            <div class="content">
-              <p>Bonjour <strong>${user.first_name || 'cher utilisateur'}</strong>,</p>
-              <p>Vous avez demandé à réinitialiser votre mot de passe Boostinghost.</p>
-              <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${resetUrl}" class="button">Réinitialiser mon mot de passe</a>
-              </div>
-              <div class="warning">
-                <strong>⚠️ Important :</strong>
-                <ul style="margin: 8px 0; padding-left: 20px;">
-                  <li>Ce lien expire dans <strong>1 heure</strong></li>
-                  <li>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email</li>
-                  <li>Ne partagez jamais ce lien avec qui que ce soit</li>
-                </ul>
-              </div>
-              <p style="color: #6b7280; font-size: 13px; margin-top: 30px;">
-                Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
-                <a href="${resetUrl}" style="color: #10b981; word-break: break-all;">${resetUrl}</a>
-              </p>
-            </div>
-            <div class="footer">
-              <p>Questions ? <a href="mailto:support@boostinghost.com" style="color: #10b981;">support@boostinghost.com</a></p>
-              <p>© ${new Date().getFullYear()} Boostinghost</p>
-            </div>
+      subject: 'Réinitialisation de votre mot de passe — Boostinghost',
+      html: bhEmailTemplate({
+        icon: '🔑',
+        title: 'Réinitialisation du mot de passe',
+        subtitle: 'Lien valide 1 heure',
+        footerNote: 'Si vous n\'avez pas demandé cette réinitialisation, ignorez cet email.',
+        bodyHtml: `
+          <p>Bonjour <strong>${user.first_name || 'cher utilisateur'}</strong>,</p>
+          <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour en créer un nouveau :</p>
+          <div class="cta-block">
+            <p>Lien valide pendant <strong>1 heure</strong></p>
+            <a href="${resetUrl}" class="btn">Réinitialiser mon mot de passe →</a>
           </div>
-        </body>
-        </html>
-      `
+          <div class="alert-card">
+            <strong>Important :</strong> Ne partagez jamais ce lien. Expiré dans 1h.
+          </div>
+          <p class="link-fallback">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${resetUrl}">${resetUrl}</a></p>
+        `
+      })
     });
     
     console.log('✅ Email reset password envoyé à:', user.email);
@@ -11183,57 +10895,22 @@ app.post('/api/auth/register', async (req, res) => {
     const mailOptions = {
       from: EMAIL_FROM,
       to: email,
-      subject: '✅ Vérifiez votre adresse email - Boostinghost',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-            .button { display: inline-block; background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🎉 Bienvenue sur Boostinghost !</h1>
-            </div>
-            <div class="content">
-              <p>Bonjour ${firstName},</p>
-              
-              <p>Merci de vous être inscrit sur <strong>Boostinghost</strong> !</p>
-              
-              <p>Pour activer votre compte et commencer à utiliser notre plateforme, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
-              
-              <div style="text-align: center;">
-                <a href="${verificationUrl}" class="button">
-                  ✅ Vérifier mon email
-                </a>
-              </div>
-              
-              <p style="color: #6b7280; font-size: 13px; margin-top: 20px;">
-                Si le bouton ne fonctionne pas, copiez ce lien :<br>
-                <a href="${verificationUrl}" style="color: #10b981;">${verificationUrl}</a>
-              </p>
-              
-              <p style="margin-top: 30px;">
-                <strong>Ce lien est valide pendant 24 heures.</strong>
-              </p>
-              
-              <p>À très bientôt sur Boostinghost ! 🚀</p>
-            </div>
-            <div class="footer">
-              <p>Cet email a été envoyé automatiquement par Boostinghost.</p>
-            </div>
+      subject: 'Vérifiez votre adresse email — Boostinghost',
+      html: bhEmailTemplate({
+        icon: '✉️',
+        title: 'Confirmez votre email',
+        subtitle: 'Une dernière étape avant de démarrer',
+        footerNote: 'Si vous n\'avez pas créé de compte, ignorez cet email.',
+        bodyHtml: `
+          <p>Bonjour <strong>${firstName}</strong>,</p>
+          <p>Merci de vous être inscrit sur Boostinghost. Pour activer votre compte, cliquez sur le bouton ci-dessous :</p>
+          <div class="cta-block">
+            <p>Lien valide pendant <strong>24 heures</strong></p>
+            <a href="${verificationUrl}" class="btn">Vérifier mon adresse email →</a>
           </div>
-        </body>
-        </html>
-      `
+          <p class="link-fallback">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}">${verificationUrl}</a></p>
+        `
+      })
     };
 
     try {
@@ -13531,7 +13208,18 @@ app.post('/api/invoice/resend',
       from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
       to: meta.clientEmail,
       subject: `Facture ${invoiceNumber} – Séjour à ${meta.propertyName || ''}${meta.checkinDate ? ' du ' + new Date(meta.checkinDate).toLocaleDateString('fr-FR') : ''}`,
-      html: `<p>Bonjour ${meta.clientName || ''},</p><p>Veuillez trouver ci-joint votre facture <strong>${invoiceNumber}</strong>${meta.propertyName ? ' pour votre séjour à ' + meta.propertyName : ''}${checkinFr ? ' du ' + checkinFr + ' au ' + checkoutFr : ''}.</p><p>Cordialement,<br>${emitterName}</p>`,
+      html: bhEmailTemplate({
+        icon: '📄',
+        title: `Facture ${invoiceNumber}`,
+        subtitle: `${meta.propertyName || ''}${checkinFr ? ' · du ' + checkinFr + ' au ' + checkoutFr : ''}`,
+        bodyHtml: `
+          <p>Bonjour <strong>${meta.clientName || ''}</strong>,</p>
+          <p>Veuillez trouver ci-joint votre facture <strong>${invoiceNumber}</strong>${meta.propertyName ? ` pour votre séjour à <strong>${meta.propertyName}</strong>` : ''}${checkinFr ? ` du ${checkinFr} au ${checkoutFr}` : ''}.</p>
+          <div class="success-card">📎 Votre facture PDF est jointe à cet email.</div>
+          <p>Pour toute question, n'hésitez pas à nous contacter.</p>
+          <p>Cordialement,<br><strong>${emitterName}</strong></p>
+        `
+      }),
       attachments: [{ filename: `${invoiceNumber}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
     });
 
@@ -13955,73 +13643,31 @@ app.post('/api/invoice/create',
         ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim())
         : (user.company || 'Ma Conciergerie');
 
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
-
-          <!-- En-tête -->
-          <div style="background: #1A7A5E; padding: 28px 32px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0; color: white; font-size: 22px;">${emitterNameEmail}</h1>
-            <p style="margin: 6px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">Facture N° ${invoiceNumber}</p>
+      const emailHtml = bhEmailTemplate({
+        icon: '📄',
+        title: `Facture ${invoiceNumber}`,
+        subtitle: `${propertyName}${checkinFr ? ' · du ' + checkinFr + ' au ' + checkoutFr : ''}`,
+        bodyHtml: `
+          <p>Bonjour <strong>${clientName}</strong>,</p>
+          <p>Veuillez trouver ci-joint votre facture pour votre séjour à <strong>${propertyName}</strong>${checkinFr ? ` du <strong>${checkinFr}</strong> au <strong>${checkoutFr}</strong>` : ''}.</p>
+          <div style="background:#F5F2EC;border:1px solid #DDD8CE;border-radius:8px;padding:18px 20px;margin:20px 0;font-size:14px;">
+            <table style="width:100%;border-collapse:collapse;">
+              ${checkinDate && checkoutDate ? `
+              <tr><td style="padding:5px 0;color:#666;">Séjour</td><td style="padding:5px 0;font-weight:600;text-align:right;">${checkinFr} → ${checkoutFr}</td></tr>
+              <tr><td style="padding:5px 0;color:#666;">Durée</td><td style="padding:5px 0;font-weight:600;text-align:right;">${nights} nuit${nights > 1 ? 's' : ''}</td></tr>` : ''}
+              ${rentAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">Loyer</td><td style="padding:5px 0;text-align:right;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
+              ${touristTaxAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">Taxe de séjour</td><td style="padding:5px 0;text-align:right;">${parseFloat(touristTaxAmount).toFixed(2)} €</td></tr>` : ''}
+              ${cleaningFee > 0 ? `<tr><td style="padding:5px 0;color:#666;">Frais de ménage</td><td style="padding:5px 0;text-align:right;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
+              ${vatAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">TVA (${vatRate}%)</td><td style="padding:5px 0;text-align:right;">${vatAmount.toFixed(2)} €</td></tr>` : ''}
+            </table>
+            <table style="width:100%;border-top:2px solid #1A7A5E;margin-top:10px;border-collapse:collapse;">
+              <tr><td style="padding-top:10px;font-weight:700;font-size:16px;">TOTAL TTC</td><td style="padding-top:10px;font-weight:700;font-size:16px;color:#1A7A5E;text-align:right;">${total.toFixed(2)} €</td></tr>
+            </table>
           </div>
-
-          <!-- Corps -->
-          <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
-
-            <p style="font-size: 16px; margin: 0 0 24px;">Bonjour <strong>${clientName}</strong>,</p>
-            <p style="font-size: 15px; margin: 0 0 24px; line-height: 1.6;">
-              Veuillez trouver ci-joint votre facture pour votre séjour à <strong>${propertyName}</strong>
-              ${checkinDate && checkoutDate ? ` du <strong>${checkinFr}</strong> au <strong>${checkoutFr}</strong>` : ''}.
-            </p>
-
-            <!-- Récap séjour -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-              <table style="width:100%; border-collapse:collapse; font-size:14px;">
-                <tr>
-                  <td style="padding:6px 0; color:#6b7280;">Logement</td>
-                  <td style="padding:6px 0; font-weight:600; text-align:right;">${propertyName}</td>
-                </tr>
-                ${checkinDate && checkoutDate ? `
-                <tr>
-                  <td style="padding:6px 0; color:#6b7280;">Séjour</td>
-                  <td style="padding:6px 0; font-weight:600; text-align:right;">${checkinFr} → ${checkoutFr}</td>
-                </tr>
-                <tr>
-                  <td style="padding:6px 0; color:#6b7280;">Durée</td>
-                  <td style="padding:6px 0; font-weight:600; text-align:right;">${nights} nuit${nights > 1 ? 's' : ''}</td>
-                </tr>` : ''}
-                ${rentAmount > 0 ? `<tr><td style="padding:6px 0; color:#6b7280; border-top:1px solid #e5e7eb;">Loyer</td><td style="padding:6px 0; text-align:right; border-top:1px solid #e5e7eb;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
-                ${touristTaxAmount > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">Taxe de séjour</td><td style="padding:6px 0; text-align:right;">${parseFloat(touristTaxAmount).toFixed(2)} €</td></tr>` : ''}
-                ${cleaningFee > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">Frais de ménage</td><td style="padding:6px 0; text-align:right;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
-                ${vatAmount > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">TVA (${vatRate}%)</td><td style="padding:6px 0; text-align:right;">${vatAmount.toFixed(2)} €</td></tr>` : ''}
-              </table>
-              <table style="width:100%; border-top:2px solid #1A7A5E; margin-top:12px; border-collapse:collapse;">
-                <tr>
-                  <td style="padding-top:12px; font-weight:700; font-size:16px;">TOTAL TTC</td>
-                  <td style="padding-top:12px; font-weight:700; font-size:16px; color:#1A7A5E; text-align:right;">${total.toFixed(2)} €</td>
-                </tr>
-              </table>
-            </div>
-
-            <!-- Pièce jointe -->
-            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:16px; text-align:center; margin-bottom:24px;">
-              <p style="margin:0; color:#166534; font-weight:600; font-size:15px;">📎 Votre facture PDF est jointe à cet email</p>
-            </div>
-
-            <p style="font-size:14px; color:#6b7280; line-height:1.6;">
-              Pour toute question, n'hésitez pas à nous contacter.<br>
-              Cordialement,
-            </p>
-          </div>
-
-          <!-- Pied de page -->
-          <div style="background:#1A7A5E; padding:16px 32px; border-radius:0 0 8px 8px; text-align:center;">
-            <p style="margin:0 0 4px; font-size:11px; color:rgba(255,255,255,0.7);">Facture générée grâce à</p>
-            <p style="margin:0; font-size:13px; font-weight:700; color:white; letter-spacing:0.5px;">Boostinghost.fr</p>
-            <p style="margin:6px 0 0; font-size:11px; color:rgba(255,255,255,0.6);">La solution de gestion pour les propriétaires et conciergeries</p>
-          </div>
-
-        </div>
-      `;
+          <div class="success-card">📎 Votre facture PDF est jointe à cet email.</div>
+          <p style="font-size:14px;color:#666;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${emitterNameEmail}</strong></p>
+        `
+      });
 
       // Envoyer via transporter avec PDF en pièce jointe
       try {
@@ -14458,46 +14104,29 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
   });
 
   // ── Template email HTML (identique à invoice/create) ──
-  const emailHtml = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
-      <div style="background: #1A7A5E; padding: 28px 32px; border-radius: 8px 8px 0 0;">
-        <h1 style="margin: 0; color: white; font-size: 22px;">${fromName}</h1>
-        <p style="margin: 6px 0 0; color: rgba(255,255,255,0.8); font-size: 14px;">Facture N° ${invoiceNumber || 'BROUILLON'}</p>
+  const emailHtml = bhEmailTemplate({
+    icon: '📄',
+    title: `Facture ${invoiceNumber || 'BROUILLON'}`,
+    subtitle: `${fromName}${period ? ' · ' + period : ''}`,
+    bodyHtml: `
+      <p>Bonjour <strong>${clientName || ''}</strong>,</p>
+      <p>Veuillez trouver ci-joint votre facture${period ? ` pour la période <strong>${period}</strong>` : ''}.</p>
+      <div style="background:#F5F2EC;border:1px solid #DDD8CE;border-radius:8px;padding:18px 20px;margin:20px 0;font-size:14px;">
+        <table style="width:100%;border-collapse:collapse;">
+          ${(items||[]).map(item => {
+            const total = parseFloat(item.total || 0);
+            return `<tr><td style="padding:5px 0;color:#666;">${item.description || 'Prestation'}</td><td style="padding:5px 0;font-weight:600;text-align:right;">${total.toFixed(2)} €</td></tr>`;
+          }).join('')}
+          ${vatAmt > 0 ? `<tr><td style="padding:5px 0;color:#666;">TVA (${vatRate}%)</td><td style="padding:5px 0;text-align:right;">${vatAmt.toFixed(2)} €</td></tr>` : ''}
+        </table>
+        <table style="width:100%;border-top:2px solid #1A7A5E;margin-top:10px;border-collapse:collapse;">
+          <tr><td style="padding-top:10px;font-weight:700;font-size:16px;">TOTAL TTC</td><td style="padding-top:10px;font-weight:700;font-size:16px;color:#1A7A5E;text-align:right;">${ttc.toFixed(2)} €</td></tr>
+        </table>
       </div>
-      <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; margin: 0 0 16px;">Bonjour <strong>${clientName || ''}</strong>,</p>
-        <p style="font-size: 15px; margin: 0 0 24px; line-height: 1.6;">
-          Veuillez trouver ci-joint votre facture${period ? ` pour la période <strong>${period}</strong>` : ''}.
-        </p>
-        <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-          <table style="width:100%; border-collapse:collapse; font-size:14px;">
-            ${(items||[]).map(item => {
-              const total = parseFloat(item.total || 0);
-              return `<tr>
-                <td style="padding:6px 0; color:#6b7280;">${item.description || 'Prestation'}</td>
-                <td style="padding:6px 0; font-weight:600; text-align:right;">${total.toFixed(2)} €</td>
-              </tr>`;
-            }).join('')}
-            ${vatAmt > 0 ? `<tr><td style="padding:6px 0; color:#6b7280;">TVA (${vatRate}%)</td><td style="padding:6px 0; text-align:right;">${vatAmt.toFixed(2)} €</td></tr>` : ''}
-          </table>
-          <table style="width:100%; border-top:2px solid #1A7A5E; margin-top:12px; border-collapse:collapse;">
-            <tr>
-              <td style="padding-top:12px; font-weight:700; font-size:16px;">TOTAL TTC</td>
-              <td style="padding-top:12px; font-weight:700; font-size:16px; color:#1A7A5E; text-align:right;">${ttc.toFixed(2)} €</td>
-            </tr>
-          </table>
-        </div>
-        <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:16px; text-align:center; margin-bottom:24px;">
-          <p style="margin:0; color:#166534; font-weight:600;">📎 Votre facture PDF est jointe à cet email</p>
-        </div>
-        <p style="font-size:14px; color:#6b7280;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement,<br><strong>${fromName}</strong></p>
-      </div>
-      <div style="background:#1A7A5E; padding:16px 32px; border-radius:0 0 8px 8px; text-align:center;">
-        <p style="margin:0 0 4px; font-size:11px; color:rgba(255,255,255,0.7);">Facture générée grâce à</p>
-        <p style="margin:0; font-size:13px; font-weight:700; color:white;">Boostinghost.fr</p>
-      </div>
-    </div>
-  `;
+      <div class="success-card">📎 Votre facture PDF est jointe à cet email.</div>
+      <p style="font-size:14px;color:#666;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${fromName}</strong></p>
+    `
+  });
 
   // Envoi au client
   await sendEmail({
@@ -14514,21 +14143,15 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
 
   // Copie à l'émetteur
   if (userEmail) {
-    const copyHtml = `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#111827;">
-        <div style="background:#1A7A5E;padding:20px 32px;border-radius:8px 8px 0 0;">
-          <h2 style="margin:0;color:white;font-size:18px;">📋 Copie — Facture envoyée</h2>
-        </div>
-        <div style="background:#fff;padding:24px 32px;border:1px solid #e5e7eb;border-top:none;">
-          <p style="margin:0 0 16px;font-size:14px;color:#374151;">
-            La facture <strong>${invoiceNumber || ''}</strong> a bien été envoyée à <strong>${clientName}</strong> (${clientEmail}).
-          </p>
-          <p style="margin:0;font-size:13px;color:#6b7280;">Le PDF est joint à cet email pour vos archives.</p>
-        </div>
-        <div style="background:#f9fafb;padding:12px 32px;border-radius:0 0 8px 8px;border:1px solid #e5e7eb;border-top:none;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#9ca3af;">Boostinghost.fr — gestion locative</p>
-        </div>
-      </div>`;
+    const copyHtml = bhEmailTemplate({
+      icon: '📋',
+      title: 'Copie — Facture envoyée',
+      subtitle: `Facture ${invoiceNumber || ''} · ${clientName}`,
+      bodyHtml: `
+        <p>La facture <strong>${invoiceNumber || ''}</strong> a bien été envoyée à <strong>${clientName}</strong> (${clientEmail}).</p>
+        <div class="info-card">Le PDF est joint à cet email pour vos archives.</div>
+      `
+    });
     await sendEmail({
       from: fromDisplay,
       to: userEmail,
