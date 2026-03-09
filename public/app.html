@@ -7278,7 +7278,7 @@ document.addEventListener('click', function(e) {
     return;
   }
 });
-  function handleDeleteBooking() {
+  async function handleDeleteBooking() {
   // Empêcher les doubles clics sur "Supprimer"
   if (window.deletingInProgress) {
     console.log('⚠️ Suppression déjà en cours, ignorée');
@@ -7324,7 +7324,8 @@ document.addEventListener('click', function(e) {
     ? 'Êtes-vous sûr de vouloir supprimer ce BLOCAGE ?'
     : 'Êtes-vous sûr de vouloir supprimer cette réservation ?';
 
-  if (!confirm(message)) {
+  const confirmed = await (typeof bhConfirm === 'function' ? bhConfirm(message) : Promise.resolve(confirm(message)));
+  if (!confirmed) {
     window.deletingInProgress = false;
     return;
   }
