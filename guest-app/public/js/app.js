@@ -717,6 +717,31 @@ async function loadMessages() {
   }
 }
 
+function linkifyMessage(text) {
+  if (!text) return '';
+  // Échapper le HTML
+  const div = document.createElement('div');
+  div.textContent = text;
+  let escaped = div.innerHTML;
+  // Convertir les sauts de ligne (vrais 
+ et \n littéraux)
+  escaped = escaped.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+  // Linkifier les URLs
+  const urlRegex = /(https?:\/\/[^\s<]+)/g;
+  return escaped.replace(urlRegex, function(url) {
+    // Nettoyer ponctuation finale
+    let cleanUrl = url.replace(/[.,;:!?)<]+$/, '');
+    const rawUrl = cleanUrl.replace(/&amp;/g, '&');
+    // Lien Stripe → bouton
+    if (rawUrl.includes('checkout.stripe.com') || rawUrl.includes('caution')) {
+      return '<a href="' + rawUrl + '" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:6px 0;padding:10px 18px;background:#7c3aed;color:white;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px;">💳 Autoriser la caution</a>';
+    }
+    // Lien normal — bleu souligné
+    const display = cleanUrl.length > 45 ? cleanUrl.substring(0, 42) + '...' : cleanUrl;
+    return '<a href="' + rawUrl + '" target="_blank" rel="noopener noreferrer" style="color:#2563EB;text-decoration:underline;word-break:break-all;font-weight:500;">' + display + '</a>';
+  });
+}
+
 function appendMessage(message) {
   const container = document.getElementById('messagesContainer');
   
@@ -759,7 +784,7 @@ function appendMessage(message) {
   
   // Ajouter le texte s'il y en a
   if (messageText) {
-    content += escapeHtml(messageText);
+    content += linkifyMessage(messageText);
   }
   
   // Ajouter les images
