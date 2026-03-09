@@ -14819,6 +14819,44 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
 // Créer une session Stripe Customer Portal
 // ============================================
 
+
+// ============================================
+// GET /api/billing/invoices
+// Récupérer les factures abonnement depuis Stripe
+// ============================================
+app.get("/api/billing/invoices", async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: "Non autorisé" });
+    if (!stripe) return res.status(500).json({ error: "Stripe non configuré" });
+    const result = await pool.query(
+      "SELECT stripe_customer_id, plan_type FROM subscriptions WHERE user_id = $1",
+      [user.id]
+    );
+    if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
+      return res.json({ invoices: [], planType: null });
+    }
+    const customerId = result.rows[0].stripe_customer_id;
+    const planType   = result.rows[0].plan_type;
+    const stripeInvoices = await stripe.invoices.list({ customer: customerId, limit: 24, status: "paid" });
+    const invoices = stripeInvoices.data.map(inv => ({
+      id:           inv.id,
+      number:       inv.number,
+      amount:       inv.amount_paid / 100,
+      currency:     inv.currency,
+      date:         inv.created,
+      period_start: inv.period_start,
+      period_end:   inv.period_end,
+      pdf:          inv.invoice_pdf,
+      hosted_url:   inv.hosted_invoice_url,
+      status:       inv.status
+    }));
+    res.json({ invoices, planType });
+  } catch (err) {
+    console.error("❌ /api/billing/invoices:", err.message);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 // ============================================
 // ROUTES POUR MESSAGE DE RÉSERVATION AVEC CLEANING PHOTOS
 // À ajouter dans chat_routes-4.js
