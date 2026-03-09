@@ -1775,6 +1775,9 @@ html[data-theme-v3="1"] .subscription-card {
         btn.addEventListener('click', () => {
           const name = btn.dataset.tab;
           activateTab(name);
+          if (name === 'subscription') {
+            setTimeout(function() { if (typeof loadInvoices === 'function') loadInvoices(); }, 150);
+          }
         });
       });
 
@@ -3510,7 +3513,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.renderInvList();
   };
 
-  async function loadInvoices() {
+  window.loadInvoices = async function() {
     const list = document.getElementById('invList');
     if (!list) return;
 
@@ -3523,48 +3526,28 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const res  = await fetch('/api/billing/invoices', { headers: { Authorization: 'Bearer ' + token } });
       const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || 'Erreur');
+      if (!res.ok) throw new Error(data.error || 'Erreur ' + res.status);
 
       _allInvoices = data.invoices || [];
 
       if (_allInvoices.length === 0) {
-        list.innerHTML = '<div class="inv-empty"><i class="fas fa-file-invoice"></i>Aucune facture pour l'instant.<br><small>Les factures apparaîtront ici après votre premier paiement.</small></div>';
+        list.innerHTML = '<div class="inv-empty"><i class="fas fa-file-invoice"></i>Aucune facture pour le moment.<br><small>Les factures apparaitront ici apres votre premier paiement.</small></div>';
         return;
       }
 
-      // Peupler le filtre années
-      const years = [...new Set(_allInvoices.map(i => new Date(i.date * 1000).getFullYear()))].sort((a,b) => b-a);
+      const years = [...new Set(_allInvoices.map(function(i){ return new Date(i.date * 1000).getFullYear(); }))].sort(function(a,b){ return b-a; });
       const yearSel = document.getElementById('invFilterYear');
       if (yearSel) {
-        yearSel.innerHTML = '<option value="">Toutes</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+        yearSel.innerHTML = '<option value="">Toutes</option>' + years.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
       }
-
       window.renderInvList();
     } catch (err) {
       console.error('Invoices error:', err);
-      list.innerHTML = '<div class="inv-empty"><i class="fas fa-exclamation-circle"></i>Impossible de charger les factures.<br><small>' + err.message + '</small></div>';
+      list.innerHTML = '<div class="inv-empty"><i class="fas fa-exclamation-circle"></i>Impossible de charger les factures : ' + err.message + '</div>';
     }
   }
 
-  // Déclencher au clic sur l'onglet abonnement
-  document.addEventListener('DOMContentLoaded', function() {
-    const tabs = document.querySelectorAll('.settings-tab');
-    tabs.forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.tab === 'subscription') {
-          setTimeout(loadInvoices, 150);
-        }
-      });
-    });
-    // Si l'onglet subscription est actif au chargement (URL ou onglet par défaut)
-    setTimeout(function() {
-      const activePane = document.querySelector('.tab-pane.active[data-tab="subscription"]');
-      if (activePane) {
-        loadInvoices();
-      }
-    }, 400);
-  });
+  // listeners gérés par le handler principal
 })();
 </script>
 </body>
