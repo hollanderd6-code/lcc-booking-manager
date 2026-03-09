@@ -10825,7 +10825,7 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { company, firstName, lastName, email, password } = req.body;
     
-    if (!company || !firstName || !lastName || !email || !password) {
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ error: 'Champs obligatoires manquants' });
     }
 
