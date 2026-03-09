@@ -966,30 +966,9 @@ if (sender_type === 'owner') {
   }
 }
 
-      // ✅ Si c'est un message du voyageur, chercher une réponse automatique
+      // ✅ Si c'est un message du voyageur → traitement complet (onboarding + réponses auto + Groq)
+      // NOTE: findAutoResponse() supprimé — handleIncomingMessage() gère tout (mots-clés inclus)
       if (sender_type === 'guest') {
-        const autoResponse = await findAutoResponse(pool, conversation.user_id, conversation.property_id, message);
-        
-        if (autoResponse) {
-          setTimeout(async () => {
-            try {
-              const autoResult = await pool.query(
-                `INSERT INTO messages 
-                (conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at)
-                VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE, TRUE, NOW())
-                RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, is_auto_response, created_at`,
-                [conversation_id, autoResponse]
-              );
-              const autoMsg = autoResult.rows[0];
-              if (io) {
-                io.to(`conversation_${conversation_id}`).emit('new_message', autoMsg);
-              }
-              console.log(`🤖 Réponse automatique envoyée pour conversation ${conversation_id}`);
-            } catch (error) {
-              console.error('❌ Erreur envoi réponse auto:', error);
-            }
-          }, 1500);
-        }
 
         // ============================================
         // 🤖 TRAITEMENT AUTOMATIQUE (Onboarding + Groq + Escalade)
