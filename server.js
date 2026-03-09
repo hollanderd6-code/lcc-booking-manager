@@ -11691,14 +11691,14 @@ app.put('/api/payments/:paymentId',
     }
 
     const amountCents = Math.round(amount * 100);
-    const platformFee = Math.round(amountCents * 0.08);
+    const platformFee = 0; // TODO: const platformFee = Math.round(amountCents * 0.08);
     const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [{ price_data: { currency: 'eur', product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
-      payment_intent_data: { application_fee_amount: platformFee, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
+      payment_intent_data: { /* application_fee_amount: platformFee, // TODO: réactiver commission */ metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`
@@ -11795,7 +11795,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
     const amountCents = Math.round(amount * 100);
     
     // 💰 Calcul de la commission (8% pour la plateforme)
-    const platformFee = Math.round(amountCents * 0.08);
+    const platformFee = 0; // TODO: const platformFee = Math.round(amountCents * 0.08);
     const ownerReceives = amountCents - platformFee;
     
     // Créer l'objet "payment"
@@ -11839,7 +11839,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       }],
       payment_intent_data: {
         // 💰 Commission de la plateforme (8%)
-        application_fee_amount: platformFee,
+        // application_fee_amount: platformFee, // TODO: réactiver commission
         metadata: {
           payment_id: payment.id,
           reservation_uid: reservationUid,
