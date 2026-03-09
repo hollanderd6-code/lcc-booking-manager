@@ -14824,10 +14824,9 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
 // GET /api/billing/invoices
 // Récupérer les factures abonnement depuis Stripe
 // ============================================
-app.get("/api/billing/invoices", async (req, res) => {
+app.get("/api/billing/invoices", authenticateAny, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: "Non autorisé" });
+    const user = req.user;
     if (!stripe) return res.status(500).json({ error: "Stripe non configuré" });
     const result = await pool.query(
       "SELECT stripe_customer_id, plan_type FROM subscriptions WHERE user_id = $1",
