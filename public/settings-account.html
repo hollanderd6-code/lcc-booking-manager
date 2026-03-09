@@ -1046,6 +1046,120 @@ html[data-theme-v3="1"] .subscription-card {
   background: transparent !important;
   border: none !important;
 }
+
+    /* ===== FACTURES ABONNEMENT ===== */
+    .inv-filters {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .inv-filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 120px;
+    }
+    .inv-filter-group select {
+      width: auto !important;
+      min-width: 120px;
+      padding: 9px 14px !important;
+      font-size: 14px !important;
+    }
+    .inv-filter-reset {
+      padding: 9px 16px !important;
+      font-size: 13px !important;
+      white-space: nowrap;
+      height: fit-content;
+    }
+    .inv-loading {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .inv-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .inv-empty i { font-size: 36px; margin-bottom: 12px; display: block; opacity: .4; }
+    .inv-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .inv-table thead th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--text-secondary);
+      padding: 0 12px 12px;
+      border-bottom: 2px solid var(--border-color);
+    }
+    .inv-table tbody tr {
+      border-bottom: 1px solid var(--border-color);
+      transition: background .12s;
+    }
+    .inv-table tbody tr:last-child { border-bottom: none; }
+    .inv-table tbody tr:hover { background: var(--bg-secondary); }
+    .inv-table td {
+      padding: 14px 12px;
+      vertical-align: middle;
+      color: var(--text-primary);
+    }
+    .inv-num {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .inv-badge-paid {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(16,185,129,.12);
+      color: #065f46;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+    .inv-amount {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .inv-dl-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: #1A7A5E;
+      color: #fff !important;
+      text-decoration: none;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    .inv-dl-btn:hover { opacity: .85; }
+    @media (max-width: 640px) {
+      .inv-table thead { display: none; }
+      .inv-table td { display: block; padding: 6px 0; border: none; }
+      .inv-table tbody tr { display: block; padding: 14px 0; border-bottom: 1px solid var(--border-color); }
+      .inv-filters { flex-direction: column; align-items: stretch; }
+      .inv-filter-group select { width: 100% !important; }
+    }
 </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
@@ -1540,6 +1654,51 @@ html[data-theme-v3="1"] .subscription-card {
 </div>
 </div>
 </section>
+
+<!-- ===== SECTION FACTURES D'ABONNEMENT ===== -->
+<section class="card mb-lg">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-file-invoice"></i>
+      Mes factures d'abonnement
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="inv-filters">
+      <div class="inv-filter-group">
+        <label for="invFilterMonth" style="margin-bottom:4px!important;">Mois</label>
+        <select id="invFilterMonth" onchange="renderInvList()">
+          <option value="">Tous</option>
+          <option value="1">Janvier</option>
+          <option value="2">Février</option>
+          <option value="3">Mars</option>
+          <option value="4">Avril</option>
+          <option value="5">Mai</option>
+          <option value="6">Juin</option>
+          <option value="7">Juillet</option>
+          <option value="8">Août</option>
+          <option value="9">Septembre</option>
+          <option value="10">Octobre</option>
+          <option value="11">Novembre</option>
+          <option value="12">Décembre</option>
+        </select>
+      </div>
+      <div class="inv-filter-group">
+        <label for="invFilterYear" style="margin-bottom:4px!important;">Année</label>
+        <select id="invFilterYear" onchange="renderInvList()">
+          <option value="">Toutes</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost inv-filter-reset" onclick="resetInvFilters()">
+        <i class="fas fa-rotate-left"></i> Réinitialiser
+      </button>
+    </div>
+    <div id="invList">
+      <div class="inv-loading"><i class="fas fa-spinner fa-spin"></i> Chargement des factures...</div>
+    </div>
+  </div>
+</section>
+
 </div>
 </div>
 </div>
@@ -3267,5 +3426,144 @@ document.addEventListener('DOMContentLoaded', function() {
     </form>
   </div>
 </div>
+
+<script>
+/* ===== FACTURES D'ABONNEMENT ===== */
+(function() {
+  let _allInvoices = [];
+
+  const MONTHS = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+  function fmt(ts) {
+    const d = new Date(ts * 1000);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  function fmtPeriod(start, end) {
+    const s = new Date(start * 1000);
+    const e = new Date(end * 1000);
+    const sStr = s.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return sStr.charAt(0).toUpperCase() + sStr.slice(1);
+  }
+
+  function fmtAmount(amount, currency) {
+    return amount.toLocaleString('fr-FR', { style: 'currency', currency: (currency || 'eur').toUpperCase() });
+  }
+
+  window.renderInvList = function() {
+    const monthSel = document.getElementById('invFilterMonth');
+    const yearSel  = document.getElementById('invFilterYear');
+    const list     = document.getElementById('invList');
+    if (!list) return;
+
+    const filterMonth = monthSel ? parseInt(monthSel.value) || 0 : 0;
+    const filterYear  = yearSel  ? parseInt(yearSel.value)  || 0 : 0;
+
+    let filtered = _allInvoices.filter(inv => {
+      const d = new Date(inv.date * 1000);
+      if (filterMonth && d.getMonth() + 1 !== filterMonth) return false;
+      if (filterYear  && d.getFullYear()  !== filterYear)  return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="inv-empty"><i class="fas fa-file-invoice"></i>Aucune facture pour cette période.</div>';
+      return;
+    }
+
+    const rows = filtered.map(inv => {
+      const dl = inv.pdf
+        ? `<a href="${inv.pdf}" target="_blank" class="inv-dl-btn"><i class="fas fa-download"></i> Télécharger</a>`
+        : `<a href="${inv.hosted_url}" target="_blank" class="inv-dl-btn"><i class="fas fa-external-link-alt"></i> Voir</a>`;
+      return `
+        <tr>
+          <td>${fmt(inv.date)}</td>
+          <td class="inv-num">${inv.number || inv.id}</td>
+          <td>${fmtPeriod(inv.period_start, inv.period_end)}</td>
+          <td class="inv-amount">${fmtAmount(inv.amount, inv.currency)}</td>
+          <td><span class="inv-badge-paid"><i class="fas fa-check"></i> Payée</span></td>
+          <td>${dl}</td>
+        </tr>`;
+    }).join('');
+
+    list.innerHTML = `
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>N° Facture</th>
+            <th>Période</th>
+            <th>Montant TTC</th>
+            <th>Statut</th>
+            <th>Facture</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  };
+
+  window.resetInvFilters = function() {
+    const m = document.getElementById('invFilterMonth');
+    const y = document.getElementById('invFilterYear');
+    if (m) m.value = '';
+    if (y) y.value = '';
+    window.renderInvList();
+  };
+
+  async function loadInvoices() {
+    const list = document.getElementById('invList');
+    if (!list) return;
+
+    const token = localStorage.getItem('lcc_token');
+    if (!token) {
+      list.innerHTML = '<div class="inv-empty"><i class="fas fa-lock"></i>Connectez-vous pour voir vos factures.</div>';
+      return;
+    }
+
+    try {
+      const res  = await fetch('/api/billing/invoices', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+
+      _allInvoices = data.invoices || [];
+
+      if (_allInvoices.length === 0) {
+        list.innerHTML = '<div class="inv-empty"><i class="fas fa-file-invoice"></i>Aucune facture pour l'instant.<br><small>Les factures apparaîtront ici après votre premier paiement.</small></div>';
+        return;
+      }
+
+      // Peupler le filtre années
+      const years = [...new Set(_allInvoices.map(i => new Date(i.date * 1000).getFullYear()))].sort((a,b) => b-a);
+      const yearSel = document.getElementById('invFilterYear');
+      if (yearSel) {
+        yearSel.innerHTML = '<option value="">Toutes</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+      }
+
+      window.renderInvList();
+    } catch (err) {
+      console.error('Invoices error:', err);
+      list.innerHTML = '<div class="inv-empty"><i class="fas fa-exclamation-circle"></i>Impossible de charger les factures.<br><small>' + err.message + '</small></div>';
+    }
+  }
+
+  // Déclencher au clic sur l'onglet abonnement
+  document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.settings-tab');
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.tab === 'subscription') {
+          setTimeout(loadInvoices, 150);
+        }
+      });
+    });
+    // Si l'onglet subscription est actif au chargement
+    const hash = window.location.search;
+    if (hash.includes('tab=subscription')) {
+      setTimeout(loadInvoices, 300);
+    }
+  });
+})();
+</script>
 </body>
 </html>
