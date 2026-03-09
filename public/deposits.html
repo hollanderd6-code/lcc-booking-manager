@@ -1858,8 +1858,10 @@ function copyDepositLinkByUid(uid) {
     }
     
     function updateTabCounts() {
-      const activeData = filterActiveReservations(allReservationsWithDeposits);
-      const historyData = filterHistoryReservations(allReservationsWithDeposits);
+      const noAirbnb = (arr) => arr.filter(r => !((r.source || r.sourceRaw || r.channel || '').toLowerCase().includes('airbnb')));
+
+      const activeData = filterActiveReservations(noAirbnb(allReservationsWithDeposits));
+      const historyData = filterHistoryReservations(noAirbnb(allReservationsWithDeposits));
 
       // Compteurs paiements
       const activePayments = allPayments.filter(r => r.payment && filterActiveReservations([r]).length > 0);
