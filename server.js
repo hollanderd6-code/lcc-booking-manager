@@ -11707,7 +11707,8 @@ app.post('/api/deposits',
       status: 'pending',
       stripeSessionId: null,
       checkoutUrl: null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      metadata: clientName ? { clientName } : null
     };
     // Sauvegarder en PostgreSQL
   const saved = await saveDepositToDB(deposit, userId, property ? property.id : null);
@@ -12039,7 +12040,8 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       status: 'pending',
       stripeSessionId: null,
       checkoutUrl: null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      metadata: clientName ? { clientName } : null
     };
     
     // Sauvegarder en PostgreSQL
