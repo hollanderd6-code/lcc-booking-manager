@@ -1804,6 +1804,49 @@ function copyDepositLinkByUid(uid) {
         if (!res.ok) throw new Error('Erreur API');
         const data = await res.json();
         allReservationsWithDeposits = Array.isArray(data) ? data : [];
+
+        // 🆓 Injecter les cautions libres (free_* ou sans réservation associée)
+        try {
+          const freeRes = await fetch(API_BASE + '/deposits', {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
+          });
+          if (freeRes.ok) {
+            const freeData = await freeRes.json();
+            const freeDeposits = (freeData.deposits || []).filter(d =>
+              d.reservation_uid && d.reservation_uid.startsWith('free_')
+            );
+            // Exclure ceux déjà présents via reservations-with-deposits
+            const existingUids = new Set(allReservationsWithDeposits.map(r => r.deposit?.id).filter(Boolean));
+            for (const d of freeDeposits) {
+              if (existingUids.has(d.id)) continue;
+              // Lire le nom client depuis metadata si disponible
+              let clientName = null;
+              try { clientName = d.metadata ? (typeof d.metadata === 'string' ? JSON.parse(d.metadata) : d.metadata).clientName : null; } catch(e) {}
+              // Construire une pseudo-entrée compatible avec renderDepositCards
+              allReservationsWithDeposits.push({
+                reservationUid: d.reservation_uid,
+                propertyId: d.property_id || null,
+                propertyName: d.property_name || null,
+                guestName: clientName || d.client_name || d.guest_name || null,
+                startDate: null,
+                endDate: null,
+                source: 'direct',
+                isFree: true,
+                deposit: {
+                  id: d.id,
+                  amountCents: d.amount_cents,
+                  status: d.status,
+                  checkoutUrl: d.checkout_url,
+                  stripeSessionId: d.stripe_session_id,
+                  createdAt: d.created_at
+                }
+              });
+            }
+          }
+        } catch (freeErr) {
+          console.warn('⚠️ Impossible de charger les cautions libres:', freeErr.message);
+        }
+
         console.log('✅ Réservations chargées:', allReservationsWithDeposits.length);
         renderDepositsTable();
         renderHistoryTable();
@@ -2247,7 +2290,7 @@ function copyDepositLinkByUid(uid) {
         html += `
           <div class="${cardClass}" ${cardClick}>
             <div class="deposit-card-header">
-              <h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3>
+              <h3 class="deposit-card-title">${r.isFree ? (guestName || 'Caution libre') : (r.propertyName || 'Logement')}</h3>
               <div style="display: flex; align-items: center; gap: 8px;">
                 ${expirationBadge}
                 ${expandIcon}
@@ -2255,6 +2298,11 @@ function copyDepositLinkByUid(uid) {
             </div>
             
             <div class="deposit-card-body">
+              ${r.isFree ? `
+              <div class="deposit-info-row" style="margin-bottom: 4px;">
+                <i class="fas fa-user-circle"></i>
+                <span style="font-weight:500;color:var(--text-secondary);font-size:12px;">Caution libre</span>
+              </div>` : `
               <div class="deposit-info-row" style="margin-bottom: 4px;">
                 <i class="fas fa-user"></i>
                 <span style="font-weight: 600; color: var(--text-primary);">${guestName || ''}</span>
@@ -2262,7 +2310,7 @@ function copyDepositLinkByUid(uid) {
               <div class="deposit-info-row">
                 <i class="fas fa-calendar"></i>
                 <span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</span>
-              </div>
+              </div>`}
               
               <div class="deposit-info-grid-simple">
                 <div class="deposit-info-item">
@@ -2746,17 +2794,56 @@ async function loadPayments() {
   try {
     const token = localStorage.getItem('lcc_token');
     const res = await fetch('/api/reservations-with-payments', {
-      headers: {
-        'Authorization': 'Bearer ' + token
-      }
+      headers: { 'Authorization': 'Bearer ' + token }
     });
     
     if (!res.ok) throw new Error('Erreur API');
     
     const data = await res.json();
     allPayments = data;
+
+    // 🆓 Injecter les paiements libres (free_*)
+    try {
+      const freeRes = await fetch('/api/payments', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (freeRes.ok) {
+        const freeData = await freeRes.json();
+        const freePayments = (freeData.payments || []).filter(p =>
+          p.reservation_uid && p.reservation_uid.startsWith('free_')
+        );
+        const existingUids = new Set(allPayments.map(r => r.payment?.id).filter(Boolean));
+        for (const p of freePayments) {
+          if (existingUids.has(p.id)) continue;
+          let clientName = null;
+          try { clientName = p.metadata ? (typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata).clientName : null; } catch(e) {}
+          allPayments.push({
+            reservationUid: p.reservation_uid,
+            propertyId: p.property_id || null,
+            propertyName: p.property_name || null,
+            guestName: clientName || p.client_name || p.guest_name || null,
+            startDate: null,
+            endDate: null,
+            source: 'direct',
+            isFree: true,
+            payment: {
+              id: p.id,
+              amountCents: p.amount_cents,
+              status: p.status,
+              checkoutUrl: p.checkout_url,
+              stripeSessionId: p.stripe_session_id,
+              description: p.description,
+              createdAt: p.created_at
+            }
+          });
+        }
+      }
+    } catch (freeErr) {
+      console.warn('⚠️ Impossible de charger les paiements libres:', freeErr.message);
+    }
     
     renderPaymentsTable();
+    updateTabCounts();
   } catch (error) {
     console.error('Erreur chargement paiements:', error);
     container.innerHTML = '<p class="empty-state">Erreur lors du chargement des paiements.</p>';
@@ -2915,15 +3002,20 @@ function renderPaymentsTable() {
     html += `
       <div class="${cardClass}" ${cardClick}>
         <div class="deposit-card-header">
-          <h3 class="deposit-card-title">${r.propertyName || 'Logement'}</h3>
+          <h3 class="deposit-card-title">${r.isFree ? (guestName || 'Paiement libre') : (r.propertyName || 'Logement')}</h3>
           <div style="display:flex;align-items:center;gap:8px;">${expandIcon}</div>
         </div>
         <div class="deposit-card-body">
+          ${r.isFree ? `
+          <div class="deposit-info-row" style="margin-bottom:4px;">
+            <i class="fas fa-user-circle"></i>
+            <span style="font-weight:500;color:var(--text-secondary);font-size:12px;">Paiement libre</span>
+          </div>` : `
           ${guestName ? `<div class="deposit-info-row" style="margin-bottom:4px;"><i class="fas fa-user"></i><span style="font-weight:600;color:var(--text-primary);">${guestName}</span></div>` : ''}
           <div class="deposit-info-row">
             <i class="fas fa-calendar"></i>
             <span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</span>
-          </div>
+          </div>`}
           <div class="deposit-info-grid-simple">
             <div class="deposit-info-item">
               <div class="deposit-info-label">Montant</div>
