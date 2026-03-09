@@ -7658,10 +7658,19 @@ async function sendWelcomeEmail(email, firstName) {
         </div>
         <hr class="divider">
         <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Nos formules</p>
-        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:24px;">
-          <tr><td style="padding:10px 12px;border-radius:6px;background:#FAFAF8;border:1px solid #E8E3DA;"><strong>Solo</strong> · 1–3 logements</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-left:none;">14,90 €/mois</td></tr>
-          <tr><td style="padding:10px 12px;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:6px;"><strong>Pro</strong> · 4–15 logements <span style="background:#1A7A5E;color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;">Populaire</span></td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1A7A5E;background:#F0F8F5;border:1.5px solid #1A7A5E;border-left:none;">49 €/mois</td></tr>
-          <tr><td style="padding:10px 12px;border-radius:6px;background:#FAFAF8;border:1px solid #E8E3DA;"><strong>Business</strong> · 16–50 logements</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-left:none;">99 €/mois</td></tr>
+        <table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:14px;margin-bottom:24px;">
+          <tr>
+            <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;"><strong>Solo</strong><span style="display:block;font-size:12px;color:#888;margin-top:2px;">1 logement inclus</span></td>
+            <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;">15 €/mois</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 14px;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:8px 0 0 8px;border-right:none;"><strong>Standard</strong> <span style="background:#1A7A5E;color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;">⭐ Recommandé</span><span style="display:block;font-size:12px;color:#888;margin-top:2px;">Jusqu'à 3 logements · +7 €/logement supp.</span></td>
+            <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:0 8px 8px 0;border-left:none;">29 €/mois</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;"><strong>Pro</strong><span style="display:block;font-size:12px;color:#888;margin-top:2px;">Jusqu'à 6 logements · +5 €/logement supp.</span></td>
+            <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;">49 €/mois</td>
+          </tr>
         </table>
         <hr class="divider">
         <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Tout inclus dans chaque plan</p>
@@ -7671,6 +7680,7 @@ async function sendWelcomeEmail(email, firstName) {
         <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong> — Planning, checklists et suivi</span></div>
         <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements</strong> — Liens Stripe en quelques secondes</span></div>
         <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong> — Voyageurs &amp; propriétaires</span></div>
+        <div class="feat-row"><span class="feat-icon">💬</span><span class="feat-text"><strong>Support 7j/7</strong> — Une équipe disponible tous les jours</span></div>
         <div class="info-card" style="margin-top:24px;">
           Une question ? Réponse rapide : <strong><a href="mailto:contact@boostinghost.fr" style="color:#1A7A5E;">contact@boostinghost.fr</a></strong>
         </div>
