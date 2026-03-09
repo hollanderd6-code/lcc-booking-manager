@@ -2130,6 +2130,7 @@ function copyDepositLinkByUid(uid) {
             </button>
             ${d.status === 'pending' ? `
             <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditDepositModal('${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-pen"></i> Modifier</button>
+            <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); renewDepositLink('${d.id}', '${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-rotate-right"></i> Renouveler le lien</button>
             <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelDepositLink('${d.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
             ` : ''}
           `;
@@ -2291,6 +2292,48 @@ function copyDepositLinkByUid(uid) {
     // ============================================
     // CRÉATION CAUTION
     // ============================================
+async function renewDepositLink(depositId, reservationUid) {
+  const r = allReservationsWithDeposits.find(x => x.reservationUid === reservationUid);
+  if (!r || !r.deposit) return;
+  try {
+    showToast('⏳ Renouvellement en cours…');
+    const res = await fetch(API_BASE + '/deposits/' + depositId, {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: r.deposit.amountCents / 100 })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors du renouvellement');
+    showToast('✅ Nouveau lien généré et prêt à être copié.');
+    await loadReservationsWithDeposits();
+  } catch (e) {
+    console.error('Erreur renewDepositLink:', e);
+    showToast('❌ ' + (e.message || 'Impossible de renouveler le lien'), 'error');
+  }
+}
+
+async function renewPaymentLink(paymentId, reservationUid) {
+  const r = allPayments.find(x => x.reservationUid === reservationUid);
+  if (!r || !r.payment) return;
+  try {
+    showToast('⏳ Renouvellement en cours…');
+    const res = await fetch(API_BASE + '/payments/' + paymentId, {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: r.payment.amountCents / 100, description: r.payment.description })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors du renouvellement');
+    const idx = allPayments.findIndex(x => x.reservationUid === reservationUid);
+    if (idx !== -1 && data.payment) allPayments[idx].payment = { ...allPayments[idx].payment, ...data.payment, checkoutUrl: data.checkoutUrl };
+    renderPaymentsTable();
+    showToast('✅ Nouveau lien généré et prêt à être copié.');
+  } catch (e) {
+    console.error('Erreur renewPaymentLink:', e);
+    showToast('❌ ' + (e.message || 'Impossible de renouveler le lien'), 'error');
+  }
+}
+
 async function cancelDepositLink(depositId, reservationUid) {
   const ok = await bhConfirm('Annuler ce lien de caution ?', 'Le lien Stripe sera expiré et le voyageur ne pourra plus l\'utiliser. Vous pourrez en créer un nouveau.', 'Annuler le lien', 'Garder', 'danger');
   if (!ok) return;
@@ -2856,6 +2899,7 @@ function renderPaymentsTable() {
         <i class="fas fa-copy"></i> Copier le lien</button>
         ${p.status === 'pending' ? `
         <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); openEditPaymentModal('${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-pen"></i> Modifier</button>
+        <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); renewPaymentLink('${p.id}', '${r.reservationUid}')" style="margin-top:6px;"><i class="fas fa-rotate-right"></i> Renouveler le lien</button>
         <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelPaymentLink('${p.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
         ` : ''}`;
     } else {
