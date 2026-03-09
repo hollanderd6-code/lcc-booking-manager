@@ -9434,6 +9434,12 @@ if (window.Capacitor) {
       showCleaningToast('✅ Checklist validée', 'success', 5000);
       if (typeof loadCleaningChecklists === 'function') loadCleaningChecklists();
     });
+    s.on('calendar:block_added', function(d) {
+      console.log('📅 Blocage reçu via socket, rafraîchissement calendrier...');
+      if (typeof loadCalendarData === 'function') loadCalendarData();
+      else if (typeof refreshCalendar === 'function') refreshCalendar();
+      else if (typeof renderCalendar === 'function') renderCalendar();
+    });
     s.on('disconnect', function() { socketOK = false; });
     s.on('connect_error', function(e) { console.log('🧹 Socket err:', e.message); });
   }
