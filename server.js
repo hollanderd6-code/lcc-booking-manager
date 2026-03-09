@@ -5206,10 +5206,47 @@ const cancelledForProperty = fetchedEmpty ? [] : oldIcalReservations.filter(r =>
         syncedAt: row.synced_at
       }));
 
-      // ✅ Base = iCal actuel + historique completed
+      // ✅ Charger les blocages manuels depuis la DB (persistants entre déploiements)
+      const blocksResult = await pool.query(
+        `SELECT uid, property_id, start_date, end_date, guest_name, notes, created_at
+         FROM reservations
+         WHERE property_id = $1
+         AND source = 'BLOCK'
+         AND end_date >= NOW()
+         ORDER BY start_date ASC`,
+        [property.id]
+      );
+      const dbBlocks = blocksResult.rows.map(row => ({
+        id: row.uid,
+        uid: row.uid,
+        start: row.start_date,
+        end: row.end_date,
+        startDate: row.start_date,
+        endDate: row.end_date,
+        guestName: row.guest_name,
+        source: 'BLOCK',
+        platform: 'BLOCK',
+        type: 'block',
+        notes: row.notes,
+        propertyId: property.id,
+        createdAt: row.created_at
+      }));
+
+      // Sync MANUAL_RESERVATIONS avec les blocages DB
+      if (dbBlocks.length > 0) {
+        if (!MANUAL_RESERVATIONS[property.id]) MANUAL_RESERVATIONS[property.id] = [];
+        dbBlocks.forEach(b => {
+          if (!MANUAL_RESERVATIONS[property.id].find(r => r.uid === b.uid)) {
+            MANUAL_RESERVATIONS[property.id].push(b);
+          }
+        });
+      }
+
+      // ✅ Base = iCal actuel + historique completed + blocages DB
       reservationsStore.properties[property.id] = [
         ...newIcalReservations,
-        ...completedReservations
+        ...completedReservations,
+        ...dbBlocks
       ];
 
       console.log(`Recherche manuelles pour property.id: ${property.id}`);
@@ -6416,12 +6453,58 @@ app.post('/api/blocks', async (req, res) => {
       createdAt: new Date().toISOString()
     };
     
+    // ✅ Sauvegarder en base de données (persistant entre déploiements)
+    await pool.query(`
+      INSERT INTO reservations (
+        uid, property_id, user_id,
+        start_date, end_date,
+        guest_name, source, platform, reservation_type,
+        status, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT (uid) DO NOTHING
+    `, [
+      block.uid,
+      propertyId,
+      user.id,
+      start,
+      end,
+      block.guestName,
+      'BLOCK',
+      'BLOCK',
+      'block',
+      'confirmed',
+      reason || ''
+    ]);
+
+    // ✅ Ajouter en mémoire pour affichage immédiat (sans attendre la prochaine sync iCal)
     if (!MANUAL_RESERVATIONS[propertyId]) {
       MANUAL_RESERVATIONS[propertyId] = [];
     }
     MANUAL_RESERVATIONS[propertyId].push(block);
-    setImmediate(() => syncAllCalendars());
-    
+
+    // ✅ Ajouter directement dans reservationsStore pour rafraîchissement immédiat
+    if (!reservationsStore.properties[propertyId]) {
+      reservationsStore.properties[propertyId] = [];
+    }
+    const alreadyInStore = reservationsStore.properties[propertyId].find(r => r.uid === block.uid);
+    if (!alreadyInStore) {
+      reservationsStore.properties[propertyId].push({
+        ...block,
+        startDate: start,
+        endDate: end,
+        propertyId,
+        id: block.uid
+      });
+    }
+
+    // ✅ Notifier le front via Socket.io pour rafraîchissement immédiat du calendrier
+    if (io) {
+      io.to('user_' + user.id).emit('calendar:block_added', {
+        block,
+        propertyId
+      });
+    }
+
     res.status(201).json({
       message: 'Blocage créé',
       block
@@ -11691,14 +11774,14 @@ app.put('/api/payments/:paymentId',
     }
 
     const amountCents = Math.round(amount * 100);
-    const platformFee = 0; // TODO: const platformFee = Math.round(amountCents * 0.08);
+    const platformFee = Math.round(amountCents * 0.08);
     const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [{ price_data: { currency: 'eur', product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
-      payment_intent_data: { /* application_fee_amount: platformFee, // TODO: réactiver commission */ metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
+      payment_intent_data: { application_fee_amount: platformFee, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`
@@ -11795,7 +11878,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
     const amountCents = Math.round(amount * 100);
     
     // 💰 Calcul de la commission (8% pour la plateforme)
-    const platformFee = 0; // TODO: const platformFee = Math.round(amountCents * 0.08);
+    const platformFee = Math.round(amountCents * 0.08);
     const ownerReceives = amountCents - platformFee;
     
     // Créer l'objet "payment"
@@ -11839,7 +11922,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       }],
       payment_intent_data: {
         // 💰 Commission de la plateforme (8%)
-        // application_fee_amount: platformFee, // TODO: réactiver commission
+        application_fee_amount: platformFee,
         metadata: {
           payment_id: payment.id,
           reservation_uid: reservationUid,
