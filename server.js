@@ -7558,7 +7558,7 @@ function bhEmailTemplate({ icon, title, subtitle, bodyHtml, footerNote }) {
     <p class="footer-name">BOOSTINGHOST</p>
     ${footerNote ? `<p>${footerNote}</p>` : ''}
     <p>© ${year} Boostinghost · Tous droits réservés</p>
-    <p><a href="mailto:support@boostinghost.com">support@boostinghost.com</a></p>
+    <p><a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
   </div>
 </div>
 </body>
@@ -7672,7 +7672,7 @@ async function sendWelcomeEmail(email, firstName) {
         <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements</strong> — Liens Stripe en quelques secondes</span></div>
         <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong> — Voyageurs &amp; propriétaires</span></div>
         <div class="info-card" style="margin-top:24px;">
-          Une question ? Réponse rapide : <strong><a href="mailto:support@boostinghost.com" style="color:#1A7A5E;">support@boostinghost.com</a></strong>
+          Une question ? Réponse rapide : <strong><a href="mailto:contact@boostinghost.fr" style="color:#1A7A5E;">contact@boostinghost.fr</a></strong>
         </div>
       `
     })
