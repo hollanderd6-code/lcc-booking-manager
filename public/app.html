@@ -979,6 +979,17 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .booking-block.direct  { background: linear-gradient(135deg, #F97316, #EA6A00) !important; }
 .booking-block.abritel { background: linear-gradient(135deg, #0096D6, #0077B3) !important; }
 .booking-block.gites   { background: linear-gradient(135deg, #2E7D32, #1B5E20) !important; }
+html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-blocked {
+  background: repeating-linear-gradient(
+    45deg,
+    #b0b8c1,
+    #b0b8c1 4px,
+    #8f9aA5 4px,
+    #8f9aA5 8px
+  ) !important;
+  color: white !important;
+  opacity: 0.9;
+}
 
 /* Premier jour de la réservation */
 .booking-block.start {
@@ -5567,7 +5578,8 @@ window.LCC_PROPERTIES = properties;
             guest_phone: r2.guest_phone || null,
             guest_display_name: r2.guest_display_name || null,
             guest_initial: r2.guest_initial || null,
-            onboarding_completed: r2.onboarding_completed || false
+            onboarding_completed: r2.onboarding_completed || false,
+            type: r2.type || null
           });
         }
         
@@ -6033,9 +6045,15 @@ function riskColor(level) {
           var cellEl = cells[j];
           var block = document.createElement('div');
           var platform = normalizePlatform(b.platform);
+          var isBlock = b.type === 'block' || b.source === 'BLOCK' || platform === 'block';
 
-          block.className = 'booking-block ' + platform;
-          block.setAttribute('data-booking-id', b.id);
+          if (isBlock) {
+            block.className = 'booking-block booking-blocked';
+            block.setAttribute('data-booking-id', b.id);
+          } else {
+            block.className = 'booking-block ' + platform;
+            block.setAttribute('data-booking-id', b.id);
+          }
 
           if (cells.length === 1) {
             block.classList.add('single');
@@ -6047,6 +6065,15 @@ function riskColor(level) {
 
           // Texte seulement sur le 1er jour
 if (j === 0 || cells.length === 1) {
+    // Blocage manuel : croix rouge simple
+    if (isBlock) {
+      var crossEl = document.createElement('span');
+      crossEl.innerHTML = '&#10005;';
+      crossEl.style.cssText = 'font-size:12px;font-weight:700;color:white;margin-right:4px;';
+      block.appendChild(crossEl);
+      var blockLabel = document.createTextNode('Bloqué');
+      block.appendChild(blockLabel);
+    } else {
     // ✅ DOT risque (vert/orange/rouge/critique)
   var rawLevel = (b.riskLevel || b.riskLabel || '').toString().toLowerCase();
   var level = 'green';
@@ -6102,6 +6129,7 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
 
   var label = document.createTextNode(guestLabel);
   block.appendChild(label);
+  } // end else (not block)
 }
 
           // Fix Safari : mousedown au lieu de click (meme bug que calendar-cell)
