@@ -1068,6 +1068,35 @@ ON invoice_download_tokens(token);
 `);
 
     // ============================================
+    // 🧾 MIGRATION — Factures d'abonnement BH
+    // ============================================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS subscription_invoices (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        invoice_number TEXT NOT NULL UNIQUE,
+        stripe_invoice_id TEXT,
+        plan_type TEXT NOT NULL,
+        amount_ttc NUMERIC(10,2) NOT NULL,
+        amount_ht NUMERIC(10,2) NOT NULL,
+        tva_rate NUMERIC(5,2) NOT NULL DEFAULT 20,
+        tva_amount NUMERIC(10,2) NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'eur',
+        period_start TIMESTAMPTZ NOT NULL,
+        period_end TIMESTAMPTZ NOT NULL,
+        payment_date TIMESTAMPTZ NOT NULL,
+        stripe_payment_intent TEXT,
+        file_path TEXT,
+        status TEXT NOT NULL DEFAULT 'paid',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_subscription_invoices_user_id
+        ON subscription_invoices(user_id);
+      CREATE INDEX IF NOT EXISTS idx_subscription_invoices_number
+        ON subscription_invoices(invoice_number);
+    `);
+
+    // ============================================
     // 🧹 MIGRATIONS MÉNAGE — Templates + colonnes enrichies
     // ============================================
     await pool.query(`
@@ -2449,7 +2478,60 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
           
           console.log(`✅ Abonnement renouvelé: ${subscriptionId}`);
         }
-        
+
+        // ── Génération facture BH pour tout paiement réussi ──
+        if (userId && invoice.amount_paid > 0) {
+          try {
+            const amountTTC = invoice.amount_paid / 100;
+            const tvaRate   = 20;
+            const amountHT  = Math.round((amountTTC / (1 + tvaRate / 100)) * 100) / 100;
+            const tvaAmount = Math.round((amountTTC - amountHT) * 100) / 100;
+
+            const userRow = await pool.query(
+              'SELECT email, first_name, last_name, company FROM users WHERE id = $1',
+              [userId]
+            );
+            const u = userRow.rows[0] || {};
+            const clientName    = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Client';
+            const clientCompany = u.company || '';
+            const clientEmail   = u.email || '';
+
+            const invoiceNumber = await generateBHInvoiceNumber();
+
+            const pdfPath = await generateSubscriptionInvoicePDF({
+              invoiceNumber,
+              planType:            plan || 'solo_monthly',
+              amountTTC, amountHT, tvaAmount, tvaRate,
+              periodStart:         subscription.current_period_start,
+              periodEnd:           subscription.current_period_end,
+              paymentDate:         invoice.created,
+              stripePaymentIntent: invoice.payment_intent,
+              clientName, clientCompany, clientEmail,
+              clientAddress: ''
+            });
+
+            await pool.query(
+              `INSERT INTO subscription_invoices
+               (user_id, invoice_number, stripe_invoice_id, plan_type,
+                amount_ttc, amount_ht, tva_rate, tva_amount, currency,
+                period_start, period_end, payment_date, stripe_payment_intent, file_path, status)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,
+                       to_timestamp($10), to_timestamp($11), to_timestamp($12),
+                       $13,$14,'paid')
+               ON CONFLICT (invoice_number) DO NOTHING`,
+              [
+                userId, invoiceNumber, invoice.id, plan || 'solo_monthly',
+                amountTTC, amountHT, tvaRate, tvaAmount, invoice.currency,
+                subscription.current_period_start, subscription.current_period_end,
+                invoice.created, invoice.payment_intent || null, pdfPath
+              ]
+            );
+            console.log(`🧾 Facture BH créée : ${invoiceNumber} (user ${userId})`);
+          } catch (invErr) {
+            console.error('❌ Erreur génération facture BH:', invErr.message);
+          }
+        }
+
         break;
       }
 
@@ -14821,23 +14903,301 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
 
 
 // ============================================
+// GÉNÉRATION PDF FACTURE ABONNEMENT BH
+// ============================================
+
+/**
+ * Génère un numéro de facture BH unique : BH-YYYY-NNN
+ * Basé sur le compteur annuel en DB
+ */
+async function generateBHInvoiceNumber() {
+  const year = new Date().getFullYear();
+  const result = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM subscription_invoices
+     WHERE EXTRACT(YEAR FROM created_at) = $1`,
+    [year]
+  );
+  const seq = parseInt(result.rows[0].cnt) + 1;
+  return `BH-${year}-${String(seq).padStart(3, '0')}`;
+}
+
+/**
+ * Génère le PDF d'une facture d'abonnement via un script Python inline
+ * Retourne le chemin du fichier généré
+ */
+async function generateSubscriptionInvoicePDF(data) {
+  const {
+    invoiceNumber, planType, amountTTC, amountHT, tvaAmount, tvaRate,
+    periodStart, periodEnd, paymentDate, stripePaymentIntent,
+    clientName, clientCompany, clientEmail, clientAddress
+  } = data;
+
+  const logoPath = path.join(__dirname, 'public', 'AppIcon_1024x1024.png');
+  const outDir   = INVOICE_PDF_DIR;
+  const outFile  = path.join(outDir, `${invoiceNumber}.pdf`);
+
+  const fmtDate = (ts) => {
+    const d = new Date(ts * 1000);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  };
+  const fmtShort = (ts) => new Date(ts * 1000).toLocaleDateString('fr-FR');
+
+  const planDisplay = getPlanDisplayName(planType) || planType;
+
+  const pythonScript = `
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
+import os
+
+W, H = A4
+BH_GREEN  = colors.HexColor('#1A7A5E')
+BH_DARK   = colors.HexColor('#1C2B25')
+BH_BORDER = colors.HexColor('#DDD8CE')
+BH_TEXT   = colors.HexColor('#1C1C1C')
+BH_GREY   = colors.HexColor('#7A8695')
+BH_LIGHT  = colors.HexColor('#F0F8F5')
+WHITE     = colors.white
+
+def draw(path):
+    c = canvas.Canvas(path, pagesize=A4)
+
+    # Header
+    HEADER_H = 52*mm
+    c.setFillColor(BH_GREEN)
+    c.rect(0, H - HEADER_H, W, HEADER_H, fill=1, stroke=0)
+    c.setFillColor(WHITE)
+    c.setFont('Helvetica-Bold', 20)
+    c.drawString(20*mm, H - HEADER_H/2 + 4*mm, 'BOOSTINGHOST')
+    c.setFont('Helvetica', 9)
+    c.setFillColor(colors.HexColor('#ffffffb0'))
+    c.drawString(20*mm, H - HEADER_H/2 - 4*mm, 'boostinghost.fr')
+    c.setFillColor(WHITE)
+    c.setFont('Helvetica-Bold', 26)
+    c.drawRightString(W - 20*mm, H - 18*mm, 'FACTURE')
+    c.setFont('Helvetica', 10)
+    c.setFillColor(colors.HexColor('#ffffffc0'))
+    c.drawRightString(W - 20*mm, H - 27*mm, 'N\\u00b0 ${invoiceNumber}')
+    c.setFont('Helvetica', 9)
+    c.setFillColor(colors.HexColor('#ffffffa0'))
+    c.drawRightString(W - 20*mm, H - 35*mm, "Date d\\'\\u00e9mission : ${fmtDate(paymentDate)}")
+    c.drawRightString(W - 20*mm, H - 43*mm, 'P\\u00e9riode : ${fmtShort(periodStart)} \\u2014 ${fmtShort(periodEnd)}')
+
+    # Emetteur + Client
+    y_block = H - HEADER_H - 12*mm
+    c.setFont('Helvetica-Bold', 8)
+    c.setFillColor(BH_GREY)
+    c.drawString(20*mm, y_block, '\\u00c9MIS PAR')
+    c.setFont('Helvetica-Bold', 11)
+    c.setFillColor(BH_TEXT)
+    c.drawString(20*mm, y_block - 7*mm, 'Boostinghost')
+    c.setFont('Helvetica', 9)
+    c.setFillColor(colors.HexColor('#555555'))
+    emetteur = ['31 Rue Adam Ledoux', '92400 Courbevoie, France', 'RCS Nanterre : 101 480 291', 'contact@boostinghost.fr']
+    for i, line in enumerate(emetteur):
+        c.drawString(20*mm, y_block - (15 + i*6)*mm, line)
+
+    c.setFont('Helvetica-Bold', 8)
+    c.setFillColor(BH_GREY)
+    c.drawRightString(W - 20*mm, y_block, 'FACTUR\\u00c9 \\u00c0')
+    c.setFont('Helvetica-Bold', 11)
+    c.setFillColor(BH_TEXT)
+    c.drawRightString(W - 20*mm, y_block - 7*mm, '${clientName}')
+    c.setFont('Helvetica', 9)
+    c.setFillColor(colors.HexColor('#555555'))
+    client = [x for x in ['${clientCompany}', '${clientAddress}', '${clientEmail}'] if x]
+    for i, line in enumerate(client):
+        c.drawRightString(W - 20*mm, y_block - (15 + i*6)*mm, line)
+
+    sep_y = y_block - 52*mm
+    c.setStrokeColor(BH_BORDER)
+    c.setLineWidth(0.5)
+    c.line(20*mm, sep_y, W - 20*mm, sep_y)
+
+    # Tableau
+    table_top = sep_y - 6*mm
+    ROW_H = 14*mm; HEAD_H = 8*mm
+    cols_x = [20*mm, 110*mm, 128*mm, 152*mm, 168*mm]
+    cols_w = [90*mm,  18*mm,  24*mm,  16*mm,  27*mm]
+    headers = ['Description', 'Qt\\u00e9', 'P.U. HT', 'TVA', 'Total TTC']
+    c.setFillColor(BH_DARK)
+    c.rect(20*mm, table_top - HEAD_H, W - 40*mm, HEAD_H, fill=1, stroke=0)
+    c.setFillColor(WHITE)
+    c.setFont('Helvetica-Bold', 9)
+    for h, x, w in zip(headers, cols_x, cols_w):
+        if h == 'Description': c.drawString(x + 3*mm, table_top - 5.5*mm, h)
+        else: c.drawCentredString(x + w/2, table_top - 5.5*mm, h)
+    row_y = table_top - HEAD_H
+    c.setFillColor(BH_LIGHT)
+    c.rect(20*mm, row_y - ROW_H, W - 40*mm, ROW_H, fill=1, stroke=0)
+    c.setFillColor(BH_TEXT)
+    c.setFont('Helvetica-Bold', 10)
+    c.drawString(23*mm, row_y - 5*mm, 'Abonnement Boostinghost \\u2014 Plan ${planDisplay}')
+    c.setFont('Helvetica', 8)
+    c.setFillColor(BH_GREY)
+    c.drawString(23*mm, row_y - 10*mm, 'Acc\\u00e8s plateforme SaaS \\u00b7 ${fmtShort(periodStart)} \\u2014 ${fmtShort(periodEnd)}')
+    c.setFillColor(BH_TEXT)
+    c.setFont('Helvetica', 10)
+    vals = ['1', '${amountHT.toFixed(2).replace('.', ',')} \\u20ac', '${tvaRate} %', '${amountTTC.toFixed(2).replace('.', ',')} \\u20ac']
+    for val, x, w in zip(vals, cols_x[1:], cols_w[1:]):
+        c.drawCentredString(x + w/2, row_y - 7.5*mm, val)
+    c.setStrokeColor(BH_BORDER)
+    c.setLineWidth(0.5)
+    c.rect(20*mm, row_y - ROW_H, W - 40*mm, HEAD_H + ROW_H, fill=0, stroke=1)
+
+    # Totaux
+    tot_y = row_y - ROW_H - 8*mm
+    for label, val, dy in [('Sous-total HT', '${amountHT.toFixed(2).replace('.', ',')} \\u20ac', 0), ('TVA ${tvaRate} %', '${tvaAmount.toFixed(2).replace('.', ',')} \\u20ac', -7*mm)]:
+        c.setFont('Helvetica', 9)
+        c.setFillColor(BH_GREY)
+        c.drawRightString(W - 55*mm, tot_y + dy, label)
+        c.setFillColor(BH_TEXT)
+        c.drawRightString(W - 20*mm, tot_y + dy, val)
+    sep2_y = tot_y - 13*mm
+    c.setStrokeColor(BH_BORDER)
+    c.setLineWidth(0.5)
+    c.line(W - 80*mm, sep2_y, W - 20*mm, sep2_y)
+    ttc_y = sep2_y - 14*mm
+    c.setFillColor(BH_GREEN)
+    c.roundRect(W - 78*mm, ttc_y - 3*mm, 58*mm, 12*mm, 3*mm, fill=1, stroke=0)
+    c.setFillColor(WHITE)
+    c.setFont('Helvetica-Bold', 9)
+    c.drawString(W - 75*mm, ttc_y + 2.5*mm, 'TOTAL TTC')
+    c.setFont('Helvetica-Bold', 13)
+    c.drawRightString(W - 22*mm, ttc_y + 1.5*mm, '${amountTTC.toFixed(2).replace('.', ',')} \\u20ac')
+
+    # Badge PAYEE
+    badge_y = ttc_y - 12*mm
+    c.setFillColor(colors.HexColor('#d1fae5'))
+    c.roundRect(20*mm, badge_y - 2*mm, 34*mm, 9*mm, 3*mm, fill=1, stroke=0)
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(colors.HexColor('#065f46'))
+    c.drawString(23*mm, badge_y + 1.5*mm, '\\u2713  PAY\\u00c9E')
+
+    # Infos paiement
+    pay_y = badge_y - 16*mm
+    c.setStrokeColor(BH_BORDER)
+    c.setLineWidth(0.5)
+    c.line(20*mm, pay_y + 6*mm, W - 20*mm, pay_y + 6*mm)
+    c.setFont('Helvetica-Bold', 8)
+    c.setFillColor(BH_GREY)
+    c.drawString(20*mm, pay_y, 'INFORMATIONS DE PAIEMENT')
+    infos = [
+        ('Mode de paiement', 'Carte bancaire via Stripe'),
+        ('Date de paiement', '${fmtDate(paymentDate)}'),
+        ('R\\u00e9f\\u00e9rence transaction', '${stripePaymentIntent || 'N/A'}'),
+    ]
+    for i, (k, v) in enumerate(infos):
+        iy = pay_y - 7*mm - i*6*mm
+        c.setFont('Helvetica', 8)
+        c.setFillColor(BH_GREY)
+        c.drawString(20*mm, iy, k + ' :')
+        c.setFillColor(BH_TEXT)
+        c.drawString(72*mm, iy, v)
+
+    # Footer
+    FOOTER_H = 30*mm
+    c.setFillColor(BH_DARK)
+    c.rect(0, 0, W, FOOTER_H, fill=1, stroke=0)
+    logo_path = '${logoPath.replace(/\\/g, '/')}'
+    FL = 11*mm
+    fx = W/2 - FL/2
+    fy = FOOTER_H - FL - 2*mm
+    if os.path.exists(logo_path):
+        c.drawImage(logo_path, fx, fy, width=FL, height=FL, mask='auto')
+    c.setFillColor(WHITE)
+    c.setFont('Helvetica-Bold', 8)
+    c.drawCentredString(W/2, fy - 5*mm, 'BOOSTINGHOST')
+    c.setFont('Helvetica', 7.5)
+    c.drawCentredString(W/2, fy - 10*mm, '31 Rue Adam Ledoux \\u2014 92400 Courbevoie \\u2014 RCS Nanterre 101 480 291')
+    c.drawCentredString(W/2, fy - 15*mm, 'contact@boostinghost.fr \\u2014 boostinghost.fr')
+    c.setFont('Helvetica', 7)
+    c.setFillColor(colors.HexColor('#ffffff60'))
+    c.drawCentredString(W/2, 2.5*mm, 'Document g\\u00e9n\\u00e9r\\u00e9 automatiquement \\u2014 \\u00a9 ${new Date().getFullYear()} Boostinghost')
+
+    c.save()
+
+draw('${outFile.replace(/\\/g, '/')}')
+print('OK')
+`;
+
+  await new Promise((resolve, reject) => {
+    const { exec } = require('child_process');
+    const tmp = path.join('/tmp', `bh_inv_${invoiceNumber}.py`);
+    fs.writeFileSync(tmp, pythonScript, 'utf8');
+    exec(`python3 "${tmp}"`, (err, stdout, stderr) => {
+      fs.unlink(tmp, () => {});
+      if (err) { console.error('❌ PDF gen error:', stderr); return reject(err); }
+      console.log(`✅ Facture PDF générée : ${invoiceNumber}`);
+      resolve();
+    });
+  });
+
+  return outFile;
+}
+
+// ============================================
 // GET /api/billing/invoices
-// Récupérer les factures abonnement depuis Stripe
+// Retourne les factures BH (DB) + fallback Stripe si aucune
 // ============================================
 app.get("/api/billing/invoices", authenticateAny, async (req, res) => {
   try {
     const user = req.user;
-    if (!stripe) return res.status(500).json({ error: "Stripe non configuré" });
-    const result = await pool.query(
-      "SELECT stripe_customer_id, plan_type FROM subscriptions WHERE user_id = $1",
+
+    // 1. Chercher nos factures BH en DB
+    const bhResult = await pool.query(
+      `SELECT invoice_number, plan_type, amount_ttc, amount_ht, tva_amount, tva_rate,
+              currency, period_start, period_end, payment_date, stripe_payment_intent,
+              file_path, status, created_at
+       FROM subscription_invoices
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 48`,
       [user.id]
     );
-    if (result.rows.length === 0 || !result.rows[0].stripe_customer_id) {
-      return res.json({ invoices: [], planType: null });
+
+    // 2. Plan courant
+    const subResult = await pool.query(
+      "SELECT plan_type FROM subscriptions WHERE user_id = $1",
+      [user.id]
+    );
+    const planType = subResult.rows[0]?.plan_type || null;
+
+    if (bhResult.rows.length > 0) {
+      const invoices = bhResult.rows.map(row => ({
+        id:           row.invoice_number,
+        number:       row.invoice_number,
+        amount:       parseFloat(row.amount_ttc),
+        amount_ht:    parseFloat(row.amount_ht),
+        tva:          parseFloat(row.tva_amount),
+        currency:     row.currency,
+        date:         Math.floor(new Date(row.created_at).getTime() / 1000),
+        period_start: Math.floor(new Date(row.period_start).getTime() / 1000),
+        period_end:   Math.floor(new Date(row.period_end).getTime() / 1000),
+        plan_type:    row.plan_type,
+        status:       row.status,
+        has_pdf:      !!row.file_path,
+        source:       'bh'
+      }));
+      return res.json({ invoices, planType });
     }
-    const customerId = result.rows[0].stripe_customer_id;
-    const planType   = result.rows[0].plan_type;
-    const stripeInvoices = await stripe.invoices.list({ customer: customerId, limit: 24, status: "paid" });
+
+    // 3. Fallback Stripe si pas encore de factures BH
+    if (!stripe) return res.json({ invoices: [], planType });
+    const subData = await pool.query(
+      "SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1",
+      [user.id]
+    );
+    if (!subData.rows[0]?.stripe_customer_id) return res.json({ invoices: [], planType });
+
+    const stripeInvoices = await stripe.invoices.list({
+      customer: subData.rows[0].stripe_customer_id,
+      limit: 24,
+      status: "paid"
+    });
     const invoices = stripeInvoices.data.map(inv => ({
       id:           inv.id,
       number:       inv.number,
@@ -14848,11 +15208,42 @@ app.get("/api/billing/invoices", authenticateAny, async (req, res) => {
       period_end:   inv.period_end,
       pdf:          inv.invoice_pdf,
       hosted_url:   inv.hosted_invoice_url,
-      status:       inv.status
+      status:       inv.status,
+      source:       'stripe'
     }));
     res.json({ invoices, planType });
+
   } catch (err) {
     console.error("❌ /api/billing/invoices:", err.message);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// ============================================
+// GET /api/billing/invoices/:number/download
+// Télécharger le PDF d'une facture BH
+// ============================================
+app.get("/api/billing/invoices/:number/download", authenticateAny, async (req, res) => {
+  try {
+    const { number } = req.params;
+    const user = req.user;
+    const result = await pool.query(
+      `SELECT file_path FROM subscription_invoices
+       WHERE invoice_number = $1 AND user_id = $2`,
+      [number, user.id]
+    );
+    if (!result.rows[0]?.file_path) {
+      return res.status(404).json({ error: 'Facture introuvable' });
+    }
+    const filePath = result.rows[0].file_path;
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Fichier PDF introuvable' });
+    }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${number}.pdf"`);
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    console.error("❌ download invoice:", err.message);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
