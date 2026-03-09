@@ -1913,6 +1913,12 @@ function copyDepositLinkByUid(uid) {
       // ✅ Filtrer uniquement les réservations ACTIVES (date de fin >= aujourd'hui)
       filtered = filterActiveReservations(filtered);
 
+      // 🚫 Exclure les réservations Airbnb (caution gérée par Airbnb)
+      filtered = filtered.filter(r => {
+        const src = (r.source || r.sourceRaw || r.channel || '').toLowerCase();
+        return !src.includes('airbnb');
+      });
+
       // Regrouper par séjour
       const byReservation = new Map();
 
@@ -1974,6 +1980,12 @@ function copyDepositLinkByUid(uid) {
       
       // ✅ Filtrer uniquement les réservations PASSÉES (< 1 mois)
       filtered = filterHistoryReservations(filtered);
+
+      // 🚫 Exclure les réservations Airbnb
+      filtered = filtered.filter(r => {
+        const src = (r.source || r.sourceRaw || r.channel || '').toLowerCase();
+        return !src.includes('airbnb');
+      });
 
       // Regrouper par séjour
       const byReservation = new Map();
@@ -2095,10 +2107,6 @@ function copyDepositLinkByUid(uid) {
           }
         }
 
-        const rawSource = r.source || r.sourceRaw || r.channel || '';
-        const sourceKey = normalizeSourceToKey(rawSource);
-        const isAirbnb = sourceKey === 'airbnb';
-          
         // Actions principales
         let actionsHtml = '';
         
@@ -2113,8 +2121,6 @@ function copyDepositLinkByUid(uid) {
           } else {
             actionsHtml = '<div class="card-hint">Pas de caution créée</div>';
           }
-        } else if (isAirbnb) {
-          actionsHtml = '<div class="card-hint">Caution gérée par Airbnb</div>';
         } else if (d && d.checkoutUrl) {
           actionsHtml = `
             <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
