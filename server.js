@@ -16076,6 +16076,10 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
 
     // ✅ Répondre avec succès (même si pas dans les caches)
     if (deleted) {
+      // Notifier le front via Socket.io pour rafraîchissement immédiat
+      if (io) {
+        io.to('user_' + user.id).emit('calendar:block_removed', { uid, propertyId });
+      }
       // Forcer la resynchronisation
       setImmediate(() => syncAllCalendars());
       
