@@ -1018,8 +1018,7 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
   padding: 9px 14px;
   flex: 1;
   min-width: 0;
-  max-width: 480px;
-  box-sizing: border-box;
+  max-width: 560px;
 }
 .wallet-widget.loading { opacity: .5; }
 .wallet-item {
@@ -1065,19 +1064,18 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
   margin-right: 2px;
 }
 .wallet-divider { width: 1px; height: 28px; background: rgba(200,184,154,.5); flex-shrink: 0; }
+
+/* Mobile: wallet below header */
 @media (max-width: 640px) {
-  #walletWrapper { flex-wrap: wrap; overflow: hidden; }
-  .card { overflow: hidden; }
   .wallet-widget {
     max-width: 100%;
     width: 100%;
-    margin-top: 4px;
-    order: 10;
-    padding: 8px 10px;
+    margin-top: 8px;
+    padding: 8px 12px;
   }
   .wallet-amount { font-size: 13px; }
   .wallet-label { font-size: 9px; }
-  .wallet-icon { width: 24px; height: 24px; font-size: 10px; margin-right: 4px; }
+  .wallet-icon { width: 26px; height: 26px; font-size: 11px; }
   .wallet-item + .wallet-item { padding-left: 8px; margin-left: 2px; }
 }
 </style>
@@ -1384,6 +1382,21 @@ Connecter mon compte Stripe
 <i class="fas fa-euro-sign"></i>
 <span>Paiements de locations</span>
 </div>
+<div style="display: flex; align-items: center; gap: 8px;">
+<div id="stripeStatusBadge" class="stripe-status-pill not-connected" style="display:none;">
+<i class="fas fa-circle" style="font-size: 8px;"></i>
+<span>Stripe non connecté</span>
+</div>
+<button class="btn btn-primary btn-xs" onclick="openFreePaymentModal()">
+<i class="fas fa-plus"></i> Paiement libre
+</button>
+<button class="btn btn-ghost btn-xs" id="refreshPaymentsBtn">
+<i class="fas fa-sync-alt"></i>
+Actualiser
+</button>
+</div>
+</div>
+
 <div id="walletWidget" class="wallet-widget loading" style="display:none;">
   <div class="wallet-icon"><i class="fas fa-wallet"></i></div>
   <div class="wallet-item">
@@ -1400,20 +1413,6 @@ Connecter mon compte Stripe
     <span class="wallet-amount" id="walletPayout" style="color:#1d4ed8;">—</span>
     <span class="wallet-label">Dernier virement</span>
   </div>
-</div>
-<div style="display: flex; align-items: center; gap: 8px;">
-<div id="stripeStatusBadge" class="stripe-status-pill not-connected" style="display:none;">
-<i class="fas fa-circle" style="font-size: 8px;"></i>
-<span>Stripe non connecté</span>
-</div>
-<button class="btn btn-primary btn-xs" onclick="openFreePaymentModal()">
-<i class="fas fa-plus"></i> Paiement libre
-</button>
-<button class="btn btn-ghost btn-xs" id="refreshPaymentsBtn">
-<i class="fas fa-sync-alt"></i>
-Actualiser
-</button>
-</div>
 </div>
 
 <div class="form-row" style="margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
