@@ -209,8 +209,8 @@ async function translateDynamic(lang) {
   }
 }
 
-// ── Init — tout via addEventListener, aucun onclick inline ─────────────
-document.addEventListener('DOMContentLoaded', function() {
+// ── Init : fonctionne que DOMContentLoaded soit passé ou non ───────────
+function wbInit() {
   const btn = document.getElementById('langBtn');
   const menuEl = document.getElementById('langMenu');
 
@@ -233,6 +233,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (menuEl) menuEl.classList.remove('open');
   });
 
+  // Appliquer la langue sauvegardée
   const saved = localStorage.getItem('wb_lang') || 'fr';
   if (saved !== 'fr') setLang(saved);
-});
+}
+
+// Lance wbInit immédiatement si DOM prêt, sinon attend DOMContentLoaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', wbInit);
+} else {
+  wbInit();
+}
