@@ -685,46 +685,36 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
    TRANSLATION BUTTON
    ============================================ */
 
-.tx-bar {
-  margin-top: 4px;
-  display: flex;
-}
+.tx-bar { margin-top: 5px; display: flex; }
+.message.owner .tx-bar { justify-content: flex-start; }
+.message.guest .tx-bar { justify-content: flex-end; }
 
-.tx-btn {
-  background: none;
+.tx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 7px;
+  background: rgba(255,255,255,0.6);
   border: none;
+  border-radius: 20px;
   cursor: pointer;
   font-size: 11px;
   font-family: inherit;
-  color: var(--text-light);
-  padding: 2px 6px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-  opacity: 0.7;
-  line-height: 1.4;
+  color: #6b7280;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: background 0.15s, color 0.15s;
+  outline: none;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
-
-.tx-btn:hover {
-  background: var(--border);
-  opacity: 1;
-  color: var(--primary);
-}
-
-.tx-btn:disabled {
-  cursor: wait;
-  opacity: 0.5;
-}
-
-/* Côté proprio — aligner à droite pour les messages guest (qui sont à gauche) */
-.message.guest .tx-bar,
-.chat-message.guest .tx-bar {
-  justify-content: flex-start;
-}
-
-/* Côté voyageur — les messages owner sont à gauche */
-.message.owner .tx-bar {
-  justify-content: flex-start;
-}
+.tx-chip:hover { background: rgba(124,58,237,0.08); color: var(--primary); }
+.tx-chip:focus { outline: none; box-shadow: none; }
+.tx-chip.translated { background: rgba(124,58,237,0.08); color: var(--primary); }
+.tx-chip:disabled { opacity: 0.4; cursor: wait; }
+.tx-chip .tx-flags { font-size: 12px; line-height: 1; }
+.tx-chip .tx-label { font-size: 10.5px; }
 
 @media (max-width: 390px) {
   .pin-digit {
