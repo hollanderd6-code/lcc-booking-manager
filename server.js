@@ -16153,7 +16153,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     // 3. Génération du HTML Premium
     const fullAddress = [d.address, d.postalCode, d.city].filter(Boolean).join(' ');
     const mapsQuery = encodeURIComponent(fullAddress || d.propertyName || '');
-    const coverPhoto = (d.photos && d.photos.cover) ? d.photos.cover : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop';
 
     const html = `
 <!DOCTYPE html>
