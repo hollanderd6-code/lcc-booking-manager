@@ -1,6 +1,6 @@
 // ============================================================
 // wb-translate.js — Welcome Book Translation Engine
-// Serve this file from /public/js/wb-translate.js
+// Place in: public/js/wb-translate.js
 // ============================================================
 
 const LANGS = {
@@ -106,23 +106,23 @@ const UI = {
 };
 
 const SEL = [
-  ['.sect-lbl-welcome', 'welcome'],    ['.sect-title-welcome', 'welcomeTitle'],
-  ['.sect-lbl-access',  'accessLbl'],  ['.sect-title-access',  'accessTitle'],
-  ['.sect-lbl-rooms',   'roomsLbl'],   ['.sect-title-rooms',   'roomsTitle'],
-  ['.sect-lbl-info',    'infoLbl'],    ['.sect-title-info',    'infoTitle'],
-  ['.sect-lbl-around',  'aroundLbl'],  ['.sect-title-around',  'aroundTitle'],
-  ['.sect-lbl-checkout','checkoutLbl'],['.sect-title-checkout', 'checkoutTitle'],
-  ['.wifi-name-lbl',    'wifi'],       ['.wifi-pw-lbl',         'wifiPw'],
-  ['.key-lbl-arrival',  'arrival'],    ['.key-val-arrival',     'checkinTime'],
+  ['.sect-lbl-welcome', 'welcome'],     ['.sect-title-welcome', 'welcomeTitle'],
+  ['.sect-lbl-access',  'accessLbl'],   ['.sect-title-access',  'accessTitle'],
+  ['.sect-lbl-rooms',   'roomsLbl'],    ['.sect-title-rooms',   'roomsTitle'],
+  ['.sect-lbl-info',    'infoLbl'],     ['.sect-title-info',    'infoTitle'],
+  ['.sect-lbl-around',  'aroundLbl'],   ['.sect-title-around',  'aroundTitle'],
+  ['.sect-lbl-checkout','checkoutLbl'], ['.sect-title-checkout','checkoutTitle'],
+  ['.wifi-name-lbl',    'wifi'],        ['.wifi-pw-lbl',        'wifiPw'],
+  ['.key-lbl-arrival',  'arrival'],     ['.key-val-arrival',    'checkinTime'],
   ['.key-lbl-departure','departure'],
-  ['.key-lbl-keybox',   'keybox'],     ['.key-lbl-host',        'host'],
+  ['.key-lbl-keybox',   'keybox'],      ['.key-lbl-host',       'host'],
   ['.limit-time-lbl',   'limitTime'],
-  ['.subcat-restos',    'restos'],     ['.subcat-shops',        'shops'],
-  ['.subcat-visit',     'visit'],      ['.foot-thanks',         'thanks'],
-  ['.nav-welcome',      'welcome'],    ['.nav-access',          'accessNav'],
-  ['.nav-rooms',        'roomsNav'],   ['.nav-info',            'infoNav'],
-  ['.nav-around',       'aroundNav'],  ['.nav-checkout',        'checkoutNav'],
-  ['.access-title-ins', 'accessIns'],  ['.access-title-parking','parking'],
+  ['.subcat-restos',    'restos'],      ['.subcat-shops',       'shops'],
+  ['.subcat-visit',     'visit'],       ['.foot-thanks',        'thanks'],
+  ['.nav-welcome',      'welcome'],     ['.nav-access',         'accessNav'],
+  ['.nav-rooms',        'roomsNav'],    ['.nav-info',           'infoNav'],
+  ['.nav-around',       'aroundNav'],   ['.nav-checkout',       'checkoutNav'],
+  ['.access-title-ins', 'accessIns'],   ['.access-title-parking','parking'],
   ['.access-title-transport', 'transport']
 ];
 
@@ -164,6 +164,20 @@ function setLang(lang) {
   translateDynamic(lang);
 }
 
+// MyMemory API — gratuit, sans clé, 5000 mots/jour
+async function translateText(text, targetLang) {
+  const langMap = { en: 'en-GB', de: 'de-DE', it: 'it-IT', nl: 'nl-NL', zh: 'zh-CN' };
+  const target = langMap[targetLang] || 'en-GB';
+  const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=fr|' + target;
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  const d = await r.json();
+  if (d.responseStatus === 200 && d.responseData && d.responseData.translatedText) {
+    return d.responseData.translatedText;
+  }
+  return null;
+}
+
 async function translateDynamic(lang) {
   const els = document.querySelectorAll('[data-translatable]');
   if (!lang || lang === 'fr') {
@@ -172,48 +186,53 @@ async function translateDynamic(lang) {
     });
     return;
   }
-  const targets = { en: 'en', de: 'de', it: 'it', nl: 'nl', zh: 'zh' };
-  const target = targets[lang] || 'en';
   els.forEach(function(el) {
     if (!el.dataset.orig) el.dataset.orig = el.innerHTML;
   });
-  for (const el of els) {
+  for (let i = 0; i < els.length; i++) {
+    const el = els[i];
     const orig = el.dataset.orig || '';
     if (!orig.trim()) continue;
-    const ckey = target + '|' + orig.slice(0, 60);
+    const ckey = lang + '|' + orig.slice(0, 60);
     if (txCache[ckey]) { el.innerHTML = txCache[ckey]; continue; }
     el.classList.add('translating');
     try {
-      const r = await fetch('https://libretranslate.com/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: orig.replace(/<br>/g, '\n'), source: 'fr', target: target, format: 'text', api_key: '' })
-      });
-      if (r.ok) {
-        const d = await r.json();
-        if (d.translatedText) {
-          const tx = d.translatedText.replace(/\n/g, '<br>');
-          txCache[ckey] = tx;
-          el.innerHTML = tx;
-        }
+      const plain = orig.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+      const translated = await translateText(plain, lang);
+      if (translated) {
+        const tx = translated.replace(/\n/g, '<br>');
+        txCache[ckey] = tx;
+        el.innerHTML = tx;
       }
-    } catch (e) { /* silent fail */ }
+    } catch (e) { /* silent */ }
     el.classList.remove('translating');
   }
 }
 
-function toggleLangMenu(e) {
-  e.stopPropagation();
-  const m = document.getElementById('langMenu');
-  if (m) m.classList.toggle('open');
-}
-
-document.addEventListener('click', function() {
-  const m = document.getElementById('langMenu');
-  if (m) m.classList.remove('open');
-});
-
+// ── Init — tout via addEventListener, aucun onclick inline ─────────────
 document.addEventListener('DOMContentLoaded', function() {
+  const btn = document.getElementById('langBtn');
+  const menuEl = document.getElementById('langMenu');
+
+  if (btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (menuEl) menuEl.classList.toggle('open');
+    });
+  }
+
+  document.querySelectorAll('.lang-option').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const lang = el.dataset.lang;
+      if (lang) setLang(lang);
+    });
+  });
+
+  document.addEventListener('click', function() {
+    if (menuEl) menuEl.classList.remove('open');
+  });
+
   const saved = localStorage.getItem('wb_lang') || 'fr';
   if (saved !== 'fr') setLang(saved);
 });
