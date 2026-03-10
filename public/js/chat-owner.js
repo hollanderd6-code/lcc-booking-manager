@@ -585,8 +585,8 @@ function appendMessage(message) {
     txBar.className = 'tx-bar';
     
     const txBtn = document.createElement('button');
-    txBtn.className = 'tx-btn';
-    txBtn.innerHTML = '<i class="fas fa-language"></i> Traduire';
+    txBtn.className = 'tx-chip';
+    txBtn.innerHTML = '<span class="tx-flags">🇫🇷→🇬🇧</span><span class="tx-label">Traduire</span>';
     txBtn.setAttribute('data-original', message.message);
     txBtn.setAttribute('data-translated', '');
     txBtn.setAttribute('data-state', 'original'); // original | loading | translated
@@ -607,14 +607,14 @@ function appendMessage(message) {
       const cached = txBtn.getAttribute('data-translated');
       if (cached) {
         bubble.textContent = cached;
-        txBtn.innerHTML = '↩ Original';
+        txBtn.innerHTML = '<span class="tx-flags">🇬🇧→🇫🇷</span><span class="tx-label">Original</span>';
         txBtn.setAttribute('data-state', 'translated');
         txBtn.classList.add('translated');
         return;
       }
       
       // Traduire via MyMemory
-      txBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+      txBtn.innerHTML = '<span class="tx-flags">⏳</span><span class="tx-label">...</span>';
       txBtn.setAttribute('data-state', 'loading');
       txBtn.disabled = true;
       
@@ -623,11 +623,11 @@ function appendMessage(message) {
         const translated = await chatTranslate(original, ownerLang);
         txBtn.setAttribute('data-translated', translated);
         bubble.textContent = translated;
-        txBtn.innerHTML = '↩ Original';
+        txBtn.innerHTML = '<span class="tx-flags">🇬🇧→🇫🇷</span><span class="tx-label">Original</span>';
         txBtn.setAttribute('data-state', 'translated');
         txBtn.classList.add('translated');
       } catch(e) {
-        txBtn.innerHTML = '<i class="fas fa-language"></i> Traduire';
+        txBtn.innerHTML = '<span class="tx-flags">🇫🇷→🇬🇧</span><span class="tx-label">Traduire</span>';
         txBtn.setAttribute('data-state', 'original');
       }
       txBtn.disabled = false;
