@@ -1210,23 +1210,35 @@ const bookingMessageModalStyles = `
 
 /* ── Bouton de traduction ─────────────────────────────── */
 .tx-bar {
-  margin-top: 3px;
+  margin-top: 4px;
   display: flex;
 }
 .tx-btn {
   background: none;
   border: none;
+  outline: none;
   cursor: pointer;
   font-size: 11px;
   font-family: inherit;
-  color: #94a3b8;
-  padding: 2px 7px;
-  border-radius: 6px;
+  color: #a0a9b8;
+  padding: 3px 8px 3px 6px;
+  border-radius: 20px;
   transition: all 0.15s;
   line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.01em;
 }
-.tx-btn:hover { background: #f1f5f9; color: #7c3aed; }
-.tx-btn:disabled { cursor: wait; opacity: 0.5; }
+.tx-btn:hover {
+  background: rgba(26, 122, 94, 0.08);
+  color: #1A7A5E;
+}
+.tx-btn.translated {
+  color: #1A7A5E;
+  background: rgba(26, 122, 94, 0.07);
+}
+.tx-btn:disabled { cursor: wait; opacity: 0.4; }
 .chat-message.guest .tx-bar { justify-content: flex-start; }
 .chat-message.owner .tx-bar { justify-content: flex-end; }
 </style>
