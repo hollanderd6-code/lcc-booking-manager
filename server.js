@@ -16684,9 +16684,9 @@ function applyUI(lang) {
     document.querySelectorAll(sel).forEach(function(el) { el.innerHTML = t[key]; });
   });
   const rulesEl = document.querySelector(".info-title-rules");
-  if (rulesEl && t.rules) rulesEl.innerHTML = "<i class=\"fas fa-exclamation-circle\"></i> " + t.rules;
+  if (rulesEl && t.rules) rulesEl.innerHTML = "<i class='fas fa-exclamation-circle'></i> " + t.rules;
   const equipEl = document.querySelector(".info-title-equip");
-  if (equipEl && t.equip) equipEl.innerHTML = "<i class=\"fas fa-toolbox\"></i> " + t.equip;
+  if (equipEl && t.equip) equipEl.innerHTML = "<i class='fas fa-toolbox'></i> " + t.equip;
 }
 
 function setLang(lang) {
