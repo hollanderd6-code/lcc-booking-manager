@@ -830,6 +830,22 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
             <input accept="image/*" id="parkingPhotos" multiple style="display:none;" type="file"/>
             <div class="image-preview" id="parkingPhotosPreview"></div>
           </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-pen"></i> Notes libres</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Informations complémentaires <span style="color:#9CA3AF;font-weight:400;">(optionnel)</span></label>
+              <textarea class="wiz-textarea" name="extraNotesAccess" placeholder="Ajoutez toute information utile..."></textarea>
+            </div>
+            <div class="wiz-group" style="margin-bottom:0">
+              <label class="wiz-label">Photos complémentaires</label>
+              <div class="wiz-upload" onclick="document.getElementById('extraPhotosAccess').click()" style="padding:10px 16px;">
+                <i class="fas fa-camera"></i><p>Ajouter des photos</p>
+              </div>
+              <input type="file" id="extraPhotosAccess" name="extraPhotosAccess" accept="image/*" multiple style="display:none;">
+              <div class="image-preview" id="extraPhotosAccessPreview"></div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="wiz-nav">
@@ -852,6 +868,22 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
           <div class="wiz-warn-box"><i class="fas fa-lightbulb"></i> Ajoutez autant de pièces que nécessaire</div>
           <div id="roomsContainer"></div>
           <button class="wiz-add-btn" onclick="addRoom()" type="button"><i class="fas fa-plus"></i> Ajouter une pièce / un espace</button>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-pen"></i> Notes libres</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Informations complémentaires <span style="color:#9CA3AF;font-weight:400;">(optionnel)</span></label>
+              <textarea class="wiz-textarea" name="extraNotesLogement" placeholder="Ajoutez toute information utile..."></textarea>
+            </div>
+            <div class="wiz-group" style="margin-bottom:0">
+              <label class="wiz-label">Photos complémentaires</label>
+              <div class="wiz-upload" onclick="document.getElementById('extraPhotosLogement').click()" style="padding:10px 16px;">
+                <i class="fas fa-camera"></i><p>Ajouter des photos</p>
+              </div>
+              <input type="file" id="extraPhotosLogement" name="extraPhotosLogement" accept="image/*" multiple style="display:none;">
+              <div class="image-preview" id="extraPhotosLogementPreview"></div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="wiz-nav">
@@ -920,6 +952,22 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
               <textarea class="wiz-textarea" name="transportInfo" placeholder="Ex: Bus ligne 15 à 1 minute à pied..."></textarea>
             </div>
           </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-pen"></i> Notes libres</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Informations complémentaires <span style="color:#9CA3AF;font-weight:400;">(optionnel)</span></label>
+              <textarea class="wiz-textarea" name="extraNotesPractical" placeholder="Ajoutez toute information utile..."></textarea>
+            </div>
+            <div class="wiz-group" style="margin-bottom:0">
+              <label class="wiz-label">Photos complémentaires</label>
+              <div class="wiz-upload" onclick="document.getElementById('extraPhotosPractical').click()" style="padding:10px 16px;">
+                <i class="fas fa-camera"></i><p>Ajouter des photos</p>
+              </div>
+              <input type="file" id="extraPhotosPractical" name="extraPhotosPractical" accept="image/*" multiple style="display:none;">
+              <div class="image-preview" id="extraPhotosPracticalPreview"></div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="wiz-nav">
@@ -957,6 +1005,22 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
             <div class="wiz-subsection-title"><i class="fas fa-map-signs"></i> Lieux à Visiter</div>
             <div id="placesContainer"></div>
             <button class="wiz-add-btn" onclick="addPlace()" type="button"><i class="fas fa-plus"></i> Ajouter un lieu à visiter</button>
+          </div>
+          <hr class="wiz-divider"/>
+          <div class="wiz-subsection">
+            <div class="wiz-subsection-title"><i class="fas fa-pen"></i> Notes libres</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Informations complémentaires <span style="color:#9CA3AF;font-weight:400;">(optionnel)</span></label>
+              <textarea class="wiz-textarea" name="extraNotesAround" placeholder="Ajoutez toute information utile..."></textarea>
+            </div>
+            <div class="wiz-group" style="margin-bottom:0">
+              <label class="wiz-label">Photos complémentaires</label>
+              <div class="wiz-upload" onclick="document.getElementById('extraPhotosAround').click()" style="padding:10px 16px;">
+                <i class="fas fa-camera"></i><p>Ajouter des photos</p>
+              </div>
+              <input type="file" id="extraPhotosAround" name="extraPhotosAround" accept="image/*" multiple style="display:none;">
+              <div class="image-preview" id="extraPhotosAroundPreview"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1064,27 +1128,30 @@ function setupImageUpload(inputId, previewId, multiple = false) {
   if (!input || !preview) return;
 
   input.addEventListener('change', () => {
-    // Reset preview
     preview.innerHTML = '';
-
     const files = Array.from(input.files || []);
     if (!files.length) return;
 
-    files.forEach(file => {
+    files.forEach((file, idx) => {
       if (!file.type || !file.type.startsWith('image/')) return;
-
       const reader = new FileReader();
       reader.onload = (ev) => {
         const div = document.createElement('div');
         div.className = 'image-preview-item';
+        div.style.cssText = 'position:relative;display:inline-block;';
         div.innerHTML = `
-          <img src="${ev.target.result}" alt="preview">
+          <img src="${ev.target.result}" alt="preview" style="display:block;">
+          <button type="button" onclick="removePreviewItem(this)" style="position:absolute;top:4px;right:4px;background:#ef4444;border:none;border-radius:50%;width:22px;height:22px;color:white;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">✕</button>
         `;
         preview.appendChild(div);
       };
       reader.readAsDataURL(file);
     });
   });
+}
+
+function removePreviewItem(btn) {
+  btn.closest('.image-preview-item, .preview-thumb').remove();
 }
 
 // ----------------------------
@@ -1099,7 +1166,8 @@ function collectFormData() {
     'address','postalCode','city','keyboxCode',
     'accessInstructions','parkingInfo','wifiSSID',
     'wifiPassword','checkoutTime','checkoutInstructions',
-    'equipmentList','importantRules','transportInfo','shopsList'
+    'equipmentList','importantRules','transportInfo','shopsList',
+    'extraNotesAccess','extraNotesLogement','extraNotesPractical','extraNotesAround'
   ];
   fields.forEach(f => formData.append(f, document.querySelector(`[name="${f}"]`)?.value || ''));
 
@@ -1141,6 +1209,17 @@ function collectFormData() {
 
   const parking = document.getElementById('parkingPhotos')?.files || [];
   for (const f of parking) formData.append('parkingPhotos', f);
+
+  // Photos extra sections
+  ['extraPhotosAccess','extraPhotosLogement','extraPhotosPractical','extraPhotosAround'].forEach(id => {
+    const files = document.getElementById(id)?.files || [];
+    for (const f of files) formData.append(id, f);
+  });
+  // Photos des pièces
+  document.querySelectorAll('[id^="roomPhotos_"]').forEach(inp => {
+    const files = inp.files || [];
+    for (const f of files) formData.append(inp.name, f);
+  });
 
   // uniqueId si édition
   if (currentUniqueId) formData.append('uniqueId', currentUniqueId);
@@ -1209,6 +1288,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setupImageUpload('coverPhoto', 'coverPhotoPreview', false);
   setupImageUpload('entrancePhotos', 'entrancePhotosPreview', true);
   setupImageUpload('parkingPhotos', 'parkingPhotosPreview', true);
+  setupImageUpload('extraPhotosAccess', 'extraPhotosAccessPreview', true);
+  setupImageUpload('extraPhotosLogement', 'extraPhotosLogementPreview', true);
+  setupImageUpload('extraPhotosPractical', 'extraPhotosPracticalPreview', true);
+  setupImageUpload('extraPhotosAround', 'extraPhotosAroundPreview', true);
 
   const form = document.getElementById('welcomeForm');
   if (form) form.addEventListener('submit', saveWelcomeBook);
@@ -1255,6 +1338,10 @@ function createNewLivret() {
 // Voir un livret
 function viewLivret(uniqueId) {
   window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
+}
+function viewWelcomeBook() {
+  if (!currentUniqueId) { alert('Identifiant manquant.'); return; }
+  window.open(`${API_BASE}/welcome/${currentUniqueId}`, '_blank');
 }
 
 // Supprimer un livret
@@ -1413,14 +1500,23 @@ function showExistingImage(containerId, url) {
   if (!container || !url) return;
 
   const wrapper = document.createElement('div');
-  wrapper.className = 'preview-thumb';
+  wrapper.className = 'preview-thumb image-preview-item';
+  wrapper.style.cssText = 'position:relative;display:inline-block;';
 
   const img = document.createElement('img');
   img.src = url;
   img.alt = 'Photo existante';
   img.loading = 'lazy';
+  img.style.display = 'block';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.innerHTML = '✕';
+  btn.style.cssText = 'position:absolute;top:4px;right:4px;background:#ef4444;border:none;border-radius:50%;width:22px;height:22px;color:white;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;';
+  btn.onclick = () => wrapper.remove();
 
   wrapper.appendChild(img);
+  wrapper.appendChild(btn);
   container.appendChild(wrapper);
 }
 
@@ -1690,20 +1786,56 @@ window.addRoom = function() {
   roomCounter += 1;
   const block = document.createElement('div');
   block.className = 'wiz-repeat-block room-block';
+  const rc = roomCounter;
   block.innerHTML = `
     <div class="wiz-repeat-header">
-      <span class="wiz-repeat-title"><i class="fas fa-door-open" style="color:#1A7A5E;margin-right:6px;"></i>Pièce ${roomCounter}</span>
+      <span class="wiz-repeat-title"><i class="fas fa-door-open" style="color:#1A7A5E;margin-right:6px;"></i>Pièce ${rc}</span>
       <button type="button" class="wiz-remove-btn" onclick="this.closest('.wiz-repeat-block').remove()"><i class="fas fa-times"></i></button>
     </div>
     <div class="wiz-group">
       <label class="wiz-label">Nom de la pièce</label>
-      <input type="text" class="wiz-input" name="room[${roomCounter}][name]" placeholder="Ex: Chambre 1">
+      <input type="text" class="wiz-input" name="room[${rc}][name]" placeholder="Ex: Chambre 1">
+    </div>
+    <div class="wiz-group">
+      <label class="wiz-label">Description</label>
+      <textarea class="wiz-textarea" name="room[${rc}][description]" placeholder="Lit, rangement, etc."></textarea>
+    </div>
+    <div class="wiz-group">
+      <label class="wiz-label">Photos de la pièce</label>
+      <div class="wiz-upload" onclick="document.getElementById('roomPhotos_${rc}').click()" style="padding:10px 16px;">
+        <i class="fas fa-camera"></i>
+        <p>Ajouter des photos</p>
+      </div>
+      <input type="file" id="roomPhotos_${rc}" name="roomPhotos_${rc}" accept="image/*" multiple style="display:none;">
+      <div class="image-preview" id="roomPhotosPreview_${rc}" style="margin-top:8px;"></div>
     </div>
     <div class="wiz-group" style="margin-bottom:0">
-      <label class="wiz-label">Description</label>
-      <textarea class="wiz-textarea" name="room[${roomCounter}][description]" placeholder="Lit, rangement, etc."></textarea>
+      <label class="wiz-label">Notes libres <span style="color:#9CA3AF;font-weight:400;">(optionnel)</span></label>
+      <textarea class="wiz-textarea" name="room[${rc}][extra]" placeholder="Infos supplémentaires, conseils..."></textarea>
     </div>
   `;
+  // Setup photo upload avec croix rouge
+  setTimeout(() => {
+    const inp = document.getElementById('roomPhotos_' + rc);
+    const prev = document.getElementById('roomPhotosPreview_' + rc);
+    if (inp && prev) {
+      inp.addEventListener('change', () => {
+        prev.innerHTML = '';
+        Array.from(inp.files || []).forEach(file => {
+          if (!file.type.startsWith('image/')) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const d = document.createElement('div');
+            d.className = 'image-preview-item';
+            d.style.cssText = 'position:relative;display:inline-block;';
+            d.innerHTML = '<img src="' + ev.target.result + '" alt="preview" style="display:block;"><button type="button" onclick="removePreviewItem(this)" style="position:absolute;top:4px;right:4px;background:#ef4444;border:none;border-radius:50%;width:22px;height:22px;color:white;font-size:13px;cursor:pointer;line-height:1;padding:0;">✕</button>';
+            prev.appendChild(d);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+    }
+  }, 0);
   container.appendChild(block);
 };
 
