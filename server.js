@@ -16474,7 +16474,7 @@ body{top:0!important}
 <nav class="nav">
   <div class="nav-logo">${title}</div>
   <div class="nav-links">${navLinks}</div>
-  <div id="google_translate_element" style="display:flex;align-items:center;padding:0 .8rem;border-left:1px solid var(--border);flex-shrink:0"></div>
+  <div id="google_translate_element" style="display:flex;align-items:center;padding:0 .8rem;border-left:1px solid var(--border);flex-shrink:0;min-width:160px"></div>
 </nav>
 <div class="wrap">
 <section class="sect" id="welcome">
@@ -16534,7 +16534,7 @@ function googleTranslateElementInit(){
   new google.translate.TranslateElement({
     pageLanguage:'fr',
     includedLanguages:'en,de,it,nl,zh-CN',
-    layout:google.translate.TranslateElement.InlineLayout.SIMPLE,
+    layout:google.translate.TranslateElement.InlineLayout.DROPDOWN,
     autoDisplay:false
   },'google_translate_element');
 }
