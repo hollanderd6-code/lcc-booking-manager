@@ -795,9 +795,14 @@ function appendMessage(message) {
   }
   
   // Bouton traduction — uniquement sur les messages du proprio (pas les siens)
+  const guestLangDetected = detectBrowserLang();
+  const flagMap = { fr:'🇫🇷', en:'🇬🇧', de:'🇩🇪', it:'🇮🇹', nl:'🇳🇱', zh:'🇨🇳', es:'🇪🇸', pt:'🇵🇹' };
+  const destFlag = flagMap[guestLangDetected] || '🌐';
   const txHtml = (!isGuest && messageText) ? `
     <div class="tx-bar">
-      <button class="tx-btn" data-original="${messageText.replace(/"/g, '&quot;')}" data-translated="" data-state="original">🌐 Traduire</button>
+      <button class="tx-chip" data-original="${messageText.replace(/"/g, '&quot;')}" data-translated="" data-state="original" data-destflag="${destFlag}">
+        <span class="tx-flags">🇫🇷→${destFlag}</span><span class="tx-label">Traduire</span>
+      </button>
     </div>` : '';
   
   messageDiv.innerHTML = `
@@ -809,7 +814,7 @@ function appendMessage(message) {
   `;
   
   // Attacher l'event au bouton si présent
-  const txBtn = messageDiv.querySelector('.tx-btn');
+  const txBtn = messageDiv.querySelector('.tx-chip');
   if (txBtn) {
     const bubble = messageDiv.querySelector('.message-bubble');
     txBtn.addEventListener('click', async function() {
@@ -818,20 +823,24 @@ function appendMessage(message) {
       
       if (state === 'translated') {
         bubble.innerHTML = linkifyMessage(original);
-        txBtn.innerHTML = '🌐 Traduire';
+        const df = txBtn.getAttribute('data-destflag') || '🌐';
+        txBtn.innerHTML = `<span class="tx-flags">🇫🇷→${df}</span><span class="tx-label">Traduire</span>`;
         txBtn.setAttribute('data-state', 'original');
+        txBtn.classList.remove('translated');
         return;
       }
       
       const cached = txBtn.getAttribute('data-translated');
       if (cached) {
         bubble.textContent = cached;
-        txBtn.innerHTML = '↩ Original';
+        const df2 = txBtn.getAttribute('data-destflag') || '🌐';
+        txBtn.innerHTML = `<span class="tx-flags">${df2}→🇫🇷</span><span class="tx-label">Original</span>`;
         txBtn.setAttribute('data-state', 'translated');
+        txBtn.classList.add('translated');
         return;
       }
       
-      txBtn.innerHTML = '⏳';
+      txBtn.innerHTML = '<span class="tx-flags">⏳</span><span class="tx-label">...</span>';
       txBtn.setAttribute('data-state', 'loading');
       txBtn.disabled = true;
       
@@ -843,7 +852,7 @@ function appendMessage(message) {
         txBtn.innerHTML = '↩ Original';
         txBtn.setAttribute('data-state', 'translated');
       } catch(e) {
-        txBtn.innerHTML = '🌐 Traduire';
+        const df4 = txBtn.getAttribute('data-destflag') || '🌐'; txBtn.innerHTML = `<span class="tx-flags">🇫🇷→${df4}</span><span class="tx-label">Traduire</span>`;
         txBtn.setAttribute('data-state', 'original');
       }
       txBtn.disabled = false;
