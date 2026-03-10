@@ -5388,7 +5388,7 @@ window.LCC_PROPERTIES = properties;
     if (nights === 1) {
       score += 30;
       tags.push('🌙 1 nuit');
-      recommendations.push('Risque prostitution/fête : surveiller');
+      recommendations.push('Risque de fête : à surveiller');
     } else if (nights === 2) {
       score += 20;
       tags.push('📅 2 nuits');
@@ -7623,7 +7623,8 @@ if (editBookingForm) {
         editModal.style.display = 'none';
       }
 
-      location.reload();
+      if (typeof loadCalendarData === 'function') loadCalendarData();
+      else location.reload();
     } catch (err) {
       console.error('❌ Erreur mise à jour blocage:', err);
       alert('Erreur : ' + err.message);
@@ -7668,7 +7669,8 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     if (data.block || data.message) {
       alert('Blocage créé !');
       document.getElementById('blockModal').style.display = 'none';
-      location.reload();
+      if (typeof loadCalendarData === 'function') loadCalendarData();
+      else location.reload();
     } else {
       alert('Erreur: ' + (data.error || 'Erreur inconnue'));
     }
