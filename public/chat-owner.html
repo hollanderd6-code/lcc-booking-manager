@@ -1207,6 +1207,28 @@ const bookingMessageModalStyles = `
     }
   }
 `;
+
+/* ── Bouton de traduction ─────────────────────────────── */
+.tx-bar {
+  margin-top: 3px;
+  display: flex;
+}
+.tx-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  color: #94a3b8;
+  padding: 2px 7px;
+  border-radius: 6px;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+.tx-btn:hover { background: #f1f5f9; color: #7c3aed; }
+.tx-btn:disabled { cursor: wait; opacity: 0.5; }
+.chat-message.guest .tx-bar { justify-content: flex-start; }
+.chat-message.owner .tx-bar { justify-content: flex-end; }
 </style>
   <script src="/js/auth-fetch.js"></script>
 </head>
