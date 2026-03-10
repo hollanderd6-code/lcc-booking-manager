@@ -1019,6 +1019,7 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
   flex: 1;
   min-width: 0;
   max-width: 480px;
+  box-sizing: border-box;
 }
 .wallet-widget.loading { opacity: .5; }
 .wallet-item {
@@ -1064,21 +1065,20 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
   margin-right: 2px;
 }
 .wallet-divider { width: 1px; height: 28px; background: rgba(200,184,154,.5); flex-shrink: 0; }
-
-/* Mobile: wallet below header */
 @media (max-width: 640px) {
+  #walletWrapper { flex-wrap: wrap; overflow: hidden; }
+  .card { overflow: hidden; }
   .wallet-widget {
     max-width: 100%;
     width: 100%;
-    margin-top: 8px;
+    margin-top: 4px;
     order: 10;
+    padding: 8px 10px;
   }
   .wallet-amount { font-size: 13px; }
   .wallet-label { font-size: 9px; }
-  .wallet-icon { width: 26px; height: 26px; font-size: 11px; }
-  #walletWrapper {
-    flex-wrap: wrap;
-  }
+  .wallet-icon { width: 24px; height: 24px; font-size: 10px; margin-right: 4px; }
+  .wallet-item + .wallet-item { padding-left: 8px; margin-left: 2px; }
 }
 </style>
 <!-- Script auth + user + logout -->
@@ -1379,7 +1379,7 @@ Connecter mon compte Stripe
 
 <!-- Section paiements -->
 <section class="card">
-<div class="card-header" id="walletWrapper" style="flex-wrap:wrap;gap:8px;">
+<div class="card-header">
 <div class="card-title">
 <i class="fas fa-euro-sign"></i>
 <span>Paiements de locations</span>
