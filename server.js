@@ -16225,7 +16225,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + '<h2 class="sect-title sect-title-access">Accès au<br>logement</h2>'
       + '<div class="sect-rule"></div>'
       + '<div class="access-grid">' + accessCards + '</div>'
-      + iif(d.extraNotesAccess, '<div class="extra-note">' + safe(d.extraNotesAccess) + '</div>')
+      + iif(d.extraNotesAccess, '<div class="extra-note" data-translatable>' + safe(d.extraNotesAccess) + '</div>')
       + galleryHtml(d.photos && d.photos.entrance)
       + galleryHtml(d.photos && d.photos.parking)
       + mapEmbed
@@ -16237,7 +16237,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       '<div class="room-row">'
       + '<div class="room-num">0' + (i + 1) + '</div>'
       + '<div>'
-        + '<div class="room-name">' + (room.name || '') + '</div>'
+        + '<div class="room-name" data-translatable>' + (room.name || '') + '</div>'
         + iif(room.description, '<div class="room-desc" data-translatable>' + safe(room.description) + '</div>')
         + iif(room.extra, '<div class="room-desc" style="margin-top:.4rem;color:#5a5a4a" data-translatable>' + safe(room.extra) + '</div>')
         + galleryHtml(d.photos && d.photos.roomPhotosPerRoom && d.photos.roomPhotosPerRoom[i + 1])
@@ -16252,7 +16252,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + '<h2 class="sect-title sect-title-rooms">Vos espaces</h2>'
       + '<div class="sect-rule"></div>'
       + '<div class="rooms">' + roomRows + '</div>'
-      + iif(d.extraNotesLogement, '<div class="extra-note">' + safe(d.extraNotesLogement) + '</div>')
+      + iif(d.extraNotesLogement, '<div class="extra-note" data-translatable>' + safe(d.extraNotesLogement) + '</div>')
       + galleryHtml(d.photos && d.photos.extraPhotosLogement)
       + '</section>'
     ) : '';
@@ -16273,8 +16273,8 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     // Alentours
     const restosItems = (d.restaurants || []).map(r => (
       '<div class="resto-item"><div>'
-      + '<div class="resto-name">' + (r.name || '') + '</div>'
-      + iif(r.description, '<div class="resto-desc">' + r.description + '</div>')
+      + '<div class="resto-name" data-translatable>' + (r.name || '') + '</div>'
+      + iif(r.description, '<div class="resto-desc" data-translatable>' + r.description + '</div>')
       + iif(r.address, '<div class="resto-addr"><i class="fas fa-location-arrow"></i> ' + r.address + '</div>')
       + '</div>'
       + iif(r.phone, '<a class="resto-phone" href="tel:' + r.phone + '">' + r.phone + '</a>')
@@ -16283,8 +16283,8 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     const placesItems = (d.places || []).map(p => (
       '<div class="resto-item"><div>'
-      + '<div class="resto-name">' + (p.name || '') + '</div>'
-      + iif(p.description, '<div class="resto-desc">' + p.description + '</div>')
+      + '<div class="resto-name" data-translatable>' + (p.name || '') + '</div>'
+      + iif(p.description, '<div class="resto-desc" data-translatable>' + p.description + '</div>')
       + '</div></div>'
     )).join('');
 
@@ -16303,7 +16303,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     // Checkout
     const checkoutSteps = (d.checkoutInstructions || '').split('\n').filter(l => l.trim())
-      .map((line, i) => '<li class="c-step"><div class="c-num">' + (i + 1) + '</div>' + line.trim() + '</li>').join('');
+      .map((line, i) => '<li class="c-step"><div class="c-num">' + (i + 1) + '</div><span data-translatable>' + line.trim() + '</span></li>').join('');
 
     const checkoutSection = (d.checkoutInstructions || d.checkoutTime) ? (
       '<section class="sect" id="checkout">'
