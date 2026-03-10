@@ -16171,8 +16171,9 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         /* HERO HEADER */
         .hero {
           position: relative;
-          height: 60vh;
-          min-height: 400px;
+          height: 55vw;
+          min-height: 280px;
+          max-height: 480px;
           background-image: url('${coverPhoto}');
           background-size: cover;
           background-position: center;
@@ -16180,11 +16181,11 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .hero-overlay {
           position: absolute;
           inset: 0;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7));
+          background: linear-gradient(to bottom, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.72));
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
-          padding: 2rem;
+          padding: 2rem 1.5rem 1.75rem;
         }
         .hero-content {
           max-width: 800px;
@@ -16193,23 +16194,31 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           color: white;
         }
         .hero h1 {
-          font-size: 2.5rem;
+          font-size: clamp(1.6rem, 5vw, 2.6rem);
           font-weight: 800;
-          margin-bottom: 0.5rem;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          margin-bottom: 0.4rem;
+          text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+          line-height: 1.2;
+          word-break: break-word;
         }
         .hero p {
-          font-size: 1.1rem;
-          opacity: 0.9;
+          font-size: clamp(0.9rem, 2.5vw, 1.05rem);
+          opacity: 0.88;
+          margin-top: 0.2rem;
         }
 
         /* CONTAINER */
         .container {
           max-width: 800px;
-          margin: -3rem auto 0;
-          padding: 0 1rem;
+          margin: 0 auto;
+          padding: 1.25rem 1rem 0;
           position: relative;
           z-index: 10;
+        }
+
+        @media (max-width: 600px) {
+          .hero { height: 62vw; min-height: 220px; }
+          .hero-overlay { padding: 1.25rem 1rem 1.5rem; }
         }
 
         /* CARDS */
