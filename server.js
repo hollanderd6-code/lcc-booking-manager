@@ -11409,6 +11409,40 @@ console.log('DEBUG stripe/status user:', user.id, user.stripeAccountId);
   }
 });
 
+// ============================================
+// GET /api/stripe/balance
+// Solde du compte Stripe connecté (portefeuille)
+// ============================================
+app.get('/api/stripe/balance', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!user.stripe_account_id) return res.status(400).json({ error: 'Aucun compte Stripe connecté' });
+
+    // Récupérer le solde du compte connecté
+    const balance = await stripe.balance.retrieve(
+      {},
+      { stripeAccount: user.stripe_account_id }
+    );
+
+    const available = balance.available.find(b => b.currency === 'eur')?.amount || 0;
+    const pending   = balance.pending.find(b => b.currency === 'eur')?.amount   || 0;
+
+    // Dernier virement
+    const payouts = await stripe.payouts.list(
+      { limit: 1 },
+      { stripeAccount: user.stripe_account_id }
+    );
+    const lastPayout = payouts.data[0] || null;
+
+    res.json({ available, pending, lastPayout });
+  } catch (err) {
+    console.error('Erreur balance Stripe:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.post('/api/stripe/create-onboarding-link', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
