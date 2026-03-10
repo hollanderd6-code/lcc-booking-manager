@@ -16177,10 +16177,10 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     // Key info sidebar
     const keyItems = [
-      '<div class="key-item key-arrival"><div class="key-lbl">Arrivée</div><div class="key-val">Dès 15h00</div></div>',
-      '<div class="key-item key-departure"><div class="key-lbl">Départ</div><div class="key-val">Avant ' + (d.checkoutTime || '11h00') + '</div></div>',
-      iif(d.keyboxCode, '<div class="key-item key-keybox"><div class="key-lbl">Boîte à clés</div><div class="key-val">' + (d.keyboxCode || '') + '</div></div>'),
-      iif(d.contactPhone, '<div class="key-item key-host"><div class="key-lbl">Votre hôte</div><div class="key-val" style="font-size:1rem">' + (d.contactPhone || '') + '</div></div>'),
+      '<div class="key-item key-arrival"><div class="key-lbl key-lbl-arrival">Arrivée</div><div class="key-val key-val-arrival">Dès 15h00</div></div>',
+      '<div class="key-item key-departure"><div class="key-lbl key-lbl-departure">Départ</div><div class="key-val">Avant ' + (d.checkoutTime || '11h00') + '</div></div>',
+      iif(d.keyboxCode, '<div class="key-item key-keybox"><div class="key-lbl key-lbl-keybox">Boîte à clés</div><div class="key-val">' + (d.keyboxCode || '') + '</div></div>'),
+      iif(d.contactPhone, '<div class="key-item key-host"><div class="key-lbl key-lbl-host">Votre hôte</div><div class="key-val" style="font-size:1rem">' + (d.contactPhone || '') + '</div></div>'),
     ].join('');
 
     // WiFi block
@@ -16220,7 +16220,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     const accessSection = (d.accessInstructions || d.keyboxCode || d.parkingInfo || d.transportInfo
       || (d.photos && (d.photos.entrance || d.photos.parking))) ? (
-      '<section class="sect" id="access" data-sect="access">'
+      '<section class="sect" id="access">'
       + '<div class="sect-lbl sect-lbl-access">Accès &amp; Arrivée</div>'
       + '<h2 class="sect-title sect-title-access">Accès au<br>logement</h2>'
       + '<div class="sect-rule"></div>'
@@ -16247,7 +16247,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     )).join('');
 
     const roomsSection = d.rooms && d.rooms.length > 0 ? (
-      '<section class="sect" id="rooms" data-sect="rooms">'
+      '<section class="sect" id="rooms">'
       + '<div class="sect-lbl sect-lbl-rooms">Le logement</div>'
       + '<h2 class="sect-title sect-title-rooms">Vos espaces</h2>'
       + '<div class="sect-rule"></div>'
@@ -16259,12 +16259,12 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     // Pratique section
     const pratiqueSection = (d.importantRules || d.equipmentList || d.extraNotesPractical) ? (
-      '<section class="sect" id="info" data-sect="info">'
+      '<section class="sect" id="info">'
       + '<div class="sect-lbl sect-lbl-info">Infos pratiques</div>'
       + '<h2 class="sect-title sect-title-info">À savoir</h2>'
       + '<div class="sect-rule"></div>'
       + iif(d.importantRules, '<div class="info-block border-left-forest"><div class="info-block-title info-title-rules"><i class="fas fa-exclamation-circle"></i> Règles importantes</div><div class="info-block-body" data-translatable>' + safe(d.importantRules) + '</div></div>')
-      + iif(d.equipmentList, '<div class="info-block border-left-forest"><div class="info-block-title info-title-equipment"><i class="fas fa-toolbox"></i> Équipements</div><div class="info-block-body" data-translatable>' + safe(d.equipmentList) + '</div></div>')
+      + iif(d.equipmentList, '<div class="info-block border-left-forest"><div class="info-block-title info-title-equip"><i class="fas fa-toolbox"></i> Équipements</div><div class="info-block-body" data-translatable>' + safe(d.equipmentList) + '</div></div>')
       + iif(d.extraNotesPractical, '<div class="extra-note" data-translatable>' + safe(d.extraNotesPractical) + '</div>')
       + galleryHtml(d.photos && d.photos.extraPhotosPractical)
       + '</section>'
@@ -16289,7 +16289,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     )).join('');
 
     const alentourSection = ((d.restaurants && d.restaurants.length > 0) || (d.places && d.places.length > 0) || d.shopsList) ? (
-      '<section class="sect" id="around" data-sect="around">'
+      '<section class="sect" id="around">'
       + '<div class="sect-lbl sect-lbl-around">Alentours</div>'
       + '<h2 class="sect-title sect-title-around">Guide du<br>quartier</h2>'
       + '<div class="sect-rule"></div>'
@@ -16306,7 +16306,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       .map((line, i) => '<li class="c-step"><div class="c-num">' + (i + 1) + '</div>' + line.trim() + '</li>').join('');
 
     const checkoutSection = (d.checkoutInstructions || d.checkoutTime) ? (
-      '<section class="sect" id="checkout" data-sect="checkout">'
+      '<section class="sect" id="checkout">'
       + '<div class="sect-lbl sect-lbl-checkout">Départ</div>'
       + '<h2 class="sect-title sect-title-checkout">Consignes<br>de départ</h2>'
       + '<div class="sect-rule"></div>'
@@ -16449,16 +16449,17 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
   .wrap{padding:0 1.2rem 6rem}
   .wifi-qr{display:none}
 }
-/* ── Language Picker ── */
+/* Lang picker */
 .lang-picker{position:relative;display:flex;align-items:center;padding:0 .8rem;flex-shrink:0;border-left:1px solid var(--border);margin-left:auto}
-.lang-btn{display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);padding:5px 8px;border-radius:8px;transition:background .15s;white-space:nowrap}
+.lang-btn{display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);padding:5px 9px;border-radius:8px;transition:background .15s;white-space:nowrap}
 .lang-btn:hover{background:var(--cream2)}
 .lang-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:5px;min-width:155px;box-shadow:0 8px 32px rgba(26,26,20,.13);z-index:9999}
 .lang-menu.open{display:block}
-.lang-option{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:400;color:var(--ink);transition:background .12s;white-space:nowrap}
+.lang-option{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink);transition:background .12s;white-space:nowrap}
 .lang-option:hover{background:var(--cream2)}
 .lang-option.active{background:var(--gold-pale);color:var(--forest);font-weight:600}
-.lang-translating{opacity:.6;transition:opacity .3s}
+[data-translatable]{transition:opacity .25s}
+[data-translatable].translating{opacity:.5}
 </style></head><body>
 <header class="hero">
   <div class="hero-bg"></div>
@@ -16482,17 +16483,17 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
       <i class="fas fa-chevron-down" style="font-size:9px;opacity:.6;margin-left:2px"></i>
     </button>
     <div class="lang-menu" id="langMenu">
-      <div class="lang-option" onclick="setLang('fr')">&#127467;&#127479; Français</div>
-      <div class="lang-option" onclick="setLang('en')">&#127468;&#127463; English</div>
-      <div class="lang-option" onclick="setLang('de')">&#127465;&#127466; Deutsch</div>
-      <div class="lang-option" onclick="setLang('it')">&#127470;&#127481; Italiano</div>
-      <div class="lang-option" onclick="setLang('nl')">&#127475;&#127473; Nederlands</div>
-      <div class="lang-option" onclick="setLang('zh')">&#127464;&#127475; 中文</div>
+      <div class="lang-option" onclick="setLang('fr')">🇫🇷 Français</div>
+      <div class="lang-option" onclick="setLang('en')">🇬🇧 English</div>
+      <div class="lang-option" onclick="setLang('de')">🇩🇪 Deutsch</div>
+      <div class="lang-option" onclick="setLang('it')">🇮🇹 Italiano</div>
+      <div class="lang-option" onclick="setLang('nl')">🇳🇱 Nederlands</div>
+      <div class="lang-option" onclick="setLang('zh')">🇨🇳 中文</div>
     </div>
   </div>
 </nav>
 <div class="wrap">
-<section class="sect" id="welcome" data-sect="welcome">
+<section class="sect" id="welcome">
   <div class="sect-lbl sect-lbl-welcome">Bienvenue</div>
   <h2 class="sect-title sect-title-welcome">Bienvenue<br>chez nous</h2>
   <div class="sect-rule"></div>
@@ -16523,6 +16524,7 @@ ${fabHtml}
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+// ── Scroll spy ──────────────────────────────────────────────────────────
 const ss=[...document.querySelectorAll('.sect')];
 const nl=[...document.querySelectorAll('.nav-links a')];
 window.addEventListener('scroll',()=>{
@@ -16536,45 +16538,42 @@ function openQr(ssid,pw){
   const c=document.getElementById('qr-big');c.width=0;c.height=0;
   if(typeof QRCode!=='undefined')QRCode.toCanvas(c,'WIFI:T:WPA;S:'+ssid+';P:'+pw+';;',{width:240,margin:2,color:{dark:'#1A1A14',light:'#FFFDF9'}},()=>{});
 }
-
 window.addEventListener('DOMContentLoaded',()=>{
   const c=document.getElementById('qr-canvas');
   if(c&&typeof QRCode!=='undefined'){
     const ssid='${wifiSSIDEscaped}',pw='${wifiPwEscaped}';
     if(ssid)QRCode.toCanvas(c,'WIFI:T:WPA;S:'+ssid+';P:'+pw+';;',{width:72,margin:1,color:{dark:'#1D4D2F',light:'#fff'}},()=>{});
   }
-  // Apply saved language on load
+  // Apply saved language
   const saved = localStorage.getItem('wb_lang') || 'fr';
   if(saved !== 'fr') setLang(saved);
 });
 
-// ================================================================
-// TRANSLATION ENGINE
-// ================================================================
+// ── Translation Engine ──────────────────────────────────────────────────
 const LANGS = {
-  fr:{flag:'\ud83c\uddeb\ud83c\uddf7',label:'FR'},
-  en:{flag:'\ud83c\uddec\ud83c\udde7',label:'EN'},
-  de:{flag:'\ud83c\udde9\ud83c\uddea',label:'DE'},
-  it:{flag:'\ud83c\uddee\ud83c\uddf9',label:'IT'},
-  nl:{flag:'\ud83c\uddf3\ud83c\uddf1',label:'NL'},
-  zh:{flag:'\ud83c\udde8\ud83c\uddf3',label:'ZH'}
+  fr:{flag:'🇫🇷',label:'FR'},
+  en:{flag:'🇬🇧',label:'EN'},
+  de:{flag:'🇩🇪',label:'DE'},
+  it:{flag:'🇮🇹',label:'IT'},
+  nl:{flag:'🇳🇱',label:'NL'},
+  zh:{flag:'🇨🇳',label:'ZH'}
 };
 
 const UI = {
   fr:{
     welcome:'Bienvenue', welcomeTitle:'Bienvenue<br>chez nous',
-    accessLbl:'Acc\u00e8s & Arriv\u00e9e', accessTitle:'Acc\u00e8s au<br>logement', accessNav:'Acc\u00e8s',
+    accessLbl:'Accès & Arrivée', accessTitle:'Accès au<br>logement', accessNav:'Accès',
     roomsLbl:'Le logement', roomsTitle:'Vos espaces', roomsNav:'Logement',
-    infoLbl:'Infos pratiques', infoTitle:'\u00c0 savoir', infoNav:'Pratique',
+    infoLbl:'Infos pratiques', infoTitle:'À savoir', infoNav:'Pratique',
     aroundLbl:'Alentours', aroundTitle:'Guide du<br>quartier', aroundNav:'Alentours',
-    checkoutLbl:'D\u00e9part', checkoutTitle:'Consignes<br>de d\u00e9part', checkoutNav:'D\u00e9part',
-    wifi:'R\u00e9seau WiFi', wifiPw:'Mot de passe', wifiCopy:'Copier',
-    arrival:'Arriv\u00e9e', departure:'D\u00e9part', keybox:'Bo\u00eete \u00e0 cl\u00e9s', host:'Votre h\u00f4te',
-    checkinTime:'D\u00e8s 15h00', limitTime:'heure limite',
-    restos:'\ud83c\udf7d Restaurants', shops:'\ud83d\uded2 Commerces', visit:'\ud83c\udfd6 \u00c0 visiter',
-    thanks:'Merci pour votre s\u00e9jour \u2736',
-    rules:'R\u00e8gles importantes', equipment:'\u00c9quipements',
-    accessIns:'Instructions d'acc\u00e8s', parking:'Parking', transport:'Transports'
+    checkoutLbl:'Départ', checkoutTitle:'Consignes<br>de départ', checkoutNav:'Départ',
+    wifi:'Réseau WiFi', wifiPw:'Mot de passe', wifiCopy:'Copier',
+    arrival:'Arrivée', departure:'Départ', keybox:'Boîte à clés', host:'Votre hôte',
+    checkinTime:'Dès 15h00', limitTime:'heure limite',
+    restos:'🍽 Restaurants', shops:'🛒 Commerces', visit:'🏞 À visiter',
+    thanks:'Merci pour votre séjour ✦',
+    rules:'Règles importantes', equip:'Équipements',
+    accessIns:"Instructions d'accès", parking:'Parking', transport:'Transports'
   },
   en:{
     welcome:'Welcome', welcomeTitle:'Welcome<br>to our home',
@@ -16586,29 +16585,29 @@ const UI = {
     wifi:'WiFi Network', wifiPw:'Password', wifiCopy:'Copy',
     arrival:'Check-in', departure:'Check-out', keybox:'Key lockbox', host:'Your host',
     checkinTime:'From 3:00 PM', limitTime:'deadline',
-    restos:'\ud83c\udf7d Restaurants', shops:'\ud83d\uded2 Shops', visit:'\ud83c\udfd6 Places to visit',
-    thanks:'Thank you for your stay \u2736',
-    rules:'House rules', equipment:'Equipment',
+    restos:'🍽 Restaurants', shops:'🛒 Shops', visit:'🏞 Places to visit',
+    thanks:'Thank you for your stay ✦',
+    rules:'House rules', equip:'Equipment',
     accessIns:'Access instructions', parking:'Parking', transport:'Transport'
   },
   de:{
     welcome:'Willkommen', welcomeTitle:'Willkommen<br>bei uns',
     accessLbl:'Zugang & Ankunft', accessTitle:'Zugang zur<br>Unterkunft', accessNav:'Zugang',
-    roomsLbl:'Die Unterkunft', roomsTitle:'Ihre R\u00e4ume', roomsNav:'Unterkunft',
+    roomsLbl:'Die Unterkunft', roomsTitle:'Ihre Räume', roomsNav:'Unterkunft',
     infoLbl:'Praktische Infos', infoTitle:'Wissenswert', infoNav:'Info',
-    aroundLbl:'Umgebung', aroundTitle:'Stadtteil-<br>f\u00fchrer', aroundNav:'Umgebung',
+    aroundLbl:'Umgebung', aroundTitle:'Stadtteil-<br>führer', aroundNav:'Umgebung',
     checkoutLbl:'Abreise', checkoutTitle:'Abreise-<br>hinweise', checkoutNav:'Abreise',
     wifi:'WLAN-Netzwerk', wifiPw:'Passwort', wifiCopy:'Kopieren',
-    arrival:'Ankunft', departure:'Abreise', keybox:'Schl\u00fcsselkasten', host:'Ihr Gastgeber',
+    arrival:'Ankunft', departure:'Abreise', keybox:'Schlüsselkasten', host:'Ihr Gastgeber',
     checkinTime:'Ab 15:00 Uhr', limitTime:'Deadline',
-    restos:'\ud83c\udf7d Restaurants', shops:'\ud83d\uded2 Gesch\u00e4fte', visit:'\ud83c\udfd6 Sehensw\u00fcrdigkeiten',
-    thanks:'Vielen Dank f\u00fcr Ihren Aufenthalt \u2736',
-    rules:'Wichtige Regeln', equipment:'Ausstattung',
+    restos:'🍽 Restaurants', shops:'🛒 Geschäfte', visit:'🏞 Sehenswürdigkeiten',
+    thanks:'Vielen Dank für Ihren Aufenthalt ✦',
+    rules:'Wichtige Regeln', equip:'Ausstattung',
     accessIns:'Zugangsanweisungen', parking:'Parken', transport:'Verkehr'
   },
   it:{
     welcome:'Benvenuto', welcomeTitle:'Benvenuto<br>da noi',
-    accessLbl:'Accesso & Arrivo', accessTitle:'Accesso alla<br>struttura', accessNav:'Accesso',
+    accessLbl:"Accesso & Arrivo", accessTitle:'Accesso alla<br>struttura', accessNav:'Accesso',
     roomsLbl:"L'alloggio", roomsTitle:'I vostri spazi', roomsNav:'Alloggio',
     infoLbl:'Informazioni pratiche', infoTitle:'Da sapere', infoNav:'Info',
     aroundLbl:'Dintorni', aroundTitle:'Guida del<br>quartiere', aroundNav:'Dintorni',
@@ -16616,9 +16615,9 @@ const UI = {
     wifi:'Rete WiFi', wifiPw:'Password', wifiCopy:'Copia',
     arrival:'Arrivo', departure:'Partenza', keybox:'Cassetta chiavi', host:'Il vostro host',
     checkinTime:'Dalle 15:00', limitTime:'orario limite',
-    restos:'\ud83c\udf7d Ristoranti', shops:'\ud83d\uded2 Negozi', visit:'\ud83c\udfd6 Da visitare',
-    thanks:'Grazie per il vostro soggiorno \u2736',
-    rules:'Regole importanti', equipment:'Attrezzature',
+    restos:'🍽 Ristoranti', shops:'🛒 Negozi', visit:'🏞 Da visitare',
+    thanks:'Grazie per il vostro soggiorno ✦',
+    rules:'Regole importanti', equip:'Attrezzature',
     accessIns:"Istruzioni d'accesso", parking:'Parcheggio', transport:'Trasporti'
   },
   nl:{
@@ -16628,31 +16627,32 @@ const UI = {
     infoLbl:'Praktische info', infoTitle:'Handig om te weten', infoNav:'Info',
     aroundLbl:'Omgeving', aroundTitle:'Buurt-<br>gids', aroundNav:'Omgeving',
     checkoutLbl:'Vertrek', checkoutTitle:'Vertrek-<br>instructies', checkoutNav:'Vertrek',
-    wifi:'WiFi-netwerk', wifiPw:'Wachtwoord', wifiCopy:'Kopi\u00ebren',
+    wifi:'WiFi-netwerk', wifiPw:'Wachtwoord', wifiCopy:'Kopiëren',
     arrival:'Aankomst', departure:'Vertrek', keybox:'Sleutelkluisje', host:'Uw gastheer',
     checkinTime:'Vanaf 15:00', limitTime:'uiterste tijd',
-    restos:'\ud83c\udf7d Restaurants', shops:'\ud83d\uded2 Winkels', visit:'\ud83c\udfd6 Bezienswaardigheden',
-    thanks:'Bedankt voor uw verblijf \u2736',
-    rules:'Belangrijke regels', equipment:'Uitrusting',
+    restos:'🍽 Restaurants', shops:'🛒 Winkels', visit:'🏞 Bezienswaardigheden',
+    thanks:'Bedankt voor uw verblijf ✦',
+    rules:'Belangrijke regels', equip:'Uitrusting',
     accessIns:'Toegangsinstructies', parking:'Parkeren', transport:'Vervoer'
   },
   zh:{
-    welcome:'\u6b22\u8fce', welcomeTitle:'\u6b22\u8fce<br>\u6765\u5230\u6211\u4eec\u5bb6',
-    accessLbl:'\u5165\u4f4f\u4e0e\u629e\u8fbe', accessTitle:'\u5230\u8fbe<br>\u4f4f\u6240', accessNav:'\u5165\u4f4f',
-    roomsLbl:'\u4f4f\u6240\u4ecb\u7ecd', roomsTitle:'\u60a8\u7684\u7a7a\u95f4', roomsNav:'\u4f4f\u6240',
-    infoLbl:'\u5b9e\u7528\u4fe1\u606f', infoTitle:'\u91cd\u8981\u4fe1\u606f', infoNav:'\u987b\u77e5',
-    aroundLbl:'\u5468\u8fb9', aroundTitle:'\u5468\u8fb9<br>\u6307\u5357', aroundNav:'\u5468\u8fb9',
-    checkoutLbl:'\u9000\u623f', checkoutTitle:'\u9000\u623f<br>\u987b\u77e5', checkoutNav:'\u9000\u623f',
-    wifi:'WiFi\u7f51\u7edc', wifiPw:'\u5bc6\u7801', wifiCopy:'\u590d\u5236',
-    arrival:'\u5165\u4f4f\u65f6\u95f4', departure:'\u9000\u623f\u65f6\u95f4', keybox:'\u9499\u5319\u7b71', host:'\u60a8\u7684\u623f\u4e1c',
-    checkinTime:'\u4e0b\u53483\u70b9\u8d77', limitTime:'\u622a\u6b62\u65f6\u95f4',
-    restos:'\ud83c\udf7d \u9910\u5385', shops:'\ud83d\uded2 \u5546\u5e97', visit:'\ud83c\udfd6 \u666f\u70b9',
-    thanks:'\u611f\u8c22\u60a8\u7684\u5149\u4e34 \u2736',
-    rules:'\u91cd\u8981\u89c4\u5b9a', equipment:'\u8bbe\u65bd',
-    accessIns:'\u5165\u4f4f\u8bf4\u660e', parking:'\u505c\u8f66', transport:'\u4ea4\u901a'
+    welcome:'欢迎', welcomeTitle:'欢迎<br>来到我们家',
+    accessLbl:'入住与抵达', accessTitle:'到达<br>住所', accessNav:'入住',
+    roomsLbl:'住所介绍', roomsTitle:'您的空间', roomsNav:'住所',
+    infoLbl:'实用信息', infoTitle:'重要信息', infoNav:'须知',
+    aroundLbl:'周边', aroundTitle:'周边<br>指南', aroundNav:'周边',
+    checkoutLbl:'退房', checkoutTitle:'退房<br>须知', checkoutNav:'退房',
+    wifi:'WiFi网络', wifiPw:'密码', wifiCopy:'复制',
+    arrival:'入住时间', departure:'退房时间', keybox:'钥匙箱', host:'您的房东',
+    checkinTime:'下午3点起', limitTime:'截止时间',
+    restos:'🍽 餐厅', shops:'🛒 商店', visit:'🏞 景点',
+    thanks:'感谢您的光临 ✦',
+    rules:'重要规定', equip:'设施',
+    accessIns:'入住说明', parking:'停车', transport:'交通'
   }
 };
 
+// [selector, UI key]
 const SEL = [
   ['.sect-lbl-welcome','welcome'],['.sect-title-welcome','welcomeTitle'],
   ['.sect-lbl-access','accessLbl'],['.sect-title-access','accessTitle'],
@@ -16660,10 +16660,10 @@ const SEL = [
   ['.sect-lbl-info','infoLbl'],['.sect-title-info','infoTitle'],
   ['.sect-lbl-around','aroundLbl'],['.sect-title-around','aroundTitle'],
   ['.sect-lbl-checkout','checkoutLbl'],['.sect-title-checkout','checkoutTitle'],
-  ['.wifi-name-lbl','wifi'],['.wifi-pw-lbl','wifiPw'],['.wifi-copy-label','wifiCopy'],
-  ['.key-arrival .key-lbl','arrival'],['.key-arrival .key-val','checkinTime'],
-  ['.key-departure .key-lbl','departure'],
-  ['.key-keybox .key-lbl','keybox'],['.key-host .key-lbl','host'],
+  ['.wifi-name-lbl','wifi'],['.wifi-pw-lbl','wifiPw'],
+  ['.key-lbl-arrival','arrival'],['.key-val-arrival','checkinTime'],
+  ['.key-lbl-departure','departure'],
+  ['.key-lbl-keybox','keybox'],['.key-lbl-host','host'],
   ['.limit-time-lbl','limitTime'],
   ['.subcat-restos','restos'],['.subcat-shops','shops'],['.subcat-visit','visit'],
   ['.foot-thanks','thanks'],
@@ -16671,92 +16671,71 @@ const SEL = [
   ['.nav-info','infoNav'],['.nav-around','aroundNav'],['.nav-checkout','checkoutNav'],
   ['.access-title-ins','accessIns'],['.access-title-parking','parking'],
   ['.access-title-transport','transport'],
-  ['.info-title-rules i + text','rules'],['.info-title-equipment i + text','equipment'],
 ];
 
 let currentLang = 'fr';
-let translationCache = {};
+const txCache = {};
+
+function applyUI(lang) {
+  const t = UI[lang] || UI.fr;
+  SEL.forEach(([sel, key]) => {
+    if (!t[key]) return;
+    document.querySelectorAll(sel).forEach(el => { el.innerHTML = t[key]; });
+  });
+  // Info titles have icon inside - preserve icon
+  const rulesEl = document.querySelector('.info-title-rules');
+  if (rulesEl && t.rules) rulesEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + t.rules;
+  const equipEl = document.querySelector('.info-title-equip');
+  if (equipEl && t.equip) equipEl.innerHTML = '<i class="fas fa-toolbox"></i> ' + t.equip;
+}
 
 function setLang(lang) {
   currentLang = lang;
   localStorage.setItem('wb_lang', lang);
-  const t = UI[lang] || UI.fr;
   const lm = LANGS[lang] || LANGS.fr;
-
-  // Update button display
   document.getElementById('langFlag').textContent = lm.flag;
   document.getElementById('langLabel').textContent = lm.label;
   document.querySelectorAll('.lang-option').forEach(el => {
-    const onclick = el.getAttribute('onclick') || '';
-    el.classList.toggle('active', onclick.includes("'" + lang + "'"));
+    const oc = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', oc === "setLang('" + lang + "')");
   });
   document.getElementById('langMenu').classList.remove('open');
   document.documentElement.lang = lang;
-
-  // Apply static UI labels
-  SEL.forEach(([sel, key]) => {
-    if(!t[key]) return;
-    if(sel.includes('i + text')) {
-      // Special case: update text node after icon
-      const cls = sel.replace(' i + text','');
-      document.querySelectorAll(cls).forEach(el => {
-        const icon = el.querySelector('i');
-        if(icon) el.innerHTML = icon.outerHTML + ' ' + t[key];
-      });
-      return;
-    }
-    document.querySelectorAll(sel).forEach(el => { el.innerHTML = t[key]; });
-  });
-
-  // Translate dynamic user content
+  applyUI(lang);
   translateDynamic(lang);
 }
 
 async function translateDynamic(lang) {
   const els = document.querySelectorAll('[data-translatable]');
-  if(!els.length) return;
-
-  if(lang === 'fr') {
+  if (!lang || lang === 'fr') {
     els.forEach(el => {
-      if(el.hasAttribute('data-orig')) el.innerHTML = el.getAttribute('data-orig');
+      if (el.dataset.orig) el.innerHTML = el.dataset.orig;
     });
     return;
   }
-
-  const langMap = {en:'en',de:'de',it:'it',nl:'nl',zh:'zh'};
-  const target = langMap[lang] || 'en';
-
-  // Show loading state
-  els.forEach(el => el.classList.add('lang-translating'));
-
-  for(const el of els) {
-    if(!el.hasAttribute('data-orig')) el.setAttribute('data-orig', el.innerHTML);
-    const orig = el.getAttribute('data-orig') || '';
-    if(!orig.trim()) { el.classList.remove('lang-translating'); continue; }
-
-    const cacheKey = target + '::' + orig.substring(0,80);
-    if(translationCache[cacheKey]) {
-      el.innerHTML = translationCache[cacheKey];
-      el.classList.remove('lang-translating');
-      continue;
-    }
-
+  const target = {en:'en',de:'de',it:'it',nl:'nl',zh:'zh'}[lang] || 'en';
+  els.forEach(el => { if (!el.dataset.orig) el.dataset.orig = el.innerHTML; });
+  for (const el of els) {
+    const orig = el.dataset.orig || '';
+    if (!orig.trim()) continue;
+    const key = target + '|' + orig.slice(0, 60);
+    if (txCache[key]) { el.innerHTML = txCache[key]; continue; }
+    el.classList.add('translating');
     try {
       const r = await fetch('https://libretranslate.com/translate', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({q:orig.replace(/<br>/g,'\n'),source:'fr',target,format:'text',api_key:''})
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({q: orig.replace(/<br>/g,'\n'), source:'fr', target, format:'text', api_key:''})
       });
-      if(r.ok) {
+      if (r.ok) {
         const d = await r.json();
-        if(d.translatedText) {
-          const translated = d.translatedText.replace(/\n/g,'<br>');
-          translationCache[cacheKey] = translated;
-          el.innerHTML = translated;
+        if (d.translatedText) {
+          const tx = d.translatedText.replace(/\n/g, '<br>');
+          txCache[key] = tx;
+          el.innerHTML = tx;
         }
       }
-    } catch(e) { /* silent fail */ }
-    el.classList.remove('lang-translating');
+    } catch(e) { /* silent */ }
+    el.classList.remove('translating');
   }
 }
 
@@ -16766,7 +16745,7 @@ function toggleLangMenu(e) {
 }
 document.addEventListener('click', () => {
   const m = document.getElementById('langMenu');
-  if(m) m.classList.remove('open');
+  if (m) m.classList.remove('open');
 });
 </script></body></html>`;
 
