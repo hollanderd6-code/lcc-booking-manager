@@ -578,14 +578,15 @@ function appendMessage(message) {
   contentDiv.appendChild(bubble);
   contentDiv.appendChild(meta);
   
-  // Bouton traduction — uniquement sur les messages du voyageur
-  if (!isOwner && message.message && message.message.trim()) {
+  // Bouton traduction — uniquement sur les messages du voyageur avec du texte
+  const msgTextOnly = (message.message || '').replace(/\[IMAGE:[^\]]+\]/g, '').trim();
+  if (!isOwner && msgTextOnly) {
     const txBar = document.createElement('div');
     txBar.className = 'tx-bar';
     
     const txBtn = document.createElement('button');
     txBtn.className = 'tx-btn';
-    txBtn.innerHTML = '🌐 Traduire';
+    txBtn.innerHTML = '<i class="fas fa-language"></i> Traduire';
     txBtn.setAttribute('data-original', message.message);
     txBtn.setAttribute('data-translated', '');
     txBtn.setAttribute('data-state', 'original'); // original | loading | translated
@@ -608,11 +609,12 @@ function appendMessage(message) {
         bubble.textContent = cached;
         txBtn.innerHTML = '↩ Original';
         txBtn.setAttribute('data-state', 'translated');
+        txBtn.classList.add('translated');
         return;
       }
       
       // Traduire via MyMemory
-      txBtn.innerHTML = '⏳';
+      txBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
       txBtn.setAttribute('data-state', 'loading');
       txBtn.disabled = true;
       
@@ -623,8 +625,9 @@ function appendMessage(message) {
         bubble.textContent = translated;
         txBtn.innerHTML = '↩ Original';
         txBtn.setAttribute('data-state', 'translated');
+        txBtn.classList.add('translated');
       } catch(e) {
-        txBtn.innerHTML = '🌐 Traduire';
+        txBtn.innerHTML = '<i class="fas fa-language"></i> Traduire';
         txBtn.setAttribute('data-state', 'original');
       }
       txBtn.disabled = false;
