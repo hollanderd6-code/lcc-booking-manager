@@ -16452,7 +16452,7 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 .lang-picker{position:relative;display:flex;align-items:center;padding:0 .8rem;flex-shrink:0;border-left:1px solid var(--border);margin-left:auto}
 .lang-btn{display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);padding:5px 9px;border-radius:8px;transition:background .15s;white-space:nowrap}
 .lang-btn:hover{background:var(--cream2)}
-.lang-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:5px;min-width:155px;box-shadow:0 8px 32px rgba(26,26,20,.13);z-index:9999}
+.lang-menu{display:none;position:fixed;top:52px;right:12px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:5px;min-width:155px;box-shadow:0 8px 32px rgba(26,26,20,.13);z-index:9999}
 .lang-menu.open{display:block}
 .lang-option{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink);transition:background .12s;white-space:nowrap}
 .lang-option:hover{background:var(--cream2)}
