@@ -16483,7 +16483,7 @@ ${pratiqueSection}
 ${alentourSection}
 ${checkoutSection}
 <footer class="foot">
-  <div class="foot-brand">BoostingHost</div>
+  <div class="foot-brand">Ce livret a été concu grâce à Boostinghost.fr</div>
   <div class="foot-sub">Merci pour votre séjour ✦</div>
 </footer>
 </div>
