@@ -16190,7 +16190,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + '<div class="wifi-info"><div class="wifi-name-lbl">Réseau WiFi</div><div class="wifi-ssid">' + (d.wifiSSID || '') + '</div></div>'
       + '<div class="wifi-pw-wrap"><div class="wifi-pw-lbl">Mot de passe</div><div class="wifi-pw">' + (d.wifiPassword || '') + '</div></div>'
       + (d.wifiPassword ? '<button class="wifi-btn" onclick="copyWifi(this,\'' + wifiPwEscaped + '\')"><i class="fas fa-copy"></i> Copier</button>' : '')
-      + '<div class="wifi-qr" onclick="openQr(\'' + wifiSSIDEscaped + '\',\'' + wifiPwEscaped + '\')"><canvas id="qr-canvas"></canvas></div>'
       + '</div>'
     ) : '';
 
