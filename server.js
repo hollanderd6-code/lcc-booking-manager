@@ -16167,20 +16167,20 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     // Nav
     const navLinks = [
-      '<a href="#welcome" class="active">Bienvenue</a>',
-      iif(d.accessInstructions || d.keyboxCode || d.parkingInfo || d.transportInfo, '<a href="#access">Accès</a>'),
-      iif(d.rooms && d.rooms.length > 0, '<a href="#rooms">Logement</a>'),
-      iif(d.importantRules || d.equipmentList, '<a href="#info">Pratique</a>'),
-      iif((d.restaurants && d.restaurants.length > 0) || (d.places && d.places.length > 0) || d.shopsList, '<a href="#around">Alentours</a>'),
-      iif(d.checkoutInstructions || d.checkoutTime, '<a href="#checkout">Départ</a>'),
+      '<a href="#welcome" class="active nav-welcome">Bienvenue</a>',
+      iif(d.accessInstructions || d.keyboxCode || d.parkingInfo || d.transportInfo, '<a href="#access" class="nav-access">Accès</a>'),
+      iif(d.rooms && d.rooms.length > 0, '<a href="#rooms" class="nav-rooms">Logement</a>'),
+      iif(d.importantRules || d.equipmentList, '<a href="#info" class="nav-info">Pratique</a>'),
+      iif((d.restaurants && d.restaurants.length > 0) || (d.places && d.places.length > 0) || d.shopsList, '<a href="#around" class="nav-around">Alentours</a>'),
+      iif(d.checkoutInstructions || d.checkoutTime, '<a href="#checkout" class="nav-checkout">Départ</a>'),
     ].join('');
 
     // Key info sidebar
     const keyItems = [
-      '<div class="key-item"><div class="key-lbl">Arrivée</div><div class="key-val">Dès 15h00</div></div>',
-      '<div class="key-item"><div class="key-lbl">Départ</div><div class="key-val">Avant ' + (d.checkoutTime || '11h00') + '</div></div>',
-      iif(d.keyboxCode, '<div class="key-item"><div class="key-lbl">Boîte à clés</div><div class="key-val">' + (d.keyboxCode || '') + '</div></div>'),
-      iif(d.contactPhone, '<div class="key-item"><div class="key-lbl">Votre hôte</div><div class="key-val" style="font-size:1rem">' + (d.contactPhone || '') + '</div></div>'),
+      '<div class="key-item key-arrival"><div class="key-lbl">Arrivée</div><div class="key-val">Dès 15h00</div></div>',
+      '<div class="key-item key-departure"><div class="key-lbl">Départ</div><div class="key-val">Avant ' + (d.checkoutTime || '11h00') + '</div></div>',
+      iif(d.keyboxCode, '<div class="key-item key-keybox"><div class="key-lbl">Boîte à clés</div><div class="key-val">' + (d.keyboxCode || '') + '</div></div>'),
+      iif(d.contactPhone, '<div class="key-item key-host"><div class="key-lbl">Votre hôte</div><div class="key-val" style="font-size:1rem">' + (d.contactPhone || '') + '</div></div>'),
     ].join('');
 
     // WiFi block
@@ -16201,28 +16201,28 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     const accessCards = [
       d.accessInstructions ? (
         '<div class="access-card"><div class="access-icon"><i class="fas fa-door-open"></i></div>'
-        + '<div class="access-title">Instructions d\'accès</div>'
-        + '<div class="access-body">' + safe(d.accessInstructions) + '</div>'
+        + '<div class="access-title access-title-ins">Instructions d\'accès</div>'
+        + '<div class="access-body" data-translatable>' + safe(d.accessInstructions) + '</div>'
         + iif(d.keyboxCode, '<div class="code-chip"><i class="fas fa-hashtag"></i>' + d.keyboxCode + '</div>')
         + '</div>'
       ) : '',
       d.parkingInfo ? (
         '<div class="access-card"><div class="access-icon"><i class="fas fa-parking"></i></div>'
-        + '<div class="access-title">Parking</div>'
-        + '<div class="access-body">' + safe(d.parkingInfo) + '</div></div>'
+        + '<div class="access-title access-title-parking">Parking</div>'
+        + '<div class="access-body" data-translatable>' + safe(d.parkingInfo) + '</div></div>'
       ) : '',
       d.transportInfo ? (
         '<div class="access-card"><div class="access-icon"><i class="fas fa-subway"></i></div>'
-        + '<div class="access-title">Transports</div>'
-        + '<div class="access-body">' + safe(d.transportInfo) + '</div></div>'
+        + '<div class="access-title access-title-transport">Transports</div>'
+        + '<div class="access-body" data-translatable>' + safe(d.transportInfo) + '</div></div>'
       ) : '',
     ].join('');
 
     const accessSection = (d.accessInstructions || d.keyboxCode || d.parkingInfo || d.transportInfo
       || (d.photos && (d.photos.entrance || d.photos.parking))) ? (
-      '<section class="sect" id="access">'
-      + '<div class="sect-lbl">Accès &amp; Arrivée</div>'
-      + '<h2 class="sect-title">Accès au<br>logement</h2>'
+      '<section class="sect" id="access" data-sect="access">'
+      + '<div class="sect-lbl sect-lbl-access">Accès &amp; Arrivée</div>'
+      + '<h2 class="sect-title sect-title-access">Accès au<br>logement</h2>'
       + '<div class="sect-rule"></div>'
       + '<div class="access-grid">' + accessCards + '</div>'
       + iif(d.extraNotesAccess, '<div class="extra-note">' + safe(d.extraNotesAccess) + '</div>')
@@ -16238,8 +16238,8 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + '<div class="room-num">0' + (i + 1) + '</div>'
       + '<div>'
         + '<div class="room-name">' + (room.name || '') + '</div>'
-        + iif(room.description, '<div class="room-desc">' + safe(room.description) + '</div>')
-        + iif(room.extra, '<div class="room-desc" style="margin-top:.4rem;color:#5a5a4a">' + safe(room.extra) + '</div>')
+        + iif(room.description, '<div class="room-desc" data-translatable>' + safe(room.description) + '</div>')
+        + iif(room.extra, '<div class="room-desc" style="margin-top:.4rem;color:#5a5a4a" data-translatable>' + safe(room.extra) + '</div>')
         + galleryHtml(d.photos && d.photos.roomPhotosPerRoom && d.photos.roomPhotosPerRoom[i + 1])
       + '</div>'
       + iif(room.badge, '<div class="room-badge">' + (room.badge || '') + '</div>')
@@ -16247,9 +16247,9 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     )).join('');
 
     const roomsSection = d.rooms && d.rooms.length > 0 ? (
-      '<section class="sect" id="rooms">'
-      + '<div class="sect-lbl">Le logement</div>'
-      + '<h2 class="sect-title">Vos espaces</h2>'
+      '<section class="sect" id="rooms" data-sect="rooms">'
+      + '<div class="sect-lbl sect-lbl-rooms">Le logement</div>'
+      + '<h2 class="sect-title sect-title-rooms">Vos espaces</h2>'
       + '<div class="sect-rule"></div>'
       + '<div class="rooms">' + roomRows + '</div>'
       + iif(d.extraNotesLogement, '<div class="extra-note">' + safe(d.extraNotesLogement) + '</div>')
@@ -16259,13 +16259,13 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     // Pratique section
     const pratiqueSection = (d.importantRules || d.equipmentList || d.extraNotesPractical) ? (
-      '<section class="sect" id="info">'
-      + '<div class="sect-lbl">Infos pratiques</div>'
-      + '<h2 class="sect-title">À savoir</h2>'
+      '<section class="sect" id="info" data-sect="info">'
+      + '<div class="sect-lbl sect-lbl-info">Infos pratiques</div>'
+      + '<h2 class="sect-title sect-title-info">À savoir</h2>'
       + '<div class="sect-rule"></div>'
-      + iif(d.importantRules, '<div class="info-block border-left-forest"><div class="info-block-title"><i class="fas fa-exclamation-circle"></i> Règles importantes</div><div class="info-block-body">' + safe(d.importantRules) + '</div></div>')
-      + iif(d.equipmentList, '<div class="info-block border-left-forest"><div class="info-block-title"><i class="fas fa-toolbox"></i> Équipements</div><div class="info-block-body">' + safe(d.equipmentList) + '</div></div>')
-      + iif(d.extraNotesPractical, '<div class="extra-note">' + safe(d.extraNotesPractical) + '</div>')
+      + iif(d.importantRules, '<div class="info-block border-left-forest"><div class="info-block-title info-title-rules"><i class="fas fa-exclamation-circle"></i> Règles importantes</div><div class="info-block-body" data-translatable>' + safe(d.importantRules) + '</div></div>')
+      + iif(d.equipmentList, '<div class="info-block border-left-forest"><div class="info-block-title info-title-equipment"><i class="fas fa-toolbox"></i> Équipements</div><div class="info-block-body" data-translatable>' + safe(d.equipmentList) + '</div></div>')
+      + iif(d.extraNotesPractical, '<div class="extra-note" data-translatable>' + safe(d.extraNotesPractical) + '</div>')
       + galleryHtml(d.photos && d.photos.extraPhotosPractical)
       + '</section>'
     ) : '';
@@ -16289,14 +16289,14 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     )).join('');
 
     const alentourSection = ((d.restaurants && d.restaurants.length > 0) || (d.places && d.places.length > 0) || d.shopsList) ? (
-      '<section class="sect" id="around">'
-      + '<div class="sect-lbl">Alentours</div>'
-      + '<h2 class="sect-title">Guide du<br>quartier</h2>'
+      '<section class="sect" id="around" data-sect="around">'
+      + '<div class="sect-lbl sect-lbl-around">Alentours</div>'
+      + '<h2 class="sect-title sect-title-around">Guide du<br>quartier</h2>'
       + '<div class="sect-rule"></div>'
-      + iif(restosItems, '<p class="subcat-label">🍽 Restaurants</p><div class="resto-list">' + restosItems + '</div>')
-      + iif(d.shopsList, '<p class="subcat-label">🛒 Commerces</p><div class="info-block"><div class="info-block-body">' + safe(d.shopsList) + '</div></div>')
-      + iif(placesItems, '<p class="subcat-label" style="margin-top:1.5rem">🏞 À visiter</p><div class="resto-list">' + placesItems + '</div>')
-      + iif(d.extraNotesAround, '<div class="extra-note" style="margin-top:1.5rem">' + safe(d.extraNotesAround) + '</div>')
+      + iif(restosItems, '<p class="subcat-label subcat-restos">🍽 Restaurants</p><div class="resto-list">' + restosItems + '</div>')
+      + iif(d.shopsList, '<p class="subcat-label subcat-shops">🛒 Commerces</p><div class="info-block"><div class="info-block-body" data-translatable>' + safe(d.shopsList) + '</div></div>')
+      + iif(placesItems, '<p class="subcat-label subcat-visit" style="margin-top:1.5rem">🏞 À visiter</p><div class="resto-list">' + placesItems + '</div>')
+      + iif(d.extraNotesAround, '<div class="extra-note" style="margin-top:1.5rem" data-translatable>' + safe(d.extraNotesAround) + '</div>')
       + galleryHtml(d.photos && d.photos.extraPhotosAround)
       + '</section>'
     ) : '';
@@ -16306,12 +16306,12 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       .map((line, i) => '<li class="c-step"><div class="c-num">' + (i + 1) + '</div>' + line.trim() + '</li>').join('');
 
     const checkoutSection = (d.checkoutInstructions || d.checkoutTime) ? (
-      '<section class="sect" id="checkout">'
-      + '<div class="sect-lbl">Départ</div>'
-      + '<h2 class="sect-title">Consignes<br>de départ</h2>'
+      '<section class="sect" id="checkout" data-sect="checkout">'
+      + '<div class="sect-lbl sect-lbl-checkout">Départ</div>'
+      + '<h2 class="sect-title sect-title-checkout">Consignes<br>de départ</h2>'
       + '<div class="sect-rule"></div>'
       + '<div class="checkout-card">'
-        + '<div class="checkout-time-block"><div class="checkout-h">' + (d.checkoutTime || '11h') + '</div><div class="checkout-h-lbl">heure limite</div></div>'
+        + '<div class="checkout-time-block"><div class="checkout-h">' + (d.checkoutTime || '11h') + '</div><div class="checkout-h-lbl limit-time-lbl">heure limite</div></div>'
         + '<ul class="checkout-steps">' + checkoutSteps + '</ul>'
       + '</div>'
       + '</section>'
@@ -16449,6 +16449,16 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
   .wrap{padding:0 1.2rem 6rem}
   .wifi-qr{display:none}
 }
+/* ── Language Picker ── */
+.lang-picker{position:relative;display:flex;align-items:center;padding:0 .8rem;flex-shrink:0;border-left:1px solid var(--border);margin-left:auto}
+.lang-btn{display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);padding:5px 8px;border-radius:8px;transition:background .15s;white-space:nowrap}
+.lang-btn:hover{background:var(--cream2)}
+.lang-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:5px;min-width:155px;box-shadow:0 8px 32px rgba(26,26,20,.13);z-index:9999}
+.lang-menu.open{display:block}
+.lang-option{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:400;color:var(--ink);transition:background .12s;white-space:nowrap}
+.lang-option:hover{background:var(--cream2)}
+.lang-option.active{background:var(--gold-pale);color:var(--forest);font-weight:600}
+.lang-translating{opacity:.6;transition:opacity .3s}
 </style></head><body>
 <header class="hero">
   <div class="hero-bg"></div>
@@ -16465,14 +16475,29 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 <nav class="nav">
   <div class="nav-logo">${title}</div>
   <div class="nav-links">${navLinks}</div>
+  <div class="lang-picker" id="langPicker">
+    <button class="lang-btn" id="langBtn" onclick="toggleLangMenu(event)">
+      <span id="langFlag">🇫🇷</span>
+      <span id="langLabel">FR</span>
+      <i class="fas fa-chevron-down" style="font-size:9px;opacity:.6;margin-left:2px"></i>
+    </button>
+    <div class="lang-menu" id="langMenu">
+      <div class="lang-option" onclick="setLang('fr')">&#127467;&#127479; Français</div>
+      <div class="lang-option" onclick="setLang('en')">&#127468;&#127463; English</div>
+      <div class="lang-option" onclick="setLang('de')">&#127465;&#127466; Deutsch</div>
+      <div class="lang-option" onclick="setLang('it')">&#127470;&#127481; Italiano</div>
+      <div class="lang-option" onclick="setLang('nl')">&#127475;&#127473; Nederlands</div>
+      <div class="lang-option" onclick="setLang('zh')">&#127464;&#127475; 中文</div>
+    </div>
+  </div>
 </nav>
 <div class="wrap">
-<section class="sect" id="welcome">
-  <div class="sect-lbl">Bienvenue</div>
-  <h2 class="sect-title">Bienvenue<br>chez nous</h2>
+<section class="sect" id="welcome" data-sect="welcome">
+  <div class="sect-lbl sect-lbl-welcome">Bienvenue</div>
+  <h2 class="sect-title sect-title-welcome">Bienvenue<br>chez nous</h2>
   <div class="sect-rule"></div>
   <div class="welcome-grid">
-    <p class="welcome-text">${safe(d.welcomeDescription)}</p>
+    <p class="welcome-text" data-translatable>${safe(d.welcomeDescription)}</p>
     <div class="key-stack">${keyItems}</div>
   </div>
   ${wifiBlock}
@@ -16483,8 +16508,8 @@ ${pratiqueSection}
 ${alentourSection}
 ${checkoutSection}
 <footer class="foot">
-  <div class="foot-brand">Ce livret a été concu grâce à Boostinghost.fr</div>
-  <div class="foot-sub">Merci pour votre séjour ✦</div>
+  <div class="foot-brand">BoostingHost</div>
+  <div class="foot-sub foot-thanks">Merci pour votre séjour ✦</div>
 </footer>
 </div>
 ${fabHtml}
@@ -16511,12 +16536,237 @@ function openQr(ssid,pw){
   const c=document.getElementById('qr-big');c.width=0;c.height=0;
   if(typeof QRCode!=='undefined')QRCode.toCanvas(c,'WIFI:T:WPA;S:'+ssid+';P:'+pw+';;',{width:240,margin:2,color:{dark:'#1A1A14',light:'#FFFDF9'}},()=>{});
 }
+
 window.addEventListener('DOMContentLoaded',()=>{
   const c=document.getElementById('qr-canvas');
   if(c&&typeof QRCode!=='undefined'){
     const ssid='${wifiSSIDEscaped}',pw='${wifiPwEscaped}';
     if(ssid)QRCode.toCanvas(c,'WIFI:T:WPA;S:'+ssid+';P:'+pw+';;',{width:72,margin:1,color:{dark:'#1D4D2F',light:'#fff'}},()=>{});
   }
+  // Apply saved language on load
+  const saved = localStorage.getItem('wb_lang') || 'fr';
+  if(saved !== 'fr') setLang(saved);
+});
+
+// ================================================================
+// TRANSLATION ENGINE
+// ================================================================
+const LANGS = {
+  fr:{flag:'\ud83c\uddeb\ud83c\uddf7',label:'FR'},
+  en:{flag:'\ud83c\uddec\ud83c\udde7',label:'EN'},
+  de:{flag:'\ud83c\udde9\ud83c\uddea',label:'DE'},
+  it:{flag:'\ud83c\uddee\ud83c\uddf9',label:'IT'},
+  nl:{flag:'\ud83c\uddf3\ud83c\uddf1',label:'NL'},
+  zh:{flag:'\ud83c\udde8\ud83c\uddf3',label:'ZH'}
+};
+
+const UI = {
+  fr:{
+    welcome:'Bienvenue', welcomeTitle:'Bienvenue<br>chez nous',
+    accessLbl:'Acc\u00e8s & Arriv\u00e9e', accessTitle:'Acc\u00e8s au<br>logement', accessNav:'Acc\u00e8s',
+    roomsLbl:'Le logement', roomsTitle:'Vos espaces', roomsNav:'Logement',
+    infoLbl:'Infos pratiques', infoTitle:'\u00c0 savoir', infoNav:'Pratique',
+    aroundLbl:'Alentours', aroundTitle:'Guide du<br>quartier', aroundNav:'Alentours',
+    checkoutLbl:'D\u00e9part', checkoutTitle:'Consignes<br>de d\u00e9part', checkoutNav:'D\u00e9part',
+    wifi:'R\u00e9seau WiFi', wifiPw:'Mot de passe', wifiCopy:'Copier',
+    arrival:'Arriv\u00e9e', departure:'D\u00e9part', keybox:'Bo\u00eete \u00e0 cl\u00e9s', host:'Votre h\u00f4te',
+    checkinTime:'D\u00e8s 15h00', limitTime:'heure limite',
+    restos:'\ud83c\udf7d Restaurants', shops:'\ud83d\uded2 Commerces', visit:'\ud83c\udfd6 \u00c0 visiter',
+    thanks:'Merci pour votre s\u00e9jour \u2736',
+    rules:'R\u00e8gles importantes', equipment:'\u00c9quipements',
+    accessIns:'Instructions d'acc\u00e8s', parking:'Parking', transport:'Transports'
+  },
+  en:{
+    welcome:'Welcome', welcomeTitle:'Welcome<br>to our home',
+    accessLbl:'Access & Arrival', accessTitle:'Access to<br>the property', accessNav:'Access',
+    roomsLbl:'The property', roomsTitle:'Your spaces', roomsNav:'Rooms',
+    infoLbl:'Practical info', infoTitle:'Good to know', infoNav:'Info',
+    aroundLbl:'Around', aroundTitle:'Area<br>guide', aroundNav:'Around',
+    checkoutLbl:'Checkout', checkoutTitle:'Checkout<br>instructions', checkoutNav:'Checkout',
+    wifi:'WiFi Network', wifiPw:'Password', wifiCopy:'Copy',
+    arrival:'Check-in', departure:'Check-out', keybox:'Key lockbox', host:'Your host',
+    checkinTime:'From 3:00 PM', limitTime:'deadline',
+    restos:'\ud83c\udf7d Restaurants', shops:'\ud83d\uded2 Shops', visit:'\ud83c\udfd6 Places to visit',
+    thanks:'Thank you for your stay \u2736',
+    rules:'House rules', equipment:'Equipment',
+    accessIns:'Access instructions', parking:'Parking', transport:'Transport'
+  },
+  de:{
+    welcome:'Willkommen', welcomeTitle:'Willkommen<br>bei uns',
+    accessLbl:'Zugang & Ankunft', accessTitle:'Zugang zur<br>Unterkunft', accessNav:'Zugang',
+    roomsLbl:'Die Unterkunft', roomsTitle:'Ihre R\u00e4ume', roomsNav:'Unterkunft',
+    infoLbl:'Praktische Infos', infoTitle:'Wissenswert', infoNav:'Info',
+    aroundLbl:'Umgebung', aroundTitle:'Stadtteil-<br>f\u00fchrer', aroundNav:'Umgebung',
+    checkoutLbl:'Abreise', checkoutTitle:'Abreise-<br>hinweise', checkoutNav:'Abreise',
+    wifi:'WLAN-Netzwerk', wifiPw:'Passwort', wifiCopy:'Kopieren',
+    arrival:'Ankunft', departure:'Abreise', keybox:'Schl\u00fcsselkasten', host:'Ihr Gastgeber',
+    checkinTime:'Ab 15:00 Uhr', limitTime:'Deadline',
+    restos:'\ud83c\udf7d Restaurants', shops:'\ud83d\uded2 Gesch\u00e4fte', visit:'\ud83c\udfd6 Sehensw\u00fcrdigkeiten',
+    thanks:'Vielen Dank f\u00fcr Ihren Aufenthalt \u2736',
+    rules:'Wichtige Regeln', equipment:'Ausstattung',
+    accessIns:'Zugangsanweisungen', parking:'Parken', transport:'Verkehr'
+  },
+  it:{
+    welcome:'Benvenuto', welcomeTitle:'Benvenuto<br>da noi',
+    accessLbl:'Accesso & Arrivo', accessTitle:'Accesso alla<br>struttura', accessNav:'Accesso',
+    roomsLbl:"L'alloggio", roomsTitle:'I vostri spazi', roomsNav:'Alloggio',
+    infoLbl:'Informazioni pratiche', infoTitle:'Da sapere', infoNav:'Info',
+    aroundLbl:'Dintorni', aroundTitle:'Guida del<br>quartiere', aroundNav:'Dintorni',
+    checkoutLbl:'Partenza', checkoutTitle:'Istruzioni<br>di partenza', checkoutNav:'Partenza',
+    wifi:'Rete WiFi', wifiPw:'Password', wifiCopy:'Copia',
+    arrival:'Arrivo', departure:'Partenza', keybox:'Cassetta chiavi', host:'Il vostro host',
+    checkinTime:'Dalle 15:00', limitTime:'orario limite',
+    restos:'\ud83c\udf7d Ristoranti', shops:'\ud83d\uded2 Negozi', visit:'\ud83c\udfd6 Da visitare',
+    thanks:'Grazie per il vostro soggiorno \u2736',
+    rules:'Regole importanti', equipment:'Attrezzature',
+    accessIns:"Istruzioni d'accesso", parking:'Parcheggio', transport:'Trasporti'
+  },
+  nl:{
+    welcome:'Welkom', welcomeTitle:'Welkom<br>bij ons',
+    accessLbl:'Toegang & Aankomst', accessTitle:'Toegang tot<br>de woning', accessNav:'Toegang',
+    roomsLbl:'De woning', roomsTitle:'Uw ruimtes', roomsNav:'Woning',
+    infoLbl:'Praktische info', infoTitle:'Handig om te weten', infoNav:'Info',
+    aroundLbl:'Omgeving', aroundTitle:'Buurt-<br>gids', aroundNav:'Omgeving',
+    checkoutLbl:'Vertrek', checkoutTitle:'Vertrek-<br>instructies', checkoutNav:'Vertrek',
+    wifi:'WiFi-netwerk', wifiPw:'Wachtwoord', wifiCopy:'Kopi\u00ebren',
+    arrival:'Aankomst', departure:'Vertrek', keybox:'Sleutelkluisje', host:'Uw gastheer',
+    checkinTime:'Vanaf 15:00', limitTime:'uiterste tijd',
+    restos:'\ud83c\udf7d Restaurants', shops:'\ud83d\uded2 Winkels', visit:'\ud83c\udfd6 Bezienswaardigheden',
+    thanks:'Bedankt voor uw verblijf \u2736',
+    rules:'Belangrijke regels', equipment:'Uitrusting',
+    accessIns:'Toegangsinstructies', parking:'Parkeren', transport:'Vervoer'
+  },
+  zh:{
+    welcome:'\u6b22\u8fce', welcomeTitle:'\u6b22\u8fce<br>\u6765\u5230\u6211\u4eec\u5bb6',
+    accessLbl:'\u5165\u4f4f\u4e0e\u629e\u8fbe', accessTitle:'\u5230\u8fbe<br>\u4f4f\u6240', accessNav:'\u5165\u4f4f',
+    roomsLbl:'\u4f4f\u6240\u4ecb\u7ecd', roomsTitle:'\u60a8\u7684\u7a7a\u95f4', roomsNav:'\u4f4f\u6240',
+    infoLbl:'\u5b9e\u7528\u4fe1\u606f', infoTitle:'\u91cd\u8981\u4fe1\u606f', infoNav:'\u987b\u77e5',
+    aroundLbl:'\u5468\u8fb9', aroundTitle:'\u5468\u8fb9<br>\u6307\u5357', aroundNav:'\u5468\u8fb9',
+    checkoutLbl:'\u9000\u623f', checkoutTitle:'\u9000\u623f<br>\u987b\u77e5', checkoutNav:'\u9000\u623f',
+    wifi:'WiFi\u7f51\u7edc', wifiPw:'\u5bc6\u7801', wifiCopy:'\u590d\u5236',
+    arrival:'\u5165\u4f4f\u65f6\u95f4', departure:'\u9000\u623f\u65f6\u95f4', keybox:'\u9499\u5319\u7b71', host:'\u60a8\u7684\u623f\u4e1c',
+    checkinTime:'\u4e0b\u53483\u70b9\u8d77', limitTime:'\u622a\u6b62\u65f6\u95f4',
+    restos:'\ud83c\udf7d \u9910\u5385', shops:'\ud83d\uded2 \u5546\u5e97', visit:'\ud83c\udfd6 \u666f\u70b9',
+    thanks:'\u611f\u8c22\u60a8\u7684\u5149\u4e34 \u2736',
+    rules:'\u91cd\u8981\u89c4\u5b9a', equipment:'\u8bbe\u65bd',
+    accessIns:'\u5165\u4f4f\u8bf4\u660e', parking:'\u505c\u8f66', transport:'\u4ea4\u901a'
+  }
+};
+
+const SEL = [
+  ['.sect-lbl-welcome','welcome'],['.sect-title-welcome','welcomeTitle'],
+  ['.sect-lbl-access','accessLbl'],['.sect-title-access','accessTitle'],
+  ['.sect-lbl-rooms','roomsLbl'],['.sect-title-rooms','roomsTitle'],
+  ['.sect-lbl-info','infoLbl'],['.sect-title-info','infoTitle'],
+  ['.sect-lbl-around','aroundLbl'],['.sect-title-around','aroundTitle'],
+  ['.sect-lbl-checkout','checkoutLbl'],['.sect-title-checkout','checkoutTitle'],
+  ['.wifi-name-lbl','wifi'],['.wifi-pw-lbl','wifiPw'],['.wifi-copy-label','wifiCopy'],
+  ['.key-arrival .key-lbl','arrival'],['.key-arrival .key-val','checkinTime'],
+  ['.key-departure .key-lbl','departure'],
+  ['.key-keybox .key-lbl','keybox'],['.key-host .key-lbl','host'],
+  ['.limit-time-lbl','limitTime'],
+  ['.subcat-restos','restos'],['.subcat-shops','shops'],['.subcat-visit','visit'],
+  ['.foot-thanks','thanks'],
+  ['.nav-welcome','welcome'],['.nav-access','accessNav'],['.nav-rooms','roomsNav'],
+  ['.nav-info','infoNav'],['.nav-around','aroundNav'],['.nav-checkout','checkoutNav'],
+  ['.access-title-ins','accessIns'],['.access-title-parking','parking'],
+  ['.access-title-transport','transport'],
+  ['.info-title-rules i + text','rules'],['.info-title-equipment i + text','equipment'],
+];
+
+let currentLang = 'fr';
+let translationCache = {};
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('wb_lang', lang);
+  const t = UI[lang] || UI.fr;
+  const lm = LANGS[lang] || LANGS.fr;
+
+  // Update button display
+  document.getElementById('langFlag').textContent = lm.flag;
+  document.getElementById('langLabel').textContent = lm.label;
+  document.querySelectorAll('.lang-option').forEach(el => {
+    const onclick = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', onclick.includes("'" + lang + "'"));
+  });
+  document.getElementById('langMenu').classList.remove('open');
+  document.documentElement.lang = lang;
+
+  // Apply static UI labels
+  SEL.forEach(([sel, key]) => {
+    if(!t[key]) return;
+    if(sel.includes('i + text')) {
+      // Special case: update text node after icon
+      const cls = sel.replace(' i + text','');
+      document.querySelectorAll(cls).forEach(el => {
+        const icon = el.querySelector('i');
+        if(icon) el.innerHTML = icon.outerHTML + ' ' + t[key];
+      });
+      return;
+    }
+    document.querySelectorAll(sel).forEach(el => { el.innerHTML = t[key]; });
+  });
+
+  // Translate dynamic user content
+  translateDynamic(lang);
+}
+
+async function translateDynamic(lang) {
+  const els = document.querySelectorAll('[data-translatable]');
+  if(!els.length) return;
+
+  if(lang === 'fr') {
+    els.forEach(el => {
+      if(el.hasAttribute('data-orig')) el.innerHTML = el.getAttribute('data-orig');
+    });
+    return;
+  }
+
+  const langMap = {en:'en',de:'de',it:'it',nl:'nl',zh:'zh'};
+  const target = langMap[lang] || 'en';
+
+  // Show loading state
+  els.forEach(el => el.classList.add('lang-translating'));
+
+  for(const el of els) {
+    if(!el.hasAttribute('data-orig')) el.setAttribute('data-orig', el.innerHTML);
+    const orig = el.getAttribute('data-orig') || '';
+    if(!orig.trim()) { el.classList.remove('lang-translating'); continue; }
+
+    const cacheKey = target + '::' + orig.substring(0,80);
+    if(translationCache[cacheKey]) {
+      el.innerHTML = translationCache[cacheKey];
+      el.classList.remove('lang-translating');
+      continue;
+    }
+
+    try {
+      const r = await fetch('https://libretranslate.com/translate', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({q:orig.replace(/<br>/g,'\n'),source:'fr',target,format:'text',api_key:''})
+      });
+      if(r.ok) {
+        const d = await r.json();
+        if(d.translatedText) {
+          const translated = d.translatedText.replace(/\n/g,'<br>');
+          translationCache[cacheKey] = translated;
+          el.innerHTML = translated;
+        }
+      }
+    } catch(e) { /* silent fail */ }
+    el.classList.remove('lang-translating');
+  }
+}
+
+function toggleLangMenu(e) {
+  e.stopPropagation();
+  document.getElementById('langMenu').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  const m = document.getElementById('langMenu');
+  if(m) m.classList.remove('open');
 });
 </script></body></html>`;
 
