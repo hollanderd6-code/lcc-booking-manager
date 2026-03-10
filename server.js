@@ -16452,10 +16452,11 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 
 
 /* Hide ALL Google Translate default UI */
-.goog-te-banner-frame,.goog-te-menu-frame{display:none!important}
+.goog-te-banner-frame,.goog-te-menu-frame,.goog-te-balloon-frame{display:none!important;visibility:hidden!important}
 .goog-te-gadget{display:none!important}
 #google_translate_element{display:none!important}
 body{top:0!important;position:static!important}
+iframe.goog-te-banner-frame{display:none!important}
 /* Custom lang picker */
 .wb-lang-picker{position:relative;display:flex;align-items:center;padding:0 .8rem;flex-shrink:0;border-left:1px solid var(--border)}
 .wb-lang-btn{display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);padding:6px 10px;border-radius:8px;transition:background .15s;white-space:nowrap}
@@ -16492,12 +16493,12 @@ body{top:0!important;position:static!important}
       <span class="chevron">&#9660;</span>
     </button>
     <div class="wb-lang-menu">
-      <div class="wb-lang-opt active" data-lang="fr" data-gtlang=""><span class="flag">&#127467;&#127479;</span> Français</div>
-      <div class="wb-lang-opt" data-lang="en" data-gtlang="en"><span class="flag">&#127468;&#127463;</span> English</div>
-      <div class="wb-lang-opt" data-lang="de" data-gtlang="de"><span class="flag">&#127465;&#127466;</span> Deutsch</div>
-      <div class="wb-lang-opt" data-lang="it" data-gtlang="it"><span class="flag">&#127470;&#127481;</span> Italiano</div>
-      <div class="wb-lang-opt" data-lang="nl" data-gtlang="nl"><span class="flag">&#127475;&#127473;</span> Nederlands</div>
-      <div class="wb-lang-opt" data-lang="zh" data-gtlang="zh-CN"><span class="flag">&#127464;&#127475;</span> 中文</div>
+      <div class="wb-lang-opt active" data-lang="fr" data-gtlang="" data-label="FR"><span class="flag">&#127467;&#127479;</span> Français</div>
+      <div class="wb-lang-opt" data-lang="en" data-gtlang="en" data-label="EN"><span class="flag">&#127468;&#127463;</span> English</div>
+      <div class="wb-lang-opt" data-lang="de" data-gtlang="de" data-label="DE"><span class="flag">&#127465;&#127466;</span> Deutsch</div>
+      <div class="wb-lang-opt" data-lang="it" data-gtlang="it" data-label="IT"><span class="flag">&#127470;&#127481;</span> Italiano</div>
+      <div class="wb-lang-opt" data-lang="nl" data-gtlang="nl" data-label="NL"><span class="flag">&#127475;&#127473;</span> Nederlands</div>
+      <div class="wb-lang-opt" data-lang="zh" data-gtlang="zh-CN" data-label="ZH"><span class="flag">&#127464;&#127475;</span> 中文</div>
     </div>
   </div>
   <div id="google_translate_element" style="display:none"></div>
@@ -16598,9 +16599,9 @@ document.addEventListener('DOMContentLoaded', function(){
     el.addEventListener('click', function(e){
       e.stopPropagation();
       var gtLang = el.dataset.gtlang;
-      var label = el.querySelector('span:last-child') ? el.childNodes[1].textContent.trim() : el.textContent.trim();
       var flag = el.querySelector('.flag').innerHTML;
-      wbSetLang(gtLang, el.textContent.trim().split(' ')[1] || 'FR', flag, el);
+      var label = el.dataset.label;
+      wbSetLang(gtLang, label, flag, el);
     });
   });
 
@@ -16608,7 +16609,15 @@ document.addEventListener('DOMContentLoaded', function(){
     if(picker) picker.classList.remove('open');
   });
 
-  // Restore saved lang after GT loads
+  // Force hide banner + restore saved lang
+  function hideBanner(){
+    var banner = document.querySelector('.goog-te-banner-frame');
+    if(banner){ banner.style.display='none'; document.body.style.top='0'; }
+    var iframe = document.querySelector('iframe[name="googleTranslateFrame"]');
+    if(iframe) iframe.style.display='none';
+  }
+  setInterval(hideBanner, 500);
+
   setTimeout(function(){
     var saved = localStorage.getItem('wb_lang');
     if(saved) {
