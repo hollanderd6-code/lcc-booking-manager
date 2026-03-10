@@ -16476,18 +16476,18 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
   <div class="nav-logo">${title}</div>
   <div class="nav-links">${navLinks}</div>
   <div class="lang-picker" id="langPicker">
-    <button class="lang-btn" id="langBtn" onclick="toggleLangMenu(event)">
+    <button class="lang-btn" id="langBtn">
       <span id="langFlag">&#127467;&#127479;</span>
       <span id="langLabel">FR</span>
       <i class="fas fa-chevron-down" style="font-size:9px;opacity:.6;margin-left:2px"></i>
     </button>
     <div class="lang-menu" id="langMenu">
-      <div class="lang-option" data-lang="fr" onclick="setLang('fr')">&#127467;&#127479; Fran&#231;ais</div>
-      <div class="lang-option" data-lang="en" onclick="setLang('en')">&#127468;&#127463; English</div>
-      <div class="lang-option" data-lang="de" onclick="setLang('de')">&#127465;&#127466; Deutsch</div>
-      <div class="lang-option" data-lang="it" onclick="setLang('it')">&#127470;&#127481; Italiano</div>
-      <div class="lang-option" data-lang="nl" onclick="setLang('nl')">&#127475;&#127473; Nederlands</div>
-      <div class="lang-option" data-lang="zh" onclick="setLang('zh')">&#127464;&#127475; &#20013;&#25991;</div>
+      <div class="lang-option" data-lang="fr">&#127467;&#127479; Fran&#231;ais</div>
+      <div class="lang-option" data-lang="en">&#127468;&#127463; English</div>
+      <div class="lang-option" data-lang="de">&#127465;&#127466; Deutsch</div>
+      <div class="lang-option" data-lang="it">&#127470;&#127481; Italiano</div>
+      <div class="lang-option" data-lang="nl">&#127475;&#127473; Nederlands</div>
+      <div class="lang-option" data-lang="zh">&#127464;&#127475; &#20013;&#25991;</div>
     </div>
   </div>
 </nav>
