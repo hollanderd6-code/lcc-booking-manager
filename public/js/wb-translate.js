@@ -1,7 +1,5 @@
-// ============================================================
 // wb-translate.js — Welcome Book Translation Engine
 // Place in: public/js/wb-translate.js
-// ============================================================
 
 const LANGS = {
   fr: { flag: '🇫🇷', label: 'FR' },
@@ -137,13 +135,9 @@ function applyUI(lang) {
     });
   });
   const rulesEl = document.querySelector('.info-title-rules');
-  if (rulesEl && t.rules) {
-    rulesEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + t.rules;
-  }
+  if (rulesEl && t.rules) rulesEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + t.rules;
   const equipEl = document.querySelector('.info-title-equip');
-  if (equipEl && t.equip) {
-    equipEl.innerHTML = '<i class="fas fa-toolbox"></i> ' + t.equip;
-  }
+  if (equipEl && t.equip) equipEl.innerHTML = '<i class="fas fa-toolbox"></i> ' + t.equip;
 }
 
 function setLang(lang) {
@@ -164,11 +158,9 @@ function setLang(lang) {
   translateDynamic(lang);
 }
 
-// MyMemory API — gratuit, sans clé, 5000 mots/jour
-async function translateText(text, targetLang) {
-  const langMap = { en: 'en-GB', de: 'de-DE', it: 'it-IT', nl: 'nl-NL', zh: 'zh-CN' };
-  const target = langMap[targetLang] || 'en-GB';
-  const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=fr|' + target;
+// MyMemory: max 500 chars per request — split long texts by line
+async function translateChunk(text, langpair) {
+  const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + langpair;
   const r = await fetch(url);
   if (!r.ok) return null;
   const d = await r.json();
@@ -176,6 +168,37 @@ async function translateText(text, targetLang) {
     return d.responseData.translatedText;
   }
   return null;
+}
+
+async function translateLong(text, targetLang) {
+  const langMap = { en: 'fr|en-GB', de: 'fr|de-DE', it: 'fr|it-IT', nl: 'fr|nl-NL', zh: 'fr|zh-CN' };
+  const langpair = langMap[targetLang] || 'fr|en-GB';
+
+  // Split on newlines, translate each non-empty line separately
+  const lines = text.split('\n');
+  const translated = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) {
+      translated.push('');
+      continue;
+    }
+    // Further split if line > 450 chars
+    if (line.length <= 450) {
+      const tx = await translateChunk(line, langpair);
+      translated.push(tx !== null ? tx : line);
+    } else {
+      // Split by sentence (. or !)
+      const sentences = line.match(/[^.!?]+[.!?]+/g) || [line];
+      const txSentences = [];
+      for (const s of sentences) {
+        const tx = await translateChunk(s.trim(), langpair);
+        txSentences.push(tx !== null ? tx : s);
+      }
+      translated.push(txSentences.join(' '));
+    }
+  }
+  return translated.join('\n');
 }
 
 async function translateDynamic(lang) {
@@ -186,19 +209,24 @@ async function translateDynamic(lang) {
     });
     return;
   }
+  // Save originals
   els.forEach(function(el) {
     if (!el.dataset.orig) el.dataset.orig = el.innerHTML;
   });
+
   for (let i = 0; i < els.length; i++) {
     const el = els[i];
     const orig = el.dataset.orig || '';
     if (!orig.trim()) continue;
-    const ckey = lang + '|' + orig.slice(0, 60);
+
+    const ckey = lang + '|' + orig.slice(0, 80);
     if (txCache[ckey]) { el.innerHTML = txCache[ckey]; continue; }
+
     el.classList.add('translating');
     try {
+      // Strip HTML tags for translation, preserve <br> as newline
       const plain = orig.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
-      const translated = await translateText(plain, lang);
+      const translated = await translateLong(plain, lang);
       if (translated) {
         const tx = translated.replace(/\n/g, '<br>');
         txCache[ckey] = tx;
@@ -209,7 +237,7 @@ async function translateDynamic(lang) {
   }
 }
 
-// ── Init : fonctionne que DOMContentLoaded soit passé ou non ───────────
+// ── Init ────────────────────────────────────────────────────────────────
 function wbInit() {
   const btn = document.getElementById('langBtn');
   const menuEl = document.getElementById('langMenu');
@@ -233,12 +261,10 @@ function wbInit() {
     if (menuEl) menuEl.classList.remove('open');
   });
 
-  // Appliquer la langue sauvegardée
   const saved = localStorage.getItem('wb_lang') || 'fr';
   if (saved !== 'fr') setLang(saved);
 }
 
-// Lance wbInit immédiatement si DOM prêt, sinon attend DOMContentLoaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', wbInit);
 } else {
