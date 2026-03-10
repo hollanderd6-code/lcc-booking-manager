@@ -16487,18 +16487,18 @@ iframe.goog-te-banner-frame{display:none!important}
   <div class="nav-logo">${title}</div>
   <div class="nav-links">${navLinks}</div>
   <div class="wb-lang-picker" id="wbLangPicker">
-    <button class="wb-lang-btn" id="wbLangBtn">
-      <span class="flag" id="wbFlag">&#127467;&#127479;</span>
-      <span id="wbLabel">FR</span>
-      <span class="chevron">&#9660;</span>
+    <button class="wb-lang-btn notranslate" id="wbLangBtn" translate="no">
+      <span class="flag notranslate" id="wbFlag">&#127467;&#127479;</span>
+      <span id="wbLabel" class="notranslate">FR</span>
+      <span class="chevron notranslate">&#9660;</span>
     </button>
     <div class="wb-lang-menu">
-      <div class="wb-lang-opt active" data-lang="fr" data-gtlang="" data-label="FR"><span class="flag">&#127467;&#127479;</span> Français</div>
-      <div class="wb-lang-opt" data-lang="en" data-gtlang="en" data-label="EN"><span class="flag">&#127468;&#127463;</span> English</div>
-      <div class="wb-lang-opt" data-lang="de" data-gtlang="de" data-label="DE"><span class="flag">&#127465;&#127466;</span> Deutsch</div>
-      <div class="wb-lang-opt" data-lang="it" data-gtlang="it" data-label="IT"><span class="flag">&#127470;&#127481;</span> Italiano</div>
-      <div class="wb-lang-opt" data-lang="nl" data-gtlang="nl" data-label="NL"><span class="flag">&#127475;&#127473;</span> Nederlands</div>
-      <div class="wb-lang-opt" data-lang="zh" data-gtlang="zh-CN" data-label="ZH"><span class="flag">&#127464;&#127475;</span> 中文</div>
+      <div class="wb-lang-opt active" data-lang="fr" data-gtlang="" data-label="FR"><span class="flag">&#127467;&#127479;</span> <span class="notranslate">Français</span></div>
+      <div class="wb-lang-opt" data-lang="en" data-gtlang="en" data-label="EN"><span class="flag">&#127468;&#127463;</span> <span class="notranslate">English</span></div>
+      <div class="wb-lang-opt" data-lang="de" data-gtlang="de" data-label="DE"><span class="flag">&#127465;&#127466;</span> <span class="notranslate">Deutsch</span></div>
+      <div class="wb-lang-opt" data-lang="it" data-gtlang="it" data-label="IT"><span class="flag">&#127470;&#127481;</span> <span class="notranslate">Italiano</span></div>
+      <div class="wb-lang-opt" data-lang="nl" data-gtlang="nl" data-label="NL"><span class="flag">&#127475;&#127473;</span> <span class="notranslate">Nederlands</span></div>
+      <div class="wb-lang-opt" data-lang="zh" data-gtlang="zh-CN" data-label="ZH"><span class="flag">&#127464;&#127475;</span> <span class="notranslate">中文</span></div>
     </div>
   </div>
   <div id="google_translate_element" style="display:none"></div>
@@ -16611,12 +16611,16 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // Force hide banner + restore saved lang
   function hideBanner(){
-    var banner = document.querySelector('.goog-te-banner-frame');
-    if(banner){ banner.style.display='none'; document.body.style.top='0'; }
-    var iframe = document.querySelector('iframe[name="googleTranslateFrame"]');
-    if(iframe) iframe.style.display='none';
+    // Hide all Google translate banners
+    document.querySelectorAll('.goog-te-banner-frame, .goog-te-menu-frame, #goog-gt-tt, .goog-tooltip').forEach(function(el){
+      el.style.cssText = 'display:none!important';
+    });
+    document.body.style.cssText = (document.body.style.cssText || '').replace(/top:[^;]+;?/,'') + ';top:0!important';
   }
-  setInterval(hideBanner, 500);
+  hideBanner();
+  setInterval(hideBanner, 300);
+  // MutationObserver to catch Google reinserting the banner
+  new MutationObserver(hideBanner).observe(document.body, {childList:true, subtree:false});
 
   setTimeout(function(){
     var saved = localStorage.getItem('wb_lang');
