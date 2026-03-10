@@ -16451,13 +16451,24 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 }
 
 
-#google_translate_element{position:relative}
-.goog-te-gadget{font-size:0!important}
-.goog-te-gadget select{font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);background:none;border:none;cursor:pointer;padding:5px 9px;border-radius:8px;outline:none;appearance:none;-webkit-appearance:none}
-.goog-te-gadget select:hover{background:var(--cream2)}
-.goog-logo-link,.goog-te-gadget span{display:none!important}
-.goog-te-banner-frame{display:none!important}
-body{top:0!important}
+/* Hide ALL Google Translate default UI */
+.goog-te-banner-frame,.goog-te-menu-frame{display:none!important}
+.goog-te-gadget{display:none!important}
+#google_translate_element{display:none!important}
+body{top:0!important;position:static!important}
+/* Custom lang picker */
+.wb-lang-picker{position:relative;display:flex;align-items:center;padding:0 .8rem;flex-shrink:0;border-left:1px solid var(--border)}
+.wb-lang-btn{display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);padding:6px 10px;border-radius:8px;transition:background .15s;white-space:nowrap}
+.wb-lang-btn:hover{background:var(--cream2)}
+.wb-lang-btn .flag{font-size:16px}
+.wb-lang-btn .chevron{font-size:9px;opacity:.5;transition:transform .2s}
+.wb-lang-picker.open .chevron{transform:rotate(180deg)}
+.wb-lang-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:5px;min-width:175px;box-shadow:0 8px 32px rgba(26,26,20,.14);z-index:9999}
+.wb-lang-picker.open .wb-lang-menu{display:block}
+.wb-lang-opt{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink);transition:background .12s;white-space:nowrap}
+.wb-lang-opt:hover{background:var(--cream2)}
+.wb-lang-opt.active{background:var(--gold-pale);color:var(--forest);font-weight:600}
+.wb-lang-opt .flag{font-size:15px}
 </style></head><body>
 <header class="hero">
   <div class="hero-bg"></div>
@@ -16474,7 +16485,22 @@ body{top:0!important}
 <nav class="nav">
   <div class="nav-logo">${title}</div>
   <div class="nav-links">${navLinks}</div>
-  <div id="google_translate_element" style="display:flex;align-items:center;padding:0 .8rem;border-left:1px solid var(--border);flex-shrink:0;min-width:160px"></div>
+  <div class="wb-lang-picker" id="wbLangPicker">
+    <button class="wb-lang-btn" id="wbLangBtn">
+      <span class="flag" id="wbFlag">&#127467;&#127479;</span>
+      <span id="wbLabel">FR</span>
+      <span class="chevron">&#9660;</span>
+    </button>
+    <div class="wb-lang-menu">
+      <div class="wb-lang-opt active" data-lang="fr" data-gtlang=""><span class="flag">&#127467;&#127479;</span> Français</div>
+      <div class="wb-lang-opt" data-lang="en" data-gtlang="en"><span class="flag">&#127468;&#127463;</span> English</div>
+      <div class="wb-lang-opt" data-lang="de" data-gtlang="de"><span class="flag">&#127465;&#127466;</span> Deutsch</div>
+      <div class="wb-lang-opt" data-lang="it" data-gtlang="it"><span class="flag">&#127470;&#127481;</span> Italiano</div>
+      <div class="wb-lang-opt" data-lang="nl" data-gtlang="nl"><span class="flag">&#127475;&#127473;</span> Nederlands</div>
+      <div class="wb-lang-opt" data-lang="zh" data-gtlang="zh-CN"><span class="flag">&#127464;&#127475;</span> 中文</div>
+    </div>
+  </div>
+  <div id="google_translate_element" style="display:none"></div>
 </nav>
 <div class="wrap">
 <section class="sect" id="welcome">
@@ -16530,14 +16556,67 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 </script>
 <script>
+// ── Google Translate init (hidden) ──────────────────────────────────────
 function googleTranslateElementInit(){
   new google.translate.TranslateElement({
     pageLanguage:'fr',
     includedLanguages:'en,de,it,nl,zh-CN',
-    layout:google.translate.TranslateElement.InlineLayout.DROPDOWN,
     autoDisplay:false
   },'google_translate_element');
 }
+
+// ── Custom picker logic ─────────────────────────────────────────────────
+function wbSetLang(gtLang, label, flag, el) {
+  // Update button
+  document.getElementById('wbFlag').innerHTML = flag;
+  document.getElementById('wbLabel').textContent = label;
+  // Update active state
+  document.querySelectorAll('.wb-lang-opt').forEach(function(o){ o.classList.remove('active'); });
+  el.classList.add('active');
+  // Close menu
+  document.getElementById('wbLangPicker').classList.remove('open');
+  // Save
+  localStorage.setItem('wb_lang', gtLang);
+  // Trigger Google Translate
+  var sel = document.querySelector('.goog-te-combo');
+  if (sel) {
+    sel.value = gtLang;
+    sel.dispatchEvent(new Event('change'));
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  var picker = document.getElementById('wbLangPicker');
+  var btn = document.getElementById('wbLangBtn');
+
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    picker.classList.toggle('open');
+  });
+
+  document.querySelectorAll('.wb-lang-opt').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      var gtLang = el.dataset.gtlang;
+      var label = el.querySelector('span:last-child') ? el.childNodes[1].textContent.trim() : el.textContent.trim();
+      var flag = el.querySelector('.flag').innerHTML;
+      wbSetLang(gtLang, el.textContent.trim().split(' ')[1] || 'FR', flag, el);
+    });
+  });
+
+  document.addEventListener('click', function(){
+    if(picker) picker.classList.remove('open');
+  });
+
+  // Restore saved lang after GT loads
+  setTimeout(function(){
+    var saved = localStorage.getItem('wb_lang');
+    if(saved) {
+      var opt = document.querySelector('.wb-lang-opt[data-gtlang="'+saved+'"]');
+      if(opt) opt.click();
+    }
+  }, 1500);
+});
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body></html>`;
