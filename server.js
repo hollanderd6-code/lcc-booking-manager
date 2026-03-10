@@ -16119,6 +16119,16 @@ app.get('/api/_routes', (req, res) => {
 // ============================================
 // ✅ ROUTE PUBLIQUE LIVRET D'ACCUEIL (VERSION PREMIUM)
 // ============================================
+// DEBUG TEMPORAIRE — voir les données brutes d'un livret
+app.get('/welcome-debug/:uniqueId', async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT data FROM welcome_books_v2 WHERE unique_id = $1`, [req.params.uniqueId]);
+    if (!result.rows.length) return res.json({ error: 'not found' });
+    const d = result.rows[0].data || {};
+    res.json({ photos: d.photos || null, rooms: (d.rooms||[]).map(r=>r.name), keys: Object.keys(d) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
@@ -16140,333 +16150,475 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     const title = d.propertyName || "Mon Livret d'Accueil";
     const coverPhoto = (d.photos && d.photos.cover) ? d.photos.cover : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop';
     
-    // 3. Génération du HTML "Design Moderne"
+    // 3. Génération du HTML Premium
+    const fullAddress = [d.address, d.postalCode, d.city].filter(Boolean).join(' ');
+    const mapsQuery = encodeURIComponent(fullAddress || d.propertyName || '');
+    const coverPhoto = (d.photos && d.photos.cover) ? d.photos.cover : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop';
+
     const html = `
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${title}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-      <style>
-        :root {
-          --primary: #2563eb;
-          --text: #1e293b;
-          --bg: #f8fafc;
-          --card: #ffffff;
-        }
-        
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body {
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          background: var(--bg);
-          color: var(--text);
-          line-height: 1.6;
-          padding-bottom: 4rem;
-        }
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --ink: #1A1A14;
+  --cream: #F5F0E8;
+  --cream2: #EDE7D8;
+  --forest: #1D4D2F;
+  --forest-l: #2D6B42;
+  --gold: #B8923A;
+  --gold-pale: #F5EDD4;
+  --muted: #7C7865;
+  --border: #D8D0C0;
+  --white: #FFFDF9;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line-height:1.7;font-size:15px}
 
-        /* HERO HEADER */
-        .hero {
-          position: relative;
-          height: 60vh;
-          min-height: 400px;
-          background-image: url('${coverPhoto}');
-          background-size: cover;
-          background-position: center;
-        }
-        .hero-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7));
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          padding: 2rem;
-        }
-        .hero-content {
-          max-width: 800px;
-          margin: 0 auto;
-          width: 100%;
-          color: white;
-        }
-        .hero h1 {
-          font-size: 2.5rem;
-          font-weight: 800;
-          margin-bottom: 0.5rem;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        .hero p {
-          font-size: 1.1rem;
-          opacity: 0.9;
-        }
+/* ── HERO ── */
+.hero{height:100svh;min-height:540px;max-height:820px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
+.hero-bg{position:absolute;inset:0;background:url('${coverPhoto}') center/cover;transform:scale(1.06);animation:hzoom 16s cubic-bezier(.25,0,0,1) forwards}
+@keyframes hzoom{to{transform:scale(1)}}
+.hero-veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(26,26,20,.84) 0%,rgba(26,26,20,.12) 55%,transparent 100%)}
+.hero-body{position:relative;z-index:2;padding:0 5vw 5vh;animation:hfade 1.1s .3s both}
+@keyframes hfade{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.hero-eye{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:1rem}
+.hero-eye span{display:block;width:32px;height:1px;background:var(--gold)}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(3rem,8vw,6rem);font-weight:300;color:#fff;line-height:1.05;margin-bottom:1.4rem}
+.hero h1 em{font-style:italic}
+.hero-meta{display:flex;gap:1.8rem;flex-wrap:wrap;color:rgba(255,255,255,.58);font-size:13px;font-weight:300}
+.hero-meta i{margin-right:5px;color:var(--gold)}
 
-        /* CONTAINER */
-        .container {
-          max-width: 800px;
-          margin: -3rem auto 0;
-          padding: 0 1rem;
-          position: relative;
-          z-index: 10;
-        }
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:200;background:rgba(255,253,249,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:stretch;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav-logo{padding:0 1.4rem;font-family:'Cormorant Garamond',serif;font-size:.95rem;font-weight:600;letter-spacing:.06em;color:var(--forest);white-space:nowrap;display:flex;align-items:center;border-right:1px solid var(--border);flex-shrink:0}
+.nav-links{display:flex;overflow-x:auto;scrollbar-width:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{padding:1rem 1.2rem;font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;font-weight:500;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;transition:color .2s,border-color .2s;display:flex;align-items:center}
+.nav-links a:hover,.nav-links a.active{color:var(--forest);border-bottom-color:var(--forest)}
 
-        /* CARDS */
-        .card {
-          background: var(--card);
-          border-radius: 16px;
-          padding: 1.5rem;
-          margin-bottom: 1.5rem;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-          border: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .section-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-          margin-bottom: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          color: var(--primary);
-        }
+/* ── LAYOUT ── */
+.wrap{max-width:880px;margin:0 auto;padding:0 5vw 8rem}
 
-        /* GRID INFO CLÉS */
-        .key-info-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1rem;
-        }
-        .info-item {
-          background: #eff6ff;
-          padding: 1rem;
-          border-radius: 12px;
-        }
-        .info-label { font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .info-value { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-top: 0.25rem; }
-        
-        /* WIFI CARD */
-        .wifi-card {
-          background: #1e293b;
-          color: white;
-          text-align: center;
-          padding: 2rem;
-        }
-        .wifi-icon { font-size: 2rem; margin-bottom: 1rem; color: #60a5fa; }
-        .wifi-ssid { font-size: 1.2rem; margin-bottom: 0.5rem; }
-        .wifi-pass { font-family: monospace; font-size: 1.4rem; background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; }
+/* ── SECTION ── */
+.sect{padding:5rem 0 .5rem}
+.sect-lbl{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:.5rem}
+.sect-title{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,4vw,2.8rem);font-weight:300;line-height:1.15;margin-bottom:.75rem}
+.sect-rule{width:44px;height:2px;background:linear-gradient(to right,var(--gold),transparent);margin-bottom:2.5rem}
 
-        /* LISTES (Restaurants, Pièces) */
-        .list-item {
-          border-bottom: 1px solid #f1f5f9;
-          padding: 1rem 0;
-        }
-        .list-item:last-child { border-bottom: none; }
-        .item-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
-        .item-title { font-weight: 700; font-size: 1.1rem; }
-        .item-meta { font-size: 0.9rem; color: #64748b; }
-        .item-desc { color: #475569; font-size: 0.95rem; }
+/* ── WELCOME ── */
+.welcome-grid{display:grid;grid-template-columns:1fr 260px;gap:2.8rem;align-items:start}
+.welcome-text{font-size:16.5px;font-weight:300;line-height:1.85;color:#3a3a30}
+.key-stack{display:flex;flex-direction:column;gap:1px}
+.key-item{background:var(--white);border:1px solid var(--border);padding:1rem 1.3rem;display:flex;justify-content:space-between;align-items:center}
+.key-item:first-child{border-radius:12px 12px 0 0}
+.key-item:last-child{border-radius:0 0 12px 12px}
+.key-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.key-val{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--forest);font-weight:600}
 
-        /* GALERIE */
-        .gallery {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-          gap: 0.5rem;
-          margin-top: 1rem;
-        }
-        .gallery img {
-          width: 100%;
-          height: 120px;
-          object-fit: cover;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: transform 0.2s;
-        }
-        .gallery img:hover { transform: scale(1.02); }
+/* ── WIFI ── */
+.wifi-card{background:var(--forest);border-radius:16px;padding:2rem 2.2rem;margin-top:2rem;display:flex;align-items:center;gap:1.8rem;flex-wrap:wrap;position:relative;overflow:hidden}
+.wifi-card::after{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.06),transparent 70%);pointer-events:none}
+.wifi-icon-box{width:46px;height:46px;border-radius:11px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.7);font-size:1.2rem;flex-shrink:0}
+.wifi-info{flex:1;min-width:140px}
+.wifi-name-lbl{font-size:11px;color:rgba(255,255,255,.45);letter-spacing:.08em;margin-bottom:3px}
+.wifi-ssid{font-size:15px;color:#fff;font-weight:400}
+.wifi-pw-wrap{text-align:right}
+.wifi-pw-lbl{font-size:11px;color:rgba(255,255,255,.45);margin-bottom:3px}
+.wifi-pw{font-family:'Jost',monospace;font-size:15px;color:#fff;letter-spacing:.05em}
+.wifi-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:9px 18px;font-size:12.5px;cursor:pointer;transition:background .2s;font-family:'Jost',sans-serif;white-space:nowrap;margin-left:.5rem}
+.wifi-btn:hover{background:rgba(255,255,255,.2)}
+.wifi-qr{width:72px;height:72px;background:white;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;overflow:hidden}
+.wifi-qr img{width:100%;height:100%;object-fit:contain}
 
-        /* FOOTER */
-        .footer {
-          text-align: center;
-          color: #94a3b8;
-          font-size: 0.9rem;
-          margin-top: 3rem;
-        }
-        
-        /* BOUTTON CONTACT */
-        .fab {
-          position: fixed;
-          bottom: 2rem;
-          right: 2rem;
-          background: #25d366; /* Couleur WhatsApp/Tel */
-          color: white;
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.5rem;
-          box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
-          text-decoration: none;
-          z-index: 100;
-          transition: transform 0.2s;
-        }
-        .fab:hover { transform: scale(1.1); }
-      </style>
-    </head>
-    <body>
+/* ── ACCESS ── */
+.access-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.access-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:1.5rem;position:relative;overflow:hidden}
+.access-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--forest)}
+.access-icon{color:var(--forest);margin-bottom:.75rem;font-size:1rem}
+.access-title{font-weight:600;font-size:14px;margin-bottom:.5rem;letter-spacing:.02em}
+.access-body{font-size:13.5px;color:#5a5a4a;line-height:1.6}
+.code-chip{display:inline-flex;align-items:center;gap:7px;background:var(--gold-pale);color:var(--gold);border:1px solid #DDB96A;border-radius:8px;padding:6px 14px;font-size:1.05rem;font-weight:600;letter-spacing:.15em;margin-top:.75rem}
 
-      <div class="hero">
-        <div class="hero-overlay">
-          <div class="hero-content">
-            <h1>${title}</h1>
-            <p><i class="fas fa-map-marker-alt"></i> ${d.address || ''} ${d.postalCode || ''} ${d.city || ''}</p>
-          </div>
-        </div>
+/* ── MAP ── */
+.map-wrap{margin-top:1.5rem;border-radius:14px;overflow:hidden;border:1px solid var(--border)}
+.map-wrap iframe{display:block;width:100%;height:260px;border:none}
+
+/* ── GALLERY ── */
+.gallery-wrap{margin-top:1.5rem;border-radius:12px;overflow:hidden}
+.gallery{display:grid;gap:4px}
+.gallery-3{grid-template-columns:2fr 1fr 1fr;grid-template-rows:160px 160px}
+.gallery-3 img:first-child{grid-row:1/3}
+.gallery img{width:100%;height:100%;object-fit:cover;cursor:pointer;display:block;transition:opacity .25s}
+.gallery img:hover{opacity:.88}
+
+/* ── ROOMS ── */
+.rooms{display:flex;flex-direction:column;gap:1px}
+.room-row{background:var(--white);border:1px solid var(--border);padding:1.5rem 2rem;display:grid;grid-template-columns:38px 1fr auto;align-items:start;gap:1.2rem}
+.room-row:first-child{border-radius:14px 14px 0 0}
+.room-row:last-child{border-radius:0 0 14px 14px}
+.room-num{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.4rem;color:var(--border);line-height:1.2}
+.room-name{font-weight:500;font-size:15px;margin-bottom:3px}
+.room-desc{font-size:13.5px;color:var(--muted)}
+.room-badge{font-size:11px;letter-spacing:.05em;text-transform:uppercase;background:#EEF5EC;color:var(--forest);padding:4px 10px;border-radius:20px;white-space:nowrap}
+
+/* ── RULES ── */
+.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.rule-chip{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;display:flex;align-items:flex-start;gap:10px;font-size:13.5px}
+.rule-chip i{margin-top:3px;font-size:11px;color:var(--muted);width:14px;text-align:center}
+
+/* ── RESTOS ── */
+.resto-list{display:flex;flex-direction:column;gap:0}
+.resto-item{background:var(--white);padding:1.3rem 1.6rem;border:1px solid var(--border);border-bottom:none;display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem}
+.resto-item:first-child{border-radius:14px 14px 0 0}
+.resto-item:last-child{border-radius:0 0 14px 14px;border-bottom:1px solid var(--border)}
+.resto-name{font-weight:500;font-size:15px}
+.resto-desc{font-size:13px;color:var(--muted);margin-top:2px}
+.resto-dist{font-size:12px;color:var(--forest);font-weight:500;white-space:nowrap}
+
+/* ── CHECKOUT ── */
+.checkout-card{background:var(--ink);border-radius:16px;padding:2.8rem 3rem;display:grid;grid-template-columns:auto 1fr;gap:3rem;align-items:start}
+.checkout-time-block{text-align:center;padding-right:3rem;border-right:1px solid rgba(255,255,255,.1)}
+.checkout-h{font-family:'Cormorant Garamond',serif;font-size:5rem;font-weight:300;color:var(--gold);line-height:1;letter-spacing:-.02em}
+.checkout-h-lbl{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-top:4px}
+.checkout-steps{list-style:none}
+.c-step{display:flex;gap:12px;align-items:flex-start;padding:.7rem 0;border-bottom:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.78);font-size:14px;font-weight:300}
+.c-step:last-child{border-bottom:none}
+.c-num{width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.4);font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px}
+
+/* ── EXTRA NOTES ── */
+.extra-note{margin-top:1.2rem;padding:1rem 1.3rem;background:var(--cream2);border-radius:10px;font-size:14px;color:#5a5a4a;line-height:1.65}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:2rem;right:2rem;z-index:500;width:58px;height:58px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;text-decoration:none;box-shadow:0 6px 24px rgba(29,77,47,.45);transition:transform .2s,box-shadow .2s}
+.fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 10px 32px rgba(29,77,47,.5)}
+.fab-label{position:absolute;right:68px;background:var(--forest);color:#fff;font-size:12px;padding:6px 12px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s}
+.fab:hover .fab-label{opacity:1}
+
+/* ── LIGHTBOX ── */
+.lb{display:none;position:fixed;inset:0;background:rgba(8,8,6,.95);z-index:9999;align-items:center;justify-content:center}
+.lb.on{display:flex}
+.lb img{max-width:94vw;max-height:90vh;border-radius:5px;object-fit:contain}
+.lb-close{position:absolute;top:1.5rem;right:1.5rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;width:42px;height:42px;border-radius:50%;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* ── FOOTER ── */
+.foot{text-align:center;padding:4rem 0 2rem;border-top:1px solid var(--border);margin-top:2rem}
+.foot-brand{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--forest);margin-bottom:.4rem}
+.foot-sub{font-size:12.5px;color:var(--muted);font-weight:300}
+
+/* ── RESPONSIVE ── */
+@media(max-width:660px){
+  .welcome-grid{grid-template-columns:1fr}
+  .access-grid{grid-template-columns:1fr}
+  .rules-grid{grid-template-columns:1fr}
+  .checkout-card{grid-template-columns:1fr;gap:1.5rem}
+  .checkout-time-block{border-right:none;border-bottom:1px solid rgba(255,255,255,.1);padding-right:0;padding-bottom:1.5rem}
+  .gallery-3{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+  .gallery-3 img:first-child{grid-row:auto;grid-column:1/3}
+  .room-row{grid-template-columns:30px 1fr}
+  .room-badge{display:none}
+  .wrap{padding:0 1.2rem 6rem}
+  .wifi-qr{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-veil"></div>
+  <div class="hero-body">
+    <div class="hero-eye"><span></span>Livret d'accueil</div>
+    <h1><em>${title}</em></h1>
+    <div class="hero-meta">
+      ${fullAddress ? `<span><i class="fas fa-map-marker-alt"></i>${fullAddress}</span>` : ''}
+      ${d.contactPhone ? `<span><i class="fas fa-phone-alt"></i>${d.contactPhone}</span>` : ''}
+    </div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav" id="mainnav">
+  <div class="nav-logo">${title}</div>
+  <div class="nav-links">
+    <a href="#welcome" class="active">Bienvenue</a>
+    ${d.accessInstructions || d.keyboxCode || d.parkingInfo ? `<a href="#access">Accès</a>` : ''}
+    ${d.rooms && d.rooms.length > 0 ? `<a href="#rooms">Logement</a>` : ''}
+    ${d.importantRules || d.equipmentList || d.checkoutInstructions ? `<a href="#info">Pratique</a>` : ''}
+    ${(d.restaurants && d.restaurants.length > 0) || (d.places && d.places.length > 0) || d.shopsList ? `<a href="#around">Alentours</a>` : ''}
+    ${d.checkoutInstructions || d.checkoutTime ? `<a href="#checkout">Départ</a>` : ''}
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ── BIENVENUE ── -->
+<section class="sect" id="welcome">
+  <div class="sect-lbl">Bienvenue</div>
+  <h2 class="sect-title">Bienvenue<br>chez nous</h2>
+  <div class="sect-rule"></div>
+  <div class="welcome-grid">
+    <p class="welcome-text">${(d.welcomeDescription || '').replace(/\n/g, '<br>')}</p>
+    <div class="key-stack">
+      <div class="key-item"><div class="key-lbl">Arrivée</div><div class="key-val">Dès 15h00</div></div>
+      <div class="key-item"><div class="key-lbl">Départ</div><div class="key-val">Avant ${d.checkoutTime || '11h00'}</div></div>
+      ${d.keyboxCode ? `<div class="key-item"><div class="key-lbl">Boîte à clés</div><div class="key-val">${d.keyboxCode}</div></div>` : ''}
+      ${d.contactPhone ? `<div class="key-item"><div class="key-lbl">Votre hôte</div><div class="key-val" style="font-size:1rem">${d.contactPhone}</div></div>` : ''}
+    </div>
+  </div>
+
+  ${d.wifiSSID ? `
+  <div class="wifi-card">
+    <div class="wifi-icon-box"><i class="fas fa-wifi"></i></div>
+    <div class="wifi-info">
+      <div class="wifi-name-lbl">Réseau WiFi</div>
+      <div class="wifi-ssid">${d.wifiSSID}</div>
+    </div>
+    <div class="wifi-pw-wrap">
+      <div class="wifi-pw-lbl">Mot de passe</div>
+      <div class="wifi-pw">${d.wifiPassword || ''}</div>
+    </div>
+    ${d.wifiPassword ? `<button class="wifi-btn" onclick="copyWifi(this,'${d.wifiPassword.replace(/'/g,"\\'")}')"><i class="fas fa-copy"></i> Copier</button>` : ''}
+    ${d.wifiSSID ? `<div class="wifi-qr" title="QR Code WiFi" onclick="openQr('${d.wifiSSID.replace(/'/g,"\\'")}','${(d.wifiPassword||'').replace(/'/g,"\\'")}')"><canvas id="qr-canvas"></canvas></div>` : ''}
+  </div>` : ''}
+</section>
+
+<!-- ── ACCÈS ── -->
+${d.accessInstructions || d.keyboxCode || d.parkingInfo || (d.photos && (d.photos.entrance||d.photos.parking)) ? `
+<section class="sect" id="access">
+  <div class="sect-lbl">Accès & Arrivée</div>
+  <h2 class="sect-title">Accès au<br>logement</h2>
+  <div class="sect-rule"></div>
+  <div class="access-grid">
+    ${d.accessInstructions ? `
+    <div class="access-card">
+      <div class="access-icon"><i class="fas fa-door-open"></i></div>
+      <div class="access-title">Instructions d'accès</div>
+      <div class="access-body">${d.accessInstructions.replace(/\n/g,'<br>')}</div>
+      ${d.keyboxCode ? `<div class="code-chip"><i class="fas fa-hashtag"></i>${d.keyboxCode}</div>` : ''}
+    </div>` : ''}
+    ${d.parkingInfo ? `
+    <div class="access-card">
+      <div class="access-icon"><i class="fas fa-parking"></i></div>
+      <div class="access-title">Parking</div>
+      <div class="access-body">${d.parkingInfo.replace(/\n/g,'<br>')}</div>
+    </div>` : ''}
+    ${d.transportInfo ? `
+    <div class="access-card">
+      <div class="access-icon"><i class="fas fa-subway"></i></div>
+      <div class="access-title">Transports</div>
+      <div class="access-body">${d.transportInfo.replace(/\n/g,'<br>')}</div>
+    </div>` : ''}
+  </div>
+  ${d.extraNotesAccess ? `<div class="extra-note">${d.extraNotesAccess.replace(/\n/g,'<br>')}</div>` : ''}
+  ${d.photos && d.photos.entrance && d.photos.entrance.length > 0 ? `
+  <div class="gallery-wrap"><div class="gallery gallery-3">
+    ${d.photos.entrance.map(u => `<img src="${u}" loading="lazy" onclick="lb('${u}')">`).join('')}
+  </div></div>` : ''}
+  ${d.photos && d.photos.parking && d.photos.parking.length > 0 ? `
+  <div class="gallery-wrap" style="margin-top:.6rem"><div class="gallery gallery-3">
+    ${d.photos.parking.map(u => `<img src="${u}" loading="lazy" onclick="lb('${u}')">`).join('')}
+  </div></div>` : ''}
+  ${fullAddress ? `
+  <div class="map-wrap">
+    <iframe src="https://www.google.com/maps?q=${mapsQuery}&output=embed" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+  </div>` : ''}
+</section>` : ''}
+
+<!-- ── LOGEMENT ── -->
+${d.rooms && d.rooms.length > 0 ? `
+<section class="sect" id="rooms">
+  <div class="sect-lbl">Le logement</div>
+  <h2 class="sect-title">Vos espaces</h2>
+  <div class="sect-rule"></div>
+  <div class="rooms">
+    ${d.rooms.map((room, i) => `
+    <div class="room-row">
+      <div class="room-num">0${i+1}</div>
+      <div>
+        <div class="room-name">${room.name || ''}</div>
+        ${room.description ? `<div class="room-desc">${room.description.replace(/\n/g,'<br>')}</div>` : ''}
+        ${room.extra ? `<div class="room-desc" style="margin-top:.4rem;color:#5a5a4a">${room.extra.replace(/\n/g,'<br>')}</div>` : ''}
+        ${d.photos && d.photos.roomPhotosPerRoom && d.photos.roomPhotosPerRoom[i+1] && d.photos.roomPhotosPerRoom[i+1].length > 0 ? `
+        <div class="gallery-wrap" style="margin-top:.75rem"><div class="gallery" style="grid-template-columns:repeat(3,1fr)">
+          ${d.photos.roomPhotosPerRoom[i+1].map(u=>`<img src="${u}" loading="lazy" onclick="lb('${u}')" style="height:100px">`).join('')}
+        </div></div>` : ''}
       </div>
+      ${room.badge ? `<div class="room-badge">${room.badge}</div>` : ''}
+    </div>`).join('')}
+  </div>
+  ${d.extraNotesLogement ? `<div class="extra-note">${d.extraNotesLogement.replace(/\n/g,'<br>')}</div>` : ''}
+  ${d.photos && d.photos.extraPhotosLogement && d.photos.extraPhotosLogement.length > 0 ? `
+  <div class="gallery-wrap" style="margin-top:.75rem"><div class="gallery gallery-3">
+    ${d.photos.extraPhotosLogement.map(u=>`<img src="${u}" loading="lazy" onclick="lb('${u}')">`).join('')}
+  </div></div>` : ''}
+</section>` : ''}
 
-      <div class="container">
-      
-        <div class="card">
-          <div class="section-title"><i class="fas fa-hand-sparkles"></i> Bienvenue</div>
-          <p>${(d.welcomeDescription || 'Bienvenue chez nous ! Passez un excellent séjour.').replace(/\n/g, '<br>')}</p>
-        </div>
+<!-- ── PRATIQUE ── -->
+${d.importantRules || d.equipmentList || d.wifiSSID || d.extraNotesPractical ? `
+<section class="sect" id="info">
+  <div class="sect-lbl">Infos pratiques</div>
+  <h2 class="sect-title">À savoir</h2>
+  <div class="sect-rule"></div>
+  ${d.importantRules ? `
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:1.6rem;margin-bottom:1.2rem;border-left:3px solid var(--forest)">
+    <div style="font-weight:600;font-size:14px;margin-bottom:.75rem;color:var(--forest)"><i class="fas fa-exclamation-circle" style="margin-right:8px"></i>Règles importantes</div>
+    <div style="font-size:14px;color:#4a4a3a;line-height:1.7">${d.importantRules.replace(/\n/g,'<br>')}</div>
+  </div>` : ''}
+  ${d.equipmentList ? `
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:1.6rem;margin-bottom:1.2rem;border-left:3px solid var(--forest)">
+    <div style="font-weight:600;font-size:14px;margin-bottom:.75rem;color:var(--forest)"><i class="fas fa-toolbox" style="margin-right:8px"></i>Équipements</div>
+    <div style="font-size:14px;color:#4a4a3a;line-height:1.7">${d.equipmentList.replace(/\n/g,'<br>')}</div>
+  </div>` : ''}
+  ${d.extraNotesPractical ? `<div class="extra-note">${d.extraNotesPractical.replace(/\n/g,'<br>')}</div>` : ''}
+  ${d.photos && d.photos.extraPhotosPractical && d.photos.extraPhotosPractical.length > 0 ? `
+  <div class="gallery-wrap" style="margin-top:.75rem"><div class="gallery gallery-3">
+    ${d.photos.extraPhotosPractical.map(u=>`<img src="${u}" loading="lazy" onclick="lb('${u}')">`).join('')}
+  </div></div>` : ''}
+</section>` : ''}
 
-        <div class="key-info-grid">
-          <div class="info-item">
-            <div class="info-label">Arrivée</div>
-            <div class="info-value">${d.accessInstructions ? 'Voir instructions' : 'Dès 15h'}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Départ</div>
-            <div class="info-value">Avant ${d.checkoutTime || '11h00'}</div>
-          </div>
-          ${d.keyboxCode ? `
-          <div class="info-item">
-            <div class="info-label">Boîte à clés</div>
-            <div class="info-value">${d.keyboxCode}</div>
-          </div>` : ''}
-        </div>
-
-        <br>
-
-        ${d.wifiSSID ? `
-        <div class="card wifi-card">
-          <div class="wifi-icon"><i class="fas fa-wifi"></i></div>
-          <div class="wifi-ssid">${d.wifiSSID}</div>
-          <div class="wifi-pass">${d.wifiPassword || 'Pas de mot de passe'}</div>
-        </div>` : ''}
-
-        ${d.accessInstructions ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-key"></i> Accès au logement</div>
-          <p>${d.accessInstructions.replace(/\n/g, '<br>')}</p>
-          ${d.photos && d.photos.entrance && d.photos.entrance.length > 0 ? `
-            <div class="gallery">${d.photos.entrance.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
-          ` : ''}
-        </div>` : ''}
-
-        ${(d.parkingInfo || (d.photos && d.photos.parking && d.photos.parking.length > 0)) ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-parking"></i> Parking</div>
-          ${d.parkingInfo ? `<p>${d.parkingInfo.replace(/\n/g, '<br>')}</p>` : ''}
-          ${d.photos && d.photos.parking && d.photos.parking.length > 0 ? `
-            <div class="gallery" style="margin-top:1rem;">${d.photos.parking.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
-          ` : ''}
-          ${d.extraNotesAccess ? `<p style="margin-top:1rem;color:#475569;">${d.extraNotesAccess.replace(/\n/g, '<br>')}</p>` : ''}
-          ${d.photos && d.photos.extraPhotosAccess && d.photos.extraPhotosAccess.length > 0 ? `
-            <div class="gallery" style="margin-top:0.75rem;">${d.photos.extraPhotosAccess.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
-          ` : ''}
-        </div>` : ''}
-
-        ${d.rooms && d.rooms.length > 0 ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-bed"></i> Le Logement</div>
-          ${d.rooms.map((room, i) => `
-            <div class="list-item">
-              <div class="item-header"><div class="item-title">${room.name}</div></div>
-              ${room.description ? `<p class="item-desc">${room.description.replace(/\n/g, '<br>')}</p>` : ''}
-              ${room.extra ? `<p class="item-desc" style="margin-top:0.5rem;color:#64748b;">${room.extra.replace(/\n/g, '<br>')}</p>` : ''}
-              ${d.photos && d.photos.roomPhotosPerRoom && d.photos.roomPhotosPerRoom[i+1] && d.photos.roomPhotosPerRoom[i+1].length > 0 ? `
-                <div class="gallery" style="margin-top:0.75rem;">${d.photos.roomPhotosPerRoom[i+1].map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
-              ` : ''}
-            </div>
-          `).join('')}
-          ${d.extraNotesLogement ? `<p style="margin-top:1rem;border-top:1px solid #f1f5f9;padding-top:1rem;color:#475569;">${d.extraNotesLogement.replace(/\n/g, '<br>')}</p>` : ''}
-          ${d.photos && d.photos.extraPhotosLogement && d.photos.extraPhotosLogement.length > 0 ? `
-            <div class="gallery" style="margin-top:0.75rem;">${d.photos.extraPhotosLogement.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
-          ` : ''}
-        </div>` : ''}
-
-        ${(d.wifiSSID || d.checkoutInstructions || d.importantRules || d.equipmentList || d.transportInfo) ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-info-circle"></i> Informations pratiques</div>
-          ${d.importantRules ? `<p><strong>À savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
-          ${d.checkoutTime ? `<p><strong>Heure de départ :</strong> ${d.checkoutTime}</p><br>` : ''}
-          ${d.checkoutInstructions ? `<p><strong>Au départ :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p><br>` : ''}
-          ${d.equipmentList ? `<p><strong>Équipements :</strong><br>${d.equipmentList.replace(/\n/g, '<br>')}</p><br>` : ''}
-          ${d.transportInfo ? `<p><strong>Transports :</strong><br>${d.transportInfo.replace(/\n/g, '<br>')}</p>` : ''}
-          ${d.extraNotesPractical ? `<p style="margin-top:1rem;border-top:1px solid #f1f5f9;padding-top:1rem;color:#475569;">${d.extraNotesPractical.replace(/\n/g, '<br>')}</p>` : ''}
-          ${d.photos && d.photos.extraPhotosPractical && d.photos.extraPhotosPractical.length > 0 ? `
-            <div class="gallery" style="margin-top:0.75rem;">${d.photos.extraPhotosPractical.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
-          ` : ''}
-        </div>` : ''}
-
-        ${(d.restaurants?.length > 0 || d.places?.length > 0 || d.shopsList) ? `
-        <div class="card">
-          <div class="section-title"><i class="fas fa-map-signs"></i> Guide Local</div>
-          
-          ${d.restaurants && d.restaurants.length > 0 ? `
-            <h4 style="margin:0 0 0.5rem 0; color:#64748b;">🍽️ Restaurants</h4>
-            ${d.restaurants.map(resto => `
-              <div class="list-item">
-                <div class="item-header">
-                  <div class="item-title">${resto.name}</div>
-                  <div class="item-meta">${resto.phone || ''}</div>
-                </div>
-                ${resto.description ? `<p class="item-desc">${resto.description}</p>` : ''}
-                ${resto.address ? `<small style="color:#94a3b8"><i class="fas fa-location-arrow"></i> ${resto.address}</small>` : ''}
-              </div>
-            `).join('')}
-          ` : ''}
-
-          ${d.shopsList ? `
-            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">🛒 Commerces</h4>
-            <p class="item-desc">${d.shopsList.replace(/\n/g, '<br>')}</p>
-          ` : ''}
-
-          ${d.places && d.places.length > 0 ? `
-            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">🏞️ À visiter</h4>
-            ${d.places.map(place => `
-              <div class="list-item">
-                <div class="item-title">${place.name}</div>
-                ${place.description ? `<p class="item-desc">${place.description}</p>` : ''}
-              </div>
-            `).join('')}
-          ` : ''}
-          ${d.extraNotesAround ? `<p style="margin-top:1rem;border-top:1px solid #f1f5f9;padding-top:1rem;color:#475569;">${d.extraNotesAround.replace(/\n/g, '<br>')}</p>` : ''}
-          ${d.photos && d.photos.extraPhotosAround && d.photos.extraPhotosAround.length > 0 ? `
-            <div class="gallery" style="margin-top:0.75rem;">${d.photos.extraPhotosAround.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
-          ` : ''}
-        </div>` : ''}
-
-        <div class="footer">
-          <p>Livret propulsé par BoostingHost</p>
-        </div>
-
+<!-- ── ALENTOURS ── -->
+${(d.restaurants && d.restaurants.length > 0) || (d.places && d.places.length > 0) || d.shopsList ? `
+<section class="sect" id="around">
+  <div class="sect-lbl">Alentours</div>
+  <h2 class="sect-title">Guide du<br>quartier</h2>
+  <div class="sect-rule"></div>
+  ${d.restaurants && d.restaurants.length > 0 ? `
+  <p style="font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.8rem;font-weight:500">🍽 Restaurants</p>
+  <div class="resto-list" style="margin-bottom:2rem">
+    ${d.restaurants.map(r => `
+    <div class="resto-item">
+      <div>
+        <div class="resto-name">${r.name||''}</div>
+        ${r.description ? `<div class="resto-desc">${r.description}</div>` : ''}
+        ${r.address ? `<div style="font-size:12px;color:var(--muted);margin-top:3px"><i class="fas fa-location-arrow" style="margin-right:4px"></i>${r.address}</div>` : ''}
       </div>
+      ${r.phone ? `<div class="resto-dist"><a href="tel:${r.phone}" style="color:var(--forest);text-decoration:none">${r.phone}</a></div>` : ''}
+    </div>`).join('')}
+  </div>` : ''}
+  ${d.shopsList ? `
+  <p style="font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.8rem;font-weight:500">🛒 Commerces</p>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:1.4rem;margin-bottom:2rem;font-size:14px;color:#4a4a3a;line-height:1.7">${d.shopsList.replace(/\n/g,'<br>')}</div>` : ''}
+  ${d.places && d.places.length > 0 ? `
+  <p style="font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.8rem;font-weight:500">🏞 À visiter</p>
+  <div class="resto-list">
+    ${d.places.map(p => `
+    <div class="resto-item">
+      <div>
+        <div class="resto-name">${p.name||''}</div>
+        ${p.description ? `<div class="resto-desc">${p.description}</div>` : ''}
+      </div>
+    </div>`).join('')}
+  </div>` : ''}
+  ${d.extraNotesAround ? `<div class="extra-note" style="margin-top:1.5rem">${d.extraNotesAround.replace(/\n/g,'<br>')}</div>` : ''}
+  ${d.photos && d.photos.extraPhotosAround && d.photos.extraPhotosAround.length > 0 ? `
+  <div class="gallery-wrap" style="margin-top:.75rem"><div class="gallery gallery-3">
+    ${d.photos.extraPhotosAround.map(u=>`<img src="${u}" loading="lazy" onclick="lb('${u}')">`).join('')}
+  </div></div>` : ''}
+</section>` : ''}
 
-      ${d.contactPhone ? `
-      <a href="tel:${d.contactPhone}" class="fab" title="Contacter l'hôte">
-        <i class="fas fa-phone"></i>
-      </a>` : ''}
+<!-- ── DÉPART ── -->
+${d.checkoutInstructions || d.checkoutTime ? `
+<section class="sect" id="checkout">
+  <div class="sect-lbl">Départ</div>
+  <h2 class="sect-title">Consignes<br>de départ</h2>
+  <div class="sect-rule"></div>
+  <div class="checkout-card">
+    <div class="checkout-time-block">
+      <div class="checkout-h">${d.checkoutTime || '11h'}</div>
+      <div class="checkout-h-lbl">heure limite</div>
+    </div>
+    <ul class="checkout-steps">
+      ${(d.checkoutInstructions || '').split('\n').filter(l=>l.trim()).map((line,i) => `
+      <li class="c-step"><div class="c-num">${i+1}</div>${line.trim()}</li>`).join('')}
+    </ul>
+  </div>
+</section>` : ''}
 
-    </body>
-    </html>
-    `;
+<footer class="foot">
+  <div class="foot-brand">BoostingHost</div>
+  <div class="foot-sub">Merci pour votre séjour ✦</div>
+</footer>
+</div>
+
+<!-- FAB appel -->
+${d.contactPhone ? `
+<a href="tel:${d.contactPhone}" class="fab" title="Appeler l'hôte">
+  <span class="fab-label">Appeler l'hôte</span>
+  <i class="fas fa-phone-alt"></i>
+</a>` : ''}
+
+<!-- Lightbox -->
+<div class="lb" id="lbox" onclick="this.classList.remove('on')">
+  <button class="lb-close" onclick="event.stopPropagation();document.getElementById('lbox').classList.remove('on')"><i class="fas fa-times"></i></button>
+  <img id="lbox-img" src="" alt="">
+</div>
+
+<!-- QR Modal -->
+<div id="qr-modal" style="display:none;position:fixed;inset:0;background:rgba(8,8,6,.9);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:1rem" onclick="this.style.display='none'">
+  <canvas id="qr-big" style="border-radius:12px"></canvas>
+  <div style="color:rgba(255,255,255,.5);font-size:12px">Scannez pour vous connecter au WiFi</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// Nav active
+const sects=[...document.querySelectorAll('.sect')];
+const navLinks=[...document.querySelectorAll('.nav-links a')];
+window.addEventListener('scroll',()=>{
+  const y=window.scrollY+90;
+  sects.forEach(s=>{if(y>=s.offsetTop)navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+s.id))});
+},{passive:true});
+
+// Lightbox
+function lb(src){
+  document.getElementById('lbox-img').src=src;
+  document.getElementById('lbox').classList.add('on');
+}
+
+// Wifi copy
+function copyWifi(btn,pw){
+  navigator.clipboard?.writeText(pw).then(()=>{
+    btn.innerHTML='<i class="fas fa-check"></i> Copié !';
+    setTimeout(()=>btn.innerHTML='<i class="fas fa-copy"></i> Copier',2200);
+  });
+}
+
+// QR Code WiFi
+function openQr(ssid,pw){
+  const modal=document.getElementById('qr-modal');
+  modal.style.display='flex';
+  const canvas=document.getElementById('qr-big');
+  canvas.width=0; canvas.height=0;
+  // WPA format: WIFI:T:WPA;S:<ssid>;P:<password>;;
+  const wifiStr='WIFI:T:WPA;S:'+ssid+';P:'+pw+';;';
+  QRCode.toCanvas(canvas,wifiStr,{width:240,margin:2,color:{dark:'#1A1A14',light:'#FFFDF9'}},()=>{});
+}
+
+// Init small QR on page load
+window.addEventListener('DOMContentLoaded',()=>{
+  const c=document.getElementById('qr-canvas');
+  if(c){
+    const ssid='${(d.wifiSSID||'').replace(/'/g,"\\'")}';
+    const pw='${(d.wifiPassword||'').replace(/'/g,"\\'")}';
+    if(ssid){
+      QRCode.toCanvas(c,'WIFI:T:WPA;S:'+ssid+';P:'+pw+';;',{width:72,margin:1,color:{dark:'#1D4D2F',light:'#fff'}},()=>{});
+    }
+  }
+});
+</script>
+</body>
+</html>
     
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
 return res.send(html);
 
   } catch (error) {
