@@ -1210,35 +1210,33 @@ const bookingMessageModalStyles = `
 
 /* ── Bouton de traduction ─────────────────────────────── */
 .tx-bar {
-  margin-top: 4px;
+  margin-top: 5px;
   display: flex;
 }
 .tx-btn {
   background: none;
   border: none;
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
   cursor: pointer;
   font-size: 11px;
   font-family: inherit;
-  color: #a0a9b8;
-  padding: 3px 8px 3px 6px;
-  border-radius: 20px;
-  transition: all 0.15s;
+  color: #b0b8c8;
+  padding: 0;
+  transition: color 0.15s;
   line-height: 1.4;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   letter-spacing: 0.01em;
+  user-select: none;
 }
-.tx-btn:hover {
-  background: rgba(26, 122, 94, 0.08);
-  color: #1A7A5E;
-}
-.tx-btn.translated {
-  color: #1A7A5E;
-  background: rgba(26, 122, 94, 0.07);
-}
-.tx-btn:disabled { cursor: wait; opacity: 0.4; }
+.tx-btn i { font-size: 10px; }
+.tx-btn:hover { color: #1A7A5E; }
+.tx-btn:focus { outline: none !important; box-shadow: none !important; }
+.tx-btn.translated { color: #1A7A5E; }
+.tx-btn:disabled { cursor: wait; opacity: 0.35; }
 .chat-message.guest .tx-bar { justify-content: flex-start; }
 .chat-message.owner .tx-bar { justify-content: flex-end; }
 </style>
