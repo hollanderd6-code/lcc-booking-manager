@@ -750,6 +750,8 @@ function appendMessage(message) {
   const loading = container.querySelector('.loading');
   if (loading) loading.remove();
   
+  const isGuest = message.sender_type === 'guest';
+  
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${message.sender_type}`;
   if (message.id) {
@@ -792,14 +794,95 @@ function appendMessage(message) {
     content = '<i>Photo</i>';
   }
   
+  // Bouton traduction — uniquement sur les messages du proprio (pas les siens)
+  const txHtml = (!isGuest && messageText) ? `
+    <div class="tx-bar">
+      <button class="tx-btn" data-original="${messageText.replace(/"/g, '&quot;')}" data-translated="" data-state="original">🌐 Traduire</button>
+    </div>` : '';
+  
   messageDiv.innerHTML = `
     <div class="message-content">
       <div class="message-bubble">${content}</div>
       <div class="message-time">${time}</div>
+      ${txHtml}
     </div>
   `;
   
+  // Attacher l'event au bouton si présent
+  const txBtn = messageDiv.querySelector('.tx-btn');
+  if (txBtn) {
+    const bubble = messageDiv.querySelector('.message-bubble');
+    txBtn.addEventListener('click', async function() {
+      const state = txBtn.getAttribute('data-state');
+      const original = txBtn.getAttribute('data-original');
+      
+      if (state === 'translated') {
+        bubble.innerHTML = linkifyMessage(original);
+        txBtn.innerHTML = '🌐 Traduire';
+        txBtn.setAttribute('data-state', 'original');
+        return;
+      }
+      
+      const cached = txBtn.getAttribute('data-translated');
+      if (cached) {
+        bubble.textContent = cached;
+        txBtn.innerHTML = '↩ Original';
+        txBtn.setAttribute('data-state', 'translated');
+        return;
+      }
+      
+      txBtn.innerHTML = '⏳';
+      txBtn.setAttribute('data-state', 'loading');
+      txBtn.disabled = true;
+      
+      try {
+        const guestLang = localStorage.getItem('guest_lang') || detectBrowserLang();
+        const translated = await guestChatTranslate(original, guestLang);
+        txBtn.setAttribute('data-translated', translated);
+        bubble.textContent = translated;
+        txBtn.innerHTML = '↩ Original';
+        txBtn.setAttribute('data-state', 'translated');
+      } catch(e) {
+        txBtn.innerHTML = '🌐 Traduire';
+        txBtn.setAttribute('data-state', 'original');
+      }
+      txBtn.disabled = false;
+    });
+  }
+  
   container.appendChild(messageDiv);
+}
+
+// ── Traduction côté voyageur ─────────────────────────────────────────────
+const _guestTxCache = {};
+async function guestChatTranslate(text, targetLang) {
+  // Détecter la langue source (fr par défaut — les hôtes écrivent en fr)
+  const langMap = { fr: 'fr|fr', en: 'fr|en-GB', de: 'fr|de-DE', it: 'fr|it-IT', nl: 'fr|nl-NL', zh: 'fr|zh-CN', es: 'fr|es-ES', pt: 'fr|pt-PT' };
+  const langpair = langMap[targetLang] || 'fr|en-GB';
+  const key = langpair + '|' + text.slice(0, 60);
+  if (_guestTxCache[key]) return _guestTxCache[key];
+  
+  if (text.length <= 450) {
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`);
+    const d = await r.json();
+    if (d.responseStatus === 200) { _guestTxCache[key] = d.responseData.translatedText; return _guestTxCache[key]; }
+    throw new Error('failed');
+  }
+  
+  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  const parts = [];
+  for (const s of sentences) {
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(s.trim())}&langpair=${langpair}`);
+    const d = await r.json();
+    parts.push(d.responseStatus === 200 ? d.responseData.translatedText : s);
+  }
+  _guestTxCache[key] = parts.join(' ');
+  return _guestTxCache[key];
+}
+
+function detectBrowserLang() {
+  const l = (navigator.language || 'fr').split('-')[0].toLowerCase();
+  return ['fr','en','de','it','nl','zh','es','pt'].includes(l) ? l : 'en';
 }
 
 function openFullImage(url) {
