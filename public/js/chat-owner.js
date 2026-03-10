@@ -578,11 +578,103 @@ function appendMessage(message) {
   contentDiv.appendChild(bubble);
   contentDiv.appendChild(meta);
   
+  // Bouton traduction — uniquement sur les messages du voyageur
+  if (!isOwner && message.message && message.message.trim()) {
+    const txBar = document.createElement('div');
+    txBar.className = 'tx-bar';
+    
+    const txBtn = document.createElement('button');
+    txBtn.className = 'tx-btn';
+    txBtn.innerHTML = '🌐 Traduire';
+    txBtn.setAttribute('data-original', message.message);
+    txBtn.setAttribute('data-translated', '');
+    txBtn.setAttribute('data-state', 'original'); // original | loading | translated
+    
+    txBtn.addEventListener('click', async function() {
+      const state = txBtn.getAttribute('data-state');
+      const original = txBtn.getAttribute('data-original');
+      
+      if (state === 'translated') {
+        // Revenir à l'original
+        bubble.textContent = original;
+        txBtn.innerHTML = '🌐 Traduire';
+        txBtn.setAttribute('data-state', 'original');
+        return;
+      }
+      
+      // Déjà traduit en cache
+      const cached = txBtn.getAttribute('data-translated');
+      if (cached) {
+        bubble.textContent = cached;
+        txBtn.innerHTML = '↩ Original';
+        txBtn.setAttribute('data-state', 'translated');
+        return;
+      }
+      
+      // Traduire via MyMemory
+      txBtn.innerHTML = '⏳';
+      txBtn.setAttribute('data-state', 'loading');
+      txBtn.disabled = true;
+      
+      try {
+        const ownerLang = localStorage.getItem('owner_lang') || 'fr';
+        const translated = await chatTranslate(original, ownerLang);
+        txBtn.setAttribute('data-translated', translated);
+        bubble.textContent = translated;
+        txBtn.innerHTML = '↩ Original';
+        txBtn.setAttribute('data-state', 'translated');
+      } catch(e) {
+        txBtn.innerHTML = '🌐 Traduire';
+        txBtn.setAttribute('data-state', 'original');
+      }
+      txBtn.disabled = false;
+    });
+    
+    txBar.appendChild(txBtn);
+    contentDiv.appendChild(txBar);
+  }
+  
   messageDiv.appendChild(avatar);
   messageDiv.appendChild(contentDiv);
   
   container.appendChild(messageDiv);
   scrollToBottom();
+}
+
+// ── Traduction MyMemory ──────────────────────────────────────────────────
+const _txCache = {};
+async function chatTranslate(text, targetLang) {
+  const langMap = { fr: 'en|fr', en: 'fr|en', de: 'fr|de', it: 'fr|it', nl: 'fr|nl', zh: 'fr|zh-CN' };
+  const langpair = langMap[targetLang] || 'en|fr';
+  const key = langpair + '|' + text.slice(0, 60);
+  if (_txCache[key]) return _txCache[key];
+  
+  // Découper si > 450 chars
+  if (text.length <= 450) {
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`);
+    const d = await r.json();
+    if (d.responseStatus === 200) {
+      _txCache[key] = d.responseData.translatedText;
+      return _txCache[key];
+    }
+    throw new Error('Translation failed');
+  }
+  
+  // Texte long : découper par phrases
+  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  const parts = [];
+  for (const s of sentences) {
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(s.trim())}&langpair=${langpair}`);
+    const d = await r.json();
+    parts.push(d.responseStatus === 200 ? d.responseData.translatedText : s);
+  }
+  _txCache[key] = parts.join(' ');
+  return _txCache[key];
+}
+
+// Langue du proprio (sauvegardée dans localStorage)
+function setOwnerLang(lang) {
+  localStorage.setItem('owner_lang', lang);
 }
 
 async function sendMessageOwner() {
