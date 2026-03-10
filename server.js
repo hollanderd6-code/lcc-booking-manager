@@ -16225,7 +16225,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + '<h2 class="sect-title sect-title-access">Accès au<br>logement</h2>'
       + '<div class="sect-rule"></div>'
       + '<div class="access-grid">' + accessCards + '</div>'
-      + iif(d.extraNotesAccess, '<div class="extra-note" data-translatable>' + safe(d.extraNotesAccess) + '</div>')
+      + iif(d.extraNotesAccess, '<div class="extra-note">' + safe(d.extraNotesAccess) + '</div>')
       + galleryHtml(d.photos && d.photos.entrance)
       + galleryHtml(d.photos && d.photos.parking)
       + mapEmbed
@@ -16237,7 +16237,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       '<div class="room-row">'
       + '<div class="room-num">0' + (i + 1) + '</div>'
       + '<div>'
-        + '<div class="room-name" data-translatable>' + (room.name || '') + '</div>'
+        + '<div class="room-name">' + (room.name || '') + '</div>'
         + iif(room.description, '<div class="room-desc" data-translatable>' + safe(room.description) + '</div>')
         + iif(room.extra, '<div class="room-desc" style="margin-top:.4rem;color:#5a5a4a" data-translatable>' + safe(room.extra) + '</div>')
         + galleryHtml(d.photos && d.photos.roomPhotosPerRoom && d.photos.roomPhotosPerRoom[i + 1])
@@ -16252,7 +16252,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + '<h2 class="sect-title sect-title-rooms">Vos espaces</h2>'
       + '<div class="sect-rule"></div>'
       + '<div class="rooms">' + roomRows + '</div>'
-      + iif(d.extraNotesLogement, '<div class="extra-note" data-translatable>' + safe(d.extraNotesLogement) + '</div>')
+      + iif(d.extraNotesLogement, '<div class="extra-note">' + safe(d.extraNotesLogement) + '</div>')
       + galleryHtml(d.photos && d.photos.extraPhotosLogement)
       + '</section>'
     ) : '';
@@ -16273,8 +16273,8 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     // Alentours
     const restosItems = (d.restaurants || []).map(r => (
       '<div class="resto-item"><div>'
-      + '<div class="resto-name" data-translatable>' + (r.name || '') + '</div>'
-      + iif(r.description, '<div class="resto-desc" data-translatable>' + r.description + '</div>')
+      + '<div class="resto-name">' + (r.name || '') + '</div>'
+      + iif(r.description, '<div class="resto-desc">' + r.description + '</div>')
       + iif(r.address, '<div class="resto-addr"><i class="fas fa-location-arrow"></i> ' + r.address + '</div>')
       + '</div>'
       + iif(r.phone, '<a class="resto-phone" href="tel:' + r.phone + '">' + r.phone + '</a>')
@@ -16283,8 +16283,8 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     const placesItems = (d.places || []).map(p => (
       '<div class="resto-item"><div>'
-      + '<div class="resto-name" data-translatable>' + (p.name || '') + '</div>'
-      + iif(p.description, '<div class="resto-desc" data-translatable>' + p.description + '</div>')
+      + '<div class="resto-name">' + (p.name || '') + '</div>'
+      + iif(p.description, '<div class="resto-desc">' + p.description + '</div>')
       + '</div></div>'
     )).join('');
 
@@ -16303,7 +16303,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     // Checkout
     const checkoutSteps = (d.checkoutInstructions || '').split('\n').filter(l => l.trim())
-      .map((line, i) => '<li class="c-step"><div class="c-num">' + (i + 1) + '</div><span data-translatable>' + line.trim() + '</span></li>').join('');
+      .map((line, i) => '<li class="c-step"><div class="c-num">' + (i + 1) + '</div>' + line.trim() + '</li>').join('');
 
     const checkoutSection = (d.checkoutInstructions || d.checkoutTime) ? (
       '<section class="sect" id="checkout">'
@@ -16449,16 +16449,15 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
   .wrap{padding:0 1.2rem 6rem}
   .wifi-qr{display:none}
 }
-.lang-picker{position:relative;display:flex;align-items:center;padding:0 .8rem;flex-shrink:0;border-left:1px solid var(--border);margin-left:auto}
-.lang-btn{display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);padding:5px 9px;border-radius:8px;transition:background .15s;white-space:nowrap}
-.lang-btn:hover{background:var(--cream2)}
-.lang-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:5px;min-width:155px;box-shadow:0 8px 32px rgba(26,26,20,.13);z-index:9999}
-.lang-menu.open{display:block}
-.lang-option{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink);transition:background .12s;white-space:nowrap}
-.lang-option:hover{background:var(--cream2)}
-.lang-option.active{background:var(--gold-pale);color:var(--forest);font-weight:600}
-[data-translatable]{transition:opacity .25s}
-[data-translatable].translating{opacity:.45}
+
+
+#google_translate_element{position:relative}
+.goog-te-gadget{font-size:0!important}
+.goog-te-gadget select{font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--ink);background:none;border:none;cursor:pointer;padding:5px 9px;border-radius:8px;outline:none;appearance:none;-webkit-appearance:none}
+.goog-te-gadget select:hover{background:var(--cream2)}
+.goog-logo-link,.goog-te-gadget span{display:none!important}
+.goog-te-banner-frame{display:none!important}
+body{top:0!important}
 </style></head><body>
 <header class="hero">
   <div class="hero-bg"></div>
@@ -16475,21 +16474,7 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 <nav class="nav">
   <div class="nav-logo">${title}</div>
   <div class="nav-links">${navLinks}</div>
-  <div class="lang-picker" id="langPicker">
-    <button class="lang-btn" id="langBtn">
-      <span id="langFlag">&#127467;&#127479;</span>
-      <span id="langLabel">FR</span>
-      <i class="fas fa-chevron-down" style="font-size:9px;opacity:.6;margin-left:2px"></i>
-    </button>
-    <div class="lang-menu" id="langMenu">
-      <div class="lang-option" data-lang="fr">&#127467;&#127479; Fran&#231;ais</div>
-      <div class="lang-option" data-lang="en">&#127468;&#127463; English</div>
-      <div class="lang-option" data-lang="de">&#127465;&#127466; Deutsch</div>
-      <div class="lang-option" data-lang="it">&#127470;&#127481; Italiano</div>
-      <div class="lang-option" data-lang="nl">&#127475;&#127473; Nederlands</div>
-      <div class="lang-option" data-lang="zh">&#127464;&#127475; &#20013;&#25991;</div>
-    </div>
-  </div>
+  <div id="google_translate_element" style="display:flex;align-items:center;padding:0 .8rem;border-left:1px solid var(--border);flex-shrink:0"></div>
 </nav>
 <div class="wrap">
 <section class="sect" id="welcome">
@@ -16544,7 +16529,17 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
 });
 </script>
-<script src="/js/wb-translate.js"></script>
+<script>
+function googleTranslateElementInit(){
+  new google.translate.TranslateElement({
+    pageLanguage:'fr',
+    includedLanguages:'en,de,it,nl,zh-CN',
+    layout:google.translate.TranslateElement.InlineLayout.SIMPLE,
+    autoDisplay:false
+  },'google_translate_element');
+}
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body></html>`;
 
 
