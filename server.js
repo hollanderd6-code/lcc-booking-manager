@@ -16171,9 +16171,8 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         /* HERO HEADER */
         .hero {
           position: relative;
-          height: 55vw;
-          min-height: 280px;
-          max-height: 480px;
+          height: 60vh;
+          min-height: 400px;
           background-image: url('${coverPhoto}');
           background-size: cover;
           background-position: center;
@@ -16181,11 +16180,11 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         .hero-overlay {
           position: absolute;
           inset: 0;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.72));
+          background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7));
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
-          padding: 2rem 1.5rem 1.75rem;
+          padding: 2rem;
         }
         .hero-content {
           max-width: 800px;
@@ -16194,31 +16193,23 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           color: white;
         }
         .hero h1 {
-          font-size: clamp(1.6rem, 5vw, 2.6rem);
+          font-size: 2.5rem;
           font-weight: 800;
-          margin-bottom: 0.4rem;
-          text-shadow: 0 2px 8px rgba(0,0,0,0.4);
-          line-height: 1.2;
-          word-break: break-word;
+          margin-bottom: 0.5rem;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         .hero p {
-          font-size: clamp(0.9rem, 2.5vw, 1.05rem);
-          opacity: 0.88;
-          margin-top: 0.2rem;
+          font-size: 1.1rem;
+          opacity: 0.9;
         }
 
         /* CONTAINER */
         .container {
           max-width: 800px;
-          margin: 0 auto;
-          padding: 1.25rem 1rem 0;
+          margin: -3rem auto 0;
+          padding: 0 1rem;
           position: relative;
           z-index: 10;
-        }
-
-        @media (max-width: 600px) {
-          .hero { height: 62vw; min-height: 220px; }
-          .hero-overlay { padding: 1.25rem 1rem 1.5rem; }
         }
 
         /* CARDS */
@@ -16371,10 +16362,21 @@ app.get('/welcome/:uniqueId', async (req, res) => {
         <div class="card">
           <div class="section-title"><i class="fas fa-key"></i> Accès au logement</div>
           <p>${d.accessInstructions.replace(/\n/g, '<br>')}</p>
-          ${d.photos && d.photos.entrance ? `
-            <div class="gallery">
-              ${d.photos.entrance.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}
-            </div>
+          ${d.photos && d.photos.entrance && d.photos.entrance.length > 0 ? `
+            <div class="gallery">${d.photos.entrance.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
+          ` : ''}
+        </div>` : ''}
+
+        ${(d.parkingInfo || (d.photos && d.photos.parking && d.photos.parking.length > 0)) ? `
+        <div class="card">
+          <div class="section-title"><i class="fas fa-parking"></i> Parking</div>
+          ${d.parkingInfo ? `<p>${d.parkingInfo.replace(/\n/g, '<br>')}</p>` : ''}
+          ${d.photos && d.photos.parking && d.photos.parking.length > 0 ? `
+            <div class="gallery" style="margin-top:1rem;">${d.photos.parking.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
+          ` : ''}
+          ${d.extraNotesAccess ? `<p style="margin-top:1rem;color:#475569;">${d.extraNotesAccess.replace(/\n/g, '<br>')}</p>` : ''}
+          ${d.photos && d.photos.extraPhotosAccess && d.photos.extraPhotosAccess.length > 0 ? `
+            <div class="gallery" style="margin-top:0.75rem;">${d.photos.extraPhotosAccess.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
           ` : ''}
         </div>` : ''}
 
@@ -16383,44 +16385,55 @@ app.get('/welcome/:uniqueId', async (req, res) => {
           <div class="section-title"><i class="fas fa-bed"></i> Le Logement</div>
           ${d.rooms.map((room, i) => `
             <div class="list-item">
-              <div class="item-header">
-                <div class="item-title">${room.name}</div>
-              </div>
-              <p class="item-desc">${room.description}</p>
-              ${d.photos && d.photos.roomPhotos ? `
-                 ` : ''}
+              <div class="item-header"><div class="item-title">${room.name}</div></div>
+              ${room.description ? `<p class="item-desc">${room.description.replace(/\n/g, '<br>')}</p>` : ''}
+              ${room.extra ? `<p class="item-desc" style="margin-top:0.5rem;color:#64748b;">${room.extra.replace(/\n/g, '<br>')}</p>` : ''}
+              ${d.photos && d.photos.roomPhotosPerRoom && d.photos.roomPhotosPerRoom[i+1] && d.photos.roomPhotosPerRoom[i+1].length > 0 ? `
+                <div class="gallery" style="margin-top:0.75rem;">${d.photos.roomPhotosPerRoom[i+1].map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
+              ` : ''}
             </div>
           `).join('')}
-          
-          ${d.photos && d.photos.roomPhotos && d.photos.roomPhotos.length > 0 ? `
-            <div class="gallery" style="margin-top:1rem; border-top:1px dashed #e2e8f0; padding-top:1rem;">
-               ${d.photos.roomPhotos.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}
-            </div>
+          ${d.extraNotesLogement ? `<p style="margin-top:1rem;border-top:1px solid #f1f5f9;padding-top:1rem;color:#475569;">${d.extraNotesLogement.replace(/\n/g, '<br>')}</p>` : ''}
+          ${d.photos && d.photos.extraPhotosLogement && d.photos.extraPhotosLogement.length > 0 ? `
+            <div class="gallery" style="margin-top:0.75rem;">${d.photos.extraPhotosLogement.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
           ` : ''}
         </div>` : ''}
 
+        ${(d.wifiSSID || d.checkoutInstructions || d.importantRules || d.equipmentList || d.transportInfo) ? `
         <div class="card">
-           <div class="section-title"><i class="fas fa-clipboard-check"></i> Règles & Départ</div>
-           ${d.importantRules ? `<p><strong>À savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
-           ${d.checkoutInstructions ? `<p><strong>Au départ :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p>` : ''}
-        </div>
+          <div class="section-title"><i class="fas fa-info-circle"></i> Informations pratiques</div>
+          ${d.importantRules ? `<p><strong>À savoir :</strong><br>${d.importantRules.replace(/\n/g, '<br>')}</p><br>` : ''}
+          ${d.checkoutTime ? `<p><strong>Heure de départ :</strong> ${d.checkoutTime}</p><br>` : ''}
+          ${d.checkoutInstructions ? `<p><strong>Au départ :</strong><br>${d.checkoutInstructions.replace(/\n/g, '<br>')}</p><br>` : ''}
+          ${d.equipmentList ? `<p><strong>Équipements :</strong><br>${d.equipmentList.replace(/\n/g, '<br>')}</p><br>` : ''}
+          ${d.transportInfo ? `<p><strong>Transports :</strong><br>${d.transportInfo.replace(/\n/g, '<br>')}</p>` : ''}
+          ${d.extraNotesPractical ? `<p style="margin-top:1rem;border-top:1px solid #f1f5f9;padding-top:1rem;color:#475569;">${d.extraNotesPractical.replace(/\n/g, '<br>')}</p>` : ''}
+          ${d.photos && d.photos.extraPhotosPractical && d.photos.extraPhotosPractical.length > 0 ? `
+            <div class="gallery" style="margin-top:0.75rem;">${d.photos.extraPhotosPractical.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
+          ` : ''}
+        </div>` : ''}
 
-        ${(d.restaurants?.length > 0 || d.places?.length > 0) ? `
+        ${(d.restaurants?.length > 0 || d.places?.length > 0 || d.shopsList) ? `
         <div class="card">
           <div class="section-title"><i class="fas fa-map-signs"></i> Guide Local</div>
           
           ${d.restaurants && d.restaurants.length > 0 ? `
-            <h4 style="margin:1rem 0 0.5rem 0; color:#64748b;">🍽️ Restaurants</h4>
+            <h4 style="margin:0 0 0.5rem 0; color:#64748b;">🍽️ Restaurants</h4>
             ${d.restaurants.map(resto => `
               <div class="list-item">
                 <div class="item-header">
                   <div class="item-title">${resto.name}</div>
                   <div class="item-meta">${resto.phone || ''}</div>
                 </div>
-                <p class="item-desc">${resto.description}</p>
+                ${resto.description ? `<p class="item-desc">${resto.description}</p>` : ''}
                 ${resto.address ? `<small style="color:#94a3b8"><i class="fas fa-location-arrow"></i> ${resto.address}</small>` : ''}
               </div>
             `).join('')}
+          ` : ''}
+
+          ${d.shopsList ? `
+            <h4 style="margin:1.5rem 0 0.5rem 0; color:#64748b;">🛒 Commerces</h4>
+            <p class="item-desc">${d.shopsList.replace(/\n/g, '<br>')}</p>
           ` : ''}
 
           ${d.places && d.places.length > 0 ? `
@@ -16428,9 +16441,13 @@ app.get('/welcome/:uniqueId', async (req, res) => {
             ${d.places.map(place => `
               <div class="list-item">
                 <div class="item-title">${place.name}</div>
-                <p class="item-desc">${place.description}</p>
+                ${place.description ? `<p class="item-desc">${place.description}</p>` : ''}
               </div>
             `).join('')}
+          ` : ''}
+          ${d.extraNotesAround ? `<p style="margin-top:1rem;border-top:1px solid #f1f5f9;padding-top:1rem;color:#475569;">${d.extraNotesAround.replace(/\n/g, '<br>')}</p>` : ''}
+          ${d.photos && d.photos.extraPhotosAround && d.photos.extraPhotosAround.length > 0 ? `
+            <div class="gallery" style="margin-top:0.75rem;">${d.photos.extraPhotosAround.map(url => `<img src="${url}" onclick="window.open(this.src)">`).join('')}</div>
           ` : ''}
         </div>` : ''}
 
