@@ -680,6 +680,52 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
    RESPONSIVE
    ============================================ */
 
+
+/* ============================================
+   TRANSLATION BUTTON
+   ============================================ */
+
+.tx-bar {
+  margin-top: 4px;
+  display: flex;
+}
+
+.tx-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--text-light);
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+.tx-btn:hover {
+  background: var(--border);
+  opacity: 1;
+  color: var(--primary);
+}
+
+.tx-btn:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+/* Côté proprio — aligner à droite pour les messages guest (qui sont à gauche) */
+.message.guest .tx-bar,
+.chat-message.guest .tx-bar {
+  justify-content: flex-start;
+}
+
+/* Côté voyageur — les messages owner sont à gauche */
+.message.owner .tx-bar {
+  justify-content: flex-start;
+}
+
 @media (max-width: 390px) {
   .pin-digit {
     width: 52px !important;
