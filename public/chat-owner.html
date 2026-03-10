@@ -1213,29 +1213,35 @@ const bookingMessageModalStyles = `
   margin-top: 5px;
   display: flex;
 }
-.tx-btn {
-  all: unset !important;
-  cursor: pointer !important;
-  font-size: 11px !important;
-  font-family: inherit !important;
-  color: #b0b8c8 !important;
-  padding: 0 !important;
-  transition: color 0.15s !important;
-  line-height: 1.4 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 3px !important;
-  letter-spacing: 0.01em !important;
-  user-select: none !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-.tx-btn i { font-size: 10px !important; }
-.tx-btn:hover { color: #1A7A5E !important; }
-.tx-btn:focus { outline: none !important; box-shadow: none !important; }
-.tx-btn.translated { color: #1A7A5E !important; }
-.tx-btn:disabled { cursor: wait !important; opacity: 0.35 !important; }
+.tx-bar { margin-top: 5px; display: flex; }
 .chat-message.guest .tx-bar { justify-content: flex-start; }
 .chat-message.owner .tx-bar { justify-content: flex-end; }
+.tx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 7px;
+  background: #f4f5f7;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  color: #6b7280;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: background 0.15s, color 0.15s;
+  outline: none;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.tx-chip:hover { background: #e8f5f0; color: #1A7A5E; }
+.tx-chip:focus { outline: none; box-shadow: none; }
+.tx-chip.translated { background: #e8f5f0; color: #1A7A5E; }
+.tx-chip:disabled { opacity: 0.4; cursor: wait; }
+.tx-chip .tx-flags { font-size: 13px; line-height: 1; }
+.tx-chip .tx-label { font-size: 10.5px; }
 </style>
   <script src="/js/auth-fetch.js"></script>
 </head>
