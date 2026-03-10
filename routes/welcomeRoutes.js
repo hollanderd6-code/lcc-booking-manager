@@ -135,13 +135,7 @@ router.get('/my-book', authenticateUser, async (req, res) => {
   }
 });
 // ---------- CREATE OR UPDATE (CORRIGÃ‰) ----------
-router.post('/create', authenticateUser, upload.fields([
-  { name: 'coverPhoto', maxCount: 1 },
-  { name: 'entrancePhotos', maxCount: 10 },
-  { name: 'parkingPhotos', maxCount: 5 },
-  { name: 'roomPhotos', maxCount: 50 },
-  { name: 'placePhotos', maxCount: 20 }
-]), async (req, res) => {
+router.post('/create', authenticateUser, upload.any(), async (req, res) => {
   try {
     const pool = req.app.locals.pool;
     console.log("ðŸ“¥ Tentative de sauvegarde reÃ§ue..."); // Log de debug
@@ -186,7 +180,13 @@ router.post('/create', authenticateUser, upload.fields([
     }
 
     const body = req.body || {};
-    const files = req.files || {};
+    // upload.any() retourne un array — on le regroupe par fieldname
+    const filesRaw = req.files || [];
+    const files = {};
+    filesRaw.forEach(f => {
+      if (!files[f.fieldname]) files[f.fieldname] = [];
+      files[f.fieldname].push(f);
+    });
 
     // --- CORRECTION CRITIQUE ICI : Parsing manuel et sÃ©curisÃ© ---
     const parseJSON = (input) => {
@@ -205,6 +205,22 @@ router.post('/create', authenticateUser, upload.fields([
     // ------------------------------------------------------------
 
     // Gestion des photos (Upload vers Cloudinary)
+
+    // Photos de pièces dynamiques (roomPhotos_1, roomPhotos_2, ...)
+    const roomPhotosPerRoom = {};
+    for (const [fieldname, fieldFiles] of Object.entries(files)) {
+      if (fieldname.startsWith('roomPhotos_')) {
+        const idx = fieldname.replace('roomPhotos_', '');
+        roomPhotosPerRoom[idx] = await uploadFiles(fieldFiles);
+      }
+    }
+
+    // Photos extra sections
+    const extraPhotosAccess    = files.extraPhotosAccess    ? await uploadFiles(files.extraPhotosAccess)    : (oldPhotos.extraPhotosAccess    || []);
+    const extraPhotosLogement  = files.extraPhotosLogement  ? await uploadFiles(files.extraPhotosLogement)  : (oldPhotos.extraPhotosLogement  || []);
+    const extraPhotosPractical = files.extraPhotosPractical ? await uploadFiles(files.extraPhotosPractical) : (oldPhotos.extraPhotosPractical || []);
+    const extraPhotosAround    = files.extraPhotosAround    ? await uploadFiles(files.extraPhotosAround)    : (oldPhotos.extraPhotosAround    || []);
+
     const photos = {
       cover: (files.coverPhoto && files.coverPhoto[0]) 
         ? await uploadFile(files.coverPhoto[0]) || oldPhotos.cover 
@@ -218,9 +234,14 @@ router.post('/create', authenticateUser, upload.fields([
       roomPhotos: (files.roomPhotos && files.roomPhotos.length > 0) 
         ? await uploadFiles(files.roomPhotos) 
         : (oldPhotos.roomPhotos || []),
+      roomPhotosPerRoom: { ...(oldPhotos.roomPhotosPerRoom || {}), ...roomPhotosPerRoom },
       placePhotos: (files.placePhotos && files.placePhotos.length > 0) 
         ? await uploadFiles(files.placePhotos) 
         : (oldPhotos.placePhotos || []),
+      extraPhotosAccess,
+      extraPhotosLogement,
+      extraPhotosPractical,
+      extraPhotosAround,
     };
 
     // Construction des donnÃ©es
@@ -251,6 +272,10 @@ router.post('/create', authenticateUser, upload.fields([
       restaurants,
       places,
       photos,
+      extraNotesAccess:    body.extraNotesAccess    || '',
+      extraNotesLogement:  body.extraNotesLogement  || '',
+      extraNotesPractical: body.extraNotesPractical || '',
+      extraNotesAround:    body.extraNotesAround    || '',
       
       updatedAt: new Date().toISOString()
     };
