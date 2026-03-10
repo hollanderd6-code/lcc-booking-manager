@@ -15995,8 +15995,9 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       if (deleted) {
         console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
         
-        // 📩 ENVOYER NOTIFICATION D'ANNULATION
-        if (await shouldSendNotification(user.id, 'notif_reservation_cancelled')) {
+        // 📩 ENVOYER NOTIFICATION D'ANNULATION (pas pour les blocages manuels)
+        const isBlockDeletion = deleteResult.rows[0] && deleteResult.rows[0].source === 'BLOCK';
+        if (!isBlockDeletion && await shouldSendNotification(user.id, 'notif_reservation_cancelled')) {
         try {
           const deletedReservation = deleteResult.rows[0];
           
