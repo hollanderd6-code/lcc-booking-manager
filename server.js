@@ -10138,7 +10138,7 @@ app.get('/api/properties/:propertyId',
     }
     
     const { propertyId } = req.params;
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
@@ -10168,10 +10168,11 @@ app.get('/api/properties/:propertyId',
       wifiPassword: property.wifi_password || null,
       accessInstructions: property.access_instructions || null,
       chatPin: property.chat_pin || null,
-      amenities: property.amenities || '{}',                    // ✅ AJOUTÉ
-      houseRules: property.house_rules || '{}',                 // ✅ AJOUTÉ
-      practicalInfo: property.practical_info || '{}',           // ✅ AJOUTÉ
-      autoResponsesEnabled: property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true,  // ✅ AJOUTÉ
+      amenities: property.amenities || '{}',
+      houseRules: property.house_rules || '{}',
+      practicalInfo: property.practical_info || '{}',
+      autoResponsesEnabled: property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true,
+      quick_replies: property.quick_replies || [],  // ✅ Raccourcis messages
       
       icalUrls: property.icalUrls || property.ical_urls || [],
       reservationCount: (reservationsStore.properties[property.id] || []).length
@@ -15802,9 +15803,9 @@ await pool.query(
 
 // DELETE - Supprimer une conversation
 // ============================================
-// GET lien caution pour une conversation
+// GET raccourcis + lien caution pour une conversation
 // ============================================
-app.get('/api/deposits/for-conversation/:convId', authenticateAny, async (req, res) => {
+app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -15813,10 +15814,12 @@ app.get('/api/deposits/for-conversation/:convId', authenticateAny, async (req, r
 
     const { convId } = req.params;
 
-    // Récupérer la conversation pour avoir le reservation_uid
+    // 1. Récupérer la conversation + quick_replies du logement en une seule requête
     const convResult = await pool.query(
-      `SELECT c.*, r.uid as reservation_uid
+      `SELECT c.*, p.quick_replies,
+              r.uid as reservation_uid
        FROM conversations c
+       LEFT JOIN properties p ON p.id = c.property_id
        LEFT JOIN reservations r ON (
          r.property_id = c.property_id
          AND DATE(r.start_date) = DATE(c.reservation_start_date)
@@ -15826,31 +15829,46 @@ app.get('/api/deposits/for-conversation/:convId', authenticateAny, async (req, r
       [convId, userId]
     );
 
-    if (!convResult.rows.length) return res.json({ depositUrl: null });
+    if (!convResult.rows.length) {
+      return res.json({ quickReplies: [], depositUrl: null });
+    }
 
-    const conv = convResult.rows[0];
-    const reservationUid = conv.reservation_uid || conv.reservation_uid;
-    if (!reservationUid) return res.json({ depositUrl: null });
+    const row = convResult.rows[0];
 
-    const depositResult = await pool.query(
-      `SELECT checkout_url, status, amount_cents FROM deposits
-       WHERE reservation_uid = $1 AND user_id = $2
-       AND status IN ('pending', 'authorized')
-       ORDER BY created_at DESC LIMIT 1`,
-      [reservationUid, userId]
-    );
+    // Parser quick_replies
+    let quickReplies = row.quick_replies || [];
+    if (typeof quickReplies === 'string') {
+      try { quickReplies = JSON.parse(quickReplies); } catch(e) { quickReplies = []; }
+    }
+    if (!Array.isArray(quickReplies)) quickReplies = [];
 
-    if (!depositResult.rows.length) return res.json({ depositUrl: null });
+    // 2. Chercher la caution si reservation_uid dispo
+    let depositUrl = null;
+    let depositAmountCents = null;
+    const reservationUid = row.reservation_uid;
 
-    const deposit = depositResult.rows[0];
+    if (reservationUid) {
+      const depositResult = await pool.query(
+        `SELECT checkout_url, amount_cents FROM deposits
+         WHERE reservation_uid = $1 AND user_id = $2
+         AND status IN ('pending', 'authorized')
+         ORDER BY created_at DESC LIMIT 1`,
+        [reservationUid, userId]
+      );
+      if (depositResult.rows.length) {
+        depositUrl = depositResult.rows[0].checkout_url;
+        depositAmountCents = depositResult.rows[0].amount_cents;
+      }
+    }
+
     return res.json({
-      depositUrl: deposit.checkout_url,
-      status: deposit.status,
-      amountCents: deposit.amount_cents
+      quickReplies,
+      depositUrl,
+      depositAmountCents
     });
 
   } catch (err) {
-    console.error('Erreur GET /api/deposits/for-conversation:', err);
+    console.error('Erreur GET quick-context:', err);
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
