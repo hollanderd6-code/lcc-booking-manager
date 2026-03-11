@@ -1299,8 +1299,9 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       max-width: 600px;
       width: 90%;
+      height: auto;
       max-height: 90vh;
-      overflow: visible;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       z-index: 10001;
@@ -3077,7 +3078,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <i class="fas fa-times"></i>
 </button>
 </div>
-<div class="modal-body" style="overflow-y:auto;flex:1;min-height:0;max-height:calc(85vh - 130px);overscroll-behavior:contain;">
+<div class="modal-body" style="overflow-y:auto;flex:1;min-height:0;">
 <form class="booking-form" id="newReservationForm">
 <div class="form-group">
 <label for="nrProperty">Logement</label>
@@ -3316,8 +3317,6 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     .modal-body {
       padding: var(--spacing-lg);
       overflow-y: auto;
-      max-height: calc(90vh - 130px);
-      overscroll-behavior: contain;
     }
 
     .modal-footer {
