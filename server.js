@@ -1194,13 +1194,9 @@ ON invoice_download_tokens(token);
 
     // ✅ Migration : quick_replies sur properties
     try {
-      await pool.query(`
-        ALTER TABLE properties ADD COLUMN IF NOT EXISTS quick_replies JSONB DEFAULT '[]'::jsonb;
-      `);
-      console.log('✅ Colonne quick_replies ajoutée à properties');
-    } catch (e) {
-      console.log('ℹ️ quick_replies: ', e.message);
-    }
+      await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS quick_replies JSONB DEFAULT '[]'::jsonb`);
+      console.log('✅ Colonne quick_replies OK');
+    } catch(e) { console.log('ℹ️ quick_replies:', e.message); }
 
     // ✅ Migration : support FCM tokens pour sous-comptes
     try {
@@ -3325,11 +3321,7 @@ async function loadProperties() {
         house_rules: row.house_rules,
         practical_info: row.practical_info,
         auto_responses_enabled: row.auto_responses_enabled,
-        quick_replies: (() => {
-          let qr = row.quick_replies || [];
-          if (typeof qr === 'string') { try { qr = JSON.parse(qr); } catch(e) { qr = []; } }
-          return Array.isArray(qr) ? qr : [];
-        })()
+        quick_replies: (() => { let q = row.quick_replies || []; if (typeof q === 'string') { try { q = JSON.parse(q); } catch(e) { q = []; } } return Array.isArray(q) ? q : []; })()
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
@@ -10172,7 +10164,7 @@ app.get('/api/properties/:propertyId',
       houseRules: property.house_rules || '{}',
       practicalInfo: property.practical_info || '{}',
       autoResponsesEnabled: property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true,
-      quick_replies: property.quick_replies || [],  // ✅ Raccourcis messages
+      quick_replies: property.quick_replies || [],
       
       icalUrls: property.icalUrls || property.ical_urls || [],
       reservationCount: (reservationsStore.properties[property.id] || []).length
@@ -10543,7 +10535,7 @@ app.put('/api/properties/:propertyId',
       practicalInfo,
       autoResponsesEnabled,
       chatPin,
-      quickReplies    // ✅ Raccourcis messages
+      quickReplies
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
@@ -10631,10 +10623,9 @@ app.put('/api/properties/:propertyId',
         ? arrivalMessage 
         : (property.arrival_message || null);  // ✅ NOUVEAU
 
-    const newQuickReplies =
-      quickReplies !== undefined
-        ? quickReplies
-        : (property.quick_replies || []);
+    const newQuickReplies = quickReplies !== undefined
+      ? (Array.isArray(quickReplies) ? quickReplies : [])
+      : (property.quick_replies || []);
         
     let newPhotoUrl =
       existingPhotoUrl !== undefined
@@ -10722,29 +10713,17 @@ userId: userId
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
-        newName,
-        newColor,
-        JSON.stringify(newIcalUrls || []),
-        newAddress,
-        newArrivalTime,
-        newDepartureTime,
-        newDepositAmount,
-        newPhotoUrl,
-        newWelcomeBookUrl,
-        newAccessCode,
-        newWifiName,
-        newWifiPassword,
-        newAccessInstructions,
-        newOwnerId,
-        newChatPin,
+        newName, newColor, JSON.stringify(newIcalUrls || []), newAddress,
+        newArrivalTime, newDepartureTime, newDepositAmount, newPhotoUrl,
+        newWelcomeBookUrl, newAccessCode, newWifiName, newWifiPassword,
+        newAccessInstructions, newOwnerId, newChatPin,
         typeof newAmenities === 'string' ? newAmenities : JSON.stringify(newAmenities || {}),
         typeof newHouseRules === 'string' ? newHouseRules : JSON.stringify(newHouseRules || {}),
         typeof newPracticalInfo === 'string' ? newPracticalInfo : JSON.stringify(newPracticalInfo || {}),
         newAutoResponsesEnabled,
-        newArrivalMessage,  // ✅ NOUVEAU
-        typeof newQuickReplies === 'string' ? newQuickReplies : JSON.stringify(newQuickReplies || []),
-        propertyId,
-        userId
+        newArrivalMessage,
+        JSON.stringify(newQuickReplies),
+        propertyId, userId
       ]
     );
     
@@ -15813,62 +15792,36 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { convId } = req.params;
-
-    // 1. Récupérer la conversation + quick_replies du logement en une seule requête
     const convResult = await pool.query(
-      `SELECT c.*, p.quick_replies,
-              r.uid as reservation_uid
+      `SELECT c.*, p.quick_replies, r.uid as reservation_uid
        FROM conversations c
        LEFT JOIN properties p ON p.id = c.property_id
-       LEFT JOIN reservations r ON (
-         r.property_id = c.property_id
-         AND DATE(r.start_date) = DATE(c.reservation_start_date)
-       )
+       LEFT JOIN reservations r ON (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date))
        WHERE c.id = $1 AND c.user_id = $2
        LIMIT 1`,
       [convId, userId]
     );
 
-    if (!convResult.rows.length) {
-      return res.json({ quickReplies: [], depositUrl: null });
-    }
+    if (!convResult.rows.length) return res.json({ quickReplies: [], depositUrl: null });
 
     const row = convResult.rows[0];
-
-    // Parser quick_replies
     let quickReplies = row.quick_replies || [];
-    if (typeof quickReplies === 'string') {
-      try { quickReplies = JSON.parse(quickReplies); } catch(e) { quickReplies = []; }
-    }
+    if (typeof quickReplies === 'string') { try { quickReplies = JSON.parse(quickReplies); } catch(e) { quickReplies = []; } }
     if (!Array.isArray(quickReplies)) quickReplies = [];
 
-    // 2. Chercher la caution si reservation_uid dispo
-    let depositUrl = null;
-    let depositAmountCents = null;
-    const reservationUid = row.reservation_uid;
-
-    if (reservationUid) {
-      const depositResult = await pool.query(
-        `SELECT checkout_url, amount_cents FROM deposits
-         WHERE reservation_uid = $1 AND user_id = $2
-         AND status IN ('pending', 'authorized')
-         ORDER BY created_at DESC LIMIT 1`,
-        [reservationUid, userId]
+    let depositUrl = null, depositAmountCents = null;
+    if (row.reservation_uid) {
+      const dep = await pool.query(
+        `SELECT checkout_url, amount_cents FROM deposits WHERE reservation_uid = $1 AND user_id = $2 AND status IN ('pending','authorized') ORDER BY created_at DESC LIMIT 1`,
+        [row.reservation_uid, userId]
       );
-      if (depositResult.rows.length) {
-        depositUrl = depositResult.rows[0].checkout_url;
-        depositAmountCents = depositResult.rows[0].amount_cents;
-      }
+      if (dep.rows.length) { depositUrl = dep.rows[0].checkout_url; depositAmountCents = dep.rows[0].amount_cents; }
     }
 
-    return res.json({
-      quickReplies,
-      depositUrl,
-      depositAmountCents
-    });
-
-  } catch (err) {
-    console.error('Erreur GET quick-context:', err);
+    console.log(`✅ quick-context conv ${convId}: ${quickReplies.length} raccourcis, caution: ${depositUrl ? 'oui' : 'non'}`);
+    return res.json({ quickReplies, depositUrl, depositAmountCents });
+  } catch(err) {
+    console.error('Erreur quick-context:', err);
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
