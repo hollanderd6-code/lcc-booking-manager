@@ -2764,7 +2764,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
 </button>
-<button id="newReservationBtn" onclick="var m=document.getElementById('newReservationModal');if(m){m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
+<button id="newReservationBtn" onclick="if(typeof openNewReservationModal==='function'){openNewReservationModal();}else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
   <i class="fas fa-plus"></i> Nouvelle réservation
 </button>
 </div>
@@ -3284,8 +3284,11 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       border-radius: var(--radius-xl);
       max-width: 600px;
       width: 90%;
+      height: 90vh;
       max-height: 90vh;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
       box-shadow: var(--shadow-xl);
     }
     
@@ -4178,13 +4181,17 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       function openNewReservationModal() {
         if (newReservationModal) {
           populateNewReservationProperties();
+          newReservationModal.style.display = 'flex';
           newReservationModal.classList.add('active');
+          document.body.style.overflow = 'hidden';
         }
       }
 
       function closeNewReservationModal() {
         if (newReservationModal) {
+          newReservationModal.style.display = 'none';
           newReservationModal.classList.remove('active');
+          document.body.style.overflow = '';
         }
         if (newReservationForm) {
           newReservationForm.reset();
@@ -9116,7 +9123,7 @@ if (document.readyState === 'loading') {
       btn.id = 'newReservationBtn';
       btn.style.cssText = 'background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:DM Sans,sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;';
       btn.innerHTML = '<i class="fas fa-plus"></i> Nouvelle réservation';
-      btn.onclick = function(){ var m=document.getElementById('newReservationModal'); if(m) m.style.display='flex'; };
+      btn.onclick = function(){ var m=document.getElementById('newReservationModal'); if(typeof openNewReservationModal==='function'){openNewReservationModal();}else if(m)m.style.display='flex'; };
       actions.appendChild(btn);
     }
   }
