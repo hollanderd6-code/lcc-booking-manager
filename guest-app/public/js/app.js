@@ -467,7 +467,7 @@ async function handleVerification(e) {
   }
   
   if (!propertyId) {
-    showError('Lien invalide - ID de propriété manquant. Veuillez utiliser le lien fourni par votre hôte.');
+    showError('Merci de cliquer sur le lien fourni par votre hôte.');
     return;
   }
   
