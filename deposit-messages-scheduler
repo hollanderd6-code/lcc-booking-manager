@@ -170,7 +170,7 @@ ${deposit.checkout_url}
 
 ⚠️ Sans cette autorisation, vous ne pourrez pas recevoir les informations d'arrivée.
 
-L'autorisation ne débite pas votre carte immédiatement. Le montant sera juste bloqué temporairement.
+L’autorisation ne débite généralement pas votre carte immédiatement : le montant est le plus souvent bloqué temporairement. Toutefois, certaines banques en ligne (comme Revolut ou N26) et certaines cartes étrangères peuvent effectuer un débit immédiat.
 
 Merci ! 😊`;
 
