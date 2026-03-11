@@ -3716,12 +3716,10 @@ async function sendDepositRequestMessages(io) {
           cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`
         };
 
-        let session;
-        if (conv.stripe_account_id) {
-          session = await stripe.checkout.sessions.create(sessionParams, { stripeAccount: conv.stripe_account_id });
-        } else {
-          session = await stripe.checkout.sessions.create(sessionParams);
-        }
+        // ✅ CAUTIONS AUTOMATIQUES : TOUJOURS sur le compte plateforme Boostinghost
+        // Ne jamais utiliser stripeAccount ici, même si le client a un compte Connect
+        const session = await stripe.checkout.sessions.create(sessionParams);
+        console.log('✅ Caution automatique Booking créée sur compte plateforme (pas Connect)');
 
         // Sauvegarder en DB
         await pool.query(`
