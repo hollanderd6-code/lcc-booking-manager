@@ -10103,6 +10103,7 @@ app.get('/api/properties',
         houseRules: p.house_rules || '{}',                 // ✅ AJOUTÉ
         practicalInfo: p.practical_info || '{}',           // ✅ AJOUTÉ
         autoResponsesEnabled: p.auto_responses_enabled !== undefined ? p.auto_responses_enabled : true,  // ✅ AJOUTÉ
+        quick_replies: (() => { let q = p.quick_replies || []; if (typeof q === 'string') { try { q = JSON.parse(q); } catch(e) { q = []; } } return Array.isArray(q) ? q : []; })(),  // ✅ RACCOURCIS
         icalUrls,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
