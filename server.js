@@ -6552,7 +6552,7 @@ function parsePropertyBody(req) {
   const body = req.body || {};
   
   // Parser tous les champs JSON string envoyés via FormData
-  const jsonFields = ['icalUrls', 'amenities', 'houseRules', 'practicalInfo'];
+  const jsonFields = ['icalUrls', 'amenities', 'houseRules', 'practicalInfo', 'quickReplies'];
   for (const field of jsonFields) {
     if (body[field] && typeof body[field] === 'string') {
       try {
