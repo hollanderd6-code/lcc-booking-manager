@@ -534,6 +534,41 @@
       margin-top: 4px;
     }
 
+    /* ===== BARRE RACCOURCIS MESSAGES ===== */
+    .quick-replies-bar {
+      padding: 8px 14px 4px;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      flex-shrink: 0;
+    }
+    .quick-replies-bar::-webkit-scrollbar { display: none; }
+
+    .qr-chip {
+      flex-shrink: 0;
+      padding: 6px 13px;
+      border-radius: 20px;
+      border: 1.5px solid #d1fae5;
+      background: #f0fdf4;
+      color: #065f46;
+      font-size: 12.5px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all .15s;
+    }
+    .qr-chip:hover { background: #10B981; color: white; border-color: #10B981; }
+    .qr-chip.deposit { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+    .qr-chip.deposit:hover { background: #f97316; color: white; border-color: #f97316; }
+
     .chat-modal-input {
       padding: 16px;
       border-top: 1px solid var(--border-color);
@@ -1485,6 +1520,9 @@ const bookingMessageModalStyles = `
           <p>Chargement des messages...</p>
         </div>
       </div>
+
+      <!-- Barre de raccourcis messages -->
+      <div class="quick-replies-bar" id="quickRepliesBar" style="display:none;"></div>
 
       <div class="chat-modal-input">
         <textarea 
