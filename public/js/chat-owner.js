@@ -438,11 +438,11 @@ async function openChat(conversationId) {
   document.body.style.height = '100%';
   document.documentElement.style.overflow = 'hidden';
   
-  // ✅ Charger les raccourcis messages
-  loadQuickReplies(conv);
-
   // Charger les messages
   await loadMessages(conversationId);
+  
+  // Charger les raccourcis messages
+  loadQuickReplies(conversationId);
   
   // Marquer comme lu
   await markMessagesAsRead(conversationId);
@@ -681,67 +681,6 @@ async function chatTranslate(text, targetLang) {
 // Langue du proprio (sauvegardée dans localStorage)
 function setOwnerLang(lang) {
   localStorage.setItem('owner_lang', lang);
-}
-
-// ============================================
-// RACCOURCIS MESSAGES + LIEN CAUTION
-// ============================================
-async function loadQuickReplies(conv) {
-  var bar = document.getElementById('quickRepliesBar');
-  if (!bar || !conv || !conv.id) return;
-
-  // Reset
-  bar.innerHTML = '';
-  bar.style.display = 'none';
-
-  try {
-    var token = localStorage.getItem('lcc_token');
-    var res = await fetch(API_URL + '/api/chat/conversations/' + conv.id + '/quick-context', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (!res.ok) return;
-
-    var data = await res.json();
-    var chips = [];
-
-    // Messages prédéfinis
-    (data.quickReplies || []).slice(0, 5).forEach(function(text) {
-      if (text && text.trim()) chips.push({ type: 'reply', label: text.trim() });
-    });
-
-    // Lien caution
-    if (data.depositUrl) {
-      var euros = data.depositAmountCents ? ' ' + Math.round(data.depositAmountCents / 100) + '\u202f\u20ac' : '';
-      chips.push({ type: 'deposit', label: '\uD83D\uDCB0 Lien caution' + euros, url: data.depositUrl });
-    }
-
-    if (!chips.length) return;
-
-    chips.forEach(function(chip) {
-      var btn = document.createElement('button');
-      btn.className = 'qr-chip' + (chip.type === 'deposit' ? ' deposit' : '');
-      btn.title = chip.type === 'deposit' ? chip.url : chip.label;
-      btn.textContent = chip.label;
-      btn.addEventListener('click', function() {
-        var input = document.getElementById('chatInput');
-        if (!input) return;
-        if (chip.type === 'deposit') {
-          input.value = (input.value.trim() ? input.value.trim() + '\n' : '') + chip.url;
-        } else {
-          input.value = chip.label;
-        }
-        input.focus();
-        input.style.height = 'auto';
-        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-      });
-      bar.appendChild(btn);
-    });
-
-    bar.style.display = 'flex';
-
-  } catch(e) {
-    console.warn('Raccourcis non chargés:', e);
-  }
 }
 
 async function sendMessageOwner() {
@@ -1091,5 +1030,57 @@ window.cleanGuestName = cleanGuestName;
 window.getGuestInitial = getGuestInitial;
 window.getGuestPhone = getGuestPhone;
 window.formatRelativeTime = formatTime; // Alias pour compatibilité
+
+// ============================================
+// RACCOURCIS MESSAGES
+// ============================================
+async function loadQuickReplies(conversationId) {
+  const bar = document.getElementById('quickRepliesBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  bar.style.display = 'none';
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/quick-context`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const chips = [];
+
+    // Raccourcis texte
+    (data.quickReplies || []).forEach(text => {
+      const btn = document.createElement('button');
+      btn.className = 'qr-chip';
+      btn.textContent = text;
+      btn.onclick = () => {
+        const input = document.getElementById('chatInput');
+        if (input) { input.value = text; input.focus(); input.dispatchEvent(new Event('input')); }
+      };
+      chips.push(btn);
+    });
+
+    // Bouton lien caution
+    if (data.depositUrl) {
+      const btn = document.createElement('button');
+      btn.className = 'qr-chip deposit';
+      btn.innerHTML = '🔒 Envoyer lien caution';
+      btn.onclick = () => {
+        const input = document.getElementById('chatInput');
+        if (input) { input.value = data.depositUrl; input.focus(); input.dispatchEvent(new Event('input')); }
+      };
+      chips.push(btn);
+    }
+
+    if (chips.length > 0) {
+      chips.forEach(c => bar.appendChild(c));
+      bar.style.display = 'flex';
+    }
+  } catch(e) {
+    console.warn('Erreur loadQuickReplies:', e);
+  }
+}
 
 console.log('✅ Chat owner initialized');
