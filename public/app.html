@@ -3258,6 +3258,10 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       justify-content: center;
       overflow: hidden;
     }
+    .modal.active .modal-body,
+    .modal[style*="flex"] .modal-body {
+      overscroll-behavior: contain;
+    }
 
     .modal-dialog {
       position: relative;
@@ -7211,6 +7215,10 @@ try {
 
 
 function handleEditBooking() {
+  // Fallback: si le let local est null, utiliser window.currentBookingData
+  if (!currentBookingData && window.currentBookingData) {
+    currentBookingData = window.currentBookingData;
+  }
   if (!currentBookingData) {
     alert('Impossible de trouver les données de la réservation');
     return;
@@ -10005,6 +10013,52 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() { reapplyOrderToDOM(); }, 800);
   setTimeout(function() { reapplyOrderToDOM(); }, 2000);
 });
+</script>
+
+<script>
+// Fix: empêche le scroll de la page quand un modal est ouvert
+(function() {
+  function preventBgScroll(e) {
+    // Cherche si l'event est dans un élément scrollable du modal
+    var el = e.target;
+    while (el && el !== document.body) {
+      if (el.scrollHeight > el.clientHeight && 
+          (getComputedStyle(el).overflowY === 'auto' || getComputedStyle(el).overflowY === 'scroll')) {
+        // On est dans un élément scrollable — laisser passer
+        return;
+      }
+      el = el.parentElement;
+    }
+    // On n'est pas dans un scrollable — bloquer
+    e.preventDefault();
+  }
+
+  function lockScroll() {
+    document.addEventListener('wheel', preventBgScroll, { passive: false });
+    document.addEventListener('touchmove', preventBgScroll, { passive: false });
+  }
+  function unlockScroll() {
+    document.removeEventListener('wheel', preventBgScroll);
+    document.removeEventListener('touchmove', preventBgScroll);
+  }
+
+  // Observer les modals qui s'ouvrent/ferment
+  var observer = new MutationObserver(function(mutations) {
+    var anyOpen = false;
+    document.querySelectorAll('.modal, .booking-modal').forEach(function(m) {
+      var s = m.style.display;
+      var cls = m.classList.contains('active');
+      if (s === 'flex' || s === 'block' || cls) anyOpen = true;
+    });
+    anyOpen ? lockScroll() : unlockScroll();
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.modal, .booking-modal').forEach(function(m) {
+      observer.observe(m, { attributes: true, attributeFilter: ['style', 'class'] });
+    });
+  });
+})();
 </script>
 </body>
 </html>
