@@ -291,6 +291,11 @@ async function saveProperty(event) {
     // Réponses auto
     const autoResponsesEnabled = document.getElementById('autoResponsesEnabled')?.checked || true;
     formData.append('autoResponsesEnabled', autoResponsesEnabled);
+
+    // ✅ RACCOURCIS MESSAGES
+    const quickReplies = Array.from(document.querySelectorAll('#quickRepliesList .qr-input'))
+      .map(i => i.value.trim()).filter(Boolean);
+    formData.append('quickReplies', JSON.stringify(quickReplies));
     
   } catch (e) {
     console.error('Erreur collecte données étendues:', e);
@@ -539,6 +544,19 @@ function openEditPropertyModal(propertyId) {
   if (document.getElementById("propertyArrivalMessage")) {
     document.getElementById("propertyArrivalMessage").value = property.arrivalMessage || "";
   }
+
+  // ✅ RACCOURCIS MESSAGES
+  try {
+    var qrList = document.getElementById('quickRepliesList');
+    var qrBtn  = document.getElementById('addQuickReplyBtn');
+    if (qrList) {
+      qrList.innerHTML = '';
+      if (qrBtn) qrBtn.style.display = 'flex';
+      var replies = property.quick_replies || property.quickReplies || [];
+      if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
+      if (Array.isArray(replies)) replies.forEach(function(t) { if (typeof window.addQuickReplyField === 'function') window.addQuickReplyField(t); });
+    }
+  } catch(e) { console.warn('Raccourcis:', e); }
   if (document.getElementById("propertyOwnerId")) {
   document.getElementById("propertyOwnerId").value = property.owner_id || "";
 }
