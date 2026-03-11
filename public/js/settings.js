@@ -979,7 +979,7 @@ const chatSectionHtml = `
       return `
         <div class="property-card" data-id="${escapeHtml(id)}">
           <!-- Image / hero -->
-          <div class="property-img">
+          <div class="property-img" style="cursor:pointer;" onclick="openEditPropertyModal('${escapeHtml(id)}')">
             ${photoUrl
               ? `<img class="property-img-bg" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(name)}" />`
               : `<div class="property-img-placeholder" style="background: linear-gradient(160deg, #e8e0d4 0%, #c8b89a 100%); width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:52px;">${propertyEmoji}</div>`
