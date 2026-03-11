@@ -438,6 +438,9 @@ async function openChat(conversationId) {
   document.body.style.height = '100%';
   document.documentElement.style.overflow = 'hidden';
   
+  // ✅ Charger les raccourcis messages
+  loadQuickReplies(conv);
+
   // Charger les messages
   await loadMessages(conversationId);
   
@@ -678,6 +681,84 @@ async function chatTranslate(text, targetLang) {
 // Langue du proprio (sauvegardée dans localStorage)
 function setOwnerLang(lang) {
   localStorage.setItem('owner_lang', lang);
+}
+
+// ============================================
+// RACCOURCIS MESSAGES + LIEN CAUTION
+// ============================================
+async function loadQuickReplies(conv) {
+  var bar = document.getElementById('quickRepliesBar');
+  if (!bar) return;
+
+  // Reset
+  bar.innerHTML = '';
+  bar.style.display = 'none';
+
+  var chips = [];
+  var token = localStorage.getItem('lcc_token');
+
+  // 1. Messages prédéfinis du logement
+  if (conv && conv.property_id) {
+    try {
+      var res = await fetch(API_URL + '/api/properties/' + conv.property_id, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        var data = await res.json();
+        var prop = data.property || data;
+        var replies = prop.quick_replies || prop.quickReplies || [];
+        if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
+        if (!Array.isArray(replies)) replies = [];
+        replies.slice(0, 5).forEach(function(text) {
+          if (text && text.trim()) chips.push({ type: 'reply', label: text.trim() });
+        });
+      }
+    } catch(e) {
+      console.warn('Raccourcis non chargés:', e);
+    }
+  }
+
+  // 2. Lien de caution si disponible
+  if (conv && conv.id) {
+    try {
+      var dres = await fetch(API_URL + '/api/deposits/for-conversation/' + conv.id, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (dres.ok) {
+        var ddata = await dres.json();
+        if (ddata.depositUrl) {
+          var euros = ddata.amountCents ? ' ' + Math.round(ddata.amountCents / 100) + '\u202f€' : '';
+          chips.push({ type: 'deposit', label: '\uD83D\uDCB0 Lien caution' + euros, url: ddata.depositUrl });
+        }
+      }
+    } catch(e) {
+      console.warn('Caution non chargée:', e);
+    }
+  }
+
+  if (!chips.length) return;
+
+  chips.forEach(function(chip) {
+    var btn = document.createElement('button');
+    btn.className = 'qr-chip' + (chip.type === 'deposit' ? ' deposit' : '');
+    btn.title = chip.type === 'deposit' ? chip.url : chip.label;
+    btn.textContent = chip.label;
+    btn.addEventListener('click', function() {
+      var input = document.getElementById('chatInput');
+      if (!input) return;
+      if (chip.type === 'deposit') {
+        input.value = (input.value.trim() ? input.value.trim() + '\n' : '') + chip.url;
+      } else {
+        input.value = chip.label;
+      }
+      input.focus();
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+    bar.appendChild(btn);
+  });
+
+  bar.style.display = 'flex';
 }
 
 async function sendMessageOwner() {
