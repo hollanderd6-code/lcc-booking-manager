@@ -7554,14 +7554,6 @@ if (editBookingForm) {
       return;
     }
 
-    // Pour l\'instant on gère surtout le cas BLOCAGE
-    if (!isBlock) {
-      alert("Pour l\'instant, ce formulaire permet surtout de déplacer / modifier les blocages manuels. Les autres réservations resteront sur le même logement.");
-      // tu pourras étendre plus tard si tu veux
-      // return ici si tu veux vraiment empêcher toute édition sur les autres types
-      // return;
-    }
-
     const propertyId = document.getElementById('editBookingProperty').value;
     const start = document.getElementById('editCheckIn').value;
     const end = document.getElementById('editCheckOut').value;
@@ -7580,58 +7572,86 @@ if (editBookingForm) {
     }
 
     try {
-      // 1️⃣ On supprime l\'ancien blocage (sur l\'ancien logement)
-      console.log('🧨 Édition blocage - ancien logement:', currentBookingData.propertyId, 'nouveau:', propertyId);
-
-      const deleteRes = await fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          propertyId: currentBookingData.propertyId, // ancien logement
-          uid: currentBookingData.uid
-        })
-      });
-
-      let deleteBody = {};
-      try {
-        deleteBody = await deleteRes.json();
-      } catch (e) {}
-      console.log('📥 Réponse suppression blocage:', deleteRes.status, deleteBody);
-
-      // Si 404 on tolère (au pire déjà supprimé)
-      if (!deleteRes.ok && deleteRes.status !== 404) {
-        throw new Error(deleteBody.error || 'Erreur lors de la suppression (' + deleteRes.status + ')');
-      }
-
-      // 2️⃣ On recrée un blocage sur le nouveau logement
       if (isBlock) {
-        const blockPayload = {
-          propertyId,
-          start,
-          end,
-          reason: notes || guestName || 'Blocage manuel'
-        };
+        // ── CAS BLOCAGE : supprimer + recréer (les blocages n'ont pas de PUT) ──
+        console.log('🧨 Édition blocage - ancien logement:', currentBookingData.propertyId, 'nouveau:', propertyId);
 
-        console.log('📤 Création nouveau blocage:', blockPayload);
+        const deleteRes = await fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            propertyId: currentBookingData.propertyId,
+            uid: currentBookingData.uid
+          })
+        });
+        let deleteBody = {};
+        try { deleteBody = await deleteRes.json(); } catch (e) {}
+        if (!deleteRes.ok && deleteRes.status !== 404) {
+          throw new Error(deleteBody.error || 'Erreur suppression (' + deleteRes.status + ')');
+        }
 
         const createRes = await fetch('https://lcc-booking-manager.onrender.com/api/blocks', {
           method: 'POST',
           headers,
-          body: JSON.stringify(blockPayload)
+          body: JSON.stringify({ propertyId, start, end, reason: notes || guestName || 'Blocage manuel' })
+        });
+        let createBody = {};
+        try { createBody = await createRes.json(); } catch (e) {}
+        if (!createRes.ok) {
+          throw new Error(createBody.error || 'Erreur création (' + createRes.status + ')');
+        }
+        alert('Blocage mis à jour !');
+
+      } else {
+        // ── CAS RÉSERVATION MANUELLE : PUT pour modifier sans supprimer ──
+        const uid = currentBookingData.uid || currentBookingData.id;
+        console.log('✏️ Modification réservation manuelle uid:', uid);
+
+        const payload = {
+          propertyId,
+          start,
+          end,
+          guestName: guestName || currentBookingData.guest_name || '',
+          notes: notes || ''
+        };
+
+        // Essai PUT d'abord
+        let res = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual/' + uid, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(payload)
         });
 
-        let createBody = {};
-        try {
-          createBody = await createRes.json();
-        } catch (e) {}
-        console.log('📥 Réponse création blocage:', createRes.status, createBody);
-
-        if (!createRes.ok) {
-          throw new Error(createBody.error || 'Erreur lors de l\'enregistrement (' + createRes.status + ')');
+        // Si pas de route PUT (404), fallback: supprimer + recréer
+        if (res.status === 404 || res.status === 405) {
+          console.log('⚠️ PUT non supporté, fallback supprimer+recréer');
+          await fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
+            method: 'POST', headers,
+            body: JSON.stringify({ propertyId: currentBookingData.propertyId, uid })
+          });
+          res = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual', {
+            method: 'POST', headers,
+            body: JSON.stringify({
+              propertyId,
+              startDate: start,
+              endDate: end,
+              guestName: guestName || currentBookingData.guest_name || '',
+              phone: currentBookingData.guest_phone || '',
+              email: currentBookingData.guest_email || '',
+              platform: currentBookingData.source || 'Direct',
+              price: currentBookingData.price || 0,
+              notes: notes || ''
+            })
+          });
         }
-      }
 
-      alert('Blocage mis à jour !');
+        let resBody = {};
+        try { resBody = await res.json(); } catch (e) {}
+        if (!res.ok) {
+          throw new Error(resBody.error || resBody.message || 'Erreur modification (' + res.status + ')');
+        }
+        alert('Réservation mise à jour !');
+      }
 
       const editModal = document.getElementById('editBookingModal');
       if (editModal) {
