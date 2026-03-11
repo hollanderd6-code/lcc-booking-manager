@@ -1192,6 +1192,16 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Colonnes escalated: ', e.message);
     }
 
+    // ✅ Migration : quick_replies sur properties
+    try {
+      await pool.query(`
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS quick_replies JSONB DEFAULT '[]'::jsonb;
+      `);
+      console.log('✅ Colonne quick_replies ajoutée à properties');
+    } catch (e) {
+      console.log('ℹ️ quick_replies: ', e.message);
+    }
+
     // ✅ Migration : support FCM tokens pour sous-comptes
     try {
       await pool.query(`
@@ -10525,7 +10535,8 @@ app.put('/api/properties/:propertyId',
       houseRules,
       practicalInfo,
       autoResponsesEnabled,
-      chatPin 
+      chatPin,
+      quickReplies    // ✅ Raccourcis messages
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
@@ -10612,6 +10623,11 @@ app.put('/api/properties/:propertyId',
       arrivalMessage !== undefined 
         ? arrivalMessage 
         : (property.arrival_message || null);  // ✅ NOUVEAU
+
+    const newQuickReplies =
+      quickReplies !== undefined
+        ? quickReplies
+        : (property.quick_replies || []);
         
     let newPhotoUrl =
       existingPhotoUrl !== undefined
@@ -10695,8 +10711,9 @@ userId: userId
          practical_info = $18,
          auto_responses_enabled = $19,
          arrival_message = $20,
+         quick_replies = $21,
          updated_at = NOW()
-       WHERE id = $21 AND user_id = $22`,
+       WHERE id = $22 AND user_id = $23`,
       [
         newName,
         newColor,
@@ -10718,6 +10735,7 @@ userId: userId
         typeof newPracticalInfo === 'string' ? newPracticalInfo : JSON.stringify(newPracticalInfo || {}),
         newAutoResponsesEnabled,
         newArrivalMessage,  // ✅ NOUVEAU
+        typeof newQuickReplies === 'string' ? newQuickReplies : JSON.stringify(newQuickReplies || []),
         propertyId,
         userId
       ]
@@ -15777,6 +15795,60 @@ await pool.query(
 // ============================================
 
 // DELETE - Supprimer une conversation
+// ============================================
+// GET lien caution pour une conversation
+// ============================================
+app.get('/api/deposits/for-conversation/:convId', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { convId } = req.params;
+
+    // Récupérer la conversation pour avoir le reservation_uid
+    const convResult = await pool.query(
+      `SELECT c.*, r.uid as reservation_uid
+       FROM conversations c
+       LEFT JOIN reservations r ON (
+         r.property_id = c.property_id
+         AND DATE(r.start_date) = DATE(c.reservation_start_date)
+       )
+       WHERE c.id = $1 AND c.user_id = $2
+       LIMIT 1`,
+      [convId, userId]
+    );
+
+    if (!convResult.rows.length) return res.json({ depositUrl: null });
+
+    const conv = convResult.rows[0];
+    const reservationUid = conv.reservation_uid || conv.reservation_uid;
+    if (!reservationUid) return res.json({ depositUrl: null });
+
+    const depositResult = await pool.query(
+      `SELECT checkout_url, status, amount_cents FROM deposits
+       WHERE reservation_uid = $1 AND user_id = $2
+       AND status IN ('pending', 'authorized')
+       ORDER BY created_at DESC LIMIT 1`,
+      [reservationUid, userId]
+    );
+
+    if (!depositResult.rows.length) return res.json({ depositUrl: null });
+
+    const deposit = depositResult.rows[0];
+    return res.json({
+      depositUrl: deposit.checkout_url,
+      status: deposit.status,
+      amountCents: deposit.amount_cents
+    });
+
+  } catch (err) {
+    console.error('Erreur GET /api/deposits/for-conversation:', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.delete('/api/chat/conversations/:conversationId', authenticateAny, checkSubscription, async (req, res) => {
   try {
     const userId = req.user.id;
