@@ -363,11 +363,7 @@
       font-size: 12.5px;
       font-weight: 500;
       white-space: nowrap;
-      max-width: 200px;
-      overflow: hidden;
-      text-overflow: ellipsis;
       cursor: pointer;
-      transition: all .15s;
     }
     .qr-chip:active { background: #10B981; color: white; border-color: #10B981; }
     .qr-chip.deposit { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
@@ -506,16 +502,19 @@
         const res = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/quick-context`, {
           headers: { 'Authorization': 'Bearer ' + token }
         });
+        console.log('🚀 quick-context status:', res.status);
         if (!res.ok) return;
         const data = await res.json();
+        console.log('📦 quick-context data:', data);
         const chips = [];
         (data.quickReplies || []).slice(0, 5).forEach(text => {
           if (text && text.trim()) chips.push({ type: 'reply', label: text.trim() });
         });
         if (data.depositUrl) {
-          const euros = data.depositAmountCents ? ' ' + Math.round(data.depositAmountCents / 100) + '\u202f€' : '';
+          const euros = data.depositAmountCents ? ' ' + Math.round(data.depositAmountCents / 100) + ' €' : '';
           chips.push({ type: 'deposit', label: '💰 Lien caution' + euros, url: data.depositUrl });
         }
+        console.log('🎯 Chips à afficher:', chips.length);
         if (!chips.length) return;
         chips.forEach(chip => {
           const btn = document.createElement('button');
@@ -535,7 +534,7 @@
         });
         bar.style.display = 'flex';
       } catch(e) {
-        console.warn('Raccourcis non chargés:', e);
+        console.warn('❌ Raccourcis non chargés:', e);
       }
     }
 
