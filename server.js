@@ -13880,23 +13880,66 @@ app.post('/api/invoice/create',
       });
 
       // Envoyer via transporter avec PDF en pièce jointe
+      const invoiceSubject = `Facture ${invoiceNumber} – Séjour à ${propertyName}${checkinDate ? ' du ' + new Date(checkinDate).toLocaleDateString('fr-FR') : ''}`;
+      const invoiceAttachment = [{
+        filename: `${invoiceNumber}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }];
+
+      let emailSentToClient = false;
+      let emailSentToOwner = false;
+      let emailError = null;
+
+      // 1) Email au client
       try {
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
           to: clientEmail,
-          subject: `Facture ${invoiceNumber} – Séjour à ${propertyName}${checkinDate ? ' du ' + new Date(checkinDate).toLocaleDateString('fr-FR') : ''}`,
+          subject: invoiceSubject,
           html: emailHtml,
-          attachments: [{
-            filename: `${invoiceNumber}.pdf`,
-            content: pdfBuffer,
-            contentType: 'application/pdf'
-          }]
+          attachments: invoiceAttachment
         });
-        
+        emailSentToClient = true;
         console.log('✅ Email facture client envoyé à:', clientEmail);
-
       } catch (emailErr) {
+        emailError = emailErr.message || 'Erreur envoi email client';
         console.error('❌ Erreur envoi email facture client:', emailErr);
+      }
+
+      // 2) Copie au propriétaire (user connecté)
+      const ownerEmail = user.email;
+      if (ownerEmail && ownerEmail !== clientEmail) {
+        try {
+          // Email de copie simplifié pour le propriétaire
+          const ownerEmailHtml = bhEmailTemplate({
+            icon: '📋',
+            title: `Copie — Facture ${invoiceNumber}`,
+            subtitle: `Envoyée à ${clientName} · ${propertyName}`,
+            bodyHtml: `
+              <p>Bonjour,</p>
+              <p>Voici la copie de la facture <strong>${invoiceNumber}</strong> envoyée à <strong>${clientName}</strong> (${clientEmail}) pour son séjour à <strong>${propertyName}</strong>.</p>
+              <p>La facture PDF est jointe à cet email.</p>
+              <p style="font-size:13px;color:#888;">Ce message est une copie automatique destinée au propriétaire du logement.</p>
+            `
+          });
+          await transporter.sendMail({
+            from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+            to: ownerEmail,
+            subject: `[Copie] ${invoiceSubject}`,
+            html: ownerEmailHtml,
+            attachments: invoiceAttachment
+          });
+          emailSentToOwner = true;
+          console.log('✅ Copie facture propriétaire envoyée à:', ownerEmail);
+        } catch (ownerErr) {
+          console.error('❌ Erreur copie facture propriétaire:', ownerErr);
+          // Non bloquant — ne pas faire échouer la requête si la copie rate
+        }
+      }
+
+      if (!emailSentToClient && emailError) {
+        return res.status(500).json({ error: "Facture créée mais erreur d'envoi email : " + emailError });
       }
     }
     
