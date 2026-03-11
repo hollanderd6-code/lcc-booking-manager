@@ -2114,6 +2114,22 @@ function insertVariable(textareaId, variable, event) {
   </button>
 </div>
 
+<!-- ===== SECTION : RACCOURCIS MESSAGES ===== -->
+<div class="form-group" style="background:linear-gradient(135deg,#10b98110 0%,#10b98118 100%);padding:20px;border-radius:14px;border:1.5px solid #10b98130;">
+  <label style="margin-bottom:14px;">
+    <i class="fas fa-bolt" style="color:#10B981;"></i>
+    <span style="font-weight:700;">Raccourcis messages <span style="font-size:11px;font-weight:500;color:#6b7280;font-style:normal;">(5 max)</span></span>
+  </label>
+  <p style="font-size:12px;color:var(--text-secondary);margin:0 0 14px;line-height:1.5;">
+    Ces messages apparaîtront comme raccourcis dans l'interface de chat. Un clic les pré-remplit dans la zone de saisie.
+  </p>
+  <div id="quickRepliesList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
+  <button type="button" id="addQuickReplyBtn" onclick="addQuickReplyField()"
+    style="width:100%;padding:9px;border:1.5px dashed #10B98160;border-radius:10px;background:transparent;color:#10B981;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;">
+    <i class="fas fa-plus"></i> Ajouter un raccourci
+  </button>
+</div>
+
 <div class="form-group">
 <label>
 <i class="fas fa-link"></i>
@@ -3522,6 +3538,111 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+</script>
+
+<!-- ===== MODULE RACCOURCIS MESSAGES ===== -->
+<script>
+(function() {
+  const MAX = 5;
+
+  function getList()   { return document.getElementById('quickRepliesList'); }
+  function getAddBtn() { return document.getElementById('addQuickReplyBtn'); }
+
+  function refreshCount() {
+    var list = getList(), btn = getAddBtn();
+    if (!list || !btn) return;
+    var count = list.querySelectorAll('.qr-item').length;
+    btn.style.display = count >= MAX ? 'none' : 'flex';
+  }
+
+  window.renderQuickReplies = function(replies) {
+    var list = getList();
+    if (!list) return;
+    list.innerHTML = '';
+    (replies || []).forEach(function(text) { addQuickReplyField(text); });
+    refreshCount();
+  };
+
+  window.addQuickReplyField = function(value) {
+    var list = getList();
+    if (!list) return;
+    var count = list.querySelectorAll('.qr-item').length;
+    if (count >= MAX) return;
+
+    var div = document.createElement('div');
+    div.className = 'qr-item';
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+    var badge = document.createElement('span');
+    badge.style.cssText = 'flex-shrink:0;width:22px;height:22px;background:#10B981;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:DM Sans,sans-serif;';
+    badge.textContent = count + 1;
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'qr-input';
+    input.maxLength = 200;
+    input.placeholder = 'Ex : Votre code d\'accès est 1234...';
+    input.value = value || '';
+    input.style.cssText = 'flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;font-family:DM Sans,sans-serif;outline:none;transition:border-color .15s;min-width:0;';
+    input.addEventListener('focus', function() { this.style.borderColor = '#10B981'; });
+    input.addEventListener('blur',  function() { this.style.borderColor = '#d1d5db'; });
+
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.style.cssText = 'flex-shrink:0;width:30px;height:30px;border:none;background:#fee2e2;color:#dc2626;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;';
+    delBtn.innerHTML = '<i class="fas fa-times"></i>';
+    delBtn.addEventListener('click', function() {
+      div.remove();
+      // Re-number remaining
+      var list2 = getList();
+      if (list2) {
+        list2.querySelectorAll('.qr-item').forEach(function(item, i) {
+          var b = item.querySelector('span');
+          if (b) b.textContent = i + 1;
+        });
+      }
+      refreshCount();
+    });
+
+    div.appendChild(badge);
+    div.appendChild(input);
+    div.appendChild(delBtn);
+    list.appendChild(div);
+    refreshCount();
+  };
+
+  window.collectQuickReplies = function() {
+    var inputs = document.querySelectorAll('#quickRepliesList .qr-input');
+    return Array.from(inputs).map(function(i) { return i.value.trim(); }).filter(Boolean);
+  };
+
+  // ---- Hook editProperty to load quick_replies ----
+  var _origEdit = window.editProperty;
+  window.editProperty = function(propertyData) {
+    if (typeof _origEdit === 'function') _origEdit(propertyData);
+    var replies = propertyData.quick_replies || propertyData.quickReplies || [];
+    if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
+    if (!Array.isArray(replies)) replies = [];
+    window.renderQuickReplies(replies);
+  };
+
+  // ---- Hook fetch to inject quickReplies on save ----
+  var _origFetch = window.fetch;
+  window.fetch = async function() {
+    var args = Array.from(arguments);
+    var url = args[0], options = args[1];
+    if (url && typeof url === 'string' && url.includes('/api/properties') && options && options.body) {
+      try {
+        var body = JSON.parse(options.body);
+        body.quickReplies = window.collectQuickReplies();
+        options.body = JSON.stringify(body);
+      } catch(e) {}
+    }
+    return _origFetch.apply(this, args);
+  };
+
+  console.log('✅ Module raccourcis messages chargé');
+})();
 </script>
 </body>
 </html>
