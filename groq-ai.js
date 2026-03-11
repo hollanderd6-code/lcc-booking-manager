@@ -92,7 +92,7 @@ function requiresHumanIntervention(message) {
   const urgentKeywords = [
     'urgent', 'urgence', 'immédiat', 'tout de suite',
     'problème grave', 'danger', 'fuite', 'incendie',
-    'cambriolage', 'police', 'secours'
+    'cambriolage', 'police', 'secours', 'humain', 'proprietaire', 'personne',
   ];
 
   const lowerMessage = message.toLowerCase();
