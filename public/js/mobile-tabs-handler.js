@@ -45,36 +45,28 @@
   // ============================================
 
   function getMoreMenuButtons() {
+    const hr = `<hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
     let buttons = '';
 
-    // Paramètres — compte principal uniquement
-    if (!isSubAccount) {
+    // 1. Livrets d'accueil
+    if (hasPermission('can_view_properties')) {
       buttons += `
-        <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
-          <i class="fas fa-user-cog"></i> Paramètres du compte
+        <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-book-open"></i> Livrets d'accueil
         </button>`;
     }
 
-    // Serrures connectées
-    if (hasPermission('can_view_smart_locks') || hasPermission('can_manage_smart_locks')) {
-      buttons += `
-        <button class="btn btn-secondary" onclick="window.location.href='/smart-locks.html'" style="width: 100%; justify-content: flex-start;">
-          <i class="fas fa-lock"></i> Serrures connectées
-        </button>`;
-    }
-
-    buttons += `<hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
-
-    // Ménages
+    // 2. Ménages
     if (hasPermission('can_view_cleaning') || hasPermission('can_manage_cleaning')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-broom"></i> Ménages
-        </button>
-        <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
+        </button>`;
     }
 
-    // Cautions
+    buttons += hr;
+
+    // 3. Finances
     if (hasPermission('can_view_deposits') || hasPermission('can_manage_deposits')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
@@ -82,7 +74,7 @@
         </button>`;
     }
 
-    // Factures
+    // 4. Factures + Factures propriétaires
     if (hasPermission('can_view_invoices') || hasPermission('can_manage_invoices')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
@@ -93,17 +85,26 @@
         </button>`;
     }
 
-    buttons += `<hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
+    buttons += hr;
 
-    // Livrets d'accueil
-    if (hasPermission('can_view_properties')) {
+    // 5. Serrures connectées — bientôt disponible (non cliquable)
+    buttons += `
+      <button class="btn btn-secondary" disabled style="width: 100%; justify-content: flex-start; opacity: 0.45; cursor: default; pointer-events: none;">
+        <i class="fas fa-lock"></i> Serrures connectées
+        <span style="margin-left:auto;font-size:10px;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:2px 7px;border-radius:20px;opacity:1;">Bientôt</span>
+      </button>`;
+
+    buttons += hr;
+
+    // 6. Paramètres — compte principal uniquement
+    if (!isSubAccount) {
       buttons += `
-        <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
-          <i class="fas fa-book-open"></i> Livrets d'accueil
+        <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-user-cog"></i> Paramètres du compte
         </button>`;
     }
 
-    // Aide — compte principal uniquement
+    // 7. Support — compte principal uniquement
     if (!isSubAccount) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
@@ -112,7 +113,7 @@
     }
 
     buttons += `
-      <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">
+      ${hr}
       <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start;">
         <i class="fas fa-sign-out-alt"></i> Déconnexion
       </button>`;
