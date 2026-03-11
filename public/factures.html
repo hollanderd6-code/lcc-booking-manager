@@ -1424,6 +1424,7 @@ html[data-theme-v3="1"] .btn-ghost {
 
       // Envoyer la facture
       window.sendInvoice = async function() {
+        try {
         const clientEmail = document.getElementById('clientEmail').value;
         if (!clientEmail) {
           alert("Veuillez renseigner l'email du client");
@@ -1504,8 +1505,8 @@ html[data-theme-v3="1"] .btn-ghost {
           alert("❌ Erreur technique : " + (err.message || err) + "\n\nVérifie les logs de la console (F12)");
         }
         } catch (outerErr) {
-          console.error('💥 Erreur inattendue dans sendInvoice:', outerErr);
-          alert('Erreur inattendue : ' + outerErr.message);
+          console.error('💥 Erreur dans sendInvoice:', outerErr);
+          alert('Erreur : ' + outerErr.message);
         }
       };
 
