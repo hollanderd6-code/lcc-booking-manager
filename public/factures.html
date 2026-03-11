@@ -1503,6 +1503,10 @@ html[data-theme-v3="1"] .btn-ghost {
           console.error('❌ Erreur réseau:', err);
           alert("❌ Erreur technique : " + (err.message || err) + "\n\nVérifie les logs de la console (F12)");
         }
+        } catch (outerErr) {
+          console.error('💥 Erreur inattendue dans sendInvoice:', outerErr);
+          alert('Erreur inattendue : ' + outerErr.message);
+        }
       };
 
       // Télécharger PDF (force le download)
