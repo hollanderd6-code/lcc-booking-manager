@@ -468,7 +468,7 @@ async function escalateToOwner(conversation, pool, io, language) {
     const lang = language || conversation.language || 'fr';
     
     const escaladeMessages = {
-      fr: `👋 Je vous mets en relation avec le resposable qui pourra mieux vous aider.\n\nVotre message lui a été transmis, il vous répondra dès que possible. Merci de votre patience ! 🙏`,
+      fr: `👋 Je vous mets en relation avec le responsable qui pourra mieux vous aider.\n\nVotre message lui a été transmis, il vous répondra dès que possible. Merci de votre patience ! 🙏`,
       en: `👋 I'm putting you in touch with the owner who can better assist you.\n\nYour message has been forwarded, they'll reply as soon as possible. Thank you for your patience! 🙏`,
       es: `👋 Le pongo en contacto con el propietario que podrá ayudarle mejor.\n\nSu mensaje ha sido transmitido, le responderá lo antes posible. ¡Gracias por su paciencia! 🙏`
     };
