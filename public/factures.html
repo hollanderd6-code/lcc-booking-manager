@@ -1037,7 +1037,7 @@ html[data-theme-v3="1"] .btn-ghost {
 </div>
 <!-- Actions -->
 <div class="form-actions">
-<button class="btn btn-primary" disabled="" id="sendBtn" onclick="sendInvoice()" type="button">
+<button class="btn btn-primary" disabled="" id="sendBtn" type="button">
 <i class="fas fa-envelope"></i>
                     Envoyer par email
                   </button>
@@ -1646,6 +1646,10 @@ html[data-theme-v3="1"] .btn-ghost {
 
       // Init
       loadProperties();
+
+      // Bind send button via JS (onclick attribute gets overridden elsewhere)
+      const sendBtnEl = document.getElementById('sendBtn');
+      if (sendBtnEl) sendBtnEl.addEventListener('click', () => sendInvoice());
     });
   </script>
 <script src="/js/bh-layout.js"></script>
