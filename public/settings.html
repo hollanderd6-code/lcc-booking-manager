@@ -2120,9 +2120,7 @@ function insertVariable(textareaId, variable, event) {
     <i class="fas fa-bolt" style="color:#10B981;"></i>
     <span style="font-weight:700;">Raccourcis messages <span style="font-size:11px;font-weight:400;color:#6b7280;">(5 max)</span></span>
   </label>
-  <p style="font-size:12px;color:var(--text-secondary);margin:0 0 14px;line-height:1.5;">
-    Ces messages apparaîtront comme raccourcis cliquables dans l'interface de chat.
-  </p>
+  <p style="font-size:12px;color:var(--text-secondary);margin:0 0 14px;line-height:1.5;">Ces messages apparaîtront comme raccourcis cliquables dans le chat.</p>
   <div id="quickRepliesList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
   <button type="button" id="addQuickReplyBtn" onclick="addQuickReplyField()"
     style="width:100%;padding:9px;border:1.5px dashed #10B98160;border-radius:10px;background:transparent;color:#10B981;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -3541,7 +3539,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// ===== MODULE RACCOURCIS MESSAGES =====
 (function() {
   var MAX = 5;
 
@@ -3551,25 +3548,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!list) return;
     var count = list.querySelectorAll('.qr-item').length;
     if (count >= MAX) return;
-
     var div = document.createElement('div');
     div.className = 'qr-item';
     div.style.cssText = 'display:flex;align-items:center;gap:8px;';
-
     var badge = document.createElement('span');
     badge.style.cssText = 'flex-shrink:0;width:22px;height:22px;background:#10B981;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;';
     badge.textContent = count + 1;
-
     var input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'qr-input';
-    input.maxLength = 200;
-    input.placeholder = "Ex : Bienvenue ! Voici vos codes d'accès...";
+    input.type = 'text'; input.className = 'qr-input'; input.maxLength = 200;
+    input.placeholder = "Ex : Voici vos codes d'accès...";
     input.value = value || '';
     input.style.cssText = 'flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;font-family:DM Sans,sans-serif;outline:none;min-width:0;';
     input.addEventListener('focus', function() { this.style.borderColor='#10B981'; });
     input.addEventListener('blur',  function() { this.style.borderColor='#d1d5db'; });
-
     var del = document.createElement('button');
     del.type = 'button';
     del.style.cssText = 'flex-shrink:0;width:30px;height:30px;border:none;background:#fee2e2;color:#dc2626;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;';
@@ -3581,7 +3572,6 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       if (btn) btn.style.display = 'flex';
     });
-
     div.appendChild(badge); div.appendChild(input); div.appendChild(del);
     list.appendChild(div);
     if (btn) btn.style.display = (count + 1) >= MAX ? 'none' : 'flex';
@@ -3592,7 +3582,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .map(function(i) { return i.value.trim(); }).filter(Boolean);
   };
 
-  // Hook editProperty pour charger les valeurs
+  // Charger les valeurs à l'ouverture de la fiche logement
   var _origEdit = window.editProperty;
   window.editProperty = function(prop) {
     if (typeof _origEdit === 'function') _origEdit(prop);
@@ -3603,11 +3593,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var replies = prop.quick_replies || prop.quickReplies || [];
     if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
     if (!Array.isArray(replies)) replies = [];
-    console.log('📋 Raccourcis chargés:', replies);
     replies.forEach(function(t) { window.addQuickReplyField(t); });
   };
 
-  // Hook fetch pour injecter quickReplies dans le save
+  // Injecter quickReplies dans le payload de save
   var _origFetch = window.fetch;
   window.fetch = async function() {
     var args = Array.from(arguments);
@@ -3617,13 +3606,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var body = JSON.parse(opts.body);
         body.quickReplies = window.collectQuickReplies();
         opts.body = JSON.stringify(body);
-        console.log('💾 quickReplies injectés dans save:', body.quickReplies);
       } catch(e) {}
     }
     return _origFetch.apply(this, args);
   };
-
-  console.log('✅ Module raccourcis messages prêt');
 })();
 </script>
 </body>
