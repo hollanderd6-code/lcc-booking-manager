@@ -70,7 +70,7 @@ function getSidebarHTML() {
     </div>
 
     <!-- GESTION -->
-    ${(!isSubAccount || hasPermission('can_view_properties') || hasPermission('can_view_cleaning')) ? `
+    ${(!isSubAccount || hasPermission('can_view_properties') || hasPermission('can_view_cleaning') || hasPermission('can_view_deposits') || hasPermission('can_manage_deposits')) ? `
     <div class="nav-section">
       <div class="nav-section-title">Gestion</div>
       ${hasPermission('can_view_properties') ? `
@@ -84,6 +84,11 @@ function getSidebarHTML() {
       ${hasPermission('can_view_cleaning') ? `
       <a class="nav-item" data-page="cleaning" href="/cleaning.html">
         <i class="fas fa-broom"></i><span>Gestion du ménage</span>
+      </a>
+      ` : ''}
+      ${hasPermission('can_view_deposits') || hasPermission('can_manage_deposits') ? `
+      <a class="nav-item" data-page="deposits" href="/deposits.html">
+        <i class="fas fa-wallet"></i><span>Finances</span>
       </a>
       ` : ''}
     </div>
@@ -104,22 +109,15 @@ function getSidebarHTML() {
     </div>
     ` : ''}
 
-    <!-- AVANCÉ -->
-    ${(!isSubAccount || hasPermission('can_view_deposits') || hasPermission('can_manage_deposits') || hasPermission('can_view_smart_locks') || hasPermission('can_manage_smart_locks')) ? `
+    <!-- À VENIR -->
     <div class="nav-section">
-      <div class="nav-section-title">Avancé</div>
-      ${hasPermission('can_view_deposits') || hasPermission('can_manage_deposits') ? `
-      <a class="nav-item" data-page="deposits" href="/deposits.html">
-        <i class="fas fa-wallet"></i><span>Finances</span>
-      </a>
-      ` : ''}
-      ${hasPermission('can_view_smart_locks') || hasPermission('can_manage_smart_locks') ? `
-      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
-        <i class="fas fa-lock"></i><span>Serrures connectées</span>
-      </a>
-      ` : ''}
+      <div class="nav-section-title">À venir</div>
+      <div class="nav-item nav-item--soon" style="opacity:0.45;cursor:default;pointer-events:none;" title="Fonctionnalité bientôt disponible">
+        <i class="fas fa-lock"></i>
+        <span>Serrures connectées</span>
+        <span style="margin-left:auto;font-size:10px;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:2px 7px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;opacity:1;">Bientôt</span>
+      </div>
     </div>
-    ` : ''}
 
     <!-- PARAMÈTRES (compte principal uniquement) -->
     ${!isSubAccount ? `
