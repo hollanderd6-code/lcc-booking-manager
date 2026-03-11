@@ -13815,8 +13815,19 @@ app.post('/api/invoice/create',
 
       // 1) Générer le fichier PDF
       const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}.pdf`);
-      await generateInvoicePdfToFile(pdfPath);
-      const pdfBuffer = fs.readFileSync(pdfPath);
+      try {
+        await generateInvoicePdfToFile(pdfPath);
+      } catch (pdfErr) {
+        console.error('❌ Erreur génération PDF facture:', pdfErr);
+        return res.status(500).json({ error: 'Erreur génération PDF : ' + (pdfErr.message || pdfErr) });
+      }
+      let pdfBuffer;
+      try {
+        pdfBuffer = fs.readFileSync(pdfPath);
+      } catch (readErr) {
+        console.error('❌ Erreur lecture PDF facture:', readErr);
+        return res.status(500).json({ error: 'PDF généré introuvable : ' + (readErr.message || readErr) });
+      }
 
       // Insérer un token pour le compteur de numérotation + historique
       try {
@@ -13906,7 +13917,7 @@ app.post('/api/invoice/create',
         console.log('✅ Email facture client envoyé à:', clientEmail);
       } catch (emailErr) {
         emailError = emailErr.message || 'Erreur envoi email client';
-        console.error('❌ Erreur envoi email facture client:', emailErr);
+        console.error('❌ Erreur envoi email facture client:', emailErr?.response?.body || emailErr?.message || emailErr);
       }
 
       // 2) Copie au propriétaire (user connecté)
@@ -14070,6 +14081,7 @@ app.put('/api/owner-invoices/:id',
   } finally {
     client.release();
   }
+});
 
 // Télécharger une facture PDF via token expirant
 app.get('/api/invoice/download/:token', async (req, res) => {
@@ -14108,7 +14120,6 @@ app.get('/api/invoice/download/:token', async (req, res) => {
     console.error('❌ Erreur download invoice:', err);
     res.status(500).send('Erreur serveur.');
   }
-});
 });
 
 // 7. SUPPRIMER UNE FACTURE BROUILLON
@@ -17809,6 +17820,8 @@ console.log('✅ Service de notifications initialisé');
   console.log(`⏰ Synchronisation automatique: toutes les ${syncInterval} minutes`);
   console.log('');
   console.log('📧 Notifications configurées:', process.env.EMAIL_USER ? '✅ OUI' : '⚠️  NON');
+  console.log('📧 BREVO_API_KEY configurée :', process.env.BREVO_API_KEY ? '✅ OUI' : '❌ NON — les emails de factures ne seront PAS envoyés');
+  console.log('📧 EMAIL_FROM configuré     :', process.env.EMAIL_FROM  ? '✅ ' + process.env.EMAIL_FROM : '⚠️  NON (défaut: no-reply@boostinghost.fr)');
   console.log('💳 Stripe configuré :', STRIPE_SECRET_KEY ? '✅ OUI' : '⚠️  NON (pas de création de cautions possible)');
   console.log('');
 });
