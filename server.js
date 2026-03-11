@@ -3284,7 +3284,8 @@ async function loadProperties() {
         amenities,
         house_rules,
         practical_info,
-        auto_responses_enabled
+        auto_responses_enabled,
+        quick_replies
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3323,7 +3324,12 @@ async function loadProperties() {
         amenities: row.amenities,
         house_rules: row.house_rules,
         practical_info: row.practical_info,
-        auto_responses_enabled: row.auto_responses_enabled
+        auto_responses_enabled: row.auto_responses_enabled,
+        quick_replies: (() => {
+          let qr = row.quick_replies || [];
+          if (typeof qr === 'string') { try { qr = JSON.parse(qr); } catch(e) { qr = []; } }
+          return Array.isArray(qr) ? qr : [];
+        })()
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
