@@ -1247,36 +1247,29 @@ html[data-theme-v3="1"] .btn-ghost {
       // Charger les logements
       async function loadProperties() {
         try {
-          console.log('🏠 loadProperties() start, token:', localStorage.getItem('lcc_token') ? 'OK' : 'MISSING');
           const response = await fetch('/api/properties', {
             headers: { 'Authorization': 'Bearer ' + token }
           });
-          console.log('🏠 /api/properties status:', response.status);
           
           if (response.ok) {
             const data = await response.json();
-            console.log('🏠 data:', JSON.stringify(data).slice(0, 200));
             const select = document.getElementById('propertyName');
-            const props = data.properties || data;
-            console.log('🏠 props count:', Array.isArray(props) ? props.length : 'not array');
 
-            if (Array.isArray(props)) {
-              props.forEach(prop => {
-                const option = document.createElement('option');
-                option.value = prop.name;
-                option.textContent = prop.name;
-                option.dataset.address = prop.address || '';
-                option.dataset.ownerId = prop.owner_id || prop.ownerId || '';
-                select.appendChild(option);
-                propertiesByName[prop.name] = prop;
-              });
-            }
+            data.properties.forEach(prop => {
+              const option = document.createElement('option');
+              option.value = prop.name;
+              option.textContent = prop.name;
+              option.dataset.address = prop.address || '';
+              option.dataset.ownerId = prop.owner_id || prop.ownerId || '';
+
+              select.appendChild(option);
+              propertiesByName[prop.name] = prop;
+            });
           } else {
-            const err = await response.text();
-            console.error('❌ Erreur chargement logements:', response.status, err);
+            console.error('Erreur chargement logements:', response.status);
           }
         } catch (err) {
-          console.error('❌ Erreur chargement logements:', err);
+          console.error('Erreur chargement logements:', err);
         }
       }
 
