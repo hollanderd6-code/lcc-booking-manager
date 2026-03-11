@@ -338,9 +338,7 @@
       cursor: not-allowed;
     }
     
-    /* ============================================
-       RACCOURCIS MESSAGES
-       ============================================ */
+    /* ===== RACCOURCIS MESSAGES ===== */
     .quick-replies-bar {
       flex-shrink: 0;
       display: flex;
@@ -489,9 +487,7 @@
     // ============================================
     // RETOUR
     // ============================================
-    // ============================================
-    // RACCOURCIS MESSAGES
-    // ============================================
+    // ===== RACCOURCIS MESSAGES =====
     async function loadQuickReplies() {
       const bar = document.getElementById('quickRepliesBar');
       if (!bar || !conversationId) return;
@@ -502,10 +498,8 @@
         const res = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/quick-context`, {
           headers: { 'Authorization': 'Bearer ' + token }
         });
-        console.log('🚀 quick-context status:', res.status);
         if (!res.ok) return;
         const data = await res.json();
-        console.log('📦 quick-context data:', data);
         const chips = [];
         (data.quickReplies || []).slice(0, 5).forEach(text => {
           if (text && text.trim()) chips.push({ type: 'reply', label: text.trim() });
@@ -514,7 +508,6 @@
           const euros = data.depositAmountCents ? ' ' + Math.round(data.depositAmountCents / 100) + ' €' : '';
           chips.push({ type: 'deposit', label: '💰 Lien caution' + euros, url: data.depositUrl });
         }
-        console.log('🎯 Chips à afficher:', chips.length);
         if (!chips.length) return;
         chips.forEach(chip => {
           const btn = document.createElement('button');
@@ -533,9 +526,7 @@
           bar.appendChild(btn);
         });
         bar.style.display = 'flex';
-      } catch(e) {
-        console.warn('❌ Raccourcis non chargés:', e);
-      }
+      } catch(e) { console.warn('Raccourcis:', e); }
     }
 
     function goBack() {
