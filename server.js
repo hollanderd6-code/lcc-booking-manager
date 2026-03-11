@@ -13592,6 +13592,8 @@ app.post('/api/invoice/create',
   authenticateAny,
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
+  console.log('📥 /api/invoice/create appelé, user:', req.user?.id || req.user?.email || 'unknown');
+  console.log('📦 sendEmail:', req.body?.sendEmail, 'clientEmail:', req.body?.clientEmail);
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
