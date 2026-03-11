@@ -15784,6 +15784,37 @@ await pool.query(
 // ============================================
 // GET raccourcis + lien caution pour une conversation
 // ============================================
+// Route dédiée pour sauvegarder les raccourcis messages
+app.put('/api/properties/:propertyId/quick-replies', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { propertyId } = req.params;
+    const { quickReplies } = req.body;
+
+    if (!Array.isArray(quickReplies)) {
+      return res.status(400).json({ error: 'quickReplies doit être un tableau' });
+    }
+
+    const cleaned = quickReplies.map(s => String(s).trim()).filter(Boolean).slice(0, 5);
+
+    await pool.query(
+      `UPDATE properties SET quick_replies = $1 WHERE id = $2 AND user_id = $3`,
+      [JSON.stringify(cleaned), propertyId, userId]
+    );
+
+    await loadProperties();
+    console.log(`✅ quick-replies sauvegardés pour ${propertyId}:`, cleaned);
+    return res.json({ success: true, quickReplies: cleaned });
+  } catch(err) {
+    console.error('Erreur PUT quick-replies:', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount
