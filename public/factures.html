@@ -1310,11 +1310,6 @@ html[data-theme-v3="1"] .btn-ghost {
         const propertyName = document.getElementById('propertyName').value;
         const propertyAddress = getSelectedPropertyAddress();
 
-        // Activer le bouton d'envoi dès que l'email client est renseigné
-        const clientEmailVal = document.getElementById('clientEmail').value;
-        const sendBtn = document.getElementById('sendBtn');
-        if (sendBtn) sendBtn.disabled = !clientEmailVal;
-
         if (!clientName || !propertyName) {
           return;
         }
@@ -1422,6 +1417,9 @@ html[data-theme-v3="1"] .btn-ghost {
         `;
 
         document.getElementById('invoicePreview').innerHTML = preview;
+
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn) sendBtn.disabled = false;
       };
 
       // Envoyer la facture
@@ -1433,7 +1431,8 @@ html[data-theme-v3="1"] .btn-ghost {
           return;
         }
 
-        if (!confirm("Envoyer la facture par email à " + clientEmail + " ?")) return;
+        const ok = await window.bhConfirm('Envoyer la facture ?', 'La facture sera envoyée par email à ' + clientEmail, 'Envoyer', 'Annuler');
+        if (!ok) return;
 
         const data = {
           clientName: document.getElementById('clientName').value,
@@ -1555,7 +1554,7 @@ html[data-theme-v3="1"] .btn-ghost {
       };
 
       // Auto-update preview
-      ['clientName', 'clientEmail', 'propertyName', 'rentAmount', 'touristTaxAmount', 'cleaningFee', 'vatRate', 'checkinDate', 'checkoutDate'].forEach(id => {
+      ['clientName', 'propertyName', 'rentAmount', 'touristTaxAmount', 'cleaningFee', 'vatRate', 'checkinDate', 'checkoutDate'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
           el.addEventListener('input', generateInvoice);
@@ -1628,7 +1627,8 @@ html[data-theme-v3="1"] .btn-ghost {
       };
 
       window.resendInvoice = async function(invoiceNumber, email) {
-        if (!confirm('Renvoyer la facture ' + invoiceNumber + ' à ' + email + ' ?')) return;
+        const ok = await window.bhConfirm('Renvoyer la facture ?', 'La facture ' + invoiceNumber + ' sera renvoyée à ' + email, 'Renvoyer', 'Annuler');
+        if (!ok) return;
         try {
           const res = await fetch('/api/invoice/resend', {
             method: 'POST',
@@ -1652,14 +1652,6 @@ html[data-theme-v3="1"] .btn-ghost {
       // Bind send button via JS (onclick attribute gets overridden elsewhere)
       const sendBtnEl = document.getElementById('sendBtn');
       if (sendBtnEl) sendBtnEl.addEventListener('click', () => sendInvoice());
-
-      // Activer/désactiver le bouton d'envoi en temps réel selon l'email
-      const clientEmailInput = document.getElementById('clientEmail');
-      if (clientEmailInput) {
-        clientEmailInput.addEventListener('input', function() {
-          if (sendBtnEl) sendBtnEl.disabled = !this.value.trim();
-        });
-      }
     });
   </script>
 <script src="/js/bh-layout.js"></script>
