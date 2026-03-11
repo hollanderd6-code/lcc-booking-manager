@@ -562,5 +562,5 @@ window.bhConfirm = function(title, message, confirmLabel, cancelLabel, variant) 
 // Ce patch évite l'alerte moche du navigateur en cas d'appel non migré.
 window.confirm = function(msg) {
   window.bhConfirm(msg || '', '', 'Confirmer', 'Annuler', 'danger');
-  return false;
+  return true;
 };
