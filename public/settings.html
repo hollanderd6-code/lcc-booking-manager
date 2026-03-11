@@ -2538,11 +2538,8 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
           // Ajouter aussi le stripeAccountId du logement
           const stripeInput = document.getElementById('propertyStripeAccountId');
           if (stripeInput) body.stripeAccountId = stripeInput.value.trim() || null;
-          // ✅ Ajouter les raccourcis messages
-          body.quickReplies = Array.from(document.querySelectorAll('#quickRepliesList .qr-input'))
-            .map(i => i.value.trim()).filter(Boolean);
           options.body = JSON.stringify(body);
-          console.log('✅ owner_id + stripeAccountId + quickReplies ajoutés:', body.ownerId, body.quickReplies);
+          console.log('✅ owner_id + stripeAccountId ajoutés à la requête:', body.ownerId, body.stripeAccountId);
           nextFetchOwnerId = null; // Reset
         }
       } catch (e) {
@@ -3545,7 +3542,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // ===== RACCOURCIS MESSAGES =====
 (function() {
   var MAX = 5;
+  var API = 'https://lcc-booking-manager.onrender.com';
 
+  // --- Rendu d'un champ ---
   window.addQuickReplyField = function(value) {
     var list = document.getElementById('quickRepliesList');
     var btn  = document.getElementById('addQuickReplyBtn');
@@ -3581,12 +3580,34 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btn) btn.style.display = (count + 1) >= MAX ? 'none' : 'flex';
   };
 
-  // Hooker editProperty EN DERNIER avec setTimeout pour passer après bh-layout.js
+  // --- Collecter les valeurs ---
+  function collectReplies() {
+    return Array.from(document.querySelectorAll('#quickRepliesList .qr-input'))
+      .map(function(i) { return i.value.trim(); }).filter(Boolean);
+  }
+
+  // --- Sauvegarder via route dédiée ---
+  async function saveQuickReplies(propertyId) {
+    if (!propertyId) return;
+    var token = localStorage.getItem('lcc_token');
+    var replies = collectReplies();
+    try {
+      var res = await fetch(API + '/api/properties/' + propertyId + '/quick-replies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ quickReplies: replies })
+      });
+      if (res.ok) console.log('✅ Raccourcis sauvegardés:', replies);
+      else console.warn('⚠️ Erreur save raccourcis:', res.status);
+    } catch(e) { console.warn('Erreur raccourcis:', e); }
+  }
+
+  // --- Hook saveProperty pour déclencher save raccourcis après ---
   setTimeout(function() {
-    var _prev = window.editProperty;
+    // Hook editProperty pour charger les valeurs à l'ouverture
+    var _prevEdit = window.editProperty;
     window.editProperty = function(prop) {
-      if (typeof _prev === 'function') _prev(prop);
-      // Vider et reremplir les champs
+      if (typeof _prevEdit === 'function') _prevEdit(prop);
       var list = document.getElementById('quickRepliesList');
       if (list) list.innerHTML = '';
       var btn = document.getElementById('addQuickReplyBtn');
@@ -3594,10 +3615,25 @@ document.addEventListener('DOMContentLoaded', function() {
       var replies = prop.quick_replies || prop.quickReplies || [];
       if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
       if (!Array.isArray(replies)) replies = [];
-      console.log('📋 Raccourcis chargés pour', prop.name, ':', replies);
+      console.log('📋 Raccourcis chargés:', replies);
       replies.forEach(function(t) { window.addQuickReplyField(t); });
     };
-    console.log('✅ Hook raccourcis messages installé');
+
+    // Hook saveProperty pour sauvegarder les raccourcis juste après
+    var _prevSave = window.saveProperty;
+    window.saveProperty = async function(event) {
+      var result = typeof _prevSave === 'function' ? await _prevSave(event) : undefined;
+      // Attendre 300ms que le save principal finisse puis sauvegarder les raccourcis
+      setTimeout(function() {
+        var pidInput = document.getElementById('propertyId');
+        if (pidInput && pidInput.value) {
+          saveQuickReplies(pidInput.value);
+        }
+      }, 300);
+      return result;
+    };
+
+    console.log('✅ Module raccourcis installé');
   }, 500);
 })();
 </script>
