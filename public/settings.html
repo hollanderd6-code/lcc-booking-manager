@@ -2538,8 +2538,11 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
           // Ajouter aussi le stripeAccountId du logement
           const stripeInput = document.getElementById('propertyStripeAccountId');
           if (stripeInput) body.stripeAccountId = stripeInput.value.trim() || null;
+          // ✅ Ajouter les raccourcis messages
+          body.quickReplies = Array.from(document.querySelectorAll('#quickRepliesList .qr-input'))
+            .map(i => i.value.trim()).filter(Boolean);
           options.body = JSON.stringify(body);
-          console.log('✅ owner_id + stripeAccountId ajoutés à la requête:', body.ownerId, body.stripeAccountId);
+          console.log('✅ owner_id + stripeAccountId + quickReplies ajoutés:', body.ownerId, body.quickReplies);
           nextFetchOwnerId = null; // Reset
         }
       } catch (e) {
@@ -3539,6 +3542,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// ===== RACCOURCIS MESSAGES =====
 (function() {
   var MAX = 5;
 
@@ -3577,39 +3581,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btn) btn.style.display = (count + 1) >= MAX ? 'none' : 'flex';
   };
 
-  window.collectQuickReplies = function() {
-    return Array.from(document.querySelectorAll('#quickRepliesList .qr-input'))
-      .map(function(i) { return i.value.trim(); }).filter(Boolean);
-  };
-
-  // Charger les valeurs à l'ouverture de la fiche logement
-  var _origEdit = window.editProperty;
-  window.editProperty = function(prop) {
-    if (typeof _origEdit === 'function') _origEdit(prop);
-    var list = document.getElementById('quickRepliesList');
-    if (list) list.innerHTML = '';
-    var btn = document.getElementById('addQuickReplyBtn');
-    if (btn) btn.style.display = 'flex';
-    var replies = prop.quick_replies || prop.quickReplies || [];
-    if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
-    if (!Array.isArray(replies)) replies = [];
-    replies.forEach(function(t) { window.addQuickReplyField(t); });
-  };
-
-  // Injecter quickReplies dans le payload de save
-  var _origFetch = window.fetch;
-  window.fetch = async function() {
-    var args = Array.from(arguments);
-    var url = args[0], opts = args[1];
-    if (url && typeof url === 'string' && url.includes('/api/properties') && opts && opts.body && typeof opts.body === 'string') {
-      try {
-        var body = JSON.parse(opts.body);
-        body.quickReplies = window.collectQuickReplies();
-        opts.body = JSON.stringify(body);
-      } catch(e) {}
-    }
-    return _origFetch.apply(this, args);
-  };
+  // Hooker editProperty EN DERNIER avec setTimeout pour passer après bh-layout.js
+  setTimeout(function() {
+    var _prev = window.editProperty;
+    window.editProperty = function(prop) {
+      if (typeof _prev === 'function') _prev(prop);
+      // Vider et reremplir les champs
+      var list = document.getElementById('quickRepliesList');
+      if (list) list.innerHTML = '';
+      var btn = document.getElementById('addQuickReplyBtn');
+      if (btn) btn.style.display = 'flex';
+      var replies = prop.quick_replies || prop.quickReplies || [];
+      if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
+      if (!Array.isArray(replies)) replies = [];
+      console.log('📋 Raccourcis chargés pour', prop.name, ':', replies);
+      replies.forEach(function(t) { window.addQuickReplyField(t); });
+    };
+    console.log('✅ Hook raccourcis messages installé');
+  }, 500);
 })();
 </script>
 </body>
