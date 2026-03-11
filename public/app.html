@@ -7609,9 +7609,15 @@ if (editBookingForm) {
 
         const payload = {
           propertyId,
+          startDate: start,
+          endDate: end,
           start,
           end,
           guestName: guestName || currentBookingData.guest_name || '',
+          phone: currentBookingData.guest_phone || '',
+          email: currentBookingData.guest_email || '',
+          platform: currentBookingData.source || currentBookingData.platform || 'Direct',
+          price: currentBookingData.price || 0,
           notes: notes || ''
         };
 
