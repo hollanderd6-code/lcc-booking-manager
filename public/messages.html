@@ -2104,9 +2104,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   .chat-modal-input {
     flex-shrink: 0 !important;
     padding: 10px 12px !important;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
     position: fixed !important;
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: 68px !important;
     left: 0 !important;
     right: 0 !important;
     background: white !important;
@@ -2116,7 +2115,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
   #quickRepliesBar {
     position: fixed !important;
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 60px) !important;
+    bottom: calc(68px + 54px) !important;
     left: 0 !important;
     right: 0 !important;
     z-index: 998 !important;
@@ -2124,9 +2123,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     border-top: 1px solid rgba(200,184,154,0.3) !important;
   }
 
-  /* Espace en bas des messages pour ne pas être caché par input+tabs */
   #chatMessages {
-    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: 150px !important;
   }
 
   /* ── 11. ITEMS CONVERSATION PLUS HAUTS ── */
