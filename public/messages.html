@@ -550,6 +550,38 @@ html[data-theme-v3="1"] .page-back-btn {
 }
 .chat-input:focus { border-color: rgba(26,122,94,.4); background: white; }
 
+.quick-replies-bar {
+  padding: 8px 14px 4px;
+  background: white;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.quick-replies-bar::-webkit-scrollbar { display: none; }
+.qr-chip {
+  flex-shrink: 0;
+  padding: 6px 13px;
+  border-radius: 20px;
+  border: 1.5px solid #d1fae5;
+  background: #f0fdf4;
+  color: #065f46;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all .15s;
+}
+.qr-chip:hover { background: #10B981; color: white; border-color: #10B981; }
+.qr-chip.deposit { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+.qr-chip.deposit:hover { background: #f97316; color: white; border-color: #f97316; }
+
 .send-btn {
   width: 38px; height: 38px; flex-shrink: 0;
   background: #1A7A5E; color: white; border: none;
@@ -1006,6 +1038,9 @@ html[data-theme-v3="1"] .app-container {
 
         <!-- chatMessages: chat-owner.js writes here -->
         <div class="chat-modal-messages" id="chatMessages" style="display:none;"></div>
+
+        <!-- Raccourcis messages -->
+        <div class="quick-replies-bar" id="quickRepliesBar" style="display:none;"></div>
 
         <!-- Input: chat-owner.js uses #chatInput and #sendBtn -->
         <div class="chat-modal-input" id="chatInputArea" style="display:none;">
@@ -1661,6 +1696,11 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       document.body.classList.remove('modal-open');
       document.documentElement.style.overflow = '';
     }, 30);
+
+    // Charger les raccourcis messages
+    if (conv && conv.id && typeof window.loadQuickReplies === 'function') {
+      window.loadQuickReplies(conv.id);
+    }
   }
 
   // ── Override openChat after chat-owner.js loaded ──
