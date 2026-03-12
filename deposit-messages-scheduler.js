@@ -159,6 +159,25 @@ async function sendDepositReminderJ2(pool, io) {
 
         // Construire le message
         const amountEuros = (deposit.amount_cents / 100).toFixed(2);
+
+        // Raccourcir l'URL Stripe via TinyURL
+        let depositUrl = deposit.checkout_url;
+        try {
+          const https = require('https');
+          const shortUrl = await new Promise((resolve) => {
+            const req = https.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(depositUrl)}`, (res) => {
+              let data = '';
+              res.on('data', chunk => data += chunk);
+              res.on('end', () => resolve(data.trim()));
+            });
+            req.on('error', () => resolve(depositUrl));
+            req.setTimeout(3000, () => { req.destroy(); resolve(depositUrl); });
+          });
+          if (shortUrl && shortUrl.startsWith('http')) depositUrl = shortUrl;
+        } catch(e) {
+          console.warn('⚠️ TinyURL failed, using full URL');
+        }
+
         const message = `⚠️ Caution obligatoire
 
 Bonjour,
@@ -166,11 +185,11 @@ Bonjour,
 Une caution de ${amountEuros}€ est requise pour votre séjour à ${propertyName}.
 
 👉 Cliquez ici pour autoriser la caution :
-${deposit.checkout_url}
+${depositUrl}
 
 ⚠️ Sans cette autorisation, vous ne pourrez pas recevoir les informations d'arrivée.
 
-L’autorisation ne débite généralement pas votre carte immédiatement : le montant est le plus souvent bloqué temporairement. Toutefois, certaines banques en ligne (comme Revolut ou N26) et certaines cartes étrangères peuvent effectuer un débit immédiat.
+L'autorisation ne débite généralement pas votre carte immédiatement : le montant est le plus souvent bloqué temporairement. Toutefois, certaines banques en ligne (comme Revolut ou N26) et certaines cartes étrangères peuvent effectuer un débit immédiat.
 
 Merci ! 😊`;
 
@@ -425,12 +444,31 @@ async function sendDepositFailedMessage(pool, io, depositId) {
 
     // Construire le message
     const amountEuros = (deposit.amount_cents / 100).toFixed(2);
+
+    // Raccourcir l'URL Stripe via TinyURL
+    let depositUrlFailed = deposit.checkout_url;
+    try {
+      const https = require('https');
+      const shortUrl = await new Promise((resolve) => {
+        const req = https.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(depositUrlFailed)}`, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => resolve(data.trim()));
+        });
+        req.on('error', () => resolve(depositUrlFailed));
+        req.setTimeout(3000, () => { req.destroy(); resolve(depositUrlFailed); });
+      });
+      if (shortUrl && shortUrl.startsWith('http')) depositUrlFailed = shortUrl;
+    } catch(e) {
+      console.warn('⚠️ TinyURL failed, using full URL');
+    }
+
     const message = `❌ Échec de l'autorisation
 
 L'autorisation de la caution de ${amountEuros}€ a échoué.
 
 👉 Veuillez réessayer en cliquant ici :
-${deposit.checkout_url}
+${depositUrlFailed}
 
 ⚠️ Sans cette autorisation, vous ne pourrez pas accéder à ${propertyName}.
 
