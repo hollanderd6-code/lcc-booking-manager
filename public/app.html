@@ -8943,6 +8943,7 @@ function populateChecklistModal(checklist) {
 
   // Garder une ref à la checklist courante
   window._currentChecklistId = checklist.id;
+  window._currentChecklist = checklist;
 }
 
 async function validateChecklist(checklistId) {
@@ -8988,13 +8989,107 @@ function closeChecklistModal(event) {
 }
 
 function viewPhotoFullscreen(photoSrc, index) {
-  // TODO: Créer une lightbox pour visualiser les photos en plein écran
-  window.open(photoSrc, '_blank');
+  // Lightbox inline
+  var existing = document.getElementById('bhLightbox');
+  if (existing) existing.remove();
+
+  var photos = [];
+  document.querySelectorAll('#modalPhotosList .photo-item img').forEach(function(img) {
+    photos.push(img.src);
+  });
+
+  var lb = document.createElement('div');
+  lb.id = 'bhLightbox';
+  lb.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;';
+
+  var currentIdx = index;
+
+  function render() {
+    lb.innerHTML = '';
+    // Fermer
+    var closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:white;width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;z-index:1;';
+    closeBtn.onclick = function() { lb.remove(); };
+    lb.appendChild(closeBtn);
+
+    // Compteur
+    if (photos.length > 1) {
+      var counter = document.createElement('div');
+      counter.style.cssText = 'position:absolute;top:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.7);font-size:13px;';
+      counter.textContent = (currentIdx + 1) + ' / ' + photos.length;
+      lb.appendChild(counter);
+    }
+
+    // Image
+    var img = document.createElement('img');
+    img.src = photos[currentIdx];
+    img.style.cssText = 'max-width:92vw;max-height:82vh;border-radius:8px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,0.5);';
+    lb.appendChild(img);
+
+    // Flèches si plusieurs photos
+    if (photos.length > 1) {
+      var prev = document.createElement('button');
+      prev.innerHTML = '<i class="fas fa-chevron-left"></i>';
+      prev.style.cssText = 'position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:white;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;';
+      prev.onclick = function(e) { e.stopPropagation(); currentIdx = (currentIdx - 1 + photos.length) % photos.length; render(); };
+      lb.appendChild(prev);
+
+      var next = document.createElement('button');
+      next.innerHTML = '<i class="fas fa-chevron-right"></i>';
+      next.style.cssText = 'position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:white;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;';
+      next.onclick = function(e) { e.stopPropagation(); currentIdx = (currentIdx + 1) % photos.length; render(); };
+      lb.appendChild(next);
+    }
+  }
+
+  render();
+  lb.addEventListener('click', function(e) { if (e.target === lb) lb.remove(); });
+  document.addEventListener('keydown', function onKey(e) {
+    if (e.key === 'Escape') { lb.remove(); document.removeEventListener('keydown', onKey); }
+    if (e.key === 'ArrowRight' && photos.length > 1) { currentIdx = (currentIdx + 1) % photos.length; render(); }
+    if (e.key === 'ArrowLeft' && photos.length > 1) { currentIdx = (currentIdx - 1 + photos.length) % photos.length; render(); }
+  });
+  document.body.appendChild(lb);
 }
 
 function downloadChecklistPDF() {
-  // TODO: Générer un PDF de la checklist
-  alert('Fonctionnalité à venir : téléchargement PDF de la checklist');
+  var c = window._currentChecklist;
+  if (!c) return;
+
+  var tasks = typeof c.tasks === 'string' ? JSON.parse(c.tasks) : (c.tasks || []);
+  var photos = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
+  var completedAt = c.completed_at ? new Date(c.completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  var checkoutDate = c.checkout_date ? c.checkout_date.slice(0,10).split('-').reverse().join('/') : '—';
+  var st = c.owner_status === 'validated' ? '✅ Validé' : c.owner_status === 'rejected' ? '⚠️ Rejeté' : '⏳ En attente';
+
+  var tasksHtml = tasks.map(function(t) {
+    return '<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">'+(t.checked?'✅':'❌')+'</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">'+(t.name||t.title||'')+'</td></tr>';
+  }).join('');
+
+  var photosHtml = photos.map(function(p) {
+    return '<img src="'+p+'" style="width:180px;height:130px;object-fit:cover;border-radius:6px;margin:4px;" />';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Checklist Ménage</title>'
+    + '<style>body{font-family:Arial,sans-serif;padding:32px;color:#333;max-width:800px;margin:0 auto;}'
+    + 'h1{font-size:22px;margin-bottom:4px;}h2{font-size:16px;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px;}'
+    + 'table{width:100%;border-collapse:collapse;}th{text-align:left;padding:6px 8px;background:#f5f5f5;}'
+    + '.meta{display:flex;gap:24px;font-size:14px;color:#666;margin-bottom:12px;}'
+    + '.status{display:inline-block;padding:4px 12px;border-radius:20px;font-weight:600;font-size:13px;background:#e8f5f1;color:#1a7a5e;}'
+    + '@media print{body{padding:16px;}}</style></head><body>'
+    + '<h1>Rapport de ménage</h1>'
+    + '<div class="meta"><span>📅 Départ : '+checkoutDate+'</span><span>👤 '+( c.cleaner_name||'N/A')+'</span><span>🕐 Soumis le '+completedAt+'</span></div>'
+    + '<span class="status">'+st+'</span>'
+    + '<h2>Tâches</h2><table><thead><tr><th>Statut</th><th>Tâche</th></tr></thead><tbody>'+tasksHtml+'</tbody></table>'
+    + (c.notes ? '<h2>Notes</h2><p style="font-size:14px;">'+c.notes+'</p>' : '')
+    + (photos.length ? '<h2>Photos ('+photos.length+')</h2><div style="display:flex;flex-wrap:wrap;gap:8px;">'+photosHtml+'</div>' : '')
+    + '</body></html>';
+
+  var win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = function() { win.print(); };
 }
 // Charger au démarrage
 if (document.readyState === 'loading') {
