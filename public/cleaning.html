@@ -1781,6 +1781,9 @@ html[data-theme-v3="1"] #templatesList > div {
       <option value="week">7 derniers jours</option>
       <option value="year">Cette année</option>
     </select>
+    <select id="statsMonth" class="assign-select" style="max-width:160px; font-size:13px;" onchange="loadStats()">
+      <option value="">Tous les mois</option>
+    </select>
   </div>
 
   <div class="stats-grid" id="statsGrid">
@@ -1795,10 +1798,6 @@ html[data-theme-v3="1"] #templatesList > div {
     <div class="stat-card">
       <div class="stat-card-value orange" id="statPending">—</div>
       <div class="stat-card-label">En attente</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-value blue" id="statAvgDuration">—</div>
-      <div class="stat-card-label">Durée moyenne</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-value green" id="statValidationRate">—</div>
@@ -2675,12 +2674,12 @@ function formatDateFr(dateStr) {
         container.innerHTML = filtered.map(function(c) {
           var st = c.owner_status || 'pending', pn = getPropertyNameById(c.property_id) || c.property_id;
           var cd = c.checkout_date ? formatDateFr(String(c.checkout_date).slice(0,10)) : '';
-          var dm = c.duration_seconds ? Math.round(c.duration_seconds / 60) : null;
+          var completedAt = c.completed_at ? new Date(c.completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
           var ph = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
           return '<div class="checklist-item"><div class="checklist-item-header"><div class="checklist-item-property">' + pn + '</div><span class="checklist-item-status ' + sC[st] + '">' + sL[st] + '</span></div>'
             + '<div class="checklist-item-meta"><div class="checklist-item-meta-item"><i class="fas fa-calendar"></i> ' + cd + '</div>'
             + '<div class="checklist-item-meta-item"><i class="fas fa-user-check"></i> ' + (c.cleaner_name || 'N/A') + '</div>'
-            + (dm ? '<div class="checklist-item-meta-item"><i class="fas fa-stopwatch"></i> ' + dm + ' min</div>' : '')
+            + (completedAt ? '<div class="checklist-item-meta-item"><i class="fas fa-clock"></i> ' + completedAt + '</div>' : '')
             + '<div class="checklist-item-meta-item"><i class="fas fa-camera"></i> ' + ph.length + ' photos</div></div>'
             + '<div class="checklist-item-actions"><button class="btn btn-ghost btn-sm" onclick="openChecklistDetail(' + c.id + ')"><i class="fas fa-eye"></i> Détails</button>'
             + (st === 'pending' ? '<button class="btn btn-sm btn-validate" onclick="validateChecklist(' + c.id + ')"><i class="fas fa-check"></i> Valider</button><button class="btn btn-sm btn-reject" onclick="rejectChecklist(' + c.id + ')"><i class="fas fa-undo"></i> Complément</button>' : '')
@@ -2696,10 +2695,15 @@ function formatDateFr(dateStr) {
           if (!res.ok) throw new Error('err');
           var data = await res.json(); var c = data.checklist;
           var pn = getPropertyNameById(c.property_id) || c.property_id, st = c.owner_status || 'pending';
-          var cd = c.checkout_date ? formatDateFr(String(c.checkout_date).slice(0,10)) : '', dm = c.duration_seconds ? Math.round(c.duration_seconds/60) : null;
+          var cd = c.checkout_date ? formatDateFr(String(c.checkout_date).slice(0,10)) : '';
+          var completedAt = c.completed_at ? new Date(c.completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : null;
           document.getElementById('detailPropertyName').textContent = pn;
           document.getElementById('detailSubtitle').textContent = 'Départ le ' + cd + ' — ' + (c.cleaner_name || 'N/A');
-          document.getElementById('detailInfos').innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:13px;"><span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;">🕐 ' + (dm ? dm+' min':'Non mesuré') + '</span><span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;">' + (c.cleaner_name||'N/A') + '</span><span class="checklist-item-status ' + (st==='validated'?'status-validated':st==='rejected'?'status-rejected':'status-pending') + '">' + (st==='validated'?'✅ Validé':st==='rejected'?'⚠️ Rejeté':'⏳ En attente') + '</span></div>';
+          document.getElementById('detailInfos').innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:13px;">'
+            + (completedAt ? '<span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;">🕐 Soumis le '+completedAt+'</span>' : '')
+            + '<span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;">' + (c.cleaner_name||'N/A') + '</span>'
+            + '<span class="checklist-item-status ' + (st==='validated'?'status-validated':st==='rejected'?'status-rejected':'status-pending') + '">' + (st==='validated'?'✅ Validé':st==='rejected'?'⚠️ Rejeté':'⏳ En attente') + '</span>'
+            + '</div>';
           var tasks = typeof c.tasks === 'string' ? JSON.parse(c.tasks) : (c.tasks || []);
           document.getElementById('detailTasks').innerHTML = tasks.map(function(t){ return '<div class="task-row-display"><div class="task-check-icon ' + (t.checked?'checked':'unchecked') + '"><i class="fas ' + (t.checked?'fa-check':'fa-times') + '"></i></div><span>' + (t.name||t.title||'Tâche') + '</span></div>'; }).join('') || '<p class="text-secondary">Aucune tâche</p>';
           var photos = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
@@ -2789,18 +2793,52 @@ function formatDateFr(dateStr) {
       window.deleteTemplate = deleteTemplate;
 
       // ========== STATISTIQUES ==========
+      function populateMonthSelector() {
+        var sel = document.getElementById('statsMonth');
+        if (!sel) return;
+        var now = new Date(), months = [];
+        for (var i = 0; i < 24; i++) {
+          var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          var val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+          var label = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+          months.push('<option value="'+val+'">'+label.charAt(0).toUpperCase()+label.slice(1)+'</option>');
+        }
+        sel.innerHTML = '<option value="">Tous les mois</option>' + months.join('');
+      }
+      populateMonthSelector();
+
       async function loadStats() {
-        try { var token = localStorage.getItem('lcc_token'), period = document.getElementById('statsPeriod')?.value || 'month';
-          var res = await fetch(API_URL+'/api/cleaning/stats?period='+period, { headers:{Authorization:'Bearer '+token} }); if (!res.ok) throw new Error('err');
+        try {
+          var token = localStorage.getItem('lcc_token');
+          var period = document.getElementById('statsPeriod')?.value || 'month';
+          var month = document.getElementById('statsMonth')?.value || '';
+          var url = API_URL+'/api/cleaning/stats?period='+period+(month?'&month='+month:'');
+          var res = await fetch(url, { headers:{Authorization:'Bearer '+token} });
+          if (!res.ok) throw new Error('err');
           var data = await res.json(), s = data.stats;
-          document.getElementById('statTotal').textContent = s.total; document.getElementById('statValidated').textContent = s.validated;
-          document.getElementById('statPending').textContent = s.pending; document.getElementById('statRejected').textContent = s.rejected;
-          document.getElementById('statAvgDuration').textContent = s.avgDurationMin ? s.avgDurationMin + ' min' : '—';
+          document.getElementById('statTotal').textContent = s.total;
+          document.getElementById('statValidated').textContent = s.validated;
+          document.getElementById('statPending').textContent = s.pending;
+          document.getElementById('statRejected').textContent = s.rejected;
           document.getElementById('statValidationRate').textContent = s.validationRate + '%';
           var ct = document.getElementById('statsCleanerTable');
-          ct.innerHTML = (s.byCleaner && s.byCleaner.length) ? '<table class="assign-table"><thead><tr><th>Nom</th><th>Total</th><th>Durée moy.</th><th>Validés</th></tr></thead><tbody>' + s.byCleaner.map(function(c){return '<tr><td>'+(c.cleaner_name||'N/A')+'</td><td>'+c.total+'</td><td>'+(c.avg_duration_min?c.avg_duration_min+' min':'—')+'</td><td>'+(c.validated||0)+'</td></tr>';}).join('') + '</tbody></table>' : '<p class="text-secondary" style="font-size:13px;">Aucune donnée</p>';
+          ct.innerHTML = (s.byCleaner && s.byCleaner.length)
+            ? '<table class="assign-table"><thead><tr><th>Nom</th><th>Total</th><th>Dernière validation</th><th>Validés</th></tr></thead><tbody>'
+              + s.byCleaner.map(function(c){
+                  var dt = c.last_completed_at ? new Date(c.last_completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+                  return '<tr><td>'+(c.cleaner_name||'N/A')+'</td><td>'+c.total+'</td><td>'+dt+'</td><td>'+(c.validated||0)+'</td></tr>';
+                }).join('')
+              + '</tbody></table>'
+            : '<p class="text-secondary" style="font-size:13px;">Aucune donnée</p>';
           var pt = document.getElementById('statsPropertyTable');
-          pt.innerHTML = (s.byProperty && s.byProperty.length) ? '<table class="assign-table"><thead><tr><th>Logement</th><th>Total</th><th>Durée moy.</th></tr></thead><tbody>' + s.byProperty.map(function(p){return '<tr><td>'+(p.property_name||p.property_id)+'</td><td>'+p.total+'</td><td>'+(p.avg_duration_min?p.avg_duration_min+' min':'—')+'</td></tr>';}).join('') + '</tbody></table>' : '<p class="text-secondary" style="font-size:13px;">Aucune donnée</p>';
+          pt.innerHTML = (s.byProperty && s.byProperty.length)
+            ? '<table class="assign-table"><thead><tr><th>Logement</th><th>Total</th><th>Dernière validation</th></tr></thead><tbody>'
+              + s.byProperty.map(function(p){
+                  var dt = p.last_completed_at ? new Date(p.last_completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+                  return '<tr><td>'+(p.property_name||p.property_id)+'</td><td>'+p.total+'</td><td>'+dt+'</td></tr>';
+                }).join('')
+              + '</tbody></table>'
+            : '<p class="text-secondary" style="font-size:13px;">Aucune donnée</p>';
         } catch(e){ console.error('Stats error:', e); }
       }
       window.loadStats = loadStats;
