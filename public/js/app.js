@@ -218,31 +218,24 @@ function initializeCalendar() {
     // contenu HTML de l’event : logement + badge + voyageur / blocage
     eventContent: function(arg) {
       const props = arg.event.extendedProps || {};
-      const property = props.propertyName || 'Logement';
       const sourceKey = props.source || normalizeSourceToKey(props.sourceRaw);
       const guest = arg.event.title || '';
 
       const wrapper = document.createElement('div');
       wrapper.className = 'bh-event-inner';
 
-      let sourceBadge = '';
-      if (sourceKey) {
-        const letter =
-          sourceKey === 'airbnb' ? 'A' :
-          sourceKey === 'booking' ? 'B' :
-          sourceKey === 'block'   ? 'X' :
-          'D';
-        sourceBadge = `<span class="bh-event-source bh-source-${sourceKey}">${letter}</span>`;
+      let iconHtml = '';
+      if (sourceKey === 'airbnb') {
+        iconHtml = '<span class="bh-bar-icon bh-bar-icon-airbnb"><i class="fab fa-airbnb"></i></span>';
+      } else if (sourceKey === 'booking') {
+        iconHtml = '<span class="bh-bar-icon bh-bar-icon-booking">B</span>';
+      } else if (sourceKey === 'block') {
+        iconHtml = '<span class="bh-bar-icon"><i class="fas fa-ban"></i></span>';
+      } else {
+        iconHtml = '<span class="bh-bar-icon bh-bar-icon-direct"><i class="fas fa-user"></i></span>';
       }
 
-      wrapper.innerHTML = `
-        <div class="bh-event-top">
-          <span class="bh-event-property">${property}</span>
-          ${sourceBadge}
-        </div>
-        <div class="bh-event-guest">${guest}</div>
-      `;
-
+      wrapper.innerHTML = iconHtml + '<span class="bh-bar-guest">' + guest + '</span>';
       return { domNodes: [wrapper] };
     },
 
