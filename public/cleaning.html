@@ -538,6 +538,7 @@
       align-items: center;
       justify-content: center;
       padding: 16px;
+      padding-bottom: calc(16px + 68px + env(safe-area-inset-bottom, 0px));
     }
 
     .checklist-detail-modal.active {
@@ -557,7 +558,7 @@
       border-radius: 16px;
       max-width: 540px;
       width: 100%;
-      max-height: 85vh;
+      max-height: min(85vh, calc(100vh - 68px - env(safe-area-inset-bottom, 0px) - 32px));
       overflow-y: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,0.2);
     }
