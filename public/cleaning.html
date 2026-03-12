@@ -538,7 +538,6 @@
       align-items: center;
       justify-content: center;
       padding: 16px;
-      padding-bottom: calc(16px + 68px + env(safe-area-inset-bottom, 0px));
     }
 
     .checklist-detail-modal.active {
@@ -558,7 +557,7 @@
       border-radius: 16px;
       max-width: 540px;
       width: 100%;
-      max-height: min(85vh, calc(100vh - 68px - env(safe-area-inset-bottom, 0px) - 32px));
+      max-height: 85vh;
       overflow-y: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,0.2);
     }
@@ -3187,6 +3186,20 @@ function formatDateFr(dateStr) {
     backdrop-filter: blur(16px) !important;
     border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+
+  .checklist-detail-modal {
+    z-index: 2000 !important;
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .checklist-detail-panel {
+    border-radius: 16px 16px 0 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: calc(100vh - 68px - env(safe-area-inset-bottom, 0px) - 60px) !important;
+    margin-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 </style>
