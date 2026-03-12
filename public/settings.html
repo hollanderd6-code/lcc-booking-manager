@@ -3562,6 +3562,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var fields = document.createElement('div');
     fields.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;';
 
+    // Extraire title et text selon le format reçu (string ou {title,text})
     var titleVal = (value && typeof value === 'object') ? (value.title || '') : '';
     var textVal  = (value && typeof value === 'object') ? (value.text  || '') : (value || '');
 
@@ -3575,7 +3576,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var textInput = document.createElement('input');
     textInput.type = 'text'; textInput.className = 'qr-input'; textInput.maxLength = 200;
-    textInput.placeholder = "Message envoyé (ex: Voici vos codes d'accès...)";
+    textInput.placeholder = "Message envoyé au voyageur";
     textInput.value = textVal;
     textInput.style.cssText = 'padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;font-family:DM Sans,sans-serif;outline:none;';
     textInput.addEventListener('focus', function() { this.style.borderColor='#10B981'; });
@@ -3605,10 +3606,10 @@ document.addEventListener('DOMContentLoaded', function() {
   function collectReplies() {
     return Array.from(document.querySelectorAll('#quickRepliesList .qr-item'))
       .map(function(item) {
-        var title = item.querySelector('.qr-title');
-        var text  = item.querySelector('.qr-input');
-        var textVal  = text  ? text.value.trim()  : '';
-        var titleVal = title ? title.value.trim() : '';
+        var titleEl = item.querySelector('.qr-title');
+        var textEl  = item.querySelector('.qr-input');
+        var textVal  = textEl  ? textEl.value.trim()  : '';
+        var titleVal = titleEl ? titleEl.value.trim() : '';
         if (!textVal) return null;
         return { title: titleVal || textVal.slice(0, 30), text: textVal };
       }).filter(Boolean);
