@@ -2139,19 +2139,35 @@ const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecretPlatform = process.env.STRIPE_WEBHOOK_SECRET_PLATFORM;
 
-  if (!webhookSecret) {
+  if (!webhookSecret && !webhookSecretPlatform) {
     console.error('STRIPE_WEBHOOK_SECRET manquant');
     return res.status(500).send('Webhook secret not configured');
   }
 
   let event;
 
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  } catch (err) {
-    console.error('Erreur verification webhook:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+  // Essayer les deux secrets : plateforme (cautions) puis Connect (paiements)
+  const secretsToTry = [
+    { secret: webhookSecretPlatform, label: 'plateforme' },
+    { secret: webhookSecret, label: 'connect' }
+  ].filter(s => s.secret);
+
+  let lastErr;
+  for (const { secret, label } of secretsToTry) {
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, secret);
+      console.log(`Webhook valide avec secret ${label}`);
+      break;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+
+  if (!event) {
+    console.error('Erreur verification webhook:', lastErr.message);
+    return res.status(400).send(`Webhook Error: ${lastErr.message}`);
   }
 
   console.log('✅ Webhook Stripe reçu:', event.type);
@@ -2322,11 +2338,14 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             if (depositStatus === 'authorized') {
               try {
                 await sendDepositAuthorizedMessage(pool, io, depositId);
-                // ✅ sendDepositAuthorizedMessage gère déjà l'envoi des infos d'arrivée en interne
-                // Ne pas appeler handleDepositPaid pour éviter le double envoi
               } catch (msgError) {
                 console.error('❌ Erreur envoi message caution autorisée:', msgError);
               }
+            }
+            
+            // Envoyer automatiquement les infos si c'est bientot l'arrivee
+            if (depositId) {
+              await handleDepositPaid(depositId, io);
             }
           } catch (err) {
             console.error('Erreur mise a jour deposit:', err);
