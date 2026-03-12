@@ -58,9 +58,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
     
-    // Send on Ctrl+Enter or Shift+Enter, new line on Enter
+    // Send on Enter
     chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.shiftKey)) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendMessageOwner();
       }
@@ -1049,13 +1049,22 @@ async function loadQuickReplies(conversationId) {
     const chips = [];
 
     // Raccourcis texte
-    (data.quickReplies || []).forEach(text => {
+    (data.quickReplies || []).forEach(reply => {
+      // Compatibilité : ancien format string ou nouveau format {title, text}
+      const text  = (typeof reply === 'object') ? reply.text  : reply;
+      const title = (typeof reply === 'object') ? reply.title : reply;
       const btn = document.createElement('button');
       btn.className = 'qr-chip';
-      btn.textContent = text;
+      btn.textContent = title || text;
+      btn.title = text; // tooltip au survol
       btn.onclick = () => {
         const input = document.getElementById('chatInput');
-        if (input) { input.value = text; input.focus(); input.dispatchEvent(new Event('input')); }
+        if (input) {
+          const current = input.value;
+          input.value = current ? current + ' ' + text : text;
+          input.focus();
+          input.dispatchEvent(new Event('input'));
+        }
       };
       chips.push(btn);
     });
