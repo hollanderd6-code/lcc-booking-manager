@@ -293,8 +293,15 @@ async function saveProperty(event) {
     formData.append('autoResponsesEnabled', autoResponsesEnabled);
 
     // ✅ RACCOURCIS MESSAGES
-    const quickReplies = Array.from(document.querySelectorAll('#quickRepliesList .qr-input'))
-      .map(i => i.value.trim()).filter(Boolean);
+    const quickReplies = Array.from(document.querySelectorAll('#quickRepliesList .qr-item'))
+      .map(item => {
+        const titleEl = item.querySelector('.qr-title');
+        const textEl  = item.querySelector('.qr-input');
+        const text  = textEl  ? textEl.value.trim()  : '';
+        const title = titleEl ? titleEl.value.trim() : '';
+        if (!text) return null;
+        return { title: title || text.slice(0, 30), text };
+      }).filter(Boolean);
     formData.append('quickReplies', JSON.stringify(quickReplies));
     
   } catch (e) {
