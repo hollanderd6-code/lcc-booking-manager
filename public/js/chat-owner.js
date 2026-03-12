@@ -441,9 +441,6 @@ async function openChat(conversationId) {
   // Charger les messages
   await loadMessages(conversationId);
   
-  // Charger les raccourcis messages
-  loadQuickReplies(conversationId);
-  
   // Marquer comme lu
   await markMessagesAsRead(conversationId);
   
