@@ -2322,14 +2322,11 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             if (depositStatus === 'authorized') {
               try {
                 await sendDepositAuthorizedMessage(pool, io, depositId);
+                // ✅ sendDepositAuthorizedMessage gère déjà l'envoi des infos d'arrivée en interne
+                // Ne pas appeler handleDepositPaid pour éviter le double envoi
               } catch (msgError) {
                 console.error('❌ Erreur envoi message caution autorisée:', msgError);
               }
-            }
-            
-            // Envoyer automatiquement les infos si c'est bientot l'arrivee
-            if (depositId) {
-              await handleDepositPaid(depositId, io);
             }
           } catch (err) {
             console.error('Erreur mise a jour deposit:', err);
