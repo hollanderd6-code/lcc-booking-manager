@@ -15793,7 +15793,18 @@ app.put('/api/properties/:propertyId/quick-replies', authenticateAny, async (req
       return res.status(400).json({ error: 'quickReplies doit être un tableau' });
     }
 
-    const cleaned = quickReplies.map(s => String(s).trim()).filter(Boolean).slice(0, 5);
+    const cleaned = quickReplies.map(item => {
+      // Nouveau format {title, text}
+      if (item && typeof item === 'object') {
+        const text  = String(item.text  || '').trim();
+        const title = String(item.title || '').trim();
+        if (!text) return null;
+        return { title: title || text.slice(0, 30), text };
+      }
+      // Ancien format string (rétrocompatibilité)
+      const text = String(item).trim();
+      return text ? { title: text.slice(0, 30), text } : null;
+    }).filter(Boolean).slice(0, 5);
 
     await pool.query(
       `UPDATE properties SET quick_replies = $1 WHERE id = $2 AND user_id = $3`,
