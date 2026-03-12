@@ -2255,9 +2255,14 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         if (depositId || session.metadata?.deposit_id) {
           console.log('Caution detectee');
           try {
-            // Pour une caution avec capture_method:'manual', checkout.session.completed
-            // signifie toujours que la caution est autorisée (jamais capturée à ce stade)
-            const depositStatus = 'authorized';
+            // Recuperer le Payment Intent pour verifier s'il est autorise ou capture
+            const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+            
+            // Determiner le statut en fonction de l'etat Stripe
+            let depositStatus = 'authorized';
+            if (paymentIntent.status === 'succeeded' && paymentIntent.charges.data[0]?.captured) {
+              depositStatus = 'captured';
+            }
             
             // Mettre à jour la caution - VERSION SIMPLIFIÉE
             const updateQuery = `
@@ -4542,18 +4547,25 @@ async function captureDeposit(depositId, amountCents = null) {
       throw new Error('Pas de Payment Intent associé - caution manuelle non débit possible');
     }
 
+    // Récupérer le compte Connect propriétaire pour opérer sur le bon compte Stripe
+    const ownerRow = await pool.query('SELECT u.stripe_account_id FROM users u WHERE u.id = $1', [depositData.user_id]);
+    const depositStripeAccount = ownerRow.rows[0]?.stripe_account_id || null;
+    const stripeOpts = depositStripeAccount ? { stripeAccount: depositStripeAccount } : undefined;
+    console.log(`💳 Opération caution sur compte: ${depositStripeAccount || 'plateforme'}`);
+
     // Vérifier l'état réel du PI depuis Stripe avant de capturer
-    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
+    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, {}, stripeOpts);
     console.log(`PI Stripe status avant capture: ${pi.status}`);
     
     if (pi.status !== 'requires_capture') {
       throw new Error(`Impossible de débiter : la caution est dans l'état "${pi.status}" côté Stripe (expiré ou déjà traité)`);
     }
 
-    // Capturer via Stripe (compte plateforme - pas de stripeAccount)
+    // Capturer via Stripe
     const capture = await stripe.paymentIntents.capture(
       depositData.stripe_payment_intent_id,
-      amountCents ? { amount_to_capture: amountCents } : {}
+      amountCents ? { amount_to_capture: amountCents } : {},
+      stripeOpts
     );
 
     // Mettre à jour en base
@@ -4584,20 +4596,26 @@ async function releaseDeposit(depositId) {
   if (depositData.stripe_payment_intent_id) {
     console.log(`Liberation caution Stripe ${depositId} (status: ${depositData.status})`);
     
+    // Récupérer le compte Connect propriétaire pour opérer sur le bon compte Stripe
+    const ownerRow2 = await pool.query('SELECT u.stripe_account_id FROM users u WHERE u.id = $1', [depositData.user_id]);
+    const releaseStripeAccount = ownerRow2.rows[0]?.stripe_account_id || null;
+    const releaseOpts = releaseStripeAccount ? { stripeAccount: releaseStripeAccount } : undefined;
+    console.log(`🔓 Release caution sur compte: ${releaseStripeAccount || 'plateforme'}`);
+
     try {
       // Récupérer l'état réel du PI depuis Stripe
-      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
+      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, {}, releaseOpts);
       console.log(`PI Stripe status: ${pi.status}`);
       
       if (pi.status === 'requires_capture') {
         // Autorisation active → annuler
         console.log(`Annulation PI ${pi.id}`);
-        await stripe.paymentIntents.cancel(pi.id);
+        await stripe.paymentIntents.cancel(pi.id, {}, releaseOpts);
         
       } else if (pi.status === 'succeeded') {
         // Déjà capturé → rembourser
         console.log(`Remboursement PI ${pi.id}`);
-        await stripe.refunds.create({ payment_intent: pi.id });
+        await stripe.refunds.create({ payment_intent: pi.id }, releaseOpts);
         
       } else {
         // PI déjà canceled, expired, etc. → rien à faire côté Stripe
