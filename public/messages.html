@@ -1701,18 +1701,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (conv && conv.id && typeof window.loadQuickReplies === 'function') {
       window.loadQuickReplies(conv.id);
     }
-
-    // Positionner l'input juste au-dessus de la barre de nav mobile
-    if (window.innerWidth <= 1366) {
-      var tabs = document.querySelector('.mobile-tabs');
-      var inputEl = document.getElementById('chatInputArea');
-      var qrBar = document.getElementById('quickRepliesBar');
-      if (tabs && inputEl) {
-        var tabsH = tabs.getBoundingClientRect().height;
-        inputEl.style.bottom = tabsH + 'px';
-        if (qrBar) qrBar.style.bottom = (tabsH + 54) + 'px';
-      }
-    }
   }
 
   // ── Override openChat after chat-owner.js loaded ──
@@ -2117,7 +2105,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     flex-shrink: 0 !important;
     padding: 10px 12px !important;
     position: fixed !important;
-    bottom: 0px !important;
+    bottom: 34px !important;
     left: 0 !important;
     right: 0 !important;
     background: white !important;
@@ -2127,7 +2115,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
   #quickRepliesBar {
     position: fixed !important;
-    bottom: 54px !important;
+    bottom: calc(34px + 54px) !important;
     left: 0 !important;
     right: 0 !important;
     z-index: 1001 !important;
