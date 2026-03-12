@@ -246,6 +246,24 @@ async function handleIncomingMessage(message, conversation, pool, io) {
                 // Récupérer le nom du logement
                 const propResult = await pool.query('SELECT name FROM properties WHERE id = $1', [conversation.property_id]);
                 const propertyName = propResult.rows[0]?.name || 'votre logement';
+
+                // ✅ Raccourcir l'URL Stripe via TinyURL
+                let depositUrl = depositInfo.checkout_url;
+                try {
+                  const https = require('https');
+                  const shortUrl = await new Promise((resolve) => {
+                    const req = https.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(depositUrl)}`, (res) => {
+                      let data = '';
+                      res.on('data', chunk => data += chunk);
+                      res.on('end', () => resolve(data.trim()));
+                    });
+                    req.on('error', () => resolve(depositUrl));
+                    req.setTimeout(3000, () => { req.destroy(); resolve(depositUrl); });
+                  });
+                  if (shortUrl && shortUrl.startsWith('http')) depositUrl = shortUrl;
+                } catch(e) {
+                  console.warn('⚠️ TinyURL failed, using full URL');
+                }
                 
                 const depositMessages = {
                   fr: `⚠️ Caution obligatoire
@@ -255,7 +273,7 @@ Bonjour ${conversation.guest_first_name || ''} !
 Une caution de ${amountEuros}€ est requise pour votre séjour à ${propertyName}.
 
 👉 Cliquez ici pour autoriser la caution :
-${depositInfo.checkout_url}
+${depositUrl}
 
 ⚠️ Sans cette autorisation, vous ne pourrez pas recevoir les informations d'arrivée (code d'accès, WiFi, etc.).
 
@@ -269,7 +287,7 @@ Hello ${conversation.guest_first_name || ''} !
 A security deposit of €${amountEuros} is required for your stay at ${propertyName}.
 
 👉 Click here to authorize the deposit:
-${depositInfo.checkout_url}
+${depositUrl}
 
 ⚠️ Without this authorization, you will not receive the arrival information (access code, WiFi, etc.).
 
@@ -283,7 +301,7 @@ Thank you! 😊`,
 Se requiere una fianza de ${amountEuros}€ para su estancia en ${propertyName}.
 
 👉 Haga clic aquí para autorizar la fianza:
-${depositInfo.checkout_url}
+${depositUrl}
 
 ⚠️ Sin esta autorización, no recibirá la información de llegada (código de acceso, WiFi, etc.).
 
