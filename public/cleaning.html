@@ -1860,6 +1860,23 @@ html[data-theme-v3="1"] #templatesList > div {
   </div>
 </div>
 
+<!-- ===== HISTORIQUE MODAL ===== -->
+<div class="checklist-detail-modal" id="historyModal">
+  <div class="checklist-detail-overlay" onclick="closeHistoryModal()"></div>
+  <div class="checklist-detail-panel" style="max-width:560px;">
+    <div class="checklist-detail-header">
+      <div>
+        <div style="font-size:17px; font-weight:700;" id="historyModalTitle">Historique</div>
+        <div style="font-size:13px; color:var(--text-secondary);" id="historyModalSubtitle"></div>
+      </div>
+      <button class="checklist-detail-close" onclick="closeHistoryModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="checklist-detail-body" style="padding:0;">
+      <div id="historyModalList" style="padding:0 16px 16px;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- QR Code Modal -->
 <div class="checklist-detail-modal" id="qrModal">
   <div class="checklist-detail-overlay" onclick="closeQrModal()"></div>
@@ -2826,7 +2843,7 @@ function formatDateFr(dateStr) {
             ? '<table class="assign-table"><thead><tr><th>Nom</th><th>Total</th><th>Dernière validation</th><th>Validés</th></tr></thead><tbody>'
               + s.byCleaner.map(function(c){
                   var dt = c.last_completed_at ? new Date(c.last_completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-                  return '<tr><td>'+(c.cleaner_name||'N/A')+'</td><td>'+c.total+'</td><td>'+dt+'</td><td>'+(c.validated||0)+'</td></tr>';
+                  return '<tr><td><span style="cursor:pointer;color:var(--primary);font-weight:600;text-decoration:underline dotted;" onclick="openHistoryByCleaner(\''+encodeURIComponent(c.cleaner_name||'')+'\')">'+(c.cleaner_name||'N/A')+'</span></td><td>'+c.total+'</td><td>'+dt+'</td><td>'+(c.validated||0)+'</td></tr>';
                 }).join('')
               + '</tbody></table>'
             : '<p class="text-secondary" style="font-size:13px;">Aucune donnée</p>';
@@ -2835,13 +2852,73 @@ function formatDateFr(dateStr) {
             ? '<table class="assign-table"><thead><tr><th>Logement</th><th>Total</th><th>Dernière validation</th></tr></thead><tbody>'
               + s.byProperty.map(function(p){
                   var dt = p.last_completed_at ? new Date(p.last_completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-                  return '<tr><td>'+(p.property_name||p.property_id)+'</td><td>'+p.total+'</td><td>'+dt+'</td></tr>';
+                  return '<tr><td><span style="cursor:pointer;color:var(--primary);font-weight:600;text-decoration:underline dotted;" onclick="openHistoryByProperty(\''+p.property_id+'\')">'+(p.property_name||p.property_id)+'</span></td><td>'+p.total+'</td><td>'+dt+'</td></tr>';
                 }).join('')
               + '</tbody></table>'
             : '<p class="text-secondary" style="font-size:13px;">Aucune donnée</p>';
         } catch(e){ console.error('Stats error:', e); }
       }
       window.loadStats = loadStats;
+
+      // ========== HISTORIQUE PAR CLEANER / LOGEMENT ==========
+      var sL = { pending: '⏳ En attente', validated: '✅ Validé', rejected: '⚠️ Rejeté' };
+      var sC = { pending: 'status-pending', validated: 'status-validated', rejected: 'status-rejected' };
+
+      function openHistoryByCleaner(encodedName) {
+        var name = decodeURIComponent(encodedName);
+        var items = allChecklists.filter(function(c){ return (c.cleaner_name||'') === name; });
+        items.sort(function(a,b){ return new Date(b.completed_at||0) - new Date(a.completed_at||0); });
+        document.getElementById('historyModalTitle').textContent = name || 'N/A';
+        document.getElementById('historyModalSubtitle').textContent = items.length + ' ménage' + (items.length>1?'s':'') + ' au total';
+        renderHistoryList(items);
+        document.getElementById('historyModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+      window.openHistoryByCleaner = openHistoryByCleaner;
+
+      function openHistoryByProperty(propertyId) {
+        var items = allChecklists.filter(function(c){ return String(c.property_id) === String(propertyId); });
+        items.sort(function(a,b){ return new Date(b.completed_at||0) - new Date(a.completed_at||0); });
+        var propName = getPropertyNameById(propertyId) || propertyId;
+        document.getElementById('historyModalTitle').textContent = propName;
+        document.getElementById('historyModalSubtitle').textContent = items.length + ' ménage' + (items.length>1?'s':'') + ' au total';
+        renderHistoryList(items);
+        document.getElementById('historyModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+      window.openHistoryByProperty = openHistoryByProperty;
+
+      function renderHistoryList(items) {
+        var container = document.getElementById('historyModalList');
+        if (!items.length) { container.innerHTML = '<p class="text-secondary" style="font-size:13px;padding:16px 0;">Aucune checklist trouvée.</p>'; return; }
+        container.innerHTML = items.map(function(c) {
+          var st = c.owner_status || 'pending';
+          var pn = getPropertyNameById(c.property_id) || c.property_id;
+          var cd = c.checkout_date ? formatDateFr(String(c.checkout_date).slice(0,10)) : '—';
+          var completedAt = c.completed_at ? new Date(c.completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+          var ph = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
+          return '<div style="padding:14px 0;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-weight:600;font-size:14px;margin-bottom:2px;">'+pn+'</div>'
+            + '<div style="font-size:12px;color:var(--text-secondary);display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">'
+            + '<span><i class="fas fa-calendar" style="margin-right:3px;"></i>Départ '+cd+'</span>'
+            + '<span><i class="fas fa-clock" style="margin-right:3px;"></i>'+completedAt+'</span>'
+            + (c.cleaner_name ? '<span><i class="fas fa-user" style="margin-right:3px;"></i>'+c.cleaner_name+'</span>' : '')
+            + '<span><i class="fas fa-camera" style="margin-right:3px;"></i>'+ph.length+' photos</span>'
+            + '</div></div>'
+            + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">'
+            + '<span class="checklist-item-status '+sC[st]+'" style="font-size:11px;">'+sL[st]+'</span>'
+            + '<button class="btn btn-ghost btn-sm" onclick="closeHistoryModal();setTimeout(function(){openChecklistDetail('+c.id+');},200);"><i class="fas fa-eye"></i></button>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+      }
+
+      function closeHistoryModal() {
+        document.getElementById('historyModal').classList.remove('active');
+        document.body.style.overflow = '';
+      }
+      window.closeHistoryModal = closeHistoryModal;
 
       // ========== QR CODE ==========
       async function openQrModal(propertyId) {
