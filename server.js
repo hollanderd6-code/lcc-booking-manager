@@ -2255,14 +2255,9 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         if (depositId || session.metadata?.deposit_id) {
           console.log('Caution detectee');
           try {
-            // Recuperer le Payment Intent pour verifier s'il est autorise ou capture
-            const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
-            
-            // Determiner le statut en fonction de l'etat Stripe
-            let depositStatus = 'authorized';
-            if (paymentIntent.status === 'succeeded' && paymentIntent.charges.data[0]?.captured) {
-              depositStatus = 'captured';
-            }
+            // Pour une caution avec capture_method:'manual', checkout.session.completed
+            // signifie toujours authorized — pas besoin de retrieve le PI
+            const depositStatus = 'authorized';
             
             // Mettre à jour la caution - VERSION SIMPLIFIÉE
             const updateQuery = `
@@ -3731,10 +3726,10 @@ async function sendDepositRequestMessages(io) {
               reservation_uid: conv.reservation_uid || ''
             }
           },
+          // ⚠️ Ne pas mettre user_id pour éviter le routing Connect
           metadata: {
             deposit_id: depositId,
-            reservation_uid: conv.reservation_uid || '',
-            user_id: conv.user_id
+            reservation_uid: conv.reservation_uid || ''
           },
           success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
           cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`
@@ -4547,25 +4542,18 @@ async function captureDeposit(depositId, amountCents = null) {
       throw new Error('Pas de Payment Intent associé - caution manuelle non débit possible');
     }
 
-    // Récupérer le compte Connect propriétaire pour opérer sur le bon compte Stripe
-    const ownerRow = await pool.query('SELECT u.stripe_account_id FROM users u WHERE u.id = $1', [depositData.user_id]);
-    const depositStripeAccount = ownerRow.rows[0]?.stripe_account_id || null;
-    const stripeOpts = depositStripeAccount ? { stripeAccount: depositStripeAccount } : undefined;
-    console.log(`💳 Opération caution sur compte: ${depositStripeAccount || 'plateforme'}`);
-
     // Vérifier l'état réel du PI depuis Stripe avant de capturer
-    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, {}, stripeOpts);
+    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
     console.log(`PI Stripe status avant capture: ${pi.status}`);
     
     if (pi.status !== 'requires_capture') {
       throw new Error(`Impossible de débiter : la caution est dans l'état "${pi.status}" côté Stripe (expiré ou déjà traité)`);
     }
 
-    // Capturer via Stripe
+    // Capturer via Stripe (compte plateforme - pas de stripeAccount)
     const capture = await stripe.paymentIntents.capture(
       depositData.stripe_payment_intent_id,
-      amountCents ? { amount_to_capture: amountCents } : {},
-      stripeOpts
+      amountCents ? { amount_to_capture: amountCents } : {}
     );
 
     // Mettre à jour en base
@@ -4596,26 +4584,20 @@ async function releaseDeposit(depositId) {
   if (depositData.stripe_payment_intent_id) {
     console.log(`Liberation caution Stripe ${depositId} (status: ${depositData.status})`);
     
-    // Récupérer le compte Connect propriétaire pour opérer sur le bon compte Stripe
-    const ownerRow2 = await pool.query('SELECT u.stripe_account_id FROM users u WHERE u.id = $1', [depositData.user_id]);
-    const releaseStripeAccount = ownerRow2.rows[0]?.stripe_account_id || null;
-    const releaseOpts = releaseStripeAccount ? { stripeAccount: releaseStripeAccount } : undefined;
-    console.log(`🔓 Release caution sur compte: ${releaseStripeAccount || 'plateforme'}`);
-
     try {
       // Récupérer l'état réel du PI depuis Stripe
-      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, {}, releaseOpts);
+      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
       console.log(`PI Stripe status: ${pi.status}`);
       
       if (pi.status === 'requires_capture') {
         // Autorisation active → annuler
         console.log(`Annulation PI ${pi.id}`);
-        await stripe.paymentIntents.cancel(pi.id, {}, releaseOpts);
+        await stripe.paymentIntents.cancel(pi.id);
         
       } else if (pi.status === 'succeeded') {
         // Déjà capturé → rembourser
         console.log(`Remboursement PI ${pi.id}`);
-        await stripe.refunds.create({ payment_intent: pi.id }, releaseOpts);
+        await stripe.refunds.create({ payment_intent: pi.id });
         
       } else {
         // PI déjà canceled, expired, etc. → rien à faire côté Stripe
@@ -11656,11 +11638,10 @@ app.post('/api/deposits',
           // ⚠️ On enlève user_id pour éviter le routing vers Connect
         }
       },
-      // Metadata sur la Session (on garde user_id ici, pas de problème)
+      // ⚠️ Ne pas mettre user_id dans les metadata session pour éviter le routing Connect
       metadata: {
         deposit_id: deposit.id,
-        reservation_uid: reservationUid,
-        user_id: userId
+        reservation_uid: reservationUid
       },
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
