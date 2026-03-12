@@ -447,29 +447,7 @@ html, body {
   padding: 6px 0;
 }
 
-.checklist-timer {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
 
-.checklist-timer.active {
-  background: #fef3c7;
-  color: #b45309;
-  animation: timer-pulse 1s ease-in-out infinite;
-}
-
-@keyframes timer-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
-}
 
 .checklist-property-name {
   font-size: 18px;
@@ -1076,10 +1054,6 @@ html[data-theme-v3="1"] .top-bar {
       <button class="checklist-back" onclick="closeChecklist()">
         <i class="fas fa-arrow-left"></i> Retour
       </button>
-      <div class="checklist-timer" id="checklistTimer">
-        <i class="fas fa-stopwatch"></i>
-        <span id="timerDisplay">00:00</span>
-      </div>
     </div>
     <div class="checklist-property-name" id="checklistPropertyName">—</div>
     <div class="checklist-subtitle" id="checklistSubtitle">—</div>
@@ -1153,8 +1127,6 @@ let tasks = [];
 let currentTask = null;
 let checklistTasks = [];
 let checklistPhotos = []; // base64 strings
-let timerInterval = null;
-let timerSeconds = 0;
 let startedAt = null;
 
 // ===== PIN LOGIN =====
@@ -1693,34 +1665,13 @@ function removePhoto(idx) {
   updateProgress();
 }
 
-// ===== TIMER =====
-function startTimer() {
-  stopTimer();
-  timerSeconds = 0;
-  updateTimerDisplay();
-  
-  timerInterval = setInterval(() => {
-    timerSeconds++;
-    updateTimerDisplay();
-  }, 1000);
-  
-  document.getElementById('checklistTimer').classList.add('active');
-}
+// ===== TIMER (désactivé - timerSeconds conservé pour compatibilité) =====
+let timerInterval = null;
+let timerSeconds = 0;
 
-function stopTimer() {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  document.getElementById('checklistTimer').classList.remove('active');
-}
-
-function updateTimerDisplay() {
-  const mins = Math.floor(timerSeconds / 60);
-  const secs = timerSeconds % 60;
-  document.getElementById('timerDisplay').textContent = 
-    `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
+function startTimer() { timerSeconds = 0; }
+function stopTimer() {}
+function updateTimerDisplay() {}
 
 // ===== SUBMIT =====
 async function handleSubmit() {
@@ -1780,9 +1731,8 @@ async function handleSubmit() {
     stopTimer();
     
     // Show success
-    const durationMin = Math.floor(timerSeconds / 60);
     document.getElementById('successSubtitle').textContent = 
-      `Durée : ${durationMin} min — Le propriétaire sera notifié.`;
+      `Ménage terminé — Le propriétaire sera notifié.`;
     document.getElementById('successOverlay').classList.add('active');
     
   } catch (err) {
