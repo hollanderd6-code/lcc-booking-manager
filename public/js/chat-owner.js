@@ -58,9 +58,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
     
-    // Send on Enter
+    // Send on Ctrl+Enter or Shift+Enter, new line on Enter
     chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.shiftKey)) {
         e.preventDefault();
         sendMessageOwner();
       }
