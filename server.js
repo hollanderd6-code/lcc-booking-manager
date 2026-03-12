@@ -16539,7 +16539,7 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 .key-item:first-child{border-radius:12px 12px 0 0}
 .key-item:last-child{border-radius:0 0 12px 12px}
 .key-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.key-val{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--forest);font-weight:600}
+.key-val{font-family:'Jost',sans-serif;font-size:1.2rem;color:var(--forest);font-weight:500;letter-spacing:.01em}
 .wifi-card{background:var(--forest);border-radius:16px;padding:2rem 2.2rem;margin-top:2rem;display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap;position:relative;overflow:hidden}
 .wifi-icon-box{width:46px;height:46px;border-radius:11px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.7);font-size:1.2rem;flex-shrink:0}
 .wifi-info{flex:1;min-width:120px}
@@ -16595,7 +16595,7 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 .resto-phone{font-size:12px;color:var(--forest);font-weight:500;white-space:nowrap;text-decoration:none}
 .checkout-card{background:var(--ink);border-radius:16px;padding:2.8rem 3rem;display:grid;grid-template-columns:auto 1fr;gap:3rem;align-items:start}
 .checkout-time-block{text-align:center;padding-right:3rem;border-right:1px solid rgba(255,255,255,.1)}
-.checkout-h{font-family:'Cormorant Garamond',serif;font-size:5rem;font-weight:300;color:var(--gold);line-height:1}
+.checkout-h{font-family:'Jost',sans-serif;font-size:5rem;font-weight:300;color:var(--gold);line-height:1;letter-spacing:-.02em}
 .checkout-h-lbl{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-top:4px}
 .checkout-steps{list-style:none}
 .c-step{display:flex;gap:12px;align-items:flex-start;padding:.7rem 0;border-bottom:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.78);font-size:14px;font-weight:300}
@@ -16695,7 +16695,7 @@ ${alentourSection}
 ${checkoutSection}
 <footer class="foot">
   <div class="foot-brand">BoostingHost</div>
-  <div class="foot-sub foot-thanks">Merci pour votre séjour ✦</div>
+  <div class="foot-sub foot-thanks">Ce livret d'accueil a été créé avec Boostinghost ✦</div>
 </footer>
 </div>
 ${fabHtml}
