@@ -2255,14 +2255,9 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         if (depositId || session.metadata?.deposit_id) {
           console.log('Caution detectee');
           try {
-            // Recuperer le Payment Intent pour verifier s'il est autorise ou capture
-            const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
-            
-            // Determiner le statut en fonction de l'etat Stripe
-            let depositStatus = 'authorized';
-            if (paymentIntent.status === 'succeeded' && paymentIntent.charges.data[0]?.captured) {
-              depositStatus = 'captured';
-            }
+            // Pour une caution avec capture_method:'manual', checkout.session.completed
+            // signifie toujours que la caution est autorisée (jamais capturée à ce stade)
+            const depositStatus = 'authorized';
             
             // Mettre à jour la caution - VERSION SIMPLIFIÉE
             const updateQuery = `
