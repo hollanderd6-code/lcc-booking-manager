@@ -1023,6 +1023,7 @@ document.addEventListener('keydown', (e) => {
 window.openChat = openChat;
 window.closeChat = closeChat;
 window.sendMessageOwner = sendMessageOwner;
+window.loadQuickReplies = loadQuickReplies;
 window.openBookingMessageModal = openBookingMessageModal;
 window.copyInviteLink = copyInviteLink;
 window.deleteConversation = deleteConversation;
