@@ -138,6 +138,7 @@
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
       padding: 16px;
+      padding-bottom: 90px; /* Espace pour l'input fixe */
       background: #efeae2;
       background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px);
       background-size: 18px 18px;
@@ -259,7 +260,10 @@
        INPUT - Fixe en bas
        ============================================ */
     .chat-input-container {
-      flex-shrink: 0;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       background: white;
       padding: 10px 16px;
       padding-bottom: max(14px, env(safe-area-inset-bottom));
@@ -268,8 +272,6 @@
       gap: 8px;
       align-items: flex-end;
       z-index: 100;
-      /* Espace pour la barre de navigation mobile */
-      margin-bottom: calc(65px + env(safe-area-inset-bottom));
     }
     
     .photo-button {
