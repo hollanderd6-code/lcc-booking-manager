@@ -9733,10 +9733,13 @@ app.get('/api/cleaning/stats',
         return res.status(401).json({ error: 'Non autorisé' });
       }
 
-      const { period } = req.query;
+      const { period, month } = req.query;
 
       let dateFilter = '';
-      if (period === 'week') {
+      if (month) {
+        // Filtre par mois exact (format YYYY-MM)
+        dateFilter = `AND TO_CHAR(cc.completed_at AT TIME ZONE 'Europe/Paris', 'YYYY-MM') = '${month.replace(/[^0-9-]/g, '')}'`;
+      } else if (period === 'week') {
         dateFilter = `AND cc.completed_at >= NOW() - INTERVAL '7 days'`;
       } else if (period === 'month') {
         dateFilter = `AND cc.completed_at >= NOW() - INTERVAL '30 days'`;
@@ -9749,10 +9752,7 @@ app.get('/api/cleaning/stats',
           COUNT(*) as total_checklists,
           COUNT(CASE WHEN owner_status = 'validated' THEN 1 END) as validated,
           COUNT(CASE WHEN owner_status = 'pending' THEN 1 END) as pending,
-          COUNT(CASE WHEN owner_status = 'rejected' THEN 1 END) as rejected,
-          AVG(duration_seconds) as avg_duration,
-          MIN(duration_seconds) as min_duration,
-          MAX(duration_seconds) as max_duration
+          COUNT(CASE WHEN owner_status = 'rejected' THEN 1 END) as rejected
         FROM cleaning_checklists cc
         WHERE cc.user_id = $1 ${dateFilter}
       `, [userId]);
@@ -9762,7 +9762,7 @@ app.get('/api/cleaning/stats',
           c.id as cleaner_id,
           c.name as cleaner_name,
           COUNT(cc.id) as total,
-          AVG(cc.duration_seconds) as avg_duration,
+          MAX(cc.completed_at) as last_completed_at,
           COUNT(CASE WHEN cc.owner_status = 'validated' THEN 1 END) as validated,
           COUNT(CASE WHEN cc.owner_status = 'rejected' THEN 1 END) as rejected
         FROM cleaning_checklists cc
@@ -9776,7 +9776,7 @@ app.get('/api/cleaning/stats',
         SELECT 
           cc.property_id,
           COUNT(cc.id) as total,
-          AVG(cc.duration_seconds) as avg_duration
+          MAX(cc.completed_at) as last_completed_at
         FROM cleaning_checklists cc
         WHERE cc.user_id = $1 ${dateFilter}
         GROUP BY cc.property_id
@@ -9788,7 +9788,6 @@ app.get('/api/cleaning/stats',
         return {
           ...row,
           property_name: property?.name || property?.title || row.property_id,
-          avg_duration_min: row.avg_duration ? Math.round(row.avg_duration / 60) : null
         };
       });
 
@@ -9801,15 +9800,9 @@ app.get('/api/cleaning/stats',
           validated: parseInt(global.validated) || 0,
           pending: parseInt(global.pending) || 0,
           rejected: parseInt(global.rejected) || 0,
-          avgDurationMin: global.avg_duration ? Math.round(global.avg_duration / 60) : null,
-          minDurationMin: global.min_duration ? Math.round(global.min_duration / 60) : null,
-          maxDurationMin: global.max_duration ? Math.round(global.max_duration / 60) : null,
           validationRate: global.total_checklists > 0
             ? Math.round((global.validated / global.total_checklists) * 100) : 0,
-          byCleaner: cleanerStats.rows.map(r => ({
-            ...r,
-            avg_duration_min: r.avg_duration ? Math.round(r.avg_duration / 60) : null
-          })),
+          byCleaner: cleanerStats.rows,
           byProperty: enrichedPropertyStats
         }
       });
