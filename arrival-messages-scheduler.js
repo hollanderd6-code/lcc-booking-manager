@@ -188,7 +188,7 @@ async function processTodayArrivals(pool, io) {
       FROM conversations c
       LEFT JOIN properties p ON c.property_id = p.id
       WHERE DATE(c.reservation_start_date) = $1
-      AND c.onboarding_completed = TRUE
+      AND (c.onboarding_completed = TRUE OR c.guest_first_name IS NOT NULL)
       ORDER BY c.id`,
       [todayStr]
     );
