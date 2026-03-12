@@ -3553,20 +3553,40 @@ document.addEventListener('DOMContentLoaded', function() {
     if (count >= MAX) return;
     var div = document.createElement('div');
     div.className = 'qr-item';
-    div.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    div.style.cssText = 'display:flex;align-items:flex-start;gap:8px;';
+
     var badge = document.createElement('span');
-    badge.style.cssText = 'flex-shrink:0;width:22px;height:22px;background:#10B981;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;';
+    badge.style.cssText = 'flex-shrink:0;width:22px;height:22px;background:#10B981;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:10px;';
     badge.textContent = count + 1;
-    var input = document.createElement('input');
-    input.type = 'text'; input.className = 'qr-input'; input.maxLength = 200;
-    input.placeholder = "Ex : Voici vos codes d'accès...";
-    input.value = value || '';
-    input.style.cssText = 'flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;font-family:DM Sans,sans-serif;outline:none;min-width:0;';
-    input.addEventListener('focus', function() { this.style.borderColor='#10B981'; });
-    input.addEventListener('blur',  function() { this.style.borderColor='#d1d5db'; });
+
+    var fields = document.createElement('div');
+    fields.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;';
+
+    var titleVal = (value && typeof value === 'object') ? (value.title || '') : '';
+    var textVal  = (value && typeof value === 'object') ? (value.text  || '') : (value || '');
+
+    var titleInput = document.createElement('input');
+    titleInput.type = 'text'; titleInput.className = 'qr-title'; titleInput.maxLength = 50;
+    titleInput.placeholder = 'Titre affiché sur le bouton (ex: Code WiFi)';
+    titleInput.value = titleVal;
+    titleInput.style.cssText = 'padding:7px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:12px;font-weight:600;font-family:DM Sans,sans-serif;outline:none;background:#f9fafb;';
+    titleInput.addEventListener('focus', function() { this.style.borderColor='#10B981'; });
+    titleInput.addEventListener('blur',  function() { this.style.borderColor='#d1d5db'; });
+
+    var textInput = document.createElement('input');
+    textInput.type = 'text'; textInput.className = 'qr-input'; textInput.maxLength = 200;
+    textInput.placeholder = "Message envoyé (ex: Voici vos codes d'accès...)";
+    textInput.value = textVal;
+    textInput.style.cssText = 'padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;font-family:DM Sans,sans-serif;outline:none;';
+    textInput.addEventListener('focus', function() { this.style.borderColor='#10B981'; });
+    textInput.addEventListener('blur',  function() { this.style.borderColor='#d1d5db'; });
+
+    fields.appendChild(titleInput);
+    fields.appendChild(textInput);
+
     var del = document.createElement('button');
     del.type = 'button';
-    del.style.cssText = 'flex-shrink:0;width:30px;height:30px;border:none;background:#fee2e2;color:#dc2626;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;';
+    del.style.cssText = 'flex-shrink:0;width:30px;height:30px;border:none;background:#fee2e2;color:#dc2626;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:7px;';
     del.innerHTML = '<i class="fas fa-times"></i>';
     del.addEventListener('click', function() {
       div.remove();
@@ -3575,15 +3595,23 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       if (btn) btn.style.display = 'flex';
     });
-    div.appendChild(badge); div.appendChild(input); div.appendChild(del);
+
+    div.appendChild(badge); div.appendChild(fields); div.appendChild(del);
     list.appendChild(div);
     if (btn) btn.style.display = (count + 1) >= MAX ? 'none' : 'flex';
   };
 
   // --- Collecter les valeurs ---
   function collectReplies() {
-    return Array.from(document.querySelectorAll('#quickRepliesList .qr-input'))
-      .map(function(i) { return i.value.trim(); }).filter(Boolean);
+    return Array.from(document.querySelectorAll('#quickRepliesList .qr-item'))
+      .map(function(item) {
+        var title = item.querySelector('.qr-title');
+        var text  = item.querySelector('.qr-input');
+        var textVal  = text  ? text.value.trim()  : '';
+        var titleVal = title ? title.value.trim() : '';
+        if (!textVal) return null;
+        return { title: titleVal || textVal.slice(0, 30), text: textVal };
+      }).filter(Boolean);
   }
 
   // --- Sauvegarder via route dédiée ---
