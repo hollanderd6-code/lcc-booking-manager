@@ -58,9 +58,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
     
-    // Send on Enter
+    // Send on Ctrl+Enter or Shift+Enter, new line on Enter
     chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.shiftKey)) {
         e.preventDefault();
         sendMessageOwner();
       }
@@ -557,7 +557,30 @@ function appendMessage(message) {
   
   const bubble = document.createElement('div');
   bubble.className = 'chat-bubble';
-  bubble.textContent = message.message;
+
+  const stripeMatch = (message.message || '').match(/(https?:\/\/(?:checkout\.stripe\.com|tinyurl\.com)\/\S+)/);
+  if (stripeMatch) {
+    const url = stripeMatch[1];
+    const textBefore = (message.message || '').replace(url, '').trim();
+    if (textBefore) {
+      const textNode = document.createElement('div');
+      textNode.style.cssText = 'margin-bottom:8px;';
+      textNode.textContent = textBefore;
+      bubble.appendChild(textNode);
+    }
+    const card = document.createElement('a');
+    card.href = url;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+    card.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:12px;padding:10px 14px;text-decoration:none;color:inherit;';
+    card.innerHTML = '<span style="font-size:22px;">🔒</span>'
+      + '<div><div style="font-weight:700;font-size:13px;">Payer la caution</div>'
+      + '<div style="font-size:11px;opacity:0.75;margin-top:2px;">Cliquer pour payer en ligne</div></div>'
+      + '<span style="margin-left:auto;font-size:16px;">→</span>';
+    bubble.appendChild(card);
+  } else {
+    bubble.textContent = message.message;
+  }
   
   // Meta : heure + statut
   const meta = document.createElement('div');
@@ -1074,9 +1097,27 @@ async function loadQuickReplies(conversationId) {
       const btn = document.createElement('button');
       btn.className = 'qr-chip deposit';
       btn.innerHTML = '🔒 Envoyer lien caution';
-      btn.onclick = () => {
+      btn.onclick = async () => {
         const input = document.getElementById('chatInput');
-        if (input) { input.value = data.depositUrl; input.focus(); input.dispatchEvent(new Event('input')); }
+        if (!input) return;
+        btn.innerHTML = '⏳ Raccourcissement...';
+        btn.disabled = true;
+        try {
+          const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(data.depositUrl)}`);
+          const shortUrl = res.ok ? (await res.text()).trim() : data.depositUrl;
+          const current = input.value;
+          input.value = current ? current + ' ' + shortUrl : shortUrl;
+          input.focus();
+          input.dispatchEvent(new Event('input'));
+        } catch(e) {
+          const current = input.value;
+          input.value = current ? current + ' ' + data.depositUrl : data.depositUrl;
+          input.focus();
+          input.dispatchEvent(new Event('input'));
+        } finally {
+          btn.innerHTML = '🔒 Envoyer lien caution';
+          btn.disabled = false;
+        }
       };
       chips.push(btn);
     }
