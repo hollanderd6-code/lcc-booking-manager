@@ -2194,6 +2194,22 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             `, [session.payment_intent, paymentId, session.id]);
             
             console.log(`Paiement confirme: ${paymentId || session.id}`);
+            
+            // 🔔 Socket.io : actualiser deposits.html en temps réel
+            try {
+              const pmtSocket = await pool.query(
+                'SELECT user_id FROM payments WHERE id = $1 OR stripe_session_id = $2 LIMIT 1',
+                [paymentId, session.id]
+              );
+              if (pmtSocket.rows.length > 0) {
+                io.to(`user_${pmtSocket.rows[0].user_id}`).emit('payment:updated', {
+                  paymentId: paymentId || session.id,
+                  status: 'paid'
+                });
+              }
+            } catch (socketErr) {
+              console.warn('⚠️ Socket payment:updated failed:', socketErr.message);
+            }
 
             // 🔔 Notif sous-comptes : paiement reçu
             try {
