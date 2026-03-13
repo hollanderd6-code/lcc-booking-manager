@@ -8909,6 +8909,40 @@ const propertyName = property?.name || property?.title || property?.label || pro
   }
 });
 // POST - Soumettre une checklist complétée (avec timer + notification propriétaire)
+// Route upload photo ménage (upload immédiat vers Cloudinary pour éviter crash mémoire iOS)
+app.post('/api/cleaning/photo-upload', async (req, res) => {
+  try {
+    const { pinCode, dataUrl } = req.body;
+    if (!pinCode || !dataUrl) {
+      return res.status(400).json({ error: 'Données manquantes' });
+    }
+    // Vérifier le PIN
+    const cleanerResult = await pool.query(
+      'SELECT id FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
+      [pinCode]
+    );
+    if (cleanerResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Code PIN invalide' });
+    }
+    // Convertir base64 en buffer
+    const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const filename = `cleaning_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    // Upload vers Cloudinary dans le dossier cleaning
+    const url = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: 'lcc-cleaning', public_id: filename, resource_type: 'image' },
+        (error, result) => error ? reject(error) : resolve(result.secure_url)
+      );
+      require('stream').Readable.from(buffer).pipe(uploadStream);
+    });
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error('❌ Erreur upload photo ménage:', err);
+    res.status(500).json({ error: 'Erreur upload photo' });
+  }
+});
+
 app.post('/api/cleaning/checklist', async (req, res) => {
   try {
     const { pinCode, reservationKey, propertyId, tasks, photos, notes, duration, startedAt, completedAt } = req.body;
