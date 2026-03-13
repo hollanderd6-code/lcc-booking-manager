@@ -17886,6 +17886,11 @@ app.delete('/api/account/delete', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     console.log(`🗑️ Suppression compte demandée par user ${userId}`);
 
+    // Récupérer l'email avant suppression pour l'email de confirmation
+    const userRow = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [userId]);
+    const userEmail = userRow.rows[0]?.email;
+    const userName = userRow.rows[0]?.first_name || 'Utilisateur';
+
     await pool.query('DELETE FROM user_fcm_tokens WHERE user_id = $1', [userId]);
     await pool.query('DELETE FROM sub_account_permissions WHERE sub_account_id IN (SELECT id FROM sub_accounts WHERE parent_user_id = $1)', [userId]);
     await pool.query('DELETE FROM sub_account_properties WHERE sub_account_id IN (SELECT id FROM sub_accounts WHERE parent_user_id = $1)', [userId]);
@@ -17903,6 +17908,43 @@ app.delete('/api/account/delete', authenticateToken, async (req, res) => {
     await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
     console.log(`✅ Compte ${userId} supprimé`);
+
+    // Envoyer email de confirmation de suppression
+    if (userEmail) {
+      try {
+        await sendEmail({
+          from: `Boostinghost <${process.env.EMAIL_FROM}>`,
+          to: userEmail,
+          subject: 'Votre compte Boostinghost a été supprimé',
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px;">
+              <div style="text-align:center;margin-bottom:24px;">
+                <img src="https://www.boostinghost.fr/logo.png" alt="Boostinghost" style="height:40px;" onerror="this.style.display='none'"/>
+              </div>
+              <h2 style="color:#111827;margin:0 0 16px;">Compte supprimé</h2>
+              <p style="color:#6b7280;line-height:1.6;">Bonjour ${userName},</p>
+              <p style="color:#6b7280;line-height:1.6;">
+                Votre compte Boostinghost associé à l'adresse <strong>${userEmail}</strong> a bien été supprimé le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.
+              </p>
+              <p style="color:#6b7280;line-height:1.6;">
+                Toutes vos données ont été définitivement effacées de nos serveurs conformément à votre demande.
+              </p>
+              <p style="color:#6b7280;line-height:1.6;">
+                Si vous n'êtes pas à l'origine de cette action, contactez-nous immédiatement à <a href="mailto:support@boostinghost.fr" style="color:#1A7A5E;">support@boostinghost.fr</a>.
+              </p>
+              <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;"/>
+              <p style="color:#9ca3af;font-size:12px;text-align:center;">
+                Boostinghost — <a href="https://www.boostinghost.fr" style="color:#9ca3af;">www.boostinghost.fr</a>
+              </p>
+            </div>
+          `
+        });
+        console.log(`📧 Email confirmation suppression envoyé à ${userEmail}`);
+      } catch(emailErr) {
+        console.warn('⚠️ Email confirmation suppression échoué:', emailErr.message);
+      }
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error('❌ Erreur suppression compte:', err);
