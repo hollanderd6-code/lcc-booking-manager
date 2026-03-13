@@ -1454,6 +1454,28 @@ html[data-theme-v3="1"] .subscription-card {
   </div>
 </section>
 </div>
+
+<!-- Modal suppression compte -->
+<div id="deleteAccountModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card,white);border-radius:16px;padding:28px;max-width:380px;width:90%;margin:auto;">
+    <div style="font-size:18px;font-weight:700;color:#ef4444;margin-bottom:8px;">
+      <i class="fas fa-exclamation-triangle"></i> Supprimer mon compte
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;line-height:1.5;">
+      Cette action est <strong>irréversible</strong>. Toutes vos données seront définitivement supprimées.<br><br>
+      Pour confirmer, tapez <strong>SUPPRIMER</strong> ci-dessous :
+    </p>
+    <input id="deleteConfirmInput" type="text" placeholder="Tapez SUPPRIMER" style="width:100%;padding:10px;border:1.5px solid #ef4444;border-radius:8px;font-size:14px;margin-bottom:16px;box-sizing:border-box;"/>
+    <div style="display:flex;gap:10px;">
+      <button id="deleteAccountCancelBtn" type="button" style="flex:1;padding:10px;border:1.5px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;font-size:14px;">
+        Annuler
+      </button>
+      <button id="deleteAccountConfirmBtn" type="button" style="flex:1;padding:10px;border:none;border-radius:8px;background:#ef4444;color:white;cursor:pointer;font-size:14px;font-weight:600;" disabled>
+        Supprimer définitivement
+      </button>
+    </div>
+  </div>
+</div>
 <!-- Onglet : Paiements & Stripe -->
 <div class="tab-pane" data-tab="payments" id="tab-payments">
 <section class="card mb-lg">
@@ -3571,20 +3593,41 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const deleteBtn = document.getElementById('deleteAccountBtn');
-  if (!deleteBtn) return;
+  const modal = document.getElementById('deleteAccountModal');
+  const cancelBtn = document.getElementById('deleteAccountCancelBtn');
+  const confirmBtn = document.getElementById('deleteAccountConfirmBtn');
+  const confirmInput = document.getElementById('deleteConfirmInput');
+  if (!deleteBtn || !modal) return;
 
-  deleteBtn.addEventListener('click', async function() {
-    // Étape 1 : confirmation
-    const confirm1 = confirm('⚠️ Êtes-vous sûr de vouloir supprimer votre compte ?\n\nCette action est irréversible. Toutes vos données seront définitivement supprimées.');
-    if (!confirm1) return;
+  // Ouvrir la modal
+  deleteBtn.addEventListener('click', function() {
+    confirmInput.value = '';
+    confirmBtn.disabled = true;
+    modal.style.display = 'flex';
+  });
 
-    // Étape 2 : double confirmation
-    const confirm2 = confirm('🗑️ Dernière confirmation.\n\nTous vos logements, réservations, messages et données seront supprimés. Continuer ?');
-    if (!confirm2) return;
+  // Fermer la modal
+  cancelBtn.addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+
+  // Fermer en cliquant hors de la modal
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+
+  // Activer le bouton seulement si "SUPPRIMER" est tapé
+  confirmInput.addEventListener('input', function() {
+    confirmBtn.disabled = confirmInput.value.trim() !== 'SUPPRIMER';
+  });
+
+  // Confirmer la suppression
+  confirmBtn.addEventListener('click', async function() {
+    if (confirmInput.value.trim() !== 'SUPPRIMER') return;
 
     try {
-      deleteBtn.disabled = true;
-      deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Suppression en cours…';
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Suppression…';
 
       const token = localStorage.getItem('lcc_token');
       const res = await fetch('/api/account/delete', {
@@ -3595,19 +3638,17 @@ document.addEventListener('DOMContentLoaded', function() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Nettoyer le localStorage
         localStorage.clear();
-        alert('✅ Votre compte a été supprimé. Au revoir !');
+        modal.style.display = 'none';
         window.location.href = '/login.html';
       } else {
-        alert('❌ Erreur : ' + (data.error || 'Impossible de supprimer le compte'));
-        deleteBtn.disabled = false;
-        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Supprimer mon compte';
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = 'Supprimer définitivement';
+        confirmInput.style.borderColor = '#ef4444';
       }
     } catch(err) {
-      alert('❌ Erreur réseau. Veuillez réessayer.');
-      deleteBtn.disabled = false;
-      deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Supprimer mon compte';
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = 'Supprimer définitivement';
     }
   });
 });
