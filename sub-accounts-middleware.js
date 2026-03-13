@@ -18,7 +18,7 @@ function generateSubAccountToken(subAccountId) {
       type: 'sub_account'
     },
     secret,
-    { expiresIn: '7d' }
+    {}
   );
 }
 
