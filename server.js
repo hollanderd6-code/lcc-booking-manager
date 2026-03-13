@@ -4186,7 +4186,7 @@ async function loadDepositsFromDB() {
         stripe_session_id, stripe_payment_intent_id,
         checkout_url, status,
         authorized_at, captured_at, released_at, cancelled_at,
-        notes, metadata,
+        metadata,
         created_at, updated_at
       FROM deposits
       ORDER BY created_at DESC
