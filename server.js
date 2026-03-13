@@ -17878,6 +17878,38 @@ async function loadManualReservationsFromDB() {
     console.error('❌ Erreur chargement réservations manuelles:', error);
   }
 }
+// ============================================
+// SUPPRESSION DE COMPTE
+// ============================================
+app.delete('/api/account/delete', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log(`🗑️ Suppression compte demandée par user ${userId}`);
+
+    await pool.query('DELETE FROM user_fcm_tokens WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM sub_account_permissions WHERE sub_account_id IN (SELECT id FROM sub_accounts WHERE parent_user_id = $1)', [userId]);
+    await pool.query('DELETE FROM sub_account_properties WHERE sub_account_id IN (SELECT id FROM sub_accounts WHERE parent_user_id = $1)', [userId]);
+    await pool.query('DELETE FROM sub_accounts WHERE parent_user_id = $1', [userId]);
+    await pool.query('DELETE FROM cleaning_checklists WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM cleaners WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM deposits WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM payments WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE user_id = $1)', [userId]);
+    await pool.query('DELETE FROM conversations WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM reservations WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM properties WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM invoices WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM subscriptions WHERE user_id = $1', [userId]);
+    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+
+    console.log(`✅ Compte ${userId} supprimé`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Erreur suppression compte:', err);
+    res.status(500).json({ error: 'Erreur lors de la suppression du compte' });
+  }
+});
+
 server.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
