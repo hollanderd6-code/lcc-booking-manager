@@ -1576,7 +1576,7 @@ function updateProgress() {
   
   // Update submit button
   const allChecked = done === total && total > 0;
-  const hasEnoughPhotos = checklistPhotos.filter(p => !p.uploading).length >= 5;
+  const hasEnoughPhotos = checklistPhotos.length >= 5;
   const canSubmit = allChecked && hasEnoughPhotos;
   
   const btn = document.getElementById('submitBtn');
@@ -1600,46 +1600,13 @@ document.getElementById('photoInput').addEventListener('change', (e) => {
   const files = Array.from(e.target.files);
   files.forEach(file => {
     if (!file.type.startsWith('image/')) return;
-    
     const reader = new FileReader();
-    reader.onerror = () => showToast('Erreur lecture photo', 'error');
-    reader.onload = async (ev) => {
-      try {
-        // Compresser d'abord
-        compressImage(ev.target.result, 400, 0.3, async (compressed) => {
-          // Ajouter un placeholder pendant l'upload
-          const placeholderIdx = checklistPhotos.length;
-          checklistPhotos.push({ uploading: true, preview: compressed });
-          renderPhotosGrid();
-
-          try {
-            // Uploader immédiatement vers Cloudinary
-            const res = await fetch(`${API_URL}/api/cleaning/photo-upload`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ pinCode: currentPin, dataUrl: compressed })
-            });
-            const data = await res.json();
-            if (data.success && data.url) {
-              // Remplacer le placeholder par l'URL
-              checklistPhotos[placeholderIdx] = { url: data.url, preview: null };
-              showToast('Photo ajoutée ✓', 'success');
-            } else {
-              // Fallback : garder en base64 si upload échoue
-              checklistPhotos[placeholderIdx] = { url: compressed, preview: null };
-              console.warn('Upload Cloudinary échoué, fallback base64');
-            }
-          } catch(uploadErr) {
-            // Fallback base64 si pas de réseau
-            checklistPhotos[placeholderIdx] = { url: compressed, preview: null };
-            console.warn('Upload échoué, fallback base64:', uploadErr.message);
-          }
-          renderPhotosGrid();
-          updateProgress();
-        });
-      } catch(err) {
-        showToast('Erreur traitement photo', 'error');
-      }
+    reader.onload = (ev) => {
+      compressImage(ev.target.result, 800, 0.6, (compressed) => {
+        checklistPhotos.push(compressed);
+        renderPhotosGrid();
+        updateProgress();
+      });
     };
     reader.readAsDataURL(file);
   });
@@ -1675,27 +1642,20 @@ function renderPhotosGrid() {
   const grid = document.getElementById('photosGrid');
   if (!grid) return;
   
-  grid.innerHTML = checklistPhotos.map((photo, idx) => {
-    if (photo.uploading) {
-      return `<div class="photo-thumb" style="background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:20px;">
-        <div style="text-align:center"><div class="spinner" style="width:20px;height:20px;margin:0 auto 4px"></div><div style="font-size:10px;color:#6b7280">Upload…</div></div>
-      </div>`;
-    }
-    const src = photo.url || photo;
-    return `<div class="photo-thumb">
-      <img src="${src}" alt="Photo ${idx + 1}" loading="lazy"/>
+  grid.innerHTML = checklistPhotos.map((photo, idx) => `
+    <div class="photo-thumb">
+      <img src="${photo}" alt="Photo ${idx + 1}" loading="lazy"/>
       <button class="photo-thumb-delete" onclick="event.stopPropagation(); removePhoto(${idx})">
         <i class="fas fa-times"></i>
       </button>
-    </div>`;
-  }).join('');
+    </div>
+  `).join('');
   
   // Update counter
   const counter = document.getElementById('photoCounter');
   if (counter) {
-    const uploadedCount = checklistPhotos.filter(p => !p.uploading).length;
-    counter.textContent = `${uploadedCount}/5 min.`;
-    counter.className = `photo-counter ${uploadedCount >= 5 ? 'enough' : 'not-enough'}`;
+    counter.textContent = `${checklistPhotos.length}/5 min.`;
+    counter.className = `photo-counter ${checklistPhotos.length >= 5 ? 'enough' : 'not-enough'}`;
   }
 }
 
@@ -1716,7 +1676,7 @@ function updateTimerDisplay() {}
 // ===== SUBMIT =====
 async function handleSubmit() {
   const allChecked = checklistTasks.every(t => t.checked);
-  const hasEnoughPhotos = checklistPhotos.filter(p => !p.uploading).length >= 5;
+  const hasEnoughPhotos = checklistPhotos.length >= 5;
   
   if (!allChecked) {
     showToast('Veuillez cocher toutes les tâches', 'error');
@@ -1745,7 +1705,7 @@ async function handleSubmit() {
         room: t.room,
         checked: t.checked
       })),
-      photos: checklistPhotos.map(p => p.url || p).filter(p => p && !p.uploading),
+      photos: checklistPhotos,
       notes: notes,
       duration: timerSeconds,
       startedAt: startedAt?.toISOString(),
