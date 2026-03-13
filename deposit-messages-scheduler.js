@@ -35,10 +35,10 @@ async function getConversationFromReservation(pool, reservationUid) {
 
     const reservation = reservationResult.rows[0];
 
-    // Méthode 1 : Chercher par reservation_id
+    // Méthode 1 : Chercher par reservation_uid
     const conversationResult = await pool.query(
-      'SELECT id FROM conversations WHERE reservation_id = $1',
-      [reservation.id]
+      'SELECT id FROM conversations WHERE reservation_uid = $1',
+      [reservationUid]
     );
 
     if (conversationResult.rows[0]?.id) {
