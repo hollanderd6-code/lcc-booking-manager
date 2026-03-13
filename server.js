@@ -2280,23 +2280,6 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             
             console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
             
-            // 🔔 Notifier en temps réel via Socket.io pour actualiser deposits.html
-            try {
-              const depSocketRow = await pool.query(
-                'SELECT user_id FROM deposits WHERE id = $1 OR stripe_session_id = $2 LIMIT 1',
-                [depositId, session.id]
-              );
-              if (depSocketRow.rows.length > 0) {
-                const depUserId = depSocketRow.rows[0].user_id;
-                io.to(`user_${depUserId}`).emit('deposit:updated', {
-                  depositId: depositId || session.metadata?.deposit_id,
-                  status: depositStatus
-                });
-              }
-            } catch (socketErr) {
-              console.warn('⚠️ Socket deposit:updated failed:', socketErr.message);
-            }
-            
             // 🔔 Notif sous-comptes : caution payée
             try {
               const depRow = await pool.query(
@@ -4560,18 +4543,25 @@ async function captureDeposit(depositId, amountCents = null) {
       throw new Error('Pas de Payment Intent associé - caution manuelle non débit possible');
     }
 
+    // Récupérer le compte Connect du propriétaire
+    const ownerRow = await pool.query('SELECT stripe_account_id FROM users WHERE id = $1', [depositData.user_id]);
+    const stripeAccount = ownerRow.rows[0]?.stripe_account_id || null;
+    const stripeOpts = stripeAccount ? { stripeAccount } : undefined;
+    console.log(`💳 Capture caution sur compte: ${stripeAccount || 'plateforme'}`);
+
     // Vérifier l'état réel du PI depuis Stripe avant de capturer
-    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
+    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, {}, stripeOpts);
     console.log(`PI Stripe status avant capture: ${pi.status}`);
     
     if (pi.status !== 'requires_capture') {
       throw new Error(`Impossible de débiter : la caution est dans l'état "${pi.status}" côté Stripe (expiré ou déjà traité)`);
     }
 
-    // Capturer via Stripe (compte plateforme - pas de stripeAccount)
+    // Capturer via Stripe
     const capture = await stripe.paymentIntents.capture(
       depositData.stripe_payment_intent_id,
-      amountCents ? { amount_to_capture: amountCents } : {}
+      amountCents ? { amount_to_capture: amountCents } : {},
+      stripeOpts
     );
 
     // Mettre à jour en base
@@ -4602,20 +4592,26 @@ async function releaseDeposit(depositId) {
   if (depositData.stripe_payment_intent_id) {
     console.log(`Liberation caution Stripe ${depositId} (status: ${depositData.status})`);
     
+    // Récupérer le compte Connect du propriétaire
+    const ownerRowR = await pool.query('SELECT stripe_account_id FROM users WHERE id = $1', [depositData.user_id]);
+    const stripeAccountR = ownerRowR.rows[0]?.stripe_account_id || null;
+    const stripeOptsR = stripeAccountR ? { stripeAccount: stripeAccountR } : undefined;
+    console.log(`🔓 Release caution sur compte: ${stripeAccountR || 'plateforme'}`);
+
     try {
       // Récupérer l'état réel du PI depuis Stripe
-      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
+      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, {}, stripeOptsR);
       console.log(`PI Stripe status: ${pi.status}`);
       
       if (pi.status === 'requires_capture') {
         // Autorisation active → annuler
         console.log(`Annulation PI ${pi.id}`);
-        await stripe.paymentIntents.cancel(pi.id);
+        await stripe.paymentIntents.cancel(pi.id, {}, stripeOptsR);
         
       } else if (pi.status === 'succeeded') {
         // Déjà capturé → rembourser
         console.log(`Remboursement PI ${pi.id}`);
-        await stripe.refunds.create({ payment_intent: pi.id });
+        await stripe.refunds.create({ payment_intent: pi.id }, stripeOptsR);
         
       } else {
         // PI déjà canceled, expired, etc. → rien à faire côté Stripe
