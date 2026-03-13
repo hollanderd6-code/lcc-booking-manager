@@ -3577,8 +3577,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   socket.on('deposit:updated', (data) => {
     console.log('💰 Caution mise à jour via Socket:', data);
-    // Recharger les données sans recharger la page
     loadReservationsWithDeposits();
+  });
+
+  socket.on('payment:updated', (data) => {
+    console.log('💳 Paiement mis à jour via Socket:', data);
     loadPayments && loadPayments();
   });
 })();
