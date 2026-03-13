@@ -1537,10 +1537,12 @@ async function shouldSendNotification(userId, prefKey) {
 // requiredPermission : colonne permission (ex: 'can_view_calendar')
 // notifColumn (optionnel) : colonne notif_sub_* à vérifier en plus
 // ============================================================
-async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn) {
+async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn, propertyId) {
   data = data || {};
+  // Extraire propertyId depuis data si pas passé directement
+  if (!propertyId && data.propertyId) propertyId = data.propertyId;
   try {
-    console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn);
+    console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn, '| propertyId:', propertyId);
 
     let q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
        FROM user_fcm_tokens uft
@@ -1552,6 +1554,15 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
          AND uft.fcm_token IS NOT NULL
          AND sap.` + requiredPermission + ` = TRUE`;
     if (notifColumn) q += ` AND sap.` + notifColumn + ` = TRUE`;
+    // Filtrer par logement si propertyId fourni
+    // Si le sous-compte a des logements assignés, vérifier que propertyId en fait partie
+    // Si aucun logement assigné (accès global), on envoie quand même
+    if (propertyId) {
+      q += ` AND (
+        NOT EXISTS (SELECT 1 FROM sub_account_properties WHERE sub_account_id = sa.id)
+        OR EXISTS (SELECT 1 FROM sub_account_properties WHERE sub_account_id = sa.id AND property_id = '` + propertyId + `')
+      )`;
+    }
     const result = await pool.query(q, [parentUserId]);
     console.log('🔍 [SubNotif] rows found:', result.rows.length);
 
@@ -2194,22 +2205,6 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             `, [session.payment_intent, paymentId, session.id]);
             
             console.log(`Paiement confirme: ${paymentId || session.id}`);
-            
-            // 🔔 Socket.io : actualiser deposits.html en temps réel
-            try {
-              const pmtSocket = await pool.query(
-                'SELECT user_id FROM payments WHERE id = $1 OR stripe_session_id = $2 LIMIT 1',
-                [paymentId, session.id]
-              );
-              if (pmtSocket.rows.length > 0) {
-                io.to(`user_${pmtSocket.rows[0].user_id}`).emit('payment:updated', {
-                  paymentId: paymentId || session.id,
-                  status: 'paid'
-                });
-              }
-            } catch (socketErr) {
-              console.warn('⚠️ Socket payment:updated failed:', socketErr.message);
-            }
 
             // 🔔 Notif sous-comptes : paiement reçu
             try {
@@ -4202,7 +4197,7 @@ async function loadDepositsFromDB() {
         stripe_session_id, stripe_payment_intent_id,
         checkout_url, status,
         authorized_at, captured_at, released_at, cancelled_at,
-        metadata,
+        notes, metadata,
         created_at, updated_at
       FROM deposits
       ORDER BY created_at DESC
@@ -4559,25 +4554,18 @@ async function captureDeposit(depositId, amountCents = null) {
       throw new Error('Pas de Payment Intent associé - caution manuelle non débit possible');
     }
 
-    // Récupérer le compte Connect du propriétaire
-    const ownerRow = await pool.query('SELECT stripe_account_id FROM users WHERE id = $1', [depositData.user_id]);
-    const stripeAccount = ownerRow.rows[0]?.stripe_account_id || null;
-    const stripeOpts = stripeAccount ? { stripeAccount } : undefined;
-    console.log(`💳 Capture caution sur compte: ${stripeAccount || 'plateforme'}`);
-
     // Vérifier l'état réel du PI depuis Stripe avant de capturer
-    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, {}, stripeOpts);
+    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
     console.log(`PI Stripe status avant capture: ${pi.status}`);
     
     if (pi.status !== 'requires_capture') {
       throw new Error(`Impossible de débiter : la caution est dans l'état "${pi.status}" côté Stripe (expiré ou déjà traité)`);
     }
 
-    // Capturer via Stripe
+    // Capturer via Stripe (compte plateforme - pas de stripeAccount)
     const capture = await stripe.paymentIntents.capture(
       depositData.stripe_payment_intent_id,
-      amountCents ? { amount_to_capture: amountCents } : {},
-      stripeOpts
+      amountCents ? { amount_to_capture: amountCents } : {}
     );
 
     // Mettre à jour en base
@@ -4608,26 +4596,20 @@ async function releaseDeposit(depositId) {
   if (depositData.stripe_payment_intent_id) {
     console.log(`Liberation caution Stripe ${depositId} (status: ${depositData.status})`);
     
-    // Récupérer le compte Connect du propriétaire
-    const ownerRowR = await pool.query('SELECT stripe_account_id FROM users WHERE id = $1', [depositData.user_id]);
-    const stripeAccountR = ownerRowR.rows[0]?.stripe_account_id || null;
-    const stripeOptsR = stripeAccountR ? { stripeAccount: stripeAccountR } : undefined;
-    console.log(`🔓 Release caution sur compte: ${stripeAccountR || 'plateforme'}`);
-
     try {
       // Récupérer l'état réel du PI depuis Stripe
-      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, {}, stripeOptsR);
+      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
       console.log(`PI Stripe status: ${pi.status}`);
       
       if (pi.status === 'requires_capture') {
         // Autorisation active → annuler
         console.log(`Annulation PI ${pi.id}`);
-        await stripe.paymentIntents.cancel(pi.id, {}, stripeOptsR);
+        await stripe.paymentIntents.cancel(pi.id);
         
       } else if (pi.status === 'succeeded') {
         // Déjà capturé → rembourser
         console.log(`Remboursement PI ${pi.id}`);
-        await stripe.refunds.create({ payment_intent: pi.id }, stripeOptsR);
+        await stripe.refunds.create({ payment_intent: pi.id });
         
       } else {
         // PI déjà canceled, expired, etc. → rien à faire côté Stripe
