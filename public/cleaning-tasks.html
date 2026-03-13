@@ -1515,7 +1515,7 @@ function renderChecklistBody() {
       </div>
       <div class="photos-section-subtitle">Prenez au moins 5 photos des pièces nettoyées</div>
       <div class="photos-grid" id="photosGrid"></div>
-      <button class="photo-add-btn" onclick="document.getElementById('photoInput').click()">
+      <button class="photo-add-btn" onclick="setTimeout(() => document.getElementById('photoInput').click(), 100)">
         <i class="fas fa-camera"></i> Prendre une photo
       </button>
     </div>
@@ -1601,16 +1601,26 @@ document.getElementById('photoInput').addEventListener('change', (e) => {
   files.forEach(file => {
     if (!file.type.startsWith('image/')) return;
     
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      // Compress image
-      compressImage(ev.target.result, 800, 0.6, (compressed) => {
-        checklistPhotos.push(compressed);
-        renderPhotosGrid();
-        updateProgress();
-      });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const reader = new FileReader();
+      reader.onerror = () => showToast('Erreur lecture photo', 'error');
+      reader.onload = (ev) => {
+        try {
+          compressImage(ev.target.result, 600, 0.5, (compressed) => {
+            checklistPhotos.push(compressed);
+            renderPhotosGrid();
+            updateProgress();
+          });
+        } catch(compErr) {
+          console.error('Erreur compression:', compErr);
+          showToast('Erreur traitement photo', 'error');
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch(err) {
+      console.error('Erreur lecture fichier:', err);
+      showToast('Erreur lecture photo', 'error');
+    }
   });
   
   // Reset input
