@@ -1436,45 +1436,6 @@ html[data-theme-v3="1"] .subscription-card {
 </form>
 </div>
 </section>
-
-<!-- Danger zone -->
-<section class="card mb-lg" style="border: 1.5px solid #ef444440;">
-  <div class="card-header">
-    <div class="card-title" style="color:#ef4444;">
-      <i class="fas fa-exclamation-triangle"></i> Suppression du compte
-    </div>
-  </div>
-  <div class="card-body">
-    <p style="color:var(--text-secondary);font-size:13px;margin:0 0 16px;">
-      La suppression de votre compte est définitive. Toutes vos données (logements, réservations, messages, factures) seront supprimées et ne pourront pas être récupérées.
-    </p>
-    <button class="btn" id="deleteAccountBtn" type="button" style="background:#ef4444;color:white;border:none;">
-      <i class="fas fa-trash-alt"></i> Supprimer mon compte
-    </button>
-  </div>
-</section>
-</div>
-
-<!-- Modal suppression compte -->
-<div id="deleteAccountModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;align-items:center;justify-content:center;">
-  <div style="background:var(--bg-card,white);border-radius:16px;padding:28px;max-width:380px;width:90%;margin:auto;">
-    <div style="font-size:18px;font-weight:700;color:#ef4444;margin-bottom:8px;">
-      <i class="fas fa-exclamation-triangle"></i> Supprimer mon compte
-    </div>
-    <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;line-height:1.5;">
-      Cette action est <strong>irréversible</strong>. Toutes vos données seront définitivement supprimées.<br><br>
-      Pour confirmer, tapez <strong>SUPPRIMER</strong> ci-dessous :
-    </p>
-    <input id="deleteConfirmInput" type="text" placeholder="Tapez SUPPRIMER" style="width:100%;padding:10px;border:1.5px solid #ef4444;border-radius:8px;font-size:14px;margin-bottom:16px;box-sizing:border-box;"/>
-    <div style="display:flex;gap:10px;">
-      <button id="deleteAccountCancelBtn" type="button" style="flex:1;padding:10px;border:1.5px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;font-size:14px;">
-        Annuler
-      </button>
-      <button id="deleteAccountConfirmBtn" type="button" style="flex:1;padding:10px;border:none;border-radius:8px;background:#ef4444;color:white;cursor:pointer;font-size:14px;font-weight:600;" disabled>
-        Supprimer définitivement
-      </button>
-    </div>
-  </div>
 </div>
 <!-- Onglet : Paiements & Stripe -->
 <div class="tab-pane" data-tab="payments" id="tab-payments">
@@ -2359,10 +2320,14 @@ if (logoInput && logoPreview) {
               </div>
             </div>
             <div class="subscription-actions" style="margin-top: 20px;">
-              <a href="/pricing.html" class="btn btn-primary">
-                <i class="fas fa-arrow-right"></i>
-                Choisir un plan
-              </a>
+              ${(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream)) ? `
+                <p style="font-size:13px;color:var(--text-secondary);">Pour choisir un plan, rendez-vous sur <strong>boostinghost.fr</strong> depuis votre navigateur.</p>
+              ` : `
+                <a href="/pricing.html" class="btn btn-primary">
+                  <i class="fas fa-arrow-right"></i>
+                  Choisir un plan
+                </a>
+              `}
             </div>
           `;
           return;
@@ -2405,16 +2370,28 @@ if (logoInput && logoPreview) {
           `;
         }
 
+        const isIOS = window.Capacitor?.isNativePlatform?.() ||
+                      window.location.protocol === 'capacitor:' ||
+                      (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream);
+
         let actionsHTML = '';
         if (data.status === 'trial') {
-          actionsHTML = `
+          actionsHTML = isIOS ? `
+            <p style="font-size:13px;color:var(--text-secondary);margin-top:8px;">
+              Pour choisir un plan, rendez-vous sur <strong>boostinghost.fr</strong> depuis votre navigateur.
+            </p>
+          ` : `
             <a href="/pricing.html" class="btn btn-primary">
               <i class="fas fa-arrow-right"></i>
               Choisir un plan
             </a>
           `;
         } else if (data.status === 'active') {
-          actionsHTML = `
+          actionsHTML = isIOS ? `
+            <p style="font-size:13px;color:var(--text-secondary);margin-top:8px;">
+              Pour gérer votre abonnement, rendez-vous sur <strong>boostinghost.fr</strong> depuis votre navigateur.
+            </p>
+          ` : `
             <button class="btn btn-ghost" onclick="openStripePortal()">
               <i class="fas fa-cog"></i>
               Gérer mon abonnement
@@ -2427,7 +2404,11 @@ if (logoInput && logoPreview) {
             ` : ''}
           `;
         } else if (data.status === 'expired' || data.status === 'canceled') {
-          actionsHTML = `
+          actionsHTML = isIOS ? `
+            <p style="font-size:13px;color:var(--text-secondary);margin-top:8px;">
+              Pour réactiver votre abonnement, rendez-vous sur <strong>boostinghost.fr</strong> depuis votre navigateur.
+            </p>
+          ` : `
             <a href="/pricing.html" class="btn btn-primary">
               <i class="fas fa-redo"></i>
               Réactiver mon abonnement
@@ -2923,9 +2904,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/messages-badge-dynamic.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
 <style id="settings-account-mobile-master">
 @media (max-width: 1366px) {
@@ -3589,68 +3570,5 @@ document.addEventListener('DOMContentLoaded', function() {
   // listeners gérés par le handler principal
 })();
 </script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const deleteBtn = document.getElementById('deleteAccountBtn');
-  const modal = document.getElementById('deleteAccountModal');
-  const cancelBtn = document.getElementById('deleteAccountCancelBtn');
-  const confirmBtn = document.getElementById('deleteAccountConfirmBtn');
-  const confirmInput = document.getElementById('deleteConfirmInput');
-  if (!deleteBtn || !modal) return;
-
-  // Ouvrir la modal
-  deleteBtn.addEventListener('click', function() {
-    confirmInput.value = '';
-    confirmBtn.disabled = true;
-    modal.style.display = 'flex';
-  });
-
-  // Fermer la modal
-  cancelBtn.addEventListener('click', function() {
-    modal.style.display = 'none';
-  });
-
-  // Fermer en cliquant hors de la modal
-  modal.addEventListener('click', function(e) {
-    if (e.target === modal) modal.style.display = 'none';
-  });
-
-  // Activer le bouton seulement si "SUPPRIMER" est tapé
-  confirmInput.addEventListener('input', function() {
-    confirmBtn.disabled = confirmInput.value.trim() !== 'SUPPRIMER';
-  });
-
-  // Confirmer la suppression
-  confirmBtn.addEventListener('click', async function() {
-    if (confirmInput.value.trim() !== 'SUPPRIMER') return;
-
-    try {
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Suppression…';
-
-      const token = localStorage.getItem('lcc_token');
-      const res = await fetch('/api/account/delete', {
-        method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        localStorage.clear();
-        modal.style.display = 'none';
-        window.location.href = '/login.html';
-      } else {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = 'Supprimer définitivement';
-        confirmInput.style.borderColor = '#ef4444';
-      }
-    } catch(err) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = 'Supprimer définitivement';
-    }
-  });
-});
-</script>
 </body>
+</html>
