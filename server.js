@@ -2280,6 +2280,23 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             
             console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
             
+            // 🔔 Notifier en temps réel via Socket.io pour actualiser deposits.html
+            try {
+              const depSocketRow = await pool.query(
+                'SELECT user_id FROM deposits WHERE id = $1 OR stripe_session_id = $2 LIMIT 1',
+                [depositId, session.id]
+              );
+              if (depSocketRow.rows.length > 0) {
+                const depUserId = depSocketRow.rows[0].user_id;
+                io.to(`user_${depUserId}`).emit('deposit:updated', {
+                  depositId: depositId || session.metadata?.deposit_id,
+                  status: depositStatus
+                });
+              }
+            } catch (socketErr) {
+              console.warn('⚠️ Socket deposit:updated failed:', socketErr.message);
+            }
+            
             // 🔔 Notif sous-comptes : caution payée
             try {
               const depRow = await pool.query(
