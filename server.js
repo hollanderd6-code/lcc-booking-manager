@@ -11723,7 +11723,8 @@ app.put('/api/deposits/:depositId',
       payment_method_types: ['card'],
       line_items: [{ price_data: { currency: 'eur', product_data: { name: `Caution séjour`, description: `Caution modifiée – ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
       payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid } },
-      metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid, user_id: String(userId) },
+      // ⚠️ Pas de user_id pour éviter le routing Connect
+      metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid },
       success_url: `${appUrl}/caution-success.html?depositId=${existing.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${existing.id}`
     });
