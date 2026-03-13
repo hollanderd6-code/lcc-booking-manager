@@ -2268,13 +2268,14 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
               WHERE id = $3 OR stripe_session_id = $4
             `;
             
-            await pool.query(updateQuery, [depositStatus, session.payment_intent, depositId, session.id]);
+            const updateResult = await pool.query(updateQuery, [depositStatus, session.payment_intent, depositId, session.id]);
+            console.log(`🔄 UPDATE deposits: ${updateResult.rowCount} ligne(s) modifiée(s) (depositId=${depositId}, sessionId=${session.id})`);
             
             // Mettre à jour les timestamps séparément pour éviter les conflits de type
             if (depositStatus === 'authorized') {
-              await pool.query(`UPDATE deposits SET authorized_at = NOW() WHERE id = $1`, [depositId]);
+              await pool.query(`UPDATE deposits SET authorized_at = NOW() WHERE id = $1 OR stripe_session_id = $2`, [depositId, session.id]);
             } else if (depositStatus === 'captured') {
-              await pool.query(`UPDATE deposits SET captured_at = NOW() WHERE id = $1`, [depositId]);
+              await pool.query(`UPDATE deposits SET captured_at = NOW() WHERE id = $1 OR stripe_session_id = $2`, [depositId, session.id]);
             }
             
             console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
@@ -11723,8 +11724,7 @@ app.put('/api/deposits/:depositId',
       payment_method_types: ['card'],
       line_items: [{ price_data: { currency: 'eur', product_data: { name: `Caution séjour`, description: `Caution modifiée – ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
       payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid } },
-      // ⚠️ Pas de user_id pour éviter le routing Connect
-      metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid },
+      metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid, user_id: String(userId) },
       success_url: `${appUrl}/caution-success.html?depositId=${existing.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${existing.id}`
     });
