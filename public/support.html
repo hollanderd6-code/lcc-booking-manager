@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support – Boostinghost</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #1A7A5E;
+      --primary-mid: #059669;
+      --primary-light: #10b981;
+      --bg: #ffffff;
+      --bg-secondary: #f8fafb;
+      --bg-card: #ffffff;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 1px 4px rgba(0,0,0,0.07);
+      --radius: 14px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--primary);
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: white;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+    }
+    .logo img { height: 32px; }
+    .header-cta {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .header-cta:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, #1A7A5E 0%, #059669 60%, #10b981 100%);
+      padding: 64px 24px 80px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      top: -200px; right: -100px;
+      pointer-events: none;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    .hero p {
+      font-size: 17px;
+      opacity: 0.9;
+      max-width: 500px;
+      margin: 0 auto 32px;
+      line-height: 1.6;
+    }
+    .hero-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 50px;
+      padding: 12px 24px;
+      color: white;
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s;
+    }
+    .hero-email:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── MAIN ── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── CONTACT CARDS ── */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 56px;
+    }
+    .contact-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .contact-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); transform: translateY(-2px); }
+    .contact-card .icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      color: white;
+      font-size: 20px;
+    }
+    .contact-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .contact-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px; }
+    .contact-card a {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .contact-card a:hover { background: var(--primary-mid); }
+
+    /* ── FAQ ── */
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+    .section-sub {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .faq { display: flex; flex-direction: column; gap: 10px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--bg-card);
+    }
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 20px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      user-select: none;
+      gap: 12px;
+    }
+    .faq-q:hover { background: var(--bg-secondary); }
+    .faq-q .chevron {
+      color: var(--primary-mid);
+      font-size: 13px;
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-q .chevron { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 0 20px 18px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 28px 24px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    footer a { color: var(--primary-mid); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .hero { padding: 48px 16px 64px; }
+      main { padding: 32px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <a class="logo" href="https://www.boostinghost.fr">
+      <img src="/img/logo-white.png" alt="Boostinghost" onerror="this.style.display='none'"/>
+      Boostinghost
+    </a>
+    <a class="header-cta" href="/app.html">Mon compte</a>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Centre d'aide</h1>
+    <p>Besoin d'aide ? Notre équipe est disponible pour vous accompagner dans l'utilisation de Boostinghost.</p>
+    <a class="hero-email" href="mailto:contact@boostinghost.fr">
+      <i class="fas fa-envelope"></i>
+      contact@boostinghost.fr
+    </a>
+  </section>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- CONTACT CARDS -->
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="icon"><i class="fas fa-envelope"></i></div>
+        <h3>Email</h3>
+        <p>Réponse sous 24h ouvrées. Idéal pour les demandes détaillées.</p>
+        <a href="mailto:contact@boostinghost.fr">Envoyer un email</a>
+      </div>
+      <div class="contact-card">
+        <div class="icon"><i class="fas fa-book-open"></i></div>
+        <h3>Documentation</h3>
+        <p>Guides et tutoriels pour prendre en main toutes les fonctionnalités.</p>
+        <a href="/aide.html">Voir les guides</a>
+      </div>
+      <div class="contact-card">
+        <div class="icon"><i class="fas fa-user-circle"></i></div>
+        <h3>Espace client</h3>
+        <p>Accédez à votre tableau de bord et gérez vos logements.</p>
+        <a href="/app.html">Mon espace</a>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="section-title">Questions fréquentes</div>
+    <div class="section-sub">Trouvez rapidement une réponse à vos questions.</div>
+
+    <div class="faq">
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggle(this)">
+          Comment créer mon compte Boostinghost ?
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="faq-a">
+          Rendez-vous sur <a href="/register.html" style="color:var(--primary-mid)">boostinghost.fr/register</a> et remplissez le formulaire d'inscription. Vous recevrez un email de confirmation pour activer votre compte.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggle(this)">
+          Comment connecter mes plateformes (Airbnb, Booking…) ?
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="faq-a">
+          Dans votre espace client, accédez à <strong>Paramètres → Intégrations</strong>. Suivez les instructions pour lier votre compte Airbnb, Booking.com ou Abritel. L'importation des réservations se fait automatiquement.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggle(this)">
+          Comment fonctionne la gestion des cautions ?
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="faq-a">
+          Boostinghost vous permet d'envoyer des liens de paiement de caution à vos voyageurs via Stripe. La caution est pré-autorisée sur la carte et libérée automatiquement après votre confirmation.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggle(this)">
+          Comment supprimer mon compte ?
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="faq-a">
+          Rendez-vous dans <strong>Paramètres → Mon compte → Supprimer mon compte</strong>. La suppression est définitive et irréversible. Pour toute question, contactez-nous à <a href="mailto:contact@boostinghost.fr" style="color:var(--primary-mid)">contact@boostinghost.fr</a> avant de procéder.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggle(this)">
+          L'application mobile est-elle disponible ?
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="faq-a">
+          Oui, l'application Boostinghost est disponible sur <strong>iOS (App Store)</strong> et <strong>Android (Google Play)</strong>. Elle vous permet de gérer vos logements, messages et réservations depuis votre smartphone.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggle(this)">
+          Comment modifier ou annuler mon abonnement ?
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="faq-a">
+          Vous pouvez gérer votre abonnement depuis <strong>Paramètres → Abonnement</strong>. Pour toute demande de remboursement ou annulation urgente, écrivez-nous à <a href="mailto:contact@boostinghost.fr" style="color:var(--primary-mid)">contact@boostinghost.fr</a>.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggle(this)">
+          Je n'arrive pas à me connecter à mon compte.
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="faq-a">
+          Vérifiez votre email et mot de passe. Si vous avez oublié votre mot de passe, utilisez la fonction <strong>Mot de passe oublié</strong> sur la page de connexion. Si le problème persiste, contactez-nous à <a href="mailto:contact@boostinghost.fr" style="color:var(--primary-mid)">contact@boostinghost.fr</a>.
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2025 Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a> · <a href="/privacy.html">Confidentialité</a> · <a href="/cgu.html">CGU</a></p>
+  </footer>
+
+  <script>
+    function toggle(el) {
+      const item = el.closest('.faq-item');
+      // Ferme les autres
+      document.querySelectorAll('.faq-item.open').forEach(i => { if (i !== item) i.classList.remove('open'); });
+      item.classList.toggle('open');
+    }
+  </script>
+
+</body>
+</html>
