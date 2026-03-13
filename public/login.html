@@ -113,7 +113,7 @@
         </button>
       </div>
 
-      <div class="auth-footer-text">
+      <div class="auth-footer-text" id="register-link-wrapper">
         Pas encore de compte ? <a href="/register.html" class="auth-link">Créer un compte</a>
       </div>
     </div>
@@ -1003,5 +1003,15 @@ html[data-theme-v3="1"] #forgotPasswordModal input[type=email] {
   </script>
   
   <script type="module" src="/js/push-notifications-handler.js"></script>
+  <script>
+    // Masquer l'inscription sur iOS (App Store)
+    const isIOS = window.Capacitor?.isNativePlatform?.() ||
+                  window.location.protocol === 'capacitor:' ||
+                  (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream);
+    if (isIOS) {
+      const el = document.getElementById('register-link-wrapper');
+      if (el) el.style.display = 'none';
+    }
+  </script>
 </body>
 </html>
