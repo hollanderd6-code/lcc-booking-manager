@@ -35,17 +35,7 @@ async function getConversationFromReservation(pool, reservationUid) {
 
     const reservation = reservationResult.rows[0];
 
-    // Méthode 1 : Chercher par reservation_uid
-    const conversationResult = await pool.query(
-      'SELECT id FROM conversations WHERE reservation_uid = $1',
-      [reservationUid]
-    );
-
-    if (conversationResult.rows[0]?.id) {
-      return conversationResult.rows[0].id;
-    }
-
-    // Méthode 2 (fallback) : Chercher par property_id + date d'arrivée
+    // Chercher par property_id + date d'arrivée (conversations n'a pas de colonne reservation_uid)
     const fallbackResult = await pool.query(
       `SELECT id FROM conversations 
        WHERE property_id = $1 
