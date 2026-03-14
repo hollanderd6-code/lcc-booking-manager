@@ -80,6 +80,9 @@ function getSidebarHTML() {
       <a class="nav-item" data-page="welcome" href="/welcome.html">
         <i class="fas fa-book"></i><span>Livret d'accueil</span>
       </a>
+      <a class="nav-item" data-page="contrat" href="/contrat.html">
+        <i class="fas fa-file-contract"></i><span>Contrats</span>
+      </a>
       ` : ''}
       ${hasPermission('can_view_cleaning') ? `
       <a class="nav-item" data-page="cleaning" href="/cleaning.html">
