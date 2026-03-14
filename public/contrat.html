@@ -77,6 +77,20 @@ html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
   margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
 }
+/* Masque le contenu centré qui déborde côté bouton retour */
+html[data-theme-v3="1"] .bh-demo-nav::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 220px; height: 40px;
+  background: #0D1117;
+  pointer-events: none;
+  z-index: 1;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
+  position: relative;
+  z-index: 2;
+}
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-mode-label {
   color: rgba(255,255,255,.4); font-size: 10.5px; font-weight: 500;
   letter-spacing: .07em; text-transform: uppercase;
@@ -424,24 +438,42 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <body data-page="contrat" data-title="Contrats">
 
 <div class="bh-demo-nav" id="bhTopBar">
-  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;white-space:nowrap;max-width:calc(100% - 340px);overflow:hidden;">
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;white-space:nowrap;max-width:calc(100% - 380px);overflow:hidden;">
+
     <div style="display:flex;align-items:center;gap:5px;">
       <i class="fa-brands fa-airbnb" style="font-size:14px;color:#FF5A5F;"></i>
       <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Airbnb</span>
       <span id="topbar-status-airbnb" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
     </div>
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);flex-shrink:0;"></div>
+
     <div style="display:flex;align-items:center;gap:5px;">
       <span style="font-size:12px;font-weight:800;color:#6B9FE4;">B.</span>
       <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Booking</span>
       <span id="topbar-status-booking" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
     </div>
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);flex-shrink:0;"></div>
+
     <div style="display:flex;align-items:center;gap:5px;">
       <i class="fa-brands fa-stripe-s" style="font-size:15px;color:#6772E5;"></i>
       <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Stripe</span>
       <span id="topbar-status-stripe" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
     </div>
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);flex-shrink:0;"></div>
+
+    <div style="display:flex;align-items:center;gap:5px;">
+      <i class="fas fa-home" style="font-size:13px;color:#E8A838;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Abritel</span>
+      <span id="topbar-status-abritel" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    </div>
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);flex-shrink:0;"></div>
+
+    <div style="display:flex;align-items:center;gap:5px;">
+      <i class="fas fa-leaf" style="font-size:13px;color:#4ADE80;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Gîtes</span>
+      <span id="topbar-status-gites" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    </div>
+
   </div>
   <div class="bh-demo-right">
     <span class="bh-demo-mode-label">Mode</span>
@@ -469,8 +501,12 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
       const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
       const hasAirbnb  = reservations.some(r => (r.source||r.platform||'').toLowerCase().includes('airbnb'));
       const hasBooking = reservations.some(r => (r.source||r.platform||'').toLowerCase().includes('booking'));
+      const hasAbritel = reservations.some(r => (r.source||r.platform||'').toLowerCase().includes('abritel') || (r.source||r.platform||'').toLowerCase().includes('vrbo'));
+      const hasGites   = reservations.some(r => (r.source||r.platform||'').toLowerCase().includes('gites') || (r.source||r.platform||'').toLowerCase().includes('gîtes'));
       setStatus('topbar-status-airbnb', hasAirbnb);
       setStatus('topbar-status-booking', hasBooking);
+      setStatus('topbar-status-abritel', hasAbritel);
+      setStatus('topbar-status-gites', hasGites);
       const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
       const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
       const hasStripe = !!(user.stripeAccountId||user.stripe_account_id||user.stripeConnected||properties.some(p=>p.stripeAccountId||p.stripe_account_id));
@@ -479,6 +515,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   }
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', checkStatuses); } else { checkStatuses(); }
   setTimeout(checkStatuses, 2000);
+  setTimeout(checkStatuses, 5000);
   window.updateTopBarStatus = checkStatuses;
 })();
 </script>
