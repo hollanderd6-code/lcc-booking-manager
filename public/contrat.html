@@ -879,9 +879,17 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
             </div>
           </div>
           <div class="contrat-card-body" id="edlBody">
-            <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">
-              Un état des lieux contradictoire sera réalisé à l'entrée et au départ du locataire. En l'absence d'état des lieux d'entrée contradictoire, le logement est présumé remis en bon état. La caution sera restituée dans un délai de <input type="number" id="depositReturnDays" value="7" min="1" max="30" style="width:50px;padding:2px 6px;border:1.5px solid rgba(13,17,23,.15);border-radius:6px;font-size:13px;font-family:inherit;color:#0D1117;display:inline;"> jours après le départ, sous réserve d'éventuelles retenues justifiées.
+            <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 14px;">
+              Un état des lieux contradictoire sera réalisé à l'entrée et au départ du locataire. En l'absence d'état des lieux d'entrée contradictoire, le logement est présumé remis en bon état.
             </p>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="font-size:13px;color:#374151;">Délai de restitution de la caution :</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="number" id="depositReturnDays" value="7" min="1" max="30" class="form-input" style="width:70px;padding:7px 10px;text-align:center;">
+                <span style="font-size:13px;color:#374151;">jours après le départ</span>
+              </div>
+            </div>
+            <p style="font-size:12px;color:#9CA3AF;margin:8px 0 0;">Sous réserve d'éventuelles retenues justifiées.</p>
           </div>
         </div>
 
