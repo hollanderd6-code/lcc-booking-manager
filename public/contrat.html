@@ -425,12 +425,54 @@ html[data-theme-v3="1"] .main-content {
     <div class="contrat-sep"></div>
     <div class="contrat-step" data-step="5">
       <div class="contrat-step-num">5</div>
+      <div class="contrat-step-label">Conditions légales</div>
+    </div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-step="6">
+      <div class="contrat-step-num">6</div>
       <div class="contrat-step-label">Signature</div>
     </div>
   </div>
 
   <!-- ── Section 1 : Logement & dates ── -->
   <div class="form-section active" data-section="1">
+    <!-- Carte Bailleur -->
+    <div class="contrat-card">
+      <div class="contrat-card-header">
+        <div class="contrat-card-icon"><i class="fas fa-user-tie"></i></div>
+        <div>
+          <h2 class="contrat-card-title">Bailleur (propriétaire)</h2>
+          <p class="contrat-card-sub">Identité de la partie qui loue le bien</p>
+        </div>
+      </div>
+      <div class="contrat-card-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Prénom <span class="form-required">*</span></label>
+            <input type="text" class="form-input" id="ownerFirstName" placeholder="Jean"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom <span class="form-required">*</span></label>
+            <input type="text" class="form-input" id="ownerLastName" placeholder="Dupont"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Adresse du bailleur <span class="form-required">*</span></label>
+          <input type="text" class="form-input" id="ownerAddress" placeholder="17 rue de la Paix, 75001 Paris"/>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="ownerEmail" placeholder="proprio@email.com"/>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Téléphone</label>
+            <input type="tel" class="form-input" id="ownerPhone" placeholder="06 XX XX XX XX"/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Carte Logement -->
     <div class="contrat-card">
       <div class="contrat-card-header">
         <div class="contrat-card-icon"><i class="fas fa-home"></i></div>
@@ -440,9 +482,23 @@ html[data-theme-v3="1"] .main-content {
         </div>
       </div>
       <div class="contrat-card-body">
-        <div class="form-group">
-          <label class="form-label">Nom du logement <span class="form-required">*</span></label>
-          <input type="text" class="form-input" id="propertyName" placeholder="Ex: Appartement Centre-Ville Lyon"/>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Nom du logement <span class="form-required">*</span></label>
+            <input type="text" class="form-input" id="propertyName" placeholder="Ex: Appartement Centre-Ville Lyon"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type de logement</label>
+            <select class="form-select" id="propertyType">
+              <option value="appartement">Appartement</option>
+              <option value="maison">Maison</option>
+              <option value="studio">Studio</option>
+              <option value="villa">Villa</option>
+              <option value="chambre">Chambre</option>
+              <option value="gite">Gîte / Chalet</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Adresse complète <span class="form-required">*</span></label>
@@ -519,6 +575,16 @@ html[data-theme-v3="1"] .main-content {
           <label class="form-label">Adresse du voyageur</label>
           <input type="text" class="form-input" id="guestAddress" placeholder="Adresse de résidence principale"/>
         </div>
+        <div class="form-grid-2" style="margin-top:16px;">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Date de naissance</label>
+            <input type="date" class="form-input" id="guestDOB"/>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">N° pièce d'identité <span class="form-hint" style="display:inline;">(optionnel)</span></label>
+            <input type="text" class="form-input" id="guestIDNumber" placeholder="CNI / Passeport n°..."/>
+          </div>
+        </div>
       </div>
     </div>
     <div class="contrat-nav">
@@ -568,6 +634,16 @@ html[data-theme-v3="1"] .main-content {
           <label class="form-label">Notes financières</label>
           <textarea class="form-textarea" id="priceNotes" placeholder="Ex: Acompte de 30% versé le ... Solde à verser à l'arrivée..."></textarea>
         </div>
+        <div class="form-grid-2" style="margin-top:16px;">
+          <div class="form-group">
+            <label class="form-label">Acompte versé à la signature</label>
+            <input type="number" class="form-input" id="acompte" placeholder="0" min="0" step="0.01"/>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Date de versement de l'acompte</label>
+            <input type="date" class="form-input" id="acompteDate"/>
+          </div>
+        </div>
       </div>
     </div>
     <div class="contrat-nav">
@@ -605,10 +681,120 @@ html[data-theme-v3="1"] .main-content {
     </div>
   </div>
 
-  <!-- ── Section 5 : Signature ── -->
+  <!-- ── Section 5 : Conditions légales ── -->
   <div class="form-section" data-section="5">
+    <div class="contrat-card">
+      <div class="contrat-card-header">
+        <div class="contrat-card-icon"><i class="fas fa-scale-balanced"></i></div>
+        <div>
+          <h2 class="contrat-card-title">Conditions légales</h2>
+          <p class="contrat-card-sub">Clauses juridiques incluses dans le contrat</p>
+        </div>
+      </div>
+      <div class="contrat-card-body">
 
-    <!-- Aperçu contrat -->
+        <!-- Annulation -->
+        <div class="contrat-card" style="border:1px solid rgba(200,184,154,.3);box-shadow:none;margin-bottom:16px;">
+          <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:10px;width:100%;">
+              <i class="fas fa-calendar-xmark" style="color:#1A7A5E;font-size:15px;"></i>
+              <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;">Politique d'annulation</span>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;">
+                <input type="checkbox" id="toggleAnnulation" checked style="accent-color:#1A7A5E;"/> Inclure
+              </label>
+            </div>
+          </div>
+          <div class="contrat-card-body" id="annulationBody">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">Délai 1 – Remboursement partiel si annulation à plus de</label>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <input type="number" class="form-input" id="cancelDays1" value="30" min="1" style="width:80px;flex-shrink:0;"/>
+                  <span style="color:#7A8695;font-size:14px;">jours avant → remboursement de</span>
+                  <input type="number" class="form-input" id="cancelPct1" value="50" min="0" max="100" style="width:70px;flex-shrink:0;"/>
+                  <span style="color:#7A8695;font-size:14px;">%</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Délai 2 – Aucun remboursement si annulation à moins de</label>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <input type="number" class="form-input" id="cancelDays2" value="7" min="1" style="width:80px;flex-shrink:0;"/>
+                  <span style="color:#7A8695;font-size:14px;">jours avant → remboursement de</span>
+                  <input type="number" class="form-input" id="cancelPct2" value="0" min="0" max="100" style="width:70px;flex-shrink:0;"/>
+                  <span style="color:#7A8695;font-size:14px;">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Obligations -->
+        <div class="contrat-card" style="border:1px solid rgba(200,184,154,.3);box-shadow:none;margin-bottom:16px;">
+          <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:10px;width:100%;">
+              <i class="fas fa-handshake" style="color:#1A7A5E;font-size:15px;"></i>
+              <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;">Obligations du locataire</span>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;">
+                <input type="checkbox" id="toggleObligations" checked style="accent-color:#1A7A5E;"/> Inclure
+              </label>
+            </div>
+          </div>
+          <div class="contrat-card-body" id="obligationsBody">
+            <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">
+              Le locataire s'engage à occuper paisiblement les lieux, à respecter le voisinage, à ne pas sous-louer le logement (même à titre gratuit), et à ne pas organiser de fêtes ou rassemblements sans accord écrit préalable du bailleur. Le logement devra être rendu dans l'état où il a été remis.
+            </p>
+            <div class="form-group" style="margin-top:12px;margin-bottom:0;">
+              <label class="form-label">Clause complémentaire <span class="form-hint" style="display:inline;">(optionnel)</span></label>
+              <textarea class="form-textarea" id="obligationsExtra" placeholder="Ex: Le locataire s'engage à..." style="min-height:60px;"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assurance -->
+        <div class="contrat-card" style="border:1px solid rgba(200,184,154,.3);box-shadow:none;margin-bottom:16px;">
+          <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:10px;width:100%;">
+              <i class="fas fa-shield-halved" style="color:#1A7A5E;font-size:15px;"></i>
+              <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;">Assurance responsabilité civile</span>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;">
+                <input type="checkbox" id="toggleAssurance" checked style="accent-color:#1A7A5E;"/> Inclure
+              </label>
+            </div>
+          </div>
+          <div class="contrat-card-body" id="assuranceBody">
+            <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">
+              Le locataire déclare être couvert par une assurance responsabilité civile en cours de validité couvrant les dommages pouvant survenir pendant la durée de la location. Il s'engage à en fournir la preuve sur simple demande du bailleur.
+            </p>
+          </div>
+        </div>
+
+        <!-- État des lieux -->
+        <div class="contrat-card" style="border:1px solid rgba(200,184,154,.3);box-shadow:none;margin-bottom:0;">
+          <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:10px;width:100%;">
+              <i class="fas fa-clipboard-list" style="color:#1A7A5E;font-size:15px;"></i>
+              <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;">État des lieux</span>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;">
+                <input type="checkbox" id="toggleEDL" checked style="accent-color:#1A7A5E;"/> Inclure
+              </label>
+            </div>
+          </div>
+          <div class="contrat-card-body" id="edlBody">
+            <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">
+              Un état des lieux contradictoire sera réalisé à l'entrée et au départ du locataire. En l'absence d'état des lieux d'entrée contradictoire, le logement est présumé remis en bon état. La caution sera restituée dans un délai de <input type="number" id="depositReturnDays" value="7" min="1" max="30" style="width:50px;padding:2px 6px;border:1.5px solid rgba(13,17,23,.15);border-radius:6px;font-size:13px;font-family:inherit;color:#0D1117;display:inline;"> jours après le départ, sous réserve d'éventuelles retenues justifiées.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="contrat-nav">
+      <button class="btn-prev" onclick="goToSection(4)"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <button class="btn-next" onclick="goToSection(6)">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+  <!-- ── Section 6 : Signature ── -->
+  <div class="form-section" data-section="6">
     <div class="contrat-card">
       <div class="contrat-card-header">
         <div class="contrat-card-icon"><i class="fas fa-file-contract"></i></div>
@@ -658,8 +844,7 @@ html[data-theme-v3="1"] .main-content {
 
     <!-- Actions finales -->
     <div class="contrat-nav">
-      <button class="btn-prev" onclick="goToSection(4)"><i class="fas fa-arrow-left"></i> Précédent</button>
-      <div class="final-actions">
+      <button class="btn-prev" onclick="goToSection(5)"><i class="fas fa-arrow-left"></i> Précédent</button>
         <button class="btn-email" onclick="sendByEmail()">
           <i class="fas fa-envelope"></i> Envoyer par email
         </button>
@@ -686,7 +871,7 @@ html[data-theme-v3="1"] .main-content {
 <script>
 // ── Navigation sections ──
 let currentSection = 1;
-const totalSections = 5;
+const totalSections = 6;
 
 function goToSection(n) {
   if (n < 1 || n > totalSections) return;
@@ -709,8 +894,8 @@ function goToSection(n) {
   // Scroll haut
   document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
 
-  // Générer aperçu à l'étape 5
-  if (n === 5) {
+  // Générer aperçu à l'étape 6
+  if (n === 6) {
     generatePreview();
     initSignature();
   }
@@ -718,6 +903,10 @@ function goToSection(n) {
 
 function validateSection(n) {
   if (n === 1) {
+    if (!v('ownerFirstName') || !v('ownerLastName') || !v('ownerAddress')) {
+      showToast('Veuillez renseigner les informations du bailleur', 'error');
+      return false;
+    }
     if (!v('propertyName') || !v('propertyAddress') || !v('checkin') || !v('checkout')) {
       showToast('Veuillez remplir les champs obligatoires', 'error');
       return false;
@@ -771,62 +960,114 @@ function generatePreview() {
   const regles = Array.from(document.querySelectorAll('#reglesList li span')).map(s => s.textContent);
   const today = new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
   const paymentLabels = { virement:'Virement bancaire', especes:'Espèces', cheque:'Chèque', carte:'Carte bancaire', autre:'Autre' };
+  const propTypeLabels = { appartement:'Appartement', maison:'Maison', studio:'Studio', villa:'Villa', chambre:'Chambre', gite:'Gîte / Chalet', autre:'Autre' };
+
+  const inclAnnulation = document.getElementById('toggleAnnulation')?.checked;
+  const inclObligations = document.getElementById('toggleObligations')?.checked;
+  const inclAssurance = document.getElementById('toggleAssurance')?.checked;
+  const inclEDL = document.getElementById('toggleEDL')?.checked;
+  const depositDays = document.getElementById('depositReturnDays')?.value || '7';
 
   document.getElementById('contratPreview').innerHTML = `
-    <h2>Contrat de location saisonnière</h2>
+    <h2>Contrat de location meublée saisonnière</h2>
     <p class="preview-sub">Établi le ${today}</p>
 
     <div class="preview-section">
-      <div class="preview-section-title">Bien loué</div>
-      <div class="preview-row"><span class="lbl">Logement</span><span class="val">${v('propertyName') || '—'}</span></div>
-      <div class="preview-row"><span class="lbl">Adresse</span><span class="val">${v('propertyAddress') || '—'}</span></div>
+      <div class="preview-section-title">1. Bailleur</div>
+      <div class="preview-row"><span class="lbl">Nom</span><span class="val">${v('ownerFirstName')} ${v('ownerLastName')}</span></div>
+      <div class="preview-row"><span class="lbl">Adresse</span><span class="val">${v('ownerAddress') || '—'}</span></div>
+      ${v('ownerEmail') ? `<div class="preview-row"><span class="lbl">Email</span><span class="val">${v('ownerEmail')}</span></div>` : ''}
+      ${v('ownerPhone') ? `<div class="preview-row"><span class="lbl">Téléphone</span><span class="val">${v('ownerPhone')}</span></div>` : ''}
     </div>
 
     <div class="preview-section">
-      <div class="preview-section-title">Dates du séjour</div>
-      <div class="preview-row"><span class="lbl">Arrivée</span><span class="val">${checkin} à ${v('checkinTime') || '15:00'}</span></div>
-      <div class="preview-row"><span class="lbl">Départ</span><span class="val">${checkout} à ${v('checkoutTime') || '11:00'}</span></div>
-      <div class="preview-row"><span class="lbl">Durée</span><span class="val">${nights} nuit${nights > 1 ? 's' : ''}</span></div>
-      <div class="preview-row"><span class="lbl">Voyageurs</span><span class="val">${v('guestCount') || '1'} personne${parseInt(v('guestCount')) > 1 ? 's' : ''}</span></div>
-    </div>
-
-    <div class="preview-section">
-      <div class="preview-section-title">Locataire</div>
+      <div class="preview-section-title">2. Locataire</div>
       <div class="preview-row"><span class="lbl">Nom complet</span><span class="val">${v('guestFirstName')} ${v('guestLastName')}</span></div>
       <div class="preview-row"><span class="lbl">Email</span><span class="val">${v('guestEmail') || '—'}</span></div>
       ${v('guestPhone') ? `<div class="preview-row"><span class="lbl">Téléphone</span><span class="val">${v('guestPhone')}</span></div>` : ''}
       ${v('guestNationality') ? `<div class="preview-row"><span class="lbl">Nationalité</span><span class="val">${v('guestNationality')}</span></div>` : ''}
       ${v('guestAddress') ? `<div class="preview-row"><span class="lbl">Adresse</span><span class="val">${v('guestAddress')}</span></div>` : ''}
+      ${v('guestDOB') ? `<div class="preview-row"><span class="lbl">Date de naissance</span><span class="val">${new Date(v('guestDOB')).toLocaleDateString('fr-FR')}</span></div>` : ''}
+      ${v('guestIDNumber') ? `<div class="preview-row"><span class="lbl">Pièce d'identité</span><span class="val">${v('guestIDNumber')}</span></div>` : ''}
     </div>
 
     <div class="preview-section">
-      <div class="preview-section-title">Conditions financières</div>
-      <div class="preview-row"><span class="lbl">Prix total</span><span class="val" style="color:#1A7A5E;font-weight:700;">${parseFloat(v('totalPrice') || 0).toFixed(2)} €</span></div>
-      ${v('cleaningFee') && parseFloat(v('cleaningFee')) > 0 ? `<div class="preview-row"><span class="lbl">Frais de ménage</span><span class="val">${parseFloat(v('cleaningFee')).toFixed(2)} €</span></div>` : ''}
-      ${v('deposit') && parseFloat(v('deposit')) > 0 ? `<div class="preview-row"><span class="lbl">Caution</span><span class="val">${parseFloat(v('deposit')).toFixed(2)} €</span></div>` : ''}
+      <div class="preview-section-title">3. Objet de la location</div>
+      <div class="preview-row"><span class="lbl">Logement</span><span class="val">${v('propertyName') || '—'}</span></div>
+      ${v('propertyType') ? `<div class="preview-row"><span class="lbl">Type</span><span class="val">${propTypeLabels[v('propertyType')] || v('propertyType')}</span></div>` : ''}
+      <div class="preview-row"><span class="lbl">Adresse</span><span class="val">${v('propertyAddress') || '—'}</span></div>
+      <p style="font-size:13px;color:#374151;margin:8px 0 0;line-height:1.6;">Cette location meublée saisonnière ne constitue pas la résidence principale du locataire.</p>
+    </div>
+
+    <div class="preview-section">
+      <div class="preview-section-title">4. Durée du séjour</div>
+      <div class="preview-row"><span class="lbl">Arrivée</span><span class="val">${checkin} à ${v('checkinTime') || '15:00'}</span></div>
+      <div class="preview-row"><span class="lbl">Départ</span><span class="val">${checkout} à ${v('checkoutTime') || '11:00'}</span></div>
+      <div class="preview-row"><span class="lbl">Durée</span><span class="val">${nights} nuit${nights > 1 ? 's' : ''}</span></div>
+      <div class="preview-row"><span class="lbl">Occupants max.</span><span class="val">${v('guestCount') || '1'} personne${parseInt(v('guestCount')) > 1 ? 's' : ''}</span></div>
+    </div>
+
+    <div class="preview-section">
+      <div class="preview-section-title">5. Conditions financières</div>
+      <div class="preview-row"><span class="lbl">Loyer total</span><span class="val" style="color:#1A7A5E;font-weight:700;">${parseFloat(v('totalPrice') || 0).toFixed(2)} € charges comprises</span></div>
+      ${v('cleaningFee') && parseFloat(v('cleaningFee')) > 0 ? `<div class="preview-row"><span class="lbl">Dont frais de ménage</span><span class="val">${parseFloat(v('cleaningFee')).toFixed(2)} €</span></div>` : ''}
+      ${v('deposit') && parseFloat(v('deposit')) > 0 ? `<div class="preview-row"><span class="lbl">Dépôt de garantie</span><span class="val">${parseFloat(v('deposit')).toFixed(2)} €</span></div>` : ''}
+      ${v('acompte') && parseFloat(v('acompte')) > 0 ? `<div class="preview-row"><span class="lbl">Acompte versé</span><span class="val">${parseFloat(v('acompte')).toFixed(2)} €${v('acompteDate') ? ' le ' + new Date(v('acompteDate')).toLocaleDateString('fr-FR') : ''}</span></div>` : ''}
       <div class="preview-row"><span class="lbl">Mode de paiement</span><span class="val">${paymentLabels[v('paymentMethod')] || '—'}</span></div>
       ${v('priceNotes') ? `<div class="preview-row"><span class="lbl">Notes</span><span class="val">${v('priceNotes')}</span></div>` : ''}
     </div>
 
     ${regles.length > 0 ? `
     <div class="preview-section">
-      <div class="preview-section-title">Règles du logement</div>
+      <div class="preview-section-title">6. Règles du logement</div>
       ${regles.map(r => `<div class="preview-row"><span class="lbl" style="min-width:20px;">•</span><span class="val">${r}</span></div>`).join('')}
     </div>` : ''}
 
+    ${inclObligations ? `
+    <div class="preview-section">
+      <div class="preview-section-title">${regles.length > 0 ? '7' : '6'}. Obligations du locataire</div>
+      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">Le locataire s'engage à occuper paisiblement les lieux, à respecter le voisinage, à ne pas sous-louer le logement (même à titre gratuit), et à ne pas organiser de fêtes ou rassemblements sans accord écrit préalable du bailleur. Le logement devra être rendu dans l'état où il a été remis.${document.getElementById('obligationsExtra')?.value?.trim() ? '<br><br>' + document.getElementById('obligationsExtra').value.trim() : ''}</p>
+    </div>` : ''}
+
+    ${inclAnnulation ? `
+    <div class="preview-section">
+      <div class="preview-section-title">Annulation</div>
+      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">
+        En cas d'annulation plus de <strong>${document.getElementById('cancelDays1')?.value || 30} jours</strong> avant l'arrivée : remboursement de <strong>${document.getElementById('cancelPct1')?.value || 50}%</strong> des sommes versées.<br>
+        En cas d'annulation moins de <strong>${document.getElementById('cancelDays2')?.value || 7} jours</strong> avant l'arrivée : remboursement de <strong>${document.getElementById('cancelPct2')?.value || 0}%</strong> des sommes versées.
+      </p>
+    </div>` : ''}
+
+    ${inclAssurance ? `
+    <div class="preview-section">
+      <div class="preview-section-title">Assurance</div>
+      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">Le locataire déclare être couvert par une assurance responsabilité civile en cours de validité couvrant les dommages pouvant survenir pendant la durée de la location. Il s'engage à en fournir la preuve sur simple demande du bailleur.</p>
+    </div>` : ''}
+
+    ${inclEDL ? `
+    <div class="preview-section">
+      <div class="preview-section-title">État des lieux & restitution de la caution</div>
+      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">Un état des lieux contradictoire sera réalisé à l'entrée et au départ. La caution sera restituée dans un délai de <strong>${depositDays} jours</strong> après le départ, sous réserve d'éventuelles retenues justifiées.</p>
+    </div>` : ''}
+
     <div class="preview-section" style="margin-bottom:0;">
+      <div class="preview-section-title">Tribunaux compétents</div>
+      <p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">Tout litige relatif au présent contrat sera soumis à la juridiction compétente du lieu de situation du logement.</p>
+    </div>
+
+    <div class="preview-section" style="margin-bottom:0;margin-top:20px;">
       <div class="preview-section-title">Signatures</div>
       <div class="preview-sig">
         <div class="preview-sig-block">
-          <div class="preview-sig-label">Signature du propriétaire</div>
+          <div class="preview-sig-label">Signature du bailleur<br><span style="font-size:11px;">${v('ownerFirstName')} ${v('ownerLastName')}</span></div>
           <div class="preview-sig-img" id="previewSigProp">
             <span style="color:#C4C4C4;font-size:12px;">À signer ci-dessous</span>
           </div>
         </div>
         <div class="preview-sig-block">
-          <div class="preview-sig-label">Signature du voyageur</div>
+          <div class="preview-sig-label">Signature du locataire<br><span style="font-size:11px;">${v('guestFirstName')} ${v('guestLastName')}</span></div>
           <div class="preview-sig-img">
-            <span style="color:#C4C4C4;font-size:12px;">Signature voyageur</span>
+            <span style="color:#C4C4C4;font-size:12px;">Signature locataire</span>
           </div>
         </div>
       </div>
@@ -981,16 +1222,30 @@ function downloadPDF() {
   const checkout = v('checkout') ? new Date(v('checkout')).toLocaleDateString('fr-FR') : '—';
   const nights = v('checkin') && v('checkout') ? Math.round((new Date(v('checkout')) - new Date(v('checkin'))) / 86400000) : 0;
 
+  sectionTitle('Bailleur');
+  row('Nom', `${v('ownerFirstName')} ${v('ownerLastName')}`);
+  row('Adresse', v('ownerAddress'));
+  if (v('ownerEmail')) row('Email', v('ownerEmail'));
+  if (v('ownerPhone')) row('Téléphone', v('ownerPhone'));
+  y += 4;
+
   sectionTitle('Bien loué');
   row('Logement', v('propertyName'));
+  const propTypeLabels2 = { appartement:'Appartement', maison:'Maison', studio:'Studio', villa:'Villa', chambre:'Chambre', gite:'Gîte / Chalet', autre:'Autre' };
+  if (v('propertyType')) row('Type', propTypeLabels2[v('propertyType')] || v('propertyType'));
   row('Adresse', v('propertyAddress'));
-  y += 4;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...gray);
+  const clauseObj = doc.splitTextToSize('Cette location meublée saisonnière ne constitue pas la résidence principale du locataire.', contentW);
+  doc.text(clauseObj, margin, y);
+  y += clauseObj.length * 4 + 4;
 
   sectionTitle('Dates du séjour');
   row('Arrivée', `${checkin} à ${v('checkinTime') || '15:00'}`);
   row('Départ', `${checkout} à ${v('checkoutTime') || '11:00'}`);
   row('Durée', `${nights} nuit${nights > 1 ? 's' : ''}`);
-  row('Voyageurs', `${v('guestCount') || '1'} personne${parseInt(v('guestCount')) > 1 ? 's' : ''}`);
+  row('Occupants max.', `${v('guestCount') || '1'} personne${parseInt(v('guestCount')) > 1 ? 's' : ''}`);
   y += 4;
 
   sectionTitle('Locataire');
@@ -999,12 +1254,15 @@ function downloadPDF() {
   if (v('guestPhone')) row('Téléphone', v('guestPhone'));
   if (v('guestNationality')) row('Nationalité', v('guestNationality'));
   if (v('guestAddress')) row('Adresse', v('guestAddress'));
+  if (v('guestDOB')) row('Date de naissance', new Date(v('guestDOB')).toLocaleDateString('fr-FR'));
+  if (v('guestIDNumber')) row("Pièce d'identité", v('guestIDNumber'));
   y += 4;
 
   sectionTitle('Conditions financières');
-  row('Prix total du séjour', `${parseFloat(v('totalPrice') || 0).toFixed(2)} €`);
-  if (v('cleaningFee') && parseFloat(v('cleaningFee')) > 0) row('Frais de ménage', `${parseFloat(v('cleaningFee')).toFixed(2)} €`);
-  if (v('deposit') && parseFloat(v('deposit')) > 0) row('Caution', `${parseFloat(v('deposit')).toFixed(2)} €`);
+  row('Loyer total (CC)', `${parseFloat(v('totalPrice') || 0).toFixed(2)} €`);
+  if (v('cleaningFee') && parseFloat(v('cleaningFee')) > 0) row('Dont frais de ménage', `${parseFloat(v('cleaningFee')).toFixed(2)} €`);
+  if (v('deposit') && parseFloat(v('deposit')) > 0) row('Dépôt de garantie', `${parseFloat(v('deposit')).toFixed(2)} €`);
+  if (v('acompte') && parseFloat(v('acompte')) > 0) row('Acompte versé', `${parseFloat(v('acompte')).toFixed(2)} €${v('acompteDate') ? ' le ' + new Date(v('acompteDate')).toLocaleDateString('fr-FR') : ''}`);
   const payLabels = { virement:'Virement bancaire', especes:'Espèces', cheque:'Chèque', carte:'Carte bancaire', autre:'Autre' };
   row('Mode de paiement', payLabels[v('paymentMethod')] || '—');
   if (v('priceNotes')) row('Notes', v('priceNotes'));
@@ -1023,8 +1281,83 @@ function downloadPDF() {
     y += 4;
   }
 
+  // Clauses légales
+  const inclObligations = document.getElementById('toggleObligations')?.checked;
+  const inclAnnulation = document.getElementById('toggleAnnulation')?.checked;
+  const inclAssurance = document.getElementById('toggleAssurance')?.checked;
+  const inclEDL = document.getElementById('toggleEDL')?.checked;
+
+  if (inclObligations) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    sectionTitle('Obligations du locataire');
+    let texteOblig = 'Le locataire s\'engage à occuper paisiblement les lieux, à respecter le voisinage, à ne pas sous-louer le logement (même à titre gratuit), et à ne pas organiser de fêtes ou rassemblements sans accord écrit préalable du bailleur. Le logement devra être rendu dans l\'état où il a été remis.';
+    const extra = document.getElementById('obligationsExtra')?.value?.trim();
+    if (extra) texteOblig += ' ' + extra;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...dark);
+    const lignesOblig = doc.splitTextToSize(texteOblig, contentW);
+    doc.text(lignesOblig, margin, y);
+    y += lignesOblig.length * 4.5 + 4;
+  }
+
+  if (inclAnnulation) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    sectionTitle("Politique d'annulation");
+    const d1 = document.getElementById('cancelDays1')?.value || 30;
+    const p1 = document.getElementById('cancelPct1')?.value || 50;
+    const d2 = document.getElementById('cancelDays2')?.value || 7;
+    const p2 = document.getElementById('cancelPct2')?.value || 0;
+    const texteAnnul = `Plus de ${d1} jours avant l'arrivée : remboursement de ${p1}% des sommes versées. Moins de ${d2} jours avant l'arrivée : remboursement de ${p2}% des sommes versées.`;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...dark);
+    const lignesAnnul = doc.splitTextToSize(texteAnnul, contentW);
+    doc.text(lignesAnnul, margin, y);
+    y += lignesAnnul.length * 4.5 + 4;
+  }
+
+  if (inclAssurance) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    sectionTitle('Assurance responsabilité civile');
+    const texteAssur = "Le locataire déclare être couvert par une assurance responsabilité civile en cours de validité couvrant les dommages pouvant survenir pendant la durée de la location. Il s'engage à en fournir la preuve sur simple demande du bailleur.";
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...dark);
+    const lignesAssur = doc.splitTextToSize(texteAssur, contentW);
+    doc.text(lignesAssur, margin, y);
+    y += lignesAssur.length * 4.5 + 4;
+  }
+
+  if (inclEDL) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    sectionTitle('État des lieux & restitution de la caution');
+    const depositDays = document.getElementById('depositReturnDays')?.value || '7';
+    const texteEDL = `Un état des lieux contradictoire sera réalisé à l'entrée et au départ. La caution sera restituée dans un délai de ${depositDays} jours après le départ, sous réserve d'éventuelles retenues justifiées.`;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...dark);
+    const lignesEDL = doc.splitTextToSize(texteEDL, contentW);
+    doc.text(lignesEDL, margin, y);
+    y += lignesEDL.length * 4.5 + 4;
+  }
+
+  if (y > 220) { doc.addPage(); y = 20; }
+  sectionTitle('Tribunaux compétents');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...dark);
+  doc.text('Tout litige relatif au présent contrat sera soumis à la juridiction compétente du lieu de situation du logement.', margin, y, { maxWidth: contentW });
+  y += 10;
+
+  // Lieu et date
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...gray);
+  doc.text(`Fait à ${v('propertyAddress').split(',').pop()?.trim() || '___________'}, le ${new Date().toLocaleDateString('fr-FR')}`, margin, y);
+  y += 8;
+
   // Signatures
-  y += 4;
   if (y > 220) { doc.addPage(); y = 20; }
   sectionTitle('Signatures');
   y += 4;
@@ -1034,9 +1367,13 @@ function downloadPDF() {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...gray);
-  doc.text('Signature du propriétaire', margin, y);
-  doc.text('Signature du voyageur', margin + sigW + 10, y);
-  y += 4;
+  doc.text('Signature du bailleur', margin, y);
+  doc.text('Signature du locataire', margin + sigW + 10, y);
+  y += 3;
+  doc.setFontSize(7);
+  doc.text(`${v('ownerFirstName')} ${v('ownerLastName')}`, margin, y);
+  doc.text(`${v('guestFirstName')} ${v('guestLastName')}`, margin + sigW + 10, y);
+  y += 5;
 
   if (signatureData) {
     try {
@@ -1047,11 +1384,6 @@ function downloadPDF() {
   doc.setDrawColor(...gray);
   doc.line(margin, y + 28, margin + sigW, y + 28);
   doc.line(margin + sigW + 10, y + 28, margin + contentW, y + 28);
-  y += 32;
-
-  doc.setFontSize(8);
-  doc.setTextColor(...gray);
-  doc.text(`${v('guestFirstName')} ${v('guestLastName')}`, margin + sigW + 10, y);
 
   // Footer
   doc.setFillColor(...lightGray);
@@ -1091,6 +1423,25 @@ function showToast(msg, type = '') {
   t.className = 'toast show ' + type;
   setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// ── Toggles conditions légales ──
+['toggleAnnulation','toggleObligations','toggleAssurance','toggleEDL'].forEach(id => {
+  const bodyMap = {
+    toggleAnnulation: 'annulationBody',
+    toggleObligations: 'obligationsBody',
+    toggleAssurance: 'assuranceBody',
+    toggleEDL: 'edlBody'
+  };
+  document.addEventListener('DOMContentLoaded', () => {
+    const chk = document.getElementById(id);
+    const body = document.getElementById(bodyMap[id]);
+    if (chk && body) {
+      chk.addEventListener('change', () => {
+        body.style.display = chk.checked ? '' : 'none';
+      });
+    }
+  });
+});
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
