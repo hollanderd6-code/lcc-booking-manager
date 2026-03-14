@@ -1162,7 +1162,10 @@ function downloadPDF() {
     return;
   }
 
-  showToast('Génération du PDF...', 'success');
+  // Masquer tout toast actif avant génération
+  document.getElementById('toast').classList.remove('show');
+
+  // Génération PDF
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
