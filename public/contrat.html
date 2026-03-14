@@ -121,6 +121,10 @@ html[data-theme-v3="1"] header.main-header {
 @media(max-width:1366px){
   html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; }
 }
+/* Header statique desktop */
+@media(max-width:1366px){
+  .contrat-static-header { display: none !important; }
+}
 html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 
 /* Back button */
@@ -408,6 +412,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     padding-top: env(safe-area-inset-top, 0px) !important;
   }
   .contrat-back-btn, #bhHeader { display: none !important; }
+  .contrat-static-header { display: none !important; }
   html[data-theme-v3="1"] .page-content {
     padding: 0 14px 90px !important;
     padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
@@ -546,6 +551,12 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <div class="app-container">
 <div id="bhSidebar"></div>
 <main class="main-content"><div id="bhHeader"></div>
+<header class="main-header contrat-static-header" style="position:fixed;top:40px;left:260px;right:0;z-index:50;background:var(--bg-primary,#F5F2EC);border-bottom:1px solid rgba(200,184,154,.35);padding:16px 24px;display:flex;align-items:center;">
+  <div class="header-left">
+    <div class="page-kicker" style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(13,17,23,.38);margin-bottom:2px;">Gestion</div>
+    <h1 class="page-title" style="font-size:22px;font-weight:700;color:#0D1117;margin:0;">Contrats</h1>
+  </div>
+</header>
 <button class="contrat-back-btn" onclick="window.location.href='/app.html'">
   <i class="fas fa-arrow-left"></i> Tableau de bord
 </button>
