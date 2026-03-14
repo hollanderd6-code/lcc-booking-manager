@@ -133,8 +133,8 @@ html[data-theme-v3="1"] .main-content {
 .contrat-step.active { background: rgba(26,122,94,.08); }
 .contrat-step.active .contrat-step-num { background: #1A7A5E; color: white; }
 .contrat-step.active .contrat-step-label { color: #1A7A5E; }
-.contrat-step.done .contrat-step-num { background: rgba(26,122,94,.15); color: #1A7A5E; }
-.contrat-step.done .contrat-step-label { color: #0D1117; }
+.contrat-step.done { cursor: pointer; }
+.contrat-step.done:hover { background: rgba(26,122,94,.06); border-radius: 10px; }
 .contrat-sep { width: 24px; height: 2px; background: rgba(13,17,23,.08); flex-shrink: 0; }
 
 /* Cards */
@@ -332,7 +332,10 @@ html[data-theme-v3="1"] .main-content {
   font-family: 'DM Sans', sans-serif; z-index: 9999;
   opacity: 0; transition: opacity .3s; pointer-events: none;
   display: flex; align-items: center; gap: 8px;
+  white-space: nowrap; max-width: calc(100vw - 48px);
+  width: auto; min-width: 0;
 }
+.toast:empty { display: none; }
 .toast.show { opacity: 1; }
 .toast.success { background: #1A7A5E; }
 .toast.error { background: #DC2626; }
@@ -822,7 +825,7 @@ html[data-theme-v3="1"] .main-content {
       <div class="contrat-card-body">
         <div class="form-group">
           <label class="form-label">Signature du propriétaire</label>
-          <div class="signature-zone">
+          <div class="signature-zone" id="signatureZone" style="display:none;">
             <canvas id="signatureCanvas"></canvas>
             <div class="signature-actions">
               <span class="signature-hint"><i class="fas fa-pen" style="margin-right:4px;color:#1A7A5E;"></i>Signez avec la souris ou le doigt</span>
@@ -897,6 +900,7 @@ function goToSection(n) {
   // Générer aperçu à l'étape 6
   if (n === 6) {
     generatePreview();
+    document.getElementById('signatureZone').style.display = '';
     initSignature();
   }
 }
@@ -1444,7 +1448,48 @@ function showToast(msg, type = '') {
 });
 
 // ── Init ──
+// ── Navigation directe (retour en arrière sans validation) ──
+function goToSectionDirect(n) {
+  if (n < 1 || n > totalSections) return;
+
+  // Si on quitte la section 6, cacher le canvas
+  if (currentSection === 6) {
+    document.getElementById('signatureZone').style.display = 'none';
+  }
+
+  document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.form-section[data-section="${n}"]`).classList.add('active');
+
+  document.querySelectorAll('.contrat-step').forEach((step, i) => {
+    step.classList.remove('active', 'done');
+    const sn = i + 1;
+    if (sn === n) step.classList.add('active');
+    else if (sn < n) step.classList.add('done');
+  });
+
+  currentSection = n;
+  document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (n === 6) {
+    generatePreview();
+    document.getElementById('signatureZone').style.display = '';
+    initSignature();
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // Clic sur les steps : retour en arrière libre, avance d'un cran avec validation
+  document.querySelectorAll('.contrat-step').forEach(step => {
+    step.addEventListener('click', () => {
+      const target = parseInt(step.dataset.step);
+      if (target < currentSection) {
+        goToSectionDirect(target);
+      } else if (target === currentSection + 1) {
+        goToSection(target);
+      }
+    });
+  });
+
   // Pré-remplir date aujourd'hui
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
