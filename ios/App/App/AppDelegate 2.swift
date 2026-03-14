@@ -4,6 +4,7 @@ import WebKit
 import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
+import LocalAuthentication
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -54,7 +55,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 localStorage.setItem('lcc_token', '\(token)');
                 console.log('[Auth] ✅ Token restauré depuis UserDefaults');
             } else {
-                // Token déjà là — synchroniser UserDefaults avec la valeur actuelle
                 window._syncTokenToNative && window._syncTokenToNative(existing);
                 console.log('[Auth] ℹ️ Token déjà dans localStorage');
             }
@@ -66,6 +66,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 print("❌ Erreur restauration token: \(error)")
             } else {
                 print("✅ Token restauré dans localStorage")
+            }
+        }
+    }
+
+    // ============================================
+    // FACE ID — LocalAuthentication natif
+    // ============================================
+
+    func evaluateBiometry(completion: @escaping (Bool, String?) -> Void) {
+        let context = LAContext()
+        var error: NSError?
+
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            completion(false, error?.localizedDescription ?? "Biométrie indisponible")
+            return
+        }
+
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                               localizedReason: "Accédez à votre espace Boostinghost") { success, error in
+            DispatchQueue.main.async {
+                completion(success, error?.localizedDescription)
             }
         }
     }
@@ -103,9 +124,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             webView.alpha = 0
             webView.navigationDelegate = self
 
-            // ✅ AJOUT : enregistrer le handler tokenSync pour recevoir le token depuis le JS
+            // Token sync handler
             webView.configuration.userContentController
                 .add(TokenSyncHandler(appDelegate: self), name: "tokenSync")
+
+            // Face ID handlers
+            webView.configuration.userContentController
+                .add(FaceIDCheckHandler(appDelegate: self), name: "faceIDCheck")
+            webView.configuration.userContentController
+                .add(FaceIDAuthHandler(appDelegate: self), name: "faceIDAuth")
         }
 
         window.rootViewController = capVC
@@ -299,15 +326,13 @@ extension AppDelegate: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         disablePullToRefresh(on: webView)
         
-        // ✅ Exposer _syncTokenToNative pour que le JS puisse sync le token
         let bridgeJS = """
         window._syncTokenToNative = function(token) {
-            window.webkit && window.webkit.messageHandlers && 
-            window.webkit.messageHandlers.tokenSync && 
+            window.webkit && window.webkit.messageHandlers &&
+            window.webkit.messageHandlers.tokenSync &&
             window.webkit.messageHandlers.tokenSync.postMessage(token);
         };
 
-        // ✅ AJOUT : intercepter automatiquement tout setItem('lcc_token', ...) dans localStorage
         (function() {
             var _originalSetItem = localStorage.setItem.bind(localStorage);
             localStorage.setItem = function(key, value) {
@@ -318,10 +343,19 @@ extension AppDelegate: WKNavigationDelegate {
                 }
             };
         })();
+
+        // Bridge Face ID natif
+        window._checkBiometryAvailable = function(callback) {
+            window.webkit.messageHandlers.faceIDCheck.postMessage('check');
+            window._faceIDCheckCallback = callback;
+        };
+        window._authenticateWithFaceID = function(callback) {
+            window.webkit.messageHandlers.faceIDAuth.postMessage('auth');
+            window._faceIDAuthCallback = callback;
+        };
         """
         webView.evaluateJavaScript(bridgeJS, completionHandler: nil)
         
-        // ✅ Restaurer le token depuis UserDefaults si localStorage est vide
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             self.restoreTokenIfNeeded(webView: webView)
         }
@@ -385,7 +419,7 @@ extension AppDelegate: MessagingDelegate {
 }
 
 // ============================================
-// TOKEN SYNC HANDLER — reçoit le token depuis le JS et le sauvegarde dans UserDefaults
+// TOKEN SYNC HANDLER
 // ============================================
 class TokenSyncHandler: NSObject, WKScriptMessageHandler {
     weak var appDelegate: AppDelegate?
@@ -400,6 +434,45 @@ class TokenSyncHandler: NSObject, WKScriptMessageHandler {
            token != "undefined", token != "null" {
             appDelegate?.saveTokenToUserDefaults(token)
             print("✅ Token synchronisé JS → UserDefaults")
+        }
+    }
+}
+
+// ============================================
+// FACE ID HANDLERS
+// ============================================
+class FaceIDCheckHandler: NSObject, WKScriptMessageHandler {
+    weak var appDelegate: AppDelegate?
+    init(appDelegate: AppDelegate) { self.appDelegate = appDelegate }
+
+    func userContentController(_ userContentController: WKUserContentController,
+                                didReceive message: WKScriptMessage) {
+        let context = LAContext()
+        var error: NSError?
+        let available = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        print("🔍 Face ID disponible: \(available)")
+
+        guard let rootVC = appDelegate?.window?.rootViewController as? CAPBridgeViewController,
+              let webView = rootVC.webView else { return }
+
+        let js = "if (window._faceIDCheckCallback) window._faceIDCheckCallback(\(available ? "true" : "false"));"
+        webView.evaluateJavaScript(js, completionHandler: nil)
+    }
+}
+
+class FaceIDAuthHandler: NSObject, WKScriptMessageHandler {
+    weak var appDelegate: AppDelegate?
+    init(appDelegate: AppDelegate) { self.appDelegate = appDelegate }
+
+    func userContentController(_ userContentController: WKUserContentController,
+                                didReceive message: WKScriptMessage) {
+        appDelegate?.evaluateBiometry { success, error in
+            print("🔐 Face ID résultat: \(success), erreur: \(error ?? "aucune")")
+            guard let rootVC = self.appDelegate?.window?.rootViewController as? CAPBridgeViewController,
+                  let webView = rootVC.webView else { return }
+
+            let js = "if (window._faceIDAuthCallback) window._faceIDAuthCallback(\(success ? "true" : "false"));"
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
     }
 }
