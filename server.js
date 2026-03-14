@@ -17952,6 +17952,338 @@ app.delete('/api/account/delete', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================
+// POST /api/contrat/send
+// Génère un PDF de contrat de location et l'envoie par email
+// ============================================
+app.post('/api/contrat/send', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const {
+      // Bailleur
+      ownerFirstName, ownerLastName, ownerAddress, ownerEmail, ownerPhone,
+      // Logement
+      propertyName, propertyType, propertyAddress,
+      // Dates
+      checkin, checkout, checkinTime, checkoutTime, guestCount,
+      // Locataire
+      guestFirstName, guestLastName, guestEmail, guestPhone,
+      guestNationality, guestAddress, guestDOB, guestIDNumber,
+      // Finances
+      totalPrice, cleaningFee, deposit, acompte, acompteDate, paymentMethod, priceNotes,
+      // Règles
+      regles,
+      // Conditions légales
+      inclAnnulation, cancelDays1, cancelPct1, cancelDays2, cancelPct2,
+      inclObligations, obligationsExtra,
+      inclAssurance,
+      inclEDL, depositReturnDays,
+      // Signature (base64 PNG)
+      signatureData,
+      // Date signature
+      signatureDate
+    } = req.body;
+
+    if (!guestEmail) return res.status(400).json({ error: 'Email du locataire requis' });
+    if (!guestFirstName || !guestLastName) return res.status(400).json({ error: 'Nom du locataire requis' });
+
+    // ── Calcul nuits ──
+    const nights = checkin && checkout
+      ? Math.round((new Date(checkout) - new Date(checkin)) / 86400000)
+      : 0;
+
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+    const fmtDateShort = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+    const payLabels = { virement: 'Virement bancaire', especes: 'Espèces', cheque: 'Chèque', carte: 'Carte bancaire', autre: 'Autre' };
+    const propTypeLabels = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', chambre: 'Chambre', gite: 'Gîte / Chalet', autre: 'Autre' };
+
+    // ── Génération PDF avec PDFKit ──
+    const contratNumber = `CONT-${Date.now()}`;
+    const pdfPath = path.join(INVOICE_PDF_DIR, `${contratNumber}.pdf`);
+
+    await new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const stream = fs.createWriteStream(pdfPath);
+      doc.pipe(stream);
+
+      const green = '#1A7A5E';
+      const dark = '#0D1117';
+      const gray = '#7A8695';
+      const lightBg = '#F5F2EC';
+      const pageW = doc.page.width - 100; // content width with margins
+
+      // ── HEADER ──
+      doc.rect(0, 0, doc.page.width, 52).fill(green);
+      doc.fillColor('white').fontSize(14).font('Helvetica-Bold')
+        .text('BOOSTINGHOST', 50, 18);
+      doc.fontSize(9).font('Helvetica')
+        .text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
+
+      let y = 75;
+
+      // ── TITRE ──
+      doc.fillColor(dark).fontSize(20).font('Helvetica-Bold')
+        .text('Contrat de location meublée saisonnière', 50, y, { align: 'center', width: pageW });
+      y += 35;
+      doc.fillColor(gray).fontSize(9).font('Helvetica')
+        .text(`Établi le ${fmtDate(signatureDate || new Date())}`, 50, y, { align: 'center', width: pageW });
+      y += 25;
+
+      // Helper : section title
+      const sectionTitle = (title) => {
+        doc.rect(50, y, pageW, 16).fill(lightBg);
+        doc.fillColor(green).fontSize(8).font('Helvetica-Bold')
+          .text(title.toUpperCase(), 54, y + 4);
+        doc.fillColor(dark);
+        y += 20;
+      };
+
+      // Helper : row
+      const row = (label, value) => {
+        if (!value || value === '—') return;
+        doc.fillColor(gray).fontSize(9).font('Helvetica').text(label, 54, y);
+        doc.fillColor(dark).font('Helvetica-Bold')
+          .text(String(value), 220, y, { width: pageW - 170 });
+        y += 14;
+      };
+
+      // Helper : paragraph
+      const para = (text) => {
+        doc.fillColor(dark).fontSize(8.5).font('Helvetica')
+          .text(text, 54, y, { width: pageW - 8, lineGap: 2 });
+        y += doc.heightOfString(text, { width: pageW - 8, lineGap: 2 }) + 6;
+      };
+
+      const checkPage = () => {
+        if (y > 740) { doc.addPage(); y = 50; }
+      };
+
+      // ── 1. BAILLEUR ──
+      sectionTitle('1. Bailleur');
+      row('Nom', `${ownerFirstName || ''} ${ownerLastName || ''}`.trim());
+      row('Adresse', ownerAddress);
+      if (ownerEmail) row('Email', ownerEmail);
+      if (ownerPhone) row('Téléphone', ownerPhone);
+      y += 6; checkPage();
+
+      // ── 2. LOCATAIRE ──
+      sectionTitle('2. Locataire');
+      row('Nom complet', `${guestFirstName} ${guestLastName}`);
+      row('Email', guestEmail);
+      if (guestPhone) row('Téléphone', guestPhone);
+      if (guestNationality) row('Nationalité', guestNationality);
+      if (guestAddress) row('Adresse', guestAddress);
+      if (guestDOB) row('Date de naissance', fmtDateShort(guestDOB));
+      if (guestIDNumber) row("Pièce d'identité", guestIDNumber);
+      y += 6; checkPage();
+
+      // ── 3. OBJET ──
+      sectionTitle('3. Objet de la location');
+      row('Logement', propertyName);
+      if (propertyType) row('Type', propTypeLabels[propertyType] || propertyType);
+      row('Adresse', propertyAddress);
+      para('Cette location meublée saisonnière ne constitue pas la résidence principale du locataire.');
+      y += 4; checkPage();
+
+      // ── 4. DURÉE ──
+      sectionTitle('4. Durée du séjour');
+      row('Arrivée', `${fmtDate(checkin)} à ${checkinTime || '15:00'}`);
+      row('Départ', `${fmtDate(checkout)} à ${checkoutTime || '11:00'}`);
+      row('Durée', `${nights} nuit${nights > 1 ? 's' : ''}`);
+      row('Occupants max.', `${guestCount || 1} personne${parseInt(guestCount) > 1 ? 's' : ''}`);
+      y += 6; checkPage();
+
+      // ── 5. CONDITIONS FINANCIÈRES ──
+      sectionTitle('5. Conditions financières');
+      row('Loyer total (CC)', `${parseFloat(totalPrice || 0).toFixed(2)} €`);
+      if (cleaningFee && parseFloat(cleaningFee) > 0) row('Dont frais de ménage', `${parseFloat(cleaningFee).toFixed(2)} €`);
+      if (deposit && parseFloat(deposit) > 0) row('Dépôt de garantie', `${parseFloat(deposit).toFixed(2)} €`);
+      if (acompte && parseFloat(acompte) > 0) row('Acompte versé', `${parseFloat(acompte).toFixed(2)} €${acompteDate ? ' le ' + fmtDateShort(acompteDate) : ''}`);
+      row('Mode de paiement', payLabels[paymentMethod] || paymentMethod || '—');
+      if (priceNotes) row('Notes', priceNotes);
+      y += 6; checkPage();
+
+      // ── 6. RÈGLES ──
+      if (regles && regles.length > 0) {
+        sectionTitle('6. Règles du logement');
+        regles.forEach(r => {
+          doc.fillColor(dark).fontSize(9).font('Helvetica').text(`• ${r}`, 56, y);
+          y += 13;
+        });
+        y += 4; checkPage();
+      }
+
+      // ── 7. OBLIGATIONS ──
+      if (inclObligations) {
+        checkPage(); sectionTitle('Obligations du locataire');
+        let texteOblig = "Le locataire s'engage à occuper paisiblement les lieux, à respecter le voisinage, à ne pas sous-louer le logement (même à titre gratuit), et à ne pas organiser de fêtes ou rassemblements sans accord écrit préalable du bailleur. Le logement devra être rendu dans l'état où il a été remis.";
+        if (obligationsExtra) texteOblig += ' ' + obligationsExtra;
+        para(texteOblig);
+        y += 4; checkPage();
+      }
+
+      // ── 8. ANNULATION ──
+      if (inclAnnulation) {
+        checkPage(); sectionTitle("Politique d'annulation");
+        para(`Plus de ${cancelDays1 || 30} jours avant l'arrivée : remboursement de ${cancelPct1 || 50}% des sommes versées. Moins de ${cancelDays2 || 7} jours avant l'arrivée : remboursement de ${cancelPct2 || 0}% des sommes versées.`);
+        y += 4; checkPage();
+      }
+
+      // ── 9. ASSURANCE ──
+      if (inclAssurance) {
+        checkPage(); sectionTitle('Assurance responsabilité civile');
+        para("Le locataire déclare être couvert par une assurance responsabilité civile en cours de validité couvrant les dommages pouvant survenir pendant la durée de la location. Il s'engage à en fournir la preuve sur simple demande du bailleur.");
+        y += 4; checkPage();
+      }
+
+      // ── 10. ÉTAT DES LIEUX ──
+      if (inclEDL) {
+        checkPage(); sectionTitle('État des lieux & restitution de la caution');
+        para(`Un état des lieux contradictoire sera réalisé à l'entrée et au départ. La caution sera restituée dans un délai de ${depositReturnDays || 7} jours après le départ, sous réserve d'éventuelles retenues justifiées.`);
+        y += 4; checkPage();
+      }
+
+      // ── LITIGES ──
+      checkPage(); sectionTitle('Tribunaux compétents');
+      para('Tout litige relatif au présent contrat sera soumis à la juridiction compétente du lieu de situation du logement.');
+      y += 10; checkPage();
+
+      // ── LIEU ET DATE ──
+      doc.fillColor(gray).fontSize(9).font('Helvetica')
+        .text(`Fait le ${fmtDateShort(signatureDate || new Date())}`, 50, y);
+      y += 20; checkPage();
+
+      // ── SIGNATURES ──
+      const sigW = (pageW - 20) / 2;
+      doc.fillColor(gray).fontSize(8).font('Helvetica')
+        .text('Signature du bailleur', 50, y)
+        .text('Signature du locataire', 50 + sigW + 20, y);
+      y += 5;
+      doc.fillColor(dark).fontSize(8).font('Helvetica-Bold')
+        .text(`${ownerFirstName || ''} ${ownerLastName || ''}`.trim(), 50, y)
+        .text(`${guestFirstName} ${guestLastName}`, 50 + sigW + 20, y);
+      y += 5;
+
+      // Signature image si fournie
+      if (signatureData && signatureData.startsWith('data:image/png;base64,')) {
+        try {
+          const sigBuffer = Buffer.from(signatureData.replace('data:image/png;base64,', ''), 'base64');
+          doc.image(sigBuffer, 50, y, { width: sigW, height: 35 });
+        } catch(e) { /* ignore if image fails */ }
+      }
+      y += 40;
+
+      // Lignes de signature
+      doc.moveTo(50, y).lineTo(50 + sigW, y).strokeColor('#AAAAAA').stroke();
+      doc.moveTo(50 + sigW + 20, y).lineTo(50 + pageW, y).strokeColor('#AAAAAA').stroke();
+
+      // ── FOOTER ──
+      doc.rect(0, doc.page.height - 28, doc.page.width, 28).fill(lightBg);
+      doc.fillColor(gray).fontSize(7).font('Helvetica')
+        .text('Contrat généré via Boostinghost — www.boostinghost.fr', 0, doc.page.height - 18, { align: 'center', width: doc.page.width });
+
+      doc.end();
+      stream.on('finish', resolve);
+      stream.on('error', reject);
+    });
+
+    const pdfBuffer = fs.readFileSync(pdfPath);
+
+    // ── Email au locataire ──
+    const checkinFr = fmtDate(checkin);
+    const checkoutFr = fmtDate(checkout);
+
+    const emailHtml = bhEmailTemplate({
+      icon: '📄',
+      title: 'Contrat de location',
+      subtitle: `${propertyName}${checkinFr !== '—' ? ' · du ' + checkinFr + ' au ' + checkoutFr : ''}`,
+      bodyHtml: `
+        <p>Bonjour <strong>${guestFirstName} ${guestLastName}</strong>,</p>
+        <p>Veuillez trouver ci-joint votre contrat de location pour votre séjour à <strong>${propertyName}</strong>${checkinFr !== '—' ? ` du <strong>${checkinFr}</strong> au <strong>${checkoutFr}</strong>` : ''}.</p>
+        <div style="background:#F5F2EC;border:1px solid #DDD8CE;border-radius:8px;padding:18px 20px;margin:20px 0;font-size:14px;">
+          <table style="width:100%;border-collapse:collapse;">
+            ${checkin && checkout ? `<tr><td style="padding:5px 0;color:#666;">Séjour</td><td style="padding:5px 0;font-weight:600;text-align:right;">${checkinFr} → ${checkoutFr}</td></tr>
+            <tr><td style="padding:5px 0;color:#666;">Durée</td><td style="padding:5px 0;font-weight:600;text-align:right;">${nights} nuit${nights > 1 ? 's' : ''}</td></tr>` : ''}
+            <tr><td style="padding:5px 0;color:#666;">Loyer total</td><td style="padding:5px 0;font-weight:700;color:#1A7A5E;text-align:right;">${parseFloat(totalPrice || 0).toFixed(2)} €</td></tr>
+            ${deposit && parseFloat(deposit) > 0 ? `<tr><td style="padding:5px 0;color:#666;">Dépôt de garantie</td><td style="padding:5px 0;text-align:right;">${parseFloat(deposit).toFixed(2)} €</td></tr>` : ''}
+          </table>
+        </div>
+        <div class="success-card">📎 Votre contrat PDF est joint à cet email.</div>
+        <p style="font-size:14px;color:#666;">Pour toute question, n'hésitez pas à contacter le bailleur.<br>Cordialement, <strong>${[ownerFirstName, ownerLastName].filter(Boolean).join(' ')}</strong></p>
+      `
+    });
+
+    const subject = `Contrat de location – ${propertyName}${checkin ? ' du ' + fmtDateShort(checkin) : ''}`;
+    const attachment = [{ filename: `contrat_${guestLastName.toLowerCase()}_${checkin || 'date'}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }];
+
+    let sentToGuest = false, sentToBailleur = false, emailError = null;
+
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+        to: guestEmail,
+        subject,
+        html: emailHtml,
+        attachments: attachment
+      });
+      sentToGuest = true;
+      console.log('✅ Contrat envoyé au locataire:', guestEmail);
+    } catch (err) {
+      emailError = err.message;
+      console.error('❌ Erreur envoi contrat locataire:', err?.response?.body || err?.message);
+    }
+
+    // Copie au bailleur (ownerEmail ou email du user connecté)
+    const bailleurEmail = ownerEmail || (await getUserFromRequest(req))?.email;
+    if (bailleurEmail && bailleurEmail !== guestEmail) {
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+          to: bailleurEmail,
+          subject: `[Copie] ${subject}`,
+          html: bhEmailTemplate({
+            icon: '📋',
+            title: 'Copie — Contrat envoyé',
+            subtitle: `${propertyName}${checkinFr !== '—' ? ' · ' + checkinFr + ' → ' + checkoutFr : ''}`,
+            bodyHtml: `
+              <p>Le contrat de location pour <strong>${guestFirstName} ${guestLastName}</strong> (${guestEmail}) a bien été envoyé.</p>
+              <p>Le contrat PDF est joint à cet email pour vos archives.</p>
+              <div class="info-card"><strong>Séjour :</strong> ${checkinFr} → ${checkoutFr} — ${nights} nuit${nights > 1 ? 's' : ''}<br><strong>Loyer :</strong> ${parseFloat(totalPrice || 0).toFixed(2)} €</div>
+            `
+          }),
+          attachments: attachment
+        });
+        sentToBailleur = true;
+        console.log('✅ Copie contrat envoyée au bailleur:', bailleurEmail);
+      } catch (err) {
+        console.error('❌ Erreur copie bailleur:', err?.message);
+      }
+    }
+
+    // Nettoyage PDF temporaire
+    try { fs.unlinkSync(pdfPath); } catch(e) {}
+
+    if (!sentToGuest && emailError) {
+      return res.status(500).json({ error: `Erreur envoi email : ${emailError}` });
+    }
+
+    res.json({
+      success: true,
+      message: `Contrat envoyé à ${guestEmail}${sentToBailleur ? ` et copie à ${bailleurEmail}` : ''}`,
+      sentToGuest,
+      sentToBailleur
+    });
+
+  } catch (err) {
+    console.error('❌ Erreur /api/contrat/send:', err);
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
+  }
+});
+
 server.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
