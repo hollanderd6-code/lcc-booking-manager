@@ -381,9 +381,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .toast.success { background: #1A7A5E; }
 .toast.error { background: #DC2626; }
 
-/* Masquer le mobile header sur desktop (bh-layout.js le force en display:flex) */
+/* Masquer le mobile header ET bhHeader sur desktop (bh-layout.js les force en display:flex) */
 @media(min-width:1367px){
   #bhMobileHeader { display: none !important; }
+  #bhHeader { display: none !important; }
 }
 
 /* Mobile */
