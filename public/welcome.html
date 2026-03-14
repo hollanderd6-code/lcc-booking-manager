@@ -1059,6 +1059,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 <script>
 
 const API_BASE = 'https://lcc-booking-manager.onrender.com';
+const PUBLIC_BASE = 'https://www.boostinghost.fr';
 
 window.getAuthToken = window.getAuthToken || (() => localStorage.getItem('lcc_token') || '');
 let currentUniqueId = null; // Pour savoir si on modifie ou on crée
@@ -1337,11 +1338,11 @@ function createNewLivret() {
 
 // Voir un livret
 function viewLivret(uniqueId) {
-  window.open(`${API_BASE}/welcome/${uniqueId}`, '_blank');
+  window.open(`${PUBLIC_BASE}/welcome/${uniqueId}`, '_blank');
 }
 function viewWelcomeBook() {
   if (!currentUniqueId) { alert('Identifiant manquant.'); return; }
-  window.open(`${API_BASE}/welcome/${currentUniqueId}`, '_blank');
+  window.open(`${PUBLIC_BASE}/welcome/${currentUniqueId}`, '_blank');
 }
 
 // Supprimer un livret
@@ -1371,7 +1372,7 @@ async function copyWelcomeBookLink(buttonEl) {
       const url =
         window.welcomeBookUrl ||
         (typeof currentUniqueId !== "undefined" && currentUniqueId
-          ? `${API_BASE}/welcome/${currentUniqueId}`
+          ? `${PUBLIC_BASE}/welcome/${currentUniqueId}`
           : "");
 
       if (!url) {
@@ -1391,7 +1392,7 @@ async function copyWelcomeBookLink(buttonEl) {
     } catch (e) {
       const url =
         window.welcomeBookUrl ||
-        (currentUniqueId ? `${API_BASE}/welcome/${currentUniqueId}` : "");
+        (currentUniqueId ? `${PUBLIC_BASE}/welcome/${currentUniqueId}` : "");
       prompt("Copie le lien :", url);
     }
   }
@@ -1429,7 +1430,7 @@ async function deleteLivret(uniqueId) {
 function downloadQRCode(uniqueId) {
   try {
     // 0) Si on a un uniqueId, on peut toujours reconstruire l'URL
-    const url = uniqueId ? `${API_BASE}/welcome/${uniqueId}` : (window.welcomeBookUrl || null);
+    const url = uniqueId ? `${PUBLIC_BASE}/welcome/${uniqueId}` : (window.welcomeBookUrl || null);
 
     // 1) Cas 1: un <img> dédié (si tu l'utilises dans une liste)
     const img =
@@ -1668,7 +1669,7 @@ function fillFormWithData(data) {
 
   // URL public / QR (on se base sur currentUniqueId si on édite)
   const uid = currentUniqueId || data.uniqueId;
-  if (uid) window.welcomeBookUrl = `${API_BASE}/welcome/${uid}`;
+  if (uid) window.welcomeBookUrl = `${PUBLIC_BASE}/welcome/${uid}`;
 }
 
 // Appeler loadLivretsList() au chargement de la page() au chargement de la page
@@ -1706,7 +1707,7 @@ function createNewLivret() {
 <script>
 // ── Redesign helpers ──
 function copyLivretLink(uniqueId, btn) {
-  const url = API_BASE + '/welcome/' + uniqueId;
+  const url = PUBLIC_BASE + '/welcome/' + uniqueId;
   navigator.clipboard.writeText(url).then(() => {
     const old = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-check"></i>';
