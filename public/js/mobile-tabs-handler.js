@@ -53,6 +53,9 @@
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-book-open"></i> Livrets d'accueil
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/contrat.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-file-contract"></i> Contrats
         </button>`;
     }
 
@@ -138,6 +141,7 @@
     'factures',
     'factures-proprietaires',
     'welcome',
+    'contrat',
     'help'
   ];
 
