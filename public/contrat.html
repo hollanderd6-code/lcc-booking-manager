@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
-<title>Contrat de location</title>
+<title>Boostinghost – Contrat de location</title>
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <!-- Font Awesome -->
@@ -945,7 +945,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     <div class="contrat-nav">
       <button class="btn-prev" onclick="goToSection(5)"><i class="fas fa-arrow-left"></i> Précédent</button>
         <button class="btn-email" onclick="sendByEmail()">
-          <i class="fas fa-envelope"></i> Envoyer par email
+          <i class="fas fa-paper-plane"></i> Envoyer par email
         </button>
         <button class="btn-download" onclick="downloadPDF()">
           <i class="fas fa-file-pdf"></i> Télécharger PDF
@@ -1500,8 +1500,8 @@ function downloadPDF() {
   showToast('PDF téléchargé !', 'success');
 }
 
-// ── Envoyer par email ──
-function sendByEmail() {
+// ── Envoyer par email via API ──
+async function sendByEmail() {
   if (!document.getElementById('acceptTerms').checked) {
     showToast('Veuillez cocher la case d\'acceptation', 'error');
     return;
@@ -1511,12 +1511,79 @@ function sendByEmail() {
     showToast('Veuillez renseigner l\'email du voyageur', 'error');
     return;
   }
-  const subject = encodeURIComponent(`Contrat de location – ${v('propertyName')}`);
-  const body = encodeURIComponent(
-    `Bonjour ${v('guestFirstName')},\n\nVeuillez trouver ci-joint votre contrat de location pour le séjour du ${v('checkin')} au ${v('checkout')} à ${v('propertyName')}.\n\nCordialement,\nBoostinghost`
-  );
-  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-  showToast('Ouverture de votre client email...', 'success');
+
+  const btn = document.querySelector('.btn-email');
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+  btn.disabled = true;
+
+  // Collecter toutes les données du formulaire
+  const regles = Array.from(document.querySelectorAll('#reglesList li span')).map(s => s.textContent);
+
+  const payload = {
+    // Bailleur
+    ownerFirstName: v('ownerFirstName'), ownerLastName: v('ownerLastName'),
+    ownerAddress: v('ownerAddress'), ownerEmail: v('ownerEmail'), ownerPhone: v('ownerPhone'),
+    // Logement
+    propertyName: v('propertyName'), propertyType: v('propertyType'), propertyAddress: v('propertyAddress'),
+    // Dates
+    checkin: v('checkin'), checkout: v('checkout'),
+    checkinTime: v('checkinTime') || '15:00', checkoutTime: v('checkoutTime') || '11:00',
+    guestCount: v('guestCount') || '1',
+    // Locataire
+    guestFirstName: v('guestFirstName'), guestLastName: v('guestLastName'),
+    guestEmail: v('guestEmail'), guestPhone: v('guestPhone'),
+    guestNationality: v('guestNationality'), guestAddress: v('guestAddress'),
+    guestDOB: v('guestDOB'), guestIDNumber: v('guestIDNumber'),
+    // Finances
+    totalPrice: v('totalPrice'), cleaningFee: v('cleaningFee'),
+    deposit: v('deposit'), acompte: v('acompte'), acompteDate: v('acompteDate'),
+    paymentMethod: v('paymentMethod'), priceNotes: v('priceNotes'),
+    // Règles
+    regles,
+    // Conditions légales
+    inclAnnulation: document.getElementById('toggleAnnulation')?.checked,
+    cancelDays1: document.getElementById('cancelDays1')?.value || '30',
+    cancelPct1: document.getElementById('cancelPct1')?.value || '50',
+    cancelDays2: document.getElementById('cancelDays2')?.value || '7',
+    cancelPct2: document.getElementById('cancelPct2')?.value || '0',
+    inclObligations: document.getElementById('toggleObligations')?.checked,
+    obligationsExtra: document.getElementById('obligationsExtra')?.value || '',
+    inclAssurance: document.getElementById('toggleAssurance')?.checked,
+    inclEDL: document.getElementById('toggleEDL')?.checked,
+    depositReturnDays: document.getElementById('depositReturnDays')?.value || '7',
+    // Signature
+    signatureData: signatureData || null,
+    signatureDate: new Date().toISOString()
+  };
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const response = await fetch('/api/contrat/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Erreur lors de l\'envoi');
+    }
+
+    showToast(data.message || 'Contrat envoyé !', 'success');
+    btn.innerHTML = '<i class="fas fa-check"></i> Envoyé !';
+    setTimeout(() => { btn.innerHTML = originalHTML; btn.disabled = false; }, 3000);
+
+  } catch (err) {
+    console.error('Erreur envoi contrat:', err);
+    showToast(err.message || 'Erreur lors de l\'envoi', 'error');
+    btn.innerHTML = originalHTML;
+    btn.disabled = false;
+  }
 }
 
 // ── Toast ──
