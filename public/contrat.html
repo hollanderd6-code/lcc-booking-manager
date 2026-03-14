@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light" data-theme-v3="1">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Contrat de location – Boostinghost</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/js/auth-fetch.js"></script>
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/menu-active-button.css" rel="stylesheet"/>
+<link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/messages-badge-red.css">
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
+
+<style>
+/* ── Layout base (identique app.html) ── */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important; z-index: 30 !important;
+}
+html[data-theme-v3="1"] header.main-header {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; right: 0 !important;
+  z-index: 50 !important; margin-top: 0 !important;
+  margin-left: 260px !important;
+}
+@media(max-width:1366px){
+  html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; }
+}
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 70px !important; margin-top: 0 !important;
+  position: relative !important; z-index: 35 !important;
+}
+html[data-theme-v3="1"] .app-container { margin-top: 0 !important; padding-top: 0 !important; }
+
+/* ── Barre dark ── */
+html[data-theme-v3="1"] .bh-demo-nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 9999; background: #0D1117;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 16px; height: 40px;
+  font-family: 'DM Sans', sans-serif; font-size: 12px;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
+  color: rgba(255,255,255,.4); font-weight: 500;
+  margin-right: 6px; letter-spacing: .08em;
+  text-transform: uppercase; font-size: 11px; white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn {
+  padding: 4px 13px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15); background: transparent;
+  color: rgba(255,255,255,.6); cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-size: 11.5px; font-weight: 500;
+  transition: all .2s; display: inline-flex; align-items: center;
+  gap: 5px; text-decoration: none; white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn:hover,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
+  background: rgba(255,255,255,.1); color: white;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
+  margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+
+/* ── Page contrat ── */
+html[data-theme-v3="1"], html[data-theme-v3="1"] body {
+  overflow: hidden !important; height: 100% !important;
+}
+html[data-theme-v3="1"] .app-container {
+  height: calc(100vh - 40px) !important; overflow: hidden !important;
+}
+html[data-theme-v3="1"] .main-content {
+  background: #F5F2EC !important;
+  overflow-y: auto !important; height: 100% !important;
+}
+
+/* Back button */
+.contrat-back-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 20px; border: none; border-radius: 12px;
+  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+  white-space: nowrap; position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200;
+}
+.contrat-back-btn:hover { background: #15624B; }
+
+/* Container */
+.contrat-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+/* Header section */
+.contrat-section-header { margin-bottom: 28px; }
+.contrat-kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: rgba(13,17,23,.38); margin-bottom: 4px;
+}
+.contrat-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px; font-weight: 400; color: #0D1117; margin: 0;
+}
+.contrat-title em { font-style: italic; color: #1A7A5E; }
+
+/* Steps */
+.contrat-steps {
+  display: flex; align-items: center; gap: 0;
+  background: white; border: 1px solid rgba(200,184,154,.4);
+  border-radius: 16px; padding: 16px 20px;
+  margin-bottom: 24px; overflow-x: auto;
+}
+.contrat-step {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  transition: all .15s; white-space: nowrap; flex: 1; justify-content: center;
+}
+.contrat-step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(13,17,23,.08); color: #7A8695;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.contrat-step-label { font-size: 12.5px; font-weight: 600; color: #7A8695; }
+.contrat-step.active { background: rgba(26,122,94,.08); }
+.contrat-step.active .contrat-step-num { background: #1A7A5E; color: white; }
+.contrat-step.active .contrat-step-label { color: #1A7A5E; }
+.contrat-step.done .contrat-step-num { background: rgba(26,122,94,.15); color: #1A7A5E; }
+.contrat-step.done .contrat-step-label { color: #0D1117; }
+.contrat-sep { width: 24px; height: 2px; background: rgba(13,17,23,.08); flex-shrink: 0; }
+
+/* Cards */
+.contrat-card {
+  background: white; border: 1px solid rgba(200,184,154,.35);
+  border-radius: 16px; overflow: hidden; margin-bottom: 16px;
+}
+.contrat-card-header {
+  padding: 20px 24px; border-bottom: 1px solid rgba(13,17,23,.06);
+  background: #FAFAF8; display: flex; align-items: center; gap: 12px;
+}
+.contrat-card-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(26,122,94,.1); display: flex; align-items: center;
+  justify-content: center; color: #1A7A5E; font-size: 16px; flex-shrink: 0;
+}
+.contrat-card-title { font-size: 16px; font-weight: 700; color: #0D1117; margin: 0; }
+.contrat-card-sub { font-size: 13px; color: #7A8695; margin: 2px 0 0; }
+.contrat-card-body { padding: 24px; }
+
+/* Form */
+.form-group { margin-bottom: 20px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: #374151; margin-bottom: 6px;
+}
+.form-required { color: #EF4444; }
+.form-hint { font-size: 12px; color: #9CA3AF; font-weight: 400; display: block; margin-top: 2px; }
+.form-input, .form-textarea, .form-select {
+  width: 100%; padding: 10px 14px;
+  background: #FAFAF8; border: 1.5px solid rgba(13,17,23,.12);
+  border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+  color: #0D1117; transition: border-color .15s; outline: none;
+  box-sizing: border-box;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: #1A7A5E; background: white;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.08);
+}
+.form-textarea { resize: vertical; min-height: 90px; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:640px){ .form-grid-2 { grid-template-columns: 1fr; } }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media(max-width:640px){ .form-grid-3 { grid-template-columns: 1fr; } }
+
+/* Règles */
+.regles-list { list-style: none; padding: 0; margin: 0; }
+.regles-list li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid rgba(13,17,23,.06);
+  font-size: 14px; color: #374151;
+}
+.regles-list li:last-child { border-bottom: none; }
+.regles-list li i { color: #1A7A5E; margin-top: 2px; flex-shrink: 0; }
+.regles-add {
+  display: flex; gap: 8px; margin-top: 12px;
+}
+.regles-add .form-input { flex: 1; }
+.btn-add-regle {
+  height: 42px; padding: 0 16px; border-radius: 10px;
+  background: rgba(26,122,94,.1); color: #1A7A5E;
+  border: 1px dashed rgba(26,122,94,.3); cursor: pointer;
+  font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-add-regle:hover { background: rgba(26,122,94,.18); border-color: #1A7A5E; }
+
+/* Signature */
+.signature-zone {
+  border: 2px dashed rgba(13,17,23,.15); border-radius: 14px;
+  background: #FAFAF8; overflow: hidden; position: relative;
+}
+.signature-zone canvas {
+  display: block; width: 100%; height: 180px; cursor: crosshair;
+  touch-action: none;
+}
+.signature-actions {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; border-top: 1px solid rgba(13,17,23,.08);
+  background: white;
+}
+.signature-hint { font-size: 12px; color: #9CA3AF; }
+.btn-clear-sig {
+  height: 32px; padding: 0 14px; border-radius: 8px;
+  background: #FEF2F2; color: #DC2626;
+  border: 1px solid rgba(220,38,38,.15); cursor: pointer;
+  font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  transition: all .15s;
+}
+.btn-clear-sig:hover { background: #FEE2E2; }
+
+/* Checkbox acceptation */
+.accept-box {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: rgba(26,122,94,.05); border: 1px solid rgba(26,122,94,.15);
+  border-radius: 12px; padding: 16px; margin-top: 20px;
+}
+.accept-box input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: #1A7A5E;
+  flex-shrink: 0; margin-top: 1px; cursor: pointer;
+}
+.accept-box label {
+  font-size: 14px; color: #374151; cursor: pointer; line-height: 1.5;
+}
+.accept-box label strong { color: #0D1117; }
+
+/* Aperçu contrat */
+.contrat-preview {
+  background: white; border: 1px solid rgba(200,184,154,.35);
+  border-radius: 16px; padding: 32px; font-family: 'DM Sans', sans-serif;
+  line-height: 1.7; color: #0D1117;
+}
+.contrat-preview h2 {
+  font-family: 'Instrument Serif', serif; font-size: 22px;
+  font-weight: 400; text-align: center; margin: 0 0 4px;
+}
+.contrat-preview .preview-sub {
+  text-align: center; font-size: 13px; color: #7A8695; margin-bottom: 28px;
+}
+.contrat-preview .preview-section { margin-bottom: 20px; }
+.contrat-preview .preview-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: #1A7A5E; margin-bottom: 8px;
+  padding-bottom: 6px; border-bottom: 1px solid rgba(26,122,94,.15);
+}
+.contrat-preview .preview-row {
+  display: flex; gap: 8px; margin-bottom: 4px; font-size: 14px;
+}
+.contrat-preview .preview-row .lbl { color: #7A8695; min-width: 160px; flex-shrink: 0; }
+.contrat-preview .preview-row .val { font-weight: 500; }
+.contrat-preview .preview-sig {
+  margin-top: 24px; display: flex; gap: 24px;
+}
+.contrat-preview .preview-sig-block { flex: 1; }
+.contrat-preview .preview-sig-label {
+  font-size: 12px; color: #7A8695; margin-bottom: 8px;
+}
+.contrat-preview .preview-sig-img {
+  border-top: 1px solid #0D1117; padding-top: 8px;
+  min-height: 60px; display: flex; align-items: center;
+}
+
+/* Navigation */
+.contrat-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 0 8px;
+}
+.btn-prev {
+  height: 44px; padding: 0 20px; border-radius: 12px;
+  background: white; color: #0D1117;
+  border: 1.5px solid rgba(13,17,23,.12); cursor: pointer;
+  font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  display: inline-flex; align-items: center; gap: 8px; transition: all .15s;
+}
+.btn-prev:hover { background: #f0ede7; }
+.btn-next {
+  height: 44px; padding: 0 24px; border-radius: 12px;
+  background: #1A7A5E; color: white; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  display: inline-flex; align-items: center; gap: 8px; transition: all .15s;
+}
+.btn-next:hover { background: #15624B; }
+.btn-next:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+/* Actions finales */
+.final-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn-download {
+  flex: 1; height: 48px; padding: 0 24px; border-radius: 12px;
+  background: #1A7A5E; color: white; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all .15s; min-width: 180px;
+}
+.btn-download:hover { background: #15624B; }
+.btn-email {
+  flex: 1; height: 48px; padding: 0 24px; border-radius: 12px;
+  background: white; color: #0D1117;
+  border: 1.5px solid rgba(13,17,23,.12); cursor: pointer;
+  font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all .15s; min-width: 180px;
+}
+.btn-email:hover { background: #f0ede7; }
+
+/* Section cachée */
+.form-section { display: none; }
+.form-section.active { display: block; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #0D1117; color: white; padding: 12px 20px;
+  border-radius: 12px; font-size: 14px; font-weight: 500;
+  font-family: 'DM Sans', sans-serif; z-index: 9999;
+  opacity: 0; transition: opacity .3s; pointer-events: none;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.show { opacity: 1; }
+.toast.success { background: #1A7A5E; }
+.toast.error { background: #DC2626; }
+
+/* Mobile */
+@media(max-width:1366px){
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] main.main-content {
+    margin-left: 0 !important;
+    padding: 0 14px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    max-width: 100% !important; box-sizing: border-box !important; width: 100% !important;
+  }
+  .mobile-header {
+    display: flex !important; position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important; align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  .contrat-back-btn, #bhHeader { display: none !important; }
+  .contrat-container { padding: 0 !important; max-width: 100% !important; }
+  .form-grid-2, .form-grid-3 { grid-template-columns: 1fr !important; }
+  .contrat-steps { padding: 12px 16px !important; }
+  .contrat-step { flex: 0 0 auto !important; padding: 8px 12px !important; }
+  .final-actions { flex-direction: column !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Barre dark -->
+<nav class="bh-demo-nav">
+  <span class="bh-demo-label">Boostinghost</span>
+  <div class="bh-demo-right"></div>
+</nav>
+
+<!-- Mobile header -->
+<div class="mobile-header">
+  <a class="mobile-logo" href="/app.html"><i class="fas fa-calendar-check"></i><span class="mobile-logo-text">Boostinghost</span></a>
+  <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app-container">
+<div id="bhSidebar"></div>
+<main class="main-content">
+<div id="bhHeader"></div>
+<button class="contrat-back-btn" onclick="window.location.href='/app.html'">
+  <i class="fas fa-arrow-left"></i> Tableau de bord
+</button>
+
+<div class="contrat-container">
+
+  <!-- Header -->
+  <div class="contrat-section-header">
+    <div class="contrat-kicker">Locations directes</div>
+    <h1 class="contrat-title">Contrat de <em>location</em></h1>
+  </div>
+
+  <!-- Stepper -->
+  <div class="contrat-steps" id="contratStepper">
+    <div class="contrat-step active" data-step="1">
+      <div class="contrat-step-num">1</div>
+      <div class="contrat-step-label">Logement & dates</div>
+    </div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-step="2">
+      <div class="contrat-step-num">2</div>
+      <div class="contrat-step-label">Voyageur</div>
+    </div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-step="3">
+      <div class="contrat-step-num">3</div>
+      <div class="contrat-step-label">Prix & caution</div>
+    </div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-step="4">
+      <div class="contrat-step-num">4</div>
+      <div class="contrat-step-label">Règles</div>
+    </div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-step="5">
+      <div class="contrat-step-num">5</div>
+      <div class="contrat-step-label">Signature</div>
+    </div>
+  </div>
+
+  <!-- ── Section 1 : Logement & dates ── -->
+  <div class="form-section active" data-section="1">
+    <div class="contrat-card">
+      <div class="contrat-card-header">
+        <div class="contrat-card-icon"><i class="fas fa-home"></i></div>
+        <div>
+          <h2 class="contrat-card-title">Logement & dates de séjour</h2>
+          <p class="contrat-card-sub">Informations sur le bien loué</p>
+        </div>
+      </div>
+      <div class="contrat-card-body">
+        <div class="form-group">
+          <label class="form-label">Nom du logement <span class="form-required">*</span></label>
+          <input type="text" class="form-input" id="propertyName" placeholder="Ex: Appartement Centre-Ville Lyon"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Adresse complète <span class="form-required">*</span></label>
+          <input type="text" class="form-input" id="propertyAddress" placeholder="12 rue des Fleurs, 75001 Paris"/>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Date d'arrivée <span class="form-required">*</span></label>
+            <input type="date" class="form-input" id="checkin"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date de départ <span class="form-required">*</span></label>
+            <input type="date" class="form-input" id="checkout"/>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Heure d'arrivée</label>
+            <input type="time" class="form-input" id="checkinTime" value="15:00"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Heure de départ</label>
+            <input type="time" class="form-input" id="checkoutTime" value="11:00"/>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Nombre de voyageurs</label>
+          <input type="number" class="form-input" id="guestCount" min="1" max="20" value="1"/>
+        </div>
+      </div>
+    </div>
+    <div class="contrat-nav">
+      <div></div>
+      <button class="btn-next" onclick="goToSection(2)">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- ── Section 2 : Voyageur ── -->
+  <div class="form-section" data-section="2">
+    <div class="contrat-card">
+      <div class="contrat-card-header">
+        <div class="contrat-card-icon"><i class="fas fa-user"></i></div>
+        <div>
+          <h2 class="contrat-card-title">Identité du voyageur</h2>
+          <p class="contrat-card-sub">Informations personnelles du locataire</p>
+        </div>
+      </div>
+      <div class="contrat-card-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Prénom <span class="form-required">*</span></label>
+            <input type="text" class="form-input" id="guestFirstName" placeholder="Marie"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom <span class="form-required">*</span></label>
+            <input type="text" class="form-input" id="guestLastName" placeholder="Dupont"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email <span class="form-required">*</span></label>
+          <input type="email" class="form-input" id="guestEmail" placeholder="marie.dupont@email.com"/>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input type="tel" class="form-input" id="guestPhone" placeholder="06 XX XX XX XX"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nationalité</label>
+            <input type="text" class="form-input" id="guestNationality" placeholder="Française"/>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Adresse du voyageur</label>
+          <input type="text" class="form-input" id="guestAddress" placeholder="Adresse de résidence principale"/>
+        </div>
+      </div>
+    </div>
+    <div class="contrat-nav">
+      <button class="btn-prev" onclick="goToSection(1)"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <button class="btn-next" onclick="goToSection(3)">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- ── Section 3 : Prix & caution ── -->
+  <div class="form-section" data-section="3">
+    <div class="contrat-card">
+      <div class="contrat-card-header">
+        <div class="contrat-card-icon"><i class="fas fa-euro-sign"></i></div>
+        <div>
+          <h2 class="contrat-card-title">Prix & caution</h2>
+          <p class="contrat-card-sub">Conditions financières de la location</p>
+        </div>
+      </div>
+      <div class="contrat-card-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Prix total du séjour <span class="form-required">*</span></label>
+            <input type="number" class="form-input" id="totalPrice" placeholder="0" min="0" step="0.01"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dont frais de ménage</label>
+            <input type="number" class="form-input" id="cleaningFee" placeholder="0" min="0" step="0.01"/>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Montant caution</label>
+            <input type="number" class="form-input" id="deposit" placeholder="0" min="0" step="0.01"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mode de paiement</label>
+            <select class="form-select" id="paymentMethod">
+              <option value="virement">Virement bancaire</option>
+              <option value="especes">Espèces</option>
+              <option value="cheque">Chèque</option>
+              <option value="carte">Carte bancaire</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Notes financières</label>
+          <textarea class="form-textarea" id="priceNotes" placeholder="Ex: Acompte de 30% versé le ... Solde à verser à l'arrivée..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="contrat-nav">
+      <button class="btn-prev" onclick="goToSection(2)"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <button class="btn-next" onclick="goToSection(4)">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- ── Section 4 : Règles ── -->
+  <div class="form-section" data-section="4">
+    <div class="contrat-card">
+      <div class="contrat-card-header">
+        <div class="contrat-card-icon"><i class="fas fa-list-check"></i></div>
+        <div>
+          <h2 class="contrat-card-title">Règles du logement</h2>
+          <p class="contrat-card-sub">Conditions que le voyageur devra accepter</p>
+        </div>
+      </div>
+      <div class="contrat-card-body">
+        <ul class="regles-list" id="reglesList">
+          <li><i class="fas fa-check-circle"></i><span>Non-fumeur dans le logement</span><button onclick="removeRegle(this)" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#DC2626;font-size:12px;"><i class="fas fa-times"></i></button></li>
+          <li><i class="fas fa-check-circle"></i><span>Animaux non admis</span><button onclick="removeRegle(this)" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#DC2626;font-size:12px;"><i class="fas fa-times"></i></button></li>
+          <li><i class="fas fa-check-circle"></i><span>Pas de fête ou événement</span><button onclick="removeRegle(this)" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#DC2626;font-size:12px;"><i class="fas fa-times"></i></button></li>
+          <li><i class="fas fa-check-circle"></i><span>Silence après 22h00</span><button onclick="removeRegle(this)" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#DC2626;font-size:12px;"><i class="fas fa-times"></i></button></li>
+        </ul>
+        <div class="regles-add">
+          <input type="text" class="form-input" id="newRegle" placeholder="Ajouter une règle..." onkeypress="if(event.key==='Enter'){addRegle();}"/>
+          <button class="btn-add-regle" onclick="addRegle()"><i class="fas fa-plus"></i> Ajouter</button>
+        </div>
+      </div>
+    </div>
+    <div class="contrat-nav">
+      <button class="btn-prev" onclick="goToSection(3)"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <button class="btn-next" onclick="goToSection(5)">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- ── Section 5 : Signature ── -->
+  <div class="form-section" data-section="5">
+
+    <!-- Aperçu contrat -->
+    <div class="contrat-card">
+      <div class="contrat-card-header">
+        <div class="contrat-card-icon"><i class="fas fa-file-contract"></i></div>
+        <div>
+          <h2 class="contrat-card-title">Aperçu du contrat</h2>
+          <p class="contrat-card-sub">Vérifiez les informations avant de signer</p>
+        </div>
+      </div>
+      <div class="contrat-card-body">
+        <div class="contrat-preview" id="contratPreview">
+          <!-- Généré dynamiquement -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Signature -->
+    <div class="contrat-card">
+      <div class="contrat-card-header">
+        <div class="contrat-card-icon"><i class="fas fa-pen-nib"></i></div>
+        <div>
+          <h2 class="contrat-card-title">Signature</h2>
+          <p class="contrat-card-sub">Signez dans le cadre ci-dessous</p>
+        </div>
+      </div>
+      <div class="contrat-card-body">
+        <div class="form-group">
+          <label class="form-label">Signature du propriétaire</label>
+          <div class="signature-zone">
+            <canvas id="signatureCanvas"></canvas>
+            <div class="signature-actions">
+              <span class="signature-hint"><i class="fas fa-pen" style="margin-right:4px;color:#1A7A5E;"></i>Signez avec la souris ou le doigt</span>
+              <button class="btn-clear-sig" onclick="clearSignature()"><i class="fas fa-trash"></i> Effacer</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checkbox acceptation -->
+        <div class="accept-box">
+          <input type="checkbox" id="acceptTerms"/>
+          <label for="acceptTerms">
+            Je certifie que les informations saisies sont exactes et j'accepte les conditions de ce contrat de location. 
+            <strong>Ce contrat a valeur d'engagement contractuel entre les deux parties.</strong>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions finales -->
+    <div class="contrat-nav">
+      <button class="btn-prev" onclick="goToSection(4)"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <div class="final-actions">
+        <button class="btn-email" onclick="sendByEmail()">
+          <i class="fas fa-envelope"></i> Envoyer par email
+        </button>
+        <button class="btn-download" onclick="downloadPDF()">
+          <i class="fas fa-file-pdf"></i> Télécharger PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .contrat-container -->
+</main>
+</div><!-- .app-container -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="/js/bh-layout.js"></script>
+<script src="/js/logout-fix.js"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
+<script src="/js/messages-badge-desktop-mobile.js"></script>
+
+<script>
+// ── Navigation sections ──
+let currentSection = 1;
+const totalSections = 5;
+
+function goToSection(n) {
+  if (n < 1 || n > totalSections) return;
+
+  // Validation section courante
+  if (n > currentSection && !validateSection(currentSection)) return;
+
+  document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.form-section[data-section="${n}"]`).classList.add('active');
+
+  document.querySelectorAll('.contrat-step').forEach((step, i) => {
+    step.classList.remove('active', 'done');
+    const sn = i + 1;
+    if (sn === n) step.classList.add('active');
+    else if (sn < n) step.classList.add('done');
+  });
+
+  currentSection = n;
+
+  // Scroll haut
+  document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Générer aperçu à l'étape 5
+  if (n === 5) {
+    generatePreview();
+    initSignature();
+  }
+}
+
+function validateSection(n) {
+  if (n === 1) {
+    if (!v('propertyName') || !v('propertyAddress') || !v('checkin') || !v('checkout')) {
+      showToast('Veuillez remplir les champs obligatoires', 'error');
+      return false;
+    }
+    if (new Date(v('checkout')) <= new Date(v('checkin'))) {
+      showToast('La date de départ doit être après l\'arrivée', 'error');
+      return false;
+    }
+  }
+  if (n === 2) {
+    if (!v('guestFirstName') || !v('guestLastName') || !v('guestEmail')) {
+      showToast('Veuillez remplir les champs obligatoires', 'error');
+      return false;
+    }
+  }
+  if (n === 3) {
+    if (!v('totalPrice')) {
+      showToast('Veuillez indiquer le prix du séjour', 'error');
+      return false;
+    }
+  }
+  return true;
+}
+
+function v(id) {
+  return document.getElementById(id)?.value?.trim() || '';
+}
+
+// ── Règles ──
+function addRegle() {
+  const input = document.getElementById('newRegle');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const li = document.createElement('li');
+  li.innerHTML = `<i class="fas fa-check-circle"></i><span>${text}</span><button onclick="removeRegle(this)" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#DC2626;font-size:12px;"><i class="fas fa-times"></i></button>`;
+  document.getElementById('reglesList').appendChild(li);
+  input.value = '';
+  input.focus();
+}
+
+function removeRegle(btn) {
+  btn.closest('li').remove();
+}
+
+// ── Aperçu contrat ──
+function generatePreview() {
+  const checkin = v('checkin') ? new Date(v('checkin')).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '—';
+  const checkout = v('checkout') ? new Date(v('checkout')).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '—';
+  const nights = v('checkin') && v('checkout') ? Math.round((new Date(v('checkout')) - new Date(v('checkin'))) / 86400000) : 0;
+  const regles = Array.from(document.querySelectorAll('#reglesList li span')).map(s => s.textContent);
+  const today = new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
+  const paymentLabels = { virement:'Virement bancaire', especes:'Espèces', cheque:'Chèque', carte:'Carte bancaire', autre:'Autre' };
+
+  document.getElementById('contratPreview').innerHTML = `
+    <h2>Contrat de location saisonnière</h2>
+    <p class="preview-sub">Établi le ${today}</p>
+
+    <div class="preview-section">
+      <div class="preview-section-title">Bien loué</div>
+      <div class="preview-row"><span class="lbl">Logement</span><span class="val">${v('propertyName') || '—'}</span></div>
+      <div class="preview-row"><span class="lbl">Adresse</span><span class="val">${v('propertyAddress') || '—'}</span></div>
+    </div>
+
+    <div class="preview-section">
+      <div class="preview-section-title">Dates du séjour</div>
+      <div class="preview-row"><span class="lbl">Arrivée</span><span class="val">${checkin} à ${v('checkinTime') || '15:00'}</span></div>
+      <div class="preview-row"><span class="lbl">Départ</span><span class="val">${checkout} à ${v('checkoutTime') || '11:00'}</span></div>
+      <div class="preview-row"><span class="lbl">Durée</span><span class="val">${nights} nuit${nights > 1 ? 's' : ''}</span></div>
+      <div class="preview-row"><span class="lbl">Voyageurs</span><span class="val">${v('guestCount') || '1'} personne${parseInt(v('guestCount')) > 1 ? 's' : ''}</span></div>
+    </div>
+
+    <div class="preview-section">
+      <div class="preview-section-title">Locataire</div>
+      <div class="preview-row"><span class="lbl">Nom complet</span><span class="val">${v('guestFirstName')} ${v('guestLastName')}</span></div>
+      <div class="preview-row"><span class="lbl">Email</span><span class="val">${v('guestEmail') || '—'}</span></div>
+      ${v('guestPhone') ? `<div class="preview-row"><span class="lbl">Téléphone</span><span class="val">${v('guestPhone')}</span></div>` : ''}
+      ${v('guestNationality') ? `<div class="preview-row"><span class="lbl">Nationalité</span><span class="val">${v('guestNationality')}</span></div>` : ''}
+      ${v('guestAddress') ? `<div class="preview-row"><span class="lbl">Adresse</span><span class="val">${v('guestAddress')}</span></div>` : ''}
+    </div>
+
+    <div class="preview-section">
+      <div class="preview-section-title">Conditions financières</div>
+      <div class="preview-row"><span class="lbl">Prix total</span><span class="val" style="color:#1A7A5E;font-weight:700;">${parseFloat(v('totalPrice') || 0).toFixed(2)} €</span></div>
+      ${v('cleaningFee') && parseFloat(v('cleaningFee')) > 0 ? `<div class="preview-row"><span class="lbl">Frais de ménage</span><span class="val">${parseFloat(v('cleaningFee')).toFixed(2)} €</span></div>` : ''}
+      ${v('deposit') && parseFloat(v('deposit')) > 0 ? `<div class="preview-row"><span class="lbl">Caution</span><span class="val">${parseFloat(v('deposit')).toFixed(2)} €</span></div>` : ''}
+      <div class="preview-row"><span class="lbl">Mode de paiement</span><span class="val">${paymentLabels[v('paymentMethod')] || '—'}</span></div>
+      ${v('priceNotes') ? `<div class="preview-row"><span class="lbl">Notes</span><span class="val">${v('priceNotes')}</span></div>` : ''}
+    </div>
+
+    ${regles.length > 0 ? `
+    <div class="preview-section">
+      <div class="preview-section-title">Règles du logement</div>
+      ${regles.map(r => `<div class="preview-row"><span class="lbl" style="min-width:20px;">•</span><span class="val">${r}</span></div>`).join('')}
+    </div>` : ''}
+
+    <div class="preview-section" style="margin-bottom:0;">
+      <div class="preview-section-title">Signatures</div>
+      <div class="preview-sig">
+        <div class="preview-sig-block">
+          <div class="preview-sig-label">Signature du propriétaire</div>
+          <div class="preview-sig-img" id="previewSigProp">
+            <span style="color:#C4C4C4;font-size:12px;">À signer ci-dessous</span>
+          </div>
+        </div>
+        <div class="preview-sig-block">
+          <div class="preview-sig-label">Signature du voyageur</div>
+          <div class="preview-sig-img">
+            <span style="color:#C4C4C4;font-size:12px;">Signature voyageur</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Signature canvas ──
+let isDrawing = false;
+let lastX = 0, lastY = 0;
+let signatureData = null;
+
+function initSignature() {
+  const canvas = document.getElementById('signatureCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Adapter la résolution
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = 180 * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.strokeStyle = '#0D1117';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return [(src.clientX - r.left), (src.clientY - r.top)];
+  }
+
+  function startDraw(e) {
+    e.preventDefault();
+    isDrawing = true;
+    [lastX, lastY] = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+  }
+
+  function draw(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const [x, y] = getPos(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    lastX = x; lastY = y;
+  }
+
+  function endDraw(e) {
+    if (!isDrawing) return;
+    isDrawing = false;
+    signatureData = canvas.toDataURL('image/png');
+    // Mettre à jour aperçu
+    const previewSig = document.getElementById('previewSigProp');
+    if (previewSig) {
+      previewSig.innerHTML = `<img src="${signatureData}" style="max-height:60px;max-width:100%;"/>`;
+    }
+  }
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', endDraw);
+}
+
+function clearSignature() {
+  const canvas = document.getElementById('signatureCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  signatureData = null;
+  const previewSig = document.getElementById('previewSigProp');
+  if (previewSig) previewSig.innerHTML = '<span style="color:#C4C4C4;font-size:12px;">À signer ci-dessous</span>';
+}
+
+// ── Télécharger PDF ──
+function downloadPDF() {
+  if (!document.getElementById('acceptTerms').checked) {
+    showToast('Veuillez cocher la case d\'acceptation', 'error');
+    return;
+  }
+  if (!signatureData) {
+    showToast('Veuillez signer le contrat avant de télécharger', 'error');
+    return;
+  }
+
+  showToast('Génération du PDF...', 'success');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const margin = 20;
+  const pageW = 210;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  // Couleurs
+  const green = [26, 122, 94];
+  const dark = [13, 17, 23];
+  const gray = [122, 134, 149];
+  const lightGray = [245, 242, 236];
+
+  // Header
+  doc.setFillColor(...green);
+  doc.rect(0, 0, 210, 18, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('BOOSTINGHOST', margin, 11);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageW - margin, 11, { align: 'right' });
+
+  y = 30;
+
+  // Titre
+  doc.setTextColor(...dark);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('Contrat de location saisonnière', pageW / 2, y, { align: 'center' });
+  y += 12;
+
+  function sectionTitle(title) {
+    doc.setFillColor(...lightGray);
+    doc.rect(margin, y - 4, contentW, 8, 'F');
+    doc.setTextColor(...green);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(title.toUpperCase(), margin + 2, y + 1);
+    doc.setTextColor(...dark);
+    y += 8;
+  }
+
+  function row(label, value) {
+    if (!value || value === '—') return;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...gray);
+    doc.text(label, margin, y);
+    doc.setTextColor(...dark);
+    doc.setFont('helvetica', 'bold');
+    const lines = doc.splitTextToSize(String(value), contentW - 60);
+    doc.text(lines, margin + 60, y);
+    y += lines.length * 5 + 2;
+  }
+
+  const checkin = v('checkin') ? new Date(v('checkin')).toLocaleDateString('fr-FR') : '—';
+  const checkout = v('checkout') ? new Date(v('checkout')).toLocaleDateString('fr-FR') : '—';
+  const nights = v('checkin') && v('checkout') ? Math.round((new Date(v('checkout')) - new Date(v('checkin'))) / 86400000) : 0;
+
+  sectionTitle('Bien loué');
+  row('Logement', v('propertyName'));
+  row('Adresse', v('propertyAddress'));
+  y += 4;
+
+  sectionTitle('Dates du séjour');
+  row('Arrivée', `${checkin} à ${v('checkinTime') || '15:00'}`);
+  row('Départ', `${checkout} à ${v('checkoutTime') || '11:00'}`);
+  row('Durée', `${nights} nuit${nights > 1 ? 's' : ''}`);
+  row('Voyageurs', `${v('guestCount') || '1'} personne${parseInt(v('guestCount')) > 1 ? 's' : ''}`);
+  y += 4;
+
+  sectionTitle('Locataire');
+  row('Nom complet', `${v('guestFirstName')} ${v('guestLastName')}`);
+  row('Email', v('guestEmail'));
+  if (v('guestPhone')) row('Téléphone', v('guestPhone'));
+  if (v('guestNationality')) row('Nationalité', v('guestNationality'));
+  if (v('guestAddress')) row('Adresse', v('guestAddress'));
+  y += 4;
+
+  sectionTitle('Conditions financières');
+  row('Prix total du séjour', `${parseFloat(v('totalPrice') || 0).toFixed(2)} €`);
+  if (v('cleaningFee') && parseFloat(v('cleaningFee')) > 0) row('Frais de ménage', `${parseFloat(v('cleaningFee')).toFixed(2)} €`);
+  if (v('deposit') && parseFloat(v('deposit')) > 0) row('Caution', `${parseFloat(v('deposit')).toFixed(2)} €`);
+  const payLabels = { virement:'Virement bancaire', especes:'Espèces', cheque:'Chèque', carte:'Carte bancaire', autre:'Autre' };
+  row('Mode de paiement', payLabels[v('paymentMethod')] || '—');
+  if (v('priceNotes')) row('Notes', v('priceNotes'));
+  y += 4;
+
+  const regles = Array.from(document.querySelectorAll('#reglesList li span')).map(s => s.textContent);
+  if (regles.length > 0) {
+    sectionTitle('Règles du logement');
+    regles.forEach(r => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...dark);
+      doc.text(`• ${r}`, margin + 2, y);
+      y += 5;
+    });
+    y += 4;
+  }
+
+  // Signatures
+  y += 4;
+  if (y > 220) { doc.addPage(); y = 20; }
+  sectionTitle('Signatures');
+  y += 4;
+
+  const sigW = (contentW - 10) / 2;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...gray);
+  doc.text('Signature du propriétaire', margin, y);
+  doc.text('Signature du voyageur', margin + sigW + 10, y);
+  y += 4;
+
+  if (signatureData) {
+    try {
+      doc.addImage(signatureData, 'PNG', margin, y, sigW, 25);
+    } catch(e) {}
+  }
+
+  doc.setDrawColor(...gray);
+  doc.line(margin, y + 28, margin + sigW, y + 28);
+  doc.line(margin + sigW + 10, y + 28, margin + contentW, y + 28);
+  y += 32;
+
+  doc.setFontSize(8);
+  doc.setTextColor(...gray);
+  doc.text(`${v('guestFirstName')} ${v('guestLastName')}`, margin + sigW + 10, y);
+
+  // Footer
+  doc.setFillColor(...lightGray);
+  doc.rect(0, 285, 210, 12, 'F');
+  doc.setTextColor(...gray);
+  doc.setFontSize(7);
+  doc.text('Contrat généré via Boostinghost — www.boostinghost.fr', pageW / 2, 292, { align: 'center' });
+
+  const filename = `contrat_${v('guestLastName').toLowerCase() || 'location'}_${v('checkin') || 'date'}.pdf`;
+  doc.save(filename);
+  showToast('PDF téléchargé !', 'success');
+}
+
+// ── Envoyer par email ──
+function sendByEmail() {
+  if (!document.getElementById('acceptTerms').checked) {
+    showToast('Veuillez cocher la case d\'acceptation', 'error');
+    return;
+  }
+  const email = v('guestEmail');
+  if (!email) {
+    showToast('Veuillez renseigner l\'email du voyageur', 'error');
+    return;
+  }
+  const subject = encodeURIComponent(`Contrat de location – ${v('propertyName')}`);
+  const body = encodeURIComponent(
+    `Bonjour ${v('guestFirstName')},\n\nVeuillez trouver ci-joint votre contrat de location pour le séjour du ${v('checkin')} au ${v('checkout')} à ${v('propertyName')}.\n\nCordialement,\nBoostinghost`
+  );
+  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  showToast('Ouverture de votre client email...', 'success');
+}
+
+// ── Toast ──
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  // Pré-remplir date aujourd'hui
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  document.getElementById('checkin').value = today;
+  document.getElementById('checkout').value = tomorrow;
+
+  // Masquer titre injecté par bh-layout
+  setTimeout(() => {
+    document.querySelectorAll('.container .page-title, .main-content > .page-title, .contrat-container > .page-title').forEach(el => {
+      el.style.display = 'none';
+    });
+  }, 100);
+});
+</script>
+
+<style id="contrat-mobile">
+@media (max-width: 1366px) {
+  html, body { overflow-x: hidden !important; }
+  .mobile-tabs {
+    position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
+</body>
+</html>
