@@ -127,7 +127,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   height: 40px; padding: 0 20px; border: none; border-radius: 12px;
   background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
-  white-space: nowrap; position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200;
+  white-space: nowrap; position: fixed; top: calc(40px + 13px); right: 24px; z-index: 10000;
 }
 .contrat-back-btn:hover { background: #15624B; }
 
@@ -421,7 +421,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 </style>
 </head>
-<body>
+<body data-page="contrat" data-title="Contrats">
 
 <div class="bh-demo-nav" id="bhTopBar">
   <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;white-space:nowrap;">
