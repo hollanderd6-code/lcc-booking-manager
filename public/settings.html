@@ -1587,34 +1587,34 @@ html[data-theme-v3="1"] .sidebar {
   </div>
   <div style="display: flex; flex-wrap: wrap; gap: 6px;">
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{guestName}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {guestName}
+      Nom du voyageur
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{propertyName}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {propertyName}
+      Nom du logement
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{address}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {address}
+      Adresse
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{arrivalTime}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {arrivalTime}
+      Heure d'arrivée
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{departureTime}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {departureTime}
+      Heure de départ
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{accessCode}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {accessCode}
+      Code d'accès
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{wifiName}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {wifiName}
+      Nom du WiFi
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{wifiPassword}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {wifiPassword}
+      Mot de passe WiFi
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{accessInstructions}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {accessInstructions}
+      Instructions d'accès
     </button>
     <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{welcomeBookUrl}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      {welcomeBookUrl}
+      Lien livret d'accueil
     </button>
   </div>
 </div>
@@ -2176,7 +2176,7 @@ function updateIcalExportUrl() {
   const input = document.getElementById('icalExportUrl');
   if (!section || !input) return;
   if (propertyId) {
-    const url = `https://www.boostinghost.fr/ical/property/${propertyId}.ics`;
+    const url = `https://lcc-booking-manager.onrender.com/ical/property/${propertyId}.ics`;
     input.value = url;
     section.style.display = '';
   } else {
