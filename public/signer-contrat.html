@@ -526,34 +526,44 @@ function renderContract(d, ownerSig) {
 let isDrawing = false, lastX = 0, lastY = 0;
 
 function initSignature() {
-  const canvas = document.getElementById('signatureCanvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * window.devicePixelRatio;
-  canvas.height = 180 * window.devicePixelRatio;
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-  ctx.strokeStyle = '#0D1117';
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+  const setup = () => {
+    const canvas = document.getElementById('signatureCanvas');
+    if (!canvas) return;
 
-  const getPos = (e) => {
-    const r = canvas.getBoundingClientRect();
-    const src = e.touches ? e.touches[0] : e;
-    return [(src.clientX - r.left), (src.clientY - r.top)];
+    const w = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 600;
+    canvas.width = w * window.devicePixelRatio;
+    canvas.height = 180 * window.devicePixelRatio;
+    canvas.style.height = '180px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    ctx.strokeStyle = '#0D1117';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const getPos = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const src = e.touches ? e.touches[0] : e;
+      const scaleX = (canvas.width / window.devicePixelRatio) / r.width;
+      const scaleY = (canvas.height / window.devicePixelRatio) / r.height;
+      return [(src.clientX - r.left) * scaleX, (src.clientY - r.top) * scaleY];
+    };
+    const startDraw = (e) => { e.preventDefault(); isDrawing = true; [lastX, lastY] = getPos(e); ctx.beginPath(); ctx.moveTo(lastX, lastY); };
+    const draw = (e) => { if (!isDrawing) return; e.preventDefault(); const [x, y] = getPos(e); ctx.lineTo(x, y); ctx.stroke(); lastX = x; lastY = y; };
+    const endDraw = () => { if (!isDrawing) return; isDrawing = false; signatureData = canvas.toDataURL('image/png'); };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', endDraw);
   };
-  const startDraw = (e) => { e.preventDefault(); isDrawing = true; [lastX, lastY] = getPos(e); ctx.beginPath(); ctx.moveTo(lastX, lastY); };
-  const draw = (e) => { if (!isDrawing) return; e.preventDefault(); const [x, y] = getPos(e); ctx.lineTo(x, y); ctx.stroke(); lastX = x; lastY = y; };
-  const endDraw = () => { if (!isDrawing) return; isDrawing = false; signatureData = canvas.toDataURL('image/png'); };
 
-  canvas.addEventListener('mousedown', startDraw);
-  canvas.addEventListener('mousemove', draw);
-  canvas.addEventListener('mouseup', endDraw);
-  canvas.addEventListener('mouseleave', endDraw);
-  canvas.addEventListener('touchstart', startDraw, { passive: false });
-  canvas.addEventListener('touchmove', draw, { passive: false });
-  canvas.addEventListener('touchend', endDraw);
+  // Double rAF pour s'assurer que le DOM est bien rendu
+  requestAnimationFrame(() => requestAnimationFrame(setup));
 }
 
 function clearSignature() {
