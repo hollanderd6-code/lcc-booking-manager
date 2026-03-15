@@ -1874,13 +1874,87 @@ function renderHistory(filter) {
           ${signedAt ? `<span style="color:#1A7A5E;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Signé le ${signedAt}</span>` : ''}
         </div>
       </div>
-      <div style="flex-shrink:0;">
+      <div style="flex-shrink:0;display:flex;flex-direction:column;gap:7px;align-items:flex-end;">
         <span class="history-badge ${c.status}">
           <i class="fas ${icon}"></i> ${statusLabels[c.status] || c.status}
         </span>
+        <div style="display:flex;gap:6px;">
+          <button onclick="downloadContractPdf('${c.id}')" title="Télécharger le PDF" style="height:32px;padding:0 10px;border-radius:8px;background:#F5F2EC;border:1px solid rgba(13,17,23,.12);cursor:pointer;font-size:12px;color:#374151;font-family:'DM Sans',sans-serif;font-weight:600;">
+            <i class="fas fa-download"></i>
+          </button>
+          ${c.status !== 'signed' ? `<button onclick="resendSignLink('${c.id}', this)" title="Renvoyer le lien de signature" style="height:32px;padding:0 10px;border-radius:8px;background:#F5F2EC;border:1px solid rgba(13,17,23,.12);cursor:pointer;font-size:12px;color:#374151;font-family:'DM Sans',sans-serif;font-weight:600;">
+            <i class="fas fa-paper-plane"></i>
+          </button>` : ''}
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Télécharger le PDF d'un contrat ──
+async function downloadContractPdf(contractId) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    showToast('Génération du PDF...', 'success');
+    const res = await fetch(`/api/contrats/${contractId}/pdf`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Erreur serveur');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `contrat_${contractId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('PDF téléchargé !', 'success');
+  } catch (err) {
+    showToast('Erreur téléchargement PDF', 'error');
+  }
+}
+
+// ── Renvoyer le lien de signature ──
+async function resendSignLink(contractId, btn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/contrats/${contractId}/resend-sign`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    showToast(data.message || 'Lien renvoyé !', 'success');
+    btn.innerHTML = '<i class="fas fa-check"></i>';
+    setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
+  } catch (err) {
+    showToast(err.message || 'Erreur envoi', 'error');
+    btn.innerHTML = orig;
+    btn.disabled = false;
+  }
+}
+
+// ── Pré-remplir depuis URL params (ex: depuis une réservation) ──
+function prefillFromUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('prefill')) return;
+
+  // Ex: /contrat.html?prefill=1&guestFirstName=John&guestLastName=Doe&checkin=2026-04-01&checkout=2026-04-07&propertyName=Appart&totalPrice=500
+  const fields = ['guestFirstName','guestLastName','guestEmail','guestPhone',
+    'propertyName','propertyAddress','checkin','checkout','guestCount','totalPrice',
+    'deposit','cleaningFee','ownerFirstName','ownerLastName','ownerAddress'];
+
+  fields.forEach(field => {
+    const val = params.get(field);
+    if (val) {
+      const el = document.getElementById(field);
+      if (el) el.value = decodeURIComponent(val);
+    }
+  });
+
+  showToast('Formulaire pré-rempli depuis la réservation', 'success');
 }
 
 // ── Toggles conditions légales ──
@@ -1945,7 +2019,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Pré-remplir date aujourd'hui
+  // Pré-remplissage depuis URL si venant d'une réservation
+  prefillFromUrlParams();
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   document.getElementById('checkin').value = today;
