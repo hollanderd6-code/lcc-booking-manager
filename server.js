@@ -4295,6 +4295,43 @@ async function saveDepositToDB(deposit, userId, propertyId = null) {
   }
 }
 
+// ============================================
+// TABLE CONTRACTS — Contrats de location
+// ============================================
+async function ensureContractsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contracts (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reservation_uid VARCHAR(255),
+        property_id VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'sent',
+        contract_data JSONB NOT NULL,
+        owner_signature TEXT,
+        guest_signature TEXT,
+        guest_signed_at TIMESTAMP,
+        guest_sign_ip VARCHAR(100),
+        sign_token VARCHAR(255) UNIQUE,
+        sign_token_expires_at TIMESTAMP,
+        pdf_path TEXT,
+        signed_pdf_path TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_contracts_user ON contracts(user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_contracts_token ON contracts(sign_token)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_contracts_reservation ON contracts(reservation_uid)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status)');
+    console.log('✅ Table contracts vérifiée/créée');
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur création table contracts:', error);
+    return false;
+  }
+}
+
 /**
  * Créer la table payments si elle n'existe pas
  */
@@ -18274,16 +18311,413 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
       return res.status(500).json({ error: `Erreur envoi email : ${emailError}` });
     }
 
+    // ── Sauvegarder le contrat en base + générer token de signature ──
+    let contractId = null;
+    let signToken = null;
+    try {
+      contractId = 'cont_' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
+      signToken = crypto.randomBytes(32).toString('hex');
+      const signExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 jours
+
+      const contractData = {
+        ownerFirstName, ownerLastName, ownerAddress, ownerEmail, ownerPhone,
+        propertyName, propertyType, propertyAddress,
+        checkin, checkout, checkinTime, checkoutTime, guestCount,
+        guestFirstName, guestLastName, guestEmail, guestPhone,
+        guestNationality, guestAddress, guestDOB, guestIDNumber,
+        totalPrice, cleaningFee, deposit, acompte, acompteDate, paymentMethod, priceNotes,
+        regles: regles || [],
+        inclAnnulation, cancelDays1, cancelPct1, cancelDays2, cancelPct2,
+        inclObligations, obligationsExtra,
+        inclAssurance, inclEDL, depositReturnDays,
+        signatureDate
+      };
+
+      await pool.query(`
+        INSERT INTO contracts (id, user_id, reservation_uid, property_id, status, contract_data, owner_signature, sign_token, sign_token_expires_at, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, 'sent', $5, $6, $7, $8, NOW(), NOW())
+      `, [
+        contractId,
+        userId,
+        reservationUid || null,
+        propertyAddress || null,
+        JSON.stringify(contractData),
+        signatureData || null,
+        signToken,
+        signExpires
+      ]);
+
+      // ── Envoyer l'email de signature au locataire ──
+      const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+      const signUrl = `${appUrl}/signer-contrat.html?token=${signToken}`;
+
+      const signEmailHtml = bhEmailTemplate({
+        icon: '✍️',
+        title: 'Signature de votre contrat',
+        subtitle: `${propertyName}${checkin ? ' · du ' + new Date(checkin).toLocaleDateString('fr-FR') : ''}`,
+        bodyHtml: `
+          <p>Bonjour <strong>${guestFirstName} ${guestLastName}</strong>,</p>
+          <p>Votre contrat de location pour <strong>${propertyName}</strong> est prêt. Il ne reste plus qu'à le signer électroniquement.</p>
+          <div class="cta-block">
+            <p>Cliquez sur le bouton ci-dessous pour consulter et signer votre contrat :</p>
+            <a href="${signUrl}" class="btn" style="display:inline-block;background:#1A7A5E;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;">
+              ✍️ Signer mon contrat
+            </a>
+          </div>
+          <div class="alert-card">⏰ Ce lien est valable <strong>7 jours</strong>. Passé ce délai, contactez votre bailleur pour un nouveau lien.</div>
+          <p style="font-size:13px;color:#666;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br><a href="${signUrl}" style="color:#1A7A5E;word-break:break-all;">${signUrl}</a></p>
+        `
+      });
+
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+        to: guestEmail,
+        subject: `Action requise : signez votre contrat – ${propertyName}`,
+        html: signEmailHtml
+      });
+
+      console.log('✅ Email de signature envoyé à:', guestEmail);
+    } catch (dbErr) {
+      console.error('⚠️ Erreur sauvegarde contrat DB:', dbErr?.message);
+      // On ne bloque pas la réponse si la DB échoue
+    }
+
     res.json({
       success: true,
       message: `Contrat envoyé à ${guestEmail}${sentToBailleur ? ` et copie à ${bailleurEmail}` : ''}`,
       sentToGuest,
-      sentToBailleur
+      sentToBailleur,
+      contractId,
+      signToken: signToken ? 'généré' : null
     });
 
   } catch (err) {
     console.error('❌ Erreur /api/contrat/send:', err);
     res.status(500).json({ error: err.message || 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// GET /api/contrat/sign/:token  (PUBLIC — pas d'auth)
+// Récupère les données du contrat pour la page de signature locataire
+// ============================================
+app.get('/api/contrat/sign/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const result = await pool.query(
+      `SELECT id, status, contract_data, owner_signature, sign_token_expires_at
+       FROM contracts WHERE sign_token = $1`,
+      [token]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Lien introuvable ou expiré' });
+
+    const contract = result.rows[0];
+    if (contract.status === 'signed') return res.status(400).json({ error: 'Ce contrat a déjà été signé', alreadySigned: true });
+    if (new Date(contract.sign_token_expires_at) < new Date()) {
+      await pool.query(`UPDATE contracts SET status = 'expired', updated_at = NOW() WHERE sign_token = $1`, [token]);
+      return res.status(410).json({ error: 'Ce lien a expiré. Contactez votre bailleur pour un nouveau lien.' });
+    }
+
+    res.json({
+      contractId: contract.id,
+      contractData: contract.contract_data,
+      ownerSignature: contract.owner_signature,
+      expiresAt: contract.sign_token_expires_at
+    });
+  } catch (err) {
+    console.error('❌ GET /api/contrat/sign/:token:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// POST /api/contrat/sign/:token  (PUBLIC — locataire signe)
+// ============================================
+app.post('/api/contrat/sign/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { guestSignature } = req.body;
+    if (!guestSignature) return res.status(400).json({ error: 'Signature manquante' });
+
+    const result = await pool.query(
+      `SELECT c.*, u.email as owner_email, u.first_name as owner_first_name
+       FROM contracts c
+       LEFT JOIN users u ON u.id = c.user_id
+       WHERE c.sign_token = $1`,
+      [token]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Lien introuvable' });
+
+    const contract = result.rows[0];
+    if (contract.status === 'signed') return res.status(400).json({ error: 'Déjà signé', alreadySigned: true });
+    if (new Date(contract.sign_token_expires_at) < new Date()) return res.status(410).json({ error: 'Lien expiré' });
+
+    const signIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+    const signedAt = new Date();
+
+    // Mettre à jour le contrat en DB
+    await pool.query(`
+      UPDATE contracts
+      SET status = 'signed', guest_signature = $1, guest_signed_at = $2, guest_sign_ip = $3, updated_at = NOW()
+      WHERE sign_token = $4
+    `, [guestSignature, signedAt, signIp, token]);
+
+    // Régénérer le PDF avec les 2 signatures
+    const data = contract.contract_data;
+    const nights = data.checkin && data.checkout
+      ? Math.round((new Date(data.checkout) - new Date(data.checkin)) / 86400000) : 0;
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+    const fmtDateShort = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+
+    const signedPdfPath = path.join(INVOICE_PDF_DIR, `contrat_signe_${contract.id}.pdf`);
+    await new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const stream = fs.createWriteStream(signedPdfPath);
+      doc.pipe(stream);
+
+      const green = '#1A7A5E', dark = '#0D1117', gray = '#7A8695', lightBg = '#F5F2EC';
+      const pageW = doc.page.width - 100;
+
+      doc.rect(0, 0, doc.page.width, 52).fill(green);
+      doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text('BOOSTINGHOST', 50, 18);
+      doc.fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
+
+      let y = 75;
+      doc.fillColor(dark).fontSize(20).font('Helvetica-Bold').text('Contrat de location meublée saisonnière', 50, y, { align: 'center', width: pageW });
+      y += 35;
+      doc.fillColor(gray).fontSize(9).font('Helvetica').text(`Établi le ${fmtDate(data.signatureDate || new Date())} — Signé le ${fmtDate(signedAt)}`, 50, y, { align: 'center', width: pageW });
+      y += 30;
+
+      const sectionTitle = (title) => {
+        doc.rect(50, y, pageW, 16).fill(lightBg);
+        doc.fillColor(green).fontSize(8).font('Helvetica-Bold').text(title.toUpperCase(), 54, y + 4);
+        doc.fillColor(dark); y += 20;
+      };
+      const row = (label, value) => {
+        if (!value || value === '—') return;
+        doc.fillColor(gray).fontSize(9).font('Helvetica').text(label, 54, y);
+        doc.fillColor(dark).font('Helvetica-Bold').text(String(value), 220, y, { width: pageW - 170 });
+        y += 14;
+      };
+      const para = (text) => {
+        doc.fillColor(dark).fontSize(8.5).font('Helvetica').text(text, 54, y, { width: pageW - 8, lineGap: 2 });
+        y += doc.heightOfString(text, { width: pageW - 8, lineGap: 2 }) + 6;
+      };
+      const checkPage = () => { if (y > 740) { doc.addPage(); y = 50; } };
+
+      sectionTitle('1. Bailleur');
+      row('Nom', `${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim());
+      row('Adresse', data.ownerAddress);
+      if (data.ownerEmail) row('Email', data.ownerEmail);
+      y += 6; checkPage();
+
+      sectionTitle('2. Locataire');
+      row('Nom complet', `${data.guestFirstName} ${data.guestLastName}`);
+      row('Email', data.guestEmail);
+      if (data.guestPhone) row('Téléphone', data.guestPhone);
+      if (data.guestAddress) row('Adresse', data.guestAddress);
+      y += 6; checkPage();
+
+      sectionTitle('3. Objet de la location');
+      row('Logement', data.propertyName);
+      row('Adresse', data.propertyAddress);
+      para('Cette location meublée saisonnière ne constitue pas la résidence principale du locataire.');
+      y += 4; checkPage();
+
+      sectionTitle('4. Durée du séjour');
+      row('Arrivée', `${fmtDate(data.checkin)} à ${data.checkinTime || '15:00'}`);
+      row('Départ', `${fmtDate(data.checkout)} à ${data.checkoutTime || '11:00'}`);
+      row('Durée', `${nights} nuit${nights > 1 ? 's' : ''}`);
+      y += 6; checkPage();
+
+      sectionTitle('5. Conditions financières');
+      row('Loyer total (CC)', `${parseFloat(data.totalPrice || 0).toFixed(2)} €`);
+      if (data.deposit && parseFloat(data.deposit) > 0) row('Dépôt de garantie', `${parseFloat(data.deposit).toFixed(2)} €`);
+      if (data.paymentMethod) row('Mode de paiement', data.paymentMethod);
+      y += 6; checkPage();
+
+      if (data.regles && data.regles.length > 0) {
+        sectionTitle('6. Règles du logement');
+        data.regles.forEach(r => { doc.fillColor(dark).fontSize(9).font('Helvetica').text(`• ${r}`, 56, y); y += 13; });
+        y += 4; checkPage();
+      }
+
+      if (data.inclAnnulation) {
+        checkPage(); sectionTitle("Politique d'annulation");
+        para(`Plus de ${data.cancelDays1 || 30} jours avant l'arrivée : remboursement de ${data.cancelPct1 || 50}%. Moins de ${data.cancelDays2 || 7} jours : remboursement de ${data.cancelPct2 || 0}%.`);
+        y += 4; checkPage();
+      }
+
+      if (data.inclObligations) {
+        checkPage(); sectionTitle('Obligations du locataire');
+        para("Le locataire s'engage à occuper paisiblement les lieux, à respecter le voisinage, à ne pas sous-louer le logement et à ne pas organiser de fêtes sans accord préalable du bailleur.");
+        y += 4; checkPage();
+      }
+
+      if (data.inclAssurance) {
+        checkPage(); sectionTitle('Assurance');
+        para("Le locataire déclare être couvert par une assurance responsabilité civile.");
+        y += 4; checkPage();
+      }
+
+      // Signatures
+      if (y > 680) { doc.addPage(); y = 50; }
+      y += 10;
+      doc.fillColor(gray).fontSize(9).font('Helvetica')
+        .text(`Fait le ${fmtDateShort(data.signatureDate || new Date())}`, 50, y);
+      y += 20;
+
+      const sigW = (pageW - 20) / 2;
+      doc.fillColor(gray).fontSize(8).font('Helvetica')
+        .text('Signature du bailleur', 50, y)
+        .text('Signature du locataire', 50 + sigW + 20, y);
+      y += 5;
+      doc.fillColor(dark).fontSize(8).font('Helvetica-Bold')
+        .text(`${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim(), 50, y)
+        .text(`${data.guestFirstName} ${data.guestLastName}`, 50 + sigW + 20, y);
+      y += 5;
+
+      if (contract.owner_signature && contract.owner_signature.startsWith('data:image/png;base64,')) {
+        try { doc.image(Buffer.from(contract.owner_signature.replace('data:image/png;base64,', ''), 'base64'), 50, y, { width: sigW, height: 35 }); } catch(e) {}
+      }
+      if (guestSignature && guestSignature.startsWith('data:image/png;base64,')) {
+        try { doc.image(Buffer.from(guestSignature.replace('data:image/png;base64,', ''), 'base64'), 50 + sigW + 20, y, { width: sigW, height: 35 }); } catch(e) {}
+      }
+      y += 42;
+      doc.moveTo(50, y).lineTo(50 + sigW, y).strokeColor('#AAAAAA').stroke();
+      doc.moveTo(50 + sigW + 20, y).lineTo(50 + pageW, y).strokeColor('#AAAAAA').stroke();
+      y += 8;
+      doc.fillColor(gray).fontSize(7).font('Helvetica')
+        .text(`Bailleur signé le ${fmtDateShort(data.signatureDate || new Date())}`, 50, y)
+        .text(`Locataire signé le ${fmtDateShort(signedAt)} · IP: ${signIp}`, 50 + sigW + 20, y);
+
+      doc.rect(0, doc.page.height - 28, doc.page.width, 28).fill(lightBg);
+      doc.fillColor(gray).fontSize(7).font('Helvetica')
+        .text('Contrat généré via Boostinghost — www.boostinghost.fr', 0, doc.page.height - 18, { align: 'center', width: doc.page.width });
+
+      doc.end();
+      stream.on('finish', resolve);
+      stream.on('error', reject);
+    });
+
+    // Sauvegarder le chemin du PDF signé
+    await pool.query(`UPDATE contracts SET signed_pdf_path = $1, updated_at = NOW() WHERE id = $2`, [signedPdfPath, contract.id]);
+
+    // Envoyer le PDF signé aux 2 parties
+    const pdfBuffer = fs.readFileSync(signedPdfPath);
+    const attachment = [{ filename: `contrat_signe_${data.guestLastName?.toLowerCase() || 'location'}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }];
+
+    const signedEmailHtml = bhEmailTemplate({
+      icon: '✅',
+      title: 'Contrat signé',
+      subtitle: `${data.propertyName} · ${fmtDate(data.checkin)} → ${fmtDate(data.checkout)}`,
+      bodyHtml: `
+        <p>Le contrat de location a été signé par les deux parties.</p>
+        <div class="success-card">📎 Le contrat signé est joint à cet email.</div>
+        <div class="info-card">
+          <strong>Locataire :</strong> ${data.guestFirstName} ${data.guestLastName}<br>
+          <strong>Signé le :</strong> ${fmtDate(signedAt)}<br>
+          <strong>Logement :</strong> ${data.propertyName}
+        </div>
+      `
+    });
+
+    // Email au locataire
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+        to: data.guestEmail,
+        subject: `Contrat signé – ${data.propertyName}`,
+        html: signedEmailHtml,
+        attachments: attachment
+      });
+    } catch(e) { console.error('⚠️ Email locataire PDF signé:', e.message); }
+
+    // Email au bailleur
+    const bailleurEmail = data.ownerEmail || contract.owner_email;
+    if (bailleurEmail && bailleurEmail !== data.guestEmail) {
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+          to: bailleurEmail,
+          subject: `[Signé] Contrat – ${data.guestFirstName} ${data.guestLastName} – ${data.propertyName}`,
+          html: signedEmailHtml,
+          attachments: attachment
+        });
+      } catch(e) { console.error('⚠️ Email bailleur PDF signé:', e.message); }
+    }
+
+    try { fs.unlinkSync(signedPdfPath); } catch(e) {}
+
+    console.log(`✅ Contrat ${contract.id} signé par ${data.guestFirstName} ${data.guestLastName}`);
+    res.json({ success: true, message: 'Contrat signé avec succès. Le PDF vous a été envoyé par email.' });
+
+  } catch (err) {
+    console.error('❌ POST /api/contrat/sign/:token:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// GET /api/contrats  — Historique des contrats (authentifié)
+// ============================================
+app.get('/api/contrats', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { status, limit = 50, offset = 0 } = req.query;
+    let query = `SELECT id, status, reservation_uid, sign_token_expires_at, guest_signed_at, created_at,
+                        contract_data->>'guestFirstName' as guest_first_name,
+                        contract_data->>'guestLastName' as guest_last_name,
+                        contract_data->>'guestEmail' as guest_email,
+                        contract_data->>'propertyName' as property_name,
+                        contract_data->>'checkin' as checkin,
+                        contract_data->>'checkout' as checkout,
+                        contract_data->>'totalPrice' as total_price
+                 FROM contracts WHERE user_id = $1`;
+    const params = [userId];
+
+    if (status) { query += ` AND status = $${params.length + 1}`; params.push(status); }
+    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    const result = await pool.query(query, params);
+    const countResult = await pool.query(`SELECT COUNT(*) FROM contracts WHERE user_id = $1${status ? ' AND status = $2' : ''}`, status ? [userId, status] : [userId]);
+
+    res.json({
+      contracts: result.rows,
+      total: parseInt(countResult.rows[0].count),
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+  } catch (err) {
+    console.error('❌ GET /api/contrats:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// GET /api/contrats/:id  — Détail d'un contrat
+// ============================================
+app.get('/api/contrats/:id', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
+      [req.params.id, userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -18309,6 +18743,10 @@ console.log('✅ Service de notifications initialisé');
   // ✅ Initialiser la table payments
   await ensurePaymentsTable();
   console.log('✅ Table payments initialisée');
+
+  // ✅ Initialiser la table contracts
+  await ensureContractsTable();
+  console.log('✅ Table contracts initialisée');
   
   // ✅ Charger les propriétés
   await loadProperties();
