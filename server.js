@@ -18819,7 +18819,12 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
       if (d.companyLogoUrl) {
         try {
           const logoRes = await axios.get(d.companyLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
-          mandatLogoBuffer = Buffer.from(logoRes.data);
+          const ct = logoRes.headers['content-type'] || '';
+          if (ct.includes('jpeg') || ct.includes('jpg') || ct.includes('png') || ct.includes('gif')) {
+            mandatLogoBuffer = Buffer.from(logoRes.data);
+          } else if (logoRes.data.byteLength > 0) {
+            mandatLogoBuffer = Buffer.from(logoRes.data); // Tenter quand même
+          }
         } catch(e) { console.warn('⚠️ Logo mandat échoué:', e.message); }
       }
 
@@ -19110,6 +19115,7 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
       // Conciergerie
       companyName, companyLegal, companyAddress, companySiret,
       companyRep, companyEmail, companyPhone, companyLogoUrl,
+      companyFreeTitle, companyFreeValue,
       // Propriétaire
       ownerFirstName, ownerLastName, ownerAddress, ownerEmail, ownerPhone,
       ownerDOB, ownerSiren,
@@ -19159,7 +19165,10 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     if (companyLogoUrl) {
       try {
         const logoRes = await axios.get(companyLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
-        companyLogoBuffer = Buffer.from(logoRes.data);
+        const ct = logoRes.headers['content-type'] || '';
+        if (ct.includes('jpeg') || ct.includes('jpg') || ct.includes('png') || ct.includes('gif') || logoRes.data.byteLength > 0) {
+          companyLogoBuffer = Buffer.from(logoRes.data);
+        }
       } catch(e) { console.warn('⚠️ Logo chargement échoué:', e.message); }
     }
 
@@ -19224,6 +19233,7 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
       if (companyRep) row('Représentée par', companyRep);
       if (companyEmail) row('Email', companyEmail);
       if (companyPhone) row('Téléphone', companyPhone);
+      if (companyFreeTitle && companyFreeValue) row(companyFreeTitle, companyFreeValue);
       y += 6;
       row('Propriétaire', `${ownerFirstName} ${ownerLastName}`);
       if (ownerAddress) row('Adresse', ownerAddress);
@@ -19350,6 +19360,7 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     const contractData = {
       contractType: 'mandat',
       companyName, companyLegal, companyAddress, companySiret, companyRep, companyEmail, companyPhone, companyLogoUrl,
+      companyFreeTitle, companyFreeValue,
       ownerFirstName, ownerLastName, ownerAddress, ownerEmail, ownerPhone, ownerDOB, ownerSiren,
       propAddress, propType, propCapacity, minStay, maxStay, animals, smoking, parties, checkinTime, checkoutTime,
       missions: missions || [], urgenceLimit, extrasFacturables: extrasFacturables || [],
