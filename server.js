@@ -18883,10 +18883,12 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
 
         sT('Article 7 — Conditions générales');
         row('Exclusivité', exclusiviteLabels[d.exclusivite] || '—');
-        row('Plafond responsabilité', d.respPlafond === '3mois' ? '3 mois d\'honoraires' : '12 mois d\'honoraires');
+        row('Limitation de responsabilité', d.respPlafond === 'non' ? 'Responsabilité de droit commun' : 'Limitée aux honoraires perçus');
         row('Confidentialité', `${d.confidentialite || 5} ans après fin de contrat`);
         y += 4;
-        para('La conciergerie n\'est tenue que d\'une obligation de moyens et ne garantit ni revenu minimal ni taux de réservation.');
+        para('La Conciergerie s\'engage à exercer ses services avec diligence et professionnalisme. Cependant, elle ne peut être tenue responsable des dommages ou pertes causés par des tiers ou des événements indépendants de sa volonté.');
+        y += 4;
+        para('La conciergerie ne garantit ni revenu minimal ni taux de réservation.');
         y += 6;
 
         sT('Article 8 — Obligations des parties');
@@ -19251,10 +19253,12 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
       // ART 7 — CONDITIONS
       sectionTitle('Article 7 — Conditions générales');
       row('Exclusivité', exclusiviteLabels[exclusivite] || '—');
-      row('Plafond responsabilité', respPlafond === '3mois' ? '3 mois d\'honoraires' : respPlafond === '12mois' ? '12 mois d\'honoraires' : '—');
+      row('Limitation de responsabilité', respPlafond === 'non' ? 'Responsabilité de droit commun' : 'Limitée aux honoraires perçus');
       row('Confidentialité', `${confidentialite || 5} ans après fin de contrat`);
       y += 4;
-      para('La conciergerie n\'est tenue que d\'une obligation de moyens. Elle ne garantit ni revenu minimal, ni taux de réservation. Les Parties rechercheront une solution amiable avant toute action judiciaire.');
+      para('La Conciergerie s\'engage à exercer ses services avec diligence et professionnalisme. Cependant, elle ne peut être tenue responsable des dommages ou pertes causés par des tiers ou des événements indépendants de sa volonté.');
+      y += 4;
+      para('La conciergerie ne garantit ni revenu minimal, ni taux de réservation. Les Parties rechercheront une solution amiable avant toute action judiciaire.');
       y += 6;
 
       // ART 8 — OBLIGATIONS (standard)
