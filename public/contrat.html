@@ -370,6 +370,87 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .form-section.active { display: block; }
 
 /* Toast */
+/* ── Onglets Nouveau / Historique ── */
+.contrat-tabs {
+  display: flex; gap: 4px;
+  background: white; border: 1px solid rgba(200,184,154,.4);
+  border-radius: 14px; padding: 5px;
+  margin-bottom: 24px;
+}
+.contrat-tab-btn {
+  flex: 1; height: 40px; border: none; border-radius: 10px;
+  background: transparent; color: #7A8695;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.contrat-tab-btn:hover { background: rgba(26,122,94,.05); color: #0D1117; }
+.contrat-tab-btn.active { background: rgba(26,122,94,.1); color: #1A7A5E; }
+.contrat-tab-btn .tab-badge {
+  background: #1A7A5E; color: white; font-size: 11px; font-weight: 700;
+  padding: 1px 7px; border-radius: 20px; min-width: 20px; text-align: center;
+}
+
+/* ── Vue historique ── */
+#historyView { display: none; }
+#historyView.active { display: block; }
+#wizardView { display: block; }
+#wizardView.hidden { display: none; }
+
+.history-filters {
+  display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.history-filter-btn {
+  height: 34px; padding: 0 14px; border-radius: 8px;
+  border: 1.5px solid rgba(13,17,23,.12); background: white;
+  color: #7A8695; font-size: 13px; font-weight: 600;
+  font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s;
+}
+.history-filter-btn:hover { border-color: #1A7A5E; color: #1A7A5E; }
+.history-filter-btn.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+
+.history-list { display: flex; flex-direction: column; gap: 12px; }
+
+.history-card {
+  background: white; border: 1px solid rgba(200,184,154,.35);
+  border-radius: 14px; padding: 20px 24px;
+  display: flex; align-items: center; gap: 16px;
+  transition: box-shadow .15s;
+}
+.history-card:hover { box-shadow: 0 4px 16px rgba(13,17,23,.08); }
+.history-card-icon {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.history-card-icon.sent { background: rgba(59,130,246,.1); color: #3B82F6; }
+.history-card-icon.signed { background: rgba(26,122,94,.1); color: #1A7A5E; }
+.history-card-icon.expired { background: rgba(156,163,175,.1); color: #9CA3AF; }
+
+.history-card-info { flex: 1; min-width: 0; }
+.history-card-name { font-size: 15px; font-weight: 700; color: #0D1117; }
+.history-card-meta { font-size: 13px; color: #7A8695; margin-top: 3px; }
+.history-card-meta span { margin-right: 14px; }
+
+.history-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+}
+.history-badge.sent { background: rgba(59,130,246,.1); color: #2563EB; }
+.history-badge.signed { background: rgba(26,122,94,.1); color: #1A7A5E; }
+.history-badge.expired { background: rgba(156,163,175,.1); color: #6B7280; }
+
+.history-empty {
+  text-align: center; padding: 60px 20px;
+  background: white; border: 1px solid rgba(200,184,154,.35); border-radius: 14px;
+}
+.history-empty i { font-size: 32px; color: #D1D5DB; margin-bottom: 12px; }
+.history-empty p { font-size: 15px; color: #7A8695; }
+
+.history-loading {
+  text-align: center; padding: 40px;
+  color: #7A8695; font-size: 14px;
+}
+
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   background: #0D1117; color: white; padding: 12px 20px;
@@ -568,6 +649,20 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     <div class="contrat-kicker">Locations directes</div>
     <h1 class="contrat-title">Contrat de <em>location</em></h1>
   </div>
+
+  <!-- Onglets -->
+  <div class="contrat-tabs">
+    <button class="contrat-tab-btn active" id="tabNew" onclick="switchTab('new')">
+      <i class="fas fa-plus"></i> Nouveau contrat
+    </button>
+    <button class="contrat-tab-btn" id="tabHistory" onclick="switchTab('history')">
+      <i class="fas fa-clock-rotate-left"></i> Historique
+      <span class="tab-badge" id="historyBadge" style="display:none;">0</span>
+    </button>
+  </div>
+
+  <!-- Vue wizard (formulaire) -->
+  <div id="wizardView">
 
   <!-- Stepper -->
   <div class="contrat-steps" id="contratStepper">
@@ -1030,6 +1125,21 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
       </div>
     </div>
   </div>
+
+</div><!-- #wizardView -->
+
+<!-- Vue historique -->
+<div id="historyView">
+  <div class="history-filters">
+    <button class="history-filter-btn active" onclick="filterHistory('all', this)">Tous</button>
+    <button class="history-filter-btn" onclick="filterHistory('sent', this)"><i class="fas fa-paper-plane"></i> Envoyés</button>
+    <button class="history-filter-btn" onclick="filterHistory('signed', this)"><i class="fas fa-check-circle"></i> Signés</button>
+    <button class="history-filter-btn" onclick="filterHistory('expired', this)"><i class="fas fa-clock"></i> Expirés</button>
+  </div>
+  <div id="historyList" class="history-list">
+    <div class="history-loading"><i class="fas fa-circle-notch fa-spin"></i> Chargement...</div>
+  </div>
+</div>
 
 </div><!-- .page-content -->
 </main>
@@ -1669,6 +1779,108 @@ function showToast(msg, type = '') {
   t.textContent = msg;
   t.className = 'toast show ' + type;
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Onglets Nouveau / Historique ──
+let allContracts = [];
+let currentFilter = 'all';
+
+function switchTab(tab) {
+  const wizardView = document.getElementById('wizardView');
+  const historyView = document.getElementById('historyView');
+  const tabNew = document.getElementById('tabNew');
+  const tabHistory = document.getElementById('tabHistory');
+
+  if (tab === 'history') {
+    wizardView.classList.add('hidden');
+    historyView.classList.add('active');
+    tabNew.classList.remove('active');
+    tabHistory.classList.add('active');
+    loadHistory();
+  } else {
+    wizardView.classList.remove('hidden');
+    historyView.classList.remove('active');
+    tabNew.classList.add('active');
+    tabHistory.classList.remove('active');
+  }
+}
+
+async function loadHistory() {
+  const list = document.getElementById('historyList');
+  list.innerHTML = '<div class="history-loading"><i class="fas fa-circle-notch fa-spin"></i> Chargement...</div>';
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/contrats?limit=100', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Erreur serveur');
+    const data = await res.json();
+    allContracts = data.contracts || [];
+
+    // Mettre à jour le badge
+    const badge = document.getElementById('historyBadge');
+    badge.textContent = allContracts.length;
+    badge.style.display = allContracts.length > 0 ? '' : 'none';
+
+    renderHistory(currentFilter);
+  } catch (err) {
+    list.innerHTML = '<div class="history-empty"><i class="fas fa-exclamation-circle"></i><p>Impossible de charger l\'historique.</p></div>';
+  }
+}
+
+function filterHistory(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.history-filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderHistory(filter);
+}
+
+function renderHistory(filter) {
+  const list = document.getElementById('historyList');
+  const filtered = filter === 'all' ? allContracts : allContracts.filter(c => c.status === filter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="history-empty">
+      <i class="fas fa-file-contract"></i>
+      <p>${filter === 'all' ? 'Aucun contrat pour l\'instant.<br>Créez votre premier contrat avec le bouton "Nouveau contrat".' : 'Aucun contrat dans cette catégorie.'}</p>
+    </div>`;
+    return;
+  }
+
+  const statusIcons = { sent: 'fa-paper-plane', signed: 'fa-check-circle', expired: 'fa-clock' };
+  const statusLabels = { sent: 'En attente de signature', signed: 'Signé', expired: 'Expiré' };
+
+  list.innerHTML = filtered.map(c => {
+    const icon = statusIcons[c.status] || 'fa-file';
+    const checkin = c.checkin ? new Date(c.checkin).toLocaleDateString('fr-FR') : '—';
+    const checkout = c.checkout ? new Date(c.checkout).toLocaleDateString('fr-FR') : '—';
+    const created = new Date(c.created_at).toLocaleDateString('fr-FR');
+    const signedAt = c.guest_signed_at ? new Date(c.guest_signed_at).toLocaleDateString('fr-FR') : null;
+
+    return `<div class="history-card">
+      <div class="history-card-icon ${c.status}">
+        <i class="fas ${icon}"></i>
+      </div>
+      <div class="history-card-info">
+        <div class="history-card-name">${c.guest_first_name || ''} ${c.guest_last_name || ''}</div>
+        <div class="history-card-meta">
+          <span><i class="fas fa-home" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${c.property_name || '—'}</span>
+          ${c.checkin ? `<span><i class="fas fa-calendar" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${checkin} → ${checkout}</span>` : ''}
+          <span><i class="fas fa-euro-sign" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${c.total_price ? parseFloat(c.total_price).toFixed(0) + ' €' : '—'}</span>
+        </div>
+        <div class="history-card-meta" style="margin-top:4px;">
+          <span>Créé le ${created}</span>
+          ${signedAt ? `<span style="color:#1A7A5E;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Signé le ${signedAt}</span>` : ''}
+        </div>
+      </div>
+      <div style="flex-shrink:0;">
+        <span class="history-badge ${c.status}">
+          <i class="fas ${icon}"></i> ${statusLabels[c.status] || c.status}
+        </span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Toggles conditions légales ──
