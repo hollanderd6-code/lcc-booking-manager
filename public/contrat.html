@@ -1258,6 +1258,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="m_companyEmail" placeholder="contact@maconciergerie.fr"/></div>
       </div>
       <div class="form-group"><label class="form-label">Téléphone</label><input type="tel" class="form-input" id="m_companyPhone" placeholder="+33 6 00 00 00 00" style="max-width:260px;"/></div>
+      <div class="form-grid-2" style="margin-top:8px;">
+        <div class="form-group"><label class="form-label">Information libre (titre)</label><input type="text" class="form-input" id="m_companyFreeTitle" placeholder="ex: N° RCP, Agrément..."/></div>
+        <div class="form-group"><label class="form-label">Valeur</label><input type="text" class="form-input" id="m_companyFreeValue" placeholder="ex: 123456789"/></div>
+      </div>
     </div>
 
     <div class="form-card">
@@ -1410,6 +1414,14 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_mis_taxe"><label for="m_mis_taxe">Encaissement taxe de séjour</label></div>
         <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_mis_livret"><label for="m_mis_livret">Fourniture d'un livret d'accueil</label></div>
         <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_mis_contrat"><label for="m_mis_contrat">Rédaction du contrat de location voyageurs</label></div>
+      </div>
+
+      <!-- Missions libres -->
+      <div class="missions-block-title"><i class="fas fa-plus"></i> Missions personnalisées</div>
+      <ul class="clauses-list" id="missionLibreList"></ul>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input type="text" class="form-input" id="missionLibreInput" placeholder="Ajouter une mission personnalisée..." style="flex:1;"/>
+        <button type="button" onclick="addMissionLibre()" style="height:44px;padding:0 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i> Ajouter</button>
       </div>
 
       <!-- Dépense urgente plafond -->
@@ -1659,10 +1671,26 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         </div>
 
       </div>
-    </div>
 
-    <div class="form-card">
-      <div class="form-card-title"><i class="fas fa-money-bill-transfer"></i> Reversements au propriétaire</div>
+      <!-- Prestations libres avec prix -->
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(200,184,154,.3);">
+        <div class="missions-block-title" style="margin-top:0;"><i class="fas fa-plus"></i> Prestations personnalisées</div>
+        <div id="extraLibreList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="text" class="form-input" id="extraLibreLabel" placeholder="Nom de la prestation..." style="flex:1;min-width:140px;"/>
+          <input type="number" class="form-input" id="extraLibrePrice" placeholder="Prix" min="0" style="width:90px;"/>
+          <span style="font-size:14px;font-weight:700;color:#1A7A5E;">€</span>
+          <select class="form-input" id="extraLibreUnit" style="width:150px;">
+            <option value="par_prestation">par prestation</option>
+            <option value="par_heure">par heure</option>
+            <option value="par_nuit">par nuit</option>
+            <option value="par_personne">par personne</option>
+            <option value="par_km">par km</option>
+          </select>
+          <button type="button" onclick="addExtraLibre()" style="height:44px;padding:0 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i> Ajouter</button>
+        </div>
+      </div>
+    </div>
       <div class="form-group">
         <label class="form-label">Fréquence de reversement</label>
         <select class="form-input" id="m_reversement" style="max-width:300px;">
@@ -2713,7 +2741,10 @@ function showMandatSection(index) {
     if (i + 1 === currentMandatSection) step.classList.add('active');
     else if (i + 1 < currentMandatSection) step.classList.add('done');
   });
-  document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+  // Scroll vers le haut
+  const mc = document.querySelector('.main-content');
+  if (mc) mc.scrollTo({ top: 0, behavior: 'smooth' });
+  else window.scrollTo({ top: 0, behavior: 'smooth' });
   if (currentMandatSection === 5) buildMandatPreview();
 }
 
@@ -2738,6 +2769,41 @@ document.querySelectorAll('#mandatStepper .contrat-step').forEach(step => {
 const vm = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
 // ── Toggle mission checkbox ──
+// ── Missions libres ──
+function addMissionLibre() {
+  const input = document.getElementById('missionLibreInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const list = document.getElementById('missionLibreList');
+  const li = document.createElement('li');
+  li.className = 'clause-item';
+  li.innerHTML = `<span>${text}</span><button onclick="this.closest('li').remove()" title="Supprimer"><i class="fas fa-times"></i></button>`;
+  list.appendChild(li);
+  input.value = '';
+  input.focus();
+}
+document.getElementById('missionLibreInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addMissionLibre(); } });
+
+// ── Extras libres avec prix ──
+function addExtraLibre() {
+  const label = document.getElementById('extraLibreLabel').value.trim();
+  const price = document.getElementById('extraLibrePrice').value.trim();
+  const unit = document.getElementById('extraLibreUnit').value;
+  const unitLabels = { par_prestation: 'par prestation', par_heure: 'par heure', par_nuit: 'par nuit', par_personne: 'par personne', par_km: 'par km' };
+  if (!label) return;
+  const text = price ? `${label} : ${price} € ${unitLabels[unit] || unit}` : label;
+  const list = document.getElementById('extraLibreList');
+  const div = document.createElement('div');
+  div.className = 'clause-item';
+  div.dataset.value = text;
+  div.innerHTML = `<span>${text}</span><button onclick="this.closest('div').remove()" title="Supprimer"><i class="fas fa-times"></i></button>`;
+  list.appendChild(div);
+  document.getElementById('extraLibreLabel').value = '';
+  document.getElementById('extraLibrePrice').value = '';
+  document.getElementById('extraLibreLabel').focus();
+}
+document.getElementById('extraLibreLabel')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addExtraLibre(); } });
+
 // ── Toggle prestation extra avec zone prix ──
 function toggleExtra(key, event) {
   if (event && event.target.tagName === 'INPUT') return;
@@ -2854,6 +2920,10 @@ function getMandatMissions() {
       if (label) missions.push(label);
     }
   });
+  // Missions libres
+  document.querySelectorAll('#missionLibreList li span').forEach(s => {
+    if (s.textContent.trim()) missions.push(s.textContent.trim());
+  });
   return missions;
 }
 
@@ -2870,6 +2940,10 @@ function getMandatExtras() {
       const unitLabel = unitLabels[unit] || unit;
       extras.push(price ? `${label} : ${price} € ${unitLabel}` : label);
     }
+  });
+  // Extras libres
+  document.querySelectorAll('#extraLibreList div').forEach(div => {
+    if (div.dataset.value) extras.push(div.dataset.value);
   });
   return extras;
 }
@@ -2948,6 +3022,7 @@ async function sendMandat() {
     companyAddress: vm('m_companyAddress'), companySiret: vm('m_companySiret'),
     companyRep: vm('m_companyRep'), companyEmail: vm('m_companyEmail'), companyPhone: vm('m_companyPhone'),
     companyLogoUrl: mandatLogoUrl,
+    companyFreeTitle: vm('m_companyFreeTitle'), companyFreeValue: vm('m_companyFreeValue'),
     // Propriétaire
     ownerFirstName: vm('m_ownerFirstName'), ownerLastName: vm('m_ownerLastName'),
     ownerAddress: vm('m_ownerAddress'), ownerEmail: vm('m_ownerEmail'), ownerPhone: vm('m_ownerPhone'),
