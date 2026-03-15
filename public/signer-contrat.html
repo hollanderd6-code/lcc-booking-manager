@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Signature de votre contrat – Boostinghost</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<style>
+:root {
+  --cream: #F7F4EE;
+  --cream-dark: #EDE8DC;
+  --green: #1A7A5E;
+  --green-light: rgba(26,122,94,.1);
+  --green-mid: rgba(26,122,94,.2);
+  --dark: #0D1117;
+  --gray: #7A8695;
+  --border: rgba(13,17,23,.1);
+  --white: #FFFFFF;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--dark);
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.sign-header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.sign-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  color: var(--dark);
+}
+.sign-logo em { color: var(--green); font-style: italic; }
+.sign-header-sep { flex: 1; }
+.sign-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 500; color: var(--gray);
+  background: var(--cream); padding: 6px 12px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+.sign-badge i { color: var(--green); }
+
+/* ── Main layout ── */
+.sign-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+
+/* ── Status screens ── */
+.status-screen {
+  display: none;
+  text-align: center;
+  padding: 80px 20px;
+}
+.status-screen.active { display: block; }
+.status-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; margin: 0 auto 24px;
+}
+.status-icon.loading { background: var(--cream-dark); color: var(--gray); }
+.status-icon.success { background: rgba(26,122,94,.12); color: var(--green); }
+.status-icon.error { background: rgba(220,38,38,.1); color: #DC2626; }
+.status-icon.already { background: rgba(26,122,94,.12); color: var(--green); }
+.status-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; margin-bottom: 12px; }
+.status-sub { font-size: 15px; color: var(--gray); line-height: 1.6; max-width: 400px; margin: 0 auto; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Contract page ── */
+#contractPage { display: none; }
+#contractPage.active { display: block; }
+
+/* ── Intro card ── */
+.intro-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 28px;
+  display: flex; gap: 20px;
+}
+.intro-icon {
+  width: 48px; height: 48px; flex-shrink: 0;
+  background: var(--green-light); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--green); font-size: 20px;
+}
+.intro-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px; font-weight: 500; margin-bottom: 6px;
+}
+.intro-sub { font-size: 14px; color: var(--gray); line-height: 1.6; }
+.intro-meta {
+  display: flex; gap: 20px; flex-wrap: wrap;
+  margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.intro-meta-item { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.intro-meta-item i { color: var(--green); font-size: 12px; }
+
+/* ── Expiry bar ── */
+.expiry-bar {
+  background: #FEF9EC;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #92400E;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 24px;
+}
+.expiry-bar i { color: #D97706; }
+
+/* ── Contract document ── */
+.contract-doc {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.contract-doc-header {
+  background: var(--green);
+  padding: 24px 32px;
+  text-align: center;
+  color: white;
+}
+.contract-doc-header h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 500; margin-bottom: 4px;
+}
+.contract-doc-header p { font-size: 13px; opacity: .75; }
+.contract-doc-body { padding: 32px; }
+
+.doc-section { margin-bottom: 24px; }
+.doc-section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--green);
+  padding-bottom: 8px; border-bottom: 1px solid var(--green-mid);
+  margin-bottom: 12px;
+}
+.doc-row {
+  display: flex; gap: 8px; margin-bottom: 6px; font-size: 14px;
+}
+.doc-row .lbl { color: var(--gray); min-width: 160px; flex-shrink: 0; font-size: 13px; }
+.doc-row .val { font-weight: 500; }
+.doc-highlight { color: var(--green); font-weight: 700; }
+.doc-clause {
+  font-size: 13px; color: #374151; line-height: 1.7;
+  background: var(--cream); border-radius: 8px; padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+/* ── Owner signature ── */
+.owner-sig-block {
+  margin-top: 24px; padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.owner-sig-label { font-size: 12px; color: var(--gray); margin-bottom: 8px; }
+.owner-sig-img { max-height: 60px; }
+
+/* ── Signature section ── */
+.sign-section {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.sign-section-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: #FAFAF8;
+  display: flex; align-items: center; gap: 12px;
+}
+.sign-section-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--green-light); color: var(--green);
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.sign-section-title { font-size: 16px; font-weight: 700; }
+.sign-section-sub { font-size: 13px; color: var(--gray); margin-top: 2px; }
+.sign-section-body { padding: 24px; }
+
+.canvas-zone {
+  border: 2px dashed rgba(13,17,23,.15);
+  border-radius: 12px;
+  background: #FAFAF8;
+  overflow: hidden; position: relative;
+}
+.canvas-zone canvas {
+  display: block; width: 100%; height: 180px;
+  cursor: crosshair; touch-action: none;
+}
+.canvas-zone-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; border-top: 1px solid var(--border);
+  background: white;
+}
+.canvas-hint { font-size: 12px; color: var(--gray); }
+.canvas-hint i { color: var(--green); margin-right: 4px; }
+.btn-clear {
+  height: 32px; padding: 0 14px; border-radius: 8px;
+  background: #FEF2F2; color: #DC2626;
+  border: 1px solid rgba(220,38,38,.15); cursor: pointer;
+  font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  transition: background .15s;
+}
+.btn-clear:hover { background: #FEE2E2; }
+
+/* ── Accept checkbox ── */
+.accept-box {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--green-light); border: 1px solid var(--green-mid);
+  border-radius: 12px; padding: 16px; margin-top: 20px;
+}
+.accept-box input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--green);
+  flex-shrink: 0; margin-top: 2px; cursor: pointer;
+}
+.accept-box label { font-size: 14px; color: #374151; cursor: pointer; line-height: 1.5; }
+.accept-box label strong { color: var(--dark); }
+
+/* ── Submit button ── */
+.btn-sign {
+  width: 100%; height: 52px; border-radius: 14px;
+  background: var(--green); color: white; border: none;
+  font-size: 16px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; transition: background .15s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 20px;
+}
+.btn-sign:hover { background: #15624B; }
+.btn-sign:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+/* ── Legal note ── */
+.legal-note {
+  text-align: center; font-size: 12px; color: var(--gray);
+  margin-top: 16px; line-height: 1.6;
+}
+.legal-note i { margin-right: 4px; }
+
+/* ── Responsive ── */
+@media(max-width:600px){
+  .sign-wrap { padding: 20px 14px 60px; }
+  .intro-card { flex-direction: column; padding: 20px; }
+  .contract-doc-body { padding: 20px 16px; }
+  .doc-row { flex-direction: column; gap: 2px; }
+  .doc-row .lbl { min-width: auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="sign-header">
+  <div class="sign-logo">Boosting<em>host</em></div>
+  <div class="sign-header-sep"></div>
+  <div class="sign-badge"><i class="fas fa-lock"></i> Signature sécurisée</div>
+</header>
+
+<!-- Loading -->
+<div id="screenLoading" class="status-screen active">
+  <div class="status-icon loading"><i class="fas fa-circle-notch spin"></i></div>
+  <div class="status-title">Chargement du contrat...</div>
+  <div class="status-sub">Veuillez patienter quelques instants.</div>
+</div>
+
+<!-- Error -->
+<div id="screenError" class="status-screen">
+  <div class="status-icon error"><i class="fas fa-exclamation-circle"></i></div>
+  <div class="status-title" id="errorTitle">Lien invalide</div>
+  <div class="status-sub" id="errorMsg">Ce lien de signature est introuvable ou a expiré. Contactez votre bailleur pour obtenir un nouveau lien.</div>
+</div>
+
+<!-- Already signed -->
+<div id="screenSigned" class="status-screen">
+  <div class="status-icon already"><i class="fas fa-check-circle"></i></div>
+  <div class="status-title">Contrat déjà signé</div>
+  <div class="status-sub">Ce contrat a déjà été signé électroniquement. Vous avez reçu le PDF signé par email.</div>
+</div>
+
+<!-- Success after signing -->
+<div id="screenSuccess" class="status-screen">
+  <div class="status-icon success"><i class="fas fa-check-circle"></i></div>
+  <div class="status-title">Contrat signé !</div>
+  <div class="status-sub">Merci — votre contrat signé vous a été envoyé par email ainsi qu'à votre bailleur. Vous pouvez fermer cette page.</div>
+</div>
+
+<!-- Contract page -->
+<div id="contractPage">
+<div class="sign-wrap">
+
+  <!-- Intro -->
+  <div class="intro-card">
+    <div class="intro-icon"><i class="fas fa-file-contract"></i></div>
+    <div>
+      <div class="intro-title">Votre contrat de location</div>
+      <div class="intro-sub">Lisez attentivement le contrat ci-dessous. En bas de page, apposez votre signature électronique pour le valider.</div>
+      <div class="intro-meta">
+        <div class="intro-meta-item"><i class="fas fa-shield-halved"></i> Signature électronique horodatée</div>
+        <div class="intro-meta-item"><i class="fas fa-envelope"></i> PDF envoyé par email après signature</div>
+        <div class="intro-meta-item"><i class="fas fa-lock"></i> Connexion sécurisée HTTPS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expiry bar -->
+  <div class="expiry-bar" id="expiryBar">
+    <i class="fas fa-clock"></i>
+    <span id="expiryText">Ce lien expire le …</span>
+  </div>
+
+  <!-- Contract document -->
+  <div class="contract-doc">
+    <div class="contract-doc-header">
+      <h2>Contrat de location meublée saisonnière</h2>
+      <p id="contractSubtitle">Chargement...</p>
+    </div>
+    <div class="contract-doc-body" id="contractBody">
+      <!-- Généré dynamiquement -->
+    </div>
+  </div>
+
+  <!-- Signature section -->
+  <div class="sign-section">
+    <div class="sign-section-header">
+      <div class="sign-section-icon"><i class="fas fa-pen-nib"></i></div>
+      <div>
+        <div class="sign-section-title">Votre signature</div>
+        <div class="sign-section-sub">Signez dans le cadre ci-dessous avec la souris ou le doigt</div>
+      </div>
+    </div>
+    <div class="sign-section-body">
+      <div class="canvas-zone" id="signatureZone">
+        <canvas id="signatureCanvas"></canvas>
+        <div class="canvas-zone-footer">
+          <span class="canvas-hint"><i class="fas fa-pen"></i>Signez ici</span>
+          <button class="btn-clear" onclick="clearSignature()"><i class="fas fa-trash"></i> Effacer</button>
+        </div>
+      </div>
+
+      <div class="accept-box">
+        <input type="checkbox" id="acceptTerms"/>
+        <label for="acceptTerms">
+          Je certifie avoir lu et compris le contrat ci-dessus, et j'accepte ses conditions.
+          <strong>Ma signature électronique a la même valeur légale qu'une signature manuscrite.</strong>
+        </label>
+      </div>
+
+      <button class="btn-sign" id="btnSign" onclick="submitSignature()">
+        <i class="fas fa-check"></i> Signer et valider le contrat
+      </button>
+
+      <div class="legal-note">
+        <i class="fas fa-shield-halved"></i>
+        Votre signature est horodatée et votre adresse IP est enregistrée à des fins de preuve.
+        Le contrat signé vous sera envoyé par email immédiatement.
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ── Token depuis URL ──
+const token = new URLSearchParams(window.location.search).get('token');
+let contractData = null;
+let ownerSignature = null;
+let signatureData = null;
+
+function showScreen(id) {
+  document.querySelectorAll('.status-screen, #contractPage').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Formatage dates ──
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+const fmtDateShort = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+const payLabels = { virement: 'Virement bancaire', especes: 'Espèces', cheque: 'Chèque', carte: 'Carte bancaire', autre: 'Autre' };
+const propTypeLabels = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', chambre: 'Chambre', gite: 'Gîte / Chalet', autre: 'Autre' };
+
+// ── Charger le contrat ──
+async function loadContract() {
+  if (!token) {
+    showScreen('screenError');
+    document.getElementById('errorTitle').textContent = 'Lien manquant';
+    document.getElementById('errorMsg').textContent = 'Aucun token de signature trouvé dans l\'URL.';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/contrat/sign/${token}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data.alreadySigned) { showScreen('screenSigned'); return; }
+      showScreen('screenError');
+      document.getElementById('errorTitle').textContent = res.status === 410 ? 'Lien expiré' : 'Lien invalide';
+      document.getElementById('errorMsg').textContent = data.error || 'Lien introuvable.';
+      return;
+    }
+
+    contractData = data.contractData;
+    ownerSignature = data.ownerSignature;
+
+    // Expiry bar
+    const expires = new Date(data.expiresAt);
+    document.getElementById('expiryText').textContent =
+      `Ce lien expire le ${expires.toLocaleDateString('fr-FR')} à ${expires.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+
+    renderContract(contractData, ownerSignature);
+    initSignature();
+    showScreen('contractPage');
+
+  } catch (err) {
+    showScreen('screenError');
+    document.getElementById('errorMsg').textContent = 'Erreur de connexion. Réessayez plus tard.';
+  }
+}
+
+// ── Rendu du contrat ──
+function renderContract(d, ownerSig) {
+  const nights = d.checkin && d.checkout
+    ? Math.round((new Date(d.checkout) - new Date(d.checkin)) / 86400000) : 0;
+
+  document.getElementById('contractSubtitle').textContent =
+    `${d.propertyName || ''}${d.checkin ? ' · du ' + fmtDateShort(d.checkin) + ' au ' + fmtDateShort(d.checkout) : ''}`;
+
+  const row = (lbl, val) => val ? `<div class="doc-row"><span class="lbl">${lbl}</span><span class="val">${val}</span></div>` : '';
+  const section = (title, content) => `<div class="doc-section"><div class="doc-section-title">${title}</div>${content}</div>`;
+  const clause = (text) => `<div class="doc-clause">${text}</div>`;
+
+  let html = '';
+
+  html += section('1. Bailleur',
+    row('Nom', `${d.ownerFirstName || ''} ${d.ownerLastName || ''}`.trim()) +
+    row('Adresse', d.ownerAddress) +
+    row('Email', d.ownerEmail) +
+    row('Téléphone', d.ownerPhone)
+  );
+
+  html += section('2. Locataire',
+    row('Nom complet', `${d.guestFirstName} ${d.guestLastName}`) +
+    row('Email', d.guestEmail) +
+    row('Téléphone', d.guestPhone) +
+    row('Nationalité', d.guestNationality) +
+    row('Adresse', d.guestAddress) +
+    (d.guestDOB ? row('Date de naissance', fmtDateShort(d.guestDOB)) : '') +
+    (d.guestIDNumber ? row("Pièce d'identité", d.guestIDNumber) : '')
+  );
+
+  html += section('3. Objet de la location',
+    row('Logement', d.propertyName) +
+    (d.propertyType ? row('Type', propTypeLabels[d.propertyType] || d.propertyType) : '') +
+    row('Adresse', d.propertyAddress) +
+    clause('Cette location meublée saisonnière ne constitue pas la résidence principale du locataire.')
+  );
+
+  html += section('4. Durée du séjour',
+    row('Arrivée', `${fmtDate(d.checkin)} à ${d.checkinTime || '15:00'}`) +
+    row('Départ', `${fmtDate(d.checkout)} à ${d.checkoutTime || '11:00'}`) +
+    row('Durée', `${nights} nuit${nights > 1 ? 's' : ''}`) +
+    row('Occupants max.', `${d.guestCount || 1} personne${parseInt(d.guestCount) > 1 ? 's' : ''}`)
+  );
+
+  html += section('5. Conditions financières',
+    `<div class="doc-row"><span class="lbl">Loyer total (CC)</span><span class="val doc-highlight">${parseFloat(d.totalPrice || 0).toFixed(2)} €</span></div>` +
+    (d.cleaningFee && parseFloat(d.cleaningFee) > 0 ? row('Dont frais de ménage', `${parseFloat(d.cleaningFee).toFixed(2)} €`) : '') +
+    (d.deposit && parseFloat(d.deposit) > 0 ? row('Dépôt de garantie', `${parseFloat(d.deposit).toFixed(2)} €`) : '') +
+    (d.acompte && parseFloat(d.acompte) > 0 ? row('Acompte versé', `${parseFloat(d.acompte).toFixed(2)} €`) : '') +
+    row('Mode de paiement', payLabels[d.paymentMethod] || d.paymentMethod)
+  );
+
+  if (d.regles && d.regles.length > 0) {
+    html += section('6. Règles du logement',
+      d.regles.map(r => `<div class="doc-row"><span class="lbl" style="min-width:20px;">•</span><span class="val">${r}</span></div>`).join('')
+    );
+  }
+
+  if (d.inclObligations) {
+    html += section('Obligations du locataire', clause("Le locataire s'engage à occuper paisiblement les lieux, à respecter le voisinage, à ne pas sous-louer le logement et à ne pas organiser de fêtes sans accord écrit préalable du bailleur."));
+  }
+
+  if (d.inclAnnulation) {
+    html += section("Politique d'annulation", clause(`Plus de ${d.cancelDays1 || 30} jours avant l'arrivée : remboursement de ${d.cancelPct1 || 50}%. Moins de ${d.cancelDays2 || 7} jours : remboursement de ${d.cancelPct2 || 0}%.`));
+  }
+
+  if (d.inclAssurance) {
+    html += section('Assurance', clause("Le locataire déclare être couvert par une assurance responsabilité civile en cours de validité."));
+  }
+
+  if (d.inclEDL) {
+    html += section('État des lieux', clause(`Un état des lieux contradictoire sera réalisé à l'entrée et au départ. La caution sera restituée dans un délai de ${d.depositReturnDays || 7} jours après le départ.`));
+  }
+
+  // Signature du bailleur
+  html += `<div class="owner-sig-block">
+    <div class="owner-sig-label"><i class="fas fa-check-circle" style="color:var(--green);margin-right:5px;"></i>Signature du bailleur — ${`${d.ownerFirstName || ''} ${d.ownerLastName || ''}`.trim()}</div>
+    ${ownerSig && ownerSig.startsWith('data:image') ? `<img class="owner-sig-img" src="${ownerSig}" alt="Signature bailleur"/>` : '<span style="font-size:13px;color:var(--gray);">Signature non disponible</span>'}
+    <div style="font-size:12px;color:var(--gray);margin-top:6px;">Signé le ${fmtDateShort(d.signatureDate || new Date())}</div>
+  </div>`;
+
+  document.getElementById('contractBody').innerHTML = html;
+}
+
+// ── Canvas signature ──
+let isDrawing = false, lastX = 0, lastY = 0;
+
+function initSignature() {
+  const canvas = document.getElementById('signatureCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = 180 * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.strokeStyle = '#0D1117';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const getPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return [(src.clientX - r.left), (src.clientY - r.top)];
+  };
+  const startDraw = (e) => { e.preventDefault(); isDrawing = true; [lastX, lastY] = getPos(e); ctx.beginPath(); ctx.moveTo(lastX, lastY); };
+  const draw = (e) => { if (!isDrawing) return; e.preventDefault(); const [x, y] = getPos(e); ctx.lineTo(x, y); ctx.stroke(); lastX = x; lastY = y; };
+  const endDraw = () => { if (!isDrawing) return; isDrawing = false; signatureData = canvas.toDataURL('image/png'); };
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', endDraw);
+}
+
+function clearSignature() {
+  const canvas = document.getElementById('signatureCanvas');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  signatureData = null;
+}
+
+// ── Soumettre la signature ──
+async function submitSignature() {
+  if (!document.getElementById('acceptTerms').checked) {
+    alert('Veuillez cocher la case d\'acceptation pour continuer.');
+    return;
+  }
+  if (!signatureData) {
+    alert('Veuillez apposer votre signature dans le cadre prévu.');
+    return;
+  }
+
+  const btn = document.getElementById('btnSign');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Envoi en cours...';
+
+  try {
+    const res = await fetch(`/api/contrat/sign/${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guestSignature: signatureData })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data.alreadySigned) { showScreen('screenSigned'); return; }
+      throw new Error(data.error || 'Erreur serveur');
+    }
+
+    showScreen('screenSuccess');
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check"></i> Signer et valider le contrat';
+    alert('Erreur : ' + (err.message || 'Réessayez plus tard.'));
+  }
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', loadContract);
+</script>
+</body>
+</html>
