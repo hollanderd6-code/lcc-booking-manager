@@ -398,6 +398,30 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 #historyView.active { display: block; }
 #wizardView { display: block; }
 #wizardView.hidden { display: none; }
+#mandatView { display: none; }
+#mandatView.active { display: block; }
+
+/* Stepper mandat — réutilise .contrat-step */
+.mandat-steps { display: flex; align-items: center; gap: 0; margin-bottom: 28px; background: white; border: 1px solid rgba(200,184,154,.35); border-radius: 14px; padding: 12px 20px; overflow-x: auto; }
+.mandat-section { display: none; }
+.mandat-section.active { display: block; }
+
+/* Missions checkboxes */
+.missions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+@media(max-width:600px){ .missions-grid { grid-template-columns: 1fr; } }
+.mission-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1.5px solid rgba(13,17,23,.08); border-radius: 10px; cursor: pointer; transition: all .15s; background: white; }
+.mission-item:hover { border-color: rgba(26,122,94,.3); background: rgba(26,122,94,.03); }
+.mission-item input[type="checkbox"] { accent-color: #1A7A5E; width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+.mission-item label { font-size: 13.5px; color: #374151; cursor: pointer; line-height: 1.4; }
+.mission-item.checked { border-color: #1A7A5E; background: rgba(26,122,94,.05); }
+.mission-item.checked label { color: #1A7A5E; font-weight: 600; }
+.missions-block-title { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #1A7A5E; margin: 18px 0 8px; }
+
+/* Clauses libres */
+.clauses-list { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.clause-item { display: flex; align-items: flex-start; gap: 10px; background: rgba(26,122,94,.05); border: 1px solid rgba(26,122,94,.15); border-radius: 10px; padding: 10px 14px; }
+.clause-item span { flex: 1; font-size: 14px; color: #374151; }
+.clause-item button { background: none; border: none; cursor: pointer; color: #DC2626; font-size: 13px; padding: 0; flex-shrink: 0; }
 
 .history-filters {
   display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
@@ -657,6 +681,9 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   <div class="contrat-tabs">
     <button class="contrat-tab-btn active" id="tabNew" onclick="switchTab('new')">
       <i class="fas fa-plus"></i> Nouveau contrat
+    </button>
+    <button class="contrat-tab-btn" id="tabMandat" onclick="switchTab('mandat')">
+      <i class="fas fa-handshake"></i> Mandat de gestion
     </button>
     <button class="contrat-tab-btn" id="tabHistory" onclick="switchTab('history')">
       <i class="fas fa-clock-rotate-left"></i> Historique
@@ -1131,6 +1158,453 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
 </div><!-- #wizardView -->
+
+<!-- Vue mandat de gestion -->
+<div id="mandatView">
+
+  <!-- Stepper mandat -->
+  <div class="mandat-steps contrat-steps" id="mandatStepper">
+    <div class="contrat-step active" data-mstep="1"><div class="contrat-step-num">1</div><div class="contrat-step-label">Parties & bien</div></div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-mstep="2"><div class="contrat-step-num">2</div><div class="contrat-step-label">Missions</div></div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-mstep="3"><div class="contrat-step-num">3</div><div class="contrat-step-label">Rémunération</div></div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-mstep="4"><div class="contrat-step-num">4</div><div class="contrat-step-label">Conditions</div></div>
+    <div class="contrat-sep"></div>
+    <div class="contrat-step" data-mstep="5"><div class="contrat-step-num">5</div><div class="contrat-step-label">Signature</div></div>
+  </div>
+
+  <!-- Section 1 — Parties & bien -->
+  <div class="mandat-section active" data-msection="1">
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-building"></i> Prestataire (votre conciergerie)</div>
+      <div class="form-notice" style="background:rgba(26,122,94,.07);border:1px solid rgba(26,122,94,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#1A7A5E;margin-bottom:16px;">
+        <i class="fas fa-info-circle"></i> Ces informations sont récupérées depuis votre profil. Modifiez-les dans <a href="/settings-account.html" style="color:#1A7A5E;font-weight:600;">Paramètres</a>.
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Raison sociale / Nom</label><input type="text" class="form-input" id="m_companyName" placeholder="La Conciergerie de Charles"/></div>
+        <div class="form-group"><label class="form-label">Forme juridique</label><input type="text" class="form-input" id="m_companyLegal" placeholder="SAS, SASU, Auto-entrepreneur..."/></div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Adresse du siège</label><input type="text" class="form-input" id="m_companyAddress" placeholder="12 rue des Lilas, 95000 Cergy"/></div>
+        <div class="form-group"><label class="form-label">SIRET</label><input type="text" class="form-input" id="m_companySiret" placeholder="000 000 000 00000"/></div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Représentée par</label><input type="text" class="form-input" id="m_companyRep" placeholder="Charles Dupont"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="m_companyEmail" placeholder="contact@maconciergerie.fr"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Téléphone</label><input type="tel" class="form-input" id="m_companyPhone" placeholder="+33 6 00 00 00 00" style="max-width:260px;"/></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-user"></i> Propriétaire / Mandant</div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Prénom <span class="required">*</span></label><input type="text" class="form-input" id="m_ownerFirstName" placeholder="Jean"/></div>
+        <div class="form-group"><label class="form-label">Nom <span class="required">*</span></label><input type="text" class="form-input" id="m_ownerLastName" placeholder="Dupont"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Adresse complète <span class="required">*</span></label><input type="text" class="form-input" id="m_ownerAddress" placeholder="12 rue des Roses, 75001 Paris"/></div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Email <span class="required">*</span></label><input type="email" class="form-input" id="m_ownerEmail" placeholder="jean.dupont@email.com"/></div>
+        <div class="form-group"><label class="form-label">Téléphone</label><input type="tel" class="form-input" id="m_ownerPhone" placeholder="+33 6 00 00 00 00"/></div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Date de naissance</label><input type="date" class="form-input" id="m_ownerDOB"/></div>
+        <div class="form-group"><label class="form-label">SIREN (si société)</label><input type="text" class="form-input" id="m_ownerSiren" placeholder="000 000 000"/></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-home"></i> Le bien confié</div>
+      <div class="form-group"><label class="form-label">Adresse complète du bien <span class="required">*</span></label><input type="text" class="form-input" id="m_propAddress" placeholder="5 avenue des Fleurs, 95000 Cergy"/></div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Type de bien</label>
+          <select class="form-input" id="m_propType">
+            <option value="">Sélectionner...</option>
+            <option value="appartement">Appartement</option>
+            <option value="maison">Maison</option>
+            <option value="studio">Studio</option>
+            <option value="villa">Villa</option>
+            <option value="chambre">Chambre</option>
+            <option value="gite">Gîte / Chalet</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Capacité maximale</label>
+          <select class="form-input" id="m_propCapacity">
+            <option value="1">1 personne</option>
+            <option value="2" selected>2 personnes</option>
+            <option value="3">3 personnes</option>
+            <option value="4">4 personnes</option>
+            <option value="5">5 personnes</option>
+            <option value="6">6 personnes</option>
+            <option value="8">8 personnes</option>
+            <option value="10">10 personnes</option>
+            <option value="12">12+ personnes</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Durée min. de séjour</label>
+          <select class="form-input" id="m_minStay">
+            <option value="1">1 nuit</option>
+            <option value="2" selected>2 nuits</option>
+            <option value="3">3 nuits</option>
+            <option value="7">1 semaine</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Durée max. de séjour</label>
+          <select class="form-input" id="m_maxStay">
+            <option value="">Pas de limite</option>
+            <option value="7">1 semaine</option>
+            <option value="14">2 semaines</option>
+            <option value="30">1 mois</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid-3">
+        <div class="form-group"><label class="form-label">Animaux</label>
+          <select class="form-input" id="m_animals"><option value="non">Non admis</option><option value="oui">Admis</option><option value="conditions">Sous conditions</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Fumeur</label>
+          <select class="form-input" id="m_smoking"><option value="non">Interdit</option><option value="exterieur">Extérieur seulement</option><option value="oui">Autorisé</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Fêtes / événements</label>
+          <select class="form-input" id="m_parties"><option value="non">Interdits</option><option value="conditions">Sous conditions</option><option value="oui">Autorisés</option></select>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Heure d'arrivée</label><input type="time" class="form-input" id="m_checkinTime" value="15:00"/></div>
+        <div class="form-group"><label class="form-label">Heure de départ</label><input type="time" class="form-input" id="m_checkoutTime" value="11:00"/></div>
+      </div>
+    </div>
+
+    <div class="wiz-nav">
+      <div></div>
+      <button class="wiz-btn-next" onclick="nextMandatSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- Section 2 — Missions -->
+  <div class="mandat-section" data-msection="2">
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-tasks"></i> Missions confiées</div>
+      <p style="font-size:13px;color:#7A8695;margin-bottom:4px;">Cochez les missions que vous assurez pour ce bien.</p>
+
+      <div class="missions-block-title"><i class="fas fa-bullhorn"></i> Annonces & visibilité</div>
+      <div class="missions-grid">
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_photos"><label for="m_mis_photos">Prise de photos / vidéos</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_annonces"><label for="m_mis_annonces">Rédaction & diffusion des annonces</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_tarifs"><label for="m_mis_tarifs">Optimisation du calendrier & tarifs</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_avis"><label for="m_mis_avis">Gestion des avis & e-réputation</label></div>
+      </div>
+
+      <div class="missions-block-title"><i class="fas fa-calendar-check"></i> Réservations</div>
+      <div class="missions-grid">
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_resa"><label for="m_mis_resa">Traitement des demandes & confirmations</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_messages"><label for="m_mis_messages">Messages pré-arrivée & consignes</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_channel"><label for="m_mis_channel">Coordination channel manager / PMS</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_collecte"><label for="m_mis_collecte">Collecte des informations voyageurs</label></div>
+      </div>
+
+      <div class="missions-block-title"><i class="fas fa-key"></i> Accueil & départ</div>
+      <div class="missions-grid">
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_checkin"><label for="m_mis_checkin">Check-in physique</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_checkin_auto"><label for="m_mis_checkin_auto">Check-in autonome</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_checkout"><label for="m_mis_checkout">Check-out physique</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_edl"><label for="m_mis_edl">État des lieux entrée / sortie</label></div>
+      </div>
+
+      <div class="missions-block-title"><i class="fas fa-broom"></i> Ménage & linge</div>
+      <div class="missions-grid">
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_menage"><label for="m_mis_menage">Ménage de départ</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_linge"><label for="m_mis_linge">Fourniture & blanchisserie du linge</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_produits"><label for="m_mis_produits">Réassort produits d'accueil</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_controle"><label for="m_mis_controle">Contrôle qualité post-ménage</label></div>
+      </div>
+
+      <div class="missions-block-title"><i class="fas fa-headset"></i> Assistance voyageurs</div>
+      <div class="missions-grid">
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_support"><label for="m_mis_support">Support téléphonique & messages</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_incidents"><label for="m_mis_incidents">Gestion des incidents mineurs</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_reclamations"><label for="m_mis_reclamations">Traitement des réclamations</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_artisans"><label for="m_mis_artisans">Coordination artisans / prestataires</label></div>
+      </div>
+
+      <div class="missions-block-title"><i class="fas fa-wrench"></i> Maintenance & intendance</div>
+      <div class="missions-grid">
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_visites"><label for="m_mis_visites">Visites de contrôle</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_maintenance"><label for="m_mis_maintenance">Petite maintenance</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_urgences"><label for="m_mis_urgences">Interventions urgentes</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_travaux"><label for="m_mis_travaux">Coordination travaux (sur devis validé)</label></div>
+      </div>
+
+      <div class="missions-block-title"><i class="fas fa-euro-sign"></i> Gestion financière & administrative</div>
+      <div class="missions-grid">
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_loyers"><label for="m_mis_loyers">Perception des loyers pour le compte du propriétaire</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_caution"><label for="m_mis_caution">Perception du dépôt de garantie</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_releves"><label for="m_mis_releves">Reversements périodiques & relevés</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_taxe"><label for="m_mis_taxe">Encaissement taxe de séjour</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_livret"><label for="m_mis_livret">Fourniture d'un livret d'accueil</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_mis_contrat"><label for="m_mis_contrat">Rédaction du contrat de location voyageurs</label></div>
+      </div>
+
+      <!-- Dépense urgente plafond -->
+      <div class="form-group" style="margin-top:20px;">
+        <label class="form-label">Plafond dépenses urgentes sans accord préalable (€ TTC)</label>
+        <input type="number" class="form-input" id="m_urgenceLimit" placeholder="150" style="max-width:200px;"/>
+        <div style="font-size:12px;color:#7A8695;margin-top:4px;">Au-delà, validation écrite du propriétaire requise</div>
+      </div>
+    </div>
+
+    <div class="wiz-nav">
+      <button class="wiz-btn-back" onclick="prevMandatSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <button class="wiz-btn-next" onclick="nextMandatSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- Section 3 — Rémunération -->
+  <div class="mandat-section" data-msection="3">
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-coins"></i> Honoraires de la conciergerie</div>
+
+      <div class="form-group">
+        <label class="form-label">Type de rémunération <span class="required">*</span></label>
+        <select class="form-input" id="m_remuType" onchange="updateRemuFields()" style="max-width:360px;">
+          <option value="">Sélectionner...</option>
+          <option value="commission">% sur les revenus locatifs</option>
+          <option value="forfait_mensuel">Forfait mensuel fixe</option>
+          <option value="forfait_resa">Forfait par réservation</option>
+          <option value="mixte">Formule mixte (% + forfait)</option>
+          <option value="carte">Prestations à la carte</option>
+        </select>
+      </div>
+
+      <div id="m_remuCommission" style="display:none;">
+        <div class="form-grid-2">
+          <div class="form-group"><label class="form-label">Taux de commission (%)</label><input type="number" class="form-input" id="m_commissionRate" placeholder="20" min="0" max="100" step="0.5"/></div>
+          <div class="form-group"><label class="form-label">Base de calcul</label>
+            <select class="form-input" id="m_commissionBase">
+              <option value="ht">Sur revenus HT</option>
+              <option value="ttc">Sur revenus TTC</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="m_remuForfaitMensuel" style="display:none;">
+        <div class="form-group"><label class="form-label">Montant mensuel</label>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="number" class="form-input" id="m_forfaitMensuel" placeholder="200" style="max-width:160px;"/>
+            <span style="font-size:14px;color:#7A8695;">€</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="m_remuForfaitResa" style="display:none;">
+        <div class="form-group"><label class="form-label">Montant par réservation</label>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="number" class="form-input" id="m_forfaitResa" placeholder="50" style="max-width:160px;"/>
+            <span style="font-size:14px;color:#7A8695;">€</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="m_remuMixte" style="display:none;">
+        <div class="form-grid-2">
+          <div class="form-group"><label class="form-label">Taux commission (%)</label><input type="number" class="form-input" id="m_mixteRate" placeholder="15" min="0" max="100"/></div>
+          <div class="form-group"><label class="form-label">Forfait mensuel (€)</label><input type="number" class="form-input" id="m_mixteForfait" placeholder="100"/></div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">TVA</label>
+        <select class="form-input" id="m_tva" style="max-width:260px;">
+          <option value="ht">Prix HT — TVA en sus au taux légal</option>
+          <option value="ttc">Prix TTC</option>
+          <option value="franchise">Franchise en base de TVA</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Préavis révision tarifaire</label>
+        <select class="form-input" id="m_tarifPreavis" style="max-width:260px;">
+          <option value="30">30 jours</option>
+          <option value="60" selected>60 jours</option>
+          <option value="90">90 jours</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-plus-circle"></i> Prestations complémentaires facturables</div>
+      <p style="font-size:13px;color:#7A8695;margin-bottom:12px;">Ces prestations peuvent être facturées en sus des honoraires.</p>
+      <div class="missions-grid">
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_extra_menage"><label for="m_extra_menage">Ménage</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_extra_linge"><label for="m_extra_linge">Linge</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_extra_checkin_tardif"><label for="m_extra_checkin_tardif">Check-in tardif</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_extra_maintenance"><label for="m_extra_maintenance">Maintenance</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_extra_deplacement"><label for="m_extra_deplacement">Déplacement exceptionnel</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_extra_photo"><label for="m_extra_photo">Shooting photo</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_extra_urgence"><label for="m_extra_urgence">Urgence week-end / jours fériés</label></div>
+        <div class="mission-item" onclick="toggleMission(this)"><input type="checkbox" id="m_extra_sinistre"><label for="m_extra_sinistre">Gestion de sinistre</label></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-money-bill-transfer"></i> Reversements au propriétaire</div>
+      <div class="form-group">
+        <label class="form-label">Fréquence de reversement</label>
+        <select class="form-input" id="m_reversement" style="max-width:300px;">
+          <option value="par_resa">À chaque réservation</option>
+          <option value="hebdo">Hebdomadaire</option>
+          <option value="mensuel" selected>Mensuel</option>
+          <option value="encaissement_direct">Encaissement direct par le propriétaire</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="wiz-nav">
+      <button class="wiz-btn-back" onclick="prevMandatSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <button class="wiz-btn-next" onclick="nextMandatSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- Section 4 — Conditions générales -->
+  <div class="mandat-section" data-msection="4">
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-calendar-alt"></i> Durée & résiliation</div>
+      <div class="form-group">
+        <label class="form-label">Type de durée</label>
+        <select class="form-input" id="m_dureeType" onchange="updateDureeFields()" style="max-width:300px;">
+          <option value="indeterminee" selected>Durée indéterminée</option>
+          <option value="determinee">Durée déterminée</option>
+        </select>
+      </div>
+      <div id="m_dureeFields" style="display:none;">
+        <div class="form-grid-2">
+          <div class="form-group"><label class="form-label">Date de début</label><input type="date" class="form-input" id="m_dateDebut"/></div>
+          <div class="form-group"><label class="form-label">Durée</label>
+            <select class="form-input" id="m_dureeMois">
+              <option value="3">3 mois</option>
+              <option value="6">6 mois</option>
+              <option value="12" selected>12 mois</option>
+              <option value="24">24 mois</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Renouvellement</label>
+          <select class="form-input" id="m_renouvellement" style="max-width:300px;">
+            <option value="tacite" selected>Tacite reconduction</option>
+            <option value="expres">Renouvellement exprès uniquement</option>
+          </select>
+        </div>
+      </div>
+      <div id="m_dateDebutIndeterminee">
+        <div class="form-group"><label class="form-label">Date de début</label><input type="date" class="form-input" id="m_dateDebutInd"/></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Préavis de résiliation</label>
+        <select class="form-input" id="m_preavis" style="max-width:300px;">
+          <option value="15">15 jours</option>
+          <option value="30" selected>30 jours</option>
+          <option value="60">60 jours</option>
+          <option value="90">90 jours</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-handshake"></i> Exclusivité</div>
+      <div class="form-group">
+        <select class="form-input" id="m_exclusivite" style="max-width:360px;">
+          <option value="non">Sans exclusivité</option>
+          <option value="totale">Exclusivité totale</option>
+          <option value="partielle">Exclusivité partielle (sur les plateformes)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-shield-halved"></i> Responsabilité & juridiction</div>
+      <div class="form-group">
+        <label class="form-label">Plafond de responsabilité de la conciergerie</label>
+        <select class="form-input" id="m_respPlafond" style="max-width:360px;">
+          <option value="3mois">3 mois d'honoraires</option>
+          <option value="12mois" selected>12 mois d'honoraires</option>
+          <option value="montant">Montant fixe</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Juridiction compétente</label>
+        <select class="form-input" id="m_juridiction" style="max-width:360px;">
+          <option value="domicile_defendeur">Tribunal du domicile du défendeur</option>
+          <option value="lieu_bien" selected>Tribunal du lieu de situation du bien</option>
+          <option value="commerce">Tribunal de commerce (si 2 sociétés)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confidentialité (durée après fin de contrat)</label>
+        <select class="form-input" id="m_confidentialite" style="max-width:260px;">
+          <option value="2">2 ans</option>
+          <option value="5" selected>5 ans</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-plus-circle"></i> Clauses personnalisées</div>
+      <p style="font-size:13px;color:#7A8695;margin-bottom:12px;">Ajoutez des clauses spécifiques à ce mandat.</p>
+      <ul class="clauses-list" id="mandatClausesList"></ul>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <input type="text" class="form-input" id="mandatClauseInput" placeholder="Saisir une clause personnalisée..." style="flex:1;"/>
+        <button type="button" onclick="addMandatClause()" style="height:44px;padding:0 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i> Ajouter</button>
+      </div>
+    </div>
+
+    <div class="wiz-nav">
+      <button class="wiz-btn-back" onclick="prevMandatSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <button class="wiz-btn-next" onclick="nextMandatSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- Section 5 — Signature & envoi -->
+  <div class="mandat-section" data-msection="5">
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-eye"></i> Récapitulatif</div>
+      <div id="mandatPreview" style="font-size:14px;color:#374151;line-height:1.8;"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title"><i class="fas fa-pen-nib"></i> Votre signature</div>
+      <p style="font-size:13px;color:#7A8695;margin-bottom:12px;">Signez ci-dessous en tant que représentant de la conciergerie.</p>
+      <div class="signature-area" id="mandatSignatureArea">
+        <canvas id="mandatSignatureCanvas" style="width:100%;height:160px;display:block;cursor:crosshair;touch-action:none;"></canvas>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <span style="font-size:12px;color:#7A8695;"><i class="fas fa-pen" style="color:#1A7A5E;margin-right:4px;"></i>Signez dans le cadre</span>
+        <button type="button" class="btn-clear" onclick="clearMandatSignature()"><i class="fas fa-trash"></i> Effacer</button>
+      </div>
+
+      <div class="form-group" style="margin-top:20px;">
+        <label class="form-label">Date de signature</label>
+        <input type="date" class="form-input" id="m_signatureDate" style="max-width:200px;"/>
+      </div>
+
+      <div class="accept-box" style="margin-top:16px;">
+        <input type="checkbox" id="m_acceptTerms"/>
+        <label for="m_acceptTerms">Je certifie être habilité(e) à signer ce contrat au nom de la conciergerie. Ma signature électronique a la même valeur légale qu'une signature manuscrite.</label>
+      </div>
+    </div>
+
+    <div class="final-actions">
+      <button type="button" class="wiz-btn-back" onclick="prevMandatSection()"><i class="fas fa-arrow-left"></i> Précédent</button>
+      <button type="button" class="btn-email" onclick="sendMandat()"><i class="fas fa-paper-plane"></i> Envoyer pour signature</button>
+    </div>
+  </div>
+
+</div><!-- #mandatView -->
 
 <!-- Vue historique -->
 <div id="historyView">
@@ -1793,20 +2267,30 @@ let currentFilter = 'all';
 function switchTab(tab) {
   const wizardView = document.getElementById('wizardView');
   const historyView = document.getElementById('historyView');
+  const mandatView = document.getElementById('mandatView');
   const tabNew = document.getElementById('tabNew');
   const tabHistory = document.getElementById('tabHistory');
+  const tabMandat = document.getElementById('tabMandat');
+
+  // Reset all
+  wizardView.classList.add('hidden');
+  historyView.classList.remove('active');
+  mandatView.classList.remove('active');
+  tabNew.classList.remove('active');
+  tabHistory.classList.remove('active');
+  tabMandat.classList.remove('active');
 
   if (tab === 'history') {
-    wizardView.classList.add('hidden');
     historyView.classList.add('active');
-    tabNew.classList.remove('active');
     tabHistory.classList.add('active');
     loadHistory();
+  } else if (tab === 'mandat') {
+    mandatView.classList.add('active');
+    tabMandat.classList.add('active');
+    prefillMandatFromProfile();
   } else {
     wizardView.classList.remove('hidden');
-    historyView.classList.remove('active');
     tabNew.classList.add('active');
-    tabHistory.classList.remove('active');
   }
 }
 
@@ -1960,6 +2444,278 @@ function prefillFromUrlParams() {
   });
 
   showToast('Formulaire pré-rempli depuis la réservation', 'success');
+}
+
+// ════════════════════════════════════════
+// MANDAT DE GESTION — JS
+// ════════════════════════════════════════
+let currentMandatSection = 1;
+const TOTAL_MANDAT_SECTIONS = 5;
+let mandatSignatureData = null;
+let mandatIsDrawing = false, mandatLastX = 0, mandatLastY = 0;
+
+// ── Pré-remplir depuis le profil utilisateur ──
+async function prefillMandatFromProfile() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/user/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!res.ok) return;
+    const user = await res.json();
+    if (user.company) document.getElementById('m_companyName').value = user.company;
+    if (user.email) document.getElementById('m_companyEmail').value = user.email;
+    if (user.phone) document.getElementById('m_companyPhone').value = user.phone;
+    if (user.siret) document.getElementById('m_companySiret').value = user.siret;
+    const rep = [user.first_name, user.last_name].filter(Boolean).join(' ');
+    if (rep) document.getElementById('m_companyRep').value = rep;
+    const addr = [user.address, user.postal_code, user.city].filter(Boolean).join(', ');
+    if (addr) document.getElementById('m_companyAddress').value = addr;
+  } catch(e) {}
+
+  // Date du jour par défaut
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('m_signatureDate').value = today;
+  document.getElementById('m_dateDebutInd').value = today;
+  document.getElementById('m_dateDebut').value = today;
+
+  // Init canvas signature mandat
+  setTimeout(() => initMandatSignature(), 100);
+}
+
+// ── Navigation stepper mandat ──
+function showMandatSection(index) {
+  currentMandatSection = Math.max(1, Math.min(index, TOTAL_MANDAT_SECTIONS));
+  document.querySelectorAll('.mandat-section').forEach((sec, i) => {
+    sec.classList.toggle('active', i + 1 === currentMandatSection);
+  });
+  document.querySelectorAll('#mandatStepper .contrat-step').forEach((step, i) => {
+    step.classList.remove('active', 'done');
+    if (i + 1 === currentMandatSection) step.classList.add('active');
+    else if (i + 1 < currentMandatSection) step.classList.add('done');
+  });
+  document.querySelector('.main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+  if (currentMandatSection === 5) buildMandatPreview();
+}
+
+function nextMandatSection() {
+  if (currentMandatSection === 1) {
+    if (!vm('m_ownerFirstName') || !vm('m_ownerLastName') || !vm('m_ownerEmail') || !vm('m_propAddress')) {
+      showToast('Veuillez remplir les champs obligatoires', 'error'); return;
+    }
+  }
+  showMandatSection(currentMandatSection + 1);
+}
+function prevMandatSection() { showMandatSection(currentMandatSection - 1); }
+
+// ── Click sur step complété pour revenir en arrière ──
+document.querySelectorAll('#mandatStepper .contrat-step').forEach(step => {
+  step.addEventListener('click', () => {
+    const target = parseInt(step.dataset.mstep);
+    if (target < currentMandatSection) showMandatSection(target);
+  });
+});
+
+const vm = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+// ── Toggle mission checkbox ──
+function toggleMission(item) {
+  const cb = item.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+  item.classList.toggle('checked', cb.checked);
+}
+
+// ── Champs rémunération dynamiques ──
+function updateRemuFields() {
+  const type = vm('m_remuType');
+  document.getElementById('m_remuCommission').style.display = type === 'commission' ? '' : 'none';
+  document.getElementById('m_remuForfaitMensuel').style.display = type === 'forfait_mensuel' ? '' : 'none';
+  document.getElementById('m_remuForfaitResa').style.display = type === 'forfait_resa' ? '' : 'none';
+  document.getElementById('m_remuMixte').style.display = type === 'mixte' ? '' : 'none';
+}
+
+// ── Champs durée dynamiques ──
+function updateDureeFields() {
+  const type = vm('m_dureeType');
+  document.getElementById('m_dureeFields').style.display = type === 'determinee' ? '' : 'none';
+  document.getElementById('m_dateDebutIndeterminee').style.display = type === 'indeterminee' ? '' : 'none';
+}
+
+// ── Clauses personnalisées ──
+function addMandatClause() {
+  const input = document.getElementById('mandatClauseInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const list = document.getElementById('mandatClausesList');
+  const li = document.createElement('li');
+  li.className = 'clause-item';
+  li.innerHTML = `<span>${text}</span><button onclick="this.closest('li').remove()" title="Supprimer"><i class="fas fa-times"></i></button>`;
+  list.appendChild(li);
+  input.value = '';
+  input.focus();
+}
+document.getElementById('mandatClauseInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addMandatClause(); } });
+
+// ── Canvas signature mandat ──
+function initMandatSignature() {
+  const setup = () => {
+    const canvas = document.getElementById('mandatSignatureCanvas');
+    if (!canvas) return;
+    const w = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 600;
+    canvas.width = w * window.devicePixelRatio;
+    canvas.height = 160 * window.devicePixelRatio;
+    canvas.style.height = '160px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    ctx.strokeStyle = '#0D1117'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const getPos = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const src = e.touches ? e.touches[0] : e;
+      const scaleX = (canvas.width / window.devicePixelRatio) / r.width;
+      const scaleY = (canvas.height / window.devicePixelRatio) / r.height;
+      return [(src.clientX - r.left) * scaleX, (src.clientY - r.top) * scaleY];
+    };
+    const startDraw = (e) => { e.preventDefault(); mandatIsDrawing = true; [mandatLastX, mandatLastY] = getPos(e); ctx.beginPath(); ctx.moveTo(mandatLastX, mandatLastY); };
+    const draw = (e) => { if (!mandatIsDrawing) return; e.preventDefault(); const [x, y] = getPos(e); ctx.lineTo(x, y); ctx.stroke(); mandatLastX = x; mandatLastY = y; };
+    const endDraw = () => { if (!mandatIsDrawing) return; mandatIsDrawing = false; mandatSignatureData = canvas.toDataURL('image/png'); };
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', endDraw);
+  };
+  requestAnimationFrame(() => requestAnimationFrame(setup));
+}
+
+function clearMandatSignature() {
+  const canvas = document.getElementById('mandatSignatureCanvas');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  mandatSignatureData = null;
+}
+
+// ── Récupérer les missions cochées ──
+function getMandatMissions() {
+  const missions = [];
+  document.querySelectorAll('#mandatView .mission-item input[type="checkbox"]').forEach(cb => {
+    if (cb.checked) {
+      const label = cb.nextElementSibling?.textContent?.trim();
+      if (label) missions.push(label);
+    }
+  });
+  return missions;
+}
+
+function getMandatExtras() {
+  const extras = [];
+  document.querySelectorAll('#mandatView [id^="m_extra_"]').forEach(cb => {
+    if (cb.checked) {
+      const label = cb.nextElementSibling?.textContent?.trim();
+      if (label) extras.push(label);
+    }
+  });
+  return extras;
+}
+
+function getMandatClauses() {
+  return Array.from(document.querySelectorAll('#mandatClausesList li span')).map(s => s.textContent.trim());
+}
+
+// ── Récapitulatif ──
+function buildMandatPreview() {
+  const remuLabels = { commission: `${vm('m_commissionRate')}% sur les revenus`, forfait_mensuel: `${vm('m_forfaitMensuel')} €/mois`, forfait_resa: `${vm('m_forfaitResa')} €/réservation`, mixte: `${vm('m_mixteRate')}% + ${vm('m_mixteForfait')} €/mois`, carte: 'Prestations à la carte' };
+  const missions = getMandatMissions();
+  const preview = document.getElementById('mandatPreview');
+  preview.innerHTML = `
+    <div style="display:grid;gap:6px;">
+      <div style="display:flex;gap:8px;"><span style="color:#7A8695;min-width:180px;font-size:13px;">Conciergerie</span><strong>${vm('m_companyName') || '—'}</strong></div>
+      <div style="display:flex;gap:8px;"><span style="color:#7A8695;min-width:180px;font-size:13px;">Propriétaire</span><strong>${vm('m_ownerFirstName')} ${vm('m_ownerLastName')}</strong></div>
+      <div style="display:flex;gap:8px;"><span style="color:#7A8695;min-width:180px;font-size:13px;">Email propriétaire</span><strong>${vm('m_ownerEmail')}</strong></div>
+      <div style="display:flex;gap:8px;"><span style="color:#7A8695;min-width:180px;font-size:13px;">Bien confié</span><strong>${vm('m_propAddress') || '—'}</strong></div>
+      <div style="display:flex;gap:8px;"><span style="color:#7A8695;min-width:180px;font-size:13px;">Rémunération</span><strong>${remuLabels[vm('m_remuType')] || '—'}</strong></div>
+      <div style="display:flex;gap:8px;"><span style="color:#7A8695;min-width:180px;font-size:13px;">Préavis résiliation</span><strong>${vm('m_preavis')} jours</strong></div>
+      <div style="display:flex;gap:8px;"><span style="color:#7A8695;min-width:180px;font-size:13px;">Missions</span><strong>${missions.length} mission${missions.length > 1 ? 's' : ''} sélectionnée${missions.length > 1 ? 's' : ''}</strong></div>
+    </div>
+  `;
+}
+
+// ── Envoyer le mandat ──
+async function sendMandat() {
+  if (!document.getElementById('m_acceptTerms').checked) {
+    showToast('Veuillez cocher la case d\'acceptation', 'error'); return;
+  }
+  if (!mandatSignatureData) {
+    showToast('Veuillez apposer votre signature', 'error'); return;
+  }
+  if (!vm('m_ownerEmail')) {
+    showToast('Email du propriétaire requis', 'error'); return;
+  }
+
+  const btn = document.querySelector('#mandatView .btn-email');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+  btn.disabled = true;
+
+  const dureeType = vm('m_dureeType');
+  const dateDebut = dureeType === 'determinee' ? vm('m_dateDebut') : vm('m_dateDebutInd');
+
+  const payload = {
+    contractType: 'mandat',
+    // Conciergerie
+    companyName: vm('m_companyName'), companyLegal: vm('m_companyLegal'),
+    companyAddress: vm('m_companyAddress'), companySiret: vm('m_companySiret'),
+    companyRep: vm('m_companyRep'), companyEmail: vm('m_companyEmail'), companyPhone: vm('m_companyPhone'),
+    // Propriétaire
+    ownerFirstName: vm('m_ownerFirstName'), ownerLastName: vm('m_ownerLastName'),
+    ownerAddress: vm('m_ownerAddress'), ownerEmail: vm('m_ownerEmail'), ownerPhone: vm('m_ownerPhone'),
+    ownerDOB: vm('m_ownerDOB'), ownerSiren: vm('m_ownerSiren'),
+    // Bien
+    propAddress: vm('m_propAddress'), propType: vm('m_propType'), propCapacity: vm('m_propCapacity'),
+    minStay: vm('m_minStay'), maxStay: vm('m_maxStay'),
+    animals: vm('m_animals'), smoking: vm('m_smoking'), parties: vm('m_parties'),
+    checkinTime: vm('m_checkinTime'), checkoutTime: vm('m_checkoutTime'),
+    // Missions
+    missions: getMandatMissions(),
+    urgenceLimit: vm('m_urgenceLimit'),
+    extrasFacturables: getMandatExtras(),
+    // Rémunération
+    remuType: vm('m_remuType'),
+    commissionRate: vm('m_commissionRate'), commissionBase: vm('m_commissionBase'),
+    forfaitMensuel: vm('m_forfaitMensuel'), forfaitResa: vm('m_forfaitResa'),
+    mixteRate: vm('m_mixteRate'), mixteForfait: vm('m_mixteForfait'),
+    tva: vm('m_tva'), tarifPreavis: vm('m_tarifPreavis'),
+    reversement: vm('m_reversement'),
+    // Conditions
+    dureeType, dateDebut, dureeMois: vm('m_dureeMois'),
+    renouvellement: vm('m_renouvellement'), preavis: vm('m_preavis'),
+    exclusivite: vm('m_exclusivite'), respPlafond: vm('m_respPlafond'),
+    juridiction: vm('m_juridiction'), confidentialite: vm('m_confidentialite'),
+    clausesPersonnalisees: getMandatClauses(),
+    // Signature
+    signatureData: mandatSignatureData,
+    signatureDate: vm('m_signatureDate'),
+    // Destinataire = propriétaire
+    guestEmail: vm('m_ownerEmail'),
+    guestFirstName: vm('m_ownerFirstName'),
+    guestLastName: vm('m_ownerLastName'),
+  };
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/mandat/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+    showToast('Mandat envoyé pour signature à ' + vm('m_ownerEmail'), 'success');
+    // Basculer sur l'historique
+    setTimeout(() => switchTab('history'), 1500);
+  } catch(err) {
+    showToast(err.message || 'Erreur envoi', 'error');
+    btn.innerHTML = orig;
+    btn.disabled = false;
+  }
 }
 
 // ── Toggles conditions légales ──
