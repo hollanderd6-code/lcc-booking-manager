@@ -18814,6 +18814,15 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
       const reversementLabels = { par_resa: 'À chaque réservation', hebdo: 'Hebdomadaire', mensuel: 'Mensuel', encaissement_direct: 'Encaissement direct' };
       const exclusiviteLabels = { non: 'Sans exclusivité', totale: 'Exclusivité totale', partielle: 'Exclusivité partielle' };
 
+      // Charger le logo avant le Promise
+      let mandatLogoBuffer = null;
+      if (d.companyLogoUrl) {
+        try {
+          const logoRes = await axios.get(d.companyLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
+          mandatLogoBuffer = Buffer.from(logoRes.data);
+        } catch(e) { console.warn('⚠️ Logo mandat échoué:', e.message); }
+      }
+
       await new Promise((resolve, reject) => {
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
         const stream = fs.createWriteStream(pdfPath);
@@ -18823,8 +18832,14 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
         const pageW = doc.page.width - 100;
 
         doc.rect(0, 0, doc.page.width, 52).fill(green);
-        doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(d.companyName || 'BOOSTINGHOST', 50, 18);
-        doc.fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
+        if (mandatLogoBuffer) {
+          try { doc.image(mandatLogoBuffer, 50, 8, { height: 36, fit: [120, 36] }); } catch(e) {
+            doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(d.companyName || 'BOOSTINGHOST', 50, 18);
+          }
+        } else {
+          doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(d.companyName || 'BOOSTINGHOST', 50, 18);
+        }
+        doc.fillColor('white').fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
         if (isSigned) doc.fontSize(8).font('Helvetica-Bold').fillColor('#4ADE80').text('✓ MANDAT SIGNÉ', 0, 30, { align: 'right', width: doc.page.width - 50 });
 
         let y = 75;
@@ -19094,7 +19109,7 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     const {
       // Conciergerie
       companyName, companyLegal, companyAddress, companySiret,
-      companyRep, companyEmail, companyPhone,
+      companyRep, companyEmail, companyPhone, companyLogoUrl,
       // Propriétaire
       ownerFirstName, ownerLastName, ownerAddress, ownerEmail, ownerPhone,
       ownerDOB, ownerSiren,
@@ -19139,6 +19154,15 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     const mandatNumber = `MAND-${Date.now()}`;
     const pdfPath = path.join(INVOICE_PDF_DIR, `${mandatNumber}.pdf`);
 
+    // Charger le logo AVANT le Promise (await non autorisé dans callback non-async)
+    let companyLogoBuffer = null;
+    if (companyLogoUrl) {
+      try {
+        const logoRes = await axios.get(companyLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
+        companyLogoBuffer = Buffer.from(logoRes.data);
+      } catch(e) { console.warn('⚠️ Logo chargement échoué:', e.message); }
+    }
+
     await new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const stream = fs.createWriteStream(pdfPath);
@@ -19149,8 +19173,15 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
 
       // ── HEADER ──
       doc.rect(0, 0, doc.page.width, 52).fill(green);
-      doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(companyName || 'BOOSTINGHOST', 50, 18);
-      doc.fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
+      // Logo (buffer chargé avant le Promise) ou nom
+      if (companyLogoBuffer) {
+        try { doc.image(companyLogoBuffer, 50, 8, { height: 36, fit: [120, 36] }); } catch(e) {
+          doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(companyName || 'BOOSTINGHOST', 50, 18);
+        }
+      } else {
+        doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(companyName || 'BOOSTINGHOST', 50, 18);
+      }
+      doc.fillColor('white').fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
 
       let y = 75;
       doc.fillColor(dark).fontSize(20).font('Helvetica-Bold')
@@ -19318,7 +19349,7 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
 
     const contractData = {
       contractType: 'mandat',
-      companyName, companyLegal, companyAddress, companySiret, companyRep, companyEmail, companyPhone,
+      companyName, companyLegal, companyAddress, companySiret, companyRep, companyEmail, companyPhone, companyLogoUrl,
       ownerFirstName, ownerLastName, ownerAddress, ownerEmail, ownerPhone, ownerDOB, ownerSiren,
       propAddress, propType, propCapacity, minStay, maxStay, animals, smoking, parties, checkinTime, checkoutTime,
       missions: missions || [], urgenceLimit, extrasFacturables: extrasFacturables || [],
