@@ -401,16 +401,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 #mandatView { display: none; }
 #mandatView.active { display: block; }
 #mandatView .m-step { display: none !important; }
-#mandatView .m-step.m-step--active { display: block !important; }
 #mandatView .m-step--active { display: block !important; }
-/* Forcer la visibilité du contenu dans les sections actives */
-#mandatView .m-step--active .form-card,
-#mandatView .m-step--active .form-group,
-#mandatView .m-step--active .wiz-nav,
-#mandatView .m-step--active .missions-grid,
-#mandatView .m-step--active .extra-row,
-#mandatView .m-step--active .remu-cards,
-#mandatView .m-step--active .final-actions { display: revert !important; }
 
 /* Stepper mandat — réutilise .contrat-step */
 .mandat-steps { display: flex; align-items: center; gap: 0; margin-bottom: 28px; background: white; border: 1px solid rgba(200,184,154,.35); border-radius: 14px; padding: 12px 20px; overflow-x: auto; }
@@ -456,20 +447,20 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .remu-card.selected .remu-card-label { color: #1A7A5E; }
 
 /* Boutons navigation wizard */
-.wiz-nav {
+#mandatView .wiz-nav {
   display: flex; justify-content: space-between; align-items: center;
   margin-top: 24px; padding-top: 20px;
   border-top: 1px solid rgba(200,184,154,.3);
 }
-.wiz-btn-next {
+#mandatView .wiz-btn-next {
   display: inline-flex; align-items: center; gap: 8px;
   height: 44px; padding: 0 24px; border-radius: 12px;
   background: #1A7A5E; color: white; border: none;
   font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700;
   cursor: pointer; transition: background .15s;
 }
-.wiz-btn-next:hover { background: #15624B; }
-.wiz-btn-back {
+#mandatView .wiz-btn-next:hover { background: #15624B; }
+#mandatView .wiz-btn-back {
   display: inline-flex; align-items: center; gap: 8px;
   height: 44px; padding: 0 20px; border-radius: 12px;
   background: white; color: #374151;
@@ -477,7 +468,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
   cursor: pointer; transition: all .15s;
 }
-.wiz-btn-back:hover { border-color: rgba(13,17,23,.3); }
+#mandatView .wiz-btn-back:hover { border-color: rgba(13,17,23,.3); }
 
 /* Clauses libres */
 .clauses-list { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
