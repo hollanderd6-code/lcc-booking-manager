@@ -1244,6 +1244,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
       <div class="form-notice" style="background:rgba(26,122,94,.07);border:1px solid rgba(26,122,94,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#1A7A5E;margin-bottom:16px;">
         <i class="fas fa-info-circle"></i> Ces informations sont récupérées depuis votre profil. Modifiez-les dans <a href="/settings-account.html" style="color:#1A7A5E;font-weight:600;">Paramètres</a>.
       </div>
+      <div id="m_logoPreview" style="margin-bottom:16px;display:flex;align-items:center;min-height:24px;"></div>
       <div class="form-grid-2">
         <div class="form-group"><label class="form-label">Raison sociale / Nom</label><input type="text" class="form-input" id="m_companyName" placeholder="La Conciergerie de Charles"/></div>
         <div class="form-group"><label class="form-label">Forme juridique</label><input type="text" class="form-input" id="m_companyLegal" placeholder="SAS, SASU, Auto-entrepreneur..."/></div>
@@ -2665,6 +2666,8 @@ let mandatSignatureData = null;
 let mandatIsDrawing = false, mandatLastX = 0, mandatLastY = 0;
 
 // ── Pré-remplir depuis le profil utilisateur ──
+let mandatLogoUrl = null;
+
 async function prefillMandatFromProfile() {
   try {
     const token = localStorage.getItem('lcc_token');
@@ -2678,6 +2681,15 @@ async function prefillMandatFromProfile() {
     if (rep) document.getElementById('m_companyRep').value = rep;
     const addr = [user.address, user.postalCode, user.city].filter(Boolean).join(', ');
     if (addr) document.getElementById('m_companyAddress').value = addr;
+    // Sauvegarder le logo
+    if (user.logoUrl) {
+      mandatLogoUrl = user.logoUrl;
+      const logoPreview = document.getElementById('m_logoPreview');
+      if (logoPreview) {
+        logoPreview.innerHTML = `<img src="${user.logoUrl}" style="height:48px;max-width:180px;object-fit:contain;border-radius:6px;border:1px solid rgba(200,184,154,.3);padding:4px;background:white;"/>
+          <span style="font-size:12px;color:#1A7A5E;margin-left:8px;"><i class="fas fa-check-circle"></i> Logo récupéré depuis votre profil</span>`;
+      }
+    }
   } catch(e) { console.warn('prefillMandatFromProfile:', e); }
 
   // Date du jour par défaut
@@ -2935,6 +2947,7 @@ async function sendMandat() {
     companyName: vm('m_companyName'), companyLegal: vm('m_companyLegal'),
     companyAddress: vm('m_companyAddress'), companySiret: vm('m_companySiret'),
     companyRep: vm('m_companyRep'), companyEmail: vm('m_companyEmail'), companyPhone: vm('m_companyPhone'),
+    companyLogoUrl: mandatLogoUrl,
     // Propriétaire
     ownerFirstName: vm('m_ownerFirstName'), ownerLastName: vm('m_ownerLastName'),
     ownerAddress: vm('m_ownerAddress'), ownerEmail: vm('m_ownerEmail'), ownerPhone: vm('m_ownerPhone'),
