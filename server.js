@@ -18025,7 +18025,9 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
       // Signature (base64 PNG)
       signatureData,
       // Date signature
-      signatureDate
+      signatureDate,
+      // Réservation liée (optionnel)
+      reservationUid
     } = req.body;
 
     if (!guestEmail) return res.status(400).json({ error: 'Email du locataire requis' });
