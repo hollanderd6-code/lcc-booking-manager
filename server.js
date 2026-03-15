@@ -18721,6 +18721,260 @@ app.get('/api/contrats/:id', authenticateAny, async (req, res) => {
   }
 });
 
+// GET /api/contrats/:id  — Détail d'un contrat
+// ============================================
+app.get('/api/contrats/:id', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
+      [req.params.id, userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// POST /api/contrats/:id/resend-sign
+// Renouvelle le token de signature et renvoie l'email au locataire
+// ============================================
+app.post('/api/contrats/:id/resend-sign', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
+      [req.params.id, userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
+
+    const contract = result.rows[0];
+    if (contract.status === 'signed') {
+      return res.status(400).json({ error: 'Ce contrat est déjà signé.' });
+    }
+
+    // Générer un nouveau token (7 jours)
+    const newToken = crypto.randomBytes(32).toString('hex');
+    const newExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await pool.query(
+      `UPDATE contracts SET sign_token = $1, sign_token_expires_at = $2, status = 'sent', updated_at = NOW() WHERE id = $3`,
+      [newToken, newExpires, contract.id]
+    );
+
+    const d = contract.contract_data;
+    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+    const signUrl = `${appUrl}/signer-contrat.html?token=${newToken}`;
+
+    const signEmailHtml = bhEmailTemplate({
+      icon: '✍️',
+      title: 'Nouveau lien de signature',
+      subtitle: `${d.propertyName || ''}`,
+      bodyHtml: `
+        <p>Bonjour <strong>${d.guestFirstName} ${d.guestLastName}</strong>,</p>
+        <p>Un nouveau lien de signature vous a été envoyé pour votre contrat de location à <strong>${d.propertyName}</strong>.</p>
+        <div class="cta-block">
+          <p>Cliquez ci-dessous pour signer votre contrat :</p>
+          <a href="${signUrl}" class="btn" style="display:inline-block;background:#1A7A5E;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;">
+            ✍️ Signer mon contrat
+          </a>
+        </div>
+        <div class="alert-card">⏰ Ce lien est valable <strong>7 jours</strong>.</div>
+        <p style="font-size:13px;color:#666;">Lien direct : <a href="${signUrl}" style="color:#1A7A5E;word-break:break-all;">${signUrl}</a></p>
+      `
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+      to: d.guestEmail,
+      subject: `Nouveau lien de signature – ${d.propertyName}`,
+      html: signEmailHtml
+    });
+
+    console.log(`✅ Lien signature renvoyé pour contrat ${contract.id} à ${d.guestEmail}`);
+    res.json({ success: true, message: `Lien de signature renvoyé à ${d.guestEmail}` });
+
+  } catch (err) {
+    console.error('❌ POST /api/contrats/:id/resend-sign:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// GET /api/contrats/:id/pdf
+// Retourne le PDF signé en base64 pour téléchargement
+// ============================================
+app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
+      [req.params.id, userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
+
+    const contract = result.rows[0];
+    const d = contract.contract_data;
+
+    // Régénérer le PDF (signé si disponible, sinon avec seulement signature bailleur)
+    const pdfPath = path.join(INVOICE_PDF_DIR, `contrat_dl_${contract.id}.pdf`);
+    const isSigned = contract.status === 'signed';
+
+    const fmtDate = (dt) => dt ? new Date(dt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+    const fmtDateShort = (dt) => dt ? new Date(dt).toLocaleDateString('fr-FR') : '—';
+    const nights = d.checkin && d.checkout ? Math.round((new Date(d.checkout) - new Date(d.checkin)) / 86400000) : 0;
+
+    await new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const stream = fs.createWriteStream(pdfPath);
+      doc.pipe(stream);
+
+      const green = '#1A7A5E', dark = '#0D1117', gray = '#7A8695', lightBg = '#F5F2EC';
+      const pageW = doc.page.width - 100;
+
+      doc.rect(0, 0, doc.page.width, 52).fill(green);
+      doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text('BOOSTINGHOST', 50, 18);
+      doc.fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
+      if (isSigned) {
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#4ADE80')
+          .text('✓ CONTRAT SIGNÉ', 0, 30, { align: 'right', width: doc.page.width - 50 });
+      }
+
+      let y = 75;
+      doc.fillColor(dark).fontSize(20).font('Helvetica-Bold')
+        .text('Contrat de location meublée saisonnière', 50, y, { align: 'center', width: pageW });
+      y += 35;
+      doc.fillColor(gray).fontSize(9).font('Helvetica')
+        .text(`Établi le ${fmtDate(d.signatureDate || new Date())}${isSigned ? ` — Signé le ${fmtDate(contract.guest_signed_at)}` : ''}`, 50, y, { align: 'center', width: pageW });
+      y += 28;
+
+      const sectionTitle = (title) => {
+        doc.rect(50, y, pageW, 16).fill(lightBg);
+        doc.fillColor(green).fontSize(8).font('Helvetica-Bold').text(title.toUpperCase(), 54, y + 4);
+        doc.fillColor(dark); y += 20;
+      };
+      const row = (label, value) => {
+        if (!value || value === '—') return;
+        doc.fillColor(gray).fontSize(9).font('Helvetica').text(label, 54, y);
+        doc.fillColor(dark).font('Helvetica-Bold').text(String(value), 220, y, { width: pageW - 170 });
+        y += 14;
+      };
+      const para = (text) => {
+        doc.fillColor(dark).fontSize(8.5).font('Helvetica').text(text, 54, y, { width: pageW - 8, lineGap: 2 });
+        y += doc.heightOfString(text, { width: pageW - 8, lineGap: 2 }) + 6;
+      };
+      const checkPage = () => { if (y > 740) { doc.addPage(); y = 50; } };
+
+      sectionTitle('1. Bailleur');
+      row('Nom', `${d.ownerFirstName || ''} ${d.ownerLastName || ''}`.trim());
+      row('Adresse', d.ownerAddress);
+      if (d.ownerEmail) row('Email', d.ownerEmail);
+      y += 6; checkPage();
+
+      sectionTitle('2. Locataire');
+      row('Nom complet', `${d.guestFirstName} ${d.guestLastName}`);
+      row('Email', d.guestEmail);
+      if (d.guestPhone) row('Téléphone', d.guestPhone);
+      if (d.guestAddress) row('Adresse', d.guestAddress);
+      y += 6; checkPage();
+
+      sectionTitle('3. Logement & durée');
+      row('Logement', d.propertyName);
+      row('Adresse', d.propertyAddress);
+      row('Arrivée', `${fmtDate(d.checkin)} à ${d.checkinTime || '15:00'}`);
+      row('Départ', `${fmtDate(d.checkout)} à ${d.checkoutTime || '11:00'}`);
+      row('Durée', `${nights} nuit${nights > 1 ? 's' : ''}`);
+      para('Location meublée saisonnière ne constituant pas la résidence principale du locataire.');
+      y += 4; checkPage();
+
+      sectionTitle('4. Conditions financières');
+      row('Loyer total (CC)', `${parseFloat(d.totalPrice || 0).toFixed(2)} €`);
+      if (d.deposit && parseFloat(d.deposit) > 0) row('Dépôt de garantie', `${parseFloat(d.deposit).toFixed(2)} €`);
+      if (d.paymentMethod) row('Mode de paiement', d.paymentMethod);
+      y += 6; checkPage();
+
+      if (d.regles && d.regles.length > 0) {
+        sectionTitle('5. Règles du logement');
+        d.regles.forEach(r => { doc.fillColor(dark).fontSize(9).font('Helvetica').text(`• ${r}`, 56, y); y += 13; });
+        y += 4; checkPage();
+      }
+
+      if (d.inclAnnulation) { checkPage(); sectionTitle("Politique d'annulation"); para(`Plus de ${d.cancelDays1 || 30} jours : ${d.cancelPct1 || 50}% remboursé. Moins de ${d.cancelDays2 || 7} jours : ${d.cancelPct2 || 0}% remboursé.`); y += 4; checkPage(); }
+      if (d.inclObligations) { checkPage(); sectionTitle('Obligations'); para("Le locataire s'engage à occuper paisiblement les lieux et à ne pas sous-louer."); y += 4; checkPage(); }
+      if (d.inclAssurance) { checkPage(); sectionTitle('Assurance'); para("Le locataire déclare être couvert par une assurance RC."); y += 4; checkPage(); }
+
+      // Signatures
+      if (y > 680) { doc.addPage(); y = 50; }
+      y += 10;
+      doc.fillColor(gray).fontSize(9).font('Helvetica').text(`Fait le ${fmtDateShort(d.signatureDate || new Date())}`, 50, y);
+      y += 20;
+
+      const sigW = (pageW - 20) / 2;
+      doc.fillColor(gray).fontSize(8).font('Helvetica')
+        .text('Signature du bailleur', 50, y)
+        .text('Signature du locataire', 50 + sigW + 20, y);
+      y += 5;
+      doc.fillColor(dark).fontSize(8).font('Helvetica-Bold')
+        .text(`${d.ownerFirstName || ''} ${d.ownerLastName || ''}`.trim(), 50, y)
+        .text(`${d.guestFirstName} ${d.guestLastName}`, 50 + sigW + 20, y);
+      y += 5;
+
+      if (contract.owner_signature?.startsWith('data:image/png;base64,')) {
+        try { doc.image(Buffer.from(contract.owner_signature.replace('data:image/png;base64,', ''), 'base64'), 50, y, { width: sigW, height: 35 }); } catch(e) {}
+      }
+      if (isSigned && contract.guest_signature?.startsWith('data:image/png;base64,')) {
+        try { doc.image(Buffer.from(contract.guest_signature.replace('data:image/png;base64,', ''), 'base64'), 50 + sigW + 20, y, { width: sigW, height: 35 }); } catch(e) {}
+      } else if (!isSigned) {
+        doc.fillColor(gray).fontSize(9).font('Helvetica').text('En attente de signature...', 50 + sigW + 20, y + 10);
+      }
+      y += 42;
+      doc.moveTo(50, y).lineTo(50 + sigW, y).strokeColor('#AAAAAA').stroke();
+      doc.moveTo(50 + sigW + 20, y).lineTo(50 + pageW, y).strokeColor('#AAAAAA').stroke();
+
+      if (isSigned) {
+        y += 8;
+        doc.fillColor(gray).fontSize(7).font('Helvetica')
+          .text(`Signé le ${fmtDateShort(contract.guest_signed_at)} · IP: ${contract.guest_sign_ip || '—'}`, 50 + sigW + 20, y);
+      }
+
+      doc.rect(0, doc.page.height - 28, doc.page.width, 28).fill(lightBg);
+      doc.fillColor(gray).fontSize(7).font('Helvetica')
+        .text('Contrat généré via Boostinghost — www.boostinghost.fr', 0, doc.page.height - 18, { align: 'center', width: doc.page.width });
+
+      doc.end();
+      stream.on('finish', resolve);
+      stream.on('error', reject);
+    });
+
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    try { fs.unlinkSync(pdfPath); } catch(e) {}
+
+    const filename = `contrat_${isSigned ? 'signe_' : ''}${d.guestLastName?.toLowerCase() || 'location'}_${d.checkin || 'date'}.pdf`;
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error('❌ GET /api/contrats/:id/pdf:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 server.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
