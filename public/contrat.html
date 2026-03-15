@@ -400,16 +400,17 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 #wizardView.hidden { display: none; }
 #mandatView { display: none; }
 #mandatView.active { display: block; }
-/* Classe unique pour éviter les conflits CSS externes */
-.mdt-section { display: none; }
-.mdt-active { display: block; }
-/* Forcer la visibilité du contenu */
-#mandatView .form-card { display: block !important; }
-#mandatView .form-group { display: block !important; }
-#mandatView .missions-grid { display: grid !important; }
-#mandatView .extra-row { display: flex !important; }
-#mandatView .wiz-nav { display: flex !important; }
-#mandatView .final-actions { display: flex !important; }
+#mandatView .m-step { display: none !important; }
+#mandatView .m-step.m-step--active { display: block !important; }
+#mandatView .m-step--active { display: block !important; }
+/* Forcer la visibilité du contenu dans les sections actives */
+#mandatView .m-step--active .form-card,
+#mandatView .m-step--active .form-group,
+#mandatView .m-step--active .wiz-nav,
+#mandatView .m-step--active .missions-grid,
+#mandatView .m-step--active .extra-row,
+#mandatView .m-step--active .remu-cards,
+#mandatView .m-step--active .final-actions { display: revert !important; }
 
 /* Stepper mandat — réutilise .contrat-step */
 .mandat-steps { display: flex; align-items: center; gap: 0; margin-bottom: 28px; background: white; border: 1px solid rgba(200,184,154,.35); border-radius: 14px; padding: 12px 20px; overflow-x: auto; }
@@ -1246,7 +1247,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 1 — Parties & bien -->
-  <div class="mdt-section mdt-active" data-msection="1" style="display:block;">
+  <div class="m-step m-step--active" data-msection="1" style="display:block !important;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-building"></i> Prestataire (votre conciergerie)</div>
       <div class="form-notice" style="background:rgba(26,122,94,.07);border:1px solid rgba(26,122,94,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#1A7A5E;margin-bottom:16px;">
@@ -1361,7 +1362,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 2 — Missions -->
-  <div class="mdt-section" data-msection="2" style="display:none;">
+  <div class="m-step" data-msection="2" style="display:none !important;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-tasks"></i> Missions confiées</div>
       <p style="font-size:13px;color:#7A8695;margin-bottom:4px;">Cochez les missions que vous assurez pour ce bien.</p>
@@ -1447,7 +1448,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 3 — Rémunération -->
-  <div class="mdt-section" data-msection="3" style="display:none;">
+  <div class="m-step" data-msection="3" style="display:none !important;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-coins"></i> Honoraires de la conciergerie</div>
 
@@ -1717,7 +1718,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 4 — Conditions générales -->
-  <div class="mdt-section" data-msection="4" style="display:none;">
+  <div class="m-step" data-msection="4" style="display:none !important;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-calendar-alt"></i> Durée & résiliation</div>
       <div class="form-group">
@@ -1817,7 +1818,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 5 — Signature & envoi -->
-  <div class="mdt-section" data-msection="5" style="display:none;">
+  <div class="m-step" data-msection="5" style="display:none !important;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-eye"></i> Récapitulatif</div>
       <div id="mandatPreview" style="font-size:14px;color:#374151;line-height:1.8;"></div>
@@ -2535,9 +2536,9 @@ function switchTab(tab) {
     mandatView.classList.add('active');
     tabMandat.classList.add('active');
     // Forcer le masquage de toutes les sections sauf la 1ère
-    document.querySelectorAll('#mandatView .mdt-section').forEach((sec, i) => {
+    document.querySelectorAll('#mandatView .m-step').forEach((sec, i) => {
       sec.style.display = i === 0 ? 'block' : 'none';
-      sec.classList.toggle('mdt-active', i === 0);
+      sec.classList.toggle('m-step--active', i === 0);
     });
     currentMandatSection = 1;
     prefillMandatFromProfile();
@@ -2747,9 +2748,9 @@ async function prefillMandatFromProfile() {
 // ── Navigation stepper mandat ──
 function showMandatSection(index) {
   currentMandatSection = Math.max(1, Math.min(index, TOTAL_MANDAT_SECTIONS));
-  document.querySelectorAll('#mandatView .mdt-section').forEach((sec, i) => {
+  document.querySelectorAll('#mandatView .m-step').forEach((sec, i) => {
     const isActive = i + 1 === currentMandatSection;
-    sec.classList.toggle('mdt-active', isActive);
+    sec.classList.toggle('m-step--active', isActive);
     sec.style.display = isActive ? 'block' : 'none';
   });
   document.querySelectorAll('#mandatStepper .contrat-step').forEach((step, i) => {
