@@ -602,8 +602,9 @@ function renderMandat(d, ownerSig) {
 
   html += section('7. Conditions générales',
     row('Exclusivité', exclusiviteLabels[d.exclusivite] || '—') +
-    row('Plafond responsabilité', d.respPlafond === '3mois' ? '3 mois d\'honoraires' : '12 mois d\'honoraires') +
+    row('Limitation de responsabilité', d.respPlafond === 'non' ? 'Responsabilité de droit commun' : 'Limitée aux honoraires perçus') +
     row('Confidentialité', `${d.confidentialite || 5} ans après fin de contrat`) +
+    clause('La Conciergerie s\'engage à exercer ses services avec diligence et professionnalisme. Cependant, elle ne peut être tenue responsable des dommages ou pertes causés par des tiers ou des événements indépendants de sa volonté.') +
     clause('La conciergerie ne garantit ni revenu minimal, ni taux de réservation.')
   );
 
