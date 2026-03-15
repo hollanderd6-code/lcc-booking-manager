@@ -2487,7 +2487,7 @@ function renderHistory(filter) {
   if (filtered.length === 0) {
     list.innerHTML = `<div class="history-empty">
       <i class="fas fa-file-contract"></i>
-      <p>${filter === 'all' ? 'Aucun contrat pour l\'instant.<br>Créez votre premier contrat avec le bouton "Nouveau contrat".' : 'Aucun contrat dans cette catégorie.'}</p>
+      <p>${filter === 'all' ? 'Aucun contrat pour l\'instant.<br>Créez votre premier contrat avec le bouton \"Nouveau contrat\".' : 'Aucun contrat dans cette catégorie.'}</p>
     </div>`;
     return;
   }
@@ -2497,22 +2497,38 @@ function renderHistory(filter) {
 
   list.innerHTML = filtered.map(c => {
     const icon = statusIcons[c.status] || 'fa-file';
-    const checkin = c.checkin ? new Date(c.checkin).toLocaleDateString('fr-FR') : '—';
-    const checkout = c.checkout ? new Date(c.checkout).toLocaleDateString('fr-FR') : '—';
     const created = new Date(c.created_at).toLocaleDateString('fr-FR');
     const signedAt = c.guest_signed_at ? new Date(c.guest_signed_at).toLocaleDateString('fr-FR') : null;
+    const d = c.contract_data || {};
+    const isMandat = d.contractType === 'mandat';
+
+    let cardName, cardMeta;
+    if (isMandat) {
+      const owner = `${d.ownerFirstName || ''} ${d.ownerLastName || ''}`.trim() || '—';
+      cardName = `<i class="fas fa-handshake" style="color:#1A7A5E;font-size:12px;margin-right:6px;"></i>Mandat — ${owner}`;
+      cardMeta = `
+        <span><i class="fas fa-home" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${d.propAddress || '—'}</span>
+        <span><i class="fas fa-building" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${d.companyName || '—'}</span>`;
+    } else {
+      const checkin = c.checkin ? new Date(c.checkin).toLocaleDateString('fr-FR') : (d.checkin ? new Date(d.checkin).toLocaleDateString('fr-FR') : '—');
+      const checkout = c.checkout ? new Date(c.checkout).toLocaleDateString('fr-FR') : (d.checkout ? new Date(d.checkout).toLocaleDateString('fr-FR') : '—');
+      const guestName = `${c.guest_first_name || d.guestFirstName || ''} ${c.guest_last_name || d.guestLastName || ''}`.trim() || '—';
+      const propName = c.property_name || d.propertyName || '—';
+      const price = c.total_price || d.totalPrice;
+      cardName = guestName;
+      cardMeta = `
+        <span><i class="fas fa-home" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${propName}</span>
+        ${d.checkin || c.checkin ? `<span><i class="fas fa-calendar" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${checkin} → ${checkout}</span>` : ''}
+        <span><i class="fas fa-euro-sign" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${price ? parseFloat(price).toFixed(0) + ' €' : '—'}</span>`;
+    }
 
     return `<div class="history-card">
       <div class="history-card-icon ${c.status}">
         <i class="fas ${icon}"></i>
       </div>
       <div class="history-card-info">
-        <div class="history-card-name">${c.guest_first_name || ''} ${c.guest_last_name || ''}</div>
-        <div class="history-card-meta">
-          <span><i class="fas fa-home" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${c.property_name || '—'}</span>
-          ${c.checkin ? `<span><i class="fas fa-calendar" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${checkin} → ${checkout}</span>` : ''}
-          <span><i class="fas fa-euro-sign" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${c.total_price ? parseFloat(c.total_price).toFixed(0) + ' €' : '—'}</span>
-        </div>
+        <div class="history-card-name">${cardName}</div>
+        <div class="history-card-meta">${cardMeta}</div>
         <div class="history-card-meta" style="margin-top:4px;">
           <span>Créé le ${created}</span>
           ${signedAt ? `<span style="color:#1A7A5E;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Signé le ${signedAt}</span>` : ''}
@@ -2526,7 +2542,7 @@ function renderHistory(filter) {
           <button onclick="downloadContractPdf('${c.id}')" title="Télécharger le PDF" style="height:32px;padding:0 10px;border-radius:8px;background:#F5F2EC;border:1px solid rgba(13,17,23,.12);cursor:pointer;font-size:12px;color:#374151;font-family:'DM Sans',sans-serif;font-weight:600;">
             <i class="fas fa-download"></i>
           </button>
-          ${c.status !== 'signed' ? `<button onclick="resendSignLink('${c.id}', this)" title="Renvoyer le lien de signature" style="height:32px;padding:0 10px;border-radius:8px;background:#F5F2EC;border:1px solid rgba(13,17,23,.12);cursor:pointer;font-size:12px;color:#374151;font-family:'DM Sans',sans-serif;font-weight:600;">
+          ${c.status !== 'signed' ? `<button onclick="resendSignLink('${c.id}', this)" title="Renvoyer le lien" style="height:32px;padding:0 10px;border-radius:8px;background:#F5F2EC;border:1px solid rgba(13,17,23,.12);cursor:pointer;font-size:12px;color:#374151;font-family:'DM Sans',sans-serif;font-weight:600;">
             <i class="fas fa-paper-plane"></i>
           </button>` : ''}
         </div>
