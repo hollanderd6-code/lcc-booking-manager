@@ -2487,13 +2487,12 @@ async function prefillMandatFromProfile() {
     const user = await res.json();
     if (user.company) document.getElementById('m_companyName').value = user.company;
     if (user.email) document.getElementById('m_companyEmail').value = user.email;
-    if (user.phone) document.getElementById('m_companyPhone').value = user.phone;
     if (user.siret) document.getElementById('m_companySiret').value = user.siret;
-    const rep = [user.first_name, user.last_name].filter(Boolean).join(' ');
+    const rep = [user.firstName, user.lastName].filter(Boolean).join(' ');
     if (rep) document.getElementById('m_companyRep').value = rep;
-    const addr = [user.address, user.postal_code, user.city].filter(Boolean).join(', ');
+    const addr = [user.address, user.postalCode, user.city].filter(Boolean).join(', ');
     if (addr) document.getElementById('m_companyAddress').value = addr;
-  } catch(e) {}
+  } catch(e) { console.warn('prefillMandatFromProfile:', e); }
 
   // Date du jour par défaut
   const today = new Date().toISOString().split('T')[0];
