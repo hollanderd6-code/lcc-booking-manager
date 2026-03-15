@@ -18262,56 +18262,10 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
     const subject = `Contrat de location – ${propertyName}${checkin ? ' du ' + fmtDateShort(checkin) : ''}`;
     const attachment = [{ filename: `contrat_${guestLastName.toLowerCase()}_${checkin || 'date'}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }];
 
-    let sentToGuest = false, sentToBailleur = false, emailError = null;
-
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-        to: guestEmail,
-        subject,
-        html: emailHtml,
-        attachments: attachment
-      });
-      sentToGuest = true;
-      console.log('✅ Contrat envoyé au locataire:', guestEmail);
-    } catch (err) {
-      emailError = err.message;
-      console.error('❌ Erreur envoi contrat locataire:', err?.response?.body || err?.message);
-    }
-
-    // Copie au bailleur (ownerEmail ou email du user connecté)
-    const bailleurEmail = ownerEmail || (await getUserFromRequest(req))?.email;
-    if (bailleurEmail && bailleurEmail !== guestEmail) {
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-          to: bailleurEmail,
-          subject: `[Copie] ${subject}`,
-          html: bhEmailTemplate({
-            icon: '📋',
-            title: 'Copie — Contrat envoyé',
-            subtitle: `${propertyName}${checkinFr !== '—' ? ' · ' + checkinFr + ' → ' + checkoutFr : ''}`,
-            bodyHtml: `
-              <p>Le contrat de location pour <strong>${guestFirstName} ${guestLastName}</strong> (${guestEmail}) a bien été envoyé.</p>
-              <p>Le contrat PDF est joint à cet email pour vos archives.</p>
-              <div class="info-card"><strong>Séjour :</strong> ${checkinFr} → ${checkoutFr} — ${nights} nuit${nights > 1 ? 's' : ''}<br><strong>Loyer :</strong> ${parseFloat(totalPrice || 0).toFixed(2)} €</div>
-            `
-          }),
-          attachments: attachment
-        });
-        sentToBailleur = true;
-        console.log('✅ Copie contrat envoyée au bailleur:', bailleurEmail);
-      } catch (err) {
-        console.error('❌ Erreur copie bailleur:', err?.message);
-      }
-    }
-
-    // Nettoyage PDF temporaire
+    // Nettoyage PDF temporaire (on n'envoie plus le PDF à ce stade)
     try { fs.unlinkSync(pdfPath); } catch(e) {}
 
-    if (!sentToGuest && emailError) {
-      return res.status(500).json({ error: `Erreur envoi email : ${emailError}` });
-    }
+    const bailleurEmail = ownerEmail || (await getUserFromRequest(req))?.email;
 
     // ── Sauvegarder le contrat en base + générer token de signature ──
     let contractId = null;
@@ -18386,9 +18340,7 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
 
     res.json({
       success: true,
-      message: `Contrat envoyé à ${guestEmail}${sentToBailleur ? ` et copie à ${bailleurEmail}` : ''}`,
-      sentToGuest,
-      sentToBailleur,
+      message: `Lien de signature envoyé à ${guestEmail}`,
       contractId,
       signToken: signToken ? 'généré' : null
     });
