@@ -312,7 +312,7 @@ body {
   <div class="intro-card">
     <div class="intro-icon"><i class="fas fa-file-contract"></i></div>
     <div>
-      <div class="intro-title">Votre contrat de location</div>
+      <div class="intro-title" id="introTitle">Votre contrat</div>
       <div class="intro-sub">Lisez attentivement le contrat ci-dessous. En bas de page, apposez votre signature électronique pour le valider.</div>
       <div class="intro-meta">
         <div class="intro-meta-item"><i class="fas fa-shield-halved"></i> Signature électronique horodatée</div>
@@ -427,7 +427,14 @@ async function loadContract() {
     document.getElementById('expiryText').textContent =
       `Ce lien expire le ${expires.toLocaleDateString('fr-FR')} à ${expires.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
 
-    renderContract(contractData, ownerSignature);
+    // Dispatch selon le type de contrat
+    if (contractData.contractType === 'mandat') {
+      document.getElementById('introTitle').textContent = 'Votre mandat de gestion';
+      renderMandat(contractData, ownerSignature);
+    } else {
+      document.getElementById('introTitle').textContent = 'Votre contrat de location';
+      renderContract(contractData, ownerSignature);
+    }
     initSignature();
     showScreen('contractPage');
 
@@ -517,6 +524,100 @@ function renderContract(d, ownerSig) {
     <div class="owner-sig-label"><i class="fas fa-check-circle" style="color:var(--green);margin-right:5px;"></i>Signature du bailleur — ${`${d.ownerFirstName || ''} ${d.ownerLastName || ''}`.trim()}</div>
     ${ownerSig && ownerSig.startsWith('data:image') ? `<img class="owner-sig-img" src="${ownerSig}" alt="Signature bailleur"/>` : '<span style="font-size:13px;color:var(--gray);">Signature non disponible</span>'}
     <div style="font-size:12px;color:var(--gray);margin-top:6px;">Signé le ${fmtDateShort(d.signatureDate || new Date())}</div>
+  </div>`;
+
+  document.getElementById('contractBody').innerHTML = html;
+}
+
+// ── Rendu du mandat de gestion ──
+function renderMandat(d, ownerSig) {
+  document.getElementById('contractSubtitle').textContent =
+    `${d.companyName || 'Mandat de gestion'} · ${d.propAddress || ''}`;
+
+  const row = (lbl, val) => val ? `<div class="doc-row"><span class="lbl">${lbl}</span><span class="val">${val}</span></div>` : '';
+  const section = (title, content) => `<div class="doc-section"><div class="doc-section-title">${title}</div>${content}</div>`;
+  const clause = (text) => `<div class="doc-clause">${text}</div>`;
+  const propTypeLabels = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', chambre: 'Chambre', gite: 'Gîte / Chalet', autre: 'Autre' };
+  const remuLabels = {
+    commission: `${d.commissionRate || '—'}% sur les revenus ${d.commissionBase === 'ttc' ? 'TTC' : 'HT'}`,
+    forfait_mensuel: `${d.forfaitMensuel || '—'} €/mois`,
+    forfait_resa: `${d.forfaitResa || '—'} €/réservation`,
+    mixte: `${d.mixteRate || '—'}% + ${d.mixteForfait || '—'} €/mois`,
+    carte: 'Prestations à la carte'
+  };
+  const tvaLabels = { ht: 'HT — TVA en sus', ttc: 'TTC', franchise: 'Auto-entrepreneur (sans TVA)' };
+  const exclusiviteLabels = { non: 'Sans exclusivité', totale: 'Exclusivité totale', partielle: 'Exclusivité partielle' };
+
+  let html = '';
+
+  html += section('1. Conciergerie / Prestataire',
+    row('Raison sociale', d.companyName) +
+    (d.companyLegal ? row('Forme juridique', d.companyLegal) : '') +
+    row('Siège social', d.companyAddress) +
+    (d.companySiret ? row('SIRET', d.companySiret) : '') +
+    row('Représentée par', d.companyRep) +
+    row('Email', d.companyEmail) +
+    row('Téléphone', d.companyPhone)
+  );
+
+  html += section('2. Propriétaire / Mandant',
+    row('Nom complet', `${d.ownerFirstName} ${d.ownerLastName}`) +
+    row('Adresse', d.ownerAddress) +
+    row('Email', d.ownerEmail) +
+    row('Téléphone', d.ownerPhone) +
+    (d.ownerDOB ? row('Date de naissance', new Date(d.ownerDOB).toLocaleDateString('fr-FR')) : '') +
+    (d.ownerSiren ? row('SIREN', d.ownerSiren) : '')
+  );
+
+  html += section('3. Bien confié',
+    row('Adresse', d.propAddress) +
+    (d.propType ? row('Type', propTypeLabels[d.propType] || d.propType) : '') +
+    (d.propCapacity ? row('Capacité max.', `${d.propCapacity} personne${parseInt(d.propCapacity) > 1 ? 's' : ''}`) : '') +
+    (d.checkinTime ? row('Heure d\'arrivée', d.checkinTime) : '') +
+    (d.checkoutTime ? row('Heure de départ', d.checkoutTime) : '') +
+    row('Animaux', d.animals === 'oui' ? 'Admis' : d.animals === 'conditions' ? 'Sous conditions' : 'Non admis') +
+    row('Fumeur', d.smoking === 'oui' ? 'Autorisé' : d.smoking === 'exterieur' ? 'Extérieur seulement' : 'Interdit')
+  );
+
+  if (d.missions && d.missions.length > 0) {
+    html += section('4. Missions confiées',
+      d.missions.map(m => `<div class="doc-row"><span class="lbl" style="min-width:20px;">•</span><span class="val">${m}</span></div>`).join('') +
+      (d.urgenceLimit ? `<div class="doc-clause" style="margin-top:8px;">Plafond dépenses urgentes sans accord préalable : <strong>${d.urgenceLimit} € TTC</strong></div>` : '')
+    );
+  }
+
+  html += section('5. Rémunération',
+    `<div class="doc-row"><span class="lbl">Mode</span><span class="val doc-highlight">${remuLabels[d.remuType] || '—'}</span></div>` +
+    row('TVA', tvaLabels[d.tva] || '—') +
+    row('Reversements', d.reversement === 'mensuel' ? 'Mensuel' : d.reversement === 'hebdo' ? 'Hebdomadaire' : d.reversement === 'par_resa' ? 'Par réservation' : 'Encaissement direct') +
+    (d.extrasFacturables && d.extrasFacturables.length > 0
+      ? `<div class="doc-clause" style="margin-top:8px;">Prestations complémentaires facturables en sus : ${d.extrasFacturables.join(', ')}</div>` : '')
+  );
+
+  html += section('6. Durée & résiliation',
+    row('Type', d.dureeType === 'determinee' ? `Durée déterminée — ${d.dureeMois || 12} mois` : 'Durée indéterminée') +
+    (d.dateDebut ? row('Date de début', new Date(d.dateDebut).toLocaleDateString('fr-FR')) : '') +
+    row('Préavis résiliation', d.preavis === '0' ? 'Aucun préavis' : `${d.preavis || 30} jours`)
+  );
+
+  html += section('7. Conditions générales',
+    row('Exclusivité', exclusiviteLabels[d.exclusivite] || '—') +
+    row('Plafond responsabilité', d.respPlafond === '3mois' ? '3 mois d\'honoraires' : '12 mois d\'honoraires') +
+    row('Confidentialité', `${d.confidentialite || 5} ans après fin de contrat`) +
+    clause('La conciergerie ne garantit ni revenu minimal, ni taux de réservation.')
+  );
+
+  if (d.clausesPersonnalisees && d.clausesPersonnalisees.length > 0) {
+    html += section('8. Clauses particulières',
+      d.clausesPersonnalisees.map((c, i) => `<div class="doc-row"><span class="lbl">${i + 1}.</span><span class="val">${c}</span></div>`).join('')
+    );
+  }
+
+  // Signature de la conciergerie déjà apposée
+  html += `<div class="owner-sig-block">
+    <div class="owner-sig-label"><i class="fas fa-check-circle" style="color:var(--green);margin-right:5px;"></i>Signature de la conciergerie — ${d.companyRep || d.companyName || '—'}</div>
+    ${ownerSig && ownerSig.startsWith('data:image') ? `<img class="owner-sig-img" src="${ownerSig}" alt="Signature conciergerie"/>` : '<span style="font-size:13px;color:var(--gray);">Signature non disponible</span>'}
+    <div style="font-size:12px;color:var(--gray);margin-top:6px;">Signé le ${d.signatureDate ? new Date(d.signatureDate).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}</div>
   </div>`;
 
   document.getElementById('contractBody').innerHTML = html;
