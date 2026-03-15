@@ -400,6 +400,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 #wizardView.hidden { display: none; }
 #mandatView { display: none; }
 #mandatView.active { display: block; }
+.mandat-section { display: none !important; }
+.mandat-section.active { display: block !important; }
 
 /* Stepper mandat — réutilise .contrat-step */
 .mandat-steps { display: flex; align-items: center; gap: 0; margin-bottom: 28px; background: white; border: 1px solid rgba(200,184,154,.35); border-radius: 14px; padding: 12px 20px; overflow-x: auto; }
@@ -2526,6 +2528,12 @@ function switchTab(tab) {
   } else if (tab === 'mandat') {
     mandatView.classList.add('active');
     tabMandat.classList.add('active');
+    // Forcer le masquage de toutes les sections sauf la 1ère
+    document.querySelectorAll('.mandat-section').forEach((sec, i) => {
+      sec.style.display = i === 0 ? 'block' : 'none';
+      sec.classList.toggle('active', i === 0);
+    });
+    currentMandatSection = 1;
     prefillMandatFromProfile();
   } else {
     wizardView.classList.remove('hidden');
@@ -2734,7 +2742,9 @@ async function prefillMandatFromProfile() {
 function showMandatSection(index) {
   currentMandatSection = Math.max(1, Math.min(index, TOTAL_MANDAT_SECTIONS));
   document.querySelectorAll('.mandat-section').forEach((sec, i) => {
-    sec.classList.toggle('active', i + 1 === currentMandatSection);
+    const isActive = i + 1 === currentMandatSection;
+    sec.classList.toggle('active', isActive);
+    sec.style.display = isActive ? 'block' : 'none'; // Force style inline
   });
   document.querySelectorAll('#mandatStepper .contrat-step').forEach((step, i) => {
     step.classList.remove('active', 'done');
