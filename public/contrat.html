@@ -400,8 +400,13 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 #wizardView.hidden { display: none; }
 #mandatView { display: none; }
 #mandatView.active { display: block; }
-.mandat-section { display: none !important; }
-.mandat-section.active { display: block !important; }
+/* Forcer la visibilité du contenu des sections mandat actives */
+#mandatView .form-card { display: block !important; }
+#mandatView .form-group { display: block !important; }
+#mandatView .missions-grid { display: grid !important; }
+#mandatView .extra-row { display: flex !important; }
+#mandatView .wiz-nav { display: flex !important; }
+#mandatView .final-actions { display: flex !important; }
 
 /* Stepper mandat — réutilise .contrat-step */
 .mandat-steps { display: flex; align-items: center; gap: 0; margin-bottom: 28px; background: white; border: 1px solid rgba(200,184,154,.35); border-radius: 14px; padding: 12px 20px; overflow-x: auto; }
