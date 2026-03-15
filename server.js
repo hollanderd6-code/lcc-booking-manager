@@ -18728,16 +18728,22 @@ app.post('/api/contrats/:id/resend-sign', authenticateAny, async (req, res) => {
     );
 
     const d = contract.contract_data;
+    const isMandat = d.contractType === 'mandat';
+    const recipientFirstName = isMandat ? d.ownerFirstName : d.guestFirstName;
+    const recipientLastName = isMandat ? d.ownerLastName : d.guestLastName;
+    const recipientEmail = isMandat ? d.ownerEmail : d.guestEmail;
+    const subjectLabel = isMandat ? `Mandat de gestion – ${d.companyName || 'votre conciergerie'}` : `${d.propertyName || ''}`;
+
     const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
     const signUrl = `${appUrl}/signer-contrat.html?token=${newToken}`;
 
     const signEmailHtml = bhEmailTemplate({
       icon: '✍️',
       title: 'Nouveau lien de signature',
-      subtitle: `${d.propertyName || ''}`,
+      subtitle: subjectLabel,
       bodyHtml: `
-        <p>Bonjour <strong>${d.guestFirstName} ${d.guestLastName}</strong>,</p>
-        <p>Un nouveau lien de signature vous a été envoyé pour votre contrat de location à <strong>${d.propertyName}</strong>.</p>
+        <p>Bonjour <strong>${recipientFirstName} ${recipientLastName}</strong>,</p>
+        <p>Un nouveau lien de signature vous a été envoyé pour ${isMandat ? 'votre mandat de gestion' : `votre contrat de location à <strong>${d.propertyName}</strong>`}.</p>
         <div class="cta-block">
           <p>Cliquez ci-dessous pour signer votre contrat :</p>
           <a href="${signUrl}" class="btn" style="display:inline-block;background:#1A7A5E;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;">
@@ -18751,13 +18757,13 @@ app.post('/api/contrats/:id/resend-sign', authenticateAny, async (req, res) => {
 
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-      to: d.guestEmail,
-      subject: `Nouveau lien de signature – ${d.propertyName}`,
+      to: recipientEmail || d.guestEmail,
+      subject: `Nouveau lien de signature – ${subjectLabel}`,
       html: signEmailHtml
     });
 
-    console.log(`✅ Lien signature renvoyé pour contrat ${contract.id} à ${d.guestEmail}`);
-    res.json({ success: true, message: `Lien de signature renvoyé à ${d.guestEmail}` });
+    console.log(`✅ Lien signature renvoyé pour contrat ${contract.id} à ${recipientEmail || d.guestEmail}`);
+    res.json({ success: true, message: `Lien de signature renvoyé à ${recipientEmail || d.guestEmail}` });
 
   } catch (err) {
     console.error('❌ POST /api/contrats/:id/resend-sign:', err);
@@ -18784,6 +18790,7 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
 
     const contract = result.rows[0];
     const d = contract.contract_data;
+    const isMandat = d.contractType === 'mandat';
 
     // Régénérer le PDF (signé si disponible, sinon avec seulement signature bailleur)
     const pdfPath = path.join(INVOICE_PDF_DIR, `contrat_dl_${contract.id}.pdf`);
@@ -18791,6 +18798,148 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
 
     const fmtDate = (dt) => dt ? new Date(dt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
     const fmtDateShort = (dt) => dt ? new Date(dt).toLocaleDateString('fr-FR') : '—';
+
+    // ── Rediriger vers PDF mandat si contractType === 'mandat' ──
+    if (isMandat) {
+      // Réutiliser la même logique de génération que /api/mandat/send
+      const propTypeLabels = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', chambre: 'Chambre', gite: 'Gîte / Chalet', autre: 'Autre' };
+      const remuLabels = {
+        commission: `${d.commissionRate || '—'}% sur les revenus ${d.commissionBase === 'ttc' ? 'TTC' : 'HT'}`,
+        forfait_mensuel: `Forfait mensuel : ${d.forfaitMensuel || '—'} €`,
+        forfait_resa: `Forfait par réservation : ${d.forfaitResa || '—'} €`,
+        mixte: `${d.mixteRate || '—'}% + ${d.mixteForfait || '—'} €/mois`,
+        carte: 'Prestations à la carte'
+      };
+      const tvaLabels = { ht: 'HT — TVA en sus', ttc: 'TTC', franchise: 'Auto-entrepreneur (sans TVA)' };
+      const reversementLabels = { par_resa: 'À chaque réservation', hebdo: 'Hebdomadaire', mensuel: 'Mensuel', encaissement_direct: 'Encaissement direct' };
+      const exclusiviteLabels = { non: 'Sans exclusivité', totale: 'Exclusivité totale', partielle: 'Exclusivité partielle' };
+
+      await new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const stream = fs.createWriteStream(pdfPath);
+        doc.pipe(stream);
+
+        const green = '#1A7A5E', dark = '#0D1117', gray = '#7A8695', lightBg = '#F5F2EC';
+        const pageW = doc.page.width - 100;
+
+        doc.rect(0, 0, doc.page.width, 52).fill(green);
+        doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(d.companyName || 'BOOSTINGHOST', 50, 18);
+        doc.fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
+        if (isSigned) doc.fontSize(8).font('Helvetica-Bold').fillColor('#4ADE80').text('✓ MANDAT SIGNÉ', 0, 30, { align: 'right', width: doc.page.width - 50 });
+
+        let y = 75;
+        doc.fillColor(dark).fontSize(20).font('Helvetica-Bold').text('Contrat de mandat de gestion', 50, y, { align: 'center', width: pageW });
+        y += 28;
+        doc.fillColor(gray).fontSize(9).font('Helvetica').text('Location saisonnière / courte durée', 50, y, { align: 'center', width: pageW });
+        y += 28;
+
+        const sT = (title) => { if (y > 720) { doc.addPage(); y = 50; } doc.rect(50, y, pageW, 18).fill(lightBg); doc.fillColor(green).fontSize(8).font('Helvetica-Bold').text(title.toUpperCase(), 54, y + 5); doc.fillColor(dark); y += 23; };
+        const row = (label, value) => { if (!value || value === '—') return; if (y > 750) { doc.addPage(); y = 50; } doc.fillColor(gray).fontSize(9).font('Helvetica').text(label, 54, y, { width: 160 }); doc.fillColor(dark).font('Helvetica-Bold').text(String(value), 220, y, { width: pageW - 170 }); y += 14; };
+        const para = (text) => { if (y > 720) { doc.addPage(); y = 50; } doc.fillColor(dark).fontSize(8.5).font('Helvetica').text(text, 54, y, { width: pageW - 8, lineGap: 2 }); y += doc.heightOfString(text, { width: pageW - 8, lineGap: 2 }) + 6; };
+        const bullet = (text) => { if (y > 750) { doc.addPage(); y = 50; } doc.fillColor(dark).fontSize(9).font('Helvetica').text(`• ${text}`, 60, y, { width: pageW - 16 }); y += 13; };
+
+        sT('Article 1 — Parties');
+        row('Conciergerie', d.companyName || '—');
+        if (d.companyLegal) row('Forme juridique', d.companyLegal);
+        if (d.companyAddress) row('Siège social', d.companyAddress);
+        if (d.companySiret) row('SIRET', d.companySiret);
+        if (d.companyRep) row('Représentée par', d.companyRep);
+        if (d.companyEmail) row('Email', d.companyEmail);
+        y += 6;
+        row('Propriétaire', `${d.ownerFirstName} ${d.ownerLastName}`);
+        if (d.ownerAddress) row('Adresse', d.ownerAddress);
+        if (d.ownerEmail) row('Email', d.ownerEmail);
+        if (d.ownerPhone) row('Téléphone', d.ownerPhone);
+        y += 6;
+
+        sT('Article 2 — Bien confié');
+        row('Adresse', d.propAddress || '—');
+        if (d.propType) row('Type', propTypeLabels[d.propType] || d.propType);
+        if (d.propCapacity) row('Capacité', `${d.propCapacity} personnes`);
+        y += 6;
+
+        if (d.missions && d.missions.length > 0) {
+          sT('Article 3 — Missions confiées');
+          d.missions.forEach(m => bullet(m));
+          if (d.urgenceLimit) { y += 4; para(`Plafond dépenses urgentes : ${d.urgenceLimit} € TTC.`); }
+          y += 6;
+        }
+
+        sT('Article 4 — Exclusions'); para('Sont exclues : gros travaux, sinistres en qualité d\'assuré, représentation en justice, obligations fiscales du propriétaire, garantie de revenu ou d\'occupation.'); y += 6;
+
+        sT('Article 5 — Rémunération');
+        row('Mode', remuLabels[d.remuType] || '—');
+        row('TVA', tvaLabels[d.tva] || '—');
+        row('Préavis révision', `${d.tarifPreavis || 60} jours`);
+        row('Reversements', reversementLabels[d.reversement] || '—');
+        if (d.extrasFacturables && d.extrasFacturables.length > 0) { y += 4; para('Prestations complémentaires :'); d.extrasFacturables.forEach(e => bullet(e)); }
+        y += 6;
+
+        sT('Article 6 — Durée et résiliation');
+        row('Type', d.dureeType === 'determinee' ? `Durée déterminée — ${d.dureeMois || 12} mois` : 'Durée indéterminée');
+        if (d.dateDebut) row('Début', fmtDate(d.dateDebut));
+        row('Préavis résiliation', d.preavis === '0' ? 'Aucun préavis' : `${d.preavis || 30} jours`);
+        y += 6;
+
+        sT('Article 7 — Conditions générales');
+        row('Exclusivité', exclusiviteLabels[d.exclusivite] || '—');
+        row('Plafond responsabilité', d.respPlafond === '3mois' ? '3 mois d\'honoraires' : '12 mois d\'honoraires');
+        row('Confidentialité', `${d.confidentialite || 5} ans après fin de contrat`);
+        y += 4;
+        para('La conciergerie n\'est tenue que d\'une obligation de moyens et ne garantit ni revenu minimal ni taux de réservation.');
+        y += 6;
+
+        sT('Article 8 — Obligations des parties');
+        para('La Conciergerie s\'engage à exécuter ses prestations avec diligence et à informer le propriétaire des incidents significatifs. Le Propriétaire s\'engage à délivrer un logement conforme et à régler les factures dans les délais.');
+        y += 6;
+
+        if (d.clausesPersonnalisees && d.clausesPersonnalisees.length > 0) {
+          sT('Article 9 — Clauses particulières');
+          d.clausesPersonnalisees.forEach((c, i) => para(`${i + 1}. ${c}`));
+          y += 6;
+        }
+
+        // Signatures
+        if (y > 680) { doc.addPage(); y = 50; }
+        y += 10;
+        doc.fillColor(gray).fontSize(9).font('Helvetica').text(`Fait le ${fmtDateShort(d.signatureDate || new Date())}`, 50, y);
+        y += 20;
+
+        const sigW = (pageW - 20) / 2;
+        doc.fillColor(gray).fontSize(8).font('Helvetica').text('La Conciergerie / Prestataire', 50, y).text('Le Propriétaire / Mandant', 50 + sigW + 20, y);
+        y += 5;
+        doc.fillColor(dark).fontSize(8).font('Helvetica-Bold').text(d.companyRep || d.companyName || '—', 50, y).text(`${d.ownerFirstName} ${d.ownerLastName}`, 50 + sigW + 20, y);
+        y += 5;
+
+        if (contract.owner_signature?.startsWith('data:image/png;base64,')) {
+          try { doc.image(Buffer.from(contract.owner_signature.replace('data:image/png;base64,', ''), 'base64'), 50, y, { width: sigW, height: 35 }); } catch(e) {}
+        }
+        if (isSigned && contract.guest_signature?.startsWith('data:image/png;base64,')) {
+          try { doc.image(Buffer.from(contract.guest_signature.replace('data:image/png;base64,', ''), 'base64'), 50 + sigW + 20, y, { width: sigW, height: 35 }); } catch(e) {}
+        } else if (!isSigned) {
+          doc.fillColor(gray).fontSize(9).font('Helvetica').text('En attente de signature...', 50 + sigW + 20, y + 10);
+        }
+        y += 42;
+        doc.moveTo(50, y).lineTo(50 + sigW, y).strokeColor('#AAAAAA').stroke();
+        doc.moveTo(50 + sigW + 20, y).lineTo(50 + pageW, y).strokeColor('#AAAAAA').stroke();
+        if (isSigned) { y += 8; doc.fillColor(gray).fontSize(7).font('Helvetica').text(`Signé le ${fmtDateShort(contract.guest_signed_at)} · IP: ${contract.guest_sign_ip || '—'}`, 50 + sigW + 20, y); }
+
+        doc.rect(0, doc.page.height - 28, doc.page.width, 28).fill(lightBg);
+        doc.fillColor(gray).fontSize(7).font('Helvetica').text('Contrat généré via Boostinghost — www.boostinghost.fr', 0, doc.page.height - 18, { align: 'center', width: doc.page.width });
+
+        doc.end();
+        stream.on('finish', resolve);
+        stream.on('error', reject);
+      });
+
+      const pdfBuffer = fs.readFileSync(pdfPath);
+      try { fs.unlinkSync(pdfPath); } catch(e) {}
+      const filename = `mandat_${isSigned ? 'signe_' : ''}${d.ownerLastName?.toLowerCase() || 'gestion'}.pdf`;
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `attachment; filename="${filename}"`);
+      return res.send(pdfBuffer);
+    }
+
     const nights = d.checkin && d.checkout ? Math.round((new Date(d.checkout) - new Date(d.checkin)) / 86400000) : 0;
 
     await new Promise((resolve, reject) => {
