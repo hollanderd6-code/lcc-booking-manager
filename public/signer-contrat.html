@@ -331,7 +331,10 @@ body {
   <!-- Contract document -->
   <div class="contract-doc">
     <div class="contract-doc-header">
-      <h2>Contrat de location meublée saisonnière</h2>
+      <div id="contractDocLogo" style="margin-bottom:12px;display:none;">
+        <img id="contractLogoImg" style="height:48px;max-width:160px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,.15);padding:4px;" alt="Logo"/>
+      </div>
+      <h2 id="contractDocTitle">Contrat de location meublée saisonnière</h2>
       <p id="contractSubtitle">Chargement...</p>
     </div>
     <div class="contract-doc-body" id="contractBody">
@@ -430,9 +433,11 @@ async function loadContract() {
     // Dispatch selon le type de contrat
     if (contractData.contractType === 'mandat') {
       document.getElementById('introTitle').textContent = 'Votre mandat de gestion';
+      document.getElementById('contractDocTitle').textContent = 'Contrat de mandat de gestion';
       renderMandat(contractData, ownerSignature);
     } else {
       document.getElementById('introTitle').textContent = 'Votre contrat de location';
+      document.getElementById('contractDocTitle').textContent = 'Contrat de location meublée saisonnière';
       renderContract(contractData, ownerSignature);
     }
     initSignature();
@@ -533,6 +538,15 @@ function renderContract(d, ownerSig) {
 function renderMandat(d, ownerSig) {
   document.getElementById('contractSubtitle').textContent =
     `${d.companyName || 'Mandat de gestion'} · ${d.propAddress || ''}`;
+
+  // Afficher le logo si disponible
+  if (d.companyLogoUrl) {
+    const logoZone = document.getElementById('contractDocLogo');
+    const logoImg = document.getElementById('contractLogoImg');
+    logoImg.src = d.companyLogoUrl;
+    logoImg.onerror = () => { logoZone.style.display = 'none'; };
+    logoZone.style.display = 'block';
+  }
 
   const row = (lbl, val) => val ? `<div class="doc-row"><span class="lbl">${lbl}</span><span class="val">${val}</span></div>` : '';
   const section = (title, content) => `<div class="doc-section"><div class="doc-section-title">${title}</div>${content}</div>`;
