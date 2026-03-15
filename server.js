@@ -11860,14 +11860,14 @@ app.put('/api/payments/:paymentId',
     }
 
     const amountCents = Math.round(amount * 100);
-    const platformFee = Math.round(amountCents * 0.08);
+    const platformFee = Math.round(amountCents * 0.08); // ⏸️ Commission en pause — remplacer 0 par platformFee pour réactiver
     const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [{ price_data: { currency: 'eur', product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
-      payment_intent_data: { application_fee_amount: platformFee, transfer_data: { destination: user.stripeAccountId }, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
+      payment_intent_data: { application_fee_amount: 0, on_behalf_of: user.stripeAccountId, transfer_data: { destination: user.stripeAccountId }, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`
@@ -11963,9 +11963,10 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
 
     const amountCents = Math.round(amount * 100);
     
-    // 💰 Calcul de la commission (8% pour la plateforme)
-    const platformFee = Math.round(amountCents * 0.08);
-    const ownerReceives = amountCents - platformFee;
+    // 💰 Calcul de la commission (8% pour la plateforme) — ⏸️ EN PAUSE
+    const platformFee = Math.round(amountCents * 0.08); // ⏸️ Garder pour réactiver plus tard
+    const platformFeeActive = 0; // 🔴 PAUSE : remplacer par platformFee pour réactiver la commission
+    const ownerReceives = amountCents - platformFeeActive;
     
     // Créer l'objet "payment"
     const paymentId = 'pay_' + Date.now().toString(36);
@@ -12008,7 +12009,9 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       }],
       payment_intent_data: {
         // 💰 Commission de la plateforme (8%)
-        application_fee_amount: platformFee,
+        application_fee_amount: platformFeeActive, // ⏸️ PAUSE — remplacer par platformFee pour réactiver
+        // 🎯 Affiche le nom du compte connecté sur le relevé du client
+        on_behalf_of: user.stripeAccountId,
         transfer_data: {
           destination: user.stripeAccountId // 🎯 Le compte du propriétaire
         },
@@ -12041,13 +12044,13 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       WHERE id = $3
     `, [session.id, session.url, payment.id]);
 
-    console.log(`✅ Paiement créé: ${payment.id} - Montant: ${amount}€ - Commission: ${(platformFee/100).toFixed(2)}€ - Propriétaire reçoit: ${(ownerReceives/100).toFixed(2)}€`);
+    console.log(`✅ Paiement créé: ${payment.id} - Montant: ${amount}€ - Commission: ${(platformFeeActive/100).toFixed(2)}€ (en pause) - Propriétaire reçoit: ${(ownerReceives/100).toFixed(2)}€`);
 
     return res.json({
       payment,
       checkoutUrl: session.url,
       amount: amount,
-      platformFee: platformFee / 100,
+      platformFee: platformFeeActive / 100,
       ownerReceives: ownerReceives / 100
     });
   } catch (err) {
