@@ -18418,6 +18418,7 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
 
     // Régénérer le PDF avec les 2 signatures
     const data = contract.contract_data;
+    const isMandat = data.contractType === 'mandat';
     const nights = data.checkin && data.checkout
       ? Math.round((new Date(data.checkout) - new Date(data.checkin)) / 86400000) : 0;
     const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
@@ -18433,11 +18434,11 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
       const pageW = doc.page.width - 100;
 
       doc.rect(0, 0, doc.page.width, 52).fill(green);
-      doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text('BOOSTINGHOST', 50, 18);
+      doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(isMandat ? (data.companyName || 'BOOSTINGHOST') : 'BOOSTINGHOST', 50, 18);
       doc.fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
 
       let y = 75;
-      doc.fillColor(dark).fontSize(20).font('Helvetica-Bold').text('Contrat de location meublée saisonnière', 50, y, { align: 'center', width: pageW });
+      doc.fillColor(dark).fontSize(20).font('Helvetica-Bold').text(isMandat ? 'Contrat de mandat de gestion' : 'Contrat de location meublée saisonnière', 50, y, { align: 'center', width: pageW });
       y += 35;
       doc.fillColor(gray).fontSize(9).font('Helvetica').text(`Établi le ${fmtDate(data.signatureDate || new Date())} — Signé le ${fmtDate(signedAt)}`, 50, y, { align: 'center', width: pageW });
       y += 30;
@@ -18557,54 +18558,61 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
     // Sauvegarder le chemin du PDF signé
     await pool.query(`UPDATE contracts SET signed_pdf_path = $1, updated_at = NOW() WHERE id = $2`, [signedPdfPath, contract.id]);
 
+    // Champs selon type (location vs mandat)
+    const signerFirstName = isMandat ? data.ownerFirstName : data.guestFirstName;
+    const signerLastName  = isMandat ? data.ownerLastName  : data.guestLastName;
+    const signerEmail     = isMandat ? data.ownerEmail     : data.guestEmail;
+    const senderEmail     = isMandat ? (data.companyEmail || contract.owner_email) : (data.ownerEmail || contract.owner_email);
+    const docLabel        = isMandat ? `Mandat – ${data.propAddress || data.companyName || ''}` : `${data.propertyName || ''}`;
+
     // Envoyer le PDF signé aux 2 parties
     const pdfBuffer = fs.readFileSync(signedPdfPath);
-    const attachment = [{ filename: `contrat_signe_${data.guestLastName?.toLowerCase() || 'location'}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }];
+    const attachment = [{
+      filename: isMandat ? `mandat_signe_${signerLastName?.toLowerCase() || 'gestion'}.pdf` : `contrat_signe_${signerLastName?.toLowerCase() || 'location'}.pdf`,
+      content: pdfBuffer, contentType: 'application/pdf'
+    }];
 
     const signedEmailHtml = bhEmailTemplate({
       icon: '✅',
-      title: 'Contrat signé',
-      subtitle: `${data.propertyName} · ${fmtDate(data.checkin)} → ${fmtDate(data.checkout)}`,
+      title: isMandat ? 'Mandat de gestion signé' : 'Contrat signé',
+      subtitle: docLabel,
       bodyHtml: `
-        <p>Le contrat de location a été signé par les deux parties.</p>
-        <div class="success-card">📎 Le contrat signé est joint à cet email.</div>
+        <p>${isMandat ? 'Le mandat de gestion' : 'Le contrat de location'} a été signé par les deux parties.</p>
+        <div class="success-card">📎 Le document signé est joint à cet email.</div>
         <div class="info-card">
-          <strong>Locataire :</strong> ${data.guestFirstName} ${data.guestLastName}<br>
+          <strong>${isMandat ? 'Propriétaire' : 'Locataire'} :</strong> ${signerFirstName} ${signerLastName}<br>
           <strong>Signé le :</strong> ${fmtDate(signedAt)}<br>
-          <strong>Logement :</strong> ${data.propertyName}
+          ${isMandat ? `<strong>Bien confié :</strong> ${data.propAddress || '—'}` : `<strong>Logement :</strong> ${data.propertyName}`}
         </div>
       `
     });
 
-    // Email au locataire
+    // Email au signataire
     try {
       await transporter.sendMail({
         from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-        to: data.guestEmail,
-        subject: `Contrat signé – ${data.propertyName}`,
-        html: signedEmailHtml,
-        attachments: attachment
+        to: signerEmail,
+        subject: `${isMandat ? 'Mandat' : 'Contrat'} signé – ${isMandat ? data.companyName : data.propertyName}`,
+        html: signedEmailHtml, attachments: attachment
       });
-    } catch(e) { console.error('⚠️ Email locataire PDF signé:', e.message); }
+    } catch(e) { console.error('⚠️ Email signataire PDF signé:', e.message); }
 
-    // Email au bailleur
-    const bailleurEmail = data.ownerEmail || contract.owner_email;
-    if (bailleurEmail && bailleurEmail !== data.guestEmail) {
+    // Email à l'autre partie
+    if (senderEmail && senderEmail !== signerEmail) {
       try {
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-          to: bailleurEmail,
-          subject: `[Signé] Contrat – ${data.guestFirstName} ${data.guestLastName} – ${data.propertyName}`,
-          html: signedEmailHtml,
-          attachments: attachment
+          to: senderEmail,
+          subject: `[Signé] ${isMandat ? 'Mandat' : 'Contrat'} – ${signerFirstName} ${signerLastName}`,
+          html: signedEmailHtml, attachments: attachment
         });
-      } catch(e) { console.error('⚠️ Email bailleur PDF signé:', e.message); }
+      } catch(e) { console.error('⚠️ Email autre partie PDF signé:', e.message); }
     }
 
     try { fs.unlinkSync(signedPdfPath); } catch(e) {}
 
-    console.log(`✅ Contrat ${contract.id} signé par ${data.guestFirstName} ${data.guestLastName}`);
-    res.json({ success: true, message: 'Contrat signé avec succès. Le PDF vous a été envoyé par email.' });
+    console.log(`✅ Contrat ${contract.id} signé par ${signerFirstName} ${signerLastName}`);
+    res.json({ success: true, message: `${isMandat ? 'Mandat' : 'Contrat'} signé avec succès. Le PDF vous a été envoyé par email.` });
 
   } catch (err) {
     console.error('❌ POST /api/contrat/sign/:token:', err);
@@ -18654,27 +18662,6 @@ app.get('/api/contrats', authenticateAny, async (req, res) => {
 });
 
 // ============================================
-// GET /api/contrats/:id  — Détail d'un contrat
-// ============================================
-app.get('/api/contrats/:id', authenticateAny, async (req, res) => {
-  try {
-    const userId = req.user.isSubAccount
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
-    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
-
-    const result = await pool.query(
-      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
-      [req.params.id, userId]
-    );
-    if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // GET /api/contrats/:id  — Détail d'un contrat
 // ============================================
 app.get('/api/contrats/:id', authenticateAny, async (req, res) => {
@@ -19092,7 +19079,8 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     const {
       // Conciergerie
       companyName, companyLegal, companyAddress, companySiret,
-      companyRep, companyEmail, companyPhone,
+      companyRep, companyEmail, companyPhone, companyLogoUrl,
+      companyFreeTitle, companyFreeValue,
       // Propriétaire
       ownerFirstName, ownerLastName, ownerAddress, ownerEmail, ownerPhone,
       ownerDOB, ownerSiren,
@@ -19137,6 +19125,15 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     const mandatNumber = `MAND-${Date.now()}`;
     const pdfPath = path.join(INVOICE_PDF_DIR, `${mandatNumber}.pdf`);
 
+    // Charger le logo avant le Promise (await interdit dans callback non-async)
+    let companyLogoBuffer = null;
+    if (companyLogoUrl) {
+      try {
+        const lr = await axios.get(companyLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
+        if (lr.data.byteLength > 0) companyLogoBuffer = Buffer.from(lr.data);
+      } catch(e) { console.warn('⚠️ Logo mandat non chargé:', e.message); }
+    }
+
     await new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const stream = fs.createWriteStream(pdfPath);
@@ -19147,8 +19144,14 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
 
       // ── HEADER ──
       doc.rect(0, 0, doc.page.width, 52).fill(green);
-      doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(companyName || 'BOOSTINGHOST', 50, 18);
-      doc.fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
+      if (companyLogoBuffer) {
+        try { doc.image(companyLogoBuffer, 50, 8, { height: 36, fit: [120, 36] }); } catch(e) {
+          doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(companyName || 'BOOSTINGHOST', 50, 18);
+        }
+      } else {
+        doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(companyName || 'BOOSTINGHOST', 50, 18);
+      }
+      doc.fillColor('white').fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
 
       let y = 75;
       doc.fillColor(dark).fontSize(20).font('Helvetica-Bold')
@@ -19191,6 +19194,7 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
       if (companyRep) row('Représentée par', companyRep);
       if (companyEmail) row('Email', companyEmail);
       if (companyPhone) row('Téléphone', companyPhone);
+      if (companyFreeTitle && companyFreeValue) row(companyFreeTitle, companyFreeValue);
       y += 6;
       row('Propriétaire', `${ownerFirstName} ${ownerLastName}`);
       if (ownerAddress) row('Adresse', ownerAddress);
@@ -19315,6 +19319,7 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     const contractData = {
       contractType: 'mandat',
       companyName, companyLegal, companyAddress, companySiret, companyRep, companyEmail, companyPhone,
+      companyLogoUrl, companyFreeTitle, companyFreeValue,
       ownerFirstName, ownerLastName, ownerAddress, ownerEmail, ownerPhone, ownerDOB, ownerSiren,
       propAddress, propType, propCapacity, minStay, maxStay, animals, smoking, parties, checkinTime, checkoutTime,
       missions: missions || [], urgenceLimit, extrasFacturables: extrasFacturables || [],
