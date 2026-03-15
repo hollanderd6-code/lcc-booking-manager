@@ -406,6 +406,12 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .mandat-section { display: none; }
 .mandat-section.active { display: block; }
 
+/* Lignes prestations avec prix */
+.extra-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 5px 0; border-bottom: 1px solid rgba(200,184,154,.15); }
+.extra-row:last-child { border-bottom: none; }
+.extra-price-zone { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.extra-euro { font-size: 14px; font-weight: 700; color: #1A7A5E; }
+
 /* Missions checkboxes */
 .missions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 @media(max-width:600px){ .missions-grid { grid-template-columns: 1fr; } }
@@ -1243,6 +1249,11 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="m_companyEmail" placeholder="contact@maconciergerie.fr"/></div>
       </div>
       <div class="form-group"><label class="form-label">Téléphone</label><input type="tel" class="form-input" id="m_companyPhone" placeholder="+33 6 00 00 00 00" style="max-width:260px;"/></div>
+      <div id="m_logoPreview" style="margin:12px 0 4px;display:flex;align-items:center;gap:10px;min-height:20px;"></div>
+      <div class="form-grid-2" style="margin-top:8px;">
+        <div class="form-group"><label class="form-label">Information libre (titre)</label><input type="text" class="form-input" id="m_companyFreeTitle" placeholder="ex: N° RCP, Agrément..."/></div>
+        <div class="form-group"><label class="form-label">Valeur</label><input type="text" class="form-input" id="m_companyFreeValue" placeholder="ex: 123456789"/></div>
+      </div>
     </div>
 
     <div class="form-card">
@@ -1397,6 +1408,14 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_mis_contrat"><label for="m_mis_contrat">Rédaction du contrat de location voyageurs</label></div>
       </div>
 
+      <!-- Missions libres -->
+      <div class="missions-block-title" style="margin-top:16px;"><i class="fas fa-plus"></i> Missions personnalisées</div>
+      <ul class="clauses-list" id="missionLibreList"></ul>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input type="text" class="form-input" id="missionLibreInput" placeholder="Ajouter une mission personnalisée..." style="flex:1;"/>
+        <button type="button" onclick="addMissionLibre()" style="height:44px;padding:0 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i> Ajouter</button>
+      </div>
+
       <!-- Dépense urgente plafond -->
       <div class="form-group" style="margin-top:20px;">
         <label class="form-label">Plafond dépenses urgentes sans accord préalable (€ TTC)</label>
@@ -1523,16 +1542,40 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-plus-circle"></i> Prestations complémentaires facturables</div>
-      <p style="font-size:13px;color:#7A8695;margin-bottom:12px;">Ces prestations peuvent être facturées en sus des honoraires.</p>
-      <div class="missions-grid">
-        <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_extra_menage"><label for="m_extra_menage">Ménage</label></div>
-        <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_extra_linge"><label for="m_extra_linge">Linge</label></div>
-        <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_extra_checkin_tardif"><label for="m_extra_checkin_tardif">Check-in tardif</label></div>
-        <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_extra_maintenance"><label for="m_extra_maintenance">Maintenance</label></div>
-        <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_extra_deplacement"><label for="m_extra_deplacement">Déplacement exceptionnel</label></div>
-        <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_extra_photo"><label for="m_extra_photo">Shooting photo</label></div>
-        <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_extra_urgence"><label for="m_extra_urgence">Urgence week-end / jours fériés</label></div>
-        <div class="mission-item" onclick="toggleMission(this, event)"><input type="checkbox" id="m_extra_sinistre"><label for="m_extra_sinistre">Gestion de sinistre</label></div>
+      <p style="font-size:13px;color:#7A8695;margin-bottom:16px;">Cochez les prestations facturées en sus et indiquez le tarif.</p>
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <!-- Ménage -->
+        <div class="extra-row"><div class="mission-item extra-check" onclick="toggleExtra('menage',event)" style="min-width:180px;flex-shrink:0;"><input type="checkbox" id="m_extra_menage"><label for="m_extra_menage">Ménage</label></div><div class="extra-price-zone" id="extra_price_menage" style="display:none;"><input type="number" class="form-input" id="m_price_menage" placeholder="0" min="0" style="width:90px;"/><span class="extra-euro">€</span><select class="form-input" id="m_unit_menage" style="width:160px;"><option value="par_prestation">par prestation</option><option value="par_heure">par heure</option><option value="par_nuit">par nuit</option><option value="par_m2">par m²</option></select></div></div>
+        <!-- Linge -->
+        <div class="extra-row"><div class="mission-item extra-check" onclick="toggleExtra('linge',event)" style="min-width:180px;flex-shrink:0;"><input type="checkbox" id="m_extra_linge"><label for="m_extra_linge">Linge</label></div><div class="extra-price-zone" id="extra_price_linge" style="display:none;"><input type="number" class="form-input" id="m_price_linge" placeholder="0" min="0" style="width:90px;"/><span class="extra-euro">€</span><select class="form-input" id="m_unit_linge" style="width:160px;"><option value="par_prestation">par prestation</option><option value="par_nuit">par nuit</option><option value="par_personne">par personne</option></select></div></div>
+        <!-- Check-in tardif -->
+        <div class="extra-row"><div class="mission-item extra-check" onclick="toggleExtra('checkin_tardif',event)" style="min-width:180px;flex-shrink:0;"><input type="checkbox" id="m_extra_checkin_tardif"><label for="m_extra_checkin_tardif">Check-in tardif</label></div><div class="extra-price-zone" id="extra_price_checkin_tardif" style="display:none;"><input type="number" class="form-input" id="m_price_checkin_tardif" placeholder="0" min="0" style="width:90px;"/><span class="extra-euro">€</span><select class="form-input" id="m_unit_checkin_tardif" style="width:160px;"><option value="par_prestation">par prestation</option><option value="par_heure">par heure</option></select></div></div>
+        <!-- Maintenance -->
+        <div class="extra-row"><div class="mission-item extra-check" onclick="toggleExtra('maintenance',event)" style="min-width:180px;flex-shrink:0;"><input type="checkbox" id="m_extra_maintenance"><label for="m_extra_maintenance">Maintenance</label></div><div class="extra-price-zone" id="extra_price_maintenance" style="display:none;"><input type="number" class="form-input" id="m_price_maintenance" placeholder="0" min="0" style="width:90px;"/><span class="extra-euro">€</span><select class="form-input" id="m_unit_maintenance" style="width:160px;"><option value="par_heure">par heure</option><option value="par_prestation">par prestation</option></select></div></div>
+        <!-- Déplacement -->
+        <div class="extra-row"><div class="mission-item extra-check" onclick="toggleExtra('deplacement',event)" style="min-width:180px;flex-shrink:0;"><input type="checkbox" id="m_extra_deplacement"><label for="m_extra_deplacement">Déplacement exceptionnel</label></div><div class="extra-price-zone" id="extra_price_deplacement" style="display:none;"><input type="number" class="form-input" id="m_price_deplacement" placeholder="0" min="0" style="width:90px;"/><span class="extra-euro">€</span><select class="form-input" id="m_unit_deplacement" style="width:160px;"><option value="par_prestation">par prestation</option><option value="par_km">par km</option></select></div></div>
+        <!-- Shooting photo -->
+        <div class="extra-row"><div class="mission-item extra-check" onclick="toggleExtra('photo',event)" style="min-width:180px;flex-shrink:0;"><input type="checkbox" id="m_extra_photo"><label for="m_extra_photo">Shooting photo</label></div><div class="extra-price-zone" id="extra_price_photo" style="display:none;"><input type="number" class="form-input" id="m_price_photo" placeholder="0" min="0" style="width:90px;"/><span class="extra-euro">€</span><select class="form-input" id="m_unit_photo" style="width:160px;"><option value="par_prestation">par prestation</option></select></div></div>
+        <!-- Urgence -->
+        <div class="extra-row"><div class="mission-item extra-check" onclick="toggleExtra('urgence',event)" style="min-width:180px;flex-shrink:0;"><input type="checkbox" id="m_extra_urgence"><label for="m_extra_urgence">Urgence WE / jours fériés</label></div><div class="extra-price-zone" id="extra_price_urgence" style="display:none;"><input type="number" class="form-input" id="m_price_urgence" placeholder="0" min="0" style="width:90px;"/><span class="extra-euro">€</span><select class="form-input" id="m_unit_urgence" style="width:160px;"><option value="par_prestation">par prestation</option><option value="par_heure">par heure</option></select></div></div>
+        <!-- Sinistre -->
+        <div class="extra-row"><div class="mission-item extra-check" onclick="toggleExtra('sinistre',event)" style="min-width:180px;flex-shrink:0;"><input type="checkbox" id="m_extra_sinistre"><label for="m_extra_sinistre">Gestion de sinistre</label></div><div class="extra-price-zone" id="extra_price_sinistre" style="display:none;"><input type="number" class="form-input" id="m_price_sinistre" placeholder="0" min="0" style="width:90px;"/><span class="extra-euro">€</span><select class="form-input" id="m_unit_sinistre" style="width:160px;"><option value="par_prestation">par prestation</option><option value="par_heure">par heure</option></select></div></div>
+        <!-- Extras libres -->
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(200,184,154,.25);">
+          <div class="missions-block-title" style="margin-top:0;"><i class="fas fa-plus"></i> Prestations personnalisées</div>
+          <div id="extraLibreList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="text" class="form-input" id="extraLibreLabel" placeholder="Nom de la prestation..." style="flex:1;min-width:120px;"/>
+            <input type="number" class="form-input" id="extraLibrePrice" placeholder="Prix" min="0" style="width:80px;"/>
+            <span style="font-size:14px;font-weight:700;color:#1A7A5E;">€</span>
+            <select class="form-input" id="extraLibreUnit" style="width:140px;">
+              <option value="par_prestation">par prestation</option>
+              <option value="par_heure">par heure</option>
+              <option value="par_nuit">par nuit</option>
+            </select>
+            <button type="button" onclick="addExtraLibre()" style="height:44px;padding:0 14px;background:#1A7A5E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1615,12 +1658,12 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-shield-halved"></i> Responsabilité & juridiction</div>
       <div class="form-group">
-        <label class="form-label">Plafond de responsabilité de la conciergerie</label>
+        <label class="form-label">Limitation de responsabilité</label>
         <select class="form-input" id="m_respPlafond" style="max-width:360px;">
-          <option value="3mois">3 mois d'honoraires</option>
-          <option value="12mois" selected>12 mois d'honoraires</option>
-          <option value="montant">Montant fixe</option>
+          <option value="oui" selected>Oui — limitée aux honoraires perçus</option>
+          <option value="non">Non — responsabilité de droit commun</option>
         </select>
+        <div style="font-size:12px;color:#7A8695;margin-top:4px;">En cas d'erreur prouvée, la responsabilité est limitée aux honoraires effectivement perçus.</div>
       </div>
       <div class="form-group">
         <label class="form-label">Juridiction compétente</label>
@@ -2540,6 +2583,8 @@ const TOTAL_MANDAT_SECTIONS = 5;
 let mandatSignatureData = null;
 let mandatIsDrawing = false, mandatLastX = 0, mandatLastY = 0;
 
+let mandatLogoUrl = null;
+
 // ── Pré-remplir depuis le profil utilisateur ──
 async function prefillMandatFromProfile() {
   try {
@@ -2554,6 +2599,11 @@ async function prefillMandatFromProfile() {
     if (rep) document.getElementById('m_companyRep').value = rep;
     const addr = [user.address, user.postalCode, user.city].filter(Boolean).join(', ');
     if (addr) document.getElementById('m_companyAddress').value = addr;
+    if (user.logoUrl) {
+      mandatLogoUrl = user.logoUrl;
+      const logoPreview = document.getElementById('m_logoPreview');
+      if (logoPreview) logoPreview.innerHTML = `<img src="${user.logoUrl}" style="height:44px;max-width:160px;object-fit:contain;border-radius:6px;border:1px solid rgba(200,184,154,.3);padding:3px;background:white;"/> <span style="font-size:12px;color:#1A7A5E;"><i class="fas fa-check-circle"></i> Logo depuis votre profil</span>`;
+    }
   } catch(e) { console.warn('prefillMandatFromProfile:', e); }
 
   // Date du jour par défaut
@@ -2615,6 +2665,13 @@ document.addEventListener('change', (e) => {
   if (e.target.type === 'checkbox' && e.target.closest('.mission-item')) {
     const item = e.target.closest('.mission-item');
     item.classList.toggle('checked', e.target.checked);
+    // Si extra, afficher/masquer zone prix
+    const id = e.target.id;
+    if (id && id.startsWith('m_extra_')) {
+      const key = id.replace('m_extra_', '');
+      const zone = document.getElementById(`extra_price_${key}`);
+      if (zone) zone.style.display = e.target.checked ? 'flex' : 'none';
+    }
   }
 });
 
@@ -2700,19 +2757,72 @@ function getMandatMissions() {
       if (label) missions.push(label);
     }
   });
+  // Missions libres
+  document.querySelectorAll('#missionLibreList li span').forEach(s => missions.push(s.textContent.trim()));
   return missions;
 }
 
 function getMandatExtras() {
   const extras = [];
-  document.querySelectorAll('#mandatView [id^="m_extra_"]').forEach(cb => {
-    if (cb.checked) {
-      const label = cb.nextElementSibling?.textContent?.trim();
-      if (label) extras.push(label);
+  const unitLabels = { par_prestation: 'par prestation', par_heure: 'par heure', par_nuit: 'par nuit', par_personne: 'par personne', par_m2: 'par m²', par_km: 'par km' };
+  ['menage','linge','checkin_tardif','maintenance','deplacement','photo','urgence','sinistre'].forEach(key => {
+    const cb = document.getElementById(`m_extra_${key}`);
+    if (cb && cb.checked) {
+      const label = cb.nextElementSibling?.textContent?.trim() || key;
+      const price = document.getElementById(`m_price_${key}`)?.value;
+      const unit = document.getElementById(`m_unit_${key}`)?.value;
+      extras.push(price ? `${label} : ${price} € ${unitLabels[unit] || unit}` : label);
     }
+  });
+  // Extras libres
+  document.querySelectorAll('#extraLibreList div[data-label]').forEach(div => {
+    extras.push(div.getAttribute('data-label'));
   });
   return extras;
 }
+
+// ── Toggle extra avec zone prix ──
+function toggleExtra(key, event) {
+  if (event && event.target.tagName === 'INPUT') return;
+  const cb = document.getElementById(`m_extra_${key}`);
+  cb.checked = !cb.checked;
+  cb.closest('.mission-item').classList.toggle('checked', cb.checked);
+  const zone = document.getElementById(`extra_price_${key}`);
+  if (zone) zone.style.display = cb.checked ? 'flex' : 'none';
+}
+
+// ── Missions libres ──
+function addMissionLibre() {
+  const input = document.getElementById('missionLibreInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const list = document.getElementById('missionLibreList');
+  const li = document.createElement('li');
+  li.className = 'clause-item';
+  li.innerHTML = `<span>${text}</span><button onclick="this.closest('li').remove()" title="Supprimer"><i class="fas fa-times"></i></button>`;
+  list.appendChild(li);
+  input.value = '';
+}
+document.getElementById('missionLibreInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addMissionLibre(); } });
+
+// ── Extras libres ──
+function addExtraLibre() {
+  const label = document.getElementById('extraLibreLabel')?.value.trim();
+  const price = document.getElementById('extraLibrePrice')?.value;
+  const unit = document.getElementById('extraLibreUnit')?.value;
+  if (!label) return;
+  const unitLabels = { par_prestation: 'par prestation', par_heure: 'par heure', par_nuit: 'par nuit' };
+  const text = price ? `${label} : ${price} € ${unitLabels[unit] || unit}` : label;
+  const list = document.getElementById('extraLibreList');
+  const div = document.createElement('div');
+  div.setAttribute('data-label', text);
+  div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:rgba(26,122,94,.05);border:1px solid rgba(26,122,94,.15);border-radius:8px;padding:8px 12px;font-size:13px;color:#374151;';
+  div.innerHTML = `<span>${text}</span><button onclick="this.closest('div').remove()" style="background:none;border:none;cursor:pointer;color:#DC2626;font-size:12px;"><i class="fas fa-times"></i></button>`;
+  list.appendChild(div);
+  document.getElementById('extraLibreLabel').value = '';
+  document.getElementById('extraLibrePrice').value = '';
+}
+
 
 function getMandatClauses() {
   return Array.from(document.querySelectorAll('#mandatClausesList li span')).map(s => s.textContent.trim());
@@ -2787,6 +2897,8 @@ async function sendMandat() {
     companyName: vm('m_companyName'), companyLegal: vm('m_companyLegal'),
     companyAddress: vm('m_companyAddress'), companySiret: vm('m_companySiret'),
     companyRep: vm('m_companyRep'), companyEmail: vm('m_companyEmail'), companyPhone: vm('m_companyPhone'),
+    companyLogoUrl: mandatLogoUrl,
+    companyFreeTitle: vm('m_companyFreeTitle'), companyFreeValue: vm('m_companyFreeValue'),
     // Propriétaire
     ownerFirstName: vm('m_ownerFirstName'), ownerLastName: vm('m_ownerLastName'),
     ownerAddress: vm('m_ownerAddress'), ownerEmail: vm('m_ownerEmail'), ownerPhone: vm('m_ownerPhone'),
