@@ -405,8 +405,6 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 
 /* Stepper mandat — réutilise .contrat-step */
 .mandat-steps { display: flex; align-items: center; gap: 0; margin-bottom: 28px; background: white; border: 1px solid rgba(200,184,154,.35); border-radius: 14px; padding: 12px 20px; overflow-x: auto; }
-.mandat-section { display: none; }
-.mandat-section.active { display: block; }
 
 /* Missions checkboxes */
 .missions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
@@ -1240,7 +1238,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 1 — Parties & bien -->
-  <div class="mandat-section active" data-msection="1">
+  <div class="mandat-section active" data-msection="1" style="display:block;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-building"></i> Prestataire (votre conciergerie)</div>
       <div class="form-notice" style="background:rgba(26,122,94,.07);border:1px solid rgba(26,122,94,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#1A7A5E;margin-bottom:16px;">
@@ -1355,7 +1353,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 2 — Missions -->
-  <div class="mandat-section" data-msection="2">
+  <div class="mandat-section" data-msection="2" style="display:none;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-tasks"></i> Missions confiées</div>
       <p style="font-size:13px;color:#7A8695;margin-bottom:4px;">Cochez les missions que vous assurez pour ce bien.</p>
@@ -1441,7 +1439,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 3 — Rémunération -->
-  <div class="mandat-section" data-msection="3">
+  <div class="mandat-section" data-msection="3" style="display:none;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-coins"></i> Honoraires de la conciergerie</div>
 
@@ -1711,7 +1709,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 4 — Conditions générales -->
-  <div class="mandat-section" data-msection="4">
+  <div class="mandat-section" data-msection="4" style="display:none;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-calendar-alt"></i> Durée & résiliation</div>
       <div class="form-group">
@@ -1811,7 +1809,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 
   <!-- Section 5 — Signature & envoi -->
-  <div class="mandat-section" data-msection="5">
+  <div class="mandat-section" data-msection="5" style="display:none;">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-eye"></i> Récapitulatif</div>
       <div id="mandatPreview" style="font-size:14px;color:#374151;line-height:1.8;"></div>
@@ -2529,7 +2527,7 @@ function switchTab(tab) {
     mandatView.classList.add('active');
     tabMandat.classList.add('active');
     // Forcer le masquage de toutes les sections sauf la 1ère
-    document.querySelectorAll('.mandat-section').forEach((sec, i) => {
+    document.querySelectorAll('#mandatView .mandat-section').forEach((sec, i) => {
       sec.style.display = i === 0 ? 'block' : 'none';
       sec.classList.toggle('active', i === 0);
     });
@@ -2741,10 +2739,10 @@ async function prefillMandatFromProfile() {
 // ── Navigation stepper mandat ──
 function showMandatSection(index) {
   currentMandatSection = Math.max(1, Math.min(index, TOTAL_MANDAT_SECTIONS));
-  document.querySelectorAll('.mandat-section').forEach((sec, i) => {
+  document.querySelectorAll('#mandatView .mandat-section').forEach((sec, i) => {
     const isActive = i + 1 === currentMandatSection;
     sec.classList.toggle('active', isActive);
-    sec.style.display = isActive ? 'block' : 'none'; // Force style inline
+    sec.style.display = isActive ? 'block' : 'none';
   });
   document.querySelectorAll('#mandatStepper .contrat-step').forEach((step, i) => {
     step.classList.remove('active', 'done');
