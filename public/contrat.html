@@ -139,13 +139,15 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 
 /* Container — wrappé dans .page-content comme deposits */
 .page-content {
-  max-width: 860px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding: 28px 24px 80px;
 }
 
-/* Header section */
-.contrat-section-header { margin-bottom: 28px; }
+/* Largeur max du contenu interne */
+.contrat-inner {
+  max-width: 860px;
+}
 .contrat-kicker {
   font-size: 11px; font-weight: 600; letter-spacing: .1em;
   text-transform: uppercase; color: rgba(13,17,23,.38); margin-bottom: 4px;
@@ -643,6 +645,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 </button>
 
 <div class="page-content">
+<div class="contrat-inner">
 
   <!-- Header -->
   <div class="contrat-section-header">
@@ -1141,6 +1144,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
 </div>
 
+</div><!-- .contrat-inner -->
 </div><!-- .page-content -->
 </main>
 </div><!-- .app-container -->
