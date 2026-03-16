@@ -4,7 +4,7 @@
 
 const IS_NATIVE = window.Capacitor?.isNativePlatform?.() || false;
 const API_URL = IS_NATIVE 
-  ? 'https://lcc-booking-manager.onrender.com'
+  ? 'https://boostinghost.fr'
   : window.location.origin;
 
 console.log('🚀 Guest App - Mode:', IS_NATIVE ? 'NATIVE' : 'WEB', 'API:', API_URL);
