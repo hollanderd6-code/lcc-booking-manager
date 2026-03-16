@@ -224,7 +224,22 @@ function getSidebarHTML() {
       const nameEl = document.getElementById('sidebarUserName');
       const avatarEl = document.getElementById('sidebarUserAvatar');
       if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-      if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+      if (avatarEl) {
+        if (user.logoUrl) {
+          avatarEl.innerHTML = '';
+          avatarEl.style.background = 'white';
+          avatarEl.style.border = '1px solid rgba(200,184,154,.4)';
+          avatarEl.style.padding = '2px';
+          avatarEl.style.overflow = 'hidden';
+          const img = document.createElement('img');
+          img.src = user.logoUrl;
+          img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:50%;';
+          img.onerror = () => { avatarEl.innerHTML = user.firstName.charAt(0).toUpperCase(); avatarEl.style.background = 'linear-gradient(135deg,#1A7A5E,#2AAE86)'; avatarEl.style.border = 'none'; };
+          avatarEl.appendChild(img);
+        } else {
+          avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+        }
+      }
     }
     if (user.company) {
       const companyEl = document.getElementById('sidebarUserCompany');
