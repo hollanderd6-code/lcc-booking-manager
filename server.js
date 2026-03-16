@@ -18669,6 +18669,28 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
     // Sauvegarder le chemin du PDF signé
     await pool.query(`UPDATE contracts SET signed_pdf_path = $1, updated_at = NOW() WHERE id = $2`, [signedPdfPath, contract.id]);
 
+    // ── Notification push au propriétaire du compte ──
+    try {
+      const tokensRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+        [contract.user_id]
+      );
+      const signerName = isMandat
+        ? `${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim()
+        : `${data.guestFirstName || ''} ${data.guestLastName || ''}`.trim();
+      const docLabel = isMandat
+        ? `Mandat – ${data.propAddress || data.companyName || ''}`
+        : `Contrat – ${data.propertyName || ''}`;
+      for (const tok of tokensRes.rows) {
+        await sendNotification(
+          tok.fcm_token,
+          `✍️ ${isMandat ? 'Mandat' : 'Contrat'} signé`,
+          `${signerName} a signé · ${docLabel}`,
+          { type: 'contract_signed', contractId: String(contract.id) }
+        );
+      }
+    } catch(nErr) { console.error('❌ Notif contrat signé:', nErr.message); }
+
     // Champs selon type (location vs mandat)
     const signerFirstName = isMandat ? data.ownerFirstName : data.guestFirstName;
     const signerLastName  = isMandat ? data.ownerLastName  : data.guestLastName;
