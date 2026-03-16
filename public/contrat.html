@@ -2187,7 +2187,7 @@ function downloadPDF() {
   if (v('cleaningFee') && parseFloat(v('cleaningFee')) > 0) row('Dont frais de ménage', `${parseFloat(v('cleaningFee')).toFixed(2)} €`);
   if (v('deposit') && parseFloat(v('deposit')) > 0) row('Dépôt de garantie', `${parseFloat(v('deposit')).toFixed(2)} €`);
   if (v('acompte') && parseFloat(v('acompte')) > 0) row('Acompte versé', `${parseFloat(v('acompte')).toFixed(2)} €${v('acompteDate') ? ' le ' + new Date(v('acompteDate')).toLocaleDateString('fr-FR') : ''}`);
-  const payLabels = { virement:'Virement bancaire', especes:'Espèces', cheque:'Chèque', carte:'Carte bancaire', autre:'Autre' };
+  const payLabels = { virement:'Virement bancaire', lien:'Lien sécurisé Boostinghost', especes:'Espèces', cheque:'Chèque', carte:'Carte bancaire', autre:'Autre' };
   row('Mode de paiement', payLabels[v('paymentMethod')] || '—');
   if (v('priceNotes')) row('Notes', v('priceNotes'));
   y += 4;
