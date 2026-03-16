@@ -226,14 +226,15 @@ function getSidebarHTML() {
       if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
       if (avatarEl) {
         if (user.logoUrl) {
-          avatarEl.innerHTML = '';
-          // Optimiser via Cloudinary si applicable
           const logoSrc = user.logoUrl.includes('cloudinary.com')
-            ? user.logoUrl.replace('/upload/', '/upload/w_120,h_120,c_fit,q_auto,f_png/')
+            ? user.logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
             : user.logoUrl;
-          avatarEl.style.background = `white url('${logoSrc}') center/80% no-repeat`;
-          avatarEl.style.border = '1.5px solid rgba(26,122,94,.25)';
-          avatarEl.style.borderRadius = '10px';
+          avatarEl.innerHTML = '';
+          avatarEl.style.cssText = 'width:34px;height:34px;min-width:34px;border-radius:8px;background:white;border:1px solid rgba(200,184,154,.4);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;';
+          avatarEl.style.backgroundImage = `url('${logoSrc}')`;
+          avatarEl.style.backgroundSize = '80%';
+          avatarEl.style.backgroundRepeat = 'no-repeat';
+          avatarEl.style.backgroundPosition = 'center';
         } else {
           avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
         }
