@@ -227,8 +227,9 @@ function getSidebarHTML() {
       if (avatarEl) {
         if (user.logoUrl) {
           avatarEl.innerHTML = '';
-          avatarEl.style.background = `white url('${user.logoUrl}') center/contain no-repeat`;
+          avatarEl.style.background = `white url('${user.logoUrl}') center/80% no-repeat`;
           avatarEl.style.border = '1.5px solid rgba(26,122,94,.25)';
+          avatarEl.style.borderRadius = '10px';
         } else {
           avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
         }
