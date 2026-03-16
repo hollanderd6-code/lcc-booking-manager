@@ -18417,8 +18417,10 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
     `, [guestSignature, signedAt, signIp, token]);
 
     // Régénérer le PDF avec les 2 signatures
-    const data = contract.contract_data;
+    const rawData = contract.contract_data;
+    const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
     const isMandat = data.contractType === 'mandat';
+    console.log(`🔍 Sign route — contractType: "${data.contractType}" — isMandat: ${isMandat}`);
     const nights = data.checkin && data.checkout
       ? Math.round((new Date(data.checkout) - new Date(data.checkin)) / 86400000) : 0;
     const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
@@ -18460,91 +18462,198 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
       };
       const checkPage = () => { if (y > 740) { doc.addPage(); y = 50; } };
 
-      sectionTitle('1. Bailleur');
-      row('Nom', `${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim());
-      row('Adresse', data.ownerAddress);
-      if (data.ownerEmail) row('Email', data.ownerEmail);
-      y += 6; checkPage();
+      if (isMandat) {
+        // ── CORPS MANDAT ──
+        const propTypeLabels = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', chambre: 'Chambre', gite: 'Gîte / Chalet', autre: 'Autre' };
+        const remuLabels = {
+          commission: `${data.commissionRate || '—'}% sur les revenus ${data.commissionBase === 'ttc' ? 'TTC' : 'HT'}`,
+          forfait_mensuel: `${data.forfaitMensuel || '—'} €/mois`,
+          forfait_resa: `${data.forfaitResa || '—'} €/réservation`,
+          mixte: `${data.mixteRate || '—'}% + ${data.mixteForfait || '—'} €/mois`,
+          carte: 'Prestations à la carte'
+        };
+        const exclusiviteLabels = { non: 'Sans exclusivité', totale: 'Exclusivité totale', partielle: 'Exclusivité partielle' };
 
-      sectionTitle('2. Locataire');
-      row('Nom complet', `${data.guestFirstName} ${data.guestLastName}`);
-      row('Email', data.guestEmail);
-      if (data.guestPhone) row('Téléphone', data.guestPhone);
-      if (data.guestAddress) row('Adresse', data.guestAddress);
-      y += 6; checkPage();
+        sectionTitle('1. Conciergerie / Prestataire');
+        row('Raison sociale', data.companyName);
+        if (data.companyLegal) row('Forme juridique', data.companyLegal);
+        row('Siège social', data.companyAddress);
+        if (data.companySiret) row('SIRET', data.companySiret);
+        row('Représentée par', data.companyRep);
+        if (data.companyEmail) row('Email', data.companyEmail);
+        if (data.companyPhone) row('Téléphone', data.companyPhone);
+        if (data.companyFreeTitle && data.companyFreeValue) row(data.companyFreeTitle, data.companyFreeValue);
+        y += 6; checkPage();
 
-      sectionTitle('3. Objet de la location');
-      row('Logement', data.propertyName);
-      row('Adresse', data.propertyAddress);
-      para('Cette location meublée saisonnière ne constitue pas la résidence principale du locataire.');
-      y += 4; checkPage();
+        sectionTitle('2. Propriétaire / Mandant');
+        row('Nom complet', `${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim());
+        if (data.ownerAddress) row('Adresse', data.ownerAddress);
+        if (data.ownerEmail) row('Email', data.ownerEmail);
+        if (data.ownerPhone) row('Téléphone', data.ownerPhone);
+        if (data.ownerSiren) row('SIREN', data.ownerSiren);
+        y += 6; checkPage();
 
-      sectionTitle('4. Durée du séjour');
-      row('Arrivée', `${fmtDate(data.checkin)} à ${data.checkinTime || '15:00'}`);
-      row('Départ', `${fmtDate(data.checkout)} à ${data.checkoutTime || '11:00'}`);
-      row('Durée', `${nights} nuit${nights > 1 ? 's' : ''}`);
-      y += 6; checkPage();
+        sectionTitle('3. Bien confié');
+        row('Adresse', data.propAddress);
+        if (data.propType) row('Type', propTypeLabels[data.propType] || data.propType);
+        if (data.propCapacity) row('Capacité max.', `${data.propCapacity} personne${parseInt(data.propCapacity) > 1 ? 's' : ''}`);
+        if (data.checkinTime) row("Heure d'arrivée", data.checkinTime);
+        if (data.checkoutTime) row('Heure de départ', data.checkoutTime);
+        y += 6; checkPage();
 
-      sectionTitle('5. Conditions financières');
-      row('Loyer total (CC)', `${parseFloat(data.totalPrice || 0).toFixed(2)} €`);
-      if (data.deposit && parseFloat(data.deposit) > 0) row('Dépôt de garantie', `${parseFloat(data.deposit).toFixed(2)} €`);
-      if (data.paymentMethod) row('Mode de paiement', data.paymentMethod);
-      y += 6; checkPage();
+        if (data.missions && data.missions.length > 0) {
+          sectionTitle('4. Missions confiées');
+          data.missions.forEach(m => { doc.fillColor(dark).fontSize(9).font('Helvetica').text(`• ${m}`, 56, y, { width: pageW - 16 }); y += 13; });
+          if (data.urgenceLimit) { y += 4; para(`Plafond dépenses urgentes : ${data.urgenceLimit} € TTC`); }
+          y += 4; checkPage();
+        }
 
-      if (data.regles && data.regles.length > 0) {
-        sectionTitle('6. Règles du logement');
-        data.regles.forEach(r => { doc.fillColor(dark).fontSize(9).font('Helvetica').text(`• ${r}`, 56, y); y += 13; });
+        sectionTitle('5. Rémunération');
+        row('Mode', remuLabels[data.remuType] || '—');
+        if (data.tva === 'franchise') row('TVA', 'Auto-entrepreneur (sans TVA)');
+        else if (data.tva === 'ht') row('TVA', 'HT — TVA en sus');
+        else row('TVA', 'TTC');
+        const revLabels = { par_resa: 'Par réservation', hebdo: 'Hebdomadaire', mensuel: 'Mensuel', encaissement_direct: 'Encaissement direct' };
+        if (data.reversement) row('Reversements', revLabels[data.reversement] || data.reversement);
+        if (data.extrasFacturables && data.extrasFacturables.length > 0) {
+          y += 4;
+          para('Prestations complémentaires : ' + data.extrasFacturables.join(', '));
+        }
+        y += 6; checkPage();
+
+        sectionTitle('6. Durée & résiliation');
+        row('Type', data.dureeType === 'determinee' ? `Durée déterminée — ${data.dureeMois || 12} mois` : 'Durée indéterminée');
+        const dateDebut = data.dateDebut || data.dateDebutInd;
+        if (dateDebut) row('Date de début', fmtDate(dateDebut));
+        row('Préavis résiliation', data.preavis === '0' ? 'Aucun préavis' : `${data.preavis || 30} jours`);
+        y += 6; checkPage();
+
+        sectionTitle('7. Conditions générales');
+        row('Exclusivité', exclusiviteLabels[data.exclusivite] || '—');
+        row('Limitation de responsabilité', data.respPlafond === 'non' ? 'Responsabilité de droit commun' : 'Limitée aux honoraires perçus');
+        if (data.confidentialite) row('Confidentialité', `${data.confidentialite} ans`);
+        y += 4;
+        para("La Conciergerie s'engage à exercer ses services avec diligence et professionnalisme. Elle ne peut être tenue responsable des dommages causés par des tiers ou des événements indépendants de sa volonté.");
+        y += 4;
+        para('La conciergerie ne garantit ni revenu minimal ni taux de réservation.');
+        y += 6; checkPage();
+
+        if (data.clausesPersonnalisees && data.clausesPersonnalisees.length > 0) {
+          sectionTitle('8. Clauses particulières');
+          data.clausesPersonnalisees.forEach((cl, i) => { para(`${i + 1}. ${cl}`); });
+          y += 4; checkPage();
+        }
+
+        // Signatures mandat
+        if (y > 660) { doc.addPage(); y = 50; }
+        y += 10;
+        doc.fillColor(gray).fontSize(9).font('Helvetica').text(`Fait le ${fmtDateShort(data.signatureDate || new Date())}`, 50, y);
+        y += 20;
+        const sigW = (pageW - 20) / 2;
+        doc.fillColor(gray).fontSize(8).font('Helvetica')
+          .text('Signature de la conciergerie', 50, y)
+          .text('Signature du propriétaire', 50 + sigW + 20, y);
+        y += 5;
+        doc.fillColor(dark).fontSize(8).font('Helvetica-Bold')
+          .text(data.companyRep || data.companyName || '', 50, y)
+          .text(`${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim(), 50 + sigW + 20, y);
+        y += 5;
+        if (contract.owner_signature && contract.owner_signature.startsWith('data:image/png;base64,')) {
+          try { doc.image(Buffer.from(contract.owner_signature.replace('data:image/png;base64,', ''), 'base64'), 50, y, { width: sigW, height: 35 }); } catch(e) {}
+        }
+        if (guestSignature && guestSignature.startsWith('data:image/png;base64,')) {
+          try { doc.image(Buffer.from(guestSignature.replace('data:image/png;base64,', ''), 'base64'), 50 + sigW + 20, y, { width: sigW, height: 35 }); } catch(e) {}
+        }
+        y += 42;
+        doc.moveTo(50, y).lineTo(50 + sigW, y).strokeColor('#AAAAAA').stroke();
+        doc.moveTo(50 + sigW + 20, y).lineTo(50 + pageW, y).strokeColor('#AAAAAA').stroke();
+        y += 8;
+        doc.fillColor(gray).fontSize(7).font('Helvetica')
+          .text(`Conciergerie signée le ${fmtDateShort(data.signatureDate || new Date())}`, 50, y)
+          .text(`Propriétaire signé le ${fmtDateShort(signedAt)} · IP: ${signIp}`, 50 + sigW + 20, y);
+
+      } else {
+        // ── CORPS LOCATION (inchangé) ──
+        sectionTitle('1. Bailleur');
+        row('Nom', `${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim());
+        row('Adresse', data.ownerAddress);
+        if (data.ownerEmail) row('Email', data.ownerEmail);
+        y += 6; checkPage();
+
+        sectionTitle('2. Locataire');
+        row('Nom complet', `${data.guestFirstName} ${data.guestLastName}`);
+        row('Email', data.guestEmail);
+        if (data.guestPhone) row('Téléphone', data.guestPhone);
+        if (data.guestAddress) row('Adresse', data.guestAddress);
+        y += 6; checkPage();
+
+        sectionTitle('3. Objet de la location');
+        row('Logement', data.propertyName);
+        row('Adresse', data.propertyAddress);
+        para('Cette location meublée saisonnière ne constitue pas la résidence principale du locataire.');
         y += 4; checkPage();
-      }
 
-      if (data.inclAnnulation) {
-        checkPage(); sectionTitle("Politique d'annulation");
-        para(`Plus de ${data.cancelDays1 || 30} jours avant l'arrivée : remboursement de ${data.cancelPct1 || 50}%. Moins de ${data.cancelDays2 || 7} jours : remboursement de ${data.cancelPct2 || 0}%.`);
-        y += 4; checkPage();
-      }
+        sectionTitle('4. Durée du séjour');
+        row('Arrivée', `${fmtDate(data.checkin)} à ${data.checkinTime || '15:00'}`);
+        row('Départ', `${fmtDate(data.checkout)} à ${data.checkoutTime || '11:00'}`);
+        row('Durée', `${nights} nuit${nights > 1 ? 's' : ''}`);
+        y += 6; checkPage();
 
-      if (data.inclObligations) {
-        checkPage(); sectionTitle('Obligations du locataire');
-        para("Le locataire s'engage à occuper paisiblement les lieux, à respecter le voisinage, à ne pas sous-louer le logement et à ne pas organiser de fêtes sans accord préalable du bailleur.");
-        y += 4; checkPage();
-      }
+        sectionTitle('5. Conditions financières');
+        row('Loyer total (CC)', `${parseFloat(data.totalPrice || 0).toFixed(2)} €`);
+        if (data.deposit && parseFloat(data.deposit) > 0) row('Dépôt de garantie', `${parseFloat(data.deposit).toFixed(2)} €`);
+        if (data.paymentMethod) row('Mode de paiement', data.paymentMethod);
+        y += 6; checkPage();
 
-      if (data.inclAssurance) {
-        checkPage(); sectionTitle('Assurance');
-        para("Le locataire déclare être couvert par une assurance responsabilité civile.");
-        y += 4; checkPage();
-      }
+        if (data.regles && data.regles.length > 0) {
+          sectionTitle('6. Règles du logement');
+          data.regles.forEach(r => { doc.fillColor(dark).fontSize(9).font('Helvetica').text(`• ${r}`, 56, y); y += 13; });
+          y += 4; checkPage();
+        }
+        if (data.inclAnnulation) {
+          checkPage(); sectionTitle("Politique d'annulation");
+          para(`Plus de ${data.cancelDays1 || 30} jours avant l'arrivée : remboursement de ${data.cancelPct1 || 50}%. Moins de ${data.cancelDays2 || 7} jours : remboursement de ${data.cancelPct2 || 0}%.`);
+          y += 4; checkPage();
+        }
+        if (data.inclObligations) {
+          checkPage(); sectionTitle('Obligations du locataire');
+          para("Le locataire s'engage à occuper paisiblement les lieux, à respecter le voisinage, à ne pas sous-louer le logement et à ne pas organiser de fêtes sans accord préalable du bailleur.");
+          y += 4; checkPage();
+        }
+        if (data.inclAssurance) {
+          checkPage(); sectionTitle('Assurance');
+          para("Le locataire déclare être couvert par une assurance responsabilité civile.");
+          y += 4; checkPage();
+        }
 
-      // Signatures
-      if (y > 680) { doc.addPage(); y = 50; }
-      y += 10;
-      doc.fillColor(gray).fontSize(9).font('Helvetica')
-        .text(`Fait le ${fmtDateShort(data.signatureDate || new Date())}`, 50, y);
-      y += 20;
-
-      const sigW = (pageW - 20) / 2;
-      doc.fillColor(gray).fontSize(8).font('Helvetica')
-        .text('Signature du bailleur', 50, y)
-        .text('Signature du locataire', 50 + sigW + 20, y);
-      y += 5;
-      doc.fillColor(dark).fontSize(8).font('Helvetica-Bold')
-        .text(`${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim(), 50, y)
-        .text(`${data.guestFirstName} ${data.guestLastName}`, 50 + sigW + 20, y);
-      y += 5;
-
-      if (contract.owner_signature && contract.owner_signature.startsWith('data:image/png;base64,')) {
-        try { doc.image(Buffer.from(contract.owner_signature.replace('data:image/png;base64,', ''), 'base64'), 50, y, { width: sigW, height: 35 }); } catch(e) {}
+        // Signatures location
+        if (y > 680) { doc.addPage(); y = 50; }
+        y += 10;
+        doc.fillColor(gray).fontSize(9).font('Helvetica').text(`Fait le ${fmtDateShort(data.signatureDate || new Date())}`, 50, y);
+        y += 20;
+        const sigW = (pageW - 20) / 2;
+        doc.fillColor(gray).fontSize(8).font('Helvetica')
+          .text('Signature du bailleur', 50, y)
+          .text('Signature du locataire', 50 + sigW + 20, y);
+        y += 5;
+        doc.fillColor(dark).fontSize(8).font('Helvetica-Bold')
+          .text(`${data.ownerFirstName || ''} ${data.ownerLastName || ''}`.trim(), 50, y)
+          .text(`${data.guestFirstName} ${data.guestLastName}`, 50 + sigW + 20, y);
+        y += 5;
+        if (contract.owner_signature && contract.owner_signature.startsWith('data:image/png;base64,')) {
+          try { doc.image(Buffer.from(contract.owner_signature.replace('data:image/png;base64,', ''), 'base64'), 50, y, { width: sigW, height: 35 }); } catch(e) {}
+        }
+        if (guestSignature && guestSignature.startsWith('data:image/png;base64,')) {
+          try { doc.image(Buffer.from(guestSignature.replace('data:image/png;base64,', ''), 'base64'), 50 + sigW + 20, y, { width: sigW, height: 35 }); } catch(e) {}
+        }
+        y += 42;
+        doc.moveTo(50, y).lineTo(50 + sigW, y).strokeColor('#AAAAAA').stroke();
+        doc.moveTo(50 + sigW + 20, y).lineTo(50 + pageW, y).strokeColor('#AAAAAA').stroke();
+        y += 8;
+        doc.fillColor(gray).fontSize(7).font('Helvetica')
+          .text(`Bailleur signé le ${fmtDateShort(data.signatureDate || new Date())}`, 50, y)
+          .text(`Locataire signé le ${fmtDateShort(signedAt)} · IP: ${signIp}`, 50 + sigW + 20, y);
       }
-      if (guestSignature && guestSignature.startsWith('data:image/png;base64,')) {
-        try { doc.image(Buffer.from(guestSignature.replace('data:image/png;base64,', ''), 'base64'), 50 + sigW + 20, y, { width: sigW, height: 35 }); } catch(e) {}
-      }
-      y += 42;
-      doc.moveTo(50, y).lineTo(50 + sigW, y).strokeColor('#AAAAAA').stroke();
-      doc.moveTo(50 + sigW + 20, y).lineTo(50 + pageW, y).strokeColor('#AAAAAA').stroke();
-      y += 8;
-      doc.fillColor(gray).fontSize(7).font('Helvetica')
-        .text(`Bailleur signé le ${fmtDateShort(data.signatureDate || new Date())}`, 50, y)
-        .text(`Locataire signé le ${fmtDateShort(signedAt)} · IP: ${signIp}`, 50 + sigW + 20, y);
 
       doc.rect(0, doc.page.height - 28, doc.page.width, 28).fill(lightBg);
       doc.fillColor(gray).fontSize(7).font('Helvetica')
@@ -18632,6 +18741,7 @@ app.get('/api/contrats', authenticateAny, async (req, res) => {
 
     const { status, limit = 50, offset = 0 } = req.query;
     let query = `SELECT id, status, reservation_uid, sign_token_expires_at, guest_signed_at, created_at,
+                        contract_data,
                         contract_data->>'guestFirstName' as guest_first_name,
                         contract_data->>'guestLastName' as guest_last_name,
                         contract_data->>'guestEmail' as guest_email,
@@ -18714,7 +18824,7 @@ app.post('/api/contrats/:id/resend-sign', authenticateAny, async (req, res) => {
       [newToken, newExpires, contract.id]
     );
 
-    const d = contract.contract_data;
+    const d = typeof contract.contract_data === 'string' ? JSON.parse(contract.contract_data) : contract.contract_data;
     const isMandat = d.contractType === 'mandat';
     const recipientFirstName = isMandat ? d.ownerFirstName : d.guestFirstName;
     const recipientLastName = isMandat ? d.ownerLastName : d.guestLastName;
@@ -18776,7 +18886,7 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
     if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
 
     const contract = result.rows[0];
-    const d = contract.contract_data;
+    const d = typeof contract.contract_data === 'string' ? JSON.parse(contract.contract_data) : contract.contract_data;
     const isMandat = d.contractType === 'mandat';
 
     // Régénérer le PDF (signé si disponible, sinon avec seulement signature bailleur)
