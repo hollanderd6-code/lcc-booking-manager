@@ -1699,6 +1699,24 @@ html[data-theme-v3="1"] .subscription-card {
   </div>
 </section>
 
+<!-- ── Zone de danger ── -->
+<section class="settings-section" style="margin-top:32px;">
+  <div class="settings-section-header">
+    <h2 class="settings-section-title" style="color:#DC2626;">Suppresion du compte</h2>
+  </div>
+  <div class="settings-card" style="border:1px solid rgba(220,38,38,.2);background:rgba(220,38,38,.03);">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div style="font-size:15px;font-weight:600;color:#0D1117;margin-bottom:4px;">Supprimer mon compte</div>
+        <div style="font-size:13px;color:#7A8695;max-width:480px;">Cette action est irréversible. Toutes vos données (logements, réservations, contrats, factures) seront définitivement supprimées.</div>
+      </div>
+      <button onclick="confirmDeleteAccount()" style="height:40px;padding:0 20px;border-radius:10px;background:white;border:1.5px solid #DC2626;color:#DC2626;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+        <i class="fas fa-trash-alt" style="margin-right:7px;"></i>Supprimer mon compte
+      </button>
+    </div>
+  </div>
+</section>
+
 </div>
 </div>
 </div>
@@ -3569,6 +3587,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // listeners gérés par le handler principal
 })();
+</script>
+
+<script>
+async function confirmDeleteAccount() {
+  const confirmed = confirm('⚠️ Êtes-vous sûr de vouloir supprimer définitivement votre compte ?\n\nToutes vos données seront effacées et cette action est irréversible.');
+  if (!confirmed) return;
+
+  const doubleConfirm = confirm('Dernière confirmation : supprimer mon compte et toutes mes données ?');
+  if (!doubleConfirm) return;
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/account/delete', {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+      localStorage.removeItem('lcc_token');
+      localStorage.removeItem('lcc_user');
+      localStorage.removeItem('lcc_account_type');
+      localStorage.removeItem('lcc_permissions');
+      alert('Votre compte a été supprimé. Vous allez être redirigé.');
+      window.location.href = '/login.html';
+    } else {
+      const err = await res.json();
+      alert('Erreur : ' + (err.error || 'Impossible de supprimer le compte.'));
+    }
+  } catch(e) {
+    alert('Erreur réseau. Veuillez réessayer.');
+  }
+}
 </script>
 </body>
 </html>
