@@ -2176,7 +2176,7 @@ function updateIcalExportUrl() {
   const input = document.getElementById('icalExportUrl');
   if (!section || !input) return;
   if (propertyId) {
-    const url = `https://lcc-booking-manager.onrender.com/ical/property/${propertyId}.ics`;
+    const url = `https://boostinghost.fr/ical/property/${propertyId}.ics`;
     input.value = url;
     section.style.display = '';
   } else {
@@ -2324,7 +2324,7 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
       const token = localStorage.getItem('lcc_token');
       if (!token) return;
 
-      const res = await fetch('https://lcc-booking-manager.onrender.com/api/properties', {
+      const res = await fetch('https://boostinghost.fr/api/properties', {
         headers: { 
           'Authorization': 'Bearer ' + token,
           'Content-Type': 'application/json'
@@ -2357,7 +2357,7 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
       const token = localStorage.getItem('lcc_token');
       if (!token) return;
 
-      const res = await fetch('https://lcc-booking-manager.onrender.com/api/owner-clients', {
+      const res = await fetch('https://boostinghost.fr/api/owner-clients', {
         headers: { 
           'Authorization': 'Bearer ' + token,
           'Content-Type': 'application/json'
@@ -2599,8 +2599,8 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
 
     try {
       const url = propertyId 
-        ? `https://lcc-booking-manager.onrender.com/api/properties/${propertyId}`
-        : 'https://lcc-booking-manager.onrender.com/api/properties';
+        ? `https://boostinghost.fr/api/properties/${propertyId}`
+        : 'https://boostinghost.fr/api/properties';
       
       const method = propertyId ? 'PUT' : 'POST';
 
@@ -2695,7 +2695,7 @@ document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
 // GESTION QUOTA LOGEMENTS
 // ============================================
 (function() {
-  const API = 'https://lcc-booking-manager.onrender.com';
+  const API = 'https://boostinghost.fr';
 
   // Config des plans
   const PLAN_LIMITS = {
@@ -3542,7 +3542,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ===== RACCOURCIS MESSAGES =====
 (function() {
   var MAX = 5;
-  var API = 'https://lcc-booking-manager.onrender.com';
+  var API = 'https://boostinghost.fr';
 
   // --- Rendu d'un champ ---
   window.addQuickReplyField = function(value) {
