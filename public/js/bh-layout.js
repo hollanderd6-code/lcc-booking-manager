@@ -227,7 +227,11 @@ function getSidebarHTML() {
       if (avatarEl) {
         if (user.logoUrl) {
           avatarEl.innerHTML = '';
-          avatarEl.style.background = `white url('${user.logoUrl}') center/80% no-repeat`;
+          // Optimiser via Cloudinary si applicable
+          const logoSrc = user.logoUrl.includes('cloudinary.com')
+            ? user.logoUrl.replace('/upload/', '/upload/w_120,h_120,c_fit,q_auto,f_png/')
+            : user.logoUrl;
+          avatarEl.style.background = `white url('${logoSrc}') center/80% no-repeat`;
           avatarEl.style.border = '1.5px solid rgba(26,122,94,.25)';
           avatarEl.style.borderRadius = '10px';
         } else {
