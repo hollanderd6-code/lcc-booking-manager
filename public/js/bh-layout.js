@@ -233,7 +233,7 @@ function getSidebarHTML() {
           avatarEl.textContent = '';
           avatarEl.style.cssText = 'width:34px;height:34px;min-width:34px;border-radius:8px;background:white;border:1px solid rgba(200,184,154,.4);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;';
           avatarEl.style.backgroundImage = `url('${logoSrc}')`;
-          avatarEl.style.backgroundSize = '80%';
+          avatarEl.style.backgroundSize = '65%';
           avatarEl.style.backgroundRepeat = 'no-repeat';
           avatarEl.style.backgroundPosition = 'center';
         } else {
