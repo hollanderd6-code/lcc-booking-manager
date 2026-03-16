@@ -227,15 +227,8 @@ function getSidebarHTML() {
       if (avatarEl) {
         if (user.logoUrl) {
           avatarEl.innerHTML = '';
-          avatarEl.style.background = 'linear-gradient(135deg,#1A7A5E,#2AAE86)';
-          avatarEl.style.border = '2px solid rgba(26,122,94,.3)';
-          avatarEl.style.padding = '2px';
-          avatarEl.style.overflow = 'hidden';
-          const img = document.createElement('img');
-          img.src = user.logoUrl;
-          img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:50%;background:white;';
-          img.onerror = () => { avatarEl.innerHTML = user.firstName.charAt(0).toUpperCase(); avatarEl.style.background = 'linear-gradient(135deg,#1A7A5E,#2AAE86)'; avatarEl.style.border = 'none'; avatarEl.style.padding = '0'; };
-          avatarEl.appendChild(img);
+          avatarEl.style.background = `white url('${user.logoUrl}') center/contain no-repeat`;
+          avatarEl.style.border = '1.5px solid rgba(26,122,94,.25)';
         } else {
           avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
         }
