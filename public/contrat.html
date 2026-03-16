@@ -1880,7 +1880,7 @@ function generatePreview() {
   const nights = v('checkin') && v('checkout') ? Math.round((new Date(v('checkout')) - new Date(v('checkin'))) / 86400000) : 0;
   const regles = Array.from(document.querySelectorAll('#reglesList li span')).map(s => s.textContent);
   const today = new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
-  const paymentLabels = { virement:'Virement bancaire', especes:'Espèces', cheque:'Chèque', carte:'Carte bancaire', autre:'Autre' };
+  const paymentLabels = { virement:'Virement bancaire', lien:'Lien sécurisée Boostinghost', especes:'Espèces', cheque:'Chèque', carte:'Carte bancaire', autre:'Autre' };
   const propTypeLabels = { appartement:'Appartement', maison:'Maison', studio:'Studio', villa:'Villa', chambre:'Chambre', gite:'Gîte / Chalet', autre:'Autre' };
 
   const inclAnnulation = document.getElementById('toggleAnnulation')?.checked;
