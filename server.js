@@ -3160,7 +3160,7 @@ async function getUserFromRequest(req) {
     const payload = jwt.verify(token, secret);
 
     const result = await pool.query(
-      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id
+      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id, logo_url
        FROM users
        WHERE id = $1`,
       [payload.id]
@@ -3177,7 +3177,8 @@ async function getUserFromRequest(req) {
       email: row.email,
       passwordHash: row.password_hash,
       createdAt: row.created_at,
-      stripeAccountId: row.stripe_account_id
+       stripeAccountId: row.stripe_account_id,
+       logoUrl: row.logo_url || null
     };
 
     return user;
@@ -3715,7 +3716,7 @@ async function sendDepositRequestMessages(io) {
         const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
         const amountCents = Math.round(parseFloat(conv.deposit_amount) * 100);
 
-        const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+        const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
         
         const sessionParams = {
           payment_method_types: ['card'],
@@ -7800,7 +7801,7 @@ function bhEmailTemplate({ icon, title, subtitle, bodyHtml, footerNote }) {
 // Fonction helper : Envoyer l'email de vérification
 // ============================================
 async function sendVerificationEmail(email, firstName, token) {
-  const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+  const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
   const verificationUrl = `${appUrl}/verify-email.html?token=${token}`;
 
   const mailOptions = {
@@ -7885,7 +7886,7 @@ async function sendWelcomeEmail(email, firstName) {
         <p>Votre compte est actif. Choisissez le plan qui vous convient et profitez de <strong style="color:#1A7A5E">14 jours d'essai gratuit</strong> — sans carte bancaire.</p>
         <div class="cta-block">
           <p>Démarrez dès maintenant</p>
-          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/pricing.html" class="btn">Choisir mon plan →</a>
+          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/pricing.html" class="btn">Choisir mon plan →</a>
         </div>
         <hr class="divider">
         <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Nos formules</p>
@@ -7953,7 +7954,7 @@ async function sendTrialStartedEmail(email, firstName, plan, amount) {
         <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements Stripe</strong></span></div>
         <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong></span></div>
         <div class="cta-block" style="margin-top:24px;">
-          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="btn">Accéder à mon espace →</a>
+          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/app.html" class="btn">Accéder à mon espace →</a>
         </div>
         <div class="alert-card">
           À la fin de l'essai, votre abonnement démarrera automatiquement à <strong>${price} €/mois</strong>. Vous pouvez annuler à tout moment depuis vos paramètres.
@@ -7992,7 +7993,7 @@ async function sendTrialReminder7Days(email, firstName, plan, amount) {
           Dans <strong>7 jours</strong>, votre abonnement passera à <strong>${price} €/mois</strong>. Vous pouvez annuler ou changer de plan à tout moment.
         </div>
         <div class="cta-block">
-          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
+          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
         </div>
       `
     })
@@ -8027,7 +8028,7 @@ async function sendTrialReminder3Days(email, firstName, plan, amount) {
         <div class="feat-row"><span class="feat-icon">🔄</span><span class="feat-text"><strong>Changer de plan</strong> — Modifiez-le dès maintenant depuis vos paramètres</span></div>
         <div class="feat-row"><span class="feat-icon">✕</span><span class="feat-text"><strong>Annuler</strong> — Faites-le avant la fin de l'essai</span></div>
         <div class="cta-block" style="margin-top:20px;">
-          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
+          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
         </div>
         <div class="info-card">
           Passez à l'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !
@@ -8063,7 +8064,7 @@ async function sendTrialReminder1Day(email, firstName, plan, amount) {
         </div>
         <p>Vous souhaitez annuler ? Faites-le maintenant depuis vos paramètres :</p>
         <div class="cta-block">
-          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
+          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
         </div>
         <div class="success-card" style="text-align:center;">
           <strong>Vous restez avec nous ? Merci !</strong><br>
@@ -8107,7 +8108,7 @@ async function sendSubscriptionConfirmedEmail(email, firstName, plan, amount) {
         <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong></span></div>
         <div class="feat-row"><span class="feat-icon">💬</span><span class="feat-text"><strong>Support ${plan === 'business' ? 'téléphone' : plan === 'pro' ? 'prioritaire' : 'email'}</strong></span></div>
         <div class="cta-block" style="margin-top:24px;">
-          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/app.html" class="btn">Accéder à mon espace →</a>
+          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/app.html" class="btn">Accéder à mon espace →</a>
         </div>
         <div class="info-card">
           Passez à l'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !
@@ -8153,7 +8154,7 @@ async function sendRenewalReminderEmail(email, firstName, plan, amount, renewalD
           Passez à l'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !
         </div>
         <div class="cta-block">
-          <a href="${process.env.APP_URL || 'https://lcc-booking-manager.onrender.com'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
+          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
         </div>
       `
     })
@@ -8222,7 +8223,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     );
     
     // Construire le lien de réinitialisation
-    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, ''); // ✅ Supprimer le slash final
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, ''); // ✅ Supprimer le slash final
     const resetUrl = `${appUrl}/reset-password.html?token=${resetToken}`;
     
     console.log('📧 Tentative envoi email reset à:', user.email);
@@ -11154,7 +11155,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Envoyer l'email de vérification
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
     const verificationUrl = `${appUrl}/verify-email.html?token=${verificationToken}`;
 
     const mailOptions = {
@@ -11208,7 +11209,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id, email_verified
+      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id, email_verified, logo_url
        FROM users
        WHERE LOWER(email) = LOWER($1)`,
       [email]
@@ -11239,7 +11240,8 @@ if (!row.email_verified) {
       email: row.email,
       passwordHash: row.password_hash,
       createdAt: row.created_at,
-      stripeAccountId: row.stripe_account_id
+       stripeAccountId: row.stripe_account_id,
+       logoUrl: row.logo_url || null
     };
 
     const token = generateToken(user);
@@ -11567,7 +11569,7 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
     }
 
     // 2) On crée le lien d'onboarding pour que l'utilisateur complète ses infos chez Stripe
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
 
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
@@ -11694,7 +11696,7 @@ app.post('/api/deposits',
   }
 
     // ✅ Nettoyer l'URL pour éviter les double slashes
-    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
 
     // ✅ Session avec capture_method: 'manual' mais SANS user_id dans payment_intent_data
     // pour éviter le routing automatique vers Connect
@@ -11799,7 +11801,7 @@ app.put('/api/deposits/:depositId',
     }
 
     const amountCents = Math.round(amount * 100);
-    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -12490,7 +12492,7 @@ app.post('/api/billing/create-portal-session', async (req, res) => {
     }
 
     let customerId = result.rows[0].stripe_customer_id;
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
 
     // Vérifier que le customer existe encore dans Stripe
     try {
@@ -15112,7 +15114,7 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
       priceId: priceId
     });
 
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
 
     // ✅ CORRECTION CRITIQUE : Créer la session Stripe Checkout
     const session = await stripe.checkout.sessions.create({
@@ -18304,7 +18306,7 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
       ]);
 
       // ── Envoyer l'email de signature au locataire ──
-      const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+      const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
       const signUrl = `${appUrl}/signer-contrat.html?token=${signToken}`;
 
       const signEmailHtml = bhEmailTemplate({
@@ -18831,7 +18833,7 @@ app.post('/api/contrats/:id/resend-sign', authenticateAny, async (req, res) => {
     const recipientEmail = isMandat ? d.ownerEmail : d.guestEmail;
     const subjectLabel = isMandat ? `Mandat de gestion – ${d.companyName || 'votre conciergerie'}` : `${d.propertyName || ''}`;
 
-    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
     const signUrl = `${appUrl}/signer-contrat.html?token=${newToken}`;
 
     const signEmailHtml = bhEmailTemplate({
@@ -19447,7 +19449,7 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     `, [contractId, userId, reservationUid || null, propAddress || null, JSON.stringify(contractData), signatureData || null, signToken, signExpires]);
 
     // ── Email de signature au propriétaire ──
-    const appUrl = (process.env.APP_URL || 'https://lcc-booking-manager.onrender.com').replace(/\/$/, '');
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
     const signUrl = `${appUrl}/signer-contrat.html?token=${signToken}`;
 
     const signEmailHtml = bhEmailTemplate({
