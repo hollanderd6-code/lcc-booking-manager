@@ -185,8 +185,20 @@
 
     // Si window.mobileApp existe, utiliser le bottom sheet natif
     if (window.mobileApp && window.mobileApp.createBottomSheet) {
+      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      const userName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Mon compte';
+      const userCompany = user.company || '';
+      const logoUrl = user.logoUrl;
+      const logoSrc = logoUrl && logoUrl.includes('cloudinary.com')
+        ? logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
+        : logoUrl;
+      const avatarHtml = logoSrc
+        ? `<div style="width:38px;height:38px;min-width:38px;border-radius:8px;background:white url('${logoSrc}') center/65% no-repeat;border:1px solid rgba(200,184,154,.4);flex-shrink:0;"></div>`
+        : `<div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#1A7A5E,#2AAE86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
+      const titleHtml = `<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}<div><div style="font-size:14px;font-weight:700;color:#0D1117;">${userName}</div>${userCompany ? `<div style="font-size:12px;color:#7A8695;">${userCompany}</div>` : ''}</div></div>`;
+
       window.mobileApp.createBottomSheet({
-        title: '<i class="fas fa-bars" style="color:#1A7A5E;margin-right:8px;"></i>Menu',
+        title: titleHtml,
         content: `
           <div style="display: flex; flex-direction: column; gap: 12px; padding: 8px 0;">
             ${menuButtons}
@@ -219,10 +231,28 @@
       document.body.appendChild(sheet);
     }
 
+    // Bloc utilisateur pour le header
+    const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+    const userName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Mon compte';
+    const userCompany = user.company || '';
+    const logoUrl = user.logoUrl;
+    const logoSrc = logoUrl && logoUrl.includes('cloudinary.com')
+      ? logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
+      : logoUrl;
+    const avatarHtml = logoSrc
+      ? `<div style="width:38px;height:38px;min-width:38px;border-radius:8px;background:white url('${logoSrc}') center/65% no-repeat;border:1px solid rgba(200,184,154,.4);flex-shrink:0;"></div>`
+      : `<div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#1A7A5E,#2AAE86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
+
     // Regénérer le contenu à chaque ouverture
     sheet.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h3 style="margin:0;font-size:18px;font-weight:700;"><i class="fas fa-bars" style="color:#1A7A5E;margin-right:8px;"></i>Menu</h3>
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${avatarHtml}
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#0D1117;line-height:1.3;">${userName}</div>
+            ${userCompany ? `<div style="font-size:12px;color:#7A8695;line-height:1.3;">${userCompany}</div>` : ''}
+          </div>
+        </div>
         <button onclick="closeMoreMenu()" style="background:none;border:none;font-size:24px;cursor:pointer;padding:0;width:32px;height:32px;">&times;</button>
       </div>
       <div style="display: flex; flex-direction: column; gap: 12px;">
