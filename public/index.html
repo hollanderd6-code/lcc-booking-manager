@@ -3,6 +3,32 @@
 <head>
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- Redirection immédiate vers login si app native iOS/Android -->
+  <script>
+    (function() {
+      var isNative = !!(
+        window.Capacitor?.isNativePlatform?.() ||
+        window.location.protocol === 'capacitor:' ||
+        window.location.protocol === 'ionic:'
+      );
+      if (isNative) {
+        window.location.replace('login.html');
+      }
+    })();
+  </script>
+  <!-- Redirection immédiate vers login si app native iOS/Android -->
+  <script>
+    (function() {
+      var isNative = !!(
+        window.Capacitor?.isNativePlatform?.() ||
+        window.location.protocol === 'capacitor:' ||
+        window.location.protocol === 'ionic:'
+      );
+      if (isNative) {
+        window.location.replace('login.html');
+      }
+    })();
+  </script>
   <title>Boostinghost – Gérez vos réservations simplement</title>
 
   <!-- Fonts -->
