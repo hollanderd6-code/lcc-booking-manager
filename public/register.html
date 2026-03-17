@@ -29,6 +29,21 @@
         Configurez votre espace pour gérer vos logements et réservations.
       </p>
 
+      <!-- Message affiché uniquement sur l'app native iOS/Android -->
+      <div id="nativeRegisterMsg" style="display:none;text-align:center;padding:24px 8px;">
+        <div style="width:56px;height:56px;border-radius:16px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <i class="fas fa-globe" style="color:#1A7A5E;font-size:22px;"></i>
+        </div>
+        <h2 style="font-size:18px;font-weight:700;color:#0D1117;margin:0 0 10px;">Créez votre compte sur le web</h2>
+        <p style="font-size:14px;color:#6B7280;line-height:1.6;margin:0 0 20px;">L'inscription se fait depuis notre site web. Une fois votre compte créé, connectez-vous ici.</p>
+        <a href="https://www.boostinghost.fr/register.html" target="_blank" style="display:inline-block;height:44px;line-height:44px;padding:0 24px;background:#1A7A5E;color:white;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;font-family:inherit;">
+          Créer mon compte sur boostinghost.fr
+        </a>
+        <div style="margin-top:20px;">
+          <a href="login.html" style="font-size:14px;color:#1A7A5E;text-decoration:none;font-weight:500;">Déjà un compte ? Se connecter</a>
+        </div>
+      </div>
+
       <form class="auth-form" id="registerForm" novalidate>
         <div class="form-group">
           <label for="company">Nom de la conciergerie / structure <span style="font-weight:400;color:#888;font-size:13px;">(optionnel)</span></label>
@@ -132,7 +147,15 @@
       window.location.protocol === 'ionic:'
     );
     
-    const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
+    const API_BASE = IS_NATIVE ? 'https://www.boostinghost.fr' : '';
+
+    // Sur app native : cacher le formulaire, afficher le message web
+    if (IS_NATIVE) {
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('nativeRegisterMsg').style.display = 'block';
+      // Cacher aussi le subtitle et le titre du formulaire
+      document.querySelector('.auth-subtitle').style.display = 'none';
+    }
     
     async function checkAuthentication() {
       const token = localStorage.getItem('lcc_token');
