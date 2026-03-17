@@ -17115,27 +17115,17 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
   try {
     const { property_id, chat_pin, checkin_date, checkout_date, platform } = req.body;
 
-    if (!chat_pin || !checkin_date || !platform) {
+    if (!property_id || !chat_pin || !checkin_date || !platform) {
       return res.status(400).json({ error: 'Tous les champs sont requis' });
     }
 
-    let propertyResult;
-    if (property_id) {
-      // Cas normal : property_id fourni via le lien
-      propertyResult = await pool.query(
-        'SELECT id, user_id, name, chat_pin FROM properties WHERE id = $1',
-        [property_id]
-      );
-    } else {
-      // Cas sans lien : chercher par PIN seul
-      propertyResult = await pool.query(
-        'SELECT id, user_id, name, chat_pin FROM properties WHERE chat_pin = $1 LIMIT 1',
-        [chat_pin]
-      );
-    }
+    const propertyResult = await pool.query(
+      'SELECT id, user_id, name, chat_pin FROM properties WHERE id = $1',
+      [property_id]
+    );
 
     if (propertyResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Logement non trouvé' });
+      return res.status(404).json({ error: 'Logement non trouve' });
     }
 
     const property = propertyResult.rows[0];
@@ -17204,7 +17194,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
     res.json({
       success: true,
       conversation_id: conversation.id,
-      property_id: property.id,
+      property_id: property_id,
       property_name: property.name
     });
 
