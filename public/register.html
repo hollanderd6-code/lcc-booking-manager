@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Boostinghost – Créer un compte</title>
+  <!-- Redirection immédiate si app native iOS/Android -->
+  <script>
+    if (window.Capacitor?.isNativePlatform?.() ||
+        window.location.protocol === 'capacitor:' ||
+        window.location.protocol === 'ionic:') {
+      document.documentElement.style.visibility = 'hidden';
+    }
+  </script>
 
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -99,11 +107,6 @@
           <input type="checkbox" id="terms" required>
           <span>J'accepte les conditions générales d'utilisation.</span>
         </label>
-
-        <div class="trial-notice">
-          <i class="fas fa-gift"></i>
-          <span><strong>14 jours d'essai gratuit</strong> – Sans engagement, sans carte bancaire</span>
-        </div>
 
         <button type="submit" class="btn btn-primary auth-submit">
           Créer mon compte
