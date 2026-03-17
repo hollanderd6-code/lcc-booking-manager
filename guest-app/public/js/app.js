@@ -466,11 +466,6 @@ async function handleVerification(e) {
     propertyId = urlParams.get('property');
   }
   
-  if (!propertyId) {
-    showError('Merci de cliquer sur le lien fourni par votre hôte.');
-    return;
-  }
-  
   const verifyBtn = document.getElementById('verifyBtn');
   verifyBtn.disabled = true;
   verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
