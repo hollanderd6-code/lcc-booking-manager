@@ -3509,9 +3509,11 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     const reservationId = result.rows[0].id;
    // Verifier si la reservation est dans les 6 prochains mois
 const now = new Date();
+const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Minuit aujourd'hui
 const sixMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 6, now.getDate());
 const reservationStart = new Date(reservation.start);
-const isWithinSixMonths = reservationStart >= now && reservationStart <= sixMonthsFromNow;
+const reservationStartDate = new Date(reservationStart.getFullYear(), reservationStart.getMonth(), reservationStart.getDate());
+const isWithinSixMonths = reservationStartDate >= todayStart && reservationStartDate <= sixMonthsFromNow;
 
 if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 'manual' && isWithinSixMonths) {
   if (await shouldSendNotification(realUserId, 'notif_new_reservation')) {
