@@ -505,7 +505,8 @@ async function handleVerification(e) {
     
     // Save to localStorage (persists across app restarts)
     localStorage.setItem('guest_conversation_id', conversationId);
-    localStorage.setItem('guest_property_id', propertyId);
+    if (data.property_id) propertyId = data.property_id;
+    localStorage.setItem('guest_property_id', data.property_id || propertyId);
     localStorage.setItem('guest_property_name', propertyName);
     localStorage.setItem('guest_verified', 'true');
     
