@@ -3547,7 +3547,8 @@
         if (avatarEl) {
           const parentLogo = localStorage.getItem('lcc_parent_logo');
           if (parentLogo) {
-            avatarEl.style.cssText = (avatarEl.style.cssText || '') + ';background-image:url(' + parentLogo + ');background-size:cover;background-position:center;background-color:transparent;';
+            avatarEl.style.background = 'url(' + parentLogo + ') center/cover no-repeat';
+            avatarEl.style.color = 'transparent';
             avatarEl.textContent = '';
           } else {
             const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
@@ -4172,7 +4173,8 @@ function populateEditBookingProperties(selectedPropertyId) {
         if (avatarEl) {
           const parentLogo = localStorage.getItem('lcc_parent_logo');
           if (parentLogo) {
-            avatarEl.style.cssText = (avatarEl.style.cssText || '') + ';background-image:url(' + parentLogo + ');background-size:cover;background-position:center;background-color:transparent;';
+            avatarEl.style.background = 'url(' + parentLogo + ') center/cover no-repeat';
+            avatarEl.style.color = 'transparent';
             avatarEl.textContent = '';
           } else {
             avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
