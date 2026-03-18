@@ -569,7 +569,15 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   .history-columns { grid-template-columns: 1fr; }
 }
 /* Cards même hauteur dans les colonnes */
+.history-columns {
+  align-items: stretch !important;
+}
+.history-columns > div {
+  display: flex;
+  flex-direction: column;
+}
 .history-columns .history-list {
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
