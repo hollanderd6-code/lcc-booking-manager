@@ -797,9 +797,10 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
       }
 
       const result = await pool.query(`
-        SELECT sa.*, sp.*
+        SELECT sa.*, sp.*, u.logo_url as parent_logo_url
         FROM sub_accounts sa
         LEFT JOIN sub_account_permissions sp ON sa.id = sp.sub_account_id
+        LEFT JOIN users u ON u.id = sa.parent_user_id
         WHERE LOWER(sa.email) = LOWER($1) AND sa.is_active = TRUE
       `, [email]);
 
@@ -837,6 +838,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           lastName: subAccount.last_name,
           role: subAccount.role,
           parentUserId: subAccount.parent_user_id,
+          parentLogoUrl: subAccount.parent_logo_url || null,
           permissions: {
             // MAPPING: DB -> Frontend
             can_view_reservations: subAccount.can_view_calendar,
