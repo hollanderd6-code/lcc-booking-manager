@@ -8497,5 +8497,31 @@ if (window.Capacitor) {
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <!-- Badge Messages -->
 <script src="/js/messages-badge-desktop-mobile.js"></script>    
+<!-- ── Logo compte parent pour sous-comptes ── -->
+<script>
+(function applyParentLogo() {
+  const logo = localStorage.getItem('lcc_parent_logo');
+  if (!logo || localStorage.getItem('lcc_account_type') !== 'sub') return;
+
+  function apply() {
+    const el = document.getElementById('sidebarUserAvatar');
+    if (el) {
+      el.style.background = 'url(' + logo + ') center/cover no-repeat';
+      el.style.color = 'transparent';
+      el.textContent = '';
+    }
+  }
+
+  // Essai immédiat
+  apply();
+  // Essai après DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', apply);
+  // Essai après chargement complet (bh-layout.js peut réinitialiser le DOM)
+  window.addEventListener('load', apply);
+  // Essai décalé pour les composants injectés dynamiquement
+  setTimeout(apply, 300);
+  setTimeout(apply, 800);
+})();
+</script>
 </body>
 </html>
