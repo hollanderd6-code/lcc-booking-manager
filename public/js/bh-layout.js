@@ -137,7 +137,7 @@ function getSidebarHTML() {
   </nav>
 
   <div style="flex-shrink:0;border-top:1px solid #E8E0D0;padding:12px;background:#F5F0E8;">
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;" onclick="window.location.href='/settings-account.html'" title="Paramètres du compte">
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;${isSubAccount ? '' : 'cursor:pointer;'}" ${isSubAccount ? '' : "onclick=\"window.location.href='/settings-account.html'\""} title="${isSubAccount ? '' : 'Paramètres du compte'}">
       <div id="sidebarUserAvatar" style="width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;flex-shrink:0;"></div>
       <div style="flex:1;min-width:0;">
         <div id="sidebarUserName" style="font-size:13px;font-weight:600;color:#0D1117 !important;font-family:DM Sans,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">Utilisateur</div>
