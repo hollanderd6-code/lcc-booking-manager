@@ -11,7 +11,94 @@ const {
   generateSubAccountToken 
 } = require('./sub-accounts-middleware');
 
-function setupSubAccountsRoutes(app, pool, authenticateToken) {
+function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
+
+  // ── Template email sous-compte ──────────────────────────────────────────
+  const EMAIL_FROM = process.env.EMAIL_FROM || '"Boostinghost" <no-reply@boostinghost.fr>';
+  const APP_URL = process.env.APP_URL || 'https://boostinghost.fr';
+
+  async function sendSubAccountWelcomeEmail({ email, firstName, lastName, password, role, parentName }) {
+    const roleLabels = {
+      owner: 'Propriétaire',
+      cleaner: 'Agent de ménage',
+      manager: 'Gestionnaire',
+      custom: 'Accès personnalisé'
+    };
+    const roleLabel = roleLabels[role] || role;
+
+    await sendEmail({
+      from: EMAIL_FROM,
+      to: email,
+      subject: `Vous avez été ajouté à l'équipe Boostinghost`,
+      html: `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{margin:0;padding:0;background:#E8E4DC;font-family:Arial,Helvetica,sans-serif;}
+    .wrap{max-width:600px;margin:0 auto;padding:32px 16px;}
+    .header{background:#1A7A5E;border-radius:12px 12px 0 0;padding:36px 40px 28px;text-align:center;}
+    .header h1{margin:0 0 6px;color:#fff;font-size:24px;font-weight:700;}
+    .header p{margin:0;color:rgba(255,255,255,0.72);font-size:14px;}
+    .body{background:#fff;padding:36px 40px;border-left:1px solid #DDD8CE;border-right:1px solid #DDD8CE;}
+    .footer-bar{background:#1C2B25;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;}
+    .footer-bar p{margin:0 0 4px;font-size:11px;color:rgba(255,255,255,0.38);}
+    .footer-bar a{color:rgba(255,255,255,0.38);text-decoration:none;}
+    .btn{display:inline-block;background:#1A7A5E;color:#fff !important;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;}
+    .cta-block{background:#F5F2EC;border:1px solid #DDD8CE;border-radius:10px;padding:24px;text-align:center;margin:24px 0;}
+    .cta-block p{margin:0 0 14px;font-size:13px;color:#777;}
+    .credentials-box{background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:10px;padding:20px 24px;margin:20px 0;}
+    .cred-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #D1EAE2;font-size:14px;}
+    .cred-row:last-child{border-bottom:none;}
+    .cred-label{color:#666;font-size:13px;}
+    .cred-value{font-weight:700;color:#1A7A5E;font-family:monospace;font-size:14px;}
+    .role-badge{display:inline-block;background:#1A7A5E;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
+    p{margin:0 0 14px;font-size:15px;color:#333;line-height:1.65;}
+    .signoff{font-size:14px;color:#888;margin-top:24px;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div style="display:inline-block;width:52px;height:52px;line-height:52px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);border-radius:12px;font-size:24px;margin-bottom:14px;">👋</div>
+    <h1>Vous rejoignez l'équipe</h1>
+    <p>Boostinghost · Gestion locative</p>
+  </div>
+  <div class="body">
+    <p>Bonjour <strong>${firstName}</strong>,</p>
+    <p><strong>${parentName || 'Un propriétaire'}</strong> vous a ajouté en tant que <span class="role-badge">${roleLabel}</span> sur Boostinghost.</p>
+    <p>Voici vos identifiants de connexion :</p>
+
+    <div class="credentials-box">
+      <div class="cred-row">
+        <span class="cred-label">Adresse e-mail</span>
+        <span class="cred-value">${email}</span>
+      </div>
+      <div class="cred-row">
+        <span class="cred-label">Mot de passe</span>
+        <span class="cred-value">${password}</span>
+      </div>
+    </div>
+
+    <div class="cta-block">
+      <p>Accédez à votre espace dès maintenant</p>
+      <a href="${APP_URL}/app-simple-subaccount.html" class="btn">Se connecter →</a>
+    </div>
+
+    <p style="font-size:13px;color:#999;">Pour votre sécurité, nous vous recommandons de changer votre mot de passe après votre première connexion.</p>
+    <p class="signoff">L'équipe Boostinghost</p>
+  </div>
+  <div class="footer-bar">
+    <p style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.65);letter-spacing:1.5px;margin-bottom:8px;">BOOSTINGHOST</p>
+    <p>© ${new Date().getFullYear()} Boostinghost · Tous droits réservés</p>
+    <p><a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+  </div>
+</div>
+</body>
+</html>`
+    });
+  }
 
   // ============================================
   // 1. CRÉER UN SOUS-COMPTE
@@ -283,6 +370,80 @@ function setupSubAccountsRoutes(app, pool, authenticateToken) {
       }
 
       console.log(`✅ Sous-compte créé: ${email} (role: ${role})`);
+
+      // ── Envoi email de bienvenue au sous-compte ──────────────────────────
+      try {
+        // Récupérer le nom du compte principal
+        const parentResult = await pool.query(
+          'SELECT first_name, last_name, company_name FROM users WHERE id = $1',
+          [req.user.id]
+        );
+        const parent = parentResult.rows[0] || {};
+        const parentName = parent.company_name || [parent.first_name, parent.last_name].filter(Boolean).join(' ') || 'Votre gestionnaire';
+
+        await sendSubAccountWelcomeEmail({
+          email,
+          firstName,
+          lastName,
+          password,
+          role: role || 'custom',
+          parentName
+        });
+        console.log(`✅ Email de bienvenue envoyé au sous-compte: ${email}`);
+      } catch (emailErr) {
+        console.error('⚠️ Erreur envoi email sous-compte (non bloquant):', emailErr.message);
+      }
+      // ────────────────────────────────────────────────────────────────────
+
+      // ── Envoi email de bienvenue au sous-compte ──
+      try {
+        const roleLabels = {
+          owner: 'Propriétaire',
+          manager: 'Gestionnaire',
+          cleaner: 'Agent de ménage',
+          accountant: 'Comptable',
+          custom: 'Personnalisé'
+        };
+        const roleLabel = roleLabels[role] || role;
+        const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
+
+        await sendEmail({
+          from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+          to: email,
+          subject: 'Vous avez été ajouté à un compte Boostinghost',
+          html: bhEmailTemplate({
+            icon: '👋',
+            title: 'Bienvenue sur Boostinghost',
+            subtitle: 'Vous venez d\'être ajouté en tant que collaborateur.',
+            bodyHtml: `
+              <p>Bonjour <strong>${firstName}</strong>,</p>
+              <p>Vous avez été ajouté à un compte <strong>Boostinghost</strong> en tant que <strong style="color:#1A7A5E;">${roleLabel}</strong>.</p>
+              <p>Voici vos informations de connexion :</p>
+              <table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:14px;margin:16px 0 24px;">
+                <tr>
+                  <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;font-weight:600;color:#555;width:40%;">Adresse email</td>
+                  <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;font-weight:700;color:#1C1C1C;">${email}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;font-weight:600;color:#555;">Mot de passe</td>
+                  <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;font-weight:700;color:#1C1C1C;">${password}</td>
+                </tr>
+              </table>
+              <div class="cta-block">
+                <p>Accédez à votre espace dès maintenant</p>
+                <a href="${appUrl}/app-simple-subaccount.html" class="btn">Se connecter →</a>
+              </div>
+              <div class="info-card" style="margin-top:24px;">
+                Une question ? Contactez-nous : <strong><a href="mailto:contact@boostinghost.fr" style="color:#1A7A5E;">contact@boostinghost.fr</a></strong>
+              </div>
+            `
+          })
+        });
+        console.log(`✅ Email de bienvenue sous-compte envoyé à: ${email}`);
+      } catch (emailError) {
+        console.error('❌ Erreur envoi email sous-compte:', emailError.message);
+        // On ne bloque pas la création si l'email échoue
+      }
 
       res.json({
         success: true,
