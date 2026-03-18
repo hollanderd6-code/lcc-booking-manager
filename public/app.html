@@ -2604,7 +2604,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     if (_u.role === 'cleaner' && localStorage.getItem('lcc_account_type') === 'sub') {
       var style = document.createElement('style');
       style.id = 'cleaner-restrictions-css';
-      style.textContent = '#kpiPropertiesCard, #kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, .cleaning-checklists-widget { display: none !important; }';
+      style.textContent = '#kpiPropertiesCard, #kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, .cleaning-checklists-widget, #newReservationBtn { display: none !important; }';
       document.head.appendChild(style);
     }
   } catch(e) {}
@@ -10234,10 +10234,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── Restrictions dashboard pour sous-compte ménage ──────────────
 (function() {
   const _accountType = localStorage.getItem('lcc_account_type');
-  const _isSubAccount = (_accountType === 'sub');
-  if (!_isSubAccount) return;
+  if (_accountType !== 'sub') return;
 
-  // Rôle ménage : détection via le rôle stocké dans lcc_user
   let _userRole = '';
   try {
     const _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
@@ -10247,21 +10245,45 @@ document.addEventListener('DOMContentLoaded', function() {
   if (_userRole !== 'cleaner') return;
 
   function applyCleanerRestrictions() {
-    // Masquer les KPIs non pertinents pour le ménage
-    const toHide = [
-      'kpiPropertiesCard',   // Logements actifs
-      'kpiTopRisksCard',     // Risques IA
-      'kpiOccupancyCard',    // Taux d'occupation
-      'kpiDepositsCard'      // Cautions
-    ];
-    toHide.forEach(function(id) {
+    // Masquer KPIs non pertinents
+    ['kpiPropertiesCard', 'kpiTopRisksCard', 'kpiOccupancyCard', 'kpiDepositsCard'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-
-    // Masquer la section checklists à valider
+    // Masquer checklists
     var checklistWidget = document.querySelector('.cleaning-checklists-widget');
     if (checklistWidget) checklistWidget.style.display = 'none';
+    // Masquer bouton nouvelle réservation
+    var newResBtn = document.getElementById('newReservationBtn');
+    if (newResBtn) newResBtn.style.display = 'none';
+
+    // Bloquer le clic sur les cellules vides du calendrier (openBlockModal)
+    var origOpenBlockModal = window.openBlockModal;
+    window.openBlockModal = function() { return; };
+
+    // Bloquer le mousedown sur les booking-blocks (ouverture fiche réservation)
+    document.addEventListener('mousedown', function(ev) {
+      if (ev.target.closest && ev.target.closest('.booking-block')) {
+        ev.stopImmediatePropagation();
+        ev.preventDefault();
+      }
+    }, true);
+
+    // Bloquer aussi le touchstart pour mobile
+    document.addEventListener('touchstart', function(ev) {
+      if (ev.target.closest && ev.target.closest('.booking-block')) {
+        ev.stopImmediatePropagation();
+      }
+      if (ev.target.closest && ev.target.closest('.calendar-cell')) {
+        ev.stopImmediatePropagation();
+      }
+    }, true);
+
+    // Curseur non-cliquable sur le calendrier
+    var style = document.getElementById('cleaner-restrictions-css');
+    if (style) {
+      style.textContent += ' .calendar-cell, .booking-block { cursor: default !important; pointer-events: none !important; }';
+    }
   }
 
   if (document.readyState === 'loading') {
