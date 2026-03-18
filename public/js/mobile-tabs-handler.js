@@ -280,8 +280,15 @@
   // FONCTIONS UTILITAIRES
   // ============================================
 
-  window.confirmLogout = function() {
-    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+  window.confirmLogout = async function() {
+    const ok = await bhConfirm(
+      'Déconnexion',
+      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      'Déconnecter',
+      'Annuler',
+      'danger'
+    );
+    if (ok) {
       localStorage.removeItem('lcc_token');
       localStorage.removeItem('lcc_user');
       localStorage.removeItem('lcc_account_type');
