@@ -2604,7 +2604,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     if (_u.role === 'cleaner' && localStorage.getItem('lcc_account_type') === 'sub') {
       var style = document.createElement('style');
       style.id = 'cleaner-restrictions-css';
-      style.textContent = '#kpiPropertiesCard, #kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, .cleaning-checklists-widget, #newReservationBtn { display: none !important; }';
+      style.textContent = '#kpiPropertiesCard, #kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, .cleaning-checklists-widget, #newReservationBtn, #fabAddResa { display: none !important; }';
       document.head.appendChild(style);
     }
   } catch(e) {}
@@ -9280,7 +9280,8 @@ if (document.readyState === 'loading') {
 
     /* Bouton + Nouvelle réservation */
     var actions = document.querySelector('.header-actions');
-    if (actions && !document.getElementById('newReservationBtn') && curPage === 'app') {
+    var _isCleanerRole = (function(){ try { return JSON.parse(localStorage.getItem('lcc_user')||'{}').role === 'cleaner' && localStorage.getItem('lcc_account_type') === 'sub'; } catch(e){ return false; } })();
+    if (actions && !document.getElementById('newReservationBtn') && curPage === 'app' && !_isCleanerRole) {
       var btn = document.createElement('button');
       btn.id = 'newReservationBtn';
       btn.style.cssText = 'background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:DM Sans,sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;';
