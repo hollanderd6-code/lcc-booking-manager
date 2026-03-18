@@ -372,6 +372,9 @@
             const permissions = data.subAccount?.permissions || data.permissions || {};
             localStorage.setItem('lcc_permissions', JSON.stringify(permissions));
             console.log('🔐 Permissions stockées:', permissions);
+            // Stocker le logo du compte parent
+            const parentLogo = data.subAccount?.parentLogoUrl || '';
+            localStorage.setItem('lcc_parent_logo', parentLogo);
           }
 
           // Redirection selon type de compte
