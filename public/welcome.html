@@ -1750,11 +1750,18 @@ function displayLivretsList(livrets) {
     return;
   }
   const emojis = ['📖','🏡','🌿','🔑','🏖️','🌄','🛋️','✨'];
-  const html = livrets.map((livret, idx) => `
+  const html = livrets.map((livret, idx) => {
+    const heroStyle = livret.coverPhoto
+      ? `background-image:url('${livret.coverPhoto}');background-size:cover;background-position:center;`
+      : '';
+    const heroIcon = livret.coverPhoto
+      ? ''
+      : `<div class="livret-card-hero-icon">${emojis[idx % emojis.length]}</div>`;
+    return `
     <div class="livret-card">
-      <div class="livret-card-hero">
-        <div class="livret-card-hero-icon">${emojis[idx % emojis.length]}</div>
-        <div style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,.2);backdrop-filter:blur(8px);color:white;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;">● Actif</div>
+      <div class="livret-card-hero" style="${heroStyle}">
+        ${heroIcon}
+        <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.3);backdrop-filter:blur(8px);color:white;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;">● Actif</div>
       </div>
       <div class="livret-card-body">
         <div>
@@ -1769,7 +1776,8 @@ function displayLivretsList(livrets) {
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   grid.innerHTML = html;
   appendAddCard(grid);
 }
