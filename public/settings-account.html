@@ -2773,6 +2773,7 @@ document.addEventListener('DOMContentLoaded', function() {
         can_manage_payments: document.getElementById('perm_canManagePayments')?.checked || false,
         can_view_smart_locks: document.getElementById('perm_canViewSmartLocks')?.checked || false,
         can_manage_smart_locks: document.getElementById('perm_canManageSmartLocks')?.checked || false
+        can_view_contracts: document.getElementById('perm_canViewContracts')?.checked || false,  
       };
       console.log('🔐 Permissions:', data.permissions);
     }
@@ -2857,6 +2858,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('perm_canManagePayments')) document.getElementById('perm_canManagePayments').checked = member.can_manage_payments || false;
         if (document.getElementById('perm_canViewSmartLocks')) document.getElementById('perm_canViewSmartLocks').checked = member.can_view_smart_locks || false;
         if (document.getElementById('perm_canManageSmartLocks')) document.getElementById('perm_canManageSmartLocks').checked = member.can_manage_smart_locks || false;
+        if (document.getElementById('perm_canViewContracts')) document.getElementById('perm_canViewContracts').checked = member.can_view_contracts || false;
       }
       
       document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
