@@ -594,53 +594,28 @@ html[data-theme-v3="1"] .mobile-header {
 <button class="help-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
 <div class="page-content">
 
-<!-- Bloc FAQ -->
+<!-- Bloc Vidéos tutoriels -->
 <section class="card mb-lg">
 <div class="card-header">
 <div class="card-title">
-<i class="fas fa-circle-question"></i>
-              Questions fréquentes
+<i class="fas fa-play-circle"></i>
+              Vidéos tutoriels
             </div>
 </div>
 <div class="card-body">
-<div class="form-row" style="margin-bottom: 16px;">
-<input id="faqSearch" placeholder="Rechercher une question..." type="text"/>
-</div>
-<div class="faq-item">
-<button class="faq-question">
-<span>📅 Comment synchroniser mes calendriers iCal ?</span>
-<span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
-</button>
-<div class="faq-answer">
-<p>Allez dans <strong>Mes logements > Modifier</strong>, puis ajoutez ou mettez à jour les URL iCal fournies par les plateformes (Airbnb, Booking, etc.). Ensuite, cliquez sur le bouton de <strong>synchronisation</strong> dans le Dashboard.</p>
-</div>
-</div>
-<div class="faq-item">
-<button class="faq-question">
-<span>➕ Comment ajouter une réservation manuelle ?</span>
-<span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
-</button>
-<div class="faq-answer">
-<p>Sur le Dashboard, cliquez sur <strong>Nouvelle réservation</strong>, remplissez les informations du séjour (logement, dates, nom du client) puis enregistrez.</p>
-</div>
-</div>
-<div class="faq-item">
-<button class="faq-question">
-<span>🔔 Comment fonctionnent les notifications ?</span>
-<span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
-</button>
-<div class="faq-answer">
-<p>Le centre de notifications regroupe les nouveaux séjours détectés. Vous pouvez ajuster vos préférences dans la page <strong>Paramètres</strong>.</p>
-</div>
-</div>
-<div class="faq-item">
-<button class="faq-question">
-<span>👤 Comment modifier mes informations de compte ?</span>
-<span class="faq-toggle-icon"><i class="fas fa-chevron-down"></i></span>
-</button>
-<div class="faq-answer">
-<p>Rendez-vous dans la page <strong>Paramètres</strong>, puis mettez à jour votre nom, email ou nom de conciergerie.</p>
-</div>
+<p style="color:var(--text-secondary);font-size:14px;margin-bottom:20px;">Suivez nos guides vidéo pour prendre en main Boostinghost rapidement.</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+  <!-- Vidéo 1 -->
+  <div style="border-radius:16px;overflow:hidden;border:1px solid rgba(200,184,154,.4);background:var(--bg-secondary);box-shadow:0 2px 12px rgba(13,17,23,.06);transition:transform .2s,box-shadow .2s;" onmouseenter="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(13,17,23,.12)'" onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 12px rgba(13,17,23,.06)'">
+    <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+      <iframe src="https://www.loom.com/embed/514c3612f9004ecaa45dfd25594437cb" frameborder="0" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+    </div>
+    <div style="padding:14px 16px;">
+      <div style="font-weight:600;font-size:14px;color:var(--text-primary);">Comment créer un compte gratuit sur Boostinghost.fr</div>
+    </div>
+  </div>
+
 </div>
 </div>
 </section>
@@ -681,37 +656,7 @@ html[data-theme-v3="1"] .mobile-header {
 </div>
 </section>
 
-<!-- Bloc Ressources / Vidéos tutoriels -->
-<section class="card">
-<div class="card-header">
-<div class="card-title">
-<i class="fas fa-play-circle"></i>
-              Vidéos tutoriels
-            </div>
-</div>
-<div class="card-body">
-<p style="color:var(--text-secondary);font-size:14px;margin-bottom:20px;">Suivez nos guides vidéo pour prendre en main Boostinghost rapidement.</p>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
-
-  <!-- Vidéo 1 -->
-  <div style="border-radius:14px;overflow:hidden;border:1px solid var(--border-color);background:var(--bg-secondary);">
-    <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
-      <iframe
-        src="https://www.loom.com/embed/514c3612f9004ecaa45dfd25594437cb"
-        frameborder="0"
-        allowfullscreen
-        style="position:absolute;top:0;left:0;width:100%;height:100%;">
-      </iframe>
-    </div>
-    <div style="padding:12px 14px;">
-      <div style="font-weight:600;font-size:14px;color:var(--text-primary);margin-bottom:4px;">Comment créer un compte gratuit sur Boostinghost.fr</div>
-    </div>
-  </div>
-
-</div>
-</div>
-</section>
 
 </div>
 </main>
@@ -761,26 +706,7 @@ function getToken() {
 })();
 </script>
 
-<!-- FAQ toggle -->
-<script>
-document.querySelectorAll('.faq-question').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const item = btn.closest('.faq-item');
-    item.classList.toggle('open');
-  });
-});
 
-const faqSearch = document.getElementById('faqSearch');
-if (faqSearch) {
-  faqSearch.addEventListener('input', function() {
-    const query = this.value.toLowerCase();
-    document.querySelectorAll('.faq-item').forEach(item => {
-      const text = item.textContent.toLowerCase();
-      item.style.display = text.includes(query) ? '' : 'none';
-    });
-  });
-}
-</script>
 
 <!-- Socket.io -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
