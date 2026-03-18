@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#7C3AED">
 
-    <!-- Logo container (cercle + B) -->
+    <!-- Logo container (carré arrondi + B), centré légèrement au-dessus du centre -->
     <LinearLayout
         android:id="@+id/logoContainer"
         android:layout_width="110dp"
@@ -14,11 +13,9 @@
         android:background="@drawable/logo_bg"
         android:gravity="center"
         android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVerticalBias="0.42">
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:layout_marginBottom="80dp">
 
         <TextView
             android:id="@+id/logoText"
@@ -31,7 +28,7 @@
             android:fontFamily="sans-serif-black"/>
     </LinearLayout>
 
-    <!-- BOOSTINGHOST -->
+    <!-- BOOSTINGHOST — sous le logo -->
     <TextView
         android:id="@+id/brandName"
         android:layout_width="wrap_content"
@@ -42,12 +39,11 @@
         android:textStyle="bold"
         android:letterSpacing="0.12"
         android:fontFamily="sans-serif-medium"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/logoContainer"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/logoContainer"
         android:layout_marginTop="24dp"/>
 
-    <!-- GUEST -->
+    <!-- GUEST — sous BOOSTINGHOST -->
     <TextView
         android:id="@+id/tagline"
         android:layout_width="wrap_content"
@@ -57,20 +53,18 @@
         android:textSize="13sp"
         android:letterSpacing="0.18"
         android:fontFamily="sans-serif-medium"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/brandName"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/brandName"
         android:layout_marginTop="6dp"/>
 
-    <!-- Spinner -->
+    <!-- Spinner en bas -->
     <ProgressBar
         android:id="@+id/spinner"
         android:layout_width="28dp"
         android:layout_height="28dp"
         android:indeterminateTint="#FFFFFFAA"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
         android:layout_marginBottom="64dp"/>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</RelativeLayout>

@@ -93,7 +93,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         print("🔗 Universal Link reçu:", url.absoluteString)
         
-        // Passer l'URL à Capacitor
+        // Injecter directement dans la WebView (plus fiable que NotificationCenter)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if let rootVC = self.window?.rootViewController as? CAPBridgeViewController,
+               let webView = rootVC.webView {
+                let js = """
+                    (function() {
+                        var url = '\(url.absoluteString)';
+                        console.log('🔗 Universal Link injecté depuis Swift:', url);
+                        if (window.handleDeepLink) {
+                            window.handleDeepLink(url);
+                        } else {
+                            setTimeout(function() {
+                                if (window.handleDeepLink) window.handleDeepLink(url);
+                            }, 1000);
+                        }
+                    })();
+                """
+                webView.evaluateJavaScript(js) { _, error in
+                    if let error = error {
+                        print("❌ Erreur injection Universal Link:", error)
+                    }
+                }
+            }
+        }
+        
+        // Aussi via Capacitor pour la compatibilité
         NotificationCenter.default.post(
             name: Notification.Name.capacitorOpenURL,
             object: nil,
@@ -109,6 +134,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         
         print("🔗 URL Scheme reçu:", url.absoluteString)
+        
+        // Injecter dans la WebView
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if let rootVC = self.window?.rootViewController as? CAPBridgeViewController,
+               let webView = rootVC.webView {
+                let js = """
+                    (function() {
+                        var url = '\(url.absoluteString)';
+                        console.log('🔗 URL Scheme injecté depuis Swift:', url);
+                        if (window.handleDeepLink) window.handleDeepLink(url);
+                    })();
+                """
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
         
         // Passer l'URL à Capacitor
         NotificationCenter.default.post(
@@ -151,19 +191,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let purpleColor = UIColor(red: 0.486, green: 0.227, blue: 0.929, alpha: 1.0)
         guard let window = self.window else { return }
 
-        // --- Conteneur principal ---
         let splashView = UIView(frame: window.bounds)
         splashView.backgroundColor = purpleColor
         splashView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
-        // --- Cercle fond blanc semi-transparent ---
         let circleSize: CGFloat = 112
         let circleView = UIView()
         circleView.backgroundColor = UIColor.white.withAlphaComponent(0.15)
         circleView.layer.cornerRadius = circleSize / 2
         circleView.translatesAutoresizingMaskIntoConstraints = false
 
-        // --- Logo B ---
         let logoLabel = UILabel()
         logoLabel.text = "B"
         logoLabel.textAlignment = .center
@@ -171,7 +208,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         logoLabel.textColor = .white
         logoLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        // --- Brand name (texte lettre par lettre) ---
         let brandLabel = UILabel()
         brandLabel.text = ""
         brandLabel.textAlignment = .center
@@ -180,7 +216,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         brandLabel.alpha = 0
         brandLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        // --- Tagline ---
         let taglineLabel = UILabel()
         taglineLabel.text = "GUEST"
         taglineLabel.textAlignment = .center
@@ -189,20 +224,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         taglineLabel.alpha = 0
         taglineLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        // --- Spinner ---
         let spinner = UIActivityIndicatorView(style: .medium)
         spinner.color = UIColor.white.withAlphaComponent(0.80)
         spinner.alpha = 0
         spinner.translatesAutoresizingMaskIntoConstraints = false
 
-        // Ajout des vues
         splashView.addSubview(circleView)
         splashView.addSubview(logoLabel)
         splashView.addSubview(brandLabel)
         splashView.addSubview(taglineLabel)
         splashView.addSubview(spinner)
 
-        // Contraintes
         NSLayoutConstraint.activate([
             circleView.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
             circleView.centerYAnchor.constraint(equalTo: splashView.centerYAnchor, constant: -80),
@@ -228,27 +260,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             spinner.bottomAnchor.constraint(equalTo: splashView.bottomAnchor, constant: -60),
         ])
 
-        // État initial (invisible pour animation)
         logoLabel.alpha = 0
         logoLabel.transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
         circleView.alpha = 0
         circleView.transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
 
-        // Ajouter dans la fenêtre par-dessus tout
         window.addSubview(splashView)
         window.bringSubviewToFront(splashView)
 
-        // Garder une référence pour hideSplashScreen()
         splashViewController = UIViewController()
         splashViewController?.view = splashView
 
         print("✅ Splash screen animé affiché (GUEST)")
 
-        // ============================================
-        // ANIMATIONS
-        // ============================================
-
-        // 1. Le B arrive avec effet spring
         UIView.animate(
             withDuration: 0.65,
             delay: 0.15,
@@ -262,38 +286,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             circleView.transform = .identity
         } completion: { _ in
 
-            // 2. Légère pulsation du cercle
             UIView.animate(withDuration: 0.3, delay: 0, options: [.autoreverse, .curveEaseInOut]) {
                 circleView.transform = CGAffineTransform(scaleX: 1.08, y: 1.08)
             } completion: { _ in
                 circleView.transform = .identity
             }
 
-            // 3. Fade in du brandLabel avant typewriter
             UIView.animate(withDuration: 0.2, delay: 0.15) {
                 brandLabel.alpha = 1
             }
 
-            // 4. Écriture lettre par lettre
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 let brandText = "BOOSTINGHOST"
                 var charIndex = 0
-
-                // Utilise un Timer stocké localement (capturé par le bloc)
                 var timer: Timer?
                 timer = Timer.scheduledTimer(withTimeInterval: 0.07, repeats: true) { t in
                     charIndex += 1
                     brandLabel.text = String(brandText.prefix(charIndex))
-
                     if charIndex >= brandText.count {
                         t.invalidate()
-
-                        // 5. Tagline fade in
                         UIView.animate(withDuration: 0.4, delay: 0.1) {
                             taglineLabel.alpha = 1
                         }
-
-                        // 6. Spinner apparaît
                         UIView.animate(withDuration: 0.4, delay: 0.25) {
                             spinner.alpha = 1
                         } completion: { _ in
@@ -301,24 +315,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                         }
                     }
                 }
-                _ = timer // évite le warning "unused variable"
+                _ = timer
             }
         }
     }
 
     func hideSplashScreen() {
         guard let splashView = splashViewController?.view else { return }
-
         print("🎬 Masquage du splash")
-
-        // Rendre la WebView visible
         if let rootVC = window?.rootViewController as? CAPBridgeViewController {
             UIView.animate(withDuration: 0.3) {
                 rootVC.webView?.alpha = 1
             }
         }
-
-        // Masquer le splash avec une transition fluide
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             UIView.animate(withDuration: 0.4, animations: {
                 splashView.alpha = 0
@@ -337,13 +346,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 extension AppDelegate: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         disablePullToRefresh(on: webView)
-
         guard !isWebViewLoaded else { return }
         isWebViewLoaded = true
-
         print("📱 WebView chargée — masquage splash dans 1.5s")
-
-        // ✅ 1.5 secondes
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.hideSplashScreen()
         }
@@ -352,7 +357,6 @@ extension AppDelegate: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         disablePullToRefresh(on: webView)
         print("❌ Erreur WebView: \(error.localizedDescription)")
-        
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             self.hideSplashScreen()
         }
@@ -364,7 +368,6 @@ extension AppDelegate: WKNavigationDelegate {
 // ============================================
 extension AppDelegate: UNUserNotificationCenterDelegate {
     
-    // Notification reçue quand l'app est au premier plan
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
@@ -375,15 +378,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         }
     }
     
-    // L'utilisateur tape sur une notification
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         UIApplication.shared.applicationIconBadgeNumber = 0
-        
         let userInfo = response.notification.request.content.userInfo
         print("📱 Notification tapée: \(userInfo)")
-        
         completionHandler()
     }
 }
@@ -395,8 +395,6 @@ extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         print("📱 FCM Token: \(token)")
-        
-        // Envoyer le token à la WebView pour que le JS puisse l'enregistrer sur le serveur
         if let rootVC = window?.rootViewController as? CAPBridgeViewController,
            let webView = rootVC.webView {
             let js = "window.fcmToken = '\(token)'; if(window.onFCMToken) window.onFCMToken('\(token)');"
@@ -408,4 +406,3 @@ extension AppDelegate: MessagingDelegate {
         }
     }
 }
-

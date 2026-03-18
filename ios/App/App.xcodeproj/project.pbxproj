@@ -12,7 +12,7 @@
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
-		5637D2622F4B9986009E8A93 /* AppDelegate-6.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5637D2612F4B9986009E8A93 /* AppDelegate-6.swift */; };
+		5650D98D2F544FC5003AF20A /* AppDelegate 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5650D98C2F544FC5003AF20A /* AppDelegate 2.swift */; };
 		5697C8652F49EF69009FA04A /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5697C8642F49EF69009FA04A /* LaunchScreen.storyboard */; };
 		56CE2D242F23AE8800C79D24 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 56CE2D232F23AE8800C79D24 /* GoogleService-Info.plist */; };
 		56CE2D272F2427B600C79D24 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56CE2D262F2427B600C79D24 /* Assets.xcassets */; };
@@ -25,7 +25,7 @@
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
-		5637D2612F4B9986009E8A93 /* AppDelegate-6.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate-6.swift"; sourceTree = "<group>"; };
+		5650D98C2F544FC5003AF20A /* AppDelegate 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate 2.swift"; sourceTree = "<group>"; };
 		5697C8632F49EE71009FA04A /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		5697C8642F49EF69009FA04A /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		56CE2D232F23AE8800C79D24 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -68,7 +68,7 @@
 			children = (
 				56CE2D252F23AEAB00C79D24 /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
-				5637D2612F4B9986009E8A93 /* AppDelegate-6.swift */,
+				5650D98C2F544FC5003AF20A /* AppDelegate 2.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				56CE2D262F2427B600C79D24 /* Assets.xcassets */,
 				5697C8642F49EF69009FA04A /* LaunchScreen.storyboard */,
@@ -112,7 +112,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 0920;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
@@ -163,7 +163,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5637D2622F4B9986009E8A93 /* AppDelegate-6.swift in Sources */,
+				5650D98D2F544FC5003AF20A /* AppDelegate 2.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -321,7 +321,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.5.2;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.boostinghost.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -353,7 +353,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.5.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.boostinghost.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
