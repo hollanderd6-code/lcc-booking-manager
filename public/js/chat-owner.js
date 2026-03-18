@@ -574,8 +574,8 @@ function appendMessage(message) {
     card.rel = 'noopener noreferrer';
     card.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:12px;padding:10px 14px;text-decoration:none;color:inherit;';
     card.innerHTML = '<span style="font-size:22px;">🔒</span>'
-      + '<div><div style="font-weight:700;font-size:13px;">Payer la caution</div>'
-      + '<div style="font-size:11px;opacity:0.75;margin-top:2px;">Cliquer pour payer en ligne</div></div>'
+      + '<div><div style="font-weight:700;font-size:13px;">Déposer la caution</div>'
+      + '<div style="font-size:11px;opacity:0.75;margin-top:2px;">Cliquer pour déposer en ligne</div></div>'
       + '<span style="margin-left:auto;font-size:16px;">→</span>';
     bubble.appendChild(card);
   } else {
