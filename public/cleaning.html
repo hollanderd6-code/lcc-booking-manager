@@ -2944,6 +2944,66 @@ function formatDateFr(dateStr) {
 
       // Init
       (async function initCleaningPage() {
+
+        // ── Détection sous-compte ménage ──────────────────────────────
+        const _accountType = localStorage.getItem('lcc_account_type');
+        const _isCleanerSubAccount = (_accountType === 'sub');
+
+        if (_isCleanerSubAccount) {
+          // 1. Masquer les onglets Checklists, Templates, Stats
+          const tabs = document.getElementById('cleaningTabs');
+          if (tabs) {
+            tabs.querySelectorAll('.cleaning-tab').forEach(btn => {
+              const tab = btn.getAttribute('data-tab');
+              if (tab && tab !== 'team') btn.style.display = 'none';
+            });
+          }
+
+          // 2. Masquer le formulaire d'ajout
+          const form = document.getElementById('cleanerForm');
+          if (form) form.style.display = 'none';
+          const hr = form ? form.nextElementSibling : null;
+          if (hr && hr.tagName === 'HR') hr.style.display = 'none';
+
+          // 3. Masquer la colonne droite "Assignation par réservation"
+          const assignSection = document.getElementById('assignContainer');
+          if (assignSection) {
+            const parentCard = assignSection.closest('section.card');
+            if (parentCard) parentCard.style.display = 'none';
+          }
+
+          // 4. Charger les données
+          loadLocalData();
+          await loadRemoteData();
+
+          // Récupérer l'email du sous-compte connecté
+          let subEmail = '';
+          try {
+            const _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+            subEmail = (_u.email || '').toLowerCase().trim();
+          } catch(e) {}
+
+          // Filtrer : ne montrer que le cleaner lié à cet email
+          if (subEmail) {
+            cleaners = cleaners.filter(c => (c.email || '').toLowerCase().trim() === subEmail);
+          } else {
+            cleaners = [];
+          }
+
+          // Changer le titre de la section
+          if (cleanerList) {
+            const parentCard = cleanerList.closest('section.card');
+            if (parentCard) {
+              const titleEl = parentCard.querySelector('.card-title');
+              if (titleEl) titleEl.innerHTML = '<i class="fas fa-user"></i> Mon espace ménage';
+            }
+          }
+
+          renderCleaners();
+          return;
+        }
+        // ─────────────────────────────────────────────────────────────
+
         loadLocalData();
         await loadRemoteData();
         await Promise.all([
