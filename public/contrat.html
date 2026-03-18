@@ -552,6 +552,23 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .history-empty i { font-size: 32px; color: #D1D5DB; margin-bottom: 12px; }
 .history-empty p { font-size: 15px; color: #7A8695; }
 
+/* ── Deux colonnes mandats / contrats ── */
+.history-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.history-col-title {
+  font-size: 11px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: rgba(13,17,23,.38);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 7px;
+}
+.history-col-title i { font-size: 13px; }
+@media (max-width: 768px) {
+  .history-columns { grid-template-columns: 1fr; }
+}
+
 .history-loading {
   text-align: center; padding: 40px;
   color: #7A8695; font-size: 14px;
@@ -2495,7 +2512,10 @@ function renderHistory(filter) {
   const statusIcons = { sent: 'fa-paper-plane', signed: 'fa-check-circle', expired: 'fa-clock' };
   const statusLabels = { sent: 'En attente de signature', signed: 'Signé', expired: 'Expiré' };
 
-  list.innerHTML = filtered.map(c => {
+  const mandats  = filtered.filter(c => (c.contract_data || {}).contractType === 'mandat');
+  const contrats = filtered.filter(c => (c.contract_data || {}).contractType !== 'mandat');
+
+  function renderCard(c) {
     const icon = statusIcons[c.status] || 'fa-file';
     const created = new Date(c.created_at).toLocaleDateString('fr-FR');
     const signedAt = c.guest_signed_at ? new Date(c.guest_signed_at).toLocaleDateString('fr-FR') : null;
@@ -2548,7 +2568,32 @@ function renderHistory(filter) {
         </div>
       </div>
     </div>`;
-  }).join('');
+  }
+
+  const emptyCol = (msg) => `<div class="history-empty" style="padding:24px 0;">
+    <i class="fas fa-file-contract"></i><p>${msg}</p>
+  </div>`;
+
+  list.innerHTML = `
+    <div class="history-columns">
+      <div>
+        <div class="history-col-title">
+          <i class="fas fa-handshake"></i> Mandats (${mandats.length})
+        </div>
+        <div class="history-list">
+          ${mandats.length ? mandats.map(renderCard).join('') : emptyCol('Aucun mandat')}
+        </div>
+      </div>
+      <div>
+        <div class="history-col-title">
+          <i class="fas fa-file-contract"></i> Contrats de séjour (${contrats.length})
+        </div>
+        <div class="history-list">
+          ${contrats.length ? contrats.map(renderCard).join('') : emptyCol('Aucun contrat de séjour')}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // ── Télécharger le PDF d'un contrat ──
