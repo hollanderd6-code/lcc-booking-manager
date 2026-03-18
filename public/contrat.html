@@ -568,6 +568,14 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 @media (max-width: 768px) {
   .history-columns { grid-template-columns: 1fr; }
 }
+/* Cards même hauteur dans les colonnes */
+.history-columns .history-list {
+  display: flex;
+  flex-direction: column;
+}
+.history-columns .history-card {
+  flex: 1;
+}
 
 .history-loading {
   text-align: center; padding: 40px;
