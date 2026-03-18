@@ -225,10 +225,11 @@ function getSidebarHTML() {
       const avatarEl = document.getElementById('sidebarUserAvatar');
       if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
       if (avatarEl) {
-        if (user.logoUrl) {
-          const logoSrc = user.logoUrl.includes('cloudinary.com')
-            ? user.logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
-            : user.logoUrl;
+        const logoUrl = user.logoUrl || (localStorage.getItem('lcc_account_type') === 'sub' ? localStorage.getItem('lcc_parent_logo') : null);
+        if (logoUrl) {
+          const logoSrc = logoUrl.includes('cloudinary.com')
+            ? logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
+            : logoUrl;
           avatarEl.innerHTML = '';
           avatarEl.textContent = '';
           avatarEl.style.cssText = 'width:34px;height:34px;min-width:34px;border-radius:8px;background:white;border:1px solid rgba(200,184,154,.4);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:transparent;font-size:0;';
