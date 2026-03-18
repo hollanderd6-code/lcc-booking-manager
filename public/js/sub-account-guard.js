@@ -133,59 +133,9 @@
         console.log('  → Masqué:', btn.id || btn.textContent.trim().substring(0, 30));
       });
       
-      // Ajouter un badge "Lecture seule"
-      addReadOnlyBadge();
     } else {
       console.log('✅ Permissions d\'édition - Tous les boutons visibles');
     }
-  }
-  
-  // Ajouter un badge "Partenaire"
-  function addReadOnlyBadge() {
-    // Vérifier si le badge n'existe pas déjà
-    if (document.getElementById('subAccountReadOnlyBadge')) {
-      return;
-    }
-    
-    const badge = document.createElement('div');
-    badge.id = 'subAccountReadOnlyBadge';
-    badge.style.cssText = `
-      position: fixed;
-      top: 15px;
-      right: 10px;
-      background: linear-gradient(135deg, #F59E0B, #D97706);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      z-index: 9999;
-      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      animation: slideInFromRight 0.4s ease;
-    `;
-    badge.innerHTML = '<i class="fas fa-handshake"></i> Partenaire';
-    
-    // Ajouter l'animation
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes slideInFromRight {
-        from {
-          opacity: 0;
-          transform: translateX(100px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    document.body.appendChild(badge);
-    console.log('🏷️ Badge "Partenaire" ajouté');
   }
   
   // Fonction publique pour masquer un élément spécifique
