@@ -2595,10 +2595,15 @@ function formatDateFr(dateStr) {
           if (!btn) return;
 
           const id = btn.getAttribute('data-id');
-          
-          if (!confirm('Êtes-vous sûr de vouloir supprimer cette personne ?')) {
-            return;
-          }
+
+          const confirmed = await bhConfirm(
+            'Supprimer ce membre ?',
+            'Cette action est irréversible. La personne sera retirée de votre équipe de ménage.',
+            'Supprimer',
+            'Annuler',
+            'danger'
+          );
+          if (!confirmed) return;
 
           const token = localStorage.getItem('lcc_token');
           if (!token) {
