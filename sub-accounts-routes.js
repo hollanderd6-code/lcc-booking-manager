@@ -375,11 +375,11 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
       try {
         // Récupérer le nom du compte principal
         const parentResult = await pool.query(
-          'SELECT first_name, last_name, company_name FROM users WHERE id = $1',
+          'SELECT first_name, last_name, company FROM users WHERE id = $1',
           [req.user.id]
         );
         const parent = parentResult.rows[0] || {};
-        const parentName = parent.company_name || [parent.first_name, parent.last_name].filter(Boolean).join(' ') || 'Votre gestionnaire';
+        const parentName = parent.company || [parent.first_name, parent.last_name].filter(Boolean).join(' ') || 'Votre gestionnaire';
 
         await sendSubAccountWelcomeEmail({
           email,
@@ -394,56 +394,6 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
         console.error('⚠️ Erreur envoi email sous-compte (non bloquant):', emailErr.message);
       }
       // ────────────────────────────────────────────────────────────────────
-
-      // ── Envoi email de bienvenue au sous-compte ──
-      try {
-        const roleLabels = {
-          owner: 'Propriétaire',
-          manager: 'Gestionnaire',
-          cleaner: 'Agent de ménage',
-          accountant: 'Comptable',
-          custom: 'Personnalisé'
-        };
-        const roleLabel = roleLabels[role] || role;
-        const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
-
-        await sendEmail({
-          from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-          to: email,
-          subject: 'Vous avez été ajouté à un compte Boostinghost',
-          html: bhEmailTemplate({
-            icon: '👋',
-            title: 'Bienvenue sur Boostinghost',
-            subtitle: 'Vous venez d\'être ajouté en tant que collaborateur.',
-            bodyHtml: `
-              <p>Bonjour <strong>${firstName}</strong>,</p>
-              <p>Vous avez été ajouté à un compte <strong>Boostinghost</strong> en tant que <strong style="color:#1A7A5E;">${roleLabel}</strong>.</p>
-              <p>Voici vos informations de connexion :</p>
-              <table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:14px;margin:16px 0 24px;">
-                <tr>
-                  <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;font-weight:600;color:#555;width:40%;">Adresse email</td>
-                  <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;font-weight:700;color:#1C1C1C;">${email}</td>
-                </tr>
-                <tr>
-                  <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;font-weight:600;color:#555;">Mot de passe</td>
-                  <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;font-weight:700;color:#1C1C1C;">${password}</td>
-                </tr>
-              </table>
-              <div class="cta-block">
-                <p>Accédez à votre espace dès maintenant</p>
-                <a href="${appUrl}/app-simple-subaccount.html" class="btn">Se connecter →</a>
-              </div>
-              <div class="info-card" style="margin-top:24px;">
-                Une question ? Contactez-nous : <strong><a href="mailto:contact@boostinghost.fr" style="color:#1A7A5E;">contact@boostinghost.fr</a></strong>
-              </div>
-            `
-          })
-        });
-        console.log(`✅ Email de bienvenue sous-compte envoyé à: ${email}`);
-      } catch (emailError) {
-        console.error('❌ Erreur envoi email sous-compte:', emailError.message);
-        // On ne bloque pas la création si l'email échoue
-      }
 
       res.json({
         success: true,
