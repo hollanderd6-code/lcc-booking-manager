@@ -173,7 +173,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_view_smart_locks: permissions.can_view_smart_locks || false,
           can_manage_smart_locks: permissions.can_manage_smart_locks || false,
           can_view_invoices: permissions.can_view_invoices || false,
-          can_manage_invoices: permissions.can_manage_invoices || false
+          can_manage_invoices: permissions.can_manage_invoices || false,
+          can_view_contracts: permissions.can_view_contracts || false
         };
       } else {
         switch(role) {
@@ -316,6 +317,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_manage_invoices = $22,
           can_view_payments = $23,
           can_manage_payments = $24,
+          can_view_contracts = $33,
           notif_sub_new_reservation = $25,
           notif_sub_reservation_cancelled = $26,
           notif_sub_cleaning_assigned = $27,
@@ -350,6 +352,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
         finalPermissions.can_manage_invoices || false,
         finalPermissions.can_view_payments || false,
         finalPermissions.can_manage_payments || false,
+        finalPermissions.can_view_contracts || false,
         notifications.notif_sub_new_reservation || false,
         notifications.notif_sub_reservation_cancelled || false,
         notifications.notif_sub_cleaning_assigned || false,
@@ -469,7 +472,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_view_smart_locks: permissions.can_view_smart_locks || false,
           can_manage_smart_locks: permissions.can_manage_smart_locks || false,
           can_view_invoices: permissions.can_view_invoices || false,
-          can_manage_invoices: permissions.can_manage_invoices || false
+          can_manage_invoices: permissions.can_manage_invoices || false,
+          can_view_contracts: permissions.can_view_contracts || false
         };
       } else {
         switch(role) {
@@ -482,7 +486,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_edit_properties: true, can_access_settings: false, can_manage_team: false,
               can_view_deposits: true, can_manage_deposits: true, can_view_smart_locks: true,
               can_manage_smart_locks: true, can_view_invoices: true, can_manage_invoices: true,
-              can_view_payments: true, can_manage_payments: true
+              can_view_payments: true, can_manage_payments: true, can_view_contracts: true
             };
             break;
           case 'manager':
@@ -494,7 +498,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_edit_properties: false, can_access_settings: false, can_manage_team: false,
               can_view_deposits: true, can_manage_deposits: true, can_view_smart_locks: false,
               can_manage_smart_locks: false, can_view_invoices: false, can_manage_invoices: false,
-              can_view_payments: true, can_manage_payments: true
+              can_view_payments: true, can_manage_payments: true, can_view_contracts: false
             };
             break;
           case 'cleaner':
@@ -506,7 +510,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_edit_properties: false, can_access_settings: false, can_manage_team: false,
               can_view_deposits: false, can_manage_deposits: false, can_view_smart_locks: false,
               can_manage_smart_locks: false, can_view_invoices: false, can_manage_invoices: false,
-              can_view_payments: false, can_manage_payments: false
+              can_view_payments: false, can_manage_payments: false, can_view_contracts: false
             };
             break;
           case 'accountant':
@@ -518,7 +522,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_edit_properties: false, can_access_settings: false, can_manage_team: false,
               can_view_deposits: true, can_manage_deposits: false, can_view_smart_locks: false,
               can_manage_smart_locks: false, can_view_invoices: true, can_manage_invoices: false,
-              can_view_payments: false, can_manage_payments: false
+              can_view_payments: false, can_manage_payments: false, can_view_contracts: false
             };
             break;
         }
@@ -549,6 +553,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
              can_manage_invoices = $22,
              can_view_payments = $23,
              can_manage_payments = $24,
+             can_view_contracts = $33,
              notif_sub_new_reservation = $25,
              notif_sub_reservation_cancelled = $26,
              notif_sub_cleaning_assigned = $27,
@@ -583,6 +588,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           finalPermissions.can_manage_invoices || false,
           finalPermissions.can_view_payments || false,
           finalPermissions.can_manage_payments || false,
+          finalPermissions.can_view_contracts || false,
           notifications.notif_sub_new_reservation || false,
           notifications.notif_sub_reservation_cancelled || false,
           notifications.notif_sub_cleaning_assigned || false,
@@ -667,6 +673,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           sp.can_manage_invoices,
           sp.can_view_payments,
           sp.can_manage_payments,
+          sp.can_view_contracts,
           sp.notif_sub_new_reservation,
           sp.notif_sub_reservation_cancelled,
           sp.notif_sub_cleaning_assigned,
@@ -704,6 +711,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
         can_manage_invoices: row.can_manage_invoices || false,
         can_view_payments: row.can_view_payments || false,
         can_manage_payments: row.can_manage_payments || false,
+        can_view_contracts: row.can_view_contracts || false,
         notif_sub_new_reservation: row.notif_sub_new_reservation || false,
         notif_sub_reservation_cancelled: row.notif_sub_reservation_cancelled || false,
         notif_sub_cleaning_assigned: row.notif_sub_cleaning_assigned || false,
@@ -860,6 +868,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
             can_manage_invoices: subAccount.can_manage_invoices || false,
             can_view_payments: subAccount.can_view_payments || false,
             can_manage_payments: subAccount.can_manage_payments || false,
+            can_view_contracts: subAccount.can_view_contracts || false,
             notif_sub_new_reservation: subAccount.notif_sub_new_reservation || false,
             notif_sub_reservation_cancelled: subAccount.notif_sub_reservation_cancelled || false,
             notif_sub_cleaning_assigned: subAccount.notif_sub_cleaning_assigned || false,
