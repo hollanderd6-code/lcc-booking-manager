@@ -8523,5 +8523,44 @@ if (window.Capacitor) {
   setTimeout(apply, 800);
 })();
 </script>
+
+<script>
+// ── Restrictions dashboard pour sous-compte ménage ──────────────
+(function() {
+  const _accountType = localStorage.getItem('lcc_account_type');
+  if (_accountType !== 'sub') return;
+
+  let _permissions = {};
+  try {
+    const _pd = localStorage.getItem('lcc_permissions');
+    if (_pd) _permissions = JSON.parse(_pd);
+  } catch(e) {}
+
+  // Rôle ménage : a can_view_cleaning mais pas réservations/messages/finances
+  const _isCleaner = _permissions['can_view_cleaning'] === true
+    && _permissions['can_view_reservations'] !== true
+    && _permissions['can_view_messages'] !== true
+    && _permissions['can_view_finances'] !== true;
+
+  if (!_isCleaner) return;
+
+  function applyCleanerRestrictions() {
+    // Masquer les KPIs non pertinents
+    ['kpiPropertiesCard', 'kpiTopRisksCard', 'kpiOccupancyCard', 'kpiDepositsCard'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    // Masquer la section checklists à valider
+    var checklistWidget = document.querySelector('.cleaning-checklists-widget');
+    if (checklistWidget) checklistWidget.style.display = 'none';
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyCleanerRestrictions);
+  } else {
+    applyCleanerRestrictions();
+  }
+})();
+</script>
 </body>
 </html>
