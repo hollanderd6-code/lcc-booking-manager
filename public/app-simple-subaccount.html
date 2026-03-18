@@ -3545,8 +3545,14 @@
           companyEl.textContent = user.company || 'Mon espace';
         }
         if (avatarEl) {
-          const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
-          avatarEl.textContent = initial.toUpperCase();
+          const parentLogo = localStorage.getItem('lcc_parent_logo');
+          if (parentLogo) {
+            avatarEl.style.cssText = (avatarEl.style.cssText || '') + ';background-image:url(' + parentLogo + ');background-size:cover;background-position:center;background-color:transparent;';
+            avatarEl.textContent = '';
+          } else {
+            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+            avatarEl.textContent = initial.toUpperCase();
+          }
         }
         
         const logoutBtn = document.getElementById('logoutBtn');
@@ -4163,7 +4169,15 @@ function populateEditBookingProperties(selectedPropertyId) {
         const nameEl = document.getElementById('sidebarUserName');
         const avatarEl = document.getElementById('sidebarUserAvatar');
         if (nameEl) nameEl.textContent = user.firstName + ' ' + (user.lastName || '');
-        if (avatarEl) avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+        if (avatarEl) {
+          const parentLogo = localStorage.getItem('lcc_parent_logo');
+          if (parentLogo) {
+            avatarEl.style.cssText = (avatarEl.style.cssText || '') + ';background-image:url(' + parentLogo + ');background-size:cover;background-position:center;background-color:transparent;';
+            avatarEl.textContent = '';
+          } else {
+            avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+          }
+        }
       }
       if (user.company) {
         const companyEl = document.getElementById('sidebarUserCompany');
