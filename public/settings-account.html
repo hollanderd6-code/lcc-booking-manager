@@ -2879,21 +2879,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   
-  window.deleteTeamMember = async function(id, email) {
-    if (!confirm(`Supprimer ${email} ?`)) return;
-    try {
-      const token = localStorage.getItem('lcc_token');
-      const res = await fetch(`/api/sub-accounts/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-      alert('✅ Supprimé');
-      loadTeamMembers();
-    } catch (error) {
-      alert('❌ ' + error.message);
-    }
+  window.deleteTeamMember = function(id, email) {
+    openDeleteSubModal(id, email);
   };
   
   window.toggleTeamMember = async function(id) {
@@ -3664,6 +3651,63 @@ async function executeDeleteAccount() {
     closeDeleteModal();
   }
 }
+</script>
+<!-- ── Modale confirmation suppression sous-compte ── -->
+<div id="deleteSubModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:18px;padding:32px 28px;max-width:380px;width:calc(100% - 40px);box-shadow:0 24px 60px rgba(0,0,0,.18);text-align:center;">
+    <div style="width:52px;height:52px;border-radius:14px;background:#FEF2F2;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:24px;">🗑️</div>
+    <div style="font-size:17px;font-weight:700;color:#1C1C1C;margin-bottom:8px;">Supprimer ce membre ?</div>
+    <div id="deleteSubModalEmail" style="font-size:14px;color:#DC2626;font-weight:600;margin-bottom:8px;"></div>
+    <div style="font-size:13px;color:#6B7280;margin-bottom:28px;">Cette action est irréversible. Le membre perdra immédiatement l'accès à votre espace.</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeDeleteSubModal()" style="flex:1;padding:13px;border-radius:10px;border:1px solid #E5E7EB;background:#fff;font-size:14px;font-weight:600;color:#374151;cursor:pointer;">Annuler</button>
+      <button id="deleteSubConfirmBtn" style="flex:1;padding:13px;border-radius:10px;border:none;background:#DC2626;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let _deleteSubId = null;
+
+  function openDeleteSubModal(id, email) {
+    _deleteSubId = id;
+    document.getElementById('deleteSubModalEmail').textContent = email;
+    document.getElementById('deleteSubConfirmBtn').onclick = executeDeleteSub;
+    const modal = document.getElementById('deleteSubModal');
+    modal.style.display = 'flex';
+  }
+
+  function closeDeleteSubModal() {
+    document.getElementById('deleteSubModal').style.display = 'none';
+    _deleteSubId = null;
+  }
+
+  async function executeDeleteSub() {
+    if (!_deleteSubId) return;
+    const btn = document.getElementById('deleteSubConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Suppression…';
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch(`/api/sub-accounts/${_deleteSubId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      closeDeleteSubModal();
+      loadTeamMembers();
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = 'Supprimer';
+      alert('❌ ' + error.message);
+    }
+  }
+
+  // Fermer en cliquant à l'extérieur
+  document.getElementById('deleteSubModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteSubModal();
+  });
 </script>
 </body>
 </html>
