@@ -16985,7 +16985,7 @@ console.log('✅ Cron job rappels caution initialisé');
 // ============================================
 // ✅ INITIALISATION DES ROUTES SOUS-COMPTES
 // ============================================
-setupSubAccountsRoutes(app, pool, authenticateAny);
+setupSubAccountsRoutes(app, pool, authenticateAny, sendEmail, bhEmailTemplate);
 console.log('✅ Routes sous-comptes initialisées');
 
 // ============================================
