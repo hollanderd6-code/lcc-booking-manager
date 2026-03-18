@@ -10254,9 +10254,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Masquer checklists
     var checklistWidget = document.querySelector('.cleaning-checklists-widget');
     if (checklistWidget) checklistWidget.style.display = 'none';
-    // Masquer bouton nouvelle réservation
+    // Masquer bouton nouvelle réservation (statique + dynamique)
     var newResBtn = document.getElementById('newReservationBtn');
     if (newResBtn) newResBtn.style.display = 'none';
+
+    // Observer pour masquer le bouton s'il est créé dynamiquement après
+    var _btnObserver = new MutationObserver(function() {
+      var btn = document.getElementById('newReservationBtn');
+      if (btn) btn.style.setProperty('display', 'none', 'important');
+      var fab = document.getElementById('fabAddResa');
+      if (fab) fab.style.setProperty('display', 'none', 'important');
+    });
+    _btnObserver.observe(document.body, { childList: true, subtree: true });
 
     // Bloquer le clic sur les cellules vides du calendrier (openBlockModal)
     var origOpenBlockModal = window.openBlockModal;
