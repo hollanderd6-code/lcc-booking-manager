@@ -2596,6 +2596,20 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+// Masquage immédiat pour le rôle ménage (avant rendu)
+(function() {
+  try {
+    var _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+    if (_u.role === 'cleaner' && localStorage.getItem('lcc_account_type') === 'sub') {
+      var style = document.createElement('style');
+      style.id = 'cleaner-restrictions-css';
+      style.textContent = '#kpiPropertiesCard, #kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, .cleaning-checklists-widget { display: none !important; }';
+      document.head.appendChild(style);
+    }
+  } catch(e) {}
+})();
+</script>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none;">
@@ -10223,18 +10237,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const _isSubAccount = (_accountType === 'sub');
   if (!_isSubAccount) return;
 
-  let _permissions = {};
+  // Rôle ménage : détection via le rôle stocké dans lcc_user
+  let _userRole = '';
   try {
-    const _pd = localStorage.getItem('lcc_permissions');
-    if (_pd) _permissions = JSON.parse(_pd);
+    const _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+    _userRole = _u.role || '';
   } catch(e) {}
 
-  const _isCleaner = _permissions['can_view_cleaning'] === true
-    && _permissions['can_view_reservations'] !== true
-    && _permissions['can_view_messages'] !== true
-    && _permissions['can_view_finances'] !== true;
-
-  if (!_isCleaner) return;
+  if (_userRole !== 'cleaner') return;
 
   function applyCleanerRestrictions() {
     // Masquer les KPIs non pertinents pour le ménage
