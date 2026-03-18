@@ -131,13 +131,29 @@
         return;
       }
 
-      const tabs = [
-        { id: 'dashboard', icon: 'fa-home', label: 'Accueil' },
-        { id: 'calendar', icon: 'fa-calendar', label: 'Calendrier' },
-        { id: 'messages', icon: 'fa-comment', label: 'Messages', badge: 0 },
-        { id: 'properties', icon: 'fa-building', label: 'Logements' },
-        { id: 'more', icon: 'fa-ellipsis-h', label: 'Plus' }
+      // ── Filtrage par permissions (même logique que bh-layout.js) ──
+      const _accountType = localStorage.getItem('lcc_account_type');
+      const _isSubAccount = (_accountType === 'sub');
+      let _permissions = {};
+      if (_isSubAccount) {
+        try {
+          const _pd = localStorage.getItem('lcc_permissions');
+          if (_pd) _permissions = JSON.parse(_pd);
+        } catch(e) {}
+      }
+      const _hasPerm = (perm) => !_isSubAccount || _permissions[perm] === true;
+
+      // Onglets de base — toujours visibles si permission
+      const allTabs = [
+        { id: 'dashboard',   icon: 'fa-home',       label: 'Accueil',    perm: 'can_view_reservations' },
+        { id: 'calendar',    icon: 'fa-calendar',   label: 'Calendrier', perm: 'can_view_reservations' },
+        { id: 'messages',    icon: 'fa-comment',    label: 'Messages',   perm: 'can_view_messages', badge: 0 },
+        { id: 'properties',  icon: 'fa-building',   label: 'Logements',  perm: 'can_view_properties' },
+        { id: 'more',        icon: 'fa-ellipsis-h', label: 'Plus',       perm: null }
       ];
+
+      // Filtrer selon permissions
+      const tabs = allTabs.filter(tab => tab.perm === null || _hasPerm(tab.perm));
 
       const tabsContainer = document.createElement('div');
       tabsContainer.className = 'mobile-tabs';
