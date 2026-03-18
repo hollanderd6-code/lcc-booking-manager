@@ -180,21 +180,41 @@
   // MENU "PLUS" - FILTRÉ PAR PERMISSIONS
   // ============================================
   
-  function showMoreMenu() {
+  async function showMoreMenu() {
     const menuButtons = getMoreMenuButtons();
+
+    // Lire depuis localStorage
+    let user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+
+    // Si pas de logoUrl, refetch depuis l'API (fix iOS Capacitor)
+    if (!user.logoUrl) {
+      try {
+        const token = localStorage.getItem('lcc_token');
+        const res = await fetch('/api/user/profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const fresh = await res.json();
+          user = { ...user, ...fresh };
+          localStorage.setItem('lcc_user', JSON.stringify(user));
+        }
+      } catch(e) {
+        console.warn('Impossible de rafraîchir le profil:', e);
+      }
+    }
+
+    const userName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Mon compte';
+    const userCompany = user.company || '';
+    const logoUrl = user.logoUrl;
+    const logoSrc = logoUrl && logoUrl.includes('cloudinary.com')
+      ? logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
+      : logoUrl;
+    const avatarHtml = logoSrc
+      ? `<div style="width:38px;height:38px;min-width:38px;border-radius:8px;background:white url('${logoSrc}') center/65% no-repeat;border:1px solid rgba(200,184,154,.4);flex-shrink:0;"></div>`
+      : `<div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#1A7A5E,#2AAE86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
 
     // Si window.mobileApp existe, utiliser le bottom sheet natif
     if (window.mobileApp && window.mobileApp.createBottomSheet) {
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      const userName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Mon compte';
-      const userCompany = user.company || '';
-      const logoUrl = user.logoUrl;
-      const logoSrc = logoUrl && logoUrl.includes('cloudinary.com')
-        ? logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
-        : logoUrl;
-      const avatarHtml = logoSrc
-        ? `<div style="width:38px;height:38px;min-width:38px;border-radius:8px;background:white url('${logoSrc}') center/65% no-repeat;border:1px solid rgba(200,184,154,.4);flex-shrink:0;"></div>`
-        : `<div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#1A7A5E,#2AAE86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
       const titleHtml = `<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}<div><div style="font-size:14px;font-weight:700;color:#0D1117;">${userName}</div>${userCompany ? `<div style="font-size:12px;color:#7A8695;">${userCompany}</div>` : ''}</div></div>`;
 
       window.mobileApp.createBottomSheet({
@@ -230,18 +250,6 @@
       sheet.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#F5F0E8;border-radius:20px 20px 0 0;padding:20px;max-height:80vh;overflow-y:auto;z-index:10000;transform:translateY(100%);transition:transform 0.3s ease;';
       document.body.appendChild(sheet);
     }
-
-    // Bloc utilisateur pour le header
-    const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    const userName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Mon compte';
-    const userCompany = user.company || '';
-    const logoUrl = user.logoUrl;
-    const logoSrc = logoUrl && logoUrl.includes('cloudinary.com')
-      ? logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
-      : logoUrl;
-    const avatarHtml = logoSrc
-      ? `<div style="width:38px;height:38px;min-width:38px;border-radius:8px;background:white url('${logoSrc}') center/65% no-repeat;border:1px solid rgba(200,184,154,.4);flex-shrink:0;"></div>`
-      : `<div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#1A7A5E,#2AAE86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
 
     // Regénérer le contenu à chaque ouverture
     sheet.innerHTML = `
