@@ -14,8 +14,12 @@
     'cleaning.html': { view: 'can_view_cleaning', edit: 'can_manage_cleaning' },
     'messages.html': { view: 'can_view_messages', edit: 'can_send_messages' },
     'deposits.html': { view: 'can_view_deposits', edit: null },
-    'smart-locks.html': { view: 'can_manage_locks', edit: 'can_manage_locks' }
+    'smart-locks.html': { view: 'can_manage_locks', edit: 'can_manage_locks' },
+    'contrat.html': { view: 'can_view_contracts', edit: null }
   };
+
+  // Pages bloquées pour tous les sous-comptes (sans exception)
+  const BLOCKED_PAGES = ['settings-account.html', 'help.html'];
   
   // Récupérer les infos du compte
   const token = localStorage.getItem('lcc_token');
@@ -38,6 +42,16 @@
     window.hasEditPermission = () => true;
     return;
   }
+
+  // Déterminer la page courante (déclaré tôt pour les vérifications suivantes)
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+
+  // Bloquer settings et support pour tous les sous-comptes
+  if (BLOCKED_PAGES.includes(currentPage)) {
+    console.log('🚫 Page bloquée pour les sous-comptes:', currentPage);
+    window.location.href = '/app-simple-subaccount.html';
+    return;
+  }
   
   // Sous-compte → vérifier permissions
   console.log('🔍 Sous-compte détecté - Vérification permissions');
@@ -46,8 +60,6 @@
   window.isSubAccount = true;
   window.permissions = permissions;
   
-  // Déterminer la page courante
-  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
   const pageConfig = PAGE_PERMISSIONS[currentPage];
   
   console.log('📄 Page courante:', currentPage);
