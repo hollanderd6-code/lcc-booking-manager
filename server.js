@@ -16779,8 +16779,8 @@ iframe.goog-te-banner-frame{display:none!important}
 </nav>
 <div class="wrap">
 <section class="sect" id="welcome">
-  <div class="sect-lbl sect-lbl-welcome">Bienvenue</div>
-  <h2 class="sect-title sect-title-welcome">Bienvenue<br>chez nous</h2>
+  <div class="sect-lbl sect-lbl-welcome">Livret d'accueil</div>
+  <h2 class="sect-title sect-title-welcome">Bienvenue</h2>
   <div class="sect-rule"></div>
   <div class="welcome-grid">
     <p class="welcome-text" data-translatable>${safe(d.welcomeDescription)}</p>
