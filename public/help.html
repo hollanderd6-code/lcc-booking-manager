@@ -51,7 +51,79 @@
   .faq-item.open .faq-answer { max-height: 500px; padding: 8px 12px 12px; }
   .faq-toggle-icon { font-size: 12px; color: var(--text-secondary); margin-left: 8px; }
   #faqSearch { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px; box-sizing: border-box; background: var(--bg-primary); color: var(--text-primary); }
-  .card.mb-lg { margin-bottom: 20px; }
+
+  /* ====== ROADMAP ====== */
+  .roadmap-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  .roadmap-filter-btn {
+    padding:6px 14px; border-radius:999px; border:1px solid var(--border-color);
+    background:transparent; font-size:12px; font-weight:600; cursor:pointer;
+    color:var(--text-secondary); transition:all .15s; font-family:'DM Sans',sans-serif;
+  }
+  .roadmap-filter-btn:hover { border-color:#1A7A5E; color:#1A7A5E; }
+  .roadmap-filter-btn.active { background:#1A7A5E; color:white; border-color:#1A7A5E; }
+
+  .roadmap-grid { display:flex; flex-direction:column; gap:10px; }
+
+  .roadmap-card {
+    background:var(--bg-secondary); border:1px solid var(--border-color);
+    border-radius:14px; padding:16px 18px;
+    display:flex; align-items:flex-start; gap:14px;
+    transition:box-shadow .15s;
+  }
+  .roadmap-card:hover { box-shadow:0 4px 16px rgba(13,17,23,.07); }
+
+  .roadmap-status-dot {
+    width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:5px;
+  }
+  .roadmap-status-dot.reflection { background:#F59E0B; }
+  .roadmap-status-dot.in_progress { background:#3B82F6; }
+  .roadmap-status-dot.available { background:#10B981; }
+
+  .roadmap-card-body { flex:1; min-width:0; }
+  .roadmap-card-title { font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:4px; }
+  .roadmap-card-desc { font-size:13px; color:var(--text-secondary); line-height:1.5; }
+  .roadmap-card-meta { font-size:11px; color:var(--text-secondary); margin-top:6px; }
+
+  .roadmap-status-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px;
+    margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;
+  }
+  .roadmap-status-badge.reflection { background:rgba(245,158,11,.12); color:#D97706; }
+  .roadmap-status-badge.in_progress { background:rgba(59,130,246,.12); color:#2563EB; }
+  .roadmap-status-badge.available { background:rgba(16,185,129,.12); color:#059669; }
+
+  .roadmap-votes {
+    display:flex; flex-direction:column; gap:6px; align-items:center; flex-shrink:0;
+  }
+  .roadmap-vote-btn {
+    display:flex; align-items:center; gap:5px; padding:6px 10px;
+    border-radius:8px; border:1px solid var(--border-color);
+    background:transparent; cursor:pointer; font-size:13px; font-weight:600;
+    color:var(--text-secondary); transition:all .15s; font-family:'DM Sans',sans-serif;
+    min-width:52px; justify-content:center;
+  }
+  .roadmap-vote-btn:hover { border-color:#1A7A5E; color:#1A7A5E; }
+  .roadmap-vote-btn.active-up { background:rgba(16,185,129,.12); border-color:#10B981; color:#059669; }
+  .roadmap-vote-btn.active-down { background:rgba(239,68,68,.1); border-color:#EF4444; color:#DC2626; }
+
+  .roadmap-suggest-form { margin-top:20px; padding-top:20px; border-top:1px solid var(--border-color); }
+  .roadmap-suggest-form textarea {
+    width:100%; padding:10px 12px; border-radius:10px;
+    border:1px solid var(--border-color); font-size:14px;
+    background:var(--bg-primary); color:var(--text-primary);
+    font-family:'DM Sans',sans-serif; resize:vertical; box-sizing:border-box;
+  }
+  .roadmap-empty {
+    text-align:center; padding:32px; color:var(--text-secondary); font-size:14px;
+  }
+  .roadmap-empty i { font-size:28px; color:#D1D5DB; display:block; margin-bottom:10px; }
+  @media(max-width:768px) {
+    .roadmap-card { flex-direction:column; gap:10px; }
+    .roadmap-votes { flex-direction:row; justify-content:flex-start; }
+  }
+
+    .card.mb-lg { margin-bottom: 20px; }
 
   /* ====== SUPPORT CHAT ====== */
   .support-status-badge {
@@ -594,6 +666,56 @@ html[data-theme-v3="1"] .mobile-header {
 <button class="help-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
 <div class="page-content">
 
+
+<!-- ====== ROADMAP ====== -->
+<section class="card mb-lg" id="roadmapSection">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-map-signs"></i> Roadmap &amp; suggestions
+    </div>
+    <span style="font-size:12px;color:var(--text-secondary);font-weight:500;">Votez pour les fonctionnalités qui vous intéressent</span>
+  </div>
+  <div class="card-body">
+
+    <!-- Filtres statut -->
+    <div class="roadmap-filters">
+      <button class="roadmap-filter-btn active" onclick="filterRoadmap('all', this)">Tout voir</button>
+      <button class="roadmap-filter-btn" onclick="filterRoadmap('reflection', this)">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F59E0B;margin-right:5px;vertical-align:middle;"></span>💡 En réflexion
+      </button>
+      <button class="roadmap-filter-btn" onclick="filterRoadmap('in_progress', this)">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3B82F6;margin-right:5px;vertical-align:middle;"></span>🔨 En cours
+      </button>
+      <button class="roadmap-filter-btn" onclick="filterRoadmap('available', this)">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10B981;margin-right:5px;vertical-align:middle;"></span>✅ Disponible
+      </button>
+    </div>
+
+    <!-- Liste des items -->
+    <div class="roadmap-grid" id="roadmapGrid">
+      <div class="roadmap-empty"><i class="fas fa-circle-notch fa-spin"></i> Chargement…</div>
+    </div>
+
+    <!-- Formulaire de suggestion -->
+    <div class="roadmap-suggest-form">
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px;">
+        <i class="fas fa-lightbulb" style="color:#F59E0B;margin-right:6px;"></i>Vous avez une idée ? Proposez-la !
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input id="suggestTitle" placeholder="Titre de votre suggestion…" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);font-size:14px;background:var(--bg-primary);color:var(--text-primary);font-family:'DM Sans',sans-serif;box-sizing:border-box;width:100%;" />
+        <textarea id="suggestDesc" placeholder="Décrivez votre idée en quelques mots (optionnel)…" rows="2" class="roadmap-suggest-form textarea" style="margin:0;"></textarea>
+        <div style="display:flex;justify-content:flex-end;">
+          <button onclick="submitSuggestion()" class="btn btn-primary" style="gap:7px;">
+            <i class="fas fa-paper-plane"></i> Envoyer ma suggestion
+          </button>
+        </div>
+      </div>
+      <p id="suggestFeedback" style="display:none;font-size:13px;color:#059669;margin-top:8px;font-weight:600;"></p>
+    </div>
+
+  </div>
+</section>
+
 <!-- ====== FAQ ====== -->
 <section class="card mb-lg">
 <div class="card-header">
@@ -614,7 +736,7 @@ html[data-theme-v3="1"] .mobile-header {
         <i class="fas fa-chevron-down faq-toggle-icon"></i>
       </button>
       <div class="faq-answer">
-        <p>Depuis votre logement, allez dans l'onglet <strong>Synchronisation</strong> et collez l'URL iCal fournie par Airbnb ou Booking.com. La synchronisation se fait automatiquement toutes les cinq minutes.</p>
+        <p>Depuis votre logement, allez dans l'onglet <strong>Synchronisation</strong> et collez l'URL iCal fournie par Airbnb ou Booking.com. La synchronisation se fait automatiquement toutes les heures.</p>
       </div>
     </div>
 
@@ -634,7 +756,7 @@ html[data-theme-v3="1"] .mobile-header {
         <i class="fas fa-chevron-down faq-toggle-icon"></i>
       </button>
       <div class="faq-answer">
-        <p>Dans <strong>Livrets d'accueil</strong>, sélectionnez votre logement, personnalisez votre livret, puis copiez le lien public, vous pouvez le coller dans la section Mes logements, il sera envoyé automatiquement au voyageur..</p>
+        <p>Dans <strong>Livrets d'accueil</strong>, sélectionnez votre logement, personnalisez votre livret, puis copiez le lien public ou envoyez-le directement par e-mail depuis l'application.</p>
       </div>
     </div>
 
@@ -1149,6 +1271,128 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   initSupportChat();
 });
+
+
+
+  // ── ROADMAP ──
+  const API_URL_BASE = '';
+  let roadmapItems = [];
+  let roadmapFilter = 'all';
+
+  const STATUS_LABELS = {
+    reflection: '💡 En réflexion',
+    in_progress: '🔨 En cours',
+    available: '✅ Disponible'
+  };
+  const STATUS_CLASS = { reflection:'reflection', in_progress:'in_progress', available:'available' };
+
+  async function loadRoadmap() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/roadmap', { headers: { Authorization: 'Bearer ' + token } });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      roadmapItems = data.items || [];
+      renderRoadmap();
+    } catch(e) {
+      document.getElementById('roadmapGrid').innerHTML =
+        '<div class="roadmap-empty"><i class="fas fa-exclamation-circle"></i>Impossible de charger la roadmap.</div>';
+    }
+  }
+
+  function renderRoadmap() {
+    const grid = document.getElementById('roadmapGrid');
+    const filtered = roadmapFilter === 'all' ? roadmapItems : roadmapItems.filter(i => i.status === roadmapFilter);
+    if (!filtered.length) {
+      grid.innerHTML = '<div class="roadmap-empty"><i class="fas fa-inbox"></i>Aucune fonctionnalité dans cette catégorie pour le moment.</div>';
+      return;
+    }
+    grid.innerHTML = filtered.map(item => {
+      const sc = STATUS_CLASS[item.status] || 'reflection';
+      const myVote = parseInt(item.my_vote) || 0;
+      return `<div class="roadmap-card" id="roadmap-item-${item.id}">
+        <div class="roadmap-status-dot ${sc}"></div>
+        <div class="roadmap-card-body">
+          <span class="roadmap-status-badge ${sc}">${STATUS_LABELS[item.status] || item.status}</span>
+          <div class="roadmap-card-title">${item.title}</div>
+          ${item.description ? `<div class="roadmap-card-desc">${item.description}</div>` : ''}
+          ${item.suggested_by_name ? `<div class="roadmap-card-meta"><i class="fas fa-user" style="margin-right:4px;"></i>Suggéré par ${item.suggested_by_name}</div>` : ''}
+        </div>
+        <div class="roadmap-votes">
+          <button class="roadmap-vote-btn ${myVote===1?'active-up':''}" onclick="voteRoadmap(${item.id}, 1, this)">
+            👍 <span class="vote-up-count">${item.upvotes}</span>
+          </button>
+          <button class="roadmap-vote-btn ${myVote===-1?'active-down':''}" onclick="voteRoadmap(${item.id}, -1, this)">
+            👎 <span class="vote-down-count">${item.downvotes}</span>
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function filterRoadmap(filter, btn) {
+    roadmapFilter = filter;
+    document.querySelectorAll('.roadmap-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderRoadmap();
+  }
+
+  async function voteRoadmap(itemId, vote, clickedBtn) {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch(`/api/roadmap/${itemId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:'Bearer '+token },
+        body: JSON.stringify({ vote })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      // Mettre à jour l'item en mémoire
+      const idx = roadmapItems.findIndex(i => i.id === itemId);
+      if (idx !== -1) {
+        roadmapItems[idx].upvotes = data.upvotes;
+        roadmapItems[idx].downvotes = data.downvotes;
+        roadmapItems[idx].my_vote = data.my_vote;
+      }
+      // Mettre à jour le DOM sans re-render complet
+      const card = document.getElementById('roadmap-item-' + itemId);
+      if (card) {
+        card.querySelector('.vote-up-count').textContent = data.upvotes;
+        card.querySelector('.vote-down-count').textContent = data.downvotes;
+        card.querySelectorAll('.roadmap-vote-btn').forEach(b => b.classList.remove('active-up','active-down'));
+        if (data.my_vote === 1) card.querySelectorAll('.roadmap-vote-btn')[0].classList.add('active-up');
+        if (data.my_vote === -1) card.querySelectorAll('.roadmap-vote-btn')[1].classList.add('active-down');
+      }
+    } catch(e) { console.error('Vote error', e); }
+  }
+
+  async function submitSuggestion() {
+    const title = document.getElementById('suggestTitle').value.trim();
+    const desc = document.getElementById('suggestDesc').value.trim();
+    const feedback = document.getElementById('suggestFeedback');
+    if (!title) { document.getElementById('suggestTitle').focus(); return; }
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/roadmap/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:'Bearer '+token },
+        body: JSON.stringify({ title, description: desc || null })
+      });
+      if (!res.ok) throw new Error();
+      document.getElementById('suggestTitle').value = '';
+      document.getElementById('suggestDesc').value = '';
+      feedback.style.display = '';
+      feedback.textContent = '✅ Suggestion envoyée, merci ! Nous l'examinerons rapidement.';
+      setTimeout(() => { feedback.style.display = 'none'; }, 4000);
+    } catch(e) {
+      feedback.style.display = '';
+      feedback.style.color = '#DC2626';
+      feedback.textContent = 'Erreur lors de l'envoi, réessayez.';
+    }
+  }
+
+  // Charger la roadmap au démarrage
+  document.addEventListener('DOMContentLoaded', loadRoadmap);
 
 
   // ── Statut support selon horaires (heure Paris) ──
