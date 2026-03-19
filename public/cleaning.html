@@ -2971,9 +2971,9 @@ function formatDateFr(dateStr) {
           } catch(e) {}
 
           // Filigrane certifié
-          doc.setFillColor(16,185,129); doc.roundedRect(margin,y,50,8,2,2,'F');
+          doc.setFillColor(16,185,129); doc.roundedRect(margin,y,70,8,2,2,'F');
           doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
-          doc.text('✓ Document certifié', margin+3, y+5.5);
+          doc.text('Document certifie', margin+3, y+5.5);
         }
 
         var filename = 'menage-certifie-' + checkoutDate.replace(/\//g,'-') + '-' + (c.cleaner_name||'cleaner').replace(/\s+/g,'-') + '.pdf';
