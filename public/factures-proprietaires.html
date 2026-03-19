@@ -526,6 +526,54 @@ html[data-theme-v3="1"] .nav-tab:not(.active):hover {
 
 /* Cards */
 html[data-theme-v3="1"] .card,
+
+/* ── Filtre mois/année factures propriétaires ── */
+.fp-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.fp-filter-bar label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7A8695;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  white-space: nowrap;
+}
+.fp-select {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(200,184,154,.5);
+  background: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0D1117;
+  cursor: pointer;
+  min-width: 130px;
+}
+.fp-filter-reset {
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(13,17,23,.12);
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7A8695;
+  cursor: pointer;
+  transition: all .15s;
+}
+.fp-filter-reset:hover { border-color: #1A7A5E; color: #1A7A5E; }
+.fp-filter-label {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-left: auto;
+}
+
 html[data-theme-v3="1"] .invoice-card {
   background: #F5F0E8 !important;
   border: 1px solid rgba(200,184,154,.4) !important;
@@ -1236,6 +1284,17 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <div class="tab-content active" id="tab-dashboard">
 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
+<div class="fp-filter-bar">
+  <label><i class="fas fa-calendar-alt" style="margin-right:5px;color:#1A7A5E;"></i>Période</label>
+  <select class="fp-select" id="fpMonthSelect" onchange="applyFpFilter()">
+    <option value="">Tous les mois</option>
+  </select>
+  <select class="fp-select" id="fpYearSelect" onchange="applyFpFilter()">
+    <option value="">Toutes les années</option>
+  </select>
+  <button class="fp-filter-reset" onclick="resetFpFilter()"><i class="fas fa-times" style="margin-right:4px;"></i>Réinitialiser</button>
+  <span class="fp-filter-label" id="fpFilterLabel"></span>
+</div>
 <div id="invoicesCardsGrid" class="invoices-cards-grid">
 <div style="padding:40px; text-align:center; grid-column: 1 / -1;">Chargement...</div>
 </div>
@@ -1785,6 +1844,113 @@ window.closeStatsModal = function() {
 };
 
 
+
+// ── Filtre mois / année factures propriétaires ──
+const MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function populateFpSelects(invs) {
+  const years = new Set();
+  const months = new Set(); // "YYYY-MM"
+
+  invs.forEach(function(inv) {
+    const d = inv.issue_date || inv.created_at;
+    if (!d) return;
+    const dt = new Date(d);
+    if (isNaN(dt)) return;
+    years.add(dt.getFullYear());
+    months.add(dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0'));
+  });
+
+  // Peupler années
+  const yearSel = document.getElementById('fpYearSelect');
+  if (yearSel) {
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    yearSel.innerHTML = '<option value="">Toutes les années</option>' +
+      sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
+  }
+
+  // Peupler mois (filtrés selon l'année sélectionnée au moment du peuplement)
+  refreshFpMonths(invs);
+}
+
+function refreshFpMonths(invs) {
+  const yearSel = document.getElementById('fpYearSelect');
+  const monthSel = document.getElementById('fpMonthSelect');
+  if (!monthSel) return;
+
+  const selectedYear = yearSel ? yearSel.value : '';
+  const monthSet = new Set();
+
+  invs.forEach(function(inv) {
+    const d = inv.issue_date || inv.created_at;
+    if (!d) return;
+    const dt = new Date(d);
+    if (isNaN(dt)) return;
+    if (selectedYear && String(dt.getFullYear()) !== selectedYear) return;
+    monthSet.add(dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0'));
+  });
+
+  const sorted = Array.from(monthSet).sort((a, b) => b.localeCompare(a));
+  monthSel.innerHTML = '<option value="">Tous les mois</option>' +
+    sorted.map(ym => {
+      const [y, m] = ym.split('-');
+      return `<option value="${ym}">${MOIS_FR[parseInt(m) - 1]} ${y}</option>`;
+    }).join('');
+}
+
+function applyFpFilter() {
+  const invs = window.ownerInvoices || [];
+  const yearSel = document.getElementById('fpYearSelect');
+  const monthSel = document.getElementById('fpMonthSelect');
+  const label = document.getElementById('fpFilterLabel');
+
+  const selectedYear = yearSel ? yearSel.value : '';
+  const selectedMonth = monthSel ? monthSel.value : '';
+
+  // Si on change l'année, rafraîchir les mois dispo
+  if (document.activeElement === yearSel) {
+    monthSel.value = '';
+    refreshFpMonths(invs);
+  }
+
+  const filtered = invs.filter(function(inv) {
+    const d = inv.issue_date || inv.created_at;
+    if (!d) return !selectedYear && !selectedMonth;
+    const dt = new Date(d);
+    if (isNaN(dt)) return false;
+    if (selectedMonth) {
+      const ym = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+      return ym === selectedMonth;
+    }
+    if (selectedYear) {
+      return String(dt.getFullYear()) === selectedYear;
+    }
+    return true;
+  });
+
+  if (label) {
+    if (selectedMonth || selectedYear) {
+      label.textContent = filtered.length + ' facture' + (filtered.length !== 1 ? 's' : '');
+    } else {
+      label.textContent = '';
+    }
+  }
+
+  renderFpGrid(filtered);
+}
+
+function resetFpFilter() {
+  const yearSel = document.getElementById('fpYearSelect');
+  const monthSel = document.getElementById('fpMonthSelect');
+  const label = document.getElementById('fpFilterLabel');
+  if (yearSel) yearSel.value = '';
+  if (monthSel) monthSel.value = '';
+  if (label) label.textContent = '';
+  const invs = window.ownerInvoices || [];
+  refreshFpMonths(invs);
+  renderFpGrid(invs);
+}
+
 async function loadInvoices() {
   console.log('🔍 loadInvoices() - Début...');
   // Afficher message de chargement
@@ -1814,6 +1980,7 @@ async function loadInvoices() {
     console.log('[DATA] Nombre de factures:', invs.length);
     
     window.ownerInvoices = invs;
+    populateFpSelects(invs);
 
     console.log('📍 Container trouvé:', !!container);
 
@@ -1824,6 +1991,27 @@ async function loadInvoices() {
       document.getElementById('statsPending').textContent = '0,00 €';
       return;
     }
+
+    renderFpGrid(invs);
+    console.log('[OK] loadInvoices() - Terminé avec succès');
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') return;
+    console.error('[ERROR] loadInvoices() - Erreur:', e);
+    if (container) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;"><p style="color:#dc2626;font-weight:600;">Erreur de chargement</p><p style="font-size:13px;color:#6b7280;margin-top:8px;"><a href="javascript:loadInvoices()" style="color:#1A7A5E;font-weight:600;">Réessayer</a></p></div>';
+    }
+  }
+}
+
+function renderFpGrid(invs) {
+  const container = document.getElementById('invoicesCardsGrid');
+  if (!container) return;
+
+  if (!invs || invs.length === 0) {
+    container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;">Aucune facture sur cette période.</div>';
+    return;
+  }
 
     let totalRev = 0;
     let totalPending = 0;
@@ -1937,15 +2125,6 @@ async function loadInvoices() {
 
     document.getElementById('statsRevenue').textContent = formatMoney(totalRev);
     document.getElementById('statsPending').textContent = formatMoney(totalPending);
-    console.log('[OK] loadInvoices() - Terminé avec succès');
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e.name === 'AbortError') return; // timeout déjà géré
-    console.error('[ERROR] loadInvoices() - Erreur:', e);
-    if (container) {
-      container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;"><p style="color:#dc2626;font-weight:600;">Erreur de chargement</p><p style="font-size:13px;color:#6b7280;margin-top:8px;"><a href="javascript:loadInvoices()" style="color:#1A7A5E;font-weight:600;">Réessayer</a></p></div>';
-    }
-  }
 }
 
 window.toggleInvoiceActions = function (id, btn) {
