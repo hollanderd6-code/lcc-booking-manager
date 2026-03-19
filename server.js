@@ -8438,7 +8438,7 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(p
     }
 
     const result = await pool.query(
-      `SELECT id, name, phone, email, notes, pin_code, is_active, sub_account_id, created_at
+      `SELECT id, name, phone, email, notes, pin_code, is_active, created_at
        FROM cleaners
        WHERE user_id = $1
        ORDER BY name ASC`,
@@ -19205,6 +19205,200 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
 // POST /api/mandat/send
 // Génère le PDF du mandat de gestion, sauvegarde en DB, envoie lien signature au propriétaire
 // ============================================
+
+// ============================================================
+// ROADMAP & SUGGESTIONS
+// ============================================================
+
+// Migration tables roadmap
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roadmap_items (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(20) NOT NULL DEFAULT 'reflection' CHECK (status IN ('reflection','in_progress','available')),
+        suggested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        suggested_by_name VARCHAR(255),
+        is_published BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roadmap_votes (
+        id SERIAL PRIMARY KEY,
+        item_id INTEGER NOT NULL REFERENCES roadmap_items(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        vote SMALLINT NOT NULL CHECK (vote IN (1, -1)),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(item_id, user_id)
+      );
+    `);
+    console.log('✅ Tables roadmap OK');
+  } catch(e) {
+    console.error('❌ Migration roadmap:', e.message);
+  }
+})();
+
+// GET — liste publique des items publiés (avec votes)
+app.get('/api/roadmap', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    const result = await pool.query(`
+      SELECT
+        ri.id, ri.title, ri.description, ri.status,
+        ri.suggested_by_name, ri.created_at,
+        COALESCE(SUM(CASE WHEN rv.vote = 1 THEN 1 ELSE 0 END), 0)::int AS upvotes,
+        COALESCE(SUM(CASE WHEN rv.vote = -1 THEN 1 ELSE 0 END), 0)::int AS downvotes,
+        MAX(CASE WHEN rv.user_id = $1 THEN rv.vote END) AS my_vote
+      FROM roadmap_items ri
+      LEFT JOIN roadmap_votes rv ON rv.item_id = ri.id
+      WHERE ri.is_published = true
+      GROUP BY ri.id
+      ORDER BY upvotes DESC, ri.created_at DESC
+    `, [userId]);
+
+    res.json({ items: result.rows });
+  } catch(e) {
+    console.error('GET /api/roadmap:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST — soumettre une suggestion (stockée non publiée)
+app.post('/api/roadmap/suggest', authenticateAny, async (req, res) => {
+  try {
+    const user = req.user.isSubAccount
+      ? null
+      : await getUserFromRequest(req);
+    const userId = user?.id || null;
+    const { title, description } = req.body || {};
+    if (!title || !title.trim()) return res.status(400).json({ error: 'Titre requis' });
+
+    const nameResult = userId ? await pool.query(
+      'SELECT first_name, last_name FROM users WHERE id = $1', [userId]
+    ) : { rows: [] };
+    const row = nameResult.rows[0];
+    const suggestedByName = row ? `${row.first_name || ''} ${row.last_name || ''}`.trim() : 'Anonyme';
+
+    await pool.query(`
+      INSERT INTO roadmap_items (title, description, status, suggested_by, suggested_by_name, is_published)
+      VALUES ($1, $2, 'reflection', $3, $4, false)
+    `, [title.trim(), description?.trim() || null, userId, suggestedByName]);
+
+    res.json({ message: 'Suggestion envoyée, merci !' });
+  } catch(e) {
+    console.error('POST /api/roadmap/suggest:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST — voter sur un item
+app.post('/api/roadmap/:id/vote', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const itemId = parseInt(req.params.id);
+    const { vote } = req.body || {}; // 1 ou -1
+    if (vote !== 1 && vote !== -1) return res.status(400).json({ error: 'Vote invalide' });
+
+    // Vérifier que l'item existe et est publié
+    const check = await pool.query('SELECT id FROM roadmap_items WHERE id = $1 AND is_published = true', [itemId]);
+    if (!check.rows.length) return res.status(404).json({ error: 'Item introuvable' });
+
+    // Si même vote → retirer (toggle)
+    const existing = await pool.query(
+      'SELECT vote FROM roadmap_votes WHERE item_id = $1 AND user_id = $2', [itemId, userId]
+    );
+    if (existing.rows.length && existing.rows[0].vote === vote) {
+      await pool.query('DELETE FROM roadmap_votes WHERE item_id = $1 AND user_id = $2', [itemId, userId]);
+    } else {
+      await pool.query(`
+        INSERT INTO roadmap_votes (item_id, user_id, vote) VALUES ($1, $2, $3)
+        ON CONFLICT (item_id, user_id) DO UPDATE SET vote = $3
+      `, [itemId, userId, vote]);
+    }
+
+    // Retourner les nouveaux totaux
+    const totals = await pool.query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN vote = 1 THEN 1 ELSE 0 END), 0)::int AS upvotes,
+        COALESCE(SUM(CASE WHEN vote = -1 THEN 1 ELSE 0 END), 0)::int AS downvotes,
+        MAX(CASE WHEN user_id = $2 THEN vote END) AS my_vote
+      FROM roadmap_votes WHERE item_id = $1
+    `, [itemId, userId]);
+
+    res.json(totals.rows[0]);
+  } catch(e) {
+    console.error('POST /api/roadmap/:id/vote:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ADMIN — GET toutes les suggestions (publiées + en attente)
+app.get('/api/admin/roadmap', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(`
+      SELECT ri.*,
+        COALESCE(SUM(CASE WHEN rv.vote = 1 THEN 1 ELSE 0 END), 0)::int AS upvotes,
+        COALESCE(SUM(CASE WHEN rv.vote = -1 THEN 1 ELSE 0 END), 0)::int AS downvotes
+      FROM roadmap_items ri
+      LEFT JOIN roadmap_votes rv ON rv.item_id = ri.id
+      GROUP BY ri.id
+      ORDER BY ri.is_published ASC, ri.created_at DESC
+    `);
+    res.json({ items: result.rows });
+  } catch(e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ADMIN — Publier / modifier un item
+app.put('/api/admin/roadmap/:id', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { title, description, status, is_published } = req.body || {};
+    await pool.query(`
+      UPDATE roadmap_items
+      SET title = COALESCE($2, title),
+          description = COALESCE($3, description),
+          status = COALESCE($4, status),
+          is_published = COALESCE($5, is_published),
+          updated_at = NOW()
+      WHERE id = $1
+    `, [req.params.id, title, description, status, is_published]);
+
+    res.json({ message: 'Mis à jour' });
+  } catch(e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ADMIN — Supprimer un item
+app.delete('/api/admin/roadmap/:id', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    await pool.query('DELETE FROM roadmap_items WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Supprimé' });
+  } catch(e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/mandat/send', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount
