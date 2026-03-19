@@ -667,54 +667,6 @@ html[data-theme-v3="1"] .mobile-header {
 <div class="page-content">
 
 
-<!-- ====== ROADMAP ====== -->
-<section class="card mb-lg" id="roadmapSection">
-  <div class="card-header">
-    <div class="card-title">
-      <i class="fas fa-map-signs"></i> Roadmap &amp; suggestions
-    </div>
-    <span style="font-size:12px;color:var(--text-secondary);font-weight:500;">Votez pour les fonctionnalités qui vous intéressent</span>
-  </div>
-  <div class="card-body">
-
-    <!-- Filtres statut -->
-    <div class="roadmap-filters">
-      <button class="roadmap-filter-btn active" onclick="filterRoadmap('all', this)">Tout voir</button>
-      <button class="roadmap-filter-btn" onclick="filterRoadmap('reflection', this)">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F59E0B;margin-right:5px;vertical-align:middle;"></span>💡 En réflexion
-      </button>
-      <button class="roadmap-filter-btn" onclick="filterRoadmap('in_progress', this)">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3B82F6;margin-right:5px;vertical-align:middle;"></span>🔨 En cours
-      </button>
-      <button class="roadmap-filter-btn" onclick="filterRoadmap('available', this)">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10B981;margin-right:5px;vertical-align:middle;"></span>✅ Disponible
-      </button>
-    </div>
-
-    <!-- Liste des items -->
-    <div class="roadmap-grid" id="roadmapGrid">
-      <div class="roadmap-empty"><i class="fas fa-circle-notch fa-spin"></i> Chargement…</div>
-    </div>
-
-    <!-- Formulaire de suggestion -->
-    <div class="roadmap-suggest-form">
-      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px;">
-        <i class="fas fa-lightbulb" style="color:#F59E0B;margin-right:6px;"></i>Vous avez une idée ? Proposez-la !
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <input id="suggestTitle" placeholder="Titre de votre suggestion…" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);font-size:14px;background:var(--bg-primary);color:var(--text-primary);font-family:'DM Sans',sans-serif;box-sizing:border-box;width:100%;" />
-        <textarea id="suggestDesc" placeholder="Décrivez votre idée en quelques mots (optionnel)…" rows="2" class="roadmap-suggest-form textarea" style="margin:0;"></textarea>
-        <div style="display:flex;justify-content:flex-end;">
-          <button onclick="submitSuggestion()" class="btn btn-primary" style="gap:7px;">
-            <i class="fas fa-paper-plane"></i> Envoyer ma suggestion
-          </button>
-        </div>
-      </div>
-      <p id="suggestFeedback" style="display:none;font-size:13px;color:#059669;margin-top:8px;font-weight:600;"></p>
-    </div>
-
-  </div>
-</section>
 
 <!-- ====== FAQ ====== -->
 <section class="card mb-lg">
@@ -923,6 +875,56 @@ html[data-theme-v3="1"] .mobile-header {
 
 </div>
 </div>
+</section>
+
+
+<!-- ====== ROADMAP ====== -->
+<section class="card mb-lg" id="roadmapSection">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-map-signs"></i> Roadmap &amp; suggestions
+    </div>
+    <span style="font-size:12px;color:var(--text-secondary);font-weight:500;">Votez pour les fonctionnalités qui vous intéressent</span>
+  </div>
+  <div class="card-body">
+
+    <!-- Filtres statut -->
+    <div class="roadmap-filters">
+      <button class="roadmap-filter-btn active" onclick="filterRoadmap('all', this)">Tout voir</button>
+      <button class="roadmap-filter-btn" onclick="filterRoadmap('reflection', this)">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F59E0B;margin-right:5px;vertical-align:middle;"></span>💡 En réflexion
+      </button>
+      <button class="roadmap-filter-btn" onclick="filterRoadmap('in_progress', this)">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3B82F6;margin-right:5px;vertical-align:middle;"></span>🔨 En cours
+      </button>
+      <button class="roadmap-filter-btn" onclick="filterRoadmap('available', this)">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10B981;margin-right:5px;vertical-align:middle;"></span>✅ Disponible
+      </button>
+    </div>
+
+    <!-- Liste des items -->
+    <div class="roadmap-grid" id="roadmapGrid">
+      <div class="roadmap-empty"><i class="fas fa-circle-notch fa-spin"></i> Chargement…</div>
+    </div>
+
+    <!-- Formulaire de suggestion -->
+    <div class="roadmap-suggest-form">
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px;">
+        <i class="fas fa-lightbulb" style="color:#F59E0B;margin-right:6px;"></i>Vous avez une idée ? Proposez-la !
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input id="suggestTitle" placeholder="Titre de votre suggestion…" style="padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);font-size:14px;background:var(--bg-primary);color:var(--text-primary);font-family:'DM Sans',sans-serif;box-sizing:border-box;width:100%;" />
+        <textarea id="suggestDesc" placeholder="Décrivez votre idée en quelques mots (optionnel)…" rows="2" class="roadmap-suggest-form textarea" style="margin:0;"></textarea>
+        <div style="display:flex;justify-content:flex-end;">
+          <button onclick="submitSuggestion()" class="btn btn-primary" style="gap:7px;">
+            <i class="fas fa-paper-plane"></i> Envoyer ma suggestion
+          </button>
+        </div>
+      </div>
+      <p id="suggestFeedback" style="display:none;font-size:13px;color:#059669;margin-top:8px;font-weight:600;"></p>
+    </div>
+
+  </div>
 </section>
 
 <!-- Bloc Chat Support -->
@@ -1395,8 +1397,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Charger la roadmap au démarrage (délai pour laisser bh-layout.js hydrater le token)
-  document.addEventListener('DOMContentLoaded', () => setTimeout(loadRoadmap, 300));
+  // Charger la roadmap au démarrage — retry si token pas encore dispo
+  async function loadRoadmapWithRetry(attempts = 3) {
+    const token = localStorage.getItem('lcc_token');
+    if (!token && attempts > 1) {
+      setTimeout(() => loadRoadmapWithRetry(attempts - 1), 400);
+      return;
+    }
+    loadRoadmap();
+  }
+  document.addEventListener('DOMContentLoaded', () => setTimeout(loadRoadmapWithRetry, 200));
 
 
   // ── Statut support selon horaires (heure Paris) ──
