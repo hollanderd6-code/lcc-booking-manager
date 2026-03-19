@@ -19281,10 +19281,12 @@ app.post('/api/roadmap/suggest', authenticateAny, async (req, res) => {
     if (!title || !title.trim()) return res.status(400).json({ error: 'Titre requis' });
 
     const nameResult = userId ? await pool.query(
-      'SELECT first_name, last_name FROM users WHERE id = $1', [userId]
+      'SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]
     ) : { rows: [] };
     const row = nameResult.rows[0];
-    const suggestedByName = row ? `${row.first_name || ''} ${row.last_name || ''}`.trim() : 'Anonyme';
+    const ADMIN_EMAILS = ['charles.induni@gmail.com'];
+    const isAdmin = row && ADMIN_EMAILS.includes(row.email);
+    const suggestedByName = isAdmin ? 'Boostinghost' : (row ? `${row.first_name || ''} ${row.last_name || ''}`.trim() : 'Anonyme');
 
     await pool.query(`
       INSERT INTO roadmap_items (title, description, status, suggested_by, suggested_by_name, is_published)
