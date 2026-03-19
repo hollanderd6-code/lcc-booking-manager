@@ -516,6 +516,20 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .history-filter-btn.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
 
 .history-list { display: flex; flex-direction: column; gap: 12px; }
+.history-period-row {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.history-period-btn {
+  height: 30px; padding: 0 12px; border-radius: 999px;
+  border: 1px solid rgba(13,17,23,.12); background: transparent;
+  color: #7A8695; font-size: 12px; font-weight: 600;
+  font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s;
+}
+.history-period-btn:hover { border-color: #1A7A5E; color: #1A7A5E; }
+.history-period-btn.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+.history-period-label {
+  font-size: 12px; color: #9CA3AF; margin-bottom: 14px; display: none;
+}
 
 .history-card {
   background: white; border: 1px solid rgba(200,184,154,.35);
@@ -1802,6 +1816,15 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     <button class="history-filter-btn" onclick="filterHistory('signed', this)"><i class="fas fa-check-circle"></i> Signés</button>
     <button class="history-filter-btn" onclick="filterHistory('expired', this)"><i class="fas fa-clock"></i> Expirés</button>
   </div>
+  <div class="history-period-row">
+    <button class="history-period-btn active" onclick="setPeriodContracts(30, this)">30 jours</button>
+    <button class="history-period-btn" onclick="setPeriodContracts(90, this)">3 mois</button>
+    <button class="history-period-btn" onclick="setPeriodContracts(180, this)">6 mois</button>
+    <button class="history-period-btn" onclick="setPeriodContractsYear('current', this)">Cette année</button>
+    <button class="history-period-btn" onclick="setPeriodContractsYear('previous', this)">Année précédente</button>
+    <button class="history-period-btn" onclick="setPeriodContracts(0, this)">Tout</button>
+  </div>
+  <div id="historyPeriodLabel" class="history-period-label"></div>
   <div id="historyList" class="history-list">
     <div class="history-loading"><i class="fas fa-circle-notch fa-spin"></i> Chargement...</div>
   </div>
@@ -2506,6 +2529,25 @@ async function loadHistory() {
   }
 }
 
+// ── Période ──
+let currentPeriodDays = 30;
+let currentPeriodType = 'days';
+
+window.setPeriodContracts = function(days, btn) {
+  currentPeriodDays = days;
+  currentPeriodType = days === 0 ? 'all' : 'days';
+  document.querySelectorAll('.history-period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderHistory(currentFilter);
+};
+
+window.setPeriodContractsYear = function(type, btn) {
+  currentPeriodType = type === 'current' ? 'year_current' : 'year_previous';
+  document.querySelectorAll('.history-period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderHistory(currentFilter);
+};
+
 function filterHistory(filter, btn) {
   currentFilter = filter;
   document.querySelectorAll('.history-filter-btn').forEach(b => b.classList.remove('active'));
@@ -2513,9 +2555,44 @@ function filterHistory(filter, btn) {
   renderHistory(filter);
 }
 
+function applyPeriodFilter(contracts) {
+  const now = new Date();
+  if (currentPeriodType === 'days' && currentPeriodDays > 0) {
+    const cutoff = new Date(now - currentPeriodDays * 24 * 60 * 60 * 1000);
+    return contracts.filter(c => c.created_at && new Date(c.created_at) >= cutoff);
+  } else if (currentPeriodType === 'year_current') {
+    const y = now.getFullYear();
+    return contracts.filter(c => c.created_at && new Date(c.created_at).getFullYear() === y);
+  } else if (currentPeriodType === 'year_previous') {
+    const y = now.getFullYear() - 1;
+    return contracts.filter(c => c.created_at && new Date(c.created_at).getFullYear() === y);
+  }
+  return contracts; // 'all'
+}
+
+function updatePeriodLabel(count) {
+  const label = document.getElementById('historyPeriodLabel');
+  if (!label) return;
+  const now = new Date();
+  let txt = '';
+  if (currentPeriodType === 'days' && currentPeriodDays > 0) {
+    txt = `${count} contrat${count !== 1 ? 's' : ''} sur les ${currentPeriodDays} derniers jours`;
+  } else if (currentPeriodType === 'year_current') {
+    txt = `${count} contrat${count !== 1 ? 's' : ''} en ${now.getFullYear()}`;
+  } else if (currentPeriodType === 'year_previous') {
+    txt = `${count} contrat${count !== 1 ? 's' : ''} en ${now.getFullYear() - 1}`;
+  } else {
+    txt = `${count} contrat${count !== 1 ? 's' : ''} au total`;
+  }
+  label.textContent = txt;
+  label.style.display = count > 0 ? 'block' : 'none';
+}
+
 function renderHistory(filter) {
   const list = document.getElementById('historyList');
-  const filtered = filter === 'all' ? allContracts : allContracts.filter(c => c.status === filter);
+  const byStatus = filter === 'all' ? allContracts : allContracts.filter(c => c.status === filter);
+  const filtered = applyPeriodFilter(byStatus);
+  updatePeriodLabel(filtered.length);
 
   if (filtered.length === 0) {
     list.innerHTML = `<div class="history-empty">
