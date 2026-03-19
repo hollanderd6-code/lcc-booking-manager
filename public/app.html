@@ -9145,7 +9145,31 @@ async function downloadChecklistPDF() {
       }
       if (col > 0) y += photoH + 5;
     }
-    var filename = 'menage-' + checkoutDate.replace(/\//g,'-') + '-' + (c.cleaner_name||'cleaner').replace(/\s+/g,'-') + '.pdf';
+    // Bloc certification signature
+    if (c.cleaner_certified && c.signature_data) {
+      if (y > 220) { doc.addPage(); y = 20; }
+      doc.setFillColor(26,122,94); doc.rect(0,y,pageW,8,'F');
+      doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
+      doc.text('Certification du ménage', margin, y+5.5); y += 14;
+
+      doc.setTextColor(50,50,50); doc.setFontSize(9); doc.setFont('helvetica','normal');
+      var certDate = c.certified_at ? new Date(c.certified_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
+      doc.text('Certifié le : ' + certDate, margin, y); y += 6;
+      doc.text('Adresse IP : ' + (c.signature_ip||'—'), margin, y); y += 6;
+      doc.text('Cleaner : ' + (c.cleaner_name||'—'), margin, y); y += 6;
+      doc.setFontSize(8); doc.setTextColor(100,100,100);
+      doc.text('Je certifie avoir effectué toutes les tâches de ménage listées dans cette checklist.', margin, y); y += 8;
+      try {
+        doc.addImage(c.signature_data, 'PNG', margin, y, 70, 28);
+        doc.setDrawColor(200,184,154); doc.setLineWidth(0.3);
+        doc.rect(margin, y, 70, 28); y += 32;
+      } catch(e) {}
+      doc.setFillColor(16,185,129); doc.roundedRect(margin,y,50,8,2,2,'F');
+      doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
+      doc.text('✓ Document certifié', margin+3, y+5.5);
+    }
+
+    var filename = 'menage-certifie-' + checkoutDate.replace(/\//g,'-') + '-' + (c.cleaner_name||'cleaner').replace(/\s+/g,'-') + '.pdf';
     doc.save(filename);
   } catch(e) {
     console.error('PDF error:', e);
