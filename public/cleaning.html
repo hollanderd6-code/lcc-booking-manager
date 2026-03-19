@@ -1447,6 +1447,7 @@ html[data-theme-v3="1"] #templatesList > div {
 </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="cleaning" data-subtitle="Assignez-la à vos logements et générez un planning intelligent." data-title="Gestion du ménage">
 
@@ -1852,6 +1853,10 @@ html[data-theme-v3="1"] #templatesList > div {
       <div class="checklist-detail-section" id="detailOwnerNotesSection" style="display:none;">
         <div class="checklist-detail-section-title">Votre commentaire (rejet)</div>
         <div class="checklist-detail-notes" id="detailOwnerNotes" style="background:#fee2e2; color:#991b1b; border-color:#ef4444;"></div>
+      </div>
+      <div class="checklist-detail-section" id="detailSignatureSection" style="display:none;">
+        <div class="checklist-detail-section-title"><i class="fas fa-shield-check" style="color:#1A7A5E;margin-right:6px;"></i>Certification du ménage</div>
+        <div id="detailSignatureContent"></div>
       </div>
     </div>
     <div class="checklist-detail-footer" id="detailFooter">
@@ -2828,15 +2833,154 @@ function formatDateFr(dateStr) {
           if (c.notes) document.getElementById('detailNotes').textContent = c.notes;
           document.getElementById('detailOwnerNotesSection').style.display = (c.owner_notes && c.owner_notes.trim()) ? 'block' : 'none';
           if (c.owner_notes) document.getElementById('detailOwnerNotes').textContent = c.owner_notes;
+          // Section signature
+          var sigSection = document.getElementById('detailSignatureSection');
+          var sigContent = document.getElementById('detailSignatureContent');
+          if (c.cleaner_certified && c.signature_data) {
+            sigSection.style.display = 'block';
+            var certDate = c.certified_at ? new Date(c.certified_at).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+            sigContent.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:12px;">'
+              + '<span style="padding:4px 10px;background:rgba(16,185,129,.1);color:#059669;border-radius:8px;font-weight:600;"><i class="fas fa-clock" style="margin-right:4px;"></i>' + certDate + '</span>'
+              + '<span style="padding:4px 10px;background:rgba(59,130,246,.1);color:#2563EB;border-radius:8px;font-weight:600;"><i class="fas fa-network-wired" style="margin-right:4px;"></i>IP : ' + (c.signature_ip || '—') + '</span>'
+              + '<span style="padding:4px 10px;background:rgba(26,122,94,.1);color:#1A7A5E;border-radius:8px;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Certifié</span>'
+              + '</div>'
+              + '<img src="' + c.signature_data + '" style="width:100%;max-width:280px;border:1px solid rgba(200,184,154,.4);border-radius:10px;background:white;" />';
+          } else {
+            sigSection.style.display = 'none';
+          }
           var footer = document.getElementById('detailFooter');
+          var dlBtn = '<button class="btn btn-ghost" onclick="downloadCleaningDetailPDF(' + c.id + ')" style="flex:1;"><i class="fas fa-download"></i> PDF</button>';
           footer.innerHTML = st === 'pending'
-            ? '<button class="btn btn-validate" onclick="validateChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-check-circle"></i> Valider</button><button class="btn btn-reject" onclick="rejectChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-undo"></i> Complément</button>'
-            : '<button class="btn btn-ghost" onclick="closeChecklistDetail()" style="width:100%;">Fermer</button>';
+            ? '<button class="btn btn-validate" onclick="validateChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-check-circle"></i> Valider</button><button class="btn btn-reject" onclick="rejectChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-undo"></i> Complément</button>' + dlBtn
+            : '<button class="btn btn-ghost" onclick="closeChecklistDetail()" style="flex:1;">Fermer</button>' + dlBtn;
+          window._currentCleaningDetailId = c.id;
           document.getElementById('checklistDetailModal').classList.add('active');
           document.body.style.overflow = 'hidden';
         } catch (err) { console.error(err); alert('Erreur chargement'); }
       }
       window.openChecklistDetail = openChecklistDetail;
+
+      async function loadImageAsDataURL(url) {
+        return new Promise(function(resolve, reject) {
+          var img = new Image(); img.crossOrigin = 'anonymous';
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.onerror = reject;
+          img.src = url;
+        });
+      }
+
+      async function downloadCleaningDetailPDF(id) {
+        var token = localStorage.getItem('lcc_token');
+        var res = await fetch(API_URL + '/api/cleaning/checklists/' + id, { headers: { Authorization: 'Bearer ' + token } });
+        if (!res.ok) { alert('Erreur chargement'); return; }
+        var data = await res.json(); var c = data.checklist;
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        var tasks = typeof c.tasks === 'string' ? JSON.parse(c.tasks) : (c.tasks || []);
+        var photos = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
+        var margin = 15, y = 20, pageW = 210;
+        var completedAt = c.completed_at ? new Date(c.completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        var checkoutDate = c.checkout_date ? c.checkout_date.slice(0,10).split('-').reverse().join('/') : '—';
+        var st = c.owner_status === 'validated' ? 'Validé' : c.owner_status === 'rejected' ? 'Rejeté' : 'En attente';
+
+        // Header
+        doc.setFillColor(26,122,94); doc.rect(0,0,pageW,30,'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(18); doc.setFont('helvetica','bold');
+        doc.text('Rapport de ménage certifié', margin, 14);
+        doc.setFontSize(10); doc.setFont('helvetica','normal');
+        doc.text('Boostinghost', margin, 22); y = 38;
+
+        // Infos
+        doc.setTextColor(50,50,50); doc.setFontSize(10); doc.setFont('helvetica','normal');
+        doc.text('Date de départ : ' + checkoutDate, margin, y); y += 6;
+        doc.text('Cleaner : ' + (c.cleaner_name||'N/A'), margin, y); y += 6;
+        doc.text('Soumis le : ' + completedAt, margin, y); y += 6;
+        var stRgb = c.owner_status==='validated'?[16,185,129]:c.owner_status==='rejected'?[239,68,68]:[245,158,11];
+        doc.setFillColor(stRgb[0],stRgb[1],stRgb[2]);
+        doc.roundedRect(margin,y,32,7,2,2,'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        doc.text(st, margin+3, y+5); y += 14;
+
+        // Tâches
+        doc.setTextColor(26,122,94); doc.setFontSize(12); doc.setFont('helvetica','bold');
+        doc.text('Tâches effectuées', margin, y); y += 2;
+        doc.setDrawColor(26,122,94); doc.setLineWidth(0.5);
+        doc.line(margin,y,pageW-margin,y); y += 6;
+        doc.setFontSize(9); doc.setFont('helvetica','normal');
+        tasks.forEach(function(t) {
+          if (y > 272) { doc.addPage(); y = 20; }
+          doc.setTextColor(t.checked?16:239, t.checked?185:68, t.checked?129:68);
+          doc.text(t.checked?'✓':'✗', margin, y);
+          doc.setTextColor(50,50,50);
+          doc.text((t.name||t.title||''), margin+6, y); y += 6;
+        });
+        y += 4;
+
+        // Notes
+        if (c.notes && c.notes.trim()) {
+          if (y > 260) { doc.addPage(); y = 20; }
+          doc.setTextColor(26,122,94); doc.setFontSize(12); doc.setFont('helvetica','bold');
+          doc.text('Notes', margin, y); y += 2;
+          doc.line(margin,y,pageW-margin,y); y += 6;
+          doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(50,50,50);
+          var lines = doc.splitTextToSize(c.notes, pageW-margin*2);
+          doc.text(lines, margin, y); y += lines.length*5+4;
+        }
+
+        // Photos
+        if (photos.length > 0) {
+          if (y > 240) { doc.addPage(); y = 20; }
+          doc.setTextColor(26,122,94); doc.setFontSize(12); doc.setFont('helvetica','bold');
+          doc.text('Photos (' + photos.length + ')', margin, y); y += 2;
+          doc.line(margin,y,pageW-margin,y); y += 6;
+          var photoW=55, photoH=42, perRow=3, col=0;
+          for (var i=0; i<photos.length; i++) {
+            if (y+photoH>282) { doc.addPage(); y=20; col=0; }
+            try { var imgData = await loadImageAsDataURL(photos[i]); doc.addImage(imgData,'JPEG',margin+col*(photoW+5),y,photoW,photoH); } catch(e){}
+            col++; if (col>=perRow) { col=0; y+=photoH+5; }
+          }
+          if (col>0) y+=photoH+5;
+        }
+
+        // Bloc certification signature
+        if (c.cleaner_certified && c.signature_data) {
+          if (y > 220) { doc.addPage(); y = 20; }
+          doc.setFillColor(26,122,94); doc.rect(0,y,pageW,8,'F');
+          doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
+          doc.text('Certification du ménage', margin, y+5.5); y += 14;
+
+          doc.setTextColor(50,50,50); doc.setFontSize(9); doc.setFont('helvetica','normal');
+          var certDate = c.certified_at ? new Date(c.certified_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
+          doc.text('Certifié le : ' + certDate, margin, y); y += 6;
+          doc.text('Adresse IP : ' + (c.signature_ip||'—'), margin, y); y += 6;
+          doc.text('Cleaner : ' + (c.cleaner_name||'—'), margin, y); y += 6;
+          doc.setFontSize(8); doc.setTextColor(100,100,100);
+          doc.text('Je certifie avoir effectué toutes les tâches de ménage listées dans cette checklist.', margin, y); y += 8;
+
+          // Signature image
+          try {
+            doc.addImage(c.signature_data, 'PNG', margin, y, 70, 28);
+            doc.setDrawColor(200,184,154); doc.setLineWidth(0.3);
+            doc.rect(margin, y, 70, 28);
+            y += 32;
+          } catch(e) {}
+
+          // Filigrane certifié
+          doc.setFillColor(16,185,129); doc.roundedRect(margin,y,50,8,2,2,'F');
+          doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
+          doc.text('✓ Document certifié', margin+3, y+5.5);
+        }
+
+        var filename = 'menage-certifie-' + checkoutDate.replace(/\//g,'-') + '-' + (c.cleaner_name||'cleaner').replace(/\s+/g,'-') + '.pdf';
+        doc.save(filename);
+      }
+      window.downloadCleaningDetailPDF = downloadCleaningDetailPDF;
+
       function closeChecklistDetail() { document.getElementById('checklistDetailModal').classList.remove('active'); document.body.style.overflow = ''; }
       window.closeChecklistDetail = closeChecklistDetail;
       async function validateChecklist(id) { if (!confirm('Valider ce ménage ?')) return; try { var token = localStorage.getItem('lcc_token'); var res = await fetch(API_URL+'/api/cleaning/checklists/'+id+'/validate', { method:'PUT', headers:{'Content-Type':'application/json',Authorization:'Bearer '+token} }); if (!res.ok) throw new Error('err'); await loadChecklistsList(); } catch(e){ console.error(e); alert('Erreur'); } }
