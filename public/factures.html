@@ -748,6 +748,35 @@ html[data-theme-v3="1"] .btn-ghost {
 }
 
 /* ===== HISTORIQUE FACTURES ===== */
+
+/* ── Filtres période ── */
+.history-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.period-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(200,184,154,.5);
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #7A8695);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.period-btn:hover { border-color: #1A7A5E; color: #1A7A5E; }
+.period-btn.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+.history-period-label {
+  font-size: 12px;
+  color: var(--text-secondary, #9ca3af);
+  margin-bottom: 10px;
+  padding: 0 16px;
+}
 .history-section { margin-top: 32px; }
 .history-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
 .history-title { font-size:18px; font-weight:700; color:#1a2e1a; display:flex; align-items:center; gap:8px; }
@@ -1072,8 +1101,17 @@ html[data-theme-v3="1"] .btn-ghost {
     <div class="history-title"><i class="fas fa-history"></i> Historique des factures</div>
     <button onclick="loadInvoiceHistory()" style="background:none;border:none;color:#1A7A5E;cursor:pointer;font-size:13px;"><i class="fas fa-sync-alt"></i> Actualiser</button>
   </div>
+  <div class="history-filters">
+    <button class="period-btn active" onclick="setPeriod(30, this)">30 derniers jours</button>
+    <button class="period-btn" onclick="setPeriod(90, this)">3 mois</button>
+    <button class="period-btn" onclick="setPeriod(180, this)">6 mois</button>
+    <button class="period-btn" onclick="setPeriodYear('current', this)">Cette année</button>
+    <button class="period-btn" onclick="setPeriodYear('previous', this)">Année précédente</button>
+    <button class="period-btn" onclick="setPeriod(0, this)">Tout</button>
+  </div>
   <div class="card">
     <div class="card-body" style="padding:0;overflow:hidden;border-radius:12px;">
+      <div id="historyPeriodLabel" class="history-period-label" style="display:none;"></div>
       <div id="historyContent">
         <div class="history-empty"><i class="fas fa-file-invoice"></i>Chargement...</div>
       </div>
@@ -1574,42 +1612,96 @@ html[data-theme-v3="1"] .btn-ghost {
             headers: { 'Authorization': 'Bearer ' + token }
           });
           const data = await res.json();
-          const invoices = data.invoices || [];
-          
-          if (invoices.length === 0) {
-            container.innerHTML = '<div class="history-empty"><i class="fas fa-file-invoice"></i>Aucune facture envoyée pour le moment</div>';
-            return;
-          }
-
-          const rows = invoices.map(inv => {
-            const date = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'}) : '—';
-            const checkin = inv.checkinDate ? new Date(inv.checkinDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : '';
-            const checkout = inv.checkoutDate ? new Date(inv.checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : '';
-            const sejour = checkin && checkout ? checkin + ' → ' + checkout : '—';
-            const total = inv.total ? parseFloat(inv.total).toFixed(2) + ' €' : '—';
-            const resendBtn = inv.clientEmail 
-              ? `<button class="history-resend-btn" onclick="resendInvoice('${inv.invoiceNumber}', '${inv.clientEmail}')"><i class="fas fa-paper-plane"></i> Renvoyer</button>`
-              : '';
-            const dlBtn = `<button class="history-resend-btn" style="border-color:#6366f1;color:#6366f1;" onclick="downloadInvoiceByNumber('${inv.invoiceNumber}')"><i class="fas fa-download"></i> PDF</button>`;
-            
-            const card = `<div class="history-card">
-              <div class="history-card-top">
-                <span class="history-card-num">${inv.invoiceNumber || '—'}</span>
-                <span class="history-card-total">${total}</span>
-              </div>
-              <div class="history-card-mid">${inv.clientName || '—'} · ${inv.propertyName || '—'}</div>
-              <div class="history-card-bottom">${sejour} · ${date}</div>
-              <div class="history-card-actions">${resendBtn}${dlBtn}</div>
-            </div>`;
-
-            return card;
-          });
-
-          container.innerHTML = `<div class="history-cards">${rows.join('')}</div>`;
+          window._allInvoices = data.invoices || [];
+          renderInvoiceHistory();
         } catch(e) {
           container.innerHTML = '<div class="history-empty"><i class="fas fa-exclamation-circle"></i>Erreur de chargement</div>';
         }
       };
+
+      // Période courante : 30 jours par défaut
+      window._currentPeriodDays = 30;
+      window._currentPeriodType = 'days'; // 'days' | 'year_current' | 'year_previous' | 'all'
+
+      window.setPeriod = function(days, btn) {
+        window._currentPeriodDays = days;
+        window._currentPeriodType = days === 0 ? 'all' : 'days';
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderInvoiceHistory();
+      };
+
+      window.setPeriodYear = function(type, btn) {
+        window._currentPeriodType = type === 'current' ? 'year_current' : 'year_previous';
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderInvoiceHistory();
+      };
+
+      function renderInvoiceHistory() {
+        const container = document.getElementById('historyContent');
+        const label = document.getElementById('historyPeriodLabel');
+        const allInvoices = window._allInvoices || [];
+        const type = window._currentPeriodType;
+        const days = window._currentPeriodDays;
+
+        // Filtrer selon la période
+        const now = new Date();
+        let filtered = allInvoices;
+        let labelText = '';
+
+        if (type === 'days' && days > 0) {
+          const cutoff = new Date(now - days * 24 * 60 * 60 * 1000);
+          filtered = allInvoices.filter(inv => inv.createdAt && new Date(inv.createdAt) >= cutoff);
+          labelText = `${filtered.length} facture${filtered.length !== 1 ? 's' : ''} sur les ${days} derniers jours`;
+        } else if (type === 'year_current') {
+          const y = now.getFullYear();
+          filtered = allInvoices.filter(inv => inv.createdAt && new Date(inv.createdAt).getFullYear() === y);
+          labelText = `${filtered.length} facture${filtered.length !== 1 ? 's' : ''} en ${y}`;
+        } else if (type === 'year_previous') {
+          const y = now.getFullYear() - 1;
+          filtered = allInvoices.filter(inv => inv.createdAt && new Date(inv.createdAt).getFullYear() === y);
+          labelText = `${filtered.length} facture${filtered.length !== 1 ? 's' : ''} en ${y}`;
+        } else {
+          labelText = `${filtered.length} facture${filtered.length !== 1 ? 's' : ''} au total`;
+        }
+
+        // Label
+        if (label) {
+          label.style.display = filtered.length > 0 ? 'block' : 'none';
+          label.textContent = labelText;
+        }
+
+        if (filtered.length === 0) {
+          container.innerHTML = '<div class="history-empty"><i class="fas fa-file-invoice"></i>Aucune facture sur cette période</div>';
+          return;
+        }
+
+        const rows = filtered.map(inv => {
+          const date = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'}) : '—';
+          const checkin = inv.checkinDate ? new Date(inv.checkinDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : '';
+          const checkout = inv.checkoutDate ? new Date(inv.checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : '';
+          const sejour = checkin && checkout ? checkin + ' → ' + checkout : '—';
+          const total = inv.total ? parseFloat(inv.total).toFixed(2) + ' €' : '—';
+          const resendBtn = inv.clientEmail 
+            ? `<button class="history-resend-btn" onclick="resendInvoice('${inv.invoiceNumber}', '${inv.clientEmail}')"><i class="fas fa-paper-plane"></i> Renvoyer</button>`
+            : '';
+          const dlBtn = `<button class="history-resend-btn" style="border-color:#6366f1;color:#6366f1;" onclick="downloadInvoiceByNumber('${inv.invoiceNumber}')"><i class="fas fa-download"></i> PDF</button>`;
+          
+          return `<div class="history-card">
+            <div class="history-card-top">
+              <span class="history-card-num">${inv.invoiceNumber || '—'}</span>
+              <span class="history-card-total">${total}</span>
+            </div>
+            <div class="history-card-mid">${inv.clientName || '—'} · ${inv.propertyName || '—'}</div>
+            <div class="history-card-bottom">${sejour} · ${date}</div>
+            <div class="history-card-actions">${resendBtn}${dlBtn}</div>
+          </div>`;
+        });
+
+        container.innerHTML = `<div class="history-cards">${rows.join('')}</div>`;
+      }
+      window.renderInvoiceHistory = renderInvoiceHistory;
 
       window.downloadInvoiceByNumber = async function(invoiceNumber) {
         try {
