@@ -2210,6 +2210,7 @@ function formatDateFr(dateStr) {
               const saData = await saResponse.json().catch(() => ({}));
               subAccounts = Array.isArray(saData.subAccounts) ? saData.subAccounts : 
                             Array.isArray(saData) ? saData : [];
+              window._subAccounts = subAccounts; // exposé pour la modale d'édition
             }
           } catch(e) { console.warn('Sous-comptes non chargés:', e); }
 
@@ -2351,9 +2352,14 @@ function formatDateFr(dateStr) {
                   ${c.sub_account_id ? `<span class="cleaner-pill" style="background: #dbeafe; color: #2563eb; font-weight: 600;"><i class="fas fa-bell"></i> Notifs activées</span>` : ''}
                 </div>
               </div>
-              <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner">
-                <i class="fas fa-trash"></i>
-              </button>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="editCleaner" title="Modifier">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="deleteCleaner" title="Supprimer">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </div>
             ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
             ${taskUrl ? `<div style="margin-top:10px;"><a href="${taskUrl}" target="_self" style="display:inline-flex; align-items:center; gap:6px; background:#ede9fe; color:#7c3aed; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; -webkit-tap-highlight-color:transparent; cursor:pointer;"><i class="fas fa-external-link-alt"></i> Accéder aux tâches</a></div>` : ''}
@@ -2585,6 +2591,79 @@ function formatDateFr(dateStr) {
             console.error('Erreur création cleaner:', err);
             alert('Erreur lors de la création: ' + err.message);
           }
+        });
+      }
+
+      // ── Édition d'un cleaner ──
+      let editingCleanerId = null;
+
+      function openEditCleaner(id) {
+        const c = cleaners.find(x => String(x.id) === String(id));
+        if (!c) return;
+        editingCleanerId = id;
+        document.getElementById('editCleanerName').value = c.name || '';
+        document.getElementById('editCleanerEmail').value = c.email || '';
+        document.getElementById('editCleanerPhone').value = c.phone || '';
+        document.getElementById('editCleanerNotes').value = c.notes || '';
+        // Remplir le select sous-compte
+        const sel = document.getElementById('editCleanerSubAccount');
+        sel.innerHTML = '<option value="">— Aucun sous-compte lié —</option>';
+        const subAccounts = window._subAccounts || [];
+        subAccounts.forEach(sa => {
+          const opt = document.createElement('option');
+          opt.value = sa.id;
+          opt.textContent = sa.name || sa.email;
+          if (String(sa.id) === String(c.sub_account_id)) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        document.getElementById('editCleanerModal').style.display = 'flex';
+      }
+
+      window.closeEditCleaner = function() {
+        document.getElementById('editCleanerModal').style.display = 'none';
+        editingCleanerId = null;
+      };
+
+      document.getElementById('editCleanerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!editingCleanerId) return;
+        const token = localStorage.getItem('lcc_token');
+        const name = document.getElementById('editCleanerName').value.trim();
+        const email = document.getElementById('editCleanerEmail').value.trim();
+        const phone = document.getElementById('editCleanerPhone').value.trim();
+        const notes = document.getElementById('editCleanerNotes').value.trim();
+        const subAccountId = document.getElementById('editCleanerSubAccount').value || null;
+
+        try {
+          const res = await fetch(`${API_URL}/api/cleaners/${editingCleanerId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({
+              name,
+              email: email || null,
+              phone: phone || null,
+              notes: notes || null,
+              subAccountId: subAccountId ? parseInt(subAccountId) : null
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+          // Mettre à jour localement
+          const idx = cleaners.findIndex(x => String(x.id) === String(editingCleanerId));
+          if (idx !== -1) cleaners[idx] = data.cleaner || { ...cleaners[idx], name, email, phone, notes, sub_account_id: subAccountId ? parseInt(subAccountId) : null };
+          closeEditCleaner();
+          renderCleaners();
+        } catch(err) {
+          alert('Erreur : ' + err.message);
+        }
+      });
+
+      // Écouter le clic sur editCleaner
+      if (cleanerList) {
+        cleanerList.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-action="editCleaner"]');
+          if (!btn) return;
+          openEditCleaner(btn.getAttribute('data-id'));
         });
       }
 
@@ -3268,6 +3347,48 @@ function formatDateFr(dateStr) {
   }
 }
 </style>
+
+
+<!-- Modale édition cleaner -->
+<div id="editCleanerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg-primary,#fff);border-radius:16px;padding:24px;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:16px;font-weight:700;color:var(--text-primary);">
+        <i class="fas fa-pen" style="color:#1A7A5E;margin-right:8px;"></i>Modifier le cleaner
+      </div>
+      <button onclick="closeEditCleaner()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-secondary);">&times;</button>
+    </div>
+    <form id="editCleanerForm" class="form-grid">
+      <div class="form-row">
+        <label for="editCleanerName">Nom &amp; prénom</label>
+        <input id="editCleanerName" required type="text"/>
+      </div>
+      <div class="form-row">
+        <label for="editCleanerEmail">E-mail</label>
+        <input id="editCleanerEmail" placeholder="exemple@mail.com" type="email"/>
+      </div>
+      <div class="form-row">
+        <label for="editCleanerPhone">Téléphone</label>
+        <input id="editCleanerPhone" placeholder="+33 6 00 00 00 00" type="tel"/>
+      </div>
+      <div class="form-row">
+        <label for="editCleanerNotes">Notes / zone d'intervention</label>
+        <textarea id="editCleanerNotes" rows="2" placeholder="Ex : intervient uniquement sur les appartements du centre-ville"></textarea>
+      </div>
+      <div class="form-row">
+        <label for="editCleanerSubAccount">Compte app (optionnel)</label>
+        <select id="editCleanerSubAccount" style="width:100%;padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:14px;">
+          <option value="">— Aucun sous-compte lié —</option>
+        </select>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Lier un sous-compte pour activer les notifications push.</div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+        <button type="button" onclick="closeEditCleaner()" class="btn btn-secondary">Annuler</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 </body>
 </html>
