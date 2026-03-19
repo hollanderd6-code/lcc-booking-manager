@@ -1382,17 +1382,17 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('suggestTitle').value = '';
       document.getElementById('suggestDesc').value = '';
       feedback.style.display = '';
-      feedback.textContent = '✅ Suggestion envoyée, merci ! Nous l'examinerons rapidement.';
+      feedback.textContent = "✅ Suggestion envoyée, merci ! Nous l'examinerons rapidement.";
       setTimeout(() => { feedback.style.display = 'none'; }, 4000);
     } catch(e) {
       feedback.style.display = '';
       feedback.style.color = '#DC2626';
-      feedback.textContent = 'Erreur lors de l'envoi, réessayez.';
+      feedback.textContent = "Erreur lors de l'envoi, réessayez.";
     }
   }
 
-  // Charger la roadmap au démarrage
-  document.addEventListener('DOMContentLoaded', loadRoadmap);
+  // Charger la roadmap au démarrage (délai pour laisser bh-layout.js hydrater le token)
+  document.addEventListener('DOMContentLoaded', () => setTimeout(loadRoadmap, 300));
 
 
   // ── Statut support selon horaires (heure Paris) ──
