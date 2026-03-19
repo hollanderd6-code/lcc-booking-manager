@@ -911,6 +911,97 @@ html, body {
   color: var(--text-secondary);
 }
 
+
+/* ===== SIGNATURE MODALE ===== */
+.sig-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(13,17,23,.6);
+  z-index: 500;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+.sig-modal-overlay.open { display: flex; }
+.sig-modal {
+  background: #F5F2EC;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px 40px;
+  width: 100%;
+  max-width: 540px;
+  box-shadow: 0 -8px 40px rgba(13,17,23,.2);
+  animation: slideUp .25s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.sig-modal-title {
+  font-size: 17px; font-weight: 700; color: #0D1117;
+  margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+}
+.sig-modal-sub {
+  font-size: 13px; color: #7A8695; margin-bottom: 16px; line-height: 1.4;
+}
+.sig-certify-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: white; border: 1px solid rgba(200,184,154,.4);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 16px;
+  cursor: pointer;
+}
+.sig-certify-row input[type="checkbox"] {
+  width: 20px; height: 20px; flex-shrink: 0;
+  accent-color: #1A7A5E; cursor: pointer; margin-top: 1px;
+}
+.sig-certify-label {
+  font-size: 13px; color: #374151; line-height: 1.5; cursor: pointer;
+}
+.sig-canvas-wrap {
+  background: white; border: 2px dashed rgba(200,184,154,.6);
+  border-radius: 14px; margin-bottom: 12px; position: relative;
+  overflow: hidden;
+}
+.sig-canvas-wrap.signed { border-style: solid; border-color: #1A7A5E; }
+#sigCanvas {
+  display: block; width: 100%; height: 160px; cursor: crosshair; touch-action: none;
+}
+.sig-canvas-hint {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; pointer-events: none;
+  font-size: 13px; color: #9CA3AF; gap: 7px;
+  transition: opacity .2s;
+}
+.sig-canvas-hint.hidden { opacity: 0; }
+.sig-clear-btn {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(13,17,23,.06); border: none; border-radius: 8px;
+  padding: 5px 10px; font-size: 12px; font-weight: 600;
+  color: #7A8695; cursor: pointer; display: none;
+}
+.sig-canvas-wrap.signed .sig-clear-btn { display: block; }
+.sig-meta {
+  font-size: 11px; color: #9CA3AF; text-align: center; margin-bottom: 16px;
+}
+.sig-actions {
+  display: flex; gap: 10px;
+}
+.sig-cancel-btn {
+  flex: 1; padding: 14px; border-radius: 14px;
+  border: 1px solid rgba(200,184,154,.5); background: white;
+  font-size: 15px; font-weight: 600; color: #7A8695; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.sig-confirm-btn {
+  flex: 2; padding: 14px; border-radius: 14px;
+  border: none; background: #cccccc; color: white;
+  font-size: 15px; font-weight: 700; cursor: not-allowed;
+  font-family: 'DM Sans', sans-serif;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background .2s;
+}
+.sig-confirm-btn.ready { background: #1A7A5E; cursor: pointer; }
+
 /* ===== NOTIFICATION TOAST ===== */
 .toast {
   position: fixed;
@@ -1081,6 +1172,48 @@ html[data-theme-v3="1"] .top-bar {
       <i class="fas fa-paper-plane"></i>
       <span id="submitLabel">Compléter toutes les tâches</span>
     </button>
+  </div>
+</div>
+
+
+<!-- ========== SIGNATURE MODALE ========== -->
+<div class="sig-modal-overlay" id="sigModalOverlay">
+  <div class="sig-modal">
+    <div class="sig-modal-title">
+      <i class="fas fa-pen-nib" style="color:#1A7A5E;"></i> Certification du ménage
+    </div>
+    <div class="sig-modal-sub">
+      Cochez la case et apposez votre signature pour certifier que toutes les tâches ont été effectuées.
+    </div>
+
+    <!-- Case à cocher -->
+    <label class="sig-certify-row" for="sigCertifyCheck">
+      <input type="checkbox" id="sigCertifyCheck" onchange="updateSigState()"/>
+      <span class="sig-certify-label">
+        Je certifie avoir effectué toutes les tâches de ménage listées dans cette checklist, conformément aux instructions reçues.
+      </span>
+    </label>
+
+    <!-- Canvas signature -->
+    <div class="sig-canvas-wrap" id="sigCanvasWrap">
+      <canvas id="sigCanvas" width="800" height="240"></canvas>
+      <div class="sig-canvas-hint" id="sigCanvasHint">
+        <i class="fas fa-signature"></i> Signez ici avec votre doigt
+      </div>
+      <button class="sig-clear-btn" onclick="clearSignature()">Effacer</button>
+    </div>
+
+    <!-- Méta horodatage -->
+    <div class="sig-meta" id="sigMeta">
+      Horodatage et adresse IP enregistrés automatiquement à la validation.
+    </div>
+
+    <div class="sig-actions">
+      <button class="sig-cancel-btn" onclick="closeSigModal()">Annuler</button>
+      <button class="sig-confirm-btn" id="sigConfirmBtn" onclick="confirmSignature()" disabled>
+        <i class="fas fa-shield-check"></i> Valider et certifier
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1673,6 +1806,98 @@ function startTimer() { timerSeconds = 0; }
 function stopTimer() {}
 function updateTimerDisplay() {}
 
+// ===== SIGNATURE ===== 
+let sigCanvas, sigCtx, sigDrawing = false, sigHasSigned = false, sigData = null;
+
+function initSigCanvas() {
+  sigCanvas = document.getElementById('sigCanvas');
+  sigCtx = sigCanvas.getContext('2d');
+  // Resize canvas to match display
+  const rect = sigCanvas.getBoundingClientRect();
+  sigCanvas.width = rect.width * window.devicePixelRatio;
+  sigCanvas.height = rect.height * window.devicePixelRatio;
+  sigCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  sigCtx.strokeStyle = '#0D1117';
+  sigCtx.lineWidth = 2.5;
+  sigCtx.lineCap = 'round';
+  sigCtx.lineJoin = 'round';
+
+  function getPos(e) {
+    const r = sigCanvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  }
+  function down(e) {
+    e.preventDefault();
+    sigDrawing = true;
+    const p = getPos(e);
+    sigCtx.beginPath();
+    sigCtx.moveTo(p.x, p.y);
+  }
+  function move(e) {
+    e.preventDefault();
+    if (!sigDrawing) return;
+    const p = getPos(e);
+    sigCtx.lineTo(p.x, p.y);
+    sigCtx.stroke();
+    if (!sigHasSigned) {
+      sigHasSigned = true;
+      document.getElementById('sigCanvasHint').classList.add('hidden');
+      document.getElementById('sigCanvasWrap').classList.add('signed');
+      updateSigState();
+    }
+  }
+  function up(e) { e.preventDefault(); sigDrawing = false; }
+
+  sigCanvas.addEventListener('mousedown', down);
+  sigCanvas.addEventListener('mousemove', move);
+  sigCanvas.addEventListener('mouseup', up);
+  sigCanvas.addEventListener('touchstart', down, { passive: false });
+  sigCanvas.addEventListener('touchmove', move, { passive: false });
+  sigCanvas.addEventListener('touchend', up, { passive: false });
+}
+
+function clearSignature() {
+  if (!sigCtx) return;
+  const r = sigCanvas.getBoundingClientRect();
+  sigCtx.clearRect(0, 0, r.width, r.height);
+  sigHasSigned = false;
+  document.getElementById('sigCanvasHint').classList.remove('hidden');
+  document.getElementById('sigCanvasWrap').classList.remove('signed');
+  updateSigState();
+}
+
+function updateSigState() {
+  const checked = document.getElementById('sigCertifyCheck').checked;
+  const btn = document.getElementById('sigConfirmBtn');
+  const ready = checked && sigHasSigned;
+  btn.disabled = !ready;
+  btn.className = 'sig-confirm-btn' + (ready ? ' ready' : '');
+}
+
+function openSigModal() {
+  document.getElementById('sigModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Reset état
+  document.getElementById('sigCertifyCheck').checked = false;
+  clearSignature();
+  document.getElementById('sigMeta').textContent =
+    'Horodatage et adresse IP enregistrés automatiquement à la validation.';
+  setTimeout(initSigCanvas, 50);
+}
+
+function closeSigModal() {
+  document.getElementById('sigModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function confirmSignature() {
+  if (!sigHasSigned || !document.getElementById('sigCertifyCheck').checked) return;
+  sigData = sigCanvas.toDataURL('image/png');
+  closeSigModal();
+  doSubmit();
+}
+
 // ===== SUBMIT =====
 async function handleSubmit() {
   const allChecked = checklistTasks.every(t => t.checked);
@@ -1687,6 +1912,11 @@ async function handleSubmit() {
     showToast(`Ajoutez encore ${5 - checklistPhotos.length} photo(s)`, 'error');
     return;
   }
+  // Ouvrir la modale de signature
+  openSigModal();
+}
+
+async function doSubmit() {
   
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
@@ -1694,6 +1924,7 @@ async function handleSubmit() {
   
   try {
     const notes = document.getElementById('cleaningNotes')?.value || '';
+    const certifiedAt = new Date().toISOString();
     
     const payload = {
       pinCode: currentPin,
@@ -1709,7 +1940,9 @@ async function handleSubmit() {
       notes: notes,
       duration: timerSeconds,
       startedAt: startedAt?.toISOString(),
-      completedAt: new Date().toISOString()
+      completedAt: certifiedAt,
+      signatureData: sigData || null,
+      certifiedAt: certifiedAt
     };
     
     const res = await fetch(`${API_URL}/api/cleaning/checklist`, {
@@ -1731,8 +1964,9 @@ async function handleSubmit() {
     stopTimer();
     
     // Show success
-    document.getElementById('successSubtitle').textContent = 
-      `Ménage terminé — Le propriétaire sera notifié.`;
+    const certTs = new Date().toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+    document.getElementById('successSubtitle').innerHTML = 
+      `Ménage certifié et signé.<br><span style="font-size:12px;opacity:.7;">📅 ${certTs} · Signature et IP enregistrées</span>`;
     document.getElementById('successOverlay').classList.add('active');
     
   } catch (err) {
