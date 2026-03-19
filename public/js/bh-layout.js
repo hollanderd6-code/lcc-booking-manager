@@ -398,64 +398,10 @@ function getSidebarHTML() {
 
 
   // ============================================================
-  // DESKTOP LAYOUT — KPI cards et autres corrections grand écran
-  // Appelée au init et au resize pour garantir la cohérence
+  // DESKTOP LAYOUT — réservé pour futurs ajustements globaux
   // ============================================================
   function applyDesktopLayout() {
-    const isDesktop = window.innerWidth >= 1367;
-
-    // ── KPI cards ──
-    const kpiGrid = document.querySelector('.kpi-grid');
-    if (kpiGrid) {
-      if (isDesktop) {
-        kpiGrid.style.setProperty('display', 'flex', 'important');
-        kpiGrid.style.setProperty('flex-direction', 'column', 'important');
-        kpiGrid.style.setProperty('gap', '10px', 'important');
-        kpiGrid.style.setProperty('width', '100%', 'important');
-      }
-    }
-
-    document.querySelectorAll('.kpi-card').forEach(card => {
-      if (isDesktop) {
-        card.style.setProperty('display', 'flex', 'important');
-        card.style.setProperty('flex-direction', 'row', 'important');
-        card.style.setProperty('align-items', 'center', 'important');
-        card.style.setProperty('justify-content', 'space-between', 'important');
-        card.style.setProperty('width', '100%', 'important');
-        card.style.setProperty('box-sizing', 'border-box', 'important');
-        card.style.setProperty('overflow', 'visible', 'important');
-
-        const header = card.querySelector('.kpi-header');
-        if (header) {
-          header.style.setProperty('flex', '1', 'important');
-          header.style.setProperty('min-width', '0', 'important');
-          header.style.setProperty('display', 'flex', 'important');
-          header.style.setProperty('flex-direction', 'column', 'important');
-          header.style.setProperty('align-items', 'flex-start', 'important');
-          header.style.setProperty('visibility', 'visible', 'important');
-          header.style.setProperty('opacity', '1', 'important');
-          header.style.setProperty('overflow', 'visible', 'important');
-        }
-        const label = card.querySelector('.kpi-label');
-        if (label) {
-          label.style.setProperty('display', 'block', 'important');
-          label.style.setProperty('visibility', 'visible', 'important');
-          label.style.setProperty('opacity', '1', 'important');
-        }
-        const pill = card.querySelector('.kpi-pill');
-        if (pill) {
-          pill.style.setProperty('display', 'inline-flex', 'important');
-          pill.style.setProperty('visibility', 'visible', 'important');
-        }
-        const main = card.querySelector('.kpi-main');
-        if (main) {
-          main.style.setProperty('flex-shrink', '0', 'important');
-          main.style.setProperty('display', 'flex', 'important');
-          main.style.setProperty('flex-direction', 'column', 'important');
-          main.style.setProperty('align-items', 'flex-end', 'important');
-        }
-      }
-    });
+    // Intentionnellement vide — le layout est géré par bh-theme-v3.css
   }
 
   function init() {
