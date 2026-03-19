@@ -2650,7 +2650,22 @@ function formatDateFr(dateStr) {
           if (!res.ok) throw new Error(data.error || 'Erreur serveur');
           // Mettre à jour localement
           const idx = cleaners.findIndex(x => String(x.id) === String(editingCleanerId));
-          if (idx !== -1) cleaners[idx] = data.cleaner || { ...cleaners[idx], name, email, phone, notes, sub_account_id: subAccountId ? parseInt(subAccountId) : null };
+          if (idx !== -1) {
+            const old = cleaners[idx];
+            const updated = data.cleaner || {};
+            // Conserver pin_code et les champs non renvoyés par le PUT
+            cleaners[idx] = {
+              ...old,
+              name: updated.name || name,
+              email: updated.email !== undefined ? updated.email : (email || null),
+              phone: updated.phone !== undefined ? updated.phone : (phone || null),
+              notes: updated.notes !== undefined ? updated.notes : (notes || null),
+              sub_account_id: updated.sub_account_id !== undefined ? updated.sub_account_id : (subAccountId ? parseInt(subAccountId) : null),
+              is_active: updated.is_active !== undefined ? updated.is_active : old.is_active,
+              // pin_code conservé depuis l'ancien objet
+              pin_code: old.pin_code
+            };
+          }
           closeEditCleaner();
           renderCleaners();
         } catch(err) {
