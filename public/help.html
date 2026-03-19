@@ -594,6 +594,129 @@ html[data-theme-v3="1"] .mobile-header {
 <button class="help-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
 <div class="page-content">
 
+<!-- ====== FAQ ====== -->
+<section class="card mb-lg">
+<div class="card-header">
+  <div class="card-title">
+    <i class="fas fa-circle-question"></i> Questions fréquentes
+  </div>
+</div>
+<div class="card-body">
+  <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px;">Retrouvez les réponses aux questions les plus posées sur Boostinghost.</p>
+
+  <input id="faqSearch" placeholder="🔍 Rechercher une question…" style="margin-bottom:16px;" oninput="filterFaq(this.value)" />
+
+  <div id="faqList">
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment synchroniser mon calendrier Airbnb / Booking ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Depuis votre logement, allez dans l'onglet <strong>Synchronisation</strong> et collez l'URL iCal fournie par Airbnb ou Booking.com. La synchronisation se fait automatiquement toutes les heures.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment créer un contrat de séjour et l'envoyer à mon voyageur ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Depuis le menu <strong>Contrats</strong>, cliquez sur « Nouveau contrat », remplissez les informations du séjour, puis envoyez le lien de signature par e-mail au voyageur. Il peut signer directement depuis son téléphone.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment envoyer un livret d'accueil à mon voyageur ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Dans <strong>Livrets d'accueil</strong>, sélectionnez votre logement, personnalisez votre livret, puis copiez le lien public ou envoyez-le directement par e-mail depuis l'application.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment ajouter une personne de ménage et lui assigner des tâches ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Dans la section <strong>Ménages</strong>, ajoutez votre cleaner avec son nom et son numéro. Vous pouvez ensuite lui assigner automatiquement les départs de chaque réservation. Si elle a un compte dans l'app, liez-le pour qu'elle reçoive des notifications push.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment créer un sous-compte pour mon équipe ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Dans <strong>Paramètres du compte</strong>, section « Sous-comptes », invitez un membre de votre équipe par e-mail. Vous pouvez définir précisément ses permissions (voir les réservations, gérer les ménages, accéder aux finances…).</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment encaisser une caution et la restituer ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Dans la section <strong>Finances</strong>, créez une demande de caution pour votre voyageur. Il règle en ligne par carte bancaire. Après le séjour, restituez la caution en un clic ou retenez le montant souhaité si nécessaire.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment générer une facture pour un propriétaire ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Dans <strong>Factures propriétaires</strong>, sélectionnez le logement et la période, puis générez la facture en un clic. Elle est envoyée automatiquement par e-mail au propriétaire au format PDF.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>L'application mobile est-elle disponible sur iOS et Android ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Oui, Boostinghost est disponible sur <strong>iOS</strong> (App Store) et <strong>Android</strong> (Play Store). Votre équipe peut aussi utiliser l'app dédiée aux prestataires pour recevoir les notifications de ménage en temps réel.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Mon abonnement est-il sans engagement ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Oui, tous les abonnements Boostinghost sont <strong>sans engagement</strong>. Vous pouvez résilier à tout moment depuis les paramètres de votre compte, sans frais.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)">
+        <span>Je n'arrive pas à me connecter, que faire ?</span>
+        <i class="fas fa-chevron-down faq-toggle-icon"></i>
+      </button>
+      <div class="faq-answer">
+        <p>Vérifiez que vous utilisez bien l'adresse e-mail avec laquelle vous avez créé votre compte. Si vous avez oublié votre mot de passe, utilisez le lien <strong>« Mot de passe oublié »</strong> sur la page de connexion. Si le problème persiste, contactez le support via le chat ci-dessous.</p>
+      </div>
+    </div>
+
+  </div><!-- /faqList -->
+
+  <p id="faqNoResult" style="display:none;font-size:14px;color:var(--text-secondary);text-align:center;padding:20px 0;">
+    <i class="fas fa-face-frown-slight" style="margin-right:6px;"></i>Aucune question ne correspond à votre recherche. Contactez-nous via le chat ci-dessous.
+  </p>
+
+</div>
+</section>
+
 <!-- Bloc Vidéos tutoriels -->
 <section class="card mb-lg">
 <div class="card-header">
@@ -1026,6 +1149,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   initSupportChat();
 });
+
+  // ── FAQ toggle ──
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    // Fermer tous les autres
+    document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // ── FAQ search ──
+  function filterFaq(query) {
+    const q = query.toLowerCase().trim();
+    const items = document.querySelectorAll('#faqList .faq-item');
+    let found = 0;
+    items.forEach(item => {
+      const text = item.querySelector('.faq-question span').textContent.toLowerCase()
+                 + item.querySelector('.faq-answer').textContent.toLowerCase();
+      const match = !q || text.includes(q);
+      item.style.display = match ? '' : 'none';
+      if (match) found++;
+    });
+    document.getElementById('faqNoResult').style.display = found === 0 ? '' : 'none';
+  }
+
 </script>
 
 <script src="/js/bh-layout.js"></script>
