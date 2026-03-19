@@ -811,7 +811,7 @@ html[data-theme-v3="1"] .mobile-header {
               Contacter le support
             </div>
 <span id="supportStatus" class="support-status-badge">
-<i class="fas fa-circle"></i> En ligne
+<i class="fas fa-circle"></i> <span id="supportStatusText">En ligne</span>
 </span>
 </div>
 <div class="card-body" style="padding: 0;">
@@ -1149,6 +1149,39 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   initSupportChat();
 });
+
+
+  // ── Statut support selon horaires (heure Paris) ──
+  function updateSupportStatus() {
+    const badge = document.getElementById('supportStatus');
+    const label = document.getElementById('supportStatusText');
+    if (!badge || !label) return;
+
+    // Heure actuelle en Europe/Paris
+    const now = new Date();
+    const paris = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const day = paris.getDay(); // 0=dim, 1=lun … 6=sam
+    const h = paris.getHours();
+    const m = paris.getMinutes();
+    const time = h + m / 60; // ex: 9.5 = 9h30
+
+    let online = false;
+    if (day >= 1 && day <= 5) online = time >= 9 && time < 18;      // Lun-Ven 9h-18h
+    else if (day === 6)       online = time >= 10 && time < 12;     // Sam 10h-12h
+    else if (day === 0)       online = time >= 14 && time < 16;     // Dim 14h-16h
+
+    if (online) {
+      badge.style.background = 'rgba(16,185,129,0.1)';
+      badge.style.color = '#059669';
+      label.textContent = 'En ligne';
+    } else {
+      badge.style.background = 'rgba(156,163,175,0.15)';
+      badge.style.color = '#6B7280';
+      label.textContent = 'Hors ligne';
+    }
+  }
+
+  updateSupportStatus();
 
   // ── FAQ toggle ──
   function toggleFaq(btn) {
