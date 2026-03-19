@@ -2798,7 +2798,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       </span>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiPropertiesValue" style="color:#1e293b !important;">0</span>
+<span class="kpi-value" id="kpiPropertiesValue">0</span>
 <span class="kpi-sub kpi-sub--green">connectés à au moins un OTA</span>
 </div>
 </article>
@@ -4771,7 +4771,7 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
       switch(type) {
         case 'properties': // Logements actifs — noir desktop uniquement, CSS gère mobile
           if (window.innerWidth > 768) {
-            element.style.setProperty('color', '#1e293b', 'important');
+            element.style.setProperty('color', '#1A7A5E', 'important');
           } else {
             element.style.removeProperty('color');
           }
@@ -9887,7 +9887,7 @@ if (window.Capacitor) {
 @media (min-width: 1367px) {
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value,
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-value,
-  html[data-theme-v3="1"] #kpiPropertiesValue { color: #1e293b !important; }
+  html[data-theme-v3="1"] #kpiPropertiesValue { color: #1A7A5E !important; }
 
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub--green,
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: #1A7A5E !important; font-weight: 600 !important; }
