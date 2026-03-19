@@ -1290,13 +1290,14 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const token = localStorage.getItem('lcc_token');
       const res = await fetch('/api/roadmap', { headers: { Authorization: 'Bearer ' + token } });
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       roadmapItems = data.items || [];
       renderRoadmap();
     } catch(e) {
+      console.error('Roadmap load error:', e);
       document.getElementById('roadmapGrid').innerHTML =
-        '<div class="roadmap-empty"><i class="fas fa-exclamation-circle"></i>Impossible de charger la roadmap.</div>';
+        '<div class="roadmap-empty"><i class="fas fa-exclamation-circle"></i>Erreur de chargement. Réessayez plus tard.</div>';
     }
   }
 
@@ -1304,7 +1305,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('roadmapGrid');
     const filtered = roadmapFilter === 'all' ? roadmapItems : roadmapItems.filter(i => i.status === roadmapFilter);
     if (!filtered.length) {
-      grid.innerHTML = '<div class="roadmap-empty"><i class="fas fa-inbox"></i>Aucune fonctionnalité dans cette catégorie pour le moment.</div>';
+      const msg = roadmapItems.length === 0
+        ? '<i class="fas fa-rocket"></i>La roadmap arrive bientôt !<br><span style="font-size:12px;margin-top:6px;display:block;">Proposez vos idées ci-dessous, nous publierons les prochaines évolutions ici.</span>'
+        : '<i class="fas fa-inbox"></i>Aucune fonctionnalité dans cette catégorie.';
+      grid.innerHTML = '<div class="roadmap-empty">' + msg + '</div>';
       return;
     }
     grid.innerHTML = filtered.map(item => {
