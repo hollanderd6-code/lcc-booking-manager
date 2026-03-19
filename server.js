@@ -8438,7 +8438,7 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(p
     }
 
     const result = await pool.query(
-      `SELECT id, name, phone, email, notes, pin_code, is_active, created_at
+      `SELECT id, name, phone, email, notes, pin_code, is_active, sub_account_id, created_at
        FROM cleaners
        WHERE user_id = $1
        ORDER BY name ASC`,
