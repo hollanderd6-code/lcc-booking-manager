@@ -1322,7 +1322,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="roadmap-status-badge ${sc}">${STATUS_LABELS[item.status] || item.status}</span>
           <div class="roadmap-card-title">${item.title}</div>
           ${item.description ? `<div class="roadmap-card-desc">${item.description}</div>` : ''}
-          ${item.suggested_by_name ? `<div class="roadmap-card-meta"><i class="fas fa-user" style="margin-right:4px;"></i>Suggéré par ${item.suggested_by_name}</div>` : ''}
+          ${item.suggested_by_name ? `<div class="roadmap-card-meta"><i class="fas fa-user" style="margin-right:4px;"></i>Suggéré par ${item.suggested_by_name.split(' ')[0]}</div>` : ''}
         </div>
         <div class="roadmap-votes">
           <button class="roadmap-vote-btn ${myVote===1?'active-up':''}" onclick="voteRoadmap(${item.id}, 1, this)">
