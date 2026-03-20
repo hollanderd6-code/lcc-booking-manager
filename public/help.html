@@ -1020,7 +1020,10 @@ function getToken() {
 
 <!-- Support Chat Logic -->
 <script>
-const API_URL = window.location.origin;
+// Fix Capacitor iOS : window.location.origin retourne "capacitor://localhost"
+const API_URL = (window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:')
+  ? 'https://boostinghost.fr'
+  : window.location.origin;
 let supportConversationId = null;
 let supportSocket = null;
 let selectedImageFile = null;
@@ -1045,7 +1048,11 @@ async function initSupportChat() {
     await loadSupportMessages();
 
     // Connecter Socket.io
-    supportSocket = io(API_URL, { transports: ['websocket', 'polling'] });
+    supportSocket = io(API_URL, { 
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 3,
+      timeout: 10000
+    });
     supportSocket.on('connect', () => {
       supportSocket.emit('join_support', supportConversationId);
     });
