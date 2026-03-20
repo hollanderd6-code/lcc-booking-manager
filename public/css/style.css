@@ -1754,3 +1754,53 @@ html, body {
 .loading-spinner:not(:has(.dot)) i      { animation-delay: 0.2s; }
 .loading-spinner:not(:has(.dot))::after { animation-delay: 0.4s; }
 .loading-spinner:not(:has(.dot)) p      { display: none; }
+
+
+/* ============================================================
+   🍎 FIX ZOOM iOS / CAPACITOR
+   iOS Safari zoome automatiquement sur tout champ dont
+   le font-size est < 16px au moment du focus.
+   Dans une WKWebView Capacitor, le dézoom ne se fait jamais
+   → on impose 16px sur tous les champs, ce qui supprime
+     la condition qui déclenche le zoom.
+   ============================================================ */
+
+input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+select,
+textarea {
+  font-size: 16px !important;   /* ← valeur magique iOS, ne jamais descendre en dessous */
+  touch-action: manipulation;   /* supprime le délai 300ms + double-tap zoom */
+}
+
+/* Évite aussi le zoom sur les éléments contenteditable (ex : éditeurs rich text) */
+[contenteditable="true"] {
+  font-size: 16px !important;
+  touch-action: manipulation;
+}
+
+/* ============================================================
+   🍎 FIX GLOBAL TOUCH-ACTION
+   Supprime le délai 300ms et le double-tap zoom sur
+   tous les éléments interactifs (boutons, liens, cards…)
+   ============================================================ */
+
+button,
+a,
+.btn,
+.card-clickable,
+.tab-btn,
+[role="button"] {
+  touch-action: manipulation;
+}
