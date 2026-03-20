@@ -23,11 +23,17 @@
     },
     "FirebaseMessaging": {
       "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "Keyboard": {
+      "resize": "body",
+      "resizeOnFullScreen": true
     }
   },
   "ios": {
     "backgroundColor": "#FFFFFF",
-    "contentInset": "automatic"
+    "contentInset": "automatic",
+    "allowsLinkPreview": false,
+    "scrollEnabled": false
   },
   "android": {
     "allowMixedContent": true,
