@@ -404,9 +404,19 @@ function getSidebarHTML() {
     // Intentionnellement vide — le layout est géré par bh-theme-v3.css
   }
 
+  function injectSmartAppBanner() {
+    // Smart App Banner iOS — affiche "Ouvrir dans Boostinghost" sur Safari iOS
+    if (document.querySelector('meta[name="apple-itunes-app"]')) return;
+    const meta = document.createElement('meta');
+    meta.name = 'apple-itunes-app';
+    meta.content = 'app-id=6758049858';
+    document.head.appendChild(meta);
+  }
+
   function init() {
     console.log("🚀 bh-layout.js - Initialisation avec filtrage permissions...");
     
+    injectSmartAppBanner();
     injectSidebar();
     injectHeader();
     normalizeBranding();
