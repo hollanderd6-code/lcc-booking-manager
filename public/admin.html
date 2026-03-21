@@ -1511,16 +1511,25 @@ function initSupport() {
 }
 
 async function loadSupportConvs() {
+  const list = document.getElementById('supportConvList');
   try {
     const res = await fetch(`${API}/api/support/admin/conversations`, {
       headers: { Authorization: 'Bearer ' + adminToken }
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('Support convs error:', res.status, err);
+      if (list) list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--danger);font-size:13px;"><i class="fas fa-exclamation-circle"></i> Erreur ${res.status} : ${err.error || 'Accès refusé'}<br><button onclick="loadSupportConvs()" style="margin-top:8px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:12px;">Réessayer</button></div>`;
+      return;
+    }
     const data = await res.json();
     supportConvs = data.conversations || [];
     renderSupportConvs();
     updateSupportBadge();
-  } catch(e) {}
+  } catch(e) {
+    console.error('Support convs fetch error:', e);
+    if (list) list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--danger);font-size:13px;"><i class="fas fa-exclamation-circle"></i> Erreur réseau<br><button onclick="loadSupportConvs()" style="margin-top:8px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:12px;">Réessayer</button></div>`;
+  }
 }
 
 function updateSupportBadge() {
