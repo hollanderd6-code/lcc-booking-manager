@@ -11212,6 +11212,32 @@ app.post('/api/auth/register', async (req, res) => {
       console.error('Erreur envoi email:', emailErr);
       // On continue quand même
     }
+
+    // 🔔 NOTIFICATION NOUVELLE INSCRIPTION
+    try {
+      await transporter.sendMail({
+        from: EMAIL_FROM,
+        to: 'contact@boostinghost.fr',
+        subject: `🎉 Nouvelle inscription — ${firstName} ${lastName}`,
+        html: `
+          <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#f9fafb;border-radius:12px;">
+            <h2 style="color:#10B981;margin-top:0;">Nouvelle inscription 🎉</h2>
+            <table style="width:100%;border-collapse:collapse;">
+              <tr><td style="padding:8px 0;color:#6B7280;width:140px;">Nom</td><td style="padding:8px 0;font-weight:600;">${firstName} ${lastName}</td></tr>
+              <tr><td style="padding:8px 0;color:#6B7280;">Email</td><td style="padding:8px 0;font-weight:600;">${email}</td></tr>
+              <tr><td style="padding:8px 0;color:#6B7280;">Société</td><td style="padding:8px 0;font-weight:600;">${company || '—'}</td></tr>
+              <tr><td style="padding:8px 0;color:#6B7280;">Date</td><td style="padding:8px 0;font-weight:600;">${new Date().toLocaleString('fr-FR')}</td></tr>
+              <tr><td style="padding:8px 0;color:#6B7280;">Trial jusqu'au</td><td style="padding:8px 0;font-weight:600;">${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}</td></tr>
+            </table>
+          </div>
+        `
+      });
+      console.log('Notification inscription envoyée à contact@boostinghost.fr');
+    } catch (notifErr) {
+      console.error('Erreur notification inscription:', notifErr);
+      // Non bloquant
+    }
+
 // Retourner succès
     res.status(201).json({
       success: true,
