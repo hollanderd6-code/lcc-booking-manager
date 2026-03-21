@@ -562,6 +562,38 @@
     .data-table { overflow-x: auto; display: block; }
     .item-card { flex-direction: column; }
     .item-actions { flex-direction: row; flex-wrap: wrap; }
+
+    /* ── Support mobile : navigation liste ↔ chat ── */
+    .support-layout {
+      flex-direction: column;
+      height: auto;
+      min-height: calc(100vh - 160px);
+    }
+    .support-sidebar {
+      width: 100% !important;
+      min-width: unset !important;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .support-sidebar.mobile-hidden { display: none !important; }
+    .support-chat-area.mobile-hidden { display: none !important; }
+    .support-conv-list { max-height: 65vh; overflow-y: auto; }
+    .support-messages { min-height: 50vh; }
+    .support-back-btn {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .support-chat-header { flex-wrap: wrap; gap: 8px; }
   }
 </style>
 </head>
@@ -846,6 +878,9 @@
           </div>
           <div id="supportChatContent" style="display:none;flex-direction:column;flex:1;min-height:0;">
             <div class="support-chat-header">
+              <button class="support-back-btn" style="display:none;" onclick="supportBackToList()" title="Retour">
+                <i class="fas fa-arrow-left"></i>
+              </button>
               <div class="support-chat-avatar" id="supportChatAvatar">?</div>
               <div class="support-chat-header-info">
                 <div class="support-chat-name" id="supportChatName"></div>
@@ -1599,10 +1634,23 @@ function renderSupportConvs() {
   }).join('');
 }
 
+function supportBackToList() {
+  document.querySelector('.support-sidebar').classList.remove('mobile-hidden');
+  document.getElementById('supportChatArea').classList.add('mobile-hidden');
+  document.querySelector('.support-back-btn').style.display = 'none';
+}
+
 async function openSupportConv(convId) {
   activeSupportConvId = convId;
   const conv = supportConvs.find(c => c.id === convId);
   if (!conv) return;
+
+  // Mobile : basculer vers la vue chat
+  if (window.innerWidth <= 768) {
+    document.querySelector('.support-sidebar').classList.add('mobile-hidden');
+    document.getElementById('supportChatArea').classList.remove('mobile-hidden');
+    document.querySelector('.support-back-btn').style.display = 'inline-flex';
+  }
 
   const name = conv.user_first_name ? `${conv.user_first_name} ${conv.user_last_name||''}`.trim() : conv.user_email;
   const initial = (conv.user_first_name || conv.user_email || '?')[0].toUpperCase();
