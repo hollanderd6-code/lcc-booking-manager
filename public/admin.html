@@ -554,6 +554,40 @@
     .data-table { overflow-x: auto; display: block; }
     .item-card { flex-direction: column; }
     .item-actions { flex-direction: row; flex-wrap: wrap; }
+
+    /* ── Support mobile ── */
+    .support-layout {
+      flex-direction: column;
+      height: auto;
+      min-height: calc(100vh - 160px);
+    }
+    .support-sidebar {
+      width: 100% !important;
+      min-width: unset !important;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      max-height: 100vh;
+    }
+    .support-sidebar.mobile-hidden { display: none; }
+    .support-chat-area { min-height: 70vh; }
+    .support-chat-area.mobile-hidden { display: none !important; }
+    .support-back-btn {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin-right: 8px;
+    }
+    .support-chat-header { flex-wrap: wrap; gap: 8px; }
+    .support-chat-actions { flex-wrap: wrap; }
+    .support-messages { min-height: 300px; }
+    .support-conv-list { max-height: 60vh; overflow-y: auto; }
   }
 </style>
 </head>
@@ -838,6 +872,9 @@
           </div>
           <div id="supportChatContent" style="display:none;flex-direction:column;flex:1;min-height:0;">
             <div class="support-chat-header">
+              <button class="support-back-btn" style="display:none;" onclick="supportBackToList()" title="Retour à la liste">
+                <i class="fas fa-arrow-left"></i>
+              </button>
               <div class="support-chat-avatar" id="supportChatAvatar">?</div>
               <div class="support-chat-header-info">
                 <div class="support-chat-name" id="supportChatName"></div>
@@ -1591,10 +1628,31 @@ function renderSupportConvs() {
   }).join('');
 }
 
+function supportBackToList() {
+  // Sur mobile : afficher la liste, cacher le chat
+  const sidebar = document.querySelector('.support-sidebar');
+  const chatArea = document.getElementById('supportChatArea');
+  const backBtn = document.querySelector('.support-back-btn');
+  if (sidebar) sidebar.classList.remove('mobile-hidden');
+  if (chatArea) chatArea.classList.add('mobile-hidden');
+  if (backBtn) backBtn.style.display = 'none';
+}
+
 async function openSupportConv(convId) {
   activeSupportConvId = convId;
   const conv = supportConvs.find(c => c.id === convId);
   if (!conv) return;
+
+  // Sur mobile : cacher la liste, afficher le chat
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    const sidebar = document.querySelector('.support-sidebar');
+    const chatArea = document.getElementById('supportChatArea');
+    const backBtn = document.querySelector('.support-back-btn');
+    if (sidebar) sidebar.classList.add('mobile-hidden');
+    if (chatArea) chatArea.classList.remove('mobile-hidden');
+    if (backBtn) backBtn.style.display = 'inline-flex';
+  }
 
   const name = conv.user_first_name ? `${conv.user_first_name} ${conv.user_last_name||''}`.trim() : conv.user_email;
   const initial = (conv.user_first_name || conv.user_email || '?')[0].toUpperCase();
