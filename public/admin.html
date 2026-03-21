@@ -431,6 +431,120 @@
   .inscriptions-total .stat-value { color: white; font-size: 28px; }
   .inscriptions-total .stat-label { color: rgba(255,255,255,.7); }
 
+  /* ── Support Chat ── */
+  .support-layout {
+    display: flex; gap: 0;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+    height: calc(100vh - 220px); min-height: 500px;
+  }
+  .support-sidebar {
+    width: 320px; min-width: 320px;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    background: #FAFAF8;
+  }
+  .support-sidebar-header {
+    padding: 16px; border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .support-sidebar-title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .support-search {
+    padding: 8px 12px 8px 32px; border-radius: 8px;
+    border: 1px solid var(--border); background: white;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; width: 100%;
+    font-size: 16px;
+  }
+  .support-filters { display: flex; gap: 4px; }
+  .support-filter-btn {
+    padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; font-size: 11px; font-weight: 700; cursor: pointer;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+  }
+  .support-filter-btn.active { background: var(--green); color: white; border-color: var(--green); }
+  .support-conv-list { flex: 1; overflow-y: auto; }
+  .support-conv-item {
+    padding: 14px 16px; cursor: pointer; border-bottom: 1px solid rgba(200,184,154,.2);
+    display: flex; align-items: center; gap: 10px; transition: background .1s;
+  }
+  .support-conv-item:hover { background: rgba(26,122,94,.04); }
+  .support-conv-item.active { background: rgba(26,122,94,.08); border-left: 3px solid var(--green); }
+  .support-conv-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .support-conv-dot.open { background: #10B981; }
+  .support-conv-dot.waiting { background: #F59E0B; }
+  .support-conv-dot.closed { background: #D1D5DB; }
+  .support-conv-avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #1A7A5E, #2AAE86);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 13px; font-weight: 700;
+  }
+  .support-conv-info { flex: 1; min-width: 0; }
+  .support-conv-name { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .support-conv-preview { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .support-conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .support-conv-time { font-size: 10px; color: var(--muted); }
+  .support-conv-badge { background: #EF4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; }
+
+  .support-chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .support-chat-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; background: white;
+  }
+  .support-chat-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #1A7A5E, #2AAE86);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 14px; font-weight: 700; flex-shrink: 0;
+  }
+  .support-chat-header-info { flex: 1; }
+  .support-chat-name { font-size: 14px; font-weight: 700; }
+  .support-chat-sub { font-size: 11px; color: var(--muted); }
+  .support-chat-actions { display: flex; gap: 6px; }
+
+  .support-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #F5F2EC; }
+  .support-msg { display: flex; gap: 8px; max-width: 80%; }
+  .support-msg.admin { align-self: flex-start; }
+  .support-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .support-msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .support-msg.admin .support-msg-avatar { background: linear-gradient(135deg,#1A7A5E,#2AAE86); color: white; }
+  .support-msg.user .support-msg-avatar { background: linear-gradient(135deg,#3B82F6,#6366F1); color: white; }
+  .support-msg-content { display: flex; flex-direction: column; gap: 3px; }
+  .support-msg-sender { font-size: 10px; font-weight: 600; color: var(--muted); }
+  .support-msg.user .support-msg-sender { text-align: right; }
+  .support-msg-bubble { padding: 10px 13px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .support-msg.admin .support-msg-bubble { background: white; border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 3px; }
+  .support-msg.user .support-msg-bubble { background: linear-gradient(135deg,#1A7A5E,#2AAE86); color: white; border-bottom-right-radius: 3px; }
+  .support-msg-bubble img { max-width: 200px; border-radius: 8px; margin-top: 6px; cursor: pointer; display: block; }
+  .support-msg-time { font-size: 10px; color: var(--muted); }
+  .support-msg.user .support-msg-time { text-align: right; }
+  .support-date-sep { text-align: center; font-size: 11px; color: var(--muted); font-weight: 600; padding: 4px 0; }
+
+  .support-input-area {
+    padding: 12px 16px; border-top: 1px solid var(--border); background: white;
+    display: flex; align-items: flex-end; gap: 8px;
+  }
+  .support-input-area.closed-state { background: #FEF3C7; justify-content: center; padding: 16px; }
+  .support-textarea {
+    flex: 1; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--border); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; resize: none; max-height: 120px; overflow-y: auto;
+    background: var(--bg); color: var(--text); font-size: 16px;
+  }
+  .support-send-btn {
+    padding: 10px 14px; border-radius: 10px; border: none;
+    background: var(--green); color: white; cursor: pointer;
+    font-size: 14px; flex-shrink: 0; transition: background .15s;
+  }
+  .support-send-btn:hover { background: #15624B; }
+
+  .support-empty { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: var(--muted); }
+  .support-empty i { font-size: 40px; color: #D1D5DB; }
+
+  @media(max-width: 900px) {
+    .support-sidebar { width: 260px; min-width: 260px; }
+  }
+
   @media(max-width: 768px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .revenue-grid { grid-template-columns: 1fr; }
@@ -490,6 +604,9 @@
     </button>
     <button class="nav-tab" onclick="showSection('roadmap', this)">
       <i class="fas fa-map"></i> Roadmap
+    </button>
+    <button class="nav-tab" id="navSupport" onclick="showSection('support', this)">
+      <i class="fas fa-headset"></i> Support <span id="supportUnreadBadge" style="display:none;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;">0</span>
     </button>
   </nav>
 
@@ -681,6 +798,68 @@
         </button>
       </div>
       <div id="roadmapList"></div>
+    </div>
+
+    <!-- ── SUPPORT ── -->
+    <div class="section-panel" id="panel-support">
+      <div class="section-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div>
+          <h1 class="section-title">Chat <em>support</em></h1>
+          <p class="section-subtitle">Gérez les conversations clients en temps réel</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="supportConvCount" style="font-size:12px;color:var(--muted);"></span>
+          <div style="display:flex;gap:4px;" id="supportFilters">
+            <button class="support-filter-btn active" onclick="setSupportFilter('all', this)">Tous</button>
+            <button class="support-filter-btn" onclick="setSupportFilter('waiting', this)">⏳ En attente</button>
+            <button class="support-filter-btn" onclick="setSupportFilter('open', this)">✅ Ouverts</button>
+            <button class="support-filter-btn" onclick="setSupportFilter('closed', this)">🔒 Fermés</button>
+          </div>
+        </div>
+      </div>
+      <div class="support-layout">
+        <!-- Sidebar conversations -->
+        <div class="support-sidebar">
+          <div class="support-sidebar-header">
+            <div style="position:relative;">
+              <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;"></i>
+              <input class="support-search" id="supportSearchInput" type="text" placeholder="Rechercher…" oninput="renderSupportConvs()"/>
+            </div>
+          </div>
+          <div class="support-conv-list" id="supportConvList">
+            <div class="support-empty"><i class="fas fa-spinner fa-spin"></i></div>
+          </div>
+        </div>
+        <!-- Zone chat -->
+        <div class="support-chat-area" id="supportChatArea">
+          <div class="support-empty" id="supportChatEmpty">
+            <i class="fas fa-comments"></i>
+            <span>Sélectionnez une conversation</span>
+          </div>
+          <div id="supportChatContent" style="display:none;flex-direction:column;flex:1;min-height:0;">
+            <div class="support-chat-header">
+              <div class="support-chat-avatar" id="supportChatAvatar">?</div>
+              <div class="support-chat-header-info">
+                <div class="support-chat-name" id="supportChatName"></div>
+                <div class="support-chat-sub" id="supportChatSub"></div>
+              </div>
+              <div class="support-chat-actions">
+                <button class="action-btn" id="btnReopenConv" onclick="reopenConversation()" style="display:none;color:var(--green);border-color:rgba(26,122,94,.3);">
+                  <i class="fas fa-lock-open"></i> Rouvrir
+                </button>
+                <button class="action-btn danger" id="btnCloseConv" onclick="closeConversationAdmin()">
+                  <i class="fas fa-check-circle"></i> Clôturer
+                </button>
+              </div>
+            </div>
+            <div class="support-messages" id="supportChatMessages"></div>
+            <div class="support-input-area" id="supportInputArea">
+              <textarea class="support-textarea" id="supportAdminInput" placeholder="Répondre…" rows="1"></textarea>
+              <button class="support-send-btn" onclick="sendSupportReply()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div><!-- /admin-body -->
@@ -1297,6 +1476,280 @@ function getStatusPill(status) {
   const [cls, label] = map[status] || ['pill-grey', status || '—'];
   return `<span class="pill ${cls}">${label}</span>`;
 }
+</script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+// ══════════════════════════════════════
+// SUPPORT CHAT — ADMIN
+// ══════════════════════════════════════
+let supportConvs = [];
+let activeSupportConvId = null;
+let supportFilter = 'all';
+let supportSocket = null;
+
+// Initialiser le support quand on ouvre l'onglet
+function initSupport() {
+  if (supportSocket) return; // déjà init
+
+  const socketUrl = 'https://lcc-booking-manager.onrender.com';
+  supportSocket = io(socketUrl, { transports: ['websocket', 'polling'] });
+  supportSocket.on('connect', () => {
+    supportSocket.emit('join_support_admin');
+  });
+  supportSocket.on('support_new_message', (msg) => {
+    loadSupportConvs();
+    const convId = msg.conversation_id || msg.conversationId;
+    if (convId === activeSupportConvId) {
+      appendSupportMsg(msg);
+      scrollSupportChat();
+    }
+    updateSupportBadge();
+  });
+
+  loadSupportConvs();
+  setInterval(loadSupportConvs, 30000);
+}
+
+async function loadSupportConvs() {
+  try {
+    const res = await fetch(`${API}/api/support/admin/conversations`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    supportConvs = data.conversations || [];
+    renderSupportConvs();
+    updateSupportBadge();
+  } catch(e) {}
+}
+
+function updateSupportBadge() {
+  const waiting = supportConvs.filter(c => c.status === 'waiting').length;
+  const badge = document.getElementById('supportUnreadBadge');
+  if (badge) {
+    badge.textContent = waiting;
+    badge.style.display = waiting > 0 ? 'inline' : 'none';
+  }
+}
+
+function setSupportFilter(f, btn) {
+  supportFilter = f;
+  document.querySelectorAll('.support-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSupportConvs();
+}
+
+function renderSupportConvs() {
+  const list = document.getElementById('supportConvList');
+  if (!list) return;
+  const search = (document.getElementById('supportSearchInput')?.value || '').toLowerCase();
+
+  let filtered = supportConvs;
+  if (supportFilter !== 'all') filtered = filtered.filter(c => c.status === supportFilter);
+  if (search) filtered = filtered.filter(c => {
+    return `${c.user_first_name||''} ${c.user_last_name||''} ${c.user_email||''} ${c.user_company||''}`.toLowerCase().includes(search);
+  });
+
+  const waiting = supportConvs.filter(c => c.status === 'waiting').length;
+  const countEl = document.getElementById('supportConvCount');
+  if (countEl) countEl.textContent = `${supportConvs.length} conv. · ${waiting} en attente`;
+
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px;">Aucune conversation</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(c => {
+    const name = c.user_first_name ? `${c.user_first_name} ${c.user_last_name||''}`.trim() : (c.user_email || 'Utilisateur');
+    const initial = (c.user_first_name || c.user_email || '?')[0].toUpperCase();
+    const preview = c.last_message ? c.last_message.substring(0, 50) : 'Pas de message';
+    const unread = parseInt(c.unread_count) || 0;
+    const isActive = c.id === activeSupportConvId;
+    const time = supportFormatTime(c.last_message_at);
+
+    return `<div class="support-conv-item ${isActive ? 'active' : ''}" onclick="openSupportConv('${c.id}')">
+      <div class="support-conv-dot ${c.status}"></div>
+      <div class="support-conv-avatar">${supportEscape(initial)}</div>
+      <div class="support-conv-info">
+        <div class="support-conv-name">${supportEscape(name)}</div>
+        <div class="support-conv-preview">${supportEscape(preview)}</div>
+      </div>
+      <div class="support-conv-meta">
+        <span class="support-conv-time">${time}</span>
+        ${unread > 0 ? `<span class="support-conv-badge">${unread}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openSupportConv(convId) {
+  activeSupportConvId = convId;
+  const conv = supportConvs.find(c => c.id === convId);
+  if (!conv) return;
+
+  const name = conv.user_first_name ? `${conv.user_first_name} ${conv.user_last_name||''}`.trim() : conv.user_email;
+  const initial = (conv.user_first_name || conv.user_email || '?')[0].toUpperCase();
+
+  document.getElementById('supportChatAvatar').textContent = initial;
+  document.getElementById('supportChatName').textContent = name;
+  document.getElementById('supportChatSub').textContent = `${conv.user_email||''} · ${conv.user_company||'Sans entreprise'}`;
+
+  // Boutons selon statut
+  const isClosed = conv.status === 'closed';
+  document.getElementById('btnCloseConv').style.display = isClosed ? 'none' : '';
+  document.getElementById('btnReopenConv').style.display = isClosed ? '' : 'none';
+
+  // Zone saisie
+  const inputArea = document.getElementById('supportInputArea');
+  if (isClosed) {
+    inputArea.innerHTML = '<div style="color:var(--amber);font-size:13px;font-weight:600;text-align:center;width:100%;"><i class="fas fa-lock" style="margin-right:6px;"></i>Conversation clôturée</div>';
+  } else {
+    inputArea.innerHTML = `<textarea class="support-textarea" id="supportAdminInput" placeholder="Répondre…" rows="1"></textarea>
+      <button class="support-send-btn" onclick="sendSupportReply()"><i class="fas fa-paper-plane"></i></button>`;
+    const ta = document.getElementById('supportAdminInput');
+    ta.addEventListener('input', () => { ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,120)+'px'; });
+    ta.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendSupportReply();} });
+  }
+
+  document.getElementById('supportChatEmpty').style.display = 'none';
+  const chatContent = document.getElementById('supportChatContent');
+  chatContent.style.display = 'flex';
+
+  // Charger messages
+  const messages = document.getElementById('supportChatMessages');
+  messages.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div>';
+
+  try {
+    const res = await fetch(`${API}/api/support/admin/messages/${convId}`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const data = await res.json();
+    messages.innerHTML = '';
+    let lastDate = '';
+    (data.messages || []).forEach(msg => {
+      const d = new Date(msg.created_at).toLocaleDateString('fr-FR');
+      if (d !== lastDate) {
+        lastDate = d;
+        const sep = document.createElement('div');
+        sep.className = 'support-date-sep';
+        sep.textContent = d === new Date().toLocaleDateString('fr-FR') ? "Aujourd'hui" : d;
+        messages.appendChild(sep);
+      }
+      appendSupportMsg(msg, false);
+    });
+    scrollSupportChat();
+    if (supportSocket) supportSocket.emit('join_support', convId);
+  } catch(e) {}
+
+  renderSupportConvs();
+}
+
+function appendSupportMsg(msg, animate = true) {
+  const container = document.getElementById('supportChatMessages');
+  if (!container) return;
+  const isAdmin = msg.sender_type === 'admin';
+  const div = document.createElement('div');
+  div.className = `support-msg ${isAdmin ? 'admin' : 'user'}`;
+
+  const initial = isAdmin ? '🛟' : (msg.sender_name || '?')[0].toUpperCase();
+  const time = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  let bubble = supportEscape(msg.message || '');
+  bubble = bubble.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:inherit;text-decoration:underline;word-break:break-all;">$1</a>');
+  if (msg.image_url) bubble += `<img src="${msg.image_url}" onclick="window.open('${msg.image_url}')" loading="lazy"/>`;
+
+  div.innerHTML = `
+    <div class="support-msg-avatar">${initial}</div>
+    <div class="support-msg-content">
+      <div class="support-msg-sender">${supportEscape(isAdmin ? (msg.sender_name||'Support') : (msg.sender_name||'Utilisateur'))}</div>
+      <div class="support-msg-bubble">${bubble}</div>
+      <div class="support-msg-time">${time}</div>
+    </div>`;
+  container.appendChild(div);
+}
+
+async function sendSupportReply() {
+  const input = document.getElementById('supportAdminInput');
+  if (!input) return;
+  const message = input.value.trim();
+  if (!message || !activeSupportConvId) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendSupportMsg({ sender_type: 'admin', sender_name: 'Support', message, created_at: new Date().toISOString() });
+  scrollSupportChat();
+
+  try {
+    await fetch(`${API}/api/support/admin/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ conversationId: activeSupportConvId, message })
+    });
+    loadSupportConvs();
+  } catch(e) {}
+}
+
+async function closeConversationAdmin() {
+  if (!activeSupportConvId) return;
+  if (!confirm('Clôturer cette conversation ? Le client ne pourra plus écrire.')) return;
+
+  try {
+    await fetch(`${API}/api/support/admin/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ conversationId: activeSupportConvId, message: "✅ Cette conversation a été clôturée par le support. N'hésitez pas à nous recontacter si besoin." })
+    });
+    await fetch(`${API}/api/support/admin/conversations/${activeSupportConvId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ status: 'closed' })
+    });
+    await loadSupportConvs();
+    openSupportConv(activeSupportConvId);
+  } catch(e) {}
+}
+
+async function reopenConversation() {
+  if (!activeSupportConvId) return;
+  try {
+    await fetch(`${API}/api/support/admin/conversations/${activeSupportConvId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ status: 'open' })
+    });
+    await loadSupportConvs();
+    openSupportConv(activeSupportConvId);
+  } catch(e) {}
+}
+
+function scrollSupportChat() {
+  const c = document.getElementById('supportChatMessages');
+  if (c) setTimeout(() => { c.scrollTop = c.scrollHeight; }, 50);
+}
+
+function supportEscape(text) {
+  if (!text) return '';
+  return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function supportFormatTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMin = Math.floor((now - d) / 60000);
+  if (diffMin < 1) return 'à l'instant';
+  if (diffMin < 60) return `${diffMin} min`;
+  if (diffMin < 1440) return `${Math.floor(diffMin/60)}h`;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+// Hooker showSection pour init support au premier clic
+const _origShowSection = showSection;
+window.showSection = function(name, btn) {
+  _origShowSection(name, btn);
+  if (name === 'support') initSupport();
+};
 </script>
 </body>
 </html>
