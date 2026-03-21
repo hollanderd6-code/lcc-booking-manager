@@ -19332,7 +19332,7 @@ app.post('/api/roadmap/suggest', authenticateAny, async (req, res) => {
       'SELECT first_name, last_name, email FROM users WHERE id = $1', [userId]
     ) : { rows: [] };
     const row = nameResult.rows[0];
-    const ADMIN_EMAILS = ['charles.induni@gmail.com'];
+    const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
     const isAdmin = row && ADMIN_EMAILS.includes(row.email);
     const suggestedByName = isAdmin ? 'Boostinghost' : (row ? `${row.first_name || ''} ${row.last_name || ''}`.trim() : 'Anonyme');
 
@@ -19386,6 +19386,61 @@ app.post('/api/roadmap/:id/vote', authenticateAny, async (req, res) => {
     res.json(totals.rows[0]);
   } catch(e) {
     console.error('POST /api/roadmap/:id/vote:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ══════════════════════════════════════════════════════
+// ADMIN — CLIENTS
+// ══════════════════════════════════════════════════════
+
+// GET /api/admin/clients — liste tous les comptes + abonnement
+app.get('/api/admin/clients', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const result = await pool.query(`
+      SELECT 
+        u.id, u.first_name, u.last_name, u.email, u.company, u.created_at,
+        s.status AS subscription_status,
+        s.plan_type,
+        s.plan_amount,
+        s.trial_end_date,
+        s.current_period_end,
+        (SELECT COUNT(*) FROM sub_accounts sa WHERE sa.user_id = u.id) AS sub_accounts_count
+      FROM users u
+      LEFT JOIN subscriptions s ON s.user_id = u.id
+      ORDER BY u.created_at DESC
+    `);
+
+    res.json({ clients: result.rows });
+  } catch(e) {
+    console.error('GET /api/admin/clients:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/admin/clients/:id/block — bloquer / débloquer un compte
+app.put('/api/admin/clients/:id/block', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { id } = req.params;
+    const { blocked } = req.body;
+    const newStatus = blocked ? 'blocked' : 'active';
+
+    await pool.query(
+      `UPDATE subscriptions SET status = $1, updated_at = NOW() WHERE user_id = $2`,
+      [newStatus, id]
+    );
+
+    res.json({ success: true, status: newStatus });
+  } catch(e) {
+    console.error('PUT /api/admin/clients/:id/block:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
