@@ -133,6 +133,29 @@
   }
   .support-status-badge i { font-size: 7px; }
 
+  /* ── Historique conversations ── */
+  .conv-history-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .conv-history-item {
+    padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color, #e5e7eb);
+    background: var(--bg-secondary, #fff); cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .conv-history-item:hover { border-color: #1A7A5E; box-shadow: 0 2px 8px rgba(26,122,94,.1); }
+  .conv-history-item.active { border-color: #1A7A5E; background: rgba(26,122,94,.05); }
+  .conv-history-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .conv-history-dot.open { background: #10B981; }
+  .conv-history-dot.waiting { background: #F59E0B; }
+  .conv-history-dot.closed { background: #9CA3AF; }
+  .conv-history-info { flex: 1; min-width: 0; }
+  .conv-history-subject { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conv-history-preview { font-size: 12px; color: var(--text-secondary, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .conv-history-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .conv-history-time { font-size: 10px; color: var(--text-secondary, #6b7280); }
+  .conv-status-pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
+  .conv-status-pill.open { background: rgba(16,185,129,.12); color: #059669; }
+  .conv-status-pill.waiting { background: rgba(245,158,11,.12); color: #D97706; }
+  .conv-status-pill.closed { background: rgba(156,163,175,.12); color: #6B7280; }
+
   .support-chat-container {
     display: flex; flex-direction: column; height: 460px;
     border-top: 1px solid var(--border-color);
@@ -243,7 +266,30 @@
   .support-img-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
 
   @media (max-width: 1366px) {
-    .support-chat-container { height: 380px; }
+    /* ── Historique conversations ── */
+  .conv-history-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .conv-history-item {
+    padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color, #e5e7eb);
+    background: var(--bg-secondary, #fff); cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .conv-history-item:hover { border-color: #1A7A5E; box-shadow: 0 2px 8px rgba(26,122,94,.1); }
+  .conv-history-item.active { border-color: #1A7A5E; background: rgba(26,122,94,.05); }
+  .conv-history-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .conv-history-dot.open { background: #10B981; }
+  .conv-history-dot.waiting { background: #F59E0B; }
+  .conv-history-dot.closed { background: #9CA3AF; }
+  .conv-history-info { flex: 1; min-width: 0; }
+  .conv-history-subject { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conv-history-preview { font-size: 12px; color: var(--text-secondary, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .conv-history-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .conv-history-time { font-size: 10px; color: var(--text-secondary, #6b7280); }
+  .conv-status-pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
+  .conv-status-pill.open { background: rgba(16,185,129,.12); color: #059669; }
+  .conv-status-pill.waiting { background: rgba(245,158,11,.12); color: #D97706; }
+  .conv-status-pill.closed { background: rgba(156,163,175,.12); color: #6B7280; }
+
+  .support-chat-container { height: 380px; }
     .support-msg { max-width: 92%; }
   }
 /* ============================================================
@@ -938,7 +984,32 @@ html[data-theme-v3="1"] .mobile-header {
 <i class="fas fa-circle"></i> <span id="supportStatusText">En ligne</span>
 </span>
 </div>
-<div class="card-body" style="padding: 0;">
+<div class="card-body" style="padding: 16px;">
+
+  <!-- Historique des conversations -->
+  <div id="convHistorySection">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary,#111);">Mes conversations</div>
+      <button onclick="startNewConversation()" style="padding:7px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-plus"></i> Nouvelle
+      </button>
+    </div>
+    <div class="conv-history-list" id="convHistoryList">
+      <div style="text-align:center;padding:20px;color:var(--text-secondary,#6b7280);font-size:13px;"><i class="fas fa-spinner fa-spin"></i></div>
+    </div>
+  </div>
+
+  <!-- Zone chat active -->
+  <div id="activeChatSection" style="display:none;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <button onclick="backToHistory()" style="background:none;border:none;cursor:pointer;color:var(--text-secondary,#6b7280);font-size:13px;padding:4px 0;display:flex;align-items:center;gap:5px;">
+        <i class="fas fa-arrow-left"></i> Retour
+      </button>
+      <span id="activeConvStatus" style="font-size:11px;"></span>
+    </div>
+</div>
+
+<div id="activeChatWrapper" style="display:none;">
 <div class="support-chat-container" id="supportChatContainer">
 <div class="support-messages" id="supportMessages">
 <div class="support-loading"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
@@ -1029,6 +1100,149 @@ let selectedImageFile = null;
 // ============================================
 // INITIALISATION
 // ============================================
+// ══════════════════════════════════════
+// HISTORIQUE CONVERSATIONS
+// ══════════════════════════════════════
+let allUserConvs = [];
+
+async function loadConvHistory() {
+  try {
+    const res = await fetch(`${API_URL}/api/support/conversations`, {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allUserConvs = data.conversations || [];
+    renderConvHistory();
+  } catch(e) {
+    // Fallback: charger la conversation unique existante
+    initSupportChat();
+  }
+}
+
+function renderConvHistory() {
+  const list = document.getElementById('convHistoryList');
+  if (!list) return;
+
+  if (!allUserConvs.length) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary,#6b7280);font-size:13px;">Aucune conversation. Créez-en une !</div>';
+    return;
+  }
+
+  const statusLabel = { open: 'Ouvert', waiting: 'En attente', closed: 'Résolu' };
+  list.innerHTML = allUserConvs.map(c => {
+    const time = convFormatTime(c.last_message_at);
+    const preview = c.last_message || 'Pas de message';
+    return `<div class="conv-history-item" onclick="openUserConv('${c.id}')">
+      <div class="conv-history-dot ${c.status}"></div>
+      <div class="conv-history-info">
+        <div class="conv-history-subject">${c.subject || 'Support général'}</div>
+        <div class="conv-history-preview">${preview.substring(0, 60)}</div>
+      </div>
+      <div class="conv-history-meta">
+        <span class="conv-history-time">${time}</span>
+        <span class="conv-status-pill ${c.status}">${statusLabel[c.status] || c.status}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openUserConv(convId) {
+  const conv = allUserConvs.find(c => c.id === convId);
+  if (!conv) return;
+
+  supportConversationId = convId;
+
+  // Afficher la section chat
+  document.getElementById('convHistorySection').style.display = 'none';
+  document.getElementById('activeChatSection').style.display = 'block';
+  document.getElementById('activeChatWrapper').style.display = 'block';
+
+  // Statut
+  const statusLabel = { open: '🟢 Ouvert', waiting: '🟡 En attente de réponse', closed: '🔒 Résolu' };
+  document.getElementById('activeConvStatus').textContent = statusLabel[conv.status] || conv.status;
+
+  // Désactiver la saisie si fermé
+  const isClosed = conv.status === 'closed';
+  const inputRow = document.querySelector('.support-input-row');
+  if (inputRow) {
+    if (isClosed) {
+      inputRow.style.display = 'none';
+      const closed = document.getElementById('closedNotice');
+      if (!closed) {
+        const notice = document.createElement('div');
+        notice.id = 'closedNotice';
+        notice.style.cssText = 'text-align:center;padding:12px;color:#D97706;font-size:13px;font-weight:600;background:rgba(245,158,11,.08);border-radius:10px;margin:8px;';
+        notice.innerHTML = '<i class="fas fa-lock" style="margin-right:6px;"></i>Cette conversation est clôturée. Créez-en une nouvelle si besoin.';
+        inputRow.parentNode.appendChild(notice);
+      }
+    } else {
+      inputRow.style.display = '';
+      const closed = document.getElementById('closedNotice');
+      if (closed) closed.remove();
+    }
+  }
+
+  await loadSupportMessages();
+
+  // Connecter socket
+  if (!supportSocket) {
+    const socketUrl = (window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:')
+      ? 'https://lcc-booking-manager.onrender.com'
+      : window.location.origin;
+    supportSocket = io(socketUrl, { transports: ['websocket', 'polling'], reconnectionAttempts: 3 });
+  }
+  supportSocket.off('support_message');
+  supportSocket.on('connect', () => supportSocket.emit('join_support', convId));
+  supportSocket.on('support_message', (msg) => {
+    if (msg.sender_type === 'user') return;
+    appendSupportMessage(msg);
+    scrollToBottom();
+    markMessagesAsRead();
+  });
+  if (supportSocket.connected) supportSocket.emit('join_support', convId);
+}
+
+async function startNewConversation() {
+  try {
+    const token = getToken();
+    // Forcer la création d'une nouvelle conversation
+    const res = await fetch(`${API_URL}/api/support/conversation/new`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      await loadConvHistory();
+      openUserConv(data.conversation.id);
+    } else {
+      // Fallback: utiliser la route standard
+      await loadConvHistory();
+      if (allUserConvs.length) openUserConv(allUserConvs[0].id);
+    }
+  } catch(e) {
+    console.error('Erreur nouvelle conv:', e);
+  }
+}
+
+function backToHistory() {
+  document.getElementById('convHistorySection').style.display = 'block';
+  document.getElementById('activeChatSection').style.display = 'none';
+  document.getElementById('activeChatWrapper').style.display = 'none';
+  loadConvHistory();
+}
+
+function convFormatTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMin = Math.floor((now - d) / 60000);
+  if (diffMin < 1) return 'à l\'instant';
+  if (diffMin < 60) return `${diffMin} min`;
+  if (diffMin < 1440) return `${Math.floor(diffMin/60)}h`;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
 async function initSupportChat() {
   const token = getToken();
   if (!token) return;
