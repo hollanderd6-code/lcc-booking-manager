@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Admin — Boostinghost</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #1A7A5E;
+    --green-light: rgba(26,122,94,.1);
+    --green-mid: rgba(26,122,94,.2);
+    --bg: #F5F2EC;
+    --card: #fff;
+    --border: rgba(200,184,154,.4);
+    --text: #0D1117;
+    --muted: #7A8695;
+    --danger: #DC2626;
+    --danger-bg: rgba(220,38,38,.08);
+    --amber: #D97706;
+    --amber-bg: rgba(245,158,11,.1);
+    --blue: #2563EB;
+    --blue-bg: rgba(59,130,246,.1);
+    --emerald: #059669;
+    --emerald-bg: rgba(16,185,129,.1);
+  }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── Login screen ── */
+  #loginScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0D1117;
+  }
+  .login-box {
+    background: #161B22;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.4);
+  }
+  .login-logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 24px;
+    color: white;
+    margin-bottom: 6px;
+  }
+  .login-logo span { color: #1A7A5E; }
+  .login-sub { font-size: 13px; color: rgba(255,255,255,.4); margin-bottom: 28px; }
+  .login-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: rgba(255,255,255,.4); margin-bottom: 6px; display: block; }
+  .login-input {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.05);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    margin-bottom: 14px;
+    font-size: 16px;
+  }
+  .login-input:focus { outline: none; border-color: #1A7A5E; }
+  .login-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--green);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background .15s;
+  }
+  .login-btn:hover { background: #15624B; }
+  .login-error { font-size: 13px; color: #EF4444; margin-top: 10px; text-align: center; display: none; }
+
+  /* ── App (après login) ── */
+  #appScreen { display: none; }
+
+  /* ── Header ── */
+  .admin-header {
+    background: #0D1117;
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .admin-header-left { display: flex; align-items: center; gap: 12px; }
+  .admin-logo { font-family: 'Instrument Serif', serif; font-size: 18px; color: white; }
+  .admin-logo span { color: #1A7A5E; }
+  .admin-badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    background: rgba(26,122,94,.25); color: #2AAE86;
+    padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(26,122,94,.3);
+  }
+  .admin-logout {
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,.4);
+    background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: color .15s;
+  }
+  .admin-logout:hover { color: white; }
+
+  /* ── Nav tabs ── */
+  .admin-nav {
+    background: #161B22;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    padding: 0 32px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .nav-tab {
+    padding: 14px 18px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,.4);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all .15s;
+  }
+  .nav-tab:hover { color: rgba(255,255,255,.7); }
+  .nav-tab.active { color: #2AAE86; border-bottom-color: #1A7A5E; }
+
+  /* ── Body ── */
+  .admin-body { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ── Section header ── */
+  .section-header { margin-bottom: 24px; }
+  .section-title { font-family: 'Instrument Serif', serif; font-size: 28px; font-weight: 400; }
+  .section-title em { font-style: italic; color: var(--green); }
+  .section-subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .stat-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .stat-value { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  /* ── Search + filters ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+  }
+  .search-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
+  .search-input {
+    width: 100%;
+    padding: 9px 12px 9px 34px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    font-size: 16px;
+  }
+  .filter-select {
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  /* ── Table ── */
+  .data-table {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .data-table table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(245,242,236,.5);
+  }
+  .data-table td {
+    padding: 13px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(200,184,154,.2);
+    vertical-align: middle;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(245,242,236,.5); }
+
+  /* ── Pills ── */
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; padding: 3px 9px;
+    border-radius: 999px; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .pill-green { background: var(--emerald-bg); color: var(--emerald); }
+  .pill-amber { background: var(--amber-bg); color: var(--amber); }
+  .pill-red { background: var(--danger-bg); color: var(--danger); }
+  .pill-blue { background: var(--blue-bg); color: var(--blue); }
+  .pill-grey { background: rgba(156,163,175,.12); color: #6B7280; }
+
+  /* ── Action buttons ── */
+  .action-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 10px; border-radius: 7px;
+    border: 1px solid var(--border); background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+    color: var(--text); cursor: pointer; transition: all .15s;
+  }
+  .action-btn:hover { background: var(--bg); }
+  .action-btn.danger { color: var(--danger); border-color: rgba(220,38,38,.2); }
+  .action-btn.danger:hover { background: var(--danger-bg); }
+  .action-btn.success { background: var(--green); color: white; border-color: var(--green); }
+  .action-btn.success:hover { background: #15624B; }
+
+  /* ── User row ── */
+  .user-info { display: flex; align-items: center; gap: 10px; }
+  .user-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, #1A7A5E, #2AAE86);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .user-name { font-weight: 600; font-size: 13px; }
+  .user-email { font-size: 12px; color: var(--muted); }
+  .sub-count {
+    font-size: 11px; font-weight: 700;
+    background: rgba(37,99,235,.1); color: var(--blue);
+    padding: 2px 7px; border-radius: 999px;
+  }
+
+  /* ── Expandable sub-accounts ── */
+  .sub-row td { background: rgba(245,242,236,.6) !important; font-size: 12px; }
+  .sub-row .user-avatar { width: 26px; height: 26px; font-size: 10px; background: linear-gradient(135deg, #3B82F6, #6366F1); }
+
+  /* ── Revenue section ── */
+  .revenue-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .revenue-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .revenue-card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 12px; }
+  .revenue-big { font-size: 32px; font-weight: 700; color: var(--text); }
+  .revenue-big span { font-size: 16px; color: var(--muted); font-weight: 400; }
+
+  /* ── Roadmap (repris de admin-roadmap.html) ── */
+  .tab-bar {
+    display: flex; gap: 4px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px; margin-bottom: 20px; width: fit-content;
+  }
+  .tab-btn {
+    padding: 8px 18px; border-radius: 8px; border: none;
+    background: transparent; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .tab-btn .count { font-size: 11px; background: rgba(13,17,23,.08); color: var(--muted); padding: 1px 6px; border-radius: 999px; font-weight: 700; }
+  .tab-btn.active { background: var(--green); color: white; }
+  .tab-btn.active .count { background: rgba(255,255,255,.25); color: white; }
+
+  .item-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px;
+    transition: box-shadow .15s; margin-bottom: 10px;
+  }
+  .item-card:hover { box-shadow: 0 4px 20px rgba(13,17,23,.07); }
+  .item-card.pending { border-left: 3px solid var(--amber); }
+  .item-card.published { border-left: 3px solid var(--green); }
+  .item-card-body { flex: 1; min-width: 0; }
+  .item-card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .item-card-desc { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
+  .item-card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .item-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .status-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: .05em; }
+  .status-pill.reflection { background: var(--amber-bg); color: var(--amber); }
+  .status-pill.in_progress { background: var(--blue-bg); color: var(--blue); }
+  .status-pill.available { background: var(--emerald-bg); color: var(--emerald); }
+  .status-pill.pending { background: rgba(156,163,175,.15); color: #6B7280; }
+  .votes-badge { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; }
+  .status-select { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; background: var(--bg); color: var(--text); cursor: pointer; }
+
+  /* ── Modal ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(13,17,23,.5); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card); border-radius: 18px; padding: 28px; width: 100%; max-width: 520px; box-shadow: 0 24px 80px rgba(13,17,23,.2); }
+  .modal-title { font-family: 'Instrument Serif', serif; font-size: 20px; margin-bottom: 20px; }
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; }
+  .form-row input, .form-row textarea, .form-row select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); font-family: 'DM Sans', sans-serif; font-size: 16px; background: var(--bg); color: var(--text); }
+  .form-row textarea { resize: vertical; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .btn-cancel { padding: 9px 18px; border-radius: 10px; border: 1px solid var(--border); background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .btn-save { padding: 9px 20px; border-radius: 10px; border: none; background: var(--green); color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+  .btn-save:hover { background: #15624B; }
+
+  /* ── Empty / loading ── */
+  .empty-state { text-align: center; padding: 48px; color: var(--muted); font-size: 14px; }
+  .empty-state i { font-size: 32px; color: #D1D5DB; display: block; margin-bottom: 12px; }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #0D1117; color: white; padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; z-index: 9999; display: flex; align-items: center; gap: 8px; transform: translateY(80px); opacity: 0; transition: all .25s; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success i { color: #10B981; }
+  .toast.error i { color: #EF4444; }
+
+  /* ── Section panels ── */
+  .section-panel { display: none; }
+  .section-panel.active { display: block; }
+
+  @media(max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .revenue-grid { grid-template-columns: 1fr; }
+    .admin-body { padding: 20px 16px 80px; }
+    .admin-nav { padding: 0 16px; }
+    .admin-header { padding: 0 16px; }
+    .data-table { overflow-x: auto; display: block; }
+    .item-card { flex-direction: column; }
+    .item-actions { flex-direction: row; flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Boosting<span>host</span></div>
+    <div class="login-sub">Accès administration</div>
+    <label class="login-label">Email</label>
+    <input class="login-input" id="loginEmail" type="email" placeholder="votre@email.com" autocomplete="email"/>
+    <label class="login-label">Mot de passe</label>
+    <input class="login-input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()"><i class="fas fa-lock" style="margin-right:7px;"></i>Accéder à l'admin</button>
+    <div class="login-error" id="loginError">Email ou mot de passe incorrect.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     APP SCREEN
+══════════════════════════════════════ -->
+<div id="appScreen">
+
+  <!-- Header -->
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <span class="admin-logo">Boosting<span>host</span></span>
+      <span class="admin-badge">Admin</span>
+    </div>
+    <button class="admin-logout" onclick="doLogout()">
+      <i class="fas fa-sign-out-alt"></i> Déconnexion
+    </button>
+  </header>
+
+  <!-- Nav -->
+  <nav class="admin-nav">
+    <button class="nav-tab active" onclick="showSection('clients', this)">
+      <i class="fas fa-users"></i> Clients
+    </button>
+    <button class="nav-tab" onclick="showSection('revenue', this)">
+      <i class="fas fa-chart-line"></i> Revenus
+    </button>
+    <button class="nav-tab" onclick="showSection('subscriptions', this)">
+      <i class="fas fa-credit-card"></i> Abonnements
+    </button>
+    <button class="nav-tab" onclick="showSection('roadmap', this)">
+      <i class="fas fa-map"></i> Roadmap
+    </button>
+  </nav>
+
+  <div class="admin-body">
+
+    <!-- ── CLIENTS ── -->
+    <div class="section-panel active" id="panel-clients">
+      <div class="section-header">
+        <h1 class="section-title">Liste des <em>clients</em></h1>
+        <p class="section-subtitle">Comptes principaux et sous-comptes rattachés</p>
+      </div>
+      <div class="stats-grid" id="clientsStats">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--emerald-bg);color:var(--emerald);"><i class="fas fa-users"></i></div>
+          <div><div class="stat-value" id="statTotalClients">—</div><div class="stat-label">Comptes principaux</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--blue-bg);color:var(--blue);"><i class="fas fa-user-plus"></i></div>
+          <div><div class="stat-value" id="statTotalSubs">—</div><div class="stat-label">Sous-comptes</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--amber-bg);color:var(--amber);"><i class="fas fa-hourglass-half"></i></div>
+          <div><div class="stat-value" id="statTrials">—</div><div class="stat-label">En trial</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-check-circle"></i></div>
+          <div><div class="stat-value" id="statActive">—</div><div class="stat-label">Actifs (payants)</div></div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <i class="fas fa-search"></i>
+          <input class="search-input" id="clientSearch" type="text" placeholder="Rechercher un client…" oninput="filterClients()"/>
+        </div>
+        <select class="filter-select" id="clientFilter" onchange="filterClients()">
+          <option value="all">Tous les statuts</option>
+          <option value="active">Actif</option>
+          <option value="trial">Trial</option>
+          <option value="expired">Expiré</option>
+          <option value="blocked">Bloqué</option>
+        </select>
+      </div>
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Statut</th>
+              <th>Abonnement</th>
+              <th>Inscrit le</th>
+              <th>Sous-comptes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="clientsTableBody">
+            <tr><td colspan="6" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── REVENUS ── -->
+    <div class="section-panel" id="panel-revenue">
+      <div class="section-header">
+        <h1 class="section-title">Revenus <em>générés</em></h1>
+        <p class="section-subtitle">Vue d'ensemble des abonnements actifs</p>
+      </div>
+      <div class="revenue-grid">
+        <div class="revenue-card">
+          <div class="revenue-card-title">MRR estimé</div>
+          <div class="revenue-big" id="revMRR">— <span>€/mois</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px;" id="revMRRDetail"></div>
+        </div>
+        <div class="revenue-card">
+          <div class="revenue-card-title">ARR estimé</div>
+          <div class="revenue-big" id="revARR">— <span>€/an</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px;">Projection annuelle</div>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns: repeat(3,1fr);">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--emerald-bg);color:var(--emerald);"><i class="fas fa-check-circle"></i></div>
+          <div><div class="stat-value" id="revActive">—</div><div class="stat-label">Abonnés actifs</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--amber-bg);color:var(--amber);"><i class="fas fa-hourglass-half"></i></div>
+          <div><div class="stat-value" id="revTrial">—</div><div class="stat-label">En trial</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--danger-bg);color:var(--danger);"><i class="fas fa-times-circle"></i></div>
+          <div><div class="stat-value" id="revExpired">—</div><div class="stat-label">Expirés / annulés</div></div>
+        </div>
+      </div>
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Plan</th>
+              <th>Montant</th>
+              <th>Statut</th>
+              <th>Renouvellement</th>
+            </tr>
+          </thead>
+          <tbody id="revenueTableBody">
+            <tr><td colspan="5" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ABONNEMENTS ── -->
+    <div class="section-panel" id="panel-subscriptions">
+      <div class="section-header">
+        <h1 class="section-title">Gestion des <em>abonnements</em></h1>
+        <p class="section-subtitle">Bloquer, débloquer ou modifier les accès</p>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <i class="fas fa-search"></i>
+          <input class="search-input" id="subSearch" type="text" placeholder="Rechercher…" oninput="filterSubs()"/>
+        </div>
+      </div>
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Plan</th>
+              <th>Statut</th>
+              <th>Trial / Expiration</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="subsTableBody">
+            <tr><td colspan="5" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ROADMAP ── -->
+    <div class="section-panel" id="panel-roadmap">
+      <div class="section-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 class="section-title">Roadmap &amp; <em>suggestions</em></h1>
+          <p class="section-subtitle">Gérez les suggestions et la roadmap publique</p>
+        </div>
+        <button class="action-btn success" onclick="openCreateModal()" style="padding:10px 18px;font-size:13px;">
+          <i class="fas fa-plus"></i> Créer un item
+        </button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(156,163,175,.1);color:#6B7280;"><i class="fas fa-inbox"></i></div>
+          <div><div class="stat-value" id="statPending">—</div><div class="stat-label">En attente</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--amber-bg);color:var(--amber);"><i class="fas fa-lightbulb"></i></div>
+          <div><div class="stat-value" id="statReflection">—</div><div class="stat-label">En réflexion</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--blue-bg);color:var(--blue);"><i class="fas fa-hammer"></i></div>
+          <div><div class="stat-value" id="statInProgress">—</div><div class="stat-label">En cours</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--emerald-bg);color:var(--emerald);"><i class="fas fa-check-circle"></i></div>
+          <div><div class="stat-value" id="statAvailable">—</div><div class="stat-label">Disponible</div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchRoadmapTab('pending', this)">
+          <i class="fas fa-clock"></i> En attente <span class="count" id="countPending">0</span>
+        </button>
+        <button class="tab-btn" onclick="switchRoadmapTab('published', this)">
+          <i class="fas fa-globe"></i> Publiés <span class="count" id="countPublished">0</span>
+        </button>
+        <button class="tab-btn" onclick="switchRoadmapTab('all', this)">
+          <i class="fas fa-list"></i> Tout
+        </button>
+      </div>
+      <div id="roadmapList"></div>
+    </div>
+
+  </div><!-- /admin-body -->
+</div><!-- /appScreen -->
+
+<!-- Modal Roadmap -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Créer un item</div>
+    <div class="form-row"><label>Titre *</label><input id="formTitle" type="text" placeholder="Ex : Intégration Google Calendar"/></div>
+    <div class="form-row"><label>Description</label><textarea id="formDesc" rows="3" placeholder="Décrivez la fonctionnalité…"></textarea></div>
+    <div class="form-row"><label>Statut</label>
+      <select id="formStatus">
+        <option value="reflection">💡 En réflexion</option>
+        <option value="in_progress">🔨 En cours</option>
+        <option value="available">✅ Disponible</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Publier immédiatement</label>
+      <select id="formPublished">
+        <option value="false">Non — garder en brouillon</option>
+        <option value="true">Oui — visible par tous</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-save" onclick="saveRoadmapItem()"><i class="fas fa-save"></i> Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><i class="fas fa-check-circle"></i> <span id="toastMsg"></span></div>
+
+<script>
+// ══════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════
+const API = 'https://lcc-booking-manager.onrender.com';
+
+// Email admin autorisé — seul cet email peut se connecter
+const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
+
+// ══════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════
+let adminToken = sessionStorage.getItem('bh_admin_token') || '';
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+
+  if (!email || !password) { errEl.textContent = 'Remplissez tous les champs.'; errEl.style.display = 'block'; return; }
+  if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
+    errEl.textContent = 'Accès non autorisé.'; errEl.style.display = 'block'; return;
+  }
+
+  try {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.token) throw new Error(data.error || 'Erreur');
+    adminToken = data.token;
+    sessionStorage.setItem('bh_admin_token', adminToken);
+    showApp();
+  } catch(e) {
+    errEl.textContent = e.message || 'Email ou mot de passe incorrect.';
+    errEl.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('bh_admin_token');
+  adminToken = '';
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  loadClients();
+}
+
+// Au chargement : si token en session, aller direct à l'app
+if (adminToken) showApp();
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function showSection(name, btn) {
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'clients') loadClients();
+  if (name === 'revenue') loadRevenue();
+  if (name === 'subscriptions') loadSubscriptions();
+  if (name === 'roadmap') loadRoadmap();
+}
+
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.className = 'toast ' + type;
+  t.querySelector('i').className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════
+// CLIENTS
+// ══════════════════════════════════════
+let allClients = [];
+
+async function loadClients() {
+  try {
+    const res = await fetch(`${API}/api/admin/clients`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (res.status === 401) { doLogout(); return; }
+    const data = await res.json();
+    allClients = data.clients || [];
+    updateClientStats();
+    renderClientsTable(allClients);
+  } catch(e) {
+    document.getElementById('clientsTableBody').innerHTML =
+      `<tr><td colspan="6" class="empty-state"><i class="fas fa-exclamation-circle"></i>Erreur de chargement</td></tr>`;
+  }
+}
+
+function updateClientStats() {
+  const trials = allClients.filter(c => c.subscription_status === 'trial').length;
+  const active = allClients.filter(c => c.subscription_status === 'active').length;
+  const totalSubs = allClients.reduce((acc, c) => acc + (c.sub_accounts_count || 0), 0);
+  document.getElementById('statTotalClients').textContent = allClients.length;
+  document.getElementById('statTotalSubs').textContent = totalSubs;
+  document.getElementById('statTrials').textContent = trials;
+  document.getElementById('statActive').textContent = active;
+}
+
+function filterClients() {
+  const q = document.getElementById('clientSearch').value.toLowerCase();
+  const f = document.getElementById('clientFilter').value;
+  const filtered = allClients.filter(c => {
+    const matchQ = !q || (c.first_name + ' ' + c.last_name + ' ' + c.email + ' ' + (c.company || '')).toLowerCase().includes(q);
+    const matchF = f === 'all' || c.subscription_status === f;
+    return matchQ && matchF;
+  });
+  renderClientsTable(filtered);
+}
+
+function renderClientsTable(clients) {
+  const tbody = document.getElementById('clientsTableBody');
+  if (!clients.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-users"></i>Aucun client trouvé</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = clients.map(c => {
+    const initials = ((c.first_name || '').charAt(0) + (c.last_name || '').charAt(0)).toUpperCase() || 'U';
+    const statusPill = getStatusPill(c.subscription_status);
+    const planLabel = c.plan_type ? c.plan_type.replace('_', ' ') : '—';
+    const createdAt = c.created_at ? new Date(c.created_at).toLocaleDateString('fr-FR') : '—';
+    const subCount = c.sub_accounts_count || 0;
+    const blocked = c.subscription_status === 'blocked';
+
+    return `
+      <tr>
+        <td>
+          <div class="user-info">
+            <div class="user-avatar">${initials}</div>
+            <div>
+              <div class="user-name">${c.first_name || ''} ${c.last_name || ''}</div>
+              <div class="user-email">${c.email}</div>
+              ${c.company ? `<div class="user-email">${c.company}</div>` : ''}
+            </div>
+          </div>
+        </td>
+        <td>${statusPill}</td>
+        <td><span style="font-weight:600;text-transform:capitalize;">${planLabel}</span></td>
+        <td>${createdAt}</td>
+        <td>
+          ${subCount > 0
+            ? `<span class="sub-count">${subCount} sous-compte${subCount > 1 ? 's' : ''}</span>`
+            : '<span style="color:var(--muted);font-size:12px;">—</span>'
+          }
+        </td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${blocked
+            ? `<button class="action-btn success" onclick="toggleBlock('${c.id}', false)"><i class="fas fa-unlock"></i> Débloquer</button>`
+            : `<button class="action-btn danger" onclick="toggleBlock('${c.id}', true)"><i class="fas fa-ban"></i> Bloquer</button>`
+          }
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function toggleBlock(userId, block) {
+  const action = block ? 'bloquer' : 'débloquer';
+  if (!confirm(`Voulez-vous ${action} ce compte ?`)) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/block`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ blocked: block })
+    });
+    if (!res.ok) throw new Error();
+    const idx = allClients.findIndex(c => c.id === userId);
+    if (idx !== -1) allClients[idx].subscription_status = block ? 'blocked' : 'active';
+    updateClientStats();
+    filterClients();
+    showToast(`Compte ${block ? 'bloqué' : 'débloqué'} avec succès.`);
+  } catch(e) {
+    showToast('Erreur lors de la mise à jour.', 'error');
+  }
+}
+
+// ══════════════════════════════════════
+// REVENUS
+// ══════════════════════════════════════
+async function loadRevenue() {
+  try {
+    const res = await fetch(`${API}/api/admin/clients`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const data = await res.json();
+    const clients = data.clients || [];
+
+    const active = clients.filter(c => c.subscription_status === 'active');
+    const trial = clients.filter(c => c.subscription_status === 'trial');
+    const expired = clients.filter(c => ['expired', 'canceled', 'blocked'].includes(c.subscription_status));
+
+    // Calcul MRR basé sur plan_amount
+    const mrr = active.reduce((acc, c) => acc + (parseFloat(c.plan_amount) || 0), 0);
+    const arr = mrr * 12;
+
+    document.getElementById('revMRR').innerHTML = `${mrr.toFixed(0)} <span>€/mois</span>`;
+    document.getElementById('revARR').innerHTML = `${arr.toFixed(0)} <span>€/an</span>`;
+    document.getElementById('revMRRDetail').textContent = `Basé sur ${active.length} abonné${active.length > 1 ? 's' : ''} actif${active.length > 1 ? 's' : ''}`;
+    document.getElementById('revActive').textContent = active.length;
+    document.getElementById('revTrial').textContent = trial.length;
+    document.getElementById('revExpired').textContent = expired.length;
+
+    const tbody = document.getElementById('revenueTableBody');
+    if (!active.length && !trial.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fas fa-chart-line"></i>Aucun abonnement actif</td></tr>`;
+      return;
+    }
+    const rows = [...active, ...trial].map(c => {
+      const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
+      const plan = c.plan_type || '—';
+      const amount = c.plan_amount ? `${parseFloat(c.plan_amount).toFixed(2)} €` : '—';
+      const status = getStatusPill(c.subscription_status);
+      const renewal = c.current_period_end
+        ? new Date(c.current_period_end * 1000).toLocaleDateString('fr-FR')
+        : c.trial_end_date
+          ? `Trial → ${new Date(c.trial_end_date).toLocaleDateString('fr-FR')}`
+          : '—';
+      return `<tr>
+        <td><div class="user-info"><div class="user-avatar">${((c.first_name||'').charAt(0)+(c.last_name||'').charAt(0)).toUpperCase()||'U'}</div><div><div class="user-name">${name}</div><div class="user-email">${c.email}</div></div></div></td>
+        <td style="text-transform:capitalize;font-weight:600;">${plan}</td>
+        <td style="font-weight:700;color:var(--green);">${amount}</td>
+        <td>${status}</td>
+        <td>${renewal}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = rows.join('');
+  } catch(e) {
+    showToast('Erreur chargement revenus.', 'error');
+  }
+}
+
+// ══════════════════════════════════════
+// ABONNEMENTS
+// ══════════════════════════════════════
+let allSubsData = [];
+
+async function loadSubscriptions() {
+  try {
+    const res = await fetch(`${API}/api/admin/clients`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const data = await res.json();
+    allSubsData = data.clients || [];
+    renderSubsTable(allSubsData);
+  } catch(e) {
+    showToast('Erreur chargement abonnements.', 'error');
+  }
+}
+
+function filterSubs() {
+  const q = document.getElementById('subSearch').value.toLowerCase();
+  const filtered = allSubsData.filter(c =>
+    (c.first_name + ' ' + c.last_name + ' ' + c.email).toLowerCase().includes(q)
+  );
+  renderSubsTable(filtered);
+}
+
+function renderSubsTable(clients) {
+  const tbody = document.getElementById('subsTableBody');
+  if (!clients.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fas fa-credit-card"></i>Aucun abonnement trouvé</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = clients.map(c => {
+    const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
+    const blocked = c.subscription_status === 'blocked';
+    const expiry = c.trial_end_date
+      ? `Trial → ${new Date(c.trial_end_date).toLocaleDateString('fr-FR')}`
+      : c.current_period_end
+        ? new Date(c.current_period_end * 1000).toLocaleDateString('fr-FR')
+        : '—';
+    return `<tr>
+      <td><div class="user-info"><div class="user-avatar">${((c.first_name||'').charAt(0)+(c.last_name||'').charAt(0)).toUpperCase()||'U'}</div><div><div class="user-name">${name}</div><div class="user-email">${c.email}</div></div></div></td>
+      <td style="text-transform:capitalize;font-weight:600;">${c.plan_type || '—'}</td>
+      <td>${getStatusPill(c.subscription_status)}</td>
+      <td>${expiry}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${blocked
+          ? `<button class="action-btn success" onclick="toggleBlock('${c.id}', false)"><i class="fas fa-unlock"></i> Débloquer</button>`
+          : `<button class="action-btn danger" onclick="toggleBlock('${c.id}', true)"><i class="fas fa-ban"></i> Bloquer</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════
+// ROADMAP
+// ══════════════════════════════════════
+let allRoadmapItems = [];
+let currentRoadmapTab = 'pending';
+let editingId = null;
+
+async function loadRoadmap() {
+  try {
+    const res = await fetch(`${API}/api/admin/roadmap`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allRoadmapItems = data.items || [];
+    updateRoadmapStats();
+    renderRoadmap();
+  } catch(e) {
+    document.getElementById('roadmapList').innerHTML =
+      `<div class="empty-state"><i class="fas fa-exclamation-circle"></i>Erreur de chargement</div>`;
+  }
+}
+
+function updateRoadmapStats() {
+  document.getElementById('statPending').textContent = allRoadmapItems.filter(i => !i.is_published).length;
+  document.getElementById('statReflection').textContent = allRoadmapItems.filter(i => i.is_published && i.status === 'reflection').length;
+  document.getElementById('statInProgress').textContent = allRoadmapItems.filter(i => i.is_published && i.status === 'in_progress').length;
+  document.getElementById('statAvailable').textContent = allRoadmapItems.filter(i => i.is_published && i.status === 'available').length;
+  document.getElementById('countPending').textContent = allRoadmapItems.filter(i => !i.is_published).length;
+  document.getElementById('countPublished').textContent = allRoadmapItems.filter(i => i.is_published).length;
+}
+
+function switchRoadmapTab(tab, btn) {
+  currentRoadmapTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRoadmap();
+}
+
+function renderRoadmap() {
+  const list = document.getElementById('roadmapList');
+  let items = allRoadmapItems;
+  if (currentRoadmapTab === 'pending') items = allRoadmapItems.filter(i => !i.is_published);
+  if (currentRoadmapTab === 'published') items = allRoadmapItems.filter(i => i.is_published);
+
+  if (!items.length) {
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i>${currentRoadmapTab === 'pending' ? 'Aucune suggestion en attente 🎉' : 'Aucun item publié.'}</div>`;
+    return;
+  }
+  const statusLabels = { reflection: '💡 En réflexion', in_progress: '🔨 En cours', available: '✅ Disponible' };
+  list.innerHTML = items.map(item => `
+    <div class="item-card ${item.is_published ? 'published' : 'pending'}">
+      <div class="item-card-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          ${item.is_published
+            ? `<span class="status-pill ${item.status}">${statusLabels[item.status] || item.status}</span>`
+            : `<span class="status-pill pending">⏳ En attente</span>`
+          }
+          ${item.upvotes || item.downvotes ? `<span class="votes-badge"><span style="color:var(--emerald)">👍 ${item.upvotes||0}</span><span style="color:var(--danger)">👎 ${item.downvotes||0}</span></span>` : ''}
+        </div>
+        <div class="item-card-title">${item.title}</div>
+        ${item.description ? `<div class="item-card-desc">${item.description}</div>` : ''}
+        <div class="item-card-meta">
+          ${item.suggested_by_name ? `<span><i class="fas fa-user"></i> ${item.suggested_by_name}</span>` : '<span><i class="fas fa-shield-halved"></i> Créé par admin</span>'}
+          <span><i class="fas fa-calendar"></i> ${new Date(item.created_at).toLocaleDateString('fr-FR')}</span>
+        </div>
+      </div>
+      <div class="item-actions">
+        ${!item.is_published
+          ? `<button class="action-btn success" onclick="roadmapPublish(${item.id})"><i class="fas fa-globe"></i> Publier</button>`
+          : `<select class="status-select" onchange="roadmapStatus(${item.id}, this.value)">
+              <option value="reflection" ${item.status==='reflection'?'selected':''}>💡 En réflexion</option>
+              <option value="in_progress" ${item.status==='in_progress'?'selected':''}>🔨 En cours</option>
+              <option value="available" ${item.status==='available'?'selected':''}>✅ Disponible</option>
+            </select>
+            <button class="action-btn" onclick="roadmapUnpublish(${item.id})"><i class="fas fa-eye-slash"></i> Dépublier</button>`
+        }
+        <button class="action-btn" onclick="openEditModal(${item.id})"><i class="fas fa-pen"></i> Modifier</button>
+        <button class="action-btn danger" onclick="roadmapDelete(${item.id})"><i class="fas fa-trash"></i> Supprimer</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function roadmapPublish(id) { await roadmapUpdate(id, { is_published: true }); showToast('Publié !'); }
+async function roadmapUnpublish(id) { await roadmapUpdate(id, { is_published: false }); showToast('Dépublié.'); }
+async function roadmapStatus(id, status) { await roadmapUpdate(id, { status }); showToast('Statut mis à jour.'); }
+
+async function roadmapUpdate(id, payload) {
+  const res = await fetch(`${API}/api/admin/roadmap/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error();
+  const idx = allRoadmapItems.findIndex(i => i.id === id);
+  if (idx !== -1) allRoadmapItems[idx] = { ...allRoadmapItems[idx], ...payload };
+  updateRoadmapStats();
+  renderRoadmap();
+}
+
+async function roadmapDelete(id) {
+  if (!confirm('Supprimer cet item définitivement ?')) return;
+  const res = await fetch(`${API}/api/admin/roadmap/${id}`, {
+    method: 'DELETE', headers: { Authorization: 'Bearer ' + adminToken }
+  });
+  if (!res.ok) { showToast('Erreur suppression.', 'error'); return; }
+  allRoadmapItems = allRoadmapItems.filter(i => i.id !== id);
+  updateRoadmapStats();
+  renderRoadmap();
+  showToast('Supprimé.');
+}
+
+function openCreateModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Créer un item';
+  document.getElementById('formTitle').value = '';
+  document.getElementById('formDesc').value = '';
+  document.getElementById('formStatus').value = 'reflection';
+  document.getElementById('formPublished').value = 'false';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const item = allRoadmapItems.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Modifier l\'item';
+  document.getElementById('formTitle').value = item.title || '';
+  document.getElementById('formDesc').value = item.description || '';
+  document.getElementById('formStatus').value = item.status || 'reflection';
+  document.getElementById('formPublished').value = item.is_published ? 'true' : 'false';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
+}
+
+async function saveRoadmapItem() {
+  const title = document.getElementById('formTitle').value.trim();
+  if (!title) { document.getElementById('formTitle').focus(); return; }
+  const payload = {
+    title,
+    description: document.getElementById('formDesc').value.trim() || null,
+    status: document.getElementById('formStatus').value,
+    is_published: document.getElementById('formPublished').value === 'true'
+  };
+  try {
+    if (editingId) {
+      await roadmapUpdate(editingId, payload);
+      showToast('Item modifié.');
+    } else {
+      const res = await fetch(`${API}/api/roadmap/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+        body: JSON.stringify({ title: payload.title, description: payload.description })
+      });
+      if (!res.ok) throw new Error();
+      await loadRoadmap();
+      if (payload.is_published) {
+        const last = [...allRoadmapItems].sort((a, b) => b.id - a.id)[0];
+        if (last) await roadmapUpdate(last.id, { status: payload.status, is_published: true });
+      }
+      showToast('Item créé !');
+    }
+    closeModal();
+  } catch(e) {
+    showToast('Erreur lors de la sauvegarde.', 'error');
+  }
+}
+
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function getStatusPill(status) {
+  const map = {
+    active:   ['pill-green', '✅ Actif'],
+    trial:    ['pill-amber', '⏳ Trial'],
+    expired:  ['pill-red',   '❌ Expiré'],
+    canceled: ['pill-red',   '❌ Annulé'],
+    blocked:  ['pill-red',   '🚫 Bloqué'],
+    past_due: ['pill-amber', '⚠️ Impayé'],
+  };
+  const [cls, label] = map[status] || ['pill-grey', status || '—'];
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+</script>
+</body>
+</html>
