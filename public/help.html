@@ -1106,25 +1106,47 @@ let selectedImageFile = null;
 let allUserConvs = [];
 
 async function loadConvHistory() {
-  try {
-    const res = await fetch(`${API_URL}/api/support/conversations`, {
-      headers: { 'Authorization': 'Bearer ' + getToken() }
-    });
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    allUserConvs = data.conversations || [];
+  // Utilise XMLHttpRequest pour contourner auth-fetch et gérer le timeout correctement
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://lcc-booking-manager.onrender.com/api/support/conversations');
+    xhr.setRequestHeader('Authorization', 'Bearer ' + getToken());
+    xhr.timeout = 6000; // 6s timeout
 
-    // Si aucune conversation, en créer une automatiquement
-    if (allUserConvs.length === 0) {
+    xhr.onload = async function() {
+      if (xhr.status === 200) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          allUserConvs = data.conversations || [];
+          if (allUserConvs.length === 0) {
+            await autoCreateFirstConv();
+          } else {
+            renderConvHistory();
+          }
+        } catch(e) {
+          await autoCreateFirstConv();
+        }
+      } else {
+        console.log('loadConvHistory status:', xhr.status);
+        await autoCreateFirstConv();
+      }
+      resolve();
+    };
+
+    xhr.ontimeout = async function() {
+      console.log('loadConvHistory timeout → fallback');
       await autoCreateFirstConv();
-      return;
-    }
+      resolve();
+    };
 
-    renderConvHistory();
-  } catch(e) {
-    // Route pas encore déployée → créer/récupérer via l'ancienne route
-    await autoCreateFirstConv();
-  }
+    xhr.onerror = async function() {
+      console.log('loadConvHistory error → fallback');
+      await autoCreateFirstConv();
+      resolve();
+    };
+
+    xhr.send();
+  });
 }
 
 async function autoCreateFirstConv() {
