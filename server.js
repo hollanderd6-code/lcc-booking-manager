@@ -11217,7 +11217,7 @@ app.post('/api/auth/register', async (req, res) => {
     try {
       await transporter.sendMail({
         from: EMAIL_FROM,
-        to: 'contact@boostinghost.fr',
+        to: 'charles.induni@gmail.com',
         subject: `🎉 Nouvelle inscription — ${firstName} ${lastName}`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#f9fafb;border-radius:12px;">
