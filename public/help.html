@@ -1270,7 +1270,7 @@ function convFormatTime(dateStr) {
   const d = new Date(dateStr);
   const now = new Date();
   const diffMin = Math.floor((now - d) / 60000);
-  if (diffMin < 1) return 'à l\'instant';
+  if (diffMin < 1) return "à l'instant";
   if (diffMin < 60) return `${diffMin} min`;
   if (diffMin < 1440) return `${Math.floor(diffMin/60)}h`;
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
