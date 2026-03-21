@@ -32,8 +32,7 @@
   "ios": {
     "backgroundColor": "#FFFFFF",
     "contentInset": "automatic",
-    "allowsLinkPreview": false,
-    "scrollEnabled": false
+    "allowsLinkPreview": false
   },
   "android": {
     "allowMixedContent": true,
