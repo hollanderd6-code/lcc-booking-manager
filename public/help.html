@@ -1113,10 +1113,43 @@ async function loadConvHistory() {
     if (!res.ok) throw new Error();
     const data = await res.json();
     allUserConvs = data.conversations || [];
+
+    // Si aucune conversation, en créer une automatiquement
+    if (allUserConvs.length === 0) {
+      await autoCreateFirstConv();
+      return;
+    }
+
     renderConvHistory();
   } catch(e) {
-    // Fallback: charger la conversation unique existante
-    initSupportChat();
+    // Route pas encore déployée → créer/récupérer via l'ancienne route
+    await autoCreateFirstConv();
+  }
+}
+
+async function autoCreateFirstConv() {
+  try {
+    // Essayer la nouvelle route d'abord
+    let res = await fetch(`${API_URL}/api/support/conversation/new`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+
+    // Fallback sur l'ancienne route si pas encore déployée
+    if (!res.ok) {
+      res = await fetch(`${API_URL}/api/support/conversation`, {
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
+    }
+
+    if (res.ok) {
+      const data = await res.json();
+      allUserConvs = [data.conversation];
+      renderConvHistory();
+    }
+  } catch(e) {
+    const list = document.getElementById('convHistoryList');
+    if (list) list.innerHTML = '<div style="text-align:center;padding:20px;color:#EF4444;font-size:13px;"><i class="fas fa-exclamation-circle"></i> Erreur de chargement. <a href="javascript:loadConvHistory()" style="color:#1A7A5E;">Réessayer</a></div>';
   }
 }
 
