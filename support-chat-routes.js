@@ -129,6 +129,61 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
   });
 
   // ============================================
+  // GET /api/support/conversations — Historique toutes les conversations du client
+  // ============================================
+  app.get('/api/support/conversations', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id || req.user.userId;
+
+      const result = await pool.query(
+        `SELECT sc.*,
+          (SELECT message FROM support_messages sm WHERE sm.conversation_id = sc.id ORDER BY sm.created_at DESC LIMIT 1) as last_message,
+          (SELECT COUNT(*) FROM support_messages sm WHERE sm.conversation_id = sc.id AND sm.sender_type = 'admin' AND sm.is_read = FALSE) as unread_count
+         FROM support_conversations sc
+         WHERE sc.user_id = $1
+         ORDER BY sc.last_message_at DESC`,
+        [userId]
+      );
+
+      res.json({ conversations: result.rows });
+    } catch (error) {
+      console.error('❌ Erreur GET /api/support/conversations:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
+  // POST /api/support/conversation/new — Créer une nouvelle conversation
+  // ============================================
+  app.post('/api/support/conversation/new', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id || req.user.userId;
+      const user = req.user;
+
+      const convId = 'sup_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+      const subject = `Support - ${user.firstName || user.email || 'Utilisateur'}`;
+
+      const insertResult = await pool.query(
+        `INSERT INTO support_conversations (id, user_id, subject, status, created_at, updated_at, last_message_at)
+         VALUES ($1, $2, $3, 'open', NOW(), NOW(), NOW())
+         RETURNING *`,
+        [convId, userId, subject]
+      );
+
+      await pool.query(
+        `INSERT INTO support_messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+         VALUES ($1, 'admin', 'Support Boostinghost', $2, FALSE, NOW())`,
+        [convId, `👋 Bonjour ! Comment pouvons-nous vous aider ?\n\nN'hésitez pas à décrire votre problème ou question. Vous pouvez aussi envoyer des captures d'écran.\n\nNous vous répondrons dès que possible.`]
+      );
+
+      res.json({ conversation: insertResult.rows[0] });
+    } catch (error) {
+      console.error('❌ Erreur POST /api/support/conversation/new:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ============================================
   // GET /api/support/messages/:conversationId — Récupérer les messages
   // ============================================
   app.get('/api/support/messages/:conversationId', authenticateToken, async (req, res) => {
@@ -232,7 +287,7 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
         
         // Source 2 : tokens Capacitor des admins via email
         // ⚠️ CHANGE L'EMAIL ICI :
-        const HARDCODED_ADMIN_EMAILS = ['contact@boostinghost.com'];
+        const HARDCODED_ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
         
         let registeredEmails = [];
         try {
@@ -365,7 +420,7 @@ function setupSupportRoutes(app, pool, io, authenticateToken) {
       try {
         const { sendNotification } = require('./services/notifications-service');
         
-        const HARDCODED_ADMIN_EMAILS = ['contact@boostinghost.com'];
+        const HARDCODED_ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
         let registeredEmails = [];
         try {
           const regResult = await pool.query('SELECT email FROM support_admin_emails');
