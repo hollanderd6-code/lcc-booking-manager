@@ -1029,10 +1029,34 @@ let supportSocket = null;
 let selectedImageFile = null;
 
 // ============================================
+// 🐛 DEBUG OVERLAY — à supprimer après diagnostic
+// ============================================
+function debugLog(msg, color) {
+  let box = document.getElementById('__debugBox');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = '__debugBox';
+    box.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;z-index:99999;background:rgba(0,0,0,0.85);color:#fff;font-size:11px;font-family:monospace;padding:10px;border-radius:10px;max-height:200px;overflow-y:auto;';
+    document.body.appendChild(box);
+  }
+  const line = document.createElement('div');
+  line.style.color = color || '#fff';
+  line.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+  line.style.paddingBottom = '4px';
+  line.style.marginBottom = '4px';
+  line.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ============================================
 // INITIALISATION
 // ============================================
 async function initSupportChat() {
   const token = getToken();
+  debugLog('protocol: ' + window.location.protocol, '#aaddff');
+  debugLog('API_URL: ' + API_URL, '#aaddff');
+  debugLog('token: ' + (token ? '✅ présent' : '❌ absent'), token ? '#aaffaa' : '#ffaaaa');
   if (!token) return;
 
   try {
@@ -1067,6 +1091,8 @@ async function initSupportChat() {
 
   } catch (err) {
     console.error('Erreur init support:', err);
+    debugLog('❌ ERREUR: ' + err.message, '#ffaaaa');
+    debugLog('stack: ' + (err.stack || 'none'), '#ffaaaa');
     document.getElementById('supportMessages').innerHTML = 
       '<div class="support-loading">Erreur de chargement. <a href="javascript:initSupportChat()">Réessayer</a></div>';
   }
