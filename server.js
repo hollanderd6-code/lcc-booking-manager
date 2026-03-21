@@ -19409,7 +19409,7 @@ app.get('/api/admin/clients', authenticateToken, async (req, res) => {
         s.plan_amount,
         s.trial_end_date,
         s.current_period_end,
-        (SELECT COUNT(*) FROM sub_accounts sa WHERE sa.parent_user_id = u.id) AS sub_accounts_count
+        (SELECT COUNT(*)::int FROM sub_accounts sa WHERE sa.parent_user_id = u.id) AS sub_accounts_count
       FROM users u
       LEFT JOIN subscriptions s ON s.user_id = u.id
       ORDER BY u.created_at DESC
