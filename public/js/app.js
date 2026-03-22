@@ -13,22 +13,32 @@ window.activeFilters = activeFilters;
 
 // Colors by source/platform (for both calendars)
 const SOURCE_COLORS = {
-  airbnb:  { bg: '#FF5A5F', border: '#FF5A5F' },   // rose foncé
-  booking: { bg: '#003580', border: '#003580' },   // bleu foncé
-  direct:  { bg: '#10B981', border: '#10B981' },   // vert
+  airbnb:  { bg: '#FF5A5F', border: '#FF5A5F' },
+  booking: { bg: '#003580', border: '#003580' },
+  direct:  { bg: '#10B981', border: '#10B981' },
   vrbo:    { bg: '#1569C7', border: '#1569C7' },
   expedia: { bg: '#FFC72C', border: '#FFC72C' },
-  block:   { bg: '#6B7280', border: '#6B7280' }    // gris pour blocages
+  abritel: { bg: '#0096D6', border: '#0096D6' },
+  block:   { bg: '#6B7280', border: '#6B7280' }
 };
 
-function normalizeSourceToKey(raw) {
+function normalizeSourceToKey(raw, otaName) {
+  // Channex ota_name codes
+  if (otaName) {
+    const o = String(otaName).toUpperCase();
+    if (o === 'ABB' || o === 'AIRBNB')    return 'airbnb';
+    if (o === 'BDC' || o === 'BOOKING')   return 'booking';
+    if (o === 'EXP' || o === 'EXPEDIA')   return 'expedia';
+    if (o === 'VRBO' || o === 'HOMEAWAY') return 'vrbo';
+    if (o === 'ABRITEL')                  return 'abritel';
+  }
   if (!raw) return 'direct';
   const v = String(raw).toLowerCase();
-  if (v.includes('airbnb')) return 'airbnb';
+  if (v.includes('airbnb'))  return 'airbnb';
   if (v.includes('booking')) return 'booking';
   if (v.includes('vrbo') || v.includes('abritel') || v.includes('homeaway')) return 'vrbo';
   if (v.includes('expedia')) return 'expedia';
-  if (v.includes('block')) return 'block';
+  if (v.includes('block'))   return 'block';
   return 'direct';
 }
 
@@ -204,7 +214,8 @@ function initializeCalendar() {
     eventClassNames: function(info) {
       const classes = ['bh-event'];
       const sourceKey = normalizeSourceToKey(
-        info.event.extendedProps.source || info.event.extendedProps.sourceRaw
+        info.event.extendedProps.source || info.event.extendedProps.sourceRaw,
+        info.event.extendedProps.otaName
       );
 
       if (sourceKey === 'airbnb') classes.push('bh-event-airbnb');
@@ -219,7 +230,7 @@ function initializeCalendar() {
     eventContent: function(arg) {
       const props = arg.event.extendedProps || {};
       const property = props.propertyName || 'Logement';
-      const sourceKey = props.source || normalizeSourceToKey(props.sourceRaw);
+      const sourceKey = props.source || normalizeSourceToKey(props.sourceRaw, props.otaName);
       const guest = arg.event.title || '';
 
       const wrapper = document.createElement('div');
@@ -228,8 +239,11 @@ function initializeCalendar() {
       let sourceBadge = '';
       if (sourceKey) {
         const letter =
-          sourceKey === 'airbnb' ? 'A' :
+          sourceKey === 'airbnb'  ? 'A' :
           sourceKey === 'booking' ? 'B' :
+          sourceKey === 'expedia' ? 'E' :
+          sourceKey === 'vrbo'    ? 'V' :
+          sourceKey === 'abritel' ? 'Ab' :
           sourceKey === 'block'   ? 'X' :
           'D';
         sourceBadge = `<span class="bh-event-source bh-source-${sourceKey}">${letter}</span>`;
@@ -319,7 +333,7 @@ function updateCalendarEvents() {
   const events = allReservations
     .filter(r => activeFilters.size === 0 || (r.property && activeFilters.has(r.property.id)))
     .map(r => {
-      const sourceKey = normalizeSourceToKey(r.source);
+      const sourceKey = normalizeSourceToKey(r.source, r.ota_name || r.otaName);
       const colors = SOURCE_COLORS[sourceKey] || SOURCE_COLORS.direct;
 
       let title;
@@ -352,7 +366,8 @@ function updateCalendarEvents() {
           reservation: r,
           propertyName: propertyName,
           sourceRaw: r.source || null,
-          source: sourceKey
+          source: sourceKey,
+          otaName: r.ota_name || r.otaName || null
         }
       };
     });
