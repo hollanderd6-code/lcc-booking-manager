@@ -13,7 +13,7 @@ function getBaseUrl() {
   return window.location.origin;
 }
 
-const BOOSTINGHOST_ICAL_BASE = getBaseUrl();
+// BOOSTINGHOST_ICAL_BASE supprimé
 let properties = [];
 let currentEditingProperty = null;
 let ownerClients = [];
@@ -215,31 +215,10 @@ async function saveProperty(event) {
     return;
   }
 
-  const urlGroups = document.querySelectorAll(".url-input-group");
-  let icalUrls = [];
-  
-  if (urlGroups.length > 0) {
-    icalUrls = Array.from(urlGroups)
-      .map((group) => {
-        const platformInput = group.querySelector(".platform-input");
-        const urlInput = group.querySelector(".url-input");
-        const platform = platformInput ? platformInput.value.trim() : "";
-        const url = urlInput ? urlInput.value.trim() : "";
-        if (!url) return null;
-        return { platform: platform || "iCal", url };
-      })
-      .filter(Boolean);
-  } else {
-    const urlInputs = document.querySelectorAll('.ical-url-input');
-    icalUrls = Array.from(urlInputs)
-      .map(input => input.value.trim())
-      .filter(Boolean);
-  }
-
   const formData = new FormData();
   formData.append('name', name);
   formData.append('color', color);
-  formData.append('icalUrls', JSON.stringify(icalUrls));
+  formData.append('icalUrls', JSON.stringify([])); // iCal désactivé — Channex gère les OTAs
   
   if (address) formData.append('address', address);
   if (arrivalTime) formData.append('arrivalTime', arrivalTime);
@@ -385,59 +364,7 @@ async function deleteProperty(propertyId) {
   }
 }
 
-async function testIcalUrl(url, buttonElement) {
-  if (!url || url.trim().length === 0) {
-    showToast("Veuillez entrer une URL", "error");
-    return;
-  }
-
-  const originalText = buttonElement.innerHTML;
-  buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Test...';
-  buttonElement.disabled = true;
-
-  try {
-    const token = localStorage.getItem("lcc_token");
-    const response = await fetch(`${API_URL}/api/properties/test-ical`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      },
-      body: JSON.stringify({ url: url.trim() }),
-    });
-    const result = await response.json();
-    if (response.ok) {
-      showToast("URL iCal valide et accessible", "success");
-    } else {
-      showToast(
-        result.error || "Erreur lors du test de l'URL iCal",
-        "error"
-      );
-    }
-  } catch (error) {
-    console.error("Erreur test iCal:", error);
-    showToast("Erreur lors du test de l'URL iCal", "error");
-  } finally {
-    buttonElement.innerHTML = originalText;
-    buttonElement.disabled = false;
-  }
-}
-
-function copyIcalUrl(url) {
-  if (!url) return;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        showToast("Lien iCal copié dans le presse-papiers", "success");
-      })
-      .catch(() => {
-        window.prompt("Copiez ce lien iCal :", url);
-      });
-  } else {
-    window.prompt("Copiez ce lien iCal :", url);
-  }
-}
+// testIcalUrl et copyIcalUrl supprimés — remplacés par Channex
 
 // ========================================
 // MODAL HANDLERS
@@ -642,22 +569,7 @@ function openEditPropertyModal(propertyId) {
     }
   }
 
-  let urls = property.icalUrls || [];
-  if (!Array.isArray(urls)) urls = [];
-
-  const urlList = document.getElementById("urlList");
-  if (urlList) {
-    urlList.innerHTML = "";
-    if (urls.length > 0) {
-      urls.forEach((u) => {
-        const platform = typeof u === "string" ? "iCal" : (u.platform || "iCal");
-        const url = typeof u === "string" ? u : (u.url || "");
-        addUrlField(platform, url);
-      });
-    } else {
-      addUrlField();
-    }
-  }
+  // populate iCal URLs supprimé — Channex gère les OTAs
 
   // ===== CHAT LINK SECTION =====
   const pid = property._id || property.id || '';
@@ -693,43 +605,7 @@ function closeEditModal() {
   if (modal) modal.classList.remove("active");
 }
 
-function addUrlField(initialPlatform = "", initialUrl = "") {
-  const urlList = document.getElementById("urlList");
-  if (!urlList) return;
-
-  const group = document.createElement("div");
-  group.className = "url-input-group";
-  group.innerHTML = `
-    <input
-      type="text"
-      class="platform-input"
-      placeholder="Plateforme (Airbnb, Booking...)"
-      value="${initialPlatform ? escapeHtml(initialPlatform) : ""}"
-    />
-    <input
-      type="text"
-      class="url-input"
-      placeholder="URL iCal"
-      value="${initialUrl ? escapeHtml(initialUrl) : ""}"
-    />
-    <button type="button" class="btn-remove-url" title="Supprimer cette URL">
-      <i class="fas fa-times"></i>
-    </button>
-  `;
-
-  const removeBtn = group.querySelector(".btn-remove-url");
-  if (removeBtn) {
-    removeBtn.addEventListener("click", () => group.remove());
-  }
-
-  urlList.appendChild(group);
-}
-
-function buildBoostinghostIcalUrl(property) {
-  const id = property._id || property.id;
-  if (!id) return null;
-  return `${BOOSTINGHOST_ICAL_BASE}/ical/${id}.ics`;
-}
+// addUrlField + buildBoostinghostIcalUrl supprimés — remplacés par Channex
 
 // ========================================
 // RENDER PROPERTIES
@@ -772,51 +648,7 @@ const chatPin = p.chatPin || p.chat_pin || 'Non défini';
 // ✅ Nouveau format de lien compatible avec les deep links iOS/Android
 const chatLink = `https://boostinghost.fr/guest?property=${id}`;
       
-      let urls = p.icalUrls || [];
-      if (!Array.isArray(urls)) urls = [];
-
-      const normalizedUrls = urls.map((item) => {
-        if (typeof item === "string") {
-          return { platform: "iCal", url: item };
-        }
-        return { platform: item.platform || "iCal", url: item.url || "" };
-      }).filter((u) => u.url);
-
-      const icalListHtml =
-        normalizedUrls.length > 0
-          ? normalizedUrls
-              .map(
-                (u) => `
-          <div class="ical-url-item">
-            <div class="ical-source">${escapeHtml(u.platform)}</div>
-            <div class="ical-url-text" title="${escapeHtml(u.url)}">
-              ${escapeHtml(u.url)}
-            </div>
-            <button
-              type="button"
-              class="btn-test-url"
-              data-url="${escapeHtml(u.url)}"
-            >
-              Tester
-            </button>
-            <button
-              type="button"
-              class="btn-copy-ical"
-              data-url="${escapeHtml(u.url)}"
-            >
-              <i class="fas fa-copy"></i>
-              Copier
-            </button>
-          </div>
-        `
-              )
-              .join("")
-          : `
-        <div style="padding: 10px; background: var(--bg-secondary,#f3f4f6); border-radius: 10px; font-size: 12px; color: var(--text-secondary);">
-          <i class="fas fa-exclamation-triangle"></i>
-          <span style="margin-left:6px;">Aucune URL iCal configurée</span>
-        </div>
-      `;
+      // icalListHtml supprimé — Channex gère la synchronisation OTA
 const chatSectionHtml = `
   <div class="chat-link-section" style="margin-top:14px;padding:14px;background:#fff;border:1.5px solid rgba(26,122,94,0.18);border-radius:14px;">
 
@@ -971,30 +803,7 @@ const chatSectionHtml = `
           </a>`
         : "";
 
-      const boostinghostUrl = buildBoostinghostIcalUrl(p);
-      const boostinghostHtml = boostinghostUrl
-        ? `
-        <div class="boostinghost-ical">
-          <div class="boostinghost-ical-label">
-            <i class="fas fa-link"></i>
-            <span>Lien iCal Boostinghost</span>
-          </div>
-          <div class="boostinghost-ical-url" title="${escapeHtml(
-            boostinghostUrl
-          )}">
-            ${escapeHtml(boostinghostUrl)}
-          </div>
-          <button
-            type="button"
-            class="btn-copy-boostinghost"
-            data-url="${escapeHtml(boostinghostUrl)}"
-          >
-            <i class="fas fa-copy"></i>
-            Copier
-          </button>
-        </div>
-      `
-        : "";
+      // boostinghostHtml (lien iCal export) supprimé
 
       const arrivalLabel = arrivalTime ? arrivalTime : '--';
       const departureLabel = departureTime ? departureTime : '--';
@@ -1080,26 +889,7 @@ const chatSectionHtml = `
     });
   });
 
-  grid.querySelectorAll(".btn-test-url").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const url = btn.getAttribute("data-url");
-      testIcalUrl(url, btn);
-    });
-  });
-
-  grid.querySelectorAll(".btn-copy-ical").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const url = btn.getAttribute("data-url");
-      copyIcalUrl(url);
-    });
-  });
-
-  grid.querySelectorAll(".btn-copy-boostinghost").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const url = btn.getAttribute("data-url");
-      copyIcalUrl(url);
-    });
-  });
+  // event listeners iCal supprimés — remplacés par Channex
 
   // ── Boutons Channex ──────────────────────────────────────────
   grid.querySelectorAll(".btn-channex-connect").forEach((btn) => {
