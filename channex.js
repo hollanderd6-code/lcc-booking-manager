@@ -47,7 +47,7 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
         country_code: 'FR',
         currency: 'EUR',
         timezone: 'Europe/Paris',
-        property_type: 'VacationRental',
+        property_type: 'apartment',
         email: 'contact@boostinghost.fr'
       }
     });
