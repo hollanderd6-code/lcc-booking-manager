@@ -7387,20 +7387,9 @@ document.addEventListener('click', function(e) {
     booking.type === 'block' ||
     booking.source === 'BLOCK';
 
-  // Est-ce une réservation venant d\'un iCal (Airbnb / Booking.com) ?
+  // Réservations OTA via Channex — supprimables localement
   const rawSource = (booking.source || booking.platform || '').toLowerCase();
-  const isFromIcal =
-    rawSource.includes('airbnb') ||
-    rawSource.includes('booking.com');
-
-  if (isFromIcal) {
-    window.deletingInProgress = false;
-    alert(
-      "Impossible de supprimer une réservation synchronisée depuis Airbnb/Booking.\n" +
-      "Supprime-la directement sur la plateforme source."
-    );
-    return;
-  }
+  // Note : plus de blocage iCal, Channex gère la sync OTA
 
   const message = isBlock
     ? 'Êtes-vous sûr de vouloir supprimer ce BLOCAGE ?'
@@ -7559,14 +7548,8 @@ if (editBookingForm) {
       currentBookingData.type === 'block' ||
       currentBookingData.source === 'BLOCK';
 
-    const isFromIcal =
-      currentBookingData.source === 'Airbnb' ||
-      currentBookingData.source === 'Booking.com';
-
-    if (isFromIcal) {
-      alert("Vous ne pouvez pas modifier ici une réservation importée (Airbnb / Booking). Modifiez-la sur la plateforme source.");
-      return;
-    }
+    // Réservations OTA via Channex — modifiables localement
+    // (Channex mettra à jour les OTAs automatiquement)
 
     const propertyId = document.getElementById('editBookingProperty').value;
     const start = document.getElementById('editCheckIn').value;
