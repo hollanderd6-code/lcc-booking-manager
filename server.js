@@ -20123,6 +20123,55 @@ app.post('/api/channex/sync-availability/:property_id', authenticateToken, async
   }
 });
 
+
+// ── Générer un token iFrame Channex ──────────────────────────
+app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
+  const { property_id } = req.body;
+  const user_id = req.user.id;
+
+  if (!property_id) return res.status(400).json({ error: 'property_id requis' });
+
+  try {
+    // Vérifier que le logement appartient à l'utilisateur et est connecté à Channex
+    const propResult = await pool.query(
+      'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, user_id]
+    );
+
+    if (propResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    const property = propResult.rows[0];
+
+    if (!property.channex_enabled || !property.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    // Générer le one-time token via l'API Channex
+    const { channexAPI } = require('./channex');
+    const response = await channexAPI.post('/auth/one_time_token', {
+      one_time_token: {
+        property_id: property.channex_property_id,
+        username: user_id
+      }
+    });
+
+    const token = response.data.data.token;
+
+    res.json({
+      success: true,
+      token,
+      channex_property_id: property.channex_property_id,
+      iframe_url: `${process.env.CHANNEX_API_URL || 'https://staging.channex.io'}/en/dashboard#/properties/${property.channex_property_id}/channels?token=${token}`
+    });
+
+  } catch (e) {
+    console.error('❌ [CHANNEX IFRAME TOKEN]', e.response?.data || e.message);
+    res.status(500).json({ error: 'Erreur génération token iFrame: ' + e.message });
+  }
+});
+
 // ── Logs Channex ─────────────────────────────────────────────
 app.get('/api/channex/logs', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
