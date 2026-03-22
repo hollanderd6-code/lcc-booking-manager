@@ -5920,7 +5920,15 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         id: p.id,
         name: p.name,
         color: p.color,
-        count: (reservationsStore.properties[p.id] || []).length
+        count: (reservationsStore.properties[p.id] || []).length,
+        basePrice: p.basePrice != null ? p.basePrice : null,
+        weekendPrice: p.weekendPrice != null ? p.weekendPrice : null,
+        channexEnabled: p.channex_enabled || false,
+        channexPropertyId: p.channex_property_id || null,
+        arrivalTime: p.arrival_time || null,
+        departureTime: p.departure_time || null,
+        depositAmount: p.deposit_amount || null,
+        address: p.address || null
       }))
     });
   } catch (err) {
@@ -9927,6 +9935,8 @@ app.get('/api/properties',
         icalUrls,
         channexEnabled: p.channex_enabled || false,
         channexPropertyId: p.channex_property_id || null,
+        basePrice: p.basePrice != null ? p.basePrice : null,
+        weekendPrice: p.weekendPrice != null ? p.weekendPrice : null,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
     });
