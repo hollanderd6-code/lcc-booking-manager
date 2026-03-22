@@ -1291,6 +1291,7 @@ function openChannexModal(propertyId, propertyName, isConnected) {
         <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
       </div>
 
+      <div data-channex-body>
       ${isConnected ? `
         <!-- État : connecté -->
         <div style="background:#e8f5f1;border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
@@ -1304,9 +1305,11 @@ function openChannexModal(propertyId, propertyName, isConnected) {
         <div style="font-size:13px;color:#374151;margin-bottom:16px;">Pour connecter vos plateformes (Airbnb, Booking, Expedia), rendez-vous dans l'onglet <strong>Channels</strong> de votre espace Channex.</div>
 
         <div style="display:flex;gap:10px;">
-          <button onclick="document.getElementById('channexModal').remove()" style="flex:1;height:42px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:14px;font-weight:500;cursor:pointer;">Fermer</button>
-          <button onclick="channexSyncAvailability('${propertyId}')" id="btnChannexSync" style="flex:2;height:42px;border-radius:12px;border:none;background:#1A7A5E;color:white;font-size:14px;font-weight:600;cursor:pointer;">
-            <i class="fas fa-sync"></i> Synchroniser les dispos
+          <button onclick="channexSyncAvailability('${propertyId}')" id="btnChannexSync" style="flex:1;height:42px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;font-weight:500;cursor:pointer;">
+            <i class="fas fa-sync"></i> Sync dispos
+          </button>
+          <button onclick="openChannexIframe('${propertyId}')" style="flex:2;height:42px;border-radius:12px;border:none;background:#1A7A5E;color:white;font-size:14px;font-weight:600;cursor:pointer;">
+            <i class="fas fa-plug"></i> Gérer les plateformes
           </button>
         </div>
         <button onclick="channexDisconnect('${propertyId}')" style="width:100%;margin-top:10px;height:38px;border-radius:12px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:13px;font-weight:500;cursor:pointer;">
@@ -1334,6 +1337,7 @@ function openChannexModal(propertyId, propertyName, isConnected) {
           </button>
         </div>
       `}
+      </div>
     </div>
   `;
 
@@ -1343,6 +1347,56 @@ function openChannexModal(propertyId, propertyName, isConnected) {
   });
 
   document.body.appendChild(modal);
+}
+
+async function openChannexIframe(propertyId) {
+  // Afficher un loader
+  const modal = document.getElementById('channexModal');
+  const body = modal?.querySelector('[data-channex-body]');
+  if (body) {
+    body.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:32px;color:#1A7A5E;"></i><div style="margin-top:12px;color:#6B7280;font-size:14px;">Chargement des plateformes...</div></div>';
+  }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/channex/iframe-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ property_id: propertyId })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    // Remplacer le contenu par l'iFrame
+    if (body) {
+      body.innerHTML = `
+        <div style="font-size:13px;color:#374151;margin-bottom:12px;">
+          Connectez vos plateformes directement ci-dessous. Les réservations arriveront automatiquement dans Boostinghost.
+        </div>
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+          <iframe 
+            src="${data.iframe_url}"
+            style="width:100%;height:480px;border:none;display:block;"
+            allow="same-origin"
+          ></iframe>
+        </div>
+        <button onclick="document.getElementById('channexModal').remove()" 
+          style="width:100%;margin-top:12px;height:42px;border-radius:12px;border:none;background:#1A7A5E;color:white;font-size:14px;font-weight:600;cursor:pointer;">
+          Fermer
+        </button>
+      `;
+    }
+
+  } catch (e) {
+    console.error('❌ [CHANNEX IFRAME]', e.message);
+    if (body) {
+      body.innerHTML = `<div style="text-align:center;padding:40px;color:#dc2626;">${e.message}</div>`;
+    }
+  }
 }
 
 async function channexConnect(propertyId) {
