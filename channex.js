@@ -60,8 +60,7 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
       room_type: {
         property_id: channex_property_id,
         title: name,
-        count_of_rooms: 1,
-        occ_adults: 2
+        count_of_rooms: 1
       }
     });
 
