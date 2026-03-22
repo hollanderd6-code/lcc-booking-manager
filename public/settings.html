@@ -1396,6 +1396,33 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 </div>
 </div>
+
+<!-- ✅ SECTION : TARIFICATION PAR NUIT -->
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyBasePrice">
+<i class="fas fa-moon"></i>
+<span>Prix de base / nuit</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyBasePrice" min="0" placeholder="Ex: 75" step="1" type="number"/>
+<span>€</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Affiché sur le calendrier (jours de semaine)</small>
+</div>
+<div class="form-group">
+<label for="propertyWeekendPrice">
+<i class="fas fa-star"></i>
+<span>Prix week-end / nuit</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyWeekendPrice" min="0" placeholder="Ex: 90" step="1" type="number"/>
+<span>€</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Samedi, dimanche (laisser vide = même tarif)</small>
+</div>
+</div>
+
 <!-- ✅ SECTION : PAIEMENTS DIRECTS PAR LOGEMENT -->
 <div class="form-group" style="background:linear-gradient(135deg,#6772E510 0%,#6772E520 100%);padding:18px;border-radius:12px;border:1.5px solid #6772E530;">
   <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
@@ -2368,9 +2395,11 @@ function insertVariable(textareaId, variable, event) {
     const welcomeBookUrl = document.getElementById('propertyWelcomeBookUrl').value;
     const accessCode = document.getElementById('propertyAccessCode').value;
     const accessInstructions = document.getElementById('propertyAccessInstructions').value;
-    const arrivalMessage = document.getElementById('propertyArrivalMessage').value;  // ✅ NOUVEAU
+    const arrivalMessage = document.getElementById('propertyArrivalMessage').value;
     const wifiName = document.getElementById('propertyWifiName').value;
     const wifiPassword = document.getElementById('propertyWifiPassword').value;
+    const basePriceVal = document.getElementById('propertyBasePrice') ? document.getElementById('propertyBasePrice').value : '';
+    const weekendPriceVal = document.getElementById('propertyWeekendPrice') ? document.getElementById('propertyWeekendPrice').value : '';
 
     const payload = {
       name,
@@ -2383,10 +2412,12 @@ function insertVariable(textareaId, variable, event) {
       welcomeBookUrl: welcomeBookUrl || null,
       accessCode: accessCode || null,
       accessInstructions: accessInstructions || null,
-      arrivalMessage: arrivalMessage || null,  // ✅ CORRIGÉ : camelCase comme le serveur l'attend
+      arrivalMessage: arrivalMessage || null,
       wifiName: wifiName || null,
       wifiPassword: wifiPassword || null,
       ownerId: ownerId || null,
+      basePrice: basePriceVal !== '' ? parseFloat(basePriceVal) : null,
+      weekendPrice: weekendPriceVal !== '' ? parseFloat(weekendPriceVal) : null,
       stripeAccountId: (document.getElementById('propertyStripeAccountId') ? document.getElementById('propertyStripeAccountId').value.trim() || null : null)
     };
 
@@ -2748,6 +2779,18 @@ function insertVariable(textareaId, variable, event) {
       const arrivalMessageField = document.getElementById('propertyArrivalMessage');
       if (arrivalMessageField && propertyData.arrival_message) {
         arrivalMessageField.value = propertyData.arrival_message;
+      }
+
+      // ✅ CHARGER LES PRIX PAR NUIT
+      const basePriceField = document.getElementById('propertyBasePrice');
+      if (basePriceField) {
+        const bp = propertyData.basePrice || propertyData.base_price;
+        basePriceField.value = bp != null ? bp : '';
+      }
+      const weekendPriceField = document.getElementById('propertyWeekendPrice');
+      if (weekendPriceField) {
+        const wp = propertyData.weekendPrice || propertyData.weekend_price;
+        weekendPriceField.value = wp != null ? wp : '';
       }
       
       // ✅ CHARGER LE COMPTE STRIPE DU LOGEMENT
