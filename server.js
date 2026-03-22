@@ -55,6 +55,54 @@ const {
   processChannexBooking
 } = require('./channex');
 
+// ============================================================
+// 🔄 CHANNEX — Sync automatique des disponibilités
+// Appelé après chaque création/suppression de réservation
+// ============================================================
+async function triggerChannexAvailabilitySync(propertyId) {
+  try {
+    // Vérifier si le logement est connecté à Channex
+    const propResult = await pool.query(
+      'SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1',
+      [propertyId]
+    );
+
+    const prop = propResult.rows[0];
+    if (!prop || !prop.channex_enabled || !prop.channex_property_id) return;
+
+    console.log(`🔄 [CHANNEX SYNC] Déclenchement pour ${propertyId}`);
+
+    // Récupérer toutes les dates bloquées
+    const resaResult = await pool.query(
+      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')",
+      [propertyId]
+    );
+
+    const dates_blocked = [];
+    resaResult.rows.forEach(r => {
+      const start = new Date(r.start_date);
+      const end = new Date(r.end_date);
+      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        dates_blocked.push(d.toISOString().split('T')[0]);
+      }
+    });
+
+    await pushAvailability(pool, {
+      property_id: propertyId,
+      channex_property_id: prop.channex_property_id,
+      channex_room_type_id: prop.channex_room_type_id,
+      dates_blocked
+    });
+
+    console.log(`✅ [CHANNEX SYNC] Dispos mises à jour (${dates_blocked.length} dates bloquées)`);
+
+  } catch (e) {
+    // Ne jamais bloquer le flux principal pour une erreur Channex
+    console.error('⚠️ [CHANNEX SYNC] Erreur (non bloquante):', e.message);
+  }
+}
+
+
 // ============================================
 // 💰 IMPORT SYSTÈME DE MESSAGES POUR LES CAUTIONS
 // ============================================
@@ -5480,6 +5528,20 @@ if (!reservationsStore.serverJustStarted && cancelledReservations.length > 0) {
   }
 
   console.log('Synchronisation terminee');
+
+  // ── Channex sync en arrière-plan pour les logements affectés ──
+  if (newReservations.length > 0 || cancelledReservations.length > 0) {
+    const affectedPropertyIds = new Set([
+      ...newReservations.map(r => r.propertyId || r.property_id),
+      ...cancelledReservations.map(r => r.propertyId || r.property_id)
+    ]);
+    setImmediate(async () => {
+      for (const pid of affectedPropertyIds) {
+        if (pid) await triggerChannexAvailabilitySync(pid);
+      }
+    });
+  }
+
   return reservationsStore;
 }
 // ============================================
@@ -6368,8 +6430,10 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
       reservation: bookingForClient
     });
     
-    // 8. NOTIFICATIONS EN ARRIÈRE-PLAN (après avoir répondu au client)
+    // 8. NOTIFICATIONS + CHANNEX SYNC EN ARRIÈRE-PLAN
     setImmediate(async () => {
+      // Sync Channex en arrière-plan
+      await triggerChannexAvailabilitySync(propertyId);
       try {
         console.log('📧 Tentative d\'envoi des notifications...');
         
@@ -6495,8 +6559,13 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
       } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
     }
     
-    // ✅ Forcer la resynchronisation
-    setImmediate(() => syncAllCalendars());
+    // ✅ Forcer la resynchronisation iCal + Channex
+    setImmediate(async () => {
+      syncAllCalendars();
+      if (deletedReservation) {
+        await triggerChannexAvailabilitySync(deletedReservation.property_id);
+      }
+    });
     
     console.log('✅ Réservation supprimée');
     
