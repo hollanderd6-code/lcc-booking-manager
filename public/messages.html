@@ -783,6 +783,118 @@ html[data-theme-v3="1"] .app-container {
   height: calc(100vh - 40px) !important;
   overflow: hidden !important;
 }
+
+/* ============================================================
+   ONGLETS MESSAGES — Chat interne vs OTA Channex
+   ============================================================ */
+.msgs-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #E8E0D0;
+  background: #F5F2EC;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.msgs-tab {
+  padding: 14px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7A8695;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+
+.msgs-tab:hover { color: #1A7A5E; }
+
+.msgs-tab.active {
+  color: #1A7A5E;
+  border-bottom-color: #1A7A5E;
+}
+
+.msgs-tab .tab-badge {
+  background: #1A7A5E;
+  color: white;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.msgs-panel { display: none; height: 100%; }
+.msgs-panel.active { display: flex; flex-direction: column; height: 100%; }
+
+/* Panel OTA Channex */
+#panelOTA {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  padding: 0;
+  background: #fff;
+  height: calc(100vh - 140px);
+}
+
+#panelOTA.active {
+  display: flex;
+}
+
+#channexMessagesFrame {
+  flex: 1;
+  border: none;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+}
+
+.channex-ota-header {
+  padding: 16px 20px;
+  background: #F5F2EC;
+  border-bottom: 1px solid #E8E0D0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.channex-ota-property-select {
+  flex: 1;
+  max-width: 280px;
+  padding: 8px 12px;
+  border: 1px solid #E8E0D0;
+  border-radius: 10px;
+  background: white;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.channex-ota-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #7A8695;
+  font-size: 14px;
+}
+
+@media (max-width: 1366px) {
+  .msgs-tabs { padding: 0 12px; }
+  .msgs-tab { padding: 12px 14px; font-size: 12px; }
+  #panelOTA { height: calc(100vh - 180px); }
+}
 </style>
 </head>
 
@@ -987,6 +1099,23 @@ html[data-theme-v3="1"] .app-container {
       </div>
     </div>
 
+    <!-- ONGLETS MESSAGES -->
+    <div class="msgs-tabs">
+      <button class="msgs-tab active" id="tabGuests" onclick="switchMsgsTab('guests')">
+        <i class="fas fa-comments"></i>
+        Messages voyageurs
+        <span class="tab-badge" id="tabGuestsBadge" style="display:none;">0</span>
+      </button>
+      <button class="msgs-tab" id="tabOTA" onclick="switchMsgsTab('ota')">
+        <i class="fas fa-plug"></i>
+        Messages OTA
+        <span style="font-size:10px;background:#1A7A5E;color:white;padding:1px 6px;border-radius:99px;font-weight:700;">Airbnb · Booking</span>
+      </button>
+    </div>
+
+    <!-- PANEL VOYAGEURS (système existant) -->
+    <div id="panelGuests" class="msgs-panel active">
+
     <!-- SPLIT LAYOUT -->
     <div class="msgs-split">
 
@@ -1058,6 +1187,26 @@ html[data-theme-v3="1"] .app-container {
         <div class="chat-modal-header"></div>
       </div>
     </div>
+
+    </div><!-- /panelGuests -->
+
+    <!-- PANEL OTA CHANNEX -->
+    <div id="panelOTA" class="msgs-panel">
+      <div class="channex-ota-header">
+        <i class="fas fa-plug" style="color:#1A7A5E;font-size:16px;"></i>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#0D1117;">Messages Airbnb · Booking · Expedia</div>
+          <div style="font-size:12px;color:#7A8695;">Répondez directement depuis Boostinghost</div>
+        </div>
+        <select class="channex-ota-property-select" id="channexPropertySelect" onchange="loadChannexMessages()">
+          <option value="">Choisir un logement...</option>
+        </select>
+      </div>
+      <div id="channexOtaContent" class="channex-ota-loading">
+        <i class="fas fa-plug" style="font-size:32px;opacity:.3;"></i>
+        <div>Sélectionnez un logement connecté à Channex</div>
+      </div>
+    </div><!-- /panelOTA -->
 
   </main>
 </div>
@@ -2211,5 +2360,166 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 })();
 </script>
 
+
+<script>
+// ============================================================
+// ONGLETS MESSAGES — Voyageurs vs OTA Channex
+// ============================================================
+
+let currentMsgsTab = 'guests';
+let channexPropertiesLoaded = false;
+
+function switchMsgsTab(tab) {
+  currentMsgsTab = tab;
+
+  // Onglets
+  document.getElementById('tabGuests').classList.toggle('active', tab === 'guests');
+  document.getElementById('tabOTA').classList.toggle('active', tab === 'ota');
+
+  // Panels
+  document.getElementById('panelGuests').classList.toggle('active', tab === 'guests');
+  document.getElementById('panelOTA').classList.toggle('active', tab === 'ota');
+
+  // Charger les logements Channex au premier accès
+  if (tab === 'ota' && !channexPropertiesLoaded) {
+    loadChannexProperties();
+  }
+}
+
+async function loadChannexProperties() {
+  channexPropertiesLoaded = true;
+  const select = document.getElementById('channexPropertySelect');
+  if (!select) return;
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('https://lcc-booking-manager.onrender.com/api/properties', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    const props = (data.properties || []).filter(p => p.channexEnabled && p.channexPropertyId);
+
+    select.innerHTML = '<option value="">Choisir un logement...</option>';
+
+    if (props.length === 0) {
+      document.getElementById('channexOtaContent').innerHTML = `
+        <i class="fas fa-exclamation-circle" style="font-size:32px;opacity:.3;"></i>
+        <div>Aucun logement connecté à Channex</div>
+        <a href="/settings.html" style="color:#1A7A5E;font-size:13px;text-decoration:underline;">
+          Connecter un logement →
+        </a>
+      `;
+      return;
+    }
+
+    props.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    });
+
+    // Auto-sélectionner si un seul logement
+    if (props.length === 1) {
+      select.value = props[0].id;
+      loadChannexMessages();
+    }
+
+  } catch (e) {
+    console.error('❌ [CHANNEX MESSAGES]', e.message);
+  }
+}
+
+async function loadChannexMessages() {
+  const select = document.getElementById('channexPropertySelect');
+  const container = document.getElementById('channexOtaContent');
+  if (!select || !container) return;
+
+  const propertyId = select.value;
+  if (!propertyId) {
+    container.className = 'channex-ota-loading';
+    container.innerHTML = `
+      <i class="fas fa-plug" style="font-size:32px;opacity:.3;"></i>
+      <div>Sélectionnez un logement connecté à Channex</div>
+    `;
+    return;
+  }
+
+  // Afficher loader
+  container.className = 'channex-ota-loading';
+  container.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><div>Chargement des messages...</div>';
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('https://lcc-booking-manager.onrender.com/api/channex/iframe-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ property_id: propertyId })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur token');
+
+    // Construire l'URL iFrame pour les messages
+    const baseUrl = 'https://staging.channex.io';
+    const iframeUrl = `${baseUrl}/auth/exchange?oauth_session_key=${data.token}&app_mode=headless&redirect_to=/messages&property_id=${data.channex_property_id}&lng=fr`;
+
+    container.className = '';
+    container.style.flex = '1';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.innerHTML = `
+      <iframe 
+        id="channexMessagesFrame"
+        src="${iframeUrl}"
+        style="flex:1;border:none;width:100%;height:100%;min-height:500px;"
+        allow="same-origin"
+      ></iframe>
+    `;
+
+  } catch (e) {
+    console.error('❌ [CHANNEX MESSAGES]', e.message);
+    container.className = 'channex-ota-loading';
+    container.innerHTML = `
+      <i class="fas fa-exclamation-triangle" style="font-size:32px;color:#dc2626;opacity:.6;"></i>
+      <div style="color:#dc2626;">${e.message}</div>
+      <button onclick="loadChannexMessages()" style="margin-top:8px;padding:8px 16px;background:#1A7A5E;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
+        Réessayer
+      </button>
+    `;
+  }
+}
+
+// Mettre à jour le badge non lus sur l'onglet voyageurs
+function updateGuestsBadge(count) {
+  const badge = document.getElementById('tabGuestsBadge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Observer les badges de non-lus existants pour mettre à jour l'onglet
+const _badgeObserver = new MutationObserver(() => {
+  const unreadBadges = document.querySelectorAll('#conversationsList .unread-badge');
+  const total = Array.from(unreadBadges).reduce((sum, b) => {
+    return sum + (parseInt(b.textContent) || 0);
+  }, 0);
+  updateGuestsBadge(total);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const list = document.getElementById('conversationsList');
+  if (list) {
+    _badgeObserver.observe(list, { childList: true, subtree: true });
+  }
+});
+</script>
 </body>
 </html>
