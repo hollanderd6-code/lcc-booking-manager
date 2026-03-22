@@ -3314,7 +3314,11 @@ async function loadProperties() {
         house_rules,
         practical_info,
         auto_responses_enabled,
-        quick_replies
+        quick_replies,
+        channex_property_id,
+        channex_room_type_id,
+        channex_rate_plan_id,
+        channex_enabled
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3354,7 +3358,11 @@ async function loadProperties() {
         house_rules: row.house_rules,
         practical_info: row.practical_info,
         auto_responses_enabled: row.auto_responses_enabled,
-        quick_replies: (() => { let q = row.quick_replies || []; if (typeof q === 'string') { try { q = JSON.parse(q); } catch(e) { q = []; } } return Array.isArray(q) ? q : []; })()
+        quick_replies: (() => { let q = row.quick_replies || []; if (typeof q === 'string') { try { q = JSON.parse(q); } catch(e) { q = []; } } return Array.isArray(q) ? q : []; })(),
+        channex_property_id: row.channex_property_id || null,
+        channex_room_type_id: row.channex_room_type_id || null,
+        channex_rate_plan_id: row.channex_rate_plan_id || null,
+        channex_enabled: row.channex_enabled || false
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
@@ -10228,6 +10236,8 @@ app.get('/api/properties',
         autoResponsesEnabled: p.auto_responses_enabled !== undefined ? p.auto_responses_enabled : true,  // ✅ AJOUTÉ
         quick_replies: (() => { let q = p.quick_replies || []; if (typeof q === 'string') { try { q = JSON.parse(q); } catch(e) { q = []; } } return Array.isArray(q) ? q : []; })(),  // ✅ RACCOURCIS
         icalUrls,
+        channexEnabled: p.channex_enabled || false,
+        channexPropertyId: p.channex_property_id || null,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
     });
