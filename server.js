@@ -20163,7 +20163,7 @@ app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
       : 'https://staging.channex.io';
 
     // URL correcte avec app_mode=headless pour bypasser la page de login
-    const iframe_url = `${baseUrl}/auth/exchange?oauth_session_key=${token}&app_mode=headless&redirect_to=/channels&property_id=${property.channex_property_id}&channels=ABB,BDC,EXP,HBB,AGO&lng=fr`;
+    const iframe_url = `${baseUrl}/auth/exchange?oauth_session_key=${token}&app_mode=headless&redirect_to=/channels&property_id=${property.channex_property_id}&lng=fr`;
 
     res.json({
       success: true,
