@@ -47,6 +47,15 @@ const smartLocksRoutes = require('./routes/smart-locks-routes');
 const { initArrivalMessagesCron } = require('./arrival-messages-cron');
 
 // ============================================
+// 🔗 IMPORT MODULE CHANNEX
+// ============================================
+const {
+  createChannexProperty,
+  pushAvailability,
+  processChannexBooking
+} = require('./channex');
+
+// ============================================
 // 💰 IMPORT SYSTÈME DE MESSAGES POUR LES CAUTIONS
 // ============================================
 const { initDepositRemindersCron } = require('./deposit-messages-cron');
@@ -19938,3 +19947,182 @@ async function processIncomingGuestMessage(savedMessage, conversationId) {
 
 // Exporter pour utilisation depuis d'autres fichiers
 global.processIncomingGuestMessage = processIncomingGuestMessage;
+
+// ============================================================
+// 🔗 ROUTES CHANNEX
+// ============================================================
+
+// ── Connecter un logement à Channex ──────────────────────────
+app.post('/api/channex/connect-property', authenticateToken, async (req, res) => {
+  const { property_id } = req.body;
+  const user_id = req.user.id;
+
+  if (!property_id) return res.status(400).json({ error: 'property_id requis' });
+
+  try {
+    const propResult = await pool.query(
+      'SELECT * FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, user_id]
+    );
+
+    if (propResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    const property = propResult.rows[0];
+
+    if (property.channex_enabled && property.channex_property_id) {
+      return res.status(400).json({ error: 'Ce logement est déjà connecté à Channex' });
+    }
+
+    const result = await createChannexProperty(pool, {
+      user_id,
+      property_id,
+      name: property.name,
+      address: property.address,
+      city: property.city
+    });
+
+    const resaResult = await pool.query(
+      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
+      [property_id]
+    );
+
+    const dates_blocked = [];
+    resaResult.rows.forEach(r => {
+      const start = new Date(r.start_date);
+      const end = new Date(r.end_date);
+      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        dates_blocked.push(d.toISOString().split('T')[0]);
+      }
+    });
+
+    await pushAvailability(pool, {
+      property_id,
+      channex_property_id: result.channex_property_id,
+      channex_room_type_id: result.channex_room_type_id,
+      dates_blocked
+    });
+
+    res.json({
+      success: true,
+      message: 'Logement connecté à Channex avec succès',
+      channex_property_id: result.channex_property_id
+    });
+
+  } catch (e) {
+    console.error('❌ [CHANNEX CONNECT]', e.message);
+    res.status(500).json({ error: 'Erreur lors de la connexion Channex: ' + e.message });
+  }
+});
+
+// ── Déconnecter un logement de Channex ───────────────────────
+app.post('/api/channex/disconnect-property', authenticateToken, async (req, res) => {
+  const { property_id } = req.body;
+  const user_id = req.user.id;
+
+  try {
+    await pool.query(
+      'UPDATE properties SET channex_enabled = false, channex_property_id = NULL, channex_room_type_id = NULL, channex_rate_plan_id = NULL WHERE id = $1 AND user_id = $2',
+      [property_id, user_id]
+    );
+    res.json({ success: true, message: 'Logement déconnecté de Channex' });
+  } catch (e) {
+    console.error('❌ [CHANNEX DISCONNECT]', e.message);
+    res.status(500).json({ error: 'Erreur déconnexion Channex' });
+  }
+});
+
+// ── Statut Channex d'un logement ─────────────────────────────
+app.get('/api/channex/property-status/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const result = await pool.query(
+      'SELECT channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, user_id]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Logement non trouvé' });
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Webhook Channex — réception des réservations ─────────────
+app.post('/api/channex/webhook', async (req, res) => {
+  try {
+    const payload = req.body;
+    console.log('📥 [CHANNEX WEBHOOK]', JSON.stringify(payload).substring(0, 200));
+
+    const bookings = payload.bookings || (payload.booking ? [payload.booking] : []);
+    for (const booking of bookings) {
+      await processChannexBooking(pool, booking);
+    }
+
+    res.status(200).json({ success: true });
+  } catch (e) {
+    console.error('❌ [CHANNEX WEBHOOK]', e.message);
+    res.status(200).json({ received: true, error: e.message });
+  }
+});
+
+// ── Forcer une sync de disponibilités vers Channex ───────────
+app.post('/api/channex/sync-availability/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const propResult = await pool.query(
+      'SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, user_id]
+    );
+
+    const property = propResult.rows[0];
+    if (!property || !property.channex_enabled) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    const resaResult = await pool.query(
+      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
+      [property_id]
+    );
+
+    const dates_blocked = [];
+    resaResult.rows.forEach(r => {
+      const start = new Date(r.start_date);
+      const end = new Date(r.end_date);
+      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        dates_blocked.push(d.toISOString().split('T')[0]);
+      }
+    });
+
+    await pushAvailability(pool, {
+      property_id,
+      channex_property_id: property.channex_property_id,
+      channex_room_type_id: property.channex_room_type_id,
+      dates_blocked
+    });
+
+    res.json({ success: true, message: 'Disponibilités synchronisées', blocked: dates_blocked.length });
+  } catch (e) {
+    console.error('❌ [CHANNEX SYNC]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Logs Channex ─────────────────────────────────────────────
+app.get('/api/channex/logs', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM channex_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
+      [user_id]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
