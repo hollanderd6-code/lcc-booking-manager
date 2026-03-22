@@ -4,7 +4,10 @@
 
 const axios = require('axios');
 
-const CHANNEX_API_URL = 'https://staging.channex.io/api/v1'; // à changer en prod
+const CHANNEX_API_URL = process.env.CHANNEX_ENV === 'production'
+  ? 'https://app.channex.io/api/v1'
+  : 'https://staging.channex.io/api/v1';
+
 const CHANNEX_API_KEY = process.env.CHANNEX_API_KEY;
 
 const channexAPI = axios.create({
@@ -15,14 +18,15 @@ const channexAPI = axios.create({
   }
 });
 
-// ── Helpers ──────────────────────────────────────────────────
+// ── Helper log ───────────────────────────────────────────────
 
-async function logChannex(supabase, { user_id, property_id, channex_property_id, event_type, direction, payload, status = 'success', error_message = null }) {
+async function logChannex(pool, { user_id, property_id, channex_property_id, event_type, direction, payload, status = 'success', error_message = null }) {
   try {
-    await supabase.from('channex_logs').insert({
-      user_id, property_id, channex_property_id,
-      event_type, direction, payload, status, error_message
-    });
+    await pool.query(
+      `INSERT INTO channex_logs (user_id, property_id, channex_property_id, event_type, direction, payload, status, error_message)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [user_id, property_id, channex_property_id, event_type, direction, JSON.stringify(payload), status, error_message]
+    );
   } catch (e) {
     console.error('❌ [CHANNEX LOG ERROR]', e.message);
   }
@@ -30,10 +34,11 @@ async function logChannex(supabase, { user_id, property_id, channex_property_id,
 
 // ── 1. Créer une propriété dans Channex ──────────────────────
 
-async function createChannexProperty(supabase, { user_id, property_id, name, address, city }) {
+async function createChannexProperty(pool, { user_id, property_id, name, address, city }) {
   try {
     console.log(`🏠 [CHANNEX] Création propriété: ${name}`);
 
+    // Créer la propriété
     const res = await channexAPI.post('/properties', {
       property: {
         title: name,
@@ -62,6 +67,7 @@ async function createChannexProperty(supabase, { user_id, property_id, name, add
     });
 
     const channex_room_type_id = rtRes.data.data.attributes.id;
+    console.log(`✅ [CHANNEX] Room Type créé: ${channex_room_type_id}`);
 
     // Créer le Rate Plan
     const rpRes = await channexAPI.post('/rate_plans', {
@@ -77,16 +83,17 @@ async function createChannexProperty(supabase, { user_id, property_id, name, add
     });
 
     const channex_rate_plan_id = rpRes.data.data.attributes.id;
+    console.log(`✅ [CHANNEX] Rate Plan créé: ${channex_rate_plan_id}`);
 
-    // Sauvegarder les IDs dans Supabase
-    await supabase.from('properties').update({
-      channex_property_id,
-      channex_room_type_id,
-      channex_rate_plan_id,
-      channex_enabled: true
-    }).eq('id', property_id);
+    // Sauvegarder les IDs dans la DB
+    await pool.query(
+      `UPDATE properties 
+       SET channex_property_id = $1, channex_room_type_id = $2, channex_rate_plan_id = $3, channex_enabled = true
+       WHERE id = $4`,
+      [channex_property_id, channex_room_type_id, channex_rate_plan_id, property_id]
+    );
 
-    await logChannex(supabase, {
+    await logChannex(pool, {
       user_id, property_id, channex_property_id,
       event_type: 'create_property',
       direction: 'outbound',
@@ -96,14 +103,15 @@ async function createChannexProperty(supabase, { user_id, property_id, name, add
     return { channex_property_id, channex_room_type_id, channex_rate_plan_id };
 
   } catch (e) {
-    console.error('❌ [CHANNEX] Erreur création propriété:', e.response?.data || e.message);
-    await logChannex(supabase, {
+    const errDetail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX] Erreur création propriété:', errDetail);
+    await logChannex(pool, {
       user_id, property_id,
       event_type: 'create_property',
       direction: 'outbound',
       payload: null,
       status: 'error',
-      error_message: e.message
+      error_message: typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail)
     });
     throw e;
   }
@@ -111,11 +119,11 @@ async function createChannexProperty(supabase, { user_id, property_id, name, add
 
 // ── 2. Pousser les disponibilités vers Channex ────────────────
 
-async function pushAvailability(supabase, { property_id, channex_property_id, channex_room_type_id, dates_blocked = [] }) {
+async function pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked = [] }) {
   try {
-    console.log(`📅 [CHANNEX] Push disponibilités pour ${channex_property_id}`);
+    console.log(`📅 [CHANNEX] Push disponibilités pour ${channex_property_id} (${dates_blocked.length} dates bloquées)`);
 
-    // Générer 365 jours de disponibilité
+    const blockedSet = new Set(dates_blocked);
     const values = [];
     const today = new Date();
 
@@ -123,120 +131,127 @@ async function pushAvailability(supabase, { property_id, channex_property_id, ch
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
-      const isBlocked = dates_blocked.includes(dateStr);
 
       values.push({
         property_id: channex_property_id,
         room_type_id: channex_room_type_id,
         date: dateStr,
-        availability: isBlocked ? 0 : 1
+        availability: blockedSet.has(dateStr) ? 0 : 1
       });
     }
 
     await channexAPI.post('/availability', { values });
 
-    await logChannex(supabase, {
+    await logChannex(pool, {
       property_id, channex_property_id,
       event_type: 'push_availability',
       direction: 'outbound',
       payload: { dates_count: values.length, blocked_count: dates_blocked.length }
     });
 
-    console.log(`✅ [CHANNEX] Disponibilités poussées`);
+    console.log(`✅ [CHANNEX] Disponibilités poussées (${values.length} jours)`);
 
   } catch (e) {
-    console.error('❌ [CHANNEX] Erreur push availability:', e.response?.data || e.message);
-    await logChannex(supabase, {
+    const errDetail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX] Erreur push availability:', errDetail);
+    await logChannex(pool, {
       property_id, channex_property_id,
       event_type: 'push_availability',
       direction: 'outbound',
       status: 'error',
-      error_message: e.message
+      error_message: typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail)
     });
     throw e;
   }
 }
 
-// ── 3. Recevoir une réservation de Channex (webhook) ─────────
+// ── 3. Recevoir une réservation de Channex (webhook) ──────────
 
-async function processChannexBooking(supabase, bookingData) {
+async function processChannexBooking(pool, bookingData) {
   try {
-    const { id: channex_booking_id, attributes } = bookingData;
+    const booking_id = bookingData.id || bookingData.attributes?.id;
+    const attrs = bookingData.attributes || bookingData;
+
     const {
       property_id: channex_property_id,
       arrival_date,
       departure_date,
-      guest_name,
-      guest_email,
-      guest_phone,
+      status: booking_status,
       ota_name,
       ota_reservation_id,
       revision_id
-    } = attributes;
+    } = attrs;
 
-    console.log(`📥 [CHANNEX] Nouvelle réservation: ${channex_booking_id} (${ota_name})`);
+    const guest = attrs.customer || {};
+    const guest_name = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
+    const guest_email = guest.email || null;
+    const guest_phone = guest.phone || null;
 
-    // Trouver le property_id Boostinghost
-    const { data: prop } = await supabase
-      .from('properties')
-      .select('id, user_id')
-      .eq('channex_property_id', channex_property_id)
-      .single();
+    console.log(`📥 [CHANNEX] Booking reçu: ${booking_id} | ${ota_name} | ${arrival_date} → ${departure_date}`);
 
-    if (!prop) {
+    // Trouver le logement Boostinghost correspondant
+    const propResult = await pool.query(
+      'SELECT id, user_id FROM properties WHERE channex_property_id = $1',
+      [channex_property_id]
+    );
+
+    if (propResult.rows.length === 0) {
       console.warn(`⚠️ [CHANNEX] Propriété non trouvée pour channex_id: ${channex_property_id}`);
       return null;
     }
 
-    // Vérifier si réservation déjà existante
-    const { data: existing } = await supabase
-      .from('reservations')
-      .select('id')
-      .eq('channex_booking_id', channex_booking_id)
-      .single();
+    const { id: property_id, user_id } = propResult.rows[0];
 
-    if (existing) {
-      console.log(`ℹ️ [CHANNEX] Réservation déjà existante, skip`);
-      return existing;
+    // Vérifier si réservation déjà existante
+    const existing = await pool.query(
+      'SELECT id, uid FROM reservations WHERE channex_booking_id = $1',
+      [booking_id]
+    );
+
+    // Annulation
+    if (booking_status === 'cancelled' || booking_status === 'canceled') {
+      if (existing.rows.length > 0) {
+        await pool.query(
+          "UPDATE reservations SET status = 'cancelled', updated_at = NOW() WHERE channex_booking_id = $1",
+          [booking_id]
+        );
+        console.log(`🚫 [CHANNEX] Réservation annulée: ${booking_id}`);
+      }
+      return null;
+    }
+
+    if (existing.rows.length > 0) {
+      console.log(`ℹ️ [CHANNEX] Réservation déjà existante: ${existing.rows[0].uid}`);
+      return existing.rows[0];
     }
 
     // Créer la réservation
-    const uid = `channex_${channex_booking_id}`;
-    const { data: reservation, error } = await supabase
-      .from('reservations')
-      .insert({
-        uid,
-        property_id: prop.id,
-        user_id: prop.user_id,
-        start_date: arrival_date,
-        end_date: departure_date,
-        guest_name: guest_name || 'Voyageur',
-        guest_email: guest_email || null,
-        guest_phone: guest_phone || null,
-        platform: ota_name || 'channex',
-        source: 'channex',
-        status: 'confirmed',
-        channex_booking_id,
-        channex_revision_id: revision_id,
-        ota_name,
-        ota_reservation_id
-      })
-      .select()
-      .single();
+    const uid = `CHX_${booking_id}`;
+    const result = await pool.query(
+      `INSERT INTO reservations 
+        (uid, property_id, user_id, start_date, end_date, guest_name, guest_email, guest_phone,
+         platform, source, status, channex_booking_id, channex_revision_id, ota_name, ota_reservation_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       RETURNING *`,
+      [
+        uid, property_id, user_id,
+        arrival_date, departure_date,
+        guest_name, guest_email, guest_phone,
+        ota_name || 'channex', 'channex', 'confirmed',
+        booking_id, revision_id || null,
+        ota_name || null, ota_reservation_id || null
+      ]
+    );
 
-    if (error) throw error;
-
-    await logChannex(supabase, {
-      user_id: prop.user_id,
-      property_id: prop.id,
-      channex_property_id,
+    await logChannex(pool, {
+      user_id, property_id, channex_property_id,
       event_type: 'receive_booking',
       direction: 'inbound',
-      payload: { channex_booking_id, ota_name, arrival_date, departure_date }
+      payload: { booking_id, ota_name, arrival_date, departure_date }
     });
 
     console.log(`✅ [CHANNEX] Réservation créée: ${uid}`);
-    return reservation;
+    return result.rows[0];
 
   } catch (e) {
     console.error('❌ [CHANNEX] Erreur traitement réservation:', e.message);
