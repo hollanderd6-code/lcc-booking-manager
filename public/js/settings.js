@@ -204,7 +204,12 @@ async function saveProperty(event) {
   const wifiPassword = document.getElementById('propertyWifiPassword')?.value?.trim() || null;
   const accessInstructions = document.getElementById('propertyAccessInstructions')?.value?.trim() || null;
 
-  const arrivalMessage = document.getElementById('propertyArrivalMessage')?.value?.trim() || null;  // ✅ MESSAGE D'ARRIVÉE
+  const arrivalMessage = document.getElementById('propertyArrivalMessage')?.value?.trim() || null;
+
+  const basePriceRaw    = document.getElementById('propertyBasePrice')?.value;
+  const weekendPriceRaw = document.getElementById('propertyWeekendPrice')?.value;
+  const basePrice    = basePriceRaw    !== undefined && basePriceRaw    !== '' ? parseFloat(basePriceRaw)    : null;
+  const weekendPrice = weekendPriceRaw !== undefined && weekendPriceRaw !== '' ? parseFloat(weekendPriceRaw) : null;
 
   const existingPhotoUrl = document.getElementById("propertyPhotoUrl")?.value || null;
   const photoInput = document.getElementById("propertyPhoto");
@@ -232,7 +237,9 @@ async function saveProperty(event) {
   if (wifiName) formData.append('wifiName', wifiName);
   if (wifiPassword) formData.append('wifiPassword', wifiPassword);
   if (accessInstructions) formData.append('accessInstructions', accessInstructions);
-  if (arrivalMessage) formData.append('arrivalMessage', arrivalMessage);  // ✅ MESSAGE D'ARRIVÉE
+  if (arrivalMessage) formData.append('arrivalMessage', arrivalMessage);
+  if (basePrice    !== null) formData.append('basePrice',    basePrice);
+  if (weekendPrice !== null) formData.append('weekendPrice', weekendPrice);
 
   // ===== AJOUT DES NOUVELLES DONNÉES (ÉQUIPEMENTS, RÈGLES, INFOS) =====
   try {
@@ -412,6 +419,12 @@ function resetPropertyForm() {
       '<span class="photo-preview-placeholder"><i class="fas fa-image"></i></span>';
   }
 
+  if (document.getElementById("propertyBasePrice")) {
+    document.getElementById("propertyBasePrice").value = "";
+  }
+  if (document.getElementById("propertyWeekendPrice")) {
+    document.getElementById("propertyWeekendPrice").value = "";
+  }
   const urlList = document.getElementById("urlList");
   if (urlList) urlList.innerHTML = "";
 }
@@ -476,7 +489,16 @@ function openEditPropertyModal(propertyId) {
   }
   // ✅ MESSAGE D'ARRIVÉE
   if (document.getElementById("propertyArrivalMessage")) {
-    document.getElementById("propertyArrivalMessage").value = property.arrivalMessage || "";
+    document.getElementById("propertyArrivalMessage").value = property.arrivalMessage || property.arrival_message || "";
+  }
+  // ✅ PRIX PAR NUIT
+  if (document.getElementById("propertyBasePrice")) {
+    const bp = property.basePrice ?? property.base_price;
+    document.getElementById("propertyBasePrice").value = bp != null ? bp : "";
+  }
+  if (document.getElementById("propertyWeekendPrice")) {
+    const wp = property.weekendPrice ?? property.weekend_price;
+    document.getElementById("propertyWeekendPrice").value = wp != null ? wp : "";
   }
 
   // ✅ RACCOURCIS MESSAGES
