@@ -6070,7 +6070,7 @@ function riskColor(level) {
         for (var j = 0; j < cells.length; j++) {
           var cellEl = cells[j];
           var block = document.createElement('div');
-          var platform = normalizePlatform(b.platform);
+          var platform = normalizePlatform(b.platform, b.ota_name || b.otaName);
           var isBlock = b.type === 'block' || b.source === 'BLOCK' || platform === 'block';
 
           if (isBlock) {
@@ -6405,7 +6405,16 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
       return y + '-' + m + '-' + d;
     }
 
-    function normalizePlatform(raw) {
+    function normalizePlatform(raw, otaName) {
+      // Channex ota_name codes: ABB=Airbnb, BDC=Booking.com, EXP=Expedia, VRBO=Vrbo
+      if (otaName) {
+        var ota = String(otaName).toUpperCase();
+        if (ota === 'ABB' || ota === 'AIRBNB') return 'airbnb';
+        if (ota === 'BDC' || ota === 'BOOKING') return 'booking';
+        if (ota === 'EXP' || ota === 'EXPEDIA') return 'expedia';
+        if (ota === 'VRBO' || ota === 'HOMEAWAY') return 'vrbo';
+        if (ota === 'ABRITEL') return 'abritel';
+      }
       if (!raw) return 'direct';
       var val = String(raw).toLowerCase();
       if (val.indexOf('airbnb') !== -1) return 'airbnb';
@@ -6415,6 +6424,7 @@ guestLabel = window.cleanGuestName(guestLabel, platform);
       if (val.indexOf('abritel') !== -1) return 'abritel';
       if (val.indexOf('gite') !== -1) return 'gites';
       if (val.indexOf('hotel') !== -1) return 'hotels';
+      if (val === 'channex') return 'direct'; // fallback si pas d'ota_name
       return 'direct';
     }
 
@@ -6937,42 +6947,120 @@ console.log('👤 DEBUG GUEST:', {
     const guestPhone = window.getGuestPhone(booking);
 
     const platformRaw = booking.source || booking.platform || 'Direct';
-    const platform    = String(platformRaw).toUpperCase();
+    const otaName     = booking.ota_name || booking.otaName || null;
+    const platformKey = (function normPlatformModal(raw, ota) {
+      if (ota) {
+        var o = String(ota).toUpperCase();
+        if (o === 'ABB' || o === 'AIRBNB')   return 'airbnb';
+        if (o === 'BDC' || o === 'BOOKING')  return 'booking';
+        if (o === 'EXP' || o === 'EXPEDIA')  return 'expedia';
+        if (o === 'VRBO' || o === 'HOMEAWAY') return 'vrbo';
+        if (o === 'ABRITEL') return 'abritel';
+      }
+      if (!raw) return 'direct';
+      var v = String(raw).toLowerCase();
+      if (v.includes('airbnb'))  return 'airbnb';
+      if (v.includes('booking')) return 'booking';
+      if (v.includes('expedia')) return 'expedia';
+      if (v.includes('vrbo') || v.includes('homeaway')) return 'vrbo';
+      if (v.includes('abritel')) return 'abritel';
+      return 'direct';
+    })(platformRaw, otaName);
 
-    // 4️⃣ Contenu "de base" du modal (sans la référence technique)
+    const PLATFORM_CONFIG = {
+      airbnb:  { label: 'Airbnb',       bg: 'linear-gradient(135deg,#FF5A5F,#E84C50)', color: '#fff', icon: 'fa-brands fa-airbnb' },
+      booking: { label: 'Booking.com',   bg: 'linear-gradient(135deg,#003580,#00224F)', color: '#fff', icon: 'fas fa-bed' },
+      expedia: { label: 'Expedia',       bg: 'linear-gradient(135deg,#FFC72C,#FFB000)', color: '#1a1a1a', icon: 'fas fa-plane' },
+      vrbo:    { label: 'Vrbo',          bg: 'linear-gradient(135deg,#1569C7,#0E4C99)', color: '#fff', icon: 'fas fa-home' },
+      abritel: { label: 'Abritel',       bg: 'linear-gradient(135deg,#0096D6,#0077B3)', color: '#fff', icon: 'fas fa-house' },
+      direct:  { label: 'Direct',        bg: 'linear-gradient(135deg,#1A7A5E,#0f5c46)', color: '#fff', icon: 'fas fa-user' },
+    };
+    const pc = PLATFORM_CONFIG[platformKey] || PLATFORM_CONFIG.direct;
+
+    // Infos voyageur
+    const guestEmail = booking.guestEmail || booking.guest_email || booking.email || null;
+
+    // Prix
+    const price  = booking.price || booking.amount || booking.totalPrice || booking.total_price || null;
+    const priceFormatted = price != null
+      ? Number(price).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+      : null;
+
+    // Nuits
+    let nights = booking.nights || booking.nightCount || booking.night_count || null;
+    if (!nights && rawStart && rawEnd) {
+      const ms = new Date(rawEnd).getTime() - new Date(rawStart).getTime();
+      nights = Math.max(1, Math.round(ms / 86400000));
+    }
+
+    // Notes
+    const notes = booking.notes || booking.comment || booking.description || '';
+
+    // Channex OTA reservation ID
+    const otaReservationId = booking.ota_reservation_id || booking.otaReservationId || null;
+
+    // 4️⃣ Contenu "de base" du modal
     detailsContent.innerHTML = `
+
+      <!-- BADGE PLATEFORME en haut -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+        <span style="
+          display:inline-flex; align-items:center; gap:7px;
+          padding:6px 14px; border-radius:999px;
+          background:${pc.bg}; color:${pc.color};
+          font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+        ">
+          <i class="${pc.icon}" style="font-size:13px;"></i>
+          ${pc.label}
+          ${otaReservationId ? `<span style="opacity:.7;font-weight:500;font-size:10px;">#${otaReservationId}</span>` : ''}
+        </span>
+        ${priceFormatted ? `
+          <div style="text-align:right;">
+            <div style="font-size:20px; font-weight:800; color:#1A7A5E;">${priceFormatted}</div>
+            ${nights ? `<div style="font-size:11px; color:#9CA3AF;">${nights} nuit${nights > 1 ? 's' : ''}</div>` : ''}
+          </div>
+        ` : nights ? `
+          <div style="font-size:13px; color:#6B7280; font-weight:600;">
+            <i class="fas fa-moon" style="margin-right:4px;"></i>${nights} nuit${nights > 1 ? 's' : ''}
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- VOYAGEUR -->
       <div class="detail-group">
         <label>VOYAGEUR</label>
-        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+        <div style="display:flex; align-items:center; gap:12px; margin-top:8px;">
           <div style="
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 18px;
-            flex-shrink: 0;
+            width:48px; height:48px; border-radius:50%; flex-shrink:0;
+            background:${pc.bg}; color:${pc.color};
+            display:flex; align-items:center; justify-content:center;
+            font-weight:700; font-size:18px;
           ">${guestInitial}</div>
-          <div style="flex: 1;">
-            <div class="detail-value" style="font-weight:700; margin-bottom: 4px;">${guest}</div>
-            ${guestPhone !== 'Non renseigné' ? `
-              <div class="detail-value" style="font-size:14px; color:#6b7280;">
-                <i class="fas fa-phone" style="margin-right: 6px;"></i>${guestPhone}
+          <div style="flex:1; min-width:0;">
+            <div class="detail-value" style="font-weight:700; margin-bottom:4px;">${guest}</div>
+            ${guestPhone && guestPhone !== 'Non renseigné' ? `
+              <div style="font-size:13px; color:#6b7280; margin-bottom:2px;">
+                <i class="fas fa-phone" style="width:14px; margin-right:4px;"></i>
+                <a href="tel:${guestPhone}" style="color:#1A7A5E; text-decoration:none;">${guestPhone}</a>
+              </div>
+            ` : ''}
+            ${guestEmail ? `
+              <div style="font-size:13px; color:#6b7280;">
+                <i class="fas fa-envelope" style="width:14px; margin-right:4px;"></i>
+                <a href="mailto:${guestEmail}" style="color:#1A7A5E; text-decoration:none; word-break:break-all;">${guestEmail}</a>
               </div>
             ` : ''}
           </div>
         </div>
       </div>
 
+      <!-- LOGEMENT -->
       <div class="detail-group">
         <label>LOGEMENT</label>
         <div class="detail-value">${propertyName || 'Logement inconnu'}</div>
       </div>
 
+      <!-- DATES -->
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
         <div>
           <label>Arrivée</label>
@@ -6984,24 +7072,13 @@ console.log('👤 DEBUG GUEST:', {
         </div>
       </div>
 
-      <div class="detail-group">
-        <label>SOURCE</label>
-        <div class="detail-value">
-          <span style="
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            padding:4px 10px;
-            border-radius:999px;
-            min-width:80px;
-            font-size:11px;
-            font-weight:700;
-            text-transform:uppercase;
-          ">
-            ${platform}
-          </span>
+      <!-- NOTES -->
+      ${notes ? `
+        <div class="detail-group">
+          <label>NOTES</label>
+          <div class="detail-value" style="white-space:pre-wrap;font-size:13px;color:#4B5563;">${notes}</div>
         </div>
-      </div>
+      ` : ''}
     `;
 // =========================
 // ✅ Injection RISQUE + CHECKLIST
