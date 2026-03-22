@@ -366,128 +366,7 @@ html[data-theme-v3="1"] .sidebar {
       opacity: 0.6;
     }
 
-    .ical-urls {
-      margin-top: 10px;
-    }
-
-    .ical-url-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 10px;
-      background: var(--bg-secondary, #f9fafb);
-      border-radius: 12px;
-      margin-bottom: 6px;
-      font-size: 12px;
-    }
-
-    .ical-source {
-      font-weight: 600;
-      color: var(--text-primary);
-      min-width: 90px;
-      font-size: 12px;
-    }
-
-    .ical-url-text {
-      flex: 1;
-      color: var(--text-secondary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 11px;
-    }
-
-    .btn-test-url {
-      background: transparent;
-      border: none;
-      color: var(--primary-color, #059669);
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 500;
-      transition: var(--transition, all .15s ease);
-      white-space: nowrap;
-    }
-
-    .btn-test-url:hover {
-      background: rgba(5,150,105,.08);
-      color: var(--primary-color, #059669);
-    }
-
-    .btn-copy-ical {
-      border: none;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 11px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(5, 150, 105, 0.08);
-      color: var(--primary-color, #059669);
-      cursor: pointer;
-      white-space: nowrap;
-      transition: var(--transition, all 0.15s ease);
-    }
-
-    .btn-copy-ical:hover {
-      background: var(--primary-color, #059669);
-      color: #ffffff;
-    }
-
-    .boostinghost-ical {
-      margin-top: 8px;
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: #fefce8;
-      border: 1px solid #facc15;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      flex-wrap: wrap;
-    }
-
-    .boostinghost-ical-label {
-      font-weight: 600;
-      color: #854d0e;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-
-    .boostinghost-ical-url {
-      flex: 1;
-      min-width: 0;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 11px;
-      color: #713f12;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .btn-copy-boostinghost {
-      border: none;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 11px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #fef3c7;
-      color: #b45309;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: var(--transition, all 0.15s ease);
-    }
-
-    .btn-copy-boostinghost:hover {
-      background: #facc15;
-      color: #713f12;
-    }
+    /* CSS iCal supprimé — remplacé par Channex */
 
     .btn-add-property {
       background: linear-gradient(135deg, var(--primary-color, #059669) 0%, var(--accent-color, #0ea5e9) 100%);
@@ -2129,105 +2008,22 @@ function insertVariable(textareaId, variable, event) {
 </div>
 
 <div class="form-group">
-<label>
-<i class="fas fa-link"></i>
-<span>URLs iCal (Airbnb, Booking, etc.)</span>
-</label>
-<div class="url-list" id="urlList">
-<!-- URLs ajoutées ici via JS -->
-</div>
-<button class="btn-add-url" onclick="addUrlField()" type="button">
-<i class="fas fa-plus"></i>
-<span>Ajouter une URL iCal</span>
-</button>
-</div>
-
-
-
-
-
-<!-- ===== SECTION : LIEN iCal EXPORT ===== -->
-<div class="form-group" id="icalExportSection" style="display:none;">
   <label>
-    <i class="fas fa-calendar-arrow-up" style="color:#1A7A5E;"></i>
-    <span style="font-weight:600;">Votre lien iCal à copier sur les plateformes</span>
+    <i class="fas fa-plug" style="color:#1A7A5E;"></i>
+    <span>Synchronisation des plateformes</span>
   </label>
-  <p style="font-size:12px;color:var(--text-secondary);margin:0 0 10px;line-height:1.5;">
-    Copiez ce lien et collez-le dans Airbnb, Booking, Abritel, etc. pour synchroniser votre calendrier automatiquement.
-  </p>
-  <div style="display:flex;align-items:center;gap:8px;background:rgba(26,122,94,0.06);border:1.5px solid rgba(26,122,94,0.2);border-radius:12px;padding:10px 14px;">
-    <i class="fas fa-calendar-check" style="color:#1A7A5E;font-size:14px;flex-shrink:0;"></i>
-    <input id="icalExportUrl" type="text" readonly
-      style="flex:1;border:none;background:transparent;font-family:ui-monospace,monospace;font-size:11.5px;color:var(--text-primary);outline:none;min-width:0;cursor:pointer;"
-      onclick="this.select()"
-      placeholder="Sauvegardez d'abord le logement pour obtenir le lien…" />
-    <button type="button" onclick="copyIcalExportUrl()" id="icalCopyBtn"
-      style="flex-shrink:0;border:none;border-radius:999px;padding:6px 12px;background:#1A7A5E;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .15s;">
-      <i class="fas fa-copy"></i> Copier
-    </button>
+  <div style="background:#e8f5f1;border:1.5px solid rgba(26,122,94,0.2);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+    <i class="fas fa-info-circle" style="color:#1A7A5E;font-size:16px;flex-shrink:0;"></i>
+    <div style="font-size:13px;color:#374151;line-height:1.5;">
+      La synchronisation Airbnb, Booking.com et Expedia se gère depuis la fiche du logement via le bouton <strong>"Connecter mes plateformes"</strong>.
+    </div>
   </div>
 </div>
 
-<script>
-// Génère et affiche l'URL iCal export selon le propertyId
-function updateIcalExportUrl() {
-  const propertyId = document.getElementById('propertyId')?.value;
-  const section = document.getElementById('icalExportSection');
-  const input = document.getElementById('icalExportUrl');
-  if (!section || !input) return;
-  if (propertyId) {
-    const url = `https://boostinghost.fr/ical/property/${propertyId}.ics`;
-    input.value = url;
-    section.style.display = '';
-  } else {
-    input.value = '';
-    section.style.display = 'none';
-  }
-}
 
-function copyIcalExportUrl() {
-  const input = document.getElementById('icalExportUrl');
-  const btn = document.getElementById('icalCopyBtn');
-  if (!input?.value) return;
-  navigator.clipboard.writeText(input.value).then(() => {
-    btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-    btn.style.background = '#15624B';
-    setTimeout(() => {
-      btn.innerHTML = '<i class="fas fa-copy"></i> Copier';
-      btn.style.background = '#1A7A5E';
-    }, 2000);
-  }).catch(() => {
-    input.select();
-    document.execCommand('copy');
-  });
-}
 
-// Appeler à chaque ouverture du modal
-const _origOpenEditModal = window.openEditModal;
-if (typeof _origOpenEditModal === 'function') {
-  window.openEditModal = function(...args) {
-    _origOpenEditModal.apply(this, args);
-    setTimeout(updateIcalExportUrl, 100);
-  };
-}
-// Aussi après chargement de la propriété
-const _origPopulateForm = window.populateEditForm || window.loadPropertyIntoModal;
-if (typeof _origPopulateForm === 'function') {
-  const key = window.populateEditForm ? 'populateEditForm' : 'loadPropertyIntoModal';
-  window[key] = function(...args) {
-    _origPopulateForm.apply(this, args);
-    setTimeout(updateIcalExportUrl, 200);
-  };
-}
-// Observer le champ propertyId pour détecter quand il est rempli
-const pidInput = document.getElementById('propertyId');
-if (pidInput) {
-  new MutationObserver(updateIcalExportUrl).observe(pidInput, { attributes: true, attributeFilter: ['value'] });
-  pidInput.addEventListener('change', updateIcalExportUrl);
-}
-// Appel initial au cas où
-document.addEventListener('DOMContentLoaded', updateIcalExportUrl);
-</script>
+
+
 
 </form>
 </div>
