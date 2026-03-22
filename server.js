@@ -20158,12 +20158,18 @@ app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
     });
 
     const token = response.data.data.token;
+    const baseUrl = process.env.CHANNEX_ENV === 'production'
+      ? 'https://app.channex.io'
+      : 'https://staging.channex.io';
+
+    // URL correcte avec app_mode=headless pour bypasser la page de login
+    const iframe_url = `${baseUrl}/auth/exchange?oauth_session_key=${token}&app_mode=headless&redirect_to=/channels&property_id=${property.channex_property_id}&channels=ABB,BDC,EXP,HBB,AGO&lng=fr`;
 
     res.json({
       success: true,
       token,
       channex_property_id: property.channex_property_id,
-      iframe_url: `${process.env.CHANNEX_API_URL || 'https://staging.channex.io'}/en/dashboard#/properties/${property.channex_property_id}/channels?token=${token}`
+      iframe_url
     });
 
   } catch (e) {
