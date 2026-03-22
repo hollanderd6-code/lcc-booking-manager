@@ -1031,6 +1031,16 @@ const chatSectionHtml = `
                 <div class="prop-stat-label">Caution</div>
               </div>
             </div>
+            <!-- Channex status badge -->
+            ${p.channexEnabled ? `
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border-radius:8px;border:1px solid #b8ddd4;">
+              <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
+              <span style="font-size:11px;font-weight:600;color:#1A7A5E;">Synchronisation OTA active</span>
+              <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" data-channex-enabled="true" style="margin-left:auto;font-size:10px;color:#1A7A5E;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">Gérer</button>
+            </div>` : `
+            <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <i class="fas fa-plug"></i> Connecter Airbnb · Booking · Expedia
+            </button>`}
             <!-- Actions -->
             <div class="property-actions">
               <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
@@ -1088,6 +1098,23 @@ const chatSectionHtml = `
     btn.addEventListener("click", () => {
       const url = btn.getAttribute("data-url");
       copyIcalUrl(url);
+    });
+  });
+
+  // ── Boutons Channex ──────────────────────────────────────────
+  grid.querySelectorAll(".btn-channex-connect").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      const name = btn.getAttribute("data-name");
+      openChannexModal(id, name, false);
+    });
+  });
+
+  grid.querySelectorAll(".btn-channex-manage").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      const name = btn.getAttribute("data-name");
+      openChannexModal(id, name, true);
     });
   });
 }
@@ -1240,3 +1267,183 @@ Il vous suffit de cliquer sur le lien, d'entrer le code PIN ainsi que vos dates 
     });
   }
 });
+
+// ============================================================
+// 🔗 CHANNEX — Modale de connexion OTA
+// ============================================================
+
+function openChannexModal(propertyId, propertyName, isConnected) {
+  // Supprimer une modale existante
+  const existing = document.getElementById('channexModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'channexModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'Instrument Serif',Georgia,serif;font-size:20px;color:#0D1117;">Synchronisation OTA</div>
+          <div style="font-size:13px;color:#6B7280;margin-top:2px;">${propertyName}</div>
+        </div>
+        <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
+      </div>
+
+      ${isConnected ? `
+        <!-- État : connecté -->
+        <div style="background:#e8f5f1;border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#1A7A5E;">Synchronisation active</div>
+            <div style="font-size:12px;color:#6B7280;margin-top:2px;">Les réservations OTA arrivent en temps réel</div>
+          </div>
+        </div>
+
+        <div style="font-size:13px;color:#374151;margin-bottom:16px;">Pour connecter vos plateformes (Airbnb, Booking, Expedia), rendez-vous dans l'onglet <strong>Channels</strong> de votre espace Channex.</div>
+
+        <div style="display:flex;gap:10px;">
+          <button onclick="document.getElementById('channexModal').remove()" style="flex:1;height:42px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:14px;font-weight:500;cursor:pointer;">Fermer</button>
+          <button onclick="channexSyncAvailability('${propertyId}')" id="btnChannexSync" style="flex:2;height:42px;border-radius:12px;border:none;background:#1A7A5E;color:white;font-size:14px;font-weight:600;cursor:pointer;">
+            <i class="fas fa-sync"></i> Synchroniser les dispos
+          </button>
+        </div>
+        <button onclick="channexDisconnect('${propertyId}')" style="width:100%;margin-top:10px;height:38px;border-radius:12px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:13px;font-weight:500;cursor:pointer;">
+          Déconnecter ce logement
+        </button>
+      ` : `
+        <!-- État : non connecté -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:13px;color:#374151;margin-bottom:16px;">Connectez votre logement aux principales plateformes de réservation pour recevoir les réservations en temps réel.</div>
+          
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+            ${['Airbnb','Booking.com','Expedia','VRBO','Agoda'].map(p => `
+              <div style="padding:6px 12px;background:#f3f4f6;border-radius:20px;font-size:12px;font-weight:500;color:#374151;">
+                ${p}
+              </div>
+            `).join('')}
+            <div style="padding:6px 12px;background:#f3f4f6;border-radius:20px;font-size:12px;color:#6B7280;">+45 autres</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;">
+          <button onclick="document.getElementById('channexModal').remove()" style="flex:1;height:42px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:14px;font-weight:500;cursor:pointer;">Annuler</button>
+          <button onclick="channexConnect('${propertyId}')" id="btnChannexConnect" style="flex:2;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;font-size:14px;font-weight:600;cursor:pointer;">
+            <i class="fas fa-plug"></i> Activer la synchronisation
+          </button>
+        </div>
+      `}
+    </div>
+  `;
+
+  // Fermer en cliquant sur le fond
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  document.body.appendChild(modal);
+}
+
+async function channexConnect(propertyId) {
+  const btn = document.getElementById('btnChannexConnect');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion en cours...';
+  }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/channex/connect-property`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ property_id: propertyId })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    document.getElementById('channexModal')?.remove();
+    showToast('Logement connecté ! Les réservations OTA arrivent maintenant en temps réel.', 'success');
+
+    // Recharger les propriétés pour mettre à jour le badge
+    await loadProperties();
+
+  } catch (e) {
+    console.error('❌ [CHANNEX CONNECT]', e.message);
+    showToast('Erreur : ' + e.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-plug"></i> Activer la synchronisation';
+    }
+  }
+}
+
+async function channexDisconnect(propertyId) {
+  const confirmed = await bhConfirm(
+    'Déconnecter ce logement ?',
+    'Les nouvelles réservations OTA ne seront plus reçues automatiquement.',
+    'Déconnecter',
+    'Annuler',
+    'danger'
+  );
+  if (!confirmed) return;
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/channex/disconnect-property`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ property_id: propertyId })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    document.getElementById('channexModal')?.remove();
+    showToast('Logement déconnecté de la synchronisation OTA.', 'info');
+    await loadProperties();
+
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function channexSyncAvailability(propertyId) {
+  const btn = document.getElementById('btnChannexSync');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Synchronisation...';
+  }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/channex/sync-availability/${propertyId}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    showToast(`Disponibilités synchronisées (${data.blocked} dates bloquées)`, 'success');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-sync"></i> Synchroniser les dispos';
+    }
+
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-sync"></i> Synchroniser les dispos';
+    }
+  }
+}
