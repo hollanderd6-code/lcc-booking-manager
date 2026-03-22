@@ -8,7 +8,7 @@ const path = require('path');
 const cron = require('node-cron');  
 const fs = require('fs');
 const fsp = require('fs').promises;
-const icalService = require('./services/icalService');
+// icalService supprimé — remplacé par Channex
 const notificationService = require('./services/notifications-service');
 const messagingService = require('./services/messagingService');
 const bcrypt = require('bcryptjs');
@@ -433,21 +433,9 @@ cron.schedule('0 7 * * *', async () => {
 console.log('✅ CRON job messages d\'arrivée configuré (tous les jours à 7h)');
 
 // ============================================
-// CRON JOB : SYNCHRONISATION ICAL AUTOMATIQUE
+// CRON iCal DÉSACTIVÉ — remplacé par Channex webhooks
 // ============================================
-
-cron.schedule('*/5 * * * *', async () => {
-  console.log('CRON: Synchronisation iCal automatique (toutes les 5 minutes)');
-  try {
-    await syncAllCalendars();
-  } catch (error) {
-    console.error('Erreur CRON synchronisation iCal:', error);
-  }
-}, {
-  timezone: "Europe/Paris"
-});
-
-console.log('CRON job synchronisation iCal configure (toutes les 5 minutes)');
+console.log('✅ Synchronisation iCal désactivée — Channex gère les réservations en temps réel');
 
 // ============================================
 // CRON JOB : DEMANDE DE CAUTION J-2
@@ -4174,7 +4162,7 @@ async function migrateManualReservationsToPostgres() {
  */
 async function syncCalendarAndSaveToPostgres(property) {
   try {
-    const reservations = await icalService.fetchAllReservations(property.icalUrls || []);
+    const reservations = []; // iCal désactivé
     
     // Sauvegarder en PostgreSQL
     await savePropertyReservations(property.id, reservations, property.userId);
@@ -5170,378 +5158,10 @@ async function generateChecklistsForReservation(userId, reservationUid) {
 }
 
 async function syncAllCalendars() {
-  console.log('🔄 Démarrage de la synchronisation iCal...');
-  const isFirstSync = !reservationsStore.lastSync; // première sync depuis le démarrage ?
-  reservationsStore.syncStatus = 'syncing';
-
-  const newReservations = [];
-  const cancelledReservations = [];
-
-  for (const property of PROPERTIES) {
-    if (!property.icalUrls || property.icalUrls.length === 0) {
-      console.log(`⚠️  Aucune URL iCal configurée pour ${property.name}`);
-      continue;
-    }
-
-    try {
-      const reservations = await icalService.fetchReservations(property, pool);
-
-      // Ancien état (iCal + manuelles) :
-      let previousAllReservations = reservationsStore.properties[property.id] || [];
-
-      // ✅ FIX : Au premier sync (redémarrage serveur), charger l'état depuis la DB
-      // pour éviter de détecter toutes les résas existantes comme "annulées"
-      if (isFirstSync || previousAllReservations.length === 0) {
-        try {
-          const dbRes = await pool.query(
-            `SELECT uid, source, type, start_date as start, end_date as end, status
-             FROM reservations
-             WHERE property_id = $1 AND status NOT IN ('cancelled', 'completed')`,
-            [property.id]
-          );
-          if (dbRes.rows.length > 0) {
-            previousAllReservations = dbRes.rows;
-            console.log(`📦 [Sync] ${property.name}: ${dbRes.rows.length} résas chargées depuis DB pour comparaison`);
-          }
-        } catch (dbErr) {
-          console.error('⚠️ Erreur chargement résas DB pour comparaison:', dbErr.message);
-        }
-      }
-
-      // On ne regarde que les résas iCal (pas les manuelles ni les blocages)
-      const oldIcalReservations = previousAllReservations.filter(r =>
-        r &&
-        r.uid &&
-        r.source !== 'MANUEL' &&
-        r.source !== 'BLOCK' &&
-        r.type !== 'manual' &&
-        r.type !== 'block'
-      );
-
-      const newIcalReservations = reservations || [];
-
-      // Séparer les vraies résas des blocages Airbnb "Not available"
-      // Les blocages sont gardés pour la détection d'annulation (comparaison UIDs)
-      // mais ne doivent PAS être sauvegardés en DB ni traités comme nouvelles résas
-      const newIcalReal = newIcalReservations.filter(r => !r.isBlock);
-
-// 🛡️ PROTECTION: si le fetch a retourné 0 réservations mais qu'on en avait avant,
-// c'est probablement une erreur réseau/iCal — on skip les annulations
-const fetchedEmpty = newIcalReservations.length === 0 && oldIcalReservations.length > 0;
-
-      const oldIds = new Set(oldIcalReservations.map(r => r.uid));
-      const newIds = new Set(newIcalReservations.map(r => r.uid));
-
-      // ➕ Nouvelles réservations (vraies résas uniquement, pas les blocages)
-      // On notifie uniquement les résas pas encore notifiées (notified_at IS NULL)
-      // Evite les doublons après redémarrage serveur
-      const unnotifiedUids = new Set();
-      try {
-        const unnotifiedRows = await pool.query(
-          "SELECT uid FROM reservations WHERE property_id = $1 AND notified_at IS NULL AND status != 'cancelled'",
-          [property.id]
-        );
-        unnotifiedRows.rows.forEach(r => unnotifiedUids.add(r.uid));
-      } catch(e) { console.error('Erreur check unnotified UIDs:', e.message); }
-
-      const trulyNewReservations = newIcalReal.filter(r =>
-        !oldIds.has(r.uid) && unnotifiedUids.has(r.uid)
-      );
-      
-      // ➖ Réservations annulées (présentes dans old mais plus dans new, ET FUTURES)
-      const now = new Date();
-const cancelledForProperty = fetchedEmpty ? [] : oldIcalReservations.filter(r => {        // Si la réservation n'est plus dans le flux
-        if (!newIds.has(r.uid)) {
-          // Vérifier si c'est une réservation FUTURE
-          const endDate = new Date(r.end);
-          // Seulement considérer comme annulée si la date de fin est dans le futur
-          return endDate >= now;
-        }
-        return false;
-      });
-      
-      if (trulyNewReservations.length > 0) {
-        newReservations.push(
-          ...trulyNewReservations.map(r => ({
-            ...r,
-            propertyId: property.id,
-            propertyName: property.name,
-            propertyColor: property.color,
-            userId: property.userId
-          }))
-        );
-      }
-      
-      console.log("🔍 [Sync]", property.name, "oldIcalReservations:", oldIcalReservations.length, "newIcalReservations:", newIcalReservations.length, "cancelledForProperty:", cancelledForProperty.length);
-      if (cancelledForProperty.length > 0) {
-        cancelledReservations.push(
-          ...cancelledForProperty.map(r => ({
-            ...r,
-            propertyId: property.id,
-            propertyName: property.name,
-            propertyColor: property.color,
-            userId: property.userId
-          }))
-        );
-      }
-
-      // SAUVEGARDER DANS POSTGRESQL (vraies résas uniquement, pas les blocages isBlock)
-      if (newIcalReal.length > 0) {
-        await savePropertyReservations(property.id, newIcalReal, property.userId);
-      }
-
-      // MARQUER LES RESERVATIONS PASSEES COMME "COMPLETED"
-      await pool.query(
-        `UPDATE reservations 
-         SET status = 'completed', updated_at = NOW()
-         WHERE property_id = $1 
-         AND end_date < $2 
-         AND status = 'confirmed'`,
-        [property.id, now]
-      );
-
-      // ✅ CORRECTION : Récupérer les réservations 'completed' depuis PostgreSQL
-      const completedResult = await pool.query(
-        `SELECT 
-          id, uid, property_id, user_id,
-          start_date, end_date,
-          guest_name, guest_email, guest_phone,
-          source, platform, reservation_type,
-          price, currency, status,
-          raw_ical_data, notes,
-          created_at, updated_at, synced_at
-         FROM reservations
-         WHERE property_id = $1 
-         AND status = 'completed'
-         AND source != 'MANUEL'
-         AND reservation_type != 'manual'
-         ORDER BY start_date ASC`,
-        [property.id]
-      );
-
-      const completedReservations = completedResult.rows.map(row => ({
-        id: row.id,
-        uid: row.uid,
-        start: row.start_date,
-        end: row.end_date,
-        guestName: row.guest_name,
-        guestEmail: row.guest_email,
-        guestPhone: row.guest_phone,
-        source: row.source,
-        platform: row.platform,
-        type: row.reservation_type,
-        price: parseFloat(row.price) || 0,
-        currency: row.currency,
-        status: row.status,
-        rawData: row.raw_ical_data,
-        notes: row.notes,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        syncedAt: row.synced_at
-      }));
-
-      // ✅ Charger les blocages manuels depuis la DB (persistants entre déploiements)
-      const blocksResult = await pool.query(
-        `SELECT uid, property_id, start_date, end_date, guest_name, notes, created_at
-         FROM reservations
-         WHERE property_id = $1
-         AND source = 'BLOCK'
-         AND end_date >= NOW()
-         ORDER BY start_date ASC`,
-        [property.id]
-      );
-      const dbBlocks = blocksResult.rows.map(row => ({
-        id: row.uid,
-        uid: row.uid,
-        start: row.start_date,
-        end: row.end_date,
-        startDate: row.start_date,
-        endDate: row.end_date,
-        guestName: row.guest_name,
-        source: 'BLOCK',
-        platform: 'BLOCK',
-        type: 'block',
-        notes: row.notes,
-        propertyId: property.id,
-        createdAt: row.created_at
-      }));
-
-      // Sync MANUAL_RESERVATIONS avec les blocages DB
-      if (dbBlocks.length > 0) {
-        if (!MANUAL_RESERVATIONS[property.id]) MANUAL_RESERVATIONS[property.id] = [];
-        dbBlocks.forEach(b => {
-          if (!MANUAL_RESERVATIONS[property.id].find(r => r.uid === b.uid)) {
-            MANUAL_RESERVATIONS[property.id].push(b);
-          }
-        });
-      }
-
-      // ✅ Base = iCal actuel + historique completed + blocages DB
-      reservationsStore.properties[property.id] = [
-        ...newIcalReservations,
-        ...completedReservations,
-        ...dbBlocks
-      ];
-
-      console.log(`Recherche manuelles pour property.id: ${property.id}`);
-      console.log(`Cles dans MANUAL_RESERVATIONS:`, Object.keys(MANUAL_RESERVATIONS));
-      const manualForProperty = MANUAL_RESERVATIONS[property.id] || [];
-      console.log(`Trouve ${manualForProperty.length} reservations manuelles`);
-      
-// Ajouter les réservations manuelles SANS DOUBLON
-if (manualForProperty.length > 0) {
-  // Créer un Set des UIDs déjà présents dans reservationsStore
-  const existingUids = new Set(
-    reservationsStore.properties[property.id].map(r => r.uid)
-  );
-  
-  // Filtrer pour ne garder que les nouvelles réservations
-  const newManuals = manualForProperty.filter(r => !existingUids.has(r.uid));
-  
-  // Ajouter uniquement les nouvelles
-  if (newManuals.length > 0) {
-    reservationsStore.properties[property.id] = [
-      ...reservationsStore.properties[property.id],
-      ...newManuals
-    ];
-    console.log(`➕ ${newManuals.length} nouvelles réservations manuelles ajoutées`);
-  } else {
-    console.log(`ℹ️ Aucune nouvelle réservation manuelle (${manualForProperty.length} déjà présentes)`);
-  }
-}
-console.log(
-  `✅ ${property.name}: ${reservationsStore.properties[property.id].length} ` +
-  `réservations (iCal + manuelles)`
-);
-    } catch (error) {
-      console.error(`❌' Erreur lors de la synchronisation de ${property.name}:`, error.message);
-    }
-  }
-
-  reservationsStore.lastSync = new Date();
-  reservationsStore.serverJustStarted = false; // ✅ Plus de premier démarrage
+  // iCal désactivé — Channex gère les réservations en temps réel via webhooks
+  console.log('ℹ️ syncAllCalendars appelée mais désactivée (Channex mode)');
   reservationsStore.syncStatus = 'idle';
-
- // Notifications : nouvelles + annulations (sauf première sync pour éviter le spam massif)
-  if (!isFirstSync && (newReservations.length > 0 || cancelledReservations.length > 0)) {
-    console.log(
-      `Notifications a envoyer - nouvelles: ${newReservations.length}, annulees: ${cancelledReservations.length}`
-    );
-      //     try {
-      //       await notifyOwnersAboutBookings(newReservations, cancelledReservations);
-      //     } catch (err) {
-      //       console.error('Erreur lors de l envoi des notifications proprietaires:', err);
-      //     }
-      console.log('Envoi email desactive - notifications push uniquement');
-    
-    // NOTIFICATIONS POUR NOUVELLES RESERVATIONS
-    if (newReservations.length > 0) {
-      try {
-        await notifyCleanersAboutNewBookings(newReservations);
-      } catch (err) {
-        console.error('Erreur lors de l envoi des notifications menage:', err);
-      }
-
-      // Marquer les résas comme notifiées en DB pour éviter les doublons
-      try {
-        const uidsToMark = newReservations.map(r => r.uid).filter(Boolean);
-        if (uidsToMark.length > 0) {
-          await pool.query(
-            'UPDATE reservations SET notified_at = NOW() WHERE uid = ANY()',
-            [uidsToMark]
-          );
-          console.log('✅ ' + uidsToMark.length + ' résa(s) marquées notifiées');
-        }
-      } catch(e) { console.error('Erreur marquage notified_at:', e.message); }
-    }
-
-    // NOTIFICATIONS POUR ANNULATIONS (UNIQUEMENT DANS LES 3 PROCHAINS MOIS)
-    console.log("🔍 [Annulation] cancelledReservations.length:", cancelledReservations.length, JSON.stringify(cancelledReservations.map(r=>({uid:r.uid,start:r.start,userId:r.userId}))));
-if (!reservationsStore.serverJustStarted && cancelledReservations.length > 0) {
-  // Filtrer pour ne garder que les reservations dans les 3 prochains mois
-  const now = new Date();
-  const threeMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
-  
-  const futureCancelledReservations = cancelledReservations.filter(r => {
-    const startDate = new Date(r.start);
-    return startDate >= now && startDate <= threeMonthsFromNow;
-  });
-  
-  if (futureCancelledReservations.length > 0) {
-    console.log(`${futureCancelledReservations.length} annulation(s) detectee(s) dans les 3 mois, verification en DB...`);
-    
-    for (const reservation of futureCancelledReservations) {
-      try {
-        // Verifier si la reservation est deja marquee comme annulee en DB
-        const dbCheck = await pool.query(
-          'SELECT status FROM reservations WHERE uid = $1',
-          [reservation.uid]
-        );
-        
-        // Si la reservation existe en DB et n'est PAS deja annulee
-        if (dbCheck.rows.length > 0 && dbCheck.rows[0].status !== 'cancelled') {
-          // Marquer comme annulee en DB
-          await pool.query(
-            'UPDATE reservations SET status = $1, updated_at = NOW() WHERE uid = $2',
-            ['cancelled', reservation.uid]
-          );
-          
-          // Envoyer la notification au compte principal
-          await sendCancelledReservationNotification(
-            reservation.userId || 1,
-            cleanGuestName(reservation.guestName, reservation.platform || reservation.source),
-            reservation.propertyName,
-            reservation.start,
-            reservation.end
-          );
-
-          // ✅ Notif sous-comptes : annulation de réservation
-          try {
-            const _gN = cleanGuestName(reservation.guestName, reservation.platform || reservation.source);
-            const _pN = reservation.propertyName || '';
-            const _start = (reservation.start || '').slice(0, 10);
-            const _end   = (reservation.end   || '').slice(0, 10);
-            await sendNotificationToSubAccountsOf(
-              reservation.userId || 1, 'can_view_calendar',
-              '\u274C R\u00E9servation annul\u00E9e \u2014 ' + _pN,
-              _gN + ' \u00B7 ' + _start + ' \u2192 ' + _end,
-              { type: 'reservation_cancelled', propertyId: String(reservation.propertyId || '') },
-              'notif_sub_reservation_cancelled'
-            );
-          } catch (_e) { console.error('Notif sous-comptes annulation iCal:', _e.message); }
-          
-          console.log(`Notification annulation envoyee pour ${reservation.propertyName} (${reservation.uid})`);
-        } else if (dbCheck.rows.length > 0 && dbCheck.rows[0].status === 'cancelled') {
-          console.log(`Annulation deja traitee pour ${reservation.propertyName} (${reservation.uid}) - pas de notification`);
-        }
-      } catch (err) {
-        console.error(`Erreur notification annulation pour ${reservation.propertyName}:`, err);
-      }
-    }
-  } else {
-    console.log(`${cancelledReservations.length} reservation(s) annulee(s) mais toutes sont passees ou au-dela de 3 mois - pas de notification`);
-  }
-}
-
-  } else if (isFirstSync) {
-    console.log('Premiere synchronisation : aucune notification envoyee pour eviter les doublons.');
-  }
-
-  console.log('Synchronisation terminee');
-
-  // ── Channex sync en arrière-plan pour les logements affectés ──
-  if (newReservations.length > 0 || cancelledReservations.length > 0) {
-    const affectedPropertyIds = new Set([
-      ...newReservations.map(r => r.propertyId || r.property_id),
-      ...cancelledReservations.map(r => r.propertyId || r.property_id)
-    ]);
-    setImmediate(async () => {
-      for (const pid of affectedPropertyIds) {
-        if (pid) await triggerChannexAvailabilitySync(pid);
-      }
-    });
-  }
-
+  reservationsStore.lastSync = new Date();
   return reservationsStore;
 }
 // ============================================
@@ -10262,9 +9882,7 @@ app.get('/api/properties',
                 return {
                   url: item,
                   platform:
-                    icalService && icalService.extractSource
-                      ? icalService.extractSource(item)
-                      : 'Inconnu'
+                    'iCal'
                 };
               }
               // Nouveau format éventuel : déjà un objet
@@ -10273,9 +9891,7 @@ app.get('/api/properties',
                   url: item.url,
                   platform:
                     item.platform ||
-                    (icalService && icalService.extractSource
-                      ? icalService.extractSource(item.url)
-                      : 'Inconnu')
+                    ('iCal')
                 };
               }
               return null;
@@ -10544,9 +10160,7 @@ app.post('/api/properties',
           if (typeof item === 'string') {
             return {
               url: item,
-              platform: icalService && icalService.extractSource
-                ? icalService.extractSource(item)
-                : 'iCal'
+              platform: 'iCal'
             };
           }
 
@@ -10554,9 +10168,7 @@ app.post('/api/properties',
             const url = item.url;
             const platform = item.platform && item.platform.trim().length > 0
               ? item.platform.trim()
-              : (icalService && icalService.extractSource
-                  ? icalService.extractSource(url)
-                  : 'iCal');
+              : 'iCal';
 
             return { url, platform };
           }
@@ -10853,10 +10465,7 @@ app.put('/api/properties/:propertyId',
               if (typeof item === 'string') {
                 return {
                   url: item,
-                  platform:
-                    icalService && icalService.extractSource
-                      ? icalService.extractSource(item)
-                      : 'iCal'
+                  platform: 'iCal'
                 };
               }
               if (item && typeof item === 'object' && item.url) {
@@ -10864,9 +10473,7 @@ app.put('/api/properties/:propertyId',
                 const platform =
                   item.platform && item.platform.trim().length > 0
                     ? item.platform.trim()
-                    : (icalService && icalService.extractSource
-                        ? icalService.extractSource(url)
-                        : 'iCal');
+                    : 'iCal';
                 return { url, platform };
               }
               return null;
@@ -11031,35 +10638,8 @@ app.delete('/api/properties/:propertyId',
 // TESTER UNE URL ICAL
 // ============================================
 app.post('/api/properties/test-ical', async (req, res) => {
-  const { url } = req.body;
-
-  if (!url) {
-    return res.status(400).json({ error: 'URL requise' });
-  }
-
-  try {
-    const testProperty = {
-      id: 'test',
-      name: 'Test',
-      color: '#000000',
-      icalUrls: [url]
-    };
-
-    const reservations = await icalService.fetchReservations(testProperty, pool);
-
-    res.json({
-      success: true,
-      message: 'URL iCal valide',
-      reservationCount: reservations.length,
-      sampleReservation: reservations[0] || null
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: 'URL iCal invalide ou inaccessible',
-      details: error.message
-    });
-  }
+  // Route désactivée — iCal remplacé par Channex
+  res.status(410).json({ error: 'iCal désactivé. Utilisez Channex pour la synchronisation OTA.' });
 });
   // ============================================
 // Réorganiser l'ordre des logements (SAFE)
