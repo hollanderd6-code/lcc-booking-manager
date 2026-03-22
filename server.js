@@ -3354,7 +3354,9 @@ async function loadProperties() {
         channex_property_id,
         channex_room_type_id,
         channex_rate_plan_id,
-        channex_enabled
+        channex_enabled,
+        base_price,
+        weekend_price
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3398,7 +3400,9 @@ async function loadProperties() {
         channex_property_id: row.channex_property_id || null,
         channex_room_type_id: row.channex_room_type_id || null,
         channex_rate_plan_id: row.channex_rate_plan_id || null,
-        channex_enabled: row.channex_enabled || false
+        channex_enabled: row.channex_enabled || false,
+        basePrice: row.base_price != null ? parseFloat(row.base_price) : null,
+        weekendPrice: row.weekend_price != null ? parseFloat(row.weekend_price) : null
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
@@ -10198,7 +10202,8 @@ app.post('/api/properties',
            access_code = $10, wifi_name = $11, wifi_password = $12,
            access_instructions = $13, owner_id = $14, chat_pin = $15,
            amenities = $16, house_rules = $17, practical_info = $18,
-           auto_responses_enabled = $19, arrival_message = $20
+           auto_responses_enabled = $19, arrival_message = $20,
+           base_price = $22, weekend_price = $23
          WHERE id = $21`,
         [
           name,
@@ -10220,8 +10225,10 @@ app.post('/api/properties',
           JSON.stringify(houseRules),
           JSON.stringify(practicalInfo),
           autoResponsesEnabled,
-          arrivalMessage || null,  // ✅ NOUVEAU
-          id
+          arrivalMessage || null,
+          id,
+          basePrice ? parseFloat(basePrice) : null,
+          weekendPrice ? parseFloat(weekendPrice) : null
         ]
       );
 
@@ -10241,7 +10248,8 @@ app.post('/api/properties',
          address, arrival_time, departure_time, deposit_amount, photo_url,
          welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
          owner_id, chat_pin, display_order, created_at,
-         amenities, house_rules, practical_info, auto_responses_enabled, arrival_message
+         amenities, house_rules, practical_info, auto_responses_enabled, arrival_message,
+         base_price, weekend_price
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -10250,7 +10258,8 @@ app.post('/api/properties',
          $16, $17,
          (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
          NOW(),
-         $18, $19, $20, $21, $22
+         $18, $19, $20, $21, $22,
+         $23, $24
        )`,
       [
         id,
@@ -10274,7 +10283,9 @@ app.post('/api/properties',
         JSON.stringify(houseRules),
         JSON.stringify(practicalInfo),
         autoResponsesEnabled,
-        arrivalMessage || null  // ✅ NOUVEAU
+        arrivalMessage || null,
+        basePrice ? parseFloat(basePrice) : null,
+        weekendPrice ? parseFloat(weekendPrice) : null
       ]
     );
 
@@ -10343,14 +10354,16 @@ app.put('/api/properties/:propertyId',
       wifiName,
       wifiPassword,
       accessInstructions,
-      arrivalMessage,  // ✅ NOUVEAU
+      arrivalMessage,
       ownerId,
       amenities,
       houseRules,
       practicalInfo,
       autoResponsesEnabled,
       chatPin,
-      quickReplies
+      quickReplies,
+      basePrice,
+      weekendPrice
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
@@ -10441,6 +10454,14 @@ app.put('/api/properties/:propertyId',
     const newQuickReplies = quickReplies !== undefined
       ? (Array.isArray(quickReplies) ? quickReplies : [])
       : (property.quick_replies || []);
+
+    const newBasePrice = basePrice !== undefined
+      ? (basePrice !== '' && basePrice !== null ? parseFloat(basePrice) : null)
+      : (property.basePrice != null ? property.basePrice : null);
+
+    const newWeekendPrice = weekendPrice !== undefined
+      ? (weekendPrice !== '' && weekendPrice !== null ? parseFloat(weekendPrice) : null)
+      : (property.weekendPrice != null ? property.weekendPrice : null);
         
     let newPhotoUrl =
       existingPhotoUrl !== undefined
@@ -10520,6 +10541,8 @@ userId: userId
          auto_responses_enabled = $19,
          arrival_message = $20,
          quick_replies = $21,
+         base_price = $24,
+         weekend_price = $25,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -10533,7 +10556,9 @@ userId: userId
         newAutoResponsesEnabled,
         newArrivalMessage,
         JSON.stringify(newQuickReplies),
-        propertyId, userId
+        propertyId, userId,
+        newBasePrice,
+        newWeekendPrice
       ]
     );
     
