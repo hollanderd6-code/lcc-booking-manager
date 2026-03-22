@@ -976,54 +976,19 @@ function bhDetectProperty(user, data) {
 
 // Étape 2 : liens iCal
 function bhDetectIcal(user, data) {
-  // 1) chercher des champs iCal dans les propriétés
+  // Channex — détecter si au moins un logement est connecté
   if (data && Array.isArray(data.properties)) {
     for (const p of data.properties) {
-      if (!p || typeof p !== 'object') continue;
-      for (const key in p) {
-        if (!Object.prototype.hasOwnProperty.call(p, key)) continue;
-        if (!key) continue;
-        if (key.toLowerCase().includes('ical')) {
-          const val = p[key];
-          if (typeof val === 'string' && val.trim() !== '') return true;
-          if (Array.isArray(val) && val.length > 0) return true;
-          if (val && typeof val === 'object') {
-            for (const subKey in val) {
-              if (!Object.prototype.hasOwnProperty.call(val, subKey)) continue;
-              const subVal = val[subKey];
-              if (typeof subVal === 'string' && subVal.trim() !== '') return true;
-            }
-          }
-        }
-      }
+      if (p && p.channexEnabled === true) return true;
     }
   }
-
-  // 2) fallback : au moins une réservation provenant d’un OTA (Airbnb, Booking, etc.)
+  // Fallback : réservation OTA via Channex
   const res = data && Array.isArray(data.reservations) ? data.reservations : [];
   for (const r of res) {
-    if (!r) continue;
-    const src = (
-      r.source ||
-      r.channel ||
-      r.platform ||
-      ''
-    ).toLowerCase();
-    if (
-      src.includes('airbnb') ||
-      src.includes('booking') ||
-      src.includes('vrbo') ||
-      src.includes('abritel') ||
-      src.includes('homeaway') ||
-      src.includes('expedia')
-    ) {
-      return true;
-    }
+    if (r && r.source === 'channex') return true;
   }
-
   return false;
 }
-
 // Étape 3 : Stripe
 function bhDetectStripe(user, data) {
   // 1) override manuel possible (au cas où)
@@ -1215,7 +1180,7 @@ function bhUpdateStatusCards(detection, data) {
           label.classList.add('status-ok');
         }
         if (text) {
-          text.textContent = 'Synchronisation iCal active.';
+          text.textContent = 'Synchronisation Channex active.';
         }
         if (btn) {
           btn.textContent = 'Gérer les connexions';
@@ -1229,10 +1194,10 @@ function bhUpdateStatusCards(detection, data) {
           label.classList.add('status-warning');
         }
         if (text) {
-          text.textContent = 'Ajoutez vos liens iCal Airbnb.';
+          text.textContent = 'Connectez Airbnb via Channex.';
         }
         if (btn) {
-          btn.textContent = 'Ajouter un iCal';
+          btn.textContent = 'Connecter via Channex';
           btn.classList.remove('btn-ghost');
           btn.classList.add('btn-secondary');
         }
@@ -1260,7 +1225,7 @@ function bhUpdateStatusCards(detection, data) {
           label.classList.add('status-ok');
         }
         if (text) {
-          text.textContent = 'Synchronisation iCal active.';
+          text.textContent = 'Synchronisation Channex active.';
         }
         if (btn) {
           btn.textContent = 'Gérer les connexions';
@@ -1274,10 +1239,10 @@ function bhUpdateStatusCards(detection, data) {
           label.classList.add('status-warning');
         }
         if (text) {
-          text.textContent = 'Ajoutez votre lien iCal Booking.com.';
+          text.textContent = 'Connectez Booking.com via Channex.';
         }
         if (btn) {
-          btn.textContent = 'Ajouter un iCal';
+          btn.textContent = 'Connecter via Channex';
           btn.classList.remove('btn-ghost');
           btn.classList.add('btn-secondary');
         }
