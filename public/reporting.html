@@ -322,10 +322,36 @@ html[data-theme-v3="1"] .main-content { background: #F5F2EC !important; }
 .top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
 html[data-theme-v3="1"] .main-content { padding: 24px !important; max-width: 1400px !important; margin: 0 auto !important; width: 100% !important; box-sizing: border-box !important; }
 
-/* ── Header dark top (injecté par bh-layout) ── */
+/* ── Dark bar + body padding ── */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important; z-index: 30 !important;
+}
+
+/* ── BARRE DARK EN HAUT ── */
+html[data-theme-v3="1"] .bh-demo-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: #0D1117; display: flex; align-items: center; gap: 6px;
+  padding: 0 16px; height: 40px; font-family: 'DM Sans', sans-serif; font-size: 12px;
+}
+.bh-demo-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.bh-demo-mode-label { color: rgba(255,255,255,.4); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
+.bh-theme-toggle {
+  width: 36px; height: 20px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.1); cursor: pointer; position: relative; transition: all .2s;
+}
+.bh-theme-toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: rgba(255,255,255,.7); transition: all .2s;
+}
+[data-theme="dark"] .bh-theme-toggle { background: rgba(26,122,94,.5); border-color: rgba(26,122,94,.8); }
+[data-theme="dark"] .bh-theme-toggle::after { transform: translateX(16px); background: white; }
+
+/* ── Header dark top ── */
 html[data-theme-v3="1"] header.main-header { position: fixed !important; top: 40px !important; left: 0 !important; right: 0 !important; z-index: 50 !important; margin-left: 260px !important; }
 @media(max-width:1366px){ html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; } }
-html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 html[data-theme-v3="1"] .header-actions .btn-ghost,
 html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !important; }
 
@@ -333,12 +359,13 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .rp-header-btns { position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200; display: flex; gap: 10px; align-items: center; }
 .rp-btn-back {
   display: inline-flex; align-items: center; gap: 8px;
-  height: 40px; padding: 0 18px; border: 1.5px solid rgba(255,255,255,.3);
-  border-radius: 12px; background: rgba(13,17,23,.08);
-  color: #0D1117; font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+  height: 40px; padding: 0 20px; border: none;
+  border-radius: 12px; background: #1A7A5E;
+  color: white; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+  white-space: nowrap;
 }
-.rp-btn-back:hover { background: rgba(13,17,23,.14); border-color: rgba(13,17,23,.2); }
+.rp-btn-back:hover { background: #15624B; }
 
 /* Mobile */
 @media(max-width:1366px){
@@ -351,6 +378,83 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 </head>
 
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="reporting" data-subtitle="Analyse de vos performances financières" data-title="Revenus">
+
+<!-- Dark bar -->
+<div class="bh-demo-nav" id="bhTopBar">
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;white-space:nowrap;">
+
+    <div style="display:flex;align-items:center;gap:5px;">
+      <i class="fa-brands fa-airbnb" style="font-size:14px;color:#FF5A5F;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Airbnb</span>
+      <span id="topbar-status-airbnb" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    </div>
+
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
+
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="font-size:12px;font-weight:800;color:#6B9FE4;">B.</span>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Booking</span>
+      <span id="topbar-status-booking" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    </div>
+
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
+
+    <div style="display:flex;align-items:center;gap:5px;">
+      <i class="fa-brands fa-stripe-s" style="font-size:15px;color:#6772E5;"></i>
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Stripe</span>
+      <span id="topbar-status-stripe" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    </div>
+
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
+
+    <div style="display:flex;align-items:center;gap:5px;">
+      <img src="/img/abritel-logo.png" width="18" height="18" style="flex-shrink:0;object-fit:contain;" onerror="this.style.display=none" />
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Abritel</span>
+      <span id="topbar-status-abritel" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    </div>
+
+    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
+
+    <div style="display:flex;align-items:center;gap:5px;">
+      <img src="/img/gites-logo.png" width="18" height="18" style="flex-shrink:0;object-fit:contain;border-radius:50%;" onerror="this.style.display=none" />
+      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Gîtes</span>
+      <span id="topbar-status-gites" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    </div>
+
+  </div>
+  <div class="bh-demo-right">
+    <span class="bh-demo-mode-label">Mode</span>
+    <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute('data-theme')==='dark'?document.documentElement.setAttribute('data-theme','light'):document.documentElement.setAttribute('data-theme','dark')"></button>
+  </div>
+</div>
+
+<script>
+(function updateTopBarStatus() {
+  function setStatus(id, connected) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (connected) {
+      el.style.background = 'rgba(34,197,94,.2)';
+      el.style.color = '#4ADE80';
+      el.style.borderColor = 'rgba(34,197,94,.35)';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:6px;"></i>Connecté';
+    } else {
+      el.style.background = 'rgba(239,68,68,.2)';
+      el.style.color = '#F87171';
+      el.style.borderColor = 'rgba(239,68,68,.35)';
+      el.innerHTML = '<i class="fas fa-circle" style="font-size:6px;"></i>Non connecté';
+    }
+  }
+  try {
+    var profile = JSON.parse(localStorage.getItem('bh_profile') || '{}');
+    setStatus('topbar-status-airbnb',  !!(profile.airbnb_token  || profile.airbnb_connected));
+    setStatus('topbar-status-booking', !!(profile.booking_token || profile.booking_connected));
+    setStatus('topbar-status-stripe',  !!(profile.stripe_account_id));
+    setStatus('topbar-status-abritel', !!(profile.abritel_connected));
+    setStatus('topbar-status-gites',   !!(profile.gites_connected));
+  } catch(e) {}
+})();
+<\/script>
 
 <div class="app-container">
 <div id="bhSidebar"></div>
