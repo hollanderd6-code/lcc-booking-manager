@@ -10316,6 +10316,114 @@ app.post('/api/properties',
     });
   }
 });
+
+// ============================================
+// PRICING OVERRIDES — Prix personnalisés par jour
+// ============================================
+
+// GET /api/pricing/overrides?property_id=X&from=YYYY-MM-DD&to=YYYY-MM-DD
+app.get('/api/pricing/overrides', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { property_id, from, to } = req.query;
+
+    let query = `
+      SELECT property_id, TO_CHAR(date, 'YYYY-MM-DD') as date, price
+      FROM pricing_overrides
+      WHERE user_id = $1
+    `;
+    const params = [user.id];
+
+    if (property_id) {
+      params.push(property_id);
+      query += ` AND property_id = $${params.length}`;
+    }
+    if (from) {
+      params.push(from);
+      query += ` AND date >= $${params.length}`;
+    }
+    if (to) {
+      params.push(to);
+      query += ` AND date <= $${params.length}`;
+    }
+
+    query += ' ORDER BY date ASC';
+
+    const result = await pool.query(query, params);
+    res.json({ overrides: result.rows });
+  } catch (err) {
+    console.error('❌ GET /api/pricing/overrides:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/pricing/overrides — Créer ou mettre à jour un prix
+app.post('/api/pricing/overrides', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { property_id, date, price } = req.body;
+
+    if (!property_id || !date) {
+      return res.status(400).json({ error: 'property_id et date sont requis' });
+    }
+
+    // Vérifier que le logement appartient à l'utilisateur
+    const propCheck = await pool.query(
+      'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, user.id]
+    );
+    if (propCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Logement introuvable ou accès refusé' });
+    }
+
+    if (price === null || price === undefined || price === '') {
+      // Supprimer l'override
+      await pool.query(
+        'DELETE FROM pricing_overrides WHERE user_id = $1 AND property_id = $2 AND date = $3',
+        [user.id, property_id, date]
+      );
+      return res.json({ success: true, deleted: true });
+    }
+
+    // Upsert
+    await pool.query(`
+      INSERT INTO pricing_overrides (user_id, property_id, date, price, updated_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (user_id, property_id, date)
+      DO UPDATE SET price = $4, updated_at = NOW()
+    `, [user.id, property_id, date, parseFloat(price)]);
+
+    res.json({ success: true, property_id, date, price: parseFloat(price) });
+  } catch (err) {
+    console.error('❌ POST /api/pricing/overrides:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/pricing/overrides/:property_id/:date
+app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { property_id, date } = req.params;
+
+    await pool.query(
+      'DELETE FROM pricing_overrides WHERE user_id = $1 AND property_id = $2 AND date = $3',
+      [user.id, property_id, date]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ DELETE /api/pricing/overrides:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ============================================
 // MODIFIER UN LOGEMENT
 // ============================================
