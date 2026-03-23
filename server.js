@@ -20790,65 +20790,55 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       return res.status(200).json({ received: true, skipped: true });
     }
 
-    // Trouver la conversation liée à cette réservation Channex
-    const convResult = await pool.query(
-      `SELECT c.id, c.user_id, c.property_id, r.guest_name, r.uid as reservation_uid
-       FROM conversations c
-       JOIN reservations r ON r.property_id = c.property_id
-         AND r.channex_booking_id = $1
-       LIMIT 1`,
+    // Récupérer la réservation Channex et sa conversation associée
+    const resaResult = await pool.query(
+      `SELECT r.id, r.uid, r.property_id, r.user_id, r.guest_name,
+              r.start_date, r.end_date, r.ota_name,
+              p.user_id as prop_user_id
+       FROM reservations r
+       JOIN properties p ON p.id = r.property_id
+       WHERE r.channex_booking_id = $1`,
       [channex_booking_id]
     );
 
+    if (resaResult.rows.length === 0) {
+      console.warn(`⚠️ [CHANNEX MSG] Réservation non trouvée: ${channex_booking_id}`);
+      return res.status(200).json({ received: true, skipped: 'not_found' });
+    }
+
+    const resa = resaResult.rows[0];
+    let guest_name = resa.guest_name || 'Voyageur';
+    let user_id = resa.user_id || resa.prop_user_id;
+
+    // Chercher conversation existante liée à cette réservation (par dates + property)
+    const existConv = await pool.query(
+      `SELECT id FROM conversations
+       WHERE property_id = $1
+         AND user_id = $2
+         AND reservation_start_date = $3::date
+       LIMIT 1`,
+      [resa.property_id, user_id, resa.start_date]
+    );
+
     let conversation_id;
-    let user_id;
-    let guest_name = 'Voyageur';
-
-    if (convResult.rows.length > 0) {
-      conversation_id = convResult.rows[0].id;
-      user_id = convResult.rows[0].user_id;
-      guest_name = convResult.rows[0].guest_name || 'Voyageur';
+    if (existConv.rows.length > 0) {
+      conversation_id = existConv.rows[0].id;
+      console.log(`✅ [CHANNEX MSG] Conversation existante trouvée: ${conversation_id}`);
     } else {
-      // Chercher via channex_booking_id directement sur la réservation
-      const resaResult = await pool.query(
-        `SELECT r.uid, r.property_id, r.user_id, r.guest_name,
-                p.user_id as prop_user_id
-         FROM reservations r
-         JOIN properties p ON p.id = r.property_id
-         WHERE r.channex_booking_id = $1`,
-        [channex_booking_id]
+      // Créer une nouvelle conversation avec toutes les colonnes requises
+      const token = require('crypto').randomBytes(32).toString('hex');
+      const platform = (resa.ota_name || 'channex').toLowerCase()
+        .replace('abb', 'airbnb').replace('bdc', 'booking');
+      const newConv = await pool.query(
+        `INSERT INTO conversations
+          (user_id, property_id, platform, guest_name, unique_token, is_verified, status,
+           reservation_start_date, reservation_end_date, created_at)
+         VALUES ($1, $2, $3, $4, $5, true, 'active', $6::date, $7::date, NOW())
+         RETURNING id`,
+        [user_id, resa.property_id, platform, guest_name, token, resa.start_date, resa.end_date]
       );
-
-      if (resaResult.rows.length === 0) {
-        console.warn(`⚠️ [CHANNEX MSG] Réservation non trouvée: ${channex_booking_id}`);
-        return res.status(200).json({ received: true, skipped: 'not_found' });
-      }
-
-      const resa = resaResult.rows[0];
-      guest_name = resa.guest_name || 'Voyageur';
-      user_id = resa.user_id || resa.prop_user_id;
-
-      // Chercher conversation existante par property + dates
-      const existConv = await pool.query(
-        `SELECT id FROM conversations WHERE property_id = $1 AND user_id = $2
-         ORDER BY created_at DESC LIMIT 1`,
-        [resa.property_id, user_id]
-      );
-
-      if (existConv.rows.length > 0) {
-        conversation_id = existConv.rows[0].id;
-      } else {
-        // Créer une nouvelle conversation
-        const token = require('crypto').randomBytes(32).toString('hex');
-        const newConv = await pool.query(
-          `INSERT INTO conversations
-            (user_id, property_id, platform, guest_name, unique_token, is_verified, status, created_at)
-           VALUES ($1, $2, 'channex', $3, $4, true, 'active', NOW())
-           RETURNING id`,
-          [user_id, resa.property_id, guest_name, token]
-        );
-        conversation_id = newConv.rows[0].id;
-      }
+      conversation_id = newConv.rows[0].id;
+      console.log(`✅ [CHANNEX MSG] Nouvelle conversation créée: ${conversation_id}`);
     }
 
     // Insérer le message dans BH
