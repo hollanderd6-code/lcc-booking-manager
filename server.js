@@ -20182,8 +20182,83 @@ app.post('/api/channex/webhook', async (req, res) => {
     console.log('📥 [CHANNEX WEBHOOK]', JSON.stringify(payload).substring(0, 200));
 
     const bookings = payload.bookings || (payload.booking ? [payload.booking] : []);
+
     for (const booking of bookings) {
-      await processChannexBooking(pool, booking);
+      const result = await processChannexBooking(pool, booking);
+
+      // ── Notification push si nouvelle réservation créée ──────
+      if (result && result.uid && result.uid.startsWith('CHX_')) {
+        try {
+          const attrs        = booking.attributes || booking;
+          const otaName      = attrs.ota_name || 'Channex';
+          const arrivalDate  = attrs.arrival_date || '';
+          const departureDate = attrs.departure_date || '';
+          const guest        = attrs.customer || {};
+          const guestName    = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
+
+          // Emoji et label selon la plateforme OTA
+          const OTA_MAP = {
+            'ABB': { emoji: '🏠', label: 'Airbnb' },
+            'AIRBNB': { emoji: '🏠', label: 'Airbnb' },
+            'BDC': { emoji: '🛏️', label: 'Booking.com' },
+            'BOOKING': { emoji: '🛏️', label: 'Booking.com' },
+            'EXP': { emoji: '✈️', label: 'Expedia' },
+            'EXPEDIA': { emoji: '✈️', label: 'Expedia' },
+            'VRBO': { emoji: '🏡', label: 'Vrbo' },
+            'HOMEAWAY': { emoji: '🏡', label: 'Vrbo' }
+          };
+          const ota = OTA_MAP[String(otaName).toUpperCase()] || { emoji: '📅', label: otaName };
+
+          // Formatter les dates
+          const fmtDate = (iso) => {
+            try {
+              return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+            } catch { return iso; }
+          };
+
+          // Récupérer le nom du logement depuis le résultat
+          const propRes = await pool.query(
+            'SELECT name FROM properties WHERE id = $1',
+            [result.property_id]
+          );
+          const propertyName = propRes.rows[0]?.name || 'Logement';
+
+          const notifTitle = `${ota.emoji} Nouvelle réservation ${ota.label}`;
+          const notifBody  = `${guestName} · ${propertyName} · ${fmtDate(arrivalDate)} → ${fmtDate(departureDate)}`;
+          const notifData  = {
+            type:       'new_booking_channex',
+            uid:        result.uid,
+            propertyId: String(result.property_id || ''),
+            otaName:    String(otaName),
+            screen:     'calendar'
+          };
+
+          // Notifier le propriétaire principal
+          const tokensRes = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+            [result.user_id]
+          );
+          for (const tok of tokensRes.rows) {
+            await sendNotification(tok.fcm_token, notifTitle, notifBody, notifData);
+          }
+
+          // Notifier les sous-comptes ayant accès à ce logement
+          await sendNotificationToSubAccountsOf(
+            result.user_id,
+            'can_view_calendar',
+            notifTitle,
+            notifBody,
+            notifData,
+            null,
+            result.property_id
+          );
+
+          console.log(`📱 [CHANNEX] Notifs push envoyées pour ${result.uid} (${tokensRes.rows.length} tokens principaux)`);
+        } catch (notifErr) {
+          // Erreur de notif non bloquante
+          console.error('⚠️ [CHANNEX WEBHOOK] Erreur notif push:', notifErr.message);
+        }
+      }
     }
 
     res.status(200).json({ success: true });
