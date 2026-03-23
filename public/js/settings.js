@@ -425,6 +425,11 @@ function resetPropertyForm() {
   if (document.getElementById("propertyWeekendPrice")) {
     document.getElementById("propertyWeekendPrice").value = "";
   }
+  // Reset règles de tarification
+  _pricingRules = [];
+  _currentPricingPropertyId = null;
+  const rulesList = document.getElementById('pricingRulesList');
+  if (rulesList) rulesList.innerHTML = '<div style="font-size:13px;color:#9CA3AF;padding:10px 0;">Aucune règle configurée</div>';
   const urlList = document.getElementById("urlList");
   if (urlList) urlList.innerHTML = "";
 }
@@ -618,6 +623,11 @@ function openEditPropertyModal(propertyId) {
   }
   if (chatCopyLinkBtn) chatCopyLinkBtn.dataset.link = chatLink;
   // ===== FIN CHAT LINK =====
+
+  // ✅ CHARGER LES RÈGLES DE TARIFICATION
+  if (typeof loadPricingRules === 'function') {
+    loadPricingRules(property._id || property.id);
+  }
 
   if (modal) modal.classList.add("active");
 }
@@ -1311,5 +1321,358 @@ async function channexSyncAvailability(propertyId) {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-sync"></i> Synchroniser les dispos';
     }
+  }
+}
+
+// ============================================
+// PRICING RULES — Règles de tarification
+// ============================================
+
+const API_PRICING = 'https://lcc-booking-manager.onrender.com';
+let _currentPricingPropertyId = null;
+let _pricingRules = [];
+
+const RULE_TYPE_LABELS = {
+  period:     { icon: 'fa-calendar-alt', label: 'Période' },
+  weekday:    { icon: 'fa-clock', label: 'Jours de semaine' },
+  min_stay:   { icon: 'fa-moon', label: 'Séjour minimum' },
+  long_stay:  { icon: 'fa-percentage', label: 'Réduction séjour long' }
+};
+
+const DAYS_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+// Charger les règles pour un logement
+async function loadPricingRules(propertyId) {
+  _currentPricingPropertyId = propertyId;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const resp = await fetch(`${API_PRICING}/api/pricing/rules?property_id=${propertyId}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    _pricingRules = data.rules || [];
+    renderPricingRules();
+  } catch(e) {
+    console.warn('loadPricingRules:', e.message);
+  }
+}
+
+// Afficher les règles dans le modal
+function renderPricingRules() {
+  const container = document.getElementById('pricingRulesList');
+  if (!container) return;
+
+  if (!_pricingRules.length) {
+    container.innerHTML = '<div style="font-size:13px;color:#9CA3AF;padding:10px 0;">Aucune règle configurée</div>';
+    return;
+  }
+
+  container.innerHTML = _pricingRules.map(rule => {
+    const typeInfo = RULE_TYPE_LABELS[rule.rule_type] || { icon: 'fa-tag', label: rule.rule_type };
+    let detail = '';
+
+    if (rule.rule_type === 'period') {
+      detail = `${rule.start_date || ''} → ${rule.end_date || ''} · <strong>${rule.price}€/nuit</strong>`;
+    } else if (rule.rule_type === 'weekday') {
+      const days = (rule.days_of_week || []).map(d => DAYS_LABELS[d]).join(', ');
+      detail = `${days} · <strong>${rule.price}€/nuit</strong>`;
+    } else if (rule.rule_type === 'min_stay') {
+      detail = `Minimum <strong>${rule.min_nights} nuits</strong>`;
+    } else if (rule.rule_type === 'long_stay') {
+      detail = `<strong>-${rule.discount_pct}%</strong> à partir de ${rule.discount_after_nights} nuits`;
+    }
+
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #E8E0D0;border-radius:10px;margin-bottom:6px;background:${rule.active ? '#fff' : '#F9F9F9'};">
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas ${typeInfo.icon}" style="color:#1A7A5E;font-size:13px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:#0D1117;">${rule.name}</div>
+          <div style="font-size:12px;color:#6B7280;margin-top:2px;">${detail}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button type="button" onclick="editPricingRule(${rule.id})"
+            style="padding:5px 10px;border:1px solid #E5E7EB;border-radius:6px;background:#fff;color:#374151;font-size:12px;cursor:pointer;">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button type="button" onclick="deletePricingRule(${rule.id})"
+            style="padding:5px 10px;border:1px solid #fee2e2;border-radius:6px;background:#fff;color:#dc2626;font-size:12px;cursor:pointer;">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Ouvrir le modal de création de règle
+function openPricingRuleModal(existingRule = null) {
+  // Supprimer un éventuel modal existant
+  const existing = document.getElementById('pricingRuleModal');
+  if (existing) existing.remove();
+
+  const isEdit = !!existingRule;
+  const rule = existingRule || {};
+
+  const modal = document.createElement('div');
+  modal.id = 'pricingRuleModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:20px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;font-family:'DM Sans',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <div style="padding:20px 24px;border-bottom:1px solid #F0EBE3;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:16px;font-weight:700;color:#0D1117;">${isEdit ? 'Modifier la règle' : 'Nouvelle règle de prix'}</div>
+        <button onclick="document.getElementById('pricingRuleModal').remove()"
+          style="width:32px;height:32px;border-radius:50%;border:none;background:#f3f4f6;color:#6B7280;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+      <div style="padding:20px 24px;">
+
+        <!-- Nom -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Nom de la règle</label>
+          <input id="pr_name" type="text" placeholder="Ex: Juillet-Août, Week-ends été..."
+            value="${rule.name || ''}"
+            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;outline:none;" />
+        </div>
+
+        <!-- Type -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Type de règle</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            ${[
+              { val: 'period', icon: 'fa-calendar-alt', label: 'Période' },
+              { val: 'weekday', icon: 'fa-clock', label: 'Jours de semaine' },
+              { val: 'min_stay', icon: 'fa-moon', label: 'Séjour minimum' },
+              { val: 'long_stay', icon: 'fa-percentage', label: 'Réduction longue durée' }
+            ].map(t => `
+              <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid ${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#E8E0D0'};border-radius:10px;cursor:pointer;background:${(rule.rule_type || 'period') === t.val ? 'rgba(26,122,94,.06)' : '#fff'};">
+                <input type="radio" name="pr_type" value="${t.val}" ${(rule.rule_type || 'period') === t.val ? 'checked' : ''} onchange="updatePricingRuleForm()" style="accent-color:#1A7A5E;" />
+                <i class="fas ${t.icon}" style="color:#1A7A5E;font-size:13px;"></i>
+                <span style="font-size:13px;font-weight:500;">${t.label}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Champs dynamiques selon le type -->
+        <div id="pr_fields"></div>
+
+        <!-- Priorité -->
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Priorité <span style="font-weight:400;text-transform:none;">(plus élevé = appliqué en premier)</span></label>
+          <input id="pr_priority" type="number" min="0" max="100" value="${rule.priority || 0}"
+            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+        </div>
+
+        <!-- Actif -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          <input id="pr_active" type="checkbox" ${rule.active !== false ? 'checked' : ''} style="width:16px;height:16px;accent-color:#1A7A5E;" />
+          <label for="pr_active" style="font-size:13px;color:#374151;cursor:pointer;">Règle active</label>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button type="button" onclick="document.getElementById('pricingRuleModal').remove()"
+            style="flex:1;padding:12px;border:1.5px solid #E5E7EB;border-radius:12px;background:#fff;color:#374151;font-size:14px;cursor:pointer;">
+            Annuler
+          </button>
+          <button type="button" onclick="savePricingRule(${isEdit ? rule.id : 'null'})"
+            style="flex:2;padding:12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">
+            <i class="fas fa-save"></i> ${isEdit ? 'Modifier' : 'Créer la règle'}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Stocker les données existantes pour l'édition
+  modal._existingRule = rule;
+  document.body.appendChild(modal);
+
+  // Fermer en cliquant l'overlay
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  // Afficher les champs du bon type
+  updatePricingRuleForm();
+}
+
+function updatePricingRuleForm() {
+  const type = document.querySelector('input[name="pr_type"]:checked')?.value || 'period';
+  const modal = document.getElementById('pricingRuleModal');
+  const rule = modal?._existingRule || {};
+  const container = document.getElementById('pr_fields');
+  if (!container) return;
+
+  // Mettre à jour le style des boutons radio
+  document.querySelectorAll('input[name="pr_type"]').forEach(r => {
+    const label = r.closest('label');
+    if (label) {
+      label.style.borderColor = r.checked ? '#1A7A5E' : '#E8E0D0';
+      label.style.background = r.checked ? 'rgba(26,122,94,.06)' : '#fff';
+    }
+  });
+
+  if (type === 'period') {
+    container.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Date début</label>
+          <input id="pr_start" type="date" value="${rule.start_date || ''}"
+            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Date fin</label>
+          <input id="pr_end" type="date" value="${rule.end_date || ''}"
+            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Prix par nuit (€)</label>
+        <input id="pr_price" type="number" min="0" step="1" placeholder="Ex: 120" value="${rule.price || ''}"
+          style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+      </div>
+    `;
+  } else if (type === 'weekday') {
+    const selectedDays = rule.days_of_week || [];
+    const days = [
+      { val: 1, label: 'Lun' }, { val: 2, label: 'Mar' }, { val: 3, label: 'Mer' },
+      { val: 4, label: 'Jeu' }, { val: 5, label: 'Ven' }, { val: 6, label: 'Sam' }, { val: 0, label: 'Dim' }
+    ];
+    container.innerHTML = `
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Jours concernés</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${days.map(d => `
+            <label style="display:flex;align-items:center;gap:4px;padding:7px 12px;border:1.5px solid ${selectedDays.includes(d.val) ? '#1A7A5E' : '#E8E0D0'};border-radius:8px;cursor:pointer;background:${selectedDays.includes(d.val) ? 'rgba(26,122,94,.08)' : '#fff'};font-size:13px;font-weight:500;">
+              <input type="checkbox" name="pr_day" value="${d.val}" ${selectedDays.includes(d.val) ? 'checked' : ''}
+                onchange="this.closest('label').style.borderColor=this.checked?'#1A7A5E':'#E8E0D0';this.closest('label').style.background=this.checked?'rgba(26,122,94,.08)':'#fff'"
+                style="accent-color:#1A7A5E;" />
+              ${d.label}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Prix par nuit (€)</label>
+        <input id="pr_price" type="number" min="0" step="1" placeholder="Ex: 90" value="${rule.price || ''}"
+          style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+      </div>
+    `;
+  } else if (type === 'min_stay') {
+    container.innerHTML = `
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Nombre de nuits minimum</label>
+        <input id="pr_min_nights" type="number" min="1" step="1" placeholder="Ex: 3" value="${rule.min_nights || ''}"
+          style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+        <small style="display:block;margin-top:4px;font-size:11px;color:#9CA3AF;">Les voyageurs ne pourront pas réserver moins de X nuits</small>
+      </div>
+    `;
+  } else if (type === 'long_stay') {
+    container.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Réduction (%)</label>
+          <input id="pr_discount_pct" type="number" min="0" max="100" step="0.5" placeholder="Ex: 10" value="${rule.discount_pct || ''}"
+            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">À partir de (nuits)</label>
+          <input id="pr_discount_nights" type="number" min="1" step="1" placeholder="Ex: 7" value="${rule.discount_after_nights || ''}"
+            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+        </div>
+      </div>
+    `;
+  }
+}
+
+function editPricingRule(id) {
+  const rule = _pricingRules.find(r => r.id === id);
+  if (rule) openPricingRuleModal(rule);
+}
+
+async function deletePricingRule(id) {
+  if (!confirm('Supprimer cette règle ?')) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(`${API_PRICING}/api/pricing/rules/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    showToast('Règle supprimée', 'success');
+    await loadPricingRules(_currentPricingPropertyId);
+  } catch(e) {
+    showToast('Erreur lors de la suppression', 'error');
+  }
+}
+
+async function savePricingRule(ruleId) {
+  const type = document.querySelector('input[name="pr_type"]:checked')?.value;
+  const name = document.getElementById('pr_name')?.value?.trim();
+  const priority = parseInt(document.getElementById('pr_priority')?.value) || 0;
+  const active = document.getElementById('pr_active')?.checked ?? true;
+
+  if (!name) { showToast('Donnez un nom à la règle', 'error'); return; }
+
+  const payload = {
+    property_id: _currentPricingPropertyId,
+    name, rule_type: type, priority, active
+  };
+
+  if (type === 'period') {
+    payload.start_date = document.getElementById('pr_start')?.value || null;
+    payload.end_date   = document.getElementById('pr_end')?.value || null;
+    payload.price      = parseFloat(document.getElementById('pr_price')?.value) || null;
+  } else if (type === 'weekday') {
+    payload.days_of_week = Array.from(document.querySelectorAll('input[name="pr_day"]:checked')).map(c => parseInt(c.value));
+    payload.price = parseFloat(document.getElementById('pr_price')?.value) || null;
+  } else if (type === 'min_stay') {
+    payload.min_nights = parseInt(document.getElementById('pr_min_nights')?.value) || null;
+  } else if (type === 'long_stay') {
+    payload.discount_pct           = parseFloat(document.getElementById('pr_discount_pct')?.value) || null;
+    payload.discount_after_nights  = parseInt(document.getElementById('pr_discount_nights')?.value) || null;
+  }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const method = ruleId ? 'PUT' : 'POST';
+    const url = ruleId
+      ? `${API_PRICING}/api/pricing/rules/${ruleId}`
+      : `${API_PRICING}/api/pricing/rules`;
+
+    const resp = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) throw new Error('Erreur serveur');
+
+    document.getElementById('pricingRuleModal')?.remove();
+    showToast(ruleId ? 'Règle modifiée' : 'Règle créée', 'success');
+    await loadPricingRules(_currentPricingPropertyId);
+  } catch(e) {
+    showToast('Erreur lors de la sauvegarde', 'error');
+  }
+}
+
+async function pushRulesToChannex() {
+  if (!_currentPricingPropertyId) return;
+  const btn = document.getElementById('btnPushChannex');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Synchronisation...'; }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const resp = await fetch(`${API_PRICING}/api/pricing/rules/push-channex/${_currentPricingPropertyId}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erreur serveur');
+    showToast(data.message || 'Prix synchronisés avec Channex ✅', 'success');
+  } catch(e) {
+    showToast(e.message || 'Erreur de synchronisation', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Synchroniser les prix avec Channex'; }
   }
 }
