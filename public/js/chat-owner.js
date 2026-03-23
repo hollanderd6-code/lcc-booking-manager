@@ -416,59 +416,12 @@ async function openChat(conversationId) {
     copyLinkBtn.style.display = 'none';
   }
   
-  // Détecter si conversation liée à Channex (Airbnb/Booking)
+  // Détecter Channex en arrière-plan (après que showInlineChat ait rendu l'UI)
   currentChannexBookingId = null;
+  window._currentChannexBookingId = null;
   const bookingBtn = document.getElementById('btnBookingMessage');
-
-  // Vérifier channex_booking_id via API
-  try {
-    const token = localStorage.getItem('lcc_token');
-    const chxRes = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages-channex`, {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (chxRes.ok) {
-      const chxData = await chxRes.json();
-      if (chxData.channex_booking_id) {
-        currentChannexBookingId = chxData.channex_booking_id;
-        window._currentChannexBookingId = currentChannexBookingId;
-
-        // Indiquer visuellement que l'envoi ira sur la plateforme
-        if (bookingBtn) bookingBtn.style.display = 'none'; // caché, inutile
-
-        // Adapter le bouton sendBtn pour indiquer la plateforme
-        const sendBtn = document.getElementById('sendBtn');
-        const platform = (conv.platform || '').toLowerCase();
-        const platformLabel = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking.com' : 'Plateforme';
-        const platformColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
-        if (sendBtn) {
-          sendBtn.title = `Envoyer sur ${platformLabel}`;
-          sendBtn.style.background = platformColor;
-          sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i>`;
-        }
-        const chatInput = document.getElementById('chatInput');
-        if (chatInput) chatInput.placeholder = `Répondre via ${platformLabel}…`;
-
-        // Injecter les messages Channex non encore en DB
-        if (chxData.channex_messages && chxData.channex_messages.length > 0) {
-          _injectChannexMessages(chxData.channex_messages);
-        }
-      } else {
-        // Pas de Channex — reset le bouton sendBtn à l'état normal
-        if (bookingBtn) bookingBtn.style.display = 'none';
-        const sendBtn = document.getElementById('sendBtn');
-        if (sendBtn) {
-          sendBtn.style.background = '';
-          sendBtn.title = 'Envoyer';
-          sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i>`;
-        }
-        const chatInput = document.getElementById('chatInput');
-        if (chatInput) chatInput.placeholder = 'Répondre à…';
-      }
-    }
-  } catch(e) {
-    console.warn('⚠️ Channex check:', e.message);
-    if (bookingBtn) bookingBtn.style.display = 'none';
-  }
+  if (bookingBtn) bookingBtn.style.display = 'none';
+  setTimeout(() => _checkChannexConversation(conversationId, conv), 200);
   
   // Afficher la modal
   const modal = document.getElementById('chatModal');
@@ -1155,6 +1108,54 @@ document.addEventListener('keydown', (e) => {
     closeChat();
   }
 });
+
+// ============================================
+// DÉTECTION CHANNEX (appelée après rendu UI)
+// ============================================
+async function _checkChannexConversation(conversationId, conv) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const chxRes = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages-channex`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!chxRes.ok) return;
+
+    const chxData = await chxRes.json();
+
+    if (chxData.channex_booking_id) {
+      currentChannexBookingId = chxData.channex_booking_id;
+      window._currentChannexBookingId = currentChannexBookingId;
+
+      // Adapter le sendBtn pour la plateforme
+      const platform = (conv ? conv.platform || '' : '').toLowerCase();
+      const platformLabel = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking.com' : 'Plateforme';
+      const platformColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) {
+        sendBtn.title = `Envoyer sur ${platformLabel}`;
+        sendBtn.style.background = platformColor;
+      }
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) chatInput.placeholder = `Répondre via ${platformLabel}…`;
+
+      // Injecter messages Channex non encore en DB
+      if (chxData.channex_messages && chxData.channex_messages.length > 0) {
+        _injectChannexMessages(chxData.channex_messages);
+      }
+
+      console.log(`✅ [CHANNEX] Conversation ${conversationId} liée au booking ${chxData.channex_booking_id}`);
+    } else {
+      // Reset sendBtn état normal
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) { sendBtn.style.background = ''; sendBtn.title = 'Envoyer'; }
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) chatInput.placeholder = 'Répondre à…';
+    }
+  } catch(e) {
+    console.warn('⚠️ [CHANNEX] check:', e.message);
+  }
+}
 
 // ============================================
 // EXPOSER LES FONCTIONS GLOBALEMENT
