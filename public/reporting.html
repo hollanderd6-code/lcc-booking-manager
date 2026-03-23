@@ -1,99 +1,137 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme-v3="1">
+<html data-theme="light" lang="fr" data-theme-v3="1">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Reporting — Boostinghost</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<meta charset="utf-8"/>
+<meta content="no-store, no-cache, must-revalidate, max-age=0" http-equiv="Cache-Control"/>
+<meta content="no-cache" http-equiv="Pragma"/>
+<meta content="0" http-equiv="Expires"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Boostinghost – Revenus</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
+<link href="/css/menu-plus-fixes.css" rel="stylesheet"/>
+<link href="/css/menu-active-button.css" rel="stylesheet"/>
+<link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link href="/css/messages-badge-red.css" rel="stylesheet"/>
+<link href="/css/messages-badge-desktop.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="/css/bh-theme-v3.css"/>
 <style>
+html, body { margin: 0 !important; }
+.app-container { margin-top: 0 !important; }
+
+/* ── Variables ── */
 :root {
   --primary: #1A7A5E;
   --primary-light: rgba(26,122,94,.08);
-  --primary-mid: rgba(26,122,94,.15);
+  --primary-mid: rgba(26,122,94,.18);
   --bg: #F5F2EC;
-  --card-bg: #FFFFFF;
   --border: #E8E0D0;
   --text: #0D1117;
   --text-muted: #6B7280;
   --text-soft: #9CA3AF;
-  --red: #dc2626;
-  --orange: #f59e0b;
-  --blue: #3b82f6;
-  --purple: #8b5cf6;
-  --radius: 16px;
-  --shadow: 0 2px 12px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 24px rgba(0,0,0,.08);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-}
-
-/* ── Layout ── */
-.page-wrapper {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px 20px 60px;
-}
-
-/* ── Header ── */
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+/* ── Stats row (même pattern que factures) ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
+  margin-bottom: 24px;
 }
-.page-title {
-  font-size: 26px;
+@media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 500px) { .stats-row { grid-template-columns: 1fr; } }
+
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--kpi-accent, var(--primary));
+}
+.stat-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: var(--kpi-bg, var(--primary-light));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  color: var(--kpi-accent, var(--primary));
+  margin-bottom: 12px;
+}
+.stat-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+.stat-value {
+  display: block;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -.3px;
+  letter-spacing: -.4px;
 }
-.page-subtitle {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin-top: 4px;
+.stat-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--primary);
+  margin-top: 5px;
 }
-.header-controls {
+
+/* ── Contrôles ── */
+.reporting-controls {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-/* ── Controls ── */
-.ctrl-select {
-  padding: 9px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
+  margin-bottom: 24px;
+  padding: 14px 18px;
   background: white;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.ctrl-select {
+  padding: 8px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: var(--text);
   cursor: pointer;
   outline: none;
-  min-width: 130px;
+  min-width: 140px;
+}
+.ctrl-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 .btn-export {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 16px;
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 16px;
   background: var(--primary);
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 600;
@@ -101,533 +139,333 @@ body {
   transition: opacity .15s;
 }
 .btn-export:hover { opacity: .88; }
-.btn-secondary {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 16px;
+.btn-csv {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px;
   background: white;
   color: var(--text);
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: 9px;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
 }
+.ml-auto { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
-/* ── KPI Cards ── */
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 24px;
-}
-@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
-
-.kpi-card {
+/* ── Cards ── */
+.card {
   background: white;
-  border-radius: var(--radius);
-  padding: 20px;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  position: relative;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
   overflow: hidden;
+  margin-bottom: 16px;
 }
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--kpi-color, var(--primary));
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
 }
-.kpi-icon {
-  width: 36px; height: 36px;
-  border-radius: 9px;
-  background: var(--kpi-bg, var(--primary-light));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px;
-  color: var(--kpi-color, var(--primary));
-  margin-bottom: 14px;
+.card-title {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
 }
-.kpi-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -.5px;
-  font-family: 'DM Mono', monospace;
-}
-.kpi-label {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 4px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-}
-.kpi-sub {
-  font-size: 11px;
-  color: var(--text-soft);
-  margin-top: 6px;
-}
+.card-title i { color: var(--primary); font-size: 13px; }
 
-/* ── Sections ── */
-.section-grid {
+/* ── Grid layouts ── */
+.grid-2-1 {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
 }
-@media (max-width: 900px) { .section-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .grid-2-1 { grid-template-columns: 1fr; } }
 
-.section-grid-3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-@media (max-width: 900px) { .section-grid-3 { grid-template-columns: 1fr; } }
-
-.card {
-  background: white;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--border);
-}
-.card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.card-title i { color: var(--primary); font-size: 13px; }
-.card-body { padding: 20px; }
-
-/* ── Chart ── */
-.chart-container {
-  position: relative;
-  height: 260px;
-  padding: 16px 20px 20px;
-}
-.chart-mini {
-  position: relative;
-  height: 180px;
-  padding: 16px 20px 20px;
-}
-
-/* ── Platform pills ── */
-.platform-list { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; }
-.platform-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.platform-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.platform-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); }
-.platform-bar-wrap {
-  flex: 2;
-  height: 6px;
+/* ── Tabs ── */
+.view-tabs {
+  display: flex; gap: 3px;
   background: var(--bg);
-  border-radius: 99px;
-  overflow: hidden;
+  border-radius: 9px;
+  padding: 3px;
+  border: 1px solid var(--border);
 }
-.platform-bar {
-  height: 100%;
-  border-radius: 99px;
-  transition: width .5s ease;
-}
-.platform-pct {
-  font-size: 12px;
-  font-weight: 700;
+.view-tab {
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; border: none;
+  background: transparent;
   color: var(--text-muted);
-  min-width: 36px;
-  text-align: right;
-  font-family: 'DM Mono', monospace;
+  font-family: 'DM Sans', sans-serif;
+  transition: all .12s;
 }
-.platform-rev {
-  font-size: 12px;
-  color: var(--text-soft);
-  min-width: 70px;
-  text-align: right;
-  font-family: 'DM Mono', monospace;
+.view-tab.active {
+  background: white; color: var(--primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
 }
 
-/* ── Property cards ── */
-.property-report-list { display: flex; flex-direction: column; gap: 0; }
-.property-report-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto auto;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
+/* ── Graphiques ── */
+.chart-wrap { position: relative; height: 250px; padding: 16px 20px 20px; }
+.chart-mini { position: relative; height: 170px; padding: 14px 20px 16px; }
+
+/* ── Plateforme ── */
+.platform-list { padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; }
+.platform-row { display: flex; align-items: center; gap: 10px; }
+.platform-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.platform-name { flex: 1; font-size: 13px; font-weight: 500; }
+.platform-bar-wrap { flex: 2; height: 5px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+.platform-bar { height: 100%; border-radius: 99px; }
+.platform-pct { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 34px; text-align: right; }
+.platform-rev { font-size: 12px; color: var(--text-soft); min-width: 72px; text-align: right; }
+
+/* ── Table propriétés ── */
+.prop-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.prop-table th {
+  padding: 9px 16px;
+  text-align: right;
+  font-size: 11px; font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .4px;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg);
+}
+.prop-table th:first-child { text-align: left; }
+.prop-table td {
+  padding: 12px 16px;
+  text-align: right;
   border-bottom: 1px solid var(--border);
-  transition: background .12s;
-}
-.property-report-row:last-child { border-bottom: none; }
-.property-report-row:hover { background: var(--bg); }
-.prop-name-wrap { display: flex; align-items: center; gap: 10px; }
-.prop-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.prop-name { font-size: 13px; font-weight: 600; color: var(--text); }
-.prop-nights { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-.prop-metric {
-  text-align: right;
-  min-width: 72px;
-}
-.prop-metric-value {
-  font-size: 13px;
-  font-weight: 700;
   color: var(--text);
-  font-family: 'DM Mono', monospace;
 }
-.prop-metric-label {
-  font-size: 10px;
-  color: var(--text-soft);
-  text-transform: uppercase;
-  letter-spacing: .3px;
-  margin-top: 1px;
-}
-.occupancy-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: 'DM Mono', monospace;
+.prop-table td:first-child { text-align: left; }
+.prop-table tr:last-child td { border-bottom: none; }
+.prop-table tr:hover td { background: var(--bg); }
+.prop-table tfoot td {
+  font-weight: 700; background: var(--primary-light);
+  color: var(--primary); border-top: 2px solid var(--primary-mid);
+  border-bottom: none;
 }
 
-/* ── Monthly table ── */
+/* ── Table mensuelle ── */
 .monthly-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .monthly-table th {
-  padding: 10px 12px;
-  text-align: right;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .4px;
+  padding: 9px 16px; text-align: right;
+  font-size: 11px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px;
   border-bottom: 2px solid var(--border);
   background: var(--bg);
 }
 .monthly-table th:first-child { text-align: left; }
 .monthly-table td {
-  padding: 11px 12px;
-  text-align: right;
-  border-bottom: 1px solid var(--border);
-  font-family: 'DM Mono', monospace;
-  font-size: 12px;
-  color: var(--text);
+  padding: 11px 16px; text-align: right;
+  border-bottom: 1px solid var(--border); color: var(--text);
 }
-.monthly-table td:first-child {
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text);
-  text-align: left;
-}
+.monthly-table td:first-child { text-align: left; font-weight: 600; }
 .monthly-table tr:last-child td { border-bottom: none; }
 .monthly-table tr:hover td { background: var(--bg); }
 .monthly-table tfoot td {
-  font-weight: 700;
-  background: var(--primary-light);
-  color: var(--primary);
-  border-top: 2px solid var(--primary-mid);
-  border-bottom: none;
-  font-family: 'DM Mono', monospace;
+  font-weight: 700; background: var(--primary-light);
+  color: var(--primary); border-top: 2px solid var(--primary-mid); border-bottom: none;
 }
-.monthly-table tfoot td:first-child {
-  font-family: 'DM Sans', sans-serif;
-}
-.zero { color: var(--text-soft) !important; }
+.zero { color: var(--text-soft) !important; font-weight: 400 !important; }
 
-/* ── Conciergerie export ── */
+/* ── Section conciergerie ── */
 .concierge-section {
   background: linear-gradient(135deg, rgba(26,122,94,.06), rgba(26,122,94,.02));
   border: 1.5px solid rgba(26,122,94,.2);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 20px;
   margin-bottom: 16px;
 }
 .concierge-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
 }
 .concierge-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 15px; font-weight: 700; color: var(--primary);
+  display: flex; align-items: center; gap: 8px;
 }
-.concierge-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
+.concierge-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
 @media (max-width: 600px) { .concierge-grid { grid-template-columns: 1fr 1fr; } }
 .concierge-kpi {
-  background: white;
-  border-radius: 12px;
-  padding: 14px 16px;
+  background: white; border-radius: 12px; padding: 14px 16px;
   border: 1px solid rgba(26,122,94,.15);
 }
-.concierge-kpi-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--primary);
-  font-family: 'DM Mono', monospace;
-}
-.concierge-kpi-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 3px;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-}
+.concierge-kpi-value { font-size: 19px; font-weight: 700; color: var(--primary); }
+.concierge-kpi-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .4px; }
 
 /* ── Loading ── */
 .loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-  gap: 16px;
-  color: var(--text-muted);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 80px 20px; gap: 14px; color: var(--text-muted);
 }
 .spinner {
-  width: 36px; height: 36px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
+  width: 32px; height: 32px;
+  border: 3px solid var(--border); border-top-color: var(--primary);
+  border-radius: 50%; animation: spin .7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.empty-state {
-  text-align: center;
-  padding: 48px 20px;
-  color: var(--text-soft);
-}
-.empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
-
-/* ── Tab bar vue ── */
-.view-tabs {
-  display: flex;
-  gap: 4px;
-  background: var(--bg);
-  border-radius: 10px;
-  padding: 3px;
-  border: 1px solid var(--border);
-}
-.view-tab {
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: 'DM Sans', sans-serif;
-  transition: all .15s;
-}
-.view-tab.active {
-  background: white;
-  color: var(--primary);
-  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+/* ── Occupancy badge ── */
+.occ-badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 700;
 }
 
-/* ── Badge ── */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-}
+html[data-theme-v3="1"] .main-content { background: #F5F2EC !important; }
 </style>
 </head>
-<body data-page="reporting" data-title="Revenus" data-subtitle="Analyse de vos performances financières" data-kicker="Facturation" data-back-href="/app.html" data-back-label="Retour au dashboard">
-<script src="/js/bh-layout.js"></script>
+
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="reporting" data-subtitle="Analyse de vos performances financières" data-title="Revenus">
 
 <div class="app-container">
+<div id="bhSidebar"></div>
+<div class="main-wrapper">
+<header class="top-bar"></header>
 <main class="main-content">
 <div id="bhHeader"></div>
 
-<div class="page-wrapper">
+<!-- Contrôles -->
+<div class="reporting-controls">
+  <select class="ctrl-select" id="yearSelect" onchange="loadReport()"></select>
+  <select class="ctrl-select" id="propertySelect" onchange="loadReport()">
+    <option value="">Tous les logements</option>
+  </select>
+  <span class="ctrl-label" id="reportSubtitle"></span>
+  <div class="ml-auto">
+    <button class="btn-csv" onclick="exportCSV()"><i class="fas fa-download"></i> CSV</button>
+    <button class="btn-export" onclick="exportConcierge()"><i class="fas fa-handshake"></i> Export conciergerie</button>
+  </div>
+</div>
 
-  <!-- Header généré par bh-layout.js via data-title / data-subtitle -->
+<!-- Loading -->
+<div id="loadingState" class="loading-state">
+  <div class="spinner"></div>
+  <div>Chargement des données...</div>
+</div>
 
-  <!-- Barre de contrôles -->
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
-    <select class="ctrl-select" id="yearSelect" onchange="loadReport()"></select>
-    <select class="ctrl-select" id="propertySelect" onchange="loadReport()">
-      <option value="">Tous les logements</option>
-    </select>
-    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
-      <div style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;" id="reportSubtitle"></div>
-      <button class="btn-secondary" onclick="exportCSV()">
-        <i class="fas fa-download"></i> CSV
+<!-- Contenu -->
+<div id="reportContent" style="display:none;">
+
+  <!-- KPI -->
+  <div class="stats-row" id="kpiGrid"></div>
+
+  <!-- Conciergerie (conditionnel) -->
+  <div class="concierge-section" id="conciergeSection" style="display:none;">
+    <div class="concierge-header">
+      <div class="concierge-title"><i class="fas fa-handshake"></i> Données conciergerie</div>
+      <button class="btn-export" onclick="exportConcierge()" style="font-size:12px;padding:7px 14px;">
+        <i class="fas fa-file-csv"></i> Exporter pour la compta
       </button>
-      <button class="btn-export" onclick="exportConcierge()">
-        <i class="fas fa-handshake"></i> Export conciergerie
-      </button>
+    </div>
+    <div class="concierge-grid" id="conciergeGrid"></div>
+  </div>
+
+  <!-- Graphiques -->
+  <div class="grid-2-1">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-chart-bar"></i> Revenus par mois</div>
+        <div class="view-tabs">
+          <button class="view-tab active" onclick="switchChart('gross',this)">Brut</button>
+          <button class="view-tab" onclick="switchChart('net',this)">Net</button>
+          <button class="view-tab" onclick="switchChart('owner',this)">Propriétaire</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-chart-pie"></i> Par plateforme</div>
+      </div>
+      <div class="chart-mini"><canvas id="platformChart"></canvas></div>
+      <div class="platform-list" id="platformList"></div>
     </div>
   </div>
 
-  <!-- État loading -->
-  <div id="loadingState" class="loading-state">
-    <div class="spinner"></div>
-    <div>Chargement des données...</div>
+  <!-- Par logement -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-home"></i> Par logement</div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="prop-table" id="propTable"></table>
+    </div>
   </div>
 
-  <!-- Contenu principal (caché pendant loading) -->
-  <div id="reportContent" style="display:none;">
-
-    <!-- KPI Cards -->
-    <div class="kpi-grid" id="kpiGrid"></div>
-
-    <!-- Section conciergerie (conditionnelle) -->
-    <div class="concierge-section" id="conciergeSection" style="display:none;">
-      <div class="concierge-header">
-        <div class="concierge-title">
-          <i class="fas fa-handshake"></i>
-          Données conciergerie
-        </div>
-        <button class="btn-export" onclick="exportConcierge()" style="font-size:12px;padding:7px 14px;">
-          <i class="fas fa-file-csv"></i> Exporter pour la compta
-        </button>
-      </div>
-      <div class="concierge-grid" id="conciergeGrid"></div>
+  <!-- Tableau mensuel -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-table"></i> Détail mensuel</div>
     </div>
-
-    <!-- Revenus par mois + Répartition plateforme -->
-    <div class="section-grid">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title"><i class="fas fa-chart-bar"></i> Revenus par mois</div>
-          <div class="view-tabs">
-            <button class="view-tab active" onclick="switchChart('gross', this)">Brut</button>
-            <button class="view-tab" onclick="switchChart('net', this)">Net</button>
-            <button class="view-tab" onclick="switchChart('owner', this)">Propriétaire</button>
-          </div>
-        </div>
-        <div class="chart-container">
-          <canvas id="monthlyChart"></canvas>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title"><i class="fas fa-chart-pie"></i> Répartition plateforme</div>
-        </div>
-        <div class="chart-mini">
-          <canvas id="platformChart"></canvas>
-        </div>
-        <div class="platform-list" id="platformList"></div>
-      </div>
+    <div style="overflow-x:auto;">
+      <table class="monthly-table" id="monthlyTable"></table>
     </div>
+  </div>
 
-    <!-- Par logement -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-header">
-        <div class="card-title"><i class="fas fa-home"></i> Par logement</div>
-      </div>
-      <div class="property-report-list" id="propertyList"></div>
-    </div>
+</div><!-- /reportContent -->
 
-    <!-- Tableau mensuel détaillé -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-header">
-        <div class="card-title"><i class="fas fa-table"></i> Détail mensuel</div>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="monthly-table" id="monthlyTable"></table>
-      </div>
-    </div>
-
-  </div><!-- /reportContent -->
-
-</div><!-- /page-wrapper -->
 </main>
+</div>
 </div><!-- /app-container -->
 
 <script>
+  // Auth guard
+  const _tok = localStorage.getItem('lcc_token');
+  if (!_tok) window.location.href = '/login.html';
+</script>
+<script src="/js/bh-layout.js"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
+
+<script>
 const API_URL = 'https://lcc-booking-manager.onrender.com';
-let _reportData = null;
-let _monthlyChart = null;
-let _platformChart = null;
-let _currentChartType = 'gross';
+let _data = null;
+let _chartBar = null;
+let _chartPie = null;
+let _chartMode = 'gross';
 
 const PLATFORM_COLORS = {
-  'Airbnb':      '#FF5A5F',
-  'Booking.com': '#003580',
-  'Expedia':     '#FFC72C',
-  'Vrbo':        '#1A5276',
-  'Direct':      '#1A7A5E'
+  'Airbnb': '#FF5A5F', 'Booking.com': '#003580',
+  'Expedia': '#FFC72C', 'Vrbo': '#1A5276', 'Direct': '#1A7A5E'
 };
-const DEFAULT_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899'];
+const FALLBACK_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899'];
 
 // ── Init ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  // Remplir le sélecteur d'années
-  const yearSel = document.getElementById('yearSelect');
-  const currentYear = new Date().getFullYear();
-  for (let y = currentYear; y >= currentYear - 3; y--) {
-    const opt = document.createElement('option');
-    opt.value = y; opt.textContent = y;
-    if (y === currentYear) opt.selected = true;
-    yearSel.appendChild(opt);
+  const sel = document.getElementById('yearSelect');
+  const y = new Date().getFullYear();
+  for (let i = y; i >= y - 3; i--) {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = i;
+    if (i === y) o.selected = true;
+    sel.appendChild(o);
   }
-
-  // Charger les logements pour le filtre
-  await loadProperties();
+  await fetchProperties();
   await loadReport();
 });
 
-async function loadProperties() {
+async function fetchProperties() {
   try {
-    const token = localStorage.getItem('lcc_token');
-    const resp = await fetch(`${API_URL}/api/properties`, {
-      headers: { 'Authorization': 'Bearer ' + token }
+    const r = await fetch(`${API_URL}/api/properties`, {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
     });
-    if (!resp.ok) return;
-    const data = await resp.json();
+    if (!r.ok) return;
+    const d = await r.json();
     const sel = document.getElementById('propertySelect');
-    (data.properties || []).forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.name;
-      sel.appendChild(opt);
+    (d.properties || []).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name;
+      sel.appendChild(o);
     });
-  } catch(e) { console.warn('loadProperties:', e.message); }
+  } catch(e) {}
 }
 
 async function loadReport() {
-  const year     = document.getElementById('yearSelect').value;
-  const propId   = document.getElementById('propertySelect').value;
-  const token    = localStorage.getItem('lcc_token');
+  const year   = document.getElementById('yearSelect').value;
+  const propId = document.getElementById('propertySelect').value;
+  const token  = localStorage.getItem('lcc_token');
 
   document.getElementById('loadingState').style.display = 'flex';
   document.getElementById('reportContent').style.display = 'none';
@@ -635,117 +473,65 @@ async function loadReport() {
   try {
     let url = `${API_URL}/api/reporting?year=${year}`;
     if (propId) url += `&property_id=${propId}`;
-
-    const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!resp.ok) throw new Error('Erreur serveur ' + resp.status);
-    _reportData = await resp.json();
-
-    renderReport(_reportData);
+    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) throw new Error('Erreur ' + r.status);
+    _data = await r.json();
+    render(_data);
   } catch(e) {
-    console.error('loadReport:', e.message);
     document.getElementById('loadingState').innerHTML = `
-      <i class="fas fa-exclamation-circle" style="font-size:36px;color:#dc2626;"></i>
-      <div>Erreur de chargement</div>
+      <i class="fas fa-exclamation-circle" style="font-size:32px;color:#dc2626;"></i>
+      <div style="font-weight:600;">Erreur de chargement</div>
       <div style="font-size:12px;color:#9CA3AF;">${e.message}</div>
     `;
   }
 }
 
-function fmt(n) {
-  if (n == null || isNaN(n)) return '—';
-  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' €';
-}
-function fmtPct(n) { return (n || 0) + '%'; }
-function fmtNum(n) { return new Intl.NumberFormat('fr-FR').format(n || 0); }
+// ── Formatters ────────────────────────────────────────────────
+const fmt   = n => n == null || isNaN(n) ? '—' : new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(n) + ' €';
+const fmtN  = n => new Intl.NumberFormat('fr-FR').format(n || 0);
 
-// ── Render principal ─────────────────────────────────────────
-function renderReport(data) {
-  const s = data.summary || {};
+// ── Render ────────────────────────────────────────────────────
+function render(d) {
+  const s = d.summary || {};
 
-  // Sous-titre
   document.getElementById('reportSubtitle').textContent =
-    `${data.year} · ${fmtNum(s.totalBookings)} réservation${s.totalBookings > 1 ? 's' : ''} · ${fmtNum(s.totalNights)} nuits`;
+    `${d.year} · ${fmtN(s.totalBookings)} réservation${s.totalBookings > 1 ? 's' : ''} · ${fmtN(s.totalNights)} nuits`;
 
-  // KPI Cards
   renderKPIs(s);
-
-  // Conciergerie
-  renderConcierge(data);
-
-  // Charts
-  renderMonthlyChart(data.monthly, _currentChartType);
-  renderPlatformChart(data.platforms);
-
-  // Par logement
-  renderPropertyList(data.byProperty);
-
-  // Tableau mensuel
-  renderMonthlyTable(data.monthly);
+  renderConcierge(d);
+  renderBarChart(d.monthly, _chartMode);
+  renderPieChart(d.platforms);
+  renderPropTable(d.byProperty);
+  renderMonthlyTable(d.monthly, d.byProperty);
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('reportContent').style.display = 'block';
 }
 
 function renderKPIs(s) {
-  const kpis = [
-    {
-      label: 'CA Brut',
-      value: fmt(s.totalGrossRevenue),
-      icon: 'fa-euro-sign',
-      color: '#1A7A5E',
-      bg: 'rgba(26,122,94,.08)',
-      sub: `dont ${fmt(s.totalCleaningFee)} ménage`
-    },
-    {
-      label: 'Revenu net hors taxe',
-      value: fmt(s.totalNetRevenue),
-      icon: 'fa-wallet',
-      color: '#3b82f6',
-      bg: 'rgba(59,130,246,.08)',
-      sub: `Taxe séjour : ${fmt(s.totalTouristTax)}`
-    },
-    {
-      label: 'Revenu propriétaire',
-      value: fmt(s.totalOwnerRevenue),
-      icon: 'fa-home',
-      color: '#8b5cf6',
-      bg: 'rgba(139,92,246,.08)',
-      sub: `Conciergerie : ${fmt(s.totalConcierge)}`
-    },
-    {
-      label: 'Réservations',
-      value: fmtNum(s.totalBookings),
-      icon: 'fa-calendar-check',
-      color: '#f59e0b',
-      bg: 'rgba(245,158,11,.08)',
-      sub: `Moy. ${s.avgNightsPerBooking || 0} nuits / séjour`
-    }
+  const cards = [
+    { label:'CA Brut', value: fmt(s.totalGrossRevenue), sub:`dont ${fmt(s.totalCleaningFee)} ménage`, accent:'#1A7A5E', bg:'rgba(26,122,94,.08)', icon:'fa-euro-sign' },
+    { label:'Revenu net', value: fmt(s.totalNetRevenue), sub:`Taxe séjour : ${fmt(s.totalTouristTax)}`, accent:'#3b82f6', bg:'rgba(59,130,246,.08)', icon:'fa-wallet' },
+    { label:'Revenu propriétaire', value: fmt(s.totalOwnerRevenue), sub:`Conciergerie : ${fmt(s.totalConcierge)}`, accent:'#8b5cf6', bg:'rgba(139,92,246,.08)', icon:'fa-home' },
+    { label:'Réservations', value: fmtN(s.totalBookings), sub:`Moy. ${s.avgNightsPerBooking || 0} nuits / séjour`, accent:'#f59e0b', bg:'rgba(245,158,11,.08)', icon:'fa-calendar-check' }
   ];
-
-  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
-    <div class="kpi-card" style="--kpi-color:${k.color};--kpi-bg:${k.bg};">
-      <div class="kpi-icon"><i class="fas ${k.icon}"></i></div>
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-sub">${k.sub}</div>
+  document.getElementById('kpiGrid').innerHTML = cards.map(c => `
+    <div class="stat-card" style="--kpi-accent:${c.accent};--kpi-bg:${c.bg};">
+      <div class="stat-icon"><i class="fas ${c.icon}"></i></div>
+      <span class="stat-label">${c.label}</span>
+      <span class="stat-value">${c.value}</span>
+      <span class="stat-sub">${c.sub}</span>
     </div>
   `).join('');
 }
 
-function renderConcierge(data) {
-  const s = data.summary || {};
-  const hasConcierge = data.byProperty && data.byProperty.some(p => p.conciergePct > 0);
-  const section = document.getElementById('conciergeSection');
-
-  if (!hasConcierge || s.totalConcierge === 0) {
-    section.style.display = 'none';
-    return;
-  }
-
-  section.style.display = 'block';
-  const grid = document.getElementById('conciergeGrid');
-
-  grid.innerHTML = `
+function renderConcierge(d) {
+  const s = d.summary || {};
+  const has = d.byProperty && d.byProperty.some(p => p.conciergePct > 0);
+  const sec = document.getElementById('conciergeSection');
+  if (!has || !s.totalConcierge) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  document.getElementById('conciergeGrid').innerHTML = `
     <div class="concierge-kpi">
       <div class="concierge-kpi-value">${fmt(s.totalConcierge)}</div>
       <div class="concierge-kpi-label">Commission totale</div>
@@ -755,10 +541,10 @@ function renderConcierge(data) {
       <div class="concierge-kpi-label">Versé au propriétaire</div>
     </div>
     <div class="concierge-kpi">
-      <div class="concierge-kpi-value">${fmtNum(s.totalBookings)}</div>
+      <div class="concierge-kpi-value">${fmtN(s.totalBookings)}</div>
       <div class="concierge-kpi-label">Séjours gérés</div>
     </div>
-    ${(data.byProperty || []).filter(p => p.conciergePct > 0).map(p => `
+    ${(d.byProperty||[]).filter(p=>p.conciergePct>0).map(p=>`
       <div class="concierge-kpi">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
           <div style="width:8px;height:8px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
@@ -771,118 +557,74 @@ function renderConcierge(data) {
   `;
 }
 
-function renderMonthlyChart(monthly, type) {
+function renderBarChart(monthly, type) {
   const labels = monthly.map(m => m.label);
-  const dataMap = {
-    gross: monthly.map(m => m.grossRevenue),
-    net:   monthly.map(m => m.netRevenue),
-    owner: monthly.map(m => m.ownerRevenue)
-  };
-  const colorMap = {
-    gross: '#1A7A5E',
-    net:   '#3b82f6',
-    owner: '#8b5cf6'
-  };
-  const values = dataMap[type] || dataMap.gross;
-  const color  = colorMap[type] || '#1A7A5E';
+  const map = { gross: monthly.map(m=>m.grossRevenue), net: monthly.map(m=>m.netRevenue), owner: monthly.map(m=>m.ownerRevenue) };
+  const cols = { gross:'#1A7A5E', net:'#3b82f6', owner:'#8b5cf6' };
+  const vals = map[type] || map.gross;
+  const col  = cols[type] || '#1A7A5E';
 
-  if (_monthlyChart) _monthlyChart.destroy();
-
-  const ctx = document.getElementById('monthlyChart').getContext('2d');
-  _monthlyChart = new Chart(ctx, {
+  if (_chartBar) _chartBar.destroy();
+  _chartBar = new Chart(document.getElementById('monthlyChart').getContext('2d'), {
     type: 'bar',
     data: {
       labels,
       datasets: [{
-        data: values,
-        backgroundColor: values.map(v => v > 0 ? color + '22' : 'transparent'),
-        borderColor: values.map(v => v > 0 ? color : 'transparent'),
+        data: vals,
+        backgroundColor: col + '25',
+        borderColor: col,
         borderWidth: 2,
-        borderRadius: 8,
+        borderRadius: 7,
         borderSkipped: false
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => fmt(ctx.raw)
-          }
-        }
-      },
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label: c => fmt(c.raw) }}},
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#9CA3AF' } },
-        y: {
-          grid: { color: 'rgba(0,0,0,.04)' },
-          ticks: {
-            font: { family: 'DM Mono', size: 11 },
-            color: '#9CA3AF',
-            callback: v => v === 0 ? '0' : (v >= 1000 ? (v/1000).toFixed(0) + 'k€' : v + '€')
-          }
-        }
+        x: { grid:{ display:false }, ticks:{ font:{ family:'DM Sans', size:11 }, color:'#9CA3AF' }},
+        y: { grid:{ color:'rgba(0,0,0,.04)' }, ticks:{ font:{ family:'DM Sans', size:11 }, color:'#9CA3AF', callback: v => v===0?'0':(v>=1000?(v/1000).toFixed(0)+'k€':v+'€') }}
       }
     }
   });
 }
 
 function switchChart(type, btn) {
-  _currentChartType = type;
+  _chartMode = type;
   document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  if (_reportData) renderMonthlyChart(_reportData.monthly, type);
+  if (_data) renderBarChart(_data.monthly, type);
 }
 
-function renderPlatformChart(platforms) {
+function renderPieChart(platforms) {
   if (!platforms || !platforms.length) return;
-
   const labels = platforms.map(p => p.name);
-  const values = platforms.map(p => p.bookings);
-  const colors = platforms.map(p => PLATFORM_COLORS[p.name] || DEFAULT_COLORS[platforms.indexOf(p) % DEFAULT_COLORS.length]);
+  const vals   = platforms.map(p => p.bookings);
+  const colors = platforms.map((p,i) => PLATFORM_COLORS[p.name] || FALLBACK_COLORS[i % FALLBACK_COLORS.length]);
 
-  if (_platformChart) _platformChart.destroy();
-
-  const ctx = document.getElementById('platformChart').getContext('2d');
-  _platformChart = new Chart(ctx, {
+  if (_chartPie) _chartPie.destroy();
+  _chartPie = new Chart(document.getElementById('platformChart').getContext('2d'), {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{
-        data: values,
-        backgroundColor: colors.map(c => c + 'CC'),
-        borderColor: colors,
-        borderWidth: 2,
-        hoverOffset: 6
-      }]
+      datasets: [{ data: vals, backgroundColor: colors.map(c=>c+'CC'), borderColor: colors, borderWidth: 2, hoverOffset: 5 }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '68%',
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
       plugins: {
         legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.label}: ${ctx.raw} rés. (${platforms[ctx.dataIndex]?.pct || 0}%)`
-          }
-        }
+        tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw} rés. (${platforms[c.dataIndex]?.pct||0}%)` }}
       }
     }
   });
 
-  // Liste plateforme
-  const totalBookings = platforms.reduce((s, p) => s + p.bookings, 0);
-  document.getElementById('platformList').innerHTML = platforms.map((p, i) => {
-    const color = PLATFORM_COLORS[p.name] || DEFAULT_COLORS[i % DEFAULT_COLORS.length];
+  document.getElementById('platformList').innerHTML = platforms.map((p,i) => {
+    const col = PLATFORM_COLORS[p.name] || FALLBACK_COLORS[i % FALLBACK_COLORS.length];
     return `
       <div class="platform-row">
-        <div class="platform-dot" style="background:${color};"></div>
+        <div class="platform-dot" style="background:${col};"></div>
         <div class="platform-name">${p.name}</div>
-        <div class="platform-bar-wrap">
-          <div class="platform-bar" style="width:${p.pct}%;background:${color};"></div>
-        </div>
+        <div class="platform-bar-wrap"><div class="platform-bar" style="width:${p.pct}%;background:${col};"></div></div>
         <div class="platform-pct">${p.pct}%</div>
         <div class="platform-rev">${fmt(p.revenue)}</div>
       </div>
@@ -890,183 +632,114 @@ function renderPlatformChart(platforms) {
   }).join('');
 }
 
-function renderPropertyList(byProperty) {
-  if (!byProperty || !byProperty.length) {
-    document.getElementById('propertyList').innerHTML = '<div class="empty-state"><i class="fas fa-home"></i>Aucun logement</div>';
-    return;
-  }
+function renderPropTable(props) {
+  if (!props || !props.length) return;
+  const hasConcierge = props.some(p => p.conciergePct > 0);
+  const thead = `<thead><tr>
+    <th>Logement</th>
+    <th>Rés.</th><th>Nuits</th>
+    <th>CA brut</th><th>Net</th>
+    ${hasConcierge ? '<th>Concierg.</th><th>Propriét.</th>' : ''}
+    <th>Taux occ.</th>
+  </tr></thead>`;
 
-  document.getElementById('propertyList').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;align-items:center;gap:12px;padding:10px 20px;background:var(--bg);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">
-      <div>Logement</div>
-      <div style="text-align:right;min-width:72px;">CA brut</div>
-      <div style="text-align:right;min-width:72px;">Net</div>
-      <div style="text-align:right;min-width:72px;">Concierg.</div>
-      <div style="text-align:right;min-width:72px;">Propriét.</div>
-      <div style="text-align:right;min-width:60px;">Taux occ.</div>
-    </div>
-    ${byProperty.map(p => {
-      const occ = p.occupancyRate || 0;
-      const occColor = occ >= 70 ? '#1A7A5E' : occ >= 40 ? '#f59e0b' : '#9CA3AF';
-      return `
-        <div class="property-report-row">
-          <div class="prop-name-wrap">
-            <div class="prop-dot" style="background:${p.color || '#10B981'};"></div>
-            <div>
-              <div class="prop-name">${p.name}</div>
-              <div class="prop-nights">${fmtNum(p.bookings)} rés. · ${fmtNum(p.nights)} nuits</div>
-            </div>
-          </div>
-          <div class="prop-metric">
-            <div class="prop-metric-value">${fmt(p.grossRevenue)}</div>
-            <div class="prop-metric-label">brut</div>
-          </div>
-          <div class="prop-metric">
-            <div class="prop-metric-value">${fmt(p.netRevenue)}</div>
-            <div class="prop-metric-label">net</div>
-          </div>
-          <div class="prop-metric">
-            <div class="prop-metric-value ${p.conciergeAmount === 0 ? 'zero' : ''}">${p.conciergeAmount > 0 ? fmt(p.conciergeAmount) : '—'}</div>
-            <div class="prop-metric-label">${p.conciergePct > 0 ? p.conciergePct + '%' : 'N/A'}</div>
-          </div>
-          <div class="prop-metric">
-            <div class="prop-metric-value">${fmt(p.ownerRevenue)}</div>
-            <div class="prop-metric-label">propriét.</div>
-          </div>
-          <div class="prop-metric">
-            <div class="occupancy-badge" style="background:${occColor}18;color:${occColor};">${occ}%</div>
+  const tbody = `<tbody>${props.map(p => {
+    const occ = p.occupancyRate || 0;
+    const occCol = occ >= 70 ? '#1A7A5E' : occ >= 40 ? '#f59e0b' : '#9CA3AF';
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:9px;height:9px;border-radius:50%;background:${p.color||'#10B981'};flex-shrink:0;"></div>
+          <div>
+            <div style="font-weight:600;font-size:13px;">${p.name}</div>
+            <div style="font-size:11px;color:#9CA3AF;">${fmtN(p.bookings)} rés.</div>
           </div>
         </div>
-      `;
-    }).join('')}
-  `;
+      </td>
+      <td>${fmtN(p.bookings)}</td>
+      <td>${fmtN(p.nights)}</td>
+      <td style="font-weight:600;">${fmt(p.grossRevenue)}</td>
+      <td>${fmt(p.netRevenue)}</td>
+      ${hasConcierge ? `<td class="${!p.conciergeAmount?'zero':''}">${p.conciergeAmount>0?fmt(p.conciergeAmount):'—'}</td><td style="font-weight:600;">${fmt(p.ownerRevenue)}</td>` : ''}
+      <td><span class="occ-badge" style="background:${occCol}18;color:${occCol};">${occ}%</span></td>
+    </tr>`;
+  }).join('')}</tbody>`;
+
+  document.getElementById('propTable').innerHTML = thead + tbody;
 }
 
-function renderMonthlyTable(monthly) {
-  const hasConcierge = _reportData?.byProperty?.some(p => p.conciergePct > 0);
+function renderMonthlyTable(monthly, byProp) {
+  const hasConcierge = byProp && byProp.some(p => p.conciergePct > 0);
+  const thead = `<thead><tr>
+    <th>Mois</th><th>Rés.</th><th>Nuits</th>
+    <th>CA brut</th><th>Ménage</th><th>Taxe séjour</th><th>Net</th>
+    ${hasConcierge ? '<th>Concierg.</th><th>Propriét.</th>' : ''}
+  </tr></thead>`;
 
-  let html = `
-    <thead>
-      <tr>
-        <th>Mois</th>
-        <th>Rés.</th>
-        <th>Nuits</th>
-        <th>CA brut</th>
-        <th>Ménage</th>
-        <th>Taxe séjour</th>
-        <th>Net</th>
-        ${hasConcierge ? '<th>Concierg.</th><th>Propriét.</th>' : ''}
-      </tr>
-    </thead>
-    <tbody>
-      ${monthly.map(m => `
-        <tr>
-          <td>${m.label}</td>
-          <td class="${m.bookings === 0 ? 'zero' : ''}">${fmtNum(m.bookings)}</td>
-          <td class="${m.nights === 0 ? 'zero' : ''}">${fmtNum(m.nights)}</td>
-          <td class="${m.grossRevenue === 0 ? 'zero' : ''}">${m.grossRevenue > 0 ? fmt(m.grossRevenue) : '—'}</td>
-          <td class="${m.cleaningFee === 0 ? 'zero' : ''}">${m.cleaningFee > 0 ? fmt(m.cleaningFee) : '—'}</td>
-          <td class="${m.touristTax === 0 ? 'zero' : ''}">${m.touristTax > 0 ? fmt(m.touristTax) : '—'}</td>
-          <td class="${m.netRevenue === 0 ? 'zero' : ''}">${m.netRevenue > 0 ? fmt(m.netRevenue) : '—'}</td>
-          ${hasConcierge ? `
-            <td class="${m.conciergeAmount === 0 ? 'zero' : ''}">${m.conciergeAmount > 0 ? fmt(m.conciergeAmount) : '—'}</td>
-            <td class="${m.ownerRevenue === 0 ? 'zero' : ''}">${m.ownerRevenue > 0 ? fmt(m.ownerRevenue) : '—'}</td>
-          ` : ''}
-        </tr>
-      `).join('')}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td>TOTAL</td>
-        <td>${fmtNum(monthly.reduce((s, m) => s + m.bookings, 0))}</td>
-        <td>${fmtNum(monthly.reduce((s, m) => s + m.nights, 0))}</td>
-        <td>${fmt(monthly.reduce((s, m) => s + m.grossRevenue, 0))}</td>
-        <td>${fmt(monthly.reduce((s, m) => s + m.cleaningFee, 0))}</td>
-        <td>${fmt(monthly.reduce((s, m) => s + m.touristTax, 0))}</td>
-        <td>${fmt(monthly.reduce((s, m) => s + m.netRevenue, 0))}</td>
-        ${hasConcierge ? `
-          <td>${fmt(monthly.reduce((s, m) => s + m.conciergeAmount, 0))}</td>
-          <td>${fmt(monthly.reduce((s, m) => s + m.ownerRevenue, 0))}</td>
-        ` : ''}
-      </tr>
-    </tfoot>
-  `;
-  document.getElementById('monthlyTable').innerHTML = html;
+  const tbody = `<tbody>${monthly.map(m => `<tr>
+    <td>${m.label}</td>
+    <td class="${!m.bookings?'zero':''}">${fmtN(m.bookings)}</td>
+    <td class="${!m.nights?'zero':''}">${fmtN(m.nights)}</td>
+    <td class="${!m.grossRevenue?'zero':''}">${m.grossRevenue>0?fmt(m.grossRevenue):'—'}</td>
+    <td class="${!m.cleaningFee?'zero':''}">${m.cleaningFee>0?fmt(m.cleaningFee):'—'}</td>
+    <td class="${!m.touristTax?'zero':''}">${m.touristTax>0?fmt(m.touristTax):'—'}</td>
+    <td class="${!m.netRevenue?'zero':''}">${m.netRevenue>0?fmt(m.netRevenue):'—'}</td>
+    ${hasConcierge ? `
+      <td class="${!m.conciergeAmount?'zero':''}">${m.conciergeAmount>0?fmt(m.conciergeAmount):'—'}</td>
+      <td class="${!m.ownerRevenue?'zero':''}">${m.ownerRevenue>0?fmt(m.ownerRevenue):'—'}</td>
+    ` : ''}
+  </tr>`).join('')}</tbody>`;
+
+  const sum = k => monthly.reduce((s,m) => s+(m[k]||0), 0);
+  const tfoot = `<tfoot><tr>
+    <td>TOTAL</td>
+    <td>${fmtN(sum('bookings'))}</td><td>${fmtN(sum('nights'))}</td>
+    <td>${fmt(sum('grossRevenue'))}</td><td>${fmt(sum('cleaningFee'))}</td>
+    <td>${fmt(sum('touristTax'))}</td><td>${fmt(sum('netRevenue'))}</td>
+    ${hasConcierge ? `<td>${fmt(sum('conciergeAmount'))}</td><td>${fmt(sum('ownerRevenue'))}</td>` : ''}
+  </tr></tfoot>`;
+
+  document.getElementById('monthlyTable').innerHTML = thead + tbody + tfoot;
 }
 
-// ── Export CSV global ─────────────────────────────────────────
+// ── Exports ───────────────────────────────────────────────────
 function exportCSV() {
-  if (!_reportData) return;
-  const year = _reportData.year;
-  const hasConcierge = _reportData.byProperty?.some(p => p.conciergePct > 0);
-
+  if (!_data) return;
+  const hasConcierge = _data.byProperty?.some(p => p.conciergePct > 0);
   const headers = ['Mois','Réservations','Nuits','CA Brut','Frais Ménage','Taxe Séjour','Revenu Net'];
   if (hasConcierge) headers.push('Commission Conciergerie','Revenu Propriétaire');
 
-  const rows = _reportData.monthly.map(m => {
-    const row = [m.label, m.bookings, m.nights, m.grossRevenue, m.cleaningFee, m.touristTax, m.netRevenue];
-    if (hasConcierge) row.push(m.conciergeAmount, m.ownerRevenue);
-    return row;
+  const rows = _data.monthly.map(m => {
+    const r = [m.label, m.bookings, m.nights, m.grossRevenue, m.cleaningFee, m.touristTax, m.netRevenue];
+    if (hasConcierge) r.push(m.conciergeAmount, m.ownerRevenue);
+    return r;
   });
-
-  // Ligne total
-  const total = ['TOTAL',
-    _reportData.monthly.reduce((s, m) => s + m.bookings, 0),
-    _reportData.monthly.reduce((s, m) => s + m.nights, 0),
-    _reportData.monthly.reduce((s, m) => s + m.grossRevenue, 0),
-    _reportData.monthly.reduce((s, m) => s + m.cleaningFee, 0),
-    _reportData.monthly.reduce((s, m) => s + m.touristTax, 0),
-    _reportData.monthly.reduce((s, m) => s + m.netRevenue, 0)
-  ];
-  if (hasConcierge) {
-    total.push(_reportData.monthly.reduce((s, m) => s + m.conciergeAmount, 0));
-    total.push(_reportData.monthly.reduce((s, m) => s + m.ownerRevenue, 0));
-  }
+  const sum = k => _data.monthly.reduce((s,m)=>s+(m[k]||0),0);
+  const total = ['TOTAL', sum('bookings'), sum('nights'), sum('grossRevenue'), sum('cleaningFee'), sum('touristTax'), sum('netRevenue')];
+  if (hasConcierge) total.push(sum('conciergeAmount'), sum('ownerRevenue'));
   rows.push(total);
 
-  downloadCSV(`reporting_${year}.csv`, headers, rows);
+  dlCSV(`revenus_${_data.year}.csv`, headers, rows);
 }
 
-// ── Export conciergerie (par logement, par réservation) ───────
 function exportConcierge() {
-  if (!_reportData) return;
-  const year = _reportData.year;
-  const resas = (_reportData.reservations || []).filter(r => r.conciergePct > 0);
-
+  if (!_data) return;
+  const resas = (_data.reservations||[]).filter(r => r.conciergePct > 0);
   if (!resas.length) {
-    alert('Aucune réservation avec commission conciergerie configurée.\n\nConfigurez le % dans Settings > Logement > Commission conciergerie.');
+    alert('Aucune réservation avec commission conciergerie.\n\nConfigurez le % dans Mes logements → Commission conciergerie.');
     return;
   }
-
   const headers = ['Logement','Plateforme','Arrivée','Départ','Nuits','Prix brut','Frais ménage','Taxe séjour','Revenu net','% Conciergerie','Commission','Versé propriétaire'];
-  const rows = resas.map(r => [
-    r.propertyName,
-    r.platform,
-    r.startDate,
-    r.endDate,
-    r.nights,
-    r.rawPrice,
-    r.cleaningFee,
-    r.touristTax,
-    r.netRevenue,
-    r.conciergePct + '%',
-    r.conciergeAmount,
-    r.ownerRevenue
-  ]);
-
-  downloadCSV(`conciergerie_${year}.csv`, headers, rows);
+  const rows = resas.map(r => [r.propertyName, r.platform, r.startDate, r.endDate, r.nights, r.rawPrice, r.cleaningFee, r.touristTax, r.netRevenue, r.conciergePct+'%', r.conciergeAmount, r.ownerRevenue]);
+  dlCSV(`conciergerie_${_data.year}.csv`, headers, rows);
 }
 
-function downloadCSV(filename, headers, rows) {
-  const bom = '\uFEFF'; // BOM pour Excel FR
-  const csv = bom + [headers, ...rows]
-    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'))
-    .join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
+function dlCSV(name, headers, rows) {
+  const bom = '\uFEFF';
+  const csv = bom + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+  a.download = name; a.click();
 }
 </script>
 </body>
