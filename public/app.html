@@ -1050,6 +1050,35 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       text-decoration: underline dotted 1.5px;
     }
 
+    /* Surbrillance des cellules avec règle de tarification active */
+    .calendar-cell.has-rule {
+      background: rgba(234, 179, 8, 0.07);
+    }
+    .calendar-cell.has-rule.weekend {
+      background: rgba(234, 179, 8, 0.1);
+    }
+    .calendar-cell.has-rule .cell-price {
+      color: #b45309; /* orange foncé = prix de règle */
+    }
+    .calendar-cell.has-rule.weekend .cell-price {
+      color: #c2410c; /* orange-rouge pour ven+sam avec règle */
+    }
+    /* Indicateur de règle min_stay — petit badge en haut à gauche */
+    .cell-min-stay {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      font-size: 8px;
+      font-weight: 700;
+      color: #6B7280;
+      background: rgba(107,114,128,.12);
+      border-radius: 3px;
+      padding: 1px 3px;
+      pointer-events: none;
+      user-select: none;
+      line-height: 1.2;
+    }
+
     /* Nom voyageur dans les blocs — tronqué avec ellipsis */
     .booking-guest-label {
       overflow: hidden;
@@ -5673,6 +5702,10 @@ window.LCC_PROPERTIES = properties;
 
         // Charger et appliquer les prix personnalisés depuis l'API
         loadPricingOverrides(state.properties);
+        // Charger et appliquer les règles de tarification
+        if (typeof window.loadPricingRules === 'function') {
+          window.loadPricingRules(state.properties);
+        }
         
                 
         // Mettre à jour le KPI des risques APRÈS que le DOM soit complètement chargé
@@ -5922,6 +5955,10 @@ window.LCC_PROPERTIES = properties;
       setTimeout(initScrollSync, 150);
       // Réappliquer les overrides après chaque rendu
       setTimeout(applyPricingOverridesFromCache, 50);
+      // Appliquer aussi les règles après chaque rendu
+      setTimeout(function() {
+        if (typeof window.applyPricingRulesToCells === 'function') window.applyPricingRulesToCells();
+      }, 80);
     }
 
         function renderDaysHeader(range) {
@@ -6021,12 +6058,32 @@ window.LCC_PROPERTIES = properties;
       if (isToday(dateObj)) cell.classList.add('today');
 
       // Prix de nuit dans la cellule
+      // Priorité : override manuel > règle active > prix de base
+      var cacheKeyCell = property.id + '_' + dateStr;
       var nightPrice = null;
-      if (isWeekend && property.weekendPrice != null) {
-        nightPrice = property.weekendPrice;
-      } else if (property.basePrice != null) {
-        nightPrice = property.basePrice;
+      var hasRule = false;
+
+      if (window._pricingOverrides && window._pricingOverrides[cacheKeyCell] != null) {
+        // Override manuel
+        nightPrice = window._pricingOverrides[cacheKeyCell];
+      } else if (window._pricingRulesCache && window._pricingRulesCache[property.id]) {
+        // Règle active pour ce logement + date
+        var rulePrice = getCalculatedPriceForDate(window._pricingRulesCache[property.id], dateStr, dow, property);
+        if (rulePrice != null) {
+          nightPrice = rulePrice.price;
+          hasRule = rulePrice.hasRule;
+        }
+      } else {
+        // Prix de base
+        if (isWeekend && property.weekendPrice != null) {
+          nightPrice = property.weekendPrice;
+        } else if (property.basePrice != null) {
+          nightPrice = property.basePrice;
+        }
       }
+
+      if (hasRule) cell.classList.add('has-rule');
+
       if (nightPrice != null) {
         var priceEl = document.createElement('span');
         priceEl.className = 'cell-price';
@@ -6815,6 +6872,152 @@ if (j === 0 || cells.length === 1) {
     </div>
   </div>
 </div>
+
+<script>
+// ─── Pricing Rules — cache et calcul ───────────────────────────
+window._pricingRulesCache = {}; // { [propertyId]: rules[] }
+
+// Charger les règles depuis l'API pour toutes les propriétés
+window.loadPricingRules = async function(properties) {
+  try {
+    var token = localStorage.getItem('lcc_token');
+    if (!token || !properties || !properties.length) return;
+    var API = (typeof API_URL !== 'undefined') ? API_URL : 'https://lcc-booking-manager.onrender.com';
+
+    // Une seule requête pour toutes les règles de l'utilisateur
+    var resp = await fetch(API + '/api/pricing/rules', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) return;
+    var data = await resp.json();
+    var rules = data.rules || [];
+
+    // Grouper par property_id
+    window._pricingRulesCache = {};
+    rules.forEach(function(r) {
+      if (!window._pricingRulesCache[r.property_id]) {
+        window._pricingRulesCache[r.property_id] = [];
+      }
+      window._pricingRulesCache[r.property_id].push(r);
+    });
+
+    console.log('✅ Pricing rules chargées:', rules.length, 'règles');
+    // Réappliquer sur les cellules visibles
+    applyPricingRulesToCells();
+  } catch(e) {
+    console.warn('⚠️ loadPricingRules:', e.message);
+  }
+};
+
+// Calculer le prix pour une date donnée selon les règles d'un logement
+window.getCalculatedPriceForDate = function(rules, dateStr, dow, property) {
+  if (!rules || !rules.length) return null;
+
+  var activeRules = rules.filter(function(r) { return r.active !== false; })
+                         .sort(function(a, b) { return (b.priority || 0) - (a.priority || 0); });
+
+  // Règles période
+  for (var i = 0; i < activeRules.length; i++) {
+    var r = activeRules[i];
+    if (r.rule_type === 'period' && r.start_date && r.end_date && r.price != null) {
+      var start = r.start_date.slice(0,10);
+      var end   = r.end_date.slice(0,10);
+      if (dateStr >= start && dateStr <= end) {
+        return { price: parseFloat(r.price), hasRule: true, ruleName: r.name };
+      }
+    }
+  }
+
+  // Règles jour de semaine
+  for (var j = 0; j < activeRules.length; j++) {
+    var r2 = activeRules[j];
+    if (r2.rule_type === 'weekday' && r2.days_of_week && r2.price != null) {
+      if (r2.days_of_week.indexOf(dow) !== -1) {
+        return { price: parseFloat(r2.price), hasRule: true, ruleName: r2.name };
+      }
+    }
+  }
+
+  // Pas de règle → prix de base du logement
+  var isPremium = (dow === 5 || dow === 6);
+  var basePrice = isPremium && property.weekendPrice != null
+    ? property.weekendPrice
+    : (property.basePrice != null ? property.basePrice : null);
+
+  return basePrice != null ? { price: basePrice, hasRule: false } : null;
+};
+
+// Appliquer les règles sur toutes les cellules visibles
+window.applyPricingRulesToCells = function() {
+  try {
+    var cells = document.querySelectorAll('.calendar-cell[data-date][data-property-id]');
+    cells.forEach(function(cell) {
+      var date    = cell.getAttribute('data-date');
+      var propId  = cell.getAttribute('data-property-id');
+
+      // Ignorer si réservation présente
+      if (cell.querySelector('.booking-block')) return;
+
+      var cacheKey = propId + '_' + date;
+
+      // Override manuel → priorité absolue, pas de surbrillance règle
+      if (window._pricingOverrides && window._pricingOverrides[cacheKey] != null) return;
+
+      var rules = window._pricingRulesCache && window._pricingRulesCache[propId];
+      if (!rules || !rules.length) return;
+
+      // Trouver la propriété
+      var props = window.LCC_PROPERTIES || window.allProperties || [];
+      var prop  = props.find(function(p) { return String(p.id) === String(propId); });
+      if (!prop) return;
+
+      var d   = new Date(date + 'T12:00:00');
+      var dow = d.getDay();
+      var result = window.getCalculatedPriceForDate(rules, date, dow, prop);
+      if (!result) return;
+
+      // Mettre à jour le prix affiché
+      var priceEl = cell.querySelector('.cell-price');
+      if (result.hasRule) {
+        cell.classList.add('has-rule');
+        if (priceEl) {
+          priceEl.textContent = Math.round(result.price);
+          priceEl.classList.remove('cell-price-override');
+        }
+      } else {
+        cell.classList.remove('has-rule');
+      }
+
+      // Afficher min_stay si applicable
+      var minStayRules = rules.filter(function(r) {
+        return r.active !== false && r.rule_type === 'min_stay' && r.min_nights != null;
+      });
+      var minStayBadge = cell.querySelector('.cell-min-stay');
+      var applicableMinStay = null;
+      for (var i = 0; i < minStayRules.length; i++) {
+        var mr = minStayRules[i];
+        if (!mr.start_date && !mr.end_date) { applicableMinStay = mr.min_nights; break; }
+        if (mr.start_date && mr.end_date) {
+          if (date >= mr.start_date.slice(0,10) && date <= mr.end_date.slice(0,10)) {
+            applicableMinStay = mr.min_nights; break;
+          }
+        }
+      }
+      if (applicableMinStay) {
+        if (!minStayBadge) {
+          var badge = document.createElement('span');
+          badge.className = 'cell-min-stay';
+          badge.title = 'Séjour minimum : ' + applicableMinStay + ' nuits';
+          badge.textContent = applicableMinStay + 'n+';
+          cell.appendChild(badge);
+        }
+      } else if (minStayBadge) {
+        minStayBadge.remove();
+      }
+    });
+  } catch(e) { console.warn('applyPricingRulesToCells:', e.message); }
+};
+</script>
 
 <script>
 // ─── Pricing overrides — scripts globaux isolés pour éviter tout crash ───
