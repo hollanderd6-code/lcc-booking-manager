@@ -77,7 +77,7 @@
         </button>`;
     }
 
-    // 4. Factures + Factures propriétaires
+    // 4. Factures + Factures propriétaires + Revenus
     if (hasPermission('can_view_invoices') || hasPermission('can_manage_invoices')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
@@ -85,6 +85,9 @@
         </button>
         <button class="btn btn-secondary" onclick="window.location.href='/factures-proprietaires.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-file-invoice-dollar"></i> Factures propriétaires
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/reporting.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-chart-bar"></i> Revenus
         </button>`;
     }
 
@@ -140,6 +143,7 @@
     'deposits',
     'factures',
     'factures-proprietaires',
+    'reporting',
     'welcome',
     'contrat',
     'help'
