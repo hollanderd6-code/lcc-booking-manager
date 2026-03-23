@@ -1045,6 +1045,11 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       display: none;
     }
 
+    /* Prix personnalisé (override) — souligné pointillé */
+    .cell-price-override {
+      text-decoration: underline dotted 1.5px;
+    }
+
     /* Nom voyageur dans les blocs — tronqué avec ellipsis */
     .booking-guest-label {
       overflow: hidden;
@@ -5665,8 +5670,10 @@ window.LCC_PROPERTIES = properties;
 
         renderPropertyList();
         renderCalendar();
+
+        // Charger et appliquer les prix personnalisés depuis l'API
+        loadPricingOverrides(state.properties);
         
-        // S\'assurer que le scroll vers aujourd\'hui se fait après le rendu
                 
         // Mettre à jour le KPI des risques APRÈS que le DOM soit complètement chargé
         console.log('⏰ Programmation du setTimeout pour updateTopRisksKpi dans 500ms...');
@@ -6807,6 +6814,59 @@ if (j === 0 || cells.length === 1) {
 
 <script>
 (function() {
+  // ─── Cache mémoire des overrides ───
+  window._pricingOverrides = {};
+
+  // Charger tous les overrides depuis l'API et les appliquer sur les cellules visibles
+  window.loadPricingOverrides = async function(properties) {
+    try {
+      var token = localStorage.getItem('lcc_token');
+      if (!token) return;
+      var API = (typeof API_URL !== 'undefined') ? API_URL : 'https://lcc-booking-manager.onrender.com';
+
+      // Plage : aujourd'hui - 30j → aujourd'hui + 120j
+      var now = new Date();
+      var from = new Date(now); from.setDate(from.getDate() - 30);
+      var to   = new Date(now); to.setDate(to.getDate() + 120);
+      var fmt  = function(d) { return d.toISOString().slice(0, 10); };
+
+      var resp = await fetch(
+        API + '/api/pricing/overrides?from=' + fmt(from) + '&to=' + fmt(to),
+        { headers: { 'Authorization': 'Bearer ' + token } }
+      );
+      if (!resp.ok) return;
+      var data = await resp.json();
+      var overrides = data.overrides || [];
+
+      // Construire le cache mémoire
+      window._pricingOverrides = {};
+      overrides.forEach(function(o) {
+        window._pricingOverrides[o.property_id + '_' + o.date] = parseFloat(o.price);
+      });
+
+      // Appliquer sur les cellules déjà rendues
+      overrides.forEach(function(o) {
+        var selector = '.calendar-cell[data-date="' + o.date + '"][data-property-id="' + o.property_id + '"]';
+        var cell = document.querySelector(selector);
+        if (!cell) return;
+        var priceEl = cell.querySelector('.cell-price');
+        if (priceEl) {
+          priceEl.textContent = Math.round(o.price);
+          priceEl.classList.add('cell-price-override');
+        } else {
+          var newEl = document.createElement('span');
+          newEl.className = 'cell-price cell-price-override';
+          newEl.textContent = Math.round(o.price);
+          cell.appendChild(newEl);
+        }
+      });
+
+      console.log('✅ Pricing overrides chargés:', overrides.length);
+    } catch(err) {
+      console.warn('⚠️ loadPricingOverrides:', err.message);
+    }
+  };
+
   // ─── État du modal cellule ───
   var _cellDate = null;
   var _cellPropertyId = null;
@@ -6835,12 +6895,11 @@ if (j === 0 || cells.length === 1) {
 
     // Pré-remplir avec le prix existant ou le défaut
     var input = document.getElementById('cellPriceInput');
-    // Chercher un prix personnalisé dans localStorage pour cette date+logement
-    var stored = null;
-    try {
-      var key = 'bh_price_' + propertyId + '_' + dateStr;
-      stored = localStorage.getItem(key);
-    } catch(e) {}
+    // Chercher un prix personnalisé dans le cache mémoire (chargé depuis l'API)
+    var cacheKey = propertyId + '_' + dateStr;
+    var stored = (window._pricingOverrides && window._pricingOverrides[cacheKey] != null)
+      ? window._pricingOverrides[cacheKey]
+      : null;
     input.value = stored !== null ? stored : (defaultPrice !== null ? defaultPrice : '');
 
     var titleEl = document.getElementById('cellModalTitle');
@@ -6850,43 +6909,92 @@ if (j === 0 || cells.length === 1) {
     setTimeout(function() { input.focus(); input.select(); }, 100);
   };
 
-  // Enregistrer le prix personnalisé (localStorage pour l'instant)
-  window.saveCellPrice = function() {
+  // Enregistrer le prix personnalisé → API
+  window.saveCellPrice = async function() {
     var input = document.getElementById('cellPriceInput');
     var val = input.value.trim();
-    
-    if (val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0) {
-      try {
-        var key = 'bh_price_' + _cellPropertyId + '_' + _cellDate;
-        localStorage.setItem(key, Math.round(parseFloat(val)));
-      } catch(e) {}
-      
-      // Mettre à jour l'affichage sur le calendrier immédiatement
+    var btn = document.querySelector('#cellModal button[onclick="saveCellPrice()"]');
+
+    // Afficher loading sur le bouton
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...'; }
+
+    var priceToSend = (val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0)
+      ? Math.round(parseFloat(val))
+      : null; // null = supprimer l'override
+
+    try {
+      var token = localStorage.getItem('lcc_token');
+      var API = (typeof API_URL !== 'undefined') ? API_URL : 'https://lcc-booking-manager.onrender.com';
+      var resp = await fetch(API + '/api/pricing/overrides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          property_id: _cellPropertyId,
+          date: _cellDate,
+          price: priceToSend
+        })
+      });
+
+      if (!resp.ok) throw new Error('Erreur serveur ' + resp.status);
+
+      // Mettre à jour l'affichage immédiatement
       var selector = '.calendar-cell[data-date="' + _cellDate + '"][data-property-id="' + _cellPropertyId + '"]';
       var cell = document.querySelector(selector);
       if (cell) {
         var priceEl = cell.querySelector('.cell-price');
-        if (priceEl) {
-          priceEl.textContent = Math.round(parseFloat(val));
+        if (priceToSend !== null) {
+          if (priceEl) {
+            priceEl.textContent = priceToSend;
+            priceEl.classList.add('cell-price-override');
+          } else {
+            var newEl = document.createElement('span');
+            newEl.className = 'cell-price cell-price-override';
+            newEl.textContent = priceToSend;
+            cell.appendChild(newEl);
+          }
         } else {
-          var newEl = document.createElement('span');
-          newEl.className = 'cell-price';
-          newEl.textContent = Math.round(parseFloat(val));
-          cell.appendChild(newEl);
+          // Supprimer : revenir au prix par défaut du logement
+          if (priceEl) {
+            var props = window.LCC_PROPERTIES || window.allProperties || [];
+            var prop = props.find(function(p) { return String(p.id) === String(_cellPropertyId); });
+            var d2 = new Date(_cellDate + 'T12:00:00');
+            var isPremium2 = (d2.getDay() === 5 || d2.getDay() === 6);
+            var defPrice = prop
+              ? ((isPremium2 && prop.weekendPrice != null) ? prop.weekendPrice : prop.basePrice)
+              : null;
+            priceEl.classList.remove('cell-price-override');
+            priceEl.textContent = defPrice !== null ? Math.round(defPrice) : '';
+          }
         }
       }
 
-      if (typeof window.showToast === 'function') {
-        window.showToast('Prix mis à jour pour le ' + _cellDate, 'success');
+      // Mettre à jour le cache mémoire des overrides
+      if (!window._pricingOverrides) window._pricingOverrides = {};
+      var cacheKey = _cellPropertyId + '_' + _cellDate;
+      if (priceToSend !== null) {
+        window._pricingOverrides[cacheKey] = priceToSend;
+      } else {
+        delete window._pricingOverrides[cacheKey];
       }
-    } else if (val === '') {
-      // Supprimer le prix personnalisé
-      try {
-        localStorage.removeItem('bh_price_' + _cellPropertyId + '_' + _cellDate);
-      } catch(e) {}
-    }
 
-    document.getElementById('cellModal').style.display = 'none';
+      if (typeof window.showToast === 'function') {
+        window.showToast(priceToSend !== null
+          ? 'Prix ' + priceToSend + '€ enregistré pour le ' + _cellDate
+          : 'Prix remis au tarif par défaut', 'success');
+      }
+
+    } catch(err) {
+      console.error('❌ saveCellPrice:', err);
+      if (typeof window.showToast === 'function') {
+        window.showToast('Erreur lors de l'enregistrement', 'error');
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer le prix'; }
+      document.getElementById('cellModal').style.display = 'none';
+    }
   };
 
   // Ouvrir le modal de blocage depuis le modal cellule
