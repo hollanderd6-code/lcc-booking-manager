@@ -20,6 +20,7 @@
 <link href="/css/messages-badge-red.css" rel="stylesheet"/>
 <link href="/css/messages-badge-desktop.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
 <style>
 html, body { margin: 0 !important; }
 .app-container { margin-top: 0 !important; }
@@ -476,14 +477,13 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
 <!-- MOBILE HEADER -->
 <div class="mobile-header" style="display:none!important;">
-  <a href="/app.html" class="mobile-logo-link">
-    <div class="mobile-logo-icon">B</div>
-    <div class="mobile-logo-text-wrap">
-      <span class="mobile-logo-name"><b>Boosting</b><span>host</span></span>
-      <span class="mobile-logo-sub">Smart Property Manager</span>
-    </div>
-  </a>
-  <span class="mobile-header-title">Revenus</span>
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-chart-bar"></i>
+<span class="mobile-logo-text">Revenus</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
@@ -942,66 +942,9 @@ function dlCSV(name, headers, rows) {
     background: #F5F2EC !important;
     box-sizing: border-box !important;
   }
-  #bhHeader, #bhHeader *, .rp-header-btns, header.main-header, header.main-header * { display: none !important; }
+  .rp-header-btns, header.main-header { display: none !important; }
 
-  /* 2. MOBILE HEADER */
-  .mobile-header {
-    display: flex !important;
-    position: fixed !important;
-    top: 0 !important; left: 0 !important; right: 0 !important;
-    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    z-index: 1100 !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(12px) !important;
-    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-    box-sizing: border-box !important;
-  }
-  .mobile-logo-link {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    text-decoration: none !important;
-  }
-  .mobile-logo-icon {
-    width: 40px !important; height: 40px !important;
-    border-radius: 50% !important;
-    background: #1A7A5E !important;
-    color: white !important;
-    font-family: "DM Sans", sans-serif !important;
-    font-size: 19px !important; font-weight: 800 !important;
-    display: flex !important; align-items: center !important; justify-content: center !important;
-    flex-shrink: 0 !important;
-  }
-  .mobile-logo-text-wrap {
-    display: flex !important;
-    flex-direction: column !important;
-    line-height: 1.25 !important;
-  }
-  .mobile-logo-name {
-    font-family: "DM Sans", sans-serif !important;
-    font-size: 15px !important; font-weight: 700 !important;
-    color: #1A7A5E !important;
-  }
-  .mobile-logo-name span { color: #0D1117 !important; font-weight: 400 !important; }
-  .mobile-logo-sub {
-    font-family: "DM Sans", sans-serif !important;
-    font-size: 9px !important; font-weight: 600 !important;
-    color: #9CA3AF !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.08em !important;
-  }
-  .mobile-header-title {
-    font-family: "DM Sans", sans-serif !important;
-    font-size: 15px !important; font-weight: 600 !important;
-    color: #6B7280 !important;
-  }
-
-  /* 3. CONTRÔLES */
+  /* 2. CONTRÔLES */
   .reporting-controls {
     flex-direction: column !important;
     align-items: stretch !important;
@@ -1015,36 +958,36 @@ function dlCSV(name, headers, rows) {
   .ml-auto .btn-csv,
   .ml-auto .btn-export { flex: 1; justify-content: center; }
 
-  /* 4. STATS */
+  /* 3. STATS */
   .stats-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
   .stat-card { padding: 14px !important; border-radius: 12px !important; }
   .stat-value { font-size: 18px !important; }
 
-  /* 5. CHARTS */
+  /* 4. CHARTS */
   .grid-2-1 { grid-template-columns: 1fr !important; gap: 10px !important; }
   .chart-wrap { height: 200px !important; padding: 12px 14px 16px !important; }
   .chart-mini { height: 140px !important; padding: 10px 14px 12px !important; }
 
-  /* 6. TABLES */
+  /* 5. TABLES */
   .prop-table, .monthly-table { font-size: 12px !important; }
   .prop-table th, .prop-table td,
   .monthly-table th, .monthly-table td { padding: 8px 10px !important; }
 
-  /* 7. CONCIERGERIE */
+  /* 6. CONCIERGERIE */
   .concierge-grid { grid-template-columns: 1fr 1fr !important; }
   .concierge-section { padding: 14px !important; border-radius: 12px !important; }
 
-  /* 8. CARDS */
+  /* 7. CARDS */
   .card { border-radius: 12px !important; margin-bottom: 10px !important; }
   .card-header { padding: 12px 14px 10px !important; }
 
-  /* 9. TABS VIEW */
+  /* 8. TABS VIEW */
   .view-tab { padding: 4px 8px !important; font-size: 11px !important; }
 
-  /* 10. PLATFORM */
+  /* 9. PLATFORM */
   .platform-rev { display: none !important; }
 
-  /* 11. BOTTOM TABS */
+  /* 10. BOTTOM TABS */
   .mobile-tabs {
     position: fixed !important;
     bottom: 0 !important; left: 0 !important; right: 0 !important;
