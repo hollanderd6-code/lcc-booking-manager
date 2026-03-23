@@ -476,11 +476,14 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
 <!-- MOBILE HEADER -->
 <div class="mobile-header" style="display:none!important;">
-  <button class="mobile-back-btn" onclick="window.location.href='/app.html'">
-    <i class="fas fa-arrow-left"></i>
-  </button>
+  <a href="/app.html" class="mobile-logo-link">
+    <div class="mobile-logo-icon">B</div>
+    <div class="mobile-logo-text-wrap">
+      <span class="mobile-logo-name">Boostinghost</span>
+      <span class="mobile-logo-sub">Smart Property Manager</span>
+    </div>
+  </a>
   <span class="mobile-header-title">Revenus</span>
-  <div style="width:36px;"></div>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
@@ -939,7 +942,7 @@ function dlCSV(name, headers, rows) {
     background: #F5F2EC !important;
     box-sizing: border-box !important;
   }
-  #bhHeader, .rp-header-btns { display: none !important; }
+  #bhHeader, .rp-header-btns, header.main-header { display: none !important; }
 
   /* 2. MOBILE HEADER */
   .mobile-header {
@@ -956,17 +959,45 @@ function dlCSV(name, headers, rows) {
     padding-top: env(safe-area-inset-top, 0px) !important;
     padding-left: 16px !important;
     padding-right: 16px !important;
+    box-sizing: border-box !important;
   }
-  .mobile-back-btn {
-    width: 36px; height: 36px;
-    border-radius: 10px; border: none;
-    background: rgba(13,17,23,.06); color: #0D1117;
-    font-size: 15px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+  .mobile-logo-link {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    text-decoration: none !important;
+  }
+  .mobile-logo-icon {
+    width: 36px !important; height: 36px !important;
+    border-radius: 10px !important;
+    background: #1A7A5E !important;
+    color: white !important;
+    font-family: "DM Sans", sans-serif !important;
+    font-size: 18px !important; font-weight: 800 !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+  .mobile-logo-text-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    line-height: 1.2 !important;
+  }
+  .mobile-logo-name {
+    font-family: "DM Sans", sans-serif !important;
+    font-size: 14px !important; font-weight: 700 !important;
+    color: #0D1117 !important;
+  }
+  .mobile-logo-sub {
+    font-family: "DM Sans", sans-serif !important;
+    font-size: 9px !important; font-weight: 500 !important;
+    color: #9CA3AF !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
   }
   .mobile-header-title {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 17px; font-weight: 700; color: #0D1117;
+    font-family: "DM Sans", sans-serif !important;
+    font-size: 15px !important; font-weight: 600 !important;
+    color: #6B7280 !important;
   }
 
   /* 3. CONTRÔLES */
