@@ -1423,6 +1423,43 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 </div>
 
+<!-- Frais ménage + taxe séjour + commission conciergerie -->
+<div class="form-grid-2" style="margin-top:12px;">
+<div class="form-group">
+<label for="propertyCleaningFee">
+<i class="fas fa-broom"></i>
+<span>Frais de ménage</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyCleaningFee" min="0" placeholder="Ex: 40" step="1" type="number"/>
+<span>€</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Par séjour (pour le reporting)</small>
+</div>
+<div class="form-group">
+<label for="propertyTouristTax">
+<i class="fas fa-landmark"></i>
+<span>Taxe de séjour</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyTouristTax" min="0" placeholder="Ex: 0.83" step="0.01" type="number"/>
+<span>€/nuit/pers</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Par nuit par voyageur</small>
+</div>
+</div>
+<div class="form-group" style="margin-top:8px;">
+<label for="propertyConciergePct">
+<i class="fas fa-handshake"></i>
+<span>Commission conciergerie</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyConciergePct" min="0" max="100" placeholder="Ex: 20" step="0.5" type="number"/>
+<span>%</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">% prélevé par la conciergerie sur le revenu brut</small>
+</div>
+
 <!-- ✅ SECTION : RÈGLES DE TARIFICATION AVANCÉE -->
 <div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-tags"></i>
