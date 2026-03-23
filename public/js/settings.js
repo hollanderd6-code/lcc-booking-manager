@@ -206,10 +206,16 @@ async function saveProperty(event) {
 
   const arrivalMessage = document.getElementById('propertyArrivalMessage')?.value?.trim() || null;
 
-  const basePriceRaw    = document.getElementById('propertyBasePrice')?.value;
-  const weekendPriceRaw = document.getElementById('propertyWeekendPrice')?.value;
+  const basePriceRaw       = document.getElementById('propertyBasePrice')?.value;
+  const weekendPriceRaw    = document.getElementById('propertyWeekendPrice')?.value;
+  const cleaningFeeRaw     = document.getElementById('propertyCleaningFee')?.value;
+  const touristTaxRaw      = document.getElementById('propertyTouristTax')?.value;
+  const conciergePctRaw    = document.getElementById('propertyConciergePct')?.value;
   const basePrice    = basePriceRaw    !== undefined && basePriceRaw    !== '' ? parseFloat(basePriceRaw)    : null;
   const weekendPrice = weekendPriceRaw !== undefined && weekendPriceRaw !== '' ? parseFloat(weekendPriceRaw) : null;
+  const cleaningFee     = cleaningFeeRaw  !== undefined && cleaningFeeRaw  !== '' ? parseFloat(cleaningFeeRaw)  : null;
+  const touristTaxPerNight = touristTaxRaw !== undefined && touristTaxRaw !== '' ? parseFloat(touristTaxRaw) : null;
+  const conciergePct    = conciergePctRaw !== undefined && conciergePctRaw !== '' ? parseFloat(conciergePctRaw) : null;
 
   const existingPhotoUrl = document.getElementById("propertyPhotoUrl")?.value || null;
   const photoInput = document.getElementById("propertyPhoto");
@@ -240,6 +246,9 @@ async function saveProperty(event) {
   if (arrivalMessage) formData.append('arrivalMessage', arrivalMessage);
   if (basePrice    !== null) formData.append('basePrice',    basePrice);
   if (weekendPrice !== null) formData.append('weekendPrice', weekendPrice);
+  if (cleaningFee     !== null) formData.append('cleaningFee',     cleaningFee);
+  if (touristTaxPerNight !== null) formData.append('touristTaxPerNight', touristTaxPerNight);
+  if (conciergePct    !== null) formData.append('conciergePct',    conciergePct);
 
   // ===== AJOUT DES NOUVELLES DONNÉES (ÉQUIPEMENTS, RÈGLES, INFOS) =====
   try {
@@ -425,6 +434,15 @@ function resetPropertyForm() {
   if (document.getElementById("propertyWeekendPrice")) {
     document.getElementById("propertyWeekendPrice").value = "";
   }
+  if (document.getElementById("propertyCleaningFee")) {
+    document.getElementById("propertyCleaningFee").value = "";
+  }
+  if (document.getElementById("propertyTouristTax")) {
+    document.getElementById("propertyTouristTax").value = "";
+  }
+  if (document.getElementById("propertyConciergePct")) {
+    document.getElementById("propertyConciergePct").value = "";
+  }
   // Reset règles de tarification
   _pricingRules = [];
   _currentPricingPropertyId = null;
@@ -504,6 +522,18 @@ function openEditPropertyModal(propertyId) {
   if (document.getElementById("propertyWeekendPrice")) {
     const wp = property.weekendPrice ?? property.weekend_price;
     document.getElementById("propertyWeekendPrice").value = wp != null ? wp : "";
+  }
+  if (document.getElementById("propertyCleaningFee")) {
+    const cf = property.cleaningFee ?? property.cleaning_fee;
+    document.getElementById("propertyCleaningFee").value = cf != null ? cf : "";
+  }
+  if (document.getElementById("propertyTouristTax")) {
+    const tt = property.touristTaxPerNight ?? property.tourist_tax_per_night;
+    document.getElementById("propertyTouristTax").value = tt != null ? tt : "";
+  }
+  if (document.getElementById("propertyConciergePct")) {
+    const cp = property.conciergePct ?? property.concierge_pct;
+    document.getElementById("propertyConciergePct").value = cp != null ? cp : "";
   }
 
   // ✅ RACCOURCIS MESSAGES
@@ -1574,58 +1604,21 @@ function updatePricingRuleForm() {
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Réduction (%)</label>
           <input id="pr_discount_pct" type="number" min="0" max="100" step="0.5" placeholder="Ex: 10" value="${rule.discount_pct || ''}"
-            oninput="updateLongStayPreview()"
             style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">À partir de (nuits)</label>
           <input id="pr_discount_nights" type="number" min="1" step="1" placeholder="Ex: 7" value="${rule.discount_after_nights || ''}"
-            oninput="updateLongStayPreview()"
             style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
         </div>
       </div>
-      <div id="longStayPreview" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#15803d;">
-        <i class="fas fa-info-circle" style="margin-right:6px;"></i>
-        <span id="longStayPreviewText"></span>
-      </div>
-      <div style="background:#fef3c7;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;">
-        <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>
-        <strong>Note :</strong> La réduction est appliquée sur le prix de base lors du push vers Channex.
-        Channex ne gère pas les réductions conditionnelles — le prix réduit est poussé directement pour toutes les dates.
-      </div>
     `;
-    updateLongStayPreview();
   }
 }
 
 function editPricingRule(id) {
   const rule = _pricingRules.find(r => r.id === id);
   if (rule) openPricingRuleModal(rule);
-}
-
-function updateLongStayPreview() {
-  const pct    = parseFloat(document.getElementById('pr_discount_pct')?.value);
-  const nights = parseInt(document.getElementById('pr_discount_nights')?.value);
-  const preview = document.getElementById('longStayPreview');
-  const previewText = document.getElementById('longStayPreviewText');
-  if (!preview || !previewText) return;
-
-  if (!isNaN(pct) && !isNaN(nights) && pct > 0 && nights > 0) {
-    // Trouver le prix de base du logement courant
-    const props = window.allProperties || [];
-    const prop  = props.find(p => String(p.id) === String(_currentPricingPropertyId));
-    const base  = prop?.basePrice || prop?.base_price || null;
-
-    let txt = `Réduction de ${pct}% sur les séjours de ${nights} nuits ou plus`;
-    if (base) {
-      const reduced = Math.round(base * (1 - pct / 100));
-      txt += ` · Prix de base ${Math.round(base)}€ → ${reduced}€/nuit`;
-    }
-    previewText.textContent = txt;
-    preview.style.display = 'block';
-  } else {
-    preview.style.display = 'none';
-  }
 }
 
 async function deletePricingRule(id) {
