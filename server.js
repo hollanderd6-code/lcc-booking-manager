@@ -52,6 +52,7 @@ const { initArrivalMessagesCron } = require('./arrival-messages-cron');
 const {
   createChannexProperty,
   pushAvailability,
+  pushRates,
   processChannexBooking
 } = require('./channex');
 
@@ -10421,6 +10422,249 @@ app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, async (
   } catch (err) {
     console.error('❌ DELETE /api/pricing/overrides:', err);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// PRICING RULES — Règles de tarification
+// ============================================
+
+// GET /api/pricing/rules?property_id=X
+app.get('/api/pricing/rules', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { property_id } = req.query;
+    let query = `SELECT * FROM pricing_rules WHERE user_id = $1`;
+    const params = [user.id];
+
+    if (property_id) {
+      params.push(property_id);
+      query += ` AND property_id = $${params.length}`;
+    }
+
+    query += ` ORDER BY priority DESC, created_at ASC`;
+    const result = await pool.query(query, params);
+    res.json({ rules: result.rows });
+  } catch (err) {
+    console.error('❌ GET /api/pricing/rules:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/pricing/rules — Créer une règle
+app.post('/api/pricing/rules', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const {
+      property_id, name, rule_type,
+      start_date, end_date,
+      days_of_week,
+      price,
+      min_nights,
+      discount_pct, discount_after_nights,
+      priority = 0
+    } = req.body;
+
+    if (!property_id || !name || !rule_type) {
+      return res.status(400).json({ error: 'property_id, name et rule_type sont requis' });
+    }
+
+    // Vérifier accès logement
+    const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [property_id, user.id]);
+    if (check.rows.length === 0) return res.status(403).json({ error: 'Logement introuvable' });
+
+    const result = await pool.query(`
+      INSERT INTO pricing_rules
+        (user_id, property_id, name, rule_type, start_date, end_date, days_of_week, price, min_nights, discount_pct, discount_after_nights, priority)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      RETURNING *
+    `, [
+      user.id, property_id, name, rule_type,
+      start_date || null, end_date || null,
+      days_of_week || null,
+      price != null ? parseFloat(price) : null,
+      min_nights || null,
+      discount_pct != null ? parseFloat(discount_pct) : null,
+      discount_after_nights || null,
+      priority
+    ]);
+
+    res.json({ success: true, rule: result.rows[0] });
+  } catch (err) {
+    console.error('❌ POST /api/pricing/rules:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/pricing/rules/:id — Modifier une règle
+app.put('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { id } = req.params;
+    const {
+      name, rule_type, start_date, end_date,
+      days_of_week, price, min_nights,
+      discount_pct, discount_after_nights, priority, active
+    } = req.body;
+
+    const result = await pool.query(`
+      UPDATE pricing_rules SET
+        name = COALESCE($1, name),
+        rule_type = COALESCE($2, rule_type),
+        start_date = $3, end_date = $4,
+        days_of_week = $5,
+        price = $6,
+        min_nights = $7,
+        discount_pct = $8,
+        discount_after_nights = $9,
+        priority = COALESCE($10, priority),
+        active = COALESCE($11, active)
+      WHERE id = $12 AND user_id = $13
+      RETURNING *
+    `, [
+      name, rule_type,
+      start_date || null, end_date || null,
+      days_of_week || null,
+      price != null ? parseFloat(price) : null,
+      min_nights || null,
+      discount_pct != null ? parseFloat(discount_pct) : null,
+      discount_after_nights || null,
+      priority,
+      active,
+      id, user.id
+    ]);
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Règle introuvable' });
+    res.json({ success: true, rule: result.rows[0] });
+  } catch (err) {
+    console.error('❌ PUT /api/pricing/rules:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/pricing/rules/:id
+app.delete('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    await pool.query('DELETE FROM pricing_rules WHERE id = $1 AND user_id = $2', [req.params.id, user.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ DELETE /api/pricing/rules:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/pricing/rules/push-channex/:property_id — Calculer et pousser les prix vers Channex
+app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { property_id } = req.params;
+
+    // Récupérer le logement avec ses infos Channex
+    const propResult = await pool.query(
+      `SELECT id, name, base_price, weekend_price,
+              channex_enabled, channex_property_id, channex_rate_plan_id
+       FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user.id]
+    );
+    if (propResult.rows.length === 0) return res.status(404).json({ error: 'Logement introuvable' });
+
+    const prop = propResult.rows[0];
+    if (!prop.channex_enabled || !prop.channex_property_id || !prop.channex_rate_plan_id) {
+      return res.status(400).json({ error: 'Ce logement n\'est pas connecté à Channex' });
+    }
+
+    // Récupérer les règles actives pour ce logement
+    const rulesResult = await pool.query(
+      'SELECT * FROM pricing_rules WHERE property_id = $1 AND user_id = $2 AND active = true ORDER BY priority DESC',
+      [property_id, user.id]
+    );
+    const rules = rulesResult.rows;
+
+    // Récupérer les overrides pour ce logement (180 jours)
+    const today = new Date();
+    const endDate = new Date(today); endDate.setDate(today.getDate() + 365);
+    const fmt = d => d.toISOString().split('T')[0];
+
+    const overridesResult = await pool.query(
+      `SELECT TO_CHAR(date,'YYYY-MM-DD') as date, price FROM pricing_overrides
+       WHERE property_id = $1 AND user_id = $2 AND date >= $3 AND date <= $4`,
+      [property_id, user.id, fmt(today), fmt(endDate)]
+    );
+    const overridesMap = {};
+    overridesResult.rows.forEach(o => { overridesMap[o.date] = parseFloat(o.price); });
+
+    // Calculer le prix pour chaque jour (365 jours)
+    const rates = [];
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dateStr = fmt(d);
+      const dow = d.getDay(); // 0=dim, 1=lun ... 5=ven, 6=sam
+
+      // 1. Override manuel → priorité absolue
+      if (overridesMap[dateStr] != null) {
+        rates.push({ date: dateStr, price: overridesMap[dateStr] });
+        continue;
+      }
+
+      // 2. Appliquer les règles par priorité
+      let appliedPrice = null;
+
+      for (const rule of rules) {
+        if (rule.rule_type === 'period' && rule.start_date && rule.end_date && rule.price != null) {
+          if (dateStr >= rule.start_date && dateStr <= rule.end_date) {
+            appliedPrice = parseFloat(rule.price);
+            break;
+          }
+        }
+        if (rule.rule_type === 'weekday' && rule.days_of_week && rule.price != null) {
+          if (rule.days_of_week.includes(dow)) {
+            appliedPrice = parseFloat(rule.price);
+            break;
+          }
+        }
+      }
+
+      // 3. Fallback → prix de base du logement
+      if (appliedPrice === null) {
+        const isPremium = (dow === 5 || dow === 6);
+        appliedPrice = isPremium && prop.weekend_price != null
+          ? parseFloat(prop.weekend_price)
+          : (prop.base_price != null ? parseFloat(prop.base_price) : null);
+      }
+
+      if (appliedPrice != null) {
+        rates.push({ date: dateStr, price: appliedPrice });
+      }
+    }
+
+    // Pusher vers Channex
+    await pushRates(pool, {
+      property_id,
+      channex_property_id: prop.channex_property_id,
+      channex_rate_plan_id: prop.channex_rate_plan_id,
+      rates
+    });
+
+    res.json({
+      success: true,
+      message: `${rates.length} jours de tarifs poussés vers Channex`,
+      property: prop.name
+    });
+  } catch (err) {
+    console.error('❌ POST /api/pricing/rules/push-channex:', err);
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
 
