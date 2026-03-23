@@ -5838,6 +5838,8 @@ window.LCC_PROPERTIES = properties;
 
       updatePeriodDisplay();
       renderCalendar();
+      // Réappliquer les overrides sur les nouvelles cellules (depuis le cache mémoire)
+      applyPricingOverridesFromCache();
     }
 
     function updatePeriodDisplay() {
@@ -5917,7 +5919,9 @@ window.LCC_PROPERTIES = properties;
       var range = getCurrentRange();
       renderDaysHeader(range);
       renderGrid(range);
-            setTimeout(initScrollSync, 150);
+      setTimeout(initScrollSync, 150);
+      // Réappliquer les overrides après chaque rendu
+      setTimeout(applyPricingOverridesFromCache, 50);
     }
 
         function renderDaysHeader(range) {
@@ -6826,8 +6830,8 @@ if (j === 0 || cells.length === 1) {
 
       // Plage : aujourd'hui - 30j → aujourd'hui + 120j
       var now = new Date();
-      var from = new Date(now); from.setDate(from.getDate() - 30);
-      var to   = new Date(now); to.setDate(to.getDate() + 120);
+      var from = new Date(now); from.setDate(from.getDate() - 60);
+      var to   = new Date(now); to.setDate(to.getDate() + 365);
       var fmt  = function(d) { return d.toISOString().slice(0, 10); };
 
       var resp = await fetch(
@@ -6862,9 +6866,57 @@ if (j === 0 || cells.length === 1) {
       });
 
       console.log('✅ Pricing overrides chargés:', overrides.length);
+      // Appliquer aussi sur les cellules actuellement visibles
+      applyPricingOverridesFromCache();
     } catch(err) {
       console.warn('⚠️ loadPricingOverrides:', err.message);
     }
+  };
+
+  // Appliquer les overrides du cache mémoire sur toutes les cellules visibles
+  window.applyPricingOverridesFromCache = function() {
+    if (!window._pricingOverrides) return;
+    var overrides = window._pricingOverrides;
+
+    // Récupérer toutes les cellules visibles
+    var cells = document.querySelectorAll('.calendar-cell[data-date][data-property-id]');
+    cells.forEach(function(cell) {
+      var date = cell.getAttribute('data-date');
+      var propId = cell.getAttribute('data-property-id');
+      var cacheKey = propId + '_' + date;
+
+      var priceEl = cell.querySelector('.cell-price');
+
+      if (overrides[cacheKey] != null) {
+        // Il y a un override pour cette date
+        if (priceEl) {
+          priceEl.textContent = Math.round(overrides[cacheKey]);
+          priceEl.classList.add('cell-price-override');
+        } else if (!cell.querySelector('.booking-block')) {
+          var newEl = document.createElement('span');
+          newEl.className = 'cell-price cell-price-override';
+          newEl.textContent = Math.round(overrides[cacheKey]);
+          cell.appendChild(newEl);
+        }
+      } else if (priceEl && priceEl.classList.contains('cell-price-override')) {
+        // Override supprimé → revenir au prix par défaut
+        priceEl.classList.remove('cell-price-override');
+        // Recalculer le prix par défaut depuis les properties
+        var props = window.LCC_PROPERTIES || window.allProperties || [];
+        var prop = props.find(function(p) { return String(p.id) === String(propId); });
+        if (prop) {
+          var d = new Date(date + 'T12:00:00');
+          var dow = d.getDay();
+          var isPremium = (dow === 5 || dow === 6);
+          var defPrice = (isPremium && prop.weekendPrice != null)
+            ? prop.weekendPrice
+            : (prop.basePrice != null ? prop.basePrice : null);
+          priceEl.textContent = defPrice !== null ? Math.round(defPrice) : '';
+        } else {
+          priceEl.textContent = '';
+        }
+      }
+    });
   };
 
   // ─── État du modal cellule ───
