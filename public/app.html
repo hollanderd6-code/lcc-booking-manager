@@ -7005,7 +7005,7 @@ window.loadPricingOverrides = async function(properties) {
     } catch(err) {
       console.error('❌ saveCellPrice:', err);
       if (typeof window.showToast === 'function') {
-        window.showToast('Erreur lors de l'enregistrement', 'error');
+        window.showToast('Erreur lors de l\'enregistrement', 'error');
       }
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer le prix'; }
