@@ -10,6 +10,8 @@ const API_URL = IS_NATIVE
 console.log('🔌 [SOCKET] API_URL:', API_URL, '(Native:', IS_NATIVE + ')');
 
 let socket = null;
+let currentChannexBookingId = null; // null si pas de lien Channex
+window._chatSocket = null; // exposé pour messages.html
 let allConversations = [];
 let currentConversationId = null;
 let userId = null;
@@ -414,14 +416,49 @@ async function openChat(conversationId) {
     copyLinkBtn.style.display = 'none';
   }
   
-  // Afficher le bouton Booking si c'est une réservation Booking
+  // Détecter si conversation liée à Channex (Airbnb/Booking)
+  currentChannexBookingId = null;
   const bookingBtn = document.getElementById('btnBookingMessage');
-  if (bookingBtn) {
-    const isBooking = (conv.platform || '').toLowerCase().includes('booking');
-    bookingBtn.style.display = isBooking ? 'inline-flex' : 'none';
-    if (isBooking) {
-      bookingBtn.onclick = () => openBookingMessageModal(conversationId);
+
+  // Vérifier channex_booking_id via API
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const chxRes = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages-channex`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (chxRes.ok) {
+      const chxData = await chxRes.json();
+      if (chxData.channex_booking_id) {
+        currentChannexBookingId = chxData.channex_booking_id;
+        window._currentChannexBookingId = currentChannexBookingId;
+
+        // Activer le bouton plateforme
+        if (bookingBtn) {
+          const platform = (conv.platform || '').toLowerCase();
+          const label = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking' : 'Plateforme';
+          bookingBtn.style.display = 'inline-flex';
+          bookingBtn.title = `Envoyer sur ${label}`;
+          bookingBtn.innerHTML = `<i class="fas fa-paper-plane"></i> ${label}`;
+          bookingBtn.onclick = null; // géré dans sendMessageOwner
+        }
+
+        // Injecter les messages Channex non encore en DB
+        if (chxData.channex_messages && chxData.channex_messages.length > 0) {
+          _injectChannexMessages(chxData.channex_messages);
+        }
+      } else {
+        // Pas de Channex — comportement classique Booking
+        if (bookingBtn) {
+          const isBooking = (conv.platform || '').toLowerCase().includes('booking');
+          bookingBtn.style.display = isBooking ? 'inline-flex' : 'none';
+          bookingBtn.innerHTML = `<i class="fas fa-paper-plane"></i>`;
+          if (isBooking) bookingBtn.onclick = () => openBookingMessageModal(conversationId);
+        }
+      }
     }
+  } catch(e) {
+    console.warn('⚠️ Channex check:', e.message);
+    if (bookingBtn) bookingBtn.style.display = 'none';
   }
   
   // Afficher la modal
@@ -706,39 +743,83 @@ function setOwnerLang(lang) {
 async function sendMessageOwner() {
   const input = document.getElementById('chatInput');
   if (!input || !currentConversationId) return;
-  
+
   const message = input.value.trim();
   if (!message) return;
-  
+
+  const sendBtn = document.getElementById('sendBtn');
+  if (sendBtn) sendBtn.disabled = true;
+
   try {
     const token = localStorage.getItem('lcc_token');
+
+    // ── Si conversation liée à Channex : envoyer via plateforme ──
+    if (currentChannexBookingId) {
+      const response = await fetch(`${API_URL}/api/chat/conversations/${currentConversationId}/send-platform`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ message })
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur envoi plateforme');
+      }
+      input.value = '';
+      input.style.height = 'auto';
+      showToast('✅ Envoyé sur la plateforme', 'success');
+      return;
+    }
+
+    // ── Conversation BH classique ──────────────────────────────
     const response = await fetch(API_URL + '/api/chat/send', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({
         conversation_id: currentConversationId,
         message: message,
         sender_type: 'owner'
       })
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('❌ Erreur serveur:', errorData);
       throw new Error(errorData.error || 'Erreur envoi message');
     }
-    
+
     input.value = '';
     input.style.height = 'auto';
     // Le message sera ajouté via Socket.IO
-    
+
   } catch (error) {
     console.error('❌ Erreur envoi message:', error);
-    showToast('Erreur lors de l\'envoi', 'error');
+    showToast('Erreur lors de l\'envoi : ' + error.message, 'error');
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
   }
+}
+
+// ── Injecter les messages Channex dans le chat UI ─────────────
+function _injectChannexMessages(channexMsgs) {
+  const chatEl = document.getElementById('chatMessages');
+  if (!chatEl) return;
+  channexMsgs.forEach(m => {
+    if (chatEl.querySelector(`[data-channex-id="${m.id}"]`)) return;
+    const isGuest = m.sender === 'guest';
+    const time = m.inserted_at
+      ? new Date(m.inserted_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    const div = document.createElement('div');
+    div.className = `chat-message${isGuest ? '' : ' owner'}`;
+    div.setAttribute('data-channex-id', m.id);
+    div.innerHTML = `
+      <div class="chat-bubble">
+        <div class="chat-sender">${isGuest ? 'Voyageur' : 'Vous'} <span style="font-size:10px;opacity:.6;">· via plateforme</span></div>
+        <div class="chat-text">${m.message}</div>
+        <div class="chat-time">${time}</div>
+      </div>`;
+    chatEl.appendChild(div);
+  });
+  chatEl.scrollTop = chatEl.scrollHeight;
 }
 
 function formatTime(timestamp) {
@@ -956,6 +1037,35 @@ function connectSocket() {
   socket.on('disconnect', () => {
     console.log('❌ Socket déconnecté');
   });
+
+  // ── Messages entrants depuis les plateformes (Airbnb/Booking) ──
+  socket.on('new_platform_message', (data) => {
+    console.log('💬 [CHANNEX] Message plateforme reçu:', data);
+
+    // Recharger la liste des conversations (badge non-lu)
+    loadConversations();
+
+    // Si la conversation est ouverte, afficher le message
+    if (data.conversation_id && currentConversationId == data.conversation_id && data.message) {
+      const m = data.message;
+      const div = document.createElement('div');
+      div.className = 'chat-message';
+      const time = new Date(m.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      div.innerHTML = `
+        <div class="chat-bubble">
+          <div class="chat-sender">Voyageur <span style="font-size:10px;opacity:.6;">· via plateforme</span></div>
+          <div class="chat-text">${m.message}</div>
+          <div class="chat-time">${time}</div>
+        </div>`;
+      const chatEl = document.getElementById('chatMessages');
+      if (chatEl) { chatEl.appendChild(div); chatEl.scrollTop = chatEl.scrollHeight; }
+    }
+
+    showToast('💬 Nouveau message voyageur', 'info');
+  });
+
+  // Exposer le socket pour messages.html
+  window._chatSocket = socket;
 }
 
 // ============================================
