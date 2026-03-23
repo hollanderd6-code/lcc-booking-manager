@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme-v3="1">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reporting — Boostinghost</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/css/bh-theme-v3.css"/>
+<style>
+:root {
+  --primary: #1A7A5E;
+  --primary-light: rgba(26,122,94,.08);
+  --primary-mid: rgba(26,122,94,.15);
+  --bg: #F5F2EC;
+  --card-bg: #FFFFFF;
+  --border: #E8E0D0;
+  --text: #0D1117;
+  --text-muted: #6B7280;
+  --text-soft: #9CA3AF;
+  --red: #dc2626;
+  --orange: #f59e0b;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --radius: 16px;
+  --shadow: 0 2px 12px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 24px rgba(0,0,0,.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Layout ── */
+.page-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+/* ── Header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.3px;
+}
+.page-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Controls ── */
+.ctrl-select {
+  padding: 9px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  min-width: 130px;
+}
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-export:hover { opacity: .88; }
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  background: white;
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ── KPI Cards ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+.kpi-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--kpi-color, var(--primary));
+}
+.kpi-icon {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  background: var(--kpi-bg, var(--primary-light));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  color: var(--kpi-color, var(--primary));
+  margin-bottom: 14px;
+}
+.kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.5px;
+  font-family: 'DM Mono', monospace;
+}
+.kpi-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.kpi-sub {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-top: 6px;
+}
+
+/* ── Sections ── */
+.section-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) { .section-grid { grid-template-columns: 1fr; } }
+
+.section-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) { .section-grid-3 { grid-template-columns: 1fr; } }
+
+.card {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title i { color: var(--primary); font-size: 13px; }
+.card-body { padding: 20px; }
+
+/* ── Chart ── */
+.chart-container {
+  position: relative;
+  height: 260px;
+  padding: 16px 20px 20px;
+}
+.chart-mini {
+  position: relative;
+  height: 180px;
+  padding: 16px 20px 20px;
+}
+
+/* ── Platform pills ── */
+.platform-list { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; }
+.platform-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.platform-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.platform-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); }
+.platform-bar-wrap {
+  flex: 2;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.platform-bar {
+  height: 100%;
+  border-radius: 99px;
+  transition: width .5s ease;
+}
+.platform-pct {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 36px;
+  text-align: right;
+  font-family: 'DM Mono', monospace;
+}
+.platform-rev {
+  font-size: 12px;
+  color: var(--text-soft);
+  min-width: 70px;
+  text-align: right;
+  font-family: 'DM Mono', monospace;
+}
+
+/* ── Property cards ── */
+.property-report-list { display: flex; flex-direction: column; gap: 0; }
+.property-report-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background .12s;
+}
+.property-report-row:last-child { border-bottom: none; }
+.property-report-row:hover { background: var(--bg); }
+.prop-name-wrap { display: flex; align-items: center; gap: 10px; }
+.prop-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.prop-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.prop-nights { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.prop-metric {
+  text-align: right;
+  min-width: 72px;
+}
+.prop-metric-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+}
+.prop-metric-label {
+  font-size: 10px;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-top: 1px;
+}
+.occupancy-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+}
+
+/* ── Monthly table ── */
+.monthly-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.monthly-table th {
+  padding: 10px 12px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg);
+}
+.monthly-table th:first-child { text-align: left; }
+.monthly-table td {
+  padding: 11px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+}
+.monthly-table td:first-child {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+}
+.monthly-table tr:last-child td { border-bottom: none; }
+.monthly-table tr:hover td { background: var(--bg); }
+.monthly-table tfoot td {
+  font-weight: 700;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-top: 2px solid var(--primary-mid);
+  border-bottom: none;
+  font-family: 'DM Mono', monospace;
+}
+.monthly-table tfoot td:first-child {
+  font-family: 'DM Sans', sans-serif;
+}
+.zero { color: var(--text-soft) !important; }
+
+/* ── Conciergerie export ── */
+.concierge-section {
+  background: linear-gradient(135deg, rgba(26,122,94,.06), rgba(26,122,94,.02));
+  border: 1.5px solid rgba(26,122,94,.2);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.concierge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.concierge-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.concierge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 600px) { .concierge-grid { grid-template-columns: 1fr 1fr; } }
+.concierge-kpi {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(26,122,94,.15);
+}
+.concierge-kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  font-family: 'DM Mono', monospace;
+}
+.concierge-kpi-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+/* ── Loading ── */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
+  color: var(--text-muted);
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-soft);
+}
+.empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+
+/* ── Tab bar vue ── */
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+.view-tab {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  transition: all .15s;
+}
+.view-tab.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
+/* ── Badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+</style>
+</head>
+<body>
+<script src="/js/bh-layout.js"></script>
+
+<div class="page-wrapper">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">📊 Reporting</div>
+      <div class="page-subtitle" id="reportSubtitle">Chargement...</div>
+    </div>
+    <div class="header-controls">
+      <select class="ctrl-select" id="yearSelect" onchange="loadReport()"></select>
+      <select class="ctrl-select" id="propertySelect" onchange="loadReport()">
+        <option value="">Tous les logements</option>
+      </select>
+      <button class="btn-secondary" onclick="exportCSV()">
+        <i class="fas fa-download"></i> CSV
+      </button>
+      <button class="btn-export" onclick="exportConcierge()">
+        <i class="fas fa-handshake"></i> Export conciergerie
+      </button>
+    </div>
+  </div>
+
+  <!-- État loading -->
+  <div id="loadingState" class="loading-state">
+    <div class="spinner"></div>
+    <div>Chargement des données...</div>
+  </div>
+
+  <!-- Contenu principal (caché pendant loading) -->
+  <div id="reportContent" style="display:none;">
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- Section conciergerie (conditionnelle) -->
+    <div class="concierge-section" id="conciergeSection" style="display:none;">
+      <div class="concierge-header">
+        <div class="concierge-title">
+          <i class="fas fa-handshake"></i>
+          Données conciergerie
+        </div>
+        <button class="btn-export" onclick="exportConcierge()" style="font-size:12px;padding:7px 14px;">
+          <i class="fas fa-file-csv"></i> Exporter pour la compta
+        </button>
+      </div>
+      <div class="concierge-grid" id="conciergeGrid"></div>
+    </div>
+
+    <!-- Revenus par mois + Répartition plateforme -->
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-chart-bar"></i> Revenus par mois</div>
+          <div class="view-tabs">
+            <button class="view-tab active" onclick="switchChart('gross', this)">Brut</button>
+            <button class="view-tab" onclick="switchChart('net', this)">Net</button>
+            <button class="view-tab" onclick="switchChart('owner', this)">Propriétaire</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="fas fa-chart-pie"></i> Répartition plateforme</div>
+        </div>
+        <div class="chart-mini">
+          <canvas id="platformChart"></canvas>
+        </div>
+        <div class="platform-list" id="platformList"></div>
+      </div>
+    </div>
+
+    <!-- Par logement -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-home"></i> Par logement</div>
+      </div>
+      <div class="property-report-list" id="propertyList"></div>
+    </div>
+
+    <!-- Tableau mensuel détaillé -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-table"></i> Détail mensuel</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="monthly-table" id="monthlyTable"></table>
+      </div>
+    </div>
+
+  </div><!-- /reportContent -->
+
+</div><!-- /page-wrapper -->
+
+<script>
+const API_URL = 'https://lcc-booking-manager.onrender.com';
+let _reportData = null;
+let _monthlyChart = null;
+let _platformChart = null;
+let _currentChartType = 'gross';
+
+const PLATFORM_COLORS = {
+  'Airbnb':      '#FF5A5F',
+  'Booking.com': '#003580',
+  'Expedia':     '#FFC72C',
+  'Vrbo':        '#1A5276',
+  'Direct':      '#1A7A5E'
+};
+const DEFAULT_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899'];
+
+// ── Init ──────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Remplir le sélecteur d'années
+  const yearSel = document.getElementById('yearSelect');
+  const currentYear = new Date().getFullYear();
+  for (let y = currentYear; y >= currentYear - 3; y--) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    yearSel.appendChild(opt);
+  }
+
+  // Charger les logements pour le filtre
+  await loadProperties();
+  await loadReport();
+});
+
+async function loadProperties() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const resp = await fetch(`${API_URL}/api/properties`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const sel = document.getElementById('propertySelect');
+    (data.properties || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.warn('loadProperties:', e.message); }
+}
+
+async function loadReport() {
+  const year     = document.getElementById('yearSelect').value;
+  const propId   = document.getElementById('propertySelect').value;
+  const token    = localStorage.getItem('lcc_token');
+
+  document.getElementById('loadingState').style.display = 'flex';
+  document.getElementById('reportContent').style.display = 'none';
+
+  try {
+    let url = `${API_URL}/api/reporting?year=${year}`;
+    if (propId) url += `&property_id=${propId}`;
+
+    const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!resp.ok) throw new Error('Erreur serveur ' + resp.status);
+    _reportData = await resp.json();
+
+    renderReport(_reportData);
+  } catch(e) {
+    console.error('loadReport:', e.message);
+    document.getElementById('loadingState').innerHTML = `
+      <i class="fas fa-exclamation-circle" style="font-size:36px;color:#dc2626;"></i>
+      <div>Erreur de chargement</div>
+      <div style="font-size:12px;color:#9CA3AF;">${e.message}</div>
+    `;
+  }
+}
+
+function fmt(n) {
+  if (n == null || isNaN(n)) return '—';
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' €';
+}
+function fmtPct(n) { return (n || 0) + '%'; }
+function fmtNum(n) { return new Intl.NumberFormat('fr-FR').format(n || 0); }
+
+// ── Render principal ─────────────────────────────────────────
+function renderReport(data) {
+  const s = data.summary || {};
+
+  // Sous-titre
+  document.getElementById('reportSubtitle').textContent =
+    `${data.year} · ${fmtNum(s.totalBookings)} réservation${s.totalBookings > 1 ? 's' : ''} · ${fmtNum(s.totalNights)} nuits`;
+
+  // KPI Cards
+  renderKPIs(s);
+
+  // Conciergerie
+  renderConcierge(data);
+
+  // Charts
+  renderMonthlyChart(data.monthly, _currentChartType);
+  renderPlatformChart(data.platforms);
+
+  // Par logement
+  renderPropertyList(data.byProperty);
+
+  // Tableau mensuel
+  renderMonthlyTable(data.monthly);
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('reportContent').style.display = 'block';
+}
+
+function renderKPIs(s) {
+  const kpis = [
+    {
+      label: 'CA Brut',
+      value: fmt(s.totalGrossRevenue),
+      icon: 'fa-euro-sign',
+      color: '#1A7A5E',
+      bg: 'rgba(26,122,94,.08)',
+      sub: `dont ${fmt(s.totalCleaningFee)} ménage`
+    },
+    {
+      label: 'Revenu net hors taxe',
+      value: fmt(s.totalNetRevenue),
+      icon: 'fa-wallet',
+      color: '#3b82f6',
+      bg: 'rgba(59,130,246,.08)',
+      sub: `Taxe séjour : ${fmt(s.totalTouristTax)}`
+    },
+    {
+      label: 'Revenu propriétaire',
+      value: fmt(s.totalOwnerRevenue),
+      icon: 'fa-home',
+      color: '#8b5cf6',
+      bg: 'rgba(139,92,246,.08)',
+      sub: `Conciergerie : ${fmt(s.totalConcierge)}`
+    },
+    {
+      label: 'Réservations',
+      value: fmtNum(s.totalBookings),
+      icon: 'fa-calendar-check',
+      color: '#f59e0b',
+      bg: 'rgba(245,158,11,.08)',
+      sub: `Moy. ${s.avgNightsPerBooking || 0} nuits / séjour`
+    }
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
+    <div class="kpi-card" style="--kpi-color:${k.color};--kpi-bg:${k.bg};">
+      <div class="kpi-icon"><i class="fas ${k.icon}"></i></div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>
+  `).join('');
+}
+
+function renderConcierge(data) {
+  const s = data.summary || {};
+  const hasConcierge = data.byProperty && data.byProperty.some(p => p.conciergePct > 0);
+  const section = document.getElementById('conciergeSection');
+
+  if (!hasConcierge || s.totalConcierge === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  const grid = document.getElementById('conciergeGrid');
+
+  grid.innerHTML = `
+    <div class="concierge-kpi">
+      <div class="concierge-kpi-value">${fmt(s.totalConcierge)}</div>
+      <div class="concierge-kpi-label">Commission totale</div>
+    </div>
+    <div class="concierge-kpi">
+      <div class="concierge-kpi-value">${fmt(s.totalOwnerRevenue)}</div>
+      <div class="concierge-kpi-label">Versé au propriétaire</div>
+    </div>
+    <div class="concierge-kpi">
+      <div class="concierge-kpi-value">${fmtNum(s.totalBookings)}</div>
+      <div class="concierge-kpi-label">Séjours gérés</div>
+    </div>
+    ${(data.byProperty || []).filter(p => p.conciergePct > 0).map(p => `
+      <div class="concierge-kpi">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
+          <div style="font-size:12px;font-weight:600;color:#374151;">${p.name}</div>
+        </div>
+        <div class="concierge-kpi-value" style="font-size:16px;">${fmt(p.conciergeAmount)}</div>
+        <div class="concierge-kpi-label">${p.conciergePct}% sur ${fmt(p.grossRevenue)}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderMonthlyChart(monthly, type) {
+  const labels = monthly.map(m => m.label);
+  const dataMap = {
+    gross: monthly.map(m => m.grossRevenue),
+    net:   monthly.map(m => m.netRevenue),
+    owner: monthly.map(m => m.ownerRevenue)
+  };
+  const colorMap = {
+    gross: '#1A7A5E',
+    net:   '#3b82f6',
+    owner: '#8b5cf6'
+  };
+  const values = dataMap[type] || dataMap.gross;
+  const color  = colorMap[type] || '#1A7A5E';
+
+  if (_monthlyChart) _monthlyChart.destroy();
+
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  _monthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: values.map(v => v > 0 ? color + '22' : 'transparent'),
+        borderColor: values.map(v => v > 0 ? color : 'transparent'),
+        borderWidth: 2,
+        borderRadius: 8,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => fmt(ctx.raw)
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#9CA3AF' } },
+        y: {
+          grid: { color: 'rgba(0,0,0,.04)' },
+          ticks: {
+            font: { family: 'DM Mono', size: 11 },
+            color: '#9CA3AF',
+            callback: v => v === 0 ? '0' : (v >= 1000 ? (v/1000).toFixed(0) + 'k€' : v + '€')
+          }
+        }
+      }
+    }
+  });
+}
+
+function switchChart(type, btn) {
+  _currentChartType = type;
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  if (_reportData) renderMonthlyChart(_reportData.monthly, type);
+}
+
+function renderPlatformChart(platforms) {
+  if (!platforms || !platforms.length) return;
+
+  const labels = platforms.map(p => p.name);
+  const values = platforms.map(p => p.bookings);
+  const colors = platforms.map(p => PLATFORM_COLORS[p.name] || DEFAULT_COLORS[platforms.indexOf(p) % DEFAULT_COLORS.length]);
+
+  if (_platformChart) _platformChart.destroy();
+
+  const ctx = document.getElementById('platformChart').getContext('2d');
+  _platformChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors.map(c => c + 'CC'),
+        borderColor: colors,
+        borderWidth: 2,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.raw} rés. (${platforms[ctx.dataIndex]?.pct || 0}%)`
+          }
+        }
+      }
+    }
+  });
+
+  // Liste plateforme
+  const totalBookings = platforms.reduce((s, p) => s + p.bookings, 0);
+  document.getElementById('platformList').innerHTML = platforms.map((p, i) => {
+    const color = PLATFORM_COLORS[p.name] || DEFAULT_COLORS[i % DEFAULT_COLORS.length];
+    return `
+      <div class="platform-row">
+        <div class="platform-dot" style="background:${color};"></div>
+        <div class="platform-name">${p.name}</div>
+        <div class="platform-bar-wrap">
+          <div class="platform-bar" style="width:${p.pct}%;background:${color};"></div>
+        </div>
+        <div class="platform-pct">${p.pct}%</div>
+        <div class="platform-rev">${fmt(p.revenue)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPropertyList(byProperty) {
+  if (!byProperty || !byProperty.length) {
+    document.getElementById('propertyList').innerHTML = '<div class="empty-state"><i class="fas fa-home"></i>Aucun logement</div>';
+    return;
+  }
+
+  document.getElementById('propertyList').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;align-items:center;gap:12px;padding:10px 20px;background:var(--bg);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">
+      <div>Logement</div>
+      <div style="text-align:right;min-width:72px;">CA brut</div>
+      <div style="text-align:right;min-width:72px;">Net</div>
+      <div style="text-align:right;min-width:72px;">Concierg.</div>
+      <div style="text-align:right;min-width:72px;">Propriét.</div>
+      <div style="text-align:right;min-width:60px;">Taux occ.</div>
+    </div>
+    ${byProperty.map(p => {
+      const occ = p.occupancyRate || 0;
+      const occColor = occ >= 70 ? '#1A7A5E' : occ >= 40 ? '#f59e0b' : '#9CA3AF';
+      return `
+        <div class="property-report-row">
+          <div class="prop-name-wrap">
+            <div class="prop-dot" style="background:${p.color || '#10B981'};"></div>
+            <div>
+              <div class="prop-name">${p.name}</div>
+              <div class="prop-nights">${fmtNum(p.bookings)} rés. · ${fmtNum(p.nights)} nuits</div>
+            </div>
+          </div>
+          <div class="prop-metric">
+            <div class="prop-metric-value">${fmt(p.grossRevenue)}</div>
+            <div class="prop-metric-label">brut</div>
+          </div>
+          <div class="prop-metric">
+            <div class="prop-metric-value">${fmt(p.netRevenue)}</div>
+            <div class="prop-metric-label">net</div>
+          </div>
+          <div class="prop-metric">
+            <div class="prop-metric-value ${p.conciergeAmount === 0 ? 'zero' : ''}">${p.conciergeAmount > 0 ? fmt(p.conciergeAmount) : '—'}</div>
+            <div class="prop-metric-label">${p.conciergePct > 0 ? p.conciergePct + '%' : 'N/A'}</div>
+          </div>
+          <div class="prop-metric">
+            <div class="prop-metric-value">${fmt(p.ownerRevenue)}</div>
+            <div class="prop-metric-label">propriét.</div>
+          </div>
+          <div class="prop-metric">
+            <div class="occupancy-badge" style="background:${occColor}18;color:${occColor};">${occ}%</div>
+          </div>
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+function renderMonthlyTable(monthly) {
+  const hasConcierge = _reportData?.byProperty?.some(p => p.conciergePct > 0);
+
+  let html = `
+    <thead>
+      <tr>
+        <th>Mois</th>
+        <th>Rés.</th>
+        <th>Nuits</th>
+        <th>CA brut</th>
+        <th>Ménage</th>
+        <th>Taxe séjour</th>
+        <th>Net</th>
+        ${hasConcierge ? '<th>Concierg.</th><th>Propriét.</th>' : ''}
+      </tr>
+    </thead>
+    <tbody>
+      ${monthly.map(m => `
+        <tr>
+          <td>${m.label}</td>
+          <td class="${m.bookings === 0 ? 'zero' : ''}">${fmtNum(m.bookings)}</td>
+          <td class="${m.nights === 0 ? 'zero' : ''}">${fmtNum(m.nights)}</td>
+          <td class="${m.grossRevenue === 0 ? 'zero' : ''}">${m.grossRevenue > 0 ? fmt(m.grossRevenue) : '—'}</td>
+          <td class="${m.cleaningFee === 0 ? 'zero' : ''}">${m.cleaningFee > 0 ? fmt(m.cleaningFee) : '—'}</td>
+          <td class="${m.touristTax === 0 ? 'zero' : ''}">${m.touristTax > 0 ? fmt(m.touristTax) : '—'}</td>
+          <td class="${m.netRevenue === 0 ? 'zero' : ''}">${m.netRevenue > 0 ? fmt(m.netRevenue) : '—'}</td>
+          ${hasConcierge ? `
+            <td class="${m.conciergeAmount === 0 ? 'zero' : ''}">${m.conciergeAmount > 0 ? fmt(m.conciergeAmount) : '—'}</td>
+            <td class="${m.ownerRevenue === 0 ? 'zero' : ''}">${m.ownerRevenue > 0 ? fmt(m.ownerRevenue) : '—'}</td>
+          ` : ''}
+        </tr>
+      `).join('')}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td>TOTAL</td>
+        <td>${fmtNum(monthly.reduce((s, m) => s + m.bookings, 0))}</td>
+        <td>${fmtNum(monthly.reduce((s, m) => s + m.nights, 0))}</td>
+        <td>${fmt(monthly.reduce((s, m) => s + m.grossRevenue, 0))}</td>
+        <td>${fmt(monthly.reduce((s, m) => s + m.cleaningFee, 0))}</td>
+        <td>${fmt(monthly.reduce((s, m) => s + m.touristTax, 0))}</td>
+        <td>${fmt(monthly.reduce((s, m) => s + m.netRevenue, 0))}</td>
+        ${hasConcierge ? `
+          <td>${fmt(monthly.reduce((s, m) => s + m.conciergeAmount, 0))}</td>
+          <td>${fmt(monthly.reduce((s, m) => s + m.ownerRevenue, 0))}</td>
+        ` : ''}
+      </tr>
+    </tfoot>
+  `;
+  document.getElementById('monthlyTable').innerHTML = html;
+}
+
+// ── Export CSV global ─────────────────────────────────────────
+function exportCSV() {
+  if (!_reportData) return;
+  const year = _reportData.year;
+  const hasConcierge = _reportData.byProperty?.some(p => p.conciergePct > 0);
+
+  const headers = ['Mois','Réservations','Nuits','CA Brut','Frais Ménage','Taxe Séjour','Revenu Net'];
+  if (hasConcierge) headers.push('Commission Conciergerie','Revenu Propriétaire');
+
+  const rows = _reportData.monthly.map(m => {
+    const row = [m.label, m.bookings, m.nights, m.grossRevenue, m.cleaningFee, m.touristTax, m.netRevenue];
+    if (hasConcierge) row.push(m.conciergeAmount, m.ownerRevenue);
+    return row;
+  });
+
+  // Ligne total
+  const total = ['TOTAL',
+    _reportData.monthly.reduce((s, m) => s + m.bookings, 0),
+    _reportData.monthly.reduce((s, m) => s + m.nights, 0),
+    _reportData.monthly.reduce((s, m) => s + m.grossRevenue, 0),
+    _reportData.monthly.reduce((s, m) => s + m.cleaningFee, 0),
+    _reportData.monthly.reduce((s, m) => s + m.touristTax, 0),
+    _reportData.monthly.reduce((s, m) => s + m.netRevenue, 0)
+  ];
+  if (hasConcierge) {
+    total.push(_reportData.monthly.reduce((s, m) => s + m.conciergeAmount, 0));
+    total.push(_reportData.monthly.reduce((s, m) => s + m.ownerRevenue, 0));
+  }
+  rows.push(total);
+
+  downloadCSV(`reporting_${year}.csv`, headers, rows);
+}
+
+// ── Export conciergerie (par logement, par réservation) ───────
+function exportConcierge() {
+  if (!_reportData) return;
+  const year = _reportData.year;
+  const resas = (_reportData.reservations || []).filter(r => r.conciergePct > 0);
+
+  if (!resas.length) {
+    alert('Aucune réservation avec commission conciergerie configurée.\n\nConfigurez le % dans Settings > Logement > Commission conciergerie.');
+    return;
+  }
+
+  const headers = ['Logement','Plateforme','Arrivée','Départ','Nuits','Prix brut','Frais ménage','Taxe séjour','Revenu net','% Conciergerie','Commission','Versé propriétaire'];
+  const rows = resas.map(r => [
+    r.propertyName,
+    r.platform,
+    r.startDate,
+    r.endDate,
+    r.nights,
+    r.rawPrice,
+    r.cleaningFee,
+    r.touristTax,
+    r.netRevenue,
+    r.conciergePct + '%',
+    r.conciergeAmount,
+    r.ownerRevenue
+  ]);
+
+  downloadCSV(`conciergerie_${year}.csv`, headers, rows);
+}
+
+function downloadCSV(filename, headers, rows) {
+  const bom = '\uFEFF'; // BOM pour Excel FR
+  const csv = bom + [headers, ...rows]
+    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
