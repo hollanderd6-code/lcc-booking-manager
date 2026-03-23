@@ -6320,12 +6320,13 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
       } catch(_e) { console.error('Notif sous-comptes annulation:', _e.message); }
     }
     
-    // ✅ Forcer la resynchronisation iCal + Channex
+    // ✅ Forcer la resynchronisation Channex d'abord, puis iCal
     setImmediate(async () => {
-      syncAllCalendars();
       if (deletedReservation) {
         await triggerChannexAvailabilitySync(deletedReservation.property_id);
       }
+      // iCal sync après Channex pour éviter race condition
+      syncAllCalendars();
     });
     
     console.log('✅ Réservation supprimée');
@@ -6426,8 +6427,14 @@ app.post('/api/blocks', async (req, res) => {
       block
     });
 
-    // ✅ Sync Channex en arrière-plan
-    setImmediate(() => triggerChannexAvailabilitySync(propertyId));
+    // ✅ Sync Channex + forcer refresh calendrier front
+    setImmediate(async () => {
+      await triggerChannexAvailabilitySync(propertyId);
+      // Notifier le front que le store est à jour (évite double action)
+      if (io) {
+        io.to('user_' + user.id).emit('reservations:updated', { propertyId });
+      }
+    });
 
   } catch (err) {
     console.error('Erreur création blocage:', err);
@@ -16954,8 +16961,15 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       if (io) {
         io.to('user_' + user.id).emit('calendar:block_removed', { uid, propertyId });
       }
-      // Forcer la resynchronisation
-      setImmediate(() => syncAllCalendars());
+      // ✅ Channex sync d'abord, puis iCal (évite race condition)
+      setImmediate(async () => {
+        await triggerChannexAvailabilitySync(propertyId);
+        syncAllCalendars();
+        // Notifier le front que le store est à jour
+        if (io) {
+          io.to('user_' + user.id).emit('reservations:updated', { propertyId });
+        }
+      });
       
       return res.status(200).json({
         success: true,
