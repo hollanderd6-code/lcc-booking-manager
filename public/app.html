@@ -5395,6 +5395,7 @@ window.LCC_PROPERTIES = properties;
       console.warn('Erreur KPI dashboard', e);
     }
   }
+  window.loadCalendarData = loadDataAndUpdateKpis;
   document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
 })();
 </script>
@@ -8064,7 +8065,6 @@ document.addEventListener('click', function(e) {
     })
     .then(data => {
       console.log('✅ Suppression backend OK :', data);
-      alert('Suppression réussie !');
 
       // On ferme le modal
       if (detailsModal) {
@@ -8074,10 +8074,16 @@ document.addEventListener('click', function(e) {
 
       window.deletingInProgress = false;
 
-      // Rafraîchissement immédiat sans reload complet
-      if (typeof loadCalendarData === 'function') loadCalendarData();
-      else if (typeof refreshCalendar === 'function') refreshCalendar();
-      else location.reload();
+      // Petit délai pour laisser la DB se stabiliser avant le refetch
+      setTimeout(function() {
+        if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+        else setTimeout(function() {
+        if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+        else if (typeof loadCalendarData === 'function') loadCalendarData();
+        else if (typeof refreshCalendar === 'function') refreshCalendar();
+        else location.reload();
+      }, 400);
+      }, 400);
     })
     .catch(err => {
       window.deletingInProgress = false;
@@ -8228,8 +8234,12 @@ if (editBookingForm) {
         editModal.style.display = 'none';
       }
 
-      if (typeof loadCalendarData === 'function') loadCalendarData();
-      else location.reload();
+      setTimeout(function() {
+        if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+        else if (typeof loadCalendarData === 'function') loadCalendarData();
+        else if (typeof refreshCalendar === 'function') refreshCalendar();
+        else location.reload();
+      }, 400);
     } catch (err) {
       console.error('❌ Erreur mise à jour blocage:', err);
       alert('Erreur : ' + err.message);
@@ -8274,8 +8284,12 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     if (data.block || data.message) {
       alert('Blocage créé !');
       document.getElementById('blockModal').style.display = 'none';
-      if (typeof loadCalendarData === 'function') loadCalendarData();
-      else location.reload();
+      setTimeout(function() {
+        if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+        else if (typeof loadCalendarData === 'function') loadCalendarData();
+        else if (typeof refreshCalendar === 'function') refreshCalendar();
+        else location.reload();
+      }, 400);
     } else {
       alert('Erreur: ' + (data.error || 'Erreur inconnue'));
     }
