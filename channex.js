@@ -207,6 +207,47 @@ async function pushRates(pool, { property_id, channex_property_id, channex_rate_
 
 
 
+// ── 2c. Pousser les restrictions vers Channex (min_stay) ─────
+async function pushRestrictions(pool, { property_id, channex_property_id, channex_room_type_id, channex_rate_plan_id, restrictions }) {
+  // restrictions = [{ date: 'YYYY-MM-DD', min_stay: 3 }, ...]
+  try {
+    console.log(`🔒 [CHANNEX] Push restrictions pour ${channex_property_id} (${restrictions.length} jours)`);
+
+    const values = restrictions.map(r => ({
+      rate_plan_id: channex_rate_plan_id,
+      date: r.date,
+      ...(r.min_stay != null ? { min_stay: r.min_stay } : {}),
+      ...(r.max_stay != null ? { max_stay: r.max_stay } : {}),
+      ...(r.closed_to_arrival != null ? { closed_to_arrival: r.closed_to_arrival } : {}),
+      ...(r.closed_to_departure != null ? { closed_to_departure: r.closed_to_departure } : {})
+    }));
+
+    await channexAPI.post('/restrictions', { values });
+
+    await logChannex(pool, {
+      property_id, channex_property_id,
+      event_type: 'push_restrictions',
+      direction: 'outbound',
+      payload: { restrictions_count: values.length }
+    });
+
+    console.log(`✅ [CHANNEX] Restrictions poussées (${values.length} jours)`);
+    return { success: true, count: values.length };
+
+  } catch (e) {
+    const errDetail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX] Erreur push restrictions:', errDetail);
+    await logChannex(pool, {
+      property_id, channex_property_id,
+      event_type: 'push_restrictions',
+      direction: 'outbound',
+      status: 'error',
+      error_message: typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail)
+    });
+    throw e;
+  }
+}
+
 async function processChannexBooking(pool, bookingData) {
   try {
     const booking_id = bookingData.id || bookingData.attributes?.id;
@@ -303,6 +344,7 @@ module.exports = {
   createChannexProperty,
   pushAvailability,
   pushRates,
+  pushRestrictions,
   processChannexBooking,
   logChannex,
   channexAPI
