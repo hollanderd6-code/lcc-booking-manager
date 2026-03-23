@@ -1423,6 +1423,28 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 </div>
 
+<!-- ✅ SECTION : RÈGLES DE TARIFICATION AVANCÉE -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-tags"></i>
+  <span>Règles de tarification</span>
+  <button type="button" id="btnAddPricingRule" onclick="openPricingRuleModal()"
+    style="margin-left:auto;display:flex;align-items:center;gap:6px;padding:6px 14px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+    <i class="fas fa-plus"></i> Ajouter une règle
+  </button>
+</div>
+<div id="pricingRulesList" style="margin-bottom:16px;">
+  <div style="font-size:13px;color:#9CA3AF;padding:10px 0;">Aucune règle configurée</div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+  <button type="button" onclick="pushRulesToChannex()" id="btnPushChannex"
+    style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
+    <i class="fas fa-cloud-upload-alt"></i> Synchroniser les prix avec Channex
+  </button>
+</div>
+<small style="font-size:11px;color:#9CA3AF;display:block;margin-bottom:16px;">
+  Les règles s'appliquent dans l'ordre de priorité. Les prix manuels (clic calendrier) ont toujours la priorité.
+</small>
+
 <!-- ✅ SECTION : PAIEMENTS DIRECTS PAR LOGEMENT -->
 <div class="form-group" style="background:linear-gradient(135deg,#6772E510 0%,#6772E520 100%);padding:18px;border-radius:12px;border:1.5px solid #6772E530;">
   <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
