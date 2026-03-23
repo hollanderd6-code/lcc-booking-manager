@@ -105,6 +105,124 @@ async function triggerChannexAvailabilitySync(propertyId) {
 }
 
 
+// ============================================================
+// 💰 CHANNEX — Sync automatique des tarifs
+// Appelé après chaque modif de prix/règle/override
+// ============================================================
+async function triggerChannexRatesSync(propertyId, userId) {
+  try {
+    const propResult = await pool.query(
+      `SELECT id, name, base_price, weekend_price,
+              channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id
+       FROM properties WHERE id = $1`,
+      [propertyId]
+    );
+    const prop = propResult.rows[0];
+    if (!prop || !prop.channex_enabled || !prop.channex_rate_plan_id) return;
+
+    console.log(`💰 [CHANNEX RATES SYNC] Déclenchement pour ${propertyId}`);
+
+    const rulesResult = await pool.query(
+      'SELECT * FROM pricing_rules WHERE property_id = $1 AND user_id = $2 AND active = true ORDER BY priority DESC',
+      [propertyId, userId]
+    );
+    const rules = rulesResult.rows;
+
+    const today = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+    const endDate = new Date(today); endDate.setDate(today.getDate() + 365);
+
+    const overridesResult = await pool.query(
+      `SELECT TO_CHAR(date,'YYYY-MM-DD') as date, price FROM pricing_overrides
+       WHERE property_id = $1 AND user_id = $2 AND date >= $3 AND date <= $4`,
+      [propertyId, userId, fmt(today), fmt(endDate)]
+    );
+    const overridesMap = {};
+    overridesResult.rows.forEach(o => { overridesMap[o.date] = parseFloat(o.price); });
+
+    const periodRules  = rules.filter(r => r.rule_type === 'period');
+    const weekdayRules = rules.filter(r => r.rule_type === 'weekday');
+    const minStayRules = rules.filter(r => r.rule_type === 'min_stay');
+    const longStayRule = rules.find(r => r.rule_type === 'long_stay') || null;
+
+    const rates = [];
+    const restrictions = [];
+
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dateStr = fmt(d);
+      const dow = d.getDay();
+
+      let appliedPrice = null;
+
+      if (overridesMap[dateStr] != null) {
+        appliedPrice = overridesMap[dateStr];
+      } else {
+        for (const rule of periodRules) {
+          if (rule.start_date && rule.end_date && rule.price != null) {
+            if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+              appliedPrice = parseFloat(rule.price); break;
+            }
+          }
+        }
+        if (appliedPrice === null) {
+          for (const rule of weekdayRules) {
+            if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
+              appliedPrice = parseFloat(rule.price); break;
+            }
+          }
+        }
+        if (appliedPrice === null) {
+          const isPremium = (dow === 5 || dow === 6);
+          appliedPrice = isPremium && prop.weekend_price != null
+            ? parseFloat(prop.weekend_price)
+            : (prop.base_price != null ? parseFloat(prop.base_price) : null);
+        }
+        if (appliedPrice != null && longStayRule && longStayRule.discount_pct && longStayRule.discount_after_nights) {
+          appliedPrice = Math.round(appliedPrice * (1 - parseFloat(longStayRule.discount_pct) / 100) * 100) / 100;
+        }
+      }
+
+      if (appliedPrice != null) rates.push({ date: dateStr, price: appliedPrice });
+
+      let minStay = null;
+      for (const rule of minStayRules) {
+        if (rule.min_nights == null) continue;
+        if (!rule.start_date && !rule.end_date && !rule.days_of_week) { minStay = rule.min_nights; break; }
+        if (rule.start_date && rule.end_date) {
+          if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+            minStay = rule.min_nights; break;
+          }
+        }
+      }
+      if (minStay != null) restrictions.push({ date: dateStr, min_stay: minStay });
+    }
+
+    if (rates.length > 0) {
+      await pushRates(pool, {
+        property_id: propertyId,
+        channex_property_id: prop.channex_property_id,
+        channex_rate_plan_id: prop.channex_rate_plan_id,
+        rates
+      });
+    }
+    if (restrictions.length > 0) {
+      await pushRestrictions(pool, {
+        property_id: propertyId,
+        channex_property_id: prop.channex_property_id,
+        channex_room_type_id: prop.channex_room_type_id,
+        channex_rate_plan_id: prop.channex_rate_plan_id,
+        restrictions
+      });
+    }
+
+    console.log(`✅ [CHANNEX RATES SYNC] ${rates.length} tarifs + ${restrictions.length} restrictions synchronisés`);
+  } catch (e) {
+    console.error('⚠️ [CHANNEX RATES SYNC] Erreur (non bloquante):', e.message);
+  }
+}
+
 // ============================================
 // 💰 IMPORT SYSTÈME DE MESSAGES POUR LES CAUTIONS
 // ============================================
@@ -10264,6 +10382,8 @@ app.post('/api/properties',
         ]
       );
 
+      await loadProperties();
+      setImmediate(() => triggerChannexRatesSync(id, userId));
       return res.json({
         success: true,
         message: 'Propriété mise à jour avec succès',
@@ -10424,6 +10544,7 @@ app.post('/api/pricing/overrides', authenticateAny, async (req, res) => {
     `, [user.id, property_id, date, parseFloat(price)]);
 
     res.json({ success: true, property_id, date, price: parseFloat(price) });
+    setImmediate(() => triggerChannexRatesSync(property_id, user.id));
   } catch (err) {
     console.error('❌ POST /api/pricing/overrides:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -10444,6 +10565,7 @@ app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, async (
     );
 
     res.json({ success: true });
+    setImmediate(() => triggerChannexRatesSync(property_id, user.id));
   } catch (err) {
     console.error('❌ DELETE /api/pricing/overrides:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -10519,6 +10641,7 @@ app.post('/api/pricing/rules', authenticateAny, async (req, res) => {
     ]);
 
     res.json({ success: true, rule: result.rows[0] });
+    setImmediate(() => triggerChannexRatesSync(property_id, user.id));
   } catch (err) {
     console.error('❌ POST /api/pricing/rules:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -10567,6 +10690,7 @@ app.put('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Règle introuvable' });
     res.json({ success: true, rule: result.rows[0] });
+    setImmediate(() => triggerChannexRatesSync(result.rows[0].property_id, user.id));
   } catch (err) {
     console.error('❌ PUT /api/pricing/rules:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -10579,8 +10703,9 @@ app.delete('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    await pool.query('DELETE FROM pricing_rules WHERE id = $1 AND user_id = $2', [req.params.id, user.id]);
+    const deleted = await pool.query('DELETE FROM pricing_rules WHERE id = $1 AND user_id = $2 RETURNING property_id', [req.params.id, user.id]);
     res.json({ success: true });
+    if (deleted.rows[0]) setImmediate(() => triggerChannexRatesSync(deleted.rows[0].property_id, user.id));
   } catch (err) {
     console.error('❌ DELETE /api/pricing/rules:', err);
     res.status(500).json({ error: 'Erreur serveur' });
