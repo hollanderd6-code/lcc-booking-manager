@@ -54,7 +54,9 @@ const {
   pushAvailability,
   pushRates,
   pushRestrictions,
-  processChannexBooking
+  processChannexBooking,
+  getBookingMessages,
+  sendBookingMessage
 } = require('./channex');
 
 // ============================================================
@@ -1419,6 +1421,78 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonnes notif_sub_* ajoutées à sub_account_permissions');
     } catch (e) {
       console.log('ℹ️ Colonnes notif_sub_* déjà existantes:', e.message);
+    }
+
+    // ✅ Migration : channex_booking_id dans reservations (si pas déjà là)
+    try {
+      await pool.query(`
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS channex_booking_id TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS channex_revision_id TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ota_name TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ota_reservation_id TEXT;
+        CREATE INDEX IF NOT EXISTS idx_reservations_channex_booking_id ON reservations(channex_booking_id) WHERE channex_booking_id IS NOT NULL;
+      `);
+      console.log('✅ Colonnes Channex ajoutées à reservations');
+    } catch (e) {
+      console.log('ℹ️ Colonnes Channex reservations:', e.message);
+    }
+
+    // ✅ Migration : table channex_logs
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS channex_logs (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT,
+          property_id TEXT,
+          channex_property_id TEXT,
+          event_type TEXT,
+          direction TEXT,
+          payload JSONB,
+          status TEXT DEFAULT 'success',
+          error_message TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+      console.log('✅ Table channex_logs OK');
+    } catch (e) {
+      console.log('ℹ️ channex_logs:', e.message);
+    }
+
+    // ✅ Migration : tables pricing
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS pricing_rules (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          property_id TEXT NOT NULL,
+          name TEXT,
+          rule_type TEXT NOT NULL,
+          start_date DATE,
+          end_date DATE,
+          days_of_week INTEGER[],
+          price NUMERIC(10,2),
+          min_nights INTEGER,
+          discount_pct NUMERIC(5,2),
+          discount_after_nights INTEGER,
+          priority INTEGER DEFAULT 0,
+          active BOOLEAN DEFAULT true,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS pricing_overrides (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          property_id TEXT NOT NULL,
+          date DATE NOT NULL,
+          price NUMERIC(10,2) NOT NULL,
+          updated_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(user_id, property_id, date)
+        );
+        CREATE INDEX IF NOT EXISTS idx_pricing_rules_user_property ON pricing_rules(user_id, property_id);
+        CREATE INDEX IF NOT EXISTS idx_pricing_overrides_property_date ON pricing_overrides(property_id, date);
+      `);
+      console.log('✅ Tables pricing OK');
+    } catch (e) {
+      console.log('ℹ️ Tables pricing:', e.message);
     }
 
   } catch (err) {
@@ -20695,6 +20769,292 @@ app.post('/api/channex/webhook', async (req, res) => {
   } catch (e) {
     console.error('❌ [CHANNEX WEBHOOK]', e.message);
     res.status(200).json({ received: true, error: e.message });
+  }
+});
+
+
+// ── Webhook message entrant depuis Channex (voyageur → BH) ───
+app.post('/api/channex/webhook-message', async (req, res) => {
+  try {
+    const payload = req.body;
+    console.log('💬 [CHANNEX MSG WEBHOOK]', JSON.stringify(payload).substring(0, 300));
+
+    // Channex envoie le message dans différents formats selon la version
+    const data = payload.data || payload;
+    const attrs = data.attributes || data;
+    const channex_booking_id = attrs.booking_id || attrs.bookingId || null;
+    const messageText = attrs.message || '';
+    const sender = attrs.sender || 'guest';
+
+    if (!channex_booking_id || !messageText || sender !== 'guest') {
+      return res.status(200).json({ received: true, skipped: true });
+    }
+
+    // Trouver la conversation liée à cette réservation Channex
+    const convResult = await pool.query(
+      `SELECT c.id, c.user_id, c.property_id, r.guest_name, r.uid as reservation_uid
+       FROM conversations c
+       JOIN reservations r ON r.property_id = c.property_id
+         AND r.channex_booking_id = $1
+       LIMIT 1`,
+      [channex_booking_id]
+    );
+
+    let conversation_id;
+    let user_id;
+    let guest_name = 'Voyageur';
+
+    if (convResult.rows.length > 0) {
+      conversation_id = convResult.rows[0].id;
+      user_id = convResult.rows[0].user_id;
+      guest_name = convResult.rows[0].guest_name || 'Voyageur';
+    } else {
+      // Chercher via channex_booking_id directement sur la réservation
+      const resaResult = await pool.query(
+        `SELECT r.uid, r.property_id, r.user_id, r.guest_name,
+                p.user_id as prop_user_id
+         FROM reservations r
+         JOIN properties p ON p.id = r.property_id
+         WHERE r.channex_booking_id = $1`,
+        [channex_booking_id]
+      );
+
+      if (resaResult.rows.length === 0) {
+        console.warn(`⚠️ [CHANNEX MSG] Réservation non trouvée: ${channex_booking_id}`);
+        return res.status(200).json({ received: true, skipped: 'not_found' });
+      }
+
+      const resa = resaResult.rows[0];
+      guest_name = resa.guest_name || 'Voyageur';
+      user_id = resa.user_id || resa.prop_user_id;
+
+      // Chercher conversation existante par property + dates
+      const existConv = await pool.query(
+        `SELECT id FROM conversations WHERE property_id = $1 AND user_id = $2
+         ORDER BY created_at DESC LIMIT 1`,
+        [resa.property_id, user_id]
+      );
+
+      if (existConv.rows.length > 0) {
+        conversation_id = existConv.rows[0].id;
+      } else {
+        // Créer une nouvelle conversation
+        const token = require('crypto').randomBytes(32).toString('hex');
+        const newConv = await pool.query(
+          `INSERT INTO conversations
+            (user_id, property_id, platform, guest_name, unique_token, is_verified, status, created_at)
+           VALUES ($1, $2, 'channex', $3, $4, true, 'active', NOW())
+           RETURNING id`,
+          [user_id, resa.property_id, guest_name, token]
+        );
+        conversation_id = newConv.rows[0].id;
+      }
+    }
+
+    // Insérer le message dans BH
+    const msgResult = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+       VALUES ($1, 'guest', $2, $3, FALSE, NOW())
+       RETURNING *`,
+      [conversation_id, guest_name, messageText]
+    );
+
+    const savedMsg = msgResult.rows[0];
+
+    // Notifier en temps réel via Socket.io
+    if (io) {
+      io.to(`conversation_${conversation_id}`).emit('new_message', savedMsg);
+      io.to(`user_${user_id}`).emit('new_platform_message', {
+        conversation_id,
+        message: savedMsg,
+        channex_booking_id
+      });
+    }
+
+    // Notification push
+    try {
+      const tokensRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+        [user_id]
+      );
+      for (const tok of tokensRes.rows) {
+        await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', `${guest_name}: ${messageText.substring(0, 80)}`, {
+          type: 'new_guest_message',
+          conversation_id: String(conversation_id)
+        });
+      }
+    } catch (notifErr) {
+      console.error('⚠️ [CHANNEX MSG] Erreur notif:', notifErr.message);
+    }
+
+    console.log(`✅ [CHANNEX MSG] Message enregistré conversation ${conversation_id}`);
+    res.status(200).json({ success: true });
+
+  } catch (e) {
+    console.error('❌ [CHANNEX MSG WEBHOOK]', e.message);
+    res.status(200).json({ received: true, error: e.message });
+  }
+});
+
+// ── GET messages d'une conversation (avec fetch Channex) ─────
+app.get('/api/chat/conversations/:conversationId/messages-channex', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { conversationId } = req.params;
+
+    // Récupérer messages BH en DB
+    const dbMessages = await pool.query(
+      `SELECT m.*, c.user_id FROM messages m
+       JOIN conversations c ON c.id = m.conversation_id
+       WHERE m.conversation_id = $1
+       ORDER BY m.created_at ASC`,
+      [conversationId]
+    );
+
+    // Chercher le channex_booking_id lié
+    const resaResult = await pool.query(
+      `SELECT r.channex_booking_id FROM reservations r
+       JOIN conversations c ON c.property_id = r.property_id
+       WHERE c.id = $1 AND r.channex_booking_id IS NOT NULL
+       LIMIT 1`,
+      [conversationId]
+    );
+
+    let channexMessages = [];
+    if (resaResult.rows.length > 0 && resaResult.rows[0].channex_booking_id) {
+      try {
+        channexMessages = await getBookingMessages(resaResult.rows[0].channex_booking_id);
+      } catch (e) {
+        console.warn('⚠️ Channex messages non récupérables:', e.message);
+      }
+    }
+
+    res.json({
+      messages: dbMessages.rows,
+      channex_messages: channexMessages,
+      channex_booking_id: resaResult.rows[0]?.channex_booking_id || null
+    });
+
+  } catch (err) {
+    console.error('❌ GET messages-channex:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST envoyer un message vers la plateforme via Channex ────
+app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { conversationId } = req.params;
+    const { message } = req.body;
+
+    if (!message) return res.status(400).json({ error: 'message requis' });
+
+    // Trouver le channex_booking_id
+    const resaResult = await pool.query(
+      `SELECT r.channex_booking_id, r.guest_name FROM reservations r
+       JOIN conversations c ON c.property_id = r.property_id
+       WHERE c.id = $1 AND r.channex_booking_id IS NOT NULL
+       LIMIT 1`,
+      [conversationId]
+    );
+
+    if (resaResult.rows.length === 0 || !resaResult.rows[0].channex_booking_id) {
+      return res.status(400).json({ error: 'Pas de réservation Channex liée à cette conversation' });
+    }
+
+    const { channex_booking_id, guest_name } = resaResult.rows[0];
+
+    // Envoyer via Channex
+    await sendBookingMessage(channex_booking_id, message);
+
+    // Sauvegarder en DB
+    const msgResult = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+       VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW())
+       RETURNING *`,
+      [conversationId, message]
+    );
+
+    const savedMsg = msgResult.rows[0];
+
+    // Notifier via Socket.io
+    if (io) {
+      io.to(`conversation_${conversationId}`).emit('new_message', savedMsg);
+    }
+
+    res.json({ success: true, message: savedMsg });
+
+  } catch (err) {
+    console.error('❌ POST send-platform:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ── Enregistrer les webhooks Channex pour un logement ────────
+app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const { property_id } = req.body;
+
+    const propResult = await pool.query(
+      'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, user_id]
+    );
+
+    const prop = propResult.rows[0];
+    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    const { channexAPI } = require('./channex');
+    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+
+    // Créer webhook booking (réservations)
+    const webhooks = [
+      {
+        event_mask: 'booking',
+        callback_url: `${appUrl}/api/channex/webhook`,
+        label: 'BH Bookings'
+      },
+      {
+        event_mask: 'message',
+        callback_url: `${appUrl}/api/channex/webhook-message`,
+        label: 'BH Messages'
+      }
+    ];
+
+    const results = [];
+    for (const wh of webhooks) {
+      try {
+        const r = await channexAPI.post('/webhooks', {
+          webhook: {
+            property_id: prop.channex_property_id,
+            callback_url: wh.callback_url,
+            event_mask: wh.event_mask,
+            is_active: true,
+            send_data: true
+          }
+        });
+        results.push({ event: wh.event_mask, status: 'created', id: r.data.data?.id });
+        console.log(`✅ [CHANNEX] Webhook ${wh.event_mask} créé`);
+      } catch (e) {
+        const err = e.response?.data || e.message;
+        results.push({ event: wh.event_mask, status: 'error', error: err });
+        console.warn(`⚠️ [CHANNEX] Webhook ${wh.event_mask}:`, err);
+      }
+    }
+
+    res.json({ success: true, results });
+
+  } catch (err) {
+    console.error('❌ register-webhooks:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
