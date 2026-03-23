@@ -53,6 +53,7 @@ const {
   createChannexProperty,
   pushAvailability,
   pushRates,
+  pushRestrictions,
   processChannexBooking
 } = require('./channex');
 
@@ -10562,7 +10563,7 @@ app.delete('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
   }
 });
 
-// POST /api/pricing/rules/push-channex/:property_id — Calculer et pousser les prix vers Channex
+// POST /api/pricing/rules/push-channex/:property_id — Calculer et pousser prix + restrictions vers Channex
 app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
@@ -10573,7 +10574,7 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async 
     // Récupérer le logement avec ses infos Channex
     const propResult = await pool.query(
       `SELECT id, name, base_price, weekend_price,
-              channex_enabled, channex_property_id, channex_rate_plan_id
+              channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id
        FROM properties WHERE id = $1 AND user_id = $2`,
       [property_id, user.id]
     );
@@ -10591,11 +10592,11 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async 
     );
     const rules = rulesResult.rows;
 
-    // Récupérer les overrides pour ce logement (180 jours)
     const today = new Date();
-    const endDate = new Date(today); endDate.setDate(today.getDate() + 365);
     const fmt = d => d.toISOString().split('T')[0];
+    const endDate = new Date(today); endDate.setDate(today.getDate() + 365);
 
+    // Récupérer les overrides manuels
     const overridesResult = await pool.query(
       `SELECT TO_CHAR(date,'YYYY-MM-DD') as date, price FROM pricing_overrides
        WHERE property_id = $1 AND user_id = $2 AND date >= $3 AND date <= $4`,
@@ -10604,64 +10605,141 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async 
     const overridesMap = {};
     overridesResult.rows.forEach(o => { overridesMap[o.date] = parseFloat(o.price); });
 
-    // Calculer le prix pour chaque jour (365 jours)
-    const rates = [];
+    // Séparer les règles par type pour traitement
+    const periodRules   = rules.filter(r => r.rule_type === 'period');
+    const weekdayRules  = rules.filter(r => r.rule_type === 'weekday');
+    const minStayRules  = rules.filter(r => r.rule_type === 'min_stay');
+    const longStayRules = rules.filter(r => r.rule_type === 'long_stay');
+
+    // Trouver la réduction long_stay applicable (la première par priorité)
+    const longStayRule = longStayRules.length > 0 ? longStayRules[0] : null;
+
+    // Calculer prix + restrictions pour chaque jour (365 jours)
+    const rates        = [];
+    const restrictions = [];
+
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const dateStr = fmt(d);
-      const dow = d.getDay(); // 0=dim, 1=lun ... 5=ven, 6=sam
+      const dow = d.getDay(); // 0=dim ... 5=ven, 6=sam
+
+      // ── CALCUL DU PRIX ──────────────────────────────────────
+
+      let appliedPrice = null;
 
       // 1. Override manuel → priorité absolue
       if (overridesMap[dateStr] != null) {
-        rates.push({ date: dateStr, price: overridesMap[dateStr] });
-        continue;
-      }
-
-      // 2. Appliquer les règles par priorité
-      let appliedPrice = null;
-
-      for (const rule of rules) {
-        if (rule.rule_type === 'period' && rule.start_date && rule.end_date && rule.price != null) {
-          if (dateStr >= rule.start_date && dateStr <= rule.end_date) {
-            appliedPrice = parseFloat(rule.price);
-            break;
+        appliedPrice = overridesMap[dateStr];
+      } else {
+        // 2. Règle période (par priorité)
+        for (const rule of periodRules) {
+          if (rule.start_date && rule.end_date && rule.price != null) {
+            if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+              appliedPrice = parseFloat(rule.price);
+              break;
+            }
           }
         }
-        if (rule.rule_type === 'weekday' && rule.days_of_week && rule.price != null) {
-          if (rule.days_of_week.includes(dow)) {
-            appliedPrice = parseFloat(rule.price);
-            break;
+
+        // 3. Règle jour de semaine (par priorité)
+        if (appliedPrice === null) {
+          for (const rule of weekdayRules) {
+            if (rule.days_of_week && rule.price != null) {
+              if (rule.days_of_week.includes(dow)) {
+                appliedPrice = parseFloat(rule.price);
+                break;
+              }
+            }
           }
         }
-      }
 
-      // 3. Fallback → prix de base du logement
-      if (appliedPrice === null) {
-        const isPremium = (dow === 5 || dow === 6);
-        appliedPrice = isPremium && prop.weekend_price != null
-          ? parseFloat(prop.weekend_price)
-          : (prop.base_price != null ? parseFloat(prop.base_price) : null);
+        // 4. Fallback → prix de base du logement
+        if (appliedPrice === null) {
+          const isPremium = (dow === 5 || dow === 6);
+          appliedPrice = isPremium && prop.weekend_price != null
+            ? parseFloat(prop.weekend_price)
+            : (prop.base_price != null ? parseFloat(prop.base_price) : null);
+        }
+
+        // 5. Appliquer la réduction long_stay si configurée
+        // Note: Channex ne gère pas le long_stay discount nativement
+        // On l'applique en calculant un prix moyen réduit
+        if (appliedPrice != null && longStayRule && longStayRule.discount_pct && longStayRule.discount_after_nights) {
+          // On pousse le prix avec réduction (simplifié : on applique la réduction sur toutes les nuits)
+          // La logique correcte serait conditionnelle au nombre de nuits de la réservation
+          // mais Channex ne supporte pas ça nativement → on pousse le prix réduit directement
+          appliedPrice = appliedPrice * (1 - parseFloat(longStayRule.discount_pct) / 100);
+          appliedPrice = Math.round(appliedPrice * 100) / 100;
+        }
       }
 
       if (appliedPrice != null) {
         rates.push({ date: dateStr, price: appliedPrice });
       }
+
+      // ── CALCUL DES RESTRICTIONS (min_stay) ──────────────────
+
+      let minStay = null;
+
+      for (const rule of minStayRules) {
+        if (rule.min_nights == null) continue;
+
+        // Règle globale (sans période ni jours définis)
+        if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
+          minStay = rule.min_nights;
+          break;
+        }
+
+        // Règle sur une période
+        if (rule.start_date && rule.end_date) {
+          if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+            minStay = rule.min_nights;
+            break;
+          }
+        }
+      }
+
+      if (minStay != null) {
+        restrictions.push({ date: dateStr, min_stay: minStay });
+      }
     }
 
-    // Pusher vers Channex
-    await pushRates(pool, {
-      property_id,
-      channex_property_id: prop.channex_property_id,
-      channex_rate_plan_id: prop.channex_rate_plan_id,
-      rates
-    });
+    // ── PUSH VERS CHANNEX ───────────────────────────────────────
+
+    const pushResults = { rates: 0, restrictions: 0 };
+
+    // Pusher les prix
+    if (rates.length > 0) {
+      await pushRates(pool, {
+        property_id,
+        channex_property_id: prop.channex_property_id,
+        channex_rate_plan_id: prop.channex_rate_plan_id,
+        rates
+      });
+      pushResults.rates = rates.length;
+    }
+
+    // Pusher les restrictions min_stay
+    if (restrictions.length > 0) {
+      await pushRestrictions(pool, {
+        property_id,
+        channex_property_id: prop.channex_property_id,
+        channex_room_type_id: prop.channex_room_type_id,
+        channex_rate_plan_id: prop.channex_rate_plan_id,
+        restrictions
+      });
+      pushResults.restrictions = restrictions.length;
+    }
 
     res.json({
       success: true,
-      message: `${rates.length} jours de tarifs poussés vers Channex`,
-      property: prop.name
+      message: `${pushResults.rates} jours de tarifs + ${pushResults.restrictions} jours de restrictions synchronisés`,
+      property: prop.name,
+      longStayApplied: longStayRule != null,
+      details: pushResults
     });
+
   } catch (err) {
     console.error('❌ POST /api/pricing/rules/push-channex:', err);
     res.status(500).json({ error: err.message || 'Erreur serveur' });
