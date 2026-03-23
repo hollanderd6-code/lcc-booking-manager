@@ -432,28 +432,37 @@ async function openChat(conversationId) {
         currentChannexBookingId = chxData.channex_booking_id;
         window._currentChannexBookingId = currentChannexBookingId;
 
-        // Activer le bouton plateforme
-        if (bookingBtn) {
-          const platform = (conv.platform || '').toLowerCase();
-          const label = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking' : 'Plateforme';
-          bookingBtn.style.display = 'inline-flex';
-          bookingBtn.title = `Envoyer sur ${label}`;
-          bookingBtn.innerHTML = `<i class="fas fa-paper-plane"></i> ${label}`;
-          bookingBtn.onclick = null; // géré dans sendMessageOwner
+        // Indiquer visuellement que l'envoi ira sur la plateforme
+        if (bookingBtn) bookingBtn.style.display = 'none'; // caché, inutile
+
+        // Adapter le bouton sendBtn pour indiquer la plateforme
+        const sendBtn = document.getElementById('sendBtn');
+        const platform = (conv.platform || '').toLowerCase();
+        const platformLabel = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking.com' : 'Plateforme';
+        const platformColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+        if (sendBtn) {
+          sendBtn.title = `Envoyer sur ${platformLabel}`;
+          sendBtn.style.background = platformColor;
+          sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i>`;
         }
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) chatInput.placeholder = `Répondre via ${platformLabel}…`;
 
         // Injecter les messages Channex non encore en DB
         if (chxData.channex_messages && chxData.channex_messages.length > 0) {
           _injectChannexMessages(chxData.channex_messages);
         }
       } else {
-        // Pas de Channex — comportement classique Booking
-        if (bookingBtn) {
-          const isBooking = (conv.platform || '').toLowerCase().includes('booking');
-          bookingBtn.style.display = isBooking ? 'inline-flex' : 'none';
-          bookingBtn.innerHTML = `<i class="fas fa-paper-plane"></i>`;
-          if (isBooking) bookingBtn.onclick = () => openBookingMessageModal(conversationId);
+        // Pas de Channex — reset le bouton sendBtn à l'état normal
+        if (bookingBtn) bookingBtn.style.display = 'none';
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn) {
+          sendBtn.style.background = '';
+          sendBtn.title = 'Envoyer';
+          sendBtn.innerHTML = `<i class="fas fa-paper-plane"></i>`;
         }
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) chatInput.placeholder = 'Répondre à…';
       }
     }
   } catch(e) {
