@@ -917,6 +917,23 @@ function dlCSV(name, headers, rows) {
 }
 </script>
 
+
+<script>
+// Masquer header.main-header sur mobile dès injection par bh-layout.js
+(function() {
+  if (window.innerWidth > 1366) return;
+  function hideMainHeader() {
+    var h = document.querySelector('header.main-header');
+    if (h) { h.style.setProperty('display', 'none', 'important'); }
+    var tb = document.querySelector('.top-bar');
+    if (tb) { tb.style.setProperty('display', 'none', 'important'); }
+  }
+  hideMainHeader();
+  var obs = new MutationObserver(hideMainHeader);
+  obs.observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('load', hideMainHeader);
+})();
+</script>
 <style id="reporting-mobile-master">
 @media (max-width: 1366px) {
 
@@ -942,7 +959,7 @@ function dlCSV(name, headers, rows) {
     background: #F5F2EC !important;
     box-sizing: border-box !important;
   }
-  .rp-header-btns, header.main-header { display: none !important; }
+  .rp-header-btns, header.main-header, .top-bar { display: none !important; }
 
   /* 2. CONTRÔLES */
   .reporting-controls {
