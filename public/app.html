@@ -1027,18 +1027,19 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     /* Price Display */
     .cell-price {
       position: absolute;
-      bottom: 3px;
-      right: 4px;
-      font-size: 10px;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
       font-weight: 700;
-      color: #9CA3AF;
-      line-height: 1;
+      color: #1A7A5E;
       pointer-events: none;
       user-select: none;
-      transition: opacity .15s;
     }
+    /* Vendredi (5) et Samedi (6) = rouge = nuits premium */
     .calendar-cell.weekend .cell-price {
-      color: #1A7A5E;
+      color: #dc2626;
     }
     .calendar-cell:has(.booking-block) .cell-price {
       display: none;
@@ -5927,7 +5928,7 @@ window.LCC_PROPERTIES = properties;
         var dow = d.getDay();
         var div = document.createElement('div');
         div.className = 'day-header';
-        if (dow === 0 || dow === 6) div.classList.add('weekend');
+        if (dow === 5 || dow === 6) div.classList.add('weekend'); // ven+sam = nuits premium
         if (isToday(d)) div.classList.add('today');
 
         var nameSpan = document.createElement('span');
@@ -6004,7 +6005,7 @@ window.LCC_PROPERTIES = properties;
       cell.setAttribute('data-date', dateStr);
 
       var dow = dateObj.getDay();
-      var isWeekend = (dow === 0 || dow === 6);
+      var isWeekend = (dow === 5 || dow === 6); // ven+sam = nuits premium
       if (isWeekend) cell.classList.add('weekend');
       if (isToday(dateObj)) cell.classList.add('today');
 
@@ -6027,7 +6028,9 @@ window.LCC_PROPERTIES = properties;
         if (ev.button !== 0) return;
         var blockHit = ev.target.closest ? ev.target.closest('.booking-block') : null;
         if (blockHit) return;
-        if (typeof window.openBlockModal === 'function') {
+        if (typeof window.openCellModal === 'function') {
+          window.openCellModal(dateStr, property.id);
+        } else if (typeof window.openBlockModal === 'function') {
           window.openBlockModal(dateStr, property.id);
         }
       });
@@ -6760,6 +6763,150 @@ if (j === 0 || cells.length === 1) {
   
   document.getElementById('blockModalCancel')?.addEventListener('click', function() {
     document.getElementById('blockModal').style.display = 'none';
+  });
+})();
+</script>
+
+<!-- ===== MODAL CELLULE : Bloquer ou modifier le prix ===== -->
+<div id="cellModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:340px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.18);font-family:'DM Sans',sans-serif;">
+    
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#0D1117;" id="cellModalTitle">Options du jour</div>
+        <div style="font-size:12px;color:#9CA3AF;margin-top:2px;" id="cellModalDate"></div>
+      </div>
+      <button onclick="document.getElementById('cellModal').style.display='none'" style="width:32px;height:32px;border-radius:50%;border:none;background:#f3f4f6;color:#6B7280;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+
+    <!-- Prix actuel -->
+    <div style="background:#F5F2EC;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+      <label style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">
+        <i class="fas fa-tag"></i> Prix de cette nuit (€)
+      </label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="cellPriceInput" type="number" min="0" step="1" placeholder="Ex: 90"
+          style="flex:1;padding:10px 14px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:16px;font-weight:700;color:#0D1117;background:white;outline:none;font-family:'DM Sans',sans-serif;" />
+        <span style="font-size:13px;color:#6B7280;">€</span>
+      </div>
+      <div style="font-size:11px;color:#9CA3AF;margin-top:6px;">Laissez vide pour utiliser le tarif par défaut du logement</div>
+    </div>
+
+    <!-- Boutons action -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button onclick="saveCellPrice()" style="width:100%;padding:12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        <i class="fas fa-save"></i> Enregistrer le prix
+      </button>
+      <button onclick="openBlockFromCell()" style="width:100%;padding:12px;background:#fff;color:#374151;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        <i class="fas fa-lock"></i> Bloquer cette date
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ─── État du modal cellule ───
+  var _cellDate = null;
+  var _cellPropertyId = null;
+
+  // Ouvrir le modal cellule (clic sur case vide)
+  window.openCellModal = function(dateStr, propertyId) {
+    _cellDate = dateStr;
+    _cellPropertyId = propertyId;
+
+    // Titre et date
+    var d = new Date(dateStr + 'T12:00:00');
+    var opts = { weekday: 'long', day: 'numeric', month: 'long' };
+    document.getElementById('cellModalDate').textContent = d.toLocaleDateString('fr-FR', opts);
+
+    // Trouver le logement pour récupérer le prix par défaut
+    var props = window.LCC_PROPERTIES || window.allProperties || [];
+    var prop = props.find(function(p) { return String(p.id) === String(propertyId); });
+    var dow = d.getDay(); // 5=ven, 6=sam
+    var isPremium = (dow === 5 || dow === 6);
+    var defaultPrice = null;
+    if (prop) {
+      defaultPrice = (isPremium && prop.weekendPrice != null)
+        ? prop.weekendPrice
+        : (prop.basePrice != null ? prop.basePrice : null);
+    }
+
+    // Pré-remplir avec le prix existant ou le défaut
+    var input = document.getElementById('cellPriceInput');
+    // Chercher un prix personnalisé dans localStorage pour cette date+logement
+    var stored = null;
+    try {
+      var key = 'bh_price_' + propertyId + '_' + dateStr;
+      stored = localStorage.getItem(key);
+    } catch(e) {}
+    input.value = stored !== null ? stored : (defaultPrice !== null ? defaultPrice : '');
+
+    var titleEl = document.getElementById('cellModalTitle');
+    titleEl.textContent = prop ? prop.name : 'Options du jour';
+
+    document.getElementById('cellModal').style.display = 'flex';
+    setTimeout(function() { input.focus(); input.select(); }, 100);
+  };
+
+  // Enregistrer le prix personnalisé (localStorage pour l'instant)
+  window.saveCellPrice = function() {
+    var input = document.getElementById('cellPriceInput');
+    var val = input.value.trim();
+    
+    if (val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0) {
+      try {
+        var key = 'bh_price_' + _cellPropertyId + '_' + _cellDate;
+        localStorage.setItem(key, Math.round(parseFloat(val)));
+      } catch(e) {}
+      
+      // Mettre à jour l'affichage sur le calendrier immédiatement
+      var selector = '.calendar-cell[data-date="' + _cellDate + '"][data-property-id="' + _cellPropertyId + '"]';
+      var cell = document.querySelector(selector);
+      if (cell) {
+        var priceEl = cell.querySelector('.cell-price');
+        if (priceEl) {
+          priceEl.textContent = Math.round(parseFloat(val));
+        } else {
+          var newEl = document.createElement('span');
+          newEl.className = 'cell-price';
+          newEl.textContent = Math.round(parseFloat(val));
+          cell.appendChild(newEl);
+        }
+      }
+
+      if (typeof window.showToast === 'function') {
+        window.showToast('Prix mis à jour pour le ' + _cellDate, 'success');
+      }
+    } else if (val === '') {
+      // Supprimer le prix personnalisé
+      try {
+        localStorage.removeItem('bh_price_' + _cellPropertyId + '_' + _cellDate);
+      } catch(e) {}
+    }
+
+    document.getElementById('cellModal').style.display = 'none';
+  };
+
+  // Ouvrir le modal de blocage depuis le modal cellule
+  window.openBlockFromCell = function() {
+    document.getElementById('cellModal').style.display = 'none';
+    if (typeof window.openBlockModal === 'function') {
+      window.openBlockModal(_cellDate, _cellPropertyId);
+    }
+  };
+
+  // Fermer avec Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.getElementById('cellModal').style.display = 'none';
+    }
+  });
+
+  // Fermer en cliquant l'overlay
+  document.getElementById('cellModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
   });
 })();
 </script>
