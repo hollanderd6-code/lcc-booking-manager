@@ -6307,6 +6307,10 @@ app.post('/api/blocks', async (req, res) => {
       message: 'Blocage créé',
       block
     });
+
+    // ✅ Sync Channex en arrière-plan
+    setImmediate(() => triggerChannexAvailabilitySync(propertyId));
+
   } catch (err) {
     console.error('Erreur création blocage:', err);
     res.status(500).json({ error: 'Erreur serveur' });
