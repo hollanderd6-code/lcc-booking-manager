@@ -3358,7 +3358,10 @@ async function loadProperties() {
         channex_rate_plan_id,
         channex_enabled,
         base_price,
-        weekend_price
+        weekend_price,
+        cleaning_fee,
+        tourist_tax_per_night,
+        concierge_pct
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3404,7 +3407,10 @@ async function loadProperties() {
         channex_rate_plan_id: row.channex_rate_plan_id || null,
         channex_enabled: row.channex_enabled || false,
         basePrice: row.base_price != null ? parseFloat(row.base_price) : null,
-        weekendPrice: row.weekend_price != null ? parseFloat(row.weekend_price) : null
+        weekendPrice: row.weekend_price != null ? parseFloat(row.weekend_price) : null,
+        cleaningFee: row.cleaning_fee != null ? parseFloat(row.cleaning_fee) : null,
+        touristTaxPerNight: row.tourist_tax_per_night != null ? parseFloat(row.tourist_tax_per_night) : null,
+        conciergePct: row.concierge_pct != null ? parseFloat(row.concierge_pct) : null
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
@@ -5925,6 +5931,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         count: (reservationsStore.properties[p.id] || []).length,
         basePrice: p.basePrice != null ? p.basePrice : null,
         weekendPrice: p.weekendPrice != null ? p.weekendPrice : null,
+        cleaningFee: p.cleaningFee != null ? p.cleaningFee : null,
+        touristTaxPerNight: p.touristTaxPerNight != null ? p.touristTaxPerNight : null,
+        conciergePct: p.conciergePct != null ? p.conciergePct : null,
         channexEnabled: p.channex_enabled || false,
         channexPropertyId: p.channex_property_id || null,
         arrivalTime: p.arrival_time || null,
@@ -9939,6 +9948,9 @@ app.get('/api/properties',
         channexPropertyId: p.channex_property_id || null,
         basePrice: p.basePrice != null ? p.basePrice : null,
         weekendPrice: p.weekendPrice != null ? p.weekendPrice : null,
+        cleaningFee: p.cleaningFee != null ? p.cleaningFee : null,
+        touristTaxPerNight: p.touristTaxPerNight != null ? p.touristTaxPerNight : null,
+        conciergePct: p.conciergePct != null ? p.conciergePct : null,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
     });
@@ -10215,7 +10227,8 @@ app.post('/api/properties',
            access_instructions = $13, owner_id = $14, chat_pin = $15,
            amenities = $16, house_rules = $17, practical_info = $18,
            auto_responses_enabled = $19, arrival_message = $20,
-           base_price = $22, weekend_price = $23
+           base_price = $22, weekend_price = $23,
+           cleaning_fee = $24, tourist_tax_per_night = $25, concierge_pct = $26
          WHERE id = $21`,
         [
           name,
@@ -10240,7 +10253,10 @@ app.post('/api/properties',
           arrivalMessage || null,
           id,
           basePrice ? parseFloat(basePrice) : null,
-          weekendPrice ? parseFloat(weekendPrice) : null
+          weekendPrice ? parseFloat(weekendPrice) : null,
+          cleaningFee != null && cleaningFee !== '' ? parseFloat(cleaningFee) : null,
+          touristTaxPerNight != null && touristTaxPerNight !== '' ? parseFloat(touristTaxPerNight) : null,
+          conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : null
         ]
       );
 
@@ -10261,7 +10277,8 @@ app.post('/api/properties',
          welcome_book_url, access_code, wifi_name, wifi_password, access_instructions,
          owner_id, chat_pin, display_order, created_at,
          amenities, house_rules, practical_info, auto_responses_enabled, arrival_message,
-         base_price, weekend_price
+         base_price, weekend_price,
+         cleaning_fee, tourist_tax_per_night, concierge_pct
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -10271,7 +10288,7 @@ app.post('/api/properties',
          (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
          NOW(),
          $18, $19, $20, $21, $22,
-         $23, $24
+         $23, $24, $25, $26, $27
        )`,
       [
         id,
@@ -10297,7 +10314,10 @@ app.post('/api/properties',
         autoResponsesEnabled,
         arrivalMessage || null,
         basePrice ? parseFloat(basePrice) : null,
-        weekendPrice ? parseFloat(weekendPrice) : null
+        weekendPrice ? parseFloat(weekendPrice) : null,
+        cleaningFee != null && cleaningFee !== '' ? parseFloat(cleaningFee) : null,
+        touristTaxPerNight != null && touristTaxPerNight !== '' ? parseFloat(touristTaxPerNight) : null,
+        conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : null
       ]
     );
 
@@ -10747,6 +10767,270 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async 
 });
 
 // ============================================
+// REPORTING — Revenus et statistiques
+// ============================================
+
+app.get('/api/reporting', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { year, property_id } = req.query;
+    const selectedYear = parseInt(year) || new Date().getFullYear();
+
+    // Récupérer les propriétés de l'utilisateur avec leurs configs financières
+    const propsResult = await pool.query(`
+      SELECT id, name, color,
+             base_price, weekend_price,
+             cleaning_fee, tourist_tax_per_night, concierge_pct
+      FROM properties WHERE user_id = $1
+      ${property_id ? 'AND id = $2' : ''}
+      ORDER BY display_order ASC, created_at ASC
+    `, property_id ? [user.id, property_id] : [user.id]);
+    const properties = propsResult.rows;
+
+    if (properties.length === 0) {
+      return res.json({ year: selectedYear, properties: [], summary: {} });
+    }
+
+    const propIds = properties.map(p => p.id);
+
+    // Récupérer toutes les réservations confirmées de l'année
+    const resaResult = await pool.query(`
+      SELECT
+        r.uid, r.property_id, r.start_date, r.end_date,
+        r.price, r.platform, r.ota_name, r.status,
+        r.guest_name, r.nb_guests,
+        EXTRACT(YEAR FROM r.start_date) as year,
+        EXTRACT(MONTH FROM r.start_date) as month,
+        (r.end_date::date - r.start_date::date) as nights
+      FROM reservations r
+      WHERE r.user_id = $1
+        AND r.status = 'confirmed'
+        AND EXTRACT(YEAR FROM r.start_date) = $2
+        AND r.property_id = ANY($3)
+      ORDER BY r.start_date ASC
+    `, [user.id, selectedYear, propIds]);
+    const reservations = resaResult.rows;
+
+    // Récupérer les overrides de prix (pour les réservations manuelles sans prix)
+    const overridesResult = await pool.query(`
+      SELECT property_id, TO_CHAR(date, 'YYYY-MM-DD') as date, price
+      FROM pricing_overrides
+      WHERE user_id = $1
+        AND EXTRACT(YEAR FROM date) = $2
+    `, [user.id, selectedYear]);
+    const overridesMap = {};
+    overridesResult.rows.forEach(o => {
+      overridesMap[`${o.property_id}_${o.date}`] = parseFloat(o.price);
+    });
+
+    // Construire un index des properties pour lookup rapide
+    const propMap = {};
+    properties.forEach(p => { propMap[p.id] = p; });
+
+    // ── Calculer les métriques par réservation ──────────────────
+    const enrichedResas = reservations.map(r => {
+      const prop = propMap[r.property_id] || {};
+      const nights = parseInt(r.nights) || 1;
+      const nbGuests = parseInt(r.nb_guests) || 1;
+
+      // Prix brut — ordre de priorité : r.price > overrides > calcul
+      let rawPrice = parseFloat(r.price) || 0;
+      if (!rawPrice) {
+        // Calculer depuis les overrides ou le prix de base
+        let total = 0;
+        const start = new Date(r.start_date);
+        for (let i = 0; i < nights; i++) {
+          const d = new Date(start);
+          d.setDate(start.getDate() + i);
+          const dateStr = d.toISOString().split('T')[0];
+          const key = `${r.property_id}_${dateStr}`;
+          const dow = d.getDay();
+          const isPremium = (dow === 5 || dow === 6);
+          const nightPrice = overridesMap[key] != null
+            ? overridesMap[key]
+            : (isPremium && prop.weekend_price ? parseFloat(prop.weekend_price) : (prop.base_price ? parseFloat(prop.base_price) : 0));
+          total += nightPrice;
+        }
+        rawPrice = total;
+      }
+
+      // Frais de ménage
+      const cleaningFee = prop.cleaning_fee != null ? parseFloat(prop.cleaning_fee) : 0;
+
+      // Taxe de séjour (par nuit × nb nuits × nb voyageurs)
+      const touristTaxTotal = prop.tourist_tax_per_night != null
+        ? parseFloat(prop.tourist_tax_per_night) * nights * Math.max(nbGuests, 1)
+        : 0;
+
+      // Revenu brut hors taxes = prix + ménage
+      const grossRevenue = rawPrice + cleaningFee;
+
+      // Revenu net (hors taxe de séjour)
+      const netRevenue = rawPrice; // sans ménage ni taxe
+
+      // Commission conciergerie
+      const conciergePct = prop.concierge_pct != null ? parseFloat(prop.concierge_pct) : 0;
+      const conciergeAmount = Math.round(rawPrice * conciergePct / 100 * 100) / 100;
+
+      // Revenu propriétaire = prix - commission conciergerie
+      const ownerRevenue = Math.round((rawPrice - conciergeAmount) * 100) / 100;
+
+      // Plateforme normalisée
+      const platform = (() => {
+        const raw = (r.ota_name || r.platform || '').toLowerCase();
+        if (raw.includes('abb') || raw.includes('airbnb')) return 'Airbnb';
+        if (raw.includes('bdc') || raw.includes('booking')) return 'Booking.com';
+        if (raw.includes('exp') || raw.includes('expedia')) return 'Expedia';
+        if (raw.includes('vrbo') || raw.includes('homeaway')) return 'Vrbo';
+        if (raw === 'direct' || raw === '') return 'Direct';
+        return raw.charAt(0).toUpperCase() + raw.slice(1);
+      })();
+
+      return {
+        uid: r.uid,
+        propertyId: r.property_id,
+        propertyName: prop.name || 'Logement',
+        propertyColor: prop.color || '#10B981',
+        startDate: r.start_date,
+        endDate: r.end_date,
+        month: parseInt(r.month),
+        nights,
+        nbGuests,
+        platform,
+        rawPrice: Math.round(rawPrice * 100) / 100,
+        cleaningFee: Math.round(cleaningFee * 100) / 100,
+        touristTax: Math.round(touristTaxTotal * 100) / 100,
+        grossRevenue: Math.round(grossRevenue * 100) / 100,
+        netRevenue: Math.round(netRevenue * 100) / 100,
+        conciergeAmount: Math.round(conciergeAmount * 100) / 100,
+        ownerRevenue: Math.round(ownerRevenue * 100) / 100,
+        conciergePct
+      };
+    });
+
+    // ── Agrégats par mois ───────────────────────────────────────
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      label: new Date(selectedYear, i, 1).toLocaleDateString('fr-FR', { month: 'short' }),
+      bookings: 0, nights: 0,
+      grossRevenue: 0, netRevenue: 0,
+      touristTax: 0, cleaningFee: 0,
+      conciergeAmount: 0, ownerRevenue: 0
+    }));
+
+    enrichedResas.forEach(r => {
+      const m = monthlyData[r.month - 1];
+      if (!m) return;
+      m.bookings++;
+      m.nights += r.nights;
+      m.grossRevenue   += r.grossRevenue;
+      m.netRevenue     += r.netRevenue;
+      m.touristTax     += r.touristTax;
+      m.cleaningFee    += r.cleaningFee;
+      m.conciergeAmount+= r.conciergeAmount;
+      m.ownerRevenue   += r.ownerRevenue;
+    });
+    monthlyData.forEach(m => {
+      m.grossRevenue    = Math.round(m.grossRevenue * 100) / 100;
+      m.netRevenue      = Math.round(m.netRevenue * 100) / 100;
+      m.touristTax      = Math.round(m.touristTax * 100) / 100;
+      m.cleaningFee     = Math.round(m.cleaningFee * 100) / 100;
+      m.conciergeAmount = Math.round(m.conciergeAmount * 100) / 100;
+      m.ownerRevenue    = Math.round(m.ownerRevenue * 100) / 100;
+    });
+
+    // ── Agrégats par logement ───────────────────────────────────
+    const byProperty = {};
+    properties.forEach(p => {
+      byProperty[p.id] = {
+        id: p.id, name: p.name, color: p.color,
+        bookings: 0, nights: 0, occupancyRate: 0,
+        grossRevenue: 0, netRevenue: 0,
+        touristTax: 0, cleaningFee: 0,
+        conciergeAmount: 0, ownerRevenue: 0,
+        conciergePct: p.concierge_pct || 0,
+        platforms: {}
+      };
+    });
+
+    enrichedResas.forEach(r => {
+      const p = byProperty[r.propertyId];
+      if (!p) return;
+      p.bookings++;
+      p.nights += r.nights;
+      p.grossRevenue    += r.grossRevenue;
+      p.netRevenue      += r.netRevenue;
+      p.touristTax      += r.touristTax;
+      p.cleaningFee     += r.cleaningFee;
+      p.conciergeAmount += r.conciergeAmount;
+      p.ownerRevenue    += r.ownerRevenue;
+      p.platforms[r.platform] = (p.platforms[r.platform] || 0) + 1;
+    });
+
+    // Taux d'occupation (jours réservés / jours dans l'année)
+    const daysInYear = 365;
+    Object.values(byProperty).forEach(p => {
+      p.occupancyRate   = Math.round(p.nights / daysInYear * 100);
+      p.grossRevenue    = Math.round(p.grossRevenue * 100) / 100;
+      p.netRevenue      = Math.round(p.netRevenue * 100) / 100;
+      p.touristTax      = Math.round(p.touristTax * 100) / 100;
+      p.cleaningFee     = Math.round(p.cleaningFee * 100) / 100;
+      p.conciergeAmount = Math.round(p.conciergeAmount * 100) / 100;
+      p.ownerRevenue    = Math.round(p.ownerRevenue * 100) / 100;
+    });
+
+    // ── Répartition par plateforme (global) ────────────────────
+    const platformStats = {};
+    enrichedResas.forEach(r => {
+      if (!platformStats[r.platform]) {
+        platformStats[r.platform] = { bookings: 0, nights: 0, revenue: 0 };
+      }
+      platformStats[r.platform].bookings++;
+      platformStats[r.platform].nights    += r.nights;
+      platformStats[r.platform].revenue   += r.grossRevenue;
+    });
+    const totalBookings = enrichedResas.length;
+    const platformArray = Object.entries(platformStats).map(([name, stats]) => ({
+      name,
+      bookings: stats.bookings,
+      nights: stats.nights,
+      revenue: Math.round(stats.revenue * 100) / 100,
+      pct: totalBookings > 0 ? Math.round(stats.bookings / totalBookings * 100) : 0
+    })).sort((a, b) => b.bookings - a.bookings);
+
+    // ── Résumé global ───────────────────────────────────────────
+    const summary = {
+      totalBookings,
+      totalNights:       enrichedResas.reduce((s, r) => s + r.nights, 0),
+      totalGrossRevenue: Math.round(enrichedResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
+      totalNetRevenue:   Math.round(enrichedResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100,
+      totalTouristTax:   Math.round(enrichedResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100,
+      totalCleaningFee:  Math.round(enrichedResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100,
+      totalConcierge:    Math.round(enrichedResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100,
+      totalOwnerRevenue: Math.round(enrichedResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100,
+      avgNightsPerBooking: totalBookings > 0
+        ? Math.round(enrichedResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
+        : 0
+    };
+
+    res.json({
+      year: selectedYear,
+      summary,
+      monthly: monthlyData,
+      byProperty: Object.values(byProperty),
+      platforms: platformArray,
+      reservations: enrichedResas
+    });
+
+  } catch (err) {
+    console.error('❌ GET /api/reporting:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // MODIFIER UN LOGEMENT
 // ============================================
 app.put('/api/properties/:propertyId', 
@@ -10803,7 +11087,10 @@ app.put('/api/properties/:propertyId',
       chatPin,
       quickReplies,
       basePrice,
-      weekendPrice
+      weekendPrice,
+      cleaningFee,
+      touristTaxPerNight,
+      conciergePct
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
