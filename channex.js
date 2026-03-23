@@ -167,7 +167,45 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
   }
 }
 
-// ── 3. Recevoir une réservation de Channex (webhook) ──────────
+// ── 2b. Pousser les prix vers Channex ────────────────────────
+async function pushRates(pool, { property_id, channex_property_id, channex_rate_plan_id, rates }) {
+  // rates = [{ date: 'YYYY-MM-DD', price: 90 }, ...]
+  try {
+    console.log(`💰 [CHANNEX] Push tarifs pour ${channex_property_id} (${rates.length} jours)`);
+
+    const values = rates.map(r => ({
+      rate_plan_id: channex_rate_plan_id,
+      date: r.date,
+      rate: parseFloat(r.price).toFixed(2)
+    }));
+
+    await channexAPI.post('/rates', { values });
+
+    await logChannex(pool, {
+      property_id, channex_property_id,
+      event_type: 'push_rates',
+      direction: 'outbound',
+      payload: { rates_count: values.length }
+    });
+
+    console.log(`✅ [CHANNEX] Tarifs poussés (${values.length} jours)`);
+    return { success: true, count: values.length };
+
+  } catch (e) {
+    const errDetail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX] Erreur push rates:', errDetail);
+    await logChannex(pool, {
+      property_id, channex_property_id,
+      event_type: 'push_rates',
+      direction: 'outbound',
+      status: 'error',
+      error_message: typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail)
+    });
+    throw e;
+  }
+}
+
+
 
 async function processChannexBooking(pool, bookingData) {
   try {
@@ -264,6 +302,7 @@ async function processChannexBooking(pool, bookingData) {
 module.exports = {
   createChannexProperty,
   pushAvailability,
+  pushRates,
   processChannexBooking,
   logChannex,
   channexAPI
