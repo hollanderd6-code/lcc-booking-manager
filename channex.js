@@ -179,7 +179,7 @@ async function pushRates(pool, { property_id, channex_property_id, channex_rate_
       rate: parseFloat(r.price).toFixed(2)
     }));
 
-    await channexAPI.post('/rates', { values });
+    await channexAPI.post('/restrictions', { values });
 
     await logChannex(pool, {
       property_id, channex_property_id,
