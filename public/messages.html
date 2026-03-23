@@ -1103,14 +1103,10 @@ html[data-theme-v3="1"] .app-container {
     <div class="msgs-tabs">
       <button class="msgs-tab active" id="tabGuests" onclick="switchMsgsTab('guests')">
         <i class="fas fa-comments"></i>
-        Messages voyageurs
+        Messages
         <span class="tab-badge" id="tabGuestsBadge" style="display:none;">0</span>
       </button>
-      <button class="msgs-tab" id="tabOTA" onclick="switchMsgsTab('ota')">
-        <i class="fas fa-plug"></i>
-        Messages OTA
-        <span style="font-size:10px;background:#1A7A5E;color:white;padding:1px 6px;border-radius:99px;font-weight:700;">Airbnb · Booking</span>
-      </button>
+
     </div>
 
     <!-- PANEL VOYAGEURS (système existant) -->
@@ -1189,24 +1185,6 @@ html[data-theme-v3="1"] .app-container {
     </div>
 
     </div><!-- /panelGuests -->
-
-    <!-- PANEL OTA CHANNEX -->
-    <div id="panelOTA" class="msgs-panel">
-      <div class="channex-ota-header">
-        <i class="fas fa-plug" style="color:#1A7A5E;font-size:16px;"></i>
-        <div>
-          <div style="font-size:14px;font-weight:600;color:#0D1117;">Messages Airbnb · Booking · Expedia</div>
-          <div style="font-size:12px;color:#7A8695;">Répondez directement depuis Boostinghost</div>
-        </div>
-        <select class="channex-ota-property-select" id="channexPropertySelect" onchange="loadChannexMessages()">
-          <option value="">Choisir un logement...</option>
-        </select>
-      </div>
-      <div id="channexOtaContent" class="channex-ota-loading">
-        <i class="fas fa-plug" style="font-size:32px;opacity:.3;"></i>
-        <div>Sélectionnez un logement connecté à Channex</div>
-      </div>
-    </div><!-- /panelOTA -->
 
   </main>
 </div>
