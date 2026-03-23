@@ -469,22 +469,25 @@ body {
 }
 </style>
 </head>
-<body>
+<body data-page="reporting" data-title="Revenus" data-subtitle="Analyse de vos performances financières" data-kicker="Facturation" data-back-href="/app.html" data-back-label="Retour au dashboard">
 <script src="/js/bh-layout.js"></script>
+
+<div class="app-container">
+<main class="main-content">
+<div id="bhHeader"></div>
 
 <div class="page-wrapper">
 
-  <!-- Header -->
-  <div class="page-header">
-    <div>
-      <div class="page-title">📊 Reporting</div>
-      <div class="page-subtitle" id="reportSubtitle">Chargement...</div>
-    </div>
-    <div class="header-controls">
-      <select class="ctrl-select" id="yearSelect" onchange="loadReport()"></select>
-      <select class="ctrl-select" id="propertySelect" onchange="loadReport()">
-        <option value="">Tous les logements</option>
-      </select>
+  <!-- Header généré par bh-layout.js via data-title / data-subtitle -->
+
+  <!-- Barre de contrôles -->
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
+    <select class="ctrl-select" id="yearSelect" onchange="loadReport()"></select>
+    <select class="ctrl-select" id="propertySelect" onchange="loadReport()">
+      <option value="">Tous les logements</option>
+    </select>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;" id="reportSubtitle"></div>
       <button class="btn-secondary" onclick="exportCSV()">
         <i class="fas fa-download"></i> CSV
       </button>
@@ -567,6 +570,8 @@ body {
   </div><!-- /reportContent -->
 
 </div><!-- /page-wrapper -->
+</main>
+</div><!-- /app-container -->
 
 <script>
 const API_URL = 'https://lcc-booking-manager.onrender.com';
