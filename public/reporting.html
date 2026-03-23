@@ -387,68 +387,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 }
 .rp-btn-back:hover { background: #15624B; }
 
-/* ── Mobile & tablet ── */
+/* ── Desktop: bouton retour fixe ── */
 @media(max-width:1366px){
   .main-wrapper { margin-left: 0 !important; }
-  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
-  html[data-theme-v3="1"] .main-wrapper { margin-left: 0 !important; }
   .rp-header-btns { display: none; }
-  html[data-theme-v3="1"] main.main-content { padding-top: 16px !important; }
-}
-
-@media(max-width:768px){
-  /* Stats : 1 colonne sur mobile */
-  .stats-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-  .stat-card { padding: 14px 14px; border-radius: 12px; }
-  .stat-value { font-size: 18px !important; }
-
-  /* Contrôles : colonne */
-  .reporting-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding: 12px 14px;
-    border-radius: 12px;
-  }
-  .ctrl-select { min-width: 0; width: 100%; }
-  .ctrl-label { display: none; }
-  .ml-auto { margin-left: 0; width: 100%; }
-  .ml-auto .btn-csv,
-  .ml-auto .btn-export { flex: 1; justify-content: center; }
-
-  /* Grid charts : colonne */
-  .grid-2-1 { grid-template-columns: 1fr !important; gap: 10px !important; }
-
-  /* Chart height réduite */
-  .chart-wrap { height: 200px; padding: 12px 14px 16px; }
-  .chart-mini { height: 140px; padding: 10px 14px 12px; }
-
-  /* Tables scrollables */
-  .prop-table, .monthly-table { font-size: 12px; }
-  .prop-table th, .prop-table td,
-  .monthly-table th, .monthly-table td { padding: 8px 10px; }
-
-  /* Conciergerie */
-  .concierge-grid { grid-template-columns: 1fr 1fr !important; }
-  .concierge-section { padding: 14px; border-radius: 12px; }
-
-  /* Card */
-  .card { border-radius: 12px; margin-bottom: 10px; }
-  .card-header { padding: 12px 14px 10px; }
-
-  /* Tabs vue brut/net */
-  .view-tab { padding: 4px 8px; font-size: 11px; }
-
-  /* Platform list */
-  .platform-rev { display: none; }
-  .platform-bar-wrap { flex: 1; }
-
-  /* Padding bottom pour bottom bar */
-  html[data-theme-v3="1"] main.main-content { padding-bottom: 80px !important; }
-}
-
-@media(max-width:400px){
-  .stats-row { grid-template-columns: 1fr !important; }
 }
 </style>
 </head>
@@ -531,6 +473,16 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   } catch(e) {}
 })();
 </script>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header" style="display:none!important;">
+  <button class="mobile-back-btn" onclick="window.location.href='/app.html'">
+    <i class="fas fa-arrow-left"></i>
+  </button>
+  <span class="mobile-header-title">Revenus</span>
+  <div style="width:36px;"></div>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="app-container">
 <div id="bhSidebar"></div>
@@ -961,5 +913,120 @@ function dlCSV(name, headers, rows) {
   a.download = name; a.click();
 }
 </script>
+
+<style id="reporting-mobile-master">
+@media (max-width: 1366px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .app-container {
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+  }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .main-wrapper { margin-left: 0 !important; height: 100% !important; }
+  html[data-theme-v3="1"] main.main-content {
+    margin-left: 0 !important;
+    padding: 0 14px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    overflow-y: auto !important;
+    height: 100% !important;
+    background: #F5F2EC !important;
+    box-sizing: border-box !important;
+  }
+  #bhHeader, .rp-header-btns { display: none !important; }
+
+  /* 2. MOBILE HEADER */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .mobile-back-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px; border: none;
+    background: rgba(13,17,23,.06); color: #0D1117;
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mobile-header-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px; font-weight: 700; color: #0D1117;
+  }
+
+  /* 3. CONTRÔLES */
+  .reporting-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+  }
+  .ctrl-select { min-width: 0 !important; width: 100% !important; }
+  .ctrl-label { display: none !important; }
+  .ml-auto { margin-left: 0 !important; width: 100% !important; }
+  .ml-auto .btn-csv,
+  .ml-auto .btn-export { flex: 1; justify-content: center; }
+
+  /* 4. STATS */
+  .stats-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .stat-card { padding: 14px !important; border-radius: 12px !important; }
+  .stat-value { font-size: 18px !important; }
+
+  /* 5. CHARTS */
+  .grid-2-1 { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .chart-wrap { height: 200px !important; padding: 12px 14px 16px !important; }
+  .chart-mini { height: 140px !important; padding: 10px 14px 12px !important; }
+
+  /* 6. TABLES */
+  .prop-table, .monthly-table { font-size: 12px !important; }
+  .prop-table th, .prop-table td,
+  .monthly-table th, .monthly-table td { padding: 8px 10px !important; }
+
+  /* 7. CONCIERGERIE */
+  .concierge-grid { grid-template-columns: 1fr 1fr !important; }
+  .concierge-section { padding: 14px !important; border-radius: 12px !important; }
+
+  /* 8. CARDS */
+  .card { border-radius: 12px !important; margin-bottom: 10px !important; }
+  .card-header { padding: 12px 14px 10px !important; }
+
+  /* 9. TABS VIEW */
+  .view-tab { padding: 4px 8px !important; font-size: 11px !important; }
+
+  /* 10. PLATFORM */
+  .platform-rev { display: none !important; }
+
+  /* 11. BOTTOM TABS */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .stats-row { grid-template-columns: 1fr !important; }
+}
+</style>
 </body>
 </html>
