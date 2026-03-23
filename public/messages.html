@@ -2521,5 +2521,172 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+
+<script>
+// ============================================================
+// 🔗 MESSAGERIE BIDIRECTIONNELLE CHANNEX
+// ============================================================
+
+// State : channex_booking_id de la conversation ouverte
+let _currentChannexBookingId = null;
+
+// ── Quand on ouvre une conversation, vérifier si elle a un channex_booking_id ──
+const _origOpenConv = window.openConversation;
+window.openConversation = async function(convId, ...args) {
+  _currentChannexBookingId = null;
+  const btn = document.getElementById('btnBookingMessage');
+  if (btn) btn.style.display = 'none';
+
+  if (typeof _origOpenConv === 'function') {
+    await _origOpenConv(convId, ...args);
+  }
+
+  // Vérifier si cette conv a un booking Channex
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/chat/conversations/${convId}/messages-channex`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.channex_booking_id) {
+        _currentChannexBookingId = data.channex_booking_id;
+        // Afficher le bouton plateforme
+        if (btn) {
+          btn.style.display = 'flex';
+          btn.title = 'Répondre sur Airbnb / Booking';
+          btn.onclick = () => sendPlatformMessage(convId);
+        }
+        // Afficher les messages Channex qui ne sont pas encore en DB
+        if (data.channex_messages && data.channex_messages.length > 0) {
+          _injectChannexMessages(data.channex_messages, convId);
+        }
+      }
+    }
+  } catch(e) {
+    console.warn('⚠️ Vérification Channex:', e.message);
+  }
+};
+
+function _injectChannexMessages(channexMsgs, convId) {
+  // Injecter les messages Channex qui ne sont pas déjà dans l'UI
+  const chatEl = document.getElementById('chatMessages');
+  if (!chatEl) return;
+
+  channexMsgs.forEach(m => {
+    const existingId = chatEl.querySelector(`[data-channex-id="${m.id}"]`);
+    if (existingId) return; // déjà affiché
+
+    const isGuest = m.sender === 'guest';
+    const time = m.inserted_at ? new Date(m.inserted_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const div = document.createElement('div');
+    div.className = `chat-message ${isGuest ? 'guest' : 'owner'}`;
+    div.setAttribute('data-channex-id', m.id);
+    div.innerHTML = `
+      <div class="chat-bubble">
+        <div class="chat-text">${m.message}</div>
+        <div class="chat-time">${time} · via plateforme</div>
+      </div>`;
+    chatEl.appendChild(div);
+  });
+
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+// ── Envoi d'un message vers la plateforme ──────────────────
+async function sendPlatformMessage(convId) {
+  const input = document.getElementById('chatInput');
+  const message = input ? input.value.trim() : '';
+  if (!message) {
+    showBHToast('Écrivez votre message d'abord', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btnBookingMessage');
+  if (btn) btn.disabled = true;
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/chat/conversations/${convId}/send-platform`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ message })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Erreur envoi');
+
+    // Vider l'input
+    if (input) input.value = '';
+    showBHToast('✅ Message envoyé sur la plateforme', 'success');
+
+  } catch(e) {
+    console.error('❌ sendPlatformMessage:', e.message);
+    showBHToast('Erreur: ' + e.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ── Socket : écouter les nouveaux messages plateforme ──────
+document.addEventListener('DOMContentLoaded', () => {
+  // Attendre que le socket soit initialisé par chat-owner.js
+  const _waitSocket = setInterval(() => {
+    const s = window._chatSocket || window.socket || window.io_socket;
+    if (!s) return;
+    clearInterval(_waitSocket);
+
+    // Message entrant d'un voyageur via Channex
+    s.on('new_platform_message', (data) => {
+      console.log('💬 [CHANNEX] Nouveau message plateforme reçu:', data);
+
+      // Mettre à jour le badge non-lus
+      const badge = document.getElementById('tabGuestsBadge');
+      if (badge) {
+        const count = (parseInt(badge.textContent) || 0) + 1;
+        badge.textContent = count;
+        badge.style.display = 'inline';
+      }
+
+      // Si la conversation est ouverte, afficher le message
+      if (data.conversation_id && window._currentOpenConvId == data.conversation_id) {
+        const chatEl = document.getElementById('chatMessages');
+        if (chatEl && data.message) {
+          const m = data.message;
+          const time = new Date(m.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+          const div = document.createElement('div');
+          div.className = 'chat-message guest';
+          div.innerHTML = `
+            <div class="chat-bubble">
+              <div class="chat-text">${m.message}</div>
+              <div class="chat-time">${time} · via plateforme</div>
+            </div>`;
+          chatEl.appendChild(div);
+          chatEl.scrollTop = chatEl.scrollHeight;
+        }
+      }
+
+      // Toast notification
+      showBHToast(`💬 Nouveau message voyageur`, 'info');
+    });
+
+  }, 500);
+});
+
+function showBHToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  if (!c) return;
+  const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 300); }, 3500);
+}
+</script>
 </body>
 </html>
