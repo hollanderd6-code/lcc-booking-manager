@@ -174,9 +174,10 @@ async function pushRates(pool, { property_id, channex_property_id, channex_rate_
     console.log(`💰 [CHANNEX] Push tarifs pour ${channex_property_id} (${rates.length} jours)`);
 
     const values = rates.map(r => ({
+      property_id: channex_property_id,
       rate_plan_id: channex_rate_plan_id,
       date: r.date,
-      rate: parseFloat(r.price).toFixed(2)
+      rate: Math.round(parseFloat(r.price) * 100) // centimes (ex: 70€ → 7000)
     }));
 
     await channexAPI.post('/restrictions', { values });
