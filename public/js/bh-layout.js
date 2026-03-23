@@ -108,6 +108,9 @@ function getSidebarHTML() {
       <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
         <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
       </a>
+      <a class="nav-item" data-page="reporting" href="/reporting.html">
+        <i class="fas fa-chart-line"></i><span>Revenus</span>
+      </a>
       ` : ''}
     </div>
     ` : ''}
