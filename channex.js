@@ -341,12 +341,53 @@ async function processChannexBooking(pool, bookingData) {
   }
 }
 
+
+// ── 5. Récupérer les messages d'une réservation ──────────────
+async function getBookingMessages(channex_booking_id) {
+  try {
+    const res = await channexAPI.get(`/bookings/${channex_booking_id}/messages`);
+    const messages = res.data.data || [];
+    return messages.map(m => {
+      const attrs = m.attributes || m;
+      return {
+        id: m.id,
+        message: attrs.message || '',
+        sender: attrs.sender || 'guest',
+        attachments: attrs.attachments || [],
+        inserted_at: attrs.inserted_at || null
+      };
+    });
+  } catch (e) {
+    const errDetail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX] Erreur get messages:', errDetail);
+    throw e;
+  }
+}
+
+// ── 6. Envoyer un message vers la plateforme via Channex ─────
+async function sendBookingMessage(channex_booking_id, message) {
+  try {
+    console.log(`📤 [CHANNEX] Envoi message booking ${channex_booking_id}`);
+    const res = await channexAPI.post(`/bookings/${channex_booking_id}/messages`, {
+      message: { message }
+    });
+    console.log(`✅ [CHANNEX] Message envoyé`);
+    return res.data.data;
+  } catch (e) {
+    const errDetail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX] Erreur envoi message:', errDetail);
+    throw e;
+  }
+}
+
 module.exports = {
   createChannexProperty,
   pushAvailability,
   pushRates,
   pushRestrictions,
   processChannexBooking,
+  getBookingMessages,
+  sendBookingMessage,
   logChannex,
   channexAPI
 };
