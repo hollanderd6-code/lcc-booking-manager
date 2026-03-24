@@ -390,19 +390,47 @@ async function openChat(conversationId) {
   
   if (!conv) return;
   
-  // Mettre à jour le titre avec le nom du voyageur
-  const guestName = cleanGuestName(conv);
+  // Nom complet : priorité guest_first_name + guest_last_name (Channex)
+  const firstName = conv.guest_first_name || null;
+  const lastName  = conv.guest_last_name  || null;
+  const fullName  = (firstName || lastName)
+    ? [firstName, lastName].filter(Boolean).join(' ')
+    : cleanGuestName(conv);
+
   const titleEl = document.getElementById('chatModalTitle');
-  if (titleEl) {
-    titleEl.textContent = guestName;
+  if (titleEl) titleEl.textContent = fullName;
+
+  // Nationalité
+  const countryCode = conv.guest_country || null;
+  const countryNames = {
+    FR:'France', GB:'Royaume-Uni', DE:'Allemagne', ES:'Espagne', IT:'Italie',
+    US:'États-Unis', NL:'Pays-Bas', BE:'Belgique', CH:'Suisse', PT:'Portugal',
+    CA:'Canada', AU:'Australie', JP:'Japon', CN:'Chine', BR:'Brésil',
+    MX:'Mexique', RU:'Russie', IN:'Inde', ZA:'Afrique du Sud', MA:'Maroc',
+    TN:'Tunisie', DZ:'Algérie', LU:'Luxembourg', IE:'Irlande', SE:'Suède',
+    NO:'Norvège', DK:'Danemark', FI:'Finlande', PL:'Pologne', AT:'Autriche',
+    GR:'Grèce', TR:'Turquie', AE:'Émirats arabes unis', SG:'Singapour',
+  };
+  const countryEl = document.getElementById('chatGuestCountry');
+  if (countryEl) {
+    if (countryCode) {
+      const flag = countryCode.toUpperCase().replace(/./g, c =>
+        String.fromCodePoint(c.charCodeAt(0) + 127397)
+      );
+      const countryName = countryNames[countryCode] || countryCode;
+      countryEl.textContent = flag + ' ' + countryName;
+      countryEl.style.display = 'block';
+    } else {
+      countryEl.style.display = 'none';
+    }
   }
-  
+
   // Remplir les infos dans le header
   const propertyNameEl = document.getElementById('chatPropertyName');
-  const checkinDateEl = document.getElementById('chatCheckinDate');
-  
+  const checkinDateEl  = document.getElementById('chatCheckinDate');
+
   if (propertyNameEl) propertyNameEl.textContent = conv.property_name || 'Logement';
-  if (checkinDateEl) {
+  if (checkinDateEl && conv.reservation_start_date) {
     const checkin = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR');
     checkinDateEl.textContent = checkin;
   }
