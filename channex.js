@@ -249,6 +249,32 @@ async function pushRestrictions(pool, { property_id, channex_property_id, channe
   }
 }
 
+// ── Parser les notes Airbnb pour extraire les montants ──────
+function parseAirbnbNotes(notes) {
+  if (!notes) return {};
+  const result = {};
+  const lines = notes.split('
+');
+  for (const line of lines) {
+    const [key, val] = line.split(':').map(s => s.trim());
+    if (!key || !val) continue;
+    const num = parseFloat(val);
+    if (isNaN(num)) continue;
+    // Mapping des clés Airbnb → noms BH
+    if (/Listing Base Price/i.test(key))           result.airbnb_base_price      = num;
+    if (/Total Paid Amount/i.test(key))             result.airbnb_total_paid      = num;
+    if (/Transient Occupancy Tax/i.test(key))       result.airbnb_occupancy_tax   = num;
+    if (/Listing Security Price/i.test(key))        result.airbnb_security_deposit= num;
+    if (/Listing Cancellation Payout/i.test(key))   result.airbnb_host_payout     = num;
+    if (/Listing Cancellation Host Fee/i.test(key)) result.airbnb_host_fee        = num;
+    if (/Occupancy Tax Amount Paid To Host/i.test(key)) result.airbnb_tax_to_host = num;
+    if (/Cleaning Fee/i.test(key))                  result.airbnb_cleaning_fee    = num;
+    if (/Guest Service Fee/i.test(key))             result.airbnb_guest_fee       = num;
+    if (/Host Service Fee/i.test(key))              result.airbnb_service_fee     = num;
+  }
+  return result;
+}
+
 async function processChannexBooking(pool, bookingData) {
   try {
     const booking_id = bookingData.id || bookingData.attributes?.id;
@@ -260,16 +286,68 @@ async function processChannexBooking(pool, bookingData) {
       departure_date,
       status: booking_status,
       ota_name,
-      ota_reservation_id,
-      revision_id
+      ota_reservation_code,
+      revision_id,
+      currency = 'EUR'
     } = attrs;
 
+    // ── Données voyageur ──────────────────────────────────────
     const guest = attrs.customer || {};
     const guest_name = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
-    const guest_email = guest.email || null;
+    const guest_first_name = guest.name || null;
+    const guest_last_name = guest.surname || null;
+    const guest_email = guest.mail || guest.email || null;
     const guest_phone = guest.phone || null;
+    const guest_country = guest.country || null; // code ISO ex: "FR"
+    const guest_language = guest.language || null;
+    const guest_city = guest.city || null;
 
-    console.log(`📥 [CHANNEX] Booking reçu: ${booking_id} | ${ota_name} | ${arrival_date} → ${departure_date}`);
+    // ── Occupation ────────────────────────────────────────────
+    const occupancy = attrs.occupancy || {};
+    const occupancy_adults = occupancy.adults || 1;
+    const occupancy_children = occupancy.children || 0;
+
+    // ── Montants ─────────────────────────────────────────────
+    const amount_total = parseFloat(attrs.amount || 0);
+    const ota_commission = parseFloat(attrs.ota_commission || 0);
+
+    // Rooms : prix par nuit, taxes, services
+    const room = (attrs.rooms || [])[0] || {};
+    const amount_rooms = parseFloat(room.amount || amount_total);
+    const days_breakdown = room.days || {}; // { "2024-06-01": "120.00", ... }
+
+    // Taxes (ex: taxe de séjour)
+    const taxes = room.taxes || [];
+    const amount_taxes = taxes.reduce((sum, t) => sum + parseFloat(t.total_price || 0), 0);
+
+    // Services au niveau room (ex: ménage Airbnb)
+    const room_services = room.services || [];
+    // Services au niveau booking (ex: petit-déjeuner Booking.com)
+    const booking_services = attrs.services || [];
+    const all_services = [...room_services, ...booking_services];
+
+    // Chercher le ménage
+    const cleaning_service = all_services.find(s =>
+      /clean|ménage|menage|cleaning/i.test(s.name || '')
+    );
+    const amount_cleaning = cleaning_service ? parseFloat(cleaning_service.total_price || 0) : 0;
+
+    // Pour Airbnb : les montants détaillés sont dans notes
+    // "Listing Base Price: 300.00
+Total Paid Amount: 249.60
+..."
+    const notes = attrs.notes || '';
+    const airbnbData = (ota_name || '').toLowerCase().includes('airbnb')
+      ? parseAirbnbNotes(notes)
+      : {};
+
+    // Enrichir les montants avec les données Airbnb si disponibles
+    const final_amount_cleaning = airbnbData.airbnb_cleaning_fee  || amount_cleaning;
+    const final_ota_commission   = airbnbData.airbnb_service_fee  || ota_commission;
+    const final_amount_taxes     = airbnbData.airbnb_occupancy_tax || amount_taxes;
+    const final_host_payout      = airbnbData.airbnb_host_payout  || null;
+
+    console.log(`📥 [CHANNEX] Booking reçu: ${booking_id} | ${ota_name} | ${arrival_date} → ${departure_date} | ${guest_name} | ${guest_country || '?'}`);
 
     // Trouver le logement Boostinghost correspondant
     const propResult = await pool.query(
@@ -303,25 +381,62 @@ async function processChannexBooking(pool, bookingData) {
     }
 
     if (existing.rows.length > 0) {
-      console.log(`ℹ️ [CHANNEX] Réservation déjà existante: ${existing.rows[0].uid}`);
+      // Mettre à jour les données enrichies si déjà existante
+      await pool.query(
+        `UPDATE reservations SET
+          guest_first_name = $1, guest_last_name = $2, guest_country = $3,
+          guest_language = $4, guest_city = $5,
+          occupancy_adults = $6, occupancy_children = $7,
+          amount_total = $8, amount_rooms = $9, amount_taxes = $10,
+          amount_cleaning = $11, ota_commission = $12,
+          days_breakdown = $13, services_raw = $14,
+          currency = $15, host_payout = $16, airbnb_data = $17,
+          updated_at = NOW()
+         WHERE channex_booking_id = $18`,
+        [
+          guest_first_name, guest_last_name, guest_country,
+          guest_language, guest_city,
+          occupancy_adults, occupancy_children,
+          amount_total, amount_rooms, final_amount_taxes,
+          final_amount_cleaning, final_ota_commission,
+          JSON.stringify(days_breakdown), JSON.stringify(all_services),
+          currency, final_host_payout,
+          Object.keys(airbnbData).length ? JSON.stringify(airbnbData) : null,
+          booking_id
+        ]
+      );
+      console.log(`ℹ️ [CHANNEX] Réservation mise à jour: ${existing.rows[0].uid}`);
       return existing.rows[0];
     }
 
-    // Créer la réservation
+    // Créer la réservation avec toutes les données
     const uid = `CHX_${booking_id}`;
     const result = await pool.query(
       `INSERT INTO reservations 
-        (uid, property_id, user_id, start_date, end_date, guest_name, guest_email, guest_phone,
-         platform, source, status, channex_booking_id, channex_revision_id, ota_name, ota_reservation_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+        (uid, property_id, user_id, start_date, end_date,
+         guest_name, guest_first_name, guest_last_name, guest_email, guest_phone,
+         guest_country, guest_language, guest_city,
+         occupancy_adults, occupancy_children,
+         amount_total, amount_rooms, amount_taxes, amount_cleaning, ota_commission,
+         days_breakdown, services_raw, currency,
+         host_payout, airbnb_data,
+         platform, source, status,
+         channex_booking_id, channex_revision_id, ota_name, ota_reservation_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32)
        RETURNING *`,
       [
         uid, property_id, user_id,
         arrival_date, departure_date,
-        guest_name, guest_email, guest_phone,
+        guest_name, guest_first_name, guest_last_name, guest_email, guest_phone,
+        guest_country, guest_language, guest_city,
+        occupancy_adults, occupancy_children,
+        amount_total, amount_rooms, final_amount_taxes, final_amount_cleaning, final_ota_commission,
+        JSON.stringify(days_breakdown), JSON.stringify(all_services), currency,
+        final_host_payout,
+        Object.keys(airbnbData).length ? JSON.stringify(airbnbData) : null,
         ota_name || 'channex', 'channex', 'confirmed',
         booking_id, revision_id || null,
-        ota_name || null, ota_reservation_id || null
+        ota_name || null, ota_reservation_code || null
       ]
     );
 
@@ -329,10 +444,10 @@ async function processChannexBooking(pool, bookingData) {
       user_id, property_id, channex_property_id,
       event_type: 'receive_booking',
       direction: 'inbound',
-      payload: { booking_id, ota_name, arrival_date, departure_date }
+      payload: { booking_id, ota_name, arrival_date, departure_date, guest_country, amount_total }
     });
 
-    console.log(`✅ [CHANNEX] Réservation créée: ${uid}`);
+    console.log(`✅ [CHANNEX] Réservation créée: ${uid} | ${guest_name} | ${guest_country} | ${amount_total}${currency}`);
     return result.rows[0];
 
   } catch (e) {
