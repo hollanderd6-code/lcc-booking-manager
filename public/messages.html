@@ -2170,12 +2170,14 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     top: 0 !important; left: 0 !important;
     width: 100% !important;
     height: 100% !important;
+    min-height: 0 !important;
     transform: translateX(100%) !important;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     z-index: 20 !important;
     background: #F5F2EC !important;
     display: flex !important;
     flex-direction: column !important;
+    overflow: hidden !important;
   }
 
   /* État chat ouvert : panel chat glisse en vue */
@@ -2226,35 +2228,32 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     min-height: 0 !important;
-    padding: 12px !important;
+    padding: 12px 12px 16px !important;
   }
 
-  /* ── 10. INPUT CHAT ── */
+  /* ── 10. INPUT CHAT — dans le flux flex (pas fixed) ── */
   .chat-modal-input {
     flex-shrink: 0 !important;
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
     padding: 10px 12px !important;
     padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
     background: white !important;
     border-top: 1px solid rgba(200,184,154,0.3) !important;
-    z-index: 1001 !important;
+    z-index: 10 !important;
   }
 
   #quickRepliesBar {
-    position: fixed !important;
-    bottom: 60px !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 1001 !important;
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    z-index: 10 !important;
     background: white !important;
     border-top: 1px solid rgba(200,184,154,0.3) !important;
-  }
-
-  #chatMessages {
-    padding-bottom: 130px !important;
+    flex-shrink: 0 !important;
   }
 
   /* ── 11. ITEMS CONVERSATION PLUS HAUTS ── */
