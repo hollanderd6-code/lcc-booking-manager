@@ -458,10 +458,6 @@ function openAddPropertyModal() {
   const titleEl = document.getElementById("modalTitle");
   if (titleEl) titleEl.querySelector("span").textContent = "Ajouter un logement";
 
-  // Nouveau logement : pas de chatPin ni de lien à afficher
-  const chatLinkSectionEl = document.getElementById('chatLinkSection');
-  if (chatLinkSectionEl) chatLinkSectionEl.style.display = 'none';
-
   if (modal) modal.classList.add("active");
 }
 
@@ -628,32 +624,6 @@ function openEditPropertyModal(propertyId) {
 
   // populate iCal URLs supprimé — Channex gère les OTAs
 
-  // ===== CHAT LINK SECTION =====
-  const pid = property._id || property.id || '';
-  const chatPin = property.chatPin || property.chat_pin || '';
-  const chatLink = `https://boostinghost.fr/guest?property=${pid}`;
-
-  const chatLinkSection = document.getElementById('chatLinkSection');
-  const chatLinkUrl = document.getElementById('chatLinkUrl');
-  const chatPinInput = document.getElementById('chatPinInput');
-  const chatPinUpdateBtn = document.getElementById('chatPinUpdateBtn');
-  const chatPinRegenBtn = document.getElementById('chatPinRegenBtn');
-  const chatAutoMsgBtn = document.getElementById('chatAutoMsgBtn');
-  const chatCopyLinkBtn = document.getElementById('chatCopyLinkBtn');
-
-  if (chatLinkSection) chatLinkSection.style.display = pid ? '' : 'none';
-  if (chatLinkUrl) chatLinkUrl.value = chatLink;
-  if (chatPinInput) { chatPinInput.value = chatPin; chatPinInput.dataset.propertyId = pid; }
-  if (chatPinUpdateBtn) chatPinUpdateBtn.dataset.propertyId = pid;
-  if (chatPinRegenBtn) chatPinRegenBtn.dataset.propertyId = pid;
-  if (chatAutoMsgBtn) {
-    chatAutoMsgBtn.dataset.link = chatLink;
-    chatAutoMsgBtn.dataset.pin = chatPin;
-    chatAutoMsgBtn.dataset.propertyName = property.name || '';
-  }
-  if (chatCopyLinkBtn) chatCopyLinkBtn.dataset.link = chatLink;
-  // ===== FIN CHAT LINK =====
-
   // ✅ CHARGER LES RÈGLES DE TARIFICATION
   if (typeof loadPricingRules === 'function') {
     loadPricingRules(property._id || property.id);
@@ -706,104 +676,7 @@ function renderProperties() {
       const hasAccessInfo = accessCode || p.accessInstructions;
       const welcomeBookUrl = p.welcomeBookUrl || "";
       const photoUrl = p.photoUrl || p.photo || null;
-const chatPin = p.chatPin || p.chat_pin || 'Non défini';
-// ✅ Nouveau format de lien compatible avec les deep links iOS/Android
-const chatLink = `https://boostinghost.fr/guest?property=${id}`;
-      
       // icalListHtml supprimé — Channex gère la synchronisation OTA
-const chatSectionHtml = `
-  <div class="chat-link-section" style="margin-top:14px;padding:14px;background:#fff;border:1.5px solid rgba(26,122,94,0.18);border-radius:14px;">
-
-    <!-- Header -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-      <div style="width:30px;height:30px;border-radius:8px;background:rgba(26,122,94,0.1);display:flex;align-items:center;justify-content:center;">
-        <i class="fas fa-comments" style="color:#1A7A5E;font-size:13px;"></i>
-      </div>
-      <span style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#0d1117;">Lien chat voyageurs</span>
-    </div>
-
-    <!-- Lien unique -->
-    <div style="margin-bottom:10px;">
-      <div style="font-size:11px;font-weight:500;color:rgba(13,17,23,0.45);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">
-        <i class="fas fa-link" style="margin-right:4px;"></i>Lien unique
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;background:rgba(26,122,94,0.05);border:1px solid rgba(26,122,94,0.15);border-radius:10px;padding:8px 10px;">
-        <input 
-          type="text" 
-          value="${escapeHtml(chatLink)}" 
-          readonly 
-          class="chat-link-input"
-          onclick="this.select()"
-          style="flex:1;border:none;background:transparent;font-family:ui-monospace,monospace;font-size:11px;color:#0d1117;outline:none;min-width:0;cursor:pointer;"
-        />
-        <button 
-          type="button" 
-          class="btn-copy-chat-link" 
-          data-link="${escapeHtml(chatLink)}"
-          style="flex-shrink:0;background:#1A7A5E;color:#fff;border:none;padding:5px 10px;border-radius:7px;cursor:pointer;font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:background .15s;"
-          onmouseover="this.style.background='#15624B'" 
-          onmouseout="this.style.background='#1A7A5E'"
-        >
-          <i class="fas fa-copy"></i> Copier
-        </button>
-      </div>
-    </div>
-
-    <!-- Code PIN -->
-    <div style="margin-bottom:10px;">
-      <div style="font-size:11px;font-weight:500;color:rgba(13,17,23,0.45);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">
-        <i class="fas fa-key" style="margin-right:4px;"></i>Code PIN voyageur
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <input 
-          type="text" 
-          value="${escapeHtml(chatPin)}" 
-          maxlength="4"
-          class="chat-pin-input"
-          data-property-id="${escapeHtml(id)}"
-          style="width:72px;background:#f9fafb;border:1.5px solid rgba(13,17,23,0.12);padding:7px 10px;border-radius:9px;font-size:18px;font-weight:700;color:#0d1117;text-align:center;font-family:ui-monospace,monospace;outline:none;"
-        />
-        <button 
-          type="button" 
-          class="btn-update-pin" 
-          data-property-id="${escapeHtml(id)}"
-          style="background:#f3f4f6;color:#374151;border:1.5px solid rgba(13,17,23,0.1);padding:7px 11px;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:all .15s;"
-          onmouseover="this.style.background='#e5e7eb'" 
-          onmouseout="this.style.background='#f3f4f6'"
-        >
-          <i class="fas fa-save"></i> Sauvegarder
-        </button>
-        <button 
-          type="button" 
-          class="btn-regenerate-pin" 
-          data-property-id="${escapeHtml(id)}"
-          style="background:#f3f4f6;color:#374151;border:1.5px solid rgba(13,17,23,0.1);padding:7px 10px;border-radius:9px;cursor:pointer;font-size:13px;transition:all .15s;"
-          onmouseover="this.style.background='#e5e7eb'" 
-          onmouseout="this.style.background='#f3f4f6'"
-          title="Générer un nouveau code aléatoire"
-        >
-          <i class="fas fa-sync-alt"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- Bouton message automatique -->
-    <button 
-      type="button" 
-      class="btn-copy-auto-message" 
-      data-link="${escapeHtml(chatLink)}" 
-      data-pin="${escapeHtml(chatPin)}"
-      data-property-name="${escapeHtml(name)}"
-      style="width:100%;background:rgba(26,122,94,0.07);color:#1A7A5E;border:1.5px solid rgba(26,122,94,0.2);padding:9px 14px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;"
-      onmouseover="this.style.background='rgba(26,122,94,0.13)'" 
-      onmouseout="this.style.background='rgba(26,122,94,0.07)'"
-    >
-      <i class="fas fa-paper-plane"></i>
-      <span>Copier le message à envoyer au voyageur</span>
-    </button>
-
-  </div>
-`;
 
       const addressBadge = address
         ? `<span class="meta-badge"><i class="fas fa-location-dot"></i>${escapeHtml(
@@ -1232,7 +1105,7 @@ async function openChannexIframe(propertyId) {
         <div style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
           <iframe 
             src="${data.iframe_url}"
-            style="width:100%;height:500px;border:none;display:block;"
+            style="width:100%;height:600px;border:none;display:block;"
             allow="same-origin"
           ></iframe>
         </div>
@@ -1403,7 +1276,8 @@ function renderPricingRules() {
     let detail = '';
 
     if (rule.rule_type === 'period') {
-      detail = `${rule.start_date || ''} → ${rule.end_date || ''} · <strong>${rule.price}€/nuit</strong>`;
+      const fmtDate = d => { if (!d) return ''; const dt = new Date(d); return `${String(dt.getUTCDate()).padStart(2,'0')}/${String(dt.getUTCMonth()+1).padStart(2,'0')}/${String(dt.getUTCFullYear()).slice(-2)}`; };
+      detail = `${fmtDate(rule.start_date)} → ${fmtDate(rule.end_date)} · <strong>${rule.price}€/nuit</strong>`;
     } else if (rule.rule_type === 'weekday') {
       const days = (rule.days_of_week || []).map(d => DAYS_LABELS[d]).join(', ');
       detail = `${days} · <strong>${rule.price}€/nuit</strong>`;
