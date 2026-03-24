@@ -2115,18 +2115,24 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     margin-left: 0 !important;
     padding: 0 !important;
     height: 100vh !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     display: block !important;
   }
   /* Masquer le header injecté par bh-layout sur mobile */
   html[data-theme-v3="1"] header.main-header { display: none !important; }
   /* Cacher l'onglet messages sur mobile (géré par mobile-header) */
   .msgs-tabs { display: none !important; }
-  /* msgs-panel prend tout l'espace */
+  /* msgs-panel remplit le split */
   .msgs-panel, .msgs-panel.active {
-    display: block !important;
-    height: 100% !important;
-    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    height: auto !important;
+    overflow: hidden !important;
   }
 
   /* ── 2. CACHER ÉLÉMENTS INUTILES SUR MOBILE ── */
