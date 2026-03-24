@@ -1232,7 +1232,7 @@ async function openChannexIframe(propertyId) {
         <div style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
           <iframe 
             src="${data.iframe_url}"
-            style="width:100%;height:600px;border:none;display:block;"
+            style="width:100%;height:540px;border:none;display:block;"
             allow="same-origin"
           ></iframe>
         </div>
