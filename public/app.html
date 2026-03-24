@@ -7564,9 +7564,9 @@ console.log('👤 DEBUG GUEST:', {
       if (entries.length > 0) {
         nightsBreakdownHTML = entries.map(([date, price]) => {
           const d = new Date(date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
-          return \`<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;padding:2px 0;">
-            <span>\${d}</span><span>\${fmtAmount(price)}</span>
-          </div>\`;
+          return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;padding:2px 0;">'
+            + '<span>' + d + '</span><span>' + fmtAmount(price) + '</span>'
+            + '</div>';
         }).join('');
       }
     }
