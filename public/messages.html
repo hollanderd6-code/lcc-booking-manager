@@ -34,15 +34,9 @@ html[data-theme-v3="1"] header.main-header {
 }
 html[data-theme-v3="1"] main.main-content {
   padding-top: 0 !important;
-  padding: 0 !important;
   margin-top: 0 !important;
   position: relative !important;
   z-index: 35 !important;
-}
-@media (min-width: 1367px) {
-  html[data-theme-v3="1"] main.main-content {
-    padding-top: 70px !important;
-  }
 }
 html[data-theme-v3="1"] .app-container {
   margin-top: 0 !important;
@@ -2169,7 +2163,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   .mobile-menu-btn, #mobileMenuBtn { display: none !important; }
 
   /* ── 4. SPLIT CONTAINER → PLEIN ÉCRAN AVEC SLIDE ── */
-  .msgs-split {
+  .msgs-split,
+  html[data-theme-v3="1"] .msgs-split {
     display: block !important;
     margin: 0 !important;
     border-radius: 0 !important;
@@ -2183,6 +2178,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     left: 0 !important;
     right: 0 !important;
     height: auto !important;
+    z-index: 50 !important;
+    background: #F5F2EC !important;
   }
 
   /* ── 5. LISTE CONVERSATIONS — vue par défaut ── */
@@ -2319,31 +2316,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   }
 }
 </style>
-
-<script>
-/* ── MESSAGES MOBILE: neutraliser paddingBottom injecté par mobile-native-experience.js ── */
-(function() {
-  if (window.innerWidth > 1366) return;
-  function fixMainPadding() {
-    var main = document.querySelector('main.main-content') || document.querySelector('.main-content');
-    if (main) {
-      main.style.setProperty('padding-bottom', '0', 'important');
-      main.style.setProperty('padding-top', '0', 'important');
-    }
-  }
-  // Observer les changements de style sur main-content
-  var obs = new MutationObserver(fixMainPadding);
-  document.addEventListener('DOMContentLoaded', function() {
-    var main = document.querySelector('main.main-content') || document.querySelector('.main-content');
-    if (main) {
-      obs.observe(main, { attributes: true, attributeFilter: ['style'] });
-      fixMainPadding();
-    }
-  });
-  setTimeout(fixMainPadding, 300);
-  setTimeout(fixMainPadding, 800);
-})();
-</script>
 
 <script>
 /* ── MESSAGES MOBILE: navigation liste ↔ chat ── */
