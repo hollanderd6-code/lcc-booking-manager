@@ -5557,13 +5557,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
     
-    const {
-      propertyId, start, end, guestName, notes,
-      phone, email, platform,
-      price,
-      guest_country, occupancy_adults, occupancy_children,
-      amount_total, amount_rooms, amount_taxes, amount_cleaning, ota_commission
-    } = req.body;
+    const { propertyId, start, end, guestName, notes } = req.body;
     console.log('📦 Données reçues:', { propertyId, start, end, guestName });
     
     if (!propertyId || !start || !end) {
@@ -5624,32 +5618,22 @@ app.post('/api/reservations/manual', async (req, res) => {
         INSERT INTO reservations (
           uid, property_id, user_id,
           start_date, end_date,
-          guest_name, guest_phone, guest_email,
-          source, platform, reservation_type,
-          price, amount_total, amount_rooms, amount_taxes, amount_cleaning, ota_commission,
-          guest_country, occupancy_adults, occupancy_children,
-          currency, status,
+          guest_name, source, platform, reservation_type,
+          price, currency, status,
           synced_at, created_at
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,NOW(),NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
         ON CONFLICT (uid) DO NOTHING
       `, [
-        uid, propertyId, user.id,
-        start, end,
+        uid,
+        propertyId,
+        user.id,
+        start,
+        end,
         guestName || 'Réservation manuelle',
-        phone || null,
-        email || null,
-        platform || 'MANUEL',
-        platform || 'MANUEL',
+        'MANUEL',
+        'MANUEL',
         'manual',
-        price || amount_total || 0,
-        amount_total || price || null,
-        amount_rooms || null,
-        amount_taxes || null,
-        amount_cleaning || null,
-        ota_commission || null,
-        guest_country || null,
-        occupancy_adults || null,
-        occupancy_children || 0,
+        0,
         'EUR',
         'confirmed'
       ]);
@@ -7255,32 +7239,32 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
       });
     });
 
-    // ✅ NOUVEAU : Récupérer les conversations avec infos voyageur
-    const conversationsResult = await pool.query(`
-      SELECT 
-        property_id,
-        reservation_start_date,
-        platform,
-        guest_first_name,
-        guest_last_name,
-        guest_phone,
-        guest_name
-      FROM conversations
-      WHERE user_id = $1
+    // Récupérer toutes les réservations enrichies depuis la DB (Channex + directes)
+    const dbResResult = await pool.query(`
+      SELECT
+        r.uid, r.property_id, r.start_date, r.end_date,
+        r.guest_name, r.guest_first_name, r.guest_last_name,
+        r.guest_email, r.guest_phone, r.guest_country,
+        r.occupancy_adults, r.occupancy_children,
+        r.amount_total, r.amount_rooms, r.amount_taxes,
+        r.amount_cleaning, r.ota_commission, r.host_payout,
+        r.days_breakdown, r.currency, r.source,
+        r.channex_booking_id, r.ota_name,
+        p.name as prop_name
+      FROM reservations r
+      LEFT JOIN properties p ON p.id = r.property_id
+      WHERE r.user_id = $1
     `, [userId]);
     
-    // Créer un Map pour matcher conversations avec réservations
-    // Clé: propertyId + startDate + platform (lowercased)
-    const conversationsMap = new Map();
-    conversationsResult.rows.forEach(c => {
-      const startDate = c.reservation_start_date ? new Date(c.reservation_start_date).toISOString().split('T')[0] : '';
-      const key = `${c.property_id}_${startDate}_${(c.platform || '').toLowerCase()}`;
-      conversationsMap.set(key, {
-        guestFirstName: c.guest_first_name,
-        guestLastName: c.guest_last_name,
-        guestPhone: c.guest_phone,
-        guestNameFromConv: c.guest_name
-      });
+    // Index par uid et par property+date pour matching
+    const dbResMap = new Map();
+    dbResResult.rows.forEach(r => {
+      dbResMap.set(r.uid, r);
+      if (r.channex_booking_id) dbResMap.set('CHX_' + r.channex_booking_id, r);
+      if (r.start_date) {
+        const d = r.start_date.toISOString ? r.start_date.toISOString().split('T')[0] : String(r.start_date).split('T')[0];
+        dbResMap.set(r.property_id + '_' + d, r);
+      }
     });
 
     const result = [];
@@ -7301,36 +7285,20 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
         // ✅ Chercher le deposit dans la Map
         const deposit = depositsMap.get(r.uid) || null;
         
-        // ✅ NOUVEAU : Chercher les infos voyageur dans les conversations
+        // Chercher les données enrichies dans la DB
         const startDate = r.start ? new Date(r.start).toISOString().split('T')[0] : '';
-        const platform = (r.platform || r.source || '').toLowerCase();
-        const convKey = `${property.id}_${startDate}_${platform}`;
-        const convData = conversationsMap.get(convKey);
-        
-        // Construire le nom complet du voyageur
-        let guestDisplayName = '';
-        let guestFirstName = '';
-        let guestLastName = '';
-        let guestPhone = '';
-        
-        if (convData) {
-          guestFirstName = convData.guestFirstName || '';
-          guestLastName = convData.guestLastName || '';
-          guestPhone = convData.guestPhone || '';
-          
-          if (guestFirstName) {
-            guestDisplayName = guestLastName 
-              ? `${guestFirstName} ${guestLastName}`
-              : guestFirstName;
-          } else if (convData.guestNameFromConv) {
-            guestDisplayName = convData.guestNameFromConv;
-          }
-        }
-        
-        // Fallback sur guestName de la réservation si pas d'info conversation
-        if (!guestDisplayName && r.guestName) {
-          guestDisplayName = r.guestName;
-        }
+        const dbData = dbResMap.get(r.uid)
+          || dbResMap.get(property.id + '_' + startDate)
+          || null;
+
+        // Nom complet du voyageur
+        const guestFirstName = (dbData?.guest_first_name) || '';
+        const guestLastName  = (dbData?.guest_last_name)  || '';
+        const guestPhone     = (dbData?.guest_phone)      || '';
+        const guestEmail     = (dbData?.guest_email)      || '';
+        let guestDisplayName = guestFirstName
+          ? (guestLastName ? guestFirstName + ' ' + guestLastName : guestFirstName)
+          : (dbData?.guest_name || r.guestName || '');
 
         result.push({
           reservationUid: r.uid,
@@ -7338,13 +7306,23 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
           propertyName: property.name,
           startDate: r.start,
           endDate: r.end,
-          guestName: r.guestName || '',
-          // ✅ NOUVEAUX CHAMPS
-          guestFirstName: guestFirstName,
-          guestLastName: guestLastName,
-          guestDisplayName: guestDisplayName,
-          guestPhone: guestPhone,
-          source: r.source || '',
+          guestName: guestDisplayName || r.guestName || '',
+          guestFirstName,
+          guestLastName,
+          guestDisplayName,
+          guestPhone,
+          guestEmail,
+          guestCountry:      dbData?.guest_country      || null,
+          occupancyAdults:   dbData?.occupancy_adults   || null,
+          occupancyChildren: dbData?.occupancy_children || 0,
+          amountTotal:    dbData?.amount_total    ? parseFloat(dbData.amount_total)    : null,
+          amountRooms:    dbData?.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+          amountTaxes:    dbData?.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
+          amountCleaning: dbData?.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
+          otaCommission:  dbData?.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
+          hostPayout:     dbData?.host_payout     ? parseFloat(dbData.host_payout)     : null,
+          currency: dbData?.currency || 'EUR',
+          source: r.source || dbData?.source || '',
           deposit: deposit
             ? {
                 id: deposit.id,
@@ -7357,6 +7335,52 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
         });
       });
     });
+
+    // Ajouter les résas Channex absentes du store iCal
+    const storeUids = new Set(result.map(r => r.reservationUid).filter(Boolean));
+    for (const [key, dbData] of dbResMap.entries()) {
+      if (!key.startsWith('CHX_') && !key.includes('_20')) {
+        if (dbData.source === 'channex' && !storeUids.has(dbData.uid)) {
+          const prop = userProps.find(p => p.id === dbData.property_id);
+          if (!prop) continue;
+          const deposit = depositsMap.get(dbData.uid) || null;
+          const startD = dbData.start_date ? (dbData.start_date.toISOString ? dbData.start_date.toISOString() : String(dbData.start_date)) : null;
+          const endD   = dbData.end_date   ? (dbData.end_date.toISOString   ? dbData.end_date.toISOString()   : String(dbData.end_date))   : null;
+          const gFirst = dbData.guest_first_name || '';
+          const gLast  = dbData.guest_last_name  || '';
+          const gDisplay = gFirst ? (gLast ? gFirst + ' ' + gLast : gFirst) : (dbData.guest_name || '');
+          result.push({
+            reservationUid: dbData.uid,
+            propertyId: prop.id,
+            propertyName: prop.name,
+            startDate: startD,
+            endDate:   endD,
+            guestName: gDisplay || dbData.guest_name || '',
+            guestFirstName:  gFirst,
+            guestLastName:   gLast,
+            guestDisplayName: gDisplay,
+            guestPhone:      dbData.guest_phone  || '',
+            guestEmail:      dbData.guest_email  || '',
+            guestCountry:    dbData.guest_country || null,
+            occupancyAdults:   dbData.occupancy_adults   || null,
+            occupancyChildren: dbData.occupancy_children || 0,
+            amountTotal:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
+            amountRooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+            amountTaxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
+            amountCleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
+            otaCommission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
+            currency: dbData.currency || 'EUR',
+            source: dbData.ota_name || dbData.source || 'channex',
+            deposit: deposit ? {
+              id: deposit.id, amountCents: deposit.amountCents,
+              status: deposit.status, checkoutUrl: deposit.checkoutUrl,
+              createdAt: deposit.createdAt
+            } : null
+          });
+          storeUids.add(dbData.uid);
+        }
+      }
+    }
 
     console.log('✅ Deposits chargés:', result.length, 'réservations');
     res.json(result);
