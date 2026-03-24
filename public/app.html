@@ -5654,19 +5654,21 @@ window.LCC_PROPERTIES = properties;
             createdAt: r2.createdAt || r2.created_at || null,
             hasDeposit: r2.hasDeposit || r2.has_deposit || false,
             depositAmount: r2.depositAmount || r2.deposit_amount || 0,
-            // Infos voyageur
-            guest_first_name:   r2.guest_first_name   || null,
-            guest_last_name:    r2.guest_last_name    || null,
-            guest_phone:        r2.guest_phone        || null,
-            guest_email:        r2.guest_email        || null,
+            // ✅ Champs enrichis depuis les conversations (onboarding)
+            guest_first_name: r2.guest_first_name || null,
+            guest_last_name: r2.guest_last_name || null,
+            guest_phone: r2.guest_phone || null,
             guest_display_name: r2.guest_display_name || null,
-            guest_initial:      r2.guest_initial      || null,
+            guest_initial: r2.guest_initial || null,
+            onboarding_completed: r2.onboarding_completed || false,
+            type: r2.type || null,
+            // Infos voyageur enrichies (Channex)
+            guest_email:        r2.guest_email        || null,
             guest_country:      r2.guest_country      || null,
             guest_language:     r2.guest_language     || null,
             guest_city:         r2.guest_city         || null,
             occupancy_adults:   r2.occupancy_adults   || null,
             occupancy_children: r2.occupancy_children || 0,
-            onboarding_completed: r2.onboarding_completed || false,
             // Montants Channex
             amount_total:    r2.amount_total    || null,
             amount_rooms:    r2.amount_rooms    || null,
@@ -5675,8 +5677,7 @@ window.LCC_PROPERTIES = properties;
             ota_commission:  r2.ota_commission  || null,
             host_payout:     r2.host_payout     || null,
             days_breakdown:  r2.days_breakdown  || null,
-            currency:        r2.currency        || 'EUR',
-            type: r2.type || null
+            currency:        r2.currency        || 'EUR'
           });
         }
         
@@ -7579,9 +7580,9 @@ console.log('👤 DEBUG GUEST:', {
       if (entries.length > 0) {
         nightsBreakdownHTML = entries.map(([date, price]) => {
           const d = new Date(date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
-          return \`<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;padding:2px 0;">
-            <span>\${d}</span><span>\${fmtAmount(price)}</span>
-          </div>\`;
+          return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;padding:2px 0;">'
+            + '<span>' + d + '</span><span>' + fmtAmount(price) + '</span>'
+            + '</div>';
         }).join('');
       }
     }
