@@ -5557,7 +5557,13 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(401).json({ error: 'Non autorisé' });
     }
     
-    const { propertyId, start, end, guestName, notes } = req.body;
+    const {
+      propertyId, start, end, guestName, notes,
+      phone, email, platform,
+      price,
+      guest_country, occupancy_adults, occupancy_children,
+      amount_total, amount_rooms, amount_taxes, amount_cleaning, ota_commission
+    } = req.body;
     console.log('📦 Données reçues:', { propertyId, start, end, guestName });
     
     if (!propertyId || !start || !end) {
@@ -5618,22 +5624,32 @@ app.post('/api/reservations/manual', async (req, res) => {
         INSERT INTO reservations (
           uid, property_id, user_id,
           start_date, end_date,
-          guest_name, source, platform, reservation_type,
-          price, currency, status,
+          guest_name, guest_phone, guest_email,
+          source, platform, reservation_type,
+          price, amount_total, amount_rooms, amount_taxes, amount_cleaning, ota_commission,
+          guest_country, occupancy_adults, occupancy_children,
+          currency, status,
           synced_at, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,NOW(),NOW())
         ON CONFLICT (uid) DO NOTHING
       `, [
-        uid,
-        propertyId,
-        user.id,
-        start,
-        end,
+        uid, propertyId, user.id,
+        start, end,
         guestName || 'Réservation manuelle',
-        'MANUEL',
-        'MANUEL',
+        phone || null,
+        email || null,
+        platform || 'MANUEL',
+        platform || 'MANUEL',
         'manual',
-        0,
+        price || amount_total || 0,
+        amount_total || price || null,
+        amount_rooms || null,
+        amount_taxes || null,
+        amount_cleaning || null,
+        ota_commission || null,
+        guest_country || null,
+        occupancy_adults || null,
+        occupancy_children || 0,
         'EUR',
         'confirmed'
       ]);
