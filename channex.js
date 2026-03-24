@@ -253,8 +253,7 @@ async function pushRestrictions(pool, { property_id, channex_property_id, channe
 function parseAirbnbNotes(notes) {
   if (!notes) return {};
   const result = {};
-  const lines = notes.split('
-');
+  const lines = notes.split(/\r?\n/);
   for (const line of lines) {
     const [key, val] = line.split(':').map(s => s.trim());
     if (!key || !val) continue;
