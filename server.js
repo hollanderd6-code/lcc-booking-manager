@@ -5983,88 +5983,62 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       return p;
     }
 
-   // ⭐ ENRICHISSEMENT : Charger TOUTES les conversations pour cet utilisateur
-    let conversationsMap = new Map();
+   // ⭐ Charger toutes les réservations enrichies depuis la DB (Channex + directes)
+    let reservationsDbMap = new Map(); // uid → données enrichies
     try {
-      const allConversationsResult = await pool.query(
-        `SELECT 
-          property_id,
-          TO_CHAR(reservation_start_date, 'YYYY-MM-DD') as start_date,
-          platform,
-          guest_first_name, 
-          guest_last_name, 
-          guest_phone,
-          onboarding_completed
-         FROM conversations 
-         WHERE user_id = $1`,
+      const dbResResult = await pool.query(
+        `SELECT
+          r.uid,
+          r.property_id,
+          r.guest_name,
+          r.guest_first_name,
+          r.guest_last_name,
+          r.guest_email,
+          r.guest_phone,
+          r.guest_country,
+          r.guest_language,
+          r.guest_city,
+          r.occupancy_adults,
+          r.occupancy_children,
+          r.amount_total,
+          r.amount_rooms,
+          r.amount_taxes,
+          r.amount_cleaning,
+          r.ota_commission,
+          r.host_payout,
+          r.days_breakdown,
+          r.currency,
+          r.channex_booking_id,
+          r.source,
+          r.start_date,
+          c.onboarding_completed,
+          c.id as conversation_id
+         FROM reservations r
+         LEFT JOIN conversations c
+           ON c.property_id = r.property_id
+           AND c.reservation_start_date = r.start_date
+           AND c.user_id = r.user_id
+         WHERE r.user_id = $1`,
         [userId]
       );
-      
-      // Créer un index pour lookup rapide avec matching flexible
-      // On crée plusieurs clés par conversation pour gérer le décalage de dates
-      allConversationsResult.rows.forEach(conv => {
-        const platform = normalizePlatform(conv.platform);
-        const baseKey = `${conv.property_id}_${conv.start_date}_${platform}`;
-        
-        // Fonction helper pour ajouter une clé sans écraser si elle existe déjà avec des infos
-        const addKey = (key, conversation) => {
-          const existing = conversationsMap.get(key);
-          // Ne pas écraser si la clé existe déjà et a des infos guest
-          if (existing && existing.guest_first_name) {
-            return; // Garder l'existant qui a des infos
-          }
-          // Sinon, ajouter/écraser
-          conversationsMap.set(key, conversation);
-        };
-        
-        // Ajouter la clé principale
-        addKey(baseKey, conv);
-        
-        // Ajouter aussi les clés avec ±1 jour pour gérer les décalages
-        const date = new Date(conv.start_date);
-        
-        // Jour précédent
-        const prevDate = new Date(date);
-        prevDate.setDate(prevDate.getDate() - 1);
-        const prevKey = `${conv.property_id}_${prevDate.toISOString().split('T')[0]}_${platform}`;
-        addKey(prevKey, conv);
-        
-        // Jour suivant
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
-        const nextKey = `${conv.property_id}_${nextDate.toISOString().split('T')[0]}_${platform}`;
-        addKey(nextKey, conv);
-        
-        // ⭐ DEBUG TEMPORAIRE pour Jean
-        if (conv.guest_first_name === 'Jean') {
-          console.log('🔍 DEBUG Jean - Clés créées:', {
-            baseKey: baseKey,
-            prevKey: prevKey,
-            nextKey: nextKey,
-            platform_original: conv.platform,
-            platform_normalized: platform
-          });
+      dbResResult.rows.forEach(r => {
+        reservationsDbMap.set(r.uid, r);
+        // Index par channex_booking_id aussi
+        if (r.channex_booking_id) {
+          reservationsDbMap.set(`CHX_${r.channex_booking_id}`, r);
+        }
+        // Index par property_id + start_date pour les résas directes
+        const dateKey = r.start_date ? r.start_date.toISOString().split('T')[0] : null;
+        if (dateKey) {
+          reservationsDbMap.set(`${r.property_id}_${dateKey}`, r);
         }
       });
-      
-      console.log(`💬 ${conversationsMap.size} conversations chargées pour enrichissement`);
-      
-      // 🔍 DEBUG: Afficher quelques exemples de clés
-      if (conversationsMap.size > 0) {
-        console.log('🔍 Exemples de clés de conversations:');
-        let count = 0;
-        for (const [key, conv] of conversationsMap.entries()) {
-          if (count < 3) {
-            console.log(`   ${key} -> ${conv.guest_first_name} ${conv.guest_last_name || ''}`);
-            count++;
-          }
-        }
-      }
+      console.log(`📊 ${dbResResult.rows.length} réservations DB chargées pour enrichissement`);
     } catch (error) {
-      console.error('❌ Erreur chargement conversations:', error);
+      console.error('❌ Erreur chargement réservations DB:', error);
     }
 
-   // Enrichir les réservations avec les données des conversations
+    // Enrichir les réservations du store iCal avec les données DB
     filteredProps.forEach(property => {
       const allPropertyReservations = reservationsStore.properties[property.id] || [];
 
@@ -6077,45 +6051,24 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         const rStart = new Date(r.start || r.startDate);
         const rEnd   = new Date(r.end || r.endDate);
         const durationDays = (rEnd - rStart) / (1000 * 60 * 60 * 24);
-        if (durationDays > 60) return false; // bloc longue durée
+        if (durationDays > 60) return false;
         for (const m of manualReservations) {
           const mStart = new Date(m.start || m.startDate);
           const mEnd   = new Date(m.end || m.endDate);
-          if (rStart >= mStart && rEnd <= mEnd) return false; // contenu dans résa directe
+          if (rStart >= mStart && rEnd <= mEnd) return false;
         }
         return true;
       });
 
-      propertyReservations.forEach((reservation, index) => {
-        // Préparer la clé de recherche avec normalisation
+      propertyReservations.forEach((reservation) => {
+        // Chercher les données DB — par uid, puis par channex key, puis par date
         const startDate = new Date(reservation.start || reservation.checkIn).toISOString().split('T')[0];
-        const platform = normalizePlatform(reservation.source || reservation.platform);
-        const key = `${property.id}_${startDate}_${platform}`;
-        
-        // 🔍 DEBUG: Log pour les premières réservations
-        if (index < 2) {
-          console.log(`🔍 Recherche réservation: ${key}`);
-        }
-        
-        // 🔍 DEBUG: Log si c'est la réservation de Jean
-        if (key === 'u_mjcpmi2k-sg-rdc_2026-02-06_booking') {
-          console.log('🔍 DEBUG MATCHING Jean:');
-          console.log('   Clé recherchée:', key);
-          console.log('   Map size:', conversationsMap.size);
-          console.log('   Has key?:', conversationsMap.has(key));
-          console.log('   Get result:', conversationsMap.get(key));
-        }
-        
-        // Chercher la conversation correspondante
-        const conversationData = conversationsMap.get(key) || {};
-        
-        // 🔍 DEBUG: Log si trouvé
-        if (conversationData.guest_first_name && index < 2) {
-          console.log(`   ✅ Trouvé: ${conversationData.guest_first_name} ${conversationData.guest_last_name || ''}`);
-        } else if (index < 2) {
-          console.log(`   ❌ Pas trouvé`);
-        }
-        // Enrichir la réservation
+        const dateKey = `${property.id}_${startDate}`;
+        const dbData = reservationsDbMap.get(reservation.uid)
+          || reservationsDbMap.get(reservation.reservationKey)
+          || reservationsDbMap.get(dateKey)
+          || {};
+
         const enrichedReservation = {
           ...reservation,
           property: {
@@ -6123,20 +6076,35 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             name: property.name,
             color: property.color
           },
-          // ⭐ Ajouter les infos du voyageur depuis la conversation
-          guest_first_name: conversationData.guest_first_name || null,
-          guest_last_name: conversationData.guest_last_name || null,
-          guest_phone: conversationData.guest_phone || null,
-          onboarding_completed: conversationData.onboarding_completed || false,
-          // Calculer les champs dérivés
-          guest_display_name: conversationData.guest_first_name 
-            ? `${conversationData.guest_first_name} ${conversationData.guest_last_name || ''}`.trim()
-            : null,
-          guest_initial: conversationData.guest_first_name 
-            ? conversationData.guest_first_name.charAt(0).toUpperCase() 
+          // Infos voyageur
+          guest_first_name:  dbData.guest_first_name  || null,
+          guest_last_name:   dbData.guest_last_name   || null,
+          guest_phone:       dbData.guest_phone       || null,
+          guest_email:       dbData.guest_email       || null,
+          guest_country:     dbData.guest_country     || null,
+          guest_language:    dbData.guest_language    || null,
+          guest_city:        dbData.guest_city        || null,
+          occupancy_adults:  dbData.occupancy_adults  || null,
+          occupancy_children:dbData.occupancy_children|| 0,
+          onboarding_completed: dbData.onboarding_completed || false,
+          // Montants
+          amount_total:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
+          amount_rooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+          amount_taxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
+          amount_cleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
+          ota_commission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
+          host_payout:     dbData.host_payout     ? parseFloat(dbData.host_payout)     : null,
+          days_breakdown:  dbData.days_breakdown  || null,
+          currency:        dbData.currency        || 'EUR',
+          // Champs dérivés
+          guest_display_name: dbData.guest_first_name
+            ? `${dbData.guest_first_name} ${dbData.guest_last_name || ''}`.trim()
+            : (dbData.guest_name || null),
+          guest_initial: dbData.guest_first_name
+            ? dbData.guest_first_name.charAt(0).toUpperCase()
             : null
         };
-        
+
         allReservations.push(enrichedReservation);
       });
     });
