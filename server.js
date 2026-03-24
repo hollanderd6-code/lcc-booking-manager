@@ -1495,6 +1495,32 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Tables pricing:', e.message);
     }
 
+    // ✅ Migration : données voyageur enrichies (Channex)
+    try {
+      await pool.query(`
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_first_name TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_last_name TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_country TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_language TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_city TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS occupancy_adults INTEGER DEFAULT 1;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS occupancy_children INTEGER DEFAULT 0;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS amount_total NUMERIC(10,2);
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS amount_rooms NUMERIC(10,2);
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS amount_taxes NUMERIC(10,2);
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS amount_cleaning NUMERIC(10,2);
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ota_commission NUMERIC(10,2);
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS days_breakdown JSONB;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS services_raw JSONB;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'EUR';
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS host_payout NUMERIC(10,2);
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS airbnb_data JSONB;
+      `);
+      console.log('✅ Colonnes données voyageur enrichies OK');
+    } catch (e) {
+      console.log('ℹ️ Colonnes voyageur enrichies:', e.message);
+    }
+
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
