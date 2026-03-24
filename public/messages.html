@@ -1839,14 +1839,20 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     // Dates check-in → check-out
     var datesEl = document.getElementById('chatDates');
     var sep1 = document.getElementById('chatMetaSep1');
-    if (conv && datesEl && conv.reservation_start_date) {
-      var cin = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
-      var cout = conv.reservation_end_date
-        ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'})
-        : null;
-      datesEl.textContent = cout ? cin + ' → ' + cout : cin;
-      datesEl.style.display = 'inline';
-      if (sep1) sep1.style.display = 'inline';
+    // Chercher les dates dans tous les champs possibles
+    var startDate = conv && (conv.reservation_start_date || conv.startDate || conv.start);
+    var endDate = conv && (conv.reservation_end_date || conv.endDate || conv.end);
+    if (datesEl && startDate) {
+      try {
+        var cin = new Date(startDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
+        var cout = endDate ? new Date(endDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : null;
+        datesEl.textContent = cout ? cin + ' → ' + cout : cin;
+        datesEl.style.display = 'inline';
+        if (sep1) sep1.style.display = 'inline';
+      } catch(e) {
+        datesEl.style.display = 'none';
+        if (sep1) sep1.style.display = 'none';
+      }
     } else if (datesEl) {
       datesEl.style.display = 'none';
       if (sep1) sep1.style.display = 'none';
