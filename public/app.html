@@ -7511,6 +7511,66 @@ console.log('👤 DEBUG GUEST:', {
     // Channex OTA reservation ID
     const otaReservationId = booking.ota_reservation_id || booking.otaReservationId || null;
 
+    // ── Données enrichies Channex ─────────────────────────────
+    const guestCountryCode = booking.guest_country || null;
+    const guestFirstName   = booking.guest_first_name || null;
+    const guestLastName    = booking.guest_last_name  || null;
+    const occupancyAdults  = booking.occupancy_adults || null;
+    const occupancyChildren= booking.occupancy_children || 0;
+
+    // Montants détaillés
+    const amountTotal    = booking.amount_total    || booking.amount || booking.price || null;
+    const amountRooms    = booking.amount_rooms    || null;
+    const amountTaxes    = booking.amount_taxes    || null;
+    const amountCleaning = booking.amount_cleaning || null;
+    const otaCommission  = booking.ota_commission  || null;
+    const hostPayout     = booking.host_payout     || null;
+    const currency       = booking.currency        || 'EUR';
+    const daysBreakdown  = booking.days_breakdown  || null;
+    const airbnbData     = booking.airbnb_data     || null;
+
+    // Nationalité : convertir code ISO → nom pays en français
+    const countryNames = {
+      FR:'France', GB:'Royaume-Uni', DE:'Allemagne', ES:'Espagne', IT:'Italie',
+      US:'États-Unis', NL:'Pays-Bas', BE:'Belgique', CH:'Suisse', PT:'Portugal',
+      CA:'Canada', AU:'Australie', JP:'Japon', CN:'Chine', BR:'Brésil',
+      MX:'Mexique', RU:'Russie', IN:'Inde', ZA:'Afrique du Sud', MA:'Maroc',
+      TN:'Tunisie', DZ:'Algérie', SN:'Sénégal', CI:'Côte d'Ivoire',
+      LU:'Luxembourg', IE:'Irlande', SE:'Suède', NO:'Norvège', DK:'Danemark',
+      FI:'Finlande', PL:'Pologne', CZ:'Tchéquie', AT:'Autriche', GR:'Grèce',
+      TR:'Turquie', AE:'Émirats arabes unis', SG:'Singapour', KR:'Corée du Sud',
+    };
+    const guestCountryName = guestCountryCode ? (countryNames[guestCountryCode] || guestCountryCode) : null;
+    const guestCountryFlag = guestCountryCode
+      ? guestCountryCode.toUpperCase().replace(/./g, c => String.fromCodePoint(c.charCodeAt(0) + 127397))
+      : null;
+
+    function fmtAmount(val) {
+      if (val == null || val === '' || isNaN(Number(val))) return null;
+      return Number(val).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    }
+
+    const amountTotalFmt    = fmtAmount(amountTotal);
+    const amountRoomsFmt    = fmtAmount(amountRooms);
+    const amountTaxesFmt    = fmtAmount(amountTaxes);
+    const amountCleaningFmt = fmtAmount(amountCleaning);
+    const otaCommissionFmt  = fmtAmount(otaCommission);
+    const hostPayoutFmt     = fmtAmount(hostPayout);
+
+    // Prix par nuit depuis days_breakdown
+    let nightsBreakdownHTML = '';
+    if (daysBreakdown && typeof daysBreakdown === 'object') {
+      const entries = Object.entries(daysBreakdown).sort(([a],[b]) => a.localeCompare(b));
+      if (entries.length > 0) {
+        nightsBreakdownHTML = entries.map(([date, price]) => {
+          const d = new Date(date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
+          return \`<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;padding:2px 0;">
+            <span>\${d}</span><span>\${fmtAmount(price)}</span>
+          </div>\`;
+        }).join('');
+      }
+    }
+
     // 4️⃣ Contenu "de base" du modal
     detailsContent.innerHTML = `
 
@@ -7550,6 +7610,16 @@ console.log('👤 DEBUG GUEST:', {
           ">${guestInitial}</div>
           <div style="flex:1; min-width:0;">
             <div class="detail-value" style="font-weight:700; margin-bottom:4px;">${guest}</div>
+            ${guestCountryName ? `
+              <div style="font-size:13px; color:#4B5563; margin-bottom:4px; font-weight:500;">
+                ${guestCountryFlag ? `<span style="margin-right:4px;">${guestCountryFlag}</span>` : ''}${guestCountryName}
+              </div>
+            ` : ''}
+            ${occupancyAdults ? `
+              <div style="font-size:12px; color:#9CA3AF; margin-bottom:4px;">
+                <i class="fas fa-user" style="width:14px; margin-right:4px;"></i>${occupancyAdults} adulte${occupancyAdults > 1 ? 's' : ''}${occupancyChildren ? ` · ${occupancyChildren} enfant${occupancyChildren > 1 ? 's' : ''}` : ''}
+              </div>
+            ` : ''}
             ${guestPhone && guestPhone !== 'Non renseigné' ? `
               <div style="font-size:13px; color:#6b7280; margin-bottom:2px;">
                 <i class="fas fa-phone" style="width:14px; margin-right:4px;"></i>
@@ -7583,6 +7653,62 @@ console.log('👤 DEBUG GUEST:', {
           <div class="detail-value">${end}</div>
         </div>
       </div>
+
+      <!-- PRIX DÉTAILLÉ -->
+      ${amountTotalFmt ? `
+        <div class="detail-group">
+          <label>PRIX DÉTAILLÉ</label>
+          <div style="margin-top:8px; background:#F9F7F4; border-radius:10px; padding:12px 14px;">
+
+            ${amountRoomsFmt ? `
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+                <span style="color:#6b7280;"><i class="fas fa-moon" style="width:14px;margin-right:6px;opacity:.6;"></i>Nuits</span>
+                <span style="font-weight:600;">${amountRoomsFmt}</span>
+              </div>
+            ` : ''}
+
+            ${nightsBreakdownHTML ? `
+              <div style="padding:6px 0 4px 20px; border-bottom:1px solid rgba(0,0,0,.06);">
+                ${nightsBreakdownHTML}
+              </div>
+            ` : ''}
+
+            ${amountCleaningFmt ? `
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+                <span style="color:#6b7280;"><i class="fas fa-broom" style="width:14px;margin-right:6px;opacity:.6;"></i>Ménage</span>
+                <span style="font-weight:600;">${amountCleaningFmt}</span>
+              </div>
+            ` : ''}
+
+            ${amountTaxesFmt ? `
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+                <span style="color:#6b7280;"><i class="fas fa-landmark" style="width:14px;margin-right:6px;opacity:.6;"></i>Taxe de séjour</span>
+                <span style="font-weight:600;">${amountTaxesFmt}</span>
+              </div>
+            ` : ''}
+
+            ${otaCommissionFmt ? `
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+                <span style="color:#6b7280;"><i class="fas fa-percent" style="width:14px;margin-right:6px;opacity:.6;"></i>Commission OTA</span>
+                <span style="font-weight:600;color:#EF4444;">${otaCommissionFmt}</span>
+              </div>
+            ` : ''}
+
+            <div style="display:flex;justify-content:space-between;font-size:14px;padding:8px 0 2px;">
+              <span style="font-weight:700;">Total</span>
+              <span style="font-weight:800;color:#1A7A5E;">${amountTotalFmt}</span>
+            </div>
+
+            ${hostPayoutFmt ? `
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#6b7280;">
+                <span><i class="fas fa-wallet" style="width:14px;margin-right:6px;opacity:.6;"></i>Reversement hôte</span>
+                <span style="font-weight:600;color:#1A7A5E;">${hostPayoutFmt}</span>
+              </div>
+            ` : ''}
+
+          </div>
+        </div>
+      ` : ''}
 
       <!-- NOTES -->
       ${notes ? `
