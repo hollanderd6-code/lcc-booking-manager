@@ -243,7 +243,7 @@ html[data-theme-v3="1"] .page-back-btn {
   border: 1px solid rgba(0,0,0,.08);
   box-shadow: 0 2px 20px rgba(0,0,0,.06);
   background: white;
-  height: calc(100vh - 40px - 64px - 48px - 16px);
+  height: calc(100vh - 40px - 64px - 48px - 8px);
 }
 
 /* ── Left panel ── */
@@ -2115,9 +2115,18 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     margin-left: 0 !important;
     padding: 0 !important;
     height: 100vh !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+  /* Masquer le header injecté par bh-layout sur mobile */
+  html[data-theme-v3="1"] header.main-header { display: none !important; }
+  /* Cacher l'onglet messages sur mobile (géré par mobile-header) */
+  .msgs-tabs { display: none !important; }
+  /* msgs-panel prend tout l'espace */
+  .msgs-panel, .msgs-panel.active {
+    display: block !important;
+    height: 100% !important;
+    overflow: visible !important;
   }
 
   /* ── 2. CACHER ÉLÉMENTS INUTILES SUR MOBILE ── */
