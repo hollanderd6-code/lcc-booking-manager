@@ -1168,7 +1168,7 @@ html[data-theme-v3="1"] .app-container {
         <div class="quick-replies-bar" id="quickRepliesBar" style="display:none;"></div>
 
         <!-- Input: chat-owner.js uses #chatInput and #sendBtn -->
-        <div class="chat-modal-input" id="chatInputArea" style="display:none;">
+        <div class="chat-modal-input" id="chatInputArea" style="display:none;" data-managed="true">
           <button class="msgs-attach-btn" id="photoUploadBtn" title="Envoyer une photo" onclick="if(window.openPhotoUpload) openPhotoUpload();"><i class="fas fa-image"></i></button>
           <textarea class="chat-input" id="chatInput" placeholder="Répondre à…" rows="1"></textarea>
           <button class="send-btn" id="sendBtn" onclick="sendMessageOwner()"><i class="fas fa-paper-plane"></i></button>
@@ -1828,6 +1828,14 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (conv && conv.id && typeof window.loadQuickReplies === 'function') {
       window.loadQuickReplies(conv.id);
     }
+
+    // S'assurer que la zone d'input est bien visible (force override)
+    setTimeout(function() {
+      var inputArea = document.getElementById('chatInputArea');
+      var chatMsgs = document.getElementById('chatMessages');
+      if (inputArea) inputArea.style.setProperty('display', 'flex', 'important');
+      if (chatMsgs) chatMsgs.style.setProperty('display', 'flex', 'important');
+    }, 100);
   }
 
   // ── Override openChat after chat-owner.js loaded ──
@@ -1849,13 +1857,13 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       // Restore
       window.isMobileDevice = origIsMobile;
 
-      // Show our inline panel
+      // Show our inline panel — attendre que openChat async finisse
       setTimeout(function() {
         var conv = (window.allConversations || []).find(function(c) {
           return String(c.id) === String(conversationId);
         });
         showInlineChat(conv || { id: conversationId });
-      }, 80);
+      }, 600);
     };
     window.openChat._bhPatched = true;
   }
