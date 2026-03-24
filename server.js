@@ -6109,6 +6109,60 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       });
     });
 
+    // ── Ajouter les résas Channex (DB) absentes du store iCal ──
+    const storeUids = new Set(allReservations.map(r => r.uid).filter(Boolean));
+    for (const [key, dbData] of reservationsDbMap.entries()) {
+      // Uniquement les entrées indexées par uid (pas les doublons par date/channex_key)
+      if (!key.startsWith('CHX_') && !key.includes('_20')) {
+        if (dbData.source === 'channex' && !storeUids.has(dbData.uid)) {
+          // Trouver le nom de la propriété
+          const prop = filteredProps.find(p => p.id === dbData.property_id);
+          if (!prop) continue;
+          allReservations.push({
+            id: dbData.uid,
+            uid: dbData.uid,
+            propertyId: dbData.property_id,
+            propertyName: prop.name,
+            startDate: dbData.start_date,
+            endDate: dbData.end_date || null,
+            start: dbData.start_date,
+            end: dbData.end_date || null,
+            guestName: dbData.guest_name || 'Voyageur',
+            platform: (dbData.ota_name || 'channex').toLowerCase(),
+            source: 'channex',
+            ota_name: dbData.ota_name || null,
+            price: dbData.amount_total ? parseFloat(dbData.amount_total) : null,
+            property: { id: prop.id, name: prop.name, color: prop.color },
+            // Infos voyageur
+            guest_first_name:  dbData.guest_first_name  || null,
+            guest_last_name:   dbData.guest_last_name   || null,
+            guest_phone:       dbData.guest_phone       || null,
+            guest_email:       dbData.guest_email       || null,
+            guest_country:     dbData.guest_country     || null,
+            guest_language:    dbData.guest_language    || null,
+            occupancy_adults:  dbData.occupancy_adults  || null,
+            occupancy_children:dbData.occupancy_children|| 0,
+            onboarding_completed: dbData.onboarding_completed || false,
+            // Montants
+            amount_total:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
+            amount_rooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+            amount_taxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
+            amount_cleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
+            ota_commission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
+            host_payout:     dbData.host_payout     ? parseFloat(dbData.host_payout)     : null,
+            days_breakdown:  dbData.days_breakdown  || null,
+            currency:        dbData.currency        || 'EUR',
+            // Champs dérivés
+            guest_display_name: dbData.guest_first_name
+              ? `${dbData.guest_first_name} ${dbData.guest_last_name || ''}`.trim()
+              : (dbData.guest_name || null),
+            guest_initial: dbData.guest_first_name
+              ? dbData.guest_first_name.charAt(0).toUpperCase() : null
+          });
+          storeUids.add(dbData.uid);
+        }
+      }
+    }
     console.log(`📅 Réservations retournées: ${allReservations.length} (${filteredProps.length} propriétés)`);
     
     // 🔍 DEBUG: Compter combien ont des infos guest
