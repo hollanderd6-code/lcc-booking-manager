@@ -3173,6 +3173,38 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <label for="nrEmail">Email</label>
 <input id="nrEmail" name="email" type="email" placeholder="Ex: client@email.com"/>
 </div>
+<div class="form-row">
+<div class="form-group">
+<label for="nrCountry">Nationalité</label>
+<select id="nrCountry" name="country">
+<option value="">-- Sélectionner --</option>
+<option value="FR">🇫🇷 France</option>
+<option value="GB">🇬🇧 Royaume-Uni</option>
+<option value="DE">🇩🇪 Allemagne</option>
+<option value="ES">🇪🇸 Espagne</option>
+<option value="IT">🇮🇹 Italie</option>
+<option value="BE">🇧🇪 Belgique</option>
+<option value="CH">🇨🇭 Suisse</option>
+<option value="NL">🇳🇱 Pays-Bas</option>
+<option value="PT">🇵🇹 Portugal</option>
+<option value="US">🇺🇸 États-Unis</option>
+<option value="CA">🇨🇦 Canada</option>
+<option value="MA">🇲🇦 Maroc</option>
+<option value="DZ">🇩🇿 Algérie</option>
+<option value="TN">🇹🇳 Tunisie</option>
+<option value="AU">🇦🇺 Australie</option>
+<option value="JP">🇯🇵 Japon</option>
+<option value="CN">🇨🇳 Chine</option>
+<option value="BR">🇧🇷 Brésil</option>
+<option value="RU">🇷🇺 Russie</option>
+<option value="AE">🇦🇪 Émirats arabes unis</option>
+</select>
+</div>
+<div class="form-group">
+<label for="nrAdults">Adultes</label>
+<input id="nrAdults" name="adults" type="number" min="1" max="20" placeholder="2"/>
+</div>
+</div>
 <div class="form-group">
 <label for="nrPlatform">Plateforme</label>
 <select id="nrPlatform" name="platform">
@@ -3186,9 +3218,30 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 </select>
 </div>
 <div class="form-group">
-<label for="nrPrice">Prix (€)</label>
+<label for="nrPrice">Prix total (€)</label>
 <input id="nrPrice" name="price" min="0" placeholder="Ex: 250" step="0.01" type="number"/>
 </div>
+<div class="form-row">
+<div class="form-group">
+<label for="nrPriceRooms">Nuits (€)</label>
+<input id="nrPriceRooms" name="priceRooms" min="0" placeholder="Ex: 180" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="nrPriceCleaning">Ménage (€)</label>
+<input id="nrPriceCleaning" name="priceCleaning" min="0" placeholder="Ex: 60" step="0.01" type="number"/>
+</div>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label for="nrPriceTaxes">Taxe de séjour (€)</label>
+<input id="nrPriceTaxes" name="priceTaxes" min="0" placeholder="Ex: 9.60" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="nrCommission">Commission OTA (€)</label>
+<input id="nrCommission" name="commission" min="0" placeholder="Ex: 25" step="0.01" type="number"/>
+</div>
+</div>
+
 <div class="form-group">
 <label for="nrNotes">Notes</label>
 <textarea id="nrNotes" name="notes" rows="3" placeholder="Notes supplémentaires..."></textarea>
@@ -6674,6 +6727,38 @@ if (j === 0 || cells.length === 1) {
 <label for="editGuestEmail">Email</label>
 <input id="editGuestEmail" placeholder="Ex: client@email.com" type="email"/>
 </div>
+<div class="form-row">
+<div class="form-group">
+<label for="editGuestCountry">Nationalité</label>
+<select id="editGuestCountry" name="country">
+<option value="">-- Sélectionner --</option>
+<option value="FR">🇫🇷 France</option>
+<option value="GB">🇬🇧 Royaume-Uni</option>
+<option value="DE">🇩🇪 Allemagne</option>
+<option value="ES">🇪🇸 Espagne</option>
+<option value="IT">🇮🇹 Italie</option>
+<option value="BE">🇧🇪 Belgique</option>
+<option value="CH">🇨🇭 Suisse</option>
+<option value="NL">🇳🇱 Pays-Bas</option>
+<option value="PT">🇵🇹 Portugal</option>
+<option value="US">🇺🇸 États-Unis</option>
+<option value="CA">🇨🇦 Canada</option>
+<option value="MA">🇲🇦 Maroc</option>
+<option value="DZ">🇩🇿 Algérie</option>
+<option value="TN">🇹🇳 Tunisie</option>
+<option value="AU">🇦🇺 Australie</option>
+<option value="JP">🇯🇵 Japon</option>
+<option value="CN">🇨🇳 Chine</option>
+<option value="BR">🇧🇷 Brésil</option>
+<option value="RU">🇷🇺 Russie</option>
+<option value="AE">🇦🇪 Émirats arabes unis</option>
+</select>
+</div>
+<div class="form-group">
+<label for="editGuestAdults">Adultes</label>
+<input id="editGuestAdults" name="adults" type="number" min="1" max="20" placeholder="2"/>
+</div>
+</div>
 <div class="form-group">
 <label for="editPlatform">Plateforme</label>
 <select id="editPlatform">
@@ -6688,9 +6773,30 @@ if (j === 0 || cells.length === 1) {
 </select>
 </div>
 <div class="form-group">
-<label for="editPrice">Prix (€)</label>
+<label for="editPrice">Prix total (€)</label>
 <input id="editPrice" min="0" placeholder="75" step="0.01" type="number"/>
 </div>
+<div class="form-row">
+<div class="form-group">
+<label for="editPriceRooms">Nuits (€)</label>
+<input id="editPriceRooms" name="priceRooms" min="0" placeholder="Ex: 180" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="editPriceCleaning">Ménage (€)</label>
+<input id="editPriceCleaning" name="priceCleaning" min="0" placeholder="Ex: 60" step="0.01" type="number"/>
+</div>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label for="editPriceTaxes">Taxe de séjour (€)</label>
+<input id="editPriceTaxes" name="priceTaxes" min="0" placeholder="Ex: 9.60" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="editCommission">Commission OTA (€)</label>
+<input id="editCommission" name="commission" min="0" placeholder="Ex: 25" step="0.01" type="number"/>
+</div>
+</div>
+
 <div class="form-group">
 <label for="editNotes">Notes</label>
 <textarea id="editNotes" placeholder="Notes supplémentaires..." rows="3"></textarea>
@@ -6741,6 +6847,38 @@ if (j === 0 || cells.length === 1) {
 <label for="guestEmail">Email</label>
 <input id="guestEmail" placeholder="Ex: client@email.com" type="email"/>
 </div>
+<div class="form-row">
+<div class="form-group">
+<label for="bookingCountry">Nationalité</label>
+<select id="bookingCountry" name="country">
+<option value="">-- Sélectionner --</option>
+<option value="FR">🇫🇷 France</option>
+<option value="GB">🇬🇧 Royaume-Uni</option>
+<option value="DE">🇩🇪 Allemagne</option>
+<option value="ES">🇪🇸 Espagne</option>
+<option value="IT">🇮🇹 Italie</option>
+<option value="BE">🇧🇪 Belgique</option>
+<option value="CH">🇨🇭 Suisse</option>
+<option value="NL">🇳🇱 Pays-Bas</option>
+<option value="PT">🇵🇹 Portugal</option>
+<option value="US">🇺🇸 États-Unis</option>
+<option value="CA">🇨🇦 Canada</option>
+<option value="MA">🇲🇦 Maroc</option>
+<option value="DZ">🇩🇿 Algérie</option>
+<option value="TN">🇹🇳 Tunisie</option>
+<option value="AU">🇦🇺 Australie</option>
+<option value="JP">🇯🇵 Japon</option>
+<option value="CN">🇨🇳 Chine</option>
+<option value="BR">🇧🇷 Brésil</option>
+<option value="RU">🇷🇺 Russie</option>
+<option value="AE">🇦🇪 Émirats arabes unis</option>
+</select>
+</div>
+<div class="form-group">
+<label for="bookingAdults">Adultes</label>
+<input id="bookingAdults" name="adults" type="number" min="1" max="20" placeholder="2"/>
+</div>
+</div>
 <div class="form-group">
 <label for="platform">Plateforme</label>
 <select id="platform">
@@ -6754,9 +6892,30 @@ if (j === 0 || cells.length === 1) {
 </select>
 </div>
 <div class="form-group">
-<label for="price">Prix (€)</label>
+<label for="price">Prix total (€)</label>
 <input id="price" min="0" placeholder="Ex: 250" step="0.01" type="number"/>
 </div>
+<div class="form-row">
+<div class="form-group">
+<label for="bookingPriceRooms">Nuits (€)</label>
+<input id="bookingPriceRooms" name="priceRooms" min="0" placeholder="Ex: 180" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="bookingPriceCleaning">Ménage (€)</label>
+<input id="bookingPriceCleaning" name="priceCleaning" min="0" placeholder="Ex: 60" step="0.01" type="number"/>
+</div>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label for="bookingPriceTaxes">Taxe de séjour (€)</label>
+<input id="bookingPriceTaxes" name="priceTaxes" min="0" placeholder="Ex: 9.60" step="0.01" type="number"/>
+</div>
+<div class="form-group">
+<label for="bookingCommission">Commission OTA (€)</label>
+<input id="bookingCommission" name="commission" min="0" placeholder="Ex: 25" step="0.01" type="number"/>
+</div>
+</div>
+
 <div class="form-group">
 <label for="notes">Notes</label>
 <textarea id="notes" placeholder="Notes supplémentaires..." rows="3"></textarea>
@@ -8056,9 +8215,9 @@ function handleEditBooking() {
     (currentBookingData.end || '').split('T')[0] || '';
 
   document.getElementById('editGuestName').value = currentBookingData.guestName || '';
-  document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || '';
-  document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || '';
-  document.getElementById('editPrice').value = currentBookingData.amount || '';
+  document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || currentBookingData.guest_phone || '';
+  document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || currentBookingData.guest_email || '';
+  document.getElementById('editPrice').value = currentBookingData.amount_total || currentBookingData.amount || '';
   document.getElementById('editNotes').value = currentBookingData.notes || '';
 
   const platformSelect = document.getElementById('editPlatform');
@@ -8067,6 +8226,20 @@ function handleEditBooking() {
       (currentBookingData.platform || currentBookingData.source || 'direct').toLowerCase();
     platformSelect.value = platform;
   }
+
+  // Nouveaux champs enrichis
+  const editCountry = document.getElementById('editGuestCountry');
+  if (editCountry) editCountry.value = currentBookingData.guest_country || '';
+  const editAdults = document.getElementById('editGuestAdults');
+  if (editAdults) editAdults.value = currentBookingData.occupancy_adults || '';
+  const editPriceRooms = document.getElementById('editPriceRooms');
+  if (editPriceRooms) editPriceRooms.value = currentBookingData.amount_rooms || '';
+  const editPriceCleaning = document.getElementById('editPriceCleaning');
+  if (editPriceCleaning) editPriceCleaning.value = currentBookingData.amount_cleaning || '';
+  const editPriceTaxes = document.getElementById('editPriceTaxes');
+  if (editPriceTaxes) editPriceTaxes.value = currentBookingData.amount_taxes || '';
+  const editCommission = document.getElementById('editCommission');
+  if (editCommission) editCommission.value = currentBookingData.ota_commission || '';
 }
 
 
@@ -8358,8 +8531,18 @@ if (editBookingForm) {
             propertyId,
             start,
             end,
-            guestName: guestName || currentBookingData.guest_name || '',
-            notes: notes || currentBookingData.notes || ''
+            guestName:      guestName || currentBookingData.guestName || '',
+            phone:          document.getElementById('editGuestPhone')?.value || '',
+            email:          document.getElementById('editGuestEmail')?.value || '',
+            platform:       document.getElementById('editPlatform')?.value || 'direct',
+            price:          document.getElementById('editPrice')?.value ? parseFloat(document.getElementById('editPrice').value) : null,
+            notes:          notes || currentBookingData.notes || '',
+            guest_country:     document.getElementById('editGuestCountry')?.value || null,
+            occupancy_adults:  document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
+            amount_rooms:      document.getElementById('editPriceRooms')?.value ? parseFloat(document.getElementById('editPriceRooms').value) : null,
+            amount_cleaning:   document.getElementById('editPriceCleaning')?.value ? parseFloat(document.getElementById('editPriceCleaning').value) : null,
+            amount_taxes:      document.getElementById('editPriceTaxes')?.value ? parseFloat(document.getElementById('editPriceTaxes').value) : null,
+            ota_commission:    document.getElementById('editCommission')?.value ? parseFloat(document.getElementById('editCommission').value) : null,
           })
         });
         let createBody = {};
@@ -9164,15 +9347,21 @@ html[data-theme-v3="1"] .sidebar .nav-section {
         const priceInput    = document.getElementById('nrPrice');
 
         const payload = {
-          propertyId: propertySelect.value,
-          start:      startInput.value,
-          end:        endInput.value,
-          guestName:  guestInput ? guestInput.value : '',
-          notes:      notesInput ? notesInput.value : '',
-          phone:      phoneInput ? phoneInput.value : '',
-          email:      emailInput ? emailInput.value : '',
-          platform:   platformInput ? platformInput.value : 'direct',
-          price:      priceInput && priceInput.value ? parseFloat(priceInput.value) : null
+          propertyId:   propertySelect.value,
+          start:        startInput.value,
+          end:          endInput.value,
+          guestName:    guestInput ? guestInput.value : '',
+          notes:        notesInput ? notesInput.value : '',
+          phone:        phoneInput ? phoneInput.value : '',
+          email:        emailInput ? emailInput.value : '',
+          platform:     platformInput ? platformInput.value : 'direct',
+          price:        priceInput && priceInput.value ? parseFloat(priceInput.value) : null,
+          guest_country:     document.getElementById('nrCountry')?.value || null,
+          occupancy_adults:  document.getElementById('nrAdults')?.value ? parseInt(document.getElementById('nrAdults').value) : null,
+          amount_rooms:      document.getElementById('nrPriceRooms')?.value ? parseFloat(document.getElementById('nrPriceRooms').value) : null,
+          amount_cleaning:   document.getElementById('nrPriceCleaning')?.value ? parseFloat(document.getElementById('nrPriceCleaning').value) : null,
+          amount_taxes:      document.getElementById('nrPriceTaxes')?.value ? parseFloat(document.getElementById('nrPriceTaxes').value) : null,
+          ota_commission:    document.getElementById('nrCommission')?.value ? parseFloat(document.getElementById('nrCommission').value) : null,
         };
 
         // Vérifs basiques
