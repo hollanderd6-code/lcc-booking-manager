@@ -4255,7 +4255,7 @@ function populateEditBookingProperties(selectedPropertyId) {
   (r.property && (r.property.name || r.property.title || r.property.label)) ||
   getPropertyNameById(propertyId, properties);
 
-const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source || r.platform);
+const guestName = window.cleanGuestName(r, r.source || r.platform);
               html += `
                 <div style="margin-bottom:8px;">
                   <strong>${propName}</strong>${guestName ? ' – ' + guestName : ''}
@@ -4400,8 +4400,8 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                     <i class="fas fa-sign-in-alt"></i>
                   </div>
                   <div class="activity-content">
-                    <div class="activity-title">Check-in : ${window.cleanGuestName(r, r.source || r.platform)}</div>
-                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+                    <div class="activity-title">Check-in : ${window.cleanGuestName(r, r.source || r.platform)} ${r.guest_country ? getCountryFlag(r.guest_country) : ''}</div>
+                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
                     <div class="activity-time">Aujourd\'hui</div>
                   </div>
                 </div>
@@ -4416,8 +4416,8 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                     <i class="fas fa-sign-out-alt"></i>
                   </div>
                   <div class="activity-content">
-                    <div class="activity-title">Check-out : ${window.cleanGuestName(r, r.source || r.platform)}</div>
-                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+                    <div class="activity-title">Check-out : ${window.cleanGuestName(r, r.source || r.platform)} ${r.guest_country ? getCountryFlag(r.guest_country) : ''}</div>
+                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
                     <div class="activity-time">Aujourd\'hui</div>
                   </div>
                 </div>
@@ -4460,8 +4460,8 @@ const guestName = window.cleanGuestName(r.guestName || r.name || '', r.source ||
                     <i class="fas fa-broom"></i>
                   </div>
                   <div class="activity-content">
-                    <div class="activity-title">Ménage après ${window.cleanGuestName(r, r.source || r.platform)}</div>
-                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}</div>
+                    <div class="activity-title">Ménage après ${window.cleanGuestName(r, r.source || r.platform)} ${r.guest_country ? getCountryFlag(r.guest_country) : ''}</div>
+                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
                     <div class="activity-time">${timeText} - ${checkoutDate.toLocaleDateString('fr-FR')}</div>
                   </div>
                 </div>
@@ -5330,7 +5330,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
             const start = formatDateFR(dateOnlyStr(r.startDate||r.start));
             const end = formatDateFR(dateOnlyStr(r.endDate||r.end));
             const prop = r.propertyName || r.propertyId || 'Logement';
-const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voyageur';
+const name = window.cleanGuestName(r, r.source || r.platform) || 'Voyageur';
             const score = Math.round(r.riskScore||0);
             const color = window.riskColor(r.riskLevel);
             const riskLabel = r.riskLabel || r.riskLevel || '';
@@ -5351,7 +5351,7 @@ const name = window.cleanGuestName(r.guestName, r.source || r.platform) || 'Voya
                 <div style="font-weight:600; opacity:0.7;">${prop}</div>
               </div>
               <div style="opacity:.85; font-size:14px; margin-bottom:4px;">
-                📅 ${start} → ${end} • 👤 ${name}
+                📅 ${start} → ${end} • 👤 ${name}${r.guest_country ? ' ' + getCountryFlag(r.guest_country) : ''}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' pers.' : ''}
               </div>
               ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px; font-size:13px;">${r.riskSummary}</div>` : ''}
               ${tagsHtml}
@@ -5575,6 +5575,26 @@ window.LCC_PROPERTIES = properties;
       tags.push('👤 Direct');
     }
     
+    // CRITÈRE NATIONALITÉ : voyageur étranger non francophone
+    var country = (booking.guest_country || '').toUpperCase();
+    var frenchSpeaking = ['FR','BE','CH','LU','CA','MC','SN','CI','MA','DZ','TN'];
+    if (country && !frenchSpeaking.includes(country)) {
+      score += 5;
+      tags.push('🌍 Voyageur étranger');
+      recommendations.push('Communiquer en anglais ou utiliser la traduction automatique');
+    }
+    // Occupation élevée = plus de risque de dégradation
+    var adults = booking.occupancy_adults || 1;
+    if (adults >= 4) {
+      score += 10;
+      tags.push('👥 Groupe (' + adults + ' pers.)');
+      recommendations.push('Groupe important : rappeler les règles de la maison');
+    } else if (adults >= 6) {
+      score += 20;
+      tags.push('👥 Grand groupe (' + adults + ' pers.)');
+      recommendations.push('Grand groupe : caution renforcée recommandée');
+    }
+
     // Limiter le score entre 0 et 100
     score = Math.max(0, Math.min(100, score));
     
@@ -5601,6 +5621,7 @@ window.LCC_PROPERTIES = properties;
     else summary += 'Direct';
     
     if (booking.hasDeposit) summary += ' • Caution OK';
+    if (booking.guest_country) summary += ' • ' + (booking.guest_country === 'FR' ? '🇫🇷' : '🌍') + ' ' + booking.guest_country;
     
     return {
       score: score,
@@ -5612,6 +5633,28 @@ window.LCC_PROPERTIES = properties;
     };
   }
   
+
+    function getCountryFlag(code) {
+      if (!code) return '';
+      const flags = {
+        FR:'🇫🇷',GB:'🇬🇧',DE:'🇩🇪',ES:'🇪🇸',IT:'🇮🇹',BE:'🇧🇪',CH:'🇨🇭',
+        NL:'🇳🇱',PT:'🇵🇹',US:'🇺🇸',CA:'🇨🇦',MA:'🇲🇦',DZ:'🇩🇿',TN:'🇹🇳',
+        AU:'🇦🇺',JP:'🇯🇵',CN:'🇨🇳',BR:'🇧🇷',RU:'🇷🇺',AE:'🇦🇪',
+        LU:'🇱🇺',IE:'🇮🇪',SE:'🇸🇪',NO:'🇳🇴',DK:'🇩🇰',PL:'🇵🇱',AT:'🇦🇹',
+        GR:'🇬🇷',TR:'🇹🇷',SG:'🇸🇬',MX:'🇲🇽',IN:'🇮🇳',ZA:'🇿🇦'
+      };
+      return flags[code.toUpperCase()] || code;
+    }
+    function getCountryLabel(code) {
+      if (!code) return '';
+      const names = {
+        FR:'France',GB:'Royaume-Uni',DE:'Allemagne',ES:'Espagne',IT:'Italie',
+        BE:'Belgique',CH:'Suisse',NL:'Pays-Bas',PT:'Portugal',US:'États-Unis',
+        CA:'Canada',MA:'Maroc',DZ:'Algérie',TN:'Tunisie',AU:'Australie',
+        JP:'Japon',CN:'Chine',BR:'Brésil',RU:'Russie',AE:'Émirats arabes unis',
+      };
+      return names[code.toUpperCase()] || code;
+    }
   // Rendre la fonction accessible globalement
   window.calculateBookingRisk = calculateBookingRisk;
   // ========================================
@@ -6325,8 +6368,7 @@ if (j === 0 || cells.length === 1) {
   block.appendChild(iconEl);
 
   // Label invité — nettoyé et tronqué
-  var guestLabel = b.guestName || 'Réservation';
-  guestLabel = window.cleanGuestName ? window.cleanGuestName(guestLabel, platform) : guestLabel;
+  var guestLabel = window.cleanGuestName ? window.cleanGuestName(b, platform) : (b.guestName || 'Réservation');
   if (platform === 'booking' && !guestLabel) guestLabel = 'Voyageur';
 
   var labelEl = document.createElement('span');
