@@ -446,6 +446,17 @@ html[data-theme-v3="1"] .page-back-btn {
 
 .msgs-chat-meta .sep { opacity: .4; }
 
+/* Badge plateforme dans le header chat */
+.chat-platform-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+  padding: 2px 7px; border-radius: 999px; line-height: 1.4;
+  font-family: 'DM Sans', sans-serif;
+}
+.chat-platform-badge.airbnb { background: #FF5A5F20; color: #FF5A5F; }
+.chat-platform-badge.booking { background: #00358020; color: #003580; }
+.chat-platform-badge.direct  { background: #1A7A5E20; color: #1A7A5E; }
+.chat-platform-badge.channex { background: #6366f120; color: #6366f1; }
+
 .msgs-chat-actions {
   display: flex; align-items: center; gap: 7px;
 }
@@ -1147,14 +1158,17 @@ html[data-theme-v3="1"] .app-container {
         <div id="msgsChatHeader" style="display:none;">
           <div class="msgs-chat-avatar" id="msgsChatAvatar">?</div>
           <div class="msgs-chat-info">
-            <div class="msgs-chat-name" id="chatModalTitle">Conversation</div>
-            <div id="chatGuestCountry" style="display:none;font-size:12px;color:#6b7280;margin-bottom:1px;"></div>
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+              <div class="msgs-chat-name" id="chatModalTitle">Conversation</div>
+              <span id="chatPlatformBadge" style="display:none;"></span>
+            </div>
+            <div id="chatGuestCountry" style="display:none;font-size:12px;color:#6b7280;margin-bottom:2px;"></div>
             <div class="msgs-chat-meta">
               <span id="chatPropertyName"></span>
               <span class="sep" id="chatMetaSep1" style="display:none">·</span>
-              <span id="chatPlatform"></span>
+              <span id="chatDates" style="display:none;"></span>
               <span class="sep" id="chatMetaSep2" style="display:none">·</span>
-              <span id="chatCheckinDate"></span>
+              <span id="chatOccupancy" style="display:none;"></span>
             </div>
           </div>
           <div class="msgs-chat-actions">
@@ -1806,9 +1820,57 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       avatarEl.style.background = conv.property_color || '#1A7A5E';
     }
 
-    // Platform in meta
-    var platEl = document.getElementById('chatPlatform');
-    if (conv && platEl) platEl.textContent = conv.platform || '';
+    // Badge plateforme coloré
+    var platBadge = document.getElementById('chatPlatformBadge');
+    if (conv && platBadge) {
+      var plat = (conv.platform || '').toLowerCase();
+      var platLabel = plat.includes('airbnb') ? 'Airbnb'
+        : plat.includes('booking') ? 'Booking.com'
+        : plat === 'channex' ? 'Channex'
+        : 'Direct';
+      var platClass = plat.includes('airbnb') ? 'airbnb'
+        : plat.includes('booking') ? 'booking'
+        : plat === 'channex' ? 'channex' : 'direct';
+      platBadge.textContent = platLabel;
+      platBadge.className = 'chat-platform-badge ' + platClass;
+      platBadge.style.display = 'inline-block';
+    }
+
+    // Dates check-in → check-out
+    var datesEl = document.getElementById('chatDates');
+    var sep1 = document.getElementById('chatMetaSep1');
+    if (conv && datesEl && conv.reservation_start_date) {
+      var cin = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
+      var cout = conv.reservation_end_date
+        ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'})
+        : null;
+      datesEl.textContent = cout ? cin + ' → ' + cout : cin;
+      datesEl.style.display = 'inline';
+      if (sep1) sep1.style.display = 'inline';
+    } else if (datesEl) {
+      datesEl.style.display = 'none';
+      if (sep1) sep1.style.display = 'none';
+    }
+
+    // Occupation adultes
+    var occEl = document.getElementById('chatOccupancy');
+    var sep2 = document.getElementById('chatMetaSep2');
+    if (conv && occEl && conv.occupancy_adults) {
+      var adults = parseInt(conv.occupancy_adults) || 0;
+      var children = parseInt(conv.occupancy_children) || 0;
+      var occText = adults + ' adulte' + (adults > 1 ? 's' : '');
+      if (children > 0) occText += ' · ' + children + ' enfant' + (children > 1 ? 's' : '');
+      occEl.textContent = occText;
+      occEl.style.display = 'inline';
+      if (sep2) sep2.style.display = 'inline';
+    } else if (occEl) {
+      occEl.style.display = 'none';
+      if (sep2) sep2.style.display = 'none';
+    }
+
+    // Garder chatPropertyName visible
+    var propEl = document.getElementById('chatPropertyName');
+    if (conv && propEl) propEl.textContent = conv.property_name || '';
 
     // Active state in list
     document.querySelectorAll('#conversationsList .conversation-item').forEach(function(el) {
