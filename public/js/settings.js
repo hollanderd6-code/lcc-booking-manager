@@ -1134,7 +1134,7 @@ function openChannexModal(propertyId, propertyName, isConnected) {
   modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
 
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+    <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:780px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
         <div>
           <div style="font-family:'Instrument Serif',Georgia,serif;font-size:20px;color:#0D1117;">Synchronisation OTA</div>
@@ -1232,7 +1232,7 @@ async function openChannexIframe(propertyId) {
         <div style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
           <iframe 
             src="${data.iframe_url}"
-            style="width:100%;height:480px;border:none;display:block;"
+            style="width:100%;height:600px;border:none;display:block;"
             allow="same-origin"
           ></iframe>
         </div>
