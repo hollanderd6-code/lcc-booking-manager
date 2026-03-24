@@ -1495,6 +1495,18 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Tables pricing:', e.message);
     }
 
+    // ✅ Migration : channex_booking_id sur conversations
+    try {
+      await pool.query(`
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS channex_booking_id TEXT;
+        CREATE INDEX IF NOT EXISTS idx_conversations_channex_booking_id 
+          ON conversations(channex_booking_id) WHERE channex_booking_id IS NOT NULL;
+      `);
+      console.log('✅ channex_booking_id ajouté à conversations');
+    } catch (e) {
+      console.log('ℹ️ channex_booking_id conversations:', e.message);
+    }
+
     // ✅ Migration : données voyageur enrichies (Channex)
     try {
       await pool.query(`
@@ -20849,6 +20861,11 @@ app.post('/api/channex/webhook-message', async (req, res) => {
     let conversation_id;
     if (existConv.rows.length > 0) {
       conversation_id = existConv.rows[0].id;
+      // Stocker channex_booking_id si pas encore défini
+      await pool.query(
+        `UPDATE conversations SET channex_booking_id = $1 WHERE id = $2 AND channex_booking_id IS NULL`,
+        [channex_booking_id, conversation_id]
+      );
       console.log(`✅ [CHANNEX MSG] Conversation existante trouvée: ${conversation_id}`);
     } else {
       // Créer une nouvelle conversation avec toutes les colonnes requises
@@ -20858,10 +20875,10 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       const newConv = await pool.query(
         `INSERT INTO conversations
           (user_id, property_id, platform, guest_name, unique_token, is_verified, status,
-           reservation_start_date, reservation_end_date, created_at)
-         VALUES ($1, $2, $3, $4, $5, true, 'active', $6::date, $7::date, NOW())
+           reservation_start_date, reservation_end_date, channex_booking_id, created_at)
+         VALUES ($1, $2, $3, $4, $5, true, 'active', $6::date, $7::date, $8, NOW())
          RETURNING id`,
-        [user_id, resa.property_id, platform, guest_name, token, resa.start_date, resa.end_date]
+        [user_id, resa.property_id, platform, guest_name, token, resa.start_date, resa.end_date, channex_booking_id]
       );
       conversation_id = newConv.rows[0].id;
       console.log(`✅ [CHANNEX MSG] Nouvelle conversation créée: ${conversation_id}`);
