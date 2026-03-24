@@ -331,10 +331,7 @@ async function processChannexBooking(pool, bookingData) {
     );
     const amount_cleaning = cleaning_service ? parseFloat(cleaning_service.total_price || 0) : 0;
 
-    // Pour Airbnb : les montants détaillés sont dans notes
-    // "Listing Base Price: 300.00
-Total Paid Amount: 249.60
-..."
+    // Pour Airbnb : les montants détaillés sont dans notes (ex: "Listing Base Price: 300.00\nTotal Paid Amount: 249.60\n...")
     const notes = attrs.notes || '';
     const airbnbData = (ota_name || '').toLowerCase().includes('airbnb')
       ? parseAirbnbNotes(notes)
