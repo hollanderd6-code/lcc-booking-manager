@@ -237,6 +237,17 @@ function renderConversations() {
     const platformIcon = getPlatformIcon(conv.platform);
     const platformColor = getPlatformColor(conv.platform);
     
+    // Nationalité + dates
+    const countryFlag = conv.guest_country
+      ? conv.guest_country.toUpperCase().replace(/./g, c => String.fromCodePoint(c.charCodeAt(0) + 127397))
+      : null;
+    const checkoutDate = conv.reservation_end_date
+      ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' })
+      : null;
+    const occupancyStr = conv.occupancy_adults
+      ? conv.occupancy_adults + ' pers.'
+      : null;
+
     return `
       <div class="conversation-item" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
         <div class="conversation-avatar" style="background: ${conv.property_color || '#10B981'};">
@@ -246,13 +257,14 @@ function renderConversations() {
         <div class="conversation-content">
           <div class="conversation-header">
             <div class="conversation-info">
-              <h3>${guestName}</h3>
+              <h3>${guestName}${countryFlag ? ' <span style="font-size:13px;">' + countryFlag + '</span>' : ''}</h3>
               ${guestPhone ? `<span class="conversation-phone">${guestPhone}</span>` : ''}
               <div class="meta">
                 <span class="property-badge" style="background: ${conv.property_color || '#10B981'}20; color: ${conv.property_color || '#10B981'};">
                   ${conv.property_name || 'Logement'}
                 </span>
-                <span><i class="fas fa-calendar"></i> ${checkinDate}</span>
+                <span><i class="fas fa-calendar"></i> ${checkinDate}${checkoutDate ? ' → ' + checkoutDate : ''}</span>
+                ${occupancyStr ? `<span><i class="fas fa-user"></i> ${occupancyStr}</span>` : ''}
                 <span class="platform-badge" style="background-color: ${platformColor}20; color: ${platformColor};">
                   <i class="fas ${platformIcon}"></i>
                   ${conv.platform || 'direct'}
