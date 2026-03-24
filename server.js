@@ -11518,6 +11518,9 @@ userId: userId
          quick_replies = $21,
          base_price = $24,
          weekend_price = $25,
+         cleaning_fee = $26,
+         tourist_tax_per_night = $27,
+         concierge_pct = $28,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -11533,7 +11536,10 @@ userId: userId
         JSON.stringify(newQuickReplies),
         propertyId, userId,
         newBasePrice,
-        newWeekendPrice
+        newWeekendPrice,
+        cleaningFee != null && cleaningFee !== '' ? parseFloat(cleaningFee) : (property.cleaningFee ?? null),
+        touristTaxPerNight != null && touristTaxPerNight !== '' ? parseFloat(touristTaxPerNight) : (property.touristTaxPerNight ?? null),
+        conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : (property.conciergePct ?? null)
       ]
     );
     
