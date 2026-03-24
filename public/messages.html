@@ -19,12 +19,15 @@
 /* ============================================================
    DARK BAR + STICKY HEADER (identical to app.html)
    ============================================================ */
-html[data-theme-v3="1"] body { padding-top: 40px !important; }
+/* padding-top géré conditionnellement (desktop only via media query ci-dessous) */
 html[data-theme-v3="1"] .sidebar {
   position: fixed !important; top: 40px !important;
   left: 0 !important; bottom: 0 !important;
   height: auto !important;
   z-index: 30 !important;
+}
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] body { padding-top: 40px !important; }
 }
 html[data-theme-v3="1"] header.main-header {
   position: sticky !important;
@@ -32,11 +35,22 @@ html[data-theme-v3="1"] header.main-header {
   z-index: 50 !important;
   margin-top: 0 !important;
 }
-html[data-theme-v3="1"] main.main-content {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-  position: relative !important;
-  z-index: 35 !important;
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] main.main-content {
+    padding-top: 0 !important;
+    padding: 0 !important;
+    margin-top: 0 !important;
+    position: relative !important;
+    z-index: 35 !important;
+  }
+}
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] main.main-content {
+    padding-top: 70px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+  }
 }
 html[data-theme-v3="1"] .app-container {
   margin-top: 0 !important;
@@ -237,7 +251,7 @@ html[data-theme-v3="1"] .page-back-btn {
 /* ── Split container ── */
 .msgs-split {
   display: flex;
-  margin: 0 16px 16px;
+  margin: 0 16px 8px;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid rgba(0,0,0,.08);
@@ -775,15 +789,17 @@ html[data-theme-v3="1"] .msgs-split {
   z-index: 46 !important;
 }
 
-/* Prevent page scroll - only internal panels scroll */
-html[data-theme-v3="1"],
-html[data-theme-v3="1"] body {
-  overflow: hidden !important;
-  height: 100% !important;
-}
-html[data-theme-v3="1"] .app-container {
-  height: calc(100vh - 40px) !important;
-  overflow: hidden !important;
+/* Prevent page scroll - only internal panels scroll — desktop only, mobile handled below */
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"],
+  html[data-theme-v3="1"] body {
+    overflow: hidden !important;
+    height: 100% !important;
+  }
+  html[data-theme-v3="1"] .app-container {
+    height: calc(100vh - 40px) !important;
+    overflow: hidden !important;
+  }
 }
 
 /* ============================================================
@@ -2087,40 +2103,58 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
 <style id="messages-mobile-master">
 /* ================================================================
-   📱 MESSAGES — LAYOUT MOBILE NATIF
+   📱 MESSAGES — LAYOUT MOBILE NATIF v2 (corrigé)
    Navigation liste → chat en slide, comme une vraie app
    ================================================================ */
 @media (max-width: 1366px) {
 
-  /* ── 1. LAYOUT DE BASE ── */
-  html, body {
+  /* ── 1. RESET CONFLITS HÉRITÉS ── */
+  /* Annuler bh-theme-v3.css padding-top:40px sur body */
+  html[data-theme-v3="1"] body {
+    padding-top: 0 !important;
     overflow: hidden !important;
     height: 100% !important;
+  }
+  html, body {
     max-width: 100vw !important;
   }
 
+  /* ── 2. DARK BAR — cachée sur mobile ── */
   html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
-  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+
+  /* ── 3. SIDEBAR / OVERLAY — cachés ── */
   html[data-theme-v3="1"] .sidebar,
   html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+
+  /* ── 4. APP CONTAINER — plein écran ── */
   html[data-theme-v3="1"] .app-container {
     height: 100vh !important;
     overflow: hidden !important;
     margin-left: 0 !important;
     padding: 0 !important;
   }
-  html[data-theme-v3="1"] .main-content {
+
+  /* ── 5. MAIN CONTENT — plein écran, pas de padding parasite ── */
+  html[data-theme-v3="1"] .main-content,
+  html[data-theme-v3="1"] main.main-content {
     margin-left: 0 !important;
     padding: 0 !important;
     height: 100vh !important;
     overflow: hidden !important;
     display: block !important;
+    position: relative !important;
   }
-  /* Masquer le header injecté par bh-layout sur mobile */
+
+  /* ── 6. ÉLÉMENTS INUTILES SUR MOBILE ── */
   html[data-theme-v3="1"] header.main-header { display: none !important; }
-  /* Cacher l'onglet messages sur mobile (géré par mobile-header) */
   .msgs-tabs { display: none !important; }
-  /* msgs-panel remplit le split */
+  #bhHeader,
+  #bhHeaderActions,
+  .page-content,
+  #msgsDirectBackBtn,
+  .msgs-back-btn { display: none !important; }
+
+  /* ── 7. MSGS-PANEL — remplit tout ── */
   .msgs-panel, .msgs-panel.active {
     display: flex !important;
     flex-direction: column !important;
@@ -2133,28 +2167,19 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     overflow: hidden !important;
   }
 
-  /* ── 2. CACHER ÉLÉMENTS INUTILES SUR MOBILE ── */
-  #bhHeader,
-  #bhHeaderActions,
-  .page-content,
-  #msgsDirectBackBtn,
-  .msgs-back-btn {
-    display: none !important;
-  }
-
-  /* ── 3. MOBILE HEADER FIXE ── */
+  /* ── 8. MOBILE HEADER FIXE ── */
   .mobile-header {
     display: flex !important;
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    height: 60px !important;
     z-index: 1100 !important;
     align-items: center !important;
     justify-content: center !important;
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
     box-shadow: 0 1px 8px rgba(13, 17, 23, 0.06) !important;
     padding-top: env(safe-area-inset-top, 0px) !important;
@@ -2162,7 +2187,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   }
   .mobile-menu-btn, #mobileMenuBtn { display: none !important; }
 
-  /* ── 4. SPLIT CONTAINER → PLEIN ÉCRAN AVEC SLIDE ── */
+  /* ── 9. SPLIT CONTAINER — positionné entre header et bottom bar ── */
   .msgs-split {
     display: block !important;
     margin: 0 !important;
@@ -2172,14 +2197,16 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     width: 100vw !important;
     position: fixed !important;
     overflow: hidden !important;
+    /* top = mobile-header height */
     top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    /* bottom = bottom tab bar height (68px) + safe area */
     bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
     left: 0 !important;
     right: 0 !important;
     height: auto !important;
   }
 
-  /* ── 5. LISTE CONVERSATIONS — vue par défaut ── */
+  /* ── 10. LISTE CONVERSATIONS — vue par défaut (visible) ── */
   .msgs-left {
     position: absolute !important;
     top: 0 !important; left: 0 !important;
@@ -2193,6 +2220,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     background: #F5F2EC !important;
     display: flex !important;
     flex-direction: column !important;
+    overflow: hidden !important;
   }
 
   /* État chat ouvert : liste glisse à gauche */
@@ -2200,7 +2228,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     transform: translateX(-100%) !important;
   }
 
-  /* ── 6. PANEL CHAT — caché à droite par défaut ── */
+  /* ── 11. PANEL CHAT — caché à droite par défaut ── */
   .msgs-right {
     position: absolute !important;
     top: 0 !important; left: 0 !important;
@@ -2221,7 +2249,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     transform: translateX(0) !important;
   }
 
-  /* ── 7. BARRE RETOUR MOBILE DANS LE CHAT ── */
+  /* ── 12. BARRE RETOUR MOBILE DANS LE CHAT ── */
   .msgs-mobile-back {
     display: flex !important;
     align-items: center !important;
@@ -2232,33 +2260,18 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     flex-shrink: 0 !important;
     cursor: pointer !important;
   }
-  .msgs-mobile-back i {
-    color: #1A7A5E !important;
-    font-size: 18px !important;
-  }
+  .msgs-mobile-back i { color: #1A7A5E !important; font-size: 18px !important; }
   .msgs-mobile-back span {
     font-family: 'DM Sans', sans-serif !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: #1A7A5E !important;
+    font-size: 14px !important; font-weight: 600 !important; color: #1A7A5E !important;
   }
 
-  /* ── 8. CHAT HEADER COMPACT ── */
-  #msgsChatHeader {
-    padding: 10px 14px !important;
-    flex-shrink: 0 !important;
-  }
-  .msgs-chat-actions {
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-  }
-  .msgs-auto-btn {
-    font-size: 11px !important;
-    padding: 0 10px !important;
-    height: 28px !important;
-  }
+  /* ── 13. CHAT HEADER COMPACT ── */
+  #msgsChatHeader { padding: 10px 14px !important; flex-shrink: 0 !important; }
+  .msgs-chat-actions { flex-wrap: wrap !important; gap: 6px !important; }
+  .msgs-auto-btn { font-size: 11px !important; padding: 0 10px !important; height: 28px !important; }
 
-  /* ── 9. ZONE MESSAGES ── */
+  /* ── 14. ZONE MESSAGES ── */
   #chatMessages, .chat-modal-messages {
     flex: 1 !important;
     overflow-y: auto !important;
@@ -2267,13 +2280,11 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     padding: 12px 12px 16px !important;
   }
 
-  /* ── 10. INPUT CHAT — dans le flux flex (pas fixed) ── */
+  /* ── 15. INPUT CHAT — dans le flux flex (pas fixed) ── */
   .chat-modal-input {
     flex-shrink: 0 !important;
     position: relative !important;
-    bottom: auto !important;
-    left: auto !important;
-    right: auto !important;
+    bottom: auto !important; left: auto !important; right: auto !important;
     padding: 10px 12px !important;
     padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
     background: white !important;
@@ -2283,33 +2294,32 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
   #quickRepliesBar {
     position: relative !important;
-    bottom: auto !important;
-    left: auto !important;
-    right: auto !important;
+    bottom: auto !important; left: auto !important; right: auto !important;
     z-index: 10 !important;
     background: white !important;
     border-top: 1px solid rgba(200,184,154,0.3) !important;
     flex-shrink: 0 !important;
   }
 
-  /* ── 11. ITEMS CONVERSATION PLUS HAUTS ── */
+  /* ── 16. ITEMS CONVERSATION PLUS LISIBLES ── */
   #conversationsList .conversation-item {
     padding: 14px 16px !important;
     min-height: 72px !important;
   }
 
-  /* ── 12. BOTTOM TABS ── */
+  /* ── 17. BOTTOM TABS ── */
   .mobile-tabs {
     display: flex !important;
     position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
     z-index: 1000 !important;
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
     border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    height: 68px !important;
+    box-sizing: border-box !important;
   }
 }
 </style>
