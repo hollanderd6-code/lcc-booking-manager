@@ -1826,6 +1826,27 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       document.documentElement.style.overflow = '';
     }, 30);
 
+    // Force le layout flex correct — override tout CSS externe
+    setTimeout(function() {
+      var msgsRight = document.querySelector('.msgs-right');
+      var chatMsgs = document.getElementById('chatMessages');
+      var inputArea = document.getElementById('chatInputArea');
+      var quickBar = document.getElementById('quickRepliesBar');
+
+      if (msgsRight) {
+        msgsRight.style.cssText += ';display:flex!important;flex-direction:column!important;overflow:hidden!important;min-height:0!important;';
+      }
+      if (chatMsgs) {
+        chatMsgs.style.cssText += ';display:flex!important;flex:1!important;min-height:0!important;overflow-y:auto!important;flex-direction:column!important;';
+      }
+      if (inputArea) {
+        inputArea.style.cssText += ';display:flex!important;position:relative!important;bottom:auto!important;left:auto!important;right:auto!important;flex-shrink:0!important;z-index:10!important;';
+      }
+      if (quickBar) {
+        quickBar.style.cssText += ';position:relative!important;bottom:auto!important;left:auto!important;right:auto!important;flex-shrink:0!important;';
+      }
+    }, 200);
+
     // Charger les raccourcis messages
     if (conv && conv.id && typeof window.loadQuickReplies === 'function') {
       window.loadQuickReplies(conv.id);
@@ -1851,13 +1872,13 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       // Restore
       window.isMobileDevice = origIsMobile;
 
-      // Show our inline panel
+      // Show our inline panel — attendre que openChat async finisse
       setTimeout(function() {
         var conv = (window.allConversations || []).find(function(c) {
           return String(c.id) === String(conversationId);
         });
         showInlineChat(conv || { id: conversationId });
-      }, 80);
+      }, 600);
     };
     window.openChat._bhPatched = true;
   }
