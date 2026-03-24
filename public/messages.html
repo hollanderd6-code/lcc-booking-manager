@@ -2183,8 +2183,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     left: 0 !important;
     right: 0 !important;
     height: auto !important;
-    z-index: 50 !important;
-    background: #F5F2EC !important;
   }
 
   /* ── 5. LISTE CONVERSATIONS — vue par défaut ── */
@@ -2321,6 +2319,31 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   }
 }
 </style>
+
+<script>
+/* ── MESSAGES MOBILE: neutraliser paddingBottom injecté par mobile-native-experience.js ── */
+(function() {
+  if (window.innerWidth > 1366) return;
+  function fixMainPadding() {
+    var main = document.querySelector('main.main-content') || document.querySelector('.main-content');
+    if (main) {
+      main.style.setProperty('padding-bottom', '0', 'important');
+      main.style.setProperty('padding-top', '0', 'important');
+    }
+  }
+  // Observer les changements de style sur main-content
+  var obs = new MutationObserver(fixMainPadding);
+  document.addEventListener('DOMContentLoaded', function() {
+    var main = document.querySelector('main.main-content') || document.querySelector('.main-content');
+    if (main) {
+      obs.observe(main, { attributes: true, attributeFilter: ['style'] });
+      fixMainPadding();
+    }
+  });
+  setTimeout(fixMainPadding, 300);
+  setTimeout(fixMainPadding, 800);
+})();
+</script>
 
 <script>
 /* ── MESSAGES MOBILE: navigation liste ↔ chat ── */
