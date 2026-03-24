@@ -39,13 +39,9 @@ html[data-theme-v3="1"] main.main-content {
   position: relative !important;
   z-index: 35 !important;
 }
-/* Desktop: pas d'espace entre header BH et msgs-split */
 @media (min-width: 1367px) {
   html[data-theme-v3="1"] main.main-content {
     padding-top: 70px !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    padding-bottom: 0 !important;
   }
 }
 html[data-theme-v3="1"] .app-container {
@@ -247,7 +243,7 @@ html[data-theme-v3="1"] .page-back-btn {
 /* ── Split container ── */
 .msgs-split {
   display: flex;
-  margin: 0 16px 8px;
+  margin: 0 16px 16px;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid rgba(0,0,0,.08);
@@ -1314,17 +1310,12 @@ console.log('✅ Fonctions helpers messages chargées');
 <!-- Script -->
 
 <script>
-// Pre-declare to avoid undefined errors — will be overridden after chat-owner.js
-window._isMobileOverridePending = true;
+// Override isMobileDevice before chat-owner.js loads
+// Forces desktop mode so openChat() never redirects to chat-mobile.html
+function isMobileDevice() { return false; }
+window.isMobileDevice = function() { return false; };
 </script>
 <script src="/js/chat-owner.js"></script>
-<script>
-// ✅ Override isMobileDevice APRÈS chat-owner.js (qui le redéfinit avec function hoisting)
-// Ceci empêche la redirection vers chat-mobile.html sur mobile
-window.isMobileDevice = function() { return false; };
-// Redéfinir avec function pour écraser le hoisting de chat-owner.js
-isMobileDevice = function() { return false; };
-</script>
 <!-- Auth + User -->
 <script>
     (async function() {
@@ -2130,8 +2121,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     height: 100vh !important;
     overflow: hidden !important;
     display: block !important;
-    /* ✅ CRITIQUE : msgs-split est position:fixed donc pas besoin de position:relative ici */
-    position: static !important;
   }
   /* Masquer le header injecté par bh-layout sur mobile */
   html[data-theme-v3="1"] header.main-header { display: none !important; }
@@ -2194,8 +2183,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     left: 0 !important;
     right: 0 !important;
     height: auto !important;
-    /* ✅ CRITIQUE : annuler le body.style.position=fixed de chat-owner.js */
-    z-index: 500 !important;
+    z-index: 50 !important;
+    background: #F5F2EC !important;
   }
 
   /* ── 5. LISTE CONVERSATIONS — vue par défaut ── */
@@ -2329,18 +2318,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     backdrop-filter: blur(16px) !important;
     border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-    height: 68px !important;
-    box-sizing: border-box !important;
-  }
-
-  /* ── 13. CONTRER body.style.position=fixed de chat-owner.js ── */
-  /* chat-owner.js fait document.body.style.position='fixed' quand openChat() */
-  /* On le remet en place via JS (voir script ci-dessous) */
-  body.modal-open {
-    position: static !important;
-    overflow: hidden !important;
-    width: auto !important;
-    height: auto !important;
   }
 }
 </style>
@@ -2377,31 +2354,25 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       }
     });
 
-    /* ✅ PATCH CRITIQUE : neutraliser body.style.position='fixed' de chat-owner.js
-       Ce style fait "sauter" la page en haut et masque le contenu sur iOS */
-    var _origOpenChat = null;
-    var checkInterval = setInterval(function() {
-      if (window.openChat && !window.openChat._mobileSlidePatch) {
-        _origOpenChat = window.openChat;
-        window.openChat = function(id) {
-          _origOpenChat.call(this, id);
-          /* Immédiatement après openChat, annuler le verrouillage du body */
-          requestAnimationFrame(function() {
-            document.body.style.position = '';
-            document.body.style.width = '';
-            document.body.style.height = '';
-            /* Garder overflow:hidden (le CSS le gère) */
-          });
-          /* Et ouvrir le panel chat */
-          setTimeout(function() {
-            if (split) split.classList.add('chat-open');
-          }, 100);
-        };
-        window.openChat._bhPatched = true;
-        window.openChat._mobileSlidePatch = true;
-        clearInterval(checkInterval);
-      }
-    }, 100);
+    /* Patch showInlineChat pour déclencher le slide */
+    var origPatch = window._bhMobileChatPatched;
+    if (!origPatch) {
+      window._bhMobileChatPatched = true;
+      var checkInterval = setInterval(function() {
+        if (window.openChat && !window.openChat._mobileSlidePatch) {
+          var orig = window.openChat;
+          window.openChat = function(id) {
+            orig.call(this, id);
+            setTimeout(function() {
+              if (split) split.classList.add('chat-open');
+            }, 100);
+          };
+          window.openChat._bhPatched = true;
+          window.openChat._mobileSlidePatch = true;
+          clearInterval(checkInterval);
+        }
+      }, 200);
+    }
   }
 
   if (document.readyState === 'loading') {
