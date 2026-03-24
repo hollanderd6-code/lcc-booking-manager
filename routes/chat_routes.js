@@ -289,11 +289,26 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
           c.guest_phone,
           p.name as property_name,
           p.color as property_color,
+          r.guest_country,
+          r.guest_language,
+          r.guest_city,
+          r.occupancy_adults,
+          r.occupancy_children,
+          r.amount_total,
+          r.amount_rooms,
+          r.amount_taxes,
+          r.amount_cleaning,
+          r.ota_commission,
+          r.host_payout,
+          r.days_breakdown,
+          r.currency,
           (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
           (SELECT message FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
           (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
         FROM conversations c
         LEFT JOIN properties p ON c.property_id = p.id
+        LEFT JOIN reservations r ON r.channex_booking_id = c.channex_booking_id
+          AND c.channex_booking_id IS NOT NULL
         WHERE c.user_id = $1
       `;
 
@@ -324,10 +339,17 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         ...conv,
         guest_display_name: conv.guest_first_name 
           ? `${conv.guest_first_name} ${conv.guest_last_name || ''}`.trim()
-          : `Voyageur ${conv.platform || 'Booking'}`,
+          : conv.guest_name || `Voyageur ${conv.platform || 'Booking'}`,
         guest_initial: conv.guest_first_name 
           ? conv.guest_first_name.charAt(0).toUpperCase() 
-          : 'V'
+          : (conv.guest_name ? conv.guest_name.charAt(0).toUpperCase() : 'V'),
+        // Données financières converties en nombres
+        amount_total:    conv.amount_total    ? parseFloat(conv.amount_total)    : null,
+        amount_rooms:    conv.amount_rooms    ? parseFloat(conv.amount_rooms)    : null,
+        amount_taxes:    conv.amount_taxes    ? parseFloat(conv.amount_taxes)    : null,
+        amount_cleaning: conv.amount_cleaning ? parseFloat(conv.amount_cleaning) : null,
+        ota_commission:  conv.ota_commission  ? parseFloat(conv.ota_commission)  : null,
+        host_payout:     conv.host_payout     ? parseFloat(conv.host_payout)     : null,
       }));
 
       res.json({
