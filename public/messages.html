@@ -394,6 +394,7 @@ html[data-theme-v3="1"] .page-back-btn {
   background: white;
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
 }
 
 /* Placeholder */
@@ -462,6 +463,7 @@ html[data-theme-v3="1"] .page-back-btn {
 /* Messages area */
 #chatMessages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
   background: #F5F2EC !important;
@@ -1168,7 +1170,7 @@ html[data-theme-v3="1"] .app-container {
         <div class="quick-replies-bar" id="quickRepliesBar" style="display:none;"></div>
 
         <!-- Input: chat-owner.js uses #chatInput and #sendBtn -->
-        <div class="chat-modal-input" id="chatInputArea" style="display:none;" data-managed="true">
+        <div class="chat-modal-input" id="chatInputArea" style="display:none;">
           <button class="msgs-attach-btn" id="photoUploadBtn" title="Envoyer une photo" onclick="if(window.openPhotoUpload) openPhotoUpload();"><i class="fas fa-image"></i></button>
           <textarea class="chat-input" id="chatInput" placeholder="Répondre à…" rows="1"></textarea>
           <button class="send-btn" id="sendBtn" onclick="sendMessageOwner()"><i class="fas fa-paper-plane"></i></button>
@@ -1828,14 +1830,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (conv && conv.id && typeof window.loadQuickReplies === 'function') {
       window.loadQuickReplies(conv.id);
     }
-
-    // S'assurer que la zone d'input est bien visible (force override)
-    setTimeout(function() {
-      var inputArea = document.getElementById('chatInputArea');
-      var chatMsgs = document.getElementById('chatMessages');
-      if (inputArea) inputArea.style.setProperty('display', 'flex', 'important');
-      if (chatMsgs) chatMsgs.style.setProperty('display', 'flex', 'important');
-    }, 100);
   }
 
   // ── Override openChat after chat-owner.js loaded ──
@@ -1857,13 +1851,13 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       // Restore
       window.isMobileDevice = origIsMobile;
 
-      // Show our inline panel — attendre que openChat async finisse
+      // Show our inline panel
       setTimeout(function() {
         var conv = (window.allConversations || []).find(function(c) {
           return String(c.id) === String(conversationId);
         });
         showInlineChat(conv || { id: conversationId });
-      }, 600);
+      }, 80);
     };
     window.openChat._bhPatched = true;
   }
