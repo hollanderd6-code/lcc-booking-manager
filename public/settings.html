@@ -2037,47 +2037,6 @@ function insertVariable(textareaId, variable, event) {
   </div>
 </div>
 
-<!-- ===== SECTION : CHAT VOYAGEUR ===== -->
-<div class="form-section-header" style="margin-top:24px;">
-  <i class="fas fa-comments"></i>
-  <h3>Chat voyageurs</h3>
-  <small>Partagez ce lien à vos voyageurs pour démarrer une conversation sécurisée</small>
-</div>
-
-<div class="form-group" id="chatLinkSection" style="display:none;">
-  <!-- Lien unique -->
-  <label><i class="fas fa-link"></i><span>Lien unique</span></label>
-  <div style="display:flex;align-items:center;gap:8px;background:rgba(26,122,94,0.05);border:1.5px solid rgba(26,122,94,0.18);border-radius:12px;padding:9px 12px;margin-bottom:10px;">
-    <input id="chatLinkUrl" type="text" readonly onclick="this.select()"
-      style="flex:1;border:none;background:transparent;font-family:ui-monospace,monospace;font-size:11.5px;color:var(--text-primary);outline:none;min-width:0;cursor:pointer;" />
-    <button id="chatCopyLinkBtn" type="button"
-      onclick="(function(){var i=document.getElementById('chatLinkUrl');var b=document.getElementById('chatCopyLinkBtn');if(!i.value)return;navigator.clipboard.writeText(i.value).then(function(){b.innerHTML='<i class=\'fas fa-check\'></i> Copié !';b.style.background='#15624B';setTimeout(function(){b.innerHTML='<i class=\'fas fa-copy\'></i> Copier';b.style.background='#1A7A5E';},2000)}).catch(function(){i.select();document.execCommand('copy')});})()"
-      style="flex-shrink:0;border:none;border-radius:8px;padding:6px 11px;background:#1A7A5E;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
-      <i class="fas fa-copy"></i> Copier
-    </button>
-  </div>
-
-  <!-- Code PIN -->
-  <label><i class="fas fa-key"></i><span>Code PIN voyageur</span></label>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <input id="chatPinInput" type="text" maxlength="4" class="chat-pin-input"
-      style="width:72px;background:#f9fafb;border:1.5px solid rgba(13,17,23,0.12);padding:8px 10px;border-radius:10px;font-size:20px;font-weight:700;color:var(--text-primary);text-align:center;font-family:ui-monospace,monospace;outline:none;" />
-    <button id="chatPinUpdateBtn" type="button" class="btn-update-pin"
-      style="background:#f3f4f6;color:#374151;border:1.5px solid rgba(13,17,23,0.1);padding:8px 12px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;transition:all .15s;">
-      <i class="fas fa-save"></i> Sauvegarder
-    </button>
-    <button id="chatPinRegenBtn" type="button" class="btn-regenerate-pin" title="Générer un nouveau code aléatoire"
-      style="background:#f3f4f6;color:#374151;border:1.5px solid rgba(13,17,23,0.1);padding:8px 11px;border-radius:10px;cursor:pointer;font-size:13px;transition:all .15s;">
-      <i class="fas fa-sync-alt"></i>
-    </button>
-  </div>
-
-  <!-- Message automatique -->
-  <button id="chatAutoMsgBtn" type="button" class="btn-copy-auto-message" style="margin-top:10px;width:100%;background:rgba(26,122,94,0.07);color:#1A7A5E;border:1.5px solid rgba(26,122,94,0.2);padding:10px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;">
-    <i class="fas fa-paper-plane"></i>
-    <span>Copier le message à envoyer au voyageur</span>
-  </button>
-</div>
 
 <!-- ===== RACCOURCIS MESSAGES ===== -->
 <div class="form-group" style="background:linear-gradient(135deg,#10b98110,#10b98118);padding:20px;border-radius:14px;border:1.5px solid #10b98130;">
