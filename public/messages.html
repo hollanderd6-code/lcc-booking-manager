@@ -2825,6 +2825,18 @@ window.openInvoiceFromConversation = function() {
   background: #F5F2EC; border-radius: 20px; width: 100%; max-width: 960px;
   max-height: 92vh; display: flex; flex-direction: column;
   box-shadow: 0 24px 64px rgba(0,0,0,.2); overflow: hidden;
+  animation: none !important;
+  transform: none !important;
+  transition: none !important;
+  position: relative !important;
+  top: auto !important; left: auto !important;
+}
+#invoiceModal, #invoiceModal .inv-content,
+#invoiceModal .inv-body, #invoiceModal .inv-form-panel,
+#invoiceModal .inv-preview-panel {
+  -webkit-animation: none !important;
+  transform: none !important;
+  transition: none !important;
 }
 #invoiceModal .inv-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -3056,7 +3068,17 @@ window.openInvoiceFromConversation = function() {
     }
   }
 
-  window.renderInvoicePreview = function() {
+  const _invOwnerCache = {};
+  async function _getInvOwner(pid) {
+    if (!pid) return null;
+    if (_invOwnerCache[pid] !== undefined) return _invOwnerCache[pid];
+    try {
+      const res = await fetch('/api/owner-clients/' + pid, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') } });
+      if (!res.ok) { _invOwnerCache[pid] = null; return null; }
+      _invOwnerCache[pid] = await res.json(); return _invOwnerCache[pid];
+    } catch(e) { _invOwnerCache[pid] = null; return null; }
+  }
+  window.renderInvoicePreview = async function() {
     const preview = document.getElementById('inv_preview');
     const sendBtn = document.getElementById('inv_sendBtn');
     if (!preview) return;
@@ -3067,6 +3089,7 @@ window.openInvoiceFromConversation = function() {
     const clientCP     = document.getElementById('inv_clientPostalCode')?.value || '';
     const clientCity   = document.getElementById('inv_clientCity')?.value || '';
     const propSel      = document.getElementById('inv_propertyName');
+    const propId       = propSel?.value || '';
     const propName     = propSel?.options[propSel.selectedIndex]?.text || '';
     const propAddr     = propSel?.options[propSel.selectedIndex]?.dataset?.address || '';
     const checkin      = document.getElementById('inv_checkin')?.value || '';
@@ -3094,13 +3117,19 @@ window.openInvoiceFromConversation = function() {
     const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '';
     const fmtAmt  = n => n.toFixed(2) + ' €';
 
-    // Récupérer infos propriétaire/émetteur
+    // Récupérer le propriétaire du logement
     const profile = JSON.parse(localStorage.getItem('lcc_settings_profile') || '{}');
     const user    = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    const emitter = profile.company || user.company || user.name || 'Ma Conciergerie';
-    const emitterAddr = profile.address || '';
-    const emitterCity = (profile.postalCode || '') + ' ' + (profile.city || '');
-    const emitterSiret = profile.siret || '';
+    const owner   = propId ? await _getInvOwner(propId) : null;
+    const emitter = owner
+      ? (owner.company_name || ((owner.first_name || '') + ' ' + (owner.last_name || '')).trim())
+      : (profile.company || user.company || user.name || 'Ma Conciergerie');
+    const emitterAddr  = owner ? (owner.address || '') : (profile.address || '');
+    const emitterCity  = owner
+      ? ((owner.postal_code || '') + ' ' + (owner.city || '')).trim()
+      : ((profile.postalCode || '') + ' ' + (profile.city || '')).trim();
+    const emitterSiret = owner ? (owner.siret || '') : (profile.siret || '');
+    const emitterEmail = owner ? (owner.email || '') : (user.email || '');
 
     const invoiceNum = 'FACT-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-4);
 
@@ -3111,7 +3140,8 @@ window.openInvoiceFromConversation = function() {
           <div style="font-size:12px;color:#6b7280;margin-top:2px;">
             ${emitterAddr ? emitterAddr + '<br>' : ''}
             ${emitterCity.trim() ? emitterCity + '<br>' : ''}
-            ${emitterSiret ? 'SIRET : ' + emitterSiret : ''}
+            ${emitterSiret ? 'SIRET : ' + emitterSiret + '<br>' : ''}
+            ${emitterEmail ? emitterEmail : ''}
           </div>
         </div>
         <div style="text-align:right;">
