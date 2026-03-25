@@ -6653,6 +6653,10 @@ function parsePropertyBody(req) {
   if (body.houseRules !== undefined && body.house_rules === undefined) {
     body.house_rules = body.houseRules;
   }
+  // Mapper internalName → internal_name
+  if (body.internalName !== undefined && body.internal_name === undefined) {
+    body.internal_name = body.internalName;
+  }
   
   return body;
 }
@@ -10658,7 +10662,8 @@ app.post('/api/properties',
            auto_responses_enabled = $19, arrival_message = $20,
            base_price = $22, weekend_price = $23,
            cleaning_fee = $24, tourist_tax_per_night = $25, concierge_pct = $26,
-           max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30
+           max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30,
+           internal_name = $31
          WHERE id = $21`,
         [
           name,
@@ -10690,7 +10695,8 @@ app.post('/api/properties',
           maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
           bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
           beds != null && beds !== '' ? parseInt(beds, 10) : null,
-          bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null
+          bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
+          internal_name != null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null
         ]
       );
 
@@ -10715,7 +10721,7 @@ app.post('/api/properties',
          amenities, house_rules, practical_info, auto_responses_enabled, arrival_message,
          base_price, weekend_price,
          cleaning_fee, tourist_tax_per_night, concierge_pct,
-         max_guests, bedrooms, beds, bathrooms
+         max_guests, bedrooms, beds, bathrooms, internal_name
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -10726,7 +10732,7 @@ app.post('/api/properties',
          NOW(),
          $18, $19, $20, $21, $22,
          $23, $24, $25, $26, $27,
-         $28, $29, $30, $31
+         $28, $29, $30, $31, $32
        )`,
       [
         id,
@@ -10759,7 +10765,8 @@ app.post('/api/properties',
         maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
         bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
         beds != null && beds !== '' ? parseInt(beds, 10) : null,
-        bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null
+        bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
+        internal_name != null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null
       ]
     );
 
