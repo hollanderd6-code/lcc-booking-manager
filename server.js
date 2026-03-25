@@ -1372,8 +1372,9 @@ ON invoice_download_tokens(token);
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS bedrooms INTEGER;
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS beds INTEGER;
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS bathrooms INTEGER;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS internal_name TEXT;
       `);
-      console.log('✅ Colonnes max_guests / bedrooms / beds / bathrooms OK');
+      console.log('✅ Colonnes max_guests / bedrooms / beds / bathrooms / internal_name OK');
     } catch(e) { console.log('ℹ️ capacity columns:', e.message); }
 
 
@@ -3618,7 +3619,8 @@ async function loadProperties() {
         max_guests,
         bedrooms,
         beds,
-        bathrooms
+        bathrooms,
+        internal_name
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3671,7 +3673,8 @@ async function loadProperties() {
         max_guests: row.max_guests != null ? parseInt(row.max_guests, 10) : null,
         bedrooms: row.bedrooms != null ? parseInt(row.bedrooms, 10) : null,
         beds: row.beds != null ? parseInt(row.beds, 10) : null,
-        bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null
+        bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null,
+        internal_name: row.internal_name || null
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
@@ -10344,6 +10347,8 @@ app.get('/api/properties',
         arrivalMessage: p.arrival_message || null,  // ✅ NOUVEAU
         ownerId: p.owner_id || null,
         owner_id: p.owner_id || null,
+        internalName: p.internal_name || p.internalName || null,
+        internal_name: p.internal_name || p.internalName || null,
         maxGuests: p.max_guests ?? p.maxGuests ?? null,
         max_guests: p.max_guests ?? p.maxGuests ?? null,
         bedrooms: p.bedrooms ?? null,
@@ -10634,7 +10639,8 @@ app.post('/api/properties',
         .filter(Boolean);
     }
 
-    const ownerId = req.body.ownerId || null;
+    const ownerId = body.ownerId ?? req.body.ownerId ?? null;
+    const internalNameValue = internalName !== undefined ? (internalName || null) : null;
 
     // ✅ VÉRIFIER SI LA PROPRIÉTÉ EXISTE DÉJÀ
     const existingProperty = await pool.query(
@@ -10657,7 +10663,8 @@ app.post('/api/properties',
            auto_responses_enabled = $19, arrival_message = $20,
            base_price = $22, weekend_price = $23,
            cleaning_fee = $24, tourist_tax_per_night = $25, concierge_pct = $26,
-           max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30
+           max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30,
+           internal_name = $31
          WHERE id = $21`,
         [
           name,
@@ -10689,7 +10696,8 @@ app.post('/api/properties',
           maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
           bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
           beds != null && beds !== '' ? parseInt(beds, 10) : null,
-          bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null
+          bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
+          internalNameValue
         ]
       );
 
@@ -10714,7 +10722,7 @@ app.post('/api/properties',
          amenities, house_rules, practical_info, auto_responses_enabled, arrival_message,
          base_price, weekend_price,
          cleaning_fee, tourist_tax_per_night, concierge_pct,
-         max_guests, bedrooms, beds, bathrooms
+         max_guests, bedrooms, beds, bathrooms, internal_name
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -10725,7 +10733,7 @@ app.post('/api/properties',
          NOW(),
          $18, $19, $20, $21, $22,
          $23, $24, $25, $26, $27,
-         $28, $29, $30, $31
+         $28, $29, $30, $31, $32
        )`,
       [
         id,
@@ -10758,7 +10766,8 @@ app.post('/api/properties',
         maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
         bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
         beds != null && beds !== '' ? parseInt(beds, 10) : null,
-        bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null
+        bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
+        internalNameValue
       ]
     );
 
@@ -11540,7 +11549,8 @@ app.put('/api/properties/:propertyId',
       maxGuests,
       bedrooms,
       beds,
-      bathrooms
+      bathrooms,
+      internalName
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
@@ -11743,6 +11753,7 @@ userId: userId
          bedrooms = $30,
          beds = $31,
          bathrooms = $32,
+         internal_name = $33,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -11765,7 +11776,8 @@ userId: userId
         newMaxGuests,
         newBedrooms,
         newBeds,
-        newBathrooms
+        newBathrooms,
+        newInternalName
       ]
     );
     
