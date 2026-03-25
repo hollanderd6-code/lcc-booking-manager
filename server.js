@@ -23,7 +23,7 @@ const { Pool } = require('pg');
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
 // ============================================
 const { handleIncomingMessage } = require('./integrated-chat-handler');
-const { startOnboarding } = require('./onboarding-system');
+// onboarding-system supprimé — données voyageur via Channex
 const crypto = require('crypto');
 const axios = require('axios');
 const brevo = require('@getbrevo/brevo');
@@ -3906,20 +3906,13 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
 } 
 
 // ============================================
-// ✅ FONCTION HELPER POUR DÉMARRER L'ONBOARDING
+// ✅ MESSAGE DE BIENVENUE — appelé à la création de conversation
+// (Onboarding supprimé — données voyageur via Channex)
 // ============================================
 
 async function sendWelcomeMessageForNewReservation(pool, io, conversationId, propertyId, userId) {
-  try {
-    console.log(`🎯 Démarrage de l'onboarding pour conversation ${conversationId}`);
-    
-    // Démarrer l'onboarding au lieu du message de bienvenue classique
-    await startOnboarding(conversationId, pool, io);
-    
-    console.log(`✅ Onboarding démarré pour conversation ${conversationId}`);
-  } catch (error) {
-    console.error('❌ Erreur sendWelcomeMessageForNewReservation:', error);
-  }
+  // Ne rien faire ici — le message de confirmation est envoyé
+  // directement dans le webhook Channex (processChannexBooking)
 }
 
 // ============================================
@@ -20944,8 +20937,41 @@ app.post('/api/channex/webhook', async (req, res) => {
 
           console.log(`📱 [CHANNEX] Notifs push envoyées pour ${result.uid} (${tokensRes.rows.length} tokens principaux)`);
         } catch (notifErr) {
-          // Erreur de notif non bloquante
           console.error('⚠️ [CHANNEX WEBHOOK] Erreur notif push:', notifErr.message);
+        }
+
+        // ── Message de confirmation immédiat au voyageur ─────────
+        try {
+          const { sendAutoMessage } = require('./integrated-chat-handler');
+
+          // Trouver la conversation liée à cette réservation
+          const convResult = await pool.query(
+            `SELECT id, channex_booking_id, guest_first_name, guest_name
+             FROM conversations
+             WHERE channex_booking_id = $1 OR (property_id = $2 AND DATE(reservation_start_date) = DATE($3))
+             ORDER BY created_at DESC LIMIT 1`,
+            [result.channex_booking_id || null, result.property_id, result.start_date || arrivalDate]
+          );
+
+          if (convResult.rows.length > 0) {
+            const conv = convResult.rows[0];
+            const guestFirst = conv.guest_first_name || (conv.guest_name ? conv.guest_name.split(' ')[0] : '');
+            const propName = propertyName || 'votre logement';
+            const otaLabel = ota?.label || otaName || 'la plateforme';
+
+            const confirmMsg = `Bonjour${guestFirst ? ' ' + guestFirst : ''} ! 👋
+
+Merci pour votre réservation via ${otaLabel} pour ${propName} !
+
+Vous recevrez les informations pour votre arrivée prochainement.
+
+N'hésitez pas à nous contacter si vous avez des questions. 😊`;
+
+            await sendAutoMessage(pool, io, conv.id, confirmMsg, conv.channex_booking_id || null);
+            console.log(`✅ [CHANNEX] Message de confirmation envoyé (conv ${conv.id})`);
+          }
+        } catch (confirmErr) {
+          console.error('⚠️ [CHANNEX WEBHOOK] Erreur message confirmation:', confirmErr.message);
         }
       }
     }
