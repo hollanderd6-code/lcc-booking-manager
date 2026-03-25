@@ -2398,12 +2398,14 @@ function copyDepositLinkByUid(uid) {
               </div>` : `
               <div class="deposit-info-row" style="margin-bottom: 4px;">
                 <i class="fas fa-user"></i>
-                <span style="font-weight: 600; color: var(--text-primary);">${guestName || ''}</span>
+                <span style="font-weight: 600; color: var(--text-primary);">${guestName || ''}${r.guestCountry ? ' ' + r.guestCountry.toUpperCase().replace(/./g, c => String.fromCodePoint(c.charCodeAt(0) + 127397)) : ''}</span>
               </div>
               <div class="deposit-info-row">
                 <i class="fas fa-calendar"></i>
-                <span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}</span>
-              </div>`}
+                <span>${formatDateFr(r.startDate)} → ${formatDateFr(r.endDate)}${r.occupancyAdults ? ' · ' + r.occupancyAdults + ' pers.' : ''}</span>
+              </div>
+              ${r.amountTotal ? `<div class="deposit-info-row" style="margin-top:4px;"><i class="fas fa-euro-sign"></i><span style="font-size:12px;color:var(--text-secondary);">Total : <strong>${r.amountTotal.toFixed(2)} €</strong>${r.amountCleaning ? ' · Ménage : ' + r.amountCleaning.toFixed(2) + ' €' : ''}${r.amountTaxes ? ' · Taxes : ' + r.amountTaxes.toFixed(2) + ' €' : ''}</span></div>` : ''}
+              `}
               
               <div class="deposit-info-grid-simple">
                 <div class="deposit-info-item">
