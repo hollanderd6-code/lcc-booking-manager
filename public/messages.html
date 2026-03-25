@@ -1173,6 +1173,7 @@ html[data-theme-v3="1"] .app-container {
           </div>
           <div class="msgs-chat-actions">
             <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="closeCurrentConversation()"><i class="fas fa-check-circle"></i> Clore la conversation</button>
+            <button class="msgs-icon-btn" id="btnInvoice" style="display:none" title="Générer une facture" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i></button>
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
             <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
           </div>
@@ -1877,6 +1878,16 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     // Garder chatPropertyName visible
     var propEl = document.getElementById('chatPropertyName');
     if (conv && propEl) propEl.textContent = conv.property_name || '';
+
+    // Stocker la conv courante pour la facture
+    window.currentChatConv = conv || null;
+
+    // Afficher bouton facture si la conv a une réservation
+    var btnInv = document.getElementById('btnInvoice');
+    if (btnInv) {
+      var hasRes = conv && (conv.reservation_start_date || conv.startDate);
+      btnInv.style.display = hasRes ? 'inline-flex' : 'none';
+    }
 
     // Active state in list
     document.querySelectorAll('#conversationsList .conversation-item').forEach(function(el) {
@@ -2776,5 +2787,425 @@ function showBHToast(msg, type = 'info') {
   setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 300); }, 3500);
 }
 </script>
+
+<script>
+window.openInvoiceFromConversation = function() {
+  var conv = window.currentChatConv;
+  if (!conv) return;
+  var checkin  = (conv.reservation_start_date || conv.startDate || '').split('T')[0];
+  var checkout = (conv.reservation_end_date   || conv.endDate   || '').split('T')[0];
+  var name = conv.guest_display_name || conv.guest_first_name
+    ? (conv.guest_first_name || '') + (conv.guest_last_name ? ' ' + conv.guest_last_name : '')
+    : (conv.guest_name || '');
+  openInvoiceModal({
+    guestName:      name.trim() || conv.guest_name || '',
+    guestEmail:     conv.guest_email || '',
+    propertyId:     conv.property_id || '',
+    propertyName:   conv.property_name || '',
+    checkin,
+    checkout,
+    amountRooms:    conv.amount_rooms    || null,
+    amountTaxes:    conv.amount_taxes    || null,
+    amountCleaning: conv.amount_cleaning || null,
+    amountTotal:    conv.amount_total    || null,
+  });
+};
+</script>
+<!-- ============================================================
+     MODAL FACTURE — insérer avant </body>
+     ============================================================ -->
+<style>
+#invoiceModal {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.5); align-items: center; justify-content: center;
+  padding: 16px;
+}
+#invoiceModal.active { display: flex; }
+#invoiceModal .inv-content {
+  background: #F5F2EC; border-radius: 20px; width: 100%; max-width: 960px;
+  max-height: 92vh; display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.2); overflow: hidden;
+}
+#invoiceModal .inv-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; border-bottom: 1px solid rgba(0,0,0,.08);
+  background: white; flex-shrink: 0;
+}
+#invoiceModal .inv-header h2 { font-family:'DM Sans',sans-serif; font-size:17px; font-weight:700; margin:0; }
+#invoiceModal .inv-close {
+  width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,.1);
+  background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:14px; color:#6b7280;
+}
+#invoiceModal .inv-close:hover { background:#f5f2ec; }
+#invoiceModal .inv-body {
+  display: grid; grid-template-columns: 380px 1fr; flex: 1; overflow: hidden;
+}
+#invoiceModal .inv-form-panel {
+  padding: 20px; overflow-y: auto; border-right: 1px solid rgba(0,0,0,.08);
+  background: white;
+}
+#invoiceModal .inv-preview-panel {
+  padding: 20px; overflow-y: auto; background: #F5F2EC;
+  display: flex; flex-direction: column; gap: 12px;
+}
+#invoiceModal .inv-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: #1A7A5E; margin: 16px 0 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+#invoiceModal .inv-section-title:first-child { margin-top: 0; }
+#invoiceModal .inv-row { margin-bottom: 10px; }
+#invoiceModal .inv-row label { font-size: 12px; font-weight: 600; color: #374151; display:block; margin-bottom:4px; }
+#invoiceModal .inv-row input,
+#invoiceModal .inv-row select {
+  width: 100%; padding: 8px 11px; border: 1px solid rgba(0,0,0,.12);
+  border-radius: 8px; font-size: 13px; font-family: 'DM Sans',sans-serif;
+  background: #fafaf8; outline: none; box-sizing: border-box;
+}
+#invoiceModal .inv-row input:focus,
+#invoiceModal .inv-row select:focus { border-color: #1A7A5E; background: white; }
+#invoiceModal .inv-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#invoiceModal .inv-checkbox { display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px;cursor:pointer; }
+#invoiceModal .inv-checkbox input { width:auto; }
+/* Aperçu */
+#invoiceModal .inv-paper {
+  background: white; border-radius: 12px; padding: 28px;
+  box-shadow: 0 2px 16px rgba(0,0,0,.08); font-family: 'DM Sans',sans-serif;
+  font-size: 13px; color: #1a1a2e;
+}
+#invoiceModal .inv-paper h2 { font-size: 18px; font-weight: 800; color: #1A7A5E; margin: 0 0 4px; }
+#invoiceModal .inv-paper .inv-num { font-size: 14px; font-weight: 700; margin: 12px 0 0; }
+#invoiceModal .inv-paper .inv-sec h3 {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  color: #9CA3AF; margin: 16px 0 6px; border-bottom: 1px solid #f0ede8; padding-bottom: 4px;
+}
+#invoiceModal .inv-line { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f2ec;font-size:13px; }
+#invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid #1A7A5E; padding-bottom:6px; }
+#invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:#1A7A5E;border:none;margin-top:4px; }
+#invoiceModal .inv-stamp {
+  text-align:center;margin:16px 0 0;padding:10px;border:2px solid #1A7A5E;
+  border-radius:8px;color:#1A7A5E;font-weight:700;font-size:13px;
+}
+#invoiceModal .inv-footer-note { font-size:11px;color:#9CA3AF;margin-top:12px;text-align:center; }
+#invoiceModal .inv-empty {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;color:#9CA3AF;padding:40px;text-align:center;
+}
+#invoiceModal .inv-empty i { font-size:40px;opacity:.3; }
+/* Actions */
+#invoiceModal .inv-actions {
+  display:flex;gap:10px;align-items:center;justify-content:flex-end;
+  padding:16px 24px;border-top:1px solid rgba(0,0,0,.08);
+  background:white;flex-shrink:0;
+}
+#invoiceModal .inv-btn {
+  height:38px;padding:0 18px;border-radius:10px;font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;border:none;
+  display:inline-flex;align-items:center;gap:7px;
+}
+#invoiceModal .inv-btn-primary { background:#1A7A5E;color:white; }
+#invoiceModal .inv-btn-primary:hover { background:#15624B; }
+#invoiceModal .inv-btn-primary:disabled { opacity:.5;cursor:not-allowed; }
+#invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
+#invoiceModal .inv-btn-ghost:hover { background:#f5f2ec; }
+@media (max-width: 768px) {
+  #invoiceModal .inv-body { grid-template-columns: 1fr; }
+  #invoiceModal .inv-preview-panel { display: none; }
+}
+</style>
+
+<div id="invoiceModal">
+  <div class="inv-content">
+    <div class="inv-header">
+      <h2><i class="fas fa-file-invoice" style="color:#1A7A5E;margin-right:8px;"></i>Générer une facture</h2>
+      <button class="inv-close" onclick="closeInvoiceModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="inv-body">
+      <!-- Formulaire -->
+      <div class="inv-form-panel">
+        <div class="inv-section-title"><i class="fas fa-user"></i> Client</div>
+        <div class="inv-row"><label>Nom complet *</label><input id="inv_clientName" placeholder="Jean Dupont" type="text" oninput="renderInvoicePreview()"/></div>
+        <div class="inv-row"><label>Email</label><input id="inv_clientEmail" placeholder="jean@email.com" type="email" oninput="renderInvoicePreview()"/></div>
+        <div class="inv-row"><label>Adresse</label><input id="inv_clientAddress" placeholder="12 rue de la République" type="text" oninput="renderInvoicePreview()"/></div>
+        <div class="inv-row-inline">
+          <div class="inv-row"><label>Code postal</label><input id="inv_clientPostalCode" placeholder="75001" type="text" oninput="renderInvoicePreview()"/></div>
+          <div class="inv-row"><label>Ville</label><input id="inv_clientCity" placeholder="Paris" type="text" oninput="renderInvoicePreview()"/></div>
+        </div>
+
+        <div class="inv-section-title"><i class="fas fa-calendar-alt"></i> Séjour</div>
+        <div class="inv-row">
+          <label>Logement *</label>
+          <select id="inv_propertyName" onchange="renderInvoicePreview()">
+            <option value="">Sélectionner…</option>
+          </select>
+        </div>
+        <div class="inv-row-inline">
+          <div class="inv-row"><label>Arrivée</label><input id="inv_checkin" type="date" oninput="renderInvoicePreview()"/></div>
+          <div class="inv-row"><label>Départ</label><input id="inv_checkout" type="date" oninput="renderInvoicePreview()"/></div>
+        </div>
+
+        <div class="inv-section-title"><i class="fas fa-euro-sign"></i> Montants</div>
+        <div class="inv-row"><label>Loyer / Nuits (€)</label><input id="inv_rent" min="0" placeholder="180.00" step="0.01" type="number" oninput="renderInvoicePreview()"/></div>
+        <div class="inv-row"><label>Taxe de séjour (€)</label><input id="inv_taxes" min="0" placeholder="0.00" step="0.01" type="number" oninput="renderInvoicePreview()"/></div>
+        <div class="inv-row"><label>Frais de ménage (€)</label><input id="inv_cleaning" min="0" placeholder="0.00" step="0.01" type="number" oninput="renderInvoicePreview()"/></div>
+        <label class="inv-checkbox"><input id="inv_withVat" type="checkbox" onchange="document.getElementById('inv_vatGroup').style.display=this.checked?'block':'none';renderInvoicePreview()"/> Avec TVA</label>
+        <div id="inv_vatGroup" style="display:none;">
+          <div class="inv-row">
+            <label>Taux TVA</label>
+            <select id="inv_vatRate" onchange="renderInvoicePreview()">
+              <option value="10">10%</option>
+              <option value="20">20%</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aperçu -->
+      <div class="inv-preview-panel">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9CA3AF;margin-bottom:8px;">
+          <i class="fas fa-file-invoice"></i> Aperçu
+        </div>
+        <div class="inv-paper" id="inv_preview">
+          <div class="inv-empty">
+            <i class="fas fa-file-invoice"></i>
+            <p>Remplissez le formulaire pour voir l'aperçu</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="inv-actions">
+      <button class="inv-btn inv-btn-ghost" onclick="closeInvoiceModal()">Annuler</button>
+      <button class="inv-btn inv-btn-primary" id="inv_sendBtn" onclick="sendInvoiceFromModal()" disabled>
+        <i class="fas fa-envelope"></i> Envoyer par email
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Invoice Modal ────────────────────────────────────────────
+(function() {
+  window.openInvoiceModal = function(data) {
+    // data = { guestName, guestEmail, propertyId, propertyName, checkin, checkout,
+    //          amountRooms, amountTaxes, amountCleaning, guest_country, occupancy_adults }
+    data = data || {};
+
+    // Remplir logements si pas encore fait
+    _populateInvPropertySelect(data.propertyId, data.propertyName);
+
+    // Remplir champs
+    _setVal('inv_clientName',   data.guestName   || '');
+    _setVal('inv_clientEmail',  data.guestEmail  || '');
+    _setVal('inv_checkin',      data.checkin     || '');
+    _setVal('inv_checkout',     data.checkout    || '');
+    _setVal('inv_rent',         data.amountRooms || data.amountTotal || '');
+    _setVal('inv_taxes',        data.amountTaxes    || '');
+    _setVal('inv_cleaning',     data.amountCleaning || '');
+
+    document.getElementById('invoiceModal').classList.add('active');
+    renderInvoicePreview();
+  };
+
+  window.closeInvoiceModal = function() {
+    document.getElementById('invoiceModal').classList.remove('active');
+  };
+
+  function _setVal(id, val) {
+    const el = document.getElementById(id);
+    if (el && val !== null && val !== undefined && val !== '') el.value = val;
+  }
+
+  function _populateInvPropertySelect(propertyId, propertyName) {
+    const sel = document.getElementById('inv_propertyName');
+    if (!sel) return;
+
+    // Si déjà peuplé, juste sélectionner
+    if (sel.options.length > 1) {
+      if (propertyId) {
+        for (let o of sel.options) { if (o.value === propertyId) { sel.value = propertyId; return; } }
+      }
+      return;
+    }
+
+    // Peupler depuis LCC_PROPERTIES ou API
+    const props = window.LCC_PROPERTIES || JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+    if (props.length) {
+      props.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        opt.dataset.address = p.address || '';
+        sel.appendChild(opt);
+      });
+      if (propertyId) sel.value = propertyId;
+    } else {
+      // Fallback API
+      fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') } })
+        .then(r => r.json()).then(data => {
+          (data.properties || []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id; opt.textContent = p.name;
+            opt.dataset.address = p.address || '';
+            sel.appendChild(opt);
+          });
+          if (propertyId) sel.value = propertyId;
+          renderInvoicePreview();
+        }).catch(() => {});
+    }
+  }
+
+  window.renderInvoicePreview = function() {
+    const preview = document.getElementById('inv_preview');
+    const sendBtn = document.getElementById('inv_sendBtn');
+    if (!preview) return;
+
+    const clientName   = document.getElementById('inv_clientName')?.value || '';
+    const clientEmail  = document.getElementById('inv_clientEmail')?.value || '';
+    const clientAddr   = document.getElementById('inv_clientAddress')?.value || '';
+    const clientCP     = document.getElementById('inv_clientPostalCode')?.value || '';
+    const clientCity   = document.getElementById('inv_clientCity')?.value || '';
+    const propSel      = document.getElementById('inv_propertyName');
+    const propName     = propSel?.options[propSel.selectedIndex]?.text || '';
+    const propAddr     = propSel?.options[propSel.selectedIndex]?.dataset?.address || '';
+    const checkin      = document.getElementById('inv_checkin')?.value || '';
+    const checkout     = document.getElementById('inv_checkout')?.value || '';
+    const rent         = parseFloat(document.getElementById('inv_rent')?.value || 0);
+    const taxes        = parseFloat(document.getElementById('inv_taxes')?.value || 0);
+    const cleaning     = parseFloat(document.getElementById('inv_cleaning')?.value || 0);
+    const withVat      = document.getElementById('inv_withVat')?.checked;
+    const vatRate      = withVat ? parseFloat(document.getElementById('inv_vatRate')?.value || 10) : 0;
+
+    if (!clientName || !propName) {
+      preview.innerHTML = '<div class="inv-empty"><i class="fas fa-file-invoice"></i><p>Remplissez le nom client et le logement</p></div>';
+      if (sendBtn) sendBtn.disabled = true;
+      return;
+    }
+
+    const subtotal = rent + taxes + cleaning;
+    const vatAmt   = withVat ? subtotal * (vatRate / 100) : 0;
+    const total    = subtotal + vatAmt;
+
+    let nights = 0;
+    if (checkin && checkout) {
+      nights = Math.ceil((new Date(checkout) - new Date(checkin)) / 86400000);
+    }
+    const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '';
+    const fmtAmt  = n => n.toFixed(2) + ' €';
+
+    // Récupérer infos propriétaire/émetteur
+    const profile = JSON.parse(localStorage.getItem('lcc_settings_profile') || '{}');
+    const user    = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+    const emitter = profile.company || user.company || user.name || 'Ma Conciergerie';
+    const emitterAddr = profile.address || '';
+    const emitterCity = (profile.postalCode || '') + ' ' + (profile.city || '');
+    const emitterSiret = profile.siret || '';
+
+    const invoiceNum = 'FACT-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-4);
+
+    preview.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div>
+          <h2>${emitter}</h2>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">
+            ${emitterAddr ? emitterAddr + '<br>' : ''}
+            ${emitterCity.trim() ? emitterCity + '<br>' : ''}
+            ${emitterSiret ? 'SIRET : ' + emitterSiret : ''}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="inv-num">FACTURE N° ${invoiceNum}</div>
+          <div style="font-size:12px;color:#6b7280;">Date : ${fmtDate(new Date().toISOString())}</div>
+        </div>
+      </div>
+
+      <div class="inv-sec">
+        <h3>Facturé à</h3>
+        <strong>${clientName}</strong><br>
+        ${clientEmail ? clientEmail + '<br>' : ''}
+        ${clientAddr ? clientAddr + '<br>' : ''}
+        ${(clientCP || clientCity) ? (clientCP + ' ' + clientCity).trim() : ''}
+      </div>
+
+      <div class="inv-sec">
+        <h3>Séjour</h3>
+        <strong>${propName}</strong>
+        ${propAddr ? '<br>' + propAddr : ''}
+        ${checkin && checkout ? '<br>Du ' + fmtDate(checkin) + ' au ' + fmtDate(checkout) + (nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : '') : ''}
+      </div>
+
+      <div class="inv-sec">
+        <h3>Détails</h3>
+        ${rent > 0   ? '<div class="inv-line"><span>Loyer / Nuits</span><span>' + fmtAmt(rent) + '</span></div>' : ''}
+        ${taxes > 0  ? '<div class="inv-line"><span>Taxe de séjour</span><span>' + fmtAmt(taxes) + '</span></div>' : ''}
+        ${cleaning > 0 ? '<div class="inv-line"><span>Frais de ménage</span><span>' + fmtAmt(cleaning) + '</span></div>' : ''}
+      </div>
+
+      <div class="inv-line inv-sub"><span>Sous-total</span><span>${fmtAmt(subtotal)}</span></div>
+      ${withVat ? '<div class="inv-line"><span>TVA (' + vatRate + '%)</span><span>' + fmtAmt(vatAmt) + '</span></div>' : ''}
+      <div class="inv-line inv-tot"><span>TOTAL TTC</span><span>${fmtAmt(total)}</span></div>
+
+      <div class="inv-stamp"><i class="fas fa-check-circle"></i> FACTURE ACQUITTÉE</div>
+      ${!withVat ? '<div class="inv-footer-note">TVA non applicable — Art. 293B du CGI</div>' : ''}
+    `;
+
+    if (sendBtn) sendBtn.disabled = !clientEmail;
+  };
+
+  window.sendInvoiceFromModal = async function() {
+    const clientEmail = document.getElementById('inv_clientEmail')?.value;
+    if (!clientEmail) { alert('Veuillez renseigner l\'email du client'); return; }
+
+    const propSel = document.getElementById('inv_propertyName');
+    const data = {
+      clientName:    document.getElementById('inv_clientName')?.value,
+      clientEmail,
+      clientAddress: document.getElementById('inv_clientAddress')?.value,
+      clientPostalCode: document.getElementById('inv_clientPostalCode')?.value,
+      clientCity:    document.getElementById('inv_clientCity')?.value,
+      propertyName:  propSel?.options[propSel.selectedIndex]?.text || '',
+      propertyAddress: propSel?.options[propSel.selectedIndex]?.dataset?.address || '',
+      checkinDate:   document.getElementById('inv_checkin')?.value,
+      checkoutDate:  document.getElementById('inv_checkout')?.value,
+      nights: (() => {
+        const ci = document.getElementById('inv_checkin')?.value;
+        const co = document.getElementById('inv_checkout')?.value;
+        return (ci && co) ? Math.ceil((new Date(co) - new Date(ci)) / 86400000) : 0;
+      })(),
+      rentAmount:       document.getElementById('inv_rent')?.value || 0,
+      touristTaxAmount: document.getElementById('inv_taxes')?.value || 0,
+      cleaningFee:      document.getElementById('inv_cleaning')?.value || 0,
+      vatRate: document.getElementById('inv_withVat')?.checked ? document.getElementById('inv_vatRate')?.value : 0,
+      sendEmail: true
+    };
+
+    const btn = document.getElementById('inv_sendBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…'; }
+
+    try {
+      const res = await fetch('/api/invoice/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Erreur envoi');
+      alert('✅ Facture envoyée à ' + clientEmail);
+      closeInvoiceModal();
+    } catch (err) {
+      alert('❌ Erreur : ' + err.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-envelope"></i> Envoyer par email'; }
+    }
+  };
+
+  // Fermer en cliquant en dehors
+  document.getElementById('invoiceModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeInvoiceModal();
+  });
+})();
+</script>
+
 </body>
 </html>
