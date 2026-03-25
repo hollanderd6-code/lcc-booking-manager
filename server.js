@@ -10323,6 +10323,12 @@ app.get('/api/properties',
         accessInstructions: p.access_instructions || null,
         arrivalMessage: p.arrival_message || null,  // ✅ NOUVEAU
         ownerId: p.owner_id || null,
+        owner_id: p.owner_id || null,
+        maxGuests: p.max_guests ?? p.maxGuests ?? null,
+        max_guests: p.max_guests ?? p.maxGuests ?? null,
+        bedrooms: p.bedrooms ?? null,
+        beds: p.beds ?? null,
+        bathrooms: p.bathrooms ?? null,
         chatPin: p.chat_pin || null,
         amenities: p.amenities || '{}',                    // ✅ AJOUTÉ
         houseRules: p.house_rules || '{}',                 // ✅ AJOUTÉ
@@ -10392,6 +10398,13 @@ app.get('/api/properties/:propertyId',
       wifiName: property.wifi_name || null,
       wifiPassword: property.wifi_password || null,
       accessInstructions: property.access_instructions || null,
+      ownerId: property.owner_id || null,
+      owner_id: property.owner_id || null,
+      maxGuests: property.max_guests ?? property.maxGuests ?? null,
+      max_guests: property.max_guests ?? property.maxGuests ?? null,
+      bedrooms: property.bedrooms ?? null,
+      beds: property.beds ?? null,
+      bathrooms: property.bathrooms ?? null,
       chatPin: property.chat_pin || null,
       amenities: property.amenities || '{}',
       houseRules: property.house_rules || '{}',
@@ -10449,7 +10462,11 @@ app.post('/api/properties',
   weekendPrice,
   cleaningFee,
   touristTaxPerNight,
-  conciergePct
+  conciergePct,
+      maxGuests,
+      bedrooms,
+      beds,
+      bathrooms
     } = body;
 
     const amenities = body.amenities || {};
@@ -10619,7 +10636,8 @@ app.post('/api/properties',
            amenities = $16, house_rules = $17, practical_info = $18,
            auto_responses_enabled = $19, arrival_message = $20,
            base_price = $22, weekend_price = $23,
-           cleaning_fee = $24, tourist_tax_per_night = $25, concierge_pct = $26
+           cleaning_fee = $24, tourist_tax_per_night = $25, concierge_pct = $26,
+           max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30
          WHERE id = $21`,
         [
           name,
@@ -10647,7 +10665,11 @@ app.post('/api/properties',
           weekendPrice ? parseFloat(weekendPrice) : null,
           cleaningFee != null && cleaningFee !== '' ? parseFloat(cleaningFee) : null,
           touristTaxPerNight != null && touristTaxPerNight !== '' ? parseFloat(touristTaxPerNight) : null,
-          conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : null
+          conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : null,
+          maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
+          bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
+          beds != null && beds !== '' ? parseInt(beds, 10) : null,
+          bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null
         ]
       );
 
@@ -10671,7 +10693,8 @@ app.post('/api/properties',
          owner_id, chat_pin, display_order, created_at,
          amenities, house_rules, practical_info, auto_responses_enabled, arrival_message,
          base_price, weekend_price,
-         cleaning_fee, tourist_tax_per_night, concierge_pct
+         cleaning_fee, tourist_tax_per_night, concierge_pct,
+         max_guests, bedrooms, beds, bathrooms
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -10681,7 +10704,8 @@ app.post('/api/properties',
          (SELECT COALESCE(MAX(display_order), 0) + 1 FROM properties WHERE user_id = $2),
          NOW(),
          $18, $19, $20, $21, $22,
-         $23, $24, $25, $26, $27
+         $23, $24, $25, $26, $27,
+         $28, $29, $30, $31
        )`,
       [
         id,
@@ -10710,7 +10734,11 @@ app.post('/api/properties',
         weekendPrice ? parseFloat(weekendPrice) : null,
         cleaningFee != null && cleaningFee !== '' ? parseFloat(cleaningFee) : null,
         touristTaxPerNight != null && touristTaxPerNight !== '' ? parseFloat(touristTaxPerNight) : null,
-        conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : null
+        conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : null,
+        maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
+        bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
+        beds != null && beds !== '' ? parseInt(beds, 10) : null,
+        bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null
       ]
     );
 
@@ -11488,7 +11516,11 @@ app.put('/api/properties/:propertyId',
       weekendPrice,
       cleaningFee,
       touristTaxPerNight,
-      conciergePct
+      conciergePct,
+      maxGuests,
+      bedrooms,
+      beds,
+      bathrooms
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
@@ -11587,6 +11619,22 @@ app.put('/api/properties/:propertyId',
     const newWeekendPrice = weekendPrice !== undefined
       ? (weekendPrice !== '' && weekendPrice !== null ? parseFloat(weekendPrice) : null)
       : (property.weekendPrice != null ? property.weekendPrice : null);
+
+    const newMaxGuests = maxGuests !== undefined
+      ? (maxGuests !== '' && maxGuests !== null ? parseInt(maxGuests, 10) : null)
+      : (property.max_guests ?? property.maxGuests ?? null);
+
+    const newBedrooms = bedrooms !== undefined
+      ? (bedrooms !== '' && bedrooms !== null ? parseInt(bedrooms, 10) : null)
+      : (property.bedrooms ?? null);
+
+    const newBeds = beds !== undefined
+      ? (beds !== '' && beds !== null ? parseInt(beds, 10) : null)
+      : (property.beds ?? null);
+
+    const newBathrooms = bathrooms !== undefined
+      ? (bathrooms !== '' && bathrooms !== null ? parseInt(bathrooms, 10) : null)
+      : (property.bathrooms ?? null);
         
     let newPhotoUrl =
       existingPhotoUrl !== undefined
@@ -11671,6 +11719,10 @@ userId: userId
          cleaning_fee = $26,
          tourist_tax_per_night = $27,
          concierge_pct = $28,
+         max_guests = $29,
+         bedrooms = $30,
+         beds = $31,
+         bathrooms = $32,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -11689,7 +11741,11 @@ userId: userId
         newWeekendPrice,
         cleaningFee != null && cleaningFee !== '' ? parseFloat(cleaningFee) : (property.cleaningFee ?? null),
         touristTaxPerNight != null && touristTaxPerNight !== '' ? parseFloat(touristTaxPerNight) : (property.touristTaxPerNight ?? null),
-        conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : (property.conciergePct ?? null)
+        conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : (property.conciergePct ?? null),
+        newMaxGuests,
+        newBedrooms,
+        newBeds,
+        newBathrooms
       ]
     );
     
