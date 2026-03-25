@@ -1088,6 +1088,57 @@ function showSection(index) {
 }
 
 function nextSection() {
+  // Valider les champs obligatoires de la section courante
+  const sections = getSections();
+  const currentSection = sections[currentSectionIndex];
+  const requiredFields = currentSection ? currentSection.querySelectorAll('[required]') : [];
+  const missing = [];
+
+  requiredFields.forEach(field => {
+    field.style.borderColor = ''; // reset
+    const val = field.value ? field.value.trim() : '';
+    if (!val) {
+      missing.push(field);
+      field.style.borderColor = '#EF4444';
+      field.style.boxShadow = '0 0 0 3px rgba(239,68,68,.12)';
+    }
+  });
+
+  // Vérifier aussi la photo de couverture (section 1)
+  const coverInput = currentSection && currentSection.querySelector('#coverPhoto');
+  const coverPreview = document.getElementById('coverPhotoPreview');
+  const hasCoverPhoto = coverInput && (coverInput.files && coverInput.files.length > 0 || (coverPreview && coverPreview.querySelector('img')));
+  if (coverInput && !hasCoverPhoto) {
+    const uploadBox = currentSection.querySelector('.wiz-upload');
+    if (uploadBox) { uploadBox.style.borderColor = '#EF4444'; missing.push(coverInput); }
+  }
+
+  if (missing.length > 0) {
+    // Modale d'alerte champs manquants
+    const existing = document.getElementById('_validModal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = '_validModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(13,17,23,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+    modal.innerHTML = `
+      <div style="background:white;border-radius:20px;padding:28px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.15);">
+        <div style="width:52px;height:52px;border-radius:50%;background:#FEF9C3;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;">⚠️</div>
+        <h3 style="font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:#0D1117;margin:0 0 8px;">Champs obligatoires manquants</h3>
+        <p style="font-size:13px;color:#7A8695;margin:0 0 20px;">Veuillez remplir tous les champs marqués d'un <span style="color:#EF4444;font-weight:700;">*</span> avant de continuer.</p>
+        <button onclick="document.getElementById('_validModal').remove()" style="width:100%;height:40px;border-radius:12px;border:none;background:#1A7A5E;color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">OK, je complète</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    // Scroll vers le premier champ manquant
+    missing[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  // Reset les bordures en cas de succès
+  requiredFields.forEach(f => { f.style.borderColor = ''; f.style.boxShadow = ''; });
+  if (coverInput) { const ub = currentSection.querySelector('.wiz-upload'); if (ub) ub.style.borderColor = ''; }
+
   const next = currentSectionIndex + 1;
   showSection(next);
   updateStepperDirect(next);
@@ -1417,29 +1468,50 @@ async function copyWelcomeBookLink(buttonEl) {
   }
   await editLivret(currentUniqueId);
 }
-async function deleteLivret(uniqueId) {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer ce livret ?')) return;
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
-    });
-    
-    const raw = await response.text();
+function deleteLivret(uniqueId) {
+  // Modale custom de confirmation (évite le confirm() bloqué sur mobile/WebView)
+  const existing = document.getElementById('_deleteModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = '_deleteModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(13,17,23,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:20px;padding:32px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.18);">
+      <div style="width:56px;height:56px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:22px;">🗑️</div>
+      <h3 style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;color:#0D1117;margin:0 0 8px;">Supprimer ce livret ?</h3>
+      <p style="font-size:13px;color:#7A8695;margin:0 0 24px;">Cette action est irréversible. Le livret et son lien seront définitivement supprimés.</p>
+      <div style="display:flex;gap:10px;">
+        <button id="_deleteCancelBtn" style="flex:1;height:42px;border-radius:12px;border:1.5px solid rgba(13,17,23,.15);background:white;color:#374151;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
+        <button id="_deleteConfirmBtn" style="flex:1;height:42px;border-radius:12px;border:none;background:#DC2626;color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Supprimer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('_deleteCancelBtn').onclick = () => modal.remove();
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  document.getElementById('_deleteConfirmBtn').onclick = async () => {
+    modal.remove();
+    try {
+      const response = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
+      });
+      const raw = await response.text();
       let data = null;
       try { data = raw ? JSON.parse(raw) : null; } catch (e) { data = null; }
-
       if (data && data.success) {
-      alert('Livret supprimé avec succès');
-      loadLivretsList();
-    } else {
+        loadLivretsList();
+      } else {
+        alert('Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Erreur suppression:', error);
       alert('Erreur lors de la suppression');
     }
-  } catch (error) {
-    console.error('Erreur suppression:', error);
-    alert('Erreur lors de la suppression');
-  }
+  };
 }
 function downloadQRCode(uniqueId) {
   try {
@@ -1699,6 +1771,7 @@ function setDisplayById(id, display) {
 function hideFormShowSuccess() {
   setDisplayById('welcomeForm', 'none');
   setDisplayById('successMessage', 'block');
+  setDisplayById('livretsListSection', 'block');
 }
 
 function showFormHideLists() {
@@ -1712,7 +1785,14 @@ function createNewLivret() {
   currentUniqueId = null;
   const form = document.getElementById('welcomeForm');
   if (form) form.reset();
+  // Reset counters and containers
+  const rooms = document.getElementById('roomsContainer'); if (rooms) rooms.innerHTML = '';
+  const rests = document.getElementById('restaurantsContainer'); if (rests) rests.innerHTML = '';
+  const places = document.getElementById('placesContainer'); if (places) places.innerHTML = '';
+  roomCounter = 0; restaurantCounter = 0; placeCounter = 0;
+  ['coverPhotoPreview','entrancePhotosPreview','parkingPhotosPreview'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
   showFormHideLists();
+  try { addRoom(); addRestaurant(); addPlace(); } catch(_) {}
 }
 
 
