@@ -1,6 +1,9 @@
 // ============================================
 // 💰 SYSTÈME DE MESSAGES AUTOMATIQUES POUR LES CAUTIONS
+// Tous les messages passent via Channex si dispo
 // ============================================
+
+const { sendAutoMessage } = require('./integrated-chat-handler');
 
 /**
  * Récupérer les infos de la propriété pour le message
@@ -23,36 +26,39 @@ async function getPropertyInfo(pool, propertyId) {
  */
 async function getConversationFromReservation(pool, reservationUid) {
   try {
-    // D'abord, trouver la réservation par UID
-    const reservationResult = await pool.query(
-      'SELECT id, property_id, start_date, source FROM reservations WHERE uid = $1',
+    const resResult = await pool.query(
+      'SELECT id, property_id, start_date, channex_booking_id FROM reservations WHERE uid = $1',
       [reservationUid]
     );
+    if (resResult.rows.length === 0) return null;
+    const res = resResult.rows[0];
 
-    if (reservationResult.rows.length === 0) {
-      return null;
+    // Chercher par channex_booking_id si dispo
+    if (res.channex_booking_id) {
+      const byChannex = await pool.query(
+        'SELECT id, channex_booking_id FROM conversations WHERE channex_booking_id = $1 LIMIT 1',
+        [res.channex_booking_id]
+      );
+      if (byChannex.rows.length > 0) {
+        console.log(`✅ Conversation trouvée par channex_booking_id pour ${reservationUid}`);
+        return { id: byChannex.rows[0].id, channexId: byChannex.rows[0].channex_booking_id };
+      }
     }
 
-    const reservation = reservationResult.rows[0];
-
-    // Chercher par property_id + date d'arrivée (conversations n'a pas de colonne reservation_uid)
-    const fallbackResult = await pool.query(
-      `SELECT id FROM conversations 
-       WHERE property_id = $1 
-       AND DATE(reservation_start_date) = DATE($2)
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [reservation.property_id, reservation.start_date]
+    // Fallback : property + date
+    const byDate = await pool.query(
+      `SELECT id, channex_booking_id FROM conversations
+       WHERE property_id = $1 AND DATE(reservation_start_date) = DATE($2)
+       ORDER BY created_at DESC LIMIT 1`,
+      [res.property_id, res.start_date]
     );
-
-    if (fallbackResult.rows[0]?.id) {
-      console.log(`🔄 Conversation trouvée par fallback (property + date) pour réservation ${reservationUid}`);
-      return fallbackResult.rows[0].id;
+    if (byDate.rows.length > 0) {
+      console.log(`🔄 Conversation trouvée par property+date pour ${reservationUid}`);
+      return { id: byDate.rows[0].id, channexId: byDate.rows[0].channex_booking_id || null };
     }
-
     return null;
   } catch (error) {
-    console.error('❌ Erreur récupération conversation:', error);
+    console.error('❌ Erreur getConversationFromReservation:', error);
     return null;
   }
 }
@@ -60,28 +66,9 @@ async function getConversationFromReservation(pool, reservationUid) {
 /**
  * Envoyer un message dans le chat
  */
-async function sendDepositMessage(pool, io, conversationId, message) {
-  try {
-    const messageResult = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_type, message, is_read, created_at)
-       VALUES ($1, 'system', $2, FALSE, NOW())
-       RETURNING id, conversation_id, sender_type, message, is_read, created_at`,
-      [conversationId, message]
-    );
-
-    const savedMessage = messageResult.rows[0];
-
-    // Émettre via Socket.io
-    if (io) {
-      io.to(`conversation_${conversationId}`).emit('new_message', savedMessage);
-    }
-
-    console.log(`✅ Message caution envoyé pour conversation ${conversationId}`);
-    return true;
-  } catch (error) {
-    console.error(`❌ Erreur envoi message caution:`, error);
-    return false;
-  }
+async function sendDepositMessage(pool, io, conversationId, message, channexId = null) {
+  const result = await sendAutoMessage(pool, io, conversationId, message, channexId);
+  return result !== null;
 }
 
 /**
@@ -104,20 +91,14 @@ async function sendDepositReminderJ2(pool, io) {
     // Récupérer toutes les cautions avec arrivée J+2, status pending, et reminder non envoyé
     const depositsResult = await pool.query(
       `SELECT 
-        d.id,
-        d.property_id,
-        d.reservation_uid,
-        d.amount_cents,
-        d.checkout_url,
-        d.status,
-        r.start_date as check_in_date,
-        r.guest_name
-      FROM deposits d
-      LEFT JOIN reservations r ON d.reservation_uid = r.uid
-      WHERE DATE(r.start_date) = $1
-        AND d.status = 'pending'
-        AND (d.reminder_sent IS NULL OR d.reminder_sent = FALSE)
-      ORDER BY d.id`,
+        d.id, d.property_id, d.reservation_uid, d.amount_cents, d.checkout_url, d.status,
+        r.start_date as check_in_date, r.guest_name, r.guest_first_name, r.channex_booking_id
+       FROM deposits d
+       LEFT JOIN reservations r ON d.reservation_uid = r.uid
+       WHERE DATE(r.start_date) = $1
+         AND d.status = 'pending'
+         AND (d.reminder_sent IS NULL OR d.reminder_sent = FALSE)
+       ORDER BY d.id`,
       [targetDateStr]
     );
 
@@ -135,7 +116,9 @@ async function sendDepositReminderJ2(pool, io) {
     for (const deposit of deposits) {
       try {
         // Récupérer la conversation
-        const conversationId = await getConversationFromReservation(pool, deposit.reservation_uid);
+        const conv = await getConversationFromReservation(pool, deposit.reservation_uid);
+        const conversationId = conv?.id || null;
+        const channexId = conv?.channexId || deposit.channex_booking_id || null;
         
         if (!conversationId) {
           console.log(`⚠️ Pas de conversation pour réservation ${deposit.reservation_uid}`);
@@ -143,7 +126,6 @@ async function sendDepositReminderJ2(pool, io) {
           continue;
         }
 
-        // Récupérer les infos de la propriété
         const property = await getPropertyInfo(pool, deposit.property_id);
         const propertyName = property?.name || 'votre logement';
 
@@ -168,9 +150,10 @@ async function sendDepositReminderJ2(pool, io) {
           console.warn('⚠️ TinyURL failed, using full URL');
         }
 
+        const guestFirst = deposit.guest_first_name || '';
         const message = `⚠️ Caution obligatoire
 
-Bonjour,
+Bonjour${guestFirst ? ' ' + guestFirst : ''} !
 
 Une caution de ${amountEuros}€ est requise pour votre séjour à ${propertyName}.
 
@@ -179,12 +162,11 @@ ${depositUrl}
 
 ⚠️ Sans cette autorisation, vous ne pourrez pas recevoir les informations d'arrivée.
 
-L'autorisation ne débite généralement pas votre carte immédiatement : le montant est le plus souvent bloqué temporairement. Toutefois, certaines banques en ligne (comme Revolut ou N26) et certaines cartes étrangères peuvent effectuer un débit immédiat.
+L'autorisation ne débite généralement pas votre carte immédiatement : le montant est bloqué temporairement.
 
 Merci ! 😊`;
 
-        // Envoyer le message
-        const success = await sendDepositMessage(pool, io, conversationId, message);
+        const success = await sendDepositMessage(pool, io, conversationId, message, channexId);
 
         if (success) {
           // Marquer le reminder comme envoyé
@@ -249,13 +231,9 @@ async function sendDepositAuthorizedMessage(pool, io, depositId) {
 
     const deposit = depositResult.rows[0];
 
-    // Récupérer la conversation
-    const conversationId = await getConversationFromReservation(pool, deposit.reservation_uid);
-    
-    if (!conversationId) {
-      console.log(`⚠️ Pas de conversation pour réservation ${deposit.reservation_uid}`);
-      return false;
-    }
+    const conv = await getConversationFromReservation(pool, deposit.reservation_uid);
+    if (!conv) { console.log(`⚠️ Pas de conversation pour réservation ${deposit.reservation_uid}`); return false; }
+    const conversationId = conv.id;
 
     // Récupérer les infos de la propriété
     const property = await getPropertyInfo(pool, deposit.property_id);
@@ -311,7 +289,7 @@ Vous recevrez les informations d'arrivée pour ${propertyName} le jour de votre 
     }
 
     // Envoyer le message de confirmation
-    await sendDepositMessage(pool, io, conversationId, confirmMessage);
+    await sendDepositMessage(pool, io, conversationId, confirmMessage, conv?.channexId || null);
 
     // ✅ ENVOYER LE MESSAGE D'ARRIVÉE SI JOUR J APRÈS 7H
     if (shouldSendNow) {
@@ -362,13 +340,9 @@ async function sendDepositReleasedMessage(pool, io, depositId) {
 
     const deposit = depositResult.rows[0];
 
-    // Récupérer la conversation
-    const conversationId = await getConversationFromReservation(pool, deposit.reservation_uid);
-    
-    if (!conversationId) {
-      console.log(`⚠️ Pas de conversation pour réservation ${deposit.reservation_uid}`);
-      return false;
-    }
+    const conv = await getConversationFromReservation(pool, deposit.reservation_uid);
+    if (!conv) { console.log(`⚠️ Pas de conversation pour réservation ${deposit.reservation_uid}`); return false; }
+    const conversationId = conv.id;
 
     // Récupérer les infos de la propriété
     const property = await getPropertyInfo(pool, deposit.property_id);
@@ -383,7 +357,7 @@ Bonne nouvelle ! Votre caution de ${amountEuros}€ pour ${propertyName} a été
 Merci pour votre séjour et à très bientôt ! 😊`;
 
     // Envoyer le message
-    return await sendDepositMessage(pool, io, conversationId, message);
+    return await sendDepositMessage(pool, io, conversationId, message, conv?.channexId || null);
 
   } catch (error) {
     console.error(`❌ Erreur sendDepositReleasedMessage:`, error);
@@ -420,13 +394,9 @@ async function sendDepositFailedMessage(pool, io, depositId) {
 
     const deposit = depositResult.rows[0];
 
-    // Récupérer la conversation
-    const conversationId = await getConversationFromReservation(pool, deposit.reservation_uid);
-    
-    if (!conversationId) {
-      console.log(`⚠️ Pas de conversation pour réservation ${deposit.reservation_uid}`);
-      return false;
-    }
+    const conv = await getConversationFromReservation(pool, deposit.reservation_uid);
+    if (!conv) { console.log(`⚠️ Pas de conversation pour réservation ${deposit.reservation_uid}`); return false; }
+    const conversationId = conv.id;
 
     // Récupérer les infos de la propriété
     const property = await getPropertyInfo(pool, deposit.property_id);
@@ -467,7 +437,7 @@ Si le problème persiste, contactez votre banque ou utilisez une autre carte.
 Merci ! 😊`;
 
     // Envoyer le message
-    return await sendDepositMessage(pool, io, conversationId, message);
+    return await sendDepositMessage(pool, io, conversationId, message, conv?.channexId || null);
 
   } catch (error) {
     console.error(`❌ Erreur sendDepositFailedMessage:`, error);
