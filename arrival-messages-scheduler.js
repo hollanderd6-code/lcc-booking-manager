@@ -1,247 +1,157 @@
 // ============================================
-// 📨 SYSTÈME D'ENVOI AUTOMATIQUE DES MESSAGES D'ARRIVÉE
+// 📨 MESSAGES AUTOMATIQUES D'ARRIVÉE
+// Envoyés le jour J à 7h via Channex + DB
+// (Onboarding supprimé — données voyageur via Channex)
 // ============================================
 
-/**
- * Remplacer les variables dans le template de message
- */
+const { sendAutoMessage } = require('./integrated-chat-handler');
+
 function replaceMessageVariables(template, data) {
   if (!template) return '';
-  
   return template
-    .replace(/{guestName}/g, data.guestName || 'Voyageur')
-    .replace(/{propertyName}/g, data.propertyName || '')
-    .replace(/{address}/g, data.address || '')
-    .replace(/{arrivalTime}/g, data.arrivalTime || '')
-    .replace(/{departureTime}/g, data.departureTime || '')
-    .replace(/{accessCode}/g, data.accessCode || '')
-    .replace(/{wifiName}/g, data.wifiName || '')
-    .replace(/{wifiPassword}/g, data.wifiPassword || '')
-    .replace(/{accessInstructions}/g, data.accessInstructions || '')
-    .replace(/{welcomeBookUrl}/g, data.welcomeBookUrl || '');
+    .replace(/{guestName}/g,            data.guestName            || 'Voyageur')
+    .replace(/{propertyName}/g,         data.propertyName         || '')
+    .replace(/{address}/g,              data.address              || '')
+    .replace(/{arrivalTime}/g,          data.arrivalTime          || '')
+    .replace(/{departureTime}/g,        data.departureTime        || '')
+    .replace(/{accessCode}/g,           data.accessCode           || '')
+    .replace(/{wifiName}/g,             data.wifiName             || '')
+    .replace(/{wifiPassword}/g,         data.wifiPassword         || '')
+    .replace(/{accessInstructions}/g,   data.accessInstructions   || '')
+    .replace(/{welcomeBookUrl}/g,       data.welcomeBookUrl       || '');
 }
 
-/**
- * Vérifier si le message d'arrivée a déjà été envoyé
- */
 async function hasArrivalMessageBeenSent(pool, conversationId) {
   try {
     const result = await pool.query(
-      `SELECT COUNT(*) as count 
-       FROM messages 
-       WHERE conversation_id = $1 
-       AND sender_type = 'system' 
+      `SELECT COUNT(*) as count FROM messages
+       WHERE conversation_id = $1 AND sender_type = 'system'
        AND message LIKE '%informations pour votre arrivée%'`,
       [conversationId]
     );
-    
-    return result.rows[0].count > 0;
+    return parseInt(result.rows[0].count) > 0;
   } catch (error) {
     console.error('❌ Erreur vérification message envoyé:', error);
     return false;
   }
 }
 
-/**
- * Envoyer le message d'arrivée pour une conversation
- */
 async function sendArrivalMessage(pool, io, conversation, property) {
   try {
-    // Vérifier si déjà envoyé
     const alreadySent = await hasArrivalMessageBeenSent(pool, conversation.id);
     if (alreadySent) {
-      console.log(`⏭️ Message d'arrivée déjà envoyé pour conversation ${conversation.id}`);
+      console.log(`⏭️ Message d'arrivée déjà envoyé pour conv ${conversation.id}`);
       return false;
     }
 
-    // ✅ VÉRIFIER LA CAUTION AVANT D'ENVOYER (sauf Airbnb)
     const platform = (conversation.platform || '').toLowerCase();
-    const isAirbnb = platform.includes('airbnb');
-    
+    const isAirbnb = platform.includes('airbnb') || platform === 'abb';
+
     if (!isAirbnb) {
       const { hasValidDeposit } = require('./deposit-messages-scheduler');
-      
-      // Récupérer l'UID de la réservation (par reservation_id ou par property + date)
-      let reservationUid = null;
-      
-      if (conversation.reservation_id) {
-        const reservationResult = await pool.query(
-          'SELECT uid FROM reservations WHERE id = $1',
-          [conversation.reservation_id]
-        );
-        if (reservationResult.rows.length > 0) {
-          reservationUid = reservationResult.rows[0].uid;
-        }
-      }
-      
-      // Fallback : chercher par property_id + date
+      let reservationUid = conversation.reservation_uid || null;
+
       if (!reservationUid && conversation.property_id && conversation.reservation_start_date) {
-        const fallbackResult = await pool.query(
-          `SELECT uid FROM reservations 
-           WHERE property_id = $1 AND DATE(start_date) = DATE($2)
-           ORDER BY created_at DESC LIMIT 1`,
+        const res = await pool.query(
+          `SELECT uid FROM reservations WHERE property_id = $1 AND DATE(start_date) = DATE($2) ORDER BY created_at DESC LIMIT 1`,
           [conversation.property_id, conversation.reservation_start_date]
         );
-        if (fallbackResult.rows.length > 0) {
-          reservationUid = fallbackResult.rows[0].uid;
-        }
+        if (res.rows.length > 0) reservationUid = res.rows[0].uid;
       }
-      
+
       if (reservationUid) {
         const depositValid = await hasValidDeposit(pool, reservationUid);
-        
         if (!depositValid) {
-          console.log(`⏭️ Caution en attente pour conversation ${conversation.id}, infos d'arrivée bloquées`);
+          console.log(`⏭️ Caution en attente pour conv ${conversation.id} → infos bloquées`);
           return false;
         }
       }
-    } else {
-      console.log(`ℹ️ Airbnb détecté → bypass vérification caution`);
     }
 
-    // Récupérer le template de message
-    const messageTemplate = property.arrival_message;
-    if (!messageTemplate) {
-      console.log(`⚠️ Pas de template de message pour ${property.name}`);
+    if (!property.arrival_message) {
+      console.log(`⚠️ Pas de template d'arrivée pour ${property.name}`);
       return false;
     }
 
-    // Construire le nom du voyageur
-    const guestName = conversation.guest_first_name 
-      ? `${conversation.guest_first_name} ${conversation.guest_last_name || ''}`.trim()
-      : 'Voyageur';
+    const guestName = [conversation.guest_first_name, conversation.guest_last_name]
+      .filter(Boolean).join(' ').trim() || conversation.guest_name || 'Voyageur';
 
-    // Préparer les données pour le remplacement
-    const messageData = {
-      guestName: guestName,
-      propertyName: property.name,
-      address: property.address,
-      arrivalTime: property.arrival_time,
-      departureTime: property.departure_time,
-      accessCode: property.access_code,
-      wifiName: property.wifi_name,
-      wifiPassword: property.wifi_password,
-      accessInstructions: property.access_instructions,
+    const finalMessage = replaceMessageVariables(property.arrival_message, {
+      guestName, propertyName: property.name, address: property.address,
+      arrivalTime: property.arrival_time, departureTime: property.departure_time,
+      accessCode: property.access_code, wifiName: property.wifi_name,
+      wifiPassword: property.wifi_password, accessInstructions: property.access_instructions,
       welcomeBookUrl: property.welcome_book_url
-    };
+    });
 
-    // Remplacer les variables
-    const finalMessage = replaceMessageVariables(messageTemplate, messageData);
+    const channexId = conversation.channex_booking_id || null;
+    await sendAutoMessage(pool, io, conversation.id, finalMessage, channexId);
 
-    // Insérer le message dans la base
-    const messageResult = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_type, message, is_read, created_at)
-       VALUES ($1, 'system', $2, FALSE, NOW())
-       RETURNING id, conversation_id, sender_type, message, is_read, created_at`,
-      [conversation.id, finalMessage]
-    );
-
-    const savedMessage = messageResult.rows[0];
-
-    // Émettre via Socket.io si disponible
-    if (io) {
-      io.to(`conversation_${conversation.id}`).emit('new_message', savedMessage);
-    }
-
-    console.log(`✅ Message d'arrivée envoyé pour ${property.name} - ${guestName} (conversation ${conversation.id})`);
+    console.log(`✅ Message d'arrivée envoyé — ${property.name} — ${guestName} (conv ${conversation.id}) | Channex: ${channexId || 'non'}`);
     return true;
 
   } catch (error) {
-    console.error(`❌ Erreur envoi message d'arrivée (conversation ${conversation.id}):`, error);
+    console.error(`❌ Erreur sendArrivalMessage (conv ${conversation.id}):`, error);
     return false;
   }
 }
 
-/**
- * Traiter tous les arrivées du jour
- */
 async function processTodayArrivals(pool, io) {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
 
-    console.log(`\n📅 ============================================`);
-    console.log(`📅 TRAITEMENT DES ARRIVÉES DU ${todayStr}`);
-    console.log(`📅 ============================================\n`);
+    console.log(`\n📅 MESSAGES D'ARRIVÉE DU ${todayStr}\n`);
 
-    // Récupérer toutes les conversations avec arrivée aujourd'hui
-    const conversationsResult = await pool.query(
-      `SELECT 
-        c.id,
-        c.property_id,
-        c.guest_first_name,
-        c.guest_last_name,
-        c.guest_phone,
-        c.onboarding_completed,
-        c.reservation_start_date,
-        p.name as property_name,
-        p.address,
-        p.arrival_time,
-        p.departure_time,
-        p.access_code,
-        p.access_instructions,
-        p.wifi_name,
-        p.wifi_password,
-        p.welcome_book_url,
-        p.arrival_message
-      FROM conversations c
-      LEFT JOIN properties p ON c.property_id = p.id
-      WHERE DATE(c.reservation_start_date) = $1
-      AND (c.onboarding_completed = TRUE OR c.guest_first_name IS NOT NULL)
-      ORDER BY c.id`,
+    const result = await pool.query(
+      `SELECT
+        c.id, c.property_id, c.platform, c.channex_booking_id,
+        c.guest_first_name, c.guest_last_name, c.guest_name, c.reservation_start_date,
+        r.uid as reservation_uid,
+        r.guest_first_name as r_guest_first_name,
+        r.guest_last_name  as r_guest_last_name,
+        r.guest_name       as r_guest_name,
+        p.name as property_name, p.address, p.arrival_time, p.departure_time,
+        p.access_code, p.access_instructions, p.wifi_name, p.wifi_password,
+        p.welcome_book_url, p.arrival_message
+       FROM conversations c
+       LEFT JOIN properties p ON c.property_id = p.id
+       LEFT JOIN reservations r ON (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
+                                OR (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date) AND c.channex_booking_id IS NULL)
+       WHERE DATE(c.reservation_start_date) = $1
+       ORDER BY c.id`,
       [todayStr]
     );
 
-    const conversations = conversationsResult.rows;
+    const conversations = result.rows;
     console.log(`📊 ${conversations.length} conversation(s) avec arrivée aujourd'hui`);
+    if (conversations.length === 0) return { total: 0, sent: 0, skipped: 0, errors: 0 };
 
-    if (conversations.length === 0) {
-      console.log('✅ Aucune arrivée aujourd\'hui');
-      return { total: 0, sent: 0, skipped: 0, errors: 0 };
-    }
+    let sent = 0, skipped = 0, errors = 0;
 
-    let sent = 0;
-    let skipped = 0;
-    let errors = 0;
-
-    for (const conversation of conversations) {
+    for (const conv of conversations) {
+      const enriched = {
+        ...conv,
+        guest_first_name: conv.guest_first_name || conv.r_guest_first_name,
+        guest_last_name:  conv.guest_last_name  || conv.r_guest_last_name,
+        guest_name:       conv.guest_name       || conv.r_guest_name
+      };
       const property = {
-        name: conversation.property_name,
-        address: conversation.address,
-        arrival_time: conversation.arrival_time,
-        departure_time: conversation.departure_time,
-        access_code: conversation.access_code,
-        access_instructions: conversation.access_instructions,
-        wifi_name: conversation.wifi_name,
-        wifi_password: conversation.wifi_password,
-        welcome_book_url: conversation.welcome_book_url,
-        arrival_message: conversation.arrival_message
+        name: conv.property_name, address: conv.address,
+        arrival_time: conv.arrival_time, departure_time: conv.departure_time,
+        access_code: conv.access_code, access_instructions: conv.access_instructions,
+        wifi_name: conv.wifi_name, wifi_password: conv.wifi_password,
+        welcome_book_url: conv.welcome_book_url, arrival_message: conv.arrival_message
       };
 
-      const success = await sendArrivalMessage(pool, io, conversation, property);
-      
-      if (success) {
-        sent++;
-      } else {
-        const alreadySent = await hasArrivalMessageBeenSent(pool, conversation.id);
-        if (alreadySent) {
-          skipped++;
-        } else {
-          errors++;
-        }
+      const success = await sendArrivalMessage(pool, io, enriched, property);
+      if (success) { sent++; } else {
+        (await hasArrivalMessageBeenSent(pool, conv.id)) ? skipped++ : errors++;
       }
-
-      // Petite pause entre chaque envoi
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(r => setTimeout(r, 500));
     }
 
-    console.log(`\n📊 RÉSUMÉ:`);
-    console.log(`   ✅ Envoyés: ${sent}`);
-    console.log(`   ⏭️ Déjà envoyés: ${skipped}`);
-    console.log(`   ❌ Erreurs: ${errors}`);
-    console.log(`   📦 Total: ${conversations.length}\n`);
-
+    console.log(`\n📊 RÉSUMÉ: ✅${sent} envoyés | ⏭️${skipped} déjà envoyés | ❌${errors} erreurs | 📦${conversations.length} total\n`);
     return { total: conversations.length, sent, skipped, errors };
 
   } catch (error) {
@@ -250,80 +160,48 @@ async function processTodayArrivals(pool, io) {
   }
 }
 
-/**
- * Envoyer immédiatement le message d'arrivée après onboarding
- * (si la réservation arrive aujourd'hui)
- */
 async function sendImmediateArrivalMessage(pool, io, conversationId) {
   try {
-    console.log(`🚀 Vérification envoi immédiat pour conversation ${conversationId}`);
-
-    const conversationResult = await pool.query(
-      `SELECT 
-        c.*,
-        p.name as property_name,
-        p.address,
-        p.arrival_time,
-        p.departure_time,
-        p.access_code,
-        p.access_instructions,
-        p.wifi_name,
-        p.wifi_password,
-        p.welcome_book_url,
-        p.arrival_message
-      FROM conversations c
-      LEFT JOIN properties p ON c.property_id = p.id
-      WHERE c.id = $1`,
+    const result = await pool.query(
+      `SELECT c.*,
+        r.uid as reservation_uid,
+        r.guest_first_name as r_first, r.guest_last_name as r_last, r.guest_name as r_name,
+        p.name as property_name, p.address, p.arrival_time, p.departure_time,
+        p.access_code, p.access_instructions, p.wifi_name, p.wifi_password,
+        p.welcome_book_url, p.arrival_message
+       FROM conversations c
+       LEFT JOIN properties p ON c.property_id = p.id
+       LEFT JOIN reservations r ON (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
+                                OR (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date) AND c.channex_booking_id IS NULL)
+       WHERE c.id = $1 LIMIT 1`,
       [conversationId]
     );
+    if (result.rows.length === 0) return false;
+    const conv = result.rows[0];
 
-    if (conversationResult.rows.length === 0) {
-      console.log(`⚠️ Conversation ${conversationId} introuvable`);
-      return false;
-    }
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const arrival = new Date(conv.reservation_start_date); arrival.setHours(0, 0, 0, 0);
+    if (arrival.getTime() !== today.getTime()) return false;
 
-    const conversation = conversationResult.rows[0];
-
-    // Vérifier si l'arrivée est aujourd'hui
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const arrivalDate = new Date(conversation.reservation_start_date);
-    arrivalDate.setHours(0, 0, 0, 0);
-
-    if (arrivalDate.getTime() !== today.getTime()) {
-      console.log(`⏰ Arrivée prévue le ${arrivalDate.toISOString().split('T')[0]}, pas aujourd'hui`);
-      return false;
-    }
-
-    // Vérifier si l'onboarding est complété
-    if (!conversation.onboarding_completed) {
-      console.log(`⚠️ Onboarding non complété pour conversation ${conversationId}`);
-      return false;
-    }
-
+    const enriched = {
+      ...conv,
+      guest_first_name: conv.guest_first_name || conv.r_first,
+      guest_last_name:  conv.guest_last_name  || conv.r_last,
+      guest_name:       conv.guest_name       || conv.r_name
+    };
     const property = {
-      name: conversation.property_name,
-      address: conversation.address,
-      arrival_time: conversation.arrival_time,
-      departure_time: conversation.departure_time,
-      access_code: conversation.access_code,
-      access_instructions: conversation.access_instructions,
-      wifi_name: conversation.wifi_name,
-      wifi_password: conversation.wifi_password,
-      welcome_book_url: conversation.welcome_book_url,
-      arrival_message: conversation.arrival_message
+      name: conv.property_name, address: conv.address,
+      arrival_time: conv.arrival_time, departure_time: conv.departure_time,
+      access_code: conv.access_code, access_instructions: conv.access_instructions,
+      wifi_name: conv.wifi_name, wifi_password: conv.wifi_password,
+      welcome_book_url: conv.welcome_book_url, arrival_message: conv.arrival_message
     };
 
-    return await sendArrivalMessage(pool, io, conversation, property);
-
+    return await sendArrivalMessage(pool, io, enriched, property);
   } catch (error) {
-    console.error(`❌ Erreur sendImmediateArrivalMessage:`, error);
+    console.error('❌ Erreur sendImmediateArrivalMessage:', error);
     return false;
   }
 }
 
-module.exports = {
-  processTodayArrivals,
-  sendImmediateArrivalMessage,
-  replaceMessageVariables
-};
+module.exports = { processTodayArrivals, sendImmediateArrivalMessage, replaceMessageVariables, sendArrivalMessage };
