@@ -11288,7 +11288,7 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 </script>
 
-
+<script>
   // ── Ouvrir modal facture depuis réservation ──────────────
   window.openInvoiceFromBooking = function() {
     const booking = window.currentBookingData;
@@ -11310,12 +11310,13 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   // Afficher/masquer le bouton Facture selon la réservation
-  function updateInvoiceBtn(booking) {
+  window.updateInvoiceBtn = function(booking) {
     const btn = document.getElementById('invoiceBookingBtn');
     if (!btn) return;
     const isBlock = booking && (booking.type === 'block' || booking.source === 'BLOCK');
     btn.style.display = (booking && !isBlock) ? 'inline-flex' : 'none';
-  }
+  };
+</script>
 
 <!-- ============================================================
      MODAL FACTURE — insérer avant </body>
