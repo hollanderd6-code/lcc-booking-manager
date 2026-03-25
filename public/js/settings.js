@@ -406,6 +406,7 @@ async function saveProperty(event) {
 
   const propertyId = document.getElementById("propertyId").value || null;
   const name = document.getElementById("propertyName").value.trim();
+  const internalName = document.getElementById("propertyInternalName")?.value?.trim() || null;
   const color = document.getElementById("propertyColor").value;
   const address = document.getElementById("propertyAddress")?.value?.trim() || null;
   const arrivalTime = document.getElementById("propertyArrivalTime")?.value || null;
@@ -448,6 +449,7 @@ async function saveProperty(event) {
 
   const formData = new FormData();
   formData.append('name', name);
+  if (internalName) formData.append('internalName', internalName);
   formData.append('color', color);
   formData.append('icalUrls', JSON.stringify([])); // iCal désactivé — Channex gère les OTAs
   
@@ -622,6 +624,9 @@ function resetPropertyForm() {
   document.getElementById("propertyId").value = "";
   document.getElementById("propertyPhotoUrl").value = "";
   document.getElementById("propertyName").value = "";
+  if (document.getElementById("propertyInternalName")) {
+    document.getElementById("propertyInternalName").value = "";
+  }
   document.getElementById("propertyAddress").value = "";
   document.getElementById("propertyArrivalTime").value = "";
   document.getElementById("propertyDepartureTime").value = "";
@@ -720,6 +725,9 @@ function openEditPropertyModal(propertyId) {
   currentEditingProperty = property;
   document.getElementById("propertyId").value = property._id || property.id || "";
   document.getElementById("propertyName").value = property.name || "";
+  if (document.getElementById("propertyInternalName")) {
+    document.getElementById("propertyInternalName").value = property.internalName || property.internal_name || "";
+  }
   document.getElementById("propertyAddress").value = property.address || "";
   // Populate selects first, then set value
   populateTimeSelects();
