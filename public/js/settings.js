@@ -72,12 +72,11 @@ function renderFilterBar() {
     ...(hasUngrouped ? [{ id: 'ungrouped', label: 'Non groupés' }] : [])
   ];
 
-  bar.innerHTML = chips.map(c => `
-    <button class="filter-chip ${activeFilter === c.id ? 'active' : ''}"
-      onclick="setFilter(${c.id === null ? 'null' : JSON.stringify(c.id)})">
-      ${c.label}
-    </button>
-  `).join('') + `
+  bar.innerHTML = chips.map(c => {
+    const val = c.id === null ? 'null' : "'" + c.id + "'";
+    const active = activeFilter === c.id ? 'active' : '';
+    return `<button class="filter-chip ${active}" onclick="setFilter(${val})">${c.label}</button>`;
+  }).join('') + `
     <button class="filter-chip filter-chip-groups" onclick="openGroupsModal()">
       <i class="fas fa-layer-group"></i> Gérer les groupes
     </button>
