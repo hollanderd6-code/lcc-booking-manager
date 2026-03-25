@@ -19,6 +19,208 @@ let currentEditingProperty = null;
 let ownerClients = [];
 
 // ========================================
+// GROUPES DE LOGEMENTS
+// ========================================
+const GROUPS_KEY = 'bh_property_groups';
+
+function loadGroups() {
+  try { return JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveGroups(groups) {
+  localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
+}
+function getGroups() { return loadGroups(); }
+
+// Filtre actif : null = tous, 'ungrouped' = non groupés, string = id du groupe
+let activeFilter = null;
+
+function getPropertyGroupId(propertyId) {
+  const groups = getGroups();
+  const group = groups.find(g => g.propertyIds && g.propertyIds.includes(propertyId));
+  return group ? group.id : null;
+}
+
+function applyFilter() {
+  const groups = getGroups();
+  let filtered;
+
+  if (!activeFilter) {
+    filtered = properties;
+  } else if (activeFilter === 'ungrouped') {
+    const groupedIds = new Set(groups.flatMap(g => g.propertyIds || []));
+    filtered = properties.filter(p => !groupedIds.has(p._id || p.id));
+  } else {
+    const group = groups.find(g => g.id === activeFilter);
+    const ids = new Set(group ? (group.propertyIds || []) : []);
+    filtered = properties.filter(p => ids.has(p._id || p.id));
+  }
+
+  renderPropertiesFiltered(filtered);
+}
+
+function renderFilterBar() {
+  const bar = document.getElementById('filterBar');
+  if (!bar) return;
+  const groups = getGroups();
+  const groupedIds = new Set(groups.flatMap(g => g.propertyIds || []));
+  const hasUngrouped = properties.some(p => !groupedIds.has(p._id || p.id));
+
+  const chips = [
+    { id: null, label: `Tous (${properties.length})` },
+    ...groups.map(g => ({ id: g.id, label: `${g.name} (${(g.propertyIds||[]).length})` })),
+    ...(hasUngrouped ? [{ id: 'ungrouped', label: 'Non groupés' }] : [])
+  ];
+
+  bar.innerHTML = chips.map(c => `
+    <button class="filter-chip ${activeFilter === c.id ? 'active' : ''}"
+      onclick="setFilter(${c.id === null ? 'null' : JSON.stringify(c.id)})">
+      ${c.label}
+    </button>
+  `).join('') + `
+    <button class="filter-chip filter-chip-groups" onclick="openGroupsModal()">
+      <i class="fas fa-layer-group"></i> Gérer les groupes
+    </button>
+  `;
+}
+
+function setFilter(id) {
+  activeFilter = id;
+  renderFilterBar();
+  applyFilter();
+}
+
+// ── Modal Gérer les groupes ───────────────────────────────────
+function openGroupsModal() {
+  const existing = document.getElementById('_groupsModal');
+  if (existing) existing.remove();
+
+  const groups = getGroups();
+  const modal = document.createElement('div');
+  modal.id = '_groupsModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(13,17,23,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:white;border-radius:20px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.2);">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px 16px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#9CA3AF;margin-bottom:2px;">Organisation</div>
+          <h3 style="margin:0;font-family:'Instrument Serif',serif;font-size:20px;font-weight:400;">Groupes de logements</h3>
+        </div>
+        <button onclick="document.getElementById('_groupsModal').remove()" style="width:36px;height:36px;border-radius:50%;border:none;background:#f3f4f6;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+      <!-- Body scrollable -->
+      <div style="flex:1;overflow-y:auto;padding:20px 24px;" id="_groupsBody">
+        ${renderGroupsBody()}
+      </div>
+      <!-- Footer : créer un groupe -->
+      <div style="padding:16px 24px;border-top:1px solid #f3f4f6;flex-shrink:0;">
+        <div style="display:flex;gap:8px;">
+          <input id="_newGroupName" type="text" placeholder="Nom du nouveau groupe…"
+            style="flex:1;padding:10px 14px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;"
+            onkeydown="if(event.key==='Enter') createGroup()" />
+          <button onclick="createGroup()"
+            style="padding:10px 18px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;">
+            <i class="fas fa-plus"></i> Créer
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function renderGroupsBody() {
+  const groups = getGroups();
+  if (groups.length === 0) {
+    return '<p style="color:#9CA3AF;font-size:14px;text-align:center;padding:16px 0;">Aucun groupe créé. Ajoutez-en un ci-dessous.</p>';
+  }
+  return groups.map(g => `
+    <div id="_group_${g.id}" style="background:#FAFAF8;border:1px solid #E8E0D0;border-radius:14px;padding:16px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <i class="fas fa-layer-group" style="color:#1A7A5E;font-size:14px;"></i>
+        <input value="${escapeHtml(g.name)}" id="_gname_${g.id}"
+          style="flex:1;font-size:15px;font-weight:700;border:none;background:transparent;outline:none;font-family:'DM Sans',sans-serif;color:#0D1117;"
+          onblur="renameGroup('${g.id}', this.value)" />
+        <button onclick="deleteGroup('${g.id}')"
+          style="width:30px;height:30px;border:none;background:#FEF2F2;color:#DC2626;border-radius:8px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${properties.map(p => {
+          const pid = p._id || p.id;
+          const checked = (g.propertyIds || []).includes(pid);
+          return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 8px;border-radius:8px;${checked ? 'background:rgba(26,122,94,.06);' : ''}">
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="togglePropertyInGroup('${g.id}','${pid}',this.checked)"
+              style="accent-color:#1A7A5E;width:15px;height:15px;" />
+            <span style="font-size:13px;font-weight:${checked ? '600' : '400'};color:#0D1117;">${escapeHtml(p.name || 'Sans nom')}</span>
+          </label>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function refreshGroupsBody() {
+  const body = document.getElementById('_groupsBody');
+  if (body) body.innerHTML = renderGroupsBody();
+}
+
+function createGroup() {
+  const input = document.getElementById('_newGroupName');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+  const groups = getGroups();
+  groups.push({ id: 'grp_' + Date.now(), name, propertyIds: [] });
+  saveGroups(groups);
+  input.value = '';
+  refreshGroupsBody();
+  renderFilterBar();
+}
+
+function renameGroup(groupId, newName) {
+  if (!newName.trim()) return;
+  const groups = getGroups();
+  const g = groups.find(g => g.id === groupId);
+  if (g) { g.name = newName.trim(); saveGroups(groups); renderFilterBar(); }
+}
+
+function deleteGroup(groupId) {
+  const groups = getGroups().filter(g => g.id !== groupId);
+  saveGroups(groups);
+  if (activeFilter === groupId) { activeFilter = null; }
+  refreshGroupsBody();
+  renderFilterBar();
+  applyFilter();
+}
+
+function togglePropertyInGroup(groupId, propertyId, add) {
+  const groups = getGroups();
+  // Retirer le logement de tous les autres groupes d'abord
+  groups.forEach(g => {
+    if (g.id !== groupId) {
+      g.propertyIds = (g.propertyIds || []).filter(id => id !== propertyId);
+    }
+  });
+  const g = groups.find(g => g.id === groupId);
+  if (g) {
+    if (add) {
+      if (!g.propertyIds.includes(propertyId)) g.propertyIds.push(propertyId);
+    } else {
+      g.propertyIds = g.propertyIds.filter(id => id !== propertyId);
+    }
+  }
+  saveGroups(groups);
+  refreshGroupsBody();
+  renderFilterBar();
+  applyFilter();
+}
+
+// ========================================
 // INITIALIZATION
 // ========================================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -810,6 +1012,13 @@ function renderProperties() {
 
   grid.innerHTML = cardsHtml + addCard;
 
+  // Update count badge
+  const countEl = document.getElementById('propertiesCount');
+  if (countEl) countEl.textContent = properties.length + (properties.length > 1 ? ' LOGEMENTS ACTIFS' : ' LOGEMENT ACTIF');
+
+  // Render filter bar
+  renderFilterBar();
+
   grid.querySelectorAll(".btn-edit").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-id");
@@ -843,6 +1052,106 @@ function renderProperties() {
     });
   });
 }
+// Render a filtered subset of properties (preserves add card)
+function renderPropertiesFiltered(filteredProps) {
+  const grid = document.getElementById("propertiesGrid");
+  if (!grid) return;
+
+  if (!filteredProps || filteredProps.length === 0) {
+    const addCard = `<div class="property-card property-card-add" id="addPropertyBtn" onclick="openAddPropertyModal()">
+      <div class="property-card-add-inner">
+        <div class="property-card-add-icon"><i class="fas fa-plus"></i></div>
+        <div class="property-card-add-label">Ajouter un logement</div>
+        <div class="property-card-add-sub">Connectez Airbnb, Booking, direct</div>
+      </div>
+    </div>`;
+    grid.innerHTML = `<p style="color:#9CA3AF;font-size:14px;grid-column:1/-1;padding:24px 0;text-align:center;">Aucun logement dans ce groupe.</p>` + addCard;
+    return;
+  }
+
+  // Re-use the existing renderProperties but with a subset
+  const savedProperties = properties;
+  const savedFilter = activeFilter;
+  // Temporarily override to avoid infinite loop — render cards directly
+  const cardsHtml = filteredProps.map((p, idx) => {
+    const id = p._id || p.id || "";
+    const color = p.color || "#059669";
+    const name = p.name || "Sans nom";
+    const address = p.address || "";
+    const arrivalTime = p.arrivalTime || "";
+    const departureTime = p.departureTime || "";
+    const arrivalLabel = arrivalTime || '--';
+    const departureLabel = departureTime || '--';
+    const depositShort = p.depositAmount != null && p.depositAmount !== '' ? p.depositAmount + ' €' : '–';
+    const photoUrl = p.photoUrl || p.photo || null;
+    const propertyEmoji = photoUrl ? '' : ['🏢','🌲','🏙️','🏡','🏖️','🏔️'][Math.abs(name.charCodeAt(0)) % 6];
+
+    // Group badge
+    const groups = getGroups();
+    const group = groups.find(g => (g.propertyIds || []).includes(id));
+    const groupBadge = group ? `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(26,122,94,.1);color:#1A7A5E;margin-bottom:6px;"><i class="fas fa-layer-group" style="font-size:9px;"></i>${escapeHtml(group.name)}</div>` : '';
+
+    return `
+      <div class="property-card" data-id="${escapeHtml(id)}">
+        <div class="property-img" style="cursor:pointer;" onclick="openEditPropertyModal('${escapeHtml(id)}')">
+          ${photoUrl
+            ? `<img class="property-img-bg" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(name)}" />`
+            : `<div class="property-img-placeholder" style="background:linear-gradient(160deg,#e8e0d4 0%,#c8b89a 100%);width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:52px;">${propertyEmoji}</div>`
+          }
+          <div class="property-img-overlay"></div>
+          <div class="property-img-badge active-badge">● Actif</div>
+        </div>
+        <div class="property-info">
+          ${groupBadge}
+          <div class="property-name">${escapeHtml(name)}</div>
+          ${address ? `<div class="property-address"><i class="fas fa-location-dot" style="color:#1A7A5E;font-size:11px;"></i> ${escapeHtml(address)}</div>` : ''}
+          <div class="property-stats">
+            <div class="prop-stat"><div class="prop-stat-val">${arrivalLabel}</div><div class="prop-stat-label">Arrivée</div></div>
+            <div class="prop-stat"><div class="prop-stat-val">${departureLabel}</div><div class="prop-stat-label">Départ</div></div>
+            <div class="prop-stat"><div class="prop-stat-val" style="color:#1A7A5E;">${depositShort}</div><div class="prop-stat-label">Caution</div></div>
+          </div>
+          ${p.channexEnabled ? `
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border-radius:8px;border:1px solid #b8ddd4;">
+            <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
+            <span style="font-size:11px;font-weight:600;color:#1A7A5E;">Synchronisation OTA active</span>
+            <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" data-channex-enabled="true" style="margin-left:auto;font-size:10px;color:#1A7A5E;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">Gérer</button>
+          </div>` : `
+          <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <i class="fas fa-plug"></i> Connecter Airbnb · Booking · Expedia
+          </button>`}
+          <div class="property-actions">
+            <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
+            <button type="button" class="btn btn-jade btn-edit" data-id="${escapeHtml(id)}">Gérer</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const addCard = `<div class="property-card property-card-add" id="addPropertyBtn" onclick="openAddPropertyModal()">
+    <div class="property-card-add-inner">
+      <div class="property-card-add-icon"><i class="fas fa-plus"></i></div>
+      <div class="property-card-add-label">Ajouter un logement</div>
+      <div class="property-card-add-sub">Connectez Airbnb, Booking, direct</div>
+    </div>
+  </div>`;
+
+  grid.innerHTML = cardsHtml + addCard;
+
+  grid.querySelectorAll(".btn-edit").forEach(btn => {
+    btn.addEventListener("click", () => openEditPropertyModal(btn.getAttribute("data-id")));
+  });
+  grid.querySelectorAll(".btn-delete").forEach(btn => {
+    btn.addEventListener("click", () => deleteProperty(btn.getAttribute("data-id")));
+  });
+  grid.querySelectorAll(".btn-channex-connect").forEach(btn => {
+    btn.addEventListener("click", () => openChannexModal(btn.getAttribute("data-id"), btn.getAttribute("data-name"), false));
+  });
+  grid.querySelectorAll(".btn-channex-manage").forEach(btn => {
+    btn.addEventListener("click", () => openChannexModal(btn.getAttribute("data-id"), btn.getAttribute("data-name"), true));
+  });
+}
+
 // Gérer le clic sur les boutons de réorganisation
 document.addEventListener('click', async function(e) {
   if (e.target.closest('.btn-reorder')) {
