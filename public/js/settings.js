@@ -358,6 +358,7 @@ async function loadProperties() {
     });
     const data = await response.json();
     properties = data.properties || [];
+    window.allProperties = properties;
     renderProperties();
   } catch (error) {
     console.error("Erreur lors du chargement des logements:", error);
