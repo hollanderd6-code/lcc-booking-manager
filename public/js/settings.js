@@ -222,9 +222,27 @@ function togglePropertyInGroup(groupId, propertyId, add) {
 // ========================================
 // INITIALIZATION
 // ========================================
+function populateTimeSelects() {
+  const times = [''];
+  for (let h = 0; h < 24; h++) {
+    for (let m of [0, 30]) {
+      times.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+    }
+  }
+  ['propertyArrivalTime','propertyDepartureTime'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = times.map(t =>
+      `<option value="${t}"${t === current ? ' selected' : ''}>${t || '-- Choisir --'}</option>`
+    ).join('');
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🔧 Paramètres - Initialisation...");
 
+  populateTimeSelects();
   setupColorPicker();
   setupPhotoPreview();
   await loadProperties();
@@ -451,6 +469,16 @@ async function saveProperty(event) {
   if (touristTaxPerNight !== null) formData.append('touristTaxPerNight', touristTaxPerNight);
   if (conciergePct    !== null) formData.append('conciergePct',    conciergePct);
 
+  // Capacité d'accueil
+  const maxGuests  = document.getElementById('propertyMaxGuests')?.value;
+  const bedrooms   = document.getElementById('propertyBedrooms')?.value;
+  const beds       = document.getElementById('propertyBeds')?.value;
+  const bathrooms  = document.getElementById('propertyBathrooms')?.value;
+  if (maxGuests  !== '' && maxGuests  != null) formData.append('maxGuests',  maxGuests);
+  if (bedrooms   !== '' && bedrooms   != null) formData.append('bedrooms',   bedrooms);
+  if (beds       !== '' && beds       != null) formData.append('beds',       beds);
+  if (bathrooms  !== '' && bathrooms  != null) formData.append('bathrooms',  bathrooms);
+
   // ===== AJOUT DES NOUVELLES DONNÉES (ÉQUIPEMENTS, RÈGLES, INFOS) =====
   try {
     // Équipements
@@ -462,7 +490,8 @@ async function saveProperty(event) {
       lave_vaisselle: document.getElementById('amenityLaveVaisselle')?.checked || false,
       television: document.getElementById('amenityTelevision')?.checked || false,
       parking: document.getElementById('amenityParking')?.checked || false,
-      climatisation: document.getElementById('amenityClimatisation')?.checked || false
+      climatisation: document.getElementById('amenityClimatisation')?.checked || false,
+      custom: _customAmenities || []
     };
     formData.append('amenities', JSON.stringify(amenities));
     
@@ -471,7 +500,8 @@ async function saveProperty(event) {
       animaux: document.getElementById('ruleAnimaux')?.checked || false,
       fumeurs: document.getElementById('ruleFumeurs')?.checked || false,
       fetes: document.getElementById('ruleFetes')?.checked || false,
-      enfants: document.getElementById('ruleEnfants')?.checked || false
+      enfants: document.getElementById('ruleEnfants')?.checked || false,
+      custom: _customRules || []
     };
     formData.append('houseRules', JSON.stringify(houseRules));
     
@@ -505,8 +535,8 @@ async function saveProperty(event) {
   }
   // ===== FIN AJOUT NOUVELLES DONNÉES =====
 
-const ownerId = document.getElementById('propertyOwnerId')?.value || null;
-if (ownerId) formData.append('ownerId', ownerId);
+const ownerId = document.getElementById('propertyOwnerId')?.value ?? '';
+formData.append('ownerId', ownerId); // Toujours envoyer, même vide (pour effacer)
   if (photoInput && photoInput.files && photoInput.files[0]) {
     formData.append('photo', photoInput.files[0]);
   }
@@ -644,11 +674,23 @@ function resetPropertyForm() {
   if (document.getElementById("propertyConciergePct")) {
     document.getElementById("propertyConciergePct").value = "";
   }
+  ['propertyMaxGuests','propertyBedrooms','propertyBeds','propertyBathrooms'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
   // Reset règles de tarification
   _pricingRules = [];
   _currentPricingPropertyId = null;
   const rulesList = document.getElementById('pricingRulesList');
   if (rulesList) rulesList.innerHTML = '<div style="font-size:13px;color:#9CA3AF;padding:10px 0;">Aucune règle configurée</div>';
+  // Reset custom chips
+  _customAmenities = [];
+  _customRules = [];
+  renderCustomChips('customAmenitiesContainer', [], 'removeCustomAmenity');
+  renderCustomChips('customRulesContainer', [], 'removeCustomRule');
+  const newAmenityInput = document.getElementById('newAmenityInput');
+  if (newAmenityInput) newAmenityInput.value = '';
+  const newRuleInput = document.getElementById('newRuleInput');
+  if (newRuleInput) newRuleInput.value = '';
   const urlList = document.getElementById("urlList");
   if (urlList) urlList.innerHTML = "";
 }
@@ -678,6 +720,8 @@ function openEditPropertyModal(propertyId) {
   document.getElementById("propertyId").value = property._id || property.id || "";
   document.getElementById("propertyName").value = property.name || "";
   document.getElementById("propertyAddress").value = property.address || "";
+  // Populate selects first, then set value
+  populateTimeSelects();
   document.getElementById("propertyArrivalTime").value = property.arrivalTime || "";
   document.getElementById("propertyDepartureTime").value = property.departureTime || "";
   document.getElementById("propertyDeposit").value =
@@ -733,6 +777,16 @@ function openEditPropertyModal(propertyId) {
     document.getElementById("propertyConciergePct").value = cp != null ? cp : "";
   }
 
+  // Capacité d'accueil
+  if (document.getElementById("propertyMaxGuests"))
+    document.getElementById("propertyMaxGuests").value = property.maxGuests ?? property.max_guests ?? '';
+  if (document.getElementById("propertyBedrooms"))
+    document.getElementById("propertyBedrooms").value = property.bedrooms ?? '';
+  if (document.getElementById("propertyBeds"))
+    document.getElementById("propertyBeds").value = property.beds ?? '';
+  if (document.getElementById("propertyBathrooms"))
+    document.getElementById("propertyBathrooms").value = property.bathrooms ?? '';
+
   // ✅ RACCOURCIS MESSAGES
   try {
     var qrList = document.getElementById('quickRepliesList');
@@ -772,6 +826,9 @@ function openEditPropertyModal(propertyId) {
       document.getElementById('amenityParking').checked = amenities.parking || false;
     if (document.getElementById('amenityClimatisation')) 
       document.getElementById('amenityClimatisation').checked = amenities.climatisation || false;
+    // Custom amenities
+    _customAmenities = Array.isArray(amenities.custom) ? [...amenities.custom] : [];
+    renderCustomChips('customAmenitiesContainer', _customAmenities, 'removeCustomAmenity');
     
     // Règles
     const rules = (property.house_rules || property.houseRules)
@@ -786,6 +843,9 @@ function openEditPropertyModal(propertyId) {
       document.getElementById('ruleFetes').checked = rules.fetes || false;
     if (document.getElementById('ruleEnfants')) 
       document.getElementById('ruleEnfants').checked = rules.enfants !== undefined ? rules.enfants : false;
+    // Custom rules
+    _customRules = Array.isArray(rules.custom) ? [...rules.custom] : [];
+    renderCustomChips('customRulesContainer', _customRules, 'removeCustomRule');
     
     // Infos pratiques
     const practical = (property.practical_info || property.practicalInfo)
@@ -1803,19 +1863,41 @@ function editPricingRule(id) {
   if (rule) openPricingRuleModal(rule);
 }
 
-async function deletePricingRule(id) {
-  if (!confirm('Supprimer cette règle ?')) return;
-  try {
-    const token = localStorage.getItem('lcc_token');
-    await fetch(`${API_PRICING}/api/pricing/rules/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    showToast('Règle supprimée', 'success');
-    await loadPricingRules(_currentPricingPropertyId);
-  } catch(e) {
-    showToast('Erreur lors de la suppression', 'error');
-  }
+function deletePricingRule(id) {
+  // Modale custom — confirm() est bloqué sur mobile/WebView
+  const existing = document.getElementById('_deleteRuleModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = '_deleteRuleModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(13,17,23,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:20px;padding:28px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.15);">
+      <div style="width:52px;height:52px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;">🗑️</div>
+      <h3 style="font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:#0D1117;margin:0 0 8px;">Supprimer cette règle ?</h3>
+      <p style="font-size:13px;color:#7A8695;margin:0 0 20px;">Cette action est irréversible.</p>
+      <div style="display:flex;gap:10px;">
+        <button id="_deleteRuleCancel" style="flex:1;height:40px;border-radius:12px;border:1.5px solid rgba(13,17,23,.15);background:white;color:#374151;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
+        <button id="_deleteRuleConfirm" style="flex:1;height:40px;border-radius:12px;border:none;background:#DC2626;color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Supprimer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  document.getElementById('_deleteRuleCancel').onclick = () => modal.remove();
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.getElementById('_deleteRuleConfirm').onclick = async () => {
+    modal.remove();
+    try {
+      const token = localStorage.getItem('lcc_token');
+      await fetch(`${API_PRICING}/api/pricing/rules/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      showToast('Règle supprimée', 'success');
+      await loadPricingRules(_currentPricingPropertyId);
+    } catch(e) {
+      showToast('Erreur lors de la suppression', 'error');
+    }
+  };
 }
 
 async function savePricingRule(ruleId) {
@@ -1867,6 +1949,55 @@ async function savePricingRule(ruleId) {
     showToast('Erreur lors de la sauvegarde', 'error');
   }
 }
+
+
+// ========================================
+// ÉQUIPEMENTS & RÈGLES PERSONNALISÉS
+// ========================================
+function renderCustomChips(containerId, items, removeCallback) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = items.map((item, i) => `
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(26,122,94,.08);border:1.5px solid rgba(26,122,94,.3);border-radius:999px;font-size:13px;font-weight:500;color:#1A7A5E;">
+      ${escapeHtml(item)}
+      <button type="button" onclick="${removeCallback}(${i})"
+        style="background:none;border:none;cursor:pointer;color:#1A7A5E;font-size:14px;line-height:1;padding:0;display:flex;align-items:center;">×</button>
+    </span>
+  `).join('');
+}
+
+let _customAmenities = [];
+let _customRules = [];
+
+window.addCustomAmenity = function() {
+  const input = document.getElementById('newAmenityInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+  _customAmenities.push(val);
+  input.value = '';
+  renderCustomChips('customAmenitiesContainer', _customAmenities, 'removeCustomAmenity');
+};
+
+window.removeCustomAmenity = function(i) {
+  _customAmenities.splice(i, 1);
+  renderCustomChips('customAmenitiesContainer', _customAmenities, 'removeCustomAmenity');
+};
+
+window.addCustomRule = function() {
+  const input = document.getElementById('newRuleInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+  _customRules.push(val);
+  input.value = '';
+  renderCustomChips('customRulesContainer', _customRules, 'removeCustomRule');
+};
+
+window.removeCustomRule = function(i) {
+  _customRules.splice(i, 1);
+  renderCustomChips('customRulesContainer', _customRules, 'removeCustomRule');
+};
 
 async function pushRulesToChannex() {
   if (!_currentPricingPropertyId) return;
