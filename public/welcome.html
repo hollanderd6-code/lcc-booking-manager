@@ -1378,6 +1378,9 @@ async function loadLivretsList() {
     
     const data = await response.json();
     
+    // Toujours réafficher la section liste
+    setDisplayById('livretsListSection', 'block');
+
     if (data.success && data.welcomeBooks && data.welcomeBooks.length > 0) {
       displayLivretsList(data.welcomeBooks);
     } else {
@@ -1390,16 +1393,7 @@ async function loadLivretsList() {
 }
 
 
-// Créer un nouveau livret
-function createNewLivret() {
-  currentUniqueId = null;
-  document.getElementById('welcomeForm').reset();
-  document.getElementById('livretsListSection').style.display = 'none';
-  document.getElementById('welcomeForm').style.display = 'block';
-  
-  // Remonter en haut de la page
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+// createNewLivret défini plus bas
 
 // Voir un livret
 function viewLivret(uniqueId) {
