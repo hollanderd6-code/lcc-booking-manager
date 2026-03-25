@@ -1365,6 +1365,18 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonne quick_replies OK');
     } catch(e) { console.log('ℹ️ quick_replies:', e.message); }
 
+    // ✅ Migration : capacité d'accueil sur properties
+    try {
+      await pool.query(`
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS max_guests INTEGER;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS bedrooms INTEGER;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS beds INTEGER;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS bathrooms INTEGER;
+      `);
+      console.log('✅ Colonnes max_guests / bedrooms / beds / bathrooms OK');
+    } catch(e) { console.log('ℹ️ capacity columns:', e.message); }
+
+
     // ✅ Migration : support FCM tokens pour sous-comptes
     try {
       await pool.query(`
@@ -3602,7 +3614,11 @@ async function loadProperties() {
         weekend_price,
         cleaning_fee,
         tourist_tax_per_night,
-        concierge_pct
+        concierge_pct,
+        max_guests,
+        bedrooms,
+        beds,
+        bathrooms
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3651,7 +3667,11 @@ async function loadProperties() {
         weekendPrice: row.weekend_price != null ? parseFloat(row.weekend_price) : null,
         cleaningFee: row.cleaning_fee != null ? parseFloat(row.cleaning_fee) : null,
         touristTaxPerNight: row.tourist_tax_per_night != null ? parseFloat(row.tourist_tax_per_night) : null,
-        conciergePct: row.concierge_pct != null ? parseFloat(row.concierge_pct) : null
+        conciergePct: row.concierge_pct != null ? parseFloat(row.concierge_pct) : null,
+        max_guests: row.max_guests != null ? parseInt(row.max_guests, 10) : null,
+        bedrooms: row.bedrooms != null ? parseInt(row.bedrooms, 10) : null,
+        beds: row.beds != null ? parseInt(row.beds, 10) : null,
+        bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
