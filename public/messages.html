@@ -3032,42 +3032,22 @@ window.openInvoiceFromConversation = function() {
   function _populateInvPropertySelect(propertyId, propertyName) {
     const sel = document.getElementById('inv_propertyName');
     if (!sel) return;
-
-    // Si déjà peuplé, juste sélectionner
-    if (sel.options.length > 1) {
-      if (propertyId) {
-        for (let o of sel.options) { if (o.value === propertyId) { sel.value = propertyId; return; } }
-      }
-      return;
-    }
-
-    // Peupler depuis LCC_PROPERTIES ou API
-    const props = window.LCC_PROPERTIES || JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-    if (props.length) {
-      props.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.name;
-        opt.dataset.address = p.address || '';
-        opt.dataset.ownerId = p.owner_id || p.ownerId || '';
-        sel.appendChild(opt);
-      });
-      if (propertyId) sel.value = propertyId;
-    } else {
-      // Fallback API
-      fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') } })
-        .then(r => r.json()).then(data => {
-          (data.properties || []).forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id; opt.textContent = p.name;
-            opt.dataset.address = p.address || '';
-            opt.dataset.ownerId = p.owner_id || p.ownerId || '';
-            sel.appendChild(opt);
-          });
-          if (propertyId) sel.value = propertyId;
-          renderInvoicePreview();
-        }).catch(() => {});
-    }
+    // Toujours depuis l'API — le localStorage ne contient pas ownerId
+    fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') } })
+      .then(r => r.json()).then(data => {
+        while (sel.options.length > 1) sel.remove(1);
+        (data.properties || []).forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id; opt.textContent = p.name;
+          opt.dataset.address = p.address || '';
+          opt.dataset.ownerId = p.ownerId || p.owner_id || '';
+          sel.appendChild(opt);
+        });
+        if (propertyId) {
+          for (let o of sel.options) { if (o.value === propertyId) { sel.value = propertyId; break; } }
+        }
+        renderInvoicePreview();
+      }).catch(() => {});
   }
 
   const _invOwnerCache = {};
