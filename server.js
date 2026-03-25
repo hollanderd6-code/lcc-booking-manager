@@ -1372,9 +1372,8 @@ ON invoice_download_tokens(token);
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS bedrooms INTEGER;
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS beds INTEGER;
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS bathrooms INTEGER;
-        ALTER TABLE properties ADD COLUMN IF NOT EXISTS internal_name TEXT;
       `);
-      console.log('✅ Colonnes max_guests / bedrooms / beds / bathrooms / internal_name OK');
+      console.log('✅ Colonnes max_guests / bedrooms / beds / bathrooms OK');
     } catch(e) { console.log('ℹ️ capacity columns:', e.message); }
 
 
@@ -3619,8 +3618,7 @@ async function loadProperties() {
         max_guests,
         bedrooms,
         beds,
-        bathrooms,
-        internal_name
+        bathrooms
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3673,8 +3671,7 @@ async function loadProperties() {
         max_guests: row.max_guests != null ? parseInt(row.max_guests, 10) : null,
         bedrooms: row.bedrooms != null ? parseInt(row.bedrooms, 10) : null,
         beds: row.beds != null ? parseInt(row.beds, 10) : null,
-        bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null,
-        internal_name: row.internal_name || null
+        bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
@@ -10347,8 +10344,6 @@ app.get('/api/properties',
         arrivalMessage: p.arrival_message || null,  // ✅ NOUVEAU
         ownerId: p.owner_id || null,
         owner_id: p.owner_id || null,
-        internalName: p.internal_name || p.internalName || null,
-        internal_name: p.internal_name || p.internalName || null,
         maxGuests: p.max_guests ?? p.maxGuests ?? null,
         max_guests: p.max_guests ?? p.maxGuests ?? null,
         bedrooms: p.bedrooms ?? null,
@@ -10639,8 +10634,7 @@ app.post('/api/properties',
         .filter(Boolean);
     }
 
-    const ownerId = body.ownerId ?? req.body.ownerId ?? null;
-    const internalNameValue = internalName !== undefined ? (internalName || null) : null;
+    const ownerId = req.body.ownerId || null;
 
     // ✅ VÉRIFIER SI LA PROPRIÉTÉ EXISTE DÉJÀ
     const existingProperty = await pool.query(
@@ -10663,8 +10657,7 @@ app.post('/api/properties',
            auto_responses_enabled = $19, arrival_message = $20,
            base_price = $22, weekend_price = $23,
            cleaning_fee = $24, tourist_tax_per_night = $25, concierge_pct = $26,
-           max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30,
-           internal_name = $31
+           max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30
          WHERE id = $21`,
         [
           name,
@@ -10696,8 +10689,7 @@ app.post('/api/properties',
           maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
           bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
           beds != null && beds !== '' ? parseInt(beds, 10) : null,
-          bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
-          internalNameValue
+          bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null
         ]
       );
 
@@ -10722,7 +10714,7 @@ app.post('/api/properties',
          amenities, house_rules, practical_info, auto_responses_enabled, arrival_message,
          base_price, weekend_price,
          cleaning_fee, tourist_tax_per_night, concierge_pct,
-         max_guests, bedrooms, beds, bathrooms, internal_name
+         max_guests, bedrooms, beds, bathrooms
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -10733,7 +10725,7 @@ app.post('/api/properties',
          NOW(),
          $18, $19, $20, $21, $22,
          $23, $24, $25, $26, $27,
-         $28, $29, $30, $31, $32
+         $28, $29, $30, $31
        )`,
       [
         id,
@@ -10766,8 +10758,7 @@ app.post('/api/properties',
         maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
         bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
         beds != null && beds !== '' ? parseInt(beds, 10) : null,
-        bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
-        internalNameValue
+        bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null
       ]
     );
 
@@ -11549,8 +11540,7 @@ app.put('/api/properties/:propertyId',
       maxGuests,
       bedrooms,
       beds,
-      bathrooms,
-      internalName
+      bathrooms
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
@@ -11650,6 +11640,10 @@ app.put('/api/properties/:propertyId',
       ? (weekendPrice !== '' && weekendPrice !== null ? parseFloat(weekendPrice) : null)
       : (property.weekendPrice != null ? property.weekendPrice : null);
 
+    const newInternalName = internal_name !== undefined
+      ? (internal_name !== null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null)
+      : (property.internal_name || property.internalName || null);
+
     const newMaxGuests = maxGuests !== undefined
       ? (maxGuests !== '' && maxGuests !== null ? parseInt(maxGuests, 10) : null)
       : (property.max_guests ?? property.maxGuests ?? null);
@@ -11744,16 +11738,16 @@ userId: userId
          auto_responses_enabled = $19,
          arrival_message = $20,
          quick_replies = $21,
-         base_price = $24,
-         weekend_price = $25,
-         cleaning_fee = $26,
-         tourist_tax_per_night = $27,
-         concierge_pct = $28,
-         max_guests = $29,
-         bedrooms = $30,
-         beds = $31,
-         bathrooms = $32,
-         internal_name = $33,
+         internal_name = $24,
+         base_price = $25,
+         weekend_price = $26,
+         cleaning_fee = $27,
+         tourist_tax_per_night = $28,
+         concierge_pct = $29,
+         max_guests = $30,
+         bedrooms = $31,
+         beds = $32,
+         bathrooms = $33,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -11768,6 +11762,7 @@ userId: userId
         newArrivalMessage,
         JSON.stringify(newQuickReplies),
         propertyId, userId,
+        newInternalName,
         newBasePrice,
         newWeekendPrice,
         cleaningFee != null && cleaningFee !== '' ? parseFloat(cleaningFee) : (property.cleaningFee ?? null),
@@ -11776,8 +11771,7 @@ userId: userId
         newMaxGuests,
         newBedrooms,
         newBeds,
-        newBathrooms,
-        newInternalName
+        newBathrooms
       ]
     );
     
