@@ -11544,6 +11544,7 @@ document.addEventListener('DOMContentLoaded', function() {
         opt.value = p.id;
         opt.textContent = p.name;
         opt.dataset.address = p.address || '';
+        opt.dataset.ownerId = p.owner_id || p.ownerId || '';
         sel.appendChild(opt);
       });
       if (propertyId) sel.value = propertyId;
@@ -11555,6 +11556,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const opt = document.createElement('option');
             opt.value = p.id; opt.textContent = p.name;
             opt.dataset.address = p.address || '';
+            opt.dataset.ownerId = p.owner_id || p.ownerId || '';
             sel.appendChild(opt);
           });
           if (propertyId) sel.value = propertyId;
@@ -11568,16 +11570,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function _getInvOwner(propertyId) {
     if (!propertyId) return null;
-    if (_invOwnerCache[propertyId] !== undefined) return _invOwnerCache[propertyId];
+    // Récupérer l'ownerId depuis le dataset de l'option sélectionnée
+    const sel = document.getElementById('inv_propertyName');
+    const selectedOpt = sel ? sel.options[sel.selectedIndex] : null;
+    const ownerId = selectedOpt?.dataset?.ownerId || null;
+    if (!ownerId) return null;
+    if (_invOwnerCache[ownerId] !== undefined) return _invOwnerCache[ownerId];
     try {
-      const res = await fetch('/api/owner-clients/' + propertyId, {
+      const res = await fetch('/api/owner-clients/' + ownerId, {
         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
       });
-      if (!res.ok) { _invOwnerCache[propertyId] = null; return null; }
+      if (!res.ok) { _invOwnerCache[ownerId] = null; return null; }
       const owner = await res.json();
-      _invOwnerCache[propertyId] = owner;
+      _invOwnerCache[ownerId] = owner;
       return owner;
-    } catch(e) { _invOwnerCache[propertyId] = null; return null; }
+    } catch(e) { _invOwnerCache[ownerId] = null; return null; }
   }
 
   window.renderInvoicePreview = async function() {
@@ -11736,6 +11743,27 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('invoiceModal')?.addEventListener('click', function(e) {
     if (e.target === this) closeInvoiceModal();
   });
+
+  // Neutraliser mobile-native-experience.js qui slide les modaux
+  (function() {
+    const invContent = document.querySelector('#invoiceModal .inv-content');
+    const invModal   = document.getElementById('invoiceModal');
+    if (!invContent || !invModal) return;
+    // Marquer pour exclure des scripts natifs
+    invModal.dataset.noNative = '1';
+    invContent.dataset.noNative = '1';
+    // Observer et annuler tout transform/animation injecté en inline style
+    const obs = new MutationObserver(() => {
+      ['transform','transition','animation','bottom','top','left','right'].forEach(prop => {
+        if (invContent.style[prop] && invContent.style[prop] !== 'none') {
+          invContent.style.setProperty(prop, prop === 'transform' ? 'none' : '', 'important');
+        }
+      });
+      if (invModal.style.transform) invModal.style.setProperty('transform','none','important');
+    });
+    obs.observe(invContent, { attributes: true, attributeFilter: ['style'] });
+    obs.observe(invModal,   { attributes: true, attributeFilter: ['style'] });
+  })();
 })();
 </script>
 
