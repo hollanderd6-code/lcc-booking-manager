@@ -20945,38 +20945,82 @@ app.post('/api/channex/webhook', async (req, res) => {
           console.error('⚠️ [CHANNEX WEBHOOK] Erreur notif push:', notifErr.message);
         }
 
-        // ── Message de confirmation immédiat au voyageur ─────────
+        // ── Créer la conversation + message de confirmation ──────
         try {
           const { sendAutoMessage } = require('./integrated-chat-handler');
+          const crypto = require('crypto');
 
-          // Trouver la conversation liée à cette réservation
-          const convResult = await pool.query(
-            `SELECT id, channex_booking_id, guest_first_name, guest_name
-             FROM conversations
-             WHERE channex_booking_id = $1 OR (property_id = $2 AND DATE(reservation_start_date) = DATE($3))
+          const attrs      = booking.attributes || booking;
+          const guest      = attrs.customer || {};
+          const guestName  = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
+          const guestFirst = guest.name || guestName.split(' ')[0] || '';
+
+          // 1. Chercher une conversation existante
+          let convId = null;
+          const existingConv = await pool.query(
+            `SELECT id FROM conversations
+             WHERE channex_booking_id = $1
+                OR (property_id = $2 AND DATE(reservation_start_date) = DATE($3))
              ORDER BY created_at DESC LIMIT 1`,
             [result.channex_booking_id || null, result.property_id, result.start_date || arrivalDate]
           );
 
-          if (convResult.rows.length > 0) {
-            const conv = convResult.rows[0];
-            const guestFirst = conv.guest_first_name || (conv.guest_name ? conv.guest_name.split(' ')[0] : '');
-            const propName = propertyName || 'votre logement';
-            const otaLabel = ota?.label || otaName || 'la plateforme';
+          if (existingConv.rows.length > 0) {
+            convId = existingConv.rows[0].id;
+            // Lier le channex_booking_id si pas encore fait
+            if (result.channex_booking_id) {
+              await pool.query(
+                `UPDATE conversations SET channex_booking_id = $1 WHERE id = $2 AND channex_booking_id IS NULL`,
+                [result.channex_booking_id, convId]
+              );
+            }
+            console.log(`🔗 [CHANNEX] Conversation existante réutilisée: ${convId}`);
+          } else {
+            // 2. Créer la conversation
+            const convResult = await pool.query(
+              `INSERT INTO conversations
+                (user_id, property_id, reservation_start_date, reservation_end_date,
+                 platform, guest_name, guest_email, pin_code, unique_token, photos_token,
+                 is_verified, status, channex_booking_id)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending', $11)
+               RETURNING id`,
+              [
+                result.user_id,
+                result.property_id,
+                result.start_date || arrivalDate,
+                result.end_date   || departureDate,
+                ota.label || otaName || 'Channex',
+                guestName,
+                guest.email || null,
+                Math.floor(1000 + Math.random() * 9000).toString(),
+                crypto.randomBytes(32).toString('hex'),
+                crypto.randomBytes(32).toString('hex'),
+                result.channex_booking_id || null
+              ]
+            );
+            convId = convResult.rows[0].id;
+            console.log(`✅ [CHANNEX] Conversation créée: ${convId}`);
 
-            const confirmMsg = `Bonjour${guestFirst ? ' ' + guestFirst : ''} ! 👋
+            // Notifier le front (onglet Messages)
+            if (io) {
+              io.to(`user_${result.user_id}`).emit('new_conversation', { conversationId: convId });
+            }
+          }
 
-Merci pour votre réservation via ${otaLabel} pour ${propName} !
+          // 3. Envoyer le message de confirmation via Channex → OTA
+          const confirmMsg = `Bonjour${guestFirst ? ' ' + guestFirst : ''} ! 👋
+
+Merci pour votre réservation via ${ota.label || otaName} pour ${propertyName} !
 
 Vous recevrez les informations pour votre arrivée prochainement.
 
 N'hésitez pas à nous contacter si vous avez des questions. 😊`;
 
-            await sendAutoMessage(pool, io, conv.id, confirmMsg, conv.channex_booking_id || null);
-            console.log(`✅ [CHANNEX] Message de confirmation envoyé (conv ${conv.id})`);
-          }
+          await sendAutoMessage(pool, io, convId, confirmMsg, result.channex_booking_id || null);
+          console.log(`✅ [CHANNEX] Message de confirmation envoyé (conv ${convId})`);
+
         } catch (confirmErr) {
-          console.error('⚠️ [CHANNEX WEBHOOK] Erreur message confirmation:', confirmErr.message);
+          console.error('⚠️ [CHANNEX WEBHOOK] Erreur conversation/message:', confirmErr.message);
         }
       }
     }
