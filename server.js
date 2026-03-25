@@ -1507,6 +1507,17 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ channex_booking_id conversations:', e.message);
     }
 
+    // ✅ Migration : phone + siret sur owner_clients
+    try {
+      await pool.query(`
+        ALTER TABLE owner_clients ADD COLUMN IF NOT EXISTS phone TEXT;
+        ALTER TABLE owner_clients ADD COLUMN IF NOT EXISTS siret TEXT;
+      `);
+      console.log('✅ Colonnes phone + siret ajoutées à owner_clients');
+    } catch (e) {
+      console.log('ℹ️ owner_clients phone/siret:', e.message);
+    }
+
     // ✅ Migration : données voyageur enrichies (Channex)
     try {
       await pool.query(`
@@ -13482,6 +13493,8 @@ app.post('/api/owner-clients', async (req, res) => {
       lastName,
       companyName,
       email,
+      phone,
+      siret,
       address,
       postalCode,
       city,
@@ -13504,11 +13517,13 @@ app.post('/api/owner-clients', async (req, res) => {
         last_name,
         company_name,
         email,
+        phone,
+        siret,
         address,
         postal_code,
         city,
         default_commission_rate
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *`,
       [
         user.id,
@@ -13517,6 +13532,8 @@ app.post('/api/owner-clients', async (req, res) => {
         lastName || null,
         companyName || null,
         email || null,
+        phone || null,
+        siret || null,
         address || null,
         postalCode || null,
         city || null,
@@ -13538,7 +13555,7 @@ app.put('/api/owner-clients/:id', async (req, res) => {
     const clientId = req.params.id;
     const {
       clientType, firstName, lastName, companyName,
-      email, address, postalCode, city, defaultCommissionRate
+      email, phone, siret, address, postalCode, city, defaultCommissionRate
     } = req.body;
   
     const result = await pool.query(`
@@ -13547,19 +13564,23 @@ app.put('/api/owner-clients/:id', async (req, res) => {
         first_name = $2, 
         last_name = $3, 
         company_name = $4,
-        email = $5, 
-        address = $6, 
-        postal_code = $7, 
-        city = $8,
-        default_commission_rate = $9
-      WHERE id = $10 AND user_id = $11
+        email = $5,
+        phone = $6,
+        siret = $7,
+        address = $8, 
+        postal_code = $9, 
+        city = $10,
+        default_commission_rate = $11
+      WHERE id = $12 AND user_id = $13
       RETURNING *
     `, [
       clientType, 
       firstName || null, 
       lastName || null, 
       companyName || null,
-      email || null, 
+      email || null,
+      phone || null,
+      siret || null,
       address || null, 
       postalCode || null, 
       city || null,
