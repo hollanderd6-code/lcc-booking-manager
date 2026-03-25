@@ -7425,6 +7425,27 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
       }
     });
 
+    // Charger toutes les réservations enrichies depuis la DB
+    const dbResResult = await pool.query(`
+      SELECT r.uid, r.property_id, r.start_date, r.end_date,
+        r.guest_name, r.guest_first_name, r.guest_last_name,
+        r.guest_email, r.guest_phone, r.guest_country,
+        r.occupancy_adults, r.occupancy_children,
+        r.amount_total, r.amount_rooms, r.amount_taxes,
+        r.amount_cleaning, r.ota_commission, r.host_payout,
+        r.currency, r.source, r.channex_booking_id, r.ota_name
+      FROM reservations r WHERE r.user_id = $1
+    `, [userId]);
+    const dbResMap = new Map();
+    dbResResult.rows.forEach(r => {
+      dbResMap.set(r.uid, r);
+      if (r.channex_booking_id) dbResMap.set('CHX_' + r.channex_booking_id, r);
+      if (r.start_date) {
+        const d = r.start_date.toISOString ? r.start_date.toISOString().split('T')[0] : String(r.start_date).split('T')[0];
+        dbResMap.set(r.property_id + '_' + d, r);
+      }
+    });
+
     const result = [];
     const userProperties = PROPERTIES.filter(p => p.userId === userId);
 
@@ -7433,18 +7454,74 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
       propReservations.forEach(r => {
         if (!r.uid || r.type === 'block' || r.source === 'BLOCK') return;
         const payment = paymentByUid[r.uid] || null;
+        const startDate = r.start ? new Date(r.start).toISOString().split('T')[0] : '';
+        const dbData = dbResMap.get(r.uid) || dbResMap.get(property.id + '_' + startDate) || null;
+        const gFirst = dbData?.guest_first_name || '';
+        const gLast  = dbData?.guest_last_name  || '';
+        const gDisplay = gFirst ? (gLast ? gFirst + ' ' + gLast : gFirst) : (dbData?.guest_name || r.guestName || '');
         result.push({
           reservationUid: r.uid,
           propertyId: property.id,
           propertyName: property.name,
           startDate: r.start,
           endDate: r.end,
-          guestName: r.guestName || '',
-          source: r.source || '',
+          guestName: gDisplay || r.guestName || '',
+          guestFirstName:  gFirst,
+          guestLastName:   gLast,
+          guestDisplayName: gDisplay,
+          guestPhone:    dbData?.guest_phone   || '',
+          guestEmail:    dbData?.guest_email   || '',
+          guestCountry:  dbData?.guest_country || null,
+          occupancyAdults:   dbData?.occupancy_adults   || null,
+          occupancyChildren: dbData?.occupancy_children || 0,
+          amountTotal:    dbData?.amount_total    ? parseFloat(dbData.amount_total)    : null,
+          amountRooms:    dbData?.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+          amountTaxes:    dbData?.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
+          amountCleaning: dbData?.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
+          otaCommission:  dbData?.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
+          currency: dbData?.currency || 'EUR',
+          source: r.source || dbData?.source || '',
           payment
         });
       });
     });
+
+    // Ajouter les résas Channex absentes du store iCal
+    const storeUids = new Set(result.map(r => r.reservationUid));
+    for (const [key, dbData] of dbResMap.entries()) {
+      if (!key.startsWith('CHX_') && !key.includes('_20')) {
+        if (dbData.source === 'channex' && !storeUids.has(dbData.uid)) {
+          const prop = userProperties.find(p => p.id === dbData.property_id);
+          if (!prop) continue;
+          const payment = paymentByUid[dbData.uid] || null;
+          const startD = dbData.start_date ? (dbData.start_date.toISOString ? dbData.start_date.toISOString() : String(dbData.start_date)) : null;
+          const endD   = dbData.end_date   ? (dbData.end_date.toISOString   ? dbData.end_date.toISOString()   : String(dbData.end_date))   : null;
+          const gFirst = dbData.guest_first_name || '';
+          const gLast  = dbData.guest_last_name  || '';
+          const gDisplay = gFirst ? (gLast ? gFirst + ' ' + gLast : gFirst) : (dbData.guest_name || '');
+          result.push({
+            reservationUid: dbData.uid,
+            propertyId: prop.id, propertyName: prop.name,
+            startDate: startD, endDate: endD,
+            guestName: gDisplay || dbData.guest_name || '',
+            guestFirstName: gFirst, guestLastName: gLast, guestDisplayName: gDisplay,
+            guestPhone: dbData.guest_phone || '', guestEmail: dbData.guest_email || '',
+            guestCountry: dbData.guest_country || null,
+            occupancyAdults: dbData.occupancy_adults || null,
+            occupancyChildren: dbData.occupancy_children || 0,
+            amountTotal:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
+            amountRooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+            amountTaxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
+            amountCleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
+            otaCommission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
+            currency: dbData.currency || 'EUR',
+            source: dbData.ota_name || dbData.source || 'channex',
+            payment
+          });
+          storeUids.add(dbData.uid);
+        }
+      }
+    }
 
     // Trier: paiements en premier, puis par date de début
     result.sort((a, b) => {
