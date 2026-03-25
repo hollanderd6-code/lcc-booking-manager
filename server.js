@@ -20873,6 +20873,28 @@ app.post('/api/channex/webhook', async (req, res) => {
     for (const booking of bookings) {
       const result = await processChannexBooking(pool, booking);
 
+      // ── Injecter immédiatement dans le store mémoire ─────────
+      if (result && result.property_id && result.uid) {
+        if (!reservationsStore.properties[result.property_id]) {
+          reservationsStore.properties[result.property_id] = [];
+        }
+        const alreadyInStore = reservationsStore.properties[result.property_id].find(r => r.uid === result.uid);
+        if (!alreadyInStore) {
+          reservationsStore.properties[result.property_id].push({
+            uid:       result.uid,
+            start:     result.start_date,
+            end:       result.end_date,
+            guestName: result.guest_name || '',
+            source:    'channex',
+            platform:  result.platform || 'Channex',
+            status:    result.status || 'confirmed',
+            price:     parseFloat(result.amount) || 0,
+            currency:  result.currency || 'EUR'
+          });
+          console.log(`✅ [CHANNEX] Résa ${result.uid} injectée dans reservationsStore`);
+        }
+      }
+
       // ── Notification push si nouvelle réservation créée ──────
       if (result && result.uid && result.uid.startsWith('CHX_')) {
         try {
