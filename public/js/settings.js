@@ -449,7 +449,7 @@ async function saveProperty(event) {
 
   const formData = new FormData();
   formData.append('name', name);
-  if (internalName) formData.append('internalName', internalName);
+  formData.append('internalName', internalName || ''); // Toujours envoyer, même vide
   formData.append('color', color);
   formData.append('icalUrls', JSON.stringify([])); // iCal désactivé — Channex gère les OTAs
   
