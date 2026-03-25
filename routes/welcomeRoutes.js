@@ -140,42 +140,28 @@ router.post('/create', authenticateUser, upload.any(), async (req, res) => {
     const pool = req.app.locals.pool;
     console.log("ðŸ“¥ Tentative de sauvegarde reÃ§ue..."); // Log de debug
 
-    // 1. RÃ©cupÃ©ration de l'ID existant
-    const existingCheck = await pool.query(
-      'SELECT id, unique_id, data FROM public.welcome_books_v2 WHERE user_id = $1 ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC LIMIT 1',
-      [req.userId]
-    );
+    // 1. Récupération de l'ID existant
+    // Si le client envoie un uniqueId → c'est une ÉDITION, on cherche ce livret précis
+    // Sinon → c'est une CRÉATION, on génère un nouvel ID sans toucher aux autres livrets
+    const clientUniqueId = req.body?.uniqueId || req.body?.unique_id || null;
 
     let uniqueId;
     let oldPhotos = {};
 
-    // Priorité: uniqueId envoyé par le client (édition), sinon valeur DB, sinon fallback dans data
-    const clientUniqueId = req.body?.uniqueId || req.body?.unique_id;
-
-    if (existingCheck.rows.length > 0) {
-      const row = existingCheck.rows[0];
-      const oldData = row.data || {};
-      const dbUniqueId = row.unique_id;
-
-      oldPhotos = oldData.photos || {};
-      uniqueId = clientUniqueId || dbUniqueId || oldData.uniqueId;
-
-      if (!uniqueId) {
-        uniqueId = crypto.randomBytes(16).toString('hex');
-        console.log(`✨ Aucun uniqueId trouvé, génération : ${uniqueId}`);
-      } else {
+    if (clientUniqueId) {
+      // Mode ÉDITION : charger les anciennes photos de CE livret
+      const existingCheck = await pool.query(
+        'SELECT id, unique_id, data FROM public.welcome_books_v2 WHERE user_id =  AND unique_id =  LIMIT 1',
+        [req.userId, clientUniqueId]
+      );
+      uniqueId = clientUniqueId;
+      if (existingCheck.rows.length > 0) {
+        oldPhotos = existingCheck.rows[0].data?.photos || {};
         console.log(`♻️ Mise à jour du livret existant : ${uniqueId}`);
       }
-
-      // Si la ligne DB n'avait pas de unique_id (ancien bug), on le fixe une bonne fois pour toutes
-      if (!dbUniqueId) {
-        await pool.query(
-          'UPDATE public.welcome_books_v2 SET unique_id = $1, updated_at = NOW() WHERE id = $2',
-          [uniqueId, row.id]
-        );
-      }
     } else {
-      uniqueId = clientUniqueId || crypto.randomBytes(16).toString('hex');
+      // Mode CRÉATION : toujours un nouvel ID
+      uniqueId = crypto.randomBytes(16).toString('hex');
       console.log(`✨ Création nouveau livret : ${uniqueId}`);
     }
 
