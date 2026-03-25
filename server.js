@@ -10486,7 +10486,8 @@ app.post('/api/properties',
       maxGuests,
       bedrooms,
       beds,
-      bathrooms
+      bathrooms,
+      internal_name
     } = body;
 
     const amenities = body.amenities || {};
@@ -11540,7 +11541,8 @@ app.put('/api/properties/:propertyId',
       maxGuests,
       bedrooms,
       beds,
-      bathrooms
+      bathrooms,
+      internal_name
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
