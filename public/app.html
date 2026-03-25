@@ -11563,7 +11563,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  window.renderInvoicePreview = function() {
+  // Cache propriétaire par logement pour éviter appels répétés
+  const _invOwnerCache = {};
+
+  async function _getInvOwner(propertyId) {
+    if (!propertyId) return null;
+    if (_invOwnerCache[propertyId] !== undefined) return _invOwnerCache[propertyId];
+    try {
+      const res = await fetch('/api/owner-clients/' + propertyId, {
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
+      });
+      if (!res.ok) { _invOwnerCache[propertyId] = null; return null; }
+      const owner = await res.json();
+      _invOwnerCache[propertyId] = owner;
+      return owner;
+    } catch(e) { _invOwnerCache[propertyId] = null; return null; }
+  }
+
+  window.renderInvoicePreview = async function() {
     const preview = document.getElementById('inv_preview');
     const sendBtn = document.getElementById('inv_sendBtn');
     if (!preview) return;
@@ -11574,6 +11591,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const clientCP     = document.getElementById('inv_clientPostalCode')?.value || '';
     const clientCity   = document.getElementById('inv_clientCity')?.value || '';
     const propSel      = document.getElementById('inv_propertyName');
+    const propId       = propSel?.value || '';
     const propName     = propSel?.options[propSel.selectedIndex]?.text || '';
     const propAddr     = propSel?.options[propSel.selectedIndex]?.dataset?.address || '';
     const checkin      = document.getElementById('inv_checkin')?.value || '';
@@ -11601,13 +11619,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '';
     const fmtAmt  = n => n.toFixed(2) + ' €';
 
-    // Récupérer infos propriétaire/émetteur
+    // Récupérer le propriétaire du logement (comme factures.html)
     const profile = JSON.parse(localStorage.getItem('lcc_settings_profile') || '{}');
     const user    = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    const emitter = profile.company || user.company || user.name || 'Ma Conciergerie';
-    const emitterAddr = profile.address || '';
-    const emitterCity = (profile.postalCode || '') + ' ' + (profile.city || '');
-    const emitterSiret = profile.siret || '';
+    const owner   = propId ? await _getInvOwner(propId) : null;
+    const emitter = owner
+      ? (owner.company_name || ((owner.first_name || '') + ' ' + (owner.last_name || '')).trim())
+      : (profile.company || user.company || user.name || 'Ma Conciergerie');
+    const emitterAddr  = owner ? (owner.address || '') : (profile.address || '');
+    const emitterCity  = owner
+      ? ((owner.postal_code || '') + ' ' + (owner.city || '')).trim()
+      : ((profile.postalCode || '') + ' ' + (profile.city || '')).trim();
+    const emitterSiret = owner ? (owner.siret || '') : (profile.siret || '');
+    const emitterEmail = owner ? (owner.email || '') : (user.email || '');
 
     const invoiceNum = 'FACT-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-4);
 
@@ -11618,7 +11642,8 @@ document.addEventListener('DOMContentLoaded', function() {
           <div style="font-size:12px;color:#6b7280;margin-top:2px;">
             ${emitterAddr ? emitterAddr + '<br>' : ''}
             ${emitterCity.trim() ? emitterCity + '<br>' : ''}
-            ${emitterSiret ? 'SIRET : ' + emitterSiret : ''}
+            ${emitterSiret ? 'SIRET : ' + emitterSiret + '<br>' : ''}
+            ${emitterEmail ? emitterEmail : ''}
           </div>
         </div>
         <div style="text-align:right;">
