@@ -5730,7 +5730,9 @@ window.LCC_PROPERTIES = properties;
         for (var k = 0; k < reservations.length; k++) {
           var r2 = reservations[k];
           if (!r2) continue;
-          var bpropId = r2.property && r2.property.id != null ? String(r2.property.id) : null;
+          var bpropId = r2.property && r2.property.id != null
+            ? String(r2.property.id)
+            : (r2.propertyId != null ? String(r2.propertyId) : null);
           var start = r2.start || r2.checkIn || r2.startDate;
           var end = r2.end || r2.checkOut || r2.endDate;
           if (!start || !end) continue;
