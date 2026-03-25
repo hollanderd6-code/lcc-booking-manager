@@ -10433,7 +10433,12 @@ app.post('/api/properties',
       wifiPassword,
       accessInstructions,
       arrivalMessage,  // ✅ NOUVEAU
-      chatPin 
+      chatPin,
+      basePrice,
+  weekendPrice,
+  cleaningFee,
+  touristTaxPerNight,
+  conciergePct
     } = body;
 
     const amenities = body.amenities || {};
