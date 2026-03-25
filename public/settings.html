@@ -1384,14 +1384,14 @@ html[data-theme-v3="1"] .sidebar {
 <i class="fas fa-sign-in-alt"></i>
 <span>Heure d’arrivée</span>
 </label>
-<input id="propertyArrivalTime" placeholder="16:00" type="time"/>
+<select id="propertyArrivalTime" class="form-control"></select>
 </div>
 <div class="form-group">
 <label for="propertyDepartureTime">
 <i class="fas fa-sign-out-alt"></i>
 <span>Heure de départ</span>
 </label>
-<input id="propertyDepartureTime" placeholder="11:00" type="time"/>
+<select id="propertyDepartureTime" class="form-control"></select>
 </div>
 </div>
 <div class="form-grid-2">
@@ -1405,14 +1405,39 @@ html[data-theme-v3="1"] .sidebar {
 <span>€</span>
 </div>
 </div>
+<input type="hidden" id="propertyColor" value="#E67E50"/>
+</div>
+
+<!-- ✅ SECTION : CAPACITÉ D'ACCUEIL -->
+<div class="form-grid-2">
 <div class="form-group">
-<label for="propertyColor">
-<i class="fas fa-palette"></i>
-<span>Couleur</span>
-</label>
-<div class="color-picker-wrapper">
-<input class="color-picker" id="propertyColor" type="color" value="#E67E50"/>
-<div class="color-preview" id="colorPreview">#E67E50</div>
+<label for="propertyMaxGuests"><i class="fas fa-users"></i><span>Capacité d'accueil</span></label>
+<div class="input-with-suffix">
+<input id="propertyMaxGuests" min="1" max="50" placeholder="Ex: 4" step="1" type="number"/>
+<span>pers.</span>
+</div>
+</div>
+<div class="form-group">
+<label for="propertyBedrooms"><i class="fas fa-door-open"></i><span>Chambres</span></label>
+<div class="input-with-suffix">
+<input id="propertyBedrooms" min="0" max="20" placeholder="Ex: 2" step="1" type="number"/>
+<span>ch.</span>
+</div>
+</div>
+</div>
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyBeds"><i class="fas fa-bed"></i><span>Lits</span></label>
+<div class="input-with-suffix">
+<input id="propertyBeds" min="0" max="20" placeholder="Ex: 3" step="1" type="number"/>
+<span>lits</span>
+</div>
+</div>
+<div class="form-group">
+<label for="propertyBathrooms"><i class="fas fa-shower"></i><span>Salles de bain</span></label>
+<div class="input-with-suffix">
+<input id="propertyBathrooms" min="0" max="10" placeholder="Ex: 1" step="0.5" type="number"/>
+<span>sdb.</span>
 </div>
 </div>
 </div>
@@ -1957,6 +1982,17 @@ function insertVariable(textareaId, variable, event) {
   <input class="chip-toggle" type="checkbox" id="amenityClimatisation" />
   <label class="chip-label" for="amenityClimatisation"><i class="fas fa-snowflake"></i>Climatisation</label>
 </div>
+<!-- Équipements personnalisés -->
+<div id="customAmenitiesContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+<div style="display:flex;gap:8px;margin-top:10px;">
+  <input id="newAmenityInput" type="text" placeholder="Ex: Jacuzzi, Piscine, Barbecue…"
+    style="flex:1;padding:8px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;"
+    onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomAmenity();}" />
+  <button type="button" onclick="addCustomAmenity()"
+    style="padding:8px 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+    <i class="fas fa-plus"></i> Ajouter
+  </button>
+</div>
 
 <!-- ===== SECTION : RÈGLES DE LA MAISON ===== -->
 <div class="form-section-header" style="margin-top:24px;">
@@ -1977,6 +2013,17 @@ function insertVariable(textareaId, variable, event) {
 
   <input class="chip-toggle" type="checkbox" id="ruleEnfants" />
   <label class="chip-label" for="ruleEnfants"><i class="fas fa-baby"></i>Enfants bienvenus</label>
+</div>
+<!-- Règles personnalisées -->
+<div id="customRulesContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+<div style="display:flex;gap:8px;margin-top:10px;">
+  <input id="newRuleInput" type="text" placeholder="Ex: Pas de chaussures, Silence après 22h…"
+    style="flex:1;padding:8px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;"
+    onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomRule();}" />
+  <button type="button" onclick="addCustomRule()"
+    style="padding:8px 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+    <i class="fas fa-plus"></i> Ajouter
+  </button>
 </div>
 
 <!-- ===== SECTION : INFOS PRATIQUES ===== -->
@@ -2762,6 +2809,16 @@ function insertVariable(textareaId, variable, event) {
     document.getElementById('autoResponsesEnabled').checked = property.auto_responses_enabled !== undefined 
       ? property.auto_responses_enabled 
       : true;
+
+    // === CAPACITÉ ===
+    if (document.getElementById('propertyMaxGuests'))
+      document.getElementById('propertyMaxGuests').value = property.max_guests ?? property.maxGuests ?? '';
+    if (document.getElementById('propertyBedrooms'))
+      document.getElementById('propertyBedrooms').value = property.bedrooms ?? '';
+    if (document.getElementById('propertyBeds'))
+      document.getElementById('propertyBeds').value = property.beds ?? '';
+    if (document.getElementById('propertyBathrooms'))
+      document.getElementById('propertyBathrooms').value = property.bathrooms ?? '';
   };
 
   // Fonction pour récupérer les données du formulaire
@@ -2798,10 +2855,14 @@ function insertVariable(textareaId, variable, event) {
     const autoResponsesEnabled = document.getElementById('autoResponsesEnabled').checked;
     
     return {
-      amenities: JSON.stringify(amenities),
-      house_rules: JSON.stringify(houseRules),
+      amenities: JSON.stringify({...amenities, custom: window._customAmenities || []}),
+      house_rules: JSON.stringify({...houseRules, custom: window._customRules || []}),
       practical_info: JSON.stringify(practicalInfo),
-      auto_responses_enabled: autoResponsesEnabled
+      auto_responses_enabled: autoResponsesEnabled,
+      max_guests: document.getElementById('propertyMaxGuests')?.value || null,
+      bedrooms: document.getElementById('propertyBedrooms')?.value || null,
+      beds: document.getElementById('propertyBeds')?.value || null,
+      bathrooms: document.getElementById('propertyBathrooms')?.value || null
     };
   };
 
