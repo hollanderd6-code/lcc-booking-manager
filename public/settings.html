@@ -240,6 +240,23 @@ html[data-theme-v3="1"] .sidebar {
 
     /* old property-card overridden */
 
+/* ── Filter chips ── */
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 999px;
+  border: 1.5px solid rgba(200,184,154,.5);
+  background: white; color: #374151;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.filter-chip:hover { border-color: #1A7A5E; color: #1A7A5E; background: rgba(26,122,94,.04); }
+.filter-chip.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+.filter-chip-groups {
+  background: #F5F0E8; border-color: rgba(200,184,154,.6); color: #6b7280;
+  margin-left: auto;
+}
+.filter-chip-groups:hover { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+
     .property-card:hover {
       box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
       transform: translateY(-2px);
@@ -1273,6 +1290,9 @@ html[data-theme-v3="1"] .sidebar {
     <i class="fas fa-plus"></i> Ajouter
   </button>
 </div>
+<!-- Barre de filtre groupes -->
+<div id="filterBar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+
 <div class="properties-grid" id="propertiesGrid">
 <!-- Logements injectés ici par settings.js -->
 </div>
