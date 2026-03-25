@@ -5985,6 +5985,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
    // ⭐ Charger toutes les réservations enrichies depuis la DB (Channex + directes)
     let reservationsDbMap = new Map(); // uid → données enrichies
+    let reservationsDbRows = []; // rows brutes pour itérer sans doublon
     try {
       const dbResResult = await pool.query(
         `SELECT
@@ -6021,6 +6022,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
          WHERE r.user_id = $1`,
         [userId]
       );
+      reservationsDbRows = dbResResult.rows;
       dbResResult.rows.forEach(r => {
         reservationsDbMap.set(r.uid, r);
         // Index par channex_booking_id aussi
@@ -6111,9 +6113,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
     // ── Ajouter les résas Channex (DB) absentes du store iCal ──
     const storeUids = new Set(allReservations.map(r => r.uid).filter(Boolean));
-    for (const [key, dbData] of reservationsDbMap.entries()) {
-      // Uniquement les entrées indexées par uid (pas les doublons par date/channex_key)
-      if (!key.startsWith('CHX_') && !key.includes('_20')) {
+    for (const dbData of reservationsDbRows) {
+      // Itérer sur les rows directement — pas de doublon
+      {
         if (dbData.source === 'channex' && !storeUids.has(dbData.uid)) {
           // Trouver le nom de la propriété
           const prop = filteredProps.find(p => p.id === dbData.property_id);
