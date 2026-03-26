@@ -85,8 +85,8 @@ const RESPONSES = {
         lines.push(`\nℹ️ ${property.access_instructions}`);
       }
       // Code d'accès : jamais avant le jour J
-      lines.push('\n🔑 Le code d'accès vous sera communiqué le jour de votre arrivée.');
-      lines.push('\nN'hésitez pas si vous avez d'autres questions ! 😊');
+      lines.push("\n🔑 Le code d'accès vous sera communiqué le jour de votre arrivée.");
+      lines.push("\nN'hésitez pas si vous avez d'autres questions ! 😊");
       return lines.join('\n');
     },
 
@@ -124,7 +124,7 @@ const RESPONSES = {
       } catch(e) {
         lines.push('🛏️ Le linge de lit et les serviettes sont fournis pour votre séjour.');
       }
-      lines.push('\nN'hésitez pas si vous avez d'autres questions ! 😊');
+      lines.push("\nN'hésitez pas si vous avez d'autres questions ! 😊");
       return lines.join('\n');
     },
 
@@ -136,7 +136,7 @@ const RESPONSES = {
       if (property.beds) lines.push(`🛌 **${property.beds} lit${property.beds > 1 ? 's' : ''}**`);
       if (property.bathrooms) lines.push(`🚿 **${property.bathrooms} salle${property.bathrooms > 1 ? 's' : ''} de bain**`);
       if (lines.length === 0) return null;
-      return lines.join('\n') + '\n\nN'hésitez pas si vous avez d'autres questions ! 😊';
+      return lines.join('\n') + "\n\nN'hésitez pas si vous avez d'autres questions ! 😊";
     },
 
     // Problème → escalade directe
@@ -167,7 +167,7 @@ const RESPONSES = {
       if (property.departure_time) lines.push(`🕐 Check-out is before **${property.departure_time}**.`);
       if (property.access_instructions) lines.push(`\nℹ️ ${property.access_instructions}`);
       lines.push('\n🔑 The access code will be sent to you on the day of your arrival.');
-      lines.push('\nFeel free to ask if you have any other questions! 😊');
+      lines.push("\nFeel free to ask if you have any other questions! 😊");
       return lines.join('\n');
     },
     wifi: (property) => {
