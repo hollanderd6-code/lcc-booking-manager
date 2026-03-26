@@ -16,7 +16,8 @@ const KEYWORDS_BY_LANGUAGE = {
     housekeeping: ['serviettes', 'draps', 'linge', 'ménage', 'propre', 'nettoyage'],
     capacity: ['combien de personnes', 'capacité', 'chambres', 'lits', 'salle de bain', 'dormeurs'],
     temperature: ['chauffage', 'clim', 'climatisation', 'chaud', 'froid', 'thermostat'],
-    thanks: ['merci', 'super', 'génial', 'parfait', 'excellent', 'top', 'nickel']
+    thanks: ['merci', 'super', 'génial', 'parfait', 'excellent', 'top', 'nickel'],
+    deposit: ['caution', 'dépôt de garantie', 'garantie', 'acompte', 'empreinte', 'carte bancaire', 'pré-autorisation']
   },
   en: {
     access: ['code', 'access', 'enter', 'key', 'arrive', 'arrival', 'check-in', 'checkin', 'what time', 'when can'],
@@ -28,7 +29,8 @@ const KEYWORDS_BY_LANGUAGE = {
     housekeeping: ['towels', 'sheets', 'linen', 'cleaning'],
     capacity: ['how many people', 'capacity', 'bedrooms', 'beds', 'bathroom'],
     temperature: ['heating', 'ac', 'air conditioning', 'hot', 'cold', 'thermostat'],
-    thanks: ['thank', 'thanks', 'great', 'perfect', 'excellent', 'amazing']
+    thanks: ['thank', 'thanks', 'great', 'perfect', 'excellent', 'amazing'],
+    deposit: ['deposit', 'security deposit', 'guarantee', 'pre-authorization', 'credit card']
   },
   es: {
     access: ['código', 'acceso', 'entrar', 'llave', 'llegar', 'check-in'],
@@ -145,7 +147,21 @@ const RESPONSES = {
     // Remerciements
     thanks: () => `Merci beaucoup ! 😊\n\nNous sommes ravis que vous appréciez votre séjour. N'hésitez pas si vous avez d'autres questions !`,
 
+    // Caution → depuis deposit_amount
+    deposit: (property) => {
+      if (property.deposit_amount && parseFloat(property.deposit_amount) > 0) {
+        return "💳 Une caution de **" + property.deposit_amount + " €** est demandée pour ce séjour.\n\nElle sera prélevée sous forme de pré-autorisation sur votre carte bancaire et libérée après votre départ si le logement est en bon état.\n\nN'hésitez pas si vous avez d'autres questions ! 😊";
+      }
+      return "✅ Aucune caution n'est demandée pour ce séjour.\n\nBonne nouvelle ! 😊";
+    },
+
     // Parking → escalade si pas d'info
+    deposit: (property) => {
+      if (property.deposit_amount && parseFloat(property.deposit_amount) > 0) {
+        return "💳 A security deposit of **" + property.deposit_amount + " €** is required for this stay.\n\nIt will be pre-authorized on your credit card and released after check-out if the property is in good condition.\n\nFeel free to ask if you have any other questions! 😊";
+      }
+      return "✅ No security deposit is required for this stay.\n\nGreat news! 😊";
+    },
     parking: (property) => null,
 
     // Restaurants → escalade
