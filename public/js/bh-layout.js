@@ -442,7 +442,13 @@ function getSidebarHTML() {
     <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute('data-theme')==='dark'?document.documentElement.setAttribute('data-theme','light'):document.documentElement.setAttribute('data-theme','dark')"></button>
   </div>\`;
 
-    document.body.insertBefore(topBar, document.body.firstChild);
+    // Insérer avant .app-container, sinon en premier
+    var appContainer = document.querySelector('.app-container');
+    if (appContainer) {
+      document.body.insertBefore(topBar, appContainer);
+    } else {
+      document.body.insertBefore(topBar, document.body.firstChild);
+    }
 
     // ── Logique statuts services ──
     var API_BASE = 'https://lcc-booking-manager.onrender.com';
