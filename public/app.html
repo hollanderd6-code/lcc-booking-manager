@@ -2794,6 +2794,19 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <span class="kpi-sub" id="kpiDepositsSub">cautions payées en cours</span>
 </div>
 </article>
+<!-- KPI 7 : Checklists en attente -->
+<article class="kpi-card kpi-card--clickable" id="kpiChecklistsCard">
+<div class="kpi-header">
+<span class="kpi-label">Checklists ménage</span>
+<span class="kpi-pill kpi-pill-neutral">
+<i class="fas fa-broom"></i> Suivi
+      </span>
+</div>
+<div class="kpi-main">
+<span class="kpi-value" id="kpiChecklistsValue">0</span>
+<span class="kpi-sub" id="kpiChecklistsSub">en attente de validation</span>
+</div>
+</article>
 </section>
 <!-- CHECKLISTS DE MÉNAGE -->
 <section class="cleaning-checklists-widget">
@@ -5061,6 +5074,61 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   window.openTodayMovesModal = openTodayMovesModal;
   window.openCleaning48hModal = openCleaning48hModal;
 
+  // ── KPI Checklists en attente ──────────────────────────
+  window.openChecklistsKpiModal = function() {
+    const modalId = 'checklistsKpiModal';
+    ensureGenericModal(modalId, 'Checklists ménage en attente');
+    const modal = document.getElementById(modalId);
+    const content = document.getElementById(modalId + 'Content');
+    if (!modal || !content) return;
+
+    const pending = (window.cleaningChecklists || []).filter(cl => {
+      const isCompleted = cl.is_validated || cl.owner_status === 'validated';
+      const isRejected = cl.owner_status === 'rejected';
+      return !isCompleted && !isRejected;
+    });
+
+    if (!pending.length) {
+      content.innerHTML = '<div style="opacity:.8;padding:12px 0;">Aucune checklist en attente.</div>';
+    } else {
+      // Réutiliser les styles des checklist-card existants
+      content.innerHTML = '<div class="checklists-grid" style="grid-template-columns:1fr;gap:12px;">' +
+        pending.map(checklist => {
+          const propertyName = (typeof getPropertyNameFromChecklistKey === 'function')
+            ? getPropertyNameFromChecklistKey(checklist.reservation_key, checklist.property_id)
+            : (checklist.property_name || 'Logement');
+          const checkoutDateStr = (typeof getCheckoutStr === 'function') ? getCheckoutStr(checklist) : '';
+          const formattedDate = (typeof formatChecklistDate === 'function' && checkoutDateStr)
+            ? formatChecklistDate(checkoutDateStr) : (checkoutDateStr || 'Date inconnue');
+          const guestName = checklist.guest_name || 'Voyageur';
+          const cleanerName = checklist.cleaner_name || checklist.assigned_to_name || 'Non assigné';
+          return \`
+            <div class="checklist-card checklist-card-pending" onclick="closeChecklistsKpiModal();openChecklistDetails('\${checklist.id}')" style="cursor:pointer;">
+              <div class="checklist-card-header">
+                <div class="checklist-property">\${propertyName}</div>
+                <span class="checklist-badge checklist-badge-pending">
+                  <i class="fas fa-clock"></i> En attente
+                </span>
+              </div>
+              <div class="checklist-info">
+                <div class="checklist-info-row"><i class="fas fa-calendar"></i> Départ : \${formattedDate}</div>
+                <div class="checklist-info-row"><i class="fas fa-user"></i> \${guestName}</div>
+                <div class="checklist-info-row"><i class="fas fa-user-check"></i> \${cleanerName}</div>
+              </div>
+            </div>
+          \`;
+        }).join('') + '</div>';
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+  };
+
+  window.closeChecklistsKpiModal = function() {
+    const modal = document.getElementById('checklistsKpiModal');
+    if (modal) { modal.classList.remove('active'); modal.style.display = ''; }
+  };
+
   function getLatestReservationsForKpi(fallback) {
     try {
       if (window.__LCC_KPI_STATE && Array.isArray(window.__LCC_KPI_STATE.reservations)) {
@@ -5089,6 +5157,16 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
 movesCard.addEventListener('touchstart', handler, { passive: true });
       movesCard.onclick = handler;
+    }
+
+    // ── KPI Checklists en attente ──────────────────────────
+    const checklistsCard = document.getElementById('kpiChecklistsCard');
+    if (checklistsCard) {
+      checklistsCard.onclick = () => {
+        if (window.cleaningChecklists && window.cleaningChecklists.length >= 0) {
+          window.openChecklistsKpiModal();
+        }
+      };
     }
 
     const cleaningCard = document.getElementById('kpiCleaning48hCard');
@@ -5232,7 +5310,17 @@ window.LCC_PROPERTIES = properties;
         movesCard.dataset.bound = '1';
         movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
 }
-      const cleaningCard = document.getElementById('kpiCleaning48hCard');
+      // ── KPI Checklists en attente ──────────────────────────
+    const checklistsCard = document.getElementById('kpiChecklistsCard');
+    if (checklistsCard) {
+      checklistsCard.onclick = () => {
+        if (window.cleaningChecklists && window.cleaningChecklists.length >= 0) {
+          window.openChecklistsKpiModal();
+        }
+      };
+    }
+
+    const cleaningCard = document.getElementById('kpiCleaning48hCard');
       if (cleaningCard && !cleaningCard.dataset.bound) {
         cleaningCard.dataset.bound = '1';
         cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
@@ -9407,6 +9495,20 @@ async function loadCleaningChecklists() {
     
     const data = await response.json();
     cleaningChecklists = data.checklists || [];
+    
+    // Mettre à jour le KPI checklists en attente
+    (function() {
+      const pending = cleaningChecklists.filter(cl => {
+        const isCompleted = cl.is_validated || cl.owner_status === 'validated';
+        const isRejected = cl.owner_status === 'rejected';
+        return !isCompleted && !isRejected;
+      });
+      const val = document.getElementById('kpiChecklistsValue');
+      const sub = document.getElementById('kpiChecklistsSub');
+      if (val) val.textContent = pending.length;
+      if (sub) sub.textContent = pending.length === 0 ? 'tout est validé ✓'
+        : pending.length === 1 ? 'checklist en attente' : 'checklists en attente';
+    })();
     
     // ✅ Enrichir les checklists avec les données des réservations (nom voyageur, plateforme)
     if (window.RESERVATIONS && window.RESERVATIONS.length > 0) {
