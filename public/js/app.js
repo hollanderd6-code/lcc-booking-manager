@@ -1,4 +1,11 @@
 // ========================================
+
+// ── Nom d'affichage : nom interne si défini, sinon nom normal
+function displayName(property) {
+  if (!property) return 'Logement';
+  return property.internalName || property.internal_name || property.name || 'Logement';
+}
+
 // PLATFORM APP - MODERN BOOKING MANAGER
 // ========================================
 const API_URL = 'https://lcc-booking-manager.onrender.com';
@@ -305,7 +312,7 @@ function handleCalendarSelect(info) {
     (allProperties || []).forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = p.name;
+      opt.textContent = displayName(p);
       select.appendChild(opt);
     });
   }
@@ -343,7 +350,7 @@ function updateCalendarEvents() {
         title = r.guestName || 'Voyageur';
       }
 
-      const propertyName = (r.property && r.property.name) || 'Logement';
+      const propertyName = displayName(r.property) || 'Logement';
 
       // Ajouter 6h UTC à la fin pour que la barre déborde sur le jour de départ
       // (symbolise un départ le matin de ce jour) — fonctionne pour 1 nuit comme pour plusieurs
@@ -435,7 +442,7 @@ function updateOverviewFromReservations(reservations) {
   todayArrivals.forEach(({ res, start }) => {
     items.push({
       type: 'arrival',
-      label: `Arrivée – ${res.propertyName || (res.property && res.property.name) || 'Logement'}`,
+      label: `Arrivée – ${res.propertyName || displayName(res.property) || 'Logement'}`,
       time: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     });
   });
@@ -443,7 +450,7 @@ function updateOverviewFromReservations(reservations) {
   currentStays.forEach(({ res }) => {
     items.push({
       type: 'stay',
-      label: `Séjour en cours – ${res.propertyName || (res.property && res.property.name) || 'Logement'}`,
+      label: `Séjour en cours – ${res.propertyName || displayName(res.property) || 'Logement'}`,
       time: ''
     });
   });
@@ -451,7 +458,7 @@ function updateOverviewFromReservations(reservations) {
   todayDepartures.forEach(({ res, end }) => {
     items.push({
       type: 'departure',
-      label: `Départ – ${res.propertyName || (res.property && res.property.name) || 'Logement'}`,
+      label: `Départ – ${res.propertyName || displayName(res.property) || 'Logement'}`,
       time: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     });
   });
@@ -644,7 +651,7 @@ function renderPropertyFilters(properties) {
          data-property-id="${p.id}"
          onclick="togglePropertyFilter('${p.id}')">
       <i class="fas fa-home"></i>
-      <span>${p.name}</span>
+      <span>${displayName(p)}</span>
       <span class="property-count">${p.count}</span>
     </div>
   `).join('');
@@ -711,8 +718,8 @@ function showReservationModal(reservation) {
   if (!modal || !modalBody) return;
 
   const propertyName =
+    (reservation.property && displayName(reservation.property)) ||
     reservation.propertyName ||
-    (reservation.property && reservation.property.name) ||
     'Logement';
 
   const platformRaw =
