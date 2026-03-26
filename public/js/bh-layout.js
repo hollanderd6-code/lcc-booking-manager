@@ -401,7 +401,8 @@ function getSidebarHTML() {
     if (!document.getElementById('bh-mobile-svc')) {
       const svcRow = document.createElement('div');
       svcRow.id = 'bh-mobile-svc';
-      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:16px;top:50%;transform:translateY(-50%);';
+      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:16px;top:50%;transform:translateY(-50%);cursor:pointer;padding:6px 4px;';
+      svcRow.title = 'Statut des services';
       svcRow.innerHTML = [
         '<div style="display:flex;align-items:center;gap:4px;">',
         '  <i class="fas fa-server" style="font-size:9px;color:#9CA3AF;"></i>',
@@ -413,6 +414,53 @@ function getSidebarHTML() {
         '  <span id="msvc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
         '</div>'
       ].join('');
+
+      // Popup au clic
+      svcRow.addEventListener('click', function() {
+        var existing = document.getElementById('bh-svc-popup');
+        if (existing) { existing.remove(); return; }
+
+        var rdot = document.getElementById('msvc-dot-render');
+        var cdot = document.getElementById('msvc-dot-channex');
+        var rlbl = document.getElementById('svc-label-render');
+        var clbl = document.getElementById('svc-label-channex');
+        var rago = document.getElementById('svc-ago-render');
+        var cago = document.getElementById('svc-ago-channex');
+
+        var popup = document.createElement('div');
+        popup.id = 'bh-svc-popup';
+        popup.style.cssText = 'position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 8px);right:12px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:14px;padding:14px 16px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:200px;';
+        popup.innerHTML = [
+          '<div style="font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">Statut des services</div>',
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">',
+          '  <span style="width:8px;height:8px;border-radius:50%;background:' + (rdot ? rdot.style.background : '#6B7280') + ';display:inline-block;flex-shrink:0;"></span>',
+          '  <div>',
+          '    <div style="font-size:13px;font-weight:500;color:#0D1117;">Fonctionnement du site</div>',
+          '    <div style="font-size:11px;color:#6B7280;">' + (rlbl ? rlbl.textContent : '...') + (rago && rago.textContent ? ' · ' + rago.textContent : '') + '</div>',
+          '  </div>',
+          '</div>',
+          '<div style="display:flex;align-items:center;gap:10px;">',
+          '  <span style="width:8px;height:8px;border-radius:50%;background:' + (cdot ? cdot.style.background : '#6B7280') + ';display:inline-block;flex-shrink:0;"></span>',
+          '  <div>',
+          '    <div style="font-size:13px;font-weight:500;color:#0D1117;">Connexion API</div>',
+          '    <div style="font-size:11px;color:#6B7280;">' + (clbl ? clbl.textContent : '...') + (cago && cago.textContent ? ' · ' + cago.textContent : '') + '</div>',
+          '  </div>',
+          '</div>'
+        ].join('');
+
+        document.body.appendChild(popup);
+
+        // Fermer en cliquant ailleurs
+        setTimeout(function() {
+          document.addEventListener('click', function closePopup(e) {
+            if (!popup.contains(e.target) && e.target !== svcRow) {
+              popup.remove();
+              document.removeEventListener('click', closePopup);
+            }
+          });
+        }, 50);
+      });
+
       mobileHeader.appendChild(svcRow);
     }
 
