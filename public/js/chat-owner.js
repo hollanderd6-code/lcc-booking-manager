@@ -272,7 +272,14 @@ function renderConversations() {
                 </button>
               </div>
               
-              <div class="conversation-time">${lastMessageTime}</div>
+              <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
+                ${(function() {
+                  const ageMs = Date.now() - new Date(conv.created_at).getTime();
+                  const isNew = ageMs < 24 * 60 * 60 * 1000 && unreadCount === 0 && !conv._opened;
+                  return isNew ? `<span class="conv-new-badge" data-conv-id="${conv.id}" style="background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:.04em;">NEW</span>` : '';
+                })()}
+                <div class="conversation-time">${lastMessageTime}</div>
+              </div>
               <div class="status-badge ${statusClass}">${statusLabel}</div>
               ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
             </div>
@@ -390,6 +397,11 @@ async function openChat(conversationId) {
   const conv = allConversations.find(c => c.id == conversationId);
   
   if (!conv) return;
+
+  // ✅ Supprimer le badge NEW à l'ouverture
+  const newBadge = document.querySelector(`.conv-new-badge[data-conv-id="${conversationId}"]`);
+  if (newBadge) newBadge.remove();
+  conv._opened = true;
   
   // Nom complet : priorité guest_first_name + guest_last_name (Channex)
   const firstName = conv.guest_first_name || null;
