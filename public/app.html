@@ -701,6 +701,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       justify-content: space-between;
       border-bottom: 1px solid var(--calendar-border);
       font-size: 13px;
+      cursor: pointer;
+      user-select: none;
       color: var(--text-primary);
       background: white;
       cursor: pointer;
@@ -6415,6 +6417,7 @@ if (j === 0 || cells.length === 1) {
     }
 
     function selectProperty(propertyId) {
+      console.log('🏠 selectProperty appelé:', propertyId, '| rows:', document.querySelectorAll('.calendar-row').length);
       // Toggle : si déjà sélectionné, désélectionner
       if (state.selectedPropertyId === propertyId) {
         state.selectedPropertyId = null;
