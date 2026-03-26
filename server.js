@@ -21123,8 +21123,11 @@ app.post('/api/channex/webhook', async (req, res) => {
             'VRBO': 'Vrbo', 'HOMEAWAY': 'Vrbo'
           };
           const otaLabel   = OTA_MAP2[String(otaName2).toUpperCase()] || otaName2;
-          const propRes2   = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
-          const propertyName = propRes2.rows[0]?.name || 'votre logement';
+          let propertyName = 'votre logement';
+          try {
+            const propRes2 = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
+            propertyName = (propRes2.rows[0] && propRes2.rows[0].name) || 'votre logement';
+          } catch(e) { /* fallback */ }
           const guest      = attrs.customer || {};
           const guestName  = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
           const guestFirst = guest.name || guestName.split(' ')[0] || '';
