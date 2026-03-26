@@ -532,7 +532,10 @@ async function saveProperty(event) {
         return { title: title || text.slice(0, 30), text };
       }).filter(Boolean);
     formData.append('quickReplies', JSON.stringify(quickReplies));
-    
+
+    // ✅ QUESTIONS-RÉPONSES PERSONNALISÉES
+    formData.append('customAutoResponses', JSON.stringify(_customQR || []));
+
   } catch (e) {
     console.error('Erreur collecte données étendues:', e);
   }
@@ -693,6 +696,9 @@ function resetPropertyForm() {
   _customRules = [];
   renderCustomChips('customAmenitiesContainer', [], 'removeCustomAmenity');
   renderCustomChips('customRulesContainer', [], 'removeCustomRule');
+  // Reset custom QR
+  _customQR = [];
+  renderCustomQR();
   const newAmenityInput = document.getElementById('newAmenityInput');
   if (newAmenityInput) newAmenityInput.value = '';
   const newRuleInput = document.getElementById('newRuleInput');
@@ -806,6 +812,14 @@ function openEditPropertyModal(propertyId) {
       var replies = property.quick_replies || property.quickReplies || [];
       if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
       if (Array.isArray(replies)) replies.forEach(function(t) { if (typeof window.addQuickReplyField === 'function') window.addQuickReplyField(t); });
+
+    // Charger les questions-réponses personnalisées
+    try {
+      const rawQR = property.custom_auto_responses || property.customAutoResponses;
+      _customQR = Array.isArray(rawQR) ? rawQR
+        : (typeof rawQR === 'string' ? JSON.parse(rawQR) : []);
+    } catch(e) { _customQR = []; }
+    renderCustomQR();
     }
   } catch(e) { console.warn('Raccourcis:', e); }
   if (document.getElementById("propertyOwnerId")) {
@@ -1976,6 +1990,7 @@ function renderCustomChips(containerId, items, removeCallback) {
 }
 
 let _customAmenities = [];
+let _customQR = []; // Questions-réponses personnalisées
 let _customRules = [];
 
 window.addCustomAmenity = function() {
@@ -2028,3 +2043,51 @@ async function pushRulesToChannex() {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Synchroniser les prix avec Channex'; }
   }
 }
+
+// ============================================================
+// QUESTIONS-RÉPONSES PERSONNALISÉES
+// ============================================================
+function renderCustomQR() {
+  const container = document.getElementById('customQRList');
+  if (!container) return;
+  if (!_customQR.length) {
+    container.innerHTML = '<div style="font-size:13px;color:#9CA3AF;padding:8px 0;">Aucune question-réponse configurée</div>';
+    return;
+  }
+  container.innerHTML = _customQR.map((qr, i) => `
+    <div class="qr-custom-item" style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;">Question ${i+1}</span>
+        <button type="button" onclick="removeCustomQR(${i})"
+          style="background:#FEF2F2;border:1px solid rgba(220,38,38,.2);color:#DC2626;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6B7280;margin-bottom:4px;display:block;">Mots-clés déclencheurs <span style="color:#9CA3AF;">(séparés par des virgules)</span></label>
+        <input type="text" class="form-input" style="font-size:13px;" placeholder="ex: piscine, pool, nager"
+          value="${escapeHtml(qr.keywords || '')}"
+          onchange="_customQR[${i}].keywords = this.value" />
+      </div>
+      <div>
+        <label style="font-size:11px;color:#6B7280;margin-bottom:4px;display:block;">Réponse automatique</label>
+        <textarea class="form-input" style="font-size:13px;min-height:80px;resize:vertical;" placeholder="ex: Oui, le logement dispose d'une piscine privée chauffée !"
+          onchange="_customQR[${i}].response = this.value">${escapeHtml(qr.response || '')}</textarea>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addCustomQR() {
+  _customQR.push({ keywords: '', response: '' });
+  renderCustomQR();
+  // Scroll vers le dernier élément
+  const container = document.getElementById('customQRList');
+  if (container) container.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeCustomQR(index) {
+  _customQR.splice(index, 1);
+  renderCustomQR();
+}
+
