@@ -389,6 +389,7 @@ function getSidebarHTML() {
     titleEl.textContent = title;
     titleEl.style.cssText = 'font-family:"Instrument Serif",Georgia,serif;font-size:20px;font-weight:400;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;';
 
+    // Wrapper colonne pour logo+titre à gauche, pastilles en dessous
     const logo = mobileHeader.querySelector('.mobile-logo');
     if (logo) {
       logo.after(titleEl);
@@ -396,6 +397,24 @@ function getSidebarHTML() {
       mobileHeader.appendChild(titleEl);
     }
 
+    // Pastilles statut sous le titre (si pas déjà présentes)
+    if (!document.getElementById('bh-mobile-svc')) {
+      const svcRow = document.createElement('div');
+      svcRow.id = 'bh-mobile-svc';
+      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:16px;top:50%;transform:translateY(-50%);';
+      svcRow.innerHTML = [
+        '<div style="display:flex;align-items:center;gap:4px;">',
+        '  <i class="fas fa-server" style="font-size:9px;color:#9CA3AF;"></i>',
+        '  <span id="msvc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
+        '</div>',
+        '<div style="width:1px;height:8px;background:rgba(0,0,0,.15);"></div>',
+        '<div style="display:flex;align-items:center;gap:4px;">',
+        '  <i class="fas fa-plug" style="font-size:9px;color:#9CA3AF;"></i>',
+        '  <span id="msvc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
+        '</div>'
+      ].join('');
+      mobileHeader.appendChild(svcRow);
+    }
 
   }
 
@@ -476,12 +495,16 @@ function getSidebarHTML() {
       var badge = document.getElementById('svc-status-' + id);
       var dot   = document.getElementById('svc-dot-'    + id);
       var lbl   = document.getElementById('svc-label-'  + id);
-      if (!badge) return;
-      badge.style.background  = c.bg;
-      badge.style.color       = c.text;
-      badge.style.borderColor = c.border;
+      if (badge) {
+        badge.style.background  = c.bg;
+        badge.style.color       = c.text;
+        badge.style.borderColor = c.border;
+      }
       if (dot) dot.style.background = c.dot;
       if (lbl) lbl.textContent = label;
+      // Sync pastille mobile
+      var mdot = document.getElementById('msvc-dot-' + id);
+      if (mdot) mdot.style.background = c.dot;
       lastCheck[id] = Date.now();
     }
 
@@ -507,72 +530,6 @@ function getSidebarHTML() {
         if (el && lastCheck[svc.id]) el.textContent = timeAgo(lastCheck[svc.id]);
       });
     }
-
-    // ── Bandeau mobile sous le header ──
-    function injectMobileStatusBar() {
-      if (document.getElementById('bh-mobile-status-bar')) return;
-      var bar = document.createElement('div');
-      bar.id = 'bh-mobile-status-bar';
-      bar.style.cssText = [
-        'position:fixed',
-        'top:calc(60px + env(safe-area-inset-top,0px))',
-        'left:0',
-        'right:0',
-        'height:28px',
-        'background:#0D1117',
-        'display:none',
-        'align-items:center',
-        'justify-content:center',
-        'gap:16px',
-        'z-index:1099',
-        'font-size:10px',
-        'white-space:nowrap'
-      ].join(';');
-      bar.innerHTML = [
-        '<div style="display:flex;align-items:center;gap:5px;">',
-        '  <i class="fas fa-server" style="font-size:9px;color:rgba(255,255,255,.4);"></i>',
-        '  <span style="color:rgba(255,255,255,.5);">Serveur</span>',
-        '  <span id="msvc-dot-render" style="width:5px;height:5px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
-        '  <span id="msvc-label-render" style="font-weight:600;color:#9CA3AF;">...</span>',
-        '</div>',
-        '<div style="width:1px;height:10px;background:rgba(255,255,255,.15);"></div>',
-        '<div style="display:flex;align-items:center;gap:5px;">',
-        '  <i class="fas fa-plug" style="font-size:9px;color:rgba(255,255,255,.4);"></i>',
-        '  <span style="color:rgba(255,255,255,.5);">API</span>',
-        '  <span id="msvc-dot-channex" style="width:5px;height:5px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
-        '  <span id="msvc-label-channex" style="font-weight:600;color:#9CA3AF;">...</span>',
-        '</div>'
-      ].join('');
-
-      document.body.appendChild(bar);
-
-      // Afficher seulement sur mobile
-      function toggleMobileBar() {
-        var isMobile = window.innerWidth <= 768;
-        bar.style.display = isMobile ? 'flex' : 'none';
-      }
-      toggleMobileBar();
-      window.addEventListener('resize', toggleMobileBar);
-    }
-
-    // Synchroniser les pastilles mobile avec les statuts desktop
-    var _origApply = applyStatus;
-    applyStatus = function(id, level, label) {
-      _origApply(id, level, label);
-      var MCOLS = {
-        ok:    { dot: '#4ADE80', text: '#4ADE80' },
-        warn:  { dot: '#FB923C', text: '#FB923C' },
-        error: { dot: '#F87171', text: '#F87171' },
-        unknown: { dot: '#9CA3AF', text: '#9CA3AF' }
-      };
-      var mc = MCOLS[level] || MCOLS.unknown;
-      var mdot = document.getElementById('msvc-dot-' + id);
-      var mlbl = document.getElementById('msvc-label-' + id);
-      if (mdot) mdot.style.background = mc.dot;
-      if (mlbl) { mlbl.textContent = label; mlbl.style.color = mc.text; }
-    };
-
-    injectMobileStatusBar();
 
     checkAll();
     setInterval(checkAll,  5 * 60 * 1000);
