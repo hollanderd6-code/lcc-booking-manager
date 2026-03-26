@@ -231,14 +231,71 @@ async function handleIncomingMessage(message, conversation, pool, io) {
 
         if (customQR.length > 0) {
           const msgLower = message.message.toLowerCase();
-          const matched = customQR.find(qr => {
+
+          // 1. Match exact d'abord (rapide, gratuit)
+          let matched = customQR.find(qr => {
             if (!qr.keywords || !qr.response) return false;
-            const keywords = qr.keywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
-            return keywords.some(k => k && msgLower.includes(k));
+            const entries = qr.keywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+            return entries.some(entry => {
+              if (msgLower.includes(entry)) return true;
+              const words = entry.split(/\s+/).filter(w => w.length >= 4);
+              return words.length > 0 && words.some(w => msgLower.includes(w));
+            });
           });
+
+          // 2. Si pas de match exact → matching sémantique via Groq
+          if (!matched && customQR.length > 0) {
+            try {
+              const topicsList = customQR
+                .filter(qr => qr.keywords && qr.response)
+                .map((qr, i) => `${i}: ${qr.keywords}`)
+                .join('\n');
+
+              const semanticPrompt = `You are a topic matcher. Given a guest message and a list of topics, return ONLY the number of the matching topic, or -1 if none match.
+
+Guest message: "${message.message}"
+
+Topics:
+${topicsList}
+
+Rules:
+- Return ONLY a single integer (e.g. 0, 1, 2... or -1)
+- Match if the guest is asking about the same subject, even in a different language
+- Be strict: only match if clearly related
+- No explanation, just the number`;
+
+              const semanticResult = await getGroqResponse(semanticPrompt, { language: 'en' });
+              const idx = semanticResult ? parseInt(semanticResult.trim()) : -1;
+              if (!isNaN(idx) && idx >= 0 && idx < customQR.length) {
+                matched = customQR[idx];
+                console.log(`🧠 [HANDLER] Match sémantique Groq: topic ${idx} ("${matched.keywords}")`);
+              }
+            } catch(e) {
+              console.warn('⚠️ [HANDLER] Erreur matching sémantique:', e.message);
+            }
+          }
           if (matched) {
             console.log(`✅ [HANDLER] Match Q/R personnalisée: "${matched.keywords}"`);
-            await sendBotMessage(conversation.id, matched.response, pool, io, channexId);
+            let finalResponse = matched.response;
+
+            // Traduire automatiquement si la langue n'est pas le français
+            if (language !== 'fr' && matched.response) {
+              try {
+                const translated = await getGroqResponse(
+                  `Translate the following text to ${language === 'en' ? 'English' : language === 'es' ? 'Spanish' : language === 'de' ? 'German' : language === 'it' ? 'Italian' : 'English'}. Return ONLY the translated text, nothing else:\n\n${matched.response}`,
+                  { language: 'en' } // contexte neutre pour la traduction
+                );
+                if (translated && !translated.includes('[ESCALADE]')) {
+                  finalResponse = translated;
+                  console.log(`🌍 [HANDLER] Réponse traduite en ${language}`);
+                }
+              } catch(e) {
+                console.warn('⚠️ [HANDLER] Erreur traduction:', e.message);
+                // Fallback sur la réponse originale
+              }
+            }
+
+            await sendBotMessage(conversation.id, finalResponse, pool, io, channexId);
             return true;
           }
         }
