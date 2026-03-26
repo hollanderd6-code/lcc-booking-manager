@@ -1372,6 +1372,7 @@ ON invoice_download_tokens(token);
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS bedrooms INTEGER;
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS beds INTEGER;
         ALTER TABLE properties ADD COLUMN IF NOT EXISTS bathrooms INTEGER;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS internal_name TEXT;
       `);
       console.log('✅ Colonnes max_guests / bedrooms / beds / bathrooms OK');
     } catch(e) { console.log('ℹ️ capacity columns:', e.message); }
