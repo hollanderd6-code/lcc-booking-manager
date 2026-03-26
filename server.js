@@ -21321,8 +21321,15 @@ app.post('/api/channex/webhook-message', async (req, res) => {
         const autoEnabled = conversation.auto_responses_enabled !== false;
 
         if (autoEnabled) {
-          console.log(`🤖 [CHANNEX MSG] Tentative réponse auto pour conv ${conversation_id}...`);
+          console.log(`🤖 [CHANNEX MSG] Conv ${conversation_id} | escalated=${conversation.escalated} | autoEnabled=${autoEnabled} | msg="${savedMsg.message.substring(0,40)}"`);
+          // Reset escalade pour les convs de test
+          if (conversation.escalated) {
+            await pool.query('UPDATE conversations SET escalated = FALSE WHERE id = $1', [conversation_id]);
+            conversation.escalated = false;
+            console.log(`🔄 [CHANNEX MSG] Escalade réinitialisée pour conv ${conversation_id}`);
+          }
           const handled = await handleIncomingMessage(savedMsg, conversation, pool, io);
+          console.log(`🤖 [CHANNEX MSG] handleIncomingMessage retourné: ${handled}`);
 
           // Notif push seulement si PAS de réponse auto (escalade ou aucune réponse)
           if (!handled) {
