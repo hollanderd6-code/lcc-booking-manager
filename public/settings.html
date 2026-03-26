@@ -2005,6 +2005,27 @@ function insertVariable(textareaId, variable, event) {
 </div>
 
 
+
+
+<!-- ===== SECTION : QUESTIONS-RÉPONSES PERSONNALISÉES ===== -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-comments"></i>
+  <h3>Questions-réponses personnalisées</h3>
+  <small>Ajoutez vos propres paires question/réponse. Le bot répondra en priorité avec ces réponses si les mots-clés correspondent.</small>
+</div>
+
+<div class="form-group">
+  <div id="customQRList" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
+  <button type="button" onclick="addCustomQR()"
+    style="width:100%;padding:9px;border:1.5px dashed #1A7A5E60;border-radius:10px;background:transparent;color:#1A7A5E;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+    <i class="fas fa-plus"></i> Ajouter une question-réponse
+  </button>
+  <div class="info-box" style="margin-top:10px;">
+    <i class="fas fa-lightbulb"></i>
+    <p>Ex : Mots-clés <strong>"piscine, nager, pool"</strong> → Réponse <strong>"Oui, le logement dispose d'une piscine privée !"</strong></p>
+  </div>
+</div>
+
 <!-- ===== RACCOURCIS MESSAGES ===== -->
 <div class="form-group" style="background:linear-gradient(135deg,#10b98110,#10b98118);padding:20px;border-radius:14px;border:1.5px solid #10b98130;">
   <label style="margin-bottom:14px;">
