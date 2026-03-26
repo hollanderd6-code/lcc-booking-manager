@@ -4251,7 +4251,6 @@ function populateEditBookingProperties(selectedPropertyId) {
               const assignedId = key && assignments ? assignments[key] : null;
               const cleanerName = getCleanerNameById(assignedId, cleaners);
               const propName =
-  (r.property && (r.property.internalName || r.property.internal_name)) ||
   r.propertyName ||
   (r.property && (r.property.name || r.property.title || r.property.label)) ||
   getPropertyNameById(propertyId, properties);
@@ -5692,7 +5691,7 @@ window.LCC_PROPERTIES = properties;
           for (var i = 0; i < properties.length; i++) {
             var p = properties[i] || {};
             var pid = p.id != null ? String(p.id) : String(i);
-            var name = p.name || ('Logement ' + (i + 1));
+            var name = p.internalName || p.internal_name || p.name || ('Logement ' + (i + 1));
             var color = p.color || '#10B981';
             props.push({
               id: pid,
@@ -6503,7 +6502,7 @@ if (j === 0 || cells.length === 1) {
 
         var nameSpan = document.createElement('span');
         nameSpan.className = 'property-name';
-        nameSpan.textContent = p.internalName || p.internal_name || p.name;
+        nameSpan.textContent = p.name;
 
         item.appendChild(nameSpan);
 
@@ -6998,7 +6997,7 @@ if (j === 0 || cells.length === 1) {
         data.properties.forEach(prop => {
           const option = document.createElement('option');
           option.value = prop.id;  // ← Changé de prop._id à prop.id
-          option.textContent = prop.internalName || prop.internal_name || prop.name;
+          option.textContent = prop.name;
           select.appendChild(option);
         });
         propertiesLoaded = true;
@@ -7347,7 +7346,7 @@ window.loadPricingOverrides = async function(properties) {
     input.value = stored !== null ? stored : (defaultPrice !== null ? defaultPrice : '');
 
     var titleEl = document.getElementById('cellModalTitle');
-    titleEl.textContent = prop ? (prop.internalName || prop.internal_name || prop.name) : 'Options du jour';
+    titleEl.textContent = prop ? prop.name : 'Options du jour';
 
     document.getElementById('cellModal').style.display = 'flex';
     setTimeout(function() { input.focus(); input.select(); }, 100);
