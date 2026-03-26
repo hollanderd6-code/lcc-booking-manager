@@ -401,8 +401,13 @@ async function processChannexBooking(pool, bookingData) {
           booking_id
         ]
       );
+      // Récupérer la ligne complète pour avoir property_id, user_id, etc.
+      const fullRow = await pool.query(
+        'SELECT * FROM reservations WHERE channex_booking_id = $1',
+        [booking_id]
+      );
       console.log(`ℹ️ [CHANNEX] Réservation mise à jour: ${existing.rows[0].uid}`);
-      return existing.rows[0];
+      return fullRow.rows[0] || existing.rows[0];
     }
 
     // Créer la réservation avec toutes les données
