@@ -7,26 +7,28 @@
  */
 const KEYWORDS_BY_LANGUAGE = {
   fr: {
-    access: ['code', 'accès', 'entrer', 'clé', 'clef', 'arriver', 'check-in', 'checkin'],
-    wifi: ['wifi', 'wi-fi', 'internet', 'connexion', 'mot de passe wifi', 'mdp wifi'],
-    checkout: ['check-out', 'checkout', 'départ', 'partir', 'quitter', 'fin'],
+    access: ['code', 'accès', 'entrer', 'clé', 'clef', 'arriver', 'arrive', 'heure d\'arrivée', 'check-in', 'checkin', 'quelle heure', 'à partir de', 'accueil'],
+    wifi: ['wifi', 'wi-fi', 'internet', 'connexion', 'mot de passe', 'mdp', 'réseau'],
+    checkout: ['check-out', 'checkout', 'départ', 'partir', 'quitter', 'fin de séjour', 'heure de départ'],
     parking: ['parking', 'voiture', 'garer', 'stationner'],
-    restaurants: ['restaurant', 'courses', 'supermarché', 'commerce', 'manger'],
-    issue: ['ne marche pas', 'panne', 'cassé', 'problème', 'bug'],
-    housekeeping: ['serviettes', 'draps', 'linge', 'ménage'],
-    temperature: ['chauffage', 'clim', 'climatisation', 'chaud', 'froid'],
-    thanks: ['merci', 'super', 'génial', 'parfait', 'excellent']
+    restaurants: ['restaurant', 'courses', 'supermarché', 'commerce', 'manger', 'boire'],
+    issue: ['ne marche pas', 'panne', 'cassé', 'problème', 'bug', 'fuite', 'bloqué', 'coincé'],
+    housekeeping: ['serviettes', 'draps', 'linge', 'ménage', 'propre', 'nettoyage'],
+    capacity: ['combien de personnes', 'capacité', 'chambres', 'lits', 'salle de bain', 'dormeurs'],
+    temperature: ['chauffage', 'clim', 'climatisation', 'chaud', 'froid', 'thermostat'],
+    thanks: ['merci', 'super', 'génial', 'parfait', 'excellent', 'top', 'nickel']
   },
   en: {
-    access: ['code', 'access', 'enter', 'key', 'arrive', 'check-in', 'checkin'],
-    wifi: ['wifi', 'wi-fi', 'internet', 'connection', 'password'],
-    checkout: ['check-out', 'checkout', 'leave', 'leaving', 'departure'],
+    access: ['code', 'access', 'enter', 'key', 'arrive', 'arrival', 'check-in', 'checkin', 'what time', 'when can'],
+    wifi: ['wifi', 'wi-fi', 'internet', 'connection', 'password', 'network'],
+    checkout: ['check-out', 'checkout', 'leave', 'leaving', 'departure', 'check out time'],
     parking: ['parking', 'car', 'park'],
     restaurants: ['restaurant', 'grocery', 'supermarket', 'shop', 'eat'],
-    issue: ['not working', 'broken', 'problem', 'issue', 'bug'],
+    issue: ['not working', 'broken', 'problem', 'issue', 'bug', 'leak', 'stuck'],
     housekeeping: ['towels', 'sheets', 'linen', 'cleaning'],
-    temperature: ['heating', 'ac', 'air conditioning', 'hot', 'cold'],
-    thanks: ['thank', 'thanks', 'great', 'perfect', 'excellent']
+    capacity: ['how many people', 'capacity', 'bedrooms', 'beds', 'bathroom'],
+    temperature: ['heating', 'ac', 'air conditioning', 'hot', 'cold', 'thermostat'],
+    thanks: ['thank', 'thanks', 'great', 'perfect', 'excellent', 'amazing']
   },
   es: {
     access: ['código', 'acceso', 'entrar', 'llave', 'llegar', 'check-in'],
@@ -65,35 +67,130 @@ const KEYWORDS_BY_LANGUAGE = {
 
 /**
  * Réponses par catégorie et par langue
+ * Logique : répondre directement depuis les données du logement
+ * JAMAIS donner le code d'accès avant le jour J
  */
 const RESPONSES = {
   fr: {
-    access: (property) => `Bonjour ! 👋\n\nVous trouverez toutes les informations d'accès (code, instructions détaillées) dans votre livret d'accueil :\n\n${property.welcome_book_url || '(Le livret sera bientôt disponible)'}\n\nBon séjour ! ✨`,
-    wifi: (property) => property.wifi_name && property.wifi_password 
-      ? `📶 Informations WiFi :\n\nRéseau : ${property.wifi_name}\nMot de passe : ${property.wifi_password}\n\nVous retrouverez ces infos dans le livret : ${property.welcome_book_url || ''}`
-      : `Vous trouverez les informations WiFi dans votre livret d'accueil :\n\n${property.welcome_book_url || '(Le livret sera bientôt disponible)'}`,
-    checkout: (property) => `L'heure de départ est à ${property.departure_time || '11h00'}.\n\nVous trouverez la procédure complète de départ dans votre livret :\n\n${property.welcome_book_url || '(Le livret sera bientôt disponible)'}\n\nMerci pour votre séjour ! 😊`,
-    parking: (property) => `🚗 Informations parking :\n\nVous trouverez toutes les infos (emplacement, accès) dans votre livret d'accueil :\n\n${property.welcome_book_url || '(Le livret sera bientôt disponible)'}`,
-    restaurants: (property) => `🍽️ Nos recommandations (restaurants, commerces) se trouvent dans le livret :\n\n${property.welcome_book_url || '(Le livret sera bientôt disponible)'}\n\nBon appétit ! 😋`,
-    issue: () => `Nous sommes vraiment désolés pour ce désagrément ! 😔\n\nVotre message a été transmis au propriétaire qui vous répondra dans les plus brefs délais.\n\nMerci de votre patience ! 🙏`,
-    housekeeping: (property) => `🛏️ Draps et serviettes sont fournis.\n\nVous trouverez tous les détails dans votre livret :\n\n${property.welcome_book_url || '(Le livret sera bientôt disponible)'}`,
-    temperature: (property) => `🌡️ Instructions pour le chauffage/climatisation :\n\nConsultez la section "Équipements" de votre livret :\n\n${property.welcome_book_url || '(Le livret sera bientôt disponible)'}`,
-    thanks: () => `Merci beaucoup ! 😊\n\nN'hésitez pas si vous avez d'autres questions !`
+    // Heure d'arrivée → donnée directement
+    access: (property) => {
+      const lines = ['Bonjour ! 👋'];
+      if (property.arrival_time) {
+        lines.push(`\n🕐 L'heure d'arrivée est à partir de **${property.arrival_time}**.`);
+      }
+      if (property.departure_time) {
+        lines.push(`🕐 L'heure de départ est avant **${property.departure_time}**.`);
+      }
+      if (property.access_instructions) {
+        lines.push(`\nℹ️ ${property.access_instructions}`);
+      }
+      // Code d'accès : jamais avant le jour J
+      lines.push('\n🔑 Le code d'accès vous sera communiqué le jour de votre arrivée.');
+      lines.push('\nN'hésitez pas si vous avez d'autres questions ! 😊');
+      return lines.join('\n');
+    },
+
+    // WiFi → donné directement
+    wifi: (property) => {
+      if (property.wifi_name && property.wifi_password) {
+        return `📶 Voici vos informations WiFi :\n\nRéseau : **${property.wifi_name}**\nMot de passe : **${property.wifi_password}**\n\nBonne connexion ! 😊`;
+      }
+      if (property.wifi_name) {
+        return `📶 Le réseau WiFi est **${property.wifi_name}**.\nLe mot de passe vous sera communiqué à votre arrivée.`;
+      }
+      return null; // Pas d'info → escalade vers Groq
+    },
+
+    // Heure de départ → donnée directement
+    checkout: (property) => {
+      const heure = property.departure_time || '11h00';
+      return `🕐 L'heure de départ est avant **${heure}**.\n\nMerci de laisser le logement propre et de déposer les clés selon les instructions reçues.\n\nMerci pour votre séjour ! 😊`;
+    },
+
+    // Draps/serviettes → depuis amenities ou réponse directe
+    housekeeping: (property) => {
+      const lines = [];
+      try {
+        const amenities = typeof property.amenities === 'string'
+          ? JSON.parse(property.amenities) : (property.amenities || {});
+        const provided = [];
+        if (amenities.linens || amenities.sheets) provided.push('draps');
+        if (amenities.towels) provided.push('serviettes');
+        if (provided.length > 0) {
+          lines.push(`🛏️ Les **${provided.join(' et ')}** sont fournis.`);
+        } else {
+          lines.push('🛏️ Le linge de lit et les serviettes sont fournis pour votre séjour.');
+        }
+      } catch(e) {
+        lines.push('🛏️ Le linge de lit et les serviettes sont fournis pour votre séjour.');
+      }
+      lines.push('\nN'hésitez pas si vous avez d'autres questions ! 😊');
+      return lines.join('\n');
+    },
+
+    // Capacité / infos logement
+    capacity: (property) => {
+      const lines = [];
+      if (property.max_guests) lines.push(`👥 Le logement accueille jusqu'à **${property.max_guests} personnes**.`);
+      if (property.bedrooms) lines.push(`🛏️ **${property.bedrooms} chambre${property.bedrooms > 1 ? 's' : ''}**`);
+      if (property.beds) lines.push(`🛌 **${property.beds} lit${property.beds > 1 ? 's' : ''}**`);
+      if (property.bathrooms) lines.push(`🚿 **${property.bathrooms} salle${property.bathrooms > 1 ? 's' : ''} de bain**`);
+      if (lines.length === 0) return null;
+      return lines.join('\n') + '\n\nN'hésitez pas si vous avez d'autres questions ! 😊';
+    },
+
+    // Problème → escalade directe
+    issue: () => `Nous sommes vraiment désolés pour ce désagrément ! 😔\n\nVotre message a été transmis au responsable qui vous répondra dans les plus brefs délais.\n\nMerci de votre patience ! 🙏`,
+
+    // Remerciements
+    thanks: () => `Merci beaucoup ! 😊\n\nNous sommes ravis que vous appréciez votre séjour. N'hésitez pas si vous avez d'autres questions !`,
+
+    // Parking → escalade si pas d'info
+    parking: (property) => null,
+
+    // Restaurants → escalade
+    restaurants: (property) => null,
+
+    // Température → escalade si pas d'instructions
+    temperature: (property) => {
+      if (property.access_instructions && property.access_instructions.toLowerCase().includes('chauffage')) {
+        return `🌡️ ${property.access_instructions}`;
+      }
+      return null;
+    }
   },
+
   en: {
-    access: (property) => `Hello! 👋\n\nYou'll find all access information (code, detailed instructions) in your welcome booklet:\n\n${property.welcome_book_url || '(Booklet will be available soon)'}\n\nEnjoy your stay! ✨`,
-    wifi: (property) => property.wifi_name && property.wifi_password
-      ? `📶 WiFi Information:\n\nNetwork: ${property.wifi_name}\nPassword: ${property.wifi_password}\n\nYou'll find this info in the booklet: ${property.welcome_book_url || ''}`
-      : `You'll find WiFi information in your welcome booklet:\n\n${property.welcome_book_url || '(Booklet will be available soon)'}`,
-    checkout: (property) => `Check-out time is ${property.departure_time || '11:00 AM'}.\n\nYou'll find the complete departure procedure in your booklet:\n\n${property.welcome_book_url || '(Booklet will be available soon)'}\n\nThank you for your stay! 😊`,
-    parking: (property) => `🚗 Parking information:\n\nYou'll find all details (location, access) in your welcome booklet:\n\n${property.welcome_book_url || '(Booklet will be available soon)'}`,
-    restaurants: (property) => `🍽️ Our recommendations (restaurants, shops) are in the booklet:\n\n${property.welcome_book_url || '(Booklet will be available soon)'}\n\nEnjoy! 😋`,
+    access: (property) => {
+      const lines = ['Hello! 👋'];
+      if (property.arrival_time) lines.push(`\n🕐 Check-in is from **${property.arrival_time}**.`);
+      if (property.departure_time) lines.push(`🕐 Check-out is before **${property.departure_time}**.`);
+      if (property.access_instructions) lines.push(`\nℹ️ ${property.access_instructions}`);
+      lines.push('\n🔑 The access code will be sent to you on the day of your arrival.');
+      lines.push('\nFeel free to ask if you have any other questions! 😊');
+      return lines.join('\n');
+    },
+    wifi: (property) => {
+      if (property.wifi_name && property.wifi_password) {
+        return `📶 WiFi details:\n\nNetwork: **${property.wifi_name}**\nPassword: **${property.wifi_password}**\n\nEnjoy! 😊`;
+      }
+      return null;
+    },
+    checkout: (property) => `🕐 Check-out time is before **${property.departure_time || '11:00 AM'}**.\n\nThank you for your stay! 😊`,
+    housekeeping: (property) => `🛏️ Bed linen and towels are provided.\n\nFeel free to ask if you need anything! 😊`,
+    capacity: (property) => {
+      const lines = [];
+      if (property.max_guests) lines.push(`👥 The property accommodates up to **${property.max_guests} guests**.`);
+      if (property.bedrooms) lines.push(`🛏️ **${property.bedrooms} bedroom${property.bedrooms > 1 ? 's' : ''}**`);
+      if (lines.length === 0) return null;
+      return lines.join('\n') + '\n\nFeel free to ask if you have other questions! 😊';
+    },
     issue: () => `We're truly sorry for the inconvenience! 😔\n\nYour message has been forwarded to the owner who will respond as soon as possible.\n\nThank you for your patience! 🙏`,
-    housekeeping: (property) => `🛏️ Sheets and towels are provided.\n\nYou'll find all details in your booklet:\n\n${property.welcome_book_url || '(Booklet will be available soon)'}`,
-    temperature: (property) => `🌡️ Heating/AC instructions:\n\nCheck the "Equipment" section of your booklet:\n\n${property.welcome_book_url || '(Booklet will be available soon)'}`,
-    thanks: () => `Thank you very much! 😊\n\nFeel free to ask if you have other questions!`
+    thanks: () => `Thank you very much! 😊\n\nWe're glad you're enjoying your stay!`,
+    parking: (property) => null,
+    restaurants: (property) => null,
+    temperature: (property) => null
   }
-  // Vous pouvez ajouter ES, DE, IT si nécessaire, sinon Groq AI prendra le relais
 };
 
 /**
@@ -123,11 +220,14 @@ function getAutoResponse(category, language, property) {
   
   if (!responseFunc) return null;
   
+  // Catégories sans données logement
   if (category === 'issue' || category === 'thanks') {
     return responseFunc();
   }
   
-  return responseFunc(property);
+  const result = responseFunc(property);
+  // Si null → pas assez d'infos → escalade vers Groq
+  return result || null;
 }
 
 /**
