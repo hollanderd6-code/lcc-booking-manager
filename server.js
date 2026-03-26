@@ -21123,11 +21123,8 @@ app.post('/api/channex/webhook', async (req, res) => {
             'VRBO': 'Vrbo', 'HOMEAWAY': 'Vrbo'
           };
           const otaLabel   = OTA_MAP2[String(otaName2).toUpperCase()] || otaName2;
-          let propertyName = 'votre logement';
-          try {
-            const propRes2 = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
-            propertyName = (propRes2.rows[0] && propRes2.rows[0].name) || 'votre logement';
-          } catch(e) { /* fallback */ }
+          const propRes2   = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
+          const propertyName = propRes2.rows[0]?.name || 'votre logement';
           const guest      = attrs.customer || {};
           const guestName  = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
           const guestFirst = guest.name || guestName.split(' ')[0] || '';
@@ -21159,7 +21156,7 @@ app.post('/api/channex/webhook', async (req, res) => {
                 (user_id, property_id, reservation_start_date, reservation_end_date,
                  platform, guest_name, guest_email, pin_code, unique_token, photos_token,
                  is_verified, status, channex_booking_id)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'active', $11)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending', $11)
                RETURNING id`,
               [
                 result.user_id,
@@ -21303,24 +21300,63 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       });
     }
 
-    // Notification push
-    try {
-      const tokensRes = await pool.query(
-        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-        [user_id]
-      );
-      for (const tok of tokensRes.rows) {
-        await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', `${guest_name}: ${messageText.substring(0, 80)}`, {
-          type: 'new_guest_message',
-          conversation_id: String(conversation_id)
-        });
-      }
-    } catch (notifErr) {
-      console.error('⚠️ [CHANNEX MSG] Erreur notif:', notifErr.message);
-    }
-
     console.log(`✅ [CHANNEX MSG] Message enregistré conversation ${conversation_id}`);
     res.status(200).json({ success: true });
+
+    // ── Réponses automatiques (après res.json pour ne pas bloquer) ──
+    try {
+      const { handleIncomingMessage } = require('./integrated-chat-handler');
+
+      // Récupérer la conversation complète pour le handler
+      const convResult = await pool.query(
+        `SELECT c.*, p.auto_responses_enabled
+         FROM conversations c
+         LEFT JOIN properties p ON p.id = c.property_id
+         WHERE c.id = $1`,
+        [conversation_id]
+      );
+
+      if (convResult.rows.length > 0) {
+        const conversation = convResult.rows[0];
+        const autoEnabled = conversation.auto_responses_enabled !== false;
+
+        if (autoEnabled) {
+          console.log(`🤖 [CHANNEX MSG] Tentative réponse auto pour conv ${conversation_id}...`);
+          const handled = await handleIncomingMessage(savedMsg, conversation, pool, io);
+
+          // Notif push seulement si PAS de réponse auto (escalade ou aucune réponse)
+          if (!handled) {
+            console.log(`📱 [CHANNEX MSG] Pas de réponse auto → notif push propriétaire`);
+            const tokensRes = await pool.query(
+              'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+              [user_id]
+            );
+            for (const tok of tokensRes.rows) {
+              await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', \`\${guest_name}: \${messageText.substring(0, 80)}\`, {
+                type: 'new_guest_message',
+                conversation_id: String(conversation_id)
+              });
+            }
+          } else {
+            console.log(`✅ [CHANNEX MSG] Réponse auto envoyée → pas de notif push`);
+          }
+        } else {
+          // Réponses auto désactivées → notif directe
+          const tokensRes = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+            [user_id]
+          );
+          for (const tok of tokensRes.rows) {
+            await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', \`\${guest_name}: \${messageText.substring(0, 80)}\`, {
+              type: 'new_guest_message',
+              conversation_id: String(conversation_id)
+            });
+          }
+        }
+      }
+    } catch (autoErr) {
+      console.error('⚠️ [CHANNEX MSG] Erreur réponse auto:', autoErr.message);
+    }
 
   } catch (e) {
     console.error('❌ [CHANNEX MSG WEBHOOK]', e.message);
