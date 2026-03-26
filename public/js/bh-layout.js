@@ -409,40 +409,39 @@ function getSidebarHTML() {
 
 
   function injectTopBar() {
-    // Ne pas injecter si déjà présent
     if (document.getElementById('bhTopBar')) return;
 
     var topBar = document.createElement('div');
     topBar.className = 'bh-demo-nav';
     topBar.id = 'bhTopBar';
-    topBar.innerHTML = \`
-  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;white-space:nowrap;">
-    <div style="display:flex;align-items:center;gap:7px;">
-      <i class="fas fa-server" style="font-size:11px;color:rgba(255,255,255,.5);"></i>
-      <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Fonctionnement du site</span>
-      <span id="svc-status-render" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">
-        <span id="svc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
-        <span id="svc-label-render">Vérification…</span>
-      </span>
-      <span id="svc-ago-render" style="font-size:9px;color:rgba(255,255,255,.3);"></span>
-    </div>
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
-    <div style="display:flex;align-items:center;gap:7px;">
-      <i class="fas fa-plug" style="font-size:11px;color:rgba(255,255,255,.5);"></i>
-      <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Connexion API</span>
-      <span id="svc-status-channex" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">
-        <span id="svc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
-        <span id="svc-label-channex">Vérification…</span>
-      </span>
-      <span id="svc-ago-channex" style="font-size:9px;color:rgba(255,255,255,.3);"></span>
-    </div>
-  </div>
-  <div class="bh-demo-right">
-    <span class="bh-demo-mode-label">Mode</span>
-    <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute('data-theme')==='dark'?document.documentElement.setAttribute('data-theme','light'):document.documentElement.setAttribute('data-theme','dark')"></button>
-  </div>\`;
+    topBar.innerHTML = [
+      '<div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;white-space:nowrap;">',
+      '  <div style="display:flex;align-items:center;gap:7px;">',
+      '    <i class="fas fa-server" style="font-size:11px;color:rgba(255,255,255,.5);"></i>',
+      '    <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Fonctionnement du site</span>',
+      '    <span id="svc-status-render" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">',
+      '      <span id="svc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
+      '      <span id="svc-label-render">Verification...</span>',
+      '    </span>',
+      '    <span id="svc-ago-render" style="font-size:9px;color:rgba(255,255,255,.3);"></span>',
+      '  </div>',
+      '  <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>',
+      '  <div style="display:flex;align-items:center;gap:7px;">',
+      '    <i class="fas fa-plug" style="font-size:11px;color:rgba(255,255,255,.5);"></i>',
+      '    <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Connexion API</span>',
+      '    <span id="svc-status-channex" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">',
+      '      <span id="svc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
+      '      <span id="svc-label-channex">Verification...</span>',
+      '    </span>',
+      '    <span id="svc-ago-channex" style="font-size:9px;color:rgba(255,255,255,.3);"></span>',
+      '  </div>',
+      '</div>',
+      '<div class="bh-demo-right">',
+      '  <span class="bh-demo-mode-label">Mode</span>',
+      '  <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute(\'data-theme\')==\'dark\'?document.documentElement.setAttribute(\'data-theme\',\'light\'):document.documentElement.setAttribute(\'data-theme\',\'dark\')"></button>',
+      '</div>'
+    ].join('');
 
-    // Insérer avant .app-container, sinon en premier
     var appContainer = document.querySelector('.app-container');
     if (appContainer) {
       document.body.insertBefore(topBar, appContainer);
@@ -450,23 +449,22 @@ function getSidebarHTML() {
       document.body.insertBefore(topBar, document.body.firstChild);
     }
 
-    // ── Logique statuts services ──
     var API_BASE = 'https://lcc-booking-manager.onrender.com';
     var SERVICES = [
       { id: 'render',  url: API_BASE + '/api/service-status/render' },
       { id: 'channex', url: API_BASE + '/api/service-status/channex' }
     ];
     var COLORS = {
-      ok:     { bg: 'rgba(34,197,94,.18)',  dot: '#4ADE80', text: '#4ADE80', border: 'rgba(34,197,94,.35)'  },
-      warn:   { bg: 'rgba(251,146,60,.18)', dot: '#FB923C', text: '#FB923C', border: 'rgba(251,146,60,.35)' },
-      error:  { bg: 'rgba(239,68,68,.18)',  dot: '#F87171', text: '#F87171', border: 'rgba(239,68,68,.35)'  },
-      unknown:{ bg: 'rgba(107,114,128,.2)', dot: '#9CA3AF', text: '#9CA3AF', border: 'rgba(107,114,128,.3)' }
+      ok:      { bg: 'rgba(34,197,94,.18)',  dot: '#4ADE80', text: '#4ADE80', border: 'rgba(34,197,94,.35)'  },
+      warn:    { bg: 'rgba(251,146,60,.18)', dot: '#FB923C', text: '#FB923C', border: 'rgba(251,146,60,.35)' },
+      error:   { bg: 'rgba(239,68,68,.18)',  dot: '#F87171', text: '#F87171', border: 'rgba(239,68,68,.35)'  },
+      unknown: { bg: 'rgba(107,114,128,.2)', dot: '#9CA3AF', text: '#9CA3AF', border: 'rgba(107,114,128,.3)' }
     };
     var lastCheck = {};
 
     function timeAgo(ts) {
       var s = Math.floor((Date.now() - ts) / 1000);
-      if (s < 10) return "à l'instant";
+      if (s < 10) return "a l'instant";
       if (s < 60) return 'il y a ' + s + 's';
       var m = Math.floor(s / 60);
       if (m < 60) return 'il y a ' + m + 'min';
@@ -489,21 +487,16 @@ function getSidebarHTML() {
 
     function parseLevel(data) {
       var ind = (data.status && data.status.indicator) || 'none';
-      if (ind === 'none')  return { level: 'ok',    label: 'Opérationnel' };
-      if (ind === 'minor') return { level: 'warn',  label: 'Dégradé' };
+      if (ind === 'none')  return { level: 'ok',    label: 'Operationnel' };
+      if (ind === 'minor') return { level: 'warn',  label: 'Degrade' };
       return                      { level: 'error', label: 'Incident' };
     }
 
     function checkService(svc) {
       fetch(svc.url, { cache: 'no-store' })
         .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var r = parseLevel(data);
-          applyStatus(svc.id, r.level, r.label);
-        })
-        .catch(function() {
-          applyStatus(svc.id, 'error', 'Injoignable');
-        });
+        .then(function(data) { var r = parseLevel(data); applyStatus(svc.id, r.level, r.label); })
+        .catch(function() { applyStatus(svc.id, 'error', 'Injoignable'); });
     }
 
     function checkAll() { SERVICES.forEach(checkService); }
@@ -516,10 +509,11 @@ function getSidebarHTML() {
     }
 
     checkAll();
-    setInterval(checkAll,   5 * 60 * 1000);
-    setInterval(updateAgo,  30 * 1000);
+    setInterval(checkAll,  5 * 60 * 1000);
+    setInterval(updateAgo, 30 * 1000);
     window.updateTopBarStatus = checkAll;
   }
+
 
   function init() {
     console.log("🚀 bh-layout.js - Initialisation avec filtrage permissions...");
