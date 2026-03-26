@@ -1377,6 +1377,11 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonnes max_guests / bedrooms / beds / bathrooms OK');
     } catch(e) { console.log('ℹ️ capacity columns:', e.message); }
 
+    // ✅ Migration : questions-réponses personnalisées
+    try {
+      await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS custom_auto_responses JSONB DEFAULT '[]'::jsonb`);
+      console.log('✅ Colonne custom_auto_responses OK');
+    } catch(e) { console.log('ℹ️ custom_auto_responses:', e.message); }
 
     // ✅ Migration : support FCM tokens pour sous-comptes
     try {
@@ -3620,7 +3625,8 @@ async function loadProperties() {
         bedrooms,
         beds,
         bathrooms,
-        internal_name
+        internal_name,
+        custom_auto_responses
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3674,7 +3680,8 @@ async function loadProperties() {
         bedrooms: row.bedrooms != null ? parseInt(row.bedrooms, 10) : null,
         beds: row.beds != null ? parseInt(row.beds, 10) : null,
         bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null,
-        internal_name: row.internal_name || null
+        internal_name: row.internal_name || null,
+        custom_auto_responses: row.custom_auto_responses || []
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
@@ -6663,6 +6670,10 @@ function parsePropertyBody(req) {
   // Mapper internalName → internal_name
   if (body.internalName !== undefined && body.internal_name === undefined) {
     body.internal_name = body.internalName;
+  }
+  // Parser customAutoResponses
+  if (body.customAutoResponses && typeof body.customAutoResponses === 'string') {
+    try { body.customAutoResponses = JSON.parse(body.customAutoResponses); } catch(e) { body.customAutoResponses = []; }
   }
   
   return body;
@@ -10376,6 +10387,8 @@ app.get('/api/properties',
         conciergePct: p.conciergePct != null ? p.conciergePct : null,
         internalName: p.internal_name || null,
         internal_name: p.internal_name || null,
+        customAutoResponses: p.custom_auto_responses || [],
+        custom_auto_responses: p.custom_auto_responses || [],
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
     });
