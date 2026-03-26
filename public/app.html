@@ -2746,7 +2746,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 
   function timeAgo(ts) {
     var s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 10) return 'à l'instant';
+    if (s < 10) return "à l'instant";
     if (s < 60) return 'il y a ' + s + 's';
     var m = Math.floor(s / 60);
     if (m < 60) return 'il y a ' + m + 'min';
