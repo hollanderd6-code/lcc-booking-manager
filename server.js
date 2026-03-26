@@ -21014,6 +21014,11 @@ app.post('/api/channex/webhook', async (req, res) => {
 
     for (const booking of bookings) {
       const result = await processChannexBooking(pool, booking);
+      console.log(`🔍 [CHANNEX DEBUG] result =`, JSON.stringify(result));
+      console.log(`🔍 [CHANNEX DEBUG] result.uid = ${result && result.uid}`);
+      console.log(`🔍 [CHANNEX DEBUG] starts CHX_ = ${result && result.uid && result.uid.startsWith('CHX_')}`);
+      console.log(`🔍 [CHANNEX DEBUG] property_id = ${result && result.property_id}`);
+      console.log(`🔍 [CHANNEX DEBUG] user_id = ${result && result.user_id}`);
 
       // ── Injecter immédiatement dans le store mémoire ─────────
       if (result && result.property_id && result.uid) {
