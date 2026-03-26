@@ -4401,7 +4401,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
                   </div>
                   <div class="activity-content">
                     <div class="activity-title">Check-in : ${window.cleanGuestName(r, r.source || r.platform)} ${r.guest_country ? getCountryFlag(r.guest_country) : ''}</div>
-                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
+                    <div class="activity-subtitle">${property ? (property.internalName || property.internal_name || property.name) : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
                     <div class="activity-time">Aujourd\'hui</div>
                   </div>
                 </div>
@@ -4417,7 +4417,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
                   </div>
                   <div class="activity-content">
                     <div class="activity-title">Check-out : ${window.cleanGuestName(r, r.source || r.platform)} ${r.guest_country ? getCountryFlag(r.guest_country) : ''}</div>
-                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
+                    <div class="activity-subtitle">${property ? (property.internalName || property.internal_name || property.name) : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
                     <div class="activity-time">Aujourd\'hui</div>
                   </div>
                 </div>
@@ -4461,7 +4461,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
                   </div>
                   <div class="activity-content">
                     <div class="activity-title">Ménage après ${window.cleanGuestName(r, r.source || r.platform)} ${r.guest_country ? getCountryFlag(r.guest_country) : ''}</div>
-                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
+                    <div class="activity-subtitle">${property ? (property.internalName || property.internal_name || property.name) : 'Logement inconnu'}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' adulte' + (r.occupancy_adults > 1 ? 's' : '') : ''}</div>
                     <div class="activity-time">${timeText} - ${checkoutDate.toLocaleDateString('fr-FR')}</div>
                   </div>
                 </div>
@@ -4501,7 +4501,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
                   </div>
                   <div class="activity-content">
                     <div class="activity-title">${window.cleanGuestName(r, r.source || r.platform)}</div>
-                    <div class="activity-subtitle">${property ? property.name : 'Logement inconnu'} • ${new Date(r.startDate).toLocaleDateString('fr-FR')} - ${new Date(r.endDate).toLocaleDateString('fr-FR')}</div>
+                    <div class="activity-subtitle">${property ? (property.internalName || property.internal_name || property.name) : 'Logement inconnu'} • ${new Date(r.startDate).toLocaleDateString('fr-FR')} - ${new Date(r.endDate).toLocaleDateString('fr-FR')}</div>
                     <div class="activity-time">${timeText}</div>
                   </div>
                 </div>
@@ -4740,14 +4740,15 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     });
 
     return dedupedReservations.map((r, index) => {
-      // Si propertyName existe déjà et n\'est pas vide, on garde
-      if (r.propertyName && r.propertyName.trim()) {
+      // Si propertyName existe déjà mais qu'on a un internalName dans r.property, on préfère l'internalName
+      const _pInternal = r.property && typeof r.property === 'object' && (r.property.internalName || r.property.internal_name);
+      if (r.propertyName && r.propertyName.trim() && !_pInternal) {
         return r;
       }
 
       // CAS SPÉCIAL : si r.property est un objet avec le nom dedans, on l\'utilise directement !
       if (r.property && typeof r.property === 'object' && r.property.name) {
-        return { ...r, propertyName: r.property.name };
+        return { ...r, propertyName: r.property.internalName || r.property.internal_name || r.property.name };
       }
 
       // Sinon, on cherche le propertyId (en gérant le cas où property est un objet avec id)
@@ -4771,7 +4772,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (property) {
         return { 
           ...r, 
-          propertyName: property.name || property.title || property.label || propertyId
+          propertyName: property.internalName || property.internal_name || property.name || property.title || property.label || propertyId
         };
       }
 
@@ -5711,7 +5712,7 @@ window.LCC_PROPERTIES = properties;
             if (!map[rid]) {
               map[rid] = {
                 id: rid,
-                name: r.property.name || 'Logement',
+                name: r.property.internalName || r.property.internal_name || r.property.name || 'Logement',
                 color: r.property.color || '#10B981',
                 raw: r.property
               };
@@ -5741,7 +5742,7 @@ window.LCC_PROPERTIES = properties;
             uid: r2.uid || null,
             reservationKey: r2.reservationKey || null,
             propertyId: bpropId,
-            propertyName: r2.propertyName || (r2.property && r2.property.name) || '',
+            propertyName: r2.propertyName || (r2.property && (r2.property.internalName || r2.property.internal_name || r2.property.name)) || '',
             startDate: start,
             endDate: end,
             guestName: r2.guestName || r2.customerName || '',
@@ -7623,6 +7624,8 @@ function findReservationForBlock(bookingBlock) {
         propertyName = booking.property;
       } else {
         propertyName =
+          booking.property.internalName ||
+          booking.property.internal_name ||
           booking.property.name ||
           booking.property.title ||
           booking.property.label ||
@@ -7651,7 +7654,7 @@ function findReservationForBlock(bookingBlock) {
             String(x.property_id) === String(propertyId)
         );
         if (p) {
-          propertyName = p.name || p.title || p.label || '';
+          propertyName = p.internalName || p.internal_name || p.name || p.title || p.label || '';
         }
       }
     }
