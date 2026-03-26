@@ -2712,10 +2712,11 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <script>
 // ── Statuts services (Render + Channex) ──────────────────────
 (function() {
+  var API_BASE_SVC = 'https://lcc-booking-manager.onrender.com';
   var SERVICES = [
     {
       id: 'render',
-      url: 'https://status.render.com/api/v2/summary.json',
+      url: API_BASE_SVC + '/api/service-status/render',
       parse: function(data) {
         // Render: data.status.indicator = 'none'|'minor'|'major'|'critical'
         var ind = (data.status && data.status.indicator) || 'none';
@@ -2726,7 +2727,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     },
     {
       id: 'channex',
-      url: 'https://status.channex.io/api/v2/summary.json',
+      url: API_BASE_SVC + '/api/service-status/channex',
       parse: function(data) {
         var ind = (data.status && data.status.indicator) || 'none';
         if (ind === 'none') return { level: 'ok', label: 'Opérationnel' };
