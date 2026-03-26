@@ -4251,6 +4251,7 @@ function populateEditBookingProperties(selectedPropertyId) {
               const assignedId = key && assignments ? assignments[key] : null;
               const cleanerName = getCleanerNameById(assignedId, cleaners);
               const propName =
+  (r.property && (r.property.internalName || r.property.internal_name)) ||
   r.propertyName ||
   (r.property && (r.property.name || r.property.title || r.property.label)) ||
   getPropertyNameById(propertyId, properties);
@@ -6502,7 +6503,7 @@ if (j === 0 || cells.length === 1) {
 
         var nameSpan = document.createElement('span');
         nameSpan.className = 'property-name';
-        nameSpan.textContent = p.name;
+        nameSpan.textContent = p.internalName || p.internal_name || p.name;
 
         item.appendChild(nameSpan);
 
@@ -6997,7 +6998,7 @@ if (j === 0 || cells.length === 1) {
         data.properties.forEach(prop => {
           const option = document.createElement('option');
           option.value = prop.id;  // ← Changé de prop._id à prop.id
-          option.textContent = prop.name;
+          option.textContent = prop.internalName || prop.internal_name || prop.name;
           select.appendChild(option);
         });
         propertiesLoaded = true;
@@ -7346,7 +7347,7 @@ window.loadPricingOverrides = async function(properties) {
     input.value = stored !== null ? stored : (defaultPrice !== null ? defaultPrice : '');
 
     var titleEl = document.getElementById('cellModalTitle');
-    titleEl.textContent = prop ? prop.name : 'Options du jour';
+    titleEl.textContent = prop ? (prop.internalName || prop.internal_name || prop.name) : 'Options du jour';
 
     document.getElementById('cellModal').style.display = 'flex';
     setTimeout(function() { input.focus(); input.select(); }, 100);
