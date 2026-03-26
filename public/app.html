@@ -5182,75 +5182,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     
     if (subEl) subEl.textContent = subText;
 
-    const card = document.getElementById('kpiTopRisksCard');
-    console.log('🎴 Carte Top Risques trouvée:', card ? 'OUI' : 'NON', card);
-    
-    if (!card) {
-      console.warn('⚠️ Carte kpiTopRisksCard introuvable dans le DOM, onclick non attaché');
-      return;
-    }
-    
-    if (card) {
-      card.onclick = () => {
-        console.log('🖱️ Click sur Top Risques, top5:', top5);
-        // reuse your existing modal if present
-        if (typeof window.openTopRisksModal === 'function') return window.openTopRisksModal(top5);
-        // fallback modal
-        ensureGenericModal('topRisksModal', 'Risques à venir');
-        const modal = document.getElementById('topRisksModal');
-        const g = document.getElementById('topRisksModalContent');
-        
-        console.log('📦 Modal element:', modal, 'Content element:', g);
-        
-        if (g) {
-          g.innerHTML = top5.length ? top5.map(r=>{
-            const start = formatDateFR(dateOnlyStr(r.startDate||r.start));
-            const end = formatDateFR(dateOnlyStr(r.endDate||r.end));
-            const prop = r.propertyName || r.propertyId || 'Logement';
-const name = window.cleanGuestName(r, r.source || r.platform) || 'Voyageur';
-            const score = Math.round(r.riskScore||0);
-            const color = window.riskColor(r.riskLevel);
-            const riskLabel = r.riskLabel || r.riskLevel || '';
-            
-            // Afficher les tags de risque
-            const tagsHtml = (r.riskTags && r.riskTags.length) 
-              ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
-                  ${r.riskTags.map(t => `
-                    <span style="font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; background:rgba(0,0,0,.06); color:#374151;">
-                      ${String(t)}
-                    </span>`).join('')}
-                </div>`
-              : '';
-            
-            return `<div style="border-left:6px solid ${color}; padding:12px; margin-bottom:16px; background:#EEE9E0; border-radius:0 8px 8px 0;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <div style="font-weight:900; font-size:16px; color:${color};">${riskLabel} — ${score}/100</div>
-                <div style="font-weight:600; opacity:0.7;">${prop}</div>
-              </div>
-              <div style="opacity:.85; font-size:14px; margin-bottom:4px;">
-                📅 ${start} → ${end} • 👤 ${name}${r.guest_country ? ' ' + getCountryFlag(r.guest_country) : ''}${r.occupancy_adults ? ' · ' + r.occupancy_adults + ' pers.' : ''}
-              </div>
-              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px; font-size:13px;">${r.riskSummary}</div>` : ''}
-              ${tagsHtml}
-            </div>`;
-          }).join('') : `<div style="opacity:.8; padding:20px; text-align:center;">Aucun risque détecté pour les réservations à venir.</div>`;
-        }
-        
-        console.log('📦 Contenu HTML généré, longueur:', g ? g.innerHTML.length : 0);
-        
-        const mm = document.getElementById('topRisksModal');
-        console.log('🎭 Modal element:', mm);
-        
-        if (mm) { 
-          mm.style.display = 'flex';
-          mm.classList.add('active');
-          document.body.style.overflow = 'hidden'; // Empêcher le scroll du body
-          console.log('✅ Modal devrait être visible maintenant');
-        } else {
-          console.error('❌ Modal topRisksModal introuvable dans le DOM');
-        }
-      };
-    }
+    // ✅ onclick géré dans loadDataAndUpdateKpis avec __bhCalendarState
   }
 
   // ---------- Data loading + binding ----------
