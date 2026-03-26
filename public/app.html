@@ -5319,6 +5319,86 @@ window.LCC_PROPERTIES = properties;
         cleaningCard.dataset.bound = '1';
         cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
 }
+
+      // ✅ FIX : attacher l'onclick sur le KPI risques directement ici
+      // en recalculant top5 à la volée au moment du clic
+      const riskCard = document.getElementById('kpiTopRisksCard');
+      if (riskCard && !riskCard.dataset.bound) {
+        riskCard.dataset.bound = '1';
+        riskCard.onclick = () => {
+          // Récupérer les bookings avec riskScore depuis state si dispo, sinon recalculer
+          let bookingsWithRisk = [];
+          try {
+            const cal = window.renderModernCalendar && window.__bhCalendarState && window.__bhCalendarState.bookings;
+            if (cal && cal.length) {
+              bookingsWithRisk = cal;
+            } else {
+              // Fallback : recalculer depuis les réservations brutes
+              const rawResas = getLatestReservationsForKpi(reservations);
+              bookingsWithRisk = rawResas.map(r => {
+                if (typeof r.riskScore === 'number') return r;
+                if (typeof window.calculateBookingRisk === 'function') {
+                  const risk = window.calculateBookingRisk(r);
+                  return Object.assign({}, r, {
+                    riskScore: risk.score,
+                    riskLevel: risk.level,
+                    riskLabel: risk.label,
+                    riskSummary: risk.summary,
+                    riskTags: risk.tags
+                  });
+                }
+                return r;
+              });
+            }
+          } catch(e) { bookingsWithRisk = []; }
+
+          const now = new Date(); now.setHours(0,0,0,0);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 1);
+          const scored = bookingsWithRisk.filter(r => {
+            if (typeof r.riskScore !== 'number') return false;
+            const s = r.startDate || r.start;
+            const e = r.endDate || r.end;
+            if (!s || !e) return false;
+            const sd = new Date(s.slice(0,10));
+            const ed = new Date(e.slice(0,10));
+            return ed >= now && sd < monthEnd;
+          });
+          scored.sort((a,b) => b.riskScore - a.riskScore);
+          const top5 = scored.slice(0,5);
+
+          if (typeof window.openTopRisksModal === 'function') return window.openTopRisksModal(top5);
+
+          ensureGenericModal('topRisksModal', 'Risques à venir');
+          const modal = document.getElementById('topRisksModal');
+          const g = document.getElementById('topRisksModalContent');
+          if (g) {
+            g.innerHTML = top5.length ? top5.map(r => {
+              const start = formatDateFR(dateOnlyStr(r.startDate||r.start));
+              const end   = formatDateFR(dateOnlyStr(r.endDate||r.end));
+              const prop  = r.propertyName || r.propertyId || 'Logement';
+              const name  = window.cleanGuestName ? window.cleanGuestName(r, r.source||r.platform) : (r.guestName||'Voyageur');
+              const score = Math.round(r.riskScore||0);
+              const color = window.riskColor ? window.riskColor(r.riskLevel) : '#F59E0B';
+              const riskLabel = r.riskLabel || r.riskLevel || '';
+              const tagsHtml = (r.riskTags && r.riskTags.length)
+                ? '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">' +
+                  r.riskTags.map(t => '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.06);color:#374151;">' + String(t) + '</span>').join('') +
+                  '</div>'
+                : '';
+              return '<div style="border-left:6px solid ' + color + ';padding:12px;margin-bottom:16px;background:#EEE9E0;border-radius:0 8px 8px 0;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                  '<div style="font-weight:900;font-size:16px;color:' + color + ';">' + riskLabel + ' — ' + score + '/100</div>' +
+                  '<div style="font-weight:600;opacity:.7;">' + prop + '</div>' +
+                '</div>' +
+                '<div style="opacity:.85;font-size:14px;margin-bottom:4px;">📅 ' + start + ' → ' + end + ' · 👤 ' + name + '</div>' +
+                (r.riskSummary ? '<div style="opacity:.85;margin-top:6px;font-size:13px;">' + r.riskSummary + '</div>' : '') +
+                tagsHtml +
+              '</div>';
+            }).join('') : '<div style="opacity:.8;padding:20px;text-align:center;">Aucun risque détecté pour les réservations à venir.</div>';
+          }
+          if (modal) { modal.style.display='flex'; modal.classList.add('active'); document.body.style.overflow='hidden'; }
+        };
+      }
       // Charger les cautions pour la KPI
       loadAndUpdateDepositsKPI();
     } catch (e) {
@@ -5678,6 +5758,7 @@ window.LCC_PROPERTIES = properties;
         })));
         
         state.bookings = bookings;
+        window.__bhCalendarState = state; // ✅ Exposer pour le KPI risques
         
         // Rendre state.bookings accessible globalement pour findReservationForBlock
         window.calendarState = state;
