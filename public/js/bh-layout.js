@@ -508,6 +508,72 @@ function getSidebarHTML() {
       });
     }
 
+    // ── Bandeau mobile sous le header ──
+    function injectMobileStatusBar() {
+      if (document.getElementById('bh-mobile-status-bar')) return;
+      var bar = document.createElement('div');
+      bar.id = 'bh-mobile-status-bar';
+      bar.style.cssText = [
+        'position:fixed',
+        'top:calc(60px + env(safe-area-inset-top,0px))',
+        'left:0',
+        'right:0',
+        'height:28px',
+        'background:#0D1117',
+        'display:none',
+        'align-items:center',
+        'justify-content:center',
+        'gap:16px',
+        'z-index:1099',
+        'font-size:10px',
+        'white-space:nowrap'
+      ].join(';');
+      bar.innerHTML = [
+        '<div style="display:flex;align-items:center;gap:5px;">',
+        '  <i class="fas fa-server" style="font-size:9px;color:rgba(255,255,255,.4);"></i>',
+        '  <span style="color:rgba(255,255,255,.5);">Serveur</span>',
+        '  <span id="msvc-dot-render" style="width:5px;height:5px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
+        '  <span id="msvc-label-render" style="font-weight:600;color:#9CA3AF;">...</span>',
+        '</div>',
+        '<div style="width:1px;height:10px;background:rgba(255,255,255,.15);"></div>',
+        '<div style="display:flex;align-items:center;gap:5px;">',
+        '  <i class="fas fa-plug" style="font-size:9px;color:rgba(255,255,255,.4);"></i>',
+        '  <span style="color:rgba(255,255,255,.5);">API</span>',
+        '  <span id="msvc-dot-channex" style="width:5px;height:5px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
+        '  <span id="msvc-label-channex" style="font-weight:600;color:#9CA3AF;">...</span>',
+        '</div>'
+      ].join('');
+
+      document.body.appendChild(bar);
+
+      // Afficher seulement sur mobile
+      function toggleMobileBar() {
+        var isMobile = window.innerWidth <= 768;
+        bar.style.display = isMobile ? 'flex' : 'none';
+      }
+      toggleMobileBar();
+      window.addEventListener('resize', toggleMobileBar);
+    }
+
+    // Synchroniser les pastilles mobile avec les statuts desktop
+    var _origApply = applyStatus;
+    applyStatus = function(id, level, label) {
+      _origApply(id, level, label);
+      var MCOLS = {
+        ok:    { dot: '#4ADE80', text: '#4ADE80' },
+        warn:  { dot: '#FB923C', text: '#FB923C' },
+        error: { dot: '#F87171', text: '#F87171' },
+        unknown: { dot: '#9CA3AF', text: '#9CA3AF' }
+      };
+      var mc = MCOLS[level] || MCOLS.unknown;
+      var mdot = document.getElementById('msvc-dot-' + id);
+      var mlbl = document.getElementById('msvc-label-' + id);
+      if (mdot) mdot.style.background = mc.dot;
+      if (mlbl) { mlbl.textContent = label; mlbl.style.color = mc.text; }
+    };
+
+    injectMobileStatusBar();
+
     checkAll();
     setInterval(checkAll,  5 * 60 * 1000);
     setInterval(updateAgo, 30 * 1000);
