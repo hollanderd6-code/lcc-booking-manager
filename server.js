@@ -10369,6 +10369,8 @@ app.get('/api/properties',
         cleaningFee: p.cleaningFee != null ? p.cleaningFee : null,
         touristTaxPerNight: p.touristTaxPerNight != null ? p.touristTaxPerNight : null,
         conciergePct: p.conciergePct != null ? p.conciergePct : null,
+        internalName: p.internal_name || null,
+        internal_name: p.internal_name || null,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
     });
@@ -10439,6 +10441,8 @@ app.get('/api/properties/:propertyId',
       quick_replies: property.quick_replies || [],
       
       icalUrls: property.icalUrls || property.ical_urls || [],
+      internalName: property.internal_name || null,
+      internal_name: property.internal_name || null,
       reservationCount: (reservationsStore.properties[property.id] || []).length
     });
   } catch (error) {
