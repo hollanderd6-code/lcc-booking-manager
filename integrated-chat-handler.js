@@ -211,6 +211,33 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     const language = conversation.language || 'fr';
 
     // ========================================
+    // ÉTAPE 2.5 : RÉPONSES PERSONNALISÉES EN PRIORITÉ
+    // ========================================
+    if (property) {
+      try {
+        const rawQR = property.custom_auto_responses || property.customAutoResponses;
+        const customQR = Array.isArray(rawQR) ? rawQR
+          : (typeof rawQR === 'string' ? JSON.parse(rawQR) : []);
+
+        if (customQR.length > 0) {
+          const msgLower = message.message.toLowerCase();
+          const matched = customQR.find(qr => {
+            if (!qr.keywords || !qr.response) return false;
+            const keywords = qr.keywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+            return keywords.some(k => k && msgLower.includes(k));
+          });
+          if (matched) {
+            console.log(`✅ [HANDLER] Match Q/R personnalisée: "${matched.keywords}"`);
+            await sendBotMessage(conversation.id, matched.response, pool, io, channexId);
+            return true;
+          }
+        }
+      } catch(e) {
+        console.warn('⚠️ [HANDLER] Erreur matching custom QR:', e.message);
+      }
+    }
+
+    // ========================================
     // ÉTAPE 3 : RÉPONSE PAR MOTS-CLÉS
     // ========================================
     const categoryMatch = detectCategory(message.message, language);
