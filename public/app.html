@@ -2672,51 +2672,35 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 </div>
 <!-- DARK TOP BAR (barre noire fixe en haut) -->
 <div class="bh-demo-nav" id="bhTopBar">
-  <!-- Connexions centrées -->
-  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;white-space:nowrap;">
 
-    <!-- Airbnb -->
-    <div style="display:flex;align-items:center;gap:5px;">
-      <i class="fa-brands fa-airbnb" style="font-size:14px;color:#FF5A5F;"></i>
-      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Airbnb</span>
-      <span id="topbar-status-airbnb" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+  <!-- Statuts services centrés -->
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;white-space:nowrap;">
+
+    <!-- Fonctionnement du site -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <i class="fas fa-server" style="font-size:11px;color:rgba(255,255,255,.5);"></i>
+      <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Fonctionnement du site</span>
+      <span id="svc-status-render" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">
+        <span id="svc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
+        <span id="svc-label-render">Vérification…</span>
+      </span>
+      <span id="svc-ago-render" style="font-size:9px;color:rgba(255,255,255,.3);"></span>
     </div>
 
     <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
 
-    <!-- Booking.com -->
-    <div style="display:flex;align-items:center;gap:5px;">
-      <span style="font-size:12px;font-weight:800;color:#6B9FE4;">B.</span>
-      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Booking</span>
-      <span id="topbar-status-booking" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
+    <!-- Connexion API (Channex) -->
+    <div style="display:flex;align-items:center;gap:7px;">
+      <i class="fas fa-plug" style="font-size:11px;color:rgba(255,255,255,.5);"></i>
+      <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Connexion API</span>
+      <span id="svc-status-channex" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">
+        <span id="svc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
+        <span id="svc-label-channex">Vérification…</span>
+      </span>
+      <span id="svc-ago-channex" style="font-size:9px;color:rgba(255,255,255,.3);"></span>
     </div>
 
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
-
-    <!-- Stripe -->
-    <div style="display:flex;align-items:center;gap:5px;">
-      <i class="fa-brands fa-stripe-s" style="font-size:15px;color:#6772E5;"></i>
-      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Stripe</span>
-      <span id="topbar-status-stripe" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
-    </div>
-
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
-
-    <!-- Abritel -->
-    <div style="display:flex;align-items:center;gap:5px;">
-      <img src="data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgdmlld0JveD0iMCAwIDQ4LjUgNDMuMyIgd2lkdGg9IjI1MDAiIGhlaWdodD0iMjIzMiI+PHN0eWxlPi5zdDB7Y2xpcC1wYXRoOnVybCgjU1ZHSURfMl8pO2ZpbGw6IzJhNmJiM30uc3Qxe2NsaXAtcGF0aDp1cmwoI1NWR0lEXzRfKTtmaWxsOiNmZmZ9LnN0Miwuc3Qze2NsaXAtcGF0aDp1cmwoI1NWR0lEXzZfKTtmaWxsOiNmZmZ9LnN0M3tjbGlwLXBhdGg6dXJsKCNTVkdJRF84Xyl9LnN0NHtjbGlwLXBhdGg6dXJsKCNTVkdJRF8xMF8pO2ZpbGw6IzExNmRiM30uc3Q1e2NsaXAtcGF0aDp1cmwoI1NWR0lEXzEyXyk7ZmlsbDojZmZmfTwvc3R5bGU+PGRlZnM+PHBhdGggaWQ9IlNWR0lEXzFfIiBkPSJNMCAwaDQ4LjV2NDMuM0gweiIvPjwvZGVmcz48Y2xpcFBhdGggaWQ9IlNWR0lEXzJfIj48dXNlIHhsaW5rOmhyZWY9IiNTVkdJRF8xXyIgb3ZlcmZsb3c9InZpc2libGUiLz48L2NsaXBQYXRoPjxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00OC4zIDQwLjFjMCAxLS44IDEuNy0xLjggMS43cy0xLjgtLjgtMS44LTEuN2MwLTEgLjgtMS43IDEuOC0xLjdzMS44LjggMS44IDEuN20tMy4xIDBjMCAuOC42IDEuNCAxLjMgMS40LjggMCAxLjMtLjYgMS4zLTEuNCAwLS44LS41LTEuNC0xLjMtMS40cy0xLjMuNy0xLjMgMS40bTEuMS45aC0uNHYtMS43aC43Yy4zIDAgLjUgMCAuNi4xLjEuMS4yLjIuMi40cy0uMS4zLS4zLjRjLjIuMS4zLjIuMy40IDAgLjMuMS40LjEuNGgtLjRjMC0uMS0uMS0uMi0uMS0uNHMtLjEtLjMtLjQtLjNoLS4yYy0uMSAwLS4xLjctLjEuN3ptMC0xaC4yYy4yIDAgLjQtLjEuNC0uMiAwLS4yLS4xLS4zLS40LS4zaC0uMnYuNXoiLz48ZGVmcz48cGF0aCBpZD0iU1ZHSURfM18iIGQ9Ik0wIDBoNDguNXY0My4zSDB6Ii8+PC9kZWZzPjxjbGlwUGF0aCBpZD0iU1ZHSURfNF8iPjx1c2UgeGxpbms6aHJlZj0iI1NWR0lEXzNfIiBvdmVyZmxvdz0idmlzaWJsZSIvPjwvY2xpcFBhdGg+PHBhdGggY2xhc3M9InN0MSIgZD0iTTE2IDMuMkw2LjQgMTQuNXYxNi44bDkuMS0xLjNzMS43LS4zIDEuOSAxLjNjLjEgMS44LTEuNSAxLjgtMS41IDEuOGwtOS41IDEuNnYzLjVsMjAuMiAzLjdWMTVDMjYuNyAxNSAxNiAzLjIgMTYgMy4yem00LjggMjIuOWMtMSAxLjMtMi41IDIuMi00LjEgMi4zaC0uM2MtMS43IDAtMy4yLS44LTQuMy0yLjEtMS4xLTEuMy0xLjgtMy4xLTEuOS01di0uNWMwLTEuOS42LTMuNyAxLjYtNSAxLTEuMyAyLjUtMi4yIDQuMS0yLjNoLjNjMS43IDAgMy4yLjggNC4zIDIuMSAxLjEgMS4zIDEuOCAzLjEgMS45IDV2LjVjMCAxLjktLjYgMy42LTEuNiA1Ii8+PGc+PGRlZnM+PHBhdGggaWQ9IlNWR0lEXzVfIiBkPSJNMCAwaDQ4LjV2NDMuM0gweiIvPjwvZGVmcz48Y2xpcFBhdGggaWQ9IlNWR0lEXzZfIj48dXNlIHhsaW5rOmhyZWY9IiNTVkdJRF81XyIgb3ZlcmZsb3c9InZpc2libGUiLz48L2NsaXBQYXRoPjxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik0zMC43IDI2Ljd2Ni41bDQuOC0uOHYtNi4zbC00LjguNnpNMTkuNSAxNi4zYy0uOS0xLjEtMi4xLTEuNy0zLjQtMS43aC0uMmMtMS4zLjEtMi40LjctMy4yIDEuOHMtMS40IDIuNi0xLjQgNC4zdi40Yy4xIDEuNy43IDMuMiAxLjYgNC4zLjkgMS4xIDIuMSAxLjcgMy40IDEuN2guMmMxLjMtLjEgMi40LS43IDMuMi0xLjhzMS40LTIuNiAxLjQtNC4zdi0uNGMwLTEuNy0uNi0zLjItMS42LTQuM20tNi43IDQuOGMtLjEtMi41IDEuMi00LjcgMy00LjgtMS4xLjctMS44IDIuNi0xLjYgNC43LjEgMi4yIDEgNCAyLjIgNC41LTEuOS4yLTMuNS0xLjgtMy42LTQuNCIvPjwvZz48Zz48ZGVmcz48cGF0aCBpZD0iU1ZHSURfN18iIGQ9Ik0wIDBoNDguNXY0My4zSDB6Ii8+PC9kZWZzPjxjbGlwUGF0aCBpZD0iU1ZHSURfOF8iPjx1c2UgeGxpbms6aHJlZj0iI1NWR0lEXzdfIiBvdmVyZmxvdz0idmlzaWJsZSIvPjwvY2xpcFBhdGg+PHBhdGggY2xhc3M9InN0MyIgZD0iTTM3LjUgMTcuNnY2LjJsNC0uNXYtNi4xbC00IC40em0wIDE0LjRsNC0uN3YtNi4xbC00IC42VjMyeiIvPjwvZz48Zz48ZGVmcz48cGF0aCBpZD0iU1ZHSURfOV8iIGQ9Ik0wIDBoNDguNXY0My4zSDB6Ii8+PC9kZWZzPjxjbGlwUGF0aCBpZD0iU1ZHSURfMTBfIj48dXNlIHhsaW5rOmhyZWY9IiNTVkdJRF85XyIgb3ZlcmZsb3c9InZpc2libGUiLz48L2NsaXBQYXRoPjxwYXRoIGNsYXNzPSJzdDQiIGQ9Ik0zNS4yIDBoLTIyTC4yIDE1LjNsNC42LS4zdjE2LjZsLTMuNS40cy0xLjcuMy0xLjMgMi4xYy40IDEuMyAxLjcgMS4zIDEuNyAxLjNsMy4xLS41djQuNGwyMS45IDQgMTcuMi0zLjl2LTI0bDQuNy0uNGMtLjEtLjEtMTMuNC0xNS0xMy40LTE1em0tNC41IDE4LjJsNC44LS41VjI0bC00LjguNnYtNi40em0tMjQuMyAyMHYtMy41bDkuNS0xLjZzMS42IDAgMS41LTEuOGMtLjEtMS42LTEuOS0xLjMtMS45LTEuM2wtOS4xIDEuNFYxNC41TDE2IDMuMiAyNi43IDE1djI2LjhMNi40IDM4LjJ6bTI0LjMtNXYtNi41bDQuOC0uNnY2LjNsLTQuOC44em0xMC43LTEuOWwtNCAuN3YtNi4ybDQtLjZ2Ni4xem0tMy45LTcuNXYtNi4ybDQtLjR2Ni4xYy0uMSAwLTQgLjUtNCAuNXptLTE3LTguM2MtMS4xLTEuMy0yLjYtMi4xLTQuMy0yLjFoLS4zYy0xLjcuMS0zLjEgMS00LjEgMi4zLTEgMS4zLTEuNiAzLjEtMS42IDV2LjVjLjEgMiAuOCAzLjggMS45IDUgMS4xIDEuMyAyLjYgMi4xIDQuMyAyLjFoLjNjMS43LS4xIDMuMS0xIDQuMS0yLjMgMS0xLjMgMS42LTMuMSAxLjYtNXYtLjVjLS4xLTEuOS0uOC0zLjctMS45LTVtLS43IDkuOGMtLjggMS4xLTIgMS44LTMuMiAxLjhoLS4yYy0xLjMgMC0yLjUtLjYtMy40LTEuNy0uOS0xLjEtMS42LTIuNi0xLjYtNC4zdi0uNGMwLTEuNy41LTMuMiAxLjQtNC4zLjgtMS4xIDItMS44IDMuMi0xLjhoLjJjMS4zIDAgMi41LjYgMy40IDEuNy45IDEuMSAxLjYgMi42IDEuNiA0LjN2LjRjMCAxLjctLjUgMy4yLTEuNCA0LjNNMTQuMiAyMWMtLjEtMi4xLjYtNCAxLjYtNC43LTEuOC4xLTMuMiAyLjMtMyA0LjguMSAyLjYgMS43IDQuNiAzLjUgNC41LTEuMS0uNi0yLTIuNC0yLjEtNC42Ii8+PC9nPjxnPjxkZWZzPjxwYXRoIGlkPSJTVkdJRF8xMV8iIGQ9Ik0wIDBoNDguNXY0My4zSDB6Ii8+PC9kZWZzPjxjbGlwUGF0aCBpZD0iU1ZHSURfMTJfIj48dXNlIHhsaW5rOmhyZWY9IiNTVkdJRF8xMV8iIG92ZXJmbG93PSJ2aXNpYmxlIi8+PC9jbGlwUGF0aD48cGF0aCBjbGFzcz0ic3Q1IiBkPSJNMzAuNyAxOC4ybDQuOC0uNHY2LjNsLTQuOC42di02LjV6Ii8+PC9nPjwvc3ZnPg==" width="20" height="18" style="flex-shrink:0;object-fit:contain;" />
-      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Abritel</span>
-      <span id="topbar-status-abritel" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
-    </div>
-
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
-
-    <!-- Gîtes de France -->
-    <div style="display:flex;align-items:center;gap:5px;">
-      <img src="data:image/png;base64,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" width="18" height="18" style="flex-shrink:0;object-fit:contain;border-radius:50%;" />
-      <span style="color:rgba(255,255,255,.7);font-size:11px;font-weight:500;">Gîtes</span>
-      <span id="topbar-status-gites" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.35);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-circle" style="font-size:6px;"></i>Non connecté</span>
-    </div>  </div>
+  </div>
 
   <!-- Toggle dark mode (droite) -->
   <div class="bh-demo-right">
@@ -2726,74 +2710,103 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 </div>
 
 <script>
-// Mise à jour des statuts de connexion dans la top bar
-(function updateTopBarStatus() {
-  function setStatus(id, connected) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (connected) {
-      el.style.background = 'rgba(34,197,94,.2)';
-      el.style.color = '#4ADE80';
-      el.style.borderColor = 'rgba(34,197,94,.35)';
-      el.style.display = 'inline-flex';
-      el.style.alignItems = 'center';
-      el.style.gap = '3px';
-      el.innerHTML = '<i class="fas fa-circle" style="font-size:6px;"></i>Connecté';
-    } else {
-      el.style.background = 'rgba(239,68,68,.2)';
-      el.style.color = '#F87171';
-      el.style.borderColor = 'rgba(239,68,68,.35)';
-      el.style.display = 'inline-flex';
-      el.style.alignItems = 'center';
-      el.style.gap = '3px';
-      el.innerHTML = '<i class="fas fa-circle" style="font-size:6px;"></i>Non connecté';
+// ── Statuts services (Render + Channex) ──────────────────────
+(function() {
+  var SERVICES = [
+    {
+      id: 'render',
+      url: 'https://status.render.com/api/v2/summary.json',
+      parse: function(data) {
+        // Render: data.status.indicator = 'none'|'minor'|'major'|'critical'
+        var ind = (data.status && data.status.indicator) || 'none';
+        if (ind === 'none') return { level: 'ok', label: 'Opérationnel' };
+        if (ind === 'minor') return { level: 'warn', label: 'Dégradé' };
+        return { level: 'error', label: 'Incident' };
+      }
+    },
+    {
+      id: 'channex',
+      url: 'https://status.channex.io/api/v2/summary.json',
+      parse: function(data) {
+        var ind = (data.status && data.status.indicator) || 'none';
+        if (ind === 'none') return { level: 'ok', label: 'Opérationnel' };
+        if (ind === 'minor') return { level: 'warn', label: 'Dégradé' };
+        return { level: 'error', label: 'Incident' };
+      }
     }
+  ];
+
+  var COLORS = {
+    ok:    { bg: 'rgba(34,197,94,.18)',  dot: '#4ADE80', text: '#4ADE80', border: 'rgba(34,197,94,.35)'  },
+    warn:  { bg: 'rgba(251,146,60,.18)', dot: '#FB923C', text: '#FB923C', border: 'rgba(251,146,60,.35)' },
+    error: { bg: 'rgba(239,68,68,.18)',  dot: '#F87171', text: '#F87171', border: 'rgba(239,68,68,.35)'  },
+    unknown:{ bg:'rgba(107,114,128,.2)', dot:'#9CA3AF',  text:'#9CA3AF',  border:'rgba(107,114,128,.3)'  }
+  };
+
+  function timeAgo(ts) {
+    var s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 10) return 'à l'instant';
+    if (s < 60) return 'il y a ' + s + 's';
+    var m = Math.floor(s / 60);
+    if (m < 60) return 'il y a ' + m + 'min';
+    return 'il y a ' + Math.floor(m/60) + 'h';
   }
 
-  function checkStatuses() {
-    try {
-      const reservations = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-      const hasAirbnb = reservations.some(r =>
-        (r.source || r.platform || '').toLowerCase().includes('airbnb')
-      );
-      const hasBooking = reservations.some(r =>
-        (r.source || r.platform || '').toLowerCase().includes('booking')
-      );
-      const hasAbritel = reservations.some(r => (r.source || r.platform || '').toLowerCase().includes('abritel') || (r.source || r.platform || '').toLowerCase().includes('vrbo'));
-      const hasGites   = reservations.some(r => (r.source || r.platform || '').toLowerCase().includes('gites') || (r.source || r.platform || '').toLowerCase().includes('gîtes'));
-      setStatus('topbar-status-airbnb', hasAirbnb);
-      setStatus('topbar-status-booking', hasBooking);
-      setStatus('topbar-status-abritel', hasAbritel);
-      setStatus('topbar-status-gites',   hasGites);
+  var lastCheck = {};
 
-      // Stripe : vérifie lcc_user ou LCC_PROPERTIES
-      const user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-      const properties = JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
-      const hasStripe = !!(
-        user.stripeAccountId ||
-        user.stripe_account_id ||
-        user.stripeConnected ||
-        properties.some(p => p.stripeAccountId || p.stripe_account_id)
-      );
-      setStatus('topbar-status-stripe', hasStripe);
-    } catch(e) {
-      console.warn('TopBar status error:', e);
-    }
+  function applyStatus(id, level, label) {
+    var c = COLORS[level] || COLORS.unknown;
+    var badge = document.getElementById('svc-status-' + id);
+    var dot   = document.getElementById('svc-dot-'    + id);
+    var lbl   = document.getElementById('svc-label-'  + id);
+    if (!badge) return;
+    badge.style.background = c.bg;
+    badge.style.color      = c.text;
+    badge.style.borderColor= c.border;
+    if (dot) { dot.style.background = c.dot; }
+    if (lbl) { lbl.textContent = label; }
+    lastCheck[id] = Date.now();
   }
 
-  // Vérifier au chargement
+  function updateAgo() {
+    SERVICES.forEach(function(svc) {
+      var el = document.getElementById('svc-ago-' + svc.id);
+      if (el && lastCheck[svc.id]) {
+        el.textContent = timeAgo(lastCheck[svc.id]);
+      }
+    });
+  }
+
+  function checkService(svc) {
+    fetch(svc.url, { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var result = svc.parse(data);
+        applyStatus(svc.id, result.level, result.label);
+      })
+      .catch(function() {
+        applyStatus(svc.id, 'error', 'Injoignable');
+      });
+  }
+
+  function checkAll() {
+    SERVICES.forEach(checkService);
+  }
+
+  // Lancer au chargement
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', checkStatuses);
+    document.addEventListener('DOMContentLoaded', checkAll);
   } else {
-    checkStatuses();
+    checkAll();
   }
 
-  // Re-vérifier après chargement des données API (délai)
-  setTimeout(checkStatuses, 2000);
-  setTimeout(checkStatuses, 5000);
+  // Toutes les 5 minutes
+  setInterval(checkAll, 5 * 60 * 1000);
 
-  // Exposer pour appel manuel après loadData
-  window.updateTopBarStatus = checkStatuses;
+  // Mettre à jour le "il y a X min" toutes les 30s
+  setInterval(updateAgo, 30 * 1000);
+
+  window.updateTopBarStatus = checkAll;
 })();
 </script>
 <!-- MOBILE HEADER -->
