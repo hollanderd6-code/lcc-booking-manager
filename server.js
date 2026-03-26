@@ -17369,6 +17369,25 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
 // DEBUG: vérifier que les GET fonctionnent et lister les routes chargées
 app.get('/api/health', (req, res) => res.status(200).send('ok'));
 
+// ── Proxy statuts services (contourne le CORS navigateur) ────
+app.get('/api/service-status/render', async (req, res) => {
+  try {
+    const r = await axios.get('https://status.render.com/api/v2/summary.json', { timeout: 8000 });
+    res.json(r.data);
+  } catch (e) {
+    res.status(502).json({ error: 'unreachable', message: e.message });
+  }
+});
+
+app.get('/api/service-status/channex', async (req, res) => {
+  try {
+    const r = await axios.get('https://status.channex.io/api/v2/summary.json', { timeout: 8000 });
+    res.json(r.data);
+  } catch (e) {
+    res.status(502).json({ error: 'unreachable', message: e.message });
+  }
+});
+
 app.get('/api/_routes', (req, res) => {
   try {
     const routes = [];
