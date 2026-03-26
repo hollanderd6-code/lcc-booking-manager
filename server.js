@@ -6102,7 +6102,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           property: {
             id: property.id,
             name: property.name,
-            color: property.color
+            color: property.color,
+            internalName: property.internal_name || null,
+            internal_name: property.internal_name || null
           },
           // Infos voyageur
           guest_first_name:  dbData.guest_first_name  || null,
@@ -6160,7 +6162,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             source: 'channex',
             ota_name: dbData.ota_name || null,
             price: dbData.amount_total ? parseFloat(dbData.amount_total) : null,
-            property: { id: prop.id, name: prop.name, color: prop.color },
+            property: { id: prop.id, name: prop.name, color: prop.color, internalName: prop.internal_name || null, internal_name: prop.internal_name || null },
             // Infos voyageur
             guest_first_name:  dbData.guest_first_name  || null,
             guest_last_name:   dbData.guest_last_name   || null,
@@ -6207,6 +6209,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       properties: filteredProps.map(p => ({
         id: p.id,
         name: p.name,
+        internalName: p.internal_name || null,
+        internal_name: p.internal_name || null,
         color: p.color,
         count: (reservationsStore.properties[p.id] || []).length,
         basePrice: p.basePrice != null ? p.basePrice : null,
