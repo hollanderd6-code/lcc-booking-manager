@@ -2671,43 +2671,6 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 </div>
 </div>
 <!-- DARK TOP BAR (barre noire fixe en haut) -->
-<div class="bh-demo-nav" id="bhTopBar">
-
-  <!-- Statuts services centrés -->
-  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;white-space:nowrap;">
-
-    <!-- Fonctionnement du site -->
-    <div style="display:flex;align-items:center;gap:7px;">
-      <i class="fas fa-server" style="font-size:11px;color:rgba(255,255,255,.5);"></i>
-      <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Fonctionnement du site</span>
-      <span id="svc-status-render" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">
-        <span id="svc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
-        <span id="svc-label-render">Vérification…</span>
-      </span>
-      <span id="svc-ago-render" style="font-size:9px;color:rgba(255,255,255,.3);"></span>
-    </div>
-
-    <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>
-
-    <!-- Connexion API (Channex) -->
-    <div style="display:flex;align-items:center;gap:7px;">
-      <i class="fas fa-plug" style="font-size:11px;color:rgba(255,255,255,.5);"></i>
-      <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Connexion API</span>
-      <span id="svc-status-channex" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">
-        <span id="svc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
-        <span id="svc-label-channex">Vérification…</span>
-      </span>
-      <span id="svc-ago-channex" style="font-size:9px;color:rgba(255,255,255,.3);"></span>
-    </div>
-
-  </div>
-
-  <!-- Toggle dark mode (droite) -->
-  <div class="bh-demo-right">
-    <span class="bh-demo-mode-label">Mode</span>
-    <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute('data-theme')==='dark'?document.documentElement.setAttribute('data-theme','light'):document.documentElement.setAttribute('data-theme','dark')"></button>
-  </div>
-</div>
 
 <!-- MOBILE HEADER -->
 <div class="mobile-header">
