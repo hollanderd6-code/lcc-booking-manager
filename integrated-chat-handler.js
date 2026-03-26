@@ -208,7 +208,17 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       return false;
     }
 
-    const language = conversation.language || 'fr';
+    // Détecter la langue depuis le message plutôt que conversation.language
+    // car conversation.language peut être null ou mal renseigné
+    const _msgLower = message.message.toLowerCase();
+    let language = 'fr'; // défaut français
+    if (conversation.language && ['fr','en','es','de','it'].includes(conversation.language)) {
+      language = conversation.language;
+    } else {
+      // Détection basique : si le message contient des mots anglais communs
+      const enWords = ['hello', 'hi', 'what time', 'check', 'wifi', 'password', 'deposit', 'when can', 'is there'];
+      if (enWords.some(w => _msgLower.includes(w))) language = 'en';
+    }
 
     // ========================================
     // ÉTAPE 2.5 : RÉPONSES PERSONNALISÉES EN PRIORITÉ
