@@ -2521,7 +2521,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 
   /* 3. ÉLÉMENTS CACHÉS */
   .status-grid, .onboarding-section, .overview-card,
-  #calendarFiltersSection, #calendarSection, #upcomingSection,
+  #calendarSection, #upcomingSection,
   .ai-section, .email-messaging-section,
   .cleaning-messages-section { display: none !important; }
 
@@ -2812,22 +2812,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 </div>
 </div>
 </section>
-<!-- Property Filters -->
-<section class="card mb-lg" id="calendarFiltersSection">
-<div class="card-header">
-<div class="card-title">
-<i class="fas fa-filter"></i>
-              Filtrer par logement
-            </div>
-<button class="btn btn-ghost" onclick="clearFilters()">
-<i class="fas fa-times"></i>
-              Réinitialiser
-            </button>
-</div>
-<div class="property-filters" id="propertyFilters">
-<!-- Généré dynamiquement par app.js -->
-</div>
-</section>
+
 <!-- Calendar Card -->
 <section class="card" id="calendarSection" style="display:block !important;">
 <div class="section-header">
@@ -5784,18 +5769,6 @@ window.LCC_PROPERTIES = properties;
         });
       }
 
-      // 🧹 Bouton filtre : scroll vers la carte "Filtrer par logement"
-      var filterBtn = document.getElementById('calendarFilterBtn');
-      if (filterBtn) {
-        filterBtn.addEventListener('click', function () {
-          var section = document.getElementById('calendarFiltersSection');
-          if (section) {
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            section.classList.add('filters-highlight');
-            setTimeout(function () {
-              section.classList.remove('filters-highlight');
-            }, 1500);
-          }
         });
       }
 
@@ -6446,18 +6419,25 @@ if (j === 0 || cells.length === 1) {
     }
 
     function selectProperty(propertyId) {
-      state.selectedPropertyId = propertyId;
+      // Toggle : si déjà sélectionné, désélectionner
+      if (state.selectedPropertyId === propertyId) {
+        state.selectedPropertyId = null;
+        propertyId = null;
+      } else {
+        state.selectedPropertyId = propertyId;
+      }
 
       var items = document.querySelectorAll('.property-item');
       for (var i = 0; i < items.length; i++) {
         var it = items[i];
-        it.classList.toggle('selected', it.getAttribute('data-property-id') === String(propertyId));
+        it.classList.toggle('selected', propertyId && it.getAttribute('data-property-id') === String(propertyId));
       }
 
       var rows = document.querySelectorAll('.calendar-row');
       for (var j = 0; j < rows.length; j++) {
         var row = rows[j];
         row.style.opacity = (!propertyId || row.getAttribute('data-property-id') === String(propertyId)) ? '1' : '0.25';
+        row.style.transition = 'opacity 0.2s ease';
       }
     }
 
