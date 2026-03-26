@@ -3618,7 +3618,8 @@ async function loadProperties() {
         max_guests,
         bedrooms,
         beds,
-        bathrooms
+        bathrooms,
+        internal_name
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3671,7 +3672,8 @@ async function loadProperties() {
         max_guests: row.max_guests != null ? parseInt(row.max_guests, 10) : null,
         bedrooms: row.bedrooms != null ? parseInt(row.bedrooms, 10) : null,
         beds: row.beds != null ? parseInt(row.beds, 10) : null,
-        bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null
+        bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null,
+        internal_name: row.internal_name || null
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
