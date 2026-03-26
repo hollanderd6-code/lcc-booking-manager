@@ -6366,14 +6366,16 @@ if (j === 0 || cells.length === 1) {
 
         item.appendChild(nameSpan);
 
-        (function(propertyId) {
-          item.addEventListener('click', function() {
-            selectProperty(propertyId);
-          });
-        })(p.id);
-
         wrapper.appendChild(item);
       }
+
+      // Délégation : 1 seul listener sur le container, survivant aux déplacements DOM
+      wrapper.removeEventListener('click', wrapper._selectHandler);
+      wrapper._selectHandler = function(e) {
+        var item = e.target.closest('.property-item[data-property-id]');
+        if (item) selectProperty(item.getAttribute('data-property-id'));
+      };
+      wrapper.addEventListener('click', wrapper._selectHandler);
     }
 
     // ============================================
