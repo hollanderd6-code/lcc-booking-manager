@@ -21159,7 +21159,7 @@ app.post('/api/channex/webhook', async (req, res) => {
                 (user_id, property_id, reservation_start_date, reservation_end_date,
                  platform, guest_name, guest_email, pin_code, unique_token, photos_token,
                  is_verified, status, channex_booking_id)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending', $11)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'active', $11)
                RETURNING id`,
               [
                 result.user_id,
