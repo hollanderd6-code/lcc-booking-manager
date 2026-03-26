@@ -21014,11 +21014,6 @@ app.post('/api/channex/webhook', async (req, res) => {
 
     for (const booking of bookings) {
       const result = await processChannexBooking(pool, booking);
-      console.log(`🔍 [CHANNEX DEBUG] result =`, JSON.stringify(result));
-      console.log(`🔍 [CHANNEX DEBUG] result.uid = ${result && result.uid}`);
-      console.log(`🔍 [CHANNEX DEBUG] starts CHX_ = ${result && result.uid && result.uid.startsWith('CHX_')}`);
-      console.log(`🔍 [CHANNEX DEBUG] property_id = ${result && result.property_id}`);
-      console.log(`🔍 [CHANNEX DEBUG] user_id = ${result && result.user_id}`);
 
       // ── Injecter immédiatement dans le store mémoire ─────────
       if (result && result.property_id && result.uid) {
@@ -21120,6 +21115,14 @@ app.post('/api/channex/webhook', async (req, res) => {
           const crypto = require('crypto');
 
           const attrs      = booking.attributes || booking;
+          const otaName2   = attrs.ota_name || 'Channex';
+          const OTA_MAP2   = {
+            'ABB': 'Airbnb', 'AIRBNB': 'Airbnb',
+            'BDC': 'Booking.com', 'BOOKING': 'Booking.com',
+            'EXP': 'Expedia', 'EXPEDIA': 'Expedia',
+            'VRBO': 'Vrbo', 'HOMEAWAY': 'Vrbo'
+          };
+          const otaLabel   = OTA_MAP2[String(otaName2).toUpperCase()] || otaName2;
           const guest      = attrs.customer || {};
           const guestName  = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
           const guestFirst = guest.name || guestName.split(' ')[0] || '';
@@ -21158,7 +21161,7 @@ app.post('/api/channex/webhook', async (req, res) => {
                 result.property_id,
                 result.start_date || arrivalDate,
                 result.end_date   || departureDate,
-                ota.label || otaName || 'Channex',
+                otaLabel || 'Channex',
                 guestName,
                 guest.email || null,
                 Math.floor(1000 + Math.random() * 9000).toString(),
@@ -21179,7 +21182,7 @@ app.post('/api/channex/webhook', async (req, res) => {
           // 3. Envoyer le message de confirmation via Channex → OTA
           const confirmMsg = `Bonjour${guestFirst ? ' ' + guestFirst : ''} ! 👋
 
-Merci pour votre réservation via ${ota.label || otaName} pour ${propertyName} !
+Merci pour votre réservation via ${otaLabel} pour ${propertyName} !
 
 Vous recevrez les informations pour votre arrivée prochainement.
 
