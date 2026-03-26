@@ -10515,7 +10515,8 @@ app.post('/api/properties',
       bedrooms,
       beds,
       bathrooms,
-      internal_name
+      internal_name,
+      customAutoResponses
     } = body;
 
     const amenities = body.amenities || {};
@@ -11573,7 +11574,8 @@ app.put('/api/properties/:propertyId',
       bedrooms,
       beds,
       bathrooms,
-      internal_name
+      internal_name,
+      customAutoResponses
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
@@ -11672,6 +11674,10 @@ app.put('/api/properties/:propertyId',
     const newWeekendPrice = weekendPrice !== undefined
       ? (weekendPrice !== '' && weekendPrice !== null ? parseFloat(weekendPrice) : null)
       : (property.weekendPrice != null ? property.weekendPrice : null);
+
+    const newCustomAutoResponses = customAutoResponses !== undefined
+      ? (Array.isArray(customAutoResponses) ? JSON.stringify(customAutoResponses) : customAutoResponses || '[]')
+      : JSON.stringify(property.custom_auto_responses || []);
 
     const newInternalName = internal_name !== undefined
       ? (internal_name !== null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null)
@@ -11781,6 +11787,7 @@ userId: userId
          bedrooms = $31,
          beds = $32,
          bathrooms = $33,
+         custom_auto_responses = $34,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -11804,7 +11811,8 @@ userId: userId
         newMaxGuests,
         newBedrooms,
         newBeds,
-        newBathrooms
+        newBathrooms,
+        newCustomAutoResponses
       ]
     );
     
