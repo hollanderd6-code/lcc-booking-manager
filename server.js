@@ -21332,7 +21332,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
               [user_id]
             );
             for (const tok of tokensRes.rows) {
-              await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', \`\${guest_name}: \${messageText.substring(0, 80)}\`, {
+              await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), {
                 type: 'new_guest_message',
                 conversation_id: String(conversation_id)
               });
@@ -21347,7 +21347,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
             [user_id]
           );
           for (const tok of tokensRes.rows) {
-            await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', \`\${guest_name}: \${messageText.substring(0, 80)}\`, {
+            await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), {
               type: 'new_guest_message',
               conversation_id: String(conversation_id)
             });
