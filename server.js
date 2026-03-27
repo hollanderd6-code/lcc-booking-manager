@@ -513,6 +513,43 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY) 
   : null;
 
+// ============================================
+// 🔀 Helper : choisir le bon compte Stripe pour une caution
+// Priorité : Stripe proprio → Stripe user → Stripe BH (3%)
+// Retourne { stripeAccountId, applyFee }
+// ============================================
+async function getStripeForProperty(pool, propertyId, userId) {
+  // 1) Chercher le propriétaire lié au logement
+  if (propertyId) {
+    const ownerRes = await pool.query(
+      `SELECT oc.stripe_account_id, oc.use_bh_stripe
+       FROM properties p
+       LEFT JOIN owner_clients oc ON oc.id = p.owner_id
+       WHERE p.id = $1`,
+      [propertyId]
+    );
+    const owner = ownerRes.rows[0];
+    if (owner?.stripe_account_id && !owner?.use_bh_stripe) {
+      return { stripeAccountId: owner.stripe_account_id, applyFee: false };
+    }
+  }
+
+  // 2) Stripe du compte principal (user)
+  if (userId) {
+    const userRes = await pool.query(
+      'SELECT stripe_account_id, use_bh_stripe FROM users WHERE id = $1',
+      [userId]
+    );
+    const user = userRes.rows[0];
+    if (user?.stripe_account_id && !user?.use_bh_stripe) {
+      return { stripeAccountId: user.stripe_account_id, applyFee: false };
+    }
+  }
+
+  // 3) Stripe BH platform → 3% de frais
+  return { stripeAccountId: null, applyFee: true };
+}
+
 const cloudinary = require('cloudinary').v2;
 
 // Configuration Cloudinary
@@ -1549,6 +1586,25 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonnes phone + siret ajoutées à owner_clients');
     } catch (e) {
       console.log('ℹ️ owner_clients phone/siret:', e.message);
+    }
+
+    // ✅ Migration : Stripe multi-propriétaires
+    try {
+      await pool.query(`
+        ALTER TABLE owner_clients ADD COLUMN IF NOT EXISTS stripe_account_id TEXT;
+        ALTER TABLE owner_clients ADD COLUMN IF NOT EXISTS use_bh_stripe BOOLEAN DEFAULT TRUE;
+      `);
+      console.log('✅ Colonnes stripe_account_id + use_bh_stripe ajoutées à owner_clients');
+    } catch (e) {
+      console.log('ℹ️ owner_clients stripe:', e.message);
+    }
+    try {
+      await pool.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS use_bh_stripe BOOLEAN DEFAULT FALSE;
+      `);
+      console.log('✅ Colonne use_bh_stripe ajoutée à users');
+    } catch (e) {
+      console.log('ℹ️ users use_bh_stripe:', e.message);
     }
 
     // ✅ Migration : données voyageur enrichies (Channex)
@@ -4132,9 +4188,20 @@ async function sendDepositRequestMessages(io) {
           cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`
         };
 
-        // ✅ CAUTIONS AUTOMATIQUES : TOUJOURS sur le compte plateforme Boostinghost
-        // Ne jamais utiliser stripeAccount ici, même si le client a un compte Connect
-        const session = await stripe.checkout.sessions.create(sessionParams);
+        // ✅ LOGIQUE PRIORITÉ STRIPE : proprio → user → BH (3%)
+        const stripeTarget = await getStripeForProperty(pool, conv.property_id, conv.user_id);
+        const sessionOptions = stripeTarget.stripeAccountId
+          ? { stripeAccount: stripeTarget.stripeAccountId }
+          : {};
+
+        if (stripeTarget.applyFee) {
+          sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * 0.03);
+          console.log(`✅ Caution automatique Booking sur compte plateforme BH (frais 3%)`);
+        } else {
+          console.log(`✅ Caution automatique Booking sur Stripe proprio/user : ${stripeTarget.stripeAccountId}`);
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
         console.log('✅ Caution automatique Booking créée sur compte plateforme (pas Connect)');
 
         // Sauvegarder en DB
@@ -6776,6 +6843,7 @@ app.get('/api/user/profile', async (req, res) => {
         city,
         siret,
         logo_url,
+        use_bh_stripe,
         created_at
        FROM users 
        WHERE id = $1`,
@@ -6800,11 +6868,35 @@ app.get('/api/user/profile', async (req, res) => {
       city: row.city,
       siret: row.siret,
       logoUrl: row.logo_url,
+      use_bh_stripe: row.use_bh_stripe,
       createdAt: row.created_at
     });
   } catch (error) {
     console.error('Erreur profil utilisateur:', error);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PATCH - Mettre à jour use_bh_stripe uniquement
+app.patch('/api/user/profile', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { use_bh_stripe } = req.body;
+    if (typeof use_bh_stripe !== 'boolean') {
+      return res.status(400).json({ error: 'use_bh_stripe doit être un booléen' });
+    }
+
+    await pool.query(
+      'UPDATE users SET use_bh_stripe = $1 WHERE id = $2',
+      [use_bh_stripe, user.id]
+    );
+
+    return res.json({ success: true, use_bh_stripe });
+  } catch (err) {
+    console.error('Erreur PATCH /api/user/profile :', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -12642,6 +12734,116 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
 });
 
 // ============================================
+// 🏠 ROUTES STRIPE - PROPRIÉTAIRES (owner_clients)
+// ============================================
+
+// POST /api/owner-clients/:id/stripe/connect — Lancer onboarding Stripe pour un proprio
+app.post('/api/owner-clients/:id/stripe/connect', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const ownerId = req.params.id;
+
+    // Vérifier que ce proprio appartient bien à cet user
+    const ownerRes = await pool.query(
+      'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
+      [ownerId, user.id]
+    );
+    if (!ownerRes.rows.length) return res.status(404).json({ error: 'Propriétaire non trouvé' });
+    const owner = ownerRes.rows[0];
+
+    let accountId = owner.stripe_account_id;
+
+    // Créer un compte Express Stripe si pas encore fait
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: owner.email,
+        metadata: { ownerId: owner.id, userId: user.id, company: owner.company || '' }
+      });
+      accountId = account.id;
+      await pool.query(
+        'UPDATE owner_clients SET stripe_account_id = $1 WHERE id = $2',
+        [accountId, ownerId]
+      );
+    }
+
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${appUrl}/settings-account.html?stripe_owner=refresh&owner_id=${ownerId}`,
+      return_url: `${appUrl}/settings-account.html?stripe_owner=return&owner_id=${ownerId}`,
+      type: 'account_onboarding'
+    });
+
+    return res.json({ url: accountLink.url });
+  } catch (err) {
+    console.error('Erreur /api/owner-clients/:id/stripe/connect :', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/owner-clients/:id/stripe/status — Statut Stripe d'un proprio
+app.get('/api/owner-clients/:id/stripe/status', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.json({ connected: false, error: 'Stripe non configuré' });
+
+    const ownerId = req.params.id;
+    const ownerRes = await pool.query(
+      'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
+      [ownerId, user.id]
+    );
+    if (!ownerRes.rows.length) return res.status(404).json({ error: 'Propriétaire non trouvé' });
+    const owner = ownerRes.rows[0];
+
+    if (!owner.stripe_account_id) return res.json({ connected: false });
+
+    try {
+      const account = await stripe.accounts.retrieve(owner.stripe_account_id);
+      return res.json({
+        connected: !!(account.charges_enabled && account.details_submitted),
+        accountId: owner.stripe_account_id,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        detailsSubmitted: account.details_submitted,
+        useBhStripe: owner.use_bh_stripe
+      });
+    } catch (e) {
+      return res.json({ connected: false, error: 'Impossible de récupérer le compte Stripe' });
+    }
+  } catch (err) {
+    console.error('Erreur /api/owner-clients/:id/stripe/status :', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/owner-clients/:id/stripe/toggle — Activer/désactiver Stripe BH pour un proprio
+app.patch('/api/owner-clients/:id/stripe/toggle', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const ownerId = req.params.id;
+    const { useBhStripe } = req.body;
+
+    const result = await pool.query(
+      'UPDATE owner_clients SET use_bh_stripe = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+      [useBhStripe, ownerId, user.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Propriétaire non trouvé' });
+
+    return res.json({ success: true, useBhStripe: result.rows[0].use_bh_stripe });
+  } catch (err) {
+    console.error('Erreur PATCH stripe/toggle :', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
 // 🚀 ROUTES API - CAUTIONS (Stripe)
 // ============================================
 
@@ -12786,9 +12988,21 @@ app.post('/api/deposits',
 
     let session;
 
-    // ✅ CAUTIONS : TOUJOURS sur le compte plateforme (pas de Stripe Connect)
-    console.log('✅ Création caution sur compte plateforme Boostinghost');
-    session = await stripe.checkout.sessions.create(sessionParams);
+    // ✅ LOGIQUE PRIORITÉ STRIPE : proprio → user → BH (3%)
+    const stripeTarget = await getStripeForProperty(pool, property ? property.id : null, userId);
+    const sessionOptions = stripeTarget.stripeAccountId
+      ? { stripeAccount: stripeTarget.stripeAccountId }
+      : {};
+
+    if (stripeTarget.applyFee) {
+      // Stripe BH platform : on ajoute 3% de frais
+      sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * 0.03);
+      console.log(`✅ Création caution sur compte plateforme BH (frais 3% : ${sessionParams.payment_intent_data.application_fee_amount} cts)`);
+    } else {
+      console.log(`✅ Création caution sur Stripe proprio/user : ${stripeTarget.stripeAccountId}`);
+    }
+
+    session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
 
     deposit.stripeSessionId = session.id;
     deposit.checkoutUrl = session.url;
