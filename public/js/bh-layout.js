@@ -103,7 +103,7 @@ function getSidebarHTML() {
       <div class="nav-section-title">Facturation</div>
       ${hasPermission('can_view_invoices') || hasPermission('can_manage_invoices') ? `
       <a class="nav-item" data-page="factures" href="/factures.html">
-        <i class="fas fa-file-invoice"></i><span>Factures clients</span>
+        <i class="fas fa-file-invoice"></i><span>Factures séjours</span>
       </a>
       <a class="nav-item" data-page="clients" href="/clients.html">
         <i class="fas fa-users"></i><span>Mes Clients</span>
