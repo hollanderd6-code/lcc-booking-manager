@@ -345,7 +345,7 @@ function getSidebarHTML() {
     const page = document.body.getAttribute('data-page');
     let title = document.body.getAttribute('data-title');
 
-    // Mapping des titres courts par page
+    // Mapping des titres courts par page — priorité absolue
     const PAGE_TITLES = {
       'app': 'Home',
       'cleaning': 'Ménage',
@@ -353,13 +353,24 @@ function getSidebarHTML() {
       'factures-proprietaires': 'F. Propriétaire'
     };
 
-    if (!title && PAGE_TITLES[page]) {
+    // 1. Mapping par data-page (prioritaire)
+    if (PAGE_TITLES[page]) {
       title = PAGE_TITLES[page];
     }
+    // 2. Fallback sur h1 si pas de mapping
     if (!title) {
       const h1 = document.querySelector('h1.page-title');
       if (h1) title = h1.textContent.trim();
     }
+    // 3. Appliquer le mapping aussi sur les titres trouvés via h1
+    const h1Mappings = {
+      'Gestion du ménage': 'Ménage',
+      'Cautions et paiements': 'Finances',
+      'Factures Propriétaires': 'F. Propriétaire',
+      'Dashboard': 'Home'
+    };
+    if (title && h1Mappings[title]) title = h1Mappings[title];
+
     if (!title) return;
 
     // Trouver ou créer la mobile-header
@@ -479,7 +490,7 @@ function getSidebarHTML() {
     if (!document.getElementById('bh-mobile-ann-btn')) {
       var annBtn = document.createElement('button');
       annBtn.id = 'bh-mobile-ann-btn';
-      annBtn.style.cssText = 'position:absolute;right:110px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:10px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
+      annBtn.style.cssText = 'position:absolute;right:80px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:10px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
       annBtn.innerHTML = '<i class="fas fa-bell"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
       var openAnn = function(e) {
         e.preventDefault();
