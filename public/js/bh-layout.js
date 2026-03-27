@@ -468,7 +468,7 @@ function getSidebarHTML() {
     if (!document.getElementById('bh-mobile-ann-btn')) {
       var annBtn = document.createElement('button');
       annBtn.id = 'bh-mobile-ann-btn';
-      annBtn.style.cssText = 'position:absolute;right:110px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;';
+      annBtn.style.cssText = 'position:absolute;right:70px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;';
       annBtn.innerHTML = '<i class="fas fa-bell"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
       annBtn.onclick = function() { window.bhToggleAnnouncements && window.bhToggleAnnouncements(); };
       mobileHeader.appendChild(annBtn);
