@@ -78,7 +78,7 @@ function getSidebarHTML() {
         <i class="fas fa-home"></i><span>Mes logements</span>
       </a>
       <a class="nav-item" data-page="welcome" href="/welcome.html">
-        <i class="fas fa-book"></i><span>Livret d'accueil</span>
+        <i class="fas fa-book"></i><span>Livrets d'accueil</span>
       </a>
       <a class="nav-item" data-page="contrat" href="/contrat.html">
         <i class="fas fa-file-contract"></i><span>Contrats</span>
@@ -350,7 +350,7 @@ function getSidebarHTML() {
       'app': 'Home',
       'cleaning': 'Ménage',
       'deposits': 'Finances',
-      'factures-proprietaires': 'F. Propriétaire'
+      'factures-proprietaires': 'F. Propriétaires'
     };
 
     // 1. Mapping par data-page (prioritaire)
