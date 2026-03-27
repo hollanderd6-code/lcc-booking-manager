@@ -2459,14 +2459,20 @@ app.locals.pool = pool;
 
 // ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
 // ── Annonces / Changelog ────────────────────────────────────────
-app.get('/api/announcements', authenticateAny, async (req, res) => {
+// ── CORS explicite pour announcements (routes définies avant le middleware global) ──
+const corsAnn = require('cors')();
+
+app.options('/api/announcements', corsAnn);
+app.options('/api/announcements/:id', corsAnn);
+
+app.get('/api/announcements', corsAnn, authenticateAny, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50');
     res.json({ announcements: result.rows });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/announcements', async (req, res) => {
+app.post('/api/announcements', corsAnn, async (req, res) => {
   try {
     const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
     if (adminKey !== (process.env.ADMIN_SECRET_KEY || 'bh-admin-2024')) return res.status(403).json({ error: 'Non autorisé' });
@@ -2481,7 +2487,7 @@ app.post('/api/announcements', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/announcements/:id', async (req, res) => {
+app.delete('/api/announcements/:id', corsAnn, async (req, res) => {
   try {
     const adminKey = req.headers['x-admin-key'] || (req.body && req.body.adminKey);
     if (adminKey !== (process.env.ADMIN_SECRET_KEY || 'bh-admin-2024')) return res.status(403).json({ error: 'Non autorisé' });
