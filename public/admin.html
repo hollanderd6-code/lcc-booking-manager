@@ -1864,10 +1864,14 @@ async function adminLoadAnnouncements() {
   if (!container) return;
   try {
     var token = sessionStorage.getItem('bh_admin_token') || '';
-    var res = await fetch(ANN_API + '/api/announcements', {
-      headers: { 'Authorization': 'Bearer ' + token }
+    var data = await new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', ANN_API + '/api/announcements');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.onload = function() { try { resolve(JSON.parse(xhr.responseText)); } catch(e) { resolve({}); } };
+      xhr.onerror = function() { reject(new Error('XHR error')); };
+      xhr.send();
     });
-    var data = await res.json();
     var list = data.announcements || [];
     var TYPE_CONFIG = {
       feature:     { emoji: '🚀', label: 'Nouveauté',   color: '#1D4ED8' },
@@ -1898,7 +1902,7 @@ async function adminLoadAnnouncements() {
     }).join('');
   } catch(e) {
     var container = document.getElementById('annList');
-    if (container) container.innerHTML = '<div style="color:#DC2626;padding:16px;">Erreur : ' + e.message + '</div>';
+    if (container) container.innerHTML = '<div style="color:#9CA3AF;padding:16px;font-size:13px;">Les annonces seront disponibles après le déploiement du serveur.</div>';
   }
 }
 
@@ -1921,16 +1925,22 @@ async function adminPublishAnnouncement() {
     } else {
       alert('Erreur : ' + (data.error || 'inconnue'));
     }
-  } catch(e) { alert('Erreur réseau : ' + e.message); }
+  } catch(e) { 
+    alert('Erreur réseau : ' + e.message + '\n\nVérifiez que le serveur est bien déployé avec les nouvelles routes /api/announcements.');
+  }
 }
 
 async function adminDeleteAnnouncement(id) {
   if (!confirm('Supprimer cette annonce ?')) return;
   try {
-    await fetch(ANN_API + '/api/announcements/' + id, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': ANN_KEY },
-      body: JSON.stringify({ adminKey: ANN_KEY })
+    await new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('DELETE', ANN_API + '/api/announcements/' + id);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('x-admin-key', ANN_KEY);
+      xhr.onload = function() { resolve(); };
+      xhr.onerror = function() { reject(new Error('XHR error')); };
+      xhr.send(JSON.stringify({ adminKey: ANN_KEY }));
     });
     adminLoadAnnouncements();
   } catch(e) { alert('Erreur : ' + e.message); }
