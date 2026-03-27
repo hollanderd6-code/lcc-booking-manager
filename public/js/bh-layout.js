@@ -350,7 +350,7 @@ function getSidebarHTML() {
       'app': 'Home',
       'cleaning': 'Ménage',
       'deposits': 'Finances',
-      'factures-proprietaires': 'F. Propriétaires'
+      'factures-proprietaires': 'Clients'
     };
 
     // 1. Mapping par data-page (prioritaire)
