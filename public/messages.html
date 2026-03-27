@@ -1062,7 +1062,7 @@ html[data-theme-v3="1"] .app-container {
           </div>
           <div class="msgs-chat-actions">
             <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i> Envoyer la facture</button>
-            <button class="msgs-icon-btn" id="btnInvoice" style="display:none" title="Générer une facture" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i></button>
+            
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
             <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
           </div>
@@ -1772,10 +1772,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     window.currentChatConv = conv || null;
 
     // Afficher bouton facture si la conv a une réservation
-    var btnInv = document.getElementById('btnInvoice');
-    if (btnInv) {
       var hasRes = conv && (conv.reservation_start_date || conv.startDate);
-      btnInv.style.display = hasRes ? 'inline-flex' : 'none';
     }
 
     // Active state in list
