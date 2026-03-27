@@ -5105,13 +5105,6 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
       movesCard.onclick = handler;
     }
 
-    // ── KPI Checklists en attente ──────────────────────────
-    const checklistsCard = document.getElementById('kpiChecklistsCard');
-    if (checklistsCard && !checklistsCard.dataset.bound) {
-      checklistsCard.dataset.bound = '1';
-      checklistsCard.onclick = () => window.openChecklistsKpiModal();
-    }
-
     const cleaningCard = document.getElementById('kpiCleaning48hCard');
     if (cleaningCard && !cleaningCard.dataset.bound2) {
       cleaningCard.dataset.bound2 = '1';
@@ -5253,13 +5246,6 @@ window.LCC_PROPERTIES = properties;
         movesCard.dataset.bound = '1';
         movesCard.onclick = () => window.openTodayMovesModal(getLatestReservationsForKpi(reservations));
 }
-      // ── KPI Checklists en attente ──────────────────────────
-    const checklistsCard = document.getElementById('kpiChecklistsCard');
-    if (checklistsCard && !checklistsCard.dataset.bound) {
-      checklistsCard.dataset.bound = '1';
-      checklistsCard.onclick = () => window.openChecklistsKpiModal();
-    }
-
     const cleaningCard = document.getElementById('kpiCleaning48hCard');
       if (cleaningCard && !cleaningCard.dataset.bound) {
         cleaningCard.dataset.bound = '1';
