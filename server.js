@@ -1383,6 +1383,21 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonne custom_auto_responses OK');
     } catch(e) { console.log('ℹ️ custom_auto_responses:', e.message); }
 
+    // ✅ Migration : annonces / changelog
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS announcements (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          body TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'info',
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          created_by TEXT DEFAULT 'admin'
+        )
+      `);
+      console.log('✅ Table announcements OK');
+    } catch(e) { console.log('ℹ️ announcements:', e.message); }
+
     // ✅ Migration : support FCM tokens pour sous-comptes
     try {
       await pool.query(`
@@ -2443,6 +2458,38 @@ app.locals.pool = pool;
 // app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // ✅ Healthcheck (pour vérifier que Render sert bien CE serveur)
+// ── Annonces / Changelog ────────────────────────────────────────
+app.get('/api/announcements', authenticateAny, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50');
+    res.json({ announcements: result.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/announcements', async (req, res) => {
+  try {
+    const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
+    if (adminKey !== (process.env.ADMIN_SECRET_KEY || 'bh-admin-2024')) return res.status(403).json({ error: 'Non autorisé' });
+    const { title, body, type } = req.body;
+    if (!title || !body) return res.status(400).json({ error: 'title et body requis' });
+    const safeType = ['feature','bugfix','maintenance','info'].includes(type) ? type : 'info';
+    const result = await pool.query(
+      'INSERT INTO announcements (title, body, type) VALUES ($1, $2, $3) RETURNING *',
+      [title, body, safeType]
+    );
+    res.json({ announcement: result.rows[0] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/announcements/:id', async (req, res) => {
+  try {
+    const adminKey = req.headers['x-admin-key'] || (req.body && req.body.adminKey);
+    if (adminKey !== (process.env.ADMIN_SECRET_KEY || 'bh-admin-2024')) return res.status(403).json({ error: 'Non autorisé' });
+    await pool.query('DELETE FROM announcements WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
