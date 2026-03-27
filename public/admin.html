@@ -1863,7 +1863,7 @@ async function adminLoadAnnouncements() {
   var container = document.getElementById('annList');
   if (!container) return;
   try {
-    var token = localStorage.getItem('admin_token') || '';
+    var token = sessionStorage.getItem('bh_admin_token') || '';
     var res = await fetch(ANN_API + '/api/announcements', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
