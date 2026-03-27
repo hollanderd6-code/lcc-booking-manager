@@ -11675,6 +11675,9 @@ app.patch('/api/properties/:propertyId', authenticateAny, async (req, res) => {
       [ownerId || null, propertyId]
     );
 
+    // ✅ Recharger le store en mémoire pour que la logique Stripe soit immédiatement à jour
+    await loadProperties();
+
     return res.json({ success: true, propertyId, ownerId: ownerId || null });
   } catch (err) {
     console.error('Erreur PATCH /api/properties/:propertyId :', err);
