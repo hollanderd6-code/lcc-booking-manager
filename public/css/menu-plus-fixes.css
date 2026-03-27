@@ -58,7 +58,7 @@ body[data-page="notifications"] .tab-btn[data-tab="more"],
 body[data-page="cleaning"] .tab-btn[data-tab="more"],
 body[data-page="deposits"] .tab-btn[data-tab="more"],
 body[data-page="factures"] .tab-btn[data-tab="more"],
-body[data-page="factures-proprietaires"] .tab-btn[data-tab="more"],
+body[data-page="clients"] .tab-btn[data-tab="more"],
 body[data-page="welcome"] .tab-btn[data-tab="more"],
 body[data-page="help"] .tab-btn[data-tab="more"] {
   color: var(--primary-color, #1A7A5E) !important;
@@ -71,7 +71,7 @@ body[data-page="notifications"] .tab-btn[data-tab="more"]::before,
 body[data-page="cleaning"] .tab-btn[data-tab="more"]::before,
 body[data-page="deposits"] .tab-btn[data-tab="more"]::before,
 body[data-page="factures"] .tab-btn[data-tab="more"]::before,
-body[data-page="factures-proprietaires"] .tab-btn[data-tab="more"]::before,
+body[data-page="clients"] .tab-btn[data-tab="more"]::before,
 body[data-page="welcome"] .tab-btn[data-tab="more"]::before,
 body[data-page="help"] .tab-btn[data-tab="more"]::before {
   content: '';
@@ -104,7 +104,7 @@ body[data-page="notifications"] .tab-btn[data-tab="more"] i,
 body[data-page="cleaning"] .tab-btn[data-tab="more"] i,
 body[data-page="deposits"] .tab-btn[data-tab="more"] i,
 body[data-page="factures"] .tab-btn[data-tab="more"] i,
-body[data-page="factures-proprietaires"] .tab-btn[data-tab="more"] i,
+body[data-page="clients"] .tab-btn[data-tab="more"] i,
 body[data-page="welcome"] .tab-btn[data-tab="more"] i,
 body[data-page="help"] .tab-btn[data-tab="more"] i {
   transform: translateY(-2px) scale(1.08);
@@ -215,7 +215,7 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
   body[data-page="cleaning"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="deposits"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="factures"] .mobile-tabs .tab-btn[data-tab="more"],
-  body[data-page="factures-proprietaires"] .mobile-tabs .tab-btn[data-tab="more"],
+  body[data-page="clients"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="welcome"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="help"] .mobile-tabs .tab-btn[data-tab="more"] {
     color: #1A7A5E !important;
