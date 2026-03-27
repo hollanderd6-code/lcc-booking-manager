@@ -695,10 +695,17 @@ function getSidebarHTML() {
   async function bhLoadAnnouncements() {
     try {
       var token = localStorage.getItem('lcc_token');
-      var res = await fetch(BH_API + '/api/announcements', {
-        headers: { 'Authorization': 'Bearer ' + token }
+      // Utiliser XMLHttpRequest pour éviter l'interception de auth-fetch.js
+      var data = await new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', BH_API + '/api/announcements');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + (token || ''));
+        xhr.onload = function() {
+          try { resolve(JSON.parse(xhr.responseText)); } catch(e) { resolve({}); }
+        };
+        xhr.onerror = function() { reject(new Error('XHR error')); };
+        xhr.send();
       });
-      var data = await res.json();
       var list = data.announcements || [];
 
       // Badge non lus
