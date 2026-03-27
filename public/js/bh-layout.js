@@ -384,24 +384,15 @@ function getSidebarHTML() {
     mobileHeader.style.setProperty('border-bottom', '1px solid rgba(200,184,154,0.4)', 'important');
 
     // Injecter le titre après le logo
-    const titleEl = document.createElement('span');
-    titleEl.id = 'bh-mobile-page-title';
-    titleEl.textContent = title;
-    titleEl.style.cssText = 'font-family:"Instrument Serif",Georgia,serif;font-size:20px;font-weight:400;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;';
-
-    // Wrapper colonne pour logo+titre à gauche, pastilles en dessous
+    // Titre supprimé — plus d'espace pour les boutons
+    // On s'assure juste qu'il y a un flex spacer pour pousser les boutons à droite
     const logo = mobileHeader.querySelector('.mobile-logo');
-    if (logo) {
-      logo.after(titleEl);
-    } else {
-      mobileHeader.appendChild(titleEl);
-    }
 
     // Pastilles statut sous le titre (si pas déjà présentes)
     if (!document.getElementById('bh-mobile-svc')) {
       const svcRow = document.createElement('div');
       svcRow.id = 'bh-mobile-svc';
-      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:44px;top:50%;transform:translateY(-50%);cursor:pointer;padding:6px 4px;';
+      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;padding:6px 4px;';
       svcRow.title = 'Statut des services';
       svcRow.innerHTML = [
         '<div style="display:flex;align-items:center;gap:4px;">',
@@ -468,7 +459,7 @@ function getSidebarHTML() {
     if (!document.getElementById('bh-mobile-ann-btn')) {
       var annBtn = document.createElement('button');
       annBtn.id = 'bh-mobile-ann-btn';
-      annBtn.style.cssText = 'position:absolute;right:88px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;';
+      annBtn.style.cssText = 'position:absolute;right:52px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;';
       annBtn.innerHTML = '<i class="fas fa-bell"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
       annBtn.onclick = function() { window.bhToggleAnnouncements && window.bhToggleAnnouncements(); };
       mobileHeader.appendChild(annBtn);
