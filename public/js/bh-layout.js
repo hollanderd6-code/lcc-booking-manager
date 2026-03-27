@@ -464,6 +464,16 @@ function getSidebarHTML() {
       mobileHeader.appendChild(svcRow);
     }
 
+    // Bouton 🔔 Nouveautés dans le header mobile
+    if (!document.getElementById('bh-mobile-ann-btn')) {
+      var annBtn = document.createElement('button');
+      annBtn.id = 'bh-mobile-ann-btn';
+      annBtn.style.cssText = 'position:absolute;right:60px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;';
+      annBtn.innerHTML = '<i class="fas fa-bell"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
+      annBtn.onclick = function() { window.bhToggleAnnouncements && window.bhToggleAnnouncements(); };
+      mobileHeader.appendChild(annBtn);
+    }
+
   }
 
 
@@ -644,7 +654,7 @@ function getSidebarHTML() {
     if (document.getElementById('bhAnnPopup')) return;
     var popup = document.createElement('div');
     popup.id = 'bhAnnPopup';
-    popup.style.cssText = 'position:fixed;top:48px;right:16px;width:360px;max-height:480px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:99999;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.08);';
+    var isMob = window.innerWidth <= 768; popup.style.cssText = 'position:fixed;top:' + (isMob ? 'calc(60px + env(safe-area-inset-top,0px))' : '48px') + ';right:' + (isMob ? '8px' : '16px') + ';width:' + (isMob ? 'calc(100vw - 16px)' : '360px') + ';max-height:480px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:99999;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.08);';
     var hdr = document.createElement('div');
     hdr.style.cssText = 'padding:16px 18px 12px;border-bottom:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
     var ttl = document.createElement('div');
@@ -711,10 +721,17 @@ function getSidebarHTML() {
       // Badge non lus
       var lastSeen = parseInt(localStorage.getItem('bh_ann_last_seen') || '0');
       var unread = list.filter(function(a) { return new Date(a.created_at).getTime() > lastSeen; }).length;
+      // Badge desktop
       var badge = document.getElementById('bhAnnBadge');
       if (badge) {
         badge.style.display = unread > 0 ? 'block' : 'none';
         badge.textContent = unread > 0 ? unread : '';
+      }
+      // Badge mobile
+      var badgeMobile = document.getElementById('bhAnnBadgeMobile');
+      if (badgeMobile) {
+        badgeMobile.style.display = unread > 0 ? 'block' : 'none';
+        badgeMobile.textContent = unread > 0 ? unread : '';
       }
 
       bhRenderAnnouncements(list);
