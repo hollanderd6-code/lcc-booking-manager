@@ -2472,11 +2472,11 @@ app.get('/api/announcements', corsAnn, authenticateAny, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/announcements', corsAnn, async (req, res) => {
+app.post('/api/announcements', corsAnn, bodyParser.json(), async (req, res) => {
   try {
-    const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
+    const adminKey = req.headers['x-admin-key'] || (req.body && req.body.adminKey);
     if (adminKey !== (process.env.ADMIN_SECRET_KEY || 'bh-admin-2024')) return res.status(403).json({ error: 'Non autorisé' });
-    const { title, body, type } = req.body;
+    const { title, body, type } = req.body || {};
     if (!title || !body) return res.status(400).json({ error: 'title et body requis' });
     const safeType = ['feature','bugfix','maintenance','info'].includes(type) ? type : 'info';
     const result = await pool.query(
@@ -2487,7 +2487,7 @@ app.post('/api/announcements', corsAnn, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/announcements/:id', corsAnn, async (req, res) => {
+app.delete('/api/announcements/:id', corsAnn, bodyParser.json(), async (req, res) => {
   try {
     const adminKey = req.headers['x-admin-key'] || (req.body && req.body.adminKey);
     if (adminKey !== (process.env.ADMIN_SECRET_KEY || 'bh-admin-2024')) return res.status(403).json({ error: 'Non autorisé' });
