@@ -1397,6 +1397,62 @@ html[data-theme-v3="1"] .subscription-card {
   </p>
 </div>
 </section>
+
+<!-- ===== SECTION STRIPE BOOSTINGHOST (3%) ===== -->
+<section class="card mb-lg" id="sectionBhStripe">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-building" style="color:#6772E5;"></i>
+      Stripe Boostinghost (plateforme)
+    </div>
+  </div>
+  <div class="card-body">
+    <div style="background:linear-gradient(135deg,#6772E508,#6772E515);border:1.5px solid #6772E530;border-radius:12px;padding:14px;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <i class="fas fa-info-circle" style="color:#6772E5;"></i>
+        <span style="font-size:13px;font-weight:700;color:var(--text-primary);">Comment ça fonctionne ?</span>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);line-height:1.6;margin:0;">
+        Lorsque vous utilisez le Stripe de Boostinghost, la plateforme encaisse les paiements à votre place.
+        Des <strong>frais de 3%</strong> sont prélevés automatiquement sur chaque transaction.
+        Un virement manuel vous sera ensuite effectué. Utile si vos propriétaires n'ont pas encore leur propre compte Stripe.
+      </p>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-color,#e5e7eb);">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Utiliser Stripe BH par défaut (mon compte)</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Activez si vous n'avez pas encore connecté votre propre compte Stripe</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggleUserBhStripe">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION PROPRIÉTAIRES STRIPE ===== -->
+<section class="card mb-lg" id="sectionOwnerStripe">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-users" style="color:#1A7A5E;"></i>
+      Stripe par propriétaire
+    </div>
+  </div>
+  <div class="card-body">
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+      Chaque propriétaire peut avoir son propre compte Stripe. Les paiements et cautions liés à ses logements seront traités sur son compte directement (sans frais BH).
+    </p>
+    <div id="ownerStripeList">
+      <div style="text-align:center;padding:32px;color:var(--text-secondary);">
+        <i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;"></i>
+        <p>Chargement des propriétaires...</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 </div>
 <div class="tab-pane" data-tab="team" id="tab-team">
   
@@ -2059,6 +2115,128 @@ if (logoInput && logoPreview) {
       }
 
       refreshStripeStatus();
+
+      /* -------- TOGGLE USE_BH_STRIPE (compte principal) -------- */
+      const toggleUserBhStripe = document.getElementById('toggleUserBhStripe');
+      async function loadUserBhStripeToggle() {
+        const token = localStorage.getItem('lcc_token');
+        if (!token || !toggleUserBhStripe) return;
+        try {
+          const res = await fetch('/api/user/profile', { headers: { 'Authorization': 'Bearer ' + token } });
+          const data = await res.json();
+          toggleUserBhStripe.checked = !!(data.use_bh_stripe || data.useBhStripe);
+        } catch(e) { console.error(e); }
+      }
+      if (toggleUserBhStripe) {
+        toggleUserBhStripe.addEventListener('change', async () => {
+          const token = localStorage.getItem('lcc_token');
+          try {
+            await fetch('/api/user/profile', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({ use_bh_stripe: toggleUserBhStripe.checked })
+            });
+          } catch(e) { console.error(e); }
+        });
+        loadUserBhStripeToggle();
+      }
+
+      /* -------- STRIPE PAR PROPRIÉTAIRE -------- */
+      async function loadOwnerStripeList() {
+        const token = localStorage.getItem('lcc_token');
+        const container = document.getElementById('ownerStripeList');
+        if (!container || !token) return;
+
+        try {
+          const res = await fetch('/api/owner-clients', { headers: { 'Authorization': 'Bearer ' + token } });
+          const owners = await res.json();
+
+          if (!owners.length) {
+            container.innerHTML = `<p style="color:var(--text-secondary);font-size:13px;text-align:center;padding:20px 0;">Aucun propriétaire enregistré. <a href="/owner-clients.html" style="color:#1A7A5E;">Ajouter un propriétaire</a></p>`;
+            return;
+          }
+
+          // Charger le statut Stripe de chaque proprio
+          const statuses = await Promise.all(owners.map(async (o) => {
+            try {
+              const r = await fetch(`/api/owner-clients/${o.id}/stripe/status`, { headers: { 'Authorization': 'Bearer ' + token } });
+              return { ...o, stripe: await r.json() };
+            } catch(e) { return { ...o, stripe: { connected: false } }; }
+          }));
+
+          container.innerHTML = statuses.map(o => {
+            const connected = o.stripe?.connected;
+            const useBh = o.stripe?.useBhStripe !== false && !connected;
+            const pillClass = connected ? 'stripe-pill-ok' : (o.stripe?.accountId ? 'stripe-pill-warn' : 'stripe-pill-error');
+            const pillText = connected ? 'Stripe connecté ✓' : (o.stripe?.accountId ? 'En attente' : 'Non connecté');
+            return `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-color,#e5e7eb);gap:12px;flex-wrap:wrap;" data-owner-id="${o.id}">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#1A7A5E20;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="fas fa-user" style="color:#1A7A5E;font-size:14px;"></i>
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.first_name || ''} ${o.last_name || ''} ${o.company ? '· ' + o.company : ''}</div>
+                  <span class="pill-status ${pillClass}" style="font-size:11px;margin-top:3px;display:inline-block;">${pillText}</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-size:12px;color:var(--text-secondary);">Stripe BH</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" class="owner-bh-toggle" data-owner-id="${o.id}" ${useBh ? 'checked' : ''} ${connected ? '' : 'disabled'}>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="connectOwnerStripe('${o.id}')">
+                  <i class="fas fa-plug"></i>
+                  ${connected ? 'Reconnecter' : 'Connecter'}
+                </button>
+              </div>
+            </div>`;
+          }).join('');
+
+          // Listeners toggles BH par proprio
+          container.querySelectorAll('.owner-bh-toggle').forEach(toggle => {
+            toggle.addEventListener('change', async () => {
+              const oid = toggle.dataset.ownerId;
+              try {
+                await fetch(`/api/owner-clients/${oid}/stripe/toggle`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                  body: JSON.stringify({ useBhStripe: toggle.checked })
+                });
+              } catch(e) { console.error(e); }
+            });
+          });
+
+        } catch(e) {
+          console.error(e);
+          container.innerHTML = `<p style="color:var(--text-secondary);font-size:13px;">Erreur lors du chargement des propriétaires.</p>`;
+        }
+      }
+
+      async function connectOwnerStripe(ownerId) {
+        const token = localStorage.getItem('lcc_token');
+        try {
+          const res = await fetch(`/api/owner-clients/${ownerId}/stripe/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+          });
+          const data = await res.json();
+          if (data.url) window.location.href = data.url;
+          else alert(data.error || 'Impossible de générer le lien Stripe.');
+        } catch(e) { alert('Erreur lors de la connexion Stripe.'); }
+      }
+
+      // Charger la liste au chargement de la page
+      loadOwnerStripeList();
+
+      // Recharger si retour depuis Stripe OAuth (owner)
+      if (new URLSearchParams(window.location.search).get('stripe_owner') === 'return') {
+        loadOwnerStripeList();
+      }
+
       });
   </script>
 <!-- MOBILE MENU SCRIPT -->
