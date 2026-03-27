@@ -230,15 +230,17 @@ html, body { margin: 0 !important; }
   text-transform: uppercase; letter-spacing: .4px;
   border-bottom: 2px solid var(--border);
   background: var(--bg);
+  white-space: nowrap;
 }
-.prop-table th:first-child { text-align: left; }
+.prop-table th:first-child { text-align: left; min-width: 160px; }
 .prop-table td {
   padding: 12px 16px;
   text-align: right;
   border-bottom: 1px solid var(--border);
   color: var(--text);
+  white-space: nowrap;
 }
-.prop-table td:first-child { text-align: left; }
+.prop-table td:first-child { text-align: left; min-width: 160px; }
 .prop-table tr:last-child td { border-bottom: none; }
 .prop-table tr:hover td { background: var(--bg); }
 .prop-table tfoot td {
@@ -255,13 +257,15 @@ html, body { margin: 0 !important; }
   color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px;
   border-bottom: 2px solid var(--border);
   background: var(--bg);
+  white-space: nowrap;
 }
-.monthly-table th:first-child { text-align: left; }
+.monthly-table th:first-child { text-align: left; min-width: 80px; }
 .monthly-table td {
   padding: 11px 16px; text-align: right;
   border-bottom: 1px solid var(--border); color: var(--text);
+  white-space: nowrap;
 }
-.monthly-table td:first-child { text-align: left; font-weight: 600; }
+.monthly-table td:first-child { text-align: left; font-weight: 600; min-width: 80px; }
 .monthly-table tr:last-child td { border-bottom: none; }
 .monthly-table tr:hover td { background: var(--bg); }
 .monthly-table tfoot td {
@@ -524,8 +528,18 @@ let _chartMode = 'gross';
 
 const PLATFORM_COLORS = {
   'Airbnb': '#FF5A5F', 'Booking.com': '#003580',
-  'Expedia': '#FFC72C', 'Vrbo': '#1A5276', 'Direct': '#1A7A5E'
+  'Expedia': '#FFC72C', 'Vrbo': '#1A5276', 'Direct': '#1A7A5E',
+  'Bloqué': '#9CA3AF', 'Direct': '#1A7A5E'
 };
+
+// Normalise les noms de plateforme
+function normalizePlatform(name) {
+  if (!name) return name;
+  const n = name.toLowerCase();
+  if (n === 'block' || n === 'bloqué' || n === 'blocked') return 'Bloqué';
+  if (n === 'manuel' || n === 'manual' || n === 'direct') return 'Direct';
+  return name;
+}
 const FALLBACK_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899'];
 
 // ── Init ──────────────────────────────────────────────────────
@@ -695,6 +709,8 @@ function switchChart(type, btn) {
 
 function renderPieChart(platforms) {
   if (!platforms || !platforms.length) return;
+  // Normaliser les noms
+  platforms = platforms.map(p => ({ ...p, name: normalizePlatform(p.name) }));
   const labels = platforms.map(p => p.name);
   const vals   = platforms.map(p => p.bookings);
   const colors = platforms.map((p,i) => PLATFORM_COLORS[p.name] || FALLBACK_COLORS[i % FALLBACK_COLORS.length]);
