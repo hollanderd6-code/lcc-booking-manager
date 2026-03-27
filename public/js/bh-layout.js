@@ -692,7 +692,7 @@ function getSidebarHTML() {
     hdr.style.cssText = 'padding:16px 18px 12px;border-bottom:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
     var ttl = document.createElement('div');
     ttl.style.cssText = 'font-size:15px;font-weight:700;color:#0D1117;';
-    ttl.textContent = '\uD83D\uDD14 Nouveautés & annonces';
+    ttl.textContent = '\uD83D\uDD14 Informations';
     var cls = document.createElement('button');
     cls.style.cssText = 'background:none;border:none;cursor:pointer;font-size:20px;color:#9CA3AF;line-height:1;padding:0 4px;';
     cls.textContent = '×';
