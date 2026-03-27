@@ -1410,13 +1410,15 @@ Actualiser
 
 <!-- Sélection du compte Stripe -->
 <div class="form-row" style="margin-top:12px;">
-  <label style="margin-bottom:8px;display:block;">Compte Stripe à utiliser</label>
-  <div style="display:flex;gap:8px;margin-bottom:10px;">
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;">
-      <input type="radio" name="freeDepositStripeTarget" value="property" checked onchange="toggleFreeDepositTarget()"> Par logement
+  <label style="margin-bottom:8px;display:block;font-weight:600;">Compte Stripe à utiliser</label>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.15s;" id="labelByProperty">
+      <input type="radio" name="freeDepositStripeTarget" value="property" checked onchange="toggleFreeDepositTarget()">
+      <i class="fas fa-home" style="color:#1A7A5E;font-size:13px;"></i> Par logement
     </label>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;">
-      <input type="radio" name="freeDepositStripeTarget" value="owner" onchange="toggleFreeDepositTarget()"> Par propriétaire
+    <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.15s;" id="labelByOwner">
+      <input type="radio" name="freeDepositStripeTarget" value="owner" onchange="toggleFreeDepositTarget()">
+      <i class="fas fa-user" style="color:#6772E5;font-size:13px;"></i> Par propriétaire
     </label>
   </div>
   <div id="freeDepositPropertySelect">
@@ -3249,6 +3251,10 @@ function toggleFreeDepositTarget() {
   const val = document.querySelector('input[name="freeDepositStripeTarget"]:checked')?.value;
   document.getElementById('freeDepositPropertySelect').style.display = val === 'property' ? 'block' : 'none';
   document.getElementById('freeDepositOwnerSelect').style.display = val === 'owner' ? 'block' : 'none';
+  const lProp = document.getElementById('labelByProperty');
+  const lOwn = document.getElementById('labelByOwner');
+  if (lProp) lProp.style.borderColor = val === 'property' ? '#1A7A5E' : '#d1d5db';
+  if (lOwn) lOwn.style.borderColor = val === 'owner' ? '#6772E5' : '#d1d5db';
 }
 
 async function createFreeDeposit() {
