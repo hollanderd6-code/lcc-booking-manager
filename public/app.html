@@ -5161,12 +5161,9 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
 
     // ── KPI Checklists en attente ──────────────────────────
     const checklistsCard = document.getElementById('kpiChecklistsCard');
-    if (checklistsCard) {
-      checklistsCard.onclick = () => {
-        if (window.cleaningChecklists && window.cleaningChecklists.length >= 0) {
-          window.openChecklistsKpiModal();
-        }
-      };
+    if (checklistsCard && !checklistsCard.dataset.bound) {
+      checklistsCard.dataset.bound = '1';
+      checklistsCard.onclick = () => window.openChecklistsKpiModal();
     }
 
     const cleaningCard = document.getElementById('kpiCleaning48hCard');
@@ -5312,12 +5309,9 @@ window.LCC_PROPERTIES = properties;
 }
       // ── KPI Checklists en attente ──────────────────────────
     const checklistsCard = document.getElementById('kpiChecklistsCard');
-    if (checklistsCard) {
-      checklistsCard.onclick = () => {
-        if (window.cleaningChecklists && window.cleaningChecklists.length >= 0) {
-          window.openChecklistsKpiModal();
-        }
-      };
+    if (checklistsCard && !checklistsCard.dataset.bound) {
+      checklistsCard.dataset.bound = '1';
+      checklistsCard.onclick = () => window.openChecklistsKpiModal();
     }
 
     const cleaningCard = document.getElementById('kpiCleaning48hCard');
