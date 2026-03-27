@@ -2742,8 +2742,21 @@ window.openChecklistsKpiModal = function() {
       pending.map(function(cl) {
         var propName = cl.property_name || 'Logement';
         if (typeof getPropertyNameFromChecklistKey === 'function') propName = getPropertyNameFromChecklistKey(cl.reservation_key, cl.property_id) || propName;
-        var dateStr = typeof getCheckoutStr === 'function' ? (getCheckoutStr(cl) || '') : '';
-        if (typeof formatChecklistDate === 'function' && dateStr) dateStr = formatChecklistDate(dateStr);
+        var dateStr = '';
+        if (cl.checkout_date) {
+          dateStr = String(cl.checkout_date).slice(0, 10);
+        } else if (cl.reservation_key) {
+          var parts = cl.reservation_key.split('_');
+          if (parts.length >= 3) dateStr = parts[parts.length - 1];
+        } else if (cl.completed_at) {
+          dateStr = String(cl.completed_at).slice(0, 10);
+        }
+        if (dateStr && dateStr !== '1970-01-01') {
+          try {
+            var d = new Date(dateStr + 'T12:00:00');
+            dateStr = d.toLocaleDateString('fr-FR', {day:'numeric', month:'short', year:'numeric'});
+          } catch(e) {}
+        } else { dateStr = 'N/A'; }
         var guest = cl.guest_name || 'Voyageur';
         var cleaner = cl.cleaner_name || cl.assigned_to_name || 'Non assigné';
         return '<div class="checklist-card checklist-card-pending" style="cursor:pointer;" onclick="window.closeChecklistsKpiModal();openChecklistDetails(\'' + cl.id + '\')">'
@@ -5389,7 +5402,7 @@ window.LCC_PROPERTIES = properties;
   window.loadCalendarData = loadDataAndUpdateKpis;
   document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
 })();
-
+</script>
 <script>
   // ============================================
   // CALENDRIER MODERNE - Vue tableau par logement
