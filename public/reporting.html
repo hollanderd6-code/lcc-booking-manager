@@ -232,7 +232,7 @@ html, body { margin: 0 !important; }
   background: var(--bg);
   white-space: nowrap;
 }
-.prop-table th:first-child { text-align: left; min-width: 160px; }
+.prop-table th:first-child { text-align: left; }
 .prop-table td {
   padding: 12px 16px;
   text-align: right;
@@ -240,7 +240,7 @@ html, body { margin: 0 !important; }
   color: var(--text);
   white-space: nowrap;
 }
-.prop-table td:first-child { text-align: left; min-width: 160px; }
+.prop-table td:first-child { text-align: left; }
 .prop-table tr:last-child td { border-bottom: none; }
 .prop-table tr:hover td { background: var(--bg); }
 .prop-table tfoot td {
@@ -259,13 +259,13 @@ html, body { margin: 0 !important; }
   background: var(--bg);
   white-space: nowrap;
 }
-.monthly-table th:first-child { text-align: left; min-width: 80px; }
+.monthly-table th:first-child { text-align: left; }
 .monthly-table td {
   padding: 11px 16px; text-align: right;
   border-bottom: 1px solid var(--border); color: var(--text);
   white-space: nowrap;
 }
-.monthly-table td:first-child { text-align: left; font-weight: 600; min-width: 80px; }
+.monthly-table td:first-child { text-align: left; font-weight: 600; }
 .monthly-table tr:last-child td { border-bottom: none; }
 .monthly-table tr:hover td { background: var(--bg); }
 .monthly-table tfoot td {
@@ -748,8 +748,17 @@ function renderPieChart(platforms) {
 function renderPropTable(props) {
   if (!props || !props.length) return;
   const hasConcierge = props.some(p => p.conciergePct > 0);
+  const colgroup = `<colgroup>
+    <col style="width:180px;">
+    <col style="width:70px;">
+    <col style="width:70px;">
+    <col style="width:110px;">
+    <col style="width:110px;">
+    ${hasConcierge ? '<col style="width:100px;"><col style="width:110px;">' : ''}
+    <col style="width:90px;">
+  </colgroup>`;
   const thead = `<thead><tr>
-    <th>Logement</th>
+    <th style="text-align:left;">Logement</th>
     <th>Rés.</th><th>Nuits</th>
     <th>CA brut</th><th>Net</th>
     ${hasConcierge ? '<th>Concierg.</th><th>Propriét.</th>' : ''}
@@ -760,7 +769,7 @@ function renderPropTable(props) {
     const occ = p.occupancyRate || 0;
     const occCol = occ >= 70 ? '#1A7A5E' : occ >= 40 ? '#f59e0b' : '#9CA3AF';
     return `<tr>
-      <td>
+      <td style="text-align:left;">
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="width:9px;height:9px;border-radius:50%;background:${p.color||'#10B981'};flex-shrink:0;"></div>
           <div>
@@ -778,13 +787,23 @@ function renderPropTable(props) {
     </tr>`;
   }).join('')}</tbody>`;
 
-  document.getElementById('propTable').innerHTML = thead + tbody;
+  document.getElementById('propTable').innerHTML = colgroup + thead + tbody;
 }
 
 function renderMonthlyTable(monthly, byProp) {
   const hasConcierge = byProp && byProp.some(p => p.conciergePct > 0);
+  const colgroup = `<colgroup>
+    <col style="width:90px;">
+    <col style="width:70px;">
+    <col style="width:70px;">
+    <col style="width:110px;">
+    <col style="width:100px;">
+    <col style="width:110px;">
+    <col style="width:110px;">
+    ${hasConcierge ? '<col style="width:100px;"><col style="width:110px;">' : ''}
+  </colgroup>`;
   const thead = `<thead><tr>
-    <th>Mois</th><th>Rés.</th><th>Nuits</th>
+    <th style="text-align:left;">Mois</th><th>Rés.</th><th>Nuits</th>
     <th>CA brut</th><th>Ménage</th><th>Taxe séjour</th><th>Net</th>
     ${hasConcierge ? '<th>Concierg.</th><th>Propriét.</th>' : ''}
   </tr></thead>`;
@@ -812,7 +831,7 @@ function renderMonthlyTable(monthly, byProp) {
     ${hasConcierge ? `<td>${fmt(sum('conciergeAmount'))}</td><td>${fmt(sum('ownerRevenue'))}</td>` : ''}
   </tr></tfoot>`;
 
-  document.getElementById('monthlyTable').innerHTML = thead + tbody + tfoot;
+  document.getElementById('monthlyTable').innerHTML = colgroup + thead + tbody + tfoot;
 }
 
 // ── Exports ───────────────────────────────────────────────────
