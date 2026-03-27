@@ -899,7 +899,7 @@ html[data-theme-v3="1"] .modal-content {
 })();
 </script>
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="Mes clients" data-subtitle="Gérez vos revenus et commissions." data-title="Factures propriétaires">
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Clients" data-page="Mes clients" data-subtitle="Gérez vos propriétaires, leur Stripe et leurs logements." data-title="Mes clients">
 
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
@@ -1585,7 +1585,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             : `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#9ca3af;"><i class="fas fa-plug" style="margin-right:3px;"></i>Stripe non connecté</span>`;
 
           // Logements
-          const props = (window.allProperties || []).filter(p => String(p.owner_id) === String(c.id));
+          const props = (window.allProperties || []).filter(p => String(p.owner_id || p.ownerId || '') === String(c.id));
           const propsHtml = props.length > 0
             ? props.map(p => `<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class="fas fa-home" style="font-size:10px;"></i>${p.name}</span>`).join('')
             : `<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement associé</span>`;
