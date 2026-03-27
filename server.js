@@ -12771,10 +12771,12 @@ app.post('/api/owner-clients/:id/stripe/connect', authenticateAny, async (req, r
     }
 
     const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+    const source = req.body.source || 'settings';
+    const returnBase = source === 'factures' ? '/factures-proprietaires.html' : '/settings-account.html';
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${appUrl}/settings-account.html?stripe_owner=refresh&owner_id=${ownerId}`,
-      return_url: `${appUrl}/settings-account.html?stripe_owner=return&owner_id=${ownerId}`,
+      refresh_url: `${appUrl}${returnBase}?stripe_owner=refresh&owner_id=${ownerId}`,
+      return_url: `${appUrl}${returnBase}?stripe_owner=return&owner_id=${ownerId}`,
       type: 'account_onboarding'
     });
 
