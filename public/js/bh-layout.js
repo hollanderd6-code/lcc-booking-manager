@@ -105,8 +105,8 @@ function getSidebarHTML() {
       <a class="nav-item" data-page="factures" href="/factures.html">
         <i class="fas fa-file-invoice"></i><span>Factures clients</span>
       </a>
-      <a class="nav-item" data-page="factures-proprietaires" href="/factures-proprietaires.html">
-        <i class="fas fa-file-invoice-dollar"></i><span>Factures propriétaires</span>
+      <a class="nav-item" data-page="clients" href="/clients.html">
+        <i class="fas fa-users"></i><span>Mes Clients</span>
       </a>
       <a class="nav-item" data-page="reporting" href="/reporting.html">
         <i class="fas fa-chart-line"></i><span>Revenus</span>
@@ -350,7 +350,7 @@ function getSidebarHTML() {
       'app': 'Home',
       'cleaning': 'Ménage',
       'deposits': 'Finances',
-      'factures-proprietaires': 'Clients'
+      'clients': 'Mes Clients'
     };
 
     // 1. Mapping par data-page (prioritaire)
