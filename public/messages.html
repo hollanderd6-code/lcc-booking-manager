@@ -1771,10 +1771,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     // Stocker la conv courante pour la facture
     window.currentChatConv = conv || null;
 
-    // Afficher bouton facture si la conv a une réservation
-      var hasRes = conv && (conv.reservation_start_date || conv.startDate);
-    }
-
     // Active state in list
     document.querySelectorAll('#conversationsList .conversation-item').forEach(function(el) {
       el.classList.toggle('active', String(el.dataset.conversationId) === String(conv && conv.id));
