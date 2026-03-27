@@ -1502,6 +1502,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Attendre que le DOM soit prêt avant d'appeler updatePreview
   setTimeout(() => updatePreview(), 100);
+
+  // ✅ Retour depuis Stripe OAuth → recharger la liste clients
+  if (new URLSearchParams(window.location.search).get('stripe_owner') === 'return') {
+    loadClients();
+    // Basculer sur l'onglet clients
+    if (window.switchTab) window.switchTab('clients');
+  }
   
   console.log('[OK] Initialisation terminée');
 });
@@ -1536,6 +1543,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (clients.length === 0) {
         container.innerHTML = '<p style="color:#6b7280;font-size:14px;">Aucun client pour le moment.</p>';
       } else {
+        // Charger le statut Stripe de chaque proprio en parallèle
+        const stripeStatuses = await Promise.all(clients.map(async (c) => {
+          try {
+            const r = await fetch(API_BASE + '/api/owner-clients/' + c.id + '/stripe/status', {
+              headers: { Authorization: 'Bearer ' + token }
+            });
+            return { id: c.id, stripe: await r.json() };
+          } catch(e) { return { id: c.id, stripe: { connected: false } }; }
+        }));
+        const stripeMap = {};
+        stripeStatuses.forEach(s => { stripeMap[s.id] = s.stripe; });
+
         container.innerHTML = clients.map(c => {
           const name = c.company_name || (`${c.first_name || ''} ${c.last_name || ''}`).trim() || 'Sans nom';
           const type = c.client_type === 'business' ? 'Entreprise' : 'Particulier';
@@ -1545,13 +1564,28 @@ document.addEventListener('DOMContentLoaded', async () => {
           const email = c.email ? '<div style="font-size:12px;color:#6b7280;"><i class="fas fa-envelope" style="margin-right:4px;"></i>' + c.email + '</div>' : '';
           const siret = c.siret ? '<div style="font-size:12px;color:#6b7280;">SIRET : ' + c.siret + '</div>' : '';
           const city = c.city ? '<div style="font-size:12px;color:#6b7280;"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>' + (c.postal_code ? c.postal_code + ' ' : '') + c.city + '</div>' : '';
+
+          // Stripe pill + bouton
+          const stripeInfo = stripeMap[c.id] || {};
+          const stripeConnected = stripeInfo.connected;
+          const stripePillColor = stripeConnected ? '#166534' : '#9ca3af';
+          const stripePillBg = stripeConnected ? '#dcfce7' : '#f3f4f6';
+          const stripePillText = stripeConnected ? '✓ Stripe connecté' : 'Stripe non connecté';
+          const stripeBtn = '<button onclick="connectOwnerStripe(\'' + c.id + '\')" style="flex-shrink:0;padding:6px 12px;background:#6772E5;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;">' +
+            '<i class="fas fa-plug"></i> ' + (stripeConnected ? 'Reconnecter' : 'Connecter Stripe') + '</button>';
+          const stripePill = '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:' + stripePillBg + ';color:' + stripePillColor + ';">' + stripePillText + '</span>';
+
           return '<div style="background:white;border:1px solid #e5e7eb;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">' +
               '<div>' +
                 '<div style="font-weight:700;font-size:15px;color:#111827;margin-bottom:4px;">' + name + '</div>' +
                 '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:' + typeBg + ';color:' + typeColor + '">' + type + '</span>' +
               '</div>' +
-              '<button onclick="editClient(\'' + c.id + '\')" style="flex-shrink:0;padding:6px 12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#374151;display:flex;align-items:center;gap:4px;"><i class="fas fa-edit"></i> Modifier</button>' +
+              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+                stripePill +
+                stripeBtn +
+                '<button onclick="editClient(\'' + c.id + '\')" style="flex-shrink:0;padding:6px 12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#374151;display:flex;align-items:center;gap:4px;"><i class="fas fa-edit"></i> Modifier</button>' +
+              '</div>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;gap:3px;">' + email + phone + siret + city + '</div>' +
           '</div>';
@@ -3068,6 +3102,28 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
     document.getElementById('clientModal').classList.add('active');
   };
+
+  window.connectOwnerStripe = async function(ownerId) {
+    try {
+      const btn = document.querySelector(`button[onclick="connectOwnerStripe('${ownerId}')"]`);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirection...'; }
+      const res = await fetch(API_BASE + '/api/owner-clients/' + ownerId + '/stripe/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ source: 'factures' })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Impossible de générer le lien Stripe.');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plug"></i> Connecter Stripe'; }
+      }
+    } catch(e) {
+      alert('Erreur lors de la connexion Stripe.');
+    }
+  };
+
   window.editClient = function(clientId) {
   console.log('[DEBUG] editClient appelé avec ID:', clientId);
   const delSection = document.getElementById('deleteClientSection');
