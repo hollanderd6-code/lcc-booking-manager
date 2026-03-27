@@ -81,7 +81,7 @@
     if (hasPermission('can_view_invoices') || hasPermission('can_manage_invoices')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
-          <i class="fas fa-file-invoice"></i> Factures
+          <i class="fas fa-file-invoice"></i> Factures séjours
         </button>
         <button class="btn btn-secondary" onclick="window.location.href='/clients.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-users"></i> Mes Clients
