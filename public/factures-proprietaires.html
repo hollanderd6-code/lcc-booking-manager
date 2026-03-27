@@ -7,7 +7,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Boostinghost – Clients</title>
+<title>Boostinghost – Mes Clients</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <link href="/css/style.css" rel="stylesheet"/>
@@ -1147,31 +1147,38 @@ html[data-theme-v3="1"] .invoice-paper {
 <main class="main-content"><div id="bhHeader"></div>
 <div class="fp-header-btns">
   <button class="fp-btn-back" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
-  <button class="fp-btn-new" onclick="createNewInvoice()"><i class="fas fa-plus"></i> Nouvelle facture</button>
+  <button class="fp-btn-new" onclick="openClientModal()"><i class="fas fa-plus"></i> Nouveau client</button>
 </div>
 <div class="dashboard-header">
-<div><h1 class="page-title">Facturation Propriétaires</h1><p class="page-subtitle" style="color:#6b7280; font-size:14px; margin-top:4px;">Gérez vos revenus et commissions.</p></div>
+  <div>
+    <h1 class="page-title">Mes Clients</h1>
+    <p class="page-subtitle" style="color:#6b7280; font-size:14px; margin-top:4px;">Gérez vos propriétaires, leur Stripe et leurs logements.</p>
+  </div>
 </div>
 <div class="stats-row">
-<div class="stat-card" onclick="openStatsModal('billed')" style="cursor:pointer;">
-<span class="stat-label">Total Facturé (Mois)</span>
-<span class="stat-value" id="statsRevenue">0,00 €</span>
-</div>
-<div class="stat-card" onclick="openStatsModal('pending')" style="cursor:pointer;">
-<span class="stat-label">En attente</span>
-<span class="stat-value" id="statsPending" style="color:#f59e0b;">0,00 €</span>
-</div>
-<div class="stat-card" onclick="openStatsModal('clients')" style="cursor:pointer;">
-<span class="stat-label">Clients Propriétaires</span>
-<span class="stat-value" id="statsClients">0</span>
-</div>
+  <div class="stat-card" onclick="openStatsModal('clients')" style="cursor:pointer;">
+    <span class="stat-label">Clients propriétaires</span>
+    <span class="stat-value" id="statsClients">0</span>
+  </div>
+  <div class="stat-card" onclick="openStatsModal('billed')" style="cursor:pointer;">
+    <span class="stat-label">Total facturé (mois)</span>
+    <span class="stat-value" id="statsRevenue">0,00 €</span>
+  </div>
+  <div class="stat-card" onclick="openStatsModal('pending')" style="cursor:pointer;">
+    <span class="stat-label">Factures en attente</span>
+    <span class="stat-value" id="statsPending" style="color:#f59e0b;">0,00 €</span>
+  </div>
 </div>
 <div class="nav-tabs">
-<button class="nav-tab active" id="btn-dashboard" onclick="switchTab('dashboard')">Historique</button>
-<button class="nav-tab" id="btn-create" onclick="switchTab('create')">Éditeur</button>
-<button class="nav-tab" id="btn-clients" onclick="switchTab('clients')">Mes Clients</button>
+  <button class="nav-tab active" id="btn-clients" onclick="switchTab('clients')"><i class="fas fa-users" style="margin-right:6px;"></i>Mes Clients</button>
+  <button class="nav-tab" id="btn-dashboard" onclick="switchTab('dashboard')"><i class="fas fa-file-invoice" style="margin-right:6px;"></i>Factures</button>
+  <button class="nav-tab" id="btn-create" onclick="switchTab('create')"><i class="fas fa-pen" style="margin-right:6px;"></i>Éditeur</button>
 </div>
-<div class="tab-content active" id="tab-dashboard">
+<div class="tab-content active" id="tab-clients">
+  <div id="clientsContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
+</div>
+
+<div class="tab-content" id="tab-dashboard">
 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
 <div class="fp-filter-bar">
   <label><i class="fas fa-calendar-alt" style="margin-right:5px;color:#1A7A5E;"></i>Période</label>
@@ -1347,14 +1354,6 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 </div>
 </div>
-<div class="tab-content" id="tab-clients">
-<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:24px;">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-<h3 style="margin:0;">Liste des propriétaires</h3>
-<button class="btn btn-primary" onclick="openClientModal()">+ Nouveau Client</button>
-</div>
-<div id="clientsContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:16px;"></div>
-</div>
 </div>
 </main>
 </div>
@@ -1487,9 +1486,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Lancer tout en parallèle
   const [_inv, _cli, _prof] = await Promise.allSettled([
     loadInvoices().catch(e => console.error('[ERROR] Factures:', e)),
-    loadClients().catch(e => console.error('[ERROR] Clients:', e)),
     loadUserProfile().catch(e => console.error('[ERROR] Profil:', e)),
   ]);
+  // Charger les clients APRÈS les factures pour avoir les stats à jour
+  await loadClients().catch(e => console.error('[ERROR] Clients:', e));
 
   // Forcer le scroll en haut (loadClients peut déclencher un scroll parasite)
   window.scrollTo(0, 0);
@@ -1505,8 +1505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ✅ Retour depuis Stripe OAuth → recharger la liste clients
   if (new URLSearchParams(window.location.search).get('stripe_owner') === 'return') {
-    loadClients();
-    // Basculer sur l'onglet clients
+    await loadClients();
     if (window.switchTab) window.switchTab('clients');
   }
   
@@ -1541,54 +1540,121 @@ document.addEventListener('DOMContentLoaded', async () => {
     const container = document.getElementById('clientsContainer');
     if (container) {
       if (clients.length === 0) {
-        container.innerHTML = '<p style="color:#6b7280;font-size:14px;">Aucun client pour le moment.</p>';
+        container.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:60px 24px;color:#9ca3af;">
+            <i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;display:block;"></i>
+            <p style="font-size:15px;font-weight:600;margin:0 0 8px;">Aucun client pour le moment</p>
+            <p style="font-size:13px;margin:0 0 20px;">Ajoutez votre premier propriétaire pour commencer</p>
+            <button class="btn btn-primary" onclick="openClientModal()"><i class="fas fa-plus"></i> Nouveau client</button>
+          </div>`;
       } else {
-        // Charger le statut Stripe de chaque proprio en parallèle
-        const stripeStatuses = await Promise.all(clients.map(async (c) => {
-          try {
-            const r = await fetch(API_BASE + '/api/owner-clients/' + c.id + '/stripe/status', {
-              headers: { Authorization: 'Bearer ' + token }
-            });
-            return { id: c.id, stripe: await r.json() };
-          } catch(e) { return { id: c.id, stripe: { connected: false } }; }
-        }));
+        // Charger statut Stripe + logements + stats factures en parallèle
+        const [stripeStatuses] = await Promise.all([
+          Promise.all(clients.map(async (c) => {
+            try {
+              const r = await fetch(API_BASE + '/api/owner-clients/' + c.id + '/stripe/status', { headers: { Authorization: 'Bearer ' + token } });
+              return { id: c.id, stripe: await r.json() };
+            } catch(e) { return { id: c.id, stripe: { connected: false } }; }
+          }))
+        ]);
         const stripeMap = {};
         stripeStatuses.forEach(s => { stripeMap[s.id] = s.stripe; });
 
+        // Stats factures par client
+        const allInvs = window.ownerInvoices || [];
+        const invStatsByClient = {};
+        clients.forEach(c => {
+          const cinvs = allInvs.filter(i => String(i.client_id) === String(c.id));
+          const total = cinvs.reduce((sum, i) => sum + (parseFloat(i.total_amount) || 0), 0);
+          const last = cinvs.sort((a,b) => new Date(b.issue_date) - new Date(a.issue_date))[0];
+          invStatsByClient[c.id] = { total, last, count: cinvs.length };
+        });
+
         container.innerHTML = clients.map(c => {
           const name = c.company_name || (`${c.first_name || ''} ${c.last_name || ''}`).trim() || 'Sans nom';
+          const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
           const type = c.client_type === 'business' ? 'Entreprise' : 'Particulier';
           const typeColor = c.client_type === 'business' ? '#1e40af' : '#166534';
           const typeBg = c.client_type === 'business' ? '#dbeafe' : '#dcfce7';
-          const phone = c.phone ? '<div style="font-size:12px;color:#6b7280;"><i class="fas fa-phone" style="margin-right:4px;"></i>' + c.phone + '</div>' : '';
-          const email = c.email ? '<div style="font-size:12px;color:#6b7280;"><i class="fas fa-envelope" style="margin-right:4px;"></i>' + c.email + '</div>' : '';
-          const siret = c.siret ? '<div style="font-size:12px;color:#6b7280;">SIRET : ' + c.siret + '</div>' : '';
-          const city = c.city ? '<div style="font-size:12px;color:#6b7280;"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>' + (c.postal_code ? c.postal_code + ' ' : '') + c.city + '</div>' : '';
 
-          // Stripe pill + bouton
+          // Stripe
           const stripeInfo = stripeMap[c.id] || {};
           const stripeConnected = stripeInfo.connected;
-          const stripePillColor = stripeConnected ? '#166534' : '#9ca3af';
-          const stripePillBg = stripeConnected ? '#dcfce7' : '#f3f4f6';
-          const stripePillText = stripeConnected ? '✓ Stripe connecté' : 'Stripe non connecté';
-          const stripeBtn = '<button onclick="connectOwnerStripe(\'' + c.id + '\')" style="flex-shrink:0;padding:6px 12px;background:#6772E5;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;">' +
-            '<i class="fas fa-plug"></i> ' + (stripeConnected ? 'Reconnecter' : 'Connecter Stripe') + '</button>';
-          const stripePill = '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:' + stripePillBg + ';color:' + stripePillColor + ';">' + stripePillText + '</span>';
+          const stripePillHtml = stripeConnected
+            ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#166534;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Stripe connecté</span>`
+            : `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#9ca3af;"><i class="fas fa-plug" style="margin-right:3px;"></i>Stripe non connecté</span>`;
 
-          return '<div style="background:white;border:1px solid #e5e7eb;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">' +
-              '<div>' +
-                '<div style="font-weight:700;font-size:15px;color:#111827;margin-bottom:4px;">' + name + '</div>' +
-                '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:' + typeBg + ';color:' + typeColor + '">' + type + '</span>' +
-              '</div>' +
-              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-                stripePill +
-                stripeBtn +
-                '<button onclick="editClient(\'' + c.id + '\')" style="flex-shrink:0;padding:6px 12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#374151;display:flex;align-items:center;gap:4px;"><i class="fas fa-edit"></i> Modifier</button>' +
-              '</div>' +
-            '</div>' +
-            '<div style="display:flex;flex-direction:column;gap:3px;">' + email + phone + siret + city + '</div>' +
-          '</div>';
+          // Logements
+          const props = (window.allProperties || []).filter(p => String(p.owner_id) === String(c.id));
+          const propsHtml = props.length > 0
+            ? props.map(p => `<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class="fas fa-home" style="font-size:10px;"></i>${p.name}</span>`).join('')
+            : `<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement associé</span>`;
+
+          // Stats factures
+          const stats = invStatsByClient[c.id] || { total: 0, last: null, count: 0 };
+          const totalFormatted = stats.total.toFixed(2).replace('.', ',') + ' €';
+          const lastInvHtml = stats.last
+            ? `<span style="font-size:12px;color:#6b7280;">Dernière : <strong>${formatDate(stats.last.issue_date)}</strong> — ${(parseFloat(stats.last.total_amount)||0).toFixed(2).replace('.',',') + ' €'}</span>`
+            : `<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucune facture</span>`;
+
+          // Coordonnées
+          const emailHtml = c.email ? `<span style="font-size:12px;color:#6b7280;"><i class="fas fa-envelope" style="width:14px;margin-right:4px;color:#9ca3af;"></i>${c.email}</span>` : '';
+          const phoneHtml = c.phone ? `<span style="font-size:12px;color:#6b7280;"><i class="fas fa-phone" style="width:14px;margin-right:4px;color:#9ca3af;"></i>${c.phone}</span>` : '';
+          const cityHtml = c.city ? `<span style="font-size:12px;color:#6b7280;"><i class="fas fa-map-marker-alt" style="width:14px;margin-right:4px;color:#9ca3af;"></i>${c.postal_code ? c.postal_code + ' ' : ''}${c.city}</span>` : '';
+
+          return `
+          <div style="background:var(--card-bg,white);border:1px solid var(--border-color,#e5e7eb);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+            
+            <!-- Header carte -->
+            <div style="padding:16px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-color,#f3f4f6);">
+              <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1A7A5E,#10B981);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:15px;flex-shrink:0;">${initials}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-size:15px;color:var(--text-primary,#111827);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+                <span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:${typeBg};color:${typeColor};">${type}</span>
+              </div>
+              <button onclick="editClient('${c.id}')" style="flex-shrink:0;padding:7px 10px;background:var(--bg-secondary,#f3f4f6);border:1px solid var(--border-color,#e5e7eb);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-secondary,#374151);" title="Modifier"><i class="fas fa-edit"></i></button>
+            </div>
+
+            <!-- Corps carte -->
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;flex:1;">
+
+              <!-- Coordonnées -->
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                ${emailHtml}${phoneHtml}${cityHtml}
+              </div>
+
+              <!-- Logements -->
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;letter-spacing:0.05em;">Logements</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;">${propsHtml}</div>
+              </div>
+
+              <!-- Stats factures -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div style="background:var(--bg-secondary,#f9fafb);border-radius:8px;padding:10px;text-align:center;">
+                  <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Total facturé</div>
+                  <div style="font-size:16px;font-weight:700;color:var(--text-primary,#111827);">${totalFormatted}</div>
+                </div>
+                <div style="background:var(--bg-secondary,#f9fafb);border-radius:8px;padding:10px;text-align:center;">
+                  <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Nb factures</div>
+                  <div style="font-size:16px;font-weight:700;color:var(--text-primary,#111827);">${stats.count}</div>
+                </div>
+              </div>
+
+              <!-- Dernière facture -->
+              <div>${lastInvHtml}</div>
+
+            </div>
+
+            <!-- Footer Stripe -->
+            <div style="padding:10px 16px;border-top:1px solid var(--border-color,#f3f4f6);display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg-secondary,#fafafa);">
+              ${stripePillHtml}
+              <button onclick="connectOwnerStripe('${c.id}')" style="padding:6px 12px;background:#6772E5;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;">
+                <i class="fas fa-plug"></i> ${stripeConnected ? 'Reconnecter' : 'Connecter Stripe'}
+              </button>
+            </div>
+
+          </div>`;
         }).join('');
       }
     }
