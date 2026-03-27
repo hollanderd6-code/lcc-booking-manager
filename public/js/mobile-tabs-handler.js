@@ -83,8 +83,8 @@
         <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-file-invoice"></i> Factures
         </button>
-        <button class="btn btn-secondary" onclick="window.location.href='/factures-proprietaires.html'" style="width: 100%; justify-content: flex-start;">
-          <i class="fas fa-file-invoice-dollar"></i> Factures propriétaires
+        <button class="btn btn-secondary" onclick="window.location.href='/clients.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-users"></i> Mes Clients
         </button>
         <button class="btn btn-secondary" onclick="window.location.href='/reporting.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-chart-bar"></i> Revenus
@@ -142,7 +142,7 @@
     'cleaning',
     'deposits',
     'factures',
-    'factures-proprietaires',
+    'clients',
     'reporting',
     'welcome',
     'contrat',
