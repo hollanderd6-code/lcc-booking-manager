@@ -12938,7 +12938,7 @@ app.post('/api/deposits',
       return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
     }
 
-    const { reservationUid, amount, freeMode, clientName } = req.body;
+    const { reservationUid, amount, freeMode, clientName, propertyId: freePropertyId, ownerId: freeOwnerId } = req.body;
 
     if (!reservationUid || !amount || amount <= 0) {
       return res.status(400).json({ error: 'reservationUid et montant (>0) sont requis' });
@@ -12955,6 +12955,21 @@ app.post('/api/deposits',
       }
       reservation = result.reservation;
       property = result.property;
+    }
+
+    // ✅ En freeMode : résoudre le propertyId depuis le body ou via ownerId
+    let freeModePropertyId = null;
+    if (freeMode) {
+      if (freePropertyId) {
+        freeModePropertyId = freePropertyId;
+      } else if (freeOwnerId) {
+        // Chercher un logement lié à ce propriétaire (le premier suffit pour le Stripe)
+        const propRes = await pool.query(
+          'SELECT id FROM properties WHERE owner_id = $1 AND user_id = $2 LIMIT 1',
+          [freeOwnerId, userId]
+        );
+        freeModePropertyId = propRes.rows[0]?.id || null;
+      }
     }
 
     const amountCents = Math.round(amount * 100);
@@ -13019,7 +13034,8 @@ app.post('/api/deposits',
     let session;
 
     // ✅ LOGIQUE PRIORITÉ STRIPE : proprio → user → BH (3%)
-    const stripeTarget = await getStripeForProperty(pool, property ? property.id : null, userId);
+    const resolvedPropertyId = property ? property.id : freeModePropertyId;
+    const stripeTarget = await getStripeForProperty(pool, resolvedPropertyId, userId);
     const sessionOptions = stripeTarget.stripeAccountId
       ? { stripeAccount: stripeTarget.stripeAccountId }
       : {};
