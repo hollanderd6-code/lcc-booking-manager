@@ -1061,7 +1061,7 @@ html[data-theme-v3="1"] .app-container {
             </div>
           </div>
           <div class="msgs-chat-actions">
-            <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="closeCurrentConversation()"><i class="fas fa-check-circle"></i> Clore la conversation</button>
+            <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i> Envoyer la facture</button>
             <button class="msgs-icon-btn" id="btnInvoice" style="display:none" title="Générer une facture" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i></button>
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
             <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
@@ -1880,7 +1880,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
           body: JSON.stringify({ status: 'active' })
         }).catch(function() {});
         if (item) { item.style.opacity = ''; item.style.filter = ''; }
-        btn.innerHTML = '<i class="fas fa-check-circle"></i> Clore la conversation';
+        btn.innerHTML = '<i class="fas fa-file-invoice"></i> Envoyer la facture';
       };
     }
   };
