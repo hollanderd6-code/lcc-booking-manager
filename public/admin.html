@@ -1912,12 +1912,15 @@ async function adminPublishAnnouncement() {
   var type = document.getElementById('annType').value;
   if (!title || !body) { alert('Titre et message requis'); return; }
   try {
-    var res = await fetch(ANN_API + '/api/announcements', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': ANN_KEY },
-      body: JSON.stringify({ title, body, type })
+    var data = await new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', ANN_API + '/api/announcements');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('x-admin-key', ANN_KEY);
+      xhr.onload = function() { try { resolve(JSON.parse(xhr.responseText)); } catch(e) { resolve({}); } };
+      xhr.onerror = function() { reject(new Error('XHR error')); };
+      xhr.send(JSON.stringify({ title: title, body: body, type: type }));
     });
-    var data = await res.json();
     if (data.announcement) {
       document.getElementById('annTitle').value = '';
       document.getElementById('annBody').value = '';
@@ -1925,9 +1928,7 @@ async function adminPublishAnnouncement() {
     } else {
       alert('Erreur : ' + (data.error || 'inconnue'));
     }
-  } catch(e) { 
-    alert('Erreur réseau : ' + e.message + '\n\nVérifiez que le serveur est bien déployé avec les nouvelles routes /api/announcements.');
-  }
+  } catch(e) { alert('Erreur réseau : ' + e.message); }
 }
 
 async function adminDeleteAnnouncement(id) {
