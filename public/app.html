@@ -2715,6 +2715,55 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <div class="page-content">
 <!-- Page Content -->
 <!-- KPI PRINCIPAUX -->
+<script>
+window.openChecklistsKpiModal = function() {
+  var modalId = 'checklistsKpiModal';
+  if (!document.getElementById(modalId)) {
+    var m = document.createElement('div');
+    m.id = modalId;
+    m.className = 'booking-modal';
+    m.innerHTML = '<div class="modal-overlay" id="' + modalId + 'Overlay"></div><div class="modal-content"><div class="modal-header"><h2>Checklists ménage en attente</h2><button class="modal-close" id="' + modalId + 'Close"><i class="fas fa-times"></i></button></div><div class="reservation-details" id="' + modalId + 'Content"></div></div>';
+    document.body.appendChild(m);
+    var close = function() { m.classList.remove('active'); m.style.display = ''; };
+    document.getElementById(modalId + 'Overlay').addEventListener('click', close);
+    document.getElementById(modalId + 'Close').addEventListener('click', close);
+  }
+  var modal = document.getElementById(modalId);
+  var content = document.getElementById(modalId + 'Content');
+  if (!modal || !content) return;
+  var checklists = window.cleaningChecklists || [];
+  var pending = checklists.filter(function(cl) {
+    return !(cl.is_validated || cl.owner_status === 'validated') && cl.owner_status !== 'rejected';
+  });
+  if (!pending.length) {
+    content.innerHTML = '<div style="padding:16px 0;opacity:.8;">Aucune checklist en attente. Tout est validé ✓</div>';
+  } else {
+    content.innerHTML = '<div class="checklists-grid" style="grid-template-columns:1fr;gap:12px;">' +
+      pending.map(function(cl) {
+        var propName = cl.property_name || 'Logement';
+        if (typeof getPropertyNameFromChecklistKey === 'function') propName = getPropertyNameFromChecklistKey(cl.reservation_key, cl.property_id) || propName;
+        var dateStr = typeof getCheckoutStr === 'function' ? (getCheckoutStr(cl) || '') : '';
+        if (typeof formatChecklistDate === 'function' && dateStr) dateStr = formatChecklistDate(dateStr);
+        var guest = cl.guest_name || 'Voyageur';
+        var cleaner = cl.cleaner_name || cl.assigned_to_name || 'Non assigné';
+        return '<div class="checklist-card checklist-card-pending" style="cursor:pointer;" onclick="window.closeChecklistsKpiModal();if(typeof openChecklistDetails==='function')openChecklistDetails('' + cl.id + '')">'
+          + '<div class="checklist-card-header"><div class="checklist-property">' + propName + '</div>'
+          + '<span class="checklist-badge checklist-badge-pending"><i class="fas fa-clock"></i> En attente</span></div>'
+          + '<div class="checklist-info">'
+          + '<div class="checklist-info-row"><i class="fas fa-calendar"></i> Départ : ' + (dateStr || 'N/A') + '</div>'
+          + '<div class="checklist-info-row"><i class="fas fa-user"></i> ' + guest + '</div>'
+          + '<div class="checklist-info-row"><i class="fas fa-user-check"></i> ' + cleaner + '</div>'
+          + '</div></div>';
+      }).join('') + '</div>';
+  }
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+};
+window.closeChecklistsKpiModal = function() {
+  var m = document.getElementById('checklistsKpiModal');
+  if (m) { m.classList.remove('active'); m.style.display = ''; }
+};
+</script>
 <section class="kpi-grid">
 <!-- KPI 1 : Logements actifs -->
 <article class="kpi-card kpi-card--clickable" id="kpiPropertiesCard">
@@ -5340,67 +5389,7 @@ window.LCC_PROPERTIES = properties;
   window.loadCalendarData = loadDataAndUpdateKpis;
   document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
 })();
-</script>
-<script>
-// ── KPI Checklists en attente — défini globalement ──────────────
-window.openChecklistsKpiModal = function() {
-  // Créer le modal si pas encore fait
-  var modalId = 'checklistsKpiModal';
-  if (!document.getElementById(modalId)) {
-    var modal = document.createElement('div');
-    modal.id = modalId;
-    modal.className = 'booking-modal';
-    modal.innerHTML = '<div class="modal-overlay" id="' + modalId + 'Overlay"></div><div class="modal-content"><div class="modal-header"><h2>Checklists ménage en attente</h2><button class="modal-close" id="' + modalId + 'Close"><i class="fas fa-times"></i></button></div><div class="reservation-details" id="' + modalId + 'Content"></div></div>';
-    document.body.appendChild(modal);
-    var close = function() { modal.classList.remove('active'); modal.style.display = ''; };
-    document.getElementById(modalId + 'Overlay').addEventListener('click', close);
-    document.getElementById(modalId + 'Close').addEventListener('click', close);
-  }
-  var modal = document.getElementById(modalId);
-  var content = document.getElementById(modalId + 'Content');
-  if (!modal || !content) return;
 
-  var checklists = window.cleaningChecklists || [];
-  var pending = checklists.filter(function(cl) {
-    var isCompleted = cl.is_validated || cl.owner_status === 'validated';
-    var isRejected = cl.owner_status === 'rejected';
-    return !isCompleted && !isRejected;
-  });
-
-  if (!pending.length) {
-    content.innerHTML = '<div style="padding:16px 0;opacity:.8;">Aucune checklist en attente. Tout est validé ✓</div>';
-  } else {
-    content.innerHTML = '<div class="checklists-grid" style="grid-template-columns:1fr;gap:12px;">' +
-      pending.map(function(cl) {
-        var propName = cl.property_name || 'Logement';
-        if (typeof getPropertyNameFromChecklistKey === 'function') {
-          propName = getPropertyNameFromChecklistKey(cl.reservation_key, cl.property_id) || propName;
-        }
-        var dateStr = '';
-        if (typeof getCheckoutStr === 'function') dateStr = getCheckoutStr(cl) || '';
-        if (typeof formatChecklistDate === 'function' && dateStr) dateStr = formatChecklistDate(dateStr);
-        var guest = cl.guest_name || 'Voyageur';
-        var cleaner = cl.cleaner_name || cl.assigned_to_name || 'Non assigné';
-        return '<div class="checklist-card checklist-card-pending" style="cursor:pointer;" onclick="window.closeChecklistsKpiModal();if(typeof openChecklistDetails==='function')openChecklistDetails('' + cl.id + '')">'
-          + '<div class="checklist-card-header"><div class="checklist-property">' + propName + '</div>'
-          + '<span class="checklist-badge checklist-badge-pending"><i class="fas fa-clock"></i> En attente</span></div>'
-          + '<div class="checklist-info">'
-          + '<div class="checklist-info-row"><i class="fas fa-calendar"></i> Départ : ' + (dateStr || 'N/A') + '</div>'
-          + '<div class="checklist-info-row"><i class="fas fa-user"></i> ' + guest + '</div>'
-          + '<div class="checklist-info-row"><i class="fas fa-user-check"></i> ' + cleaner + '</div>'
-          + '</div></div>';
-      }).join('') + '</div>';
-  }
-
-  modal.style.display = 'flex';
-  modal.classList.add('active');
-};
-
-window.closeChecklistsKpiModal = function() {
-  var modal = document.getElementById('checklistsKpiModal');
-  if (modal) { modal.classList.remove('active'); modal.style.display = ''; }
-};
-</script>
 <script>
   // ============================================
   // CALENDRIER MODERNE - Vue tableau par logement
