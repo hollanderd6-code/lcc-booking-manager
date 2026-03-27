@@ -1427,29 +1427,6 @@ html[data-theme-v3="1"] .sidebar {
   Les règles s'appliquent dans l'ordre de priorité. Les prix manuels (clic calendrier) ont toujours la priorité.
 </small>
 
-<!-- ✅ SECTION : PAIEMENTS DIRECTS PAR LOGEMENT -->
-<div class="form-group" style="background:linear-gradient(135deg,#6772E510 0%,#6772E520 100%);padding:18px;border-radius:12px;border:1.5px solid #6772E530;">
-  <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-    <i class="fa-brands fa-stripe-s" style="color:#6772E5;font-size:18px;"></i>
-    <span style="font-weight:600;color:#1e293b;">Compte Stripe pour les paiements directs</span>
-    <span style="background:#6772E5;color:white;font-size:10px;padding:2px 7px;border-radius:12px;font-weight:600;letter-spacing:.04em;">OPTIONNEL</span>
-  </label>
-  <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.5;">
-    Associez un compte Stripe spécifique à ce logement. Les paiements directs iront sur ce compte.<br>
-    <em>Si non renseigné, le compte Stripe global du profil sera utilisé.</em>
-  </p>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <div style="position:relative;flex:1;">
-      <i class="fa-brands fa-stripe-s" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#6772E5;font-size:15px;"></i>
-      <input id="propertyStripeAccountId" type="text" placeholder="acct_1ABC..." style="width:100%;padding:9px 12px 9px 34px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Courier New',monospace;box-sizing:border-box;" />
-    </div>
-    <div id="propertyStripeStatus" style="display:none;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;"></div>
-  </div>
-  <small style="display:block;margin-top:6px;font-size:11px;color:#94a3b8;">
-    L'ID de compte Stripe commence par <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">acct_</code>. Retrouvez-le dans votre dashboard Stripe → Paramètres → Compte.
-  </small>
-</div>
-
 <!-- ✅ SECTION : LIVRET D'ACCUEIL -->
 <div class="form-group">
 <label for="propertyWelcomeBookUrl">
