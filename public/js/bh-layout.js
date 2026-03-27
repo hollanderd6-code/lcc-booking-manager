@@ -504,6 +504,8 @@ function getSidebarHTML() {
       '  </div>',
       '</div>',
       '<div class="bh-demo-right">',
+      '  <button id="bhAnnouncementsBtn" onclick="window.bhToggleAnnouncements && window.bhToggleAnnouncements()" style="position:relative;background:none;border:none;cursor:pointer;padding:4px 8px;display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.7);font-size:11px;font-weight:500;border-radius:6px;transition:background .15s;" onmouseover="this.style.background=\'rgba(255,255,255,.08)\'" onmouseout="this.style.background=\'none\'"><i class="fas fa-bell" style="font-size:12px;"></i><span>Nouveautés</span><span id="bhAnnBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span></button>',
+      '  <div style="width:1px;height:14px;background:rgba(255,255,255,.15);margin:0 4px;"></div>',
       '  <span class="bh-demo-mode-label">Mode</span>',
       '  <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute(\'data-theme\')==\'dark\'?document.documentElement.setAttribute(\'data-theme\',\'light\'):document.documentElement.setAttribute(\'data-theme\',\'dark\')"></button>',
       '</div>'
@@ -632,6 +634,125 @@ function getSidebarHTML() {
     forceUpdateSidebarLogo,
     applyDesktopLayout
   };
+
+
+  // ── Annonces / Changelog ────────────────────────────────────────
+  var BH_API = 'https://lcc-booking-manager.onrender.com';
+  var bhAnnPopup = null;
+
+  function bhCreatePopup() {
+    if (document.getElementById('bhAnnPopup')) return;
+    var popup = document.createElement('div');
+    popup.id = 'bhAnnPopup';
+    popup.style.cssText = 'position:fixed;top:48px;right:16px;width:360px;max-height:480px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:99999;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.08);';
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'padding:16px 18px 12px;border-bottom:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
+    var ttl = document.createElement('div');
+    ttl.style.cssText = 'font-size:15px;font-weight:700;color:#0D1117;';
+    ttl.textContent = '\uD83D\uDD14 Nouveautés & annonces';
+    var cls = document.createElement('button');
+    cls.style.cssText = 'background:none;border:none;cursor:pointer;font-size:20px;color:#9CA3AF;line-height:1;padding:0 4px;';
+    cls.textContent = '×';
+    cls.onclick = function() { window.bhCloseAnnouncements(); };
+    hdr.appendChild(ttl);
+    hdr.appendChild(cls);
+    var lst = document.createElement('div');
+    lst.id = 'bhAnnList';
+    lst.style.cssText = 'overflow-y:auto;flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:10px;';
+    lst.innerHTML = '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Chargement...</div>';
+    popup.appendChild(hdr);
+    popup.appendChild(lst);
+    document.body.appendChild(popup);
+  }
+
+  function bhRenderAnnouncements(list) {
+    var container = document.getElementById('bhAnnList');
+    if (!container) return;
+    var TYPE_CONFIG = {
+      feature:     { emoji: '🚀', label: 'Nouveauté',    bg: '#EFF6FF', color: '#1D4ED8' },
+      bugfix:      { emoji: '🐛', label: 'Correction',   bg: '#F0FDF4', color: '#15803D' },
+      maintenance: { emoji: '⚠️', label: 'Maintenance',  bg: '#FFFBEB', color: '#B45309' },
+      info:        { emoji: '📢', label: 'Information',  bg: '#F5F3FF', color: '#6D28D9' }
+    };
+    if (!list.length) {
+      container.innerHTML = '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Aucune annonce pour l\u0027instant.</div>';
+      return;
+    }
+    container.innerHTML = list.map(function(a) {
+      var cfg = TYPE_CONFIG[a.type] || TYPE_CONFIG.info;
+      var date = new Date(a.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' });
+      return '<div style="background:#FAFAF8;border:1px solid rgba(0,0,0,.07);border-radius:10px;padding:12px 14px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '  <span style="background:' + cfg.bg + ';color:' + cfg.color + ';font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">' + cfg.emoji + ' ' + cfg.label + '</span>'
+        + '  <span style="font-size:11px;color:#9CA3AF;margin-left:auto;">' + date + '</span>'
+        + '</div>'
+        + '<div style="font-size:13px;font-weight:700;color:#0D1117;margin-bottom:4px;font-family:sans-serif;">' + a.title + '</div>'
+        + '<div style="font-size:12px;color:#6B7280;line-height:1.5;white-space:pre-line;">' + a.body + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  async function bhLoadAnnouncements() {
+    try {
+      var token = localStorage.getItem('lcc_token');
+      var res = await fetch(BH_API + '/api/announcements', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      var data = await res.json();
+      var list = data.announcements || [];
+
+      // Badge non lus
+      var lastSeen = parseInt(localStorage.getItem('bh_ann_last_seen') || '0');
+      var unread = list.filter(function(a) { return new Date(a.created_at).getTime() > lastSeen; }).length;
+      var badge = document.getElementById('bhAnnBadge');
+      if (badge) {
+        badge.style.display = unread > 0 ? 'block' : 'none';
+        badge.textContent = unread > 0 ? unread : '';
+      }
+
+      bhRenderAnnouncements(list);
+    } catch(e) {
+      var container = document.getElementById('bhAnnList');
+      if (container) container.innerHTML = '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Erreur de chargement.</div>';
+    }
+  }
+
+  window.bhToggleAnnouncements = function() {
+    bhCreatePopup();
+    var popup = document.getElementById('bhAnnPopup');
+    if (!popup) return;
+    var isOpen = popup.style.display === 'flex';
+    if (isOpen) {
+      popup.style.display = 'none';
+    } else {
+      popup.style.display = 'flex';
+      // Marquer comme lus
+      localStorage.setItem('bh_ann_last_seen', Date.now().toString());
+      var badge = document.getElementById('bhAnnBadge');
+      if (badge) badge.style.display = 'none';
+      bhLoadAnnouncements();
+    }
+  };
+
+  window.bhCloseAnnouncements = function() {
+    var popup = document.getElementById('bhAnnPopup');
+    if (popup) popup.style.display = 'none';
+  };
+
+  // Fermer en cliquant dehors
+  document.addEventListener('click', function(e) {
+    var popup = document.getElementById('bhAnnPopup');
+    var btn = document.getElementById('bhAnnouncementsBtn');
+    if (popup && popup.style.display === 'flex' && !popup.contains(e.target) && btn && !btn.contains(e.target)) {
+      popup.style.display = 'none';
+    }
+  });
+
+  // Charger le badge au démarrage
+  setTimeout(function() {
+    bhCreatePopup();
+    bhLoadAnnouncements();
+  }, 1500);
 
 })();
 // ============================================================
