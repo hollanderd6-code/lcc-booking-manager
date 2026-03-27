@@ -645,6 +645,9 @@
     <button class="nav-tab" onclick="showSection('roadmap', this)">
       <i class="fas fa-map"></i> Roadmap
     </button>
+    <button class="nav-tab" onclick="showSection('announcements', this)">
+      <i class="fas fa-bullhorn"></i> Annonces
+    </button>
     <button class="nav-tab" id="navSupport" onclick="showSection('support', this)">
       <i class="fas fa-headset"></i> Support <span id="supportUnreadBadge" style="display:none;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;">0</span>
     </button>
@@ -840,6 +843,48 @@
       <div id="roadmapList"></div>
     </div>
 
+    <!-- ── ANNONCES ── -->
+    <div class="section-panel" id="panel-announcements">
+      <div class="section-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 class="section-title">Annonces & <em>nouveautés</em></h1>
+          <p class="section-subtitle">Publiez des annonces visibles par tous les utilisateurs dans la topbar</p>
+        </div>
+      </div>
+
+      <!-- Formulaire création -->
+      <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:24px;margin-bottom:24px;">
+        <h3 style="font-size:15px;font-weight:700;margin:0 0 16px;color:#0D1117;">Publier une nouvelle annonce</h3>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Type</label>
+            <select id="annType" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;">
+              <option value="feature">🚀 Nouveauté</option>
+              <option value="bugfix">🐛 Correction de bug</option>
+              <option value="maintenance">⚠️ Maintenance</option>
+              <option value="info">📢 Information générale</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Titre</label>
+            <input id="annTitle" type="text" placeholder="ex: Nouveau système de messagerie automatique" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Message</label>
+            <textarea id="annBody" rows="4" placeholder="Décrivez la nouveauté, le bug corrigé ou la maintenance prévue..." style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;resize:vertical;box-sizing:border-box;"></textarea>
+          </div>
+          <button onclick="adminPublishAnnouncement()" style="align-self:flex-start;background:#1A7A5E;color:white;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px;">
+            <i class="fas fa-paper-plane"></i> Publier l'annonce
+          </button>
+        </div>
+      </div>
+
+      <!-- Liste des annonces publiées -->
+      <div id="annList" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Chargement...</div>
+      </div>
+    </div>
+
     <!-- ── SUPPORT ── -->
     <div class="section-panel" id="panel-support">
       <div class="section-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
@@ -1009,6 +1054,7 @@ if (adminToken) showApp();
 // NAVIGATION
 // ══════════════════════════════════════
 function showSection(name, btn) {
+  if (name === 'announcements') setTimeout(adminLoadAnnouncements, 100);
   document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
@@ -1807,6 +1853,87 @@ function supportFormatTime(dateStr) {
   if (diffMin < 60) return `${diffMin} min`;
   if (diffMin < 1440) return `${Math.floor(diffMin/60)}h`;
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+// ── Annonces admin ──────────────────────────────────────────────
+var ANN_API = 'https://lcc-booking-manager.onrender.com';
+var ANN_KEY = 'bh-admin-2024';
+
+async function adminLoadAnnouncements() {
+  var container = document.getElementById('annList');
+  if (!container) return;
+  try {
+    var token = localStorage.getItem('admin_token') || '';
+    var res = await fetch(ANN_API + '/api/announcements', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    var data = await res.json();
+    var list = data.announcements || [];
+    var TYPE_CONFIG = {
+      feature:     { emoji: '🚀', label: 'Nouveauté',   color: '#1D4ED8' },
+      bugfix:      { emoji: '🐛', label: 'Correction',  color: '#15803D' },
+      maintenance: { emoji: '⚠️', label: 'Maintenance', color: '#B45309' },
+      info:        { emoji: '📢', label: 'Information', color: '#6D28D9' }
+    };
+    if (!list.length) {
+      container.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:13px;">Aucune annonce publiée.</div>';
+      return;
+    }
+    container.innerHTML = list.map(function(a) {
+      var cfg = TYPE_CONFIG[a.type] || TYPE_CONFIG.info;
+      var date = new Date(a.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      return '<div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start;">'
+        + '<div style="flex:1;">'
+        + '  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '    <span style="font-size:11px;font-weight:700;color:' + cfg.color + ';">' + cfg.emoji + ' ' + cfg.label + '</span>'
+        + '    <span style="font-size:11px;color:#9CA3AF;">' + date + '</span>'
+        + '  </div>'
+        + '  <div style="font-size:14px;font-weight:700;color:#0D1117;margin-bottom:4px;">' + a.title + '</div>'
+        + '  <div style="font-size:13px;color:#6B7280;line-height:1.5;white-space:pre-line;">' + a.body + '</div>'
+        + '</div>'
+        + '<button onclick="adminDeleteAnnouncement(' + a.id + ')" style="background:#FEF2F2;border:1px solid rgba(220,38,38,.2);color:#DC2626;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;" title="Supprimer">'
+        + '  <i class="fas fa-trash"></i>'
+        + '</button>'
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    var container = document.getElementById('annList');
+    if (container) container.innerHTML = '<div style="color:#DC2626;padding:16px;">Erreur : ' + e.message + '</div>';
+  }
+}
+
+async function adminPublishAnnouncement() {
+  var title = document.getElementById('annTitle').value.trim();
+  var body = document.getElementById('annBody').value.trim();
+  var type = document.getElementById('annType').value;
+  if (!title || !body) { alert('Titre et message requis'); return; }
+  try {
+    var res = await fetch(ANN_API + '/api/announcements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': ANN_KEY },
+      body: JSON.stringify({ title, body, type })
+    });
+    var data = await res.json();
+    if (data.announcement) {
+      document.getElementById('annTitle').value = '';
+      document.getElementById('annBody').value = '';
+      adminLoadAnnouncements();
+    } else {
+      alert('Erreur : ' + (data.error || 'inconnue'));
+    }
+  } catch(e) { alert('Erreur réseau : ' + e.message); }
+}
+
+async function adminDeleteAnnouncement(id) {
+  if (!confirm('Supprimer cette annonce ?')) return;
+  try {
+    await fetch(ANN_API + '/api/announcements/' + id, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': ANN_KEY },
+      body: JSON.stringify({ adminKey: ANN_KEY })
+    });
+    adminLoadAnnouncements();
+  } catch(e) { alert('Erreur : ' + e.message); }
 }
 
 // Hooker showSection pour init support au premier clic
