@@ -899,7 +899,7 @@ html[data-theme-v3="1"] .modal-content {
 })();
 </script>
 </head>
-<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Clients" data-page="Mes clients" data-subtitle="Gérez vos propriétaires, leur Stripe et leurs logements." data-title="Mes clients">
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="Mes clients" data-subtitle="Gérez vos propriétaires, leur Stripe et leurs logements." data-title="Mes clients">
 
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
@@ -1402,6 +1402,12 @@ html[data-theme-v3="1"] .invoice-paper {
     <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px;">
       <div><label style="font-size:12px;">CP</label><input class="form-control" id="clientPostalCode" type="text"/></div>
       <div><label style="font-size:12px;">Ville</label><input class="form-control" id="clientCity" type="text"/></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;font-weight:700;text-transform:uppercase;color:#6b7280;letter-spacing:0.05em;display:block;margin-bottom:8px;"><i class="fas fa-home" style="margin-right:5px;color:#1A7A5E;"></i>Logements associés</label>
+      <div id="clientPropertyList" style="display:flex;flex-direction:column;gap:6px;">
+        <p style="font-size:12px;color:#9ca3af;font-style:italic;">Chargement des logements...</p>
+      </div>
     </div>
     <div id="deleteClientSection" style="display:none;margin-top:8px;">
       <button onclick="deleteClient()" style="width:100%;padding:12px;background:white;color:#ef4444;border:2px solid #ef4444;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">🗑️ Supprimer ce client</button>
@@ -3148,6 +3154,25 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 };
 
   // --- CLIENT MODAL ---
+  function renderPropertyCheckboxes(clientId) {
+    const container = document.getElementById('clientPropertyList');
+    if (!container) return;
+    const allProps = window.allProperties || [];
+    if (allProps.length === 0) {
+      container.innerHTML = '<p style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement enregistré. <a href="/settings.html" style="color:#1A7A5E;">Ajouter un logement</a></p>';
+      return;
+    }
+    container.innerHTML = allProps.map(p => {
+      const isChecked = clientId && String(p.owner_id || p.ownerId || '') === String(clientId);
+      return `
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ${isChecked ? '#bbf7d0' : '#e5e7eb'};border-radius:8px;cursor:pointer;background:${isChecked ? '#f0fdf4' : 'white'};transition:all 0.15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor='${isChecked ? '#bbf7d0' : '#e5e7eb'}'">
+          <input type="checkbox" data-property-id="${p.id}" ${isChecked ? 'checked' : ''} style="accent-color:#1A7A5E;width:16px;height:16px;cursor:pointer;">
+          <span style="font-size:13px;font-weight:500;color:#111827;">${p.name}</span>
+          ${p.address ? `<span style="font-size:11px;color:#9ca3af;margin-left:auto;">${p.address}</span>` : ''}
+        </label>`;
+    }).join('');
+  }
+
   window.openClientModal = function() {
   const delSection = document.getElementById('deleteClientSection');
   if (delSection) delSection.style.display = 'none';
@@ -3167,6 +3192,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
       });
 
     document.getElementById('clientModal').classList.add('active');
+    renderPropertyCheckboxes(null);
   };
 
   window.connectOwnerStripe = async function(ownerId) {
@@ -3237,6 +3263,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   
   // Ouvrir le modal
   document.getElementById('clientModal').classList.add('active');
+  renderPropertyCheckboxes(clientId);
   console.log('[OK] Modal client ouvert');
   
   // Fermer la modal des stats
@@ -3313,8 +3340,36 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
         const json = await res.json();
         if (!res.ok) return alert(json.error || "Erreur serveur");
 
-        alert(editingClientId ? "Client mis à jour !" : "Client ajouté !");
+        const savedClientId = json.client?.id || json.id || editingClientId;
 
+        // ✅ Mettre à jour owner_id sur les logements cochés/décochés
+        const checkboxes = document.querySelectorAll('#clientPropertyList input[type="checkbox"]');
+        await Promise.all(Array.from(checkboxes).map(async (cb) => {
+          const propId = cb.dataset.propertyId;
+          const prop = (window.allProperties || []).find(p => String(p.id) === String(propId));
+          const currentOwner = String(prop?.owner_id || prop?.ownerId || '');
+          const newOwner = cb.checked ? String(savedClientId) : '';
+          // Mettre à jour seulement si changement
+          if (cb.checked && currentOwner !== String(savedClientId)) {
+            await fetch(API_BASE + '/api/properties/' + propId, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({ ownerId: savedClientId })
+            });
+          } else if (!cb.checked && currentOwner === String(savedClientId)) {
+            // Décoché : retirer ce client du logement
+            await fetch(API_BASE + '/api/properties/' + propId, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({ ownerId: null })
+            });
+          }
+        }));
+
+        // Recharger les propriétés pour mettre à jour window.allProperties
+        await loadPropertiesForInvoice();
+
+        alert(editingClientId ? "Client mis à jour !" : "Client ajouté !");
         closeClientModal();
         await loadClients();
     } catch (err) {
