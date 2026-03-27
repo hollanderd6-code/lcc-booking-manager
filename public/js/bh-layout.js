@@ -344,7 +344,7 @@ function getSidebarHTML() {
     // Lire le titre depuis data-title ou page
     const page = document.body.getAttribute('data-page');
     let title = document.body.getAttribute('data-title');
-    if (!title && page === 'app') title = 'Dashboard';
+    if (!title && page === 'app') title = 'Home';
     if (!title) {
       const h1 = document.querySelector('h1.page-title');
       if (h1) title = h1.textContent.trim();
