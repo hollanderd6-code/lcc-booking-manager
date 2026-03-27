@@ -9448,6 +9448,7 @@ let cleaningChecklists = [];
 
 async function loadCleaningChecklists() {
   const container = document.getElementById('checklistsContainer');
+  if (!container) return;
   
   try {
     const token = localStorage.getItem('lcc_token');
@@ -9525,6 +9526,7 @@ async function loadCleaningChecklists() {
 
 function renderCleaningChecklists() {
   const container = document.getElementById('checklistsContainer');
+  if (!container) return;
   
   if (cleaningChecklists.length === 0) {
     container.innerHTML = `
