@@ -11657,6 +11657,31 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
 // ============================================
 // MODIFIER UN LOGEMENT
 // ============================================
+// PATCH /api/properties/:propertyId — Mettre à jour owner_id uniquement
+app.patch('/api/properties/:propertyId', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { propertyId } = req.params;
+    const { ownerId } = req.body;
+
+    // Vérifier que le logement appartient à cet user
+    const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [propertyId, user.id]);
+    if (!check.rows.length) return res.status(404).json({ error: 'Logement non trouvé' });
+
+    await pool.query(
+      'UPDATE properties SET owner_id = $1 WHERE id = $2',
+      [ownerId || null, propertyId]
+    );
+
+    return res.json({ success: true, propertyId, ownerId: ownerId || null });
+  } catch (err) {
+    console.error('Erreur PATCH /api/properties/:propertyId :', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/properties/:propertyId', 
   authenticateAny,
   requirePermission(pool, 'can_edit_properties'),
