@@ -1407,6 +1407,32 @@ Actualiser
   <input id="freeDepositAmount" min="1" step="1" type="number" placeholder="Ex: 200"/>
   <div class="small-hint">Le montant sera autorisé via Stripe (empreinte bancaire). Vous pourrez le débiter ou le libérer ensuite.</div>
 </div>
+
+<!-- Sélection du compte Stripe -->
+<div class="form-row" style="margin-top:12px;">
+  <label style="margin-bottom:8px;display:block;">Compte Stripe à utiliser</label>
+  <div style="display:flex;gap:8px;margin-bottom:10px;">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;">
+      <input type="radio" name="freeDepositStripeTarget" value="property" checked onchange="toggleFreeDepositTarget()"> Par logement
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;">
+      <input type="radio" name="freeDepositStripeTarget" value="owner" onchange="toggleFreeDepositTarget()"> Par propriétaire
+    </label>
+  </div>
+  <div id="freeDepositPropertySelect">
+    <select id="freeDepositPropertyId" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:white;">
+      <option value="">— Sélectionner un logement —</option>
+    </select>
+    <div class="small-hint" style="margin-top:4px;">Le Stripe lié au propriétaire de ce logement sera utilisé.</div>
+  </div>
+  <div id="freeDepositOwnerSelect" style="display:none;">
+    <select id="freeDepositOwnerId" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:white;">
+      <option value="">— Sélectionner un propriétaire —</option>
+    </select>
+    <div class="small-hint" style="margin-top:4px;">Le Stripe connecté à ce propriétaire sera utilisé.</div>
+  </div>
+</div>
+
 <div class="small-hint" id="freeDepositError" style="color:#b91c1c;"></div>
 </div>
 <div class="modal-actions">
@@ -1763,10 +1789,45 @@ function copyDepositLinkByUid(uid) {
           }
         });
 
+        // ✅ Peupler aussi le select logement du modal caution libre
+        const freeDepPropSel = document.getElementById('freeDepositPropertyId');
+        if (freeDepPropSel) {
+          freeDepPropSel.innerHTML = '<option value="">— Sélectionner un logement —</option>';
+          allProperties.forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.id;
+            o.textContent = p.name;
+            freeDepPropSel.appendChild(o);
+          });
+        }
+
         select.addEventListener('change', renderDepositsTable);
         if (selectHistory) {
           selectHistory.addEventListener('change', renderHistoryTable);
         }
+
+        // ✅ Charger les propriétaires pour le select du modal caution libre
+        try {
+          const ownRes = await fetch(API_BASE + '/owner-clients', {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
+          });
+          if (ownRes.ok) {
+            const ownData = await ownRes.json();
+            const owners = ownData.clients || [];
+            const freeDepOwnSel = document.getElementById('freeDepositOwnerId');
+            if (freeDepOwnSel) {
+              freeDepOwnSel.innerHTML = '<option value="">— Sélectionner un propriétaire —</option>';
+              owners.forEach(o => {
+                const name = o.company_name || `${o.first_name || ''} ${o.last_name || ''}`.trim() || 'Sans nom';
+                const opt = document.createElement('option');
+                opt.value = o.id;
+                opt.textContent = name;
+                freeDepOwnSel.appendChild(opt);
+              });
+            }
+          }
+        } catch(e) { console.warn('Erreur chargement propriétaires:', e); }
+
       } catch (e) {
         console.error('Erreur chargement propriétés:', e);
       }
@@ -3184,6 +3245,12 @@ async function createFreePayment() {
   }
 }
 
+function toggleFreeDepositTarget() {
+  const val = document.querySelector('input[name="freeDepositStripeTarget"]:checked')?.value;
+  document.getElementById('freeDepositPropertySelect').style.display = val === 'property' ? 'block' : 'none';
+  document.getElementById('freeDepositOwnerSelect').style.display = val === 'owner' ? 'block' : 'none';
+}
+
 async function createFreeDeposit() {
   const errorEl = document.getElementById('freeDepositError');
   errorEl.textContent = '';
@@ -3194,6 +3261,11 @@ async function createFreeDeposit() {
     errorEl.textContent = 'Merci de saisir un montant valide.';
     return;
   }
+
+  // Récupérer la cible Stripe choisie
+  const stripeTarget = document.querySelector('input[name="freeDepositStripeTarget"]:checked')?.value || 'property';
+  const propertyId = stripeTarget === 'property' ? (document.getElementById('freeDepositPropertyId')?.value || null) : null;
+  const ownerId = stripeTarget === 'owner' ? (document.getElementById('freeDepositOwnerId')?.value || null) : null;
 
   const btn = document.getElementById('freeDepositCreateBtn');
   btn.disabled = true;
@@ -3207,7 +3279,9 @@ async function createFreeDeposit() {
         reservationUid: 'free_' + Date.now(),
         amount,
         freeMode: true,
-        clientName: name
+        clientName: name,
+        propertyId: propertyId || undefined,
+        ownerId: ownerId || undefined
       })
     });
     const data = await res.json();
