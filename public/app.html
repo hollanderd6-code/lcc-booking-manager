@@ -2746,7 +2746,7 @@ window.openChecklistsKpiModal = function() {
         if (typeof formatChecklistDate === 'function' && dateStr) dateStr = formatChecklistDate(dateStr);
         var guest = cl.guest_name || 'Voyageur';
         var cleaner = cl.cleaner_name || cl.assigned_to_name || 'Non assigné';
-        return '<div class="checklist-card checklist-card-pending" style="cursor:pointer;" onclick="window.closeChecklistsKpiModal();if(typeof openChecklistDetails==='function')openChecklistDetails('' + cl.id + '')">'
+        return '<div class="checklist-card checklist-card-pending" style="cursor:pointer;" onclick="window.closeChecklistsKpiModal();openChecklistDetails(\'' + cl.id + '\')">'
           + '<div class="checklist-card-header"><div class="checklist-property">' + propName + '</div>'
           + '<span class="checklist-badge checklist-badge-pending"><i class="fas fa-clock"></i> En attente</span></div>'
           + '<div class="checklist-info">'
