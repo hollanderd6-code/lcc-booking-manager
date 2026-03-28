@@ -828,8 +828,8 @@ html[data-theme-v3="1"] .page-content {
     color: #1A7A5E !important;
   }
   html[data-theme-v3="1"] #kpiChecklistsCard .kpi-pill {
-    background: rgba(245,158,11,.12) !important;
-    color: #D97706 !important;
+    background: rgba(26,122,94,.15) !important;
+    color: #1A7A5E !important;
   }
 
   /* Header dashboard compact */
