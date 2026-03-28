@@ -873,6 +873,14 @@
             <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Message</label>
             <textarea id="annBody" rows="4" placeholder="Décrivez la nouveauté, le bug corrigé ou la maintenance prévue..." style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;resize:vertical;box-sizing:border-box;"></textarea>
           </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Statut initial</label>
+            <select id="annStatus" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;">
+              <option value="en_cours">🔄 En cours</option>
+              <option value="resolu">✅ Résolu</option>
+              <option value="termine">✔️ Terminé</option>
+            </select>
+          </div>
           <button onclick="adminPublishAnnouncement()" style="align-self:flex-start;background:#1A7A5E;color:white;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px;">
             <i class="fas fa-paper-plane"></i> Publier l'annonce
           </button>
@@ -1879,21 +1887,36 @@ async function adminLoadAnnouncements() {
       maintenance: { emoji: '⚠️', label: 'Maintenance', color: '#B45309' },
       info:        { emoji: '📢', label: 'Information', color: '#6D28D9' }
     };
+    var STATUS_CONFIG = {
+      en_cours: { emoji: '🔄', label: 'En cours',  bg: '#EFF6FF', color: '#1D4ED8' },
+      resolu:   { emoji: '✅', label: 'Résolu',    bg: '#F0FDF4', color: '#15803D' },
+      termine:  { emoji: '✔️', label: 'Terminé',  bg: '#F3F4F6', color: '#6B7280' }
+    };
     if (!list.length) {
       container.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:13px;">Aucune annonce publiée.</div>';
       return;
     }
     container.innerHTML = list.map(function(a) {
       var cfg = TYPE_CONFIG[a.type] || TYPE_CONFIG.info;
+      var scfg = STATUS_CONFIG[a.status] || STATUS_CONFIG.en_cours;
       var date = new Date(a.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
       return '<div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start;">'
         + '<div style="flex:1;">'
-        + '  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">'
         + '    <span style="font-size:11px;font-weight:700;color:' + cfg.color + ';">' + cfg.emoji + ' ' + cfg.label + '</span>'
+        + '    <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:' + scfg.bg + ';color:' + scfg.color + ';">' + scfg.emoji + ' ' + scfg.label + '</span>'
         + '    <span style="font-size:11px;color:#9CA3AF;">' + date + '</span>'
         + '  </div>'
         + '  <div style="font-size:14px;font-weight:700;color:#0D1117;margin-bottom:4px;">' + a.title + '</div>'
-        + '  <div style="font-size:13px;color:#6B7280;line-height:1.5;white-space:pre-line;">' + a.body + '</div>'
+        + '  <div style="font-size:13px;color:#6B7280;line-height:1.5;white-space:pre-line;margin-bottom:10px;">' + a.body + '</div>'
+        + '  <div style="display:flex;align-items:center;gap:8px;">'
+        + '    <label style="font-size:11px;font-weight:600;color:#6B7280;">Changer statut :</label>'
+        + '    <select onchange="adminUpdateAnnouncementStatus(' + a.id + ', this.value)" style="padding:4px 8px;border:1px solid rgba(0,0,0,.12);border-radius:6px;font-size:12px;font-family:\'DM Sans\',sans-serif;background:#FAFAF8;cursor:pointer;">'
+        + '      <option value="en_cours"' + (a.status === 'en_cours' ? ' selected' : '') + '>🔄 En cours</option>'
+        + '      <option value="resolu"' + (a.status === 'resolu' ? ' selected' : '') + '>✅ Résolu</option>'
+        + '      <option value="termine"' + (a.status === 'termine' ? ' selected' : '') + '>✔️ Terminé</option>'
+        + '    </select>'
+        + '  </div>'
         + '</div>'
         + '<button onclick="adminDeleteAnnouncement(' + a.id + ')" style="background:#FEF2F2;border:1px solid rgba(220,38,38,.2);color:#DC2626;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;" title="Supprimer">'
         + '  <i class="fas fa-trash"></i>'
@@ -1910,6 +1933,7 @@ async function adminPublishAnnouncement() {
   var title = document.getElementById('annTitle').value.trim();
   var body = document.getElementById('annBody').value.trim();
   var type = document.getElementById('annType').value;
+  var status = document.getElementById('annStatus').value;
   if (!title || !body) { alert('Titre et message requis'); return; }
   try {
     var data = await new Promise(function(resolve, reject) {
@@ -1919,7 +1943,7 @@ async function adminPublishAnnouncement() {
       xhr.setRequestHeader('x-admin-key', ANN_KEY);
       xhr.onload = function() { try { resolve(JSON.parse(xhr.responseText)); } catch(e) { resolve({}); } };
       xhr.onerror = function() { reject(new Error('XHR error')); };
-      xhr.send(JSON.stringify({ title: title, body: body, type: type }));
+      xhr.send(JSON.stringify({ title: title, body: body, type: type, status: status }));
     });
     if (data.announcement) {
       document.getElementById('annTitle').value = '';
@@ -1929,6 +1953,21 @@ async function adminPublishAnnouncement() {
       alert('Erreur : ' + (data.error || 'inconnue'));
     }
   } catch(e) { alert('Erreur réseau : ' + e.message); }
+}
+
+async function adminUpdateAnnouncementStatus(id, status) {
+  try {
+    await new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('PATCH', ANN_API + '/api/announcements/' + id + '/status');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('x-admin-key', ANN_KEY);
+      xhr.onload = function() { resolve(); };
+      xhr.onerror = function() { reject(new Error('XHR error')); };
+      xhr.send(JSON.stringify({ status: status, adminKey: ANN_KEY }));
+    });
+    adminLoadAnnouncements();
+  } catch(e) { alert('Erreur : ' + e.message); }
 }
 
 async function adminDeleteAnnouncement(id) {
