@@ -705,7 +705,7 @@ html[data-theme-v3="1"] .page-content {
   }
 }
 
-/* ── KPI GRID : mobile — 1 colonne, label gauche / valeur droite ── */
+/* ── KPI GRID : mobile — 2 colonnes, badge icône ── */
 @media (max-width: 1366px) {
   /* Reset body padding-top (demo-nav masquée sur mobile) */
   html[data-theme-v3="1"] body {
@@ -713,38 +713,38 @@ html[data-theme-v3="1"] .page-content {
   }
 
   html[data-theme-v3="1"] .kpi-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 10px !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
     margin: 0 0 16px !important;
     padding: 0 !important;
   }
 
   html[data-theme-v3="1"] .kpi-card {
     width: 100% !important;
-    padding: 16px 20px !important;
-    border-radius: 16px !important;
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
     background: var(--cream-warm) !important;
     border: 1px solid var(--border-warm-v3) !important;
     box-shadow: none !important;
     cursor: pointer !important;
     animation: none !important;
-    /* Layout : label gauche, valeur+sub droite, alignés en haut */
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: flex-start !important;
-    justify-content: space-between !important;
-    gap: 16px !important;
-  }
-
-  html[data-theme-v3="1"] .kpi-header {
-    flex: 1 !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-header {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     gap: 4px !important;
     margin-bottom: 0 !important;
-    padding-top: 2px !important;
+    padding-top: 0 !important;
   }
 
   html[data-theme-v3="1"] .kpi-main {
@@ -756,25 +756,42 @@ html[data-theme-v3="1"] .page-content {
   }
 
   html[data-theme-v3="1"] .kpi-value {
-    font-size: 42px !important;
+    font-size: 26px !important;
     line-height: 1 !important;
     color: var(--jade) !important;
+    font-weight: 500 !important;
   }
 
   html[data-theme-v3="1"] .kpi-sub {
     text-align: right !important;
-    max-width: 160px !important;
+    max-width: 100px !important;
+    font-size: 10px !important;
   }
 
   html[data-theme-v3="1"] .kpi-label {
     text-transform: uppercase !important;
     font-size: 11px !important;
     letter-spacing: .06em !important;
+    font-weight: 500 !important;
   }
 
+  /* Pill → badge icône carré, texte masqué */
   html[data-theme-v3="1"] .kpi-pill,
   html[data-theme-v3="1"] .kpi-pill-neutral {
-    display: none !important;
+    display: inline-flex !important;
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-pill i,
+  html[data-theme-v3="1"] .kpi-pill-neutral i {
+    font-size: 12px !important;
   }
 
   /* Header dashboard compact */
