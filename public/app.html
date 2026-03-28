@@ -2527,78 +2527,9 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   .ai-section, .email-messaging-section,
   .cleaning-messages-section { display: none !important; }
 
-  /* 4. KPI — grille 2 colonnes, style badge icône (option 3) */
-  .kpi-grid {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    margin: 0 0 16px !important;
-    padding: 0 !important;
-    width: 100% !important;
-  }
-  .kpi-card {
-    width: 100% !important;
-    min-width: 0 !important;
-    padding: 12px 14px !important;
-    border-radius: 14px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    justify-content: flex-start !important;
-    gap: 6px !important;
-  }
-  /* Header : pill badge à gauche, valeur à droite */
-  .kpi-card .kpi-header {
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    margin-bottom: 0 !important;
-    gap: 4px !important;
-  }
-  /* Pill → badge icône carré — masquer le texte, garder l'icône */
-  .kpi-card .kpi-pill {
-    width: 30px !important;
-    height: 30px !important;
-    padding: 0 !important;
-    border-radius: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 0 !important;
-    flex-shrink: 0 !important;
-  }
-  .kpi-card .kpi-pill i {
-    font-size: 13px !important;
-  }
-  /* Label : petit, sous le header */
-  .kpi-card .kpi-label {
-    font-size: 11px !important;
-    font-weight: 500 !important;
-    line-height: 1.3 !important;
-  }
-  /* Main : valeur + sous-texte, alignés à droite dans le header */
-  .kpi-card .kpi-main {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-end !important;
-    gap: 0 !important;
-    flex-shrink: 0 !important;
-  }
-  .kpi-card .kpi-value {
-    font-size: 26px !important;
-    line-height: 1 !important;
-    font-weight: 500 !important;
-    color: #1A7A5E !important;
-    letter-spacing: -0.02em !important;
-  }
-  .kpi-card .kpi-sub {
-    font-size: 10px !important;
-    line-height: 1.3 !important;
-    text-align: right !important;
-    max-width: 100px !important;
-  }
+  /* 4. KPI — grille 2 colonnes sur desktop (géré séparément en bas) */
+
+}
 
   /* 5. CALENDRIER — header noir caché, navigation centrée */
   #calendarSection {
@@ -2658,6 +2589,84 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 
   /* 6. FAB */
   .fab-add-resa { background: #1A7A5E !important; }
+}
+
+/* ================================================================
+   KPI MOBILE — grille 2 colonnes (option 3, badge icône)
+   Uniquement sur vrais mobiles
+   ================================================================ */
+@media (max-width: 768px) {
+  .kpi-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    margin: 0 0 16px !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  .kpi-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+  }
+  /* Ligne haut : icône pill à gauche, valeur à droite */
+  .kpi-card .kpi-header {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 0 !important;
+    gap: 4px !important;
+  }
+  /* Pill → badge icône carré, texte masqué */
+  .kpi-card .kpi-pill {
+    width: 30px !important;
+    height: 30px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  .kpi-card .kpi-pill i {
+    font-size: 13px !important;
+  }
+  /* Label : petit, sous le header */
+  .kpi-card .kpi-label {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+  }
+  /* Main : valeur + sous-texte à droite dans le header */
+  .kpi-card .kpi-main {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  .kpi-card .kpi-value {
+    font-size: 26px !important;
+    line-height: 1 !important;
+    font-weight: 500 !important;
+    color: #1A7A5E !important;
+    letter-spacing: -0.02em !important;
+  }
+  .kpi-card .kpi-sub {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+    text-align: right !important;
+    max-width: 100px !important;
+  }
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
