@@ -796,6 +796,7 @@ html[data-theme-v3="1"] .page-content {
     align-items: center !important;
     justify-content: center !important;
     font-size: 0 !important;
+    line-height: 0 !important;
     flex-shrink: 0 !important;
     border: none !important;
     align-self: flex-start !important;
@@ -804,11 +805,11 @@ html[data-theme-v3="1"] .page-content {
   html[data-theme-v3="1"] .kpi-pill i,
   html[data-theme-v3="1"] .kpi-pill-neutral i {
     font-size: 14px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    height: 100% !important;
+    display: block !important;
+    line-height: 1 !important;
+    width: auto !important;
+    height: auto !important;
+    text-align: center !important;
   }
 
   /* Couleurs par KPI via ID */
