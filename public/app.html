@@ -947,6 +947,17 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   cursor: pointer;
 }
 
+/* Masquer la bordure droite des cellules avec réservation pour éviter les lignes verticales */
+.calendar-cell:has(.booking-block) {
+  border-right-color: transparent !important;
+}
+.calendar-cell:has(.booking-block.end) {
+  border-right-color: var(--calendar-border) !important;
+}
+.calendar-cell:has(.booking-block.single) {
+  border-right-color: var(--calendar-border) !important;
+}
+
 /* Couleurs par plateforme — toutes hardcodées pour éviter override par style.css */
 .booking-block.airbnb  { background: linear-gradient(135deg, #FF5A5F, #E84C50) !important; }
 .booking-block.booking { background: linear-gradient(135deg, #003580, #00224F) !important; }
@@ -2715,60 +2726,6 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <!-- Page Content -->
 <!-- KPI PRINCIPAUX -->
 <script>
-window.openCaKpiModal = function() {
-  var modalId = 'caKpiModal';
-  if (document.getElementById(modalId)) document.getElementById(modalId).remove();
-  var m = document.createElement('div');
-  m.id = modalId;
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
-  m.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
-    + '<div style="display:flex;align-items:center;gap:10px;">'
-    + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-line" style="color:#1A7A5E;font-size:15px;"></i></div>'
-    + '<div><div style="font-size:16px;font-weight:700;color:#0D1117;">CA mensuel</div><div style="font-size:12px;color:#7A8695;" id="caModalSubtitle">mois en cours</div></div>'
-    + '</div>'
-    + '<button onclick="document.getElementById(\'caKpiModal\').remove()" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
-    + '</div>'
-    + '<div style="padding:16px 20px 4px;display:flex;align-items:center;justify-content:space-between;">'
-    + '<span style="font-size:13px;color:#7A8695;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</span>'
-    + '<span id="caModalTotal" style="font-size:22px;font-weight:700;color:#1A7A5E;">—</span>'
-    + '</div>'
-    + '<div style="overflow-y:auto;padding:8px 20px 40px;" id="caModalList"></div>'
-    + '</div>';
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
-
-  const caByProp = window._kpiCaByProperty || {};
-  const caTotal  = window._kpiCaTotal || 0;
-  const now = new Date();
-  const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  const subtitle = document.getElementById('caModalSubtitle');
-  if (subtitle) subtitle.textContent = monthNames[now.getMonth()] + ' ' + now.getFullYear();
-  const totalEl = document.getElementById('caModalTotal');
-  if (totalEl) totalEl.textContent = caTotal >= 1000 ? (Math.round(caTotal/100)/10).toFixed(1) + 'k€' : Math.round(caTotal) + '€';
-  const list = document.getElementById('caModalList');
-  if (list) {
-    const entries = Object.values(caByProp).sort((a,b) => b.amount - a.amount);
-    if (!entries.length) {
-      list.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:13px;">Aucune réservation avec montant ce mois-ci.<br><small style="margin-top:8px;display:block;">Renseignez les montants sur vos réservations pour voir le CA.</small></div>';
-    } else {
-      list.innerHTML = entries.map(p => {
-        const pct = caTotal > 0 ? Math.round((p.amount / caTotal) * 100) : 0;
-        const amt = p.amount >= 1000 ? (Math.round(p.amount/100)/10).toFixed(1) + 'k€' : Math.round(p.amount) + '€';
-        return '<div style="background:white;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">'
-          + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#1A7A5E;font-size:14px;"></i></div>'
-          + '<div style="flex:1;min-width:0;">'
-          + '<div style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.name + '</div>'
-          + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">' + p.count + ' réservation' + (p.count > 1 ? 's' : '') + ' · ' + pct + '%</div>'
-          + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:' + pct + '%;background:#1A7A5E;border-radius:99px;"></div></div>'
-          + '</div>'
-          + '<div style="font-size:16px;font-weight:700;color:#1A7A5E;flex-shrink:0;">' + amt + '</div>'
-          + '</div>';
-      }).join('');
-    }
-  }
-};
-
 window.openChecklistsKpiModal = function() {
   var modalId = 'checklistsKpiModal';
   if (!document.getElementById(modalId)) {
@@ -4939,13 +4896,10 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     });
     window._kpiCaByProperty = caByProperty;
     window._kpiCaTotal = caTotal;
-
     const caVal = document.getElementById('kpiCaValue');
     const caSub = document.getElementById('kpiCaSub');
     if (caVal) {
-      const formatted = caTotal >= 1000
-        ? Math.round(caTotal / 100) / 10 + 'k€'
-        : Math.round(caTotal) + '€';
+      const formatted = caTotal >= 1000 ? (Math.round(caTotal/100)/10).toFixed(1) + 'k€' : Math.round(caTotal) + '€';
       caVal.textContent = caTotal > 0 ? formatted : '0€';
       caVal.style.color = '#1A7A5E';
       caVal.style.fontWeight = '700';
@@ -4953,6 +4907,50 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     const monthNames = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     if (caSub) caSub.textContent = monthNames[m] + ' ' + y;
   }
+
+  window.openCaKpiModal = function() {
+    var mid = 'caKpiModal';
+    if (document.getElementById(mid)) document.getElementById(mid).remove();
+    var overlay = document.createElement('div');
+    overlay.id = mid;
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+    var now2 = new Date();
+    var mNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    var caByProp = window._kpiCaByProperty || {};
+    var caTotal2 = window._kpiCaTotal || 0;
+    var fmtAmt = function(v) { return v >= 1000 ? (Math.round(v/100)/10).toFixed(1)+'k€' : Math.round(v)+'€'; };
+    var entries = Object.values(caByProp).sort(function(a,b){return b.amount-a.amount;});
+    var listHtml = entries.length === 0
+      ? '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:13px;">Aucune réservation avec montant ce mois-ci.<br><small style="display:block;margin-top:8px;">Renseignez les montants sur vos réservations.</small></div>'
+      : entries.map(function(p) {
+          var pct = caTotal2 > 0 ? Math.round((p.amount/caTotal2)*100) : 0;
+          return '<div style="background:white;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">'
+            +'<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#1A7A5E;font-size:14px;"></i></div>'
+            +'<div style="flex:1;min-width:0;">'
+            +'<div style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>'
+            +'<div style="font-size:11px;color:#7A8695;margin-top:2px;">'+p.count+' rés. · '+pct+'%</div>'
+            +'<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:'+pct+'%;background:#1A7A5E;border-radius:99px;"></div></div>'
+            +'</div>'
+            +'<div style="font-size:16px;font-weight:700;color:#1A7A5E;flex-shrink:0;">'+fmtAmt(p.amount)+'</div>'
+            +'</div>';
+        }).join('');
+    overlay.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
+      +'<div style="display:flex;align-items:center;gap:10px;">'
+      +'<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-line" style="color:#1A7A5E;font-size:15px;"></i></div>'
+      +'<div><div style="font-size:16px;font-weight:700;color:#0D1117;">CA mensuel</div><div style="font-size:12px;color:#7A8695;">'+mNames[now2.getMonth()]+' '+now2.getFullYear()+'</div></div>'
+      +'</div>'
+      +'<button onclick="document.getElementById(\'caKpiModal\').remove()" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
+      +'</div>'
+      +'<div style="padding:16px 20px 4px;display:flex;align-items:center;justify-content:space-between;">'
+      +'<span style="font-size:13px;color:#7A8695;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</span>'
+      +'<span style="font-size:22px;font-weight:700;color:#1A7A5E;">'+fmtAmt(caTotal2)+'</span>'
+      +'</div>'
+      +'<div style="overflow-y:auto;padding:8px 20px 40px;">'+listHtml+'</div>'
+      +'</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  };
 
   // ---------- Cautions KPI ----------
   async function loadAndUpdateDepositsKPI() {
