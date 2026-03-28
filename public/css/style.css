@@ -656,8 +656,70 @@ body {
 }
 
 @media (max-width: 640px) {
+  /* Grille 2 colonnes sur mobile */
   .kpi-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  /* Carte : colonne, compacte */
+  .kpi-card {
+    padding: 12px 14px;
+    gap: 6px;
+    border-radius: 14px;
+  }
+
+  /* Header : pill badge à gauche, valeur à droite */
+  .kpi-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  /* Pill → badge icône carré, texte masqué */
+  .kpi-pill {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    flex-shrink: 0;
+  }
+  .kpi-pill i {
+    font-size: 13px;
+  }
+
+  /* Label : petit */
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* Valeur à droite dans le header */
+  .kpi-main {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+    flex-shrink: 0;
+  }
+
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #1A7A5E;
+  }
+
+  .kpi-sub {
+    font-size: 10px;
+    text-align: right;
+    max-width: 100px;
   }
 }
 
