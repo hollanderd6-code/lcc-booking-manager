@@ -2740,6 +2740,62 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <!-- Page Content -->
 <!-- KPI PRINCIPAUX -->
 <script>
+window.openCaKpiModal = function() {
+  var modalId = 'caKpiModal';
+  if (!document.getElementById(modalId)) {
+    var m = document.createElement('div');
+    m.id = modalId;
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+    m.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-line" style="color:#1A7A5E;font-size:15px;"></i></div>'
+      + '<div><div style="font-size:16px;font-weight:700;color:#0D1117;">CA mensuel</div><div style="font-size:12px;color:#7A8695;" id="caModalSubtitle">mois en cours</div></div>'
+      + '</div>'
+      + '<button onclick="document.getElementById(\'caKpiModal\').remove()" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>'
+      + '</div>'
+      + '<div style="padding:16px 20px 4px;display:flex;align-items:center;justify-content:space-between;">'
+      + '<span style="font-size:13px;color:#7A8695;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</span>'
+      + '<span id="caModalTotal" style="font-size:22px;font-weight:700;color:#1A7A5E;">—</span>'
+      + '</div>'
+      + '<div style="overflow-y:auto;padding:8px 20px 32px;" id="caModalList"></div>'
+      + '</div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
+  }
+  // Remplir les données
+  const caByProp = window._kpiCaByProperty || {};
+  const caTotal  = window._kpiCaTotal || 0;
+  const now = new Date();
+  const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const subtitle = document.getElementById('caModalSubtitle');
+  if (subtitle) subtitle.textContent = monthNames[now.getMonth()] + ' ' + now.getFullYear();
+  const totalEl = document.getElementById('caModalTotal');
+  if (totalEl) totalEl.textContent = caTotal >= 1000 ? (Math.round(caTotal/100)/10).toFixed(1) + 'k€' : Math.round(caTotal) + '€';
+  const list = document.getElementById('caModalList');
+  if (list) {
+    const entries = Object.values(caByProp).sort((a,b) => b.amount - a.amount);
+    if (!entries.length) {
+      list.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:13px;">Aucune réservation avec montant ce mois-ci.<br><small>Renseignez les montants sur vos réservations pour voir le CA.</small></div>';
+    } else {
+      list.innerHTML = entries.map(p => {
+        const pct = caTotal > 0 ? Math.round((p.amount / caTotal) * 100) : 0;
+        const amt = p.amount >= 1000 ? (Math.round(p.amount/100)/10).toFixed(1) + 'k€' : Math.round(p.amount) + '€';
+        return '<div style="background:white;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">'
+          + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#1A7A5E;font-size:14px;"></i></div>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.name + '</div>'
+          + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">' + p.count + ' réservation' + (p.count > 1 ? 's' : '') + '</div>'
+          + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:' + pct + '%;background:#1A7A5E;border-radius:99px;"></div></div>'
+          + '</div>'
+          + '<div style="font-size:16px;font-weight:700;color:#1A7A5E;flex-shrink:0;">' + amt + '</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
+  document.getElementById(modalId).style.display = 'flex';
+};
+
 window.openChecklistsKpiModal = function() {
   var modalId = 'checklistsKpiModal';
   if (!document.getElementById(modalId)) {
@@ -2877,6 +2933,18 @@ window.closeChecklistsKpiModal = function() {
 <div class="kpi-main">
 <span class="kpi-value" id="kpiChecklistsValue">0</span>
 <span class="kpi-sub" id="kpiChecklistsSub">en attente de validation</span>
+</div>
+</article>
+
+<!-- KPI 8 : CA mensuel -->
+<article class="kpi-card kpi-card--clickable" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
+<div class="kpi-header">
+<span class="kpi-label">CA mensuel</span>
+<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-chart-line" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
+</div>
+<div class="kpi-main">
+<span class="kpi-value" id="kpiCaValue">—</span>
+<span class="kpi-sub" id="kpiCaSub">mois en cours</span>
 </div>
 </article>
 </section>
@@ -4871,6 +4939,46 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       applyKpiColor(cleanVal, cleaning48h, 'cleaning');
     }
     if (cleanSub) cleanSub.textContent = `départs à nettoyer sous 48h`;
+
+    // ── CA mensuel ──
+    const caByProperty = {};
+    let caTotal = 0;
+    (reservations || []).forEach((r) => {
+      const rawStart = r.start || r.startDate;
+      const rawEnd   = r.end   || r.endDate;
+      if (!rawStart) return;
+      const start = parseDateSafe(rawStart);
+      const end   = rawEnd ? parseDateSafe(rawEnd) : null;
+      if (!start) return;
+      if (r.type === 'block' || r.source === 'BLOCK') return;
+      const startsInMonth = start >= monthStart && start <= monthEnd;
+      const endsInMonth   = end && end >= monthStart && end <= monthEnd;
+      const spansMonth    = start <= monthStart && end && end >= monthEnd;
+      if (!startsInMonth && !endsInMonth && !spansMonth) return;
+      const amount = parseFloat(r.amount_total || r.amountTotal || r.amount_rooms || r.amountRooms || 0);
+      if (!amount) return;
+      caTotal += amount;
+      const pid = String(r.propertyId || r.property_id || (r.property && typeof r.property === 'object' ? r.property.id : r.property) || 'unknown');
+      const propName = (properties.find(p => String(p.id) === pid) || {}).name || 'Logement';
+      if (!caByProperty[pid]) caByProperty[pid] = { name: propName, amount: 0, count: 0 };
+      caByProperty[pid].amount += amount;
+      caByProperty[pid].count += 1;
+    });
+    window._kpiCaByProperty = caByProperty;
+    window._kpiCaTotal = caTotal;
+
+    const caVal = document.getElementById('kpiCaValue');
+    const caSub = document.getElementById('kpiCaSub');
+    if (caVal) {
+      const formatted = caTotal >= 1000
+        ? Math.round(caTotal / 1000 * 10) / 10 + 'k€'
+        : Math.round(caTotal) + '€';
+      caVal.textContent = caTotal > 0 ? formatted : '0€';
+      caVal.style.color = '#1A7A5E';
+      caVal.style.fontWeight = '700';
+    }
+    const monthNames = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    if (caSub) caSub.textContent = monthNames[m] + ' ' + y;
   }
 
   // ---------- Cautions KPI ----------
