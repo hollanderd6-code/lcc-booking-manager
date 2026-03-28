@@ -733,9 +733,10 @@ html[data-theme-v3="1"] .page-content {
     flex-direction: column !important;
     align-items: flex-start !important;
     justify-content: flex-start !important;
-    gap: 8px !important;
+    gap: 6px !important;
   }
 
+  /* Ligne 1 : badge icône à gauche, valeur à droite */
   html[data-theme-v3="1"] .kpi-header {
     width: 100% !important;
     display: flex !important;
@@ -747,51 +748,88 @@ html[data-theme-v3="1"] .page-content {
     padding-top: 0 !important;
   }
 
+  /* Ligne 2 : label + sous-texte empilés */
   html[data-theme-v3="1"] .kpi-main {
     display: flex !important;
     flex-direction: column !important;
-    align-items: flex-end !important;
+    align-items: flex-start !important;
     gap: 2px !important;
     flex-shrink: 0 !important;
+    width: 100% !important;
   }
 
   html[data-theme-v3="1"] .kpi-value {
-    font-size: 26px !important;
+    font-size: 28px !important;
     line-height: 1 !important;
     color: var(--jade) !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
   }
 
   html[data-theme-v3="1"] .kpi-sub {
-    text-align: right !important;
-    max-width: 100px !important;
-    font-size: 10px !important;
+    text-align: left !important;
+    max-width: 100% !important;
+    font-size: 11px !important;
+    color: var(--text-3) !important;
+    line-height: 1.3 !important;
   }
 
   html[data-theme-v3="1"] .kpi-label {
     text-transform: uppercase !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     letter-spacing: .06em !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    color: var(--text-2) !important;
+    line-height: 1.3 !important;
   }
 
-  /* Pill → badge icône carré, texte masqué */
+  /* Badge icône — style de base */
   html[data-theme-v3="1"] .kpi-pill,
   html[data-theme-v3="1"] .kpi-pill-neutral {
     display: inline-flex !important;
-    width: 28px !important;
-    height: 28px !important;
+    width: 32px !important;
+    height: 32px !important;
     padding: 0 !important;
-    border-radius: 8px !important;
+    border-radius: 9px !important;
     align-items: center !important;
     justify-content: center !important;
     font-size: 0 !important;
     flex-shrink: 0 !important;
+    border: none !important;
   }
 
   html[data-theme-v3="1"] .kpi-pill i,
   html[data-theme-v3="1"] .kpi-pill-neutral i {
-    font-size: 12px !important;
+    font-size: 14px !important;
+  }
+
+  /* Couleurs par KPI via ID */
+  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-pill {
+    background: rgba(26,122,94,.15) !important;
+    color: #1A7A5E !important;
+  }
+  html[data-theme-v3="1"] #kpiTodayMovesCard .kpi-pill {
+    background: rgba(59,130,246,.12) !important;
+    color: #2563EB !important;
+  }
+  html[data-theme-v3="1"] #kpiCleaning48hCard .kpi-pill {
+    background: rgba(245,158,11,.12) !important;
+    color: #D97706 !important;
+  }
+  html[data-theme-v3="1"] #kpiTopRisksCard .kpi-pill {
+    background: rgba(220,38,38,.1) !important;
+    color: #DC2626 !important;
+  }
+  html[data-theme-v3="1"] #kpiOccupancyCard .kpi-pill {
+    background: rgba(139,92,246,.12) !important;
+    color: #7C3AED !important;
+  }
+  html[data-theme-v3="1"] #kpiDepositsCard .kpi-pill {
+    background: rgba(26,122,94,.12) !important;
+    color: #1A7A5E !important;
+  }
+  html[data-theme-v3="1"] #kpiChecklistsCard .kpi-pill {
+    background: rgba(245,158,11,.12) !important;
+    color: #D97706 !important;
   }
 
   /* Header dashboard compact */
