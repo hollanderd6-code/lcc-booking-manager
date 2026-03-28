@@ -1428,12 +1428,19 @@ ON invoice_download_tokens(token);
           title TEXT NOT NULL,
           body TEXT NOT NULL,
           type TEXT NOT NULL DEFAULT 'info',
+          status TEXT NOT NULL DEFAULT 'en_cours',
           created_at TIMESTAMPTZ DEFAULT NOW(),
           created_by TEXT DEFAULT 'admin'
         )
       `);
       console.log('✅ Table announcements OK');
     } catch(e) { console.log('ℹ️ announcements:', e.message); }
+
+    // ✅ Migration : colonne status sur announcements
+    try {
+      await pool.query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'en_cours'`);
+      console.log('✅ Colonne status ajoutée à announcements');
+    } catch(e) { console.log('ℹ️ announcements status:', e.message); }
 
     // ✅ Migration : support FCM tokens pour sous-comptes
     try {
@@ -2532,13 +2539,30 @@ app.post('/api/announcements', corsAnn, bodyParser.json(), async (req, res) => {
   try {
     const adminKey = req.headers['x-admin-key'] || (req.body && req.body.adminKey);
     if (adminKey !== (process.env.ADMIN_SECRET_KEY || 'bh-admin-2024')) return res.status(403).json({ error: 'Non autorisé' });
-    const { title, body, type } = req.body || {};
+    const { title, body, type, status } = req.body || {};
     if (!title || !body) return res.status(400).json({ error: 'title et body requis' });
     const safeType = ['feature','bugfix','maintenance','info'].includes(type) ? type : 'info';
+    const safeStatus = ['en_cours','resolu','termine'].includes(status) ? status : 'en_cours';
     const result = await pool.query(
-      'INSERT INTO announcements (title, body, type) VALUES ($1, $2, $3) RETURNING *',
-      [title, body, safeType]
+      'INSERT INTO announcements (title, body, type, status) VALUES ($1, $2, $3, $4) RETURNING *',
+      [title, body, safeType, safeStatus]
     );
+    res.json({ announcement: result.rows[0] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch('/api/announcements/:id/status', corsAnn, bodyParser.json(), async (req, res) => {
+  try {
+    const adminKey = req.headers['x-admin-key'] || (req.body && req.body.adminKey);
+    if (adminKey !== (process.env.ADMIN_SECRET_KEY || 'bh-admin-2024')) return res.status(403).json({ error: 'Non autorisé' });
+    const { status } = req.body || {};
+    const allowed = ['en_cours', 'resolu', 'termine'];
+    if (!allowed.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
+    const result = await pool.query(
+      'UPDATE announcements SET status = $1 WHERE id = $2 RETURNING *',
+      [status, req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Annonce non trouvée' });
     res.json({ announcement: result.rows[0] });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
