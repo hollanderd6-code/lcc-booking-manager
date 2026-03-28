@@ -803,9 +803,6 @@ html[data-theme-v3="1"] .page-content {
   html[data-theme-v3="1"] .kpi-pill i,
   html[data-theme-v3="1"] .kpi-pill-neutral i {
     font-size: 14px !important;
-    line-height: 32px !important;
-    width: 32px !important;
-    text-align: center !important;
   }
 
   /* Couleurs par KPI via ID */
