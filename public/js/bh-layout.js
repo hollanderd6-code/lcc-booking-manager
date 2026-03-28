@@ -717,16 +717,23 @@ function getSidebarHTML() {
       maintenance: { emoji: '⚠️', label: 'Maintenance',  bg: '#FFFBEB', color: '#B45309' },
       info:        { emoji: '📢', label: 'Information',  bg: '#F5F3FF', color: '#6D28D9' }
     };
+    var STATUS_CONFIG = {
+      en_cours: { emoji: '🔄', label: 'En cours', bg: '#EFF6FF', color: '#1D4ED8' },
+      resolu:   { emoji: '✅', label: 'Résolu',   bg: '#F0FDF4', color: '#15803D' },
+      termine:  { emoji: '✔️', label: 'Terminé', bg: '#F3F4F6', color: '#6B7280' }
+    };
     if (!list.length) {
       container.innerHTML = '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Aucune annonce pour l\u0027instant.</div>';
       return;
     }
     container.innerHTML = list.map(function(a) {
       var cfg = TYPE_CONFIG[a.type] || TYPE_CONFIG.info;
+      var scfg = a.status ? (STATUS_CONFIG[a.status] || STATUS_CONFIG.en_cours) : null;
       var date = new Date(a.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' });
       return '<div style="background:#FAFAF8;border:1px solid rgba(0,0,0,.07);border-radius:10px;padding:12px 14px;">'
-        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">'
         + '  <span style="background:' + cfg.bg + ';color:' + cfg.color + ';font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">' + cfg.emoji + ' ' + cfg.label + '</span>'
+        + (scfg ? '  <span style="background:' + scfg.bg + ';color:' + scfg.color + ';font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">' + scfg.emoji + ' ' + scfg.label + '</span>' : '')
         + '  <span style="font-size:11px;color:#9CA3AF;margin-left:auto;">' + date + '</span>'
         + '</div>'
         + '<div style="font-size:13px;font-weight:700;color:#0D1117;margin-bottom:4px;font-family:sans-serif;">' + a.title + '</div>'
