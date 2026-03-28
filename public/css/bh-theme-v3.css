@@ -835,6 +835,11 @@ html[data-theme-v3="1"] .page-content {
     color: #1A7A5E !important;
   }
 
+  html[data-theme-v3="1"] #kpiCaCard .kpi-pill {
+    background: rgba(26,122,94,.15) !important;
+    color: #1A7A5E !important;
+  }
+
   /* Header dashboard compact */
   html[data-theme-v3="1"] header.main-header,
   html[data-theme-v3="1"] #bhMainHeader {
