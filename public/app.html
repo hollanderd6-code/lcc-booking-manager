@@ -891,9 +891,9 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   position: absolute;
   top: 3px;
   bottom: 3px;
-  left: 4px;
-  right: 4px;
-  border-radius: 999px;
+  left: 0;
+  right: 0;
+  border-radius: 0;
   padding: 2px 8px;
   font-size: 11px;
   font-weight: 600;
@@ -906,35 +906,35 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   z-index: 1;
   overflow: hidden;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
-/* 1 seule nuit (ex : 21 → 22) : on déborde légèrement sur la case du 22 */
+/* 1 seule nuit : arrondi des deux côtés + marges */
 .booking-block.single {
   left: 4px;
-  right: -10px; /* déborde un peu sur le jour de départ */
+  right: 4px;
+  border-radius: 999px;
 }
 
-/* Premier jour d'un séjour (arrivée) */
+/* Premier jour (arrivée) : arrondi à gauche seulement */
 .booking-block.start {
   left: 4px;
-  right: -10px; /* dépasse sur la case suivante et sur la ligne grise */
-  border-top-left-radius: 999px;
-  border-bottom-left-radius: 999px;
+  right: 0;
+  border-radius: 999px 0 0 999px;
 }
 
-/* Dernier jour (dernière nuit, checkout le lendemain) */
+/* Dernier jour : arrondi à droite seulement */
 .booking-block.end {
-  left: -10px;  /* revient légèrement dans la case précédente */
-  right: -10px; /* déborde sur la case du checkout, comme pour 1 nuit */
-  border-top-right-radius: 999px;
-  border-bottom-right-radius: 999px;
+  left: 0;
+  right: 4px;
+  border-radius: 0 999px 999px 0;
 }
 
-/* Jours intermédiaires : débord léger des deux côtés */
+/* Jours intermédiaires : aucun arrondi, pleine largeur */
 .booking-block:not(.single):not(.start):not(.end) {
-  left: -10px;
-  right: -10px;
+  left: 0;
+  right: 0;
+  border-radius: 0;
 }
 
 
@@ -945,31 +945,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   position: relative;
   overflow: visible;
   cursor: pointer;
-}
-
-.booking-block {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  right: 4px;
-
-  /* base : rectangle, on gère les arrondis avec .start / .end / .single */
-  border-radius: 0;
-
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  cursor: pointer;
-  z-index: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Couleurs par plateforme — toutes hardcodées pour éviter override par style.css */
@@ -2742,28 +2717,27 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <script>
 window.openCaKpiModal = function() {
   var modalId = 'caKpiModal';
-  if (!document.getElementById(modalId)) {
-    var m = document.createElement('div');
-    m.id = modalId;
-    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
-    m.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
-      + '<div style="display:flex;align-items:center;gap:10px;">'
-      + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-line" style="color:#1A7A5E;font-size:15px;"></i></div>'
-      + '<div><div style="font-size:16px;font-weight:700;color:#0D1117;">CA mensuel</div><div style="font-size:12px;color:#7A8695;" id="caModalSubtitle">mois en cours</div></div>'
-      + '</div>'
-      + '<button onclick="document.getElementById(\'caKpiModal\').remove()" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>'
-      + '</div>'
-      + '<div style="padding:16px 20px 4px;display:flex;align-items:center;justify-content:space-between;">'
-      + '<span style="font-size:13px;color:#7A8695;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</span>'
-      + '<span id="caModalTotal" style="font-size:22px;font-weight:700;color:#1A7A5E;">—</span>'
-      + '</div>'
-      + '<div style="overflow-y:auto;padding:8px 20px 32px;" id="caModalList"></div>'
-      + '</div>';
-    document.body.appendChild(m);
-    m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
-  }
-  // Remplir les données
+  if (document.getElementById(modalId)) document.getElementById(modalId).remove();
+  var m = document.createElement('div');
+  m.id = modalId;
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  m.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
+    + '<div style="display:flex;align-items:center;gap:10px;">'
+    + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-line" style="color:#1A7A5E;font-size:15px;"></i></div>'
+    + '<div><div style="font-size:16px;font-weight:700;color:#0D1117;">CA mensuel</div><div style="font-size:12px;color:#7A8695;" id="caModalSubtitle">mois en cours</div></div>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'caKpiModal\').remove()" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
+    + '</div>'
+    + '<div style="padding:16px 20px 4px;display:flex;align-items:center;justify-content:space-between;">'
+    + '<span style="font-size:13px;color:#7A8695;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</span>'
+    + '<span id="caModalTotal" style="font-size:22px;font-weight:700;color:#1A7A5E;">—</span>'
+    + '</div>'
+    + '<div style="overflow-y:auto;padding:8px 20px 40px;" id="caModalList"></div>'
+    + '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
+
   const caByProp = window._kpiCaByProperty || {};
   const caTotal  = window._kpiCaTotal || 0;
   const now = new Date();
@@ -2776,7 +2750,7 @@ window.openCaKpiModal = function() {
   if (list) {
     const entries = Object.values(caByProp).sort((a,b) => b.amount - a.amount);
     if (!entries.length) {
-      list.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:13px;">Aucune réservation avec montant ce mois-ci.<br><small>Renseignez les montants sur vos réservations pour voir le CA.</small></div>';
+      list.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:13px;">Aucune réservation avec montant ce mois-ci.<br><small style="margin-top:8px;display:block;">Renseignez les montants sur vos réservations pour voir le CA.</small></div>';
     } else {
       list.innerHTML = entries.map(p => {
         const pct = caTotal > 0 ? Math.round((p.amount / caTotal) * 100) : 0;
@@ -2785,7 +2759,7 @@ window.openCaKpiModal = function() {
           + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#1A7A5E;font-size:14px;"></i></div>'
           + '<div style="flex:1;min-width:0;">'
           + '<div style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.name + '</div>'
-          + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">' + p.count + ' réservation' + (p.count > 1 ? 's' : '') + '</div>'
+          + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">' + p.count + ' réservation' + (p.count > 1 ? 's' : '') + ' · ' + pct + '%</div>'
           + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:' + pct + '%;background:#1A7A5E;border-radius:99px;"></div></div>'
           + '</div>'
           + '<div style="font-size:16px;font-weight:700;color:#1A7A5E;flex-shrink:0;">' + amt + '</div>'
@@ -2793,7 +2767,6 @@ window.openCaKpiModal = function() {
       }).join('');
     }
   }
-  document.getElementById(modalId).style.display = 'flex';
 };
 
 window.openChecklistsKpiModal = function() {
@@ -4971,7 +4944,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     const caSub = document.getElementById('kpiCaSub');
     if (caVal) {
       const formatted = caTotal >= 1000
-        ? Math.round(caTotal / 1000 * 10) / 10 + 'k€'
+        ? Math.round(caTotal / 100) / 10 + 'k€'
         : Math.round(caTotal) + '€';
       caVal.textContent = caTotal > 0 ? formatted : '0€';
       caVal.style.color = '#1A7A5E';
