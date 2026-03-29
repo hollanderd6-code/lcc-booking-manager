@@ -1444,46 +1444,54 @@ html[data-theme-v3="1"] .sidebar {
   Les règles s'appliquent dans l'ordre de priorité. Les prix manuels (clic calendrier) ont toujours la priorité.
 </small>
 
-<!-- ✅ SECTION : IDENTIFIANTS PLATEFORMES -->
+<!-- ✅ SECTION : CONNEXION OTA IDs -->
 <div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-plug"></i>
-  <h3>Identifiants plateformes</h3>
+  <h3>Connexion OTA</h3>
 </div>
 <p style="font-size:12px;color:#6b7280;margin-bottom:16px;line-height:1.5;">
-  Ces identifiants permettent de lier ce logement à chaque plateforme via Channex. Vous les trouvez dans votre extranet ou votre channel manager.
+  Renseignez les identifiants de vos annonces sur chaque plateforme pour activer la synchronisation des réservations.
 </p>
-<div class="form-grid-2">
-  <div class="form-group">
-    <label for="propertyBookingId">
-      <i class="fas fa-building" style="color:#003580;"></i>
-      <span>ID Booking.com</span>
-    </label>
-    <input id="propertyBookingId" placeholder="Ex: 12345678" type="text"/>
-    <small style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;">Extranet Booking → Hébergement → Informations</small>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
+  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:#FF5A5F20;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:14px;"></i>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:#111827;">Airbnb</span>
+    </div>
+    <input id="propertyAirbnbId" placeholder="Ex: 12345678" type="text" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+    <small style="display:block;margin-top:6px;font-size:11px;color:#9ca3af;">Profil Airbnb → Annonces → ID de l'annonce</small>
   </div>
-  <div class="form-group">
-    <label for="propertyAbritelId">
-      <i class="fas fa-home" style="color:#0096D6;"></i>
-      <span>ID Abritel / VRBO</span>
-    </label>
-    <input id="propertyAbritelId" placeholder="Ex: 987654" type="text"/>
-    <small style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;">Visible dans l'URL de votre annonce Abritel</small>
+  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:#00358015;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fas fa-building" style="color:#003580;font-size:13px;"></i>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:#111827;">Booking.com</span>
+    </div>
+    <input id="propertyBookingId" placeholder="Ex: 12345678" type="text" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+    <small style="display:block;margin-top:6px;font-size:11px;color:#9ca3af;">Extranet Booking → Hébergement → Informations</small>
   </div>
-  <div class="form-group">
-    <label for="propertyExpediaId">
-      <i class="fas fa-plane" style="color:#FFC72C;"></i>
-      <span>ID Expedia</span>
-    </label>
-    <input id="propertyExpediaId" placeholder="Ex: 56789" type="text"/>
-    <small style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;">Extranet Expedia Partner Central → Propriété</small>
+  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:#0096D615;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fas fa-home" style="color:#0096D6;font-size:13px;"></i>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:#111827;">Abritel / VRBO</span>
+    </div>
+    <input id="propertyAbritelId" placeholder="Ex: 987654" type="text" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+    <small style="display:block;margin-top:6px;font-size:11px;color:#9ca3af;">Visible dans l'URL de votre annonce</small>
   </div>
-  <div class="form-group">
-    <label for="propertyChannexId">
-      <i class="fas fa-network-wired" style="color:#1A7A5E;"></i>
-      <span>ID interne (avancé)</span>
-    </label>
-    <input id="propertyChannexId" placeholder="UUID Channex" type="text"/>
-    <small style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;">Identifiant technique optionnel</small>
+  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:#FFC72C20;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fas fa-plane" style="color:#D97706;font-size:13px;"></i>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:#111827;">Expedia</span>
+    </div>
+    <input id="propertyExpediaId" placeholder="Ex: 56789" type="text" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+    <small style="display:block;margin-top:6px;font-size:11px;color:#9ca3af;">Expedia Partner Central → Propriété</small>
   </div>
 </div>
 
@@ -2096,34 +2104,19 @@ function insertVariable(textareaId, variable, event) {
 
   <!-- Sélecteur (caché par défaut) -->
   <div id="channexSelectorPanel" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;">
-    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Associez ce logement à l'une de vos annonces pour activer la synchronisation des réservations :</p>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px;">Sélectionnez le compte à synchroniser avec ce logement :</p>
 
-    <div class="form-group" style="margin-bottom:10px;">
-      <label style="font-size:12px;font-weight:600;color:#374151;">Annonce à synchroniser</label>
-      <select id="channexPropertySelect" onchange="onChannexPropertyChange()" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
-        <option value="">-- Chargement... --</option>
-      </select>
-    </div>
-
-    <div class="form-group" style="margin-bottom:10px;" id="channexRoomTypeGroup" style="display:none;">
-      <label style="font-size:12px;font-weight:600;color:#374151;">Room Type</label>
-      <select id="channexRoomTypeSelect" onchange="onChannexRoomTypeChange()" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
-        <option value="">-- Sélectionnez une propriété d'abord --</option>
-      </select>
-    </div>
-
-    <div class="form-group" style="margin-bottom:14px;" id="channexRatePlanGroup" style="display:none;">
-      <label style="font-size:12px;font-weight:600;color:#374151;">Rate Plan</label>
-      <select id="channexRatePlanSelect" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
-        <option value="">-- Sélectionnez un room type d'abord --</option>
+    <div style="margin-bottom:14px;">
+      <select id="channexPropertySelect" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;background:white;color:#111827;">
+        <option value="">-- Choisir un compte --</option>
       </select>
     </div>
 
     <div style="display:flex;gap:8px;">
-      <button type="button" onclick="applyChannexLink()" style="flex:1;padding:9px;background:#1A7A5E;color:white;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;">
-        <i class="fas fa-link"></i> Associer
+      <button type="button" onclick="applyChannexLink()" style="flex:1;padding:10px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
+        <i class="fas fa-check"></i> Confirmer
       </button>
-      <button type="button" onclick="toggleChannexSelector()" style="padding:9px 14px;background:white;border:1px solid #e5e7eb;border-radius:9px;font-size:13px;cursor:pointer;color:#374151;">
+      <button type="button" onclick="toggleChannexSelector()" style="padding:10px 16px;background:white;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;cursor:pointer;color:#374151;">
         Annuler
       </button>
     </div>
@@ -2474,6 +2467,7 @@ function insertVariable(textareaId, variable, event) {
       bedrooms: document.getElementById('propertyBedrooms')?.value || null,
       beds: document.getElementById('propertyBeds')?.value || null,
       bathrooms: document.getElementById('propertyBathrooms')?.value || null,
+      airbnb_id: document.getElementById('propertyAirbnbId')?.value.trim() || null,
       booking_id: document.getElementById('propertyBookingId')?.value.trim() || null,
       abritel_id: document.getElementById('propertyAbritelId')?.value.trim() || null,
       expedia_id: document.getElementById('propertyExpediaId')?.value.trim() || null,
@@ -2496,10 +2490,12 @@ function insertVariable(textareaId, variable, event) {
       }
 
       // ✅ CHARGER LES IDENTIFIANTS PLATEFORMES
+      const fAirbnb = document.getElementById('propertyAirbnbId');
       const fBooking = document.getElementById('propertyBookingId');
       const fAbritel = document.getElementById('propertyAbritelId');
       const fExpedia = document.getElementById('propertyExpediaId');
       const fChannex = document.getElementById('propertyChannexId');
+      if (fAirbnb) fAirbnb.value = propertyData.airbnb_id || '';
       if (fBooking) fBooking.value = propertyData.booking_id || '';
       if (fAbritel) fAbritel.value = propertyData.abritel_id || '';
       if (fExpedia) fExpedia.value = propertyData.expedia_id || '';
@@ -3272,73 +3268,38 @@ async function loadChannexPropertiesList() {
     }
     const props = _channexPropertiesCache;
     if (!Array.isArray(props) || !props.length) {
-      sel.innerHTML = '<option value="">Aucune propriété Channex trouvée</option>';
+      sel.innerHTML = '<option value="">Aucun compte connecté</option>';
       return;
     }
-    sel.innerHTML = '<option value="">-- Choisir une propriété --</option>'
+    sel.innerHTML = '<option value="">-- Choisir un compte --</option>'
       + props.map(p => `<option value="${p.id}">${p.name}${p.city ? ' · ' + p.city : ''}</option>`).join('');
-    document.getElementById('channexRoomTypeGroup').style.display = 'none';
-    document.getElementById('channexRatePlanGroup').style.display = 'none';
   } catch(e) {
     sel.innerHTML = '<option value="">Erreur de chargement</option>';
   }
 }
 
-async function onChannexPropertyChange() {
-  const channexPropId = document.getElementById('channexPropertySelect').value;
-  const rtSel   = document.getElementById('channexRoomTypeSelect');
-  const rtGroup = document.getElementById('channexRoomTypeGroup');
-  const rpGroup = document.getElementById('channexRatePlanGroup');
-  if (!channexPropId) { rtGroup.style.display = 'none'; rpGroup.style.display = 'none'; return; }
-  rtSel.innerHTML = '<option value="">Chargement...</option>';
-  rtGroup.style.display = 'block';
-  rpGroup.style.display = 'none';
-  try {
-    const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/channex/room-types/' + channexPropId, { headers: { 'Authorization': 'Bearer ' + token } });
-    const roomTypes = await res.json();
-    rtSel.innerHTML = '<option value="">-- Choisir un room type --</option>'
-      + roomTypes.map(rt => `<option value="${rt.id}">${rt.name}</option>`).join('');
-  } catch(e) {
-    rtSel.innerHTML = '<option value="">Erreur de chargement</option>';
-  }
-}
-
-async function onChannexRoomTypeChange() {
-  const rtId    = document.getElementById('channexRoomTypeSelect').value;
-  const rpSel   = document.getElementById('channexRatePlanSelect');
-  const rpGroup = document.getElementById('channexRatePlanGroup');
-  if (!rtId) { rpGroup.style.display = 'none'; return; }
-  rpSel.innerHTML = '<option value="">Chargement...</option>';
-  rpGroup.style.display = 'block';
-  try {
-    const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/channex/rate-plans/' + rtId, { headers: { 'Authorization': 'Bearer ' + token } });
-    const ratePlans = await res.json();
-    rpSel.innerHTML = '<option value="">-- Choisir un rate plan --</option>'
-      + ratePlans.map(rp => `<option value="${rp.id}">${rp.name}</option>`).join('');
-  } catch(e) {
-    rpSel.innerHTML = '<option value="">Erreur de chargement</option>';
-  }
-}
-
 async function applyChannexLink() {
   const channexPropertyId = document.getElementById('channexPropertySelect').value;
-  const channexRoomTypeId = document.getElementById('channexRoomTypeSelect').value;
-  const channexRatePlanId = document.getElementById('channexRatePlanSelect').value;
-  if (!channexPropertyId || !channexRoomTypeId || !channexRatePlanId) {
-    alert('Veuillez sélectionner une propriété, un room type et un rate plan.');
-    return;
-  }
+  if (!channexPropertyId) { alert('Veuillez sélectionner un compte.'); return; }
   if (!_currentEditingPropertyId) { alert('Erreur : aucun logement en cours d\'édition.'); return; }
   try {
     const token = localStorage.getItem('lcc_token');
+    // Récupérer automatiquement le premier room type et rate plan
+    const rtRes = await fetch('/api/channex/room-types/' + channexPropertyId, { headers: { 'Authorization': 'Bearer ' + token } });
+    const roomTypes = await rtRes.json();
+    if (!roomTypes.length) throw new Error('Aucun type de chambre trouvé pour ce compte.');
+    const channexRoomTypeId = roomTypes[0].id;
+    const rpRes = await fetch('/api/channex/rate-plans/' + channexRoomTypeId, { headers: { 'Authorization': 'Bearer ' + token } });
+    const ratePlans = await rpRes.json();
+    if (!ratePlans.length) throw new Error('Aucun tarif trouvé pour ce compte.');
+    const channexRatePlanId = ratePlans[0].id;
+
     const res = await fetch('/api/channex/link-property', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({
-        property_id:         _currentEditingPropertyId,
-        channex_property_id: channexPropertyId,
+        property_id:          _currentEditingPropertyId,
+        channex_property_id:  channexPropertyId,
         channex_room_type_id: channexRoomTypeId,
         channex_rate_plan_id: channexRatePlanId
       })
