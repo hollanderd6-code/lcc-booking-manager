@@ -6695,17 +6695,13 @@ function riskColor(level) {
   })();
 </script>
 <!-- Modal blocage calendrier -->
-<div class="modal" id="blockModal">
-<div class="modal-dialog">
-<div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border-color);">
-  <h2 class="modal-title" style="margin:0;display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;">
-    <i class="fas fa-lock"></i> Bloquer le calendrier
-  </h2>
-  <button id="blockModalClose" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--bg-hover,#f3f4f6);color:var(--text-primary,#111);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
-    <i class="fas fa-times"></i>
-  </button>
+<div id="blockModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;">
+<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
+  <div style="font-size:16px;font-weight:700;color:#0D1117;display:flex;align-items:center;gap:8px;"><i class="fas fa-lock" style="color:#1A7A5E;"></i> Bloquer le calendrier</div>
+  <button id="blockModalClose" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
 </div>
-<div class="modal-body">
+<div style="overflow-y:auto;padding:16px 20px;">
 <div class="form-group">
 <label for="blockPropertySelect">Logement</label>
 <select class="form-control" id="blockPropertySelect"></select>
@@ -6723,7 +6719,7 @@ function riskColor(level) {
 <input class="form-control" id="blockReason" placeholder="Blocage perso, travaux, famille..." type="text"/>
 </div>
 </div>
-<div class="modal-footer">
+<div style="padding:12px 20px 32px;display:flex;gap:8px;border-top:1px solid rgba(200,184,154,.3);">
 <button class="btn btn-secondary" id="blockModalCancel">Annuler</button>
 <button class="btn btn-primary" id="blockSaveBtn">
 <i class="fas fa-lock"></i>
@@ -6734,19 +6730,16 @@ function riskColor(level) {
 </div>
 <!-- MODALS DU CALENDRIER MODERNE -->
 <!-- Reservation Details Modal -->
-<div class="booking-modal" id="reservationDetailsModal">
-<div class="modal-overlay" id="detailsModalOverlay"></div>
-<div class="modal-content">
-<div class="modal-header">
-<h2 id="detailsModalTitle">Détails de la réservation</h2>
-<button class="modal-close" id="closeDetailsModal">
-<i class="fas fa-times"></i>
-</button>
+<div id="reservationDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;">
+<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
+  <h2 id="detailsModalTitle" style="font-size:16px;font-weight:700;color:#0D1117;margin:0;">Détails de la réservation</h2>
+  <button id="closeDetailsModal" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
 </div>
-<div class="reservation-details" id="reservationDetailsContent">
+<div class="reservation-details" id="reservationDetailsContent" style="overflow-y:auto;padding:16px 20px;flex:1;">
 <!-- Le contenu sera inséré dynamiquement -->
 </div>
-<div class="modal-actions" id="detailsModalActions">
+<div class="modal-actions" id="detailsModalActions" style="padding:12px 20px 32px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid rgba(200,184,154,.3);">
 <button class="btn btn-danger" id="deleteBookingBtn" style="margin-right: auto;" type="button">
 <i class="fas fa-trash"></i> Supprimer
       </button>
@@ -7076,6 +7069,7 @@ function riskColor(level) {
     const propertySelect = document.getElementById('blockPropertySelect');
     
     if (modal) {
+      window.hideFab();
       modal.style.display = 'flex';
       
       if (startDate) startDate.value = date;
@@ -7091,11 +7085,13 @@ function riskColor(level) {
   
   // Fermeture du modal
   document.getElementById('blockModalClose')?.addEventListener('click', function() {
-    document.getElementById('blockModal').style.display = 'none';
+    document.getElementById('blockModal').style.display = 'none'; window.showFab();
   });
-  
+  document.getElementById('blockModal')?.addEventListener('click', function(e) {
+    if (e.target === document.getElementById('blockModal')) { document.getElementById('blockModal').style.display = 'none'; window.showFab(); }
+  });
   document.getElementById('blockModalCancel')?.addEventListener('click', function() {
-    document.getElementById('blockModal').style.display = 'none';
+    document.getElementById('blockModal').style.display = 'none'; window.showFab();
   });
 })();
 </script>
@@ -8200,8 +8196,8 @@ try {
 
     // 6️⃣ Ouverture du modal et datasets utiles
     window.hideFab();
+    window.hideFab();
     detailsModal.style.display = 'flex';
-    detailsModal.classList.add('active');
 
     const reservationUid =
       booking.uid ||
@@ -8232,7 +8228,7 @@ function handleEditBooking() {
   const detailsModal = document.getElementById('reservationDetailsModal');
   if (detailsModal) {
     detailsModal.style.display = 'none';
-    detailsModal.classList.remove('active');
+    
     window.showFab();
   }
 
@@ -8478,7 +8474,7 @@ document.addEventListener('click', function(e) {
       // On ferme le modal
       if (detailsModal) {
         detailsModal.style.display = 'none';
-        detailsModal.classList.remove('active');
+        window.showFab();
       }
 
       window.deletingInProgress = false;
@@ -8702,7 +8698,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
     
     if (data.block || data.message) {
       alert('Blocage créé !');
-      document.getElementById('blockModal').style.display = 'none';
+      document.getElementById('blockModal').style.display = 'none'; window.showFab();
       setTimeout(function() {
         if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
         else if (typeof loadCalendarData === 'function') loadCalendarData();
@@ -9283,7 +9279,7 @@ html[data-theme-v3="1"] .sidebar .nav-section {
     function closeDetailsModalSafe() {
       if (!detailsModal) return;
       detailsModal.style.display = 'none';
-      detailsModal.classList.remove('active');
+      window.showFab();
     }
 
     if (closeDetailsX) {
