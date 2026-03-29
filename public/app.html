@@ -5021,8 +5021,16 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   }
 
   // ---------- Top risks KPI ----------
-  function hideFab() { var f = document.getElementById('fabAddResa'); if (f) f.style.display = 'none'; }
-  function showFab() { var f = document.getElementById('fabAddResa'); if (f) f.style.display = ''; }
+  function hideFab() { var f = document.getElementById('fabAddResa'); if (f) f.style.setProperty('display', 'none', 'important'); }
+  function showFab() {
+    try {
+      var u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      var isCleaner = u.role === 'cleaner' && localStorage.getItem('lcc_account_type') === 'sub';
+      if (isCleaner) return; // ne pas montrer le FAB pour les cleaners
+    } catch(e) {}
+    var f = document.getElementById('fabAddResa');
+    if (f) f.style.setProperty('display', 'flex', 'important');
+  }
 
   function ensureGenericModal(modalId, titleText) {
   if (document.getElementById(modalId)) return;
