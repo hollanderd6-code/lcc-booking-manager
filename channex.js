@@ -496,8 +496,64 @@ async function sendBookingMessage(channex_booking_id, message) {
   }
 }
 
+// ── Lister les propriétés existantes dans Channex ────────────
+async function listChannexProperties() {
+  try {
+    const res = await channexAPI.get('/properties', {
+      params: { pagination: false }
+    });
+    const data = res.data?.data || res.data || [];
+    return Array.isArray(data) ? data.map(p => ({
+      id: p.id,
+      name: p.attributes?.title || p.attributes?.name || p.id,
+      city: p.attributes?.city || '',
+      rooms: p.attributes?.rooms_count || null
+    })) : [];
+  } catch (e) {
+    console.error('❌ [CHANNEX] listChannexProperties:', e.message);
+    return [];
+  }
+}
+
+// ── Lister les room_types d'une propriété Channex ────────────
+async function listChannexRoomTypes(channex_property_id) {
+  try {
+    const res = await channexAPI.get('/room_types', {
+      params: { property_id: channex_property_id, pagination: false }
+    });
+    const data = res.data?.data || res.data || [];
+    return Array.isArray(data) ? data.map(rt => ({
+      id: rt.id,
+      name: rt.attributes?.title || rt.attributes?.name || rt.id
+    })) : [];
+  } catch (e) {
+    console.error('❌ [CHANNEX] listChannexRoomTypes:', e.message);
+    return [];
+  }
+}
+
+// ── Lister les rate_plans d'un room_type Channex ────────────
+async function listChannexRatePlans(channex_room_type_id) {
+  try {
+    const res = await channexAPI.get('/rate_plans', {
+      params: { room_type_id: channex_room_type_id, pagination: false }
+    });
+    const data = res.data?.data || res.data || [];
+    return Array.isArray(data) ? data.map(rp => ({
+      id: rp.id,
+      name: rp.attributes?.title || rp.attributes?.name || rp.id
+    })) : [];
+  } catch (e) {
+    console.error('❌ [CHANNEX] listChannexRatePlans:', e.message);
+    return [];
+  }
+}
+
 module.exports = {
   createChannexProperty,
+  listChannexProperties,
+  listChannexRoomTypes,
+  listChannexRatePlans,
   pushAvailability,
   pushRates,
   pushRestrictions,
