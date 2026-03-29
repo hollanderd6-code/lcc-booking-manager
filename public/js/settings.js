@@ -1389,28 +1389,88 @@ Il vous suffit de cliquer sur le lien, d'entrer le code PIN ainsi que vos dates 
 // ============================================================
 
 // ── Logos des plateformes (réutilisé dans la modal) ──────────
-function _channexPlatformLogos() {
-  return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#fff8f8;border:1px solid #fde8e8;border-radius:8px;">
-      <i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:15px;"></i>
-      <span style="font-size:12px;font-weight:600;color:#333;">Airbnb</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#f0f4fc;border:1px solid #d9e4f7;border-radius:8px;">
-      <i class="fas fa-building" style="color:#003580;font-size:12px;"></i>
-      <span style="font-size:12px;font-weight:600;color:#333;">Booking.com</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#f0f6fc;border:1px solid #d0e4f5;border-radius:8px;">
-      <i class="fas fa-plane" style="color:#1B5E96;font-size:12px;"></i>
-      <span style="font-size:12px;font-weight:600;color:#333;">Expedia</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#f0f5fb;border:1px solid #cfe1f4;border-radius:8px;">
-      <i class="fas fa-home" style="color:#1C61A5;font-size:12px;"></i>
-      <span style="font-size:12px;font-weight:600;color:#333;">Abritel / VRBO</span>
-    </div>
-  </div>`;
-}
+// ─────────────────────────────────────────────────────────────
+// Config des plateformes OTA : instructions + code Channex
+// ─────────────────────────────────────────────────────────────
+const OTA_PLATFORMS = [
+  {
+    code: 'ABB',
+    label: 'Airbnb',
+    icon: '<i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:18px;"></i>',
+    color: '#FF5A5F',
+    bg: '#fff8f8',
+    border: '#fde8e8',
+    instructions: `
+      <div style="font-size:13px;color:#374151;line-height:1.6;">
+        <p style="margin:0 0 10px;"><strong>Avant de continuer :</strong></p>
+        <ol style="margin:0;padding-left:18px;">
+          <li>Assurez-vous d'être <strong>connecté à votre compte Airbnb</strong> dans votre navigateur.</li>
+          <li>Cliquez sur <strong>Continuer</strong> — vous serez redirigé vers Airbnb pour autoriser la connexion.</li>
+          <li>Une fois revenu, sélectionnez votre annonce et associez-la.</li>
+        </ol>
+      </div>`
+  },
+  {
+    code: 'BDC',
+    label: 'Booking.com',
+    icon: '<i class="fas fa-building" style="color:#003580;font-size:16px;"></i>',
+    color: '#003580',
+    bg: '#f0f4fc',
+    border: '#d9e4f7',
+    instructions: `
+      <div style="font-size:13px;color:#374151;line-height:1.6;">
+        <p style="margin:0 0 10px;"><strong>Étape préalable dans votre extranet Booking.com :</strong></p>
+        <ol style="margin:0;padding-left:18px;">
+          <li>Connectez-vous à <strong>l'extranet Booking.com</strong>.</li>
+          <li>Allez dans <strong>Compte → Fournisseur de connectivité</strong>.</li>
+          <li>Recherchez <strong>"Channex"</strong> et cliquez sur <strong>Accepter</strong>.</li>
+          <li>Notez votre <strong>Property ID</strong> (numéro affiché en haut à côté du nom de votre établissement).</li>
+        </ol>
+        <p style="margin:10px 0 0;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:12px;color:#92400e;">
+          <i class="fas fa-exclamation-triangle"></i> Faites d'abord ces étapes <strong>avant</strong> de cliquer sur Continuer.
+        </p>
+      </div>`
+  },
+  {
+    code: 'EXP',
+    label: 'Expedia',
+    icon: '<i class="fas fa-plane" style="color:#1B5E96;font-size:15px;"></i>',
+    color: '#1B5E96',
+    bg: '#f0f6fc',
+    border: '#d0e4f5',
+    instructions: `
+      <div style="font-size:13px;color:#374151;line-height:1.6;">
+        <p style="margin:0 0 10px;"><strong>Avant de continuer :</strong></p>
+        <ol style="margin:0;padding-left:18px;">
+          <li>Connectez-vous à <strong>Expedia Partner Central</strong>.</li>
+          <li>Allez dans les paramètres de votre propriété et notez votre <strong>Property ID</strong>.</li>
+          <li>Cliquez sur Continuer et renseignez cet identifiant dans le formulaire de connexion.</li>
+        </ol>
+      </div>`
+  },
+  {
+    code: 'VRB',
+    label: 'Abritel / VRBO',
+    icon: '<i class="fas fa-home" style="color:#1C61A5;font-size:15px;"></i>',
+    color: '#1C61A5',
+    bg: '#f0f5fb',
+    border: '#cfe1f4',
+    instructions: `
+      <div style="font-size:13px;color:#374151;line-height:1.6;">
+        <p style="margin:0 0 10px;"><strong>Avant de continuer :</strong></p>
+        <ol style="margin:0;padding-left:18px;">
+          <li>Connectez-vous à votre compte <strong>Abritel / VRBO</strong>.</li>
+          <li>Votre Property ID est visible dans l'URL de votre annonce.</li>
+          <li>Cliquez sur Continuer et renseignez cet identifiant.</li>
+        </ol>
+      </div>`
+  }
+];
 
-// Ouvre la modal + connecte Channex si besoin + ouvre l'iframe directement
+// ─────────────────────────────────────────────────────────────
+// Modal principale : écran 1 = choix + instructions
+//                   écran 2 = iframe
+// ─────────────────────────────────────────────────────────────
 async function openChannexModal(propertyId, propertyName, isConnected) {
   const existing = document.getElementById('channexModal');
   if (existing) existing.remove();
@@ -1418,99 +1478,181 @@ async function openChannexModal(propertyId, propertyName, isConnected) {
   const modal = document.createElement('div');
   modal.id = 'channexModal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
-
-  modal.innerHTML = `
-    <div style="background:#fff;border-radius:20px;padding:24px;max-width:780px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.2);">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
-        <div>
-          <div style="font-family:'Instrument Serif',Georgia,serif;font-size:19px;color:#0D1117;">Connecter mes plateformes</div>
-          <div style="font-size:12px;color:#6B7280;margin-top:3px;">${propertyName}</div>
-        </div>
-        <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;flex-shrink:0;margin-left:12px;">✕</button>
-      </div>
-      <div style="margin-bottom:12px;flex-shrink:0;">${_channexPlatformLogos()}</div>
-      <div data-channex-body style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-        <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#1A7A5E;"></i>
-        <div style="margin-top:12px;color:#6B7280;font-size:13px;">${isConnected ? 'Chargement...' : 'Activation en cours...'}</div>
-      </div>
-      ${isConnected ? `
-      <div style="flex-shrink:0;margin-top:12px;display:flex;gap:10px;">
-        <button onclick="channexSyncAvailability('${propertyId}')" id="btnChannexSync" style="flex:1;height:38px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:12px;font-weight:500;cursor:pointer;">
-          <i class="fas fa-sync"></i> Sync disponibilités
-        </button>
-        <button onclick="channexDisconnect('${propertyId}')" style="flex:1;height:38px;border-radius:10px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:12px;font-weight:500;cursor:pointer;">
-          <i class="fas fa-unlink"></i> Déconnecter
-        </button>
-      </div>` : ''}
-    </div>
-  `;
-
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
 
-  // Si non connecté → activer silencieusement d'abord
+  // Si pas encore connecté à Channex → on active silencieusement
   if (!isConnected) {
+    modal.innerHTML = `<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;">
+      <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#1A7A5E;"></i>
+      <div style="margin-top:12px;color:#6B7280;font-size:13px;">Activation en cours...</div>
+    </div>`;
     try {
       const token = localStorage.getItem('lcc_token');
-      const connectRes = await fetch(`${API_URL}/api/channex/connect-property`, {
+      const r = await fetch(`${API_URL}/api/channex/connect-property`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ property_id: propertyId })
       });
-      const connectData = await connectRes.json();
-      if (!connectRes.ok) throw new Error(connectData.error || 'Erreur activation');
-      // Recharger les cards en arrière-plan sans fermer la modal
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Erreur activation');
       loadProperties().catch(() => {});
     } catch (e) {
-      const body = modal.querySelector('[data-channex-body]');
-      if (body) body.innerHTML = `
-        <div style="text-align:center;padding:40px;color:#dc2626;">
-          <i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:8px;display:block;"></i>
-          <div style="font-size:13px;">${e.message}</div>
-          <button onclick="document.getElementById('channexModal').remove()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;">Fermer</button>
-        </div>`;
+      modal.innerHTML = `<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:400px;">
+        <i class="fas fa-exclamation-circle" style="font-size:28px;color:#dc2626;margin-bottom:8px;display:block;"></i>
+        <div style="font-size:13px;color:#374151;">${e.message}</div>
+        <button onclick="document.getElementById('channexModal').remove()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;">Fermer</button>
+      </div>`;
       return;
     }
   }
 
-  // Charger l'iframe OTA directement
-  await _loadChannexIframe(propertyId, modal);
+  // Écran 1 : sélection de la plateforme
+  _showPlatformPicker(modal, propertyId, propertyName, isConnected);
 }
 
-async function _loadChannexIframe(propertyId, modal) {
-  const body = modal?.querySelector('[data-channex-body]');
+function _showPlatformPicker(modal, propertyId, propertyName, isConnected) {
+  let selected = null;
+
+  const render = () => {
+    const platform = selected ? OTA_PLATFORMS.find(p => p.code === selected) : null;
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:24px;max-width:520px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+          <div>
+            <div style="font-family:'Instrument Serif',Georgia,serif;font-size:19px;color:#0D1117;">Connecter mes plateformes</div>
+            <div style="font-size:12px;color:#6B7280;margin-top:3px;">${propertyName}</div>
+          </div>
+          <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;flex-shrink:0;margin-left:12px;">✕</button>
+        </div>
+
+        <!-- Sélecteur plateformes -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+          ${OTA_PLATFORMS.map(p => `
+            <button onclick="_selectOta('${p.code}')" style="
+              display:flex;align-items:center;gap:8px;padding:10px 12px;
+              background:${selected === p.code ? p.bg : '#f9fafb'};
+              border:2px solid ${selected === p.code ? p.color : '#e5e7eb'};
+              border-radius:10px;cursor:pointer;text-align:left;
+              transition:all .15s;
+            ">
+              ${p.icon}
+              <span style="font-size:13px;font-weight:600;color:#111827;">${p.label}</span>
+              ${selected === p.code ? `<i class="fas fa-check-circle" style="margin-left:auto;color:${p.color};font-size:13px;"></i>` : ''}
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- Instructions contextuelles -->
+        <div style="min-height:120px;margin-bottom:16px;">
+          ${platform ? `
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px;">
+              ${platform.instructions}
+            </div>
+          ` : `
+            <div style="display:flex;align-items:center;justify-content:center;height:120px;color:#9ca3af;font-size:13px;">
+              <span>← Sélectionnez une plateforme pour voir les instructions</span>
+            </div>
+          `}
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:10px;">
+          ${isConnected ? `
+          <button onclick="_showOtaActions('${propertyId}',this.closest('[style*=border-radius]').parentNode.querySelector('#channexModal'))" style="flex:1;height:42px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;font-weight:500;cursor:pointer;">
+            <i class="fas fa-cog"></i> Gérer
+          </button>` : ''}
+          <button id="btnOtaContinue" onclick="_continueToIframe('${propertyId}','${propertyName}')"
+            ${selected ? '' : 'disabled'}
+            style="flex:2;height:42px;border-radius:10px;border:none;
+              background:${selected ? 'linear-gradient(135deg,#1A7A5E,#2AAE86)' : '#e5e7eb'};
+              color:${selected ? 'white' : '#9ca3af'};font-size:14px;font-weight:600;cursor:${selected ? 'pointer' : 'not-allowed'};">
+            Continuer <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+
+        ${isConnected ? `
+        <div style="margin-top:10px;text-align:center;">
+          <button onclick="channexDisconnect('${propertyId}')" style="background:none;border:none;color:#dc2626;font-size:12px;cursor:pointer;text-decoration:underline;">
+            Déconnecter ce logement
+          </button>
+        </div>` : ''}
+      </div>
+    `;
+
+    // Réassigner la variable globale pour la sélection
+    window._otaSelected = selected;
+    window._otaPropertyId = propertyId;
+    window._otaPropertyName = propertyName;
+    window._otaIsConnected = isConnected;
+    window._otaModal = modal;
+  };
+
+  window._selectOta = (code) => {
+    selected = code;
+    window._otaSelected = code;
+    render();
+  };
+
+  window._continueToIframe = async (pid, pname) => {
+    const channelCode = window._otaSelected;
+    if (!channelCode) return;
+    await _loadChannexIframe(pid, window._otaModal, channelCode);
+  };
+
+  render();
+}
+
+async function _loadChannexIframe(propertyId, modal, channelCode) {
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:24px;max-width:820px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
+        <button onclick="_showPlatformPicker(window._otaModal,'${propertyId}',window._otaPropertyName,window._otaIsConnected)" style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:#374151;">
+          <i class="fas fa-arrow-left"></i> Retour
+        </button>
+        <div style="font-size:13px;font-weight:600;color:#374151;">${OTA_PLATFORMS.find(p=>p.code===channelCode)?.label || ''}</div>
+        <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;">
+        <i class="fas fa-spinner fa-spin" style="font-size:24px;color:#1A7A5E;"></i>
+        <div style="margin-top:10px;color:#6B7280;font-size:13px;">Chargement...</div>
+      </div>
+    </div>
+  `;
 
   try {
     const token = localStorage.getItem('lcc_token');
     const res = await fetch(`${API_URL}/api/channex/iframe-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ property_id: propertyId })
+      body: JSON.stringify({ property_id: propertyId, channel_code: channelCode })
     });
-
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur serveur');
 
-    if (body) {
-      body.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;';
-      body.innerHTML = `
-        <div style="flex:1;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;min-height:0;">
-          <iframe
-            src="${data.iframe_url}"
-            style="width:100%;height:100%;min-height:560px;border:none;display:block;"
-            allow="same-origin"
-          ></iframe>
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:24px;max-width:820px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
+          <button onclick="_showPlatformPicker(window._otaModal,'${propertyId}',window._otaPropertyName,window._otaIsConnected)" style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:#374151;">
+            <i class="fas fa-arrow-left"></i> Retour
+          </button>
+          <div style="font-size:13px;font-weight:600;color:#374151;">${OTA_PLATFORMS.find(p=>p.code===channelCode)?.label || ''}</div>
+          <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
         </div>
-      `;
-    }
+        <div style="flex:1;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;min-height:0;">
+          <iframe src="${data.iframe_url}" style="width:100%;height:100%;min-height:580px;border:none;display:block;" allow="same-origin"></iframe>
+        </div>
+      </div>
+    `;
   } catch (e) {
-    console.error('❌ [CHANNEX IFRAME]', e.message);
-    if (body) body.innerHTML = `
-      <div style="text-align:center;padding:40px;color:#dc2626;">
-        <i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:8px;display:block;"></i>
-        <div style="font-size:13px;">${e.message}</div>
-        <button onclick="document.getElementById('channexModal').remove()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;">Fermer</button>
-      </div>`;
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:400px;">
+        <i class="fas fa-exclamation-circle" style="font-size:28px;color:#dc2626;margin-bottom:8px;display:block;"></i>
+        <div style="font-size:13px;color:#374151;margin-bottom:16px;">${e.message}</div>
+        <button onclick="_showPlatformPicker(window._otaModal,'${propertyId}',window._otaPropertyName,window._otaIsConnected)" style="padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;margin-right:8px;">Retour</button>
+        <button onclick="document.getElementById('channexModal').remove()" style="padding:8px 20px;border-radius:8px;border:none;background:#1A7A5E;color:#fff;font-size:13px;cursor:pointer;">Fermer</button>
+      </div>
+    `;
   }
 }
 
