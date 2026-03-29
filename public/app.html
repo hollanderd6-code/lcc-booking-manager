@@ -2785,11 +2785,12 @@ window.openChecklistsKpiModal = function() {
           + '</div></div>';
       }).join('') + '</div>';
   }
+  hideFab();
   modal.style.display = 'flex';
 };
 window.closeChecklistsKpiModal = function() {
   var m = document.getElementById('checklistsKpiModal');
-  if (m) m.style.display = 'none';
+  if (m) { m.style.display = 'none'; showFab(); }
 };
 </script>
 <section class="kpi-grid">
@@ -4973,6 +4974,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }).join('');
     }
 
+    hideFab();
     modal.style.display = 'flex';
   };
 
@@ -5019,6 +5021,9 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   }
 
   // ---------- Top risks KPI ----------
+  function hideFab() { var f = document.getElementById('fabAddResa'); if (f) f.style.display = 'none'; }
+  function showFab() { var f = document.getElementById('fabAddResa'); if (f) f.style.display = ''; }
+
   function ensureGenericModal(modalId, titleText) {
   if (document.getElementById(modalId)) return;
 
@@ -5036,7 +5041,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   `;
   document.body.appendChild(modal);
 
-  const close = () => { modal.style.display = 'none'; };
+  const close = () => { modal.style.display = 'none'; showFab(); };
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
   document.getElementById(modalId + 'Close').addEventListener('click', close);
 }
@@ -5143,6 +5148,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         renderList(outRows, "Départs", "fa-right-from-bracket");
     }
 
+    hideFab();
     modal.style.display = 'flex';
   }
 
@@ -5216,6 +5222,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }).join('');
     }
 
+    hideFab();
     modal.style.display = 'flex';
   }
 
@@ -8858,11 +8865,12 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
             contentEl.innerHTML = html;
           }
 
+          hideFab();
           modal.style.display = 'flex';
         }
 
         function closeModal() {
-          modal.style.display = 'none';
+          modal.style.display = 'none'; showFab();
         }
 
         kpiCard.addEventListener('click', openModal);
@@ -8922,11 +8930,12 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
             });
           }
 
+          hideFab();
           modal.style.display = 'flex';
         }
 
         function closeModal() {
-          modal.style.display = 'none';
+          modal.style.display = 'none'; showFab();
         }
 
         kpiCard.addEventListener('click', openModal);
@@ -8964,6 +8973,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 
         async function openModal() {
           contentEl.innerHTML = '<p style="padding:16px 0;opacity:.7;">Chargement...</p>';
+          hideFab();
           modal.style.display = 'flex';
 
           try {
@@ -9055,7 +9065,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
         }
 
         function closeModal() {
-          modal.style.display = 'none';
+          modal.style.display = 'none'; showFab();
         }
 
         kpiCard.addEventListener('click', openModal);
