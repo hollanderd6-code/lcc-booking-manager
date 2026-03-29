@@ -4932,7 +4932,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         + '<div id="caKpiModalContent" style="overflow-y:auto;padding:8px 20px 40px;"></div>'
         + '</div>';
       document.body.appendChild(m);
-      var close = function() { m.style.display = 'none'; };
+      var close = function() { m.style.display = 'none'; window.showFab(); };
       m.addEventListener('click', function(e) { if (e.target === m) close(); });
       document.getElementById('caKpiModalClose').addEventListener('click', close);
     }
@@ -5497,7 +5497,7 @@ window.LCC_PROPERTIES = properties;
               '</div>';
             }).join('') : '<div style="opacity:.8;padding:20px;text-align:center;">Aucun risque détecté pour les réservations à venir.</div>';
           }
-          if (modal) { modal.style.display='flex'; modal.classList.add('active'); document.body.style.overflow='hidden'; }
+          if (modal) { window.hideFab(); modal.style.display='flex'; document.body.style.overflow='hidden'; }
         };
       }
       // Charger les cautions pour la KPI
