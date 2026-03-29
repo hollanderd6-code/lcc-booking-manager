@@ -7043,12 +7043,7 @@ function riskColor(level) {
       modal.style.display = 'flex';
       
       if (startDate) startDate.value = date;
-      if (endDate) {
-        // Date de fin = jour suivant par défaut
-        var d = new Date(date);
-        d.setDate(d.getDate() + 1);
-        endDate.value = d.toISOString().slice(0, 10);
-      }
+      if (endDate) endDate.value = date;
       
       if (propertySelect && propertyId) {
         console.log('🎯 Tentative de pré-sélection:', propertyId);
@@ -9360,11 +9355,7 @@ html[data-theme-v3="1"] .sidebar .nav-section {
       // Dates par défaut : aujourd\'hui si vide
       const today = new Date().toISOString().slice(0, 10);
       if (startInput && !startInput.value) startInput.value = today;
-      if (endInput && !endInput.value) {
-        var d2 = new Date(today);
-        d2.setDate(d2.getDate() + 1);
-        endInput.value = d2.toISOString().slice(0, 10);
-      }
+      if (endInput && !endInput.value) { var tom = new Date(); tom.setDate(tom.getDate() + 1); endInput.value = tom.toISOString().slice(0, 10); }
 
       modal.style.display = 'flex';
       modal.classList.add('active');
