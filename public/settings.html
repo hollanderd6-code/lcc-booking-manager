@@ -2135,12 +2135,52 @@ function insertVariable(textareaId, variable, event) {
 <div class="form-group">
   <label>
     <i class="fas fa-plug" style="color:#1A7A5E;"></i>
-    <span>Synchronisation des plateformes</span>
+    <span>Association Channex</span>
   </label>
-  <div style="background:#e8f5f1;border:1.5px solid rgba(26,122,94,0.2);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
-    <i class="fas fa-info-circle" style="color:#1A7A5E;font-size:16px;flex-shrink:0;"></i>
-    <div style="font-size:13px;color:#374151;line-height:1.5;">
-      La synchronisation Airbnb, Booking.com et Expedia se gère depuis la fiche du logement via le bouton <strong>"Connecter mes plateformes"</strong>.
+
+  <!-- Statut actuel -->
+  <div id="channexStatus" style="background:#e8f5f1;border:1.5px solid rgba(26,122,94,0.2);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;">
+      <span id="channexStatusDot" style="width:8px;height:8px;border-radius:50%;background:#9ca3af;flex-shrink:0;display:inline-block;"></span>
+      <span id="channexStatusText">Non associé</span>
+    </div>
+    <button type="button" id="btnToggleChannexSelector" onclick="toggleChannexSelector()" style="font-size:12px;padding:5px 12px;background:white;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;color:#374151;font-weight:600;">
+      Associer / Changer
+    </button>
+  </div>
+
+  <!-- Sélecteur (caché par défaut) -->
+  <div id="channexSelectorPanel" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;">
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Sélectionnez la propriété Channex correspondante à ce logement :</p>
+
+    <div class="form-group" style="margin-bottom:10px;">
+      <label style="font-size:12px;font-weight:600;color:#374151;">Propriété Channex</label>
+      <select id="channexPropertySelect" onchange="onChannexPropertyChange()" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+        <option value="">-- Chargement... --</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:10px;" id="channexRoomTypeGroup" style="display:none;">
+      <label style="font-size:12px;font-weight:600;color:#374151;">Room Type</label>
+      <select id="channexRoomTypeSelect" onchange="onChannexRoomTypeChange()" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+        <option value="">-- Sélectionnez une propriété d'abord --</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;" id="channexRatePlanGroup" style="display:none;">
+      <label style="font-size:12px;font-weight:600;color:#374151;">Rate Plan</label>
+      <select id="channexRatePlanSelect" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+        <option value="">-- Sélectionnez un room type d'abord --</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button type="button" onclick="applyChannexLink()" style="flex:1;padding:9px;background:#1A7A5E;color:white;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;">
+        <i class="fas fa-link"></i> Associer
+      </button>
+      <button type="button" onclick="toggleChannexSelector()" style="padding:9px 14px;background:white;border:1px solid #e5e7eb;border-radius:9px;font-size:13px;cursor:pointer;color:#374151;">
+        Annuler
+      </button>
     </div>
   </div>
 </div>
@@ -3399,4 +3439,142 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAirbnbAccounts();
     loadPlatformIds();
   });
+</script>
+<script>
+// ── Channex Property Selector ──────────────────────────────
+let _channexPropertiesCache = null;
+let _currentEditingPropertyId = null;
+
+function initChannexSelector(propertyData) {
+  _currentEditingPropertyId = propertyData?.id || null;
+  const dot  = document.getElementById('channexStatusDot');
+  const text = document.getElementById('channexStatusText');
+  if (propertyData?.channex_enabled && propertyData?.channex_property_id) {
+    if (dot)  dot.style.background = '#16a34a';
+    if (text) text.textContent = 'Synchronisation OTA active';
+  } else {
+    if (dot)  dot.style.background = '#9ca3af';
+    if (text) text.textContent = 'Non associé à Channex';
+  }
+  const panel = document.getElementById('channexSelectorPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+async function toggleChannexSelector() {
+  const panel = document.getElementById('channexSelectorPanel');
+  if (!panel) return;
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    await loadChannexPropertiesList();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+async function loadChannexPropertiesList() {
+  const sel = document.getElementById('channexPropertySelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Chargement...</option>';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!_channexPropertiesCache) {
+      const res = await fetch('/api/channex/list-properties', { headers: { 'Authorization': 'Bearer ' + token } });
+      _channexPropertiesCache = await res.json();
+    }
+    const props = _channexPropertiesCache;
+    if (!Array.isArray(props) || !props.length) {
+      sel.innerHTML = '<option value="">Aucune propriété Channex trouvée</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">-- Choisir une propriété --</option>'
+      + props.map(p => `<option value="${p.id}">${p.name}${p.city ? ' · ' + p.city : ''}</option>`).join('');
+    document.getElementById('channexRoomTypeGroup').style.display = 'none';
+    document.getElementById('channexRatePlanGroup').style.display = 'none';
+  } catch(e) {
+    sel.innerHTML = '<option value="">Erreur de chargement</option>';
+  }
+}
+
+async function onChannexPropertyChange() {
+  const channexPropId = document.getElementById('channexPropertySelect').value;
+  const rtSel   = document.getElementById('channexRoomTypeSelect');
+  const rtGroup = document.getElementById('channexRoomTypeGroup');
+  const rpGroup = document.getElementById('channexRatePlanGroup');
+  if (!channexPropId) { rtGroup.style.display = 'none'; rpGroup.style.display = 'none'; return; }
+  rtSel.innerHTML = '<option value="">Chargement...</option>';
+  rtGroup.style.display = 'block';
+  rpGroup.style.display = 'none';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/channex/room-types/' + channexPropId, { headers: { 'Authorization': 'Bearer ' + token } });
+    const roomTypes = await res.json();
+    rtSel.innerHTML = '<option value="">-- Choisir un room type --</option>'
+      + roomTypes.map(rt => `<option value="${rt.id}">${rt.name}</option>`).join('');
+  } catch(e) {
+    rtSel.innerHTML = '<option value="">Erreur de chargement</option>';
+  }
+}
+
+async function onChannexRoomTypeChange() {
+  const rtId    = document.getElementById('channexRoomTypeSelect').value;
+  const rpSel   = document.getElementById('channexRatePlanSelect');
+  const rpGroup = document.getElementById('channexRatePlanGroup');
+  if (!rtId) { rpGroup.style.display = 'none'; return; }
+  rpSel.innerHTML = '<option value="">Chargement...</option>';
+  rpGroup.style.display = 'block';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/channex/rate-plans/' + rtId, { headers: { 'Authorization': 'Bearer ' + token } });
+    const ratePlans = await res.json();
+    rpSel.innerHTML = '<option value="">-- Choisir un rate plan --</option>'
+      + ratePlans.map(rp => `<option value="${rp.id}">${rp.name}</option>`).join('');
+  } catch(e) {
+    rpSel.innerHTML = '<option value="">Erreur de chargement</option>';
+  }
+}
+
+async function applyChannexLink() {
+  const channexPropertyId = document.getElementById('channexPropertySelect').value;
+  const channexRoomTypeId = document.getElementById('channexRoomTypeSelect').value;
+  const channexRatePlanId = document.getElementById('channexRatePlanSelect').value;
+  if (!channexPropertyId || !channexRoomTypeId || !channexRatePlanId) {
+    alert('Veuillez sélectionner une propriété, un room type et un rate plan.');
+    return;
+  }
+  if (!_currentEditingPropertyId) { alert('Erreur : aucun logement en cours d\'édition.'); return; }
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/channex/link-property', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        property_id:         _currentEditingPropertyId,
+        channex_property_id: channexPropertyId,
+        channex_room_type_id: channexRoomTypeId,
+        channex_rate_plan_id: channexRatePlanId
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    const dot  = document.getElementById('channexStatusDot');
+    const text = document.getElementById('channexStatusText');
+    if (dot)  dot.style.background = '#16a34a';
+    if (text) text.textContent = 'Synchronisation OTA active';
+    document.getElementById('channexSelectorPanel').style.display = 'none';
+    alert('✅ ' + data.message);
+  } catch(e) {
+    alert('Erreur : ' + e.message);
+  }
+}
+
+// Hook sur editProperty pour initialiser le sélecteur
+document.addEventListener('DOMContentLoaded', function() {
+  const orig = window.editProperty;
+  if (typeof orig === 'function') {
+    window.editProperty = function(propertyData) {
+      orig(propertyData);
+      setTimeout(() => initChannexSelector(propertyData), 150);
+    };
+  }
+});
 </script>
