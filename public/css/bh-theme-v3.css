@@ -1503,7 +1503,7 @@ html[data-theme-v3="1"] .calendar-cell.today { background: rgba(26,122,94,.05) !
 /* Booking blocks */
 html[data-theme-v3="1"] .booking-block {
   position: absolute !important;
-  top: 0 !important; bottom: 0 !important;
+  top: 4px !important; bottom: 4px !important;
   left: 0 !important; right: 0 !important;
   border-radius: 0 !important;
   padding: 0 7px !important;
@@ -1519,14 +1519,26 @@ html[data-theme-v3="1"] .booking-block {
 }
 
 html[data-theme-v3="1"] .booking-block:hover { filter: brightness(1.08) !important; }
-html[data-theme-v3="1"] .booking-block.start { border-radius: 999px 0 0 999px !important; top: 4px !important; bottom: 4px !important; left: 4px !important; right: -1px !important; }
-html[data-theme-v3="1"] .booking-block.end { border-radius: 0 999px 999px 0 !important; top: 4px !important; bottom: 4px !important; left: -1px !important; right: -10px !important; }
-html[data-theme-v3="1"] .booking-block.single { border-radius: 999px !important; top: 4px !important; bottom: 4px !important; left: 4px !important; right: -10px !important; }
-html[data-theme-v3="1"] .booking-block:not(.single):not(.start):not(.end) { top: 0 !important; bottom: 0 !important; left: -1px !important; right: -1px !important; border-radius: 0 !important; }
+html[data-theme-v3="1"] .booking-block.start { border-radius: 999px 0 0 999px !important; left: 4px !important; right: -1px !important; }
+html[data-theme-v3="1"] .booking-block.end { border-radius: 0 999px 999px 0 !important; left: -1px !important; right: -10px !important; }
+html[data-theme-v3="1"] .booking-block.single { border-radius: 999px !important; left: 4px !important; right: -10px !important; }
+html[data-theme-v3="1"] .booking-block:not(.single):not(.start):not(.end) { left: -1px !important; right: -1px !important; border-radius: 0 !important; }
 
-/* Masquer les bordures sous les blocs pour une barre continue */
+/* Masquer les bordures sous les blocs — pseudo element par-dessus */
 html[data-theme-v3="1"] .calendar-cell:has(.booking-block) { border-right-color: transparent !important; }
 html[data-theme-v3="1"] .calendar-cell:has(.booking-block.single) { border-right-color: transparent !important; }
+
+/* Couvrir la bordure avec un pseudo element de la couleur du fond */
+html[data-theme-v3="1"] .calendar-cell:has(.booking-block):not(:has(.booking-block.end)):not(:has(.booking-block.single))::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important; bottom: 0 !important;
+  right: -1px !important;
+  width: 3px !important;
+  background: inherit !important;
+  z-index: 4 !important;
+  pointer-events: none !important;
+}
 
 html[data-theme-v3="1"] .booking-block.airbnb  { background: linear-gradient(90deg,#FF5A5F,#E84C50) !important; }
 html[data-theme-v3="1"] .booking-block.booking { background: linear-gradient(90deg,#003580,#00224F) !important; }
