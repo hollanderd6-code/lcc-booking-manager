@@ -22181,9 +22181,13 @@ app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
       : 'https://staging.channex.io';
 
     // URL correcte avec app_mode=headless pour bypasser la page de login
-    // Filtrer sur les plateformes proposées aux clients (Airbnb, Booking, Expedia, VRBO/Abritel)
+    // Le client choisit sa plateforme en amont, on pré-filtre l'iframe dessus
     const allowedChannels = 'ABB,BDC,EXP,VRB';
-    const iframe_url = `${baseUrl}/auth/exchange?oauth_session_key=${token}&app_mode=headless&redirect_to=/channels&property_id=${property.channex_property_id}&lng=fr&channels_filter=${allowedChannels}&available_channels=${allowedChannels}`;
+    const { channel_code } = req.body;
+    const channelFilter = (channel_code && ['ABB','BDC','EXP','VRB'].includes(channel_code))
+      ? channel_code
+      : allowedChannels;
+    const iframe_url = `${baseUrl}/auth/exchange?oauth_session_key=${token}&app_mode=headless&redirect_to=/channels/new&property_id=${property.channex_property_id}&lng=fr&channels_filter=${channelFilter}&available_channels=${channelFilter}`;
 
     res.json({
       success: true,
