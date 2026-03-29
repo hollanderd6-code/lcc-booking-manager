@@ -22187,7 +22187,9 @@ app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
     const channelFilter = (channel_code && ['ABB','BDC','EXP','VRB'].includes(channel_code))
       ? channel_code
       : allowedChannels;
-    const iframe_url = `${baseUrl}/auth/exchange?oauth_session_key=${token}&app_mode=headless&redirect_to=/channels/new&property_id=${property.channex_property_id}&lng=fr&channels_filter=${channelFilter}&available_channels=${channelFilter}`;
+    // redirect_to=/channels est la seule URL supportée par Channex en mode headless.
+    // Le paramètre "channels=CODE" (sans _filter) ouvre directement le formulaire de création pour ce canal.
+    const iframe_url = `${baseUrl}/auth/exchange?oauth_session_key=${token}&app_mode=headless&redirect_to=/channels&property_id=${property.channex_property_id}&lng=fr&channels=${channelFilter}`;
 
     res.json({
       success: true,
