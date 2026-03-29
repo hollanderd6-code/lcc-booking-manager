@@ -2785,12 +2785,12 @@ window.openChecklistsKpiModal = function() {
           + '</div></div>';
       }).join('') + '</div>';
   }
-  hideFab();
+  window.hideFab();
   modal.style.display = 'flex';
 };
 window.closeChecklistsKpiModal = function() {
   var m = document.getElementById('checklistsKpiModal');
-  if (m) { m.style.display = 'none'; showFab(); }
+  if (m) { m.style.display = 'none'; window.showFab(); }
 };
 </script>
 <section class="kpi-grid">
@@ -4974,7 +4974,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }).join('');
     }
 
-    hideFab();
+    window.hideFab();
     modal.style.display = 'flex';
   };
 
@@ -5021,16 +5021,18 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   }
 
   // ---------- Top risks KPI ----------
-  function hideFab() { var f = document.getElementById('fabAddResa'); if (f) f.style.setProperty('display', 'none', 'important'); }
-  function showFab() {
+  window.hideFab = function() { var f = document.getElementById('fabAddResa'); if (f) f.style.setProperty('display', 'none', 'important'); };
+  window.showFab = function() {
     try {
       var u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
       var isCleaner = u.role === 'cleaner' && localStorage.getItem('lcc_account_type') === 'sub';
-      if (isCleaner) return; // ne pas montrer le FAB pour les cleaners
+      if (isCleaner) return;
     } catch(e) {}
     var f = document.getElementById('fabAddResa');
-    if (f) f.style.setProperty('display', 'flex', 'important');
-  }
+    if (f) f.style.removeProperty('display');
+  };
+  function hideFab() { window.hideFab(); }
+  function showFab() { window.showFab(); }
 
   function ensureGenericModal(modalId, titleText) {
   if (document.getElementById(modalId)) return;
@@ -5049,7 +5051,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   `;
   document.body.appendChild(modal);
 
-  const close = () => { modal.style.display = 'none'; showFab(); };
+  const close = () => { modal.style.display = 'none'; window.showFab(); };
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
   document.getElementById(modalId + 'Close').addEventListener('click', close);
 }
@@ -5156,7 +5158,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         renderList(outRows, "Départs", "fa-right-from-bracket");
     }
 
-    hideFab();
+    window.hideFab();
     modal.style.display = 'flex';
   }
 
@@ -5230,7 +5232,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }).join('');
     }
 
-    hideFab();
+    window.hideFab();
     modal.style.display = 'flex';
   }
 
@@ -8873,12 +8875,12 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
             contentEl.innerHTML = html;
           }
 
-          hideFab();
+          window.hideFab();
           modal.style.display = 'flex';
         }
 
         function closeModal() {
-          modal.style.display = 'none'; showFab();
+          modal.style.display = 'none'; window.showFab();
         }
 
         kpiCard.addEventListener('click', openModal);
@@ -8938,12 +8940,12 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
             });
           }
 
-          hideFab();
+          window.hideFab();
           modal.style.display = 'flex';
         }
 
         function closeModal() {
-          modal.style.display = 'none'; showFab();
+          modal.style.display = 'none'; window.showFab();
         }
 
         kpiCard.addEventListener('click', openModal);
@@ -8981,7 +8983,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
 
         async function openModal() {
           contentEl.innerHTML = '<p style="padding:16px 0;opacity:.7;">Chargement...</p>';
-          hideFab();
+          window.hideFab();
           modal.style.display = 'flex';
 
           try {
@@ -9073,7 +9075,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
         }
 
         function closeModal() {
-          modal.style.display = 'none'; showFab();
+          modal.style.display = 'none'; window.showFab();
         }
 
         kpiCard.addEventListener('click', openModal);
