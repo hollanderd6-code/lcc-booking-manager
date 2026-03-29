@@ -1064,11 +1064,7 @@ function renderProperties() {
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border-radius:8px;border:1px solid #b8ddd4;">
               <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
               <span style="font-size:11px;font-weight:600;color:#1A7A5E;">Synchronisation OTA active</span>
-              <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" data-channex-enabled="true" style="margin-left:auto;font-size:10px;color:#1A7A5E;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">Gérer</button>
-            </div>` : `
-            <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-              <i class="fas fa-plug"></i> Connecter Airbnb · Booking · Expedia
-            </button>`}
+            </div>` : ''}
             <!-- Actions -->
             <div class="property-actions">
               <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
@@ -1126,13 +1122,6 @@ function renderProperties() {
     });
   });
 
-  grid.querySelectorAll(".btn-channex-manage").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-id");
-      const name = btn.getAttribute("data-name");
-      openChannexModal(id, name, true);
-    });
-  });
 }
 // Render a filtered subset of properties (preserves add card)
 function renderPropertiesFiltered(filteredProps) {
@@ -1196,11 +1185,7 @@ function renderPropertiesFiltered(filteredProps) {
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border-radius:8px;border:1px solid #b8ddd4;">
             <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
             <span style="font-size:11px;font-weight:600;color:#1A7A5E;">Synchronisation OTA active</span>
-            <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" data-channex-enabled="true" style="margin-left:auto;font-size:10px;color:#1A7A5E;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">Gérer</button>
-          </div>` : `
-          <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <i class="fas fa-plug"></i> Connecter Airbnb · Booking · Expedia
-          </button>`}
+          </div>` : ''}
           <div class="property-actions">
             <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
             <button type="button" class="btn btn-jade btn-edit" data-id="${escapeHtml(id)}">Gérer</button>
@@ -1229,10 +1214,7 @@ function renderPropertiesFiltered(filteredProps) {
   grid.querySelectorAll(".btn-channex-connect").forEach(btn => {
     btn.addEventListener("click", () => openChannexModal(btn.getAttribute("data-id"), btn.getAttribute("data-name"), false));
   });
-  grid.querySelectorAll(".btn-channex-manage").forEach(btn => {
-    btn.addEventListener("click", () => openChannexModal(btn.getAttribute("data-id"), btn.getAttribute("data-name"), true));
-  });
-}
+  }
 
 // Gérer le clic sur les boutons de réorganisation
 document.addEventListener('click', async function(e) {
