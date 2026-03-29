@@ -1444,55 +1444,40 @@ html[data-theme-v3="1"] .sidebar {
   Les règles s'appliquent dans l'ordre de priorité. Les prix manuels (clic calendrier) ont toujours la priorité.
 </small>
 
-<!-- ✅ SECTION : CONNEXION OTA IDs -->
+<!-- ✅ SECTION : CONNEXION OTA -->
 <div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-plug"></i>
   <h3>Connexion OTA</h3>
 </div>
-<p style="font-size:12px;color:#6b7280;margin-bottom:16px;line-height:1.5;">
-  Renseignez les identifiants de vos annonces sur chaque plateforme pour activer la synchronisation des réservations.
-</p>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
-  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <div style="width:28px;height:28px;border-radius:8px;background:#FF5A5F20;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:14px;"></i>
-      </div>
-      <span style="font-size:13px;font-weight:700;color:#111827;">Airbnb</span>
+<div id="otaStatusBlock" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:16px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+    <div id="otaStatusDot" style="width:9px;height:9px;border-radius:50%;background:#d1d5db;flex-shrink:0;"></div>
+    <div>
+      <div id="otaStatusText" style="font-size:13px;font-weight:600;color:#374151;">Non connecté</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:1px;">Connectez vos plateformes pour recevoir les réservations en temps réel</div>
     </div>
-    <input id="propertyAirbnbId" placeholder="Ex: 12345678" type="text" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
-    <small style="display:block;margin-top:6px;font-size:11px;color:#9ca3af;">Profil Airbnb → Annonces → ID de l'annonce</small>
   </div>
-  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <div style="width:28px;height:28px;border-radius:8px;background:#00358015;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="fas fa-building" style="color:#003580;font-size:13px;"></i>
-      </div>
-      <span style="font-size:13px;font-weight:700;color:#111827;">Booking.com</span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:#fff;border:1px solid #f0e8e8;border-radius:7px;">
+      <i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:13px;"></i>
+      <span style="font-size:11px;font-weight:600;color:#333;">Airbnb</span>
     </div>
-    <input id="propertyBookingId" placeholder="Ex: 12345678" type="text" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
-    <small style="display:block;margin-top:6px;font-size:11px;color:#9ca3af;">Extranet Booking → Hébergement → Informations</small>
-  </div>
-  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <div style="width:28px;height:28px;border-radius:8px;background:#0096D615;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="fas fa-home" style="color:#0096D6;font-size:13px;"></i>
-      </div>
-      <span style="font-size:13px;font-weight:700;color:#111827;">Abritel / VRBO</span>
+    <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:#fff;border:1px solid #d9e4f7;border-radius:7px;">
+      <i class="fas fa-building" style="color:#003580;font-size:11px;"></i>
+      <span style="font-size:11px;font-weight:600;color:#333;">Booking.com</span>
     </div>
-    <input id="propertyAbritelId" placeholder="Ex: 987654" type="text" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
-    <small style="display:block;margin-top:6px;font-size:11px;color:#9ca3af;">Visible dans l'URL de votre annonce</small>
-  </div>
-  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <div style="width:28px;height:28px;border-radius:8px;background:#FFC72C20;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="fas fa-plane" style="color:#D97706;font-size:13px;"></i>
-      </div>
-      <span style="font-size:13px;font-weight:700;color:#111827;">Expedia</span>
+    <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:#fff;border:1px solid #d0e4f5;border-radius:7px;">
+      <i class="fas fa-plane" style="color:#1B5E96;font-size:11px;"></i>
+      <span style="font-size:11px;font-weight:600;color:#333;">Expedia</span>
     </div>
-    <input id="propertyExpediaId" placeholder="Ex: 56789" type="text" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
-    <small style="display:block;margin-top:6px;font-size:11px;color:#9ca3af;">Expedia Partner Central → Propriété</small>
+    <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:#fff;border:1px solid #cfe1f4;border-radius:7px;">
+      <i class="fas fa-home" style="color:#1C61A5;font-size:11px;"></i>
+      <span style="font-size:11px;font-weight:600;color:#333;">Abritel / VRBO</span>
+    </div>
   </div>
+  <button id="otaConnectBtn" type="button" onclick="openOtaFromSettings()" style="width:100%;padding:9px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+    <i class="fas fa-plug"></i> <span id="otaConnectBtnLabel">Connecter mes plateformes</span>
+  </button>
 </div>
 
 <!-- ✅ SECTION : LIVRET D'ACCUEIL -->
@@ -2467,10 +2452,10 @@ function insertVariable(textareaId, variable, event) {
       bedrooms: document.getElementById('propertyBedrooms')?.value || null,
       beds: document.getElementById('propertyBeds')?.value || null,
       bathrooms: document.getElementById('propertyBathrooms')?.value || null,
-      airbnb_id: document.getElementById('propertyAirbnbId')?.value.trim() || null,
-      booking_id: document.getElementById('propertyBookingId')?.value.trim() || null,
-      abritel_id: document.getElementById('propertyAbritelId')?.value.trim() || null,
-      expedia_id: document.getElementById('propertyExpediaId')?.value.trim() || null,
+      airbnb_id: null,
+      booking_id: null,
+      abritel_id: null,
+      expedia_id: null,
       channex_property_id: document.getElementById('propertyChannexId')?.value.trim() || null
     };
   };
@@ -2489,16 +2474,8 @@ function insertVariable(textareaId, variable, event) {
         arrivalMessageField.value = propertyData.arrival_message;
       }
 
-      // ✅ CHARGER LES IDENTIFIANTS PLATEFORMES
-      const fAirbnb = document.getElementById('propertyAirbnbId');
-      const fBooking = document.getElementById('propertyBookingId');
-      const fAbritel = document.getElementById('propertyAbritelId');
-      const fExpedia = document.getElementById('propertyExpediaId');
+      // ✅ CHARGER L'ID CHANNEX (usage interne admin)
       const fChannex = document.getElementById('propertyChannexId');
-      if (fAirbnb) fAirbnb.value = propertyData.airbnb_id || '';
-      if (fBooking) fBooking.value = propertyData.booking_id || '';
-      if (fAbritel) fAbritel.value = propertyData.abritel_id || '';
-      if (fExpedia) fExpedia.value = propertyData.expedia_id || '';
       if (fChannex) fChannex.value = propertyData.channex_property_id || propertyData.channexId || '';
 
       // ✅ CHARGER LES PRIX PAR NUIT
@@ -3229,12 +3206,18 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── Channex Property Selector ──────────────────────────────
 let _channexPropertiesCache = null;
 let _currentEditingPropertyId = null;
+let _currentEditingPropertyConnected = false;
+let _currentEditingPropertyName = '';
 
 function initChannexSelector(propertyData) {
   _currentEditingPropertyId = propertyData?.id || null;
+  _currentEditingPropertyConnected = !!(propertyData?.channex_enabled && propertyData?.channex_property_id);
+  _currentEditingPropertyName = propertyData?.name || propertyData?.title || 'Logement';
+
+  // Mettre à jour le statut dans le sélecteur admin
   const dot  = document.getElementById('channexStatusDot');
   const text = document.getElementById('channexStatusText');
-  if (propertyData?.channex_enabled && propertyData?.channex_property_id) {
+  if (_currentEditingPropertyConnected) {
     if (dot)  dot.style.background = '#16a34a';
     if (text) text.textContent = 'Synchronisation OTA active';
   } else {
@@ -3243,6 +3226,31 @@ function initChannexSelector(propertyData) {
   }
   const panel = document.getElementById('channexSelectorPanel');
   if (panel) panel.style.display = 'none';
+
+  // Mettre à jour le bloc OTA dans le formulaire
+  const otaDot = document.getElementById('otaStatusDot');
+  const otaText = document.getElementById('otaStatusText');
+  const otaBtn = document.getElementById('otaConnectBtn');
+  const otaBtnLabel = document.getElementById('otaConnectBtnLabel');
+  if (_currentEditingPropertyConnected) {
+    if (otaDot) { otaDot.style.background = '#1A7A5E'; }
+    if (otaText) { otaText.style.color = '#1A7A5E'; otaText.textContent = 'Plateformes connectées'; }
+    if (otaBtnLabel) otaBtnLabel.textContent = 'Gérer mes plateformes';
+    if (otaBtn) otaBtn.style.background = '#1A7A5E';
+  } else {
+    if (otaDot) { otaDot.style.background = '#d1d5db'; }
+    if (otaText) { otaText.style.color = '#374151'; otaText.textContent = 'Non connecté'; }
+    if (otaBtnLabel) otaBtnLabel.textContent = 'Connecter mes plateformes';
+    if (otaBtn) otaBtn.style.background = 'linear-gradient(135deg,#1A7A5E,#2AAE86)';
+  }
+}
+
+// Appelé depuis le bouton OTA dans le panneau d'édition
+function openOtaFromSettings() {
+  if (!_currentEditingPropertyId) return;
+  if (typeof openChannexModal === 'function') {
+    openChannexModal(_currentEditingPropertyId, _currentEditingPropertyName, _currentEditingPropertyConnected);
+  }
 }
 
 async function toggleChannexSelector() {
