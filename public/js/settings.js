@@ -1061,10 +1061,11 @@ function renderProperties() {
             </div>
             <!-- OTA status -->
             ${p.channexEnabled ? `
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border-radius:8px;border:1px solid #b8ddd4;">
+            <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border:1px solid #b8ddd4;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left;">
               <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
-              <span style="font-size:11px;font-weight:600;color:#1A7A5E;">Synchronisation OTA active</span>
-            </div>` : `
+              <span style="font-size:11px;font-weight:600;color:#1A7A5E;flex:1;">Synchronisation OTA active</span>
+              <i class="fas fa-cog" style="font-size:11px;color:#1A7A5E;opacity:.7;"></i>
+            </button>` : `
             <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fas fa-plug"></i> Connecter mes plateformes
             </button>`}
@@ -1192,10 +1193,11 @@ function renderPropertiesFiltered(filteredProps) {
             <div class="prop-stat"><div class="prop-stat-val" style="color:#1A7A5E;">${depositShort}</div><div class="prop-stat-label">Caution</div></div>
           </div>
           ${p.channexEnabled ? `
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border-radius:8px;border:1px solid #b8ddd4;">
+          <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border:1px solid #b8ddd4;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left;">
             <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
-            <span style="font-size:11px;font-weight:600;color:#1A7A5E;">Synchronisation OTA active</span>
-          </div>` : `
+            <span style="font-size:11px;font-weight:600;color:#1A7A5E;flex:1;">Synchronisation OTA active</span>
+            <i class="fas fa-cog" style="font-size:11px;color:#1A7A5E;opacity:.7;"></i>
+          </button>` : `
           <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fas fa-plug"></i> Connecter mes plateformes
           </button>`}
@@ -1386,168 +1388,129 @@ Il vous suffit de cliquer sur le lien, d'entrer le code PIN ainsi que vos dates 
 // 🔗 CHANNEX — Modale de connexion OTA
 // ============================================================
 
-function openChannexModal(propertyId, propertyName, isConnected) {
-  // Supprimer une modale existante
+// ── Logos des plateformes (réutilisé dans la modal) ──────────
+function _channexPlatformLogos() {
+  return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#fff8f8;border:1px solid #fde8e8;border-radius:8px;">
+      <i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:15px;"></i>
+      <span style="font-size:12px;font-weight:600;color:#333;">Airbnb</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#f0f4fc;border:1px solid #d9e4f7;border-radius:8px;">
+      <i class="fas fa-building" style="color:#003580;font-size:12px;"></i>
+      <span style="font-size:12px;font-weight:600;color:#333;">Booking.com</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#f0f6fc;border:1px solid #d0e4f5;border-radius:8px;">
+      <i class="fas fa-plane" style="color:#1B5E96;font-size:12px;"></i>
+      <span style="font-size:12px;font-weight:600;color:#333;">Expedia</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#f0f5fb;border:1px solid #cfe1f4;border-radius:8px;">
+      <i class="fas fa-home" style="color:#1C61A5;font-size:12px;"></i>
+      <span style="font-size:12px;font-weight:600;color:#333;">Abritel / VRBO</span>
+    </div>
+  </div>`;
+}
+
+// Ouvre la modal + connecte Channex si besoin + ouvre l'iframe directement
+async function openChannexModal(propertyId, propertyName, isConnected) {
   const existing = document.getElementById('channexModal');
   if (existing) existing.remove();
 
   const modal = document.createElement('div');
   modal.id = 'channexModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
 
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:620px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div style="background:#fff;border-radius:20px;padding:24px;max-width:780px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
         <div>
-          <div style="font-family:'Instrument Serif',Georgia,serif;font-size:20px;color:#0D1117;">Synchronisation OTA</div>
-          <div style="font-size:13px;color:#6B7280;margin-top:2px;">${propertyName}</div>
+          <div style="font-family:'Instrument Serif',Georgia,serif;font-size:19px;color:#0D1117;">Connecter mes plateformes</div>
+          <div style="font-size:12px;color:#6B7280;margin-top:3px;">${propertyName}</div>
         </div>
-        <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
+        <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;flex-shrink:0;margin-left:12px;">✕</button>
       </div>
-
-      <div data-channex-body>
+      <div style="margin-bottom:12px;flex-shrink:0;">${_channexPlatformLogos()}</div>
+      <div data-channex-body style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#1A7A5E;"></i>
+        <div style="margin-top:12px;color:#6B7280;font-size:13px;">${isConnected ? 'Chargement...' : 'Activation en cours...'}</div>
+      </div>
       ${isConnected ? `
-        <!-- État : connecté -->
-        <div style="background:#e8f5f1;border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
-          <div style="width:10px;height:10px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></div>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:#1A7A5E;">Synchronisation active</div>
-            <div style="font-size:12px;color:#6B7280;margin-top:2px;">Les réservations OTA arrivent en temps réel</div>
-          </div>
-        </div>
-
-        <div style="font-size:13px;color:#374151;margin-bottom:16px;">Vos plateformes (Airbnb, Booking.com, Expedia…) sont maintenant synchronisées. Les nouvelles réservations arrivent en temps réel dans Boostinghost.</div>
-
-        <div style="display:flex;gap:10px;">
-          <button onclick="channexSyncAvailability('${propertyId}')" id="btnChannexSync" style="flex:1;height:42px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;font-weight:500;cursor:pointer;">
-            <i class="fas fa-sync"></i> Sync dispos
-          </button>
-          <button onclick="openChannexIframe('${propertyId}')" style="flex:2;height:42px;border-radius:12px;border:none;background:#1A7A5E;color:white;font-size:14px;font-weight:600;cursor:pointer;">
-            <i class="fas fa-plug"></i> Gérer les plateformes
-          </button>
-        </div>
-        <button onclick="channexDisconnect('${propertyId}')" style="width:100%;margin-top:10px;height:38px;border-radius:12px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:13px;font-weight:500;cursor:pointer;">
-          Déconnecter ce logement
+      <div style="flex-shrink:0;margin-top:12px;display:flex;gap:10px;">
+        <button onclick="channexSyncAvailability('${propertyId}')" id="btnChannexSync" style="flex:1;height:38px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:12px;font-weight:500;cursor:pointer;">
+          <i class="fas fa-sync"></i> Sync disponibilités
         </button>
-      ` : `
-        <!-- État : non connecté -->
-        <div style="margin-bottom:20px;">
-          <div style="font-size:13px;color:#374151;margin-bottom:16px;">Connectez votre logement aux principales plateformes de réservation pour recevoir les réservations en temps réel.</div>
-          
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
-            ${['Airbnb','Booking.com','Expedia','VRBO','Agoda'].map(p => `
-              <div style="padding:6px 12px;background:#f3f4f6;border-radius:20px;font-size:12px;font-weight:500;color:#374151;">
-                ${p}
-              </div>
-            `).join('')}
-            <div style="padding:6px 12px;background:#f3f4f6;border-radius:20px;font-size:12px;color:#6B7280;">+45 autres</div>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:10px;">
-          <button onclick="document.getElementById('channexModal').remove()" style="flex:1;height:42px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:14px;font-weight:500;cursor:pointer;">Annuler</button>
-          <button onclick="channexConnect('${propertyId}')" id="btnChannexConnect" style="flex:2;height:42px;border-radius:12px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;font-size:14px;font-weight:600;cursor:pointer;">
-            <i class="fas fa-plug"></i> Activer la synchronisation
-          </button>
-        </div>
-      `}
-      </div>
+        <button onclick="channexDisconnect('${propertyId}')" style="flex:1;height:38px;border-radius:10px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:12px;font-weight:500;cursor:pointer;">
+          <i class="fas fa-unlink"></i> Déconnecter
+        </button>
+      </div>` : ''}
     </div>
   `;
 
-  // Fermer en cliquant sur le fond
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.remove();
-  });
-
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
+
+  // Si non connecté → activer silencieusement d'abord
+  if (!isConnected) {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const connectRes = await fetch(`${API_URL}/api/channex/connect-property`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ property_id: propertyId })
+      });
+      const connectData = await connectRes.json();
+      if (!connectRes.ok) throw new Error(connectData.error || 'Erreur activation');
+      // Recharger les cards en arrière-plan sans fermer la modal
+      loadProperties().catch(() => {});
+    } catch (e) {
+      const body = modal.querySelector('[data-channex-body]');
+      if (body) body.innerHTML = `
+        <div style="text-align:center;padding:40px;color:#dc2626;">
+          <i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:8px;display:block;"></i>
+          <div style="font-size:13px;">${e.message}</div>
+          <button onclick="document.getElementById('channexModal').remove()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;">Fermer</button>
+        </div>`;
+      return;
+    }
+  }
+
+  // Charger l'iframe OTA directement
+  await _loadChannexIframe(propertyId, modal);
 }
 
-async function openChannexIframe(propertyId) {
-  // Afficher un loader
-  const modal = document.getElementById('channexModal');
+async function _loadChannexIframe(propertyId, modal) {
   const body = modal?.querySelector('[data-channex-body]');
-  if (body) {
-    body.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:32px;color:#1A7A5E;"></i><div style="margin-top:12px;color:#6B7280;font-size:14px;">Chargement des plateformes...</div></div>';
-  }
 
   try {
     const token = localStorage.getItem('lcc_token');
     const res = await fetch(`${API_URL}/api/channex/iframe-token`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ property_id: propertyId })
     });
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur serveur');
 
-    // Remplacer le contenu par l'iFrame
     if (body) {
+      body.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;';
       body.innerHTML = `
-        <div style="font-size:13px;color:#374151;margin-bottom:12px;">
-          Connectez vos plateformes directement ci-dessous. Les réservations arriveront automatiquement dans Boostinghost.
-        </div>
-        <div style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
-          <iframe 
+        <div style="flex:1;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;min-height:0;">
+          <iframe
             src="${data.iframe_url}"
-            style="width:100%;height:600px;border:none;display:block;"
+            style="width:100%;height:100%;min-height:560px;border:none;display:block;"
             allow="same-origin"
           ></iframe>
         </div>
-        <button onclick="document.getElementById('channexModal').remove()" 
-          style="width:100%;margin-top:12px;height:42px;border-radius:12px;border:none;background:#1A7A5E;color:white;font-size:14px;font-weight:600;cursor:pointer;">
-          Fermer
-        </button>
       `;
     }
-
   } catch (e) {
     console.error('❌ [CHANNEX IFRAME]', e.message);
-    if (body) {
-      body.innerHTML = `<div style="text-align:center;padding:40px;color:#dc2626;">${e.message}</div>`;
-    }
-  }
-}
-
-async function channexConnect(propertyId) {
-  const btn = document.getElementById('btnChannexConnect');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion en cours...';
-  }
-
-  try {
-    const token = localStorage.getItem('lcc_token');
-    const res = await fetch(`${API_URL}/api/channex/connect-property`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ property_id: propertyId })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
-
-    document.getElementById('channexModal')?.remove();
-    showToast('Logement connecté ! Les réservations OTA arrivent maintenant en temps réel.', 'success');
-
-    // Recharger les propriétés pour mettre à jour le badge
-    await loadProperties();
-
-  } catch (e) {
-    console.error('❌ [CHANNEX CONNECT]', e.message);
-    showToast('Erreur : ' + e.message, 'error');
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-plug"></i> Activer la synchronisation';
-    }
+    if (body) body.innerHTML = `
+      <div style="text-align:center;padding:40px;color:#dc2626;">
+        <i class="fas fa-exclamation-circle" style="font-size:24px;margin-bottom:8px;display:block;"></i>
+        <div style="font-size:13px;">${e.message}</div>
+        <button onclick="document.getElementById('channexModal').remove()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;">Fermer</button>
+      </div>`;
   }
 }
 
