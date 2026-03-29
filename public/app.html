@@ -6294,11 +6294,123 @@ function riskColor(level) {
 
         if (!cells.length) continue;
 
-        for (var j = 0; j < cells.length; j++) {
-          var cellEl = cells[j];
-          var block = document.createElement('div');
-          var platform = normalizePlatform(b.platform, b.ota_name || b.otaName);
-          var isBlock = b.type === 'block' || b.source === 'BLOCK' || platform === 'block';
+        // ── UN SEUL BLOC par réservation ──
+        var firstCell = cells[0];
+        var lastCell  = cells[cells.length - 1];
+
+        var platform = normalizePlatform(b.platform, b.ota_name || b.otaName);
+        var isBlock  = b.type === 'block' || b.source === 'BLOCK' || platform === 'block';
+
+        var block = document.createElement('div');
+        block.className = isBlock ? 'booking-block booking-blocked' : 'booking-block ' + platform;
+        block.setAttribute('data-booking-id', b.id);
+
+        // Largeur calculée via getBoundingClientRect après rendu
+        (function(block2, firstCell2, lastCell2) {
+          function setWidth() {
+            var fr = firstCell2.getBoundingClientRect();
+            var lr = lastCell2.getBoundingClientRect();
+            if (!fr.width) return; // pas encore visible
+            // de left+4 jusqu'à right de lastCell+10 (débord checkout)
+            block2.style.width = (lr.right - fr.left - 4 + 10) + 'px';
+          }
+          requestAnimationFrame(function() {
+            setWidth();
+            // recalcul si le calendrier est redimensionné
+            window.addEventListener('resize', setWidth);
+          });
+        })(block, firstCell, lastCell);
+
+        // Contenu : dot risque + icône plateforme + nom invité
+        if (isBlock) {
+          var crossEl = document.createElement('span');
+          crossEl.innerHTML = '&#10005;';
+          crossEl.style.cssText = 'font-size:13px;font-weight:900;color:#ef4444;margin-right:4px;flex-shrink:0;';
+          block.appendChild(crossEl);
+          block.appendChild(document.createTextNode('Bloqué'));
+        } else {
+          var rawLevel = (b.riskLevel || b.riskLabel || '').toString().toLowerCase();
+          var level = 'green';
+          if (rawLevel.includes('critical') || rawLevel.includes('critique')) level = 'critical';
+          else if (rawLevel.includes('red') || rawLevel.includes('rouge') || rawLevel.includes('high') || rawLevel.includes('élev')) level = 'red';
+          else if (rawLevel.includes('orange') || rawLevel.includes('medium') || rawLevel.includes('moy')) level = 'orange';
+
+          var dot = document.createElement('span');
+          dot.style.cssText = 'width:8px;height:8px;border-radius:999px;display:inline-block;flex-shrink:0;background:' + riskColor(level) + ';';
+          block.appendChild(dot);
+
+          var iconEl;
+          if (platform === 'airbnb') {
+            iconEl = document.createElement('i');
+            iconEl.className = 'fa-brands fa-airbnb platform-icon';
+          } else if (platform === 'booking') {
+            iconEl = document.createElement('span');
+            iconEl.className = 'platform-icon booking-letter';
+            iconEl.textContent = 'B.';
+          } else if (platform === 'expedia') {
+            iconEl = document.createElement('span');
+            iconEl.className = 'platform-icon booking-letter';
+            iconEl.textContent = 'E.';
+          } else if (platform === 'vrbo') {
+            iconEl = document.createElement('span');
+            iconEl.className = 'platform-icon booking-letter';
+            iconEl.textContent = 'V.';
+          } else if (platform === 'abritel') {
+            iconEl = document.createElement('span');
+            iconEl.className = 'platform-icon booking-letter';
+            iconEl.textContent = 'Ab.';
+          } else if (platform === 'gites') {
+            iconEl = document.createElement('span');
+            iconEl.className = 'platform-icon booking-letter';
+            iconEl.textContent = 'G.';
+          } else {
+            iconEl = document.createElement('i');
+            iconEl.className = 'fas platform-icon ' + (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
+          }
+          block.appendChild(iconEl);
+
+          var guestLabel = window.cleanGuestName ? window.cleanGuestName(b, platform) : (b.guestName || 'Réservation');
+          if (platform === 'booking' && !guestLabel) guestLabel = 'Voyageur';
+          var labelEl = document.createElement('span');
+          labelEl.className = 'booking-guest-label';
+          labelEl.textContent = guestLabel;
+          block.appendChild(labelEl);
+        }
+
+        // Clic → modal réservation
+        (function(bookingData, blockEl) {
+          blockEl.addEventListener('mousedown', function(ev) {
+            if (ev.button !== 0) return;
+            ev.stopPropagation();
+            var found = null;
+            var bookings = [];
+            if (window.calendarState && Array.isArray(window.calendarState.bookings)) {
+              bookings = window.calendarState.bookings;
+            } else if (Array.isArray(window.LCC_RESERVATIONS)) {
+              bookings = window.LCC_RESERVATIONS;
+            }
+            var idStr = String(bookingData.id);
+            found = bookings.find(function(r) {
+              if (!r) return false;
+              return String(r.id) === idStr || String(r.uid) === idStr || String(r.reservationKey) === idStr;
+            });
+            if (!found) {
+              var idx = parseInt(idStr, 10);
+              if (!isNaN(idx) && bookings[idx]) found = bookings[idx];
+            }
+            if (found) {
+              window.currentBookingData = found;
+              window.currentBooking = found;
+            }
+            setTimeout(function() {
+              if (typeof window.fixModalContent === 'function') window.fixModalContent(blockEl);
+            }, 200);
+          });
+        })(b, block);
+
+        firstCell.appendChild(block);
+      }
+    }
 
           if (isBlock) {
             block.className = 'booking-block booking-blocked';
