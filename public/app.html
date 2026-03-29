@@ -2731,12 +2731,18 @@ window.openChecklistsKpiModal = function() {
   if (!document.getElementById(modalId)) {
     var m = document.createElement('div');
     m.id = modalId;
-    m.className = 'booking-modal';
-    m.innerHTML = '<div class="modal-overlay" id="' + modalId + 'Overlay"></div><div class="modal-content"><div class="modal-header"><h2>Checklists ménage en attente</h2><button class="modal-close" id="' + modalId + 'Close"><i class="fas fa-times"></i></button></div><div class="reservation-details" id="' + modalId + 'Content"></div></div>';
+    m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
+    m.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
+      + '<div style="font-size:16px;font-weight:700;color:#0D1117;">Checklists ménage en attente</div>'
+      + '<button id="checklistsKpiModalClose" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
+      + '</div>'
+      + '<div id="checklistsKpiModalContent" style="overflow-y:auto;padding:16px 20px 40px;"></div>'
+      + '</div>';
     document.body.appendChild(m);
-    var close = function() { m.classList.remove('active'); m.style.display = ''; };
-    document.getElementById(modalId + 'Overlay').addEventListener('click', close);
-    document.getElementById(modalId + 'Close').addEventListener('click', close);
+    var close = function() { m.style.display = 'none'; };
+    m.addEventListener('click', function(e) { if (e.target === m) close(); });
+    document.getElementById('checklistsKpiModalClose').addEventListener('click', close);
   }
   var modal = document.getElementById(modalId);
   var content = document.getElementById(modalId + 'Content');
@@ -2780,11 +2786,10 @@ window.openChecklistsKpiModal = function() {
       }).join('') + '</div>';
   }
   modal.style.display = 'flex';
-  modal.classList.add('active');
 };
 window.closeChecklistsKpiModal = function() {
   var m = document.getElementById('checklistsKpiModal');
-  if (m) { m.classList.remove('active'); m.style.display = ''; }
+  if (m) m.style.display = 'none';
 };
 </script>
 <section class="kpi-grid">
@@ -4910,10 +4915,10 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
 
   window.openCaKpiModal = function() {
     var mid = 'caKpiModal';
-    if (document.getElementById(mid)) document.getElementById(mid).remove();
-    var overlay = document.createElement('div');
-    overlay.id = mid;
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+    if (!document.getElementById(mid)) {
+      var overlay = document.createElement('div');
+      overlay.id = mid;
+      overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
     var now2 = new Date();
     var mNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
     var caByProp = window._kpiCaByProperty || {};
@@ -4948,8 +4953,11 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       +'</div>'
       +'<div style="overflow-y:auto;padding:8px 20px 40px;">'+listHtml+'</div>'
       +'</div>';
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.style.display='none'; });
+      document.querySelector('#caKpiModal [id$="Close"]') && document.querySelector('#caKpiModal [id$="Close"]').addEventListener('click', function(){ overlay.style.display='none'; });
+    }
+    var caModal = document.getElementById(mid);
   };
 
   // ---------- Cautions KPI ----------
@@ -5000,23 +5008,20 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
 
   const modal = document.createElement('div');
   modal.id = modalId;
-  modal.className = 'booking-modal';
+  modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
   modal.innerHTML = `
-    <div class="modal-overlay" id="${modalId}Overlay"></div>
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>${titleText}</h2>
-        <button class="modal-close" id="${modalId}Close">
-          <i class="fas fa-times"></i>
-        </button>
+    <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
+        <div style="font-size:16px;font-weight:700;color:#0D1117;">${titleText}</div>
+        <button id="${modalId}Close" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
       </div>
-      <div class="reservation-details" id="${modalId}Content"></div>
+      <div id="${modalId}Content" style="overflow-y:auto;padding:16px 20px 40px;"></div>
     </div>
   `;
   document.body.appendChild(modal);
 
-  const close = () => { modal.classList.remove('active'); modal.style.display = ''; };
-  document.getElementById(modalId + 'Overlay').addEventListener('click', close);
+  const close = () => { modal.style.display = 'none'; };
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
   document.getElementById(modalId + 'Close').addEventListener('click', close);
 }
 
@@ -5123,7 +5128,6 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     }
 
     modal.style.display = 'flex';
-    modal.classList.add('active');
   }
 
   function openCleaning48hModal(reservations) {
@@ -5197,7 +5201,6 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     }
 
     modal.style.display = 'flex';
-    modal.classList.add('active');
   }
 
   
@@ -8719,7 +8722,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
           modal.innerHTML = `
             <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
               <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
-                <div style="font-size:16px;font-weight:700;color:#0D1117;">Détail du taux d'occupation</div>
+                <div style="font-size:16px;font-weight:700;color:#0D1117;">Taux d'occupation</div>
                 <button id="closeOccupancyDetailsModal" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
               </div>
               <div id="occupancyDetailsContent" style="overflow-y:auto;padding:16px 20px 40px;"></div>
@@ -8944,7 +8947,7 @@ document.getElementById('blockSaveBtn')?.addEventListener('click', async functio
         if (!closeBtn || !contentEl) return;
 
         async function openModal() {
-          contentEl.innerHTML = '<p style="padding:16px 0;opacity:.7;">Chargement des cautions...</p>';
+          contentEl.innerHTML = '<p style="padding:16px 0;opacity:.7;">Chargement...</p>';
           modal.style.display = 'flex';
 
           try {
