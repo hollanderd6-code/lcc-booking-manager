@@ -1230,54 +1230,14 @@ html[data-theme-v3="1"] .sidebar {
     </div>
   </div>
 
-  <!-- CHANNEX — Connexion globale -->
-  <div style="margin-bottom:32px;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-      <div style="width:36px;height:36px;border-radius:9px;background:#1A7A5E20;display:flex;align-items:center;justify-content:center;">
-        <i class="fas fa-plug" style="color:#1A7A5E;font-size:16px;"></i>
-      </div>
-      <div>
-        <div style="font-size:15px;font-weight:700;color:#111827;">Channex — Channel Manager</div>
-        <div style="font-size:12px;color:#6b7280;">Toutes vos plateformes (Airbnb, Booking, Expedia, Abritel…) se connectent via Channex</div>
-      </div>
-    </div>
-    <div id="channexGlobalStatus" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
-      <span id="channexGlobalDot" style="width:10px;height:10px;border-radius:50%;background:#9ca3af;flex-shrink:0;display:inline-block;"></span>
-      <span id="channexGlobalText" style="font-size:13px;font-weight:600;color:#374151;">Vérification de la connexion Channex...</span>
-    </div>
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
-      <i class="fas fa-info-circle" style="color:#16a34a;margin-top:2px;flex-shrink:0;"></i>
-      <div style="font-size:13px;color:#15803d;line-height:1.5;">
-        Channex centralise toutes vos plateformes OTA. Connectez Airbnb, Booking.com, Expedia et Abritel directement dans votre espace Channex, puis associez chaque logement depuis la <strong>fiche du logement → Association Channex</strong>.
-        <br><a href="https://app.channex.io" target="_blank" style="color:#15803d;font-weight:600;margin-top:6px;display:inline-block;">Ouvrir Channex <i class="fas fa-external-link-alt" style="font-size:10px;"></i></a>
-      </div>
-    </div>
-    <div id="channexConnectedList" style="font-size:12px;color:#9ca3af;padding:4px 0;"></div>
-  </div>
+  <p style="font-size:13px;color:#6b7280;margin-bottom:20px;line-height:1.6;">
+    Connectez chaque logement à vos plateformes de réservation (Airbnb, Booking.com, Expedia, Abritel…) directement depuis la fiche du logement.
+  </p>
 
-  <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:24px;">
-
-  <!-- BOOKING / ABRITEL / EXPEDIA -->
-  <div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <div style="width:36px;height:36px;border-radius:9px;background:#00358020;display:flex;align-items:center;justify-content:center;">
-        <i class="fas fa-plug" style="color:#003580;font-size:15px;"></i>
-      </div>
-      <div>
-        <div style="font-size:15px;font-weight:700;color:#111827;">Booking.com · Abritel · Expedia</div>
-        <div style="font-size:12px;color:#6b7280;">Ces plateformes se connectent via Channex, logement par logement</div>
-      </div>
-    </div>
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:10px;">
-      <i class="fas fa-info-circle" style="color:#16a34a;margin-top:2px;flex-shrink:0;"></i>
-      <div style="font-size:13px;color:#15803d;line-height:1.5;">
-        Ouvrez la <strong>fiche du logement → Association Channex</strong> pour associer chaque logement à la bonne propriété Channex.
-      </div>
-    </div>
-
-        <!-- Liste des logements avec leurs IDs plateformes -->
-    <div id="platformIdsList" style="margin-top:16px;">
-      <div style="font-size:12px;color:#9ca3af;padding:8px 0;">Chargement des logements...</div>
+  <!-- Statut par logement -->
+  <div id="platformIdsList">
+    <div style="font-size:13px;color:#9ca3af;padding:12px 0;text-align:center;">
+      <i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Chargement...
     </div>
   </div>
 </section>
@@ -1520,10 +1480,10 @@ html[data-theme-v3="1"] .sidebar {
   <div class="form-group">
     <label for="propertyChannexId">
       <i class="fas fa-network-wired" style="color:#1A7A5E;"></i>
-      <span>ID Channex (property)</span>
+      <span>ID interne (avancé)</span>
     </label>
     <input id="propertyChannexId" placeholder="UUID Channex" type="text"/>
-    <small style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;">Disponible dans votre dashboard Channex</small>
+    <small style="display:block;margin-top:4px;font-size:11px;color:#9ca3af;">Identifiant technique optionnel</small>
   </div>
 </div>
 
@@ -2120,7 +2080,7 @@ function insertVariable(textareaId, variable, event) {
 <div class="form-group">
   <label>
     <i class="fas fa-plug" style="color:#1A7A5E;"></i>
-    <span>Association Channex</span>
+    <span>Connexion OTA</span>
   </label>
 
   <!-- Statut actuel -->
@@ -2136,10 +2096,10 @@ function insertVariable(textareaId, variable, event) {
 
   <!-- Sélecteur (caché par défaut) -->
   <div id="channexSelectorPanel" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;">
-    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Sélectionnez la propriété Channex correspondante à ce logement :</p>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Associez ce logement à l'une de vos annonces pour activer la synchronisation des réservations :</p>
 
     <div class="form-group" style="margin-bottom:10px;">
-      <label style="font-size:12px;font-weight:600;color:#374151;">Propriété Channex</label>
+      <label style="font-size:12px;font-weight:600;color:#374151;">Annonce à synchroniser</label>
       <select id="channexPropertySelect" onchange="onChannexPropertyChange()" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
         <option value="">-- Chargement... --</option>
       </select>
@@ -3396,39 +3356,6 @@ async function applyChannexLink() {
   }
 }
 
-// ── Channex Global Status ──────────────────────────────────
-async function loadChannexGlobalStatus() {
-  const token = localStorage.getItem('lcc_token');
-  const dot  = document.getElementById('channexGlobalDot');
-  const text = document.getElementById('channexGlobalText');
-  const list = document.getElementById('channexConnectedList');
-  try {
-    const res = await fetch('/api/channex/list-properties', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const props = await res.json();
-    if (Array.isArray(props) && props.length > 0) {
-      if (dot)  dot.style.background = '#16a34a';
-      if (text) text.textContent = 'Channex connecté — ' + props.length + ' propriété(s) disponible(s)';
-      if (list) list.innerHTML = props.map(p =>
-        '<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #f3f4f6;">'
-        + '<i class="fas fa-home" style="color:#1A7A5E;font-size:11px;"></i>'
-        + '<span style="font-size:12px;color:#374151;">' + p.name + (p.city ? ' · ' + p.city : '') + '</span>'
-        + '</div>'
-      ).join('');
-    } else {
-      if (dot)  dot.style.background = '#f59e0b';
-      if (text) text.textContent = 'Channex connecté mais aucune propriété trouvée';
-      if (list && list.textContent) list.textContent = '';
-    }
-  } catch(e) {
-    if (dot)  dot.style.background = '#ef4444';
-    if (text) text.textContent = 'Connexion Channex non vérifiable — vérifiez la clé API';
-  }
-  // Charger la liste des logements avec IDs plateformes
-  loadPlatformIds();
-}
-
 async function loadPlatformIds() {
   const token = localStorage.getItem('lcc_token');
   const container = document.getElementById('platformIdsList');
@@ -3439,16 +3366,16 @@ async function loadPlatformIds() {
     const props = data.properties || data || [];
     if (!props.length) { container.innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:8px 0;">Aucun logement créé.</div>'; return; }
     container.innerHTML = props.map(p => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f9fafb;border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f9fafb;border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="width:8px;height:8px;border-radius:50%;background:${p.channexEnabled ? '#16a34a' : '#d1d5db'};display:inline-block;flex-shrink:0;"></span>
           <span style="font-size:13px;font-weight:600;color:#111827;">${p.name || p.title || 'Logement'}</span>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;">
-          ${p.channexEnabled ? '<span style="color:#1A7A5E;"><i class="fas fa-plug"></i> Channex ✓</span>' : '<span style="color:#d1d5db;">Channex —</span>'}
-          ${p.booking_id ? '<span style="color:#003580;">Booking: ' + p.booking_id + '</span>' : ''}
-          ${p.abritel_id ? '<span style="color:#0096D6;">Abritel: ' + p.abritel_id + '</span>' : ''}
-          ${p.expedia_id ? '<span style="color:#D97706;">Expedia: ' + p.expedia_id + '</span>' : ''}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${p.channexEnabled
+            ? '<span style="font-size:12px;font-weight:600;color:#1A7A5E;background:#e8f5f1;padding:3px 10px;border-radius:999px;"><i class="fas fa-check-circle"></i> Synchronisation active</span>'
+            : '<span style="font-size:12px;color:#9ca3af;">Non synchronisé</span>'
+          }
         </div>
       </div>
     `).join('');
@@ -3464,7 +3391,7 @@ document.addEventListener('DOMContentLoaded', function() {
       setTimeout(() => initChannexSelector(propertyData), 150);
     };
   }
-  // Charger le statut Channex global
-  loadChannexGlobalStatus();
+  // Charger le statut des logements
+  loadPlatformIds();
 });
 </script>
