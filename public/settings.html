@@ -1230,44 +1230,29 @@ html[data-theme-v3="1"] .sidebar {
     </div>
   </div>
 
-  <!-- AIRBNB -->
+  <!-- CHANNEX — Connexion globale -->
   <div style="margin-bottom:32px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:36px;height:36px;border-radius:9px;background:#FF5A5F20;display:flex;align-items:center;justify-content:center;">
-          <i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:18px;"></i>
-        </div>
-        <div>
-          <div style="font-size:15px;font-weight:700;color:#111827;">Airbnb</div>
-          <div style="font-size:12px;color:#6b7280;">Connexion OAuth — un compte peut gérer plusieurs logements</div>
-        </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <div style="width:36px;height:36px;border-radius:9px;background:#1A7A5E20;display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-plug" style="color:#1A7A5E;font-size:16px;"></i>
       </div>
-      <button onclick="openAddAirbnbModal()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;background:#FF5A5F;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
-        <i class="fas fa-plus"></i> Ajouter un compte Airbnb
-      </button>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#111827;">Channex — Channel Manager</div>
+        <div style="font-size:12px;color:#6b7280;">Toutes vos plateformes (Airbnb, Booking, Expedia, Abritel…) se connectent via Channex</div>
+      </div>
     </div>
-
-    <!-- Table comptes Airbnb -->
-    <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead>
-          <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
-            <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;">Email</th>
-            <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;">User ID</th>
-            <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;">État</th>
-            <th style="padding:10px 16px;text-align:center;font-weight:600;color:#374151;">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="airbnbAccountsList">
-          <tr>
-            <td colspan="4" style="padding:32px;text-align:center;color:#9ca3af;">
-              <i class="fas fa-spinner fa-spin" style="font-size:20px;margin-bottom:8px;display:block;"></i>
-              Chargement des comptes...
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div id="channexGlobalStatus" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <span id="channexGlobalDot" style="width:10px;height:10px;border-radius:50%;background:#9ca3af;flex-shrink:0;display:inline-block;"></span>
+      <span id="channexGlobalText" style="font-size:13px;font-weight:600;color:#374151;">Vérification de la connexion Channex...</span>
     </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+      <i class="fas fa-info-circle" style="color:#16a34a;margin-top:2px;flex-shrink:0;"></i>
+      <div style="font-size:13px;color:#15803d;line-height:1.5;">
+        Channex centralise toutes vos plateformes OTA. Connectez Airbnb, Booking.com, Expedia et Abritel directement dans votre espace Channex, puis associez chaque logement depuis la <strong>fiche du logement → Association Channex</strong>.
+        <br><a href="https://app.channex.io" target="_blank" style="color:#15803d;font-weight:600;margin-top:6px;display:inline-block;">Ouvrir Channex <i class="fas fa-external-link-alt" style="font-size:10px;"></i></a>
+      </div>
+    </div>
+    <div id="channexConnectedList" style="font-size:12px;color:#9ca3af;padding:4px 0;"></div>
   </div>
 
   <hr style="border:none;border-top:1px solid #e5e7eb;margin-bottom:24px;">
@@ -1286,11 +1271,11 @@ html[data-theme-v3="1"] .sidebar {
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:10px;">
       <i class="fas fa-info-circle" style="color:#16a34a;margin-top:2px;flex-shrink:0;"></i>
       <div style="font-size:13px;color:#15803d;line-height:1.5;">
-        Pour connecter un logement à Booking.com, Abritel ou Expedia, ouvrez la <strong>fiche du logement</strong> → section <strong>"Identifiants plateformes"</strong> et renseignez l'ID correspondant. Channex se charge de la synchronisation.
+        Ouvrez la <strong>fiche du logement → Association Channex</strong> pour associer chaque logement à la bonne propriété Channex.
       </div>
     </div>
 
-    <!-- Liste des logements avec leurs IDs plateformes -->
+        <!-- Liste des logements avec leurs IDs plateformes -->
     <div id="platformIdsList" style="margin-top:16px;">
       <div style="font-size:12px;color:#9ca3af;padding:8px 0;">Chargement des logements...</div>
     </div>
@@ -2268,6 +2253,7 @@ function insertVariable(textareaId, variable, event) {
     })();
   </script>
 <!-- PATCH OWNER_ID désactivé : saveProperty() gère déjà ownerId via FormData -->
+<script>
 // ============================================
 // GESTION QUOTA LOGEMENTS
 // ============================================
@@ -3283,163 +3269,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 500);
 })();
 </script>
-<!-- MODAL : Ajouter compte Airbnb -->
-<div id="addAirbnbModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;">
-  <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:24px 24px 40px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <div style="font-size:16px;font-weight:700;color:#0D1117;display:flex;align-items:center;gap:8px;">
-        <i class="fa-brands fa-airbnb" style="color:#FF5A5F;"></i> Connecter un compte Airbnb
-      </div>
-      <button onclick="closeAddAirbnbModal()" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
-    </div>
-    <div style="margin-bottom:16px;">
-      <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Email du compte Airbnb</label>
-      <input id="airbnbEmail" type="email" placeholder="email@exemple.com" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
-    </div>
-    <div style="margin-bottom:20px;">
-      <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">User ID Airbnb</label>
-      <input id="airbnbUserId" type="text" placeholder="Ex: 510280927" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;box-sizing:border-box;"/>
-      <small style="font-size:11px;color:#9ca3af;margin-top:4px;display:block;">Visible dans votre profil Airbnb → URL de la page profil</small>
-    </div>
-    <button onclick="saveAirbnbAccount()" style="width:100%;padding:12px;background:#FF5A5F;color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">
-      <i class="fas fa-plug"></i> Connecter ce compte
-    </button>
-  </div>
-</div>
-
-<script>
-  // ── Airbnb accounts ──
-  function openAddAirbnbModal() {
-    document.getElementById('addAirbnbModal').style.display = 'flex';
-  }
-  function closeAddAirbnbModal() {
-    document.getElementById('addAirbnbModal').style.display = 'none';
-    document.getElementById('airbnbEmail').value = '';
-    document.getElementById('airbnbUserId').value = '';
-  }
-  document.getElementById('addAirbnbModal').addEventListener('click', function(e) {
-    if (e.target === this) closeAddAirbnbModal();
-  });
-
-  async function loadAirbnbAccounts() {
-    const token = localStorage.getItem('lcc_token');
-    const tbody = document.getElementById('airbnbAccountsList');
-    if (!token || !tbody) return;
-    try {
-      const res = await fetch('/api/airbnb-accounts', { headers: { 'Authorization': 'Bearer ' + token } });
-      const accounts = await res.json();
-      if (!accounts.length) {
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:32px;text-align:center;color:#9ca3af;">Aucun compte Airbnb connecté. Cliquez sur "+ Ajouter" pour commencer.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = accounts.map(a => `
-        <tr style="border-bottom:1px solid #f3f4f6;">
-          <td style="padding:12px 16px;color:#111827;">${a.email || '—'}</td>
-          <td style="padding:12px 16px;"><a href="https://www.airbnb.fr/users/show/${a.user_id}" target="_blank" style="color:#FF5A5F;font-weight:600;">${a.user_id}</a></td>
-          <td style="padding:12px 16px;">
-            <span style="background:${a.status === 'connected' ? '#dcfce7' : '#fee2e2'};color:${a.status === 'connected' ? '#16a34a' : '#dc2626'};padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;">
-              ${a.status === 'connected' ? 'Connecté API' : 'Déconnecté'}
-            </span>
-          </td>
-          <td style="padding:12px 16px;text-align:center;">
-            <div style="position:relative;display:inline-block;">
-              <button onclick="toggleAirbnbMenu('menu_${a.id}')" style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:#6b7280;letter-spacing:2px;">···</button>
-              <div id="menu_${a.id}" style="display:none;position:absolute;right:0;top:100%;background:white;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;min-width:200px;padding:8px 0;">
-                <button onclick="importAirbnbProperties(${a.id})" style="width:100%;padding:10px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:#111827;">Importer les appartements</button>
-                <button onclick="deleteAirbnbAccount(${a.id})" style="width:100%;padding:10px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:#dc2626;">Supprimer</button>
-                <button onclick="reconnectAirbnbAccount(${a.id})" style="width:100%;padding:10px 16px;text-align:left;background:none;border:none;cursor:pointer;font-size:14px;color:#111827;">Reconnecter le compte</button>
-              </div>
-            </div>
-          </td>
-        </tr>
-      `).join('');
-    } catch(e) {
-      tbody.innerHTML = '<tr><td colspan="4" style="padding:16px;text-align:center;color:#9ca3af;">Erreur de chargement.</td></tr>';
-    }
-  }
-
-  function toggleAirbnbMenu(id) {
-    document.querySelectorAll('[id^="menu_"]').forEach(m => { if (m.id !== id) m.style.display = 'none'; });
-    const m = document.getElementById(id);
-    if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
-  }
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('[id^="menu_"]') && !e.target.closest('button[onclick^="toggleAirbnbMenu"]')) {
-      document.querySelectorAll('[id^="menu_"]').forEach(m => m.style.display = 'none');
-    }
-  });
-
-  async function saveAirbnbAccount() {
-    const token = localStorage.getItem('lcc_token');
-    const email = document.getElementById('airbnbEmail').value.trim();
-    const userId = document.getElementById('airbnbUserId').value.trim();
-    if (!email || !userId) return alert('Veuillez remplir l\'email et le User ID.');
-    try {
-      const res = await fetch('/api/airbnb-accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ email, user_id: userId })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur');
-      closeAddAirbnbModal();
-      loadAirbnbAccounts();
-    } catch(e) { alert('Erreur : ' + e.message); }
-  }
-
-  async function deleteAirbnbAccount(id) {
-    if (!confirm('Supprimer ce compte Airbnb ?')) return;
-    const token = localStorage.getItem('lcc_token');
-    await fetch('/api/airbnb-accounts/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
-    loadAirbnbAccounts();
-  }
-
-  async function importAirbnbProperties(id) {
-    const token = localStorage.getItem('lcc_token');
-    try {
-      const res = await fetch('/api/airbnb-accounts/' + id + '/import', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
-      const data = await res.json();
-      alert(data.message || 'Import lancé !');
-    } catch(e) { alert('Erreur lors de l\'import.'); }
-  }
-
-  function reconnectAirbnbAccount(id) {
-    window.location.href = '/api/airbnb-accounts/' + id + '/reconnect';
-  }
-
-  // ── Platform IDs par logement ──
-  async function loadPlatformIds() {
-    const token = localStorage.getItem('lcc_token');
-    const container = document.getElementById('platformIdsList');
-    if (!token || !container) return;
-    try {
-      const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
-      const props = await res.json();
-      if (!props.length) { container.innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:8px 0;">Aucun logement créé.</div>'; return; }
-      container.innerHTML = props.map(p => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f9fafb;border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <i class="fas fa-home" style="color:#1A7A5E;"></i>
-            <span style="font-size:13px;font-weight:600;color:#111827;">${p.name}</span>
-          </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            ${p.booking_id ? `<span style="font-size:12px;color:#003580;"><i class="fas fa-building"></i> Booking: ${p.booking_id}</span>` : '<span style="font-size:12px;color:#d1d5db;">Booking: —</span>'}
-            ${p.abritel_id ? `<span style="font-size:12px;color:#0096D6;"><i class="fas fa-home"></i> Abritel: ${p.abritel_id}</span>` : '<span style="font-size:12px;color:#d1d5db;">Abritel: —</span>'}
-            ${p.expedia_id ? `<span style="font-size:12px;color:#FFC72C;"><i class="fas fa-plane"></i> Expedia: ${p.expedia_id}</span>` : '<span style="font-size:12px;color:#d1d5db;">Expedia: —</span>'}
-          </div>
-          <button onclick="openEditPropertyModal && openEditPropertyModal('${p.id}')" style="font-size:12px;padding:4px 10px;background:white;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;color:#374151;">
-            <i class="fas fa-edit"></i> Modifier
-          </button>
-        </div>
-      `).join('');
-    } catch(e) { container.innerHTML = '<div style="font-size:13px;color:#9ca3af;">Erreur de chargement.</div>'; }
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    loadAirbnbAccounts();
-    loadPlatformIds();
-  });
-</script>
 <script>
 // ── Channex Property Selector ──────────────────────────────
 let _channexPropertiesCache = null;
@@ -3567,6 +3396,65 @@ async function applyChannexLink() {
   }
 }
 
+// ── Channex Global Status ──────────────────────────────────
+async function loadChannexGlobalStatus() {
+  const token = localStorage.getItem('lcc_token');
+  const dot  = document.getElementById('channexGlobalDot');
+  const text = document.getElementById('channexGlobalText');
+  const list = document.getElementById('channexConnectedList');
+  try {
+    const res = await fetch('/api/channex/list-properties', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const props = await res.json();
+    if (Array.isArray(props) && props.length > 0) {
+      if (dot)  dot.style.background = '#16a34a';
+      if (text) text.textContent = 'Channex connecté — ' + props.length + ' propriété(s) disponible(s)';
+      if (list) list.innerHTML = props.map(p =>
+        '<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #f3f4f6;">'
+        + '<i class="fas fa-home" style="color:#1A7A5E;font-size:11px;"></i>'
+        + '<span style="font-size:12px;color:#374151;">' + p.name + (p.city ? ' · ' + p.city : '') + '</span>'
+        + '</div>'
+      ).join('');
+    } else {
+      if (dot)  dot.style.background = '#f59e0b';
+      if (text) text.textContent = 'Channex connecté mais aucune propriété trouvée';
+      if (list && list.textContent) list.textContent = '';
+    }
+  } catch(e) {
+    if (dot)  dot.style.background = '#ef4444';
+    if (text) text.textContent = 'Connexion Channex non vérifiable — vérifiez la clé API';
+  }
+  // Charger la liste des logements avec IDs plateformes
+  loadPlatformIds();
+}
+
+async function loadPlatformIds() {
+  const token = localStorage.getItem('lcc_token');
+  const container = document.getElementById('platformIdsList');
+  if (!token || !container) return;
+  try {
+    const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    const props = data.properties || data || [];
+    if (!props.length) { container.innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:8px 0;">Aucun logement créé.</div>'; return; }
+    container.innerHTML = props.map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f9fafb;border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${p.channexEnabled ? '#16a34a' : '#d1d5db'};display:inline-block;flex-shrink:0;"></span>
+          <span style="font-size:13px;font-weight:600;color:#111827;">${p.name || p.title || 'Logement'}</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;">
+          ${p.channexEnabled ? '<span style="color:#1A7A5E;"><i class="fas fa-plug"></i> Channex ✓</span>' : '<span style="color:#d1d5db;">Channex —</span>'}
+          ${p.booking_id ? '<span style="color:#003580;">Booking: ' + p.booking_id + '</span>' : ''}
+          ${p.abritel_id ? '<span style="color:#0096D6;">Abritel: ' + p.abritel_id + '</span>' : ''}
+          ${p.expedia_id ? '<span style="color:#D97706;">Expedia: ' + p.expedia_id + '</span>' : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { container.innerHTML = '<div style="font-size:13px;color:#9ca3af;">Erreur de chargement.</div>'; }
+}
+
 // Hook sur editProperty pour initialiser le sélecteur
 document.addEventListener('DOMContentLoaded', function() {
   const orig = window.editProperty;
@@ -3576,5 +3464,7 @@ document.addEventListener('DOMContentLoaded', function() {
       setTimeout(() => initChannexSelector(propertyData), 150);
     };
   }
+  // Charger le statut Channex global
+  loadChannexGlobalStatus();
 });
 </script>
