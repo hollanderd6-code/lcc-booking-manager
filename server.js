@@ -51,6 +51,9 @@ const { initArrivalMessagesCron } = require('./arrival-messages-cron');
 // ============================================
 const {
   createChannexProperty,
+  listChannexProperties,
+  listChannexRoomTypes,
+  listChannexRatePlans,
   pushAvailability,
   pushRates,
   pushRestrictions,
@@ -21394,6 +21397,79 @@ global.processIncomingGuestMessage = processIncomingGuestMessage;
 // ============================================================
 
 // ── Connecter un logement à Channex ──────────────────────────
+// ── Lister les propriétés Channex existantes ─────────────────
+app.get('/api/channex/list-properties', authenticateToken, async (req, res) => {
+  try {
+    const properties = await listChannexProperties();
+    res.json(properties);
+  } catch (e) {
+    console.error('❌ [CHANNEX LIST]', e.message);
+    res.status(500).json({ error: 'Erreur Channex: ' + e.message });
+  }
+});
+
+// ── Lister les room_types d'une propriété Channex ────────────
+app.get('/api/channex/room-types/:channexPropertyId', authenticateToken, async (req, res) => {
+  try {
+    const roomTypes = await listChannexRoomTypes(req.params.channexPropertyId);
+    res.json(roomTypes);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur Channex: ' + e.message });
+  }
+});
+
+// ── Lister les rate_plans d'un room_type Channex ────────────
+app.get('/api/channex/rate-plans/:channexRoomTypeId', authenticateToken, async (req, res) => {
+  try {
+    const ratePlans = await listChannexRatePlans(req.params.channexRoomTypeId);
+    res.json(ratePlans);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur Channex: ' + e.message });
+  }
+});
+
+// ── Associer un logement BH à une propriété Channex existante ─
+app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
+  const { property_id, channex_property_id, channex_room_type_id, channex_rate_plan_id } = req.body;
+  const user_id = req.user.id;
+  if (!property_id || !channex_property_id || !channex_room_type_id || !channex_rate_plan_id) {
+    return res.status(400).json({ error: 'property_id, channex_property_id, channex_room_type_id et channex_rate_plan_id requis' });
+  }
+  try {
+    await pool.query(
+      `UPDATE properties SET
+         channex_enabled = true,
+         channex_property_id = $1,
+         channex_room_type_id = $2,
+         channex_rate_plan_id = $3,
+         updated_at = NOW()
+       WHERE id = $4 AND user_id = $5`,
+      [channex_property_id, channex_room_type_id, channex_rate_plan_id, property_id, user_id]
+    );
+    await loadProperties();
+
+    // Pousser les disponibilités existantes vers Channex
+    const resaResult = await pool.query(
+      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
+      [property_id]
+    );
+    const dates_blocked = [];
+    resaResult.rows.forEach(r => {
+      const start = new Date(r.start_date);
+      const end = new Date(r.end_date);
+      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        dates_blocked.push(d.toISOString().split('T')[0]);
+      }
+    });
+    await pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked });
+
+    res.json({ success: true, message: 'Logement associé à Channex avec succès' });
+  } catch (e) {
+    console.error('❌ [CHANNEX LINK]', e.message);
+    res.status(500).json({ error: 'Erreur lors de l\'association: ' + e.message });
+  }
+});
+
 app.post('/api/channex/connect-property', authenticateToken, async (req, res) => {
   const { property_id } = req.body;
   const user_id = req.user.id;
