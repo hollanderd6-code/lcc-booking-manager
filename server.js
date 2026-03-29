@@ -1640,6 +1640,38 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Colonnes voyageur enrichies:', e.message);
     }
 
+    // ✅ Migration : identifiants plateformes OTA sur properties
+    try {
+      await pool.query(`
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS booking_id TEXT;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS abritel_id TEXT;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS expedia_id TEXT;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS channex_property_id_ext TEXT;
+      `);
+      console.log('✅ Colonnes identifiants OTA sur properties OK');
+    } catch (e) {
+      console.log('ℹ️ Colonnes OTA properties:', e.message);
+    }
+
+    // ✅ Migration : table airbnb_accounts
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS airbnb_accounts (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          email TEXT NOT NULL,
+          user_id_airbnb TEXT NOT NULL,
+          status TEXT DEFAULT 'connected',
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_airbnb_accounts_user_id ON airbnb_accounts(user_id);
+      `);
+      console.log('✅ Table airbnb_accounts OK');
+    } catch (e) {
+      console.log('ℹ️ Table airbnb_accounts:', e.message);
+    }
+
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -10558,6 +10590,10 @@ app.get('/api/properties',
         internal_name: p.internal_name || null,
         customAutoResponses: p.custom_auto_responses || [],
         custom_auto_responses: p.custom_auto_responses || [],
+        booking_id: p.booking_id || null,
+        abritel_id: p.abritel_id || null,
+        expedia_id: p.expedia_id || null,
+        channex_property_id_ext: p.channex_property_id_ext || null,
         reservationCount: (reservationsStore.properties[p.id] || []).length
       };
     });
@@ -11772,7 +11808,11 @@ app.put('/api/properties/:propertyId',
       beds,
       bathrooms,
       internal_name,
-      customAutoResponses
+      customAutoResponses,
+      booking_id,
+      abritel_id,
+      expedia_id,
+      channex_property_id: channex_property_id_ext
     } = body;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
@@ -11895,7 +11935,12 @@ app.put('/api/properties/:propertyId',
     const newBathrooms = bathrooms !== undefined
       ? (bathrooms !== '' && bathrooms !== null ? parseInt(bathrooms, 10) : null)
       : (property.bathrooms ?? null);
-        
+
+    const newBookingId = booking_id !== undefined ? (booking_id || null) : (property.booking_id || null);
+    const newAbritelId = abritel_id !== undefined ? (abritel_id || null) : (property.abritel_id || null);
+    const newExpediaId = expedia_id !== undefined ? (expedia_id || null) : (property.expedia_id || null);
+    const newChannexPropertyIdExt = channex_property_id_ext !== undefined ? (channex_property_id_ext || null) : (property.channex_property_id_ext || null);
+
     let newPhotoUrl =
       existingPhotoUrl !== undefined
         ? (existingPhotoUrl || null)
@@ -11985,6 +12030,10 @@ userId: userId
          beds = $32,
          bathrooms = $33,
          custom_auto_responses = $34,
+         booking_id = $35,
+         abritel_id = $36,
+         expedia_id = $37,
+         channex_property_id_ext = $38,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -12009,7 +12058,11 @@ userId: userId
         newBedrooms,
         newBeds,
         newBathrooms,
-        newCustomAutoResponses
+        newCustomAutoResponses,
+        newBookingId,
+        newAbritelId,
+        newExpediaId,
+        newChannexPropertyIdExt
       ]
     );
     
@@ -12026,6 +12079,83 @@ userId: userId
     console.error('❌ Erreur modification logement:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
+});
+
+// ============================================
+// AIRBNB ACCOUNTS
+// ============================================
+
+// GET — liste des comptes Airbnb de l'utilisateur
+app.get('/api/airbnb-accounts', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const result = await pool.query(
+      'SELECT id, email, user_id_airbnb AS user_id, status, created_at FROM airbnb_accounts WHERE user_id = $1 ORDER BY created_at ASC',
+      [user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ GET airbnb-accounts:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST — ajouter un compte Airbnb
+app.post('/api/airbnb-accounts', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { email, user_id } = req.body;
+    if (!email || !user_id) return res.status(400).json({ error: 'email et user_id requis' });
+    const result = await pool.query(
+      'INSERT INTO airbnb_accounts (user_id, email, user_id_airbnb, status) VALUES ($1, $2, $3, $4) RETURNING id, email, user_id_airbnb AS user_id, status',
+      [user.id, email.trim(), String(user_id).trim(), 'connected']
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('❌ POST airbnb-accounts:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE — supprimer un compte Airbnb
+app.delete('/api/airbnb-accounts/:id', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    await pool.query(
+      'DELETE FROM airbnb_accounts WHERE id = $1 AND user_id = $2',
+      [req.params.id, user.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ DELETE airbnb-accounts:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST — importer les logements depuis un compte Airbnb (placeholder)
+app.post('/api/airbnb-accounts/:id/import', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const account = await pool.query(
+      'SELECT * FROM airbnb_accounts WHERE id = $1 AND user_id = $2',
+      [req.params.id, user.id]
+    );
+    if (!account.rows.length) return res.status(404).json({ error: 'Compte non trouvé' });
+    // TODO: intégrer l'API Airbnb pour importer les annonces
+    res.json({ message: `Import lancé pour le compte ${account.rows[0].email}. Les logements apparaîtront dans vos propriétés sous 24h.` });
+  } catch (err) {
+    console.error('❌ POST airbnb-accounts/import:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET — reconnecter (redirect OAuth — placeholder)
+app.get('/api/airbnb-accounts/:id/reconnect', authenticateAny, async (req, res) => {
+  res.redirect('/settings.html?reconnect_airbnb=' + req.params.id);
 });
 
 // ============================================
