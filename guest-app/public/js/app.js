@@ -142,7 +142,7 @@ function showScreen(name) {
 
   // Header et nav selon l'écran
   const headerScreens = ['home'];
-  const navScreens = ['home', 'bookings', 'account'];
+  const navScreens = ['home', 'bookings', 'account', 'login'];
   document.getElementById('appHeader').style.display = headerScreens.includes(name) ? 'block' : 'none';
   document.getElementById('bottomNav').style.display = navScreens.includes(name) ? 'flex' : 'none';
 
@@ -154,16 +154,11 @@ function showScreen(name) {
 }
 
 function navTo(name) {
-  // Si on va sur Compte/Réservations sans session → rediriger vers login
-  if ((name === 'bookings' || name === 'account') && !isLoggedIn()) {
-    showScreen('login');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('nav-account')?.classList.add('active');
-    return;
-  }
   showScreen(name);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('nav-' + name)?.classList.add('active');
+  // Login → active l'onglet Compte visuellement
+  const navId = name === 'login' ? 'account' : name;
+  document.getElementById('nav-' + navId)?.classList.add('active');
 }
 
 // ── Recherche ────────────────────────────────────────────────
@@ -673,7 +668,14 @@ async function loadMyBookings() {
   const session = getSession();
 
   if (!session?.token) {
-    list.innerHTML = `<div class="empty-state"><i class="fas fa-user"></i><p>Connectez-vous pour voir vos réservations</p></div>`;
+    list.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-calendar"></i>
+        <p style="margin-bottom:20px;">Connectez-vous pour voir vos réservations</p>
+        <button onclick="navTo('login')" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;">
+          <i class="fas fa-sign-in-alt"></i> Se connecter
+        </button>
+      </div>`;
     return;
   }
 
