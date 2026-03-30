@@ -62,19 +62,27 @@ function closeSearchOnBg(e) {
 function updateSearchLabel() {
   const ci = document.getElementById('searchCheckin').value;
   const co = document.getElementById('searchCheckout').value;
-  const g = document.getElementById('searchGuests').value;
+  const city = document.getElementById('searchCity')?.value?.trim();
   const fmtDate = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : null;
-  let label = '';
-  if (ci && co) label = `${fmtDate(ci)} → ${fmtDate(co)}`;
-  else if (ci) label = `Arrivée ${fmtDate(ci)}`;
-  if (g) label += (label ? ' · ' : '') + g + ' voy.';
-  document.getElementById('searchLabel').textContent = label || 'Dates, voyageurs...';
+  let parts = [];
+  if (city) parts.push(city);
+  if (ci && co) parts.push(`${fmtDate(ci)} → ${fmtDate(co)}`);
+  else if (ci) parts.push(`Arrivée ${fmtDate(ci)}`);
+  if (state.search.guests) parts.push(state.search.guests + ' voy.');
+  document.getElementById('searchLabel').textContent = parts.join(' · ') || 'Dates, voyageurs...';
+}
+
+function selectGuests(btn, val) {
+  document.querySelectorAll('.guest-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.search.guests = val || null;
+  updateSearchLabel();
 }
 
 async function applySearch() {
   state.search.checkin = document.getElementById('searchCheckin').value || null;
   state.search.checkout = document.getElementById('searchCheckout').value || null;
-  state.search.guests = document.getElementById('searchGuests').value || null;
+  state.search.city = document.getElementById('searchCity')?.value?.trim() || null;
   document.getElementById('searchModal').classList.remove('open');
   await loadProperties();
 }
@@ -93,6 +101,16 @@ async function loadProperties() {
     const res = await fetch(`${API_URL}/api/guest/properties?${params}`);
     if (!res.ok) throw new Error('Erreur serveur');
     state.properties = await res.json();
+
+    // Filtrer par ville côté client
+    if (state.search.city) {
+      const city = state.search.city.toLowerCase();
+      state.properties = state.properties.filter(p =>
+        (p.city && p.city.toLowerCase().includes(city)) ||
+        (p.address && p.address.toLowerCase().includes(city)) ||
+        (p.name && p.name.toLowerCase().includes(city))
+      );
+    }
 
     if (!state.properties.length) {
       grid.innerHTML = `<div class="empty-state"><i class="fas fa-home"></i><p>Aucun logement disponible pour ces critères</p></div>`;
