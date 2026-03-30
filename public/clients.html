@@ -2713,17 +2713,26 @@ window.duplicatePrestation = function(id) {
 
   function loadEmitterProfile() {
     try {
-      // Charger d'abord depuis lcc_settings_profile (source de vérité paramètres)
+      // 1. Base : profil émetteur local (company, address, siret saisis dans l'éditeur)
+      const saved = JSON.parse(localStorage.getItem('lcc_owner_emitter_profile') || '{}');
+      emitterProfile = { ...emitterProfile, ...saved };
+
+      // 2. Enrichir avec les champs des Paramètres (phone, email, website, customFields)
+      //    Ces champs ont priorité car ils viennent de la source de vérité "Paramètres"
       const settingsRaw = localStorage.getItem('lcc_settings_profile');
       if (settingsRaw) {
         const sp = JSON.parse(settingsRaw);
         if (sp.phone)        emitterProfile.phone        = sp.phone;
         if (sp.invoiceEmail) emitterProfile.email        = sp.invoiceEmail;
         if (sp.website)      emitterProfile.website      = sp.website;
-        if (sp.customFields) emitterProfile.customFields = sp.customFields;
+        if (sp.customFields && sp.customFields.length) emitterProfile.customFields = sp.customFields;
+        // Aussi récupérer adresse/ville/cp/siret des paramètres si pas encore renseignés
+        if (!emitterProfile.company  && sp.company)    emitterProfile.company    = sp.company;
+        if (!emitterProfile.address  && sp.address)    emitterProfile.address    = sp.address;
+        if (!emitterProfile.postalCode && sp.postalCode) emitterProfile.postalCode = sp.postalCode;
+        if (!emitterProfile.city     && sp.city)       emitterProfile.city       = sp.city;
+        if (!emitterProfile.siret    && sp.siret)      emitterProfile.siret      = sp.siret;
       }
-      const saved = JSON.parse(localStorage.getItem('lcc_owner_emitter_profile') || '{}');
-      emitterProfile = { ...emitterProfile, ...saved };
 
       const companyInput = document.getElementById('emitterCompany');
       const addressInput = document.getElementById('emitterAddress');
@@ -2840,10 +2849,36 @@ if (window.userProfile && window.userProfile.logoUrl) {
     const senderNameEl = document.getElementById('previewSenderName');
     if (senderNameEl) senderNameEl.textContent = name;
 
-    const addrTextarea = document.getElementById('senderAddressInput');
-    const addr = (addrTextarea && addrTextarea.value) || '';
     const senderAddrEl = document.getElementById('previewSenderAddress');
-    if (senderAddrEl) senderAddrEl.innerText = addr || 'Adresse...';
+    if (senderAddrEl) {
+      // Construire directement depuis emitterProfile pour avoir toutes les infos
+      const lines = [];
+      if (emitterProfile.address) lines.push(emitterProfile.address);
+      const cityLine = ((emitterProfile.postalCode || '') + ' ' + (emitterProfile.city || '')).trim();
+      if (cityLine) lines.push(cityLine);
+      if (emitterProfile.siret) lines.push('SIRET : ' + emitterProfile.siret);
+      if (emitterProfile.phone) lines.push(emitterProfile.phone);
+      if (emitterProfile.email) lines.push(emitterProfile.email);
+      if (emitterProfile.website) lines.push(emitterProfile.website);
+      if (emitterProfile.customFields && emitterProfile.customFields.length) {
+        emitterProfile.customFields.forEach(function(cf) {
+          if (cf.label && cf.value) lines.push(cf.label + ' : ' + cf.value);
+          else if (cf.value) lines.push(cf.value);
+        });
+      }
+      // Aussi lire les lignes manuelles du textarea (saisie libre)
+      const addrTextarea = document.getElementById('senderAddressInput');
+      if (addrTextarea && addrTextarea.value.trim()) {
+        // Si le textarea a été modifié manuellement, l'utiliser tel quel
+        senderAddrEl.innerHTML = addrTextarea.value.split('\n').map(function(l) {
+          return l.trim() ? '<span>' + l.trim() + '</span>' : '';
+        }).filter(Boolean).join('<br>');
+      } else {
+        senderAddrEl.innerHTML = lines.map(function(l) {
+          return '<span>' + l + '</span>';
+        }).join('<br>') || 'Adresse...';
+      }
+    }
   }
 
   // --- PREVIEW ---
@@ -2906,9 +2941,8 @@ if (window.userProfile && window.userProfile.logoUrl) {
         propertyContainer.parentElement.style.display = 'none';
       }
     }
-    // Sender
-    const sender = document.getElementById('senderAddressInput').value;
-    if(sender) document.getElementById('previewSenderAddress').textContent = sender;
+    // Sender — appeler updateSenderPreviewOnly pour le rendu multilignes
+    updateSenderPreviewOnly();
 
     // Totaux
     const tbody = document.getElementById('previewBody');
