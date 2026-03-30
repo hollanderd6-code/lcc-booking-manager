@@ -18,6 +18,22 @@ const channexAPI = axios.create({
   }
 });
 
+// ── Rate limiter simple (test 12 certification Channex) ──────
+// Channex limite à ~40 req/min sur les restrictions et ~10 req/s global.
+// On impose un délai minimum entre chaque appel outbound pour rester safe.
+let _lastChannexCallAt = 0;
+const CHANNEX_MIN_INTERVAL_MS = 150; // ~6-7 req/s max
+
+channexAPI.interceptors.request.use(async (config) => {
+  const now = Date.now();
+  const elapsed = now - _lastChannexCallAt;
+  if (elapsed < CHANNEX_MIN_INTERVAL_MS) {
+    await new Promise(r => setTimeout(r, CHANNEX_MIN_INTERVAL_MS - elapsed));
+  }
+  _lastChannexCallAt = Date.now();
+  return config;
+});
+
 // ── Helper log ───────────────────────────────────────────────
 
 async function logChannex(pool, { user_id, property_id, channex_property_id, event_type, direction, payload, status = 'success', error_message = null }) {
@@ -129,7 +145,7 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
     const values = [];
     const today = new Date();
 
-    for (let i = 0; i < 365; i++) {
+    for (let i = 0; i < 500; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
@@ -217,9 +233,10 @@ async function pushRestrictions(pool, { property_id, channex_property_id, channe
     const values = restrictions.map(r => ({
       rate_plan_id: channex_rate_plan_id,
       date: r.date,
-      ...(r.min_stay != null ? { min_stay: r.min_stay } : {}),
-      ...(r.max_stay != null ? { max_stay: r.max_stay } : {}),
-      ...(r.closed_to_arrival != null ? { closed_to_arrival: r.closed_to_arrival } : {}),
+      ...(r.min_stay        != null ? { min_stay: r.min_stay }               : {}),
+      ...(r.max_stay        != null ? { max_stay: r.max_stay }               : {}),
+      ...(r.stop_sell       != null ? { stop_sell: r.stop_sell }             : {}),
+      ...(r.closed_to_arrival   != null ? { closed_to_arrival: r.closed_to_arrival }   : {}),
       ...(r.closed_to_departure != null ? { closed_to_departure: r.closed_to_departure } : {})
     }));
 
@@ -458,6 +475,19 @@ async function processChannexBooking(pool, bookingData) {
 }
 
 
+// ── Accusé de réception d'une réservation (requis par Channex) ──
+async function bookingAcknowledge(booking_id) {
+  try {
+    await channexAPI.post(`/bookings/${booking_id}/acknowledge`);
+    console.log(`✅ [CHANNEX] Acknowledge envoyé pour booking ${booking_id}`);
+    return true;
+  } catch (e) {
+    // Ne pas bloquer le traitement si l'acknowledge échoue
+    console.error(`⚠️ [CHANNEX] Erreur acknowledge booking ${booking_id}:`, e.response?.data || e.message);
+    return false;
+  }
+}
+
 // ── 5. Récupérer les messages d'une réservation ──────────────
 async function getBookingMessages(channex_booking_id) {
   try {
@@ -557,6 +587,7 @@ module.exports = {
   pushAvailability,
   pushRates,
   pushRestrictions,
+  bookingAcknowledge,
   processChannexBooking,
   getBookingMessages,
   sendBookingMessage,
