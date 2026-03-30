@@ -128,16 +128,13 @@
 }
 /* LES 3 PETITS POINTS*/
 .invoice-actions-menu {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  right: 0;
+  position: fixed;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 -4px 20px rgba(15,23,42,0.15);
-  padding: 4px;
-  min-width: 180px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(15,23,42,0.18);
+  padding: 6px;
+  min-width: 200px;
   display: none;
   z-index: 9999;
 }
@@ -989,10 +986,10 @@ html[data-theme-v3="1"] .modal-content {
 }
 .invoice-card-actions-btn:hover { background: white; }
 .invoice-actions-menu {
-  position: absolute; bottom: calc(100% + 6px); left: 0; right: 0;
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
-  box-shadow: 0 -4px 20px rgba(15,23,42,.12); padding: 4px;
-  min-width: 180px; display: none; z-index: 9999;
+  position: fixed;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(15,23,42,.18); padding: 6px;
+  min-width: 200px; display: none; z-index: 9999;
 }
 .invoice-actions-menu.open { display: block; }
 .invoice-actions-menu button {
@@ -1386,6 +1383,27 @@ html[data-theme-v3="1"] .invoice-paper {
 </main>
 </div>
 </div>
+
+<!-- MODALE APERÇU FACTURE -->
+<div id="invoicePreviewModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(13,17,23,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:20px;">
+  <div style="max-width:860px;margin:0 auto;position:relative;">
+    <!-- Barre d'actions sticky -->
+    <div style="position:sticky;top:0;z-index:10001;display:flex;justify-content:space-between;align-items:center;background:rgba(13,17,23,.85);backdrop-filter:blur(8px);padding:12px 16px;border-radius:12px;margin-bottom:16px;">
+      <span style="color:white;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;" id="invoicePreviewModalTitle">Aperçu facture</span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="window.downloadOwnerInvoice(window._previewInvoiceId)" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;background:#1A7A5E;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">
+          <i class="fas fa-download"></i> Télécharger PDF
+        </button>
+        <button onclick="document.getElementById('invoicePreviewModal').style.display='none';document.body.style.overflow='';" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:white;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">
+          <i class="fas fa-times"></i> Fermer
+        </button>
+      </div>
+    </div>
+    <!-- Contenu facture -->
+    <div id="invoicePreviewContent" style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="statsModal">
 <div class="modal-content">
 <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
@@ -2202,7 +2220,24 @@ window.toggleInvoiceActions = function (id, btn) {
   if (!menu) return;
   const wasOpen = menu.classList.contains('open');
   document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
-  if (!wasOpen) menu.classList.add('open');
+  if (!wasOpen) {
+    // Calculer la position du bouton pour positionner le menu intelligemment
+    const rect = btn.getBoundingClientRect();
+    const menuH = 260; // hauteur estimée du menu
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    menu.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 216)) + 'px';
+    if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
+      // Ouvrir vers le bas
+      menu.style.top = (rect.bottom + 6) + 'px';
+      menu.style.bottom = 'auto';
+    } else {
+      // Ouvrir vers le haut
+      menu.style.top = 'auto';
+      menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    }
+    menu.classList.add('open');
+  }
 };
 
 // Listener délégué pour les boutons data-action dans les menus de factures
@@ -2218,12 +2253,7 @@ document.addEventListener('click', function(e) {
   // Fermer le menu
   document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
   if (action === 'view') {
-    const invToView = (window.ownerInvoices || []).find(i => i.id === id);
-    if (invToView && invToView.status === 'draft') {
-      window.editOwnerInvoiceDraft(id);
-    } else {
-      window.viewOwnerInvoiceReadOnly(id);
-    }
+    window.openInvoicePreview(id);
   }
   else if (action === 'download')  window.downloadOwnerInvoice(id);
   else if (action === 'send')      window.sendOwnerInvoice(id);
@@ -2235,9 +2265,25 @@ document.addEventListener('click', function(e) {
 
 // Fermer le menu si on clique ailleurs dans la page
 document.addEventListener('click', function(e) {
-  // Vérifier si le clic est en dehors d'un menu ou d'un bouton "..."
   if (!e.target.closest('.invoice-row-actions') && !e.target.closest('.invoice-card-actions-btn') && !e.target.closest('.invoice-actions-menu')) {
     document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
+  }
+  // Fermer modale aperçu si clic sur le backdrop
+  const modal = document.getElementById('invoicePreviewModal');
+  if (modal && e.target === modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+});
+
+// Fermer modale aperçu avec Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('invoicePreviewModal');
+    if (modal && modal.style.display !== 'none') {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
   }
 });
 
@@ -2290,31 +2336,9 @@ window.deleteOwnerInvoice = async function (id) {
     alert('Erreur serveur');
   }
 };
-  window.downloadOwnerInvoice = async function (id) {
-  try {
-    // Récupérer les données de la facture
-    const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    
-    if (!res.ok) throw new Error('Erreur chargement facture');
-    
-    const json = await res.json();
-    const inv = json.invoice;
-    const items = json.items || [];
-    
-    // Trouver le client
-    const client = clients.find(c => c.id == inv.client_id);
+  // ── Fonction commune : génère le HTML interne d'une facture ──
+  function buildInvoiceHTML(inv, items, client, container) {
     const clientName = client ? (client.company_name || `${client.first_name || ''} ${client.last_name || ''}`.trim()) : 'Client';
-    
-    // Créer un conteneur temporaire invisible avec la facture
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'fixed';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '0';
-    document.body.appendChild(tempContainer);
-    
-    // Générer le HTML de la facture
     let itemsHtml = '';
     items.forEach(item => {
       const desc = item.description || 'Prestation';
@@ -2389,7 +2413,7 @@ window.deleteOwnerInvoice = async function (id) {
     const invTitle = inv.is_credit_note ? 'AVOIR' : 'FACTURE';
     const invRef = inv.invoice_number || 'BROUILLON';
 
-    tempContainer.innerHTML = `
+    container.innerHTML = `
   <div id="tempInvoicePaper" style="background:white;width:210mm;min-height:297mm;padding:16mm 18mm;font-family:Arial,Helvetica,sans-serif;color:#1f2937;box-sizing:border-box;font-size:12px;line-height:1.5;">
 
     <!-- HEADER : titre gauche, logo droite -->
@@ -2465,57 +2489,87 @@ window.deleteOwnerInvoice = async function (id) {
     </div>
   </div>
 `;
+  } // fin buildInvoiceHTML
+
+  // ── Charger les données d'une facture (fetch mutualisé) ──
+  async function fetchInvoiceData(id) {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Erreur chargement facture');
+    const json = await res.json();
+    const inv = json.invoice;
+    const items = json.items || [];
+    const client = clients.find(c => c.id == inv.client_id);
+    return { inv, items, client };
+  }
+
+  // ── Aperçu facture dans modale ──
+  window.openInvoicePreview = async function(id) {
+    try {
+      const { inv, items, client } = await fetchInvoiceData(id);
+      const modal = document.getElementById('invoicePreviewModal');
+      const content = document.getElementById('invoicePreviewContent');
+      const title = document.getElementById('invoicePreviewModalTitle');
+      if (!modal || !content) return;
+      window._previewInvoiceId = id;
+      title.textContent = 'Facture ' + (inv.invoice_number || 'Brouillon');
+      // Injecter le HTML dans la modale (sans le wrapper position:fixed)
+      const tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;';
+      document.body.appendChild(tempDiv);
+      buildInvoiceHTML(inv, items, client, tempDiv);
+      const paper = tempDiv.querySelector('#tempInvoicePaper');
+      if (paper) {
+        paper.style.width = '100%';
+        paper.style.minHeight = 'auto';
+        paper.style.boxSizing = 'border-box';
+        content.innerHTML = paper.outerHTML;
+      }
+      document.body.removeChild(tempDiv);
+      modal.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    } catch(err) {
+      console.error(err);
+      alert('Erreur lors du chargement de la facture');
+    }
+  };
+
+  // ── Télécharger PDF ──
+  window.downloadOwnerInvoice = async function (id) {
+  try {
+    const { inv, items, client } = await fetchInvoiceData(id);
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'fixed';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    document.body.appendChild(tempContainer);
+    buildInvoiceHTML(inv, items, client, tempContainer);
     const invoiceElement = document.getElementById('tempInvoicePaper');
     const filename = `${inv.invoice_number || 'facture'}.pdf`;
     
-    // Charger html2pdf dynamiquement
-    if (typeof html2pdf === 'undefined') {
-  const script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-  script.onload = () => {
     const opt = {
       margin: 0,
       filename: filename,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        letterRendering: true
-      },
-      jsPDF: { 
-        unit: 'mm', 
-        format: 'a4', 
-        orientation: 'portrait',
-        compress: true
-      }
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true }
     };
-    html2pdf().set(opt).from(invoiceElement).save().then(() => {
-      document.body.removeChild(tempContainer);
-    });
-  };
-  document.head.appendChild(script);
-} else {
-  const opt = {
-    margin: 0,
-    filename: filename,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { 
-      scale: 2,
-      useCORS: true,
-      letterRendering: true
-    },
-    jsPDF: { 
-      unit: 'mm', 
-      format: 'a4', 
-      orientation: 'portrait',
-      compress: true
+
+    function doPdf() {
+      html2pdf().set(opt).from(invoiceElement).save().then(() => {
+        document.body.removeChild(tempContainer);
+      });
     }
-  };
-  html2pdf().set(opt).from(invoiceElement).save().then(() => {
-    document.body.removeChild(tempContainer);
-  });
-}
-    
+
+    if (typeof html2pdf === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      script.onload = doPdf;
+      document.head.appendChild(script);
+    } else {
+      doPdf();
+    }
   } catch (err) {
     console.error(err);
     alert('Erreur lors du téléchargement');
