@@ -22071,7 +22071,7 @@ app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) =
     }
 
     const { channexAPI } = require('./channex');
-    const appUrl = process.env.APP_URL || 'https://lcc-booking-manager.onrender.com';
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
 
     // Créer webhook booking (réservations)
     const webhooks = [
@@ -22234,5 +22234,128 @@ app.get('/api/channex/logs', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Route de certification Channex — Test 7 (CTA/CTD/max_stay) ──
+// Envoie exactement le payload du test 7 de la certification Channex.
+// À utiliser UNE SEULE FOIS pendant la certification, sur la propriété de test staging.
+// Protégée par token — réservée à l'admin.
+app.post('/api/channex/certification/test7', authenticateToken, async (req, res) => {
+  try {
+    const {
+      property_id,                // ID BH du logement de test
+      rate_plan_id_twin_bar,      // channex rate plan ID Twin/BAR
+      rate_plan_id_twin_bb,       // channex rate plan ID Twin/B&B
+      rate_plan_id_double_bar,    // channex rate plan ID Double/BAR
+      rate_plan_id_double_bb      // channex rate plan ID Double/B&B
+    } = req.body;
+
+    if (!property_id || !rate_plan_id_twin_bar || !rate_plan_id_twin_bb || !rate_plan_id_double_bar || !rate_plan_id_double_bb) {
+      return res.status(400).json({ error: 'Tous les rate_plan_id sont requis' });
+    }
+
+    const { channexAPI } = require('./channex');
+
+    // Payload exact du test 7 de la certification Channex
+    // Twin/BAR — 01-10 Nov 2026 : CTA=true, CTD=false, max_stay=4, min_stay=1
+    const twinBarDates = [];
+    for (let d = new Date('2026-11-01'); d <= new Date('2026-11-10'); d.setDate(d.getDate() + 1)) {
+      twinBarDates.push({
+        rate_plan_id: rate_plan_id_twin_bar,
+        date: d.toISOString().split('T')[0],
+        closed_to_arrival: true,
+        closed_to_departure: false,
+        max_stay: 4,
+        min_stay: 1
+      });
+    }
+
+    // Twin/B&B — 12-16 Nov 2026 : CTD=true, min_stay=6
+    const twinBBDates = [];
+    for (let d = new Date('2026-11-12'); d <= new Date('2026-11-16'); d.setDate(d.getDate() + 1)) {
+      twinBBDates.push({
+        rate_plan_id: rate_plan_id_twin_bb,
+        date: d.toISOString().split('T')[0],
+        closed_to_arrival: false,
+        closed_to_departure: true,
+        min_stay: 6
+      });
+    }
+
+    // Double/BAR — 10-16 Nov 2026 : CTA=true, min_stay=2
+    const doubleBarDates = [];
+    for (let d = new Date('2026-11-10'); d <= new Date('2026-11-16'); d.setDate(d.getDate() + 1)) {
+      doubleBarDates.push({
+        rate_plan_id: rate_plan_id_double_bar,
+        date: d.toISOString().split('T')[0],
+        closed_to_arrival: true,
+        min_stay: 2
+      });
+    }
+
+    // Double/B&B — 01-20 Nov 2026 : min_stay=10
+    const doubleBBDates = [];
+    for (let d = new Date('2026-11-01'); d <= new Date('2026-11-20'); d.setDate(d.getDate() + 1)) {
+      doubleBBDates.push({
+        rate_plan_id: rate_plan_id_double_bb,
+        date: d.toISOString().split('T')[0],
+        min_stay: 10
+      });
+    }
+
+    // 1 seul appel API avec toutes les restrictions combinées
+    const values = [...twinBarDates, ...twinBBDates, ...doubleBarDates, ...doubleBBDates];
+    const response = await channexAPI.post('/restrictions', { values });
+
+    res.json({
+      success: true,
+      test: 'Test 7 — Multiple Restrictions Update',
+      total_entries: values.length,
+      task_id: response.data?.meta?.task_id || response.data?.data?.id || null,
+      channex_response: response.data
+    });
+
+  } catch (e) {
+    console.error('❌ [CERT TEST 7]', e.response?.data || e.message);
+    res.status(500).json({ error: e.response?.data || e.message });
+  }
+});
+
+// ── Route de certification — Vérifier les webhooks enregistrés ──
+app.get('/api/channex/certification/check-webhooks', authenticateToken, async (req, res) => {
+  try {
+    const { property_id } = req.query;
+    if (!property_id) return res.status(400).json({ error: 'property_id requis' });
+
+    const propResult = await pool.query(
+      'SELECT channex_property_id FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, req.user.id]
+    );
+    if (!propResult.rows[0]?.channex_property_id) {
+      return res.status(404).json({ error: 'Logement ou channex_property_id introuvable' });
+    }
+
+    const { channexAPI } = require('./channex');
+    const response = await channexAPI.get('/webhooks', {
+      params: { property_id: propResult.rows[0].channex_property_id }
+    });
+
+    const webhooks = response.data?.data || [];
+    res.json({
+      success: true,
+      channex_property_id: propResult.rows[0].channex_property_id,
+      webhooks_count: webhooks.length,
+      webhooks: webhooks.map(w => ({
+        id: w.id,
+        event_mask: w.attributes?.event_mask,
+        callback_url: w.attributes?.callback_url,
+        is_active: w.attributes?.is_active
+      }))
+    });
+
+  } catch (e) {
+    console.error('❌ [CHECK WEBHOOKS]', e.response?.data || e.message);
+    res.status(500).json({ error: e.response?.data || e.message });
   }
 });
