@@ -1289,6 +1289,32 @@ html[data-theme-v3="1"] .subscription-card {
                   </p>
 </div>
 <div class="form-row">
+<label for="profilePhone">Numéro de téléphone</label>
+<input id="profilePhone" placeholder="06 12 34 56 78" type="tel"/>
+</div>
+<div class="form-row">
+<label for="profileInvoiceEmail">Adresse email (factures)</label>
+<input id="profileInvoiceEmail" placeholder="contact@monentreprise.fr" type="email"/>
+<p class="settings-hint">Cet email apparaîtra sur vos factures.</p>
+</div>
+<div class="form-row">
+<label for="profileWebsite">Site internet</label>
+<input id="profileWebsite" placeholder="www.monentreprise.fr" type="text"/>
+</div>
+
+<!-- Champs personnalisés -->
+<div class="form-row" style="border-top:1px solid var(--border-color);padding-top:16px;margin-top:4px;">
+  <label style="font-weight:700;font-size:13px;color:var(--text-primary);margin-bottom:8px;display:block;">
+    <i class="fas fa-plus-circle" style="color:#10B981;margin-right:6px;"></i>Champs personnalisés sur la facture
+  </label>
+  <p class="settings-hint" style="margin-bottom:12px;">Ajoutez des informations supplémentaires qui apparaîtront dans votre bloc émetteur sur les factures (ex : N° TVA intracommunautaire, RCS, IBAN…)</p>
+  <div id="customFieldsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+  <button id="addCustomFieldBtn" type="button" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1.5px dashed #10B981;background:transparent;color:#059669;font-size:13px;font-weight:600;cursor:pointer;">
+    <i class="fas fa-plus"></i> Ajouter un champ
+  </button>
+</div>
+
+<div class="form-row">
 <label for="profileLogo">Logo</label>
 <div style="display:flex;gap:12px;align-items:flex-start;">
 <div id="logoPreview" style="width:80px;height:80px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
@@ -1860,6 +1886,16 @@ if (logoInput && logoPreview) {
   if (profile.postalCode) postalCodeInput.value = profile.postalCode;
   if (profile.city)      cityInput.value      = profile.city;
   if (profile.siret)     siretInput.value     = profile.siret;
+  const phoneInput   = document.getElementById('profilePhone');
+  const invoiceEmailInput = document.getElementById('profileInvoiceEmail');
+  const websiteInput = document.getElementById('profileWebsite');
+  if (phoneInput && profile.phone)         phoneInput.value         = profile.phone;
+  if (invoiceEmailInput && profile.invoiceEmail) invoiceEmailInput.value = profile.invoiceEmail;
+  if (websiteInput && profile.website)     websiteInput.value       = profile.website;
+  // Champs personnalisés
+  if (profile.customFields && Array.isArray(profile.customFields)) {
+    profile.customFields.forEach(function(cf) { addCustomFieldRow(cf.label, cf.value); });
+  }
   
   // Restaurer le type de compte
   if (profile.accountType === 'business') {
@@ -1878,6 +1914,39 @@ if (logoInput && logoPreview) {
       // Charger au démarrage
       loadProfileFromAPI();
 
+      // --- CHAMPS PERSONNALISÉS ---
+      function addCustomFieldRow(label, value) {
+        label = label || '';
+        value = value || '';
+        const customFieldsList = document.getElementById('customFieldsList');
+        if (!customFieldsList) return;
+        const row = document.createElement('div');
+        row.className = 'custom-field-row';
+        row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+        row.innerHTML = `
+          <input type="text" class="cf-label" placeholder="Titre (ex: N° TVA)" value="${label.replace(/"/g,'&quot;')}" style="flex:1;padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;">
+          <input type="text" class="cf-value" placeholder="Contenu" value="${value.replace(/"/g,'&quot;')}" style="flex:2;padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;">
+          <button type="button" onclick="this.closest('.custom-field-row').remove()" style="width:32px;height:32px;border-radius:8px;border:none;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:14px;flex-shrink:0;">×</button>
+        `;
+        customFieldsList.appendChild(row);
+      }
+
+      function getCustomFields() {
+        const rows = document.querySelectorAll('#customFieldsList .custom-field-row');
+        const fields = [];
+        rows.forEach(function(row) {
+          const label = (row.querySelector('.cf-label') || {}).value || '';
+          const value = (row.querySelector('.cf-value') || {}).value || '';
+          if (label.trim() || value.trim()) fields.push({ label: label.trim(), value: value.trim() });
+        });
+        return fields;
+      }
+
+      const addCustomFieldBtn = document.getElementById('addCustomFieldBtn');
+      if (addCustomFieldBtn) {
+        addCustomFieldBtn.addEventListener('click', function() { addCustomFieldRow('', ''); });
+      }
+
       if (saveProfileBtn) {
   saveProfileBtn.addEventListener('click', async function () {
     const formData = new FormData();
@@ -1890,6 +1959,15 @@ if (logoInput && logoPreview) {
     formData.append('city', cityInput.value.trim());
     formData.append('siret', siretInput.value.replace(/\s/g, ''));
     formData.append('accountType', accountTypeIndividual.checked ? 'individual' : 'business');
+    const phoneVal   = (document.getElementById('profilePhone') || {}).value || '';
+    const invEmailVal = (document.getElementById('profileInvoiceEmail') || {}).value || '';
+    const websiteVal = (document.getElementById('profileWebsite') || {}).value || '';
+    formData.append('phone', phoneVal.trim());
+    formData.append('invoiceEmail', invEmailVal.trim());
+    formData.append('website', websiteVal.trim());
+    // Champs personnalisés
+    const customFields = getCustomFields();
+    formData.append('customFields', JSON.stringify(customFields));
     
     // Ajouter le logo si un fichier est sélectionné
     if (logoInput.files && logoInput.files[0]) {
@@ -1906,7 +1984,11 @@ if (logoInput && logoPreview) {
       postalCode: postalCodeInput.value.trim(),
       city: cityInput.value.trim(),
       siret: siretInput.value.replace(/\s/g, ''),
-      accountType: accountTypeIndividual.checked ? 'individual' : 'business'
+      accountType: accountTypeIndividual.checked ? 'individual' : 'business',
+      phone: phoneVal.trim(),
+      invoiceEmail: invEmailVal.trim(),
+      website: websiteVal.trim(),
+      customFields: customFields
     };
 
     // Sauvegarde locale immédiate pour UX
