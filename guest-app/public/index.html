@@ -7,187 +7,520 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="css/app.css">
   <style>
-    .date-wrapper {
-      position: relative;
+    /* ── Variables Guest ── */
+    :root {
+      --primary: #7c3aed;
+      --primary-dark: #6d28d9;
+      --primary-light: #ede9fe;
+      --green: #10b981;
+      --green-light: #d1fae5;
+      --bg: #f8f9fb;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --error: #ef4444;
     }
-    .date-wrapper input[type="date"] {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      opacity: 0;
-      cursor: pointer;
-      box-sizing: border-box;
-    }
-    .date-display {
-      width: 100%;
-      padding: 14px 16px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      font-size: 16px;
+
+    /* ── Bottom nav ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
       background: white;
-      box-sizing: border-box;
-      color: var(--text-light);
-      cursor: pointer;
+      border-top: 1px solid var(--border);
       display: flex;
+      padding: 8px 0 env(safe-area-inset-bottom);
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
+      gap: 3px;
+      padding: 6px 0;
+      cursor: pointer;
+      color: var(--text-light);
+      font-size: 10px;
+      border: none;
+      background: none;
       font-family: inherit;
     }
-    .date-display.has-value { color: var(--text); }
-    .date-display i { color: var(--primary); font-size: 14px; }
+    .nav-item i { font-size: 20px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-item.active i { color: var(--primary); }
+
+    /* ── App header ── */
+    .app-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: env(safe-area-inset-top, 16px) 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .app-header .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .app-header .logo-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800;
+    }
+    .app-header .logo-label { font-size: 18px; font-weight: 700; }
+
+    /* ── Search bar ── */
+    .search-bar {
+      background: rgba(255,255,255,0.15);
+      border: 1.5px solid rgba(255,255,255,0.3);
+      border-radius: 14px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .search-bar i { font-size: 15px; opacity: 0.9; }
+    .search-bar span { font-size: 14px; opacity: 0.85; }
+
+    /* ── Search modal ── */
+    .search-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+    }
+    .search-modal.open { display: flex; }
+    .search-sheet {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px env(safe-area-inset-bottom);
+      width: 100%;
+    }
+    .search-sheet h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+    .search-row { margin-bottom: 16px; }
+    .search-row label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: block; }
+    .search-row input, .search-row select {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px; font-size: 15px;
+      font-family: inherit; background: white;
+      box-sizing: border-box; color: var(--text);
+    }
+    .search-row input:focus, .search-row select:focus {
+      outline: none; border-color: var(--primary);
+    }
+    .dates-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-search-apply {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 600; cursor: pointer;
+      margin-top: 8px;
+    }
+
+    /* ── Screen content ── */
+    .screen-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 80px;
+    }
+    .screen-content.active { display: block; }
+
+    /* ── Property cards ── */
+    .properties-grid { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+    .prop-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      cursor: pointer;
+    }
+    .prop-photo {
+      width: 100%; height: 200px;
+      object-fit: cover;
+      background: #e2e8f0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-light); font-size: 40px;
+    }
+    .prop-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .prop-info { padding: 14px 16px; }
+    .prop-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .prop-location { font-size: 13px; color: var(--text-light); margin-bottom: 10px; display: flex; align-items: center; gap: 4px; }
+    .prop-features { display: flex; gap: 12px; margin-bottom: 12px; }
+    .prop-feat { font-size: 12px; color: var(--text-light); display: flex; align-items: center; gap: 4px; }
+    .prop-price-row { display: flex; align-items: center; justify-content: space-between; }
+    .prop-price { font-size: 18px; font-weight: 700; color: var(--primary); }
+    .prop-price span { font-size: 13px; font-weight: 400; color: var(--text-light); }
+    .btn-voir { background: var(--primary-light); color: var(--primary); border: none; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    /* ── Detail screen ── */
+    .detail-header {
+      position: sticky; top: 0; z-index: 50;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: env(safe-area-inset-top, 16px) 16px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .btn-back-detail {
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.2); border: none;
+      border-radius: 10px; color: white; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .detail-photos { width: 100%; height: 240px; background: #e2e8f0; overflow: hidden; }
+    .detail-photos img { width: 100%; height: 100%; object-fit: cover; }
+    .detail-photos .no-photo { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 60px; color: var(--text-light); }
+    .detail-body { padding: 20px 16px; }
+    .detail-name { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .detail-location { font-size: 14px; color: var(--text-light); margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+    .detail-feats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .detail-feat { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--bg); border-radius: 12px; padding: 10px 16px; }
+    .detail-feat i { font-size: 18px; color: var(--primary); }
+    .detail-feat span { font-size: 12px; color: var(--text-light); }
+    .detail-feat strong { font-size: 14px; color: var(--text); }
+    .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin: 20px 0 12px; }
+
+    /* ── Calendrier ── */
+    .calendar-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .calendar-nav button { background: var(--bg); border: none; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 16px; }
+    .calendar-nav h4 { font-size: 15px; font-weight: 600; color: var(--text); text-transform: capitalize; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; text-align: center; }
+    .cal-day-header { font-size: 11px; color: var(--text-light); font-weight: 600; padding: 4px 0; }
+    .cal-day { height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; color: var(--text); }
+    .cal-day.empty { cursor: default; }
+    .cal-day.booked { background: #fef2f2; color: #fca5a5; text-decoration: line-through; cursor: not-allowed; }
+    .cal-day.selected-start, .cal-day.selected-end { background: var(--primary); color: white; font-weight: 700; }
+    .cal-day.in-range { background: var(--primary-light); color: var(--primary); }
+    .cal-day.today { border: 2px solid var(--primary); }
+    .cal-day.past { color: #cbd5e1; cursor: not-allowed; }
+
+    /* ── Booking bar ── */
+    .booking-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      padding: 14px 16px env(safe-area-inset-bottom);
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 100;
+    }
+    .booking-bar-price { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .booking-bar-price span { font-size: 13px; font-weight: 400; color: var(--text-light); }
+    .btn-book {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 14px;
+      padding: 14px 28px; font-size: 16px; font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-book:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Checkout screen ── */
+    .checkout-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: env(safe-area-inset-top, 16px) 16px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .checkout-body { padding: 20px 16px; padding-bottom: 120px; }
+    .checkout-summary {
+      background: var(--bg);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .checkout-row {
+      display: flex; justify-content: space-between;
+      font-size: 14px; color: var(--text-light);
+      margin-bottom: 8px;
+    }
+    .checkout-row.total {
+      border-top: 1px solid var(--border);
+      padding-top: 10px; margin-top: 4px;
+      font-size: 16px; font-weight: 700; color: var(--text);
+    }
+    .form-section { margin-bottom: 20px; }
+    .form-section label { font-size: 13px; font-weight: 600; color: var(--text); display: block; margin-bottom: 6px; }
+    .form-section input {
+      width: 100%; padding: 13px 14px;
+      border: 2px solid var(--border); border-radius: 12px;
+      font-size: 15px; font-family: inherit;
+      box-sizing: border-box; background: white; color: var(--text);
+    }
+    .form-section input:focus { outline: none; border-color: var(--primary); }
+    .checkout-cta {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 14px 16px env(safe-area-inset-bottom);
+      background: white;
+      border-top: 1px solid var(--border);
+    }
+    .btn-pay {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 14px;
+      font-size: 17px; font-weight: 700; cursor: pointer;
+    }
+    .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Confirmation ── */
+    .confirm-screen { padding: 40px 24px; text-align: center; }
+    .confirm-icon {
+      width: 80px; height: 80px;
+      background: var(--green-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .confirm-icon i { font-size: 36px; color: var(--green); }
+    .confirm-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .confirm-sub { font-size: 15px; color: var(--text-light); margin-bottom: 28px; }
+    .confirm-card {
+      background: white; border-radius: 20px;
+      padding: 20px; text-align: left;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      margin-bottom: 24px;
+    }
+    .confirm-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; }
+    .confirm-row span:first-child { color: var(--text-light); }
+    .confirm-row span:last-child { font-weight: 600; color: var(--text); }
+    .btn-confirm-home {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 14px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+
+    /* ── Mes réservations ── */
+    .my-bookings-list { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .booking-card {
+      background: white; border-radius: 18px;
+      padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .booking-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .booking-card-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .booking-badge {
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .badge-confirmed { background: var(--green-light); color: var(--green); }
+    .badge-cancelled { background: #fef2f2; color: var(--error); }
+    .booking-dates { font-size: 13px; color: var(--text-light); margin-bottom: 6px; }
+    .booking-total { font-size: 14px; font-weight: 600; color: var(--primary); }
+
+    /* ── Compte ── */
+    .account-section { padding: 24px 16px; }
+    .account-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .account-field { margin-bottom: 16px; }
+    .account-field label { font-size: 13px; color: var(--text-light); display: block; margin-bottom: 4px; }
+    .account-field input {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid var(--border); border-radius: 10px;
+      font-size: 15px; font-family: inherit;
+      box-sizing: border-box; color: var(--text);
+    }
+    .btn-save-account {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 60px 24px;
+      color: var(--text-light);
+    }
+    .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+    .empty-state p { font-size: 15px; }
+
+    /* ── Loading ── */
+    .loading-center {
+      text-align: center; padding: 60px;
+      color: var(--text-light);
+    }
+    .loading-center i { font-size: 28px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: white;
+      padding: 12px 20px; border-radius: 12px;
+      font-size: 14px; z-index: 999;
+      opacity: 0; transition: opacity 0.3s;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
   </style>
 </head>
-<body>
-  
-  <!-- 🔐 ÉCRAN VÉRIFICATION PIN -->
-  <div id="pinScreen" class="screen active">
-    <div class="container">
-      
-      <div class="header">
-        <div class="logo">
-          <div class="logo-icon">B</div>
-          <div class="logo-text">Boostinghost</div>
-        </div>
-      </div>
+<body style="background: var(--bg); height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
 
-      <div class="card">
-        <div class="card-icon">
-          <i class="fas fa-lock"></i>
-        </div>
-        <h1>Accès au Chat</h1>
-        <p class="subtitle">Contactez votre hôte facilement</p>
+<!-- ═══════════════════════════════════════════════
+     APP SHELL
+═══════════════════════════════════════════════ -->
+<div id="appShell" style="display:flex; flex-direction:column; height:100vh; overflow:hidden;">
 
-        <form id="pinForm">
-          <!-- Code PIN -->
-          <div class="form-group">
-            <label>
-              <i class="fas fa-key"></i>
-              Code PIN à 4 chiffres
-            </label>
-            <div class="pin-input">
-              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit" id="pin1" autocomplete="off">
-              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit" id="pin2" autocomplete="off">
-              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit" id="pin3" autocomplete="off">
-              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit" id="pin4" autocomplete="off">
-            </div>
-            <small>Le code PIN vous a été fourni par le propriétaire</small>
-          </div>
-
-          <!-- Date d'arrivée -->
-          <div class="form-group">
-            <label>
-              <i class="fas fa-calendar-check"></i>
-              Date d'arrivée
-            </label>
-            <div class="date-wrapper">
-              <div class="date-display" id="checkinDisplay">
-                <span>Sélectionner une date</span>
-                <i class="fas fa-calendar"></i>
-              </div>
-              <input type="date" id="checkinDate" required onchange="updateDateDisplay('checkinDate','checkinDisplay')">
-            </div>
-          </div>
-
-          <!-- Date de départ -->
-          <div class="form-group">
-            <label>
-              <i class="fas fa-calendar-xmark"></i>
-              Date de départ <span class="optional">(optionnel)</span>
-            </label>
-            <div class="date-wrapper">
-              <div class="date-display" id="checkoutDisplay">
-                <span>Sélectionner une date</span>
-                <i class="fas fa-calendar"></i>
-              </div>
-              <input type="date" id="checkoutDate" onchange="updateDateDisplay('checkoutDate','checkoutDisplay')">
-            </div>
-            <small>Peut aider à identifier votre réservation plus précisément</small>
-          </div>
-
-          <!-- Plateforme -->
-          <div class="form-group">
-            <label>
-              <i class="fas fa-hotel"></i>
-              Plateforme de réservation
-            </label>
-            <select id="platform" required>
-              <option value="">Sélectionnez votre plateforme</option>
-              <option value="Airbnb">Airbnb</option>
-              <option value="Booking.com">Booking.com</option>
-              <option value="Abritel">Abritel</option>
-              <option value="Gite de France">Gite de France</option>
-              <option value="Direct">Direct</option>
-            </select>
-          </div>
-
-          <div id="errorMessage" class="error-box" style="display: none;">
-            <i class="fas fa-exclamation-circle"></i>
-            <span id="errorText"></span>
-          </div>
-
-          <button type="submit" class="btn-verify" id="verifyBtn">
-            <i class="fas fa-check"></i>
-            Vérifier et accéder au chat
-          </button>
-        </form>
-
-        <div class="security-note">
-          <i class="fas fa-shield-halved"></i>
-          Vos informations sont vérifiées de manière sécurisée
-        </div>
-      </div>
-
+  <!-- Header dynamique -->
+  <div id="appHeader" class="app-header">
+    <div class="logo-row">
+      <div class="logo-icon">B</div>
+      <div class="logo-label">Boostinghost Guest</div>
+    </div>
+    <div class="search-bar" onclick="openSearch()">
+      <i class="fas fa-search"></i>
+      <span id="searchLabel">Dates, voyageurs...</span>
     </div>
   </div>
 
-  <!-- 💬 ÉCRAN CHAT -->
-  <div id="chatScreen" class="screen">
-    <div class="chat-container">
-      
-      <div class="chat-header">
-        <button class="btn-back" id="btnBack">
+  <!-- Conteneur screens -->
+  <div style="flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;" id="mainScroll">
+
+    <!-- ─── ÉCRAN 1 : Accueil ─── -->
+    <div id="screen-home" class="screen-content active">
+      <div class="properties-grid" id="propertiesGrid">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+
+    <!-- ─── ÉCRAN 2 : Détail logement ─── -->
+    <div id="screen-detail" class="screen-content">
+      <div class="detail-header" id="detailHeader">
+        <button class="btn-back-detail" onclick="showScreen('home')">
           <i class="fas fa-arrow-left"></i>
         </button>
-        <div class="chat-header-info">
-          <div class="property-name" id="propertyName">Chargement...</div>
-          <div class="property-dates" id="propertyDates"></div>
-        </div>
+        <div style="font-size:16px; font-weight:600;" id="detailHeaderName">Logement</div>
       </div>
-
-      <div class="messages-container" id="messagesContainer">
-        <div class="loading">
-          <i class="fas fa-spinner fa-spin"></i>
-          Chargement des messages...
+      <div id="detailBody"></div>
+      <div class="booking-bar" id="bookingBar">
+        <div>
+          <div class="booking-bar-price" id="barPrice">--€ <span>/ nuit</span></div>
+          <div style="font-size:12px; color:var(--text-light);" id="barDates">Sélectionnez des dates</div>
         </div>
+        <button class="btn-book" id="btnBook" disabled onclick="goToCheckout()">Réserver</button>
       </div>
+    </div>
 
-      <div class="chat-input-container">
-        <textarea id="messageInput" placeholder="Écrivez votre message..." rows="1"></textarea>
-        <div class="input-actions">
-          <button type="button" id="photoBtn" class="btn-photo" title="Envoyer une photo">
-            <i class="fas fa-image"></i>
-          </button>
-        </div>
-        <button id="sendBtn" class="btn-send" title="Envoyer">
-          <i class="fas fa-paper-plane"></i>
+    <!-- ─── ÉCRAN 3 : Checkout ─── -->
+    <div id="screen-checkout" class="screen-content">
+      <div class="checkout-header">
+        <button class="btn-back-detail" onclick="showScreen('detail')">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <div style="font-size:16px; font-weight:600;">Finaliser la réservation</div>
+      </div>
+      <div class="checkout-body" id="checkoutBody"></div>
+      <div class="checkout-cta">
+        <button class="btn-pay" id="btnPay" onclick="submitBooking()">
+          <i class="fas fa-lock"></i> Payer
         </button>
       </div>
-
     </div>
-  </div>
 
-  <script>
-    function updateDateDisplay(inputId, displayId) {
-      var input = document.getElementById(inputId);
-      var display = document.getElementById(displayId);
-      if (input.value) {
-        var d = new Date(input.value + 'T00:00:00');
-        display.querySelector('span').textContent = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        display.classList.add('has-value');
-      }
-    }
-  </script>
-  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
-  <script src="js/app.js"></script>
+    <!-- ─── ÉCRAN 4 : Confirmation ─── -->
+    <div id="screen-confirm" class="screen-content">
+      <div class="confirm-screen" id="confirmBody"></div>
+    </div>
+
+    <!-- ─── ÉCRAN 5 : Mes réservations ─── -->
+    <div id="screen-bookings" class="screen-content">
+      <div style="padding:20px 16px 8px;">
+        <h2 style="font-size:20px; font-weight:700; color:var(--text);">Mes réservations</h2>
+      </div>
+      <div class="my-bookings-list" id="myBookingsList">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+
+    <!-- ─── ÉCRAN 6 : Compte ─── -->
+    <div id="screen-account" class="screen-content">
+      <div style="padding:20px 16px 8px;">
+        <h2 style="font-size:20px; font-weight:700; color:var(--text);">Mon compte</h2>
+      </div>
+      <div class="account-section">
+        <div class="account-card">
+          <div class="account-field">
+            <label>Prénom et nom</label>
+            <input type="text" id="accountName" placeholder="Votre nom complet">
+          </div>
+          <div class="account-field">
+            <label>Email</label>
+            <input type="email" id="accountEmail" placeholder="votre@email.com">
+          </div>
+          <div class="account-field" style="margin-bottom:0;">
+            <label>Téléphone</label>
+            <input type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
+          </div>
+        </div>
+        <button class="btn-save-account" onclick="saveAccount()">Sauvegarder</button>
+      </div>
+    </div>
+
+  </div><!-- /mainScroll -->
+
+  <!-- Bottom nav (masquée sur detail/checkout/confirm) -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-item active" id="nav-home" onclick="navTo('home')">
+      <i class="fas fa-home"></i>
+      <span>Accueil</span>
+    </button>
+    <button class="nav-item" id="nav-bookings" onclick="navTo('bookings')">
+      <i class="fas fa-calendar-check"></i>
+      <span>Réservations</span>
+    </button>
+    <button class="nav-item" id="nav-account" onclick="navTo('account')">
+      <i class="fas fa-user"></i>
+      <span>Compte</span>
+    </button>
+  </nav>
+
+</div><!-- /appShell -->
+
+<!-- ─── Modal recherche ─── -->
+<div class="search-modal" id="searchModal" onclick="closeSearchOnBg(event)">
+  <div class="search-sheet">
+    <h3>Rechercher un logement</h3>
+    <div class="search-row dates-row">
+      <div>
+        <label>Arrivée</label>
+        <input type="date" id="searchCheckin" onchange="updateSearchLabel()">
+      </div>
+      <div>
+        <label>Départ</label>
+        <input type="date" id="searchCheckout" onchange="updateSearchLabel()">
+      </div>
+    </div>
+    <div class="search-row">
+      <label>Voyageurs</label>
+      <select id="searchGuests" onchange="updateSearchLabel()">
+        <option value="">Peu importe</option>
+        <option value="1">1 voyageur</option>
+        <option value="2">2 voyageurs</option>
+        <option value="3">3 voyageurs</option>
+        <option value="4">4 voyageurs</option>
+        <option value="6">6 voyageurs</option>
+        <option value="8">8 voyageurs</option>
+      </select>
+    </div>
+    <button class="btn-search-apply" onclick="applySearch()">
+      <i class="fas fa-search"></i> Rechercher
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="js/app-guest.js"></script>
 </body>
 </html>
