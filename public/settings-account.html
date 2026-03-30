@@ -1827,53 +1827,44 @@ if (logoInput && logoPreview) {
 
       // Charger le profil depuis l'API au chargement
       async function loadProfileFromAPI() {
+        // Lire les données locales en priorité (contiennent phone/email/website/customFields)
+        let localData = {};
+        try {
+          const raw = localStorage.getItem('lcc_settings_profile');
+          if (raw) localData = JSON.parse(raw);
+        } catch(e) {}
+
         const token = localStorage.getItem('lcc_token');
         if (!token) {
-          // Fallback sur localStorage si pas de token
-          const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
-          if (savedProfileRaw) {
-            try {
-              const savedProfile = JSON.parse(savedProfileRaw);
-              fillProfileFields(savedProfile);
-            } catch (e) {
-              console.error('Erreur lecture profil localStorage', e);
-            }
-          }
+          if (Object.keys(localData).length) fillProfileFields(localData);
           return;
         }
 
         try {
           const response = await fetch('/api/user/profile', {
-            headers: {
-              'Authorization': 'Bearer ' + token
-            }
+            headers: { 'Authorization': 'Bearer ' + token }
           });
 
           if (response.ok) {
-            const profile = await response.json();
-            fillProfileFields(profile);
-            // Sauvegarder aussi en local pour fallback
-            localStorage.setItem('lcc_settings_profile', JSON.stringify(profile));
+            const apiProfile = await response.json();
+            // Fusionner : API pour les champs de base, localStorage pour les champs
+            // non gérés par le backend (phone, invoiceEmail, website, customFields)
+            const merged = Object.assign({}, apiProfile, {
+              phone:        localData.phone        || apiProfile.phone        || '',
+              invoiceEmail: localData.invoiceEmail || apiProfile.invoiceEmail || '',
+              website:      localData.website      || apiProfile.website      || '',
+              customFields: localData.customFields || apiProfile.customFields || [],
+              logoUrl:      apiProfile.logoUrl     || localData.logoUrl       || ''
+            });
+            fillProfileFields(merged);
+            // Sauvegarder la version fusionnée pour les prochains chargements hors-ligne
+            localStorage.setItem('lcc_settings_profile', JSON.stringify(merged));
           } else {
-            // Fallback sur localStorage
-            const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
-            if (savedProfileRaw) {
-              const savedProfile = JSON.parse(savedProfileRaw);
-              fillProfileFields(savedProfile);
-            }
+            if (Object.keys(localData).length) fillProfileFields(localData);
           }
         } catch (e) {
           console.error('Erreur chargement profil API', e);
-          // Fallback sur localStorage
-          const savedProfileRaw = localStorage.getItem('lcc_settings_profile');
-          if (savedProfileRaw) {
-            try {
-              const savedProfile = JSON.parse(savedProfileRaw);
-              fillProfileFields(savedProfile);
-            } catch (err) {
-              console.error('Erreur lecture profil localStorage', err);
-            }
-          }
+          if (Object.keys(localData).length) fillProfileFields(localData);
         }
       }
 
@@ -1892,7 +1883,9 @@ if (logoInput && logoPreview) {
   if (phoneInput && profile.phone)         phoneInput.value         = profile.phone;
   if (invoiceEmailInput && profile.invoiceEmail) invoiceEmailInput.value = profile.invoiceEmail;
   if (websiteInput && profile.website)     websiteInput.value       = profile.website;
-  // Champs personnalisés
+  // Champs personnalisés — vider d'abord pour éviter les doublons au rechargement
+  const existingList = document.getElementById('customFieldsList');
+  if (existingList) existingList.innerHTML = '';
   if (profile.customFields && Array.isArray(profile.customFields)) {
     profile.customFields.forEach(function(cf) { addCustomFieldRow(cf.label, cf.value); });
   }
