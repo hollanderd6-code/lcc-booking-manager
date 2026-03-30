@@ -468,6 +468,35 @@
       <div class="confirm-screen" id="confirmBody"></div>
     </div>
 
+    <!-- ─── ÉCRAN LOGIN ─── -->
+    <div id="screen-login" class="screen-content">
+      <div class="page-header"><h2>Connexion</h2></div>
+      <div style="padding:32px 20px;">
+        <p style="font-size:15px;color:var(--text-light);margin-bottom:28px;line-height:1.6;">
+          Entrez votre email pour recevoir un lien de connexion instantané. Aucun mot de passe.
+        </p>
+        <div id="loginForm">
+          <div class="form-section">
+            <label>Votre email</label>
+            <input type="email" id="loginEmail" placeholder="votre@email.com" style="margin-bottom:12px;">
+          </div>
+          <button onclick="requestMagicLink()" id="btnMagicLink" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
+            <i class="fas fa-paper-plane"></i> Recevoir mon lien
+          </button>
+        </div>
+        <div id="loginSent" style="display:none;text-align:center;padding:20px 0;">
+          <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <i class="fas fa-envelope" style="font-size:28px;color:var(--primary);"></i>
+          </div>
+          <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">Email envoyé !</div>
+          <div style="font-size:14px;color:var(--text-light);line-height:1.6;">Vérifiez votre boîte mail et cliquez sur le lien.<br>Valable 15 minutes.</div>
+          <button onclick="document.getElementById('loginSent').style.display='none';document.getElementById('loginForm').style.display='block';" style="margin-top:20px;background:none;border:none;color:var(--primary);font-size:14px;cursor:pointer;text-decoration:underline;">
+            Renvoyer un lien
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── ÉCRAN 5 : Mes réservations ─── -->
     <div id="screen-bookings" class="screen-content">
       <div class="page-header">
@@ -516,7 +545,7 @@
     </button>
     <button class="nav-item" id="nav-account" onclick="navTo('account')">
       <i class="fas fa-user"></i>
-      <span>Compte</span>
+      <span id="navAccountLabel">Compte</span>
     </button>
   </nav>
 
