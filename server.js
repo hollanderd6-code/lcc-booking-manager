@@ -14419,7 +14419,10 @@ app.post('/api/owner-invoices',
       discountType,
       discountValue,
       notes,
-      internalNotes
+      internalNotes,
+      paymentDelay,
+      paymentMode,
+      lateInterest
     } = req.body;
 
     if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
@@ -14473,6 +14476,9 @@ app.post('/api/owner-invoices',
         total_ttc,
         notes,
         internal_notes,
+        payment_delay,
+        payment_mode,
+        late_interest,
         status,
         created_at
       ) VALUES (
@@ -14482,7 +14488,8 @@ app.post('/api/owner-invoices',
         $9,$10,$11,
         $12,$13,$14,$15,
         $16,$17,
-        $18,
+        $18,$19,$20,
+        $21,
         NOW()
       )
       RETURNING *
@@ -14504,6 +14511,9 @@ app.post('/api/owner-invoices',
       totalTtc,
       notes || null,
       internalNotes || null,
+      paymentDelay || null,
+      paymentMode || null,
+      lateInterest || null,
       'draft'
     ]);
 
@@ -15593,7 +15603,8 @@ app.put('/api/owner-invoices/:id',
       issueDate, dueDate, periodStart, periodEnd,
       vatApplicable, vatRate,
       discountType, discountValue,
-      notes, internalNotes
+      notes, internalNotes,
+      paymentDelay, paymentMode, lateInterest
     } = req.body;
 
     // Recalculer totaux
@@ -15621,7 +15632,7 @@ app.put('/api/owner-invoices/:id',
     const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100) : 0;
     const totalTtc = netHt + subtotalDebours + vatAmount;
 
-    // Mettre à jour facture (inclut client, dates et totaux)
+    // Mettre à jour facture (client, dates, totaux, conditions)
     await client.query(`
       UPDATE owner_invoices SET
         client_id = $1,
@@ -15630,8 +15641,9 @@ app.put('/api/owner-invoices/:id',
         vat_applicable = $6, vat_rate = $7,
         discount_type = $8, discount_value = $9, discount_amount = $10,
         subtotal_ht = $11, subtotal_debours = $12, vat_amount = $13, total_ttc = $14,
-        notes = $15, internal_notes = $16
-      WHERE id = $17
+        notes = $15, internal_notes = $16,
+        payment_delay = $17, payment_mode = $18, late_interest = $19
+      WHERE id = $20
     `, [
       clientId || null,
       issueDate || null, dueDate || null,
@@ -15640,13 +15652,14 @@ app.put('/api/owner-invoices/:id',
       discountType || 'none', discountValue || 0, discountAmount,
       subtotalHt, subtotalDebours, vatAmount, totalTtc,
       notes || null, internalNotes || null,
+      paymentDelay || null, paymentMode || null, lateInterest || null,
       req.params.id
     ]);
 
     // Supprimer anciennes lignes
     await client.query('DELETE FROM owner_invoice_items WHERE invoice_id = $1', [req.params.id]);
 
-    // Insérer nouvelles lignes (avec gen_random_uuid() pour la colonne id NOT NULL)
+    // Insérer nouvelles lignes
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       await client.query(`
