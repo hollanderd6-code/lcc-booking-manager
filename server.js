@@ -21598,13 +21598,32 @@ app.post('/api/channex/webhook', async (req, res) => {
         await bookingAcknowledge(bookingId);
       }
 
-      // ── Injecter immédiatement dans le store mémoire ─────────
+      // ── Injecter/mettre à jour dans le store mémoire ─────────
       if (result && result.property_id && result.uid) {
         if (!reservationsStore.properties[result.property_id]) {
           reservationsStore.properties[result.property_id] = [];
         }
-        const alreadyInStore = reservationsStore.properties[result.property_id].find(r => r.uid === result.uid);
-        if (!alreadyInStore) {
+        const storeIdx = reservationsStore.properties[result.property_id].findIndex(r => r.uid === result.uid);
+
+        if (result.status === 'cancelled') {
+          // Supprimer du store si annulée
+          if (storeIdx !== -1) {
+            reservationsStore.properties[result.property_id].splice(storeIdx, 1);
+            console.log(`🚫 [CHANNEX] Résa ${result.uid} retirée du reservationsStore`);
+          }
+        } else if (storeIdx !== -1) {
+          // Mettre à jour si déjà dans le store (modification)
+          reservationsStore.properties[result.property_id][storeIdx] = {
+            ...reservationsStore.properties[result.property_id][storeIdx],
+            start:    result.start_date,
+            end:      result.end_date,
+            status:   result.status || 'confirmed',
+            price:    parseFloat(result.amount_total) || 0,
+            currency: result.currency || 'EUR'
+          };
+          console.log(`✏️ [CHANNEX] Résa ${result.uid} mise à jour dans reservationsStore`);
+        } else {
+          // Nouvelle réservation → ajouter au store
           reservationsStore.properties[result.property_id].push({
             uid:       result.uid,
             start:     result.start_date,
@@ -21613,15 +21632,53 @@ app.post('/api/channex/webhook', async (req, res) => {
             source:    'channex',
             platform:  result.platform || 'Channex',
             status:    result.status || 'confirmed',
-            price:     parseFloat(result.amount) || 0,
+            price:     parseFloat(result.amount_total) || 0,
             currency:  result.currency || 'EUR'
           });
           console.log(`✅ [CHANNEX] Résa ${result.uid} injectée dans reservationsStore`);
         }
       }
 
+      // ── Notification push annulation ────────────────────────
+      if (result && result.uid && result.status === 'cancelled') {
+        try {
+          const attrs     = booking.attributes || booking;
+          const otaName   = attrs.ota_name || 'Channex';
+          const OTA_EMOJI = { 'ABB':'🏠','AIRBNB':'🏠','BDC':'🛏️','BOOKING':'🛏️','EXP':'✈️','EXPEDIA':'✈️','VRBO':'🏡','HOMEAWAY':'🏡' };
+          const emoji     = OTA_EMOJI[String(otaName).toUpperCase()] || '📅';
+          const fmtDate   = (iso) => { try { return new Date(iso+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); } catch { return iso; } };
+          const guest     = attrs.customer || {};
+          const guestName = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
+          const propRes   = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
+          const propertyName = propRes.rows[0]?.name || 'Logement';
+
+          const notifTitle = `${emoji} Réservation annulée`;
+          const notifBody  = `${guestName} · ${propertyName} · ${fmtDate(result.start_date)} → ${fmtDate(result.end_date)}`;
+          const notifData  = { type: 'cancelled_booking_channex', uid: result.uid, propertyId: String(result.property_id || ''), screen: 'calendar' };
+
+          if (await shouldSendNotification(result.user_id, 'notif_reservation_cancelled')) {
+            const tokensRes = await pool.query(
+              'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+              [result.user_id]
+            );
+            for (const tok of tokensRes.rows) {
+              await sendNotification(tok.fcm_token, notifTitle, notifBody, notifData);
+            }
+            console.log(`📱 [CHANNEX] Notif annulation envoyée pour ${result.uid} (${tokensRes.rows.length} tokens)`);
+          }
+
+          // Notifier les sous-comptes
+          await sendNotificationToSubAccountsOf(
+            result.user_id, 'notif_sub_reservation_cancelled',
+            notifTitle, notifBody, notifData, null, result.property_id
+          );
+        } catch (cancelNotifErr) {
+          console.error('⚠️ [CHANNEX WEBHOOK] Erreur notif annulation:', cancelNotifErr.message);
+        }
+      }
+
       // ── Notification push si nouvelle réservation créée ──────
-      if (result && result.uid && result.uid.startsWith('CHX_')) {
+      if (result && result.uid && result.uid.startsWith('CHX_') && result.status !== 'cancelled') {
         try {
           const attrs        = booking.attributes || booking;
           const otaName      = attrs.ota_name || 'Channex';
