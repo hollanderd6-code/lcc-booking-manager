@@ -21646,7 +21646,7 @@ app.post('/api/channex/webhook', async (req, res) => {
           const otaName   = attrs.ota_name || 'Channex';
           const OTA_EMOJI = { 'ABB':'🏠','AIRBNB':'🏠','BDC':'🛏️','BOOKING':'🛏️','EXP':'✈️','EXPEDIA':'✈️','VRBO':'🏡','HOMEAWAY':'🏡' };
           const emoji     = OTA_EMOJI[String(otaName).toUpperCase()] || '📅';
-          const fmtDate   = (iso) => { try { return new Date(iso+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); } catch { return iso; } };
+          const fmtDate   = (iso) => { try { const d = iso instanceof Date ? iso : new Date(String(iso).substring(0,10)+'T12:00:00'); return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); } catch { return String(iso); } };
           const guest     = attrs.customer || {};
           const guestName = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
           const propRes   = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
