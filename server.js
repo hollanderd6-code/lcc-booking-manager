@@ -57,6 +57,7 @@ const {
   pushAvailability,
   pushRates,
   pushRestrictions,
+  bookingAcknowledge,
   processChannexBooking,
   getBookingMessages,
   sendBookingMessage
@@ -135,7 +136,7 @@ async function triggerChannexRatesSync(propertyId, userId) {
 
     const today = new Date();
     const fmt = d => d.toISOString().split('T')[0];
-    const endDate = new Date(today); endDate.setDate(today.getDate() + 365);
+    const endDate = new Date(today); endDate.setDate(today.getDate() + 500);
 
     const overridesResult = await pool.query(
       `SELECT TO_CHAR(date,'YYYY-MM-DD') as date, price FROM pricing_overrides
@@ -153,7 +154,7 @@ async function triggerChannexRatesSync(propertyId, userId) {
     const rates = [];
     const restrictions = [];
 
-    for (let i = 0; i < 365; i++) {
+    for (let i = 0; i < 500; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const dateStr = fmt(d);
@@ -11301,7 +11302,7 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async 
 
     const today = new Date();
     const fmt = d => d.toISOString().split('T')[0];
-    const endDate = new Date(today); endDate.setDate(today.getDate() + 365);
+    const endDate = new Date(today); endDate.setDate(today.getDate() + 500);
 
     // Récupérer les overrides manuels
     const overridesResult = await pool.query(
@@ -11321,11 +11322,11 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async 
     // Trouver la réduction long_stay applicable (la première par priorité)
     const longStayRule = longStayRules.length > 0 ? longStayRules[0] : null;
 
-    // Calculer prix + restrictions pour chaque jour (365 jours)
+    // Calculer prix + restrictions pour chaque jour (500 jours — full sync certification)
     const rates        = [];
     const restrictions = [];
 
-    for (let i = 0; i < 365; i++) {
+    for (let i = 0; i < 500; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const dateStr = fmt(d);
@@ -11385,30 +11386,42 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async 
         rates.push({ date: dateStr, price: appliedPrice });
       }
 
-      // ── CALCUL DES RESTRICTIONS (min_stay) ──────────────────
+      // ── CALCUL DES RESTRICTIONS (min_stay + stop_sell + CTA/CTD) ──
 
-      let minStay = null;
+      const restrictionEntry = { date: dateStr };
+      let hasRestriction = false;
 
+      // min_stay via pricing_rules
       for (const rule of minStayRules) {
         if (rule.min_nights == null) continue;
-
-        // Règle globale (sans période ni jours définis)
         if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
-          minStay = rule.min_nights;
+          restrictionEntry.min_stay = rule.min_nights;
+          hasRestriction = true;
           break;
         }
-
-        // Règle sur une période
         if (rule.start_date && rule.end_date) {
           if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
-            minStay = rule.min_nights;
+            restrictionEntry.min_stay = rule.min_nights;
+            hasRestriction = true;
             break;
           }
         }
       }
 
-      if (minStay != null) {
-        restrictions.push({ date: dateStr, min_stay: minStay });
+      // stop_sell via pricing_rules de type stop_sell
+      const stopSellRules = rules.filter(r => r.rule_type === 'stop_sell');
+      for (const rule of stopSellRules) {
+        if (rule.start_date && rule.end_date) {
+          if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+            restrictionEntry.stop_sell = true;
+            hasRestriction = true;
+            break;
+          }
+        }
+      }
+
+      if (hasRestriction) {
+        restrictions.push(restrictionEntry);
       }
     }
 
@@ -21578,6 +21591,12 @@ app.post('/api/channex/webhook', async (req, res) => {
 
     for (const booking of bookings) {
       const result = await processChannexBooking(pool, booking);
+
+      // ── Acknowledge immédiat — requis par Channex (test 11 certification) ──
+      const bookingId = booking.id || booking.attributes?.id;
+      if (bookingId) {
+        await bookingAcknowledge(bookingId);
+      }
 
       // ── Injecter immédiatement dans le store mémoire ─────────
       if (result && result.property_id && result.uid) {
