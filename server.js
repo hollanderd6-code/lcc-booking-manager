@@ -22422,3 +22422,395 @@ app.get('/api/channex/certification/check-webhooks', authenticateToken, async (r
     res.status(500).json({ error: e.response?.data || e.message });
   }
 });
+
+// ============================================================
+// 🏠 BOOSTINGHOST GUEST — API publique de réservation directe
+// ============================================================
+
+// ── Liste tous les logements publics (sans auth) ─────────────
+app.get('/api/guest/properties', async (req, res) => {
+  try {
+    const { checkin, checkout, guests } = req.query;
+
+    // Récupérer tous les logements actifs avec subscription valide
+    const result = await pool.query(`
+      SELECT 
+        p.id, p.name, p.address, p.city, p.photo_url,
+        p.base_price, p.weekend_price, p.max_guests,
+        p.bedrooms, p.beds, p.bathrooms,
+        p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
+        u.id as owner_id
+      FROM properties p
+      JOIN users u ON u.id = p.user_id
+      JOIN subscriptions s ON s.user_id = u.id
+      WHERE p.is_active = true
+        AND s.status IN ('active', 'trial')
+        AND p.base_price IS NOT NULL
+      ORDER BY p.created_at DESC
+    `);
+
+    let properties = result.rows;
+
+    // Filtrer par nombre de voyageurs si fourni
+    if (guests) {
+      const g = parseInt(guests);
+      properties = properties.filter(p => !p.max_guests || p.max_guests >= g);
+    }
+
+    // Filtrer par disponibilité si dates fournies
+    if (checkin && checkout) {
+      const bookedIds = await pool.query(`
+        SELECT DISTINCT property_id FROM reservations
+        WHERE status NOT IN ('cancelled')
+          AND start_date < $2
+          AND end_date > $1
+      `, [checkin, checkout]);
+      const bookedSet = new Set(bookedIds.rows.map(r => r.property_id));
+      properties = properties.filter(p => !bookedSet.has(p.id));
+    }
+
+    res.json(properties.map(p => ({
+      id: p.id,
+      name: p.name,
+      address: p.address,
+      city: p.city,
+      photoUrl: p.photo_url,
+      basePrice: parseFloat(p.base_price) || null,
+      weekendPrice: parseFloat(p.weekend_price) || null,
+      maxGuests: p.max_guests,
+      bedrooms: p.bedrooms,
+      beds: p.beds,
+      bathrooms: p.bathrooms,
+      channexEnabled: p.channex_enabled
+    })));
+
+  } catch (e) {
+    console.error('❌ [GUEST] GET /api/guest/properties:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Détail d'un logement public ──────────────────────────────
+app.get('/api/guest/properties/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`
+      SELECT 
+        p.id, p.name, p.address, p.city, p.photo_url,
+        p.base_price, p.weekend_price, p.max_guests,
+        p.bedrooms, p.beds, p.bathrooms,
+        p.arrival_time, p.departure_time,
+        p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
+        p.user_id as owner_id
+      FROM properties p
+      JOIN users u ON u.id = p.user_id
+      JOIN subscriptions s ON s.user_id = u.id
+      WHERE p.id = $1
+        AND p.is_active = true
+        AND s.status IN ('active', 'trial')
+    `, [id]);
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+    const p = result.rows[0];
+
+    // Récupérer les réservations confirmées pour le calendrier
+    const resas = await pool.query(`
+      SELECT start_date, end_date FROM reservations
+      WHERE property_id = $1 AND status NOT IN ('cancelled')
+        AND end_date >= NOW()
+      ORDER BY start_date ASC
+    `, [id]);
+
+    res.json({
+      id: p.id,
+      name: p.name,
+      address: p.address,
+      city: p.city,
+      photoUrl: p.photo_url,
+      basePrice: parseFloat(p.base_price) || null,
+      weekendPrice: parseFloat(p.weekend_price) || null,
+      maxGuests: p.max_guests,
+      bedrooms: p.bedrooms,
+      beds: p.beds,
+      bathrooms: p.bathrooms,
+      arrivalTime: p.arrival_time,
+      departureTime: p.departure_time,
+      channexEnabled: p.channex_enabled,
+      bookedDates: resas.rows.map(r => ({
+        start: r.start_date,
+        end: r.end_date
+      }))
+    });
+
+  } catch (e) {
+    console.error('❌ [GUEST] GET /api/guest/properties/:id:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Créer une réservation Guest + paiement Stripe ───────────
+app.post('/api/guest/book', async (req, res) => {
+  try {
+    const {
+      property_id, checkin, checkout,
+      guests, guest_name, guest_email, guest_phone,
+      payment_method_id  // token Stripe
+    } = req.body;
+
+    if (!property_id || !checkin || !checkout || !guest_name || !guest_email) {
+      return res.status(400).json({ error: 'Champs requis manquants' });
+    }
+
+    // Vérifier que le logement est disponible
+    const conflict = await pool.query(`
+      SELECT id FROM reservations
+      WHERE property_id = $1
+        AND status NOT IN ('cancelled')
+        AND start_date < $3
+        AND end_date > $2
+    `, [property_id, checkin, checkout]);
+
+    if (conflict.rows.length > 0) {
+      return res.status(409).json({ error: 'Ces dates ne sont plus disponibles' });
+    }
+
+    // Récupérer le logement et l'hôte
+    const propResult = await pool.query(`
+      SELECT p.*, u.id as owner_user_id
+      FROM properties p
+      JOIN users u ON u.id = p.user_id
+      WHERE p.id = $1 AND p.is_active = true
+    `, [property_id]);
+
+    if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+    const prop = propResult.rows[0];
+
+    // Calculer le prix
+    const start = new Date(checkin);
+    const end = new Date(checkout);
+    const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
+    
+    let totalBase = 0;
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dow = d.getDay();
+      const isPremium = dow === 5 || dow === 6;
+      const nightPrice = isPremium && prop.weekend_price
+        ? parseFloat(prop.weekend_price)
+        : parseFloat(prop.base_price || 0);
+      totalBase += nightPrice;
+    }
+
+    const commission = Math.round(totalBase * 0.03 * 100) / 100;
+    const totalTTC = Math.round((totalBase + commission) * 100); // en centimes
+
+    // Créer le PaymentIntent Stripe
+    let paymentIntent = null;
+    if (payment_method_id) {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: totalTTC,
+        currency: 'eur',
+        payment_method: payment_method_id,
+        confirm: true,
+        return_url: 'https://www.boostinghost.fr/guest-app/public/index.html',
+        metadata: {
+          property_id,
+          guest_email,
+          checkin,
+          checkout,
+          source: 'boostinghost_guest'
+        }
+      });
+    }
+
+    // Créer la réservation dans BH
+    const uid = `GUEST_${Date.now()}`;
+    const crypto = require('crypto');
+    const insertResult = await pool.query(`
+      INSERT INTO reservations
+        (uid, property_id, user_id, start_date, end_date,
+         guest_name, guest_email, guest_phone,
+         amount_total, platform, source, status,
+         occupancy_adults, currency)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+      RETURNING *
+    `, [
+      uid, property_id, prop.owner_user_id,
+      checkin, checkout,
+      guest_name, guest_email, guest_phone || null,
+      totalBase, 'Boostinghost Guest', 'guest_app', 'confirmed',
+      guests || 1, 'EUR'
+    ]);
+
+    const reservation = insertResult.rows[0];
+
+    // Bloquer les dates dans Channex si le logement est connecté
+    if (prop.channex_enabled && prop.channex_property_id) {
+      try {
+        const { pushAvailability } = require('./channex');
+        // Construire les dates bloquées
+        const blockedDates = [];
+        for (let i = 0; i < nights; i++) {
+          const d = new Date(start);
+          d.setDate(start.getDate() + i);
+          blockedDates.push(d.toISOString().split('T')[0]);
+        }
+        // Récupérer toutes les réservations confirmées
+        const allResas = await pool.query(
+          `SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+          [property_id]
+        );
+        const allBlocked = [];
+        allResas.rows.forEach(r => {
+          const s = new Date(r.start_date), e = new Date(r.end_date);
+          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+            allBlocked.push(d.toISOString().split('T')[0]);
+          }
+        });
+        await pushAvailability(pool, {
+          property_id,
+          channex_property_id: prop.channex_property_id,
+          channex_room_type_id: prop.channex_room_type_id,
+          dates_blocked: allBlocked
+        });
+        console.log(`✅ [GUEST] Disponibilités Channex mises à jour pour ${property_id}`);
+      } catch (channexErr) {
+        console.error('⚠️ [GUEST] Erreur sync Channex (non bloquant):', channexErr.message);
+      }
+    }
+
+    // Notification push à l'hôte
+    try {
+      const tokensRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+        [prop.owner_user_id]
+      );
+      for (const tok of tokensRes.rows) {
+        await sendNotification(tok.fcm_token,
+          '🏠 Nouvelle réservation directe',
+          `${guest_name} · ${prop.name} · ${checkin} → ${checkout}`,
+          { type: 'new_booking_guest', uid, propertyId: property_id, screen: 'calendar' }
+        );
+      }
+    } catch (notifErr) {
+      console.error('⚠️ [GUEST] Erreur notif hôte:', notifErr.message);
+    }
+
+    res.json({
+      success: true,
+      reservation_uid: uid,
+      total: totalBase,
+      commission,
+      total_ttc: totalTTC / 100,
+      nights,
+      payment_status: paymentIntent?.status || 'pending'
+    });
+
+  } catch (e) {
+    console.error('❌ [GUEST] POST /api/guest/book:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Mes réservations (par email voyageur) ────────────────────
+app.get('/api/guest/my-bookings', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'Email requis' });
+
+    const result = await pool.query(`
+      SELECT r.uid, r.start_date, r.end_date, r.amount_total,
+             r.status, r.guest_name, r.created_at,
+             p.name as property_name, p.photo_url, p.address, p.city,
+             p.arrival_time, p.departure_time
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      WHERE r.guest_email = $1
+        AND r.source = 'guest_app'
+      ORDER BY r.start_date DESC
+    `, [email]);
+
+    res.json(result.rows.map(r => ({
+      uid: r.uid,
+      checkin: r.start_date,
+      checkout: r.end_date,
+      total: parseFloat(r.amount_total),
+      status: r.status,
+      guestName: r.guest_name,
+      createdAt: r.created_at,
+      property: {
+        name: r.property_name,
+        photoUrl: r.photo_url,
+        address: r.address,
+        city: r.city,
+        arrivalTime: r.arrival_time,
+        departureTime: r.departure_time
+      }
+    })));
+
+  } catch (e) {
+    console.error('❌ [GUEST] GET /api/guest/my-bookings:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Créer un PaymentIntent Stripe pour Guest ─────────────────
+app.post('/api/guest/create-payment-intent', async (req, res) => {
+  try {
+    const { property_id, checkin, checkout, guests } = req.body;
+    if (!property_id || !checkin || !checkout) {
+      return res.status(400).json({ error: 'Champs requis manquants' });
+    }
+
+    const propResult = await pool.query(
+      'SELECT base_price, weekend_price, name FROM properties WHERE id = $1 AND is_active = true',
+      [property_id]
+    );
+    if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+    const prop = propResult.rows[0];
+
+    const start = new Date(checkin);
+    const end = new Date(checkout);
+    const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+    let totalBase = 0;
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dow = d.getDay();
+      const isPremium = dow === 5 || dow === 6;
+      const nightPrice = isPremium && prop.weekend_price
+        ? parseFloat(prop.weekend_price)
+        : parseFloat(prop.base_price || 0);
+      totalBase += nightPrice;
+    }
+
+    const commission = Math.round(totalBase * 0.03 * 100) / 100;
+    const totalTTC = Math.round((totalBase + commission) * 100);
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: totalTTC,
+      currency: 'eur',
+      metadata: { property_id, checkin, checkout, source: 'boostinghost_guest' }
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      totalBase,
+      commission,
+      totalTTC: totalTTC / 100,
+      nights,
+      propertyName: prop.name
+    });
+
+  } catch (e) {
+    console.error('❌ [GUEST] create-payment-intent:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Servir l'app Guest (catch-all SPA) ───────────────────────
+app.get('/guest-app/public', (req, res) => {
+  res.sendFile(path.join(__dirname, 'guest-app', 'public', 'index.html'));
+});
