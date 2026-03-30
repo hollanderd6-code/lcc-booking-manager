@@ -22678,7 +22678,125 @@ app.post('/api/guest/book', async (req, res) => {
       }
     }
 
-    // Notification push à l'hôte
+    // ── Email de confirmation au voyageur ───────────────────
+    try {
+      const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+
+      await sendEmailViaBrevo({
+        to: guest_email,
+        subject: `✅ Réservation confirmée — ${prop.name}`,
+        text: `Votre réservation est confirmée pour ${prop.name} du ${fmtDate(checkin)} au ${fmtDate(checkout)}.`,
+        html: bhEmailTemplate({
+          icon: '🏠',
+          title: 'Réservation confirmée !',
+          subtitle: prop.name,
+          bodyHtml: `
+            <div class="success-card">
+              <strong>Votre réservation est confirmée</strong><br>
+              Référence : <strong>${uid}</strong>
+            </div>
+
+            <div class="feat-row">
+              <div class="feat-icon">📍</div>
+              <div class="feat-text"><strong>Logement</strong><br>${prop.name}${prop.address ? '<br>' + prop.address : ''}</div>
+            </div>
+            <div class="feat-row">
+              <div class="feat-icon">📅</div>
+              <div class="feat-text"><strong>Arrivée</strong><br>${fmtDate(checkin)}${prop.arrival_time ? ' à partir de ' + prop.arrival_time : ''}</div>
+            </div>
+            <div class="feat-row">
+              <div class="feat-icon">📅</div>
+              <div class="feat-text"><strong>Départ</strong><br>${fmtDate(checkout)}${prop.departure_time ? ' avant ' + prop.departure_time : ''}</div>
+            </div>
+            <div class="feat-row">
+              <div class="feat-icon">👥</div>
+              <div class="feat-text"><strong>Voyageurs</strong><br>${guests || 1} personne${(guests || 1) > 1 ? 's' : ''}</div>
+            </div>
+
+            <hr class="divider">
+
+            <div style="background:#F5F2EC;border-radius:10px;padding:20px;margin:20px 0;">
+              <p style="margin:0 0 8px;font-size:13px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Récapitulatif du paiement</p>
+              <div style="display:flex;justify-content:space-between;font-size:14px;color:#444;margin-bottom:6px;">
+                <span>${prop.base_price}€ × ${nights} nuit${nights > 1 ? 's' : ''}</span>
+                <span>${totalBase}€</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:14px;color:#444;margin-bottom:10px;">
+                <span>Frais de service (3%)</span>
+                <span>${commission}€</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#1A7A5E;border-top:1px solid #DDD8CE;padding-top:10px;">
+                <span>Total payé</span>
+                <span>${totalTTC / 100}€</span>
+              </div>
+            </div>
+
+            <div class="cta-block">
+              <p>Retrouvez toutes vos réservations dans l'app Boostinghost Guest</p>
+              <a href="${appUrl}/guest-app/public/index.html" class="btn">Voir mes réservations</a>
+            </div>
+
+            <p class="signoff">À très bientôt,<br>L'équipe Boostinghost</p>
+          `,
+          footerNote: 'Boostinghost Guest — Réservation directe'
+        })
+      });
+      console.log(`✅ [GUEST] Email confirmation envoyé à ${guest_email}`);
+    } catch (emailErr) {
+      console.error('⚠️ [GUEST] Erreur email confirmation (non bloquant):', emailErr.message);
+    }
+
+    // ── Email de notification à l'hôte ───────────────────────
+    try {
+      const ownerResult = await pool.query('SELECT email, company_name FROM users WHERE id = $1', [prop.owner_user_id]);
+      const owner = ownerResult.rows[0];
+      const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      if (owner?.email) {
+        await sendEmailViaBrevo({
+          to: owner.email,
+          subject: `🏠 Nouvelle réservation directe — ${prop.name}`,
+          text: `${guest_name} vient de réserver ${prop.name} du ${fmtDate(checkin)} au ${fmtDate(checkout)} via Boostinghost Guest.`,
+          html: bhEmailTemplate({
+            icon: '🏠',
+            title: 'Nouvelle réservation directe',
+            subtitle: `Via Boostinghost Guest`,
+            bodyHtml: `
+              <div class="info-card">
+                <strong>Réservation reçue !</strong><br>
+                Un voyageur vient de réserver directement via Boostinghost Guest.
+              </div>
+
+              <div class="feat-row">
+                <div class="feat-icon">👤</div>
+                <div class="feat-text"><strong>Voyageur</strong><br>${guest_name}${guest_email ? '<br>' + guest_email : ''}${guest_phone ? '<br>' + guest_phone : ''}</div>
+              </div>
+              <div class="feat-row">
+                <div class="feat-icon">🏠</div>
+                <div class="feat-text"><strong>Logement</strong><br>${prop.name}</div>
+              </div>
+              <div class="feat-row">
+                <div class="feat-icon">📅</div>
+                <div class="feat-text"><strong>Dates</strong><br>${fmtDate(checkin)} → ${fmtDate(checkout)} (${nights} nuit${nights > 1 ? 's' : ''})</div>
+              </div>
+              <div class="feat-row">
+                <div class="feat-icon">💶</div>
+                <div class="feat-text"><strong>Montant reversé</strong><br>${totalBase}€ (après commission 3%)</div>
+              </div>
+
+              <p class="signoff">Référence : ${uid}</p>
+            `,
+            footerNote: 'Boostinghost — Tableau de bord hôte'
+          })
+        });
+        console.log(`✅ [GUEST] Email hôte envoyé à ${owner.email}`);
+      }
+    } catch (ownerEmailErr) {
+      console.error('⚠️ [GUEST] Erreur email hôte (non bloquant):', ownerEmailErr.message);
+    }
+
+    // ── Notification push à l'hôte ───────────────────────────
     try {
       const tokensRes = await pool.query(
         'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
@@ -22808,6 +22926,231 @@ app.post('/api/guest/create-payment-intent', async (req, res) => {
   }
 });
 
+
+// ============================================================
+// 🔐 BOOSTINGHOST GUEST — Authentification par lien magique
+// ============================================================
+
+// Créer la table au démarrage (si pas existante)
+pool.query(`
+  CREATE TABLE IF NOT EXISTS guest_magic_tokens (
+    id SERIAL PRIMARY KEY,
+    email TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`).catch(e => console.error('❌ guest_magic_tokens table:', e.message));
+
+// ── 1. Demander un lien magique ──────────────────────────────
+app.post('/api/guest/auth/request', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'Email invalide' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+
+    // Stocker le token (remplace un éventuel token existant)
+    await pool.query(`
+      INSERT INTO guest_magic_tokens (email, token, expires_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT DO NOTHING
+    `, [normalizedEmail, token, expiresAt]);
+
+    // Fallback si conflict (email déjà en attente) → update
+    await pool.query(`
+      UPDATE guest_magic_tokens
+      SET token = $2, expires_at = $3, used = FALSE, created_at = NOW()
+      WHERE email = $1
+    `, [normalizedEmail, token, expiresAt]);
+
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+    const magicLink = `${appUrl}/guest-app/public/index.html?magic_token=${token}`;
+
+    // Compter les réservations de ce voyageur
+    const resaCount = await pool.query(
+      'SELECT COUNT(*) FROM reservations WHERE guest_email = $1 AND source = $2',
+      [normalizedEmail, 'guest_app']
+    );
+    const hasBookings = parseInt(resaCount.rows[0].count) > 0;
+
+    await sendEmailViaBrevo({
+      to: normalizedEmail,
+      subject: '🔑 Votre lien de connexion — Boostinghost Guest',
+      text: `Cliquez sur ce lien pour vous connecter : ${magicLink}`,
+      html: bhEmailTemplate({
+        icon: '🔑',
+        title: 'Connexion à votre espace',
+        subtitle: 'Boostinghost Guest',
+        bodyHtml: `
+          <p>Bonjour,</p>
+          <p>Cliquez sur le bouton ci-dessous pour vous connecter à votre espace voyageur. Ce lien est valable <strong>15 minutes</strong>.</p>
+
+          <div class="cta-block">
+            <p>Un seul clic, aucun mot de passe à retenir</p>
+            <a href="${magicLink}" class="btn">Se connecter maintenant</a>
+          </div>
+
+          ${hasBookings ? `
+          <div class="info-card">
+            <strong>Vos réservations vous attendent</strong><br>
+            Retrouvez l'historique de vos séjours directement après connexion.
+          </div>` : `
+          <div class="info-card">
+            <strong>Première fois ?</strong><br>
+            Découvrez tous les logements disponibles et réservez en direct, sans commission.
+          </div>`}
+
+          <p style="font-size:13px;color:#888;margin-top:20px;">
+            Si vous n'avez pas demandé ce lien, ignorez simplement cet email.
+          </p>
+
+          <p class="link-fallback">
+            Lien de connexion : <a href="${magicLink}">${magicLink}</a>
+          </p>
+          <p class="signoff">L'équipe Boostinghost</p>
+        `,
+        footerNote: 'Lien valable 15 minutes · Ne partagez pas ce lien'
+      })
+    });
+
+    console.log(`✅ [GUEST AUTH] Lien magique envoyé à ${normalizedEmail}`);
+    res.json({ success: true, message: 'Lien envoyé par email' });
+
+  } catch (e) {
+    console.error('❌ [GUEST AUTH] request:', e.message);
+    res.status(500).json({ error: 'Erreur lors de l\'envoi du lien' });
+  }
+});
+
+// ── 2. Valider le token et créer une session ─────────────────
+app.post('/api/guest/auth/verify', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token manquant' });
+
+    const result = await pool.query(`
+      SELECT email, expires_at, used
+      FROM guest_magic_tokens
+      WHERE token = $1
+    `, [token]);
+
+    if (!result.rows[0]) {
+      return res.status(401).json({ error: 'Lien invalide ou expiré' });
+    }
+
+    const { email, expires_at, used } = result.rows[0];
+
+    if (used) {
+      return res.status(401).json({ error: 'Ce lien a déjà été utilisé' });
+    }
+
+    if (new Date() > new Date(expires_at)) {
+      return res.status(401).json({ error: 'Ce lien a expiré. Demandez-en un nouveau.' });
+    }
+
+    // Marquer le token comme utilisé
+    await pool.query(
+      'UPDATE guest_magic_tokens SET used = TRUE WHERE token = $1',
+      [token]
+    );
+
+    // Générer un JWT de session (valable 30 jours)
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const sessionToken = jwt.sign(
+      { email, type: 'guest_session' },
+      secret,
+      { expiresIn: '30d' }
+    );
+
+    // Récupérer le profil si existant
+    const bookings = await pool.query(`
+      SELECT r.uid, r.start_date, r.end_date, r.guest_name, r.amount_total, r.status,
+             p.name as property_name
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      WHERE r.guest_email = $1 AND r.source = 'guest_app'
+      ORDER BY r.start_date DESC LIMIT 1
+    `, [email]);
+
+    const lastBooking = bookings.rows[0];
+    const guestName = lastBooking?.guest_name || null;
+
+    console.log(`✅ [GUEST AUTH] Connexion validée pour ${email}`);
+    res.json({
+      success: true,
+      session_token: sessionToken,
+      email,
+      name: guestName
+    });
+
+  } catch (e) {
+    console.error('❌ [GUEST AUTH] verify:', e.message);
+    res.status(500).json({ error: 'Erreur de vérification' });
+  }
+});
+
+// ── 3. Vérifier une session active (middleware léger) ────────
+function verifyGuestSession(req) {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth) return null;
+    const token = auth.replace('Bearer ', '');
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const decoded = jwt.verify(token, secret);
+    if (decoded.type !== 'guest_session') return null;
+    return decoded.email;
+  } catch {
+    return null;
+  }
+}
+
+// ── Route protégée : mes réservations avec session ───────────
+app.get('/api/guest/me', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+
+  try {
+    const result = await pool.query(`
+      SELECT r.uid, r.start_date, r.end_date, r.amount_total,
+             r.status, r.guest_name, r.created_at,
+             p.name as property_name, p.photo_url, p.address, p.city,
+             p.arrival_time, p.departure_time
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      WHERE r.guest_email = $1 AND r.source = 'guest_app'
+      ORDER BY r.start_date DESC
+    `, [email]);
+
+    res.json({
+      email,
+      bookings: result.rows.map(r => ({
+        uid: r.uid,
+        checkin: r.start_date,
+        checkout: r.end_date,
+        total: parseFloat(r.amount_total),
+        status: r.status,
+        guestName: r.guest_name,
+        createdAt: r.created_at,
+        property: {
+          name: r.property_name,
+          photoUrl: r.photo_url,
+          address: r.address,
+          city: r.city,
+          arrivalTime: r.arrival_time,
+          departureTime: r.departure_time
+        }
+      }))
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 // ── Servir l'app Guest (catch-all SPA) ───────────────────────
 app.get('/guest-app/public', (req, res) => {
   res.sendFile(path.join(__dirname, 'guest-app', 'public', 'index.html'));
