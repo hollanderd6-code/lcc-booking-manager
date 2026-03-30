@@ -362,6 +362,42 @@
       white-space: nowrap;
     }
     .toast.show { opacity: 1; }
+    /* Guest buttons filtres */
+    .guest-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 2px solid var(--border);
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-light);
+      font-family: inherit;
+    }
+    .guest-btn.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    /* Safe area fix - header */
+    .app-header {
+      padding-top: max(env(safe-area-inset-top), 16px) !important;
+    }
+    /* Header universel pour toutes les pages */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: max(env(safe-area-inset-top), 16px) 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .page-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin: 0;
+    }
   </style>
 </head>
 <body style="background: var(--bg); height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
@@ -434,8 +470,8 @@
 
     <!-- ─── ÉCRAN 5 : Mes réservations ─── -->
     <div id="screen-bookings" class="screen-content">
-      <div style="padding:20px 16px 8px;">
-        <h2 style="font-size:20px; font-weight:700; color:var(--text);">Mes réservations</h2>
+      <div class="page-header">
+        <h2>Mes réservations</h2>
       </div>
       <div class="my-bookings-list" id="myBookingsList">
         <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
@@ -444,8 +480,8 @@
 
     <!-- ─── ÉCRAN 6 : Compte ─── -->
     <div id="screen-account" class="screen-content">
-      <div style="padding:20px 16px 8px;">
-        <h2 style="font-size:20px; font-weight:700; color:var(--text);">Mon compte</h2>
+      <div class="page-header">
+        <h2>Mon compte</h2>
       </div>
       <div class="account-section">
         <div class="account-card">
@@ -501,16 +537,20 @@
       </div>
     </div>
     <div class="search-row">
+      <label>Ville</label>
+      <input type="text" id="searchCity" placeholder="Paris, Lyon, Bordeaux..." oninput="updateSearchLabel()">
+    </div>
+    <div class="search-row">
       <label>Voyageurs</label>
-      <select id="searchGuests" onchange="updateSearchLabel()">
-        <option value="">Peu importe</option>
-        <option value="1">1 voyageur</option>
-        <option value="2">2 voyageurs</option>
-        <option value="3">3 voyageurs</option>
-        <option value="4">4 voyageurs</option>
-        <option value="6">6 voyageurs</option>
-        <option value="8">8 voyageurs</option>
-      </select>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="guestBtns">
+        <button type="button" class="guest-btn active" data-val="" onclick="selectGuests(this,'')">Tous</button>
+        <button type="button" class="guest-btn" data-val="1" onclick="selectGuests(this,'1')">1</button>
+        <button type="button" class="guest-btn" data-val="2" onclick="selectGuests(this,'2')">2</button>
+        <button type="button" class="guest-btn" data-val="3" onclick="selectGuests(this,'3')">3</button>
+        <button type="button" class="guest-btn" data-val="4" onclick="selectGuests(this,'4')">4</button>
+        <button type="button" class="guest-btn" data-val="6" onclick="selectGuests(this,'6')">6+</button>
+        <button type="button" class="guest-btn" data-val="8" onclick="selectGuests(this,'8')">8+</button>
+      </div>
     </div>
     <button class="btn-search-apply" onclick="applySearch()">
       <i class="fas fa-search"></i> Rechercher
