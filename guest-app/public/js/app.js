@@ -7,6 +7,19 @@ const API_URL = IS_NATIVE
   ? 'https://www.boostinghost.fr'
   : window.location.origin;
 
+// Stripe publishable key
+const STRIPE_PK = 'pk_live_51Su7Z1FDAmyxvgFK3uralsUfB7fEX3UfOop2G4krZr6hgMNajjPYYCCJ14Ds7LSK19GT68xfJoftkjFhVBFe4d8100Vv1T8lSz'; // ← remplace par ta clé publishable Stripe live
+
+// Init Stripe Capacitor (natif) ou Stripe.js (web)
+let StripePlugin = null;
+async function initStripe() {
+  if (IS_NATIVE && window.Capacitor?.Plugins?.Stripe) {
+    StripePlugin = window.Capacitor.Plugins.Stripe;
+    await StripePlugin.initialize({ publishableKey: STRIPE_PK });
+    console.log('✅ Stripe natif initialisé');
+  }
+}
+
 // ── State global ─────────────────────────────────────────────
 let state = {
   properties: [],
@@ -17,7 +30,8 @@ let state = {
   selectedCheckout: null,
   selectingEnd: false,
   account: JSON.parse(localStorage.getItem('guest_account') || '{}'),
-  session: null // { email, token, name }
+  session: null, // { email, token, name }
+  appliedPromo: null // { code, discount_type, discount_value, discount_amount }
 };
 
 // ── Auth helpers ─────────────────────────────────────────────
@@ -100,6 +114,7 @@ async function verifyMagicToken(token) {
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  await initStripe();
   // Récupérer session existante
   state.session = getSession();
   updateNavAccount();
@@ -438,13 +453,17 @@ function goToCheckout() {
   const ttc = Math.round((total + commission) * 100) / 100;
   const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
+  // Reset promo state
+  state.appliedPromo = null;
+
   document.getElementById('checkoutBody').innerHTML = `
-    <div class="checkout-summary">
+    <div class="checkout-summary" id="priceSummary">
       <div style="font-size:15px;font-weight:700;margin-bottom:12px;">${p.name}</div>
       <div class="checkout-row"><span>Dates</span><span>${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}</span></div>
-      <div class="checkout-row"><span>${p.basePrice}€ × ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>
-      <div class="checkout-row"><span>Frais de service (3%)</span><span>${commission}€</span></div>
-      <div class="checkout-row total"><span>Total</span><span>${ttc}€</span></div>
+      <div class="checkout-row" id="baseRow"><span>${p.basePrice}€ × ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>
+      <div class="checkout-row" id="promoRow" style="display:none;color:#10b981;"><span>Code promo</span><span id="promoAmount">-0€</span></div>
+      <div class="checkout-row" id="commissionRow"><span>Frais de service (3%)</span><span id="commissionAmount">${commission}€</span></div>
+      <div class="checkout-row total"><span>Total</span><span id="totalAmount">${ttc}€</span></div>
     </div>
     <div class="form-section">
       <label>Prénom et nom *</label>
@@ -462,6 +481,16 @@ function goToCheckout() {
       <label>Nombre de voyageurs</label>
       <input type="number" id="guestCount" min="1" max="${p.maxGuests || 10}" value="2">
     </div>
+    <div class="form-section">
+      <label>Code promo <span style="font-size:12px;color:var(--text-light);font-weight:400;">(optionnel)</span></label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="promoInput" placeholder="Ex: BEEN10" style="text-transform:uppercase;flex:1;">
+        <button onclick="applyPromo()" id="btnApplyPromo" style="padding:13px 16px;background:var(--primary-light);color:var(--primary);border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+          Appliquer
+        </button>
+      </div>
+      <div id="promoMsg" style="font-size:12px;margin-top:6px;display:none;"></div>
+    </div>
     <div style="background:var(--bg);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-light);margin-top:8px;">
       <i class="fas fa-lock" style="color:var(--primary);margin-right:6px;"></i>
       Paiement sécurisé. Votre réservation sera confirmée immédiatement.
@@ -472,11 +501,66 @@ function goToCheckout() {
   showScreen('checkout');
 }
 
+async function applyPromo() {
+  const code = document.getElementById('promoInput')?.value?.trim();
+  if (!code) return;
+  const btn = document.getElementById('btnApplyPromo');
+  const msg = document.getElementById('promoMsg');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    const p = state.currentProperty;
+    const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
+    let total = 0;
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(state.selectedCheckin); d.setDate(d.getDate() + i);
+      const dow = d.getDay();
+      total += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
+    }
+
+    const res = await fetch(`${API_URL}/api/guest/promo/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, amount: total })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    // Appliquer la réduction
+    state.appliedPromo = data;
+    const discount = data.discount_amount;
+    const discounted = Math.max(0, total - discount);
+    const commission = Math.round(discounted * 0.03 * 100) / 100;
+    const ttc = Math.round((discounted + commission) * 100) / 100;
+
+    document.getElementById('promoRow').style.display = 'flex';
+    document.getElementById('promoAmount').textContent = `-${discount}€`;
+    document.getElementById('commissionAmount').textContent = `${commission}€`;
+    document.getElementById('totalAmount').textContent = `${ttc}€`;
+    document.getElementById('btnPay').textContent = `Payer ${ttc}€`;
+
+    msg.style.display = 'block';
+    msg.style.color = '#10b981';
+    msg.textContent = `✓ ${data.description} appliqué`;
+
+  } catch (e) {
+    msg.style.display = 'block';
+    msg.style.color = 'var(--error)';
+    msg.textContent = e.message;
+    state.appliedPromo = null;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Appliquer';
+  }
+}
+
 async function submitBooking() {
   const guestName = document.getElementById('guestName')?.value.trim();
   const guestEmail = document.getElementById('guestEmail')?.value.trim();
   const guestPhone = document.getElementById('guestPhone')?.value.trim();
   const guestCount = document.getElementById('guestCount')?.value;
+  const promoCode = state.appliedPromo?.code || document.getElementById('promoInput')?.value?.trim() || null;
 
   if (!guestName || !guestEmail) {
     showToast('Veuillez remplir votre nom et email');
@@ -485,10 +569,45 @@ async function submitBooking() {
 
   const btn = document.getElementById('btnPay');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traitement...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Préparation...';
 
   try {
-    const res = await fetch(`${API_URL}/api/guest/book`, {
+    // 1. Créer le PaymentIntent côté serveur
+    const intentRes = await fetch(`${API_URL}/api/guest/create-payment-intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        property_id: state.currentProperty.id,
+        checkin: state.selectedCheckin,
+        checkout: state.selectedCheckout,
+        guests: guestCount || 2,
+        promo_code: promoCode
+      })
+    });
+    const intentData = await intentRes.json();
+    if (!intentRes.ok) throw new Error(intentData.error);
+
+    // 2. Paiement via Payment Sheet (natif) ou fallback web
+    if (IS_NATIVE && StripePlugin) {
+      // Mode natif iOS/Android — Payment Sheet
+      await StripePlugin.createPaymentSheet({
+        paymentIntentClientSecret: intentData.clientSecret,
+        merchantDisplayName: 'Boostinghost Guest',
+        style: 'automatic'
+      });
+
+      const result = await StripePlugin.presentPaymentSheet();
+      if (result.paymentResult !== 'paymentSheetCompleted') {
+        throw new Error('Paiement annulé');
+      }
+    } else {
+      // Mode web — on simule le paiement (à remplacer par Stripe.js si besoin)
+      console.log('Mode web — paiement simulé (PaymentIntent créé:', intentData.payment_intent_id, ')');
+    }
+
+    // 3. Confirmer la réservation côté serveur
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmation...';
+    const bookRes = await fetch(`${API_URL}/api/guest/book`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -498,20 +617,21 @@ async function submitBooking() {
         guests: guestCount || 2,
         guest_name: guestName,
         guest_email: guestEmail,
-        guest_phone: guestPhone
+        guest_phone: guestPhone,
+        promo_code: promoCode,
+        payment_intent_id: intentData.payment_intent_id
       })
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur lors de la réservation');
+    const bookData = await bookRes.json();
+    if (!bookRes.ok) throw new Error(bookData.error || 'Erreur lors de la réservation');
 
-    // Sauvegarder le compte
+    // 4. Sauvegarder le compte
     state.account = { name: guestName, email: guestEmail, phone: guestPhone };
     localStorage.setItem('guest_account', JSON.stringify(state.account));
     loadAccountFields();
 
-    // Afficher confirmation
-    showConfirmation(data, guestName, guestEmail);
+    showConfirmation(bookData, guestName, guestEmail);
 
   } catch (e) {
     showToast(e.message);
