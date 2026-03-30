@@ -2236,7 +2236,6 @@ window.toggleInvoiceActions = function (id, btn) {
   const wasOpen = menu.classList.contains('open');
   document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
   if (!wasOpen) menu.classList.add('open');
-}
 };
 
 // Listener délégué pour les boutons data-action dans les menus de factures
