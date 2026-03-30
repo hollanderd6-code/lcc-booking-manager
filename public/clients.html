@@ -1759,6 +1759,7 @@ function loadClientDefaults() {
   
   if (clientProperties.length === 0) {
     section.style.display = 'none';
+    updatePreview();
     return;
   }
   
@@ -2763,7 +2764,13 @@ if (window.userProfile && window.userProfile.logoUrl) {
     if(client) {
       const name = client.company_name || `${client.first_name} ${client.last_name}`;
       document.getElementById('previewClientName').textContent = name;
-      document.getElementById('previewClientDetails').innerHTML = `${client.address || ''}<br>${client.postal_code || ''} ${client.city || ''}`;
+      let details = '';
+      if (client.address) details += client.address + '<br>';
+      if (client.postal_code || client.city) details += `${client.postal_code || ''} ${client.city || ''}`.trim() + '<br>';
+      if (client.siret) details += `SIRET : ${client.siret}<br>`;
+      if (client.email) details += client.email + '<br>';
+      if (client.phone) details += client.phone + '<br>';
+      document.getElementById('previewClientDetails').innerHTML = details;
     }
 
     // Dates
