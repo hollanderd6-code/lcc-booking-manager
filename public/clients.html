@@ -1254,6 +1254,25 @@ html[data-theme-v3="1"] .invoice-paper {
 <input class="form-control" id="emitterSiret" oninput="updateEmitterProfile()" placeholder="534 392 600" type="text"/>
 </div>
 <div class="form-group">
+<label>Téléphone</label>
+<input class="form-control" id="emitterPhone" oninput="updateEmitterProfile()" placeholder="06 12 34 56 78" type="tel"/>
+</div>
+<div class="form-group">
+<label>Email</label>
+<input class="form-control" id="emitterEmail" oninput="updateEmitterProfile()" placeholder="contact@monentreprise.fr" type="email"/>
+</div>
+<div class="form-group">
+<label>Site internet</label>
+<input class="form-control" id="emitterWebsite" oninput="updateEmitterProfile()" placeholder="www.monentreprise.fr" type="text"/>
+</div>
+<div class="form-group">
+<label style="display:flex;align-items:center;justify-content:space-between;">
+  <span>Champs perso</span>
+  <button type="button" onclick="addEmitterCustomField()" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px dashed #10B981;background:transparent;color:#059669;cursor:pointer;">+ Ajouter</button>
+</label>
+<div id="emitterCustomFieldsList" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+</div>
+<div class="form-group">
 <label>Logo entreprise (optionnel)</label>
 <div style="display:flex;gap:12px;align-items:center;">
 <div style="width:60px;height:60px;border:2px dashed #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9fafb;overflow:hidden;">
@@ -1435,6 +1454,10 @@ let token = localStorage.getItem('lcc_token');
     postalCode: '',
     city: '',
     siret: '',
+    phone: '',
+    email: '',
+    website: '',
+    customFields: [],
     logoDataUrl: ''
   };
   let currentUser = null;
@@ -2339,15 +2362,19 @@ window.deleteOwnerInvoice = async function (id) {
     ].filter(Boolean).map(l => `<div>${l}</div>`).join('') : '';
 
     // Infos émetteur
+    const emitterCustomFields = (ep.customFields || up.customFields || []);
     const emitterLines = [
       ep.address || up.address,
       ((ep.postalCode||up.postalCode||'') + ' ' + (ep.city||up.city||'')).trim(),
-      'France',
       ep.siret ? 'SIRET : ' + ep.siret : (up.siret || ''),
-      up.phone || '',
-      up.email || '',
-      up.website || ''
-    ].filter(Boolean).map(l => `<div style="margin-bottom:3px;">${l}</div>`).join('');
+      ep.phone || up.phone || '',
+      ep.email || up.invoiceEmail || up.email || '',
+      ep.website || up.website || ''
+    ].filter(Boolean).concat(
+      emitterCustomFields.map(function(cf) {
+        return cf.label && cf.value ? cf.label + ' : ' + cf.value : (cf.value || '');
+      }).filter(Boolean)
+    ).map(l => `<div style="margin-bottom:3px;">${l}</div>`).join('');
 
     // Numéro de facture — titre
     const invTitle = inv.is_credit_note ? 'AVOIR' : 'FACTURE';
@@ -2657,8 +2684,44 @@ window.duplicatePrestation = function(id) {
   }
 
 
+  // --- CHAMPS PERSONNALISÉS ÉMETTEUR ---
+  window.addEmitterCustomField = function(label, value) {
+    label = label || '';
+    value = value || '';
+    const list = document.getElementById('emitterCustomFieldsList');
+    if (!list) return;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+    row.innerHTML = `
+      <input type="text" class="form-control ecf-label" placeholder="Titre" value="${label.replace(/"/g,'&quot;')}" oninput="updateEmitterProfile()" style="flex:1;font-size:12px;padding:6px 8px;">
+      <input type="text" class="form-control ecf-value" placeholder="Contenu" value="${value.replace(/"/g,'&quot;')}" oninput="updateEmitterProfile()" style="flex:2;font-size:12px;padding:6px 8px;">
+      <button type="button" onclick="this.parentNode.remove();updateEmitterProfile();" style="width:28px;height:28px;border-radius:6px;border:none;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:14px;flex-shrink:0;">×</button>
+    `;
+    list.appendChild(row);
+  };
+
+  function getEmitterCustomFields() {
+    const rows = document.querySelectorAll('#emitterCustomFieldsList > div');
+    const fields = [];
+    rows.forEach(function(row) {
+      const label = (row.querySelector('.ecf-label') || {}).value || '';
+      const value = (row.querySelector('.ecf-value') || {}).value || '';
+      if (label.trim() || value.trim()) fields.push({ label: label.trim(), value: value.trim() });
+    });
+    return fields;
+  }
+
   function loadEmitterProfile() {
     try {
+      // Charger d'abord depuis lcc_settings_profile (source de vérité paramètres)
+      const settingsRaw = localStorage.getItem('lcc_settings_profile');
+      if (settingsRaw) {
+        const sp = JSON.parse(settingsRaw);
+        if (sp.phone)        emitterProfile.phone        = sp.phone;
+        if (sp.invoiceEmail) emitterProfile.email        = sp.invoiceEmail;
+        if (sp.website)      emitterProfile.website      = sp.website;
+        if (sp.customFields) emitterProfile.customFields = sp.customFields;
+      }
       const saved = JSON.parse(localStorage.getItem('lcc_owner_emitter_profile') || '{}');
       emitterProfile = { ...emitterProfile, ...saved };
 
@@ -2667,12 +2730,23 @@ window.duplicatePrestation = function(id) {
       const postalInput = document.getElementById('emitterPostalCode');
       const cityInput = document.getElementById('emitterCity');
       const siretInput = document.getElementById('emitterSiret');
+      const phoneInput = document.getElementById('emitterPhone');
+      const emailInput = document.getElementById('emitterEmail');
+      const websiteInput = document.getElementById('emitterWebsite');
 
       if (companyInput) companyInput.value = emitterProfile.company || '';
       if (addressInput) addressInput.value = emitterProfile.address || '';
       if (postalInput) postalInput.value = emitterProfile.postalCode || '';
       if (cityInput) cityInput.value = emitterProfile.city || '';
       if (siretInput) siretInput.value = emitterProfile.siret || '';
+      if (phoneInput) phoneInput.value = emitterProfile.phone || '';
+      if (emailInput) emailInput.value = emitterProfile.email || '';
+      if (websiteInput) websiteInput.value = emitterProfile.website || '';
+
+      // Charger les champs personnalisés
+      if (emitterProfile.customFields && Array.isArray(emitterProfile.customFields)) {
+        emitterProfile.customFields.forEach(function(cf) { addEmitterCustomField(cf.label, cf.value); });
+      }
 
       updateSenderAddressFromProfile();
       updateSenderPreviewOnly();
@@ -2709,12 +2783,19 @@ if (window.userProfile && window.userProfile.logoUrl) {
     const postalInput = document.getElementById('emitterPostalCode');
     const cityInput = document.getElementById('emitterCity');
     const siretInput = document.getElementById('emitterSiret');
+    const phoneInput = document.getElementById('emitterPhone');
+    const emailInput = document.getElementById('emitterEmail');
+    const websiteInput = document.getElementById('emitterWebsite');
 
     emitterProfile.company = companyInput ? companyInput.value.trim() : '';
     emitterProfile.address = addressInput ? addressInput.value.trim() : '';
     emitterProfile.postalCode = postalInput ? postalInput.value.trim() : '';
     emitterProfile.city = cityInput ? cityInput.value.trim() : '';
     emitterProfile.siret = siretInput ? siretInput.value.trim() : '';
+    emitterProfile.phone = phoneInput ? phoneInput.value.trim() : '';
+    emitterProfile.email = emailInput ? emailInput.value.trim() : '';
+    emitterProfile.website = websiteInput ? websiteInput.value.trim() : '';
+    emitterProfile.customFields = getEmitterCustomFields();
 
     updateSenderAddressFromProfile();
     saveEmitterProfile();
@@ -2728,6 +2809,15 @@ if (window.userProfile && window.userProfile.logoUrl) {
     const cityLine = (emitterProfile.postalCode || '') + ' ' + (emitterProfile.city || '');
     if (cityLine.trim()) parts.push(cityLine.trim());
     if (emitterProfile.siret) parts.push('SIRET : ' + emitterProfile.siret);
+    if (emitterProfile.phone) parts.push(emitterProfile.phone);
+    if (emitterProfile.email) parts.push(emitterProfile.email);
+    if (emitterProfile.website) parts.push(emitterProfile.website);
+    if (emitterProfile.customFields && emitterProfile.customFields.length) {
+      emitterProfile.customFields.forEach(function(cf) {
+        if (cf.label && cf.value) parts.push(cf.label + ' : ' + cf.value);
+        else if (cf.value) parts.push(cf.value);
+      });
+    }
 
     const textarea = document.getElementById('senderAddressInput');
     if (textarea) {
