@@ -128,13 +128,16 @@
 }
 /* LES 3 PETITS POINTS*/
 .invoice-actions-menu {
-  position: fixed;
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 0;
+  right: 0;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(15,23,42,0.18);
-  padding: 6px;
-  min-width: 200px;
+  border-radius: 8px;
+  box-shadow: 0 -4px 20px rgba(15,23,42,0.15);
+  padding: 4px;
+  min-width: 180px;
   display: none;
   z-index: 9999;
 }
@@ -986,10 +989,10 @@ html[data-theme-v3="1"] .modal-content {
 }
 .invoice-card-actions-btn:hover { background: white; }
 .invoice-actions-menu {
-  position: fixed;
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(15,23,42,.18); padding: 6px;
-  min-width: 200px; display: none; z-index: 9999;
+  position: absolute; bottom: calc(100% + 2px); left: 0; right: 0;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+  box-shadow: 0 -4px 20px rgba(15,23,42,.12); padding: 4px;
+  min-width: 180px; display: none; z-index: 9999;
 }
 .invoice-actions-menu.open { display: block; }
 .invoice-actions-menu button {
@@ -2232,32 +2235,8 @@ window.toggleInvoiceActions = function (id, btn) {
   if (!menu) return;
   const wasOpen = menu.classList.contains('open');
   document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
-  if (!wasOpen) {
-    const rect = btn.getBoundingClientRect();
-    const menuW = 210;
-    const menuH = 280;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // Horizontal : aligner le bord DROIT du menu avec le bord droit du bouton
-    // et s'assurer qu'il ne déborde pas à gauche
-    const rightEdge = window.innerWidth - rect.right;
-    menu.style.right = 'auto';
-    menu.style.left = 'auto';
-    // On place le menu en partant du bord droit du bouton
-    const leftPos = rect.right - menuW;
-    menu.style.left = Math.max(8, leftPos) + 'px';
-
-    // Vertical : haut ou bas selon l'espace
-    if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
-      menu.style.top = (rect.bottom + 6) + 'px';
-      menu.style.bottom = 'auto';
-    } else {
-      menu.style.top = 'auto';
-      menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-    }
-    menu.classList.add('open');
-  }
+  if (!wasOpen) menu.classList.add('open');
+}
 };
 
 // Listener délégué pour les boutons data-action dans les menus de factures
