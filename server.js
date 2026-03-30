@@ -15589,6 +15589,8 @@ app.put('/api/owner-invoices/:id',
 
     const {
       items,
+      clientId,
+      issueDate, dueDate, periodStart, periodEnd,
       vatApplicable, vatRate,
       discountType, discountValue,
       notes, internalNotes
@@ -15619,37 +15621,44 @@ app.put('/api/owner-invoices/:id',
     const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100) : 0;
     const totalTtc = netHt + subtotalDebours + vatAmount;
 
-    // Mettre à jour facture
+    // Mettre à jour facture (inclut client, dates et totaux)
     await client.query(`
       UPDATE owner_invoices SET
-        vat_applicable = $1, vat_rate = $2,
-        discount_type = $3, discount_value = $4, discount_amount = $5,
-        subtotal_ht = $6, subtotal_debours = $7, vat_amount = $8, total_ttc = $9,
-        notes = $10, internal_notes = $11
-      WHERE id = $12
+        client_id = $1,
+        issue_date = $2, due_date = $3,
+        period_start = $4, period_end = $5,
+        vat_applicable = $6, vat_rate = $7,
+        discount_type = $8, discount_value = $9, discount_amount = $10,
+        subtotal_ht = $11, subtotal_debours = $12, vat_amount = $13, total_ttc = $14,
+        notes = $15, internal_notes = $16
+      WHERE id = $17
     `, [
+      clientId || null,
+      issueDate || null, dueDate || null,
+      periodStart || null, periodEnd || null,
       vatApplicable, vatRate,
       discountType || 'none', discountValue || 0, discountAmount,
       subtotalHt, subtotalDebours, vatAmount, totalTtc,
-      notes, internalNotes,
+      notes || null, internalNotes || null,
       req.params.id
     ]);
 
     // Supprimer anciennes lignes
     await client.query('DELETE FROM owner_invoice_items WHERE invoice_id = $1', [req.params.id]);
 
-    // Insérer nouvelles lignes
+    // Insérer nouvelles lignes (avec gen_random_uuid() pour la colonne id NOT NULL)
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       await client.query(`
         INSERT INTO owner_invoice_items (
-          invoice_id, item_type, description,
+          id, invoice_id, item_type, description,
           rental_amount, commission_rate, quantity, unit_price, total,
           order_index, is_debours
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `, [
         req.params.id, item.itemType, item.description,
-        item.rentalAmount, item.commissionRate, item.quantity, item.unitPrice, item.total,
+        item.rentalAmount || 0, item.commissionRate || 0,
+        item.quantity || 0, item.unitPrice || 0, item.total || 0,
         i, item.isDebours || false
       ]);
     }
