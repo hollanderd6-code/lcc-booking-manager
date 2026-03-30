@@ -14419,10 +14419,7 @@ app.post('/api/owner-invoices',
       discountType,
       discountValue,
       notes,
-      internalNotes,
-      paymentDelay,
-      paymentMode,
-      lateInterest
+      internalNotes
     } = req.body;
 
     if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
@@ -14476,9 +14473,6 @@ app.post('/api/owner-invoices',
         total_ttc,
         notes,
         internal_notes,
-        payment_delay,
-        payment_mode,
-        late_interest,
         status,
         created_at
       ) VALUES (
@@ -14488,8 +14482,7 @@ app.post('/api/owner-invoices',
         $9,$10,$11,
         $12,$13,$14,$15,
         $16,$17,
-        $18,$19,$20,
-        $21,
+        $18,
         NOW()
       )
       RETURNING *
@@ -14511,9 +14504,6 @@ app.post('/api/owner-invoices',
       totalTtc,
       notes || null,
       internalNotes || null,
-      paymentDelay || null,
-      paymentMode || null,
-      lateInterest || null,
       'draft'
     ]);
 
@@ -15599,12 +15589,9 @@ app.put('/api/owner-invoices/:id',
 
     const {
       items,
-      clientId,
-      issueDate, dueDate, periodStart, periodEnd,
       vatApplicable, vatRate,
       discountType, discountValue,
-      notes, internalNotes,
-      paymentDelay, paymentMode, lateInterest
+      notes, internalNotes
     } = req.body;
 
     // Recalculer totaux
@@ -15632,27 +15619,19 @@ app.put('/api/owner-invoices/:id',
     const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100) : 0;
     const totalTtc = netHt + subtotalDebours + vatAmount;
 
-    // Mettre à jour facture (client, dates, totaux, conditions)
+    // Mettre à jour facture
     await client.query(`
       UPDATE owner_invoices SET
-        client_id = $1,
-        issue_date = $2, due_date = $3,
-        period_start = $4, period_end = $5,
-        vat_applicable = $6, vat_rate = $7,
-        discount_type = $8, discount_value = $9, discount_amount = $10,
-        subtotal_ht = $11, subtotal_debours = $12, vat_amount = $13, total_ttc = $14,
-        notes = $15, internal_notes = $16,
-        payment_delay = $17, payment_mode = $18, late_interest = $19
-      WHERE id = $20
+        vat_applicable = $1, vat_rate = $2,
+        discount_type = $3, discount_value = $4, discount_amount = $5,
+        subtotal_ht = $6, subtotal_debours = $7, vat_amount = $8, total_ttc = $9,
+        notes = $10, internal_notes = $11
+      WHERE id = $12
     `, [
-      clientId || null,
-      issueDate || null, dueDate || null,
-      periodStart || null, periodEnd || null,
       vatApplicable, vatRate,
       discountType || 'none', discountValue || 0, discountAmount,
       subtotalHt, subtotalDebours, vatAmount, totalTtc,
-      notes || null, internalNotes || null,
-      paymentDelay || null, paymentMode || null, lateInterest || null,
+      notes, internalNotes,
       req.params.id
     ]);
 
@@ -15664,14 +15643,13 @@ app.put('/api/owner-invoices/:id',
       const item = items[i];
       await client.query(`
         INSERT INTO owner_invoice_items (
-          id, invoice_id, item_type, description,
+          invoice_id, item_type, description,
           rental_amount, commission_rate, quantity, unit_price, total,
           order_index, is_debours
-        ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `, [
         req.params.id, item.itemType, item.description,
-        item.rentalAmount || 0, item.commissionRate || 0,
-        item.quantity || 0, item.unitPrice || 0, item.total || 0,
+        item.rentalAmount, item.commissionRate, item.quantity, item.unitPrice, item.total,
         i, item.isDebours || false
       ]);
     }
@@ -21736,7 +21714,13 @@ app.post('/api/channex/webhook', async (req, res) => {
           );
           const propertyName = propRes.rows[0]?.name || 'Logement';
 
-          const notifTitle = `${ota.emoji} Nouvelle réservation ${ota.label}`;
+          // Détecter si c'est une modification ou une nouvelle réservation
+          const bookingStatus = (booking.attributes || booking).status || 'new';
+          const isModification = bookingStatus === 'modified' || bookingStatus === 'modification';
+
+          const notifTitle = isModification
+            ? `✏️ Réservation modifiée ${ota.label}`
+            : `${ota.emoji} Nouvelle réservation ${ota.label}`;
           const notifBody  = `${guestName} · ${propertyName} · ${fmtDate(arrivalDate)} → ${fmtDate(departureDate)}`;
           const notifData  = {
             type:       'new_booking_channex',
