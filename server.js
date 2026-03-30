@@ -23151,6 +23151,206 @@ app.get('/api/guest/me', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ============================================================
+// 💳 BOOSTINGHOST GUEST — Paiement Stripe + Codes promo
+// ============================================================
+
+// Créer la table promo_codes au démarrage
+pool.query(`
+  CREATE TABLE IF NOT EXISTS guest_promo_codes (
+    id SERIAL PRIMARY KEY,
+    code TEXT NOT NULL UNIQUE,
+    discount_type TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed')),
+    discount_value NUMERIC NOT NULL,
+    max_uses INTEGER DEFAULT NULL,
+    uses_count INTEGER DEFAULT 0,
+    expires_at TIMESTAMP DEFAULT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+`).catch(e => console.error('❌ guest_promo_codes table:', e.message));
+
+// ── Vérifier un code promo ───────────────────────────────────
+app.post('/api/guest/promo/check', async (req, res) => {
+  try {
+    const { code, amount } = req.body;
+    if (!code) return res.status(400).json({ error: 'Code requis' });
+
+    const result = await pool.query(`
+      SELECT * FROM guest_promo_codes
+      WHERE UPPER(code) = UPPER($1)
+        AND active = TRUE
+        AND (expires_at IS NULL OR expires_at > NOW())
+        AND (max_uses IS NULL OR uses_count < max_uses)
+    `, [code.trim()]);
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Code promo invalide ou expiré' });
+    }
+
+    const promo = result.rows[0];
+    const baseAmount = parseFloat(amount) || 0;
+
+    let discount = 0;
+    if (promo.discount_type === 'percent') {
+      discount = Math.round(baseAmount * parseFloat(promo.discount_value) / 100 * 100) / 100;
+    } else {
+      discount = Math.min(parseFloat(promo.discount_value), baseAmount);
+    }
+
+    res.json({
+      valid: true,
+      code: promo.code.toUpperCase(),
+      discount_type: promo.discount_type,
+      discount_value: parseFloat(promo.discount_value),
+      discount_amount: discount,
+      description: promo.description || (promo.discount_type === 'percent'
+        ? `-${promo.discount_value}%`
+        : `-${promo.discount_value}€`)
+    });
+
+  } catch (e) {
+    console.error('❌ [GUEST PROMO] check:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Créer un PaymentIntent avec promo optionnelle ────────────
+app.post('/api/guest/create-payment-intent', async (req, res) => {
+  try {
+    const { property_id, checkin, checkout, guests, promo_code } = req.body;
+    if (!property_id || !checkin || !checkout) {
+      return res.status(400).json({ error: 'Champs requis manquants' });
+    }
+
+    const propResult = await pool.query(
+      'SELECT base_price, weekend_price, name FROM properties WHERE id = $1',
+      [property_id]
+    );
+    if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+    const prop = propResult.rows[0];
+
+    // Calcul prix
+    const start = new Date(checkin);
+    const end = new Date(checkout);
+    const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+    let totalBase = 0;
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dow = d.getDay();
+      const isPremium = dow === 5 || dow === 6;
+      totalBase += isPremium && prop.weekend_price
+        ? parseFloat(prop.weekend_price)
+        : parseFloat(prop.base_price || 0);
+    }
+
+    // Appliquer code promo si fourni
+    let discount = 0;
+    let promoData = null;
+    if (promo_code) {
+      const promoResult = await pool.query(`
+        SELECT * FROM guest_promo_codes
+        WHERE UPPER(code) = UPPER($1)
+          AND active = TRUE
+          AND (expires_at IS NULL OR expires_at > NOW())
+          AND (max_uses IS NULL OR uses_count < max_uses)
+      `, [promo_code.trim()]);
+
+      if (promoResult.rows[0]) {
+        const promo = promoResult.rows[0];
+        if (promo.discount_type === 'percent') {
+          discount = Math.round(totalBase * parseFloat(promo.discount_value) / 100 * 100) / 100;
+        } else {
+          discount = Math.min(parseFloat(promo.discount_value), totalBase);
+        }
+        promoData = {
+          code: promo.code.toUpperCase(),
+          discount_type: promo.discount_type,
+          discount_value: parseFloat(promo.discount_value),
+          discount_amount: discount
+        };
+      }
+    }
+
+    const discountedBase = Math.max(0, totalBase - discount);
+    const commission = Math.round(discountedBase * 0.03 * 100) / 100;
+    const totalTTC = Math.round((discountedBase + commission) * 100); // centimes
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: totalTTC,
+      currency: 'eur',
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        property_id,
+        checkin,
+        checkout,
+        guests: guests || 1,
+        promo_code: promo_code || '',
+        source: 'boostinghost_guest'
+      }
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      payment_intent_id: paymentIntent.id,
+      totalBase,
+      discount,
+      discountedBase,
+      commission,
+      totalTTC: totalTTC / 100,
+      nights,
+      propertyName: prop.name,
+      promo: promoData
+    });
+
+  } catch (e) {
+    console.error('❌ [GUEST] create-payment-intent:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Admin : gérer les codes promo ────────────────────────────
+app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM guest_promo_codes ORDER BY created_at DESC'
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/guest/promo/create', authenticateToken, async (req, res) => {
+  try {
+    const { code, discount_type, discount_value, max_uses, expires_at, description } = req.body;
+    if (!code || !discount_type || !discount_value) {
+      return res.status(400).json({ error: 'code, discount_type et discount_value requis' });
+    }
+    const result = await pool.query(`
+      INSERT INTO guest_promo_codes (code, discount_type, discount_value, max_uses, expires_at, description)
+      VALUES (UPPER($1), $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [code.trim(), discount_type, discount_value, max_uses || null, expires_at || null, description || null]);
+    res.json({ success: true, promo: result.rows[0] });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ error: 'Ce code existe déjà' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/guest/promo/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.query('UPDATE guest_promo_codes SET active = FALSE WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 // ── Servir l'app Guest (catch-all SPA) ───────────────────────
 app.get('/guest-app/public', (req, res) => {
   res.sendFile(path.join(__dirname, 'guest-app', 'public', 'index.html'));
