@@ -16,11 +16,106 @@ let state = {
   selectedCheckin: null,
   selectedCheckout: null,
   selectingEnd: false,
-  account: JSON.parse(localStorage.getItem('guest_account') || '{}')
+  account: JSON.parse(localStorage.getItem('guest_account') || '{}'),
+  session: null // { email, token, name }
 };
+
+// ── Auth helpers ─────────────────────────────────────────────
+function getSession() {
+  const raw = localStorage.getItem('guest_session');
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+function saveSession(session) {
+  state.session = session;
+  localStorage.setItem('guest_session', JSON.stringify(session));
+  // Mettre à jour aussi le compte
+  if (session.name || session.email) {
+    state.account = { ...state.account, email: session.email, name: session.name || state.account.name };
+    localStorage.setItem('guest_account', JSON.stringify(state.account));
+  }
+}
+
+function clearSession() {
+  state.session = null;
+  localStorage.removeItem('guest_session');
+}
+
+function isLoggedIn() {
+  return !!getSession()?.token;
+}
+
+function updateNavAccount() {
+  const label = document.getElementById('navAccountLabel');
+  if (!label) return;
+  const session = getSession();
+  label.textContent = session ? (session.name?.split(' ')[0] || 'Moi') : 'Compte';
+}
+
+async function requestMagicLink() {
+  const email = document.getElementById('loginEmail')?.value?.trim();
+  if (!email || !email.includes('@')) { showToast('Email invalide'); return; }
+  const btn = document.getElementById('btnMagicLink');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+  try {
+    const res = await fetch(`${API_URL}/api/guest/auth/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('loginSent').style.display = 'block';
+  } catch (e) {
+    showToast(e.message || 'Erreur envoi email');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Recevoir mon lien';
+  }
+}
+
+async function verifyMagicToken(token) {
+  try {
+    const res = await fetch(`${API_URL}/api/guest/auth/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    saveSession({ token: data.session_token, email: data.email, name: data.name });
+    updateNavAccount();
+    showToast('Connexion réussie !');
+    // Nettoyer l'URL
+    window.history.replaceState({}, '', window.location.pathname);
+    return true;
+  } catch (e) {
+    showToast(e.message || 'Lien invalide ou expiré');
+    return false;
+  }
+}
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  // Récupérer session existante
+  state.session = getSession();
+  updateNavAccount();
+
+  // Vérifier si un magic_token est dans l'URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const magicToken = urlParams.get('magic_token');
+  if (magicToken) {
+    await verifyMagicToken(magicToken);
+  }
+
+  // Charger les champs compte
+  if (state.session) {
+    state.account = { ...state.account, email: state.session.email, name: state.session.name || state.account.name };
+    localStorage.setItem('guest_account', JSON.stringify(state.account));
+  }
   loadAccountFields();
   await loadProperties();
 });
@@ -40,9 +135,17 @@ function showScreen(name) {
   document.getElementById('mainScroll').scrollTop = 0;
 
   if (name === 'bookings') loadMyBookings();
+  if (name === 'account') { loadAccountFields(); renderLogoutSection(); }
 }
 
 function navTo(name) {
+  // Si on va sur Compte/Réservations sans session → rediriger vers login
+  if ((name === 'bookings' || name === 'account') && !isLoggedIn()) {
+    showScreen('login');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('nav-account')?.classList.add('active');
+    return;
+  }
   showScreen(name);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('nav-' + name)?.classList.add('active');
@@ -447,18 +550,22 @@ function showConfirmation(data, guestName, guestEmail) {
 // ── Mes réservations ─────────────────────────────────────────
 async function loadMyBookings() {
   const list = document.getElementById('myBookingsList');
-  const email = state.account.email;
+  const session = getSession();
 
-  if (!email) {
-    list.innerHTML = `<div class="empty-state"><i class="fas fa-user"></i><p>Renseignez votre email dans "Compte" pour voir vos réservations</p></div>`;
+  if (!session?.token) {
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-user"></i><p>Connectez-vous pour voir vos réservations</p></div>`;
     return;
   }
 
   list.innerHTML = '<div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>';
 
   try {
-    const res = await fetch(`${API_URL}/api/guest/my-bookings?email=${encodeURIComponent(email)}`);
-    const bookings = await res.json();
+    const res = await fetch(`${API_URL}/api/guest/me`, {
+      headers: { 'Authorization': `Bearer ${session.token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) { clearSession(); navTo('home'); return; }
+    const bookings = data.bookings || [];
 
     if (!bookings.length) {
       list.innerHTML = `<div class="empty-state"><i class="fas fa-calendar"></i><p>Aucune réservation pour le moment</p></div>`;
@@ -508,6 +615,37 @@ function saveAccount() {
   };
   localStorage.setItem('guest_account', JSON.stringify(state.account));
   showToast('Compte sauvegardé ✓');
+}
+
+function renderLogoutSection() {
+  const section = document.getElementById('logoutSection');
+  if (!section) return;
+  const session = getSession();
+  if (session) {
+    section.innerHTML = `
+      <div style="background:white;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <div style="font-size:13px;color:var(--text-light);">Connecté en tant que<br><strong style="color:var(--text);">${session.email}</strong></div>
+        <button onclick="logout()" style="background:none;border:1px solid var(--error);color:var(--error);border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:600;">
+          Déconnexion
+        </button>
+      </div>`;
+  } else {
+    section.innerHTML = `
+      <button onclick="navTo('login')" style="width:100%;padding:14px;background:var(--primary-light);color:var(--primary);border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">
+        <i class="fas fa-sign-in-alt"></i> Se connecter
+      </button>`;
+  }
+}
+
+function logout() {
+  clearSession();
+  state.account = {};
+  localStorage.removeItem('guest_account');
+  loadAccountFields();
+  updateNavAccount();
+  renderLogoutSection();
+  showToast('Déconnecté');
+  navTo('home');
 }
 
 // ── Toast ────────────────────────────────────────────────────
