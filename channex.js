@@ -389,24 +389,33 @@ async function processChannexBooking(pool, bookingData) {
           [booking_id]
         );
         console.log(`🚫 [CHANNEX] Réservation annulée: ${booking_id}`);
+        // Retourner la réservation pour déclencher notif + mise à jour store
+        const cancelledRow = await pool.query(
+          'SELECT * FROM reservations WHERE channex_booking_id = $1',
+          [booking_id]
+        );
+        return cancelledRow.rows[0] || null;
       }
       return null;
     }
 
     if (existing.rows.length > 0) {
-      // Mettre à jour les données enrichies si déjà existante
+      // Mettre à jour dates + données enrichies (modification)
       await pool.query(
         `UPDATE reservations SET
-          guest_first_name = $1, guest_last_name = $2, guest_country = $3,
-          guest_language = $4, guest_city = $5,
-          occupancy_adults = $6, occupancy_children = $7,
-          amount_total = $8, amount_rooms = $9, amount_taxes = $10,
-          amount_cleaning = $11, ota_commission = $12,
-          days_breakdown = $13, services_raw = $14,
-          currency = $15, host_payout = $16, airbnb_data = $17,
+          start_date = $1, end_date = $2,
+          guest_first_name = $3, guest_last_name = $4, guest_country = $5,
+          guest_language = $6, guest_city = $7,
+          occupancy_adults = $8, occupancy_children = $9,
+          amount_total = $10, amount_rooms = $11, amount_taxes = $12,
+          amount_cleaning = $13, ota_commission = $14,
+          days_breakdown = $15, services_raw = $16,
+          currency = $17, host_payout = $18, airbnb_data = $19,
+          status = CASE WHEN status = 'cancelled' THEN 'confirmed' ELSE status END,
           updated_at = NOW()
-         WHERE channex_booking_id = $18`,
+         WHERE channex_booking_id = $20`,
         [
+          arrival_date, departure_date,
           guest_first_name, guest_last_name, guest_country,
           guest_language, guest_city,
           occupancy_adults, occupancy_children,
