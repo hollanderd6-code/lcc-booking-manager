@@ -1365,8 +1365,17 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 </div>
 </div>
+<!-- SECTION CONDITIONS APERÇU (style A) -->
+<div id="previewConditionsSection" style="margin-top:28px;padding:14px 18px;background:#f7faf8;border-radius:8px;border-top:2px solid #1A7A5E;display:none;">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#1A7A5E;margin-bottom:8px;">Conditions</div>
+  <div id="previewConditionsContent" style="font-size:12px;color:#374151;line-height:1.8;"></div>
+</div>
+<!-- NOTES APERÇU -->
+<div id="previewNotesSection" style="margin-top:12px;font-size:12px;color:#6b7280;font-style:italic;display:none;">
+  <span id="previewNotesContent"></span>
+</div>
 <!-- FOOTER PAPER -->
-<div style="text-align:center;margin-top:32px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;">
+<div style="text-align:center;margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;">
   Facture générée via <strong style="color:#1A7A5E;">boostinghost.fr</strong> — logiciel de gestion locative
 </div>
 </div>
@@ -2428,11 +2437,13 @@ window.deleteOwnerInvoice = async function (id) {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10mm;margin-bottom:8mm;">
       <!-- Conditions -->
       <div style="flex:1;font-size:11px;color:#4b5563;">
-        <div style="font-weight:700;color:#1A7A5E;margin-bottom:4px;text-transform:uppercase;font-size:10px;letter-spacing:.06em;">Conditions</div>
-        <div style="margin-bottom:2px;"><strong>Conditions de règlement :</strong> 30 jours</div>
-        <div style="margin-bottom:2px;"><strong>Mode de règlement :</strong> Virement bancaire</div>
-        <div style="margin-bottom:2px;"><strong>Intérêts de retard :</strong> 3× taux légal</div>
-        ${inv.notes ? `<div style="margin-top:6px;"><strong>Notes :</strong> ${inv.notes}</div>` : ''}
+        ${(inv.payment_delay || inv.payment_mode || inv.late_interest || inv.notes) ? `
+          <div style="font-weight:700;color:#1A7A5E;margin-bottom:6px;text-transform:uppercase;font-size:10px;letter-spacing:.06em;">Conditions</div>
+          ${inv.payment_delay ? `<div style="margin-bottom:3px;"><strong>Délai de règlement :</strong> ${inv.payment_delay}</div>` : ''}
+          ${inv.payment_mode  ? `<div style="margin-bottom:3px;"><strong>Mode de règlement :</strong> ${inv.payment_mode}</div>`  : ''}
+          ${inv.late_interest ? `<div style="margin-bottom:3px;"><strong>Intérêts de retard :</strong> ${inv.late_interest}</div>` : ''}
+          ${inv.notes ? `<div style="margin-top:8px;font-style:italic;color:#6b7280;">${inv.notes}</div>` : ''}
+        ` : ''}
       </div>
       <!-- Totaux -->
       <div style="min-width:200px;">
@@ -2449,7 +2460,7 @@ window.deleteOwnerInvoice = async function (id) {
     </div>
 
     <!-- FOOTER -->
-    <div style="text-align:center;padding-top:5mm;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;">
+    <div style="text-align:center;padding-top:5mm;margin-top:5mm;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;letter-spacing:.02em;">
       Facture générée via <strong style="color:#1A7A5E;">boostinghost.fr</strong> — logiciel de gestion locative
     </div>
   </div>
@@ -3019,8 +3030,39 @@ if (window.userProfile && window.userProfile.logoUrl) {
       mentionEl.style.display = hasVat ? 'none' : 'block';
     }
 
+    // --- CONDITIONS ---
+    const delay = (document.getElementById('invoicePaymentDelay') || {}).value || '';
+    const mode  = (document.getElementById('invoicePaymentMode') || {}).value || '';
+    const late  = (document.getElementById('invoiceLateInterest') || {}).value || '';
+    const notes = (document.getElementById('invoiceNotes') || {}).value || '';
 
-  
+    const condSection = document.getElementById('previewConditionsSection');
+    const condContent = document.getElementById('previewConditionsContent');
+    const notesSection = document.getElementById('previewNotesSection');
+    const notesContent = document.getElementById('previewNotesContent');
+
+    const condLines = [];
+    if (delay) condLines.push('<strong>Délai de règlement :</strong> ' + delay);
+    if (mode)  condLines.push('<strong>Mode de règlement :</strong> ' + mode);
+    if (late)  condLines.push('<strong>Intérêts de retard :</strong> ' + late);
+
+    if (condSection && condContent) {
+      if (condLines.length > 0) {
+        condContent.innerHTML = condLines.join('<br>');
+        condSection.style.display = 'block';
+      } else {
+        condSection.style.display = 'none';
+      }
+    }
+    if (notesSection && notesContent) {
+      if (notes.trim()) {
+        notesContent.textContent = notes;
+        notesSection.style.display = 'block';
+      } else {
+        notesSection.style.display = 'none';
+      }
+    }
+
   };
 
 // --- LOGO ---
@@ -3078,7 +3120,11 @@ function getSelectedProperties() {
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
       vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
       propertyIds: getSelectedProperties(),
-      sendEmail: send
+      sendEmail: send,
+      paymentDelay: (document.getElementById('invoicePaymentDelay') || {}).value || '',
+      paymentMode: (document.getElementById('invoicePaymentMode') || {}).value || '',
+      lateInterest: (document.getElementById('invoiceLateInterest') || {}).value || '',
+      notes: (document.getElementById('invoiceNotes') || {}).value || ''
     };
 
     try {
@@ -3201,6 +3247,16 @@ window.editOwnerInvoiceDraft = async function(id) {
       });
     });
 
+    // Recharger les conditions
+    const pd = document.getElementById('invoicePaymentDelay');
+    const pm = document.getElementById('invoicePaymentMode');
+    const li = document.getElementById('invoiceLateInterest');
+    const nt = document.getElementById('invoiceNotes');
+    if (pd) pd.value = inv.payment_delay || '';
+    if (pm) pm.value = inv.payment_mode || 'Virement bancaire';
+    if (li) li.value = inv.late_interest || '';
+    if (nt) nt.value = inv.notes || '';
+
     renderEditorPrestations();
     updatePreview();
     switchTab('create');
@@ -3273,6 +3329,16 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
         isDebours: item.is_debours
       });
     });
+
+    // Charger les conditions
+    const pd2 = document.getElementById('invoicePaymentDelay');
+    const pm2 = document.getElementById('invoicePaymentMode');
+    const li2 = document.getElementById('invoiceLateInterest');
+    const nt2 = document.getElementById('invoiceNotes');
+    if (pd2) pd2.value = inv.payment_delay || '';
+    if (pm2) pm2.value = inv.payment_mode || 'Virement bancaire';
+    if (li2) li2.value = inv.late_interest || '';
+    if (nt2) nt2.value = inv.notes || '';
 
     renderEditorPrestations();
     updatePreview();
