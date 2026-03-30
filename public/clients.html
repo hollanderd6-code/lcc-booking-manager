@@ -1404,6 +1404,18 @@ html[data-theme-v3="1"] .invoice-paper {
   </div>
 </div>
 
+<!-- MODALE CONFIRMATION CUSTOM -->
+<div id="confirmModal" style="display:none;position:fixed;inset:0;z-index:20000;background:rgba(13,17,23,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:28px 24px;max-width:340px;width:90%;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);font-family:'DM Sans',sans-serif;">
+    <div style="font-size:18px;font-weight:700;color:#0D1117;margin-bottom:8px;" id="confirmModalTitle">Confirmer</div>
+    <div style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;" id="confirmModalMessage"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="confirmModalCancel" style="padding:10px 20px;border-radius:10px;border:1px solid #e5e7eb;background:white;font-size:14px;font-weight:600;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;">Annuler</button>
+      <button id="confirmModalOk" style="padding:10px 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Confirmer</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="statsModal">
 <div class="modal-content">
 <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
@@ -2221,18 +2233,26 @@ window.toggleInvoiceActions = function (id, btn) {
   const wasOpen = menu.classList.contains('open');
   document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
   if (!wasOpen) {
-    // Calculer la position du bouton pour positionner le menu intelligemment
     const rect = btn.getBoundingClientRect();
-    const menuH = 260; // hauteur estimée du menu
+    const menuW = 210;
+    const menuH = 280;
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
-    menu.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 216)) + 'px';
+
+    // Horizontal : aligner le bord DROIT du menu avec le bord droit du bouton
+    // et s'assurer qu'il ne déborde pas à gauche
+    const rightEdge = window.innerWidth - rect.right;
+    menu.style.right = 'auto';
+    menu.style.left = 'auto';
+    // On place le menu en partant du bord droit du bouton
+    const leftPos = rect.right - menuW;
+    menu.style.left = Math.max(8, leftPos) + 'px';
+
+    // Vertical : haut ou bas selon l'espace
     if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
-      // Ouvrir vers le bas
       menu.style.top = (rect.bottom + 6) + 'px';
       menu.style.bottom = 'auto';
     } else {
-      // Ouvrir vers le haut
       menu.style.top = 'auto';
       menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
     }
@@ -2263,6 +2283,35 @@ document.addEventListener('click', function(e) {
   else if (action === 'creditnote') window.createOwnerCreditNote(id);
 });
 
+// ── Modale de confirmation custom (remplace confirm() natif) ──
+function showConfirm(message, onOk, title) {
+  const modal = document.getElementById('confirmModal');
+  const msgEl = document.getElementById('confirmModalMessage');
+  const titleEl = document.getElementById('confirmModalTitle');
+  const okBtn = document.getElementById('confirmModalOk');
+  const cancelBtn = document.getElementById('confirmModalCancel');
+  if (!modal) { if (confirm(message)) onOk(); return; }
+  titleEl.textContent = title || 'Confirmer';
+  msgEl.textContent = message;
+  modal.style.display = 'flex';
+  // Couleur du bouton OK selon le contexte (danger si "Supprimer")
+  const isDanger = message.toLowerCase().includes('supprimer') || message.toLowerCase().includes('irréversible');
+  okBtn.style.background = isDanger ? '#dc2626' : '#1A7A5E';
+  okBtn.textContent = isDanger ? 'Supprimer' : 'Confirmer';
+  // Nettoyer les anciens listeners
+  const newOk = okBtn.cloneNode(true);
+  const newCancel = cancelBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOk, okBtn);
+  cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+  document.getElementById('confirmModalOk').addEventListener('click', function() {
+    modal.style.display = 'none';
+    onOk();
+  });
+  document.getElementById('confirmModalCancel').addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+}
+
 // Fermer le menu si on clique ailleurs dans la page
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.invoice-row-actions') && !e.target.closest('.invoice-card-actions-btn') && !e.target.closest('.invoice-actions-menu')) {
@@ -2289,13 +2338,12 @@ document.addEventListener('keydown', function(e) {
 
 
 // Envoyer la facture (brouillon -> envoyée)
-window.sendOwnerInvoice = async function (id) {
-  // Vérifier que la facture est finalisée avant d'envoyer
+window.sendOwnerInvoice = function (id) {
   const inv = (window.ownerInvoices || []).find(i => i.id === id);
   if (inv && inv.status === 'draft') {
     return alert("Veuillez d'abord finaliser la facture (Passer en Facturée) avant de l'envoyer.");
   }
-  if (!confirm('Envoyer cette facture au client ?')) return;
+  showConfirm('Envoyer cette facture par email au client ?', async function() {
 
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/send', {
@@ -2313,13 +2361,11 @@ window.sendOwnerInvoice = async function (id) {
     console.error(e);
     alert('Erreur serveur');
   }
+  }, 'Envoyer la facture');
 };
 
-// Supprimer un brouillon
-// Supprimer un brouillon
-window.deleteOwnerInvoice = async function (id) {
-  if (!confirm('Supprimer cette facture ?')) return;
-
+window.deleteOwnerInvoice = function (id) {
+  showConfirm('Supprimer cette facture ? Cette action est irréversible.', async function() {
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
       method: 'DELETE',
@@ -2335,6 +2381,7 @@ window.deleteOwnerInvoice = async function (id) {
     console.error(e);
     alert('Erreur serveur');
   }
+  }, 'Supprimer la facture');
 };
   // ── Fonction commune : génère le HTML interne d'une facture ──
   function buildInvoiceHTML(inv, items, client, container) {
@@ -2578,7 +2625,7 @@ window.deleteOwnerInvoice = async function (id) {
 
 
 window.createOwnerCreditNote = async function(id) {
-  if (!confirm('Créer un avoir pour cette facture ?')) return;
+  showConfirm('Créer un avoir pour cette facture ?', async function() {
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/credit-note', {
       method: 'POST',
@@ -2592,11 +2639,11 @@ window.createOwnerCreditNote = async function(id) {
     console.error(e);
     alert('Erreur serveur');
   }
+  }, 'Créer un avoir');
 };
 
-window.finalizeOwnerInvoice = async function (id) {
-  if (!confirm('Passer cette facture en “Facturée” ?')) return;
-
+window.finalizeOwnerInvoice = function (id) {
+  showConfirm('Passer cette facture en \"Facturée\" ? Elle ne sera plus modifiable.', async function() {
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/finalize', {
       method: 'POST',
@@ -2607,18 +2654,17 @@ window.finalizeOwnerInvoice = async function (id) {
       console.error(json);
       return alert(json.error || 'Erreur lors de la validation');
     }
-    alert('Facture passée en “Facturée” [OK]');
+    alert('Facture passée en "Facturée" [OK]');
     loadInvoices();
   } catch (e) {
     console.error(e);
     alert('Erreur serveur');
   }
+  }, 'Finaliser la facture');
 };
 
-
-window.markOwnerInvoicePaid = async function (id) {
-  if (!confirm('Marquer cette facture comme encaissée ?')) return;
-
+window.markOwnerInvoicePaid = function (id) {
+  showConfirm('Marquer cette facture comme encaissée ?', async function() {
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/mark-paid', {
       method: 'POST',
@@ -2638,6 +2684,7 @@ window.markOwnerInvoicePaid = async function (id) {
     console.error(e);
     alert('Erreur serveur');
   }
+  }, 'Encaisser la facture');
 };
 
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
@@ -3533,23 +3580,24 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
   window.deleteClient = async function() {
     if (!editingClientId) return;
-    if (!confirm('Supprimer ce client ? Cette action est irréversible.')) return;
-    try {
-      const res = await fetch('/api/owner-clients/' + editingClientId, {
-        method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        return alert(json.error || 'Erreur lors de la suppression');
+    showConfirm('Supprimer ce client ? Cette action est irréversible.', async function() {
+      try {
+        const res = await fetch('/api/owner-clients/' + editingClientId, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          const json = await res.json();
+          return alert(json.error || 'Erreur lors de la suppression');
+        }
+        alert('Client supprimé.');
+        closeClientModal();
+        await loadClients();
+      } catch (err) {
+        console.error(err);
+        alert('Erreur serveur');
       }
-      alert('Client supprimé.');
-      closeClientModal();
-      await loadClients();
-    } catch (err) {
-      console.error(err);
-      alert('Erreur serveur');
-    }
+    }, 'Supprimer le client');
   };
 
   window.saveClient = async function() {
