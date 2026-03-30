@@ -22443,8 +22443,7 @@ app.get('/api/guest/properties', async (req, res) => {
       FROM properties p
       JOIN users u ON u.id = p.user_id
       JOIN subscriptions s ON s.user_id = u.id
-      WHERE p.is_active = true
-        AND s.status IN ('active', 'trial')
+      WHERE s.status IN ('active', 'trial')
         AND p.base_price IS NOT NULL
       ORDER BY p.created_at DESC
     `);
@@ -22506,7 +22505,6 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       JOIN users u ON u.id = p.user_id
       JOIN subscriptions s ON s.user_id = u.id
       WHERE p.id = $1
-        AND p.is_active = true
         AND s.status IN ('active', 'trial')
     `, [id]);
 
@@ -22579,7 +22577,7 @@ app.post('/api/guest/book', async (req, res) => {
       SELECT p.*, u.id as owner_user_id
       FROM properties p
       JOIN users u ON u.id = p.user_id
-      WHERE p.id = $1 AND p.is_active = true
+      WHERE p.id = $1
     `, [property_id]);
 
     if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
@@ -22764,7 +22762,7 @@ app.post('/api/guest/create-payment-intent', async (req, res) => {
     }
 
     const propResult = await pool.query(
-      'SELECT base_price, weekend_price, name FROM properties WHERE id = $1 AND is_active = true',
+      'SELECT base_price, weekend_price, name FROM properties WHERE id = $1',
       [property_id]
     );
     if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
