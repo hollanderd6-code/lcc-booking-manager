@@ -210,10 +210,10 @@
     /* ── Booking bar ── */
     .booking-bar {
       position: fixed;
-      bottom: 60px; left: 0; right: 0;
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+      left: 0; right: 0;
       background: white;
       border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
       padding: 12px 16px;
       display: flex; align-items: center; justify-content: space-between;
       z-index: 99;
@@ -390,8 +390,9 @@
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: white;
       padding: max(env(safe-area-inset-top), 16px) 20px 16px;
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0; right: 0;
       z-index: 50;
     }
     .page-header h2 {
@@ -399,6 +400,12 @@
       font-weight: 700;
       color: white;
       margin: 0;
+    }
+    /* Compense la hauteur du header fixe pour les écrans qui l'utilisent */
+    .screen-with-header > .my-bookings-list,
+    .screen-with-header > .account-body,
+    .screen-with-header > div:not(.page-header) {
+      padding-top: 62px;
     }
   </style>
 </head>
@@ -440,7 +447,7 @@
         <div style="font-size:16px; font-weight:600;" id="detailHeaderName">Logement</div>
       </div>
       <div id="detailBody"></div>
-      <div class="booking-bar" id="bookingBar">
+      <div class="booking-bar" id="bookingBar" style="display:none;">
         <div>
           <div class="booking-bar-price" id="barPrice">--€ <span>/ nuit</span></div>
           <div style="font-size:12px; color:var(--text-light);" id="barDates">Sélectionnez des dates</div>
@@ -471,9 +478,9 @@
     </div>
 
     <!-- ─── ÉCRAN LOGIN ─── -->
-    <div id="screen-login" class="screen-content">
+    <div id="screen-login" class="screen-content screen-with-header">
       <div class="page-header"><h2>Connexion</h2></div>
-      <div style="padding:32px 20px;">
+      <div style="padding:32px 20px; padding-top: calc(62px + 32px);">\n
         <p style="font-size:15px;color:var(--text-light);margin-bottom:28px;line-height:1.6;">
           Entrez votre email pour recevoir un lien de connexion instantané. Aucun mot de passe.
         </p>
@@ -500,7 +507,7 @@
     </div>
 
     <!-- ─── ÉCRAN 5 : Mes réservations ─── -->
-    <div id="screen-bookings" class="screen-content">
+    <div id="screen-bookings" class="screen-content screen-with-header">
       <div class="page-header">
         <h2>Mes réservations</h2>
       </div>
@@ -510,7 +517,7 @@
     </div>
 
     <!-- ─── ÉCRAN 6 : Compte ─── -->
-    <div id="screen-account" class="screen-content">
+    <div id="screen-account" class="screen-content screen-with-header">
       <div class="page-header">
         <h2>Mon compte</h2>
       </div>
