@@ -22872,59 +22872,7 @@ app.get('/api/guest/my-bookings', async (req, res) => {
 });
 
 // ── Créer un PaymentIntent Stripe pour Guest ─────────────────
-app.post('/api/guest/create-payment-intent', async (req, res) => {
-  try {
-    const { property_id, checkin, checkout, guests } = req.body;
-    if (!property_id || !checkin || !checkout) {
-      return res.status(400).json({ error: 'Champs requis manquants' });
-    }
-
-    const propResult = await pool.query(
-      'SELECT base_price, weekend_price, name FROM properties WHERE id = $1',
-      [property_id]
-    );
-    if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
-    const prop = propResult.rows[0];
-
-    const start = new Date(checkin);
-    const end = new Date(checkout);
-    const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
-
-    let totalBase = 0;
-    for (let i = 0; i < nights; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const dow = d.getDay();
-      const isPremium = dow === 5 || dow === 6;
-      const nightPrice = isPremium && prop.weekend_price
-        ? parseFloat(prop.weekend_price)
-        : parseFloat(prop.base_price || 0);
-      totalBase += nightPrice;
-    }
-
-    const commission = Math.round(totalBase * 0.03 * 100) / 100;
-    const totalTTC = Math.round((totalBase + commission) * 100);
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: totalTTC,
-      currency: 'eur',
-      metadata: { property_id, checkin, checkout, source: 'boostinghost_guest' }
-    });
-
-    res.json({
-      clientSecret: paymentIntent.client_secret,
-      totalBase,
-      commission,
-      totalTTC: totalTTC / 100,
-      nights,
-      propertyName: prop.name
-    });
-
-  } catch (e) {
-    console.error('❌ [GUEST] create-payment-intent:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
+// [ancienne route create-payment-intent supprimée]
 
 
 // ============================================================
