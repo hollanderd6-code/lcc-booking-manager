@@ -7,6 +7,44 @@ const API_URL = IS_NATIVE
   ? 'https://www.boostinghost.fr'
   : window.location.origin;
 
+<<<<<<< HEAD
+=======
+// Stripe publishable key
+const STRIPE_PK = 'pk_live_51Su7Z1FDAmyxvgFK3uralsUfB7fEX3UfOop2G4krZr6hgMNajjPYYCCJ14Ds7LSK19GT68xfJoftkjFhVBFe4d8100Vv1T8lSz'; // ← remplace par ta clé publishable Stripe live
+
+// Init Stripe Capacitor v8
+let StripePlugin = null;
+async function initStripe() {
+  if (!IS_NATIVE) return;
+  
+  // Attendre que le plugin soit disponible (max 5 secondes)
+  const plugin = await new Promise(resolve => {
+    let attempts = 0;
+    const check = () => {
+      const p = window.Capacitor?.Plugins?.Stripe;
+      if (p) { resolve(p); return; }
+      attempts++;
+      if (attempts < 50) setTimeout(check, 100);
+      else resolve(null);
+    };
+    check();
+  });
+
+  if (!plugin) {
+    console.warn('⚠️ Stripe plugin non trouvé après 5s');
+    return;
+  }
+
+  try {
+    await plugin.initialize({ publishableKey: STRIPE_PK });
+    StripePlugin = plugin;
+    console.log('✅ Stripe initialisé');
+  } catch(e) {
+    console.warn('⚠️ Stripe init error:', e.message);
+  }
+}
+
+>>>>>>> c7950af934bbf0f94875fbb2bfd5c205d805bc1a
 // ── State global ─────────────────────────────────────────────
 let state = {
   properties: [],
@@ -21,9 +59,73 @@ let state = {
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+<<<<<<< HEAD
+=======
+  initStripe(); // Lance en parallèle — polling interne jusqu'à 5s
+  // Récupérer session existante
+  state.session = getSession();
+  updateNavAccount();
+
+  // Vérifier si un magic_token est dans l'URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const magicToken = urlParams.get('magic_token');
+  if (magicToken) {
+    await verifyMagicToken(magicToken);
+  }
+
+  // Charger les champs compte
+  if (state.session) {
+    state.account = { ...state.account, email: state.session.email, name: state.session.name || state.account.name };
+    localStorage.setItem('guest_account', JSON.stringify(state.account));
+  }
+>>>>>>> c7950af934bbf0f94875fbb2bfd5c205d805bc1a
   loadAccountFields();
+
+  // Détecter le retour depuis Stripe Checkout
+  const urlParams2 = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams2.get('payment');
+  if (paymentStatus === 'success') {
+    await handleStripeReturn(urlParams2);
+  } else if (paymentStatus === 'cancel') {
+    showToast('Paiement annulé');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
   await loadProperties();
 });
+
+async function handleStripeReturn(params) {
+  // Nettoyer l'URL
+  window.history.replaceState({}, '', window.location.pathname);
+
+  // Récupérer les infos de la réservation en attente
+  const pending = JSON.parse(localStorage.getItem('guest_pending_booking') || 'null');
+  if (!pending) { showToast('Paiement reçu !'); return; }
+
+  localStorage.removeItem('guest_pending_booking');
+
+  const btn_pay = document.createElement('div'); // dummy
+  showToast('Confirmation de la réservation...');
+
+  try {
+    const res = await fetch(`${API_URL}/api/guest/confirm-after-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pending)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    // Mettre à jour le compte
+    state.account = { name: pending.guest_name, email: pending.guest_email, phone: pending.guest_phone };
+    localStorage.setItem('guest_account', JSON.stringify(state.account));
+    updateNavAccount();
+
+    showConfirmation(data, pending.guest_name, pending.guest_email);
+  } catch (e) {
+    showToast('Réservation confirmée mais erreur: ' + e.message);
+  }
+}
 
 // ── Navigation ───────────────────────────────────────────────
 function showScreen(name) {
@@ -367,7 +469,12 @@ async function submitBooking() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traitement...';
 
   try {
+<<<<<<< HEAD
     const res = await fetch(`${API_URL}/api/guest/book`, {
+=======
+    // Créer la session Stripe Checkout
+    const res = await fetch(`${API_URL}/api/guest/create-checkout-session`, {
+>>>>>>> c7950af934bbf0f94875fbb2bfd5c205d805bc1a
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -377,10 +484,18 @@ async function submitBooking() {
         guests: guestCount || 2,
         guest_name: guestName,
         guest_email: guestEmail,
+<<<<<<< HEAD
         guest_phone: guestPhone
+=======
+        guest_phone: guestPhone,
+        promo_code: promoCode
+>>>>>>> c7950af934bbf0f94875fbb2bfd5c205d805bc1a
       })
     });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
 
+<<<<<<< HEAD
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur lors de la réservation');
 
@@ -391,6 +506,25 @@ async function submitBooking() {
 
     // Afficher confirmation
     showConfirmation(data, guestName, guestEmail);
+=======
+    // Sauvegarder les infos en attendant le retour de Stripe
+    localStorage.setItem('guest_pending_booking', JSON.stringify({
+      property_id: state.currentProperty.id,
+      checkin: state.selectedCheckin,
+      checkout: state.selectedCheckout,
+      guests: guestCount || 2,
+      guest_name: guestName,
+      guest_email: guestEmail,
+      guest_phone: guestPhone,
+      promo_code: promoCode,
+      session_id: data.sessionId
+    }));
+    localStorage.setItem('guest_session_email', guestEmail);
+    localStorage.setItem('guest_session_name', guestName);
+
+    // Ouvrir Stripe Checkout
+    window.location.href = data.checkoutUrl;
+>>>>>>> c7950af934bbf0f94875fbb2bfd5c205d805bc1a
 
   } catch (e) {
     showToast(e.message);

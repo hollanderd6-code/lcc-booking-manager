@@ -23159,15 +23159,18 @@ app.post('/api/guest/promo/check', async (req, res) => {
 });
 
 // ── Créer un PaymentIntent avec promo optionnelle ────────────
-app.post('/api/guest/create-payment-intent', async (req, res) => {
+// ── Créer une session Stripe Checkout ───────────────────────
+app.post('/api/guest/create-checkout-session', async (req, res) => {
   try {
-    const { property_id, checkin, checkout, guests, promo_code } = req.body;
-    if (!property_id || !checkin || !checkout) {
+    const { property_id, checkin, checkout, guests, promo_code,
+            guest_name, guest_email, guest_phone } = req.body;
+
+    if (!property_id || !checkin || !checkout || !guest_email) {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
 
     const propResult = await pool.query(
-      'SELECT base_price, weekend_price, name FROM properties WHERE id = $1',
+      'SELECT base_price, weekend_price, name, address FROM properties WHERE id = $1',
       [property_id]
     );
     if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
@@ -23177,43 +23180,30 @@ app.post('/api/guest/create-payment-intent', async (req, res) => {
     const start = new Date(checkin);
     const end = new Date(checkout);
     const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
-
     let totalBase = 0;
     for (let i = 0; i < nights; i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const dow = d.getDay();
-      const isPremium = dow === 5 || dow === 6;
-      totalBase += isPremium && prop.weekend_price
+      totalBase += (dow === 5 || dow === 6) && prop.weekend_price
         ? parseFloat(prop.weekend_price)
         : parseFloat(prop.base_price || 0);
     }
 
-    // Appliquer code promo si fourni
+    // Appliquer promo si fournie
     let discount = 0;
-    let promoData = null;
     if (promo_code) {
       const promoResult = await pool.query(`
         SELECT * FROM guest_promo_codes
-        WHERE UPPER(code) = UPPER($1)
-          AND active = TRUE
+        WHERE UPPER(code) = UPPER($1) AND active = TRUE
           AND (expires_at IS NULL OR expires_at > NOW())
           AND (max_uses IS NULL OR uses_count < max_uses)
       `, [promo_code.trim()]);
-
       if (promoResult.rows[0]) {
         const promo = promoResult.rows[0];
-        if (promo.discount_type === 'percent') {
-          discount = Math.round(totalBase * parseFloat(promo.discount_value) / 100 * 100) / 100;
-        } else {
-          discount = Math.min(parseFloat(promo.discount_value), totalBase);
-        }
-        promoData = {
-          code: promo.code.toUpperCase(),
-          discount_type: promo.discount_type,
-          discount_value: parseFloat(promo.discount_value),
-          discount_amount: discount
-        };
+        discount = promo.discount_type === 'percent'
+          ? Math.round(totalBase * parseFloat(promo.discount_value) / 100 * 100) / 100
+          : Math.min(parseFloat(promo.discount_value), totalBase);
       }
     }
 
@@ -23221,38 +23211,207 @@ app.post('/api/guest/create-payment-intent', async (req, res) => {
     const commission = Math.round(discountedBase * 0.03 * 100) / 100;
     const totalTTC = Math.round((discountedBase + commission) * 100); // centimes
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: totalTTC,
-      currency: 'eur',
-      automatic_payment_methods: { enabled: true },
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+    const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}`;
+    const cancelUrl = `${appUrl}/guest-app/public/index.html?payment=cancel`;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      customer_email: guest_email,
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          unit_amount: totalTTC,
+          product_data: {
+            name: `${prop.name} — ${nights} nuit${nights > 1 ? 's' : ''}`,
+            description: `Du ${checkin} au ${checkout}${discount > 0 ? ` (promo: -${discount}€)` : ''}`,
+          }
+        },
+        quantity: 1
+      }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
-        property_id,
-        checkin,
-        checkout,
-        guests: guests || 1,
+        property_id, checkin, checkout,
+        guest_name: guest_name || '',
+        guest_email, guest_phone: guest_phone || '',
         promo_code: promo_code || '',
+        guests: String(guests || 1),
         source: 'boostinghost_guest'
       }
     });
 
     res.json({
-      clientSecret: paymentIntent.client_secret,
-      payment_intent_id: paymentIntent.id,
-      totalBase,
-      discount,
-      discountedBase,
-      commission,
-      totalTTC: totalTTC / 100,
-      nights,
-      propertyName: prop.name,
-      promo: promoData
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      totalBase, discount, discountedBase, commission,
+      totalTTC: totalTTC / 100, nights,
+      propertyName: prop.name
     });
 
   } catch (e) {
-    console.error('❌ [GUEST] create-payment-intent:', e.message);
+    console.error('❌ [GUEST] create-checkout-session:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
+
+// ── Confirmer réservation après paiement Stripe Checkout ─────
+app.post('/api/guest/confirm-after-payment', async (req, res) => {
+  try {
+    const { session_id, property_id, checkin, checkout,
+            guest_name, guest_email, guest_phone, guests, promo_code } = req.body;
+
+    // Vérifier que le paiement est bien passé via Stripe
+    if (session_id) {
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+      if (session.payment_status !== 'paid') {
+        return res.status(402).json({ error: 'Paiement non confirmé' });
+      }
+    }
+
+    // Vérifier dispo
+    const conflict = await pool.query(`
+      SELECT id FROM reservations
+      WHERE property_id = $1 AND status NOT IN ('cancelled')
+        AND start_date < $3 AND end_date > $2
+    `, [property_id, checkin, checkout]);
+    if (conflict.rows.length > 0) {
+      return res.status(409).json({ error: 'Ces dates ne sont plus disponibles' });
+    }
+
+    // Récupérer le logement
+    const propResult = await pool.query(
+      'SELECT *, user_id as owner_user_id FROM properties WHERE id = $1',
+      [property_id]
+    );
+    if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+    const prop = propResult.rows[0];
+
+    // Calcul prix
+    const start = new Date(checkin);
+    const end = new Date(checkout);
+    const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
+    let totalBase = 0;
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dow = d.getDay();
+      totalBase += (dow === 5 || dow === 6) && prop.weekend_price
+        ? parseFloat(prop.weekend_price)
+        : parseFloat(prop.base_price || 0);
+    }
+    let discount = 0;
+    if (promo_code) {
+      const promoResult = await pool.query(`
+        SELECT * FROM guest_promo_codes WHERE UPPER(code) = UPPER($1) AND active = TRUE
+      `, [promo_code]);
+      if (promoResult.rows[0]) {
+        const promo = promoResult.rows[0];
+        discount = promo.discount_type === 'percent'
+          ? Math.round(totalBase * parseFloat(promo.discount_value) / 100 * 100) / 100
+          : Math.min(parseFloat(promo.discount_value), totalBase);
+        // Incrémenter uses_count
+        await pool.query('UPDATE guest_promo_codes SET uses_count = uses_count + 1 WHERE UPPER(code) = UPPER($1)', [promo_code]);
+      }
+    }
+    const discountedBase = Math.max(0, totalBase - discount);
+    const commission = Math.round(discountedBase * 0.03 * 100) / 100;
+
+    // Créer la réservation
+    const uid = `GUEST_${Date.now()}`;
+    const insertResult = await pool.query(`
+      INSERT INTO reservations
+        (uid, property_id, user_id, start_date, end_date,
+         guest_name, guest_email, guest_phone,
+         amount_total, platform, source, status, occupancy_adults, currency)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+      RETURNING *
+    `, [
+      uid, property_id, prop.owner_user_id,
+      checkin, checkout,
+      guest_name, guest_email, guest_phone || null,
+      discountedBase, 'Boostinghost Guest', 'guest_app', 'confirmed',
+      guests || 1, 'EUR'
+    ]);
+
+    const reservation = insertResult.rows[0];
+
+    // Sync Channex si activé
+    if (prop.channex_enabled && prop.channex_property_id) {
+      try {
+        const { pushAvailability } = require('./channex');
+        const allResas = await pool.query(
+          `SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+          [property_id]
+        );
+        const allBlocked = [];
+        allResas.rows.forEach(r => {
+          const s = new Date(r.start_date), e = new Date(r.end_date);
+          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+            allBlocked.push(d.toISOString().split('T')[0]);
+          }
+        });
+        await pushAvailability(pool, {
+          property_id, channex_property_id: prop.channex_property_id,
+          channex_room_type_id: prop.channex_room_type_id, dates_blocked: allBlocked
+        });
+      } catch (channexErr) {
+        console.error('⚠️ [GUEST] Erreur sync Channex:', channexErr.message);
+      }
+    }
+
+    // Email confirmation voyageur
+    try {
+      const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      await sendEmailViaBrevo({
+        to: guest_email,
+        subject: `✅ Réservation confirmée — ${prop.name}`,
+        text: `Votre réservation est confirmée pour ${prop.name} du ${fmtDate(checkin)} au ${fmtDate(checkout)}.`,
+        html: bhEmailTemplate({
+          icon: '🏠', title: 'Réservation confirmée !', subtitle: prop.name,
+          bodyHtml: `
+            <div class="success-card"><strong>Paiement reçu ✓</strong><br>Référence : ${uid}</div>
+            <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Arrivée</strong><br>${fmtDate(checkin)}</div></div>
+            <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Départ</strong><br>${fmtDate(checkout)}</div></div>
+            <div class="feat-row"><div class="feat-icon">💶</div><div class="feat-text"><strong>Total payé</strong><br>${discountedBase + commission}€</div></div>
+            <p class="signoff">À très bientôt,<br>L'équipe Boostinghost</p>
+          `,
+          footerNote: 'Boostinghost Guest'
+        })
+      });
+    } catch (emailErr) {
+      console.error('⚠️ [GUEST] Email voyageur:', emailErr.message);
+    }
+
+    // Notif push hôte
+    try {
+      const tokensRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+        [prop.owner_user_id]
+      );
+      for (const tok of tokensRes.rows) {
+        await sendNotification(tok.fcm_token, '🏠 Nouvelle réservation directe',
+          `${guest_name} · ${prop.name} · ${checkin} → ${checkout}`,
+          { type: 'new_booking_guest', uid, propertyId: property_id, screen: 'calendar' }
+        );
+      }
+    } catch (notifErr) {
+      console.error('⚠️ [GUEST] Notif hôte:', notifErr.message);
+    }
+
+    res.json({
+      success: true, reservation_uid: uid,
+      total: discountedBase, commission,
+      total_ttc: discountedBase + commission, nights
+    });
+
+  } catch (e) {
+    console.error('❌ [GUEST] confirm-after-payment:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 // ── Admin : gérer les codes promo ────────────────────────────
 app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
