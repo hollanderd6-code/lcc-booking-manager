@@ -22955,18 +22955,11 @@ app.post('/api/guest/auth/request', async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
-    // Stocker le token (remplace un éventuel token existant)
+    // Supprimer l'ancien token si existant, puis insérer le nouveau
+    await pool.query('DELETE FROM guest_magic_tokens WHERE email = $1', [normalizedEmail]);
     await pool.query(`
       INSERT INTO guest_magic_tokens (email, token, expires_at)
       VALUES ($1, $2, $3)
-      ON CONFLICT DO NOTHING
-    `, [normalizedEmail, token, expiresAt]);
-
-    // Fallback si conflict (email déjà en attente) → update
-    await pool.query(`
-      UPDATE guest_magic_tokens
-      SET token = $2, expires_at = $3, used = FALSE, created_at = NOW()
-      WHERE email = $1
     `, [normalizedEmail, token, expiresAt]);
 
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
