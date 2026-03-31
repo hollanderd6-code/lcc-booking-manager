@@ -23212,7 +23212,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     const totalTTC = Math.round((discountedBase + commission) * 100); // centimes
 
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
-    const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}`;
+    const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&session_id={CHECKOUT_SESSION_ID}&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}`;
     const cancelUrl = `${appUrl}/guest-app/public/index.html?payment=cancel`;
 
     const session = await stripe.checkout.sessions.create({
