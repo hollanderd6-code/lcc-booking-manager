@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@capacitor-community/stripe": "^8.1.0",
     "@capacitor-firebase/messaging": "^8.0.1",
     "@capacitor/android": "^8.1.0",
     "@capacitor/app": "^8.0.1",

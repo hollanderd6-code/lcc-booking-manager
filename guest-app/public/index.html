@@ -24,13 +24,20 @@
 
     /* ── Bottom nav ── */
     .bottom-nav {
-      position: relative;
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
       background: white;
       border-top: 1px solid var(--border);
-      display: flex;
+      display: flex !important;
       padding: 8px 0 env(safe-area-inset-bottom);
       z-index: 100;
-      flex-shrink: 0;
+    }
+    /* Cacher le nav seulement sur les écrans sans nav */
+    body.screen-detail .bottom-nav,
+    body.screen-checkout .bottom-nav,
+    body.screen-confirm .bottom-nav {
+      display: none !important;
     }
     .nav-item {
       flex: 1;
@@ -129,15 +136,12 @@
     /* ── Screen content ── */
     .screen-content {
       display: none;
-      flex-direction: column;
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
+      flex: 1;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding-bottom: 80px;
-      background: var(--bg);
     }
-    .screen-content.active { display: flex; }
+    .screen-content.active { display: block; }
 
     /* ── Property cards ── */
     .properties-grid { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
@@ -389,11 +393,10 @@
     .page-header {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: white;
-      padding: max(env(safe-area-inset-top, 16px), 16px) 20px 16px;
+      padding: max(env(safe-area-inset-top), 16px) 20px 16px;
       position: sticky;
       top: 0;
       z-index: 50;
-      flex-shrink: 0;
     }
     .page-header h2 {
       font-size: 20px;
@@ -423,7 +426,7 @@
   </div>
 
   <!-- Conteneur screens -->
-  <div style="flex:1; overflow:hidden; position:relative;" id="mainScroll">
+  <div style="flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;" id="mainScroll">
 
     <!-- ─── ÉCRAN 1 : Accueil ─── -->
     <div id="screen-home" class="screen-content active">
