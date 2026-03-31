@@ -15,23 +15,45 @@ let StripePlugin = null;
 async function initStripe() {
   try {
     if (!IS_NATIVE) { console.log('ℹ️ Mode web — Stripe natif désactivé'); return; }
-    
-    // Capacitor v8 : les plugins sont enregistrés via registerPlugin
-    // On tente d'abord via Capacitor.Plugins, puis via registerPlugin global
+
+    // Capacitor v8 — attendre que les plugins natifs soient prêts
+    // puis récupérer Stripe via registerPlugin
+    await new Promise(resolve => {
+      if (document.readyState === 'complete') { resolve(); return; }
+      window.addEventListener('load', resolve, { once: true });
+    });
+
+    // Laisser Capacitor bridge s'initialiser complètement
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Méthode 1 : via Capacitor.Plugins
     let plugin = window.Capacitor?.Plugins?.Stripe;
-    
-    if (!plugin && window.Capacitor?.registerPlugin) {
-      plugin = window.Capacitor.registerPlugin('Stripe');
-    }
-    
+
+    // Méthode 2 : via registerPlugin (Capacitor v8)
     if (!plugin) {
-      console.warn('⚠️ Plugin Stripe non trouvé');
+      try {
+        const { registerPlugin } = window.Capacitor || {};
+        if (registerPlugin) {
+          plugin = registerPlugin('Stripe');
+        }
+      } catch(_) {}
+    }
+
+    // Méthode 3 : chercher dans tous les plugins disponibles
+    if (!plugin) {
+      const allPlugins = window.Capacitor?.Plugins || {};
+      const stripeKey = Object.keys(allPlugins).find(k => k.toLowerCase().includes('stripe'));
+      if (stripeKey) plugin = allPlugins[stripeKey];
+    }
+
+    if (!plugin) {
+      console.warn('⚠️ Plugin Stripe introuvable dans:', Object.keys(window.Capacitor?.Plugins || {}));
       return;
     }
 
     await plugin.initialize({ publishableKey: STRIPE_PK });
     StripePlugin = plugin;
-    console.log('✅ Stripe natif initialisé (v8)');
+    console.log('✅ Stripe natif initialisé');
   } catch(e) {
     console.warn('⚠️ Stripe init échoué:', e.message);
     StripePlugin = null;
@@ -134,7 +156,8 @@ async function verifyMagicToken(token) {
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  await initStripe();
+  // Init Stripe après un court délai pour laisser le bridge Capacitor se charger
+  setTimeout(initStripe, 500);
   // Récupérer session existante
   state.session = getSession();
   updateNavAccount();
@@ -603,10 +626,7 @@ async function submitBooking() {
     if (!intentRes.ok) throw new Error(intentData.error);
 
     // 2. Paiement via Payment Sheet (natif) ou confirmation directe
-    // Debug temporaire — alert visible sans Web Inspector
-    const pluginKeys = Object.keys(window.Capacitor?.Plugins || {}).join(', ');
-    const debugInfo = `IS_NATIVE: ${IS_NATIVE}\nStripe: ${StripePlugin !== null ? 'OK' : 'NULL'}\nPlugins: ${pluginKeys}`;
-    alert(debugInfo);
+    console.log('🔍 Stripe debug — IS_NATIVE:', IS_NATIVE, '| StripePlugin:', StripePlugin !== null ? 'OK' : 'NULL');
     
     const stripeAvailable = IS_NATIVE && StripePlugin !== null;
     if (stripeAvailable) {
