@@ -22499,6 +22499,7 @@ app.get('/api/guest/properties/:id', async (req, res) => {
         p.base_price, p.weekend_price, p.max_guests,
         p.bedrooms, p.beds, p.bathrooms,
         p.arrival_time, p.departure_time,
+        p.cleaning_fee, p.tourist_tax_per_night,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
         p.user_id as owner_id
       FROM properties p
@@ -22533,6 +22534,8 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       bathrooms: p.bathrooms,
       arrivalTime: p.arrival_time,
       departureTime: p.departure_time,
+      cleaningFee: p.cleaning_fee != null ? parseFloat(p.cleaning_fee) : null,
+      touristTaxPerNight: p.tourist_tax_per_night != null ? parseFloat(p.tourist_tax_per_night) : null,
       channexEnabled: p.channex_enabled,
       bookedDates: resas.rows.map(r => ({
         start: r.start_date,
@@ -23170,7 +23173,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     }
 
     const propResult = await pool.query(
-      'SELECT base_price, weekend_price, name, address FROM properties WHERE id = $1',
+      'SELECT base_price, weekend_price, name, address, cleaning_fee, tourist_tax_per_night FROM properties WHERE id = $1',
       [property_id]
     );
     if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
@@ -23208,8 +23211,13 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     }
 
     const discountedBase = Math.max(0, totalBase - discount);
+    const cleaningFee = prop.cleaning_fee != null ? parseFloat(prop.cleaning_fee) : 0;
+    const nbGuests = parseInt(guests) || 1;
+    const touristTax = prop.tourist_tax_per_night != null
+      ? Math.round(parseFloat(prop.tourist_tax_per_night) * nights * nbGuests * 100) / 100
+      : 0;
     const commission = Math.round(discountedBase * 0.03 * 100) / 100;
-    const totalTTC = Math.round((discountedBase + commission) * 100); // centimes
+    const totalTTC = Math.round((discountedBase + cleaningFee + touristTax + commission) * 100); // centimes
 
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
     const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&session_id={CHECKOUT_SESSION_ID}&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}`;
@@ -23225,7 +23233,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
           unit_amount: totalTTC,
           product_data: {
             name: `${prop.name} — ${nights} nuit${nights > 1 ? 's' : ''}`,
-            description: `Du ${checkin} au ${checkout}${discount > 0 ? ` (promo: -${discount}€)` : ''}`,
+            description: `Du ${checkin} au ${checkout}${discount > 0 ? ` (promo: -${discount}€)` : ''}${cleaningFee > 0 ? ` · Ménage: ${cleaningFee}€` : ''}${touristTax > 0 ? ` · Taxe séjour: ${touristTax}€` : ''}`,
           }
         },
         quantity: 1
@@ -23245,7 +23253,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     res.json({
       checkoutUrl: session.url,
       sessionId: session.id,
-      totalBase, discount, discountedBase, commission,
+      totalBase, discount, discountedBase, cleaningFee, touristTax, commission,
       totalTTC: totalTTC / 100, nights,
       propertyName: prop.name
     });
@@ -23316,7 +23324,13 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       }
     }
     const discountedBase = Math.max(0, totalBase - discount);
+    const cleaningFee = prop.cleaning_fee != null ? parseFloat(prop.cleaning_fee) : 0;
+    const nbGuests = parseInt(guests) || 1;
+    const touristTax = prop.tourist_tax_per_night != null
+      ? Math.round(parseFloat(prop.tourist_tax_per_night) * nights * nbGuests * 100) / 100
+      : 0;
     const commission = Math.round(discountedBase * 0.03 * 100) / 100;
+    const totalTTC = Math.round((discountedBase + cleaningFee + touristTax + commission) * 100) / 100;
 
     // Créer la réservation
     const uid = `GUEST_${Date.now()}`;
@@ -23331,7 +23345,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       uid, property_id, prop.owner_user_id,
       checkin, checkout,
       guest_name, guest_email, guest_phone || null,
-      discountedBase, 'Boostinghost Guest', 'guest_app', 'confirmed',
+      totalTTC, 'Boostinghost Guest', 'guest_app', 'confirmed',
       guests || 1, 'EUR'
     ]);
 
@@ -23374,7 +23388,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
             <div class="success-card"><strong>Paiement reçu ✓</strong><br>Référence : ${uid}</div>
             <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Arrivée</strong><br>${fmtDate(checkin)}</div></div>
             <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Départ</strong><br>${fmtDate(checkout)}</div></div>
-            <div class="feat-row"><div class="feat-icon">💶</div><div class="feat-text"><strong>Total payé</strong><br>${discountedBase + commission}€</div></div>
+            <div class="feat-row"><div class="feat-icon">💶</div><div class="feat-text"><strong>Total payé</strong><br>${totalTTC}€</div></div>
             <p class="signoff">À très bientôt,<br>L'équipe Boostinghost</p>
           `,
           footerNote: 'Boostinghost Guest'
@@ -23402,8 +23416,8 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
 
     res.json({
       success: true, reservation_uid: uid,
-      total: discountedBase, commission,
-      total_ttc: discountedBase + commission, nights
+      total: discountedBase, cleaningFee, touristTax, commission,
+      total_ttc: totalTTC, nights
     });
 
   } catch (e) {
