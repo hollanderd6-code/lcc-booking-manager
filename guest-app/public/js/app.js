@@ -676,8 +676,8 @@ async function loadMyBookings() {
       <div class="empty-state">
         <i class="fas fa-calendar"></i>
         <p style="margin-bottom:20px;">Connectez-vous pour voir vos réservations</p>
-        <button onclick="navTo('login')" style="background:var(--primary-light);color:var(--primary);border:2px solid var(--primary);border-radius:12px;padding:11px 24px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
-          <i class="fas fa-sign-in-alt"></i> Se connecter
+        <button onclick="navTo('login')" style="background:var(--primary);color:white;border:none;border-radius:12px;padding:12px 28px;font-size:14px;font-weight:600;cursor:pointer;">
+          Se connecter
         </button>
       </div>`;
     return;
