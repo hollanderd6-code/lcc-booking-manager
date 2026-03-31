@@ -809,7 +809,11 @@ async function loadMyBookings() {
       return;
     }
 
-    const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    const fmtDate = iso => {
+      if (!iso) return '?';
+      const s = String(iso).substring(0, 10); // extrait YYYY-MM-DD même si PG renvoie ISO complet
+      return new Date(s + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
 
     list.innerHTML = bookings.map(b => `
       <div class="booking-card">
