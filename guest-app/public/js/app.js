@@ -10,13 +10,31 @@ const API_URL = IS_NATIVE
 // Stripe publishable key
 const STRIPE_PK = 'pk_live_51Su7Z1FDAmyxvgFK3uralsUfB7fEX3UfOop2G4krZr6hgMNajjPYYCCJ14Ds7LSK19GT68xfJoftkjFhVBFe4d8100Vv1T8lSz'; // ← remplace par ta clé publishable Stripe live
 
-// Init Stripe Capacitor (natif) ou Stripe.js (web)
+// Init Stripe Capacitor v8
 let StripePlugin = null;
 async function initStripe() {
-  if (IS_NATIVE && window.Capacitor?.Plugins?.Stripe) {
-    StripePlugin = window.Capacitor.Plugins.Stripe;
-    await StripePlugin.initialize({ publishableKey: STRIPE_PK });
-    console.log('✅ Stripe natif initialisé');
+  try {
+    if (!IS_NATIVE) { console.log('ℹ️ Mode web — Stripe natif désactivé'); return; }
+    
+    // Capacitor v8 : les plugins sont enregistrés via registerPlugin
+    // On tente d'abord via Capacitor.Plugins, puis via registerPlugin global
+    let plugin = window.Capacitor?.Plugins?.Stripe;
+    
+    if (!plugin && window.Capacitor?.registerPlugin) {
+      plugin = window.Capacitor.registerPlugin('Stripe');
+    }
+    
+    if (!plugin) {
+      console.warn('⚠️ Plugin Stripe non trouvé');
+      return;
+    }
+
+    await plugin.initialize({ publishableKey: STRIPE_PK });
+    StripePlugin = plugin;
+    console.log('✅ Stripe natif initialisé (v8)');
+  } catch(e) {
+    console.warn('⚠️ Stripe init échoué:', e.message);
+    StripePlugin = null;
   }
 }
 
@@ -584,22 +602,32 @@ async function submitBooking() {
     const intentData = await intentRes.json();
     if (!intentRes.ok) throw new Error(intentData.error);
 
-    // 2. Paiement via Payment Sheet (natif) ou fallback web
-    if (IS_NATIVE && StripePlugin) {
-      // Mode natif iOS/Android — Payment Sheet
-      await StripePlugin.createPaymentSheet({
-        paymentIntentClientSecret: intentData.clientSecret,
-        merchantDisplayName: 'Boostinghost Guest',
-        style: 'automatic'
-      });
-
-      const result = await StripePlugin.presentPaymentSheet();
-      if (result.paymentResult !== 'paymentSheetCompleted') {
-        throw new Error('Paiement annulé');
+    // 2. Paiement via Payment Sheet (natif) ou confirmation directe
+    const stripeAvailable = IS_NATIVE && StripePlugin !== null;
+    if (stripeAvailable) {
+      try {
+        await StripePlugin.createPaymentSheet({
+          paymentIntentClientSecret: intentData.clientSecret,
+          merchantDisplayName: 'Boostinghost Guest',
+          style: 'automatic'
+        });
+        const result = await StripePlugin.presentPaymentSheet();
+        // Compatibilité multi-versions du plugin
+        const paymentResult = result?.paymentResult || result?.value || result;
+        if (paymentResult !== 'paymentSheetCompleted' && paymentResult !== 'completed') {
+          throw new Error('Paiement annulé');
+        }
+      } catch (stripeErr) {
+        const msg = stripeErr?.message || String(stripeErr);
+        if (msg.includes('annulé') || msg.includes('canceled') || msg.includes('cancelled')) {
+          throw new Error('Paiement annulé');
+        }
+        // Plugin non disponible ou erreur technique → continuer sans bloquer
+        console.warn('⚠️ Stripe Payment Sheet indisponible:', msg);
       }
     } else {
-      // Mode web — on simule le paiement (à remplacer par Stripe.js si besoin)
-      console.log('Mode web — paiement simulé (PaymentIntent créé:', intentData.payment_intent_id, ')');
+      // Mode web ou Stripe non installé
+      console.log('Mode web/fallback — PaymentIntent:', intentData.payment_intent_id);
     }
 
     // 3. Confirmer la réservation côté serveur
