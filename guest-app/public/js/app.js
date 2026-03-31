@@ -146,8 +146,9 @@ function showScreen(name) {
   document.getElementById('appHeader').style.display = headerScreens.includes(name) ? 'block' : 'none';
   document.getElementById('bottomNav').style.display = navScreens.includes(name) ? 'flex' : 'none';
 
-  // Scroll en haut
-  document.getElementById('mainScroll').scrollTop = 0;
+  // Scroll en haut du screen actif
+  const activeScreen = document.querySelector('.screen-content.active');
+  if (activeScreen) activeScreen.scrollTop = 0;
 
   if (name === 'bookings') loadMyBookings();
   if (name === 'account') { loadAccountFields(); renderLogoutSection(); }
