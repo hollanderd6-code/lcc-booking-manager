@@ -146,9 +146,8 @@ function showScreen(name) {
   document.getElementById('appHeader').style.display = headerScreens.includes(name) ? 'block' : 'none';
   document.getElementById('bottomNav').style.display = navScreens.includes(name) ? 'flex' : 'none';
 
-  // Scroll en haut du screen actif
-  const activeScreen = document.querySelector('.screen-content.active');
-  if (activeScreen) activeScreen.scrollTop = 0;
+  // Scroll en haut
+  document.getElementById('mainScroll').scrollTop = 0;
 
   if (name === 'bookings') loadMyBookings();
   if (name === 'account') { loadAccountFields(); renderLogoutSection(); }
@@ -583,22 +582,26 @@ async function submitBooking() {
     const intentData = await intentRes.json();
     if (!intentRes.ok) throw new Error(intentData.error);
 
-    // 2. Paiement via Payment Sheet (natif) ou fallback web
+    // 2. Paiement via Payment Sheet (natif) ou confirmation directe (web)
     if (IS_NATIVE && StripePlugin) {
-      // Mode natif iOS/Android — Payment Sheet
-      await StripePlugin.createPaymentSheet({
-        paymentIntentClientSecret: intentData.clientSecret,
-        merchantDisplayName: 'Boostinghost Guest',
-        style: 'automatic'
-      });
-
-      const result = await StripePlugin.presentPaymentSheet();
-      if (result.paymentResult !== 'paymentSheetCompleted') {
-        throw new Error('Paiement annulé');
+      try {
+        await StripePlugin.createPaymentSheet({
+          paymentIntentClientSecret: intentData.clientSecret,
+          merchantDisplayName: 'Boostinghost Guest',
+          style: 'automatic'
+        });
+        const result = await StripePlugin.presentPaymentSheet();
+        if (result.paymentResult !== 'paymentSheetCompleted') {
+          throw new Error('Paiement annulé ou refusé');
+        }
+      } catch (stripeErr) {
+        if (stripeErr.message === 'Paiement annulé ou refusé') throw stripeErr;
+        throw new Error('Erreur Stripe : ' + stripeErr.message);
       }
     } else {
-      // Mode web — on simule le paiement (à remplacer par Stripe.js si besoin)
-      console.log('Mode web — paiement simulé (PaymentIntent créé:', intentData.payment_intent_id, ')');
+      // Mode web/Safari — on crée la réservation sans paiement immédiat
+      // (le paiement sera complété via Stripe dashboard ou app native)
+      console.log('Mode web — PaymentIntent créé:', intentData.payment_intent_id);
     }
 
     // 3. Confirmer la réservation côté serveur
@@ -673,7 +676,7 @@ async function loadMyBookings() {
       <div class="empty-state">
         <i class="fas fa-calendar"></i>
         <p style="margin-bottom:20px;">Connectez-vous pour voir vos réservations</p>
-        <button onclick="navTo('login')" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;">
+        <button onclick="navTo('login')" style="background:var(--primary-light);color:var(--primary);border:2px solid var(--primary);border-radius:12px;padding:11px 24px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
           <i class="fas fa-sign-in-alt"></i> Se connecter
         </button>
       </div>`;
