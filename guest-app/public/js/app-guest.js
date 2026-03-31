@@ -13,50 +13,32 @@ const STRIPE_PK = 'pk_live_51Su7Z1FDAmyxvgFK3uralsUfB7fEX3UfOop2G4krZr6hgMNajjPY
 // Init Stripe Capacitor v8
 let StripePlugin = null;
 async function initStripe() {
+  if (!IS_NATIVE) return;
+  
+  // Attendre que le plugin soit disponible (max 5 secondes)
+  const plugin = await new Promise(resolve => {
+    let attempts = 0;
+    const check = () => {
+      const p = window.Capacitor?.Plugins?.Stripe;
+      if (p) { resolve(p); return; }
+      attempts++;
+      if (attempts < 50) setTimeout(check, 100);
+      else resolve(null);
+    };
+    check();
+  });
+
+  if (!plugin) {
+    console.warn('⚠️ Stripe plugin non trouvé après 5s');
+    return;
+  }
+
   try {
-    if (!IS_NATIVE) { console.log('ℹ️ Mode web — Stripe natif désactivé'); return; }
-
-    // Capacitor v8 — attendre que les plugins natifs soient prêts
-    // puis récupérer Stripe via registerPlugin
-    await new Promise(resolve => {
-      if (document.readyState === 'complete') { resolve(); return; }
-      window.addEventListener('load', resolve, { once: true });
-    });
-
-    // Laisser Capacitor bridge s'initialiser complètement
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Méthode 1 : via Capacitor.Plugins
-    let plugin = window.Capacitor?.Plugins?.Stripe;
-
-    // Méthode 2 : via registerPlugin (Capacitor v8)
-    if (!plugin) {
-      try {
-        const { registerPlugin } = window.Capacitor || {};
-        if (registerPlugin) {
-          plugin = registerPlugin('Stripe');
-        }
-      } catch(_) {}
-    }
-
-    // Méthode 3 : chercher dans tous les plugins disponibles
-    if (!plugin) {
-      const allPlugins = window.Capacitor?.Plugins || {};
-      const stripeKey = Object.keys(allPlugins).find(k => k.toLowerCase().includes('stripe'));
-      if (stripeKey) plugin = allPlugins[stripeKey];
-    }
-
-    if (!plugin) {
-      console.warn('⚠️ Plugin Stripe introuvable dans:', Object.keys(window.Capacitor?.Plugins || {}));
-      return;
-    }
-
     await plugin.initialize({ publishableKey: STRIPE_PK });
     StripePlugin = plugin;
-    console.log('✅ Stripe natif initialisé');
+    console.log('✅ Stripe initialisé');
   } catch(e) {
-    console.warn('⚠️ Stripe init échoué:', e.message);
-    StripePlugin = null;
+    console.warn('⚠️ Stripe init error:', e.message);
   }
 }
 
@@ -156,8 +138,7 @@ async function verifyMagicToken(token) {
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  // Init Stripe après un court délai pour laisser le bridge Capacitor se charger
-  setTimeout(initStripe, 500);
+  initStripe(); // Lance en parallèle — polling interne jusqu'à 5s
   // Récupérer session existante
   state.session = getSession();
   updateNavAccount();
@@ -680,22 +661,9 @@ async function submitBooking() {
     state.account = { name: guestName, email: guestEmail, phone: guestPhone };
     localStorage.setItem('guest_account', JSON.stringify(state.account));
 
-    // 5. Créer une session email si pas encore connecté
-    if (!getSession()) {
-      try {
-        const authRes = await fetch(`${API_URL}/api/guest/auth/request`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: guestEmail })
-        });
-        // On envoie le lien mais on stocke aussi l'email localement
-        // pour permettre de voir les réservations directement
-        const tempSession = { email: guestEmail, name: guestName, token: null, temp: true };
-        state.session = tempSession;
-        localStorage.setItem('guest_session_email', guestEmail);
-        localStorage.setItem('guest_session_name', guestName);
-      } catch(_) {}
-    }
+    // 5. Stocker l'email localement pour voir les réservations
+    localStorage.setItem('guest_session_email', guestEmail);
+    localStorage.setItem('guest_session_name', guestName);
 
     loadAccountFields();
     updateNavAccount();
