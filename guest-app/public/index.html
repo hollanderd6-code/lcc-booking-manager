@@ -29,15 +29,9 @@
       left: 0; right: 0;
       background: white;
       border-top: 1px solid var(--border);
-      display: flex !important;
+      display: flex;
       padding: 8px 0 env(safe-area-inset-bottom);
       z-index: 100;
-    }
-    /* Cacher le nav seulement sur les écrans sans nav */
-    body.screen-detail .bottom-nav,
-    body.screen-checkout .bottom-nav,
-    body.screen-confirm .bottom-nav {
-      display: none !important;
     }
     .nav-item {
       flex: 1;
@@ -142,6 +136,7 @@
       padding-bottom: 80px;
     }
     .screen-content.active { display: block; }
+    #screen-detail { padding-bottom: 140px; }
 
     /* ── Property cards ── */
     .properties-grid { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
@@ -215,12 +210,13 @@
     /* ── Booking bar ── */
     .booking-bar {
       position: fixed;
-      bottom: 0; left: 0; right: 0;
+      bottom: 60px; left: 0; right: 0;
       background: white;
       border-top: 1px solid var(--border);
-      padding: 14px 16px env(safe-area-inset-bottom);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
       display: flex; align-items: center; justify-content: space-between;
-      z-index: 100;
+      z-index: 99;
     }
     .booking-bar-price { font-size: 20px; font-weight: 700; color: var(--primary); }
     .booking-bar-price span { font-size: 13px; font-weight: 400; color: var(--text-light); }
