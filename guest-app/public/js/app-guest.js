@@ -679,8 +679,26 @@ async function submitBooking() {
     // 4. Sauvegarder le compte
     state.account = { name: guestName, email: guestEmail, phone: guestPhone };
     localStorage.setItem('guest_account', JSON.stringify(state.account));
-    loadAccountFields();
 
+    // 5. Créer une session email si pas encore connecté
+    if (!getSession()) {
+      try {
+        const authRes = await fetch(`${API_URL}/api/guest/auth/request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: guestEmail })
+        });
+        // On envoie le lien mais on stocke aussi l'email localement
+        // pour permettre de voir les réservations directement
+        const tempSession = { email: guestEmail, name: guestName, token: null, temp: true };
+        state.session = tempSession;
+        localStorage.setItem('guest_session_email', guestEmail);
+        localStorage.setItem('guest_session_name', guestName);
+      } catch(_) {}
+    }
+
+    loadAccountFields();
+    updateNavAccount();
     showConfirmation(bookData, guestName, guestEmail);
 
   } catch (e) {
@@ -722,7 +740,10 @@ async function loadMyBookings() {
   const list = document.getElementById('myBookingsList');
   const session = getSession();
 
-  if (!session?.token) {
+  // Accepter soit un JWT complet, soit un email local (après réservation sans connexion)
+  const localEmail = localStorage.getItem('guest_session_email') || state.account?.email;
+  
+  if (!session?.token && !localEmail) {
     list.innerHTML = `
       <div class="empty-state">
         <i class="fas fa-calendar"></i>
@@ -737,12 +758,20 @@ async function loadMyBookings() {
   list.innerHTML = '<div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>';
 
   try {
-    const res = await fetch(`${API_URL}/api/guest/me`, {
-      headers: { 'Authorization': `Bearer ${session.token}` }
-    });
-    const data = await res.json();
-    if (!res.ok) { clearSession(); navTo('home'); return; }
-    const bookings = data.bookings || [];
+    let bookings = [];
+    if (session?.token) {
+      // Connecté avec JWT → /api/guest/me
+      const res = await fetch(`${API_URL}/api/guest/me`, {
+        headers: { 'Authorization': `Bearer ${session.token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) { clearSession(); }
+      else bookings = data.bookings || [];
+    } else if (localEmail) {
+      // Email local → /api/guest/my-bookings
+      const res = await fetch(`${API_URL}/api/guest/my-bookings?email=${encodeURIComponent(localEmail)}`);
+      if (res.ok) bookings = await res.json();
+    }
 
     if (!bookings.length) {
       list.innerHTML = `<div class="empty-state"><i class="fas fa-calendar"></i><p>Aucune réservation pour le moment</p></div>`;
