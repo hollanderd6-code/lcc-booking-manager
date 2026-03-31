@@ -174,37 +174,13 @@ async function handleStripeReturn(params) {
   // Nettoyer l'URL
   window.history.replaceState({}, '', window.location.pathname);
 
-  // Récupérer les infos de la réservation en attente depuis localStorage ou depuis l'URL
-  let pending = JSON.parse(localStorage.getItem('guest_pending_booking') || 'null');
-
-  // Fallback : reconstituer depuis les query params que Stripe renvoie dans le success_url
-  if (!pending) {
-    const pid = params.get('property_id');
-    const ci  = params.get('checkin');
-    const co  = params.get('checkout');
-    const ge  = params.get('guest_email');
-    if (pid && ci && co && ge) {
-      pending = {
-        property_id:  pid,
-        checkin:      ci,
-        checkout:     co,
-        guests:       params.get('guests') || 1,
-        guest_name:   params.get('guest_name') || '',
-        guest_email:  ge,
-        guest_phone:  params.get('guest_phone') || '',
-        promo_code:   params.get('promo_code') || null,
-        session_id:   params.get('session_id') || null
-      };
-    }
-  }
-
-  if (!pending) {
-    showToast('Paiement reçu ! Vérifiez vos réservations.');
-    navTo('bookings');
-    return;
-  }
+  // Récupérer les infos de la réservation en attente
+  const pending = JSON.parse(localStorage.getItem('guest_pending_booking') || 'null');
+  if (!pending) { showToast('Paiement reçu !'); return; }
 
   localStorage.removeItem('guest_pending_booking');
+
+  const btn_pay = document.createElement('div'); // dummy
   showToast('Confirmation de la réservation...');
 
   try {
@@ -219,26 +195,11 @@ async function handleStripeReturn(params) {
     // Mettre à jour le compte
     state.account = { name: pending.guest_name, email: pending.guest_email, phone: pending.guest_phone };
     localStorage.setItem('guest_account', JSON.stringify(state.account));
-    localStorage.setItem('guest_session_email', pending.guest_email);
-    localStorage.setItem('guest_session_name', pending.guest_name);
     updateNavAccount();
-
-    // Restaurer la prop courante si nécessaire pour showConfirmation
-    if (!state.currentProperty || state.currentProperty.id !== pending.property_id) {
-      try {
-        const pr = await fetch(`${API_URL}/api/guest/properties/${pending.property_id}`);
-        if (pr.ok) state.currentProperty = await pr.json();
-      } catch (_) {}
-    }
-    // Restaurer les dates sélectionnées
-    state.selectedCheckin  = pending.checkin;
-    state.selectedCheckout = pending.checkout;
 
     showConfirmation(data, pending.guest_name, pending.guest_email);
   } catch (e) {
     showToast('Réservation confirmée mais erreur: ' + e.message);
-    // Même en cas d'erreur, aller sur les réservations
-    setTimeout(() => navTo('bookings'), 2000);
   }
 }
 
@@ -552,7 +513,12 @@ function goToCheckout() {
     total += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
   }
   const commission = Math.round(total * 0.03 * 100) / 100;
-  const ttc = Math.round((total + commission) * 100) / 100;
+  const cleaningFee = p.cleaningFee || 0;
+  const guestCount = parseInt(document.getElementById('guestCount')?.value) || 2;
+  const touristTax = p.touristTaxPerNight
+    ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
+    : 0;
+  const ttc = Math.round((total + cleaningFee + touristTax + commission) * 100) / 100;
   const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
   // Reset promo state
@@ -564,6 +530,8 @@ function goToCheckout() {
       <div class="checkout-row"><span>Dates</span><span>${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}</span></div>
       <div class="checkout-row" id="baseRow"><span>${p.basePrice}€ × ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>
       <div class="checkout-row" id="promoRow" style="display:none;color:#10b981;"><span>Code promo</span><span id="promoAmount">-0€</span></div>
+      ${cleaningFee > 0 ? `<div class="checkout-row" id="cleaningRow"><span>Frais de ménage</span><span>${cleaningFee}€</span></div>` : ''}
+      ${touristTax > 0 ? `<div class="checkout-row" id="touristTaxRow"><span>Taxe de séjour</span><span id="touristTaxAmount">${touristTax}€</span></div>` : ''}
       <div class="checkout-row" id="commissionRow"><span>Frais de service (3%)</span><span id="commissionAmount">${commission}€</span></div>
       <div class="checkout-row total"><span>Total</span><span id="totalAmount">${ttc}€</span></div>
     </div>
@@ -581,7 +549,7 @@ function goToCheckout() {
     </div>
     <div class="form-section">
       <label>Nombre de voyageurs</label>
-      <input type="number" id="guestCount" min="1" max="${p.maxGuests || 10}" value="2">
+      <input type="number" id="guestCount" min="1" max="${p.maxGuests || 10}" value="2" onchange="onGuestCountChange()">
     </div>
     <div class="form-section">
       <label>Code promo <span style="font-size:12px;color:var(--text-light);font-weight:400;">(optionnel)</span></label>
@@ -601,6 +569,51 @@ function goToCheckout() {
 
   document.getElementById('btnPay').textContent = `Payer ${ttc}€`;
   showScreen('checkout');
+}
+
+// Recalcule la taxe de séjour quand le nb de voyageurs change
+function onGuestCountChange() {
+  const p = state.currentProperty;
+  if (!p || !p.touristTaxPerNight) return;
+  const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
+  const guestCount = parseInt(document.getElementById('guestCount')?.value) || 1;
+  const touristTax = Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100;
+
+  const el = document.getElementById('touristTaxAmount');
+  if (el) el.textContent = `${touristTax}€`;
+
+  // Recalcule le total
+  _recalcTotal();
+}
+
+function _recalcTotal() {
+  const p = state.currentProperty;
+  if (!p) return;
+  const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
+  let totalBase = 0;
+  for (let i = 0; i < nights; i++) {
+    const d = new Date(state.selectedCheckin);
+    d.setDate(d.getDate() + i);
+    const dow = d.getDay();
+    totalBase += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
+  }
+  const discount = state.appliedPromo?.discount_amount || 0;
+  const discounted = Math.max(0, totalBase - discount);
+  const cleaningFee = p.cleaningFee || 0;
+  const guestCount = parseInt(document.getElementById('guestCount')?.value) || 1;
+  const touristTax = p.touristTaxPerNight
+    ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
+    : 0;
+  const commission = Math.round(discounted * 0.03 * 100) / 100;
+  const ttc = Math.round((discounted + cleaningFee + touristTax + commission) * 100) / 100;
+
+  const elComm = document.getElementById('commissionAmount');
+  const elTotal = document.getElementById('totalAmount');
+  const elTax = document.getElementById('touristTaxAmount');
+  if (elComm) elComm.textContent = `${commission}€`;
+  if (elTotal) elTotal.textContent = `${ttc}€`;
+  if (elTax) elTax.textContent = `${touristTax}€`;
+  document.getElementById('btnPay').textContent = `Payer ${ttc}€`;
 }
 
 async function applyPromo() {
@@ -633,8 +646,13 @@ async function applyPromo() {
     state.appliedPromo = data;
     const discount = data.discount_amount;
     const discounted = Math.max(0, total - discount);
+    const cleaningFee = p.cleaningFee || 0;
+    const guestCount = parseInt(document.getElementById('guestCount')?.value) || 1;
+    const touristTax = p.touristTaxPerNight
+      ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
+      : 0;
     const commission = Math.round(discounted * 0.03 * 100) / 100;
-    const ttc = Math.round((discounted + commission) * 100) / 100;
+    const ttc = Math.round((discounted + cleaningFee + touristTax + commission) * 100) / 100;
 
     document.getElementById('promoRow').style.display = 'flex';
     document.getElementById('promoAmount').textContent = `-${discount}€`;
@@ -787,13 +805,7 @@ async function loadMyBookings() {
       return;
     }
 
-    // Extraire seulement YYYY-MM-DD (PostgreSQL renvoie parfois une ISO complète)
-    const toDateStr = iso => iso ? String(iso).substring(0, 10) : null;
-    const fmtDate = iso => {
-      const s = toDateStr(iso);
-      if (!s) return '?';
-      return new Date(s + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-    };
+    const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
     list.innerHTML = bookings.map(b => `
       <div class="booking-card">
