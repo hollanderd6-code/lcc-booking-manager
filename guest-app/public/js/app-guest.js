@@ -214,6 +214,10 @@ function showScreen(name) {
   document.getElementById('appHeader').style.display = headerScreens.includes(name) ? 'block' : 'none';
   document.getElementById('bottomNav').style.display = navScreens.includes(name) ? 'flex' : 'none';
 
+  // Booking bar uniquement sur l'écran détail
+  const bookingBar = document.getElementById('bookingBar');
+  if (bookingBar) bookingBar.style.display = name === 'detail' ? 'flex' : 'none';
+
   // Scroll en haut
   document.getElementById('mainScroll').scrollTop = 0;
 
