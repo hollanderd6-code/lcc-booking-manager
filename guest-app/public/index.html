@@ -131,13 +131,13 @@
     .screen-content {
       display: none;
       flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
       padding-bottom: 80px;
     }
     .screen-content.active { display: block; }
     #screen-detail { padding-bottom: 140px; }
 
+    /* Padding-top pour compenser le header fixe sur les écrans avec page-header */
+    .screen-with-header { padding-top: 60px; }
     /* ── Property cards ── */
     .properties-grid { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
     .prop-card {
@@ -401,13 +401,7 @@
       color: white;
       margin: 0;
     }
-    /* Compense la hauteur du header fixe pour les écrans qui l'utilisent */
-    .screen-with-header > .my-bookings-list,
-    .screen-with-header > .account-body,
-    .screen-with-header > div:not(.page-header) {
-      padding-top: 62px;
-    }
-  </style>
+    </style>
 </head>
 <body style="background: var(--bg); height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
 
