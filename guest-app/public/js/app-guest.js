@@ -115,33 +115,18 @@ async function verifyMagicToken(token) {
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await initStripe();
-
-  // Session existante
+  // Récupérer session existante
   state.session = getSession();
   updateNavAccount();
 
-  // ── Magic token dans l'URL (Safari web) ──────────────────
+  // Vérifier si un magic_token est dans l'URL
   const urlParams = new URLSearchParams(window.location.search);
   const magicToken = urlParams.get('magic_token');
   if (magicToken) {
-    const ok = await verifyMagicToken(magicToken);
-    if (ok) navTo('bookings');
+    await verifyMagicToken(magicToken);
   }
 
-  // ── Deep link Capacitor (app native) ─────────────────────
-  const CapApp = window.Capacitor?.Plugins?.App;
-  if (CapApp) {
-    // Vérifier l'URL de lancement
-    try {
-      const { url } = await CapApp.getLaunchUrl();
-      if (url) handleDeepLinkUrl(url);
-    } catch (_) {}
-
-    // Écouter les liens futurs
-    CapApp.addListener('appUrlOpen', ({ url }) => handleDeepLinkUrl(url));
-  }
-
-  // Charger le compte
+  // Charger les champs compte
   if (state.session) {
     state.account = { ...state.account, email: state.session.email, name: state.session.name || state.account.name };
     localStorage.setItem('guest_account', JSON.stringify(state.account));
@@ -150,33 +135,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadProperties();
 });
 
-function handleDeepLinkUrl(url) {
-  if (!url) return;
-  try {
-    const u = new URL(url);
-    const token = u.searchParams.get('magic_token');
-    if (token) {
-      verifyMagicToken(token).then(ok => { if (ok) navTo('bookings'); });
-    }
-  } catch (_) {}
-}
-
 // ── Navigation ───────────────────────────────────────────────
 function showScreen(name) {
   document.querySelectorAll('.screen-content').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + name)?.classList.add('active');
 
-  // Header principal uniquement sur accueil
-  const appHeader = document.getElementById('appHeader');
-  if (appHeader) appHeader.style.display = name === 'home' ? 'block' : 'none';
-
-  // Classe sur body pour CSS nav visibility
-  document.body.className = 'screen-' + name;
+  // Header et nav selon l'écran
+  const headerScreens = ['home'];
+  const navScreens = ['home', 'bookings', 'account', 'login'];
+  document.getElementById('appHeader').style.display = headerScreens.includes(name) ? 'block' : 'none';
+  document.getElementById('bottomNav').style.display = navScreens.includes(name) ? 'flex' : 'none';
 
   // Scroll en haut
   document.getElementById('mainScroll').scrollTop = 0;
 
-  // Callbacks
   if (name === 'bookings') loadMyBookings();
   if (name === 'account') { loadAccountFields(); renderLogoutSection(); }
 }
@@ -285,8 +257,7 @@ async function loadProperties() {
     `).join('');
 
   } catch (e) {
-    console.error('[GUEST] loadProperties error:', e);
-    grid.innerHTML = `<div class="empty-state"><i class="fas fa-wifi"></i><p>Erreur: ${e.message}</p><button onclick="loadProperties()" style="margin-top:16px;padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;">Réessayer</button></div>`;
+    grid.innerHTML = `<div class="empty-state"><i class="fas fa-wifi"></i><p>Impossible de charger les logements</p></div>`;
   }
 }
 
@@ -611,22 +582,26 @@ async function submitBooking() {
     const intentData = await intentRes.json();
     if (!intentRes.ok) throw new Error(intentData.error);
 
-    // 2. Paiement via Payment Sheet (natif) ou fallback web
+    // 2. Paiement via Payment Sheet (natif) ou confirmation directe (web)
     if (IS_NATIVE && StripePlugin) {
-      // Mode natif iOS/Android — Payment Sheet
-      await StripePlugin.createPaymentSheet({
-        paymentIntentClientSecret: intentData.clientSecret,
-        merchantDisplayName: 'Boostinghost Guest',
-        style: 'automatic'
-      });
-
-      const result = await StripePlugin.presentPaymentSheet();
-      if (result.paymentResult !== 'paymentSheetCompleted') {
-        throw new Error('Paiement annulé');
+      try {
+        await StripePlugin.createPaymentSheet({
+          paymentIntentClientSecret: intentData.clientSecret,
+          merchantDisplayName: 'Boostinghost Guest',
+          style: 'automatic'
+        });
+        const result = await StripePlugin.presentPaymentSheet();
+        if (result.paymentResult !== 'paymentSheetCompleted') {
+          throw new Error('Paiement annulé ou refusé');
+        }
+      } catch (stripeErr) {
+        if (stripeErr.message === 'Paiement annulé ou refusé') throw stripeErr;
+        throw new Error('Erreur Stripe : ' + stripeErr.message);
       }
     } else {
-      // Mode web — on simule le paiement (à remplacer par Stripe.js si besoin)
-      console.log('Mode web — paiement simulé (PaymentIntent créé:', intentData.payment_intent_id, ')');
+      // Mode web/Safari — on crée la réservation sans paiement immédiat
+      // (le paiement sera complété via Stripe dashboard ou app native)
+      console.log('Mode web — PaymentIntent créé:', intentData.payment_intent_id);
     }
 
     // 3. Confirmer la réservation côté serveur
@@ -701,7 +676,7 @@ async function loadMyBookings() {
       <div class="empty-state">
         <i class="fas fa-calendar"></i>
         <p style="margin-bottom:20px;">Connectez-vous pour voir vos réservations</p>
-        <button onclick="navTo('login')" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;">
+        <button onclick="navTo('login')" style="background:var(--primary-light);color:var(--primary);border:2px solid var(--primary);border-radius:12px;padding:11px 24px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
           <i class="fas fa-sign-in-alt"></i> Se connecter
         </button>
       </div>`;
