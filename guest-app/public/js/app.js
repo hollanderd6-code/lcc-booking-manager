@@ -603,9 +603,10 @@ async function submitBooking() {
     if (!intentRes.ok) throw new Error(intentData.error);
 
     // 2. Paiement via Payment Sheet (natif) ou confirmation directe
-    // Debug temporaire
-    const debugInfo = `IS_NATIVE=${IS_NATIVE}, StripePlugin=${StripePlugin !== null ? 'OK' : 'NULL'}, Plugins=${JSON.stringify(Object.keys(window.Capacitor?.Plugins || {}))}`;
-    console.log('🔍 Stripe debug:', debugInfo);
+    // Debug temporaire — alert visible sans Web Inspector
+    const pluginKeys = Object.keys(window.Capacitor?.Plugins || {}).join(', ');
+    const debugInfo = `IS_NATIVE: ${IS_NATIVE}\nStripe: ${StripePlugin !== null ? 'OK' : 'NULL'}\nPlugins: ${pluginKeys}`;
+    alert(debugInfo);
     
     const stripeAvailable = IS_NATIVE && StripePlugin !== null;
     if (stripeAvailable) {
