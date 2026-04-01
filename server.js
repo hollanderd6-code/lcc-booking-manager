@@ -15213,10 +15213,13 @@ app.post('/api/invoice/create',
     // Générer le numéro de facture lisible : FACT-2026-001
     const yearStr = new Date().getFullYear();
     const countResult = await pool.query(
-      `SELECT COUNT(*) FROM invoice_download_tokens WHERE user_id = $1 AND EXTRACT(YEAR FROM created_at) = $2`,
+      `SELECT COUNT(*) as count FROM owner_invoices
+       WHERE user_id = $1
+         AND EXTRACT(YEAR FROM created_at) = $2
+         AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
       [userId, yearStr]
     ).catch(() => ({ rows: [{ count: 0 }] }));
-    const seq = String(parseInt(countResult.rows[0].count) + 1).padStart(3, '0');
+    const seq = String(parseInt(countResult.rows[0].count) + 1).padStart(4, '0');
     const invoiceNumber = `FACT-${yearStr}-${seq}`;
     const invoiceId = 'inv_' + Date.now();
 
@@ -15778,8 +15781,9 @@ app.post('/api/owner-invoices/:id/finalize',
         `SELECT COUNT(*) as cnt FROM owner_invoices
          WHERE user_id = $1 AND invoice_number IS NOT NULL
          AND invoice_number != '' AND invoice_number NOT LIKE 'Brouillon%'
-         AND is_credit_note = FALSE`,
-        [userId]
+         AND (is_credit_note IS NULL OR is_credit_note = FALSE)
+         AND EXTRACT(YEAR FROM created_at) = $2`,
+        [userId, year]
       );
       const seq = String(parseInt(seqRes.rows[0].cnt || 0) + 1).padStart(4, '0');
       invoiceNumber = `FACT-${year}-${seq}`;
