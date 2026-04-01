@@ -15813,9 +15813,17 @@ app.post('/api/owner-invoices/:id/finalize',
 // ============================================================
 async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret }) {
   if (!clientEmail) throw new Error('Email client manquant');
-  console.log('📧 [INVOICE EMAIL] periodStart:', periodStart, '| periodEnd:', periodEnd, '| type:', typeof periodStart);
 
-  const toDateOnly = d => d ? String(d).match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || String(d).substring(0,10) : null;
+  const toDateOnly = d => {
+    if (!d) return null;
+    if (d instanceof Date) return d.toISOString().substring(0, 10);
+    const str = String(d).trim();
+    const m = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().substring(0, 10);
+    return null;
+  };
   const periodStartFr = periodStart ? new Date(toDateOnly(periodStart) + 'T00:00:00').toLocaleDateString('fr-FR') : '';
   const periodEndFr   = periodEnd   ? new Date(toDateOnly(periodEnd)   + 'T00:00:00').toLocaleDateString('fr-FR') : '';
   const period = (periodStartFr || periodEndFr) ? `du ${periodStartFr} au ${periodEndFr}` : '';
