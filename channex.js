@@ -486,14 +486,14 @@ async function processChannexBooking(pool, bookingData) {
 
 
 // ── Accusé de réception d'une réservation (requis par Channex) ──
-async function bookingAcknowledge(booking_id) {
+async function bookingAcknowledge(revision_id) {
   try {
-    await channexAPI.post(`/bookings/${booking_id}/acknowledge`);
+    await channexAPI.post(`/booking_revisions/${revision_id}/acknowledge`);
     console.log(`✅ [CHANNEX] Acknowledge envoyé pour booking ${booking_id}`);
     return true;
   } catch (e) {
     // Ne pas bloquer le traitement si l'acknowledge échoue
-    console.error(`⚠️ [CHANNEX] Erreur acknowledge booking ${booking_id}:`, e.response?.data || e.message);
+    console.error(`⚠️ [CHANNEX] Erreur acknowledge revision ${revision_id}:`, e.response?.data || e.message);
     return false;
   }
 }
