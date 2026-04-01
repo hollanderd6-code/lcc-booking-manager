@@ -196,7 +196,7 @@ async function pushRates(pool, { property_id, channex_property_id, channex_rate_
       rate: Math.round(parseFloat(r.price) * 100) // centimes (ex: 70€ → 7000)
     }));
 
-    await channexAPI.post('/restrictions', { values });
+    await channexAPI.post('/rates', { values });
 
     await logChannex(pool, {
       property_id, channex_property_id,
