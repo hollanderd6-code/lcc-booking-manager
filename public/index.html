@@ -105,6 +105,16 @@
         <span class="brand-name"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></span>
       </span>
     </a>
+    <!-- MENU MOBILE (hamburger) -->
+  <div id="mobileMenu" style="display:none;position:fixed;top:60px;left:0;right:0;z-index:25;background:rgba(245,242,236,.98);backdrop-filter:blur(12px);border-bottom:1px solid rgba(200,184,154,.35);padding:12px 20px 16px;flex-direction:column;gap:4px;">
+    <a href="#features" class="nav-link" onclick="closeMobileMenu()" style="display:block;padding:10px 0;font-size:14px;border-bottom:1px solid rgba(200,184,154,.2);">Fonctionnalités</a>
+    <a href="#how" class="nav-link" onclick="closeMobileMenu()" style="display:block;padding:10px 0;font-size:14px;border-bottom:1px solid rgba(200,184,154,.2);">Comment ça marche</a>
+    <a href="#pour-qui" class="nav-link" onclick="closeMobileMenu()" style="display:block;padding:10px 0;font-size:14px;border-bottom:1px solid rgba(200,184,154,.2);">Pour qui ?</a>
+    <a href="/blog.html" class="nav-link" onclick="closeMobileMenu()" style="display:block;padding:10px 0;font-size:14px;border-bottom:1px solid rgba(200,184,154,.2);">Blog</a>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <a href="/login.html" class="btn btn-ghost" style="flex:1;justify-content:center;font-size:13px;">Se connecter</a>
+      <a href="/register.html" class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px;">Créer un compte</a>
+    </div>
   </div>
 
   <!-- HEADER -->
@@ -803,15 +813,20 @@
     }
 
     .feature-icon {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 12px;
-      background: rgba(34, 197, 94, 0.12);
+      background: rgba(26, 122, 94, 0.1);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #16a34a;
+      color: #1A7A5E;
       margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .feature-icon i {
+      font-size: 15px;
+      line-height: 1;
     }
 
     .steps-grid {
@@ -1208,5 +1223,24 @@ html[data-theme-v3="1"] .hero-calendar-footer { color: rgba(255,255,255,.5) !imp
     })();
   </script>
   <script type="module" src="/js/push-notifications-handler.js"></script>
+
+  <script>
+    function toggleMobileMenu() {
+      var menu = document.getElementById('mobileMenu');
+      var open = menu.style.display === 'flex';
+      menu.style.display = open ? 'none' : 'flex';
+    }
+    function closeMobileMenu() {
+      document.getElementById('mobileMenu').style.display = 'none';
+    }
+    // Fermer si clic en dehors
+    document.addEventListener('click', function(e) {
+      var menu = document.getElementById('mobileMenu');
+      var btn = document.getElementById('hamburgerBtn');
+      if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.style.display = 'none';
+      }
+    });
+  </script>
 </body>
 </html>
