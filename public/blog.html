@@ -38,8 +38,8 @@
       top: 0;
       z-index: 20;
       backdrop-filter: blur(18px);
-      background: rgba(245, 242, 236, 0.95);
-      border-bottom: 1px solid rgba(210, 200, 188, 0.7);
+      background: rgba(245,242,236,.92);
+      border-bottom: 1px solid rgba(200,184,154,.35);
     }
 
     .header-inner {
@@ -76,17 +76,17 @@
     .brand-boosting { color: #1A7A5E; }
 
     .header-nav { display: flex; align-items: center; gap: 16px; }
-    .nav-link { font-size: 13px; text-decoration: none; color: #4b5563; font-weight: 500; }
-    .nav-link:hover { color: #111827; }
+    .nav-link { font-size: 13px; text-decoration: none; color: #7A8695; font-weight: 500; font-family: 'DM Sans', sans-serif; }
+    .nav-link:hover { color: #0D1117; }
     .nav-link.active { color: #1A7A5E; font-weight: 600; }
 
     .header-actions { display: flex; align-items: center; gap: 8px; }
 
-    .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 9px 16px; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all .15s ease; }
-    .btn-ghost { border: 1px solid rgba(148,163,184,.5); color: #4b5563; background: rgba(255,255,255,.7); }
-    .btn-ghost:hover { background: #fff; border-color: rgba(148,163,184,.9); }
-    .btn-primary { background: #1A7A5E; color: #fff; box-shadow: 0 8px 24px rgba(26,122,94,.3); }
-    .btn-primary:hover { background: #145f4a; transform: translateY(-1px); }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all .15s ease; font-family: 'DM Sans', sans-serif; }
+    .btn-ghost { border-radius: 12px; border: 1.5px solid rgba(13,17,23,.12); color: #374151; background: rgba(255,255,255,.6); font-weight: 600; }
+    .btn-ghost:hover { background: #fff; }
+    .btn-primary { border-radius: 12px; background: #1A7A5E; color: #fff; box-shadow: 0 4px 12px rgba(26,122,94,.25); font-weight: 600; }
+    .btn-primary:hover { background: #15624B; transform: translateY(-1px); }
 
     /* ── Hero Blog ── */
     .blog-hero {
@@ -546,7 +546,7 @@
         position: fixed;
         top: 0; left: 0; right: 0;
         z-index: 30;
-        background: rgba(245, 242, 236, 0.95);
+        background: rgba(245,242,236,.92);
         border-bottom: 1px solid rgba(226,232,240,.7);
         backdrop-filter: blur(12px);
       }
