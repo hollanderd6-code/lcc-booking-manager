@@ -22484,6 +22484,124 @@ app.get('/api/channex/certification/check-webhooks', authenticateToken, async (r
 });
 
 // ============================================================
+// ⭐ CHANNEX — Avis voyageurs (Reviews & Scores)
+// ============================================================
+
+// ── GET /api/channex/reviews/:property_id ────────────────────
+// Retourne les avis + scores d'un logement depuis Channex
+app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    // 1. Vérifier que le logement appartient à l'utilisateur et est connecté à Channex
+    const propResult = await pool.query(
+      `SELECT channex_property_id, channex_enabled
+       FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user_id]
+    );
+
+    const prop = propResult.rows[0];
+    if (!prop) return res.status(404).json({ error: 'Logement introuvable' });
+    if (!prop.channex_enabled || !prop.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    const channexPropertyId = prop.channex_property_id;
+
+    // 2. Récupérer les avis depuis Channex (paginé, 25 max)
+    const [reviewsRes, scoresRes] = await Promise.all([
+      channexAPI.get('/reviews', {
+        params: {
+          'filter[property_id]': channexPropertyId,
+          pagination: 1,
+          'pagination[page_size]': 25
+        }
+      }),
+      channexAPI.get('/reviews/scores', {
+        params: { 'filter[property_id]': channexPropertyId }
+      })
+    ]);
+
+    // 3. Formater les avis
+    const rawReviews = reviewsRes.data?.data || [];
+    const reviews = rawReviews.map(r => {
+      const attrs = r.attributes || r;
+      return {
+        id:             r.id,
+        reviewer_name:  attrs.reviewer_name || attrs.guest_name || 'Voyageur',
+        reviewed_at:    attrs.reviewed_at || attrs.created_at,
+        score:          attrs.score,
+        comment:        attrs.comment || attrs.body || null,
+        reply:          attrs.reply || null,
+        is_replied:     attrs.is_replied || !!attrs.reply,
+        is_hidden:      attrs.is_hidden || false,
+        channel_code:   attrs.channel_code || attrs.channel || ''
+      };
+    });
+
+    // 4. Formater les scores par catégorie
+    const rawScores = scoresRes.data?.data || [];
+    const scores = {};
+    rawScores.forEach(s => {
+      const attrs = s.attributes || s;
+      if (attrs.scores) {
+        Object.entries(attrs.scores).forEach(([key, val]) => {
+          scores[key] = val;
+        });
+      }
+    });
+
+    console.log(`⭐ [CHANNEX REVIEWS] ${reviews.length} avis pour ${property_id}`);
+    res.json({ reviews, scores });
+
+  } catch (e) {
+    console.error('❌ [CHANNEX REVIEWS GET]', e.response?.data || e.message);
+    res.status(500).json({ error: e.response?.data || e.message });
+  }
+});
+
+// ── POST /api/channex/reviews/:review_id/reply ────────────────
+// Envoie une réponse à un avis via Channex
+app.post('/api/channex/reviews/:review_id/reply', authenticateToken, async (req, res) => {
+  const { review_id } = req.params;
+  const { reply, property_id } = req.body;
+  const user_id = req.user.id;
+
+  if (!reply?.trim()) return res.status(400).json({ error: 'Réponse vide' });
+  if (!property_id)    return res.status(400).json({ error: 'property_id requis' });
+
+  try {
+    // 1. Vérifier que le logement appartient à l'utilisateur
+    const propResult = await pool.query(
+      `SELECT channex_property_id, channex_enabled
+       FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user_id]
+    );
+
+    const prop = propResult.rows[0];
+    if (!prop) return res.status(404).json({ error: 'Logement introuvable' });
+    if (!prop.channex_enabled || !prop.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    // 2. Envoyer la réponse via Channex
+    await channexAPI.post(`/reviews/${review_id}/reply`, {
+      data: {
+        attributes: { reply: reply.trim() }
+      }
+    });
+
+    console.log(`✅ [CHANNEX REVIEWS REPLY] Réponse envoyée pour review ${review_id}`);
+    res.json({ success: true });
+
+  } catch (e) {
+    console.error('❌ [CHANNEX REVIEWS REPLY]', e.response?.data || e.message);
+    res.status(500).json({ error: e.response?.data || e.message });
+  }
+});
+
+// ============================================================
 // 🏠 BOOSTINGHOST GUEST — API publique de réservation directe
 // ============================================================
 
