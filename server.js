@@ -15210,13 +15210,18 @@ app.post('/api/invoice/create',
       sendEmail
     } = req.body;
 
-    // Générer le numéro de facture lisible : FACT-2026-001
+    // Générer le numéro de facture lisible : FACT-2026-0001
     const yearStr = new Date().getFullYear();
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM invoice_download_tokens WHERE user_id = $1 AND EXTRACT(YEAR FROM created_at) = $2`,
-      [userId, yearStr]
-    ).catch(() => ({ rows: [{ count: 0 }] }));
-    const seq = String(parseInt(countResult.rows[0].count) + 1).padStart(3, '0');
+    const maxResult = await pool.query(
+      `SELECT MAX(CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER)) as max_seq
+       FROM owner_invoices
+       WHERE user_id = $1
+         AND invoice_number LIKE $2
+         AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
+      [userId, `FACT-${yearStr}-%`]
+    ).catch(() => ({ rows: [{ max_seq: 0 }] }));
+    const nextSeq = (parseInt(maxResult.rows[0]?.max_seq || 0) + 1);
+    const seq = String(nextSeq).padStart(4, '0');
     const invoiceNumber = `FACT-${yearStr}-${seq}`;
     const invoiceId = 'inv_' + Date.now();
 
@@ -15775,14 +15780,15 @@ app.post('/api/owner-invoices/:id/finalize',
     if (!invoiceNumber || invoiceNumber.startsWith('Brouillon')) {
       const year = new Date().getFullYear();
       const seqRes = await pool.query(
-        `SELECT COUNT(*) as cnt FROM owner_invoices
-         WHERE user_id = $1 AND invoice_number IS NOT NULL
-         AND invoice_number != '' AND invoice_number NOT LIKE 'Brouillon%'
-         AND is_credit_note = FALSE`,
-        [userId]
+        `SELECT MAX(CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER)) as max_seq
+         FROM owner_invoices
+         WHERE user_id = $1
+           AND invoice_number LIKE $2
+           AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
+        [userId, `FACT-${year}-%`]
       );
-      const seq = String(parseInt(seqRes.rows[0].cnt || 0) + 1).padStart(4, '0');
-      invoiceNumber = `FACT-${year}-${seq}`;
+      const nextSeq = (parseInt(seqRes.rows[0]?.max_seq || 0) + 1);
+      invoiceNumber = `FACT-${year}-${String(nextSeq).padStart(4, '0')}`;
     }
 
     const updateResult = await pool.query(
