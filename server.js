@@ -21647,9 +21647,15 @@ app.post('/api/channex/webhook', async (req, res) => {
 
       const result = await processChannexBooking(pool, booking);
 
-      // ── Acknowledge immédiat — requis par Channex ──────────
-      if (bookingId) {
-        await bookingAcknowledge(bookingId);
+      // ── Acknowledge immédiat — requis par Channex (via revision_id) ──
+      const ackId = revisionId || bookingId;
+      if (ackId) {
+        try {
+          await bookingAcknowledge(ackId);
+          console.log(`✅ [CHANNEX] Booking acknowledged: ${ackId}`);
+        } catch (ackErr) {
+          console.warn(`⚠️ [CHANNEX] Erreur acknowledge ${ackId}:`, ackErr.message);
+        }
       }
 
       // ── Injecter/mettre à jour dans le store mémoire ─────────
