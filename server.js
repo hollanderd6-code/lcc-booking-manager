@@ -21712,7 +21712,7 @@ app.post('/api/channex/webhook', async (req, res) => {
           const propRes   = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
           const propertyName = propRes.rows[0]?.name || 'Logement';
 
-          const notifTitle = `${emoji} Réservation annulée`;
+          const notifTitle = `❌ Réservation annulée`;
           const notifBody  = `${guestName} · ${propertyName} · ${fmtDate(result.start_date)} → ${fmtDate(result.end_date)}`;
           const notifData  = { type: 'cancelled_booking_channex', uid: result.uid, propertyId: String(result.property_id || ''), screen: 'calendar' };
 
