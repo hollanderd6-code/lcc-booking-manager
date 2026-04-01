@@ -423,7 +423,7 @@ function getSidebarHTML() {
     if (!document.getElementById('bh-mobile-svc')) {
       const svcRow = document.createElement('div');
       svcRow.id = 'bh-mobile-svc';
-      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;padding:6px 4px;';
+      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:8px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);cursor:pointer;padding:0 4px;';
       svcRow.title = 'Statut des services';
       svcRow.innerHTML = [
         '<div style="display:flex;align-items:center;gap:4px;">',
@@ -490,7 +490,7 @@ function getSidebarHTML() {
     if (!document.getElementById('bh-mobile-ann-btn')) {
       var annBtn = document.createElement('button');
       annBtn.id = 'bh-mobile-ann-btn';
-      annBtn.style.cssText = 'position:absolute;right:80px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:10px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
+      annBtn.style.cssText = 'position:absolute;right:80px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
       annBtn.innerHTML = '<i class="fas fa-bell"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
       var openAnn = function(e) {
         e.preventDefault();
