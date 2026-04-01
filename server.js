@@ -15811,19 +15811,10 @@ app.post('/api/owner-invoices/:id/finalize',
 // ============================================================
 // ENVOI EMAIL FACTURE PROPRIÉTAIRE
 // ============================================================
-async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret }) {
+async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret }) {
   if (!clientEmail) throw new Error('Email client manquant');
 
-  const toDateOnly = d => {
-    if (!d) return null;
-    if (d instanceof Date) return d.toISOString().substring(0, 10);
-    const str = String(d).trim();
-    const m = str.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (m) return m[1];
-    const parsed = new Date(str);
-    if (!isNaN(parsed.getTime())) return parsed.toISOString().substring(0, 10);
-    return null;
-  };
+  const toDateOnly = d => d ? String(d).match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || String(d).substring(0,10) : null;
   const periodStartFr = periodStart ? new Date(toDateOnly(periodStart) + 'T00:00:00').toLocaleDateString('fr-FR') : '';
   const periodEndFr   = periodEnd   ? new Date(toDateOnly(periodEnd)   + 'T00:00:00').toLocaleDateString('fr-FR') : '';
   const period = (periodStartFr || periodEndFr) ? `du ${periodStartFr} au ${periodEndFr}` : '';
@@ -15888,7 +15879,10 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, p
        .text(clientName || '', col2+10, y+22, { width: colW-20 });
     doc.font('Helvetica').fontSize(9).fillColor(GRAY);
     let cy2 = y + 36;
-    if (clientEmail) { doc.text(clientEmail, col2+10, cy2, { width: colW-20 }); cy2 += 13; }
+    if (clientAddress)                { doc.text(clientAddress, col2+10, cy2, { width: colW-20 }); cy2 += 13; }
+    if (clientPostalCode || clientCity) { doc.text(((clientPostalCode||'')+' '+(clientCity||'')).trim(), col2+10, cy2, { width: colW-20 }); cy2 += 13; }
+    if (clientSiret)                  { doc.text('SIRET : '+clientSiret, col2+10, cy2, { width: colW-20 }); cy2 += 11; }
+    if (clientEmail)                  { doc.text(clientEmail, col2+10, cy2, { width: colW-20 }); cy2 += 13; }
 
     y += boxH + 16;
 
@@ -16096,6 +16090,10 @@ app.post('/api/owner-invoices/:id/send',
           invoiceNumber:  invoice.invoice_number,
           clientName,
           clientEmail,
+          clientAddress:  client.address || '',
+          clientPostalCode: client.postal_code || '',
+          clientCity:     client.city || '',
+          clientSiret:    client.siret || '',
           periodStart:    invoice.period_start,
           periodEnd:      invoice.period_end,
           totalTtc:       invoice.total_ttc,
