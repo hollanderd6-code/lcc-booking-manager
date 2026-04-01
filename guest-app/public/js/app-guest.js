@@ -248,7 +248,7 @@ function updateSearchLabel() {
   const ci = document.getElementById('searchCheckin').value;
   const co = document.getElementById('searchCheckout').value;
   const city = document.getElementById('searchCity')?.value?.trim();
-  const fmtDate = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : null;
+  const fmtDate = iso => iso ? new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : null;
   let parts = [];
   if (city) parts.push(city);
   if (ci && co) parts.push(`${fmtDate(ci)} → ${fmtDate(co)}`);
@@ -493,7 +493,7 @@ function updateBookingBar() {
       const dow = d.getDay();
       total += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
     }
-    const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
     bar.innerHTML = `${total}€ <span>· ${nights} nuit${nights > 1 ? 's' : ''}</span>`;
     datesLabel.textContent = `${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}`;
     btn.disabled = false;
@@ -523,7 +523,7 @@ function goToCheckout() {
     ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
     : 0;
   const ttc = Math.round((total + cleaningFee + touristTax + commission) * 100) / 100;
-  const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
   // Reset promo state
   state.appliedPromo = null;
@@ -741,7 +741,7 @@ async function submitBooking() {
 
 function showConfirmation(data, guestName, guestEmail) {
   const p = state.currentProperty;
-  const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
   document.getElementById('confirmBody').innerHTML = `
     <div class="confirm-icon"><i class="fas fa-check"></i></div>
@@ -809,11 +809,7 @@ async function loadMyBookings() {
       return;
     }
 
-    const fmtDate = iso => {
-      if (!iso) return '?';
-      const s = String(iso).substring(0, 10); // extrait YYYY-MM-DD même si PG renvoie ISO complet
-      return new Date(s + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-    };
+    const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
     list.innerHTML = bookings.map(b => `
       <div class="booking-card">
