@@ -236,6 +236,9 @@ function navTo(name) {
 // ── Recherche ────────────────────────────────────────────────
 function openSearch() {
   document.getElementById('searchModal').classList.add('open');
+  loadCityChips();
+  updateDateBoxes();
+  updateResetBtn();
 }
 
 function closeSearchOnBg(e) {
@@ -244,13 +247,91 @@ function closeSearchOnBg(e) {
   }
 }
 
+// Charge les villes disponibles depuis les logements
+async function loadCityChips() {
+  const container = document.getElementById('cityChips');
+  if (!container) return;
+  // Si déjà chargé, ne pas recharger
+  if (container.dataset.loaded === '1') return;
+
+  try {
+    const res = await fetch(`${API_URL}/api/guest/properties`);
+    const props = await res.json();
+    // Extraire les villes uniques non vides
+    const cities = [...new Set(
+      props.map(p => p.city || (p.address ? p.address.split(',').pop().trim() : null))
+          .filter(Boolean)
+    )].sort();
+
+    if (!cities.length) {
+      container.innerHTML = '<span class="city-chips-loading">Aucune ville disponible</span>';
+      return;
+    }
+
+    const currentCity = state.search.city;
+    container.innerHTML = cities.map(city => `
+      <button type="button" class="city-chip ${currentCity === city ? 'active' : ''}"
+        onclick="selectCity(this, '${city.replace(/'/g, "\\'")}')">
+        ${city}
+      </button>
+    `).join('');
+    container.dataset.loaded = '1';
+  } catch(e) {
+    container.innerHTML = '<span class="city-chips-loading">Erreur de chargement</span>';
+  }
+}
+
+function selectCity(btn, city) {
+  const chips = document.querySelectorAll('.city-chip');
+  // Toggle : si déjà actif, désélectionner
+  if (btn.classList.contains('active')) {
+    btn.classList.remove('active');
+    state.search.city = null;
+  } else {
+    chips.forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    state.search.city = city;
+  }
+  updateSearchLabel();
+  updateResetBtn();
+}
+
+function updateDateBoxes() {
+  const ci = document.getElementById('searchCheckin')?.value;
+  const co = document.getElementById('searchCheckout')?.value;
+  document.getElementById('dateBoxCheckin')?.classList.toggle('has-value', !!ci);
+  document.getElementById('dateBoxCheckout')?.classList.toggle('has-value', !!co);
+  updateResetBtn();
+}
+
+function updateResetBtn() {
+  const ci = document.getElementById('searchCheckin')?.value;
+  const co = document.getElementById('searchCheckout')?.value;
+  const hasCity = !!state.search.city;
+  const hasGuests = !!state.search.guests;
+  const hasFilter = ci || co || hasCity || hasGuests;
+  const btn = document.getElementById('btnResetFilters');
+  if (btn) btn.classList.toggle('visible', !!hasFilter);
+}
+
+function resetFilters() {
+  document.getElementById('searchCheckin').value = '';
+  document.getElementById('searchCheckout').value = '';
+  document.querySelectorAll('.city-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.guest-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.guest-btn[data-val=""]')?.classList.add('active');
+  state.search = { ...state.search, checkin: null, checkout: null, city: null, guests: null };
+  updateDateBoxes();
+  updateSearchLabel();
+  updateResetBtn();
+}
+
 function updateSearchLabel() {
   const ci = document.getElementById('searchCheckin').value;
   const co = document.getElementById('searchCheckout').value;
-  const city = document.getElementById('searchCity')?.value?.trim();
   const fmtDate = iso => iso ? new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : null;
   let parts = [];
-  if (city) parts.push(city);
+  if (state.search.city) parts.push(state.search.city);
   if (ci && co) parts.push(`${fmtDate(ci)} → ${fmtDate(co)}`);
   else if (ci) parts.push(`Arrivée ${fmtDate(ci)}`);
   if (state.search.guests) parts.push(state.search.guests + ' voy.');
@@ -262,12 +343,13 @@ function selectGuests(btn, val) {
   btn.classList.add('active');
   state.search.guests = val || null;
   updateSearchLabel();
+  updateResetBtn();
 }
 
 async function applySearch() {
   state.search.checkin = document.getElementById('searchCheckin').value || null;
   state.search.checkout = document.getElementById('searchCheckout').value || null;
-  state.search.city = document.getElementById('searchCity')?.value?.trim() || null;
+  // city est déjà dans state.search.city via selectCity()
   document.getElementById('searchModal').classList.remove('open');
   await loadProperties();
 }
