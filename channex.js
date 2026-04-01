@@ -489,7 +489,7 @@ async function processChannexBooking(pool, bookingData) {
 async function bookingAcknowledge(revision_id) {
   try {
     await channexAPI.post(`/booking_revisions/${revision_id}/ack`);
-    console.log(`✅ [CHANNEX] Acknowledge envoyé pour booking ${booking_id}`);
+    console.log(`✅ [CHANNEX] Acknowledge envoyé pour revision ${revision_id}`);
     return true;
   } catch (e) {
     // Ne pas bloquer le traitement si l'acknowledge échoue
