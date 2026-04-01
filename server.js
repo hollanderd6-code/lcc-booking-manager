@@ -15813,6 +15813,7 @@ app.post('/api/owner-invoices/:id/finalize',
 // ============================================================
 async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret }) {
   if (!clientEmail) throw new Error('Email client manquant');
+  console.log('📧 [INVOICE EMAIL] periodStart:', periodStart, '| periodEnd:', periodEnd, '| type:', typeof periodStart);
 
   const toDateOnly = d => d ? String(d).match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || String(d).substring(0,10) : null;
   const periodStartFr = periodStart ? new Date(toDateOnly(periodStart) + 'T00:00:00').toLocaleDateString('fr-FR') : '';
