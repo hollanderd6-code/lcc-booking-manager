@@ -294,8 +294,9 @@ function parseAirbnbNotes(notes) {
 
 async function processChannexBooking(pool, bookingData) {
   try {
-    const booking_id = bookingData.id || bookingData.attributes?.id;
     const attrs = bookingData.attributes || bookingData;
+    // booking_id = le vrai ID du booking (pas de la revision)
+    const booking_id = attrs.booking_id || bookingData.id || bookingData.attributes?.id;
 
     const {
       property_id: channex_property_id,
