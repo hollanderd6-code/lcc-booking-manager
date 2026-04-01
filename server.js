@@ -21610,13 +21610,33 @@ app.post('/api/channex/webhook', async (req, res) => {
     const payload = req.body;
     console.log('📥 [CHANNEX WEBHOOK]', JSON.stringify(payload).substring(0, 200));
 
+    // ✅ Channex exige d'utiliser Booking Revisions — pas la liste directe
     const bookings = payload.bookings || (payload.booking ? [payload.booking] : []);
 
-    for (const booking of bookings) {
+    for (let booking of bookings) {
+      const bookingId = booking.id || booking.attributes?.id;
+      const revisionId = booking.attributes?.revision_id || booking.revision_id;
+
+      // ── Fetcher le booking complet via Booking Revisions Feed ──
+      if (revisionId) {
+        try {
+          const { channexAPI } = require('./channex');
+          const revRes = await channexAPI.get(`/booking_revisions/${revisionId}`);
+          if (revRes.data?.data) {
+            // Fusionner les données enrichies dans le booking
+            const revData = revRes.data.data.attributes || revRes.data.data;
+            booking = { ...booking, attributes: { ...(booking.attributes || {}), ...revData } };
+            console.log(`✅ [CHANNEX] Revision ${revisionId} récupérée`);
+          }
+        } catch (revErr) {
+          console.warn(`⚠️ [CHANNEX] Impossible de récupérer revision ${revisionId}:`, revErr.message);
+          // Continuer avec les données du webhook
+        }
+      }
+
       const result = await processChannexBooking(pool, booking);
 
-      // ── Acknowledge immédiat — requis par Channex (test 11 certification) ──
-      const bookingId = booking.id || booking.attributes?.id;
+      // ── Acknowledge immédiat — requis par Channex ──────────
       if (bookingId) {
         await bookingAcknowledge(bookingId);
       }
