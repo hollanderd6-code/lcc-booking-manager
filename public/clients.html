@@ -1513,12 +1513,16 @@ let token = localStorage.getItem('lcc_token');
   // Safari iOS ne parse pas 'YYYY-MM-DD' en local time, il faut ajouter T00:00:00
   function parseLocalDate(dateStr) {
     if (!dateStr) return null;
-    // Si déjà un objet Date
     if (dateStr instanceof Date) return dateStr;
-    // Convertir YYYY-MM-DD en YYYY-MM-DDT00:00:00 pour éviter le décalage UTC iOS
     const str = String(dateStr).trim();
+    // YYYY-MM-DD → ajouter T00:00:00 pour éviter décalage UTC
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
       return new Date(str + 'T00:00:00');
+    }
+    // TIMESTAMPTZ complet (ex: 2026-03-01T00:00:00+00:00) → extraire YYYY-MM-DD
+    const isoMatch = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) {
+      return new Date(isoMatch[1] + 'T00:00:00');
     }
     return new Date(str);
   }
@@ -2414,10 +2418,10 @@ window.deleteOwnerInvoice = function (id) {
     // Infos client
     const clientAddr = client ? [
       client.address,
-      ((client.postal_code||'') + ' ' + (client.city||'')).trim(),
-      client.country || 'France',
+      ((client.postal_code||'') + ' ' + (client.city||'')).trim() || null,
+      (client.country && client.country !== 'France') ? client.country : null,
       client.email
-    ].filter(Boolean).map(l => `<div>${l}</div>`).join('') : '';
+    ].filter(v => v && String(v).trim()).map(l => `<div>${l}</div>`).join('') : '';
 
     // Infos émetteur
     const emitterCustomFields = (ep.customFields || up.customFields || []);
