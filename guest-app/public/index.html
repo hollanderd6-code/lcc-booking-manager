@@ -93,38 +93,83 @@
     .search-modal {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.55);
       z-index: 200;
       display: none;
       align-items: flex-end;
+      backdrop-filter: blur(2px);
     }
     .search-modal.open { display: flex; }
     .search-sheet {
       background: white;
-      border-radius: 24px 24px 0 0;
-      padding: 24px 20px env(safe-area-inset-bottom);
+      border-radius: 28px 28px 0 0;
+      padding: 0 0 env(safe-area-inset-bottom);
       width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
     }
-    .search-sheet h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
-    .search-row { margin-bottom: 16px; }
-    .search-row label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: block; }
-    .search-row input, .search-row select {
-      width: 100%; padding: 12px 14px;
-      border: 2px solid var(--border);
-      border-radius: 12px; font-size: 15px;
-      font-family: inherit; background: white;
-      box-sizing: border-box; color: var(--text);
+    .search-sheet-handle {
+      width: 40px; height: 4px;
+      background: #e2e8f0; border-radius: 2px;
+      margin: 12px auto 0;
     }
-    .search-row input:focus, .search-row select:focus {
-      outline: none; border-color: var(--primary);
+    .search-sheet-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .search-sheet-header h3 { font-size: 17px; font-weight: 700; color: var(--text); margin: 0; }
+    .btn-reset-filters {
+      font-size: 12px; font-weight: 600; color: var(--primary);
+      background: var(--primary-light); border: none; border-radius: 20px;
+      padding: 5px 12px; cursor: pointer; display: none;
+    }
+    .btn-reset-filters.visible { display: block; }
+    .search-body { padding: 16px 20px; }
+    .search-section { margin-bottom: 20px; }
+    .search-section-label {
+      font-size: 12px; font-weight: 700; color: var(--text-light);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
     }
     .dates-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .date-box {
+      background: #f8fafc; border: 2px solid var(--border);
+      border-radius: 14px; padding: 10px 14px; cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .date-box.has-value { border-color: var(--primary); background: var(--primary-light); }
+    .date-box label { font-size: 11px; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 2px; }
+    .date-box input {
+      border: none; background: transparent; font-size: 14px; font-weight: 600;
+      color: var(--text); font-family: inherit; width: 100%; padding: 0; cursor: pointer;
+    }
+    .date-box input:focus { outline: none; }
+    /* Chips villes */
+    .city-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .city-chip {
+      padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      border: 2px solid var(--border); background: white; color: var(--text);
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .city-chip.active {
+      border-color: var(--primary); background: var(--primary); color: white;
+    }
+    .city-chips-loading { font-size: 13px; color: var(--text-light); }
+    /* Chips voyageurs */
+    .guest-btn {
+      padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      border: 2px solid var(--border); background: white; color: var(--text);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .guest-btn.active {
+      border-color: var(--primary); background: var(--primary); color: white;
+    }
     .btn-search-apply {
-      width: 100%; padding: 14px;
+      width: 100%; padding: 15px;
       background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white; border: none; border-radius: 12px;
-      font-size: 16px; font-weight: 600; cursor: pointer;
-      margin-top: 8px;
+      color: white; border: none; border-radius: 14px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 8px;
     }
 
     /* ── Screen content ── */
@@ -401,7 +446,7 @@
       margin: 0;
     }
     /* Pousse le contenu sous le header fixe — valeur safe pour iPhone avec notch */
-    .screen-with-header { padding-top: 80px; }
+    .screen-with-header { padding-top: 96px; }
   </style>
 </head>
 <body style="background: var(--bg); height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
@@ -558,36 +603,47 @@
 <!-- ─── Modal recherche ─── -->
 <div class="search-modal" id="searchModal" onclick="closeSearchOnBg(event)">
   <div class="search-sheet">
-    <h3>Rechercher un logement</h3>
-    <div class="search-row dates-row">
-      <div>
-        <label>Arrivée</label>
-        <input type="date" id="searchCheckin" onchange="updateSearchLabel()">
-      </div>
-      <div>
-        <label>Départ</label>
-        <input type="date" id="searchCheckout" onchange="updateSearchLabel()">
-      </div>
+    <div class="search-sheet-handle"></div>
+    <div class="search-sheet-header">
+      <h3>🔍 Rechercher</h3>
+      <button class="btn-reset-filters" id="btnResetFilters" onclick="resetFilters()">✕ Effacer</button>
     </div>
-    <div class="search-row">
-      <label>Ville</label>
-      <input type="text" id="searchCity" placeholder="Paris, Lyon, Bordeaux..." oninput="updateSearchLabel()">
-    </div>
-    <div class="search-row">
-      <label>Voyageurs</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="guestBtns">
-        <button type="button" class="guest-btn active" data-val="" onclick="selectGuests(this,'')">Tous</button>
-        <button type="button" class="guest-btn" data-val="1" onclick="selectGuests(this,'1')">1</button>
-        <button type="button" class="guest-btn" data-val="2" onclick="selectGuests(this,'2')">2</button>
-        <button type="button" class="guest-btn" data-val="3" onclick="selectGuests(this,'3')">3</button>
-        <button type="button" class="guest-btn" data-val="4" onclick="selectGuests(this,'4')">4</button>
-        <button type="button" class="guest-btn" data-val="6" onclick="selectGuests(this,'6')">6+</button>
-        <button type="button" class="guest-btn" data-val="8" onclick="selectGuests(this,'8')">8+</button>
+    <div class="search-body">
+      <div class="search-section">
+        <div class="search-section-label">📅 Dates de séjour</div>
+        <div class="dates-row">
+          <div class="date-box" id="dateBoxCheckin">
+            <label>Arrivée</label>
+            <input type="date" id="searchCheckin" onchange="updateSearchLabel();updateDateBoxes();">
+          </div>
+          <div class="date-box" id="dateBoxCheckout">
+            <label>Départ</label>
+            <input type="date" id="searchCheckout" onchange="updateSearchLabel();updateDateBoxes();">
+          </div>
+        </div>
       </div>
+      <div class="search-section">
+        <div class="search-section-label">📍 Ville</div>
+        <div class="city-chips" id="cityChips">
+          <span class="city-chips-loading"><i class="fas fa-spinner fa-spin"></i> Chargement...</span>
+        </div>
+      </div>
+      <div class="search-section">
+        <div class="search-section-label">👥 Voyageurs</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="guestBtns">
+          <button type="button" class="guest-btn active" data-val="" onclick="selectGuests(this,'')">Tous</button>
+          <button type="button" class="guest-btn" data-val="1" onclick="selectGuests(this,'1')">1</button>
+          <button type="button" class="guest-btn" data-val="2" onclick="selectGuests(this,'2')">2</button>
+          <button type="button" class="guest-btn" data-val="3" onclick="selectGuests(this,'3')">3</button>
+          <button type="button" class="guest-btn" data-val="4" onclick="selectGuests(this,'4')">4</button>
+          <button type="button" class="guest-btn" data-val="6" onclick="selectGuests(this,'6')">6+</button>
+          <button type="button" class="guest-btn" data-val="8" onclick="selectGuests(this,'8')">8+</button>
+        </div>
+      </div>
+      <button class="btn-search-apply" onclick="applySearch()">
+        <i class="fas fa-search"></i> Rechercher
+      </button>
     </div>
-    <button class="btn-search-apply" onclick="applySearch()">
-      <i class="fas fa-search"></i> Rechercher
-    </button>
   </div>
 </div>
 
