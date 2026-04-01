@@ -104,7 +104,14 @@
         <span class="brand-name"><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></span>
       </span>
     </a>
-    <!-- MENU MOBILE (hamburger) -->
+    <button onclick="toggleMobileMenu()" id="hamburgerBtn" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;flex-direction:column;gap:5px;justify-content:center;margin-left:auto;">
+      <span style="display:block;width:22px;height:2px;background:#374151;border-radius:2px;"></span>
+      <span style="display:block;width:22px;height:2px;background:#374151;border-radius:2px;"></span>
+      <span style="display:block;width:22px;height:2px;background:#374151;border-radius:2px;"></span>
+    </button>
+  </div>
+
+  <!-- MENU MOBILE (hamburger) -->
   <div id="mobileMenu" style="display:none;position:fixed;top:60px;left:0;right:0;z-index:25;background:rgba(245,242,236,.98);backdrop-filter:blur(12px);border-bottom:1px solid rgba(200,184,154,.35);padding:12px 20px 16px;flex-direction:column;gap:4px;">
     <a href="#features" class="nav-link" onclick="closeMobileMenu()" style="display:block;padding:10px 0;font-size:14px;border-bottom:1px solid rgba(200,184,154,.2);">Fonctionnalités</a>
     <a href="#how" class="nav-link" onclick="closeMobileMenu()" style="display:block;padding:10px 0;font-size:14px;border-bottom:1px solid rgba(200,184,154,.2);">Comment ça marche</a>
