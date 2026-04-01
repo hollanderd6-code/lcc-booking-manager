@@ -913,6 +913,13 @@ function openEditPropertyModal(propertyId) {
     loadPricingRules(property._id || property.id);
   }
 
+  // ✅ CHARGER LES AVIS OTA (Channex)
+  if (typeof initReviewsSection === 'function') {
+    const pid = property._id || property.id;
+    const isConnected = !!(property.channex_enabled || property.channexEnabled) && !!(property.channex_property_id || property.channexPropertyId);
+    initReviewsSection(pid, isConnected);
+  }
+
   if (modal) modal.classList.add("active");
 }
 
