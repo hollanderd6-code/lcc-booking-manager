@@ -22432,9 +22432,6 @@ app.get('/api/guest/properties', async (req, res) => {
   try {
     const { checkin, checkout, guests } = req.query;
 
-    // 🔒 DEMO TEMPORAIRE — afficher uniquement les logements du compte demo
-    const DEMO_EMAIL = 'emailboostinghost@gmail.com';
-
     // Récupérer tous les logements actifs avec subscription valide
     const result = await pool.query(`
       SELECT 
@@ -22448,9 +22445,8 @@ app.get('/api/guest/properties', async (req, res) => {
       JOIN subscriptions s ON s.user_id = u.id
       WHERE s.status IN ('active', 'trial')
         AND p.base_price IS NOT NULL
-        AND u.email = $1
       ORDER BY p.created_at DESC
-    `, [DEMO_EMAIL]);
+    `);
 
     let properties = result.rows;
 
