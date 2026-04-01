@@ -1358,6 +1358,19 @@ html[data-theme-v3="1"] .invoice-paper {
 </main>
 </div>
 </div>
+<!-- MODAL DE CONFIRMATION PERSONNALISÉE (remplace confirm() natif bloqué sur Capacitor) -->
+<div class="modal-overlay" id="bh-confirm-modal" style="z-index:99999;">
+  <div class="modal-content" style="max-width:360px;text-align:center;padding:28px 24px;">
+    <div id="bh-confirm-icon" style="font-size:36px;margin-bottom:12px;">⚠️</div>
+    <h3 id="bh-confirm-title" style="margin:0 0 8px;font-size:17px;font-weight:700;color:#111827;"></h3>
+    <p id="bh-confirm-message" style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.5;"></p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="bh-confirm-cancel" style="flex:1;padding:11px 16px;border:1.5px solid #d1d5db;border-radius:10px;background:white;font-size:14px;font-weight:600;cursor:pointer;color:#374151;">Annuler</button>
+      <button id="bh-confirm-ok" style="flex:1;padding:11px 16px;border:none;border-radius:10px;background:#1A7A5E;font-size:14px;font-weight:600;cursor:pointer;color:white;">Confirmer</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="statsModal">
 <div class="modal-content">
 <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
@@ -1422,6 +1435,47 @@ html[data-theme-v3="1"] .invoice-paper {
 <script>
 console.log('[INIT] Script principal charge');
 let token = localStorage.getItem('lcc_token');
+
+// ── Modal de confirmation (remplace confirm() natif bloqué dans Capacitor) ──
+window.bhConfirm = function(message, title, icon) {
+  return new Promise(function(resolve) {
+    const modal   = document.getElementById('bh-confirm-modal');
+    const titleEl = document.getElementById('bh-confirm-title');
+    const msgEl   = document.getElementById('bh-confirm-message');
+    const iconEl  = document.getElementById('bh-confirm-icon');
+    const okBtn   = document.getElementById('bh-confirm-ok');
+    const cancelBtn = document.getElementById('bh-confirm-cancel');
+
+    if (!modal) { resolve(window.confirm(message)); return; }
+
+    titleEl.textContent  = title  || 'Confirmation';
+    msgEl.textContent    = message || '';
+    iconEl.textContent   = icon   || '⚠️';
+
+    modal.classList.add('active');
+
+    function cleanup(result) {
+      modal.classList.remove('active');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+    function onOk()     { cleanup(true);  }
+    function onCancel() { cleanup(false); }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+};
+// ── Couleur du bouton confirmer selon le type d'action ──
+window.bhConfirmDanger = function(message, title) {
+  const okBtn = document.getElementById('bh-confirm-ok');
+  if (okBtn) { okBtn.style.background = '#ef4444'; }
+  return window.bhConfirm(message, title || 'Confirmation', '🗑️').then(function(r) {
+    if (okBtn) { okBtn.style.background = '#1A7A5E'; }
+    return r;
+  });
+};
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
   let clients = [];
   let prestations = [];
@@ -2216,7 +2270,7 @@ window.sendOwnerInvoice = async function (id) {
   if (inv && inv.status === 'draft') {
     return alert("Veuillez d'abord finaliser la facture (Passer en Facturée) avant de l'envoyer.");
   }
-  if (!confirm('Envoyer cette facture au client ?')) return;
+  if (!await window.bhConfirm('Envoyer cette facture au client ?', 'Envoyer la facture', '📧')) return;
 
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/send', {
@@ -2239,7 +2293,7 @@ window.sendOwnerInvoice = async function (id) {
 // Supprimer un brouillon
 // Supprimer un brouillon
 window.deleteOwnerInvoice = async function (id) {
-  if (!confirm('Supprimer cette facture ?')) return;
+  if (!await window.bhConfirmDanger('Supprimer définitivement cette facture ?', 'Supprimer la facture')) return;
 
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
@@ -2485,7 +2539,7 @@ window.deleteOwnerInvoice = async function (id) {
 
 
 window.createOwnerCreditNote = async function(id) {
-  if (!confirm('Créer un avoir pour cette facture ?')) return;
+  if (!await window.bhConfirm('Créer un avoir pour cette facture ?', 'Créer un avoir', '📋')) return;
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/credit-note', {
       method: 'POST',
@@ -2502,7 +2556,7 @@ window.createOwnerCreditNote = async function(id) {
 };
 
 window.finalizeOwnerInvoice = async function (id) {
-  if (!confirm('Passer cette facture en “Facturée” ?')) return;
+  if (!await window.bhConfirm('Passer cette facture en "Facturée" ?', 'Finaliser la facture', '✅')) return;
 
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/finalize', {
@@ -2524,7 +2578,7 @@ window.finalizeOwnerInvoice = async function (id) {
 
 
 window.markOwnerInvoicePaid = async function (id) {
-  if (!confirm('Marquer cette facture comme encaissée ?')) return;
+  if (!await window.bhConfirm('Marquer cette facture comme encaissée ?', 'Marquer comme encaissée', '💰')) return;
 
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/mark-paid', {
@@ -3282,7 +3336,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
   window.deleteClient = async function() {
     if (!editingClientId) return;
-    if (!confirm('Supprimer ce client ? Cette action est irréversible.')) return;
+    if (!await window.bhConfirmDanger('Supprimer ce client ? Cette action est irréversible.', 'Supprimer le client')) return;
     try {
       const res = await fetch('/api/owner-clients/' + editingClientId, {
         method: 'DELETE',
