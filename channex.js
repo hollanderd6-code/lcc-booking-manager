@@ -488,7 +488,7 @@ async function processChannexBooking(pool, bookingData) {
 // ── Accusé de réception d'une réservation (requis par Channex) ──
 async function bookingAcknowledge(revision_id) {
   try {
-    await channexAPI.post(`/booking_revisions/${revision_id}/acknowledge`);
+    await channexAPI.post(`/booking_revisions/${revision_id}/ack`);
     console.log(`✅ [CHANNEX] Acknowledge envoyé pour booking ${booking_id}`);
     return true;
   } catch (e) {
