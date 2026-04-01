@@ -2,6 +2,16 @@
 <html lang="fr" data-theme="light">
 <head>
   <meta charset="UTF-8">
+  <script>
+    (function() {
+      var isNative = !!(
+        window.Capacitor?.isNativePlatform?.() ||
+        window.location.protocol === 'capacitor:' ||
+        window.location.protocol === 'ionic:'
+      );
+      if (isNative) document.documentElement.classList.add('native-app');
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blog Boostinghost – Conseils pour gérer vos locations courte durée</title>
   <meta name="description" content="Conseils, guides et bonnes pratiques pour gérer vos locations courte durée. Synchronisation Airbnb Booking, automatisation, channel manager et conciergerie.">
@@ -16,6 +26,10 @@
   <style>
     /* ── Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Cacher "Créer un compte" sur app iOS native */
+    html.native-app a[href="/register.html"],
+    html.native-app a[href="/register-2.html"] { display: none !important; }
 
     .landing-body {
       font-family: 'DM Sans', system-ui, sans-serif;
