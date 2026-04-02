@@ -4227,7 +4227,11 @@ async function generateAttestationPDF(sendByEmail = false) {
     ? new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'})
     : new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
 
-  const fmt = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' \u20ac';
+  const fmt = n => {
+    const parts = n.toFixed(2).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return parts.join(',') + ' \u20ac';
+  };
 
   // ── Génération jsPDF ──
   async function loadJsPDFAndGenerate() {
@@ -4258,9 +4262,10 @@ async function generateAttestationPDF(sendByEmail = false) {
     y += 8;
 
     // Blocs émetteur / bénéficiaire
-    const bH = 8 + senderLines.length * 5 + 4;
-    const bH2 = 8 + clientLines.length * 5 + 4;
-    const boxH = Math.max(bH, bH2, 28);
+    const lineH = 5.5;
+    const bH = 18 + senderLines.length * lineH + 4;
+    const bH2 = 18 + clientLines.length * lineH + 4;
+    const boxH = Math.max(bH, bH2, 32);
     const halfCol = (col - 6) / 2;
 
     // Émetteur
@@ -4279,7 +4284,7 @@ async function generateAttestationPDF(sendByEmail = false) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(107, 114, 128);
-    senderLines.forEach((l, i) => doc.text(l, margin + 4, y + 18 + i * 5));
+    senderLines.forEach((l, i) => doc.text(l, margin + 4, y + 18 + i * lineH));
 
     // Bénéficiaire
     const x2 = margin + halfCol + 6;
@@ -4297,7 +4302,7 @@ async function generateAttestationPDF(sendByEmail = false) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(107, 114, 128);
-    clientLines.forEach((l, i) => doc.text(l, x2 + 4, y + 18 + i * 5));
+    clientLines.forEach((l, i) => doc.text(l, x2 + 4, y + 18 + i * lineH));
     y += boxH + 8;
 
     // Texte intro
@@ -4366,13 +4371,13 @@ async function generateAttestationPDF(sendByEmail = false) {
     doc.setDrawColor(110, 231, 183);
     doc.setLineWidth(0.3);
     const encText = "Conform\u00e9ment aux articles L.7231-1 et suivants du Code du travail, ces prestations sont \u00e9ligibles au cr\u00e9dit d'imp\u00f4t pour l'emploi d'un salari\u00e9 \u00e0 domicile (art. 199 sexdecies du CGI). Le montant des d\u00e9penses ouvrant droit \u00e0 r\u00e9duction ou cr\u00e9dit d'imp\u00f4t au titre de l'ann\u00e9e " + year + " s'\u00e9l\u00e8ve \u00e0 : " + fmt(grandTotal) + ".";
-    const encLines = doc.splitTextToSize(encText, col - 8);
-    const encH = encLines.length * 5 + 8;
+    const encLines = doc.splitTextToSize(encText, col - 12);
+    const encH = encLines.length * 6 + 12;
     doc.roundedRect(margin, y, col, encH, 2, 2, 'FD');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.setTextColor(6, 95, 70);
-    doc.text(encLines, margin + 4, y + 6);
+    doc.text(encLines, margin + 4, y + 7);
     y += encH + 10;
 
     // Fait à + signature
