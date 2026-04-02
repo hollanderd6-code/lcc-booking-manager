@@ -900,6 +900,19 @@ html[data-theme-v3="1"] .modal-content {
 </script>
 <!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// Stub déclaré tôt pour que le onclick soit résolu même si le script principal n'est pas encore parsé
+function openAttestationModal() {
+  if (window._openAttestationModalReady) {
+    window._openAttestationModalReady();
+  } else {
+    // Attendre que la vraie fonction soit prête
+    document.addEventListener('attestationReady', function() {
+      window._openAttestationModalReady();
+    });
+  }
+}
+</script>
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="clients" data-subtitle="Gérez vos propriétaires, leur Stripe et leurs logements." data-title="Mes clients">
 
@@ -4027,6 +4040,12 @@ let attSignatureData = null;
 let attIsDrawing = false;
 let attLastX = 0, attLastY = 0;
 
+// Exposer la fonction pour le stub déclaré en avance
+window._openAttestationModalReady = function() {
+  _doOpenAttestationModal();
+};
+document.dispatchEvent(new Event('attestationReady'));
+
 const PRESTATIONS_OPTIONS = [
   "Ménage à domicile",
   "Jardinage",
@@ -4035,7 +4054,7 @@ const PRESTATIONS_OPTIONS = [
   "Autre (saisir manuellement)",
 ];
 
-function openAttestationModal() {
+function _doOpenAttestationModal() {
   // Remplir le select clients
   const sel = document.getElementById('attClientId');
   sel.innerHTML = '<option value="">-- Sélectionner un client --</option>';
