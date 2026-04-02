@@ -22662,7 +22662,7 @@ app.post('/api/attestation/send', authenticateToken, async (req, res) => {
       </div>`;
 
     await sendEmail({
-      from: `${fromName} <${fromEmail}>`,
+      from: `${fromName} <${process.env.EMAIL_FROM || 'no-reply@boostinghost.fr'}>`,
       to:   clientEmail,
       subject: `Attestation fiscale ${year} – Services à la personne`,
       html: htmlBody,
