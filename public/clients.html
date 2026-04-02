@@ -4371,14 +4371,22 @@ async function generateAttestationPDF(sendByEmail = false) {
     doc.setDrawColor(110, 231, 183);
     doc.setLineWidth(0.3);
     const encText = "Conform\u00e9ment aux articles L.7231-1 et suivants du Code du travail, ces prestations sont \u00e9ligibles au cr\u00e9dit d'imp\u00f4t pour l'emploi d'un salari\u00e9 \u00e0 domicile (art. 199 sexdecies du CGI). Le montant des d\u00e9penses ouvrant droit \u00e0 r\u00e9duction ou cr\u00e9dit d'imp\u00f4t au titre de l'ann\u00e9e " + year + " s'\u00e9l\u00e8ve \u00e0 : " + fmt(grandTotal) + ".";
-    const encLines = doc.splitTextToSize(encText, col - 10);
-    const encH = encLines.length * 6 + 8;
-    doc.roundedRect(margin, y, col, encH, 2, 2, 'FD');
+    const encRectW = W - margin * 2;
+    const encWrapW = encRectW - 10;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
+    const encLines = doc.splitTextToSize(encText, encWrapW);
+    const encH = encLines.length * 5.5 + 10;
+    doc.roundedRect(margin, y, encRectW, encH, 2, 2, 'FD');
     doc.setTextColor(6, 95, 70);
-    doc.text(encLines, margin + 4, y + 7);
+    doc.text(encLines, margin + 5, y + 7);
     y += encH + 10;
+
+
+
+
+
+
 
     // Fait à + signature
     doc.setFont('helvetica', 'normal');
