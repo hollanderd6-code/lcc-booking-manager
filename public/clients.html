@@ -1189,10 +1189,8 @@ html[data-theme-v3="1"] .invoice-paper {
   <button class="nav-tab active" id="btn-clients" onclick="switchTab('clients')"><i class="fas fa-users" style="margin-right:6px;"></i>Mes Clients</button>
   <button class="nav-tab" id="btn-dashboard" onclick="switchTab('dashboard')"><i class="fas fa-file-invoice" style="margin-right:6px;"></i>Factures</button>
   <button class="nav-tab" id="btn-create" onclick="switchTab('create')"><i class="fas fa-pen" style="margin-right:6px;"></i>Éditeur</button>
+  <button class="nav-tab" id="btn-attestation" onclick="openAttestationModal()"><i class="fas fa-file-contract" style="margin-right:6px;"></i>Attestation fiscale</button>
 </div>
-<button id="btn-attestation" onclick="openAttestationModal()" style="height:36px;padding:0 16px;border-radius:10px;border:1.5px solid rgba(26,122,94,.3);background:white;color:#1A7A5E;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;margin-left:8px;vertical-align:middle;">
-  <i class="fas fa-file-contract"></i> Attestation fiscale
-</button>
 <div class="tab-content active" id="tab-clients">
   <div id="clientsContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
 </div>
