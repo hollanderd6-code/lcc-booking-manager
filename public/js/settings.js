@@ -914,9 +914,18 @@ function openEditPropertyModal(propertyId) {
   }
 
   // ✅ CHARGER LES AVIS OTA (Channex)
+  console.log('⭐ [DEBUG REVIEWS] property:', {
+    id: property._id || property.id,
+    channex_enabled: property.channex_enabled,
+    channexEnabled: property.channexEnabled,
+    channex_property_id: property.channex_property_id,
+    channexPropertyId: property.channexPropertyId
+  });
+  console.log('⭐ [DEBUG REVIEWS] initReviewsSection défini:', typeof initReviewsSection === 'function');
   if (typeof initReviewsSection === 'function') {
     const pid = property._id || property.id;
     const isConnected = !!(property.channex_enabled || property.channexEnabled) && !!(property.channex_property_id || property.channexPropertyId);
+    console.log('⭐ [DEBUG REVIEWS] isConnected:', isConnected, 'pid:', pid);
     initReviewsSection(pid, isConnected);
   }
 
