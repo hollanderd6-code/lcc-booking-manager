@@ -22628,6 +22628,7 @@ app.post('/api/attestation/send', authenticateToken, async (req, res) => {
     // Nettoyer le base64 et convertir en Buffer (comme les autres routes PDF)
     const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '').replace(/\s/g, '');
     const pdfBuffer  = Buffer.from(base64Data, 'base64');
+    console.log(`📄 [ATTESTATION] PDF buffer: ${pdfBuffer.length} octets, début: ${pdfBuffer.slice(0,4).toString('ascii')}`);
 
     const fileName = `attestation-fiscale-${year}-${(clientName || 'client').replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
