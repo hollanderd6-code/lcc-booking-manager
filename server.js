@@ -888,7 +888,9 @@ async function sendEmail(mailOptions) {
           name: att.filename,
           content: Buffer.isBuffer(att.content)
             ? att.content.toString('base64')
-            : Buffer.from(att.content).toString('base64')
+            : typeof att.content === 'string'
+              ? att.content  // déjà en base64
+              : Buffer.from(att.content).toString('base64')
         }));
       }
 
@@ -22625,10 +22627,8 @@ app.post('/api/attestation/send', authenticateToken, async (req, res) => {
     const fromEmail = user.email;
     const fromName  = senderName || user.firstName || 'Boostinghost';
 
-    // Convertir le base64 en buffer
-    // Le base64 peut commencer par "data:application/pdf;base64,"
-    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
-    const pdfBuffer  = Buffer.from(base64Data, 'base64');
+    // Nettoyer le base64 (retirer le préfixe data URI si présent)
+    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '').replace(/\s/g, '');
 
     const fileName = `attestation-fiscale-${year}-${(clientName || 'client').replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
@@ -22670,7 +22670,7 @@ app.post('/api/attestation/send', authenticateToken, async (req, res) => {
       html: htmlBody,
       attachments: [{
         filename:    fileName,
-        content:     pdfBuffer,
+        content:     base64Data,
         contentType: 'application/pdf'
       }]
     });
