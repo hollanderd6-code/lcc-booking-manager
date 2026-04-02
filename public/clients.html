@@ -1603,6 +1603,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch(API_BASE + '/api/owner-clients', { headers: { Authorization: 'Bearer '+token }});
     const data = await res.json();
     clients = data.clients || [];
+    window.clients = clients; // ✅ Exposer globalement pour la modal attestation
     document.getElementById('statsClients').textContent = clients.length;
     
     // Remplir le SELECT dans l'éditeur
@@ -4025,7 +4026,6 @@ const PRESTATIONS_OPTIONS = [
   "Ménage à domicile",
   "Jardinage",
   "Bricolage / petits travaux",
-  "Garde d'enfants",
   "Assistance administrative",
   "Autre (saisir manuellement)",
 ];
