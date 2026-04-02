@@ -4429,7 +4429,12 @@ async function generateAttestationPDF(sendByEmail = false) {
 
     if (sendByEmail) {
       // Envoyer via l'API backend (Brevo)
-      const pdfBase64 = doc.output('datauristring');
+      // Générer le PDF en arraybuffer et convertir en base64 propre
+      const pdfArrayBuffer = doc.output('arraybuffer');
+      const pdfUint8 = new Uint8Array(pdfArrayBuffer);
+      let binary = '';
+      for (let i = 0; i < pdfUint8.length; i++) binary += String.fromCharCode(pdfUint8[i]);
+      const pdfBase64 = btoa(binary);
       const clientObj = (window.clients || []).find(c => String(c.id) === document.getElementById('attClientId').value);
       const clientEmail = clientObj?.email || '';
       if (!clientEmail) {
