@@ -22602,6 +22602,86 @@ app.post('/api/channex/reviews/:review_id/reply', authenticateToken, async (req,
 });
 
 // ============================================================
+// ============================================================
+// 📄 ATTESTATION FISCALE — Envoi par email via Brevo
+// ============================================================
+app.post('/api/attestation/send', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      pdfBase64,      // PDF en base64 généré par jsPDF côté client
+      clientEmail,    // Email du bénéficiaire
+      clientName,     // Nom du bénéficiaire
+      year,           // Année de l'attestation
+      senderName,     // Nom du prestataire
+    } = req.body;
+
+    if (!pdfBase64)    return res.status(400).json({ error: 'PDF manquant' });
+    if (!clientEmail)  return res.status(400).json({ error: 'Email destinataire manquant' });
+
+    // Récupérer l'email de l'expéditeur
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const fromEmail = user.email;
+    const fromName  = senderName || user.firstName || 'Boostinghost';
+
+    // Convertir le base64 en buffer
+    // Le base64 peut commencer par "data:application/pdf;base64,"
+    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+    const pdfBuffer  = Buffer.from(base64Data, 'base64');
+
+    const fileName = `attestation-fiscale-${year}-${(clientName || 'client').replace(/\s+/g, '-').toLowerCase()}.pdf`;
+
+    const htmlBody = `
+      <div style="font-family:'DM Sans',Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#111827;">
+        <div style="background:#1A7A5E;border-radius:12px 12px 0 0;padding:24px;text-align:center;">
+          <div style="color:white;font-size:18px;font-weight:700;">Attestation fiscale ${year}</div>
+          <div style="color:rgba(255,255,255,.8);font-size:13px;margin-top:4px;">Services à la personne</div>
+        </div>
+        <div style="background:white;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:28px 24px;">
+          <p style="font-size:14px;line-height:1.7;color:#374151;">Bonjour,</p>
+          <p style="font-size:14px;line-height:1.7;color:#374151;">
+            Veuillez trouver en pièce jointe votre <strong>attestation fiscale pour l'année ${year}</strong> 
+            concernant les services à la personne fournis par <strong>${fromName}</strong>.
+          </p>
+          <p style="font-size:14px;line-height:1.7;color:#374151;">
+            Ce document vous permettra de bénéficier du <strong>crédit d'impôt pour l'emploi d'un salarié à domicile</strong> 
+            (art. 199 sexdecies du CGI) lors de votre déclaration de revenus.
+          </p>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin:20px 0;font-size:13px;color:#065f46;">
+            💡 <strong>Conseil :</strong> Conservez ce document pour votre déclaration de revenus ${parseInt(year) + 1}.
+          </div>
+          <p style="font-size:13px;color:#6b7280;margin-top:20px;">
+            Pour toute question, n'hésitez pas à nous contacter.<br>
+            Cordialement,<br><strong>${fromName}</strong>
+          </p>
+        </div>
+        <div style="text-align:center;padding:16px;font-size:11px;color:#9ca3af;">
+          Attestation générée via <strong>boostinghost.fr</strong>
+        </div>
+      </div>`;
+
+    await sendEmail({
+      from: `${fromName} <${fromEmail}>`,
+      to:   clientEmail,
+      subject: `Attestation fiscale ${year} – Services à la personne`,
+      html: htmlBody,
+      attachments: [{
+        filename:    fileName,
+        content:     pdfBuffer,
+        contentType: 'application/pdf'
+      }]
+    });
+
+    console.log(`✅ [ATTESTATION] Envoyée à ${clientEmail} pour l'année ${year}`);
+    res.json({ success: true, message: `Attestation envoyée à ${clientEmail}` });
+
+  } catch (e) {
+    console.error('❌ [ATTESTATION SEND]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 🏠 BOOSTINGHOST GUEST — API publique de réservation directe
 // ============================================================
 
