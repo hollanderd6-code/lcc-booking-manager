@@ -22661,8 +22661,10 @@ app.post('/api/attestation/send', authenticateToken, async (req, res) => {
         </div>
       </div>`;
 
+    const brevoSender = getBrevoSender();
+    console.log('📧 [ATTESTATION] Expéditeur Brevo:', JSON.stringify(brevoSender));
     await sendEmail({
-      from: `${fromName} <${process.env.EMAIL_FROM || 'no-reply@boostinghost.fr'}>`,
+      from: `${fromName} <${brevoSender.email}>`,
       to:   clientEmail,
       subject: `Attestation fiscale ${year} – Services à la personne`,
       html: htmlBody,
