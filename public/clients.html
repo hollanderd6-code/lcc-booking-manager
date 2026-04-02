@@ -1148,6 +1148,9 @@ html[data-theme-v3="1"] .invoice-paper {
 <div class="fp-header-btns">
   <button class="fp-btn-back" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
   <button class="fp-btn-new" onclick="openClientModal()"><i class="fas fa-plus"></i> Nouveau client</button>
+  <button onclick="openAttestationModal()" style="height:38px;padding:0 16px;border-radius:12px;background:white;border:1.5px solid rgba(26,122,94,.3);color:#1A7A5E;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;margin-left:8px;">
+    <i class="fas fa-file-contract"></i> Attestation fiscale
+  </button>
 </div>
 <div class="dashboard-header">
   <div>
@@ -3920,6 +3923,389 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     }
   });
 })();
+</script>
+
+
+<!-- ══════════ MODAL ATTESTATION FISCALE ══════════ -->
+<div id="attestationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.18);">
+
+    <!-- Header -->
+    <div style="padding:22px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:17px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Attestation fiscale</div>
+        <div style="font-size:12px;color:#6B7280;margin-top:2px;">Services à la personne</div>
+      </div>
+      <button onclick="closeAttestationModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6B7280;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Client -->
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Bénéficiaire</label>
+        <select id="attClientId" onchange="onAttClientChange()" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#111827;">
+          <option value="">-- Sélectionner un client --</option>
+        </select>
+      </div>
+
+      <!-- Année + Ville + Date -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Année</label>
+          <select id="attYear" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#111827;">
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Ville</label>
+          <input id="attVille" type="text" placeholder="Ex : Paris" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#111827;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Date</label>
+          <input id="attDate" type="date" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#111827;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- Lignes de prestations -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <label style="font-size:12px;font-weight:600;color:#374151;">Prestations</label>
+          <button onclick="addAttLine()" style="font-size:11px;padding:4px 10px;border-radius:7px;border:1px dashed rgba(26,122,94,.4);background:rgba(26,122,94,.05);color:#1A7A5E;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;">
+            <i class="fas fa-plus"></i> Ajouter
+          </button>
+        </div>
+        <div id="attLines" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <!-- Total calculé -->
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:600;color:#065f46;">Total annuel</span>
+        <span id="attTotal" style="font-size:18px;font-weight:800;color:#1A7A5E;">0,00 €</span>
+      </div>
+
+      <!-- Zone signature -->
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Signature du prestataire</label>
+        <div style="border:2px dashed rgba(13,17,23,.15);border-radius:14px;background:#FAFAF8;overflow:hidden;">
+          <canvas id="attSignatureCanvas" style="display:block;width:100%;height:160px;cursor:crosshair;touch-action:none;"></canvas>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-top:1px solid rgba(13,17,23,.08);background:white;">
+            <span style="font-size:11px;color:#9CA3AF;">Signez dans le cadre ci-dessus</span>
+            <button onclick="clearAttSignature()" style="height:28px;padding:0 12px;border-radius:7px;background:#FEF2F2;color:#DC2626;border:1px solid rgba(220,38,38,.15);cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;">
+              <i class="fas fa-trash"></i> Effacer
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:16px 24px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeAttestationModal()" style="height:40px;padding:0 18px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Annuler</button>
+      <button onclick="generateAttestationPDF()" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-download"></i> Télécharger l'attestation
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ ATTESTATION FISCALE ══════════════════════════════════════
+
+let attSignatureData = null;
+let attIsDrawing = false;
+let attLastX = 0, attLastY = 0;
+
+const PRESTATIONS_OPTIONS = [
+  'Ménage à domicile',
+  'Jardinage',
+  'Bricolage / petits travaux',
+  'Garde d'enfants',
+  'Assistance administrative',
+  'Autre (saisir manuellement)',
+];
+
+function openAttestationModal() {
+  // Remplir le select clients
+  const sel = document.getElementById('attClientId');
+  sel.innerHTML = '<option value="">-- Sélectionner un client --</option>';
+  (window.clients || []).forEach(c => {
+    const name = c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
+    sel.innerHTML += `<option value="${c.id}">${name}</option>`;
+  });
+
+  // Date du jour
+  document.getElementById('attDate').value = new Date().toISOString().split('T')[0];
+
+  // Ville depuis profil émetteur
+  const ep = window.emitterProfile || {};
+  const up = window.userProfile || {};
+  document.getElementById('attVille').value = ep.city || up.city || '';
+
+  // Ligne par défaut
+  document.getElementById('attLines').innerHTML = '';
+  addAttLine();
+
+  // Afficher
+  const modal = document.getElementById('attestationModal');
+  modal.style.display = 'flex';
+
+  // Init signature (après affichage)
+  setTimeout(initAttSignature, 100);
+}
+
+function closeAttestationModal() {
+  document.getElementById('attestationModal').style.display = 'none';
+  attSignatureData = null;
+}
+
+function onAttClientChange() { recalcAttTotal(); }
+
+function addAttLine() {
+  const container = document.getElementById('attLines');
+  const idx = container.children.length;
+  const div = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:2fr 80px 90px 28px;gap:8px;align-items:center;';
+  div.innerHTML = `
+    <select onchange="onAttPrestChange(this, ${idx})" style="padding:9px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;color:#111827;">
+      ${PRESTATIONS_OPTIONS.map(o => `<option value="${o}">${o}</option>`).join('')}
+    </select>
+    <input type="number" placeholder="Heures" min="0" step="0.5" oninput="recalcAttTotal()" style="padding:9px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;text-align:center;">
+    <input type="number" placeholder="€/h" min="0" step="0.01" oninput="recalcAttTotal()" style="padding:9px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;text-align:center;">
+    <button onclick="this.parentElement.remove();recalcAttTotal();" style="width:28px;height:28px;border-radius:7px;border:none;background:#fee2e2;color:#dc2626;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  // Gérer le champ libre si "Autre"
+  const select = div.querySelector('select');
+  if (select.value === 'Autre (saisir manuellement)') {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Décrivez la prestation...';
+    input.style.cssText = select.style.cssText;
+    select.replaceWith(input);
+  }
+  container.appendChild(div);
+}
+
+function onAttPrestChange(sel, idx) {
+  if (sel.value === 'Autre (saisir manuellement)') {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Décrivez la prestation...';
+    input.style.cssText = sel.style.cssText;
+    sel.replaceWith(input);
+    input.focus();
+  }
+}
+
+function recalcAttTotal() {
+  let total = 0;
+  document.querySelectorAll('#attLines > div').forEach(row => {
+    const inputs = row.querySelectorAll('input[type="number"]');
+    if (inputs.length >= 2) {
+      const h = parseFloat(inputs[0].value) || 0;
+      const rate = parseFloat(inputs[1].value) || 0;
+      total += h * rate;
+    }
+  });
+  document.getElementById('attTotal').textContent = total.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+}
+
+function initAttSignature() {
+  const canvas = document.getElementById('attSignatureCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = 160 * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.strokeStyle = '#0D1117';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return [(src.clientX - r.left), (src.clientY - r.top)];
+  }
+  function startDraw(e) { e.preventDefault(); attIsDrawing = true; [attLastX, attLastY] = getPos(e); ctx.beginPath(); ctx.moveTo(attLastX, attLastY); }
+  function draw(e) { if (!attIsDrawing) return; e.preventDefault(); const [x,y] = getPos(e); ctx.lineTo(x,y); ctx.stroke(); attLastX=x; attLastY=y; }
+  function endDraw() { if (!attIsDrawing) return; attIsDrawing=false; attSignatureData = canvas.toDataURL('image/png'); }
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, {passive:false});
+  canvas.addEventListener('touchmove', draw, {passive:false});
+  canvas.addEventListener('touchend', endDraw);
+}
+
+function clearAttSignature() {
+  const canvas = document.getElementById('attSignatureCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  attSignatureData = null;
+}
+
+function generateAttestationPDF() {
+  const clientId = document.getElementById('attClientId').value;
+  const year = document.getElementById('attYear').value;
+  const ville = document.getElementById('attVille').value.trim() || 'votre ville';
+  const dateStr = document.getElementById('attDate').value;
+
+  if (!clientId) { alert('Veuillez sélectionner un client.'); return; }
+
+  const client = (window.clients || []).find(c => String(c.id) === clientId);
+  if (!client) return;
+
+  const ep = window.emitterProfile || {};
+  const up = window.userProfile || {};
+  const senderName = ep.company || up.company || ((up.firstName||'') + ' ' + (up.lastName||'')).trim() || 'Votre entreprise';
+  const senderAddr = [ep.address||up.address, ((ep.postalCode||up.postalCode||'') + ' ' + (ep.city||up.city||'')).trim(), ep.siret ? 'SIRET : '+ep.siret : null, up.email].filter(Boolean);
+  const clientName = client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim();
+  const clientAddr = [client.address, ((client.postal_code||'') + ' ' + (client.city||'')).trim(), client.email].filter(v => v && v.trim());
+
+  // Récupérer les lignes
+  const lines = [];
+  let grandTotal = 0;
+  document.querySelectorAll('#attLines > div').forEach(row => {
+    const labelEl = row.querySelector('input[type="text"], select');
+    const inputs = row.querySelectorAll('input[type="number"]');
+    if (!labelEl || inputs.length < 2) return;
+    const label = labelEl.value || labelEl.options?.[labelEl.selectedIndex]?.value || '';
+    const heures = parseFloat(inputs[0].value) || 0;
+    const taux = parseFloat(inputs[1].value) || 0;
+    const total = heures * taux;
+    if (label && heures > 0) {
+      lines.push({ label, heures, taux, total });
+      grandTotal += total;
+    }
+  });
+
+  if (lines.length === 0) { alert('Veuillez ajouter au moins une prestation.'); return; }
+
+  const dateFormatted = dateStr ? new Date(dateStr).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
+  const totalFormatted = grandTotal.toLocaleString('fr-FR', {minimumFractionDigits:2}) + ' €';
+
+  // Construire le HTML du PDF
+  const linesHTML = lines.map(l => `
+    <tr>
+      <td>${l.label}</td>
+      <td style="text-align:center;">${l.heures} h</td>
+      <td style="text-align:center;">${l.taux.toLocaleString('fr-FR', {minimumFractionDigits:2})} €/h</td>
+      <td style="text-align:right;font-weight:700;">${l.total.toLocaleString('fr-FR', {minimumFractionDigits:2})} €</td>
+    </tr>`).join('');
+
+  const sigHtml = attSignatureData
+    ? `<img src="${attSignatureData}" style="max-height:60px;max-width:180px;display:block;margin-top:8px;">`
+    : '<div style="height:60px;border-bottom:1px solid #0D1117;width:180px;margin-top:8px;"></div>';
+
+  const html = `
+  <div style="font-family:'DM Sans',Helvetica,sans-serif;color:#111827;max-width:780px;margin:0 auto;padding:40px 48px;background:white;">
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+      <div>
+        <div style="font-size:22px;font-weight:800;color:#1A7A5E;">ATTESTATION FISCALE</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:4px;">Services à la personne — Année ${year}</div>
+      </div>
+    </div>
+    <div style="height:3px;background:#1A7A5E;border-radius:2px;margin-bottom:24px;"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:16px;">
+        <div style="font-size:10px;font-weight:700;color:#1A7A5E;letter-spacing:.05em;margin-bottom:8px;">PRESTATAIRE</div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${senderName}</div>
+        <div style="font-size:12px;color:#6B7280;line-height:1.6;">${senderAddr.join('<br>')}</div>
+      </div>
+      <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:16px;">
+        <div style="font-size:10px;font-weight:700;color:#1A7A5E;letter-spacing:.05em;margin-bottom:8px;">BÉNÉFICIAIRE</div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${clientName}</div>
+        <div style="font-size:12px;color:#6B7280;line-height:1.6;">${clientAddr.join('<br>')}</div>
+      </div>
+    </div>
+
+    <p style="font-size:13px;line-height:1.7;margin-bottom:6px;">
+      Je soussigné(e), <b>${senderName}</b>, prestataire de services à la personne, atteste avoir fourni à <b>${clientName}</b> les prestations suivantes au cours de l'année <b>${year}</b> :
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:12px;">
+      <thead>
+        <tr style="background:#F3F4F6;">
+          <th style="text-align:left;padding:10px 12px;font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #E5E7EB;">Prestation</th>
+          <th style="text-align:center;padding:10px 12px;font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #E5E7EB;">Heures</th>
+          <th style="text-align:center;padding:10px 12px;font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #E5E7EB;">Tarif/h</th>
+          <th style="text-align:right;padding:10px 12px;font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #E5E7EB;">Total TTC</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${linesHTML}
+      </tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #E5E7EB;">
+          <td colspan="3" style="padding:12px;text-align:right;font-weight:700;font-size:13px;">Total annuel</td>
+          <td style="padding:12px;text-align:right;font-weight:800;font-size:16px;color:#1A7A5E;">${totalFormatted}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div style="font-size:10px;color:#6B7280;margin-bottom:16px;">TVA non applicable, art. 293 B du CGI</div>
+
+    <div style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:10px;padding:14px 16px;font-size:12px;color:#065F46;line-height:1.6;margin-bottom:20px;">
+      Conformément aux articles L. 7231-1 et suivants du Code du travail, ces prestations sont éligibles au crédit d'impôt pour l'emploi d'un salarié à domicile (art. 199 sexdecies du CGI). Le montant des dépenses ouvrant droit à réduction ou crédit d'impôt au titre de l'année <b>${year}</b> s'élève à : <b>${totalFormatted}</b>.
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;">
+      <div style="font-size:12px;color:#374151;">
+        Fait à ${ville}, le ${dateFormatted}
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:#6B7280;margin-bottom:6px;">Signature du prestataire</div>
+        ${sigHtml}
+        <div style="font-size:11px;font-weight:600;margin-top:6px;">${senderName}</div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #E5E7EB;margin-top:28px;padding-top:10px;text-align:center;font-size:10px;color:#9CA3AF;">
+      Attestation générée via <b>boostinghost.fr</b> — logiciel de gestion locative
+    </div>
+  </div>`;
+
+  // Générer avec html2pdf
+  function doGenerate() {
+    const el = document.createElement('div');
+    el.innerHTML = html;
+    document.body.appendChild(el);
+    const opt = {
+      margin: 0,
+      filename: `attestation-fiscale-${year}-${clientName.replace(/\s+/g,'-').toLowerCase()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(el).save().then(() => {
+      document.body.removeChild(el);
+      closeAttestationModal();
+    });
+  }
+
+  if (typeof html2pdf === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = doGenerate;
+    document.head.appendChild(script);
+  } else {
+    doGenerate();
+  }
+}
 </script>
 
 </body>
