@@ -4181,7 +4181,7 @@ function clearAttSignature() {
   attSignatureData = null;
 }
 
-function generateAttestationPDF(sendByEmail = false) {
+async function generateAttestationPDF(sendByEmail = false) {
   const clientId = document.getElementById('attClientId').value;
   const year     = document.getElementById('attYear').value;
   const ville    = document.getElementById('attVille').value.trim() || 'votre ville';
@@ -4232,7 +4232,7 @@ function generateAttestationPDF(sendByEmail = false) {
   const fmt = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' \u20ac';
 
   // ── Génération jsPDF ──
-  function loadJsPDFAndGenerate() {
+  async function loadJsPDFAndGenerate() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const W = 210, margin = 18, col = W - margin * 2;
