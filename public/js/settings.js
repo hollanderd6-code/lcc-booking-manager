@@ -2306,17 +2306,17 @@ function buildReviewCard(review, propertyId) {
     + (review.comment ? '<div class="review-text">&ldquo;' + review.comment + '&rdquo;</div>' : '')
     + (review.is_replied && review.reply ? '<div class="review-reply-existing"><i class="fas fa-reply"></i><span>' + review.reply + '</span></div>' : '')
     + '<div class="review-actions">'
-      + '<button class="btn-reply-toggle" onclick="toggleReplyForm('' + review.id + '')">'
+      + '<button class="btn-reply-toggle" onclick="toggleReplyForm(\'' + review.id + '\')">'
         + '<i class="fas fa-reply"></i> ' + (review.is_replied ? 'Modifier la réponse' : 'Répondre')
       + '</button>'
       + (!review.is_replied ? '<span style="font-size:11px;color:#f59e0b;font-weight:600;"><i class="fas fa-clock" style="margin-right:3px;"></i>Sans réponse</span>' : '')
     + '</div>'
     + '<div class="review-reply-form" id="replyForm_' + review.id + '">'
-      + (review.is_hidden ? '<div style="font-size:11px;color:#92400e;background:#fef3c7;padding:8px 10px;border-radius:7px;margin-bottom:4px;"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Airbnb : votre réponse rendra l'avis public.</div>' : '')
+      + (review.is_hidden ? '<div style="font-size:11px;color:#92400e;background:#fef3c7;padding:8px 10px;border-radius:7px;margin-bottom:4px;"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Airbnb : votre réponse rendra l\'avis public.</div>' : '')
       + '<textarea class="review-reply-textarea" id="replyText_' + review.id + '" placeholder="Votre réponse au voyageur...">' + (review.reply || '') + '</textarea>'
       + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
-        + '<button class="btn-reply-cancel" onclick="toggleReplyForm('' + review.id + '')">Annuler</button>'
-        + '<button class="btn-reply-send" id="replySend_' + review.id + '" onclick="sendReviewReply('' + review.id + '','' + propertyId + '')">'
+        + '<button class="btn-reply-cancel" onclick="toggleReplyForm(\'' + review.id + '\')">Annuler</button>'
+        + '<button class="btn-reply-send" id="replySend_' + review.id + '" onclick="sendReviewReply(\'' + review.id + '\',\'' + propertyId + '\')">'
           + '<i class="fas fa-paper-plane"></i> Envoyer'
         + '</button>'
       + '</div>'
