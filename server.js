@@ -888,9 +888,7 @@ async function sendEmail(mailOptions) {
           name: att.filename,
           content: Buffer.isBuffer(att.content)
             ? att.content.toString('base64')
-            : typeof att.content === 'string'
-              ? att.content  // déjà en base64
-              : Buffer.from(att.content).toString('base64')
+            : Buffer.from(att.content).toString('base64')
         }));
       }
 
@@ -22627,8 +22625,9 @@ app.post('/api/attestation/send', authenticateToken, async (req, res) => {
     const fromEmail = user.email;
     const fromName  = senderName || user.firstName || 'Boostinghost';
 
-    // Nettoyer le base64 (retirer le préfixe data URI si présent)
+    // Nettoyer le base64 et convertir en Buffer (comme les autres routes PDF)
     const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '').replace(/\s/g, '');
+    const pdfBuffer  = Buffer.from(base64Data, 'base64');
 
     const fileName = `attestation-fiscale-${year}-${(clientName || 'client').replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
@@ -22670,7 +22669,7 @@ app.post('/api/attestation/send', authenticateToken, async (req, res) => {
       html: htmlBody,
       attachments: [{
         filename:    fileName,
-        content:     base64Data,
+        content:     pdfBuffer,
         contentType: 'application/pdf'
       }]
     });
