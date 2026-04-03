@@ -14519,12 +14519,12 @@ app.post('/api/owner-invoices',
           id, invoice_id, item_type, description,
           rental_amount, commission_rate,
           quantity, unit_price, total,
-          order_index, is_debours
+          order_index, is_debours, debours_id
         ) VALUES (
           gen_random_uuid(),$1,$2,$3,
           $4,$5,
           $6,$7,$8,
-          $9,$10
+          $9,$10,$11
         )
       `, [
         invoiceId,
@@ -14536,7 +14536,8 @@ app.post('/api/owner-invoices',
         item.unitPrice || 0,
         item.total || 0,
         i,
-        item.isDebours || false
+        item.isDebours || false,
+        item.deboursId || null
       ]);
     }
 // Sauvegarder les logements liés
@@ -15651,12 +15652,12 @@ app.put('/api/owner-invoices/:id',
         INSERT INTO owner_invoice_items (
           invoice_id, item_type, description,
           rental_amount, commission_rate, quantity, unit_price, total,
-          order_index, is_debours
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          order_index, is_debours, debours_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       `, [
         req.params.id, item.itemType, item.description,
         item.rentalAmount, item.commissionRate, item.quantity, item.unitPrice, item.total,
-        i, item.isDebours || false
+        i, item.isDebours || false, item.deboursId || null
       ]);
     }
 
@@ -20796,6 +20797,8 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
       EXCEPTION WHEN others THEN NULL; END $$;
     `);
     console.log('✅ Table debours OK');
+    // Ajouter colonne debours_id si manquante
+    await pool.query(`ALTER TABLE owner_invoice_items ADD COLUMN IF NOT EXISTS debours_id TEXT`);
   } catch(e) {
     console.error('❌ Migration debours:', e.message);
   }
@@ -20884,6 +20887,22 @@ app.get('/api/debours', authenticateAny, async (req, res) => {
 });
 
 // PATCH /api/debours/:id/status — changer le statut
+// GET /api/debours/:id — récupérer un justificatif par ID
+app.get('/api/debours/:id', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+    const result = await pool.query('SELECT * FROM debours WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Débours non trouvé' });
+    res.json({ debours: result.rows[0] });
+  } catch(e) {
+    console.error('❌ GET /api/debours/:id:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.patch('/api/debours/:id/status', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount
