@@ -1702,7 +1702,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
     document.getElementById('tab-'+id).classList.add('active');
     document.getElementById('btn-'+id).classList.add('active');
-    window.scrollTo(0, 0);
+    if (id === 'attestation') {
+      setTimeout(function() {
+        if (typeof _doOpenAttestationModal === 'function') _doOpenAttestationModal();
+      }, 50);
+    }
+    // Scroll en haut dans le main-content (scroll container v3)
+    const main = document.querySelector('.main-content');
+    if (main) main.scrollTop = 0;
+    else window.scrollTo(0, 0);
   }
 
   // --- CLIENTS ---
