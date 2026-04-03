@@ -20782,7 +20782,7 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
       CREATE TABLE IF NOT EXISTS debours (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
-        client_id INTEGER NOT NULL,
+        client_id TEXT NOT NULL,
         description TEXT NOT NULL,
         montant NUMERIC(10,2) NOT NULL DEFAULT 0,
         date DATE,
@@ -20790,6 +20790,10 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
         status TEXT NOT NULL DEFAULT 'pending',
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      -- Migration: convertir client_id INTEGER → TEXT si nécessaire
+      DO $$ BEGIN
+        ALTER TABLE debours ALTER COLUMN client_id TYPE TEXT USING client_id::TEXT;
+      EXCEPTION WHEN others THEN NULL; END $$;
     `);
     console.log('✅ Table debours OK');
   } catch(e) {
@@ -20843,7 +20847,7 @@ app.post('/api/debours', authenticateAny, uploadDebours.single('photo'), async (
       `INSERT INTO debours (id, user_id, client_id, description, montant, date, photo_url, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
        ON CONFLICT (id) DO NOTHING`,
-      [deboursId, userId, parseInt(client_id), description, parseFloat(montant), date || null, photo_url]
+      [deboursId, userId, client_id, description, parseFloat(montant), date || null, photo_url]
     );
 
     const row = await pool.query('SELECT * FROM debours WHERE id = $1', [deboursId]);
@@ -20867,7 +20871,7 @@ app.get('/api/debours', authenticateAny, async (req, res) => {
     let q = 'SELECT * FROM debours WHERE user_id = $1';
     const params = [userId];
 
-    if (client_id) { q += ` AND client_id = $${params.length+1}`; params.push(parseInt(client_id)); }
+    if (client_id) { q += ` AND client_id = $${params.length+1}`; params.push(client_id); }
     if (status)    { q += ` AND status = $${params.length+1}`; params.push(status); }
 
     q += ' ORDER BY created_at DESC';
