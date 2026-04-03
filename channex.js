@@ -137,7 +137,7 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
 
 // ── 2. Pousser les disponibilités vers Channex ────────────────
 
-async function pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked = [] }) {
+async function pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked = [], dates_to_update = null }) {
   try {
     console.log(`📅 [CHANNEX] Push disponibilités pour ${channex_property_id} (${dates_blocked.length} dates bloquées)`);
 
@@ -145,17 +145,29 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
     const values = [];
     const today = new Date();
 
-    for (let i = 0; i < 500; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-
-      values.push({
-        property_id: channex_property_id,
-        room_type_id: channex_room_type_id,
-        date: dateStr,
-        availability: blockedSet.has(dateStr) ? 0 : 1
-      });
+    if (dates_to_update && dates_to_update.length > 0) {
+      // Mode partiel : envoyer seulement les dates concernées
+      for (const dateStr of dates_to_update) {
+        values.push({
+          property_id: channex_property_id,
+          room_type_id: channex_room_type_id,
+          date: dateStr,
+          availability: blockedSet.has(dateStr) ? 0 : 1
+        });
+      }
+    } else {
+      // Mode full sync : 500 jours
+      for (let i = 0; i < 500; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        const dateStr = d.toISOString().split('T')[0];
+        values.push({
+          property_id: channex_property_id,
+          room_type_id: channex_room_type_id,
+          date: dateStr,
+          availability: blockedSet.has(dateStr) ? 0 : 1
+        });
+      }
     }
 
     await channexAPI.post('/availability', { values });
@@ -235,7 +247,7 @@ async function pushRestrictions(pool, { property_id, channex_property_id, channe
       property_id: channex_property_id,
       rate_plan_id: channex_rate_plan_id,
       date: r.date,
-      ...(r.min_stay        != null ? { min_stay_arrival: r.min_stay, min_stay_through: r.min_stay } : {}),
+      ...(r.min_stay        != null ? { min_stay: r.min_stay }               : {}),
       ...(r.max_stay        != null ? { max_stay: r.max_stay }               : {}),
       ...(r.stop_sell       != null ? { stop_sell: r.stop_sell }             : {}),
       ...(r.closed_to_arrival   != null ? { closed_to_arrival: r.closed_to_arrival }   : {}),
