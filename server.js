@@ -21658,6 +21658,46 @@ app.post('/api/channex/webhook', async (req, res) => {
         }
       }
 
+      // ── Push availability vers Channex après chaque booking ──
+      // Requis par la certification : le PMS doit renvoyer les dispos
+      // mises à jour après chaque réservation / modification / annulation
+      if (result && result.property_id) {
+        try {
+          const propResult = await pool.query(
+            `SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1`,
+            [result.property_id]
+          );
+          const prop = propResult.rows[0];
+          if (prop && prop.channex_enabled && prop.channex_property_id) {
+            const reservations = await pool.query(
+              `SELECT start_date, end_date FROM reservations
+               WHERE property_id = $1
+                 AND status NOT IN ('cancelled', 'rejected')
+                 AND end_date >= CURRENT_DATE`,
+              [result.property_id]
+            );
+            const dates_blocked = [];
+            for (const r of reservations.rows) {
+              let d = new Date(r.start_date);
+              const end = new Date(r.end_date);
+              while (d < end) {
+                dates_blocked.push(d.toISOString().substring(0, 10));
+                d.setDate(d.getDate() + 1);
+              }
+            }
+            await pushAvailability(pool, {
+              property_id:          result.property_id,
+              channex_property_id:  prop.channex_property_id,
+              channex_room_type_id: prop.channex_room_type_id,
+              dates_blocked
+            });
+            console.log(`✅ [CHANNEX SYNC] Availability pushed après booking ${result.uid} (${dates_blocked.length} dates bloquées)`);
+          }
+        } catch (availErr) {
+          console.warn(`⚠️ [CHANNEX SYNC] Erreur push availability (non bloquant):`, availErr.message);
+        }
+      }
+
       // ── Injecter/mettre à jour dans le store mémoire ─────────
       if (result && result.property_id && result.uid) {
         if (!reservationsStore.properties[result.property_id]) {
