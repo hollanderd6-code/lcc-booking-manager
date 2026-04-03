@@ -4778,14 +4778,10 @@ window.openAddDebours = function(preselectedClientId) {
   const modal = document.getElementById('deboursModal');
   modal.style.display = 'flex';
   // Forcer le body à ne pas clipper le modal (v3 theme a overflow:hidden)
-  document.body.style.overflow = 'visible';
-  document.documentElement.style.overflow = 'visible';
 };
 
 window.closeDeboursModal = function() {
   document.getElementById('deboursModal').style.display = 'none';
-  document.body.style.overflow = '';
-  document.documentElement.style.overflow = '';
 };
 
 // ── Preview photo ──
@@ -4878,8 +4874,6 @@ window.openImportDebours = async function() {
 
   document.getElementById('importDeboursClientName').textContent = clientName ? `Client : ${clientName}` : '';
   document.getElementById('importDeboursModal').style.display = 'flex';
-  document.body.style.overflow = 'visible';
-  document.documentElement.style.overflow = 'visible';
 
   const container = document.getElementById('importDeboursListContainer');
   container.innerHTML = '<div style="text-align:center;padding:20px;color:#9ca3af;font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
@@ -4935,8 +4929,6 @@ window.openImportDebours = async function() {
 
 window.closeImportDeboursModal = function() {
   document.getElementById('importDeboursModal').style.display = 'none';
-  document.body.style.overflow = '';
-  document.documentElement.style.overflow = '';
 };
 
 window.confirmImportDebours = function() {
@@ -4963,7 +4955,7 @@ window.confirmImportDebours = function() {
       photoDataUrl: photoDataUrl || null
     });
     // Marquer comme facturé via API (non bloquant)
-    fetch(API_BASE + '/api/debours/' + d.id + '/status', {
+    fetch(API_BASE + '/api/debours/' + cb.value + '/status', {
       method: 'PATCH',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'billed' })
