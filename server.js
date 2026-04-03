@@ -966,7 +966,7 @@ try {
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
       'image/jpeg',
@@ -975,10 +975,11 @@ const upload = multer({
       'image/webp',
       'image/gif',
       'image/heic',
-      'image/heif'
+      'image/heif',
+      'application/pdf'
     ];
     
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif', '.pdf'];
     const fileExtension = file.originalname.toLowerCase().match(/\.[^.]+$/)?.[0];
     
     const mimeOk = allowedMimes.includes(file.mimetype.toLowerCase());
@@ -20771,6 +20772,151 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
     console.error('❌ Migration roadmap:', e.message);
   }
 })();
+
+// ============================================================
+// 🧾 DÉBOURS — Init table
+// ============================================================
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS debours (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        client_id INTEGER NOT NULL,
+        description TEXT NOT NULL,
+        montant NUMERIC(10,2) NOT NULL DEFAULT 0,
+        date DATE,
+        photo_url TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Table debours OK');
+  } catch(e) {
+    console.error('❌ Migration debours:', e.message);
+  }
+})();
+
+// ============================================================
+// 🧾 DÉBOURS — Routes CRUD
+// ============================================================
+
+// Multer pour debours (accepte images + PDF, 10MB)
+const uploadDebours = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = ['image/jpeg','image/jpg','image/png','image/webp','image/heic','image/heif','application/pdf']
+      .includes(file.mimetype.toLowerCase());
+    cb(null, ok);
+  }
+});
+
+// POST /api/debours — créer un justificatif
+app.post('/api/debours', authenticateAny, uploadDebours.single('photo'), async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { id, client_id, description, montant, date } = req.body;
+    if (!client_id || !description || !montant) {
+      return res.status(400).json({ error: 'client_id, description et montant requis' });
+    }
+
+    let photo_url = null;
+    if (req.file) {
+      const filename = `debours_${userId}_${Date.now()}`;
+      photo_url = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'lcc-debours', public_id: filename, resource_type: 'auto' },
+          (err, result) => err ? reject(err) : resolve(result.secure_url)
+        );
+        require('stream').Readable.from(req.file.buffer).pipe(stream);
+      });
+    }
+
+    const deboursId = id || ('d_' + Date.now() + '_' + Math.random().toString(36).slice(2,7));
+
+    await pool.query(
+      `INSERT INTO debours (id, user_id, client_id, description, montant, date, photo_url, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+       ON CONFLICT (id) DO NOTHING`,
+      [deboursId, userId, parseInt(client_id), description, parseFloat(montant), date || null, photo_url]
+    );
+
+    const row = await pool.query('SELECT * FROM debours WHERE id = $1', [deboursId]);
+    console.log(`✅ [DÉBOURS] Créé: ${deboursId} pour client ${client_id}`);
+    res.json({ success: true, debours: row.rows[0] });
+  } catch(e) {
+    console.error('❌ POST /api/debours:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/debours — liste des justificatifs
+app.get('/api/debours', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { client_id, status } = req.query;
+    let q = 'SELECT * FROM debours WHERE user_id = $1';
+    const params = [userId];
+
+    if (client_id) { q += ` AND client_id = $${params.length+1}`; params.push(parseInt(client_id)); }
+    if (status)    { q += ` AND status = $${params.length+1}`; params.push(status); }
+
+    q += ' ORDER BY created_at DESC';
+    const result = await pool.query(q, params);
+    res.json({ debours: result.rows });
+  } catch(e) {
+    console.error('❌ GET /api/debours:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PATCH /api/debours/:id/status — changer le statut
+app.patch('/api/debours/:id/status', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { status } = req.body;
+    if (!['pending','billed'].includes(status)) return res.status(400).json({ error: 'Statut invalide' });
+
+    await pool.query(
+      'UPDATE debours SET status = $1 WHERE id = $2 AND user_id = $3',
+      [status, req.params.id, userId]
+    );
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ PATCH /api/debours:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /api/debours/:id
+app.delete('/api/debours/:id', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    await pool.query('DELETE FROM debours WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+    console.log(`🗑️ [DÉBOURS] Supprimé: ${req.params.id}`);
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ DELETE /api/debours:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // GET — liste publique des items publiés (avec votes)
 app.get('/api/roadmap', authenticateAny, async (req, res) => {
