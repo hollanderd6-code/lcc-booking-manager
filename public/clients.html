@@ -4869,7 +4869,7 @@ window.deleteDebours = async function(id) {
 };
 
 // ── Import dans l'éditeur de facture ──
-window.openImportDebours = function() {
+window.openImportDebours = async function() {
   const clientId = document.getElementById('invoiceClientId')?.value;
   if (!clientId) { alert("Veuillez d'abord sélectionner un client dans la facture."); return; }
 
@@ -4877,10 +4877,29 @@ window.openImportDebours = function() {
   const clientName = client ? (client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim()) : '';
 
   document.getElementById('importDeboursClientName').textContent = clientName ? `Client : ${clientName}` : '';
-
-  const pending = deboursData.filter(d => String(d.clientId) === clientId && (d.status || 'pending') === 'pending');
+  document.getElementById('importDeboursModal').style.display = 'flex';
+  document.body.style.overflow = 'visible';
+  document.documentElement.style.overflow = 'visible';
 
   const container = document.getElementById('importDeboursListContainer');
+  container.innerHTML = '<div style="text-align:center;padding:20px;color:#9ca3af;font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
+
+  // Charger depuis l'API directement (ne pas dépendre de deboursData en mémoire)
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(API_BASE + '/api/debours?client_id=' + clientId + '&status=pending', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+    const pending = (data.debours || []).map(d => ({
+      id: d.id,
+      clientId: String(d.client_id),
+      description: d.description,
+      montant: parseFloat(d.montant),
+      date: d.date ? d.date.split('T')[0] : '',
+      photoDataUrl: d.photo_url || null,
+      status: d.status || 'pending'
+    }));
 
   if (pending.length === 0) {
     container.innerHTML = `<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">
@@ -4897,7 +4916,7 @@ window.openImportDebours = function() {
 
       return `
       <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='#f59e0b'" onmouseout="this.style.borderColor='#e5e7eb'">
-        <input type="checkbox" value="${d.id}" style="width:18px;height:18px;accent-color:#f59e0b;flex-shrink:0;">
+        <input type="checkbox" value="${d.id}" data-description="${d.description}" data-montant="${d.montant}" data-photo="${d.photoDataUrl||''}" style="width:18px;height:18px;accent-color:#f59e0b;flex-shrink:0;">
         ${photoHtml}
         <div style="flex:1;">
           <div style="font-size:13px;font-weight:600;color:#111827;">${d.description}</div>
@@ -4908,9 +4927,10 @@ window.openImportDebours = function() {
     }).join('');
   }
 
-  document.getElementById('importDeboursModal').style.display = 'flex';
-  document.body.style.overflow = 'visible';
-  document.documentElement.style.overflow = 'visible';
+  } catch(e) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#dc2626;font-size:13px;">❌ Erreur chargement : ' + e.message + '</div>';
+    console.error('Erreur openImportDebours:', e);
+  }
 };
 
 window.closeImportDeboursModal = function() {
@@ -4927,18 +4947,20 @@ window.confirmImportDebours = function() {
   const selected = Array.from(checkboxes);
 
   selected.forEach(cb => {
-    const d = deboursData.find(x => x.id === cb.value);
-    if (!d) return;
+    // Lire depuis data-attributes (pas besoin de deboursData en mémoire)
+    const description = cb.dataset.description || 'Débours';
+    const montant = parseFloat(cb.dataset.montant) || 0;
+    const photoDataUrl = cb.dataset.photo || null;
     prestationCounter++;
     prestations.push({
       id: 'p' + prestationCounter,
       type: 'debours',
-      description: d.description,
+      description: description,
       quantity: 1,
-      unitPrice: parseFloat(d.montant) || 0,
+      unitPrice: montant,
       isDebours: true,
-      deboursId: d.id,
-      photoDataUrl: d.photoDataUrl || null
+      deboursId: cb.value,
+      photoDataUrl: photoDataUrl || null
     });
     // Marquer comme facturé via API (non bloquant)
     fetch(API_BASE + '/api/debours/' + d.id + '/status', {
