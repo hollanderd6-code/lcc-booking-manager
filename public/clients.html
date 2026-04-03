@@ -2542,7 +2542,8 @@ window.deleteOwnerInvoice = function (id) {
   }, 'Supprimer la facture');
 };
   // ── Fonction commune : génère le HTML interne d'une facture ──
-  function buildInvoiceHTML(inv, items, client, container) {
+  function buildInvoiceHTML(inv, items, client, container, deboursPhotos) {
+    deboursPhotos = deboursPhotos || {};
     const clientName = client ? (client.company_name || `${client.first_name || ''} ${client.last_name || ''}`.trim()) : 'Client';
     let itemsHtml = '';
     items.forEach(item => {
@@ -2694,6 +2695,32 @@ window.deleteOwnerInvoice = function (id) {
     </div>
   </div>
 `;
+
+    // Annexes : photos des débours
+    const deboursWithPhotos = items.filter(it => it.is_debours && it.debours_id && deboursPhotos[it.debours_id]);
+    if (deboursWithPhotos.length > 0) {
+      const annexeDiv = document.createElement('div');
+      annexeDiv.style.cssText = 'background:white;width:210mm;padding:16mm 18mm;font-family:Arial,Helvetica,sans-serif;color:#1f2937;box-sizing:border-box;font-size:12px;page-break-before:always;';
+      let annexeHtml = `
+        <div style="font-size:16px;font-weight:700;color:#1A7A5E;margin-bottom:6mm;padding-bottom:4mm;border-bottom:2px solid #1A7A5E;">
+          Annexe — Justificatifs de débours
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8mm;">
+      `;
+      deboursWithPhotos.forEach(it => {
+        const photoUrl = deboursPhotos[it.debours_id];
+        const total = parseFloat(it.total || 0).toFixed(2);
+        annexeHtml += `
+          <div style="border:1px solid #e5e7eb;border-radius:6px;padding:4mm;break-inside:avoid;">
+            <div style="font-weight:600;font-size:12px;margin-bottom:3mm;">${it.description || 'Débours'} — ${total} €</div>
+            <img src="${photoUrl}" style="width:100%;max-height:80mm;object-fit:contain;border-radius:4px;" crossorigin="anonymous">
+          </div>
+        `;
+      });
+      annexeHtml += '</div>';
+      annexeDiv.innerHTML = annexeHtml;
+      container.appendChild(annexeDiv);
+    }
   } // fin buildInvoiceHTML
 
   // ── Charger les données d'une facture (fetch mutualisé) ──
@@ -2744,26 +2771,47 @@ window.deleteOwnerInvoice = function (id) {
   window.downloadOwnerInvoice = async function (id) {
   try {
     const { inv, items, client } = await fetchInvoiceData(id);
+
+    // Récupérer les photos de débours associées aux items
+    const token = localStorage.getItem('lcc_token');
+    const deboursItems = items.filter(it => it.is_debours && it.debours_id);
+    const deboursPhotos = {}; // debours_id → photo_url
+    await Promise.all(deboursItems.map(async it => {
+      try {
+        const r = await fetch(API_BASE + '/api/debours/' + it.debours_id, { headers: { Authorization: 'Bearer ' + token } });
+        if (r.ok) { const d = await r.json(); if (d.debours?.photo_url) deboursPhotos[it.debours_id] = d.debours.photo_url; }
+      } catch(e) {}
+    }));
+
     const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'fixed';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '0';
+    tempContainer.style.cssText = 'position:absolute;left:-9999px;top:0;width:210mm;';
     document.body.appendChild(tempContainer);
-    buildInvoiceHTML(inv, items, client, tempContainer);
+    buildInvoiceHTML(inv, items, client, tempContainer, deboursPhotos);
+
+    // Attendre que les images soient chargées
     const invoiceElement = document.getElementById('tempInvoicePaper');
+    const imgs = invoiceElement.querySelectorAll('img');
+    await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
+      if (img.complete) resolve();
+      else { img.onload = resolve; img.onerror = resolve; }
+    })));
+
     const filename = `${inv.invoice_number || 'facture'}.pdf`;
-    
     const opt = {
       margin: 0,
       filename: filename,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true, letterRendering: true, logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true }
     };
 
     function doPdf() {
       html2pdf().set(opt).from(invoiceElement).save().then(() => {
         document.body.removeChild(tempContainer);
+      }).catch(e => {
+        console.error('html2pdf error:', e);
+        document.body.removeChild(tempContainer);
+        alert('Erreur génération PDF');
       });
     }
 
@@ -3378,7 +3426,8 @@ function getSelectedProperties() {
         quantity: p.quantity,
         unitPrice: p.unitPrice,
         total: calculateLineTotal(p),
-        isDebours: p.isDebours
+        isDebours: p.isDebours,
+        deboursId: p.deboursId || null
       })),
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
       vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
