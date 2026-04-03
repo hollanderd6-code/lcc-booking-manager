@@ -19241,6 +19241,7 @@ cron.schedule('0 8 * * *', async () => {
       }
     }
 
+    const usersResult = await pool.query(
       `SELECT DISTINCT u.id
        FROM users u
        JOIN user_fcm_tokens t ON u.id = t.user_id
