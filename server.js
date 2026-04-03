@@ -21694,6 +21694,29 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       dates_blocked
     });
 
+    // ✅ Enregistrer les webhooks automatiquement
+    try {
+      const { channexAPI } = require('./channex');
+      const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+      for (const wh of [
+        { event_mask: 'booking', callback_url: `${appUrl}/api/channex/webhook`, label: 'BH Bookings' },
+        { event_mask: 'message', callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' }
+      ]) {
+        await channexAPI.post('/webhooks', {
+          webhook: {
+            property_id: result.channex_property_id,
+            callback_url: wh.callback_url,
+            event_mask: wh.event_mask,
+            is_active: true,
+            send_data: true
+          }
+        });
+        console.log(`✅ [CHANNEX] Webhook ${wh.event_mask} enregistré pour ${result.channex_property_id}`);
+      }
+    } catch (whErr) {
+      console.warn('⚠️ [CHANNEX] Erreur enregistrement webhooks (non bloquant):', whErr.message);
+    }
+
     res.json({
       success: true,
       message: 'Logement connecté à Channex avec succès',
@@ -22778,6 +22801,8 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
   const user_id = req.user.id;
 
   try {
+    const { channexAPI } = require('./channex');
+
     // 1. Vérifier que le logement appartient à l'utilisateur et est connecté à Channex
     const propResult = await pool.query(
       `SELECT channex_property_id, channex_enabled
@@ -22856,6 +22881,8 @@ app.post('/api/channex/reviews/:review_id/reply', authenticateToken, async (req,
   if (!property_id)    return res.status(400).json({ error: 'property_id requis' });
 
   try {
+    const { channexAPI } = require('./channex');
+
     // 1. Vérifier que le logement appartient à l'utilisateur
     const propResult = await pool.query(
       `SELECT channex_property_id, channex_enabled
