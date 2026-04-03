@@ -3942,8 +3942,8 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
 
 <!-- ══════════ MODAL ATTESTATION FISCALE ══════════ -->
-<div id="attestationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.18);">
+<div id="attestationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:16px;overflow:hidden;touch-action:none;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px rgba(0,0,0,.18);-webkit-overflow-scrolling:touch;">
 
     <!-- Header -->
     <div style="padding:22px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
@@ -4021,12 +4021,12 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     </div>
 
     <!-- Footer -->
-    <div style="padding:16px 24px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end;">
+    <div style="padding:16px 24px;border-top:1px solid #f1f5f9;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;">
       <button onclick="closeAttestationModal()" style="height:40px;padding:0 18px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Annuler</button>
       <button onclick="generateAttestationPDF(false)" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
         <i class="fas fa-download"></i> Télécharger
       </button>
-      <button onclick="generateAttestationPDF(true)" style="height:40px;padding:0 20px;border-radius:10px;border:1.5px solid #1A7A5E;background:white;color:#1A7A5E;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
+      <button onclick="generateAttestationPDF(true)" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#0D5C3E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
         <i class="fas fa-envelope"></i> Envoyer par email
       </button>
     </div>
