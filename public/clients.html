@@ -4752,10 +4752,15 @@ function _renderDeboursListLocal() {
 
 // ── Ouvrir modal ajout ──
 window.openAddDebours = function(preselectedClientId) {
-  // Remplir select clients
+  // Remplir select clients — utiliser window.clients ou les options du select invoiceClientId comme fallback
   const sel = document.getElementById('deboursClientId');
+  const clientsList = window.clients && window.clients.length > 0
+    ? window.clients
+    : Array.from(document.querySelectorAll('#invoiceClientId option'))
+        .filter(o => o.value)
+        .map(o => ({ id: o.value, company_name: o.textContent }));
   sel.innerHTML = '<option value="">-- Sélectionner un client --</option>';
-  (window.clients || []).forEach(c => {
+  clientsList.forEach(c => {
     const name = c.company_name || `${c.first_name||''} ${c.last_name||''}`.trim();
     sel.innerHTML += `<option value="${c.id}">${name}</option>`;
   });
@@ -4866,7 +4871,7 @@ window.deleteDebours = async function(id) {
 // ── Import dans l'éditeur de facture ──
 window.openImportDebours = function() {
   const clientId = document.getElementById('invoiceClientId')?.value;
-  if (!clientId) { alert('Veuillez d'abord sélectionner un client dans la facture.'); return; }
+  if (!clientId) { alert("Veuillez d'abord sélectionner un client dans la facture."); return; }
 
   const client = (window.clients || []).find(c => String(c.id) === clientId);
   const clientName = client ? (client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim()) : '';
