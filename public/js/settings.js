@@ -1644,7 +1644,7 @@ async function _loadChannexIframe(propertyId, modal, channelCode) {
             <i class="fas fa-arrow-left"></i> Retour
           </button>
           <div style="font-size:13px;font-weight:600;color:#374151;">${OTA_PLATFORMS.find(p=>p.code===channelCode)?.label || ''}</div>
-          <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
+          <button onclick="_closeChannexIframe()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
         </div>
         <div style="flex:1;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;min-height:0;">
           <iframe src="${data.iframe_url}" style="width:100%;height:100%;min-height:580px;border:none;display:block;" allow="same-origin"></iframe>
@@ -1661,6 +1661,12 @@ async function _loadChannexIframe(propertyId, modal, channelCode) {
       </div>
     `;
   }
+}
+
+function _closeChannexIframe() {
+  document.getElementById('channexModal')?.remove();
+  showToast('Vérifiez dans quelques instants que votre plateforme apparaît bien connectée.', 'info');
+  setTimeout(() => loadProperties().catch(() => {}), 1500);
 }
 
 async function channexDisconnect(propertyId) {
