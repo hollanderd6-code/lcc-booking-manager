@@ -3399,6 +3399,17 @@ function getSelectedProperties() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
+        // Marquer les débours utilisés comme facturés
+        const deboursIds = prestations.filter(p => p.deboursId).map(p => p.deboursId);
+        if (deboursIds.length > 0) {
+          deboursIds.forEach(id => {
+            fetch(API_BASE + '/api/debours/' + id + '/status', {
+              method: 'PATCH',
+              headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'billed' })
+            }).catch(e => console.warn('Erreur PATCH débours:', e));
+          });
+        }
         alert('[OK] Facture enregistrée !');
         prestations = [];
         prestationCounter = 0;
@@ -4717,7 +4728,13 @@ function _renderDeboursListLocal() {
 
   container.innerHTML = items.map(d => {
     const client = (window.clients || []).find(c => String(c.id) === String(d.clientId));
-    const clientName = client ? (client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim()) : 'Client inconnu';
+    let clientName = client ? (client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim()) : '';
+    if (!clientName) {
+      // Fallback: chercher dans les selects existants
+      const opt = document.querySelector(`#invoiceClientId option[value="${d.clientId}"]`)
+               || document.querySelector(`#attClientId option[value="${d.clientId}"]`);
+      clientName = opt ? opt.textContent : 'Client inconnu';
+    }
     const status = d.status || 'pending';
     const statusHtml = status === 'billed'
       ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#166534;">✓ Facturé</span>`
@@ -4954,12 +4971,7 @@ window.confirmImportDebours = function() {
       deboursId: cb.value,
       photoDataUrl: photoDataUrl || null
     });
-    // Marquer comme facturé via API (non bloquant)
-    fetch(API_BASE + '/api/debours/' + cb.value + '/status', {
-      method: 'PATCH',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'billed' })
-    }).catch(e => console.warn('Erreur PATCH status débours:', e));
+    // statut mis à jour lors de la sauvegarde de la facture
   });
 
   renderEditorPrestations();
