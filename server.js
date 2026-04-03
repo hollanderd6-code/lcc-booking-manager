@@ -19197,22 +19197,6 @@ cron.schedule('0 8 * * *', async () => {
         params
       );
       const arrivalsCount = arrivalsResult.rows.length;
-      const arrivalsText = arrivalsCount > 0
-        ? arrivalsResult.rows.map(a => `${a.property_name} - ${a.guest_name || 'Voyageur'}`).join(', ')
-        : 'Aucune arrivee prevue';
-
-      console.log('CRON 8H user ' + parentUserId + ' (notif:' + notifUserId + '): ' + arrivalsCount + ' arrivee(s)');
-
-      if (await shouldSendNotification(notifUserId, 'notif_daily_summary')) {
-        for (const token of tokens) {
-          try {
-            await sendNotification(token.fcm_token,
-              arrivalsCount + ' arrivee(s) aujourd\'hui',
-              arrivalsText,
-              { type: 'daily_arrivals', count: arrivalsCount.toString() });
-          } catch (e) { console.error('Erreur notif arrivees:', e.message); }
-        }
-      }
 
       // Departs
       const departuresResult = await pool.query(
@@ -19230,27 +19214,33 @@ cron.schedule('0 8 * * *', async () => {
       );
       const uniqueProps = [...new Set(departuresResult.rows.map(d => d.property_name))];
       const departuresCount = uniqueProps.length;
-      const departuresText = departuresCount > 0
-        ? 'Menages a prevoir : ' + uniqueProps.join(', ')
-        : 'Aucun depart prevu';
 
-      console.log('CRON 8H user ' + parentUserId + ' (notif:' + notifUserId + '): ' + departuresCount + ' depart(s)');
+      console.log(`CRON 8H user ${parentUserId} (notif:${notifUserId}): ${arrivalsCount} arrivée(s), ${departuresCount} départ(s)`);
 
+      // Une seule notification groupée, envoyée même si tout est à 0
       if (await shouldSendNotification(notifUserId, 'notif_daily_summary')) {
+        const arrivalsLine = arrivalsCount > 0
+          ? '📥 ' + arrivalsResult.rows.map(a => `${a.property_name} — ${a.guest_name || 'Voyageur'}`).join(', ')
+          : '📥 Aucune arrivée';
+        const departuresLine = departuresCount > 0
+          ? '🧹 Ménages : ' + uniqueProps.join(', ')
+          : '🧹 Aucun départ';
+
+        const title = `📅 ${arrivalsCount} arrivée(s) · ${departuresCount} départ(s) aujourd'hui`;
+        const body = arrivalsLine + ' | ' + departuresLine;
+
         for (const token of tokens) {
           try {
-            await sendNotification(token.fcm_token,
-              departuresCount + ' depart(s) aujourd\'hui',
-              departuresText,
-              { type: 'daily_departures', count: departuresCount.toString() });
-          } catch (e) { console.error('Erreur notif departs:', e.message); }
+            await sendNotification(token.fcm_token, title, body,
+              { type: 'daily_summary', arrivals: arrivalsCount.toString(), departures: departuresCount.toString() });
+          } catch (e) { console.error('Erreur notif résumé quotidien:', e.message); }
         }
+        console.log(`✅ CRON 8H résumé envoyé à ${tokens.length} token(s) pour ${notifUserId}`);
+      } else {
+        console.log(`ℹ️ CRON 8H notif_daily_summary désactivée pour ${notifUserId}`);
       }
-      console.log('Resume quotidien envoye (' + tokens.length + ' token(s))');
     }
 
-    // 1. Comptes principaux (tokens sans sub_account_id)
-    const usersResult = await pool.query(
       `SELECT DISTINCT u.id
        FROM users u
        JOIN user_fcm_tokens t ON u.id = t.user_id
