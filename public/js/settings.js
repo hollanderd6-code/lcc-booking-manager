@@ -1478,7 +1478,7 @@ const OTA_PLATFORMS = [
 // Modal principale : écran 1 = choix + instructions
 //                   écran 2 = iframe
 // ─────────────────────────────────────────────────────────────
-async function openChannexModal(propertyId, propertyName, isConnected) {
+async function openChannexModal(propertyId, propertyName, isConnected, channelCode = null) {
   const existing = document.getElementById('channexModal');
   if (existing) existing.remove();
 
@@ -1514,8 +1514,13 @@ async function openChannexModal(propertyId, propertyName, isConnected) {
     }
   }
 
-  // Écran 1 : sélection de la plateforme
-  _showPlatformPicker(modal, propertyId, propertyName, isConnected);
+  // Écran 1 : sélection de la plateforme (ou aller direct à l'iframe si channelCode fourni)
+  if (channelCode) {
+    window._otaSelected = channelCode;
+    await _loadChannexIframe(propertyId, modal, channelCode);
+  } else {
+    _showPlatformPicker(modal, propertyId, propertyName, isConnected);
+  }
 }
 
 function _showPlatformPicker(modal, propertyId, propertyName, isConnected) {
@@ -2389,3 +2394,186 @@ async function sendReviewReply(reviewId, propertyId) {
 }
 
 // initReviewsSection est appelé directement depuis openEditPropertyModal (settings.js)
+
+// ══════════════════════════════════════════════════════════════
+// CONNEXIONS OTA GLOBALES
+// ══════════════════════════════════════════════════════════════
+
+async function loadPlatformIds() {
+  const token = localStorage.getItem('lcc_token');
+  const container = document.getElementById('platformIdsList');
+  if (!token || !container) return;
+  try {
+    const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    const props = data.properties || data || [];
+    if (!props.length) {
+      container.innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:8px 0;">Aucun logement créé.</div>';
+      return;
+    }
+
+    const OTA_ICONS = {
+      airbnb: '<i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:14px;"></i>',
+      booking: '<i class="fas fa-building" style="color:#003580;font-size:13px;"></i>',
+      expedia: '<i class="fas fa-plane" style="color:#1B5E96;font-size:13px;"></i>',
+      abritel: '<i class="fas fa-home" style="color:#1C61A5;font-size:13px;"></i>',
+    };
+
+    container.innerHTML = props.map(p => {
+      const id = p._id || p.id;
+      const connected = !!(p.channexEnabled || p.channex_enabled);
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f9fafb;border-radius:10px;margin-bottom:8px;flex-wrap:wrap;gap:8px;cursor:pointer;"
+             onclick="openGlobalOtaModal('${id}')"
+             onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#f9fafb'">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:${connected ? '#16a34a' : '#d1d5db'};display:inline-block;flex-shrink:0;"></span>
+            <span style="font-size:13px;font-weight:600;color:#111827;">${p.name || 'Logement'}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${connected
+              ? '<span style="font-size:12px;font-weight:600;color:#1A7A5E;background:#e8f5f1;padding:3px 10px;border-radius:999px;display:flex;align-items:center;gap:5px;"><i class="fas fa-check-circle"></i> Synchronisation active</span>'
+              : '<button style="font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid #e5e7eb;background:white;color:#374151;cursor:pointer;">Connecter</button>'
+            }
+            <i class="fas fa-chevron-right" style="color:#9ca3af;font-size:11px;"></i>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = '<div style="font-size:13px;color:#9ca3af;">Erreur de chargement.</div>';
+  }
+}
+
+function openGlobalOtaModal(preselectedPropertyId = null) {
+  const modal = document.getElementById('globalOtaModal');
+  if (!modal) return;
+
+  // Remplir le select des logements
+  const sel = document.getElementById('otaPropertySelect');
+  sel.innerHTML = '<option value="">-- Sélectionner un logement --</option>';
+  (window.allProperties || properties || []).forEach(p => {
+    const id = p._id || p.id;
+    const name = p.name || 'Logement';
+    sel.innerHTML += `<option value="${id}">${name}</option>`;
+  });
+
+  // Pré-sélectionner si fourni
+  if (preselectedPropertyId) {
+    sel.value = preselectedPropertyId;
+    onOtaPropertyChange();
+  } else {
+    _showOtaState('initial');
+  }
+
+  modal.style.display = 'flex';
+}
+
+function _showOtaState(state) {
+  const status  = document.getElementById('otaConnectionStatus');
+  const grid    = document.getElementById('otaPlatformsGrid');
+  const notConn = document.getElementById('otaNotConnected');
+  const loading = document.getElementById('otaLoading');
+
+  status.style.display  = 'none';
+  grid.style.display    = 'none';
+  notConn.style.display = 'none';
+  loading.style.display = 'none';
+
+  if (state === 'connected') {
+    status.style.display = 'flex';
+    grid.style.display   = 'block';
+  } else if (state === 'notconnected') {
+    notConn.style.display = 'block';
+  } else if (state === 'loading') {
+    loading.style.display = 'block';
+  }
+}
+
+async function onOtaPropertyChange() {
+  const propertyId = document.getElementById('otaPropertySelect').value;
+  if (!propertyId) { _showOtaState('initial'); return; }
+
+  _showOtaState('loading');
+
+  const prop = (window.allProperties || properties || []).find(p => (p._id || p.id) === propertyId);
+  const isConnected = !!(prop?.channexEnabled || prop?.channex_enabled);
+
+  if (isConnected) {
+    const textEl = document.getElementById('otaConnectionText');
+    if (textEl) textEl.textContent = 'Synchronisation Channex active';
+    _showOtaState('connected');
+    // Mémoriser pour openOtaIframe
+    window._otaSelectedPropertyId = propertyId;
+    window._otaSelectedPropertyName = prop?.name || 'Logement';
+  } else {
+    _showOtaState('notconnected');
+    window._otaSelectedPropertyId = propertyId;
+    window._otaSelectedPropertyName = prop?.name || 'Logement';
+  }
+}
+
+async function activateOtaProperty() {
+  const propertyId = window._otaSelectedPropertyId;
+  if (!propertyId) return;
+
+  _showOtaState('loading');
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const r = await fetch(`${API_URL}/api/channex/connect-property`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ property_id: propertyId })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Erreur activation');
+
+    await loadProperties();
+    showToast('Logement activé ! Vous pouvez maintenant connecter vos plateformes.', 'success');
+    _showOtaState('connected');
+    document.getElementById('otaConnectionText').textContent = 'Synchronisation Channex active';
+  } catch(e) {
+    _showOtaState('notconnected');
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function disconnectOtaProperty() {
+  const propertyId = window._otaSelectedPropertyId;
+  if (!propertyId) return;
+
+  const confirmed = await bhConfirm(
+    'Déconnecter ce logement ?',
+    'Les nouvelles réservations OTA ne seront plus reçues automatiquement.',
+    'Déconnecter', 'Annuler', 'danger'
+  );
+  if (!confirmed) return;
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const r = await fetch(`${API_URL}/api/channex/disconnect-property`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ property_id: propertyId })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Erreur');
+    await loadProperties();
+    loadPlatformIds();
+    showToast('Logement déconnecté.', 'info');
+    _showOtaState('notconnected');
+  } catch(e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function openOtaIframe(channelCode) {
+  const propertyId = window._otaSelectedPropertyId;
+  const propertyName = window._otaSelectedPropertyName || 'Logement';
+  if (!propertyId) return;
+
+  // Fermer la modal globale et ouvrir l'iframe Channex
+  document.getElementById('globalOtaModal').style.display = 'none';
+  await openChannexModal(propertyId, propertyName, true, channelCode);
+}
+
