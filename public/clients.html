@@ -1588,6 +1588,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Profil émetteur (APRÈS loadUserProfile)
   loadEmitterProfile();
+
+  // Init attestation fiscale (date + ville + ligne par défaut)
+  const attDateEl = document.getElementById('attDate');
+  if (attDateEl) attDateEl.value = new Date().toISOString().split('T')[0];
+  if (typeof addAttLine === 'function' && document.getElementById('attLines') && document.getElementById('attLines').children.length === 0) {
+    addAttLine();
+  }
   
   // Ajout d'une ligne par défaut (seulement si vide)
   if (prestations.length === 0) addPrestation('commission');
@@ -1610,9 +1617,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
     document.getElementById('tab-'+id).classList.add('active');
     document.getElementById('btn-'+id).classList.add('active');
-    if (id === 'attestation' && typeof _doOpenAttestationModal === 'function') {
-      setTimeout(_doOpenAttestationModal, 0);
-    }
     window.scrollTo(0, 0);
   }
 
@@ -1632,6 +1636,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const name = c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
       sel.innerHTML += `<option value="${c.id}">${name}</option>`;
     });
+
+    // Remplir le SELECT attestation fiscale
+    const attSel = document.getElementById('attClientId');
+    if (attSel) {
+      attSel.innerHTML = '<option value="">-- Sélectionner un client --</option>';
+      clients.forEach(c => {
+        const name = c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
+        attSel.innerHTML += `<option value="${c.id}">${name}</option>`;
+      });
+    }
 
     // Afficher les clients dans la liste onglet Mes Clients
     const container = document.getElementById('clientsContainer');
@@ -2867,6 +2881,10 @@ window.duplicatePrestation = function(id) {
       if (phoneInput) phoneInput.value = emitterProfile.phone || '';
       if (emailInput) emailInput.value = emitterProfile.email || '';
       if (websiteInput) websiteInput.value = emitterProfile.website || '';
+
+      // Pré-remplir la ville dans l'attestation fiscale
+      const attVilleEl = document.getElementById('attVille');
+      if (attVilleEl) attVilleEl.value = emitterProfile.city || '';
 
       // Charger les champs personnalisés
       if (emitterProfile.customFields && Array.isArray(emitterProfile.customFields)) {
