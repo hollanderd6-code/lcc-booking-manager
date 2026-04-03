@@ -22314,6 +22314,92 @@ app.post('/api/channex/sync-availability/:property_id', authenticateToken, async
   }
 });
 
+// ── Sync restrictions vers Channex (full sync certification) ─
+app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const propResult = await pool.query(
+      `SELECT channex_property_id, channex_room_type_id, channex_rate_plan_id, channex_enabled,
+              base_price, weekend_price
+       FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user_id]
+    );
+
+    const prop = propResult.rows[0];
+    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    // Récupérer les règles min_stay actives
+    const rulesResult = await pool.query(
+      `SELECT * FROM pricing_rules
+       WHERE property_id = $1 AND user_id = $2 AND active = true
+         AND rule_type IN ('min_stay', 'stop_sell')
+       ORDER BY priority DESC`,
+      [property_id, user_id]
+    );
+    const rules = rulesResult.rows;
+    const minStayRules  = rules.filter(r => r.rule_type === 'min_stay');
+    const stopSellRules = rules.filter(r => r.rule_type === 'stop_sell');
+
+    const today = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+    const restrictions = [];
+
+    for (let i = 0; i < 500; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dateStr = fmt(d);
+      const entry = { date: dateStr };
+      let hasRestriction = false;
+
+      // min_stay
+      for (const rule of minStayRules) {
+        if (rule.min_nights == null) continue;
+        if (!rule.start_date && !rule.end_date) {
+          entry.min_stay = rule.min_nights; hasRestriction = true; break;
+        }
+        if (rule.start_date && rule.end_date &&
+            dateStr >= fmt(new Date(rule.start_date)) &&
+            dateStr <= fmt(new Date(rule.end_date))) {
+          entry.min_stay = rule.min_nights; hasRestriction = true; break;
+        }
+      }
+
+      // stop_sell
+      for (const rule of stopSellRules) {
+        if (rule.start_date && rule.end_date &&
+            dateStr >= fmt(new Date(rule.start_date)) &&
+            dateStr <= fmt(new Date(rule.end_date))) {
+          entry.stop_sell = true; hasRestriction = true; break;
+        }
+      }
+
+      // Pousser toutes les dates avec min_stay=1 par défaut (requis par Channex pour le full sync)
+      if (!hasRestriction) {
+        entry.min_stay = 1;
+      }
+      restrictions.push(entry);
+    }
+
+    await pushRestrictions(pool, {
+      property_id,
+      channex_property_id:  prop.channex_property_id,
+      channex_room_type_id: prop.channex_room_type_id,
+      channex_rate_plan_id: prop.channex_rate_plan_id,
+      restrictions
+    });
+
+    console.log(`✅ [CHANNEX SYNC RESTRICTIONS] ${restrictions.length} jours poussés pour ${property_id}`);
+    res.json({ success: true, message: 'Restrictions synchronisées', days: restrictions.length });
+
+  } catch (e) {
+    console.error('❌ [CHANNEX SYNC RESTRICTIONS]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ── Générer un token iFrame Channex ──────────────────────────
 app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
