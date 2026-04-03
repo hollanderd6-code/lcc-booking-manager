@@ -21660,29 +21660,27 @@ app.post('/api/channex/webhook', async (req, res) => {
           );
           const prop = propResult.rows[0];
           if (prop && prop.channex_enabled && prop.channex_property_id) {
-            const reservations = await pool.query(
-              `SELECT start_date, end_date FROM reservations
-               WHERE property_id = $1
-                 AND status NOT IN ('cancelled', 'rejected')
-                 AND end_date >= CURRENT_DATE`,
-              [result.property_id]
-            );
+            // ✅ Channex veut seulement les dates qui changent, pas 500 jours
+            // On envoie uniquement les dates de CETTE réservation
             const dates_blocked = [];
-            for (const r of reservations.rows) {
-              let d = new Date(r.start_date);
-              const end = new Date(r.end_date);
+            if (result.start_date && result.end_date) {
+              let d = new Date(result.start_date);
+              const end = new Date(result.end_date);
               while (d < end) {
                 dates_blocked.push(d.toISOString().substring(0, 10));
                 d.setDate(d.getDate() + 1);
               }
             }
+            // Pour une annulation, les dates redeviennent disponibles (dates_blocked vide = disponible)
+            // On envoie quand même les dates pour mettre à jour la dispo
             await pushAvailability(pool, {
               property_id:          result.property_id,
               channex_property_id:  prop.channex_property_id,
               channex_room_type_id: prop.channex_room_type_id,
-              dates_blocked
+              dates_blocked: result.status === 'cancelled' ? [] : dates_blocked,
+              dates_to_update: dates_blocked // Toujours envoyer les dates concernées
             });
-            console.log(`✅ [CHANNEX SYNC] Availability pushed après booking ${result.uid} (${dates_blocked.length} dates bloquées)`);
+            console.log(`✅ [CHANNEX SYNC] Availability pushed après booking ${result.uid} (${dates_blocked.length} dates modifiées, status: ${result.status})`);
           }
         } catch (availErr) {
           console.warn(`⚠️ [CHANNEX SYNC] Erreur push availability (non bloquant):`, availErr.message);
@@ -22314,7 +22312,7 @@ app.post('/api/channex/sync-availability/:property_id', authenticateToken, async
   }
 });
 
-// ── Sync restrictions vers Channex (full sync certification) ─
+// ── Sync restrictions + tarifs vers Channex (full sync certification) ─
 app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
@@ -22332,58 +22330,91 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
       return res.status(400).json({ error: 'Logement non connecté à Channex' });
     }
 
-    // Récupérer les règles min_stay actives
+    // Récupérer toutes les règles actives
     const rulesResult = await pool.query(
       `SELECT * FROM pricing_rules
        WHERE property_id = $1 AND user_id = $2 AND active = true
-         AND rule_type IN ('min_stay', 'stop_sell')
        ORDER BY priority DESC`,
       [property_id, user_id]
     );
     const rules = rulesResult.rows;
     const minStayRules  = rules.filter(r => r.rule_type === 'min_stay');
     const stopSellRules = rules.filter(r => r.rule_type === 'stop_sell');
+    const periodRules   = rules.filter(r => r.rule_type === 'period');
+    const weekdayRules  = rules.filter(r => r.rule_type === 'weekday');
 
     const today = new Date();
     const fmt = d => d.toISOString().split('T')[0];
     const restrictions = [];
+    const rates = [];
 
     for (let i = 0; i < 500; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const dateStr = fmt(d);
+      const dow = d.getDay();
       const entry = { date: dateStr };
-      let hasRestriction = false;
 
-      // min_stay
+      // ── Prix ──
+      let price = null;
+      for (const rule of periodRules) {
+        if (rule.start_date && rule.end_date && rule.price != null &&
+            dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+          price = parseFloat(rule.price); break;
+        }
+      }
+      if (price === null) {
+        for (const rule of weekdayRules) {
+          if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
+            price = parseFloat(rule.price); break;
+          }
+        }
+      }
+      if (price === null) {
+        const isPremium = (dow === 5 || dow === 6);
+        price = isPremium && prop.weekend_price != null
+          ? parseFloat(prop.weekend_price)
+          : (prop.base_price != null ? parseFloat(prop.base_price) : null);
+      }
+      if (price != null) rates.push({ date: dateStr, price });
+
+      // ── min_stay ──
       for (const rule of minStayRules) {
         if (rule.min_nights == null) continue;
         if (!rule.start_date && !rule.end_date) {
-          entry.min_stay = rule.min_nights; hasRestriction = true; break;
+          entry.min_stay = rule.min_nights; break;
         }
         if (rule.start_date && rule.end_date &&
             dateStr >= fmt(new Date(rule.start_date)) &&
             dateStr <= fmt(new Date(rule.end_date))) {
-          entry.min_stay = rule.min_nights; hasRestriction = true; break;
+          entry.min_stay = rule.min_nights; break;
         }
       }
+      if (entry.min_stay == null) entry.min_stay = 1; // défaut requis par Channex
 
-      // stop_sell
+      // ── stop_sell ──
       for (const rule of stopSellRules) {
         if (rule.start_date && rule.end_date &&
             dateStr >= fmt(new Date(rule.start_date)) &&
             dateStr <= fmt(new Date(rule.end_date))) {
-          entry.stop_sell = true; hasRestriction = true; break;
+          entry.stop_sell = true; break;
         }
       }
 
-      // Pousser toutes les dates avec min_stay=1 par défaut (requis par Channex pour le full sync)
-      if (!hasRestriction) {
-        entry.min_stay = 1;
-      }
       restrictions.push(entry);
     }
 
+    // Pousser tarifs
+    if (rates.length > 0) {
+      await pushRates(pool, {
+        property_id,
+        channex_property_id: prop.channex_property_id,
+        channex_rate_plan_id: prop.channex_rate_plan_id,
+        rates
+      });
+    }
+
+    // Pousser restrictions
     await pushRestrictions(pool, {
       property_id,
       channex_property_id:  prop.channex_property_id,
@@ -22392,8 +22423,8 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
       restrictions
     });
 
-    console.log(`✅ [CHANNEX SYNC RESTRICTIONS] ${restrictions.length} jours poussés pour ${property_id}`);
-    res.json({ success: true, message: 'Restrictions synchronisées', days: restrictions.length });
+    console.log(`✅ [CHANNEX SYNC] ${rates.length} tarifs + ${restrictions.length} restrictions poussés pour ${property_id}`);
+    res.json({ success: true, message: 'Tarifs + restrictions synchronisés', rates: rates.length, restrictions: restrictions.length });
 
   } catch (e) {
     console.error('❌ [CHANNEX SYNC RESTRICTIONS]', e.message);
