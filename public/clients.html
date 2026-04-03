@@ -1610,6 +1610,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
     document.getElementById('tab-'+id).classList.add('active');
     document.getElementById('btn-'+id).classList.add('active');
+    if (id === 'attestation' && typeof _doOpenAttestationModal === 'function') {
+      setTimeout(_doOpenAttestationModal, 0);
+    }
+    window.scrollTo(0, 0);
   }
 
   // --- CLIENTS ---
@@ -4068,9 +4072,6 @@ function _doOpenAttestationModal() {
   // Ligne par défaut
   document.getElementById('attLines').innerHTML = '';
   addAttLine();
-
-  // Afficher via switchTab
-  switchTab('attestation');
 
   // Init signature (après affichage)
   setTimeout(initAttSignature, 100);
