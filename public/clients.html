@@ -1746,6 +1746,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof _doOpenAttestationModal === 'function') _doOpenAttestationModal();
       }, 50);
     }
+    if (id === 'debours') {
+      setTimeout(function() {
+        if (typeof initDeboursTab === 'function') initDeboursTab();
+      }, 50);
+    }
     // Scroll en haut dans le main-content (scroll container v3)
     const main = document.querySelector('.main-content');
     if (main) main.scrollTop = 0;
@@ -4639,15 +4644,10 @@ async function generateAttestationPDF(sendByEmail = false) {
 // SYSTÈME DÉBOURS
 // ══════════════════════════════════════════════════
 
-// Stockage local des débours (remplacé par API plus tard)
-let deboursData = JSON.parse(localStorage.getItem('bh_debours') || '[]');
-
-function saveDeboursToStorage() {
-  localStorage.setItem('bh_debours', JSON.stringify(deboursData));
-}
+let deboursData = []; // chargé depuis l'API
 
 // ── Init tab débours ──
-function initDeboursTab() {
+async function initDeboursTab() {
   // Remplir le filtre client
   const sel = document.getElementById('deboursFilterClient');
   if (sel) {
@@ -4657,18 +4657,51 @@ function initDeboursTab() {
       sel.innerHTML += `<option value="${c.id}">${name}</option>`;
     });
   }
-  renderDeboursList();
+  await loadDeboursFromAPI();
+}
+
+async function loadDeboursFromAPI() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const filterClient = document.getElementById('deboursFilterClient')?.value || '';
+    let url = API_BASE + '/api/debours';
+    if (filterClient) url += '?client_id=' + filterClient;
+    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    const data = await res.json();
+    deboursData = (data.debours || []).map(d => ({
+      id: d.id,
+      clientId: String(d.client_id),
+      description: d.description,
+      montant: parseFloat(d.montant),
+      date: d.date ? d.date.split('T')[0] : '',
+      photoDataUrl: d.photo_url || null,
+      status: d.status || 'pending',
+      createdAt: d.created_at
+    }));
+    _renderDeboursListLocal();
+  } catch(e) {
+    console.error('Erreur chargement débours:', e);
+    _renderDeboursListLocal();
+  }
 }
 
 // ── Rendu de la liste ──
-window.renderDeboursList = function() {
+window.renderDeboursList = async function() {
+  const container = document.getElementById('deboursListContainer');
+  if (!container) return;
+
+  // Recharger depuis API avec filtre client
+  await loadDeboursFromAPI();
+};
+
+function _renderDeboursListLocal() {
   const container = document.getElementById('deboursListContainer');
   if (!container) return;
 
   const filterClient = document.getElementById('deboursFilterClient')?.value || '';
   const filterStatus = document.getElementById('deboursFilterStatus')?.value || '';
 
-  let items = [...deboursData].sort((a,b) => new Date(b.date) - new Date(a.date));
+  let items = [...deboursData].sort((a,b) => new Date(b.createdAt||b.date) - new Date(a.createdAt||a.date));
   if (filterClient) items = items.filter(d => String(d.clientId) === filterClient);
   if (filterStatus) items = items.filter(d => (d.status || 'pending') === filterStatus);
 
@@ -4739,10 +4772,15 @@ window.openAddDebours = function(preselectedClientId) {
 
   const modal = document.getElementById('deboursModal');
   modal.style.display = 'flex';
+  // Forcer le body à ne pas clipper le modal (v3 theme a overflow:hidden)
+  document.body.style.overflow = 'visible';
+  document.documentElement.style.overflow = 'visible';
 };
 
 window.closeDeboursModal = function() {
   document.getElementById('deboursModal').style.display = 'none';
+  document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
 };
 
 // ── Preview photo ──
@@ -4768,7 +4806,7 @@ window.openDeboursPhoto = function(id) {
 };
 
 // ── Sauvegarder débours ──
-window.saveDebours = function() {
+window.saveDebours = async function() {
   const clientId = document.getElementById('deboursClientId').value;
   const description = document.getElementById('deboursDescription').value.trim();
   const montant = parseFloat(document.getElementById('deboursMontant').value) || 0;
@@ -4778,30 +4816,51 @@ window.saveDebours = function() {
   if (!description) { alert('Veuillez saisir une description.'); return; }
   if (!montant) { alert('Veuillez saisir un montant.'); return; }
 
-  const newDebours = {
-    id: 'd_' + Date.now(),
-    clientId,
-    description,
-    montant,
-    date: date || new Date().toISOString().split('T')[0],
-    photoDataUrl: window._deboursPhotoDataUrl || null,
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
+  const saveBtn = document.querySelector('#deboursModal button[onclick="saveDebours()"]');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...'; }
 
-  deboursData.unshift(newDebours);
-  saveDeboursToStorage();
-  closeDeboursModal();
-  renderDeboursList();
-  alert('✅ Justificatif enregistré !');
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const formData = new FormData();
+    formData.append('client_id', clientId);
+    formData.append('description', description);
+    formData.append('montant', montant);
+    formData.append('date', date || new Date().toISOString().split('T')[0]);
+
+    const photoInput = document.getElementById('deboursPhotoInput');
+    if (photoInput.files[0]) formData.append('photo', photoInput.files[0]);
+
+    const res = await fetch(API_BASE + '/api/debours', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    closeDeboursModal();
+    await loadDeboursFromAPI();
+    alert('✅ Justificatif enregistré !');
+  } catch(e) {
+    alert('❌ Erreur : ' + e.message);
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer'; }
+  }
 };
 
 // ── Supprimer débours ──
-window.deleteDebours = function(id) {
+window.deleteDebours = async function(id) {
   if (!confirm('Supprimer ce justificatif ?')) return;
-  deboursData = deboursData.filter(d => d.id !== id);
-  saveDeboursToStorage();
-  renderDeboursList();
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(API_BASE + '/api/debours/' + id, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    await loadDeboursFromAPI();
+  } catch(e) {
+    alert('❌ Erreur suppression : ' + e.message);
+  }
 };
 
 // ── Import dans l'éditeur de facture ──
@@ -4845,21 +4904,26 @@ window.openImportDebours = function() {
   }
 
   document.getElementById('importDeboursModal').style.display = 'flex';
+  document.body.style.overflow = 'visible';
+  document.documentElement.style.overflow = 'visible';
 };
 
 window.closeImportDeboursModal = function() {
   document.getElementById('importDeboursModal').style.display = 'none';
+  document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
 };
 
 window.confirmImportDebours = function() {
   const checkboxes = document.querySelectorAll('#importDeboursListContainer input[type="checkbox"]:checked');
   if (checkboxes.length === 0) { alert('Sélectionnez au moins un justificatif.'); return; }
 
-  checkboxes.forEach(cb => {
+  const token = localStorage.getItem('lcc_token');
+  const selected = Array.from(checkboxes);
+
+  selected.forEach(cb => {
     const d = deboursData.find(x => x.id === cb.value);
     if (!d) return;
-
-    // Ajouter comme prestation débours
     prestationCounter++;
     prestations.push({
       id: 'p' + prestationCounter,
@@ -4871,24 +4935,21 @@ window.confirmImportDebours = function() {
       deboursId: d.id,
       photoDataUrl: d.photoDataUrl || null
     });
-
-    // Marquer comme facturé
-    d.status = 'billed';
+    // Marquer comme facturé via API (non bloquant)
+    fetch(API_BASE + '/api/debours/' + d.id + '/status', {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'billed' })
+    }).catch(e => console.warn('Erreur PATCH status débours:', e));
   });
 
-  saveDeboursToStorage();
   renderEditorPrestations();
   updatePreview();
   closeImportDeboursModal();
-  alert(`✅ ${checkboxes.length} débours ajouté(s) à la facture.`);
+  alert(`✅ ${selected.length} débours ajouté(s) à la facture.`);
 };
 
-// ── Hookup dans switchTab ──
-const _origSwitchTab = window.switchTab;
-window.switchTab = function(id) {
-  _origSwitchTab(id);
-  if (id === 'debours') initDeboursTab();
-};
+// switchTab hookup intégré directement dans la définition principale
 </script>
 
 </body>
