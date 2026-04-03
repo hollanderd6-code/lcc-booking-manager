@@ -4679,8 +4679,6 @@ async function loadDeboursFromAPI() {
     if (filterClient) url += '?client_id=' + filterClient;
     const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
     const data = await res.json();
-    console.log('[DÉBOURS] API response:', JSON.stringify(data.debours?.map(d => ({id:d.id, client_id:d.client_id, status:d.status}))));
-    console.log('[DÉBOURS] window.clients ids:', (window.clients||[]).map(c => c.id));
     deboursData = (data.debours || []).map(d => ({
       id: d.id,
       clientId: String(d.client_id),
