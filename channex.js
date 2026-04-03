@@ -232,10 +232,9 @@ async function pushRestrictions(pool, { property_id, channex_property_id, channe
     console.log(`🔒 [CHANNEX] Push restrictions pour ${channex_property_id} (${restrictions.length} jours)`);
 
     const values = restrictions.map(r => ({
-      property_id: channex_property_id,
       rate_plan_id: channex_rate_plan_id,
       date: r.date,
-      ...(r.min_stay        != null ? { min_stay: r.min_stay }               : {}),
+      ...(r.min_stay        != null ? { min_stay_arrival: r.min_stay, min_stay_through: r.min_stay } : {}),
       ...(r.max_stay        != null ? { max_stay: r.max_stay }               : {}),
       ...(r.stop_sell       != null ? { stop_sell: r.stop_sell }             : {}),
       ...(r.closed_to_arrival   != null ? { closed_to_arrival: r.closed_to_arrival }   : {}),
