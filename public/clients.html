@@ -1190,6 +1190,7 @@ html[data-theme-v3="1"] .invoice-paper {
   <button class="nav-tab" id="btn-dashboard" onclick="switchTab('dashboard')"><i class="fas fa-file-invoice" style="margin-right:6px;"></i>Factures</button>
   <button class="nav-tab" id="btn-create" onclick="switchTab('create')"><i class="fas fa-pen" style="margin-right:6px;"></i>Éditeur</button>
   <button class="nav-tab" id="btn-attestation" onclick="switchTab('attestation')"><i class="fas fa-file-contract" style="margin-right:6px;"></i>Attestation fiscale</button>
+  <button class="nav-tab" id="btn-debours" onclick="switchTab('debours')"><i class="fas fa-receipt" style="margin-right:6px;"></i>Débours</button>
 </div>
 <div class="tab-content active" id="tab-clients">
   <div id="clientsContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
@@ -1314,6 +1315,7 @@ html[data-theme-v3="1"] .invoice-paper {
 <button class="btn-xs btn-secondary" onclick="addPrestation('cleaning')">Ménage</button>
 <button class="btn-xs btn-secondary" onclick="addPrestation('debours')">Débours</button>
 <button class="btn-xs btn-secondary" onclick="addPrestation('other')">Autre</button>
+<button class="btn-xs" onclick="openImportDebours()" style="background:#f59e0b;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-receipt" style="margin-right:4px;"></i>Importer débours</button>
 </div>
 <div id="prestationsListEditor"></div>
 </div>
@@ -1481,6 +1483,44 @@ html[data-theme-v3="1"] .invoice-paper {
         <i class="fas fa-envelope"></i> Envoyer par email
       </button>
     </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-debours">
+  <div style="max-width:800px;margin:0 auto;padding:16px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid #f1f5f9;margin-bottom:20px;">
+      <div>
+        <div style="font-size:17px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Justificatifs de débours</div>
+        <div style="font-size:12px;color:#6B7280;margin-top:2px;">Tickets & factures à intégrer dans vos factures</div>
+      </div>
+      <button onclick="openAddDebours()" style="height:40px;padding:0 18px;border-radius:10px;border:none;background:#f59e0b;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-plus"></i> Ajouter un justificatif
+      </button>
+    </div>
+
+    <!-- Filtres -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <select id="deboursFilterClient" onchange="renderDeboursList()" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:#374151;background:white;">
+        <option value="">Tous les clients</option>
+      </select>
+      <select id="deboursFilterStatus" onchange="renderDeboursList()" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:#374151;background:white;">
+        <option value="">Tous les statuts</option>
+        <option value="pending">Non facturé</option>
+        <option value="billed">Facturé</option>
+      </select>
+    </div>
+
+    <!-- Liste -->
+    <div id="deboursListContainer">
+      <div style="text-align:center;padding:60px 24px;color:#9ca3af;">
+        <i class="fas fa-receipt" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i>
+        <p style="font-size:14px;font-weight:600;margin:0 0 6px;">Aucun justificatif</p>
+        <p style="font-size:13px;margin:0;">Ajoutez votre premier justificatif de débours</p>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1849,12 +1889,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             </div>
 
-            <!-- Footer Stripe -->
-            <div style="padding:10px 16px;border-top:1px solid var(--border-color,#f3f4f6);display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg-secondary,#fafafa);">
+            <!-- Footer actions -->
+            <div style="padding:10px 16px;border-top:1px solid var(--border-color,#f3f4f6);display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg-secondary,#fafafa);flex-wrap:wrap;">
               ${stripePillHtml}
-              <button onclick="connectOwnerStripe('${c.id}')" style="padding:6px 12px;background:#6772E5;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;">
-                <i class="fas fa-plug"></i> ${stripeConnected ? 'Reconnecter' : 'Connecter Stripe'}
-              </button>
+              <div style="display:flex;gap:6px;align-items:center;">
+
+                <button onclick="connectOwnerStripe('${c.id}')" style="padding:6px 12px;background:#6772E5;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:white;display:flex;align-items:center;gap:4px;">
+                  <i class="fas fa-plug"></i> ${stripeConnected ? 'Reconnecter' : 'Connecter Stripe'}
+                </button>
+              </div>
             </div>
 
           </div>`;
@@ -4504,6 +4547,348 @@ async function generateAttestationPDF(sendByEmail = false) {
     loadJsPDFAndGenerate();
   }
 }
+</script>
+
+
+<!-- ══════════ MODAL DÉBOURS ══════════ -->
+<div id="deboursModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center;padding:16px;overflow:hidden;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;overflow-x:hidden;box-shadow:0 24px 60px rgba(0,0,0,.18);-webkit-overflow-scrolling:touch;">
+    <div style="padding:20px 24px 14px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:16px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Nouveau justificatif</div>
+      <button onclick="closeDeboursModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6B7280;"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Client -->
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Client *</label>
+        <select id="deboursClientId" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#111827;box-sizing:border-box;">
+          <option value="">-- Sélectionner un client --</option>
+        </select>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Description *</label>
+        <input id="deboursDescription" type="text" placeholder="Ex : Ampoules, produits ménagers..." style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#111827;box-sizing:border-box;">
+      </div>
+
+      <!-- Montant + Date -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Montant TTC (€) *</label>
+          <input id="deboursMontant" type="number" step="0.01" placeholder="0.00" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#111827;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Date</label>
+          <input id="deboursDate" type="date" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#111827;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- Photo -->
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Photo du justificatif</label>
+        <div id="deboursPhotoZone" onclick="document.getElementById('deboursPhotoInput').click()" style="border:2px dashed #e5e7eb;border-radius:12px;padding:24px;text-align:center;cursor:pointer;background:#fafafa;transition:border-color .2s;" onmouseover="this.style.borderColor='#f59e0b'" onmouseout="this.style.borderColor='#e5e7eb'">
+          <div id="deboursPhotoPreview" style="display:none;">
+            <img id="deboursPhotoImg" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;">
+            <div style="margin-top:8px;font-size:12px;color:#6b7280;">Cliquer pour changer</div>
+          </div>
+          <div id="deboursPhotoPlaceholder">
+            <i class="fas fa-camera" style="font-size:28px;color:#d1d5db;display:block;margin-bottom:8px;"></i>
+            <div style="font-size:13px;font-weight:600;color:#6b7280;">Prendre une photo ou choisir un fichier</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">JPG, PNG, PDF — max 10 Mo</div>
+          </div>
+        </div>
+        <input id="deboursPhotoInput" type="file" accept="image/*,application/pdf" capture="environment" style="display:none;" onchange="previewDeboursPhoto(this)">
+      </div>
+
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeDeboursModal()" style="height:40px;padding:0 18px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Annuler</button>
+      <button onclick="saveDebours()" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#f59e0b;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-save"></i> Enregistrer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL IMPORT DÉBOURS (éditeur facture) ══════════ -->
+<div id="importDeboursModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center;padding:16px;overflow:hidden;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;overflow-x:hidden;box-shadow:0 24px 60px rgba(0,0,0,.18);-webkit-overflow-scrolling:touch;">
+    <div style="padding:20px 24px 14px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Importer des débours</div>
+        <div id="importDeboursClientName" style="font-size:12px;color:#6B7280;margin-top:2px;"></div>
+      </div>
+      <button onclick="closeImportDeboursModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6B7280;"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="importDeboursListContainer" style="padding:16px 24px;display:flex;flex-direction:column;gap:8px;min-height:100px;">
+      <div style="text-align:center;color:#9ca3af;padding:20px;font-size:13px;">Chargement...</div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeImportDeboursModal()" style="height:40px;padding:0 18px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Annuler</button>
+      <button onclick="confirmImportDebours()" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-plus"></i> Ajouter à la facture
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// SYSTÈME DÉBOURS
+// ══════════════════════════════════════════════════
+
+// Stockage local des débours (remplacé par API plus tard)
+let deboursData = JSON.parse(localStorage.getItem('bh_debours') || '[]');
+
+function saveDeboursToStorage() {
+  localStorage.setItem('bh_debours', JSON.stringify(deboursData));
+}
+
+// ── Init tab débours ──
+function initDeboursTab() {
+  // Remplir le filtre client
+  const sel = document.getElementById('deboursFilterClient');
+  if (sel) {
+    sel.innerHTML = '<option value="">Tous les clients</option>';
+    (window.clients || []).forEach(c => {
+      const name = c.company_name || `${c.first_name||''} ${c.last_name||''}`.trim();
+      sel.innerHTML += `<option value="${c.id}">${name}</option>`;
+    });
+  }
+  renderDeboursList();
+}
+
+// ── Rendu de la liste ──
+window.renderDeboursList = function() {
+  const container = document.getElementById('deboursListContainer');
+  if (!container) return;
+
+  const filterClient = document.getElementById('deboursFilterClient')?.value || '';
+  const filterStatus = document.getElementById('deboursFilterStatus')?.value || '';
+
+  let items = [...deboursData].sort((a,b) => new Date(b.date) - new Date(a.date));
+  if (filterClient) items = items.filter(d => String(d.clientId) === filterClient);
+  if (filterStatus) items = items.filter(d => (d.status || 'pending') === filterStatus);
+
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:60px 24px;color:#9ca3af;">
+        <i class="fas fa-receipt" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i>
+        <p style="font-size:14px;font-weight:600;margin:0 0 6px;">Aucun justificatif</p>
+        <p style="font-size:13px;margin:0;">Cliquez sur "Ajouter un justificatif" pour commencer</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = items.map(d => {
+    const client = (window.clients || []).find(c => String(c.id) === String(d.clientId));
+    const clientName = client ? (client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim()) : 'Client inconnu';
+    const status = d.status || 'pending';
+    const statusHtml = status === 'billed'
+      ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#166534;">✓ Facturé</span>`
+      : `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;">En attente</span>`;
+
+    const dateStr = d.date ? new Date(d.date).toLocaleDateString('fr-FR') : '—';
+    const montant = parseFloat(d.montant || 0).toFixed(2).replace('.', ',') + ' €';
+
+    const photoHtml = d.photoDataUrl
+      ? `<img src="${d.photoDataUrl}" onclick="openDeboursPhoto('${d.id}')" style="width:56px;height:56px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #e5e7eb;flex-shrink:0;" title="Voir le justificatif">`
+      : `<div style="width:56px;height:56px;border-radius:8px;background:#f3f4f6;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-image" style="color:#d1d5db;font-size:18px;"></i></div>`;
+
+    return `
+    <div style="background:white;border:1px solid #e5e7eb;border-radius:12px;padding:14px;display:flex;gap:12px;align-items:flex-start;" id="debours-${d.id}">
+      ${photoHtml}
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="font-size:14px;font-weight:600;color:#111827;">${d.description}</span>
+          ${statusHtml}
+        </div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">${clientName} · ${dateStr}</div>
+        <div style="font-size:16px;font-weight:700;color:#f59e0b;">${montant}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <button onclick="deleteDebours('${d.id}')" style="width:32px;height:32px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Supprimer">
+          <i class="fas fa-trash" style="font-size:11px;"></i>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+// ── Ouvrir modal ajout ──
+window.openAddDebours = function(preselectedClientId) {
+  // Remplir select clients
+  const sel = document.getElementById('deboursClientId');
+  sel.innerHTML = '<option value="">-- Sélectionner un client --</option>';
+  (window.clients || []).forEach(c => {
+    const name = c.company_name || `${c.first_name||''} ${c.last_name||''}`.trim();
+    sel.innerHTML += `<option value="${c.id}">${name}</option>`;
+  });
+  if (preselectedClientId) sel.value = preselectedClientId;
+
+  // Date du jour
+  document.getElementById('deboursDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('deboursDescription').value = '';
+  document.getElementById('deboursMontant').value = '';
+  document.getElementById('deboursPhotoInput').value = '';
+  document.getElementById('deboursPhotoPreview').style.display = 'none';
+  document.getElementById('deboursPhotoPlaceholder').style.display = 'block';
+  window._deboursPhotoDataUrl = null;
+
+  const modal = document.getElementById('deboursModal');
+  modal.style.display = 'flex';
+};
+
+window.closeDeboursModal = function() {
+  document.getElementById('deboursModal').style.display = 'none';
+};
+
+// ── Preview photo ──
+window.previewDeboursPhoto = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._deboursPhotoDataUrl = e.target.result;
+    document.getElementById('deboursPhotoImg').src = e.target.result;
+    document.getElementById('deboursPhotoPreview').style.display = 'block';
+    document.getElementById('deboursPhotoPlaceholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+};
+
+// ── Voir photo en grand ──
+window.openDeboursPhoto = function(id) {
+  const d = deboursData.find(x => x.id === id);
+  if (!d?.photoDataUrl) return;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"></body></html>`);
+};
+
+// ── Sauvegarder débours ──
+window.saveDebours = function() {
+  const clientId = document.getElementById('deboursClientId').value;
+  const description = document.getElementById('deboursDescription').value.trim();
+  const montant = parseFloat(document.getElementById('deboursMontant').value) || 0;
+  const date = document.getElementById('deboursDate').value;
+
+  if (!clientId) { alert('Veuillez sélectionner un client.'); return; }
+  if (!description) { alert('Veuillez saisir une description.'); return; }
+  if (!montant) { alert('Veuillez saisir un montant.'); return; }
+
+  const newDebours = {
+    id: 'd_' + Date.now(),
+    clientId,
+    description,
+    montant,
+    date: date || new Date().toISOString().split('T')[0],
+    photoDataUrl: window._deboursPhotoDataUrl || null,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+
+  deboursData.unshift(newDebours);
+  saveDeboursToStorage();
+  closeDeboursModal();
+  renderDeboursList();
+  alert('✅ Justificatif enregistré !');
+};
+
+// ── Supprimer débours ──
+window.deleteDebours = function(id) {
+  if (!confirm('Supprimer ce justificatif ?')) return;
+  deboursData = deboursData.filter(d => d.id !== id);
+  saveDeboursToStorage();
+  renderDeboursList();
+};
+
+// ── Import dans l'éditeur de facture ──
+window.openImportDebours = function() {
+  const clientId = document.getElementById('invoiceClientId')?.value;
+  if (!clientId) { alert('Veuillez d'abord sélectionner un client dans la facture.'); return; }
+
+  const client = (window.clients || []).find(c => String(c.id) === clientId);
+  const clientName = client ? (client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim()) : '';
+
+  document.getElementById('importDeboursClientName').textContent = clientName ? `Client : ${clientName}` : '';
+
+  const pending = deboursData.filter(d => String(d.clientId) === clientId && (d.status || 'pending') === 'pending');
+
+  const container = document.getElementById('importDeboursListContainer');
+
+  if (pending.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">
+      <i class="fas fa-receipt" style="display:block;font-size:30px;margin-bottom:10px;opacity:0.3;"></i>
+      Aucun débours en attente pour ce client
+    </div>`;
+  } else {
+    container.innerHTML = pending.map(d => {
+      const dateStr = d.date ? new Date(d.date).toLocaleDateString('fr-FR') : '—';
+      const montant = parseFloat(d.montant||0).toFixed(2).replace('.', ',') + ' €';
+      const photoHtml = d.photoDataUrl
+        ? `<img src="${d.photoDataUrl}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid #e5e7eb;">`
+        : `<div style="width:44px;height:44px;border-radius:6px;background:#f3f4f6;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-image" style="color:#d1d5db;"></i></div>`;
+
+      return `
+      <label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='#f59e0b'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <input type="checkbox" value="${d.id}" style="width:18px;height:18px;accent-color:#f59e0b;flex-shrink:0;">
+        ${photoHtml}
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:#111827;">${d.description}</div>
+          <div style="font-size:12px;color:#6b7280;">${dateStr}</div>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:#f59e0b;flex-shrink:0;">${montant}</div>
+      </label>`;
+    }).join('');
+  }
+
+  document.getElementById('importDeboursModal').style.display = 'flex';
+};
+
+window.closeImportDeboursModal = function() {
+  document.getElementById('importDeboursModal').style.display = 'none';
+};
+
+window.confirmImportDebours = function() {
+  const checkboxes = document.querySelectorAll('#importDeboursListContainer input[type="checkbox"]:checked');
+  if (checkboxes.length === 0) { alert('Sélectionnez au moins un justificatif.'); return; }
+
+  checkboxes.forEach(cb => {
+    const d = deboursData.find(x => x.id === cb.value);
+    if (!d) return;
+
+    // Ajouter comme prestation débours
+    prestationCounter++;
+    prestations.push({
+      id: 'p' + prestationCounter,
+      type: 'debours',
+      description: d.description,
+      quantity: 1,
+      unitPrice: parseFloat(d.montant) || 0,
+      isDebours: true,
+      deboursId: d.id,
+      photoDataUrl: d.photoDataUrl || null
+    });
+
+    // Marquer comme facturé
+    d.status = 'billed';
+  });
+
+  saveDeboursToStorage();
+  renderEditorPrestations();
+  updatePreview();
+  closeImportDeboursModal();
+  alert(`✅ ${checkboxes.length} débours ajouté(s) à la facture.`);
+};
+
+// ── Hookup dans switchTab ──
+const _origSwitchTab = window.switchTab;
+window.switchTab = function(id) {
+  _origSwitchTab(id);
+  if (id === 'debours') initDeboursTab();
+};
 </script>
 
 </body>
