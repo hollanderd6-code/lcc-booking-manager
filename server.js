@@ -22522,7 +22522,7 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
           ? parseFloat(prop.weekend_price)
           : (prop.base_price != null ? parseFloat(prop.base_price) : null);
       }
-      if (price != null) rates.push({ date: dateStr, price });
+      if (price != null) entry.rate = price; // rate inclus dans la restriction (format ARI Channex)
 
       // ── min_stay ──
       for (const rule of minStayRules) {
@@ -22550,17 +22550,7 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
       restrictions.push(entry);
     }
 
-    // Pousser tarifs
-    if (rates.length > 0) {
-      await pushRates(pool, {
-        property_id,
-        channex_property_id: prop.channex_property_id,
-        channex_rate_plan_id: prop.channex_rate_plan_id,
-        rates
-      });
-    }
-
-    // Pousser restrictions
+    // Pousser tarifs + restrictions en un seul appel (format ARI Channex)
     await pushRestrictions(pool, {
       property_id,
       channex_property_id:  prop.channex_property_id,
@@ -22569,8 +22559,8 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
       restrictions
     });
 
-    console.log(`✅ [CHANNEX SYNC] ${rates.length} tarifs + ${restrictions.length} restrictions poussés pour ${property_id}`);
-    res.json({ success: true, message: 'Tarifs + restrictions synchronisés', rates: rates.length, restrictions: restrictions.length });
+    console.log(`✅ [CHANNEX SYNC] ${restrictions.length} restrictions+tarifs poussés pour ${property_id}`);
+    res.json({ success: true, message: 'Tarifs + restrictions synchronisés', restrictions: restrictions.length });
 
   } catch (e) {
     console.error('❌ [CHANNEX SYNC RESTRICTIONS]', e.message);
