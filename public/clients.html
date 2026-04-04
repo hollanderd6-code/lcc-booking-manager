@@ -2772,9 +2772,25 @@ window.deleteOwnerInvoice = function (id) {
   window.downloadOwnerInvoice = async function (id) {
   try {
     const token = localStorage.getItem('lcc_token');
+    // Construire le profil émetteur depuis les données locales
+    const ep = window.emitterProfile || {};
+    const up = window.userProfile || {};
+    const sp = JSON.parse(localStorage.getItem('lcc_settings_profile') || '{}');
+    const emitterPayload = {
+      company:     ep.company   || up.company   || '',
+      address:     ep.address   || up.address   || '',
+      postalCode:  ep.postalCode|| up.postalCode || '',
+      city:        ep.city      || up.city       || '',
+      siret:       ep.siret     || up.siret      || '',
+      phone:       ep.phone     || sp.phone      || '',
+      email:       ep.email     || sp.invoiceEmail|| up.email || '',
+      website:     ep.website   || sp.website    || '',
+    };
     // Généré côté serveur avec PDFKit (fiable, inclut les annexes débours)
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/pdf', {
-      headers: { Authorization: 'Bearer ' + token }
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emitter: emitterPayload })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
