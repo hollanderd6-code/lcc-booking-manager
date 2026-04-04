@@ -2696,30 +2696,31 @@ window.deleteOwnerInvoice = function (id) {
   </div>
 `;
 
-    // Annexes : photos des débours
+    // Annexes : photos des débours — injectées dans #tempInvoicePaper
     const deboursWithPhotos = items.filter(it => it.is_debours && it.debours_id && deboursPhotos[it.debours_id]);
     if (deboursWithPhotos.length > 0) {
-      const annexeDiv = document.createElement('div');
-      annexeDiv.style.cssText = 'background:white;width:210mm;padding:16mm 18mm;font-family:Arial,Helvetica,sans-serif;color:#1f2937;box-sizing:border-box;font-size:12px;page-break-before:always;';
-      let annexeHtml = `
-        <div style="font-size:16px;font-weight:700;color:#1A7A5E;margin-bottom:6mm;padding-bottom:4mm;border-bottom:2px solid #1A7A5E;">
-          Annexe — Justificatifs de débours
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8mm;">
-      `;
-      deboursWithPhotos.forEach(it => {
-        const photoUrl = deboursPhotos[it.debours_id];
-        const total = parseFloat(it.total || 0).toFixed(2);
-        annexeHtml += `
-          <div style="border:1px solid #e5e7eb;border-radius:6px;padding:4mm;break-inside:avoid;">
-            <div style="font-weight:600;font-size:12px;margin-bottom:3mm;">${it.description || 'Débours'} — ${total} €</div>
-            <img src="${photoUrl}" style="width:100%;max-height:80mm;object-fit:contain;border-radius:4px;" crossorigin="anonymous">
-          </div>
+      const paper = container.querySelector('#tempInvoicePaper') || container.getElementById?.('tempInvoicePaper');
+      if (paper) {
+        let annexeHtml = `
+          <div style="page-break-before:always;padding-top:10mm;">
+            <div style="font-size:16px;font-weight:700;color:#1A7A5E;margin-bottom:6mm;padding-bottom:4mm;border-bottom:2px solid #1A7A5E;">
+              Annexe — Justificatifs de débours
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8mm;">
         `;
-      });
-      annexeHtml += '</div>';
-      annexeDiv.innerHTML = annexeHtml;
-      container.appendChild(annexeDiv);
+        deboursWithPhotos.forEach(it => {
+          const photoUrl = deboursPhotos[it.debours_id];
+          const total = parseFloat(it.total || 0).toFixed(2);
+          annexeHtml += `
+            <div style="border:1px solid #e5e7eb;border-radius:6px;padding:4mm;break-inside:avoid;">
+              <div style="font-weight:600;font-size:12px;margin-bottom:3mm;">${it.description || 'Débours'} — ${total} €</div>
+              <img src="${photoUrl}" style="width:100%;max-height:80mm;object-fit:contain;border-radius:4px;" crossorigin="anonymous">
+            </div>
+          `;
+        });
+        annexeHtml += '</div></div>';
+        paper.insertAdjacentHTML('beforeend', annexeHtml);
+      }
     }
   } // fin buildInvoiceHTML
 
@@ -2789,8 +2790,8 @@ window.deleteOwnerInvoice = function (id) {
     buildInvoiceHTML(inv, items, client, tempContainer, deboursPhotos);
 
     // Attendre que les images soient chargées (facture + annexes)
-    const invoiceElement = tempContainer; // inclut facture + annexe débours
-    const imgs = tempContainer.querySelectorAll('img');
+    const invoiceElement = document.getElementById('tempInvoicePaper');
+    const imgs = invoiceElement.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) resolve();
       else { img.onload = resolve; img.onerror = resolve; }
