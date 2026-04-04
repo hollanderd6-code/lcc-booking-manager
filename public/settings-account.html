@@ -1850,11 +1850,12 @@ if (logoInput && logoPreview) {
             // Fusionner : API pour les champs de base, localStorage pour les champs
             // non gérés par le backend (phone, invoiceEmail, website, customFields)
             const merged = Object.assign({}, apiProfile, {
-              phone:        localData.phone        || apiProfile.phone        || '',
-              invoiceEmail: localData.invoiceEmail || apiProfile.invoiceEmail || '',
-              website:      localData.website      || apiProfile.website      || '',
-              customFields: localData.customFields || apiProfile.customFields || [],
-              logoUrl:      apiProfile.logoUrl     || localData.logoUrl       || ''
+              // Priorité à l'API (DB) pour phone/invoiceEmail/website maintenant sauvegardés
+              phone:        apiProfile.phone        || localData.phone        || '',
+              invoiceEmail: apiProfile.invoiceEmail || localData.invoiceEmail || '',
+              website:      apiProfile.website      || localData.website      || '',
+              customFields: localData.customFields  || apiProfile.customFields || [],
+              logoUrl:      apiProfile.logoUrl      || localData.logoUrl      || ''
             });
             fillProfileFields(merged);
             // Sauvegarder la version fusionnée pour les prochains chargements hors-ligne
