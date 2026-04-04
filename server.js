@@ -14614,6 +14614,271 @@ res.json({
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// ── Télécharger PDF d'une facture propriétaire (généré server-side avec PDFKit) ──
+app.get('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const invoiceId = req.params.id;
+
+    // Récupérer facture + items + client
+    const invRes = await pool.query('SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2', [invoiceId, userId]);
+    if (invRes.rows.length === 0) return res.status(404).json({ error: 'Facture non trouvée' });
+    const inv = invRes.rows[0];
+
+    const itemsRes = await pool.query('SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index', [invoiceId]);
+    const items = itemsRes.rows;
+
+    const clientRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1', [inv.client_id]);
+    const client = clientRes.rows[0] || {};
+
+    // Récupérer photos débours
+    const deboursItems = items.filter(it => it.is_debours && it.debours_id);
+    const deboursPhotos = {}; // debours_id → { photo_url, description }
+    await Promise.all(deboursItems.map(async it => {
+      try {
+        const dr = await pool.query('SELECT * FROM debours WHERE id = $1', [it.debours_id]);
+        if (dr.rows.length > 0 && dr.rows[0].photo_url) {
+          deboursPhotos[it.debours_id] = dr.rows[0].photo_url;
+        }
+      } catch(e) {}
+    }));
+
+    // Profil émetteur depuis user_settings
+    const settingsRes = await pool.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
+    const settings = settingsRes.rows[0]?.settings || {};
+    const ep = settings.emitterProfile || {};
+    const up = settingsRes.rows[0]?.settings || {};
+
+    const senderName  = ep.company || up.company || 'Votre entreprise';
+    const senderAddr  = ep.address || '';
+    const senderCP    = ep.postalCode || '';
+    const senderCity  = ep.city || '';
+    const senderEmail = ep.email || ep.invoiceEmail || '';
+    const senderSiret = ep.siret || '';
+
+    const clientName  = client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || 'Client';
+    const clientAddr  = client.address || '';
+    const clientCP    = client.postal_code || '';
+    const clientCity  = client.city || '';
+    const clientEmail = client.email || '';
+
+    // Générer PDF avec PDFKit
+    const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
+    res.setHeader('Content-Type', 'application/pdf');
+    const filename = (inv.invoice_number || 'facture').replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf';
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+
+    const W = 595, mg = 50;
+    const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
+    const LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
+
+    // ── PAGE 1 : Facture ──
+    let y = mg;
+
+    // Titre
+    const invTitle = inv.is_credit_note ? 'AVOIR' : (inv.invoice_number ? 'FACTURE' : 'FACTURE BROUILLON');
+    const invRef   = inv.invoice_number || 'BROUILLON';
+    doc.font('Helvetica-Bold').fontSize(22).fillColor(GREEN).text(invTitle + (inv.invoice_number ? '' : ''), mg, y);
+    y += 28;
+    const issDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
+    doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(issDate, mg, y);
+    y += 6;
+
+    // Ligne verte
+    doc.rect(mg, y, W - mg*2, 2).fill(GREEN);
+    y += 14;
+
+    // Blocs émetteur / destinataire
+    const colW = (W - mg*2 - 20) / 2;
+    const col2 = mg + colW + 20;
+    const boxTop = y;
+
+    // Cadre émetteur
+    doc.rect(mg, boxTop, colW, 90).strokeColor(BORDER).lineWidth(1).stroke();
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('ÉMETTEUR', mg+8, boxTop+8);
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(senderName, mg+8, boxTop+20, {width: colW-16});
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    let yL = boxTop + 36;
+    if (senderAddr)  { doc.text(senderAddr, mg+8, yL, {width:colW-16}); yL+=13; }
+    if (senderCP||senderCity) { doc.text(`${senderCP} ${senderCity}`.trim(), mg+8, yL); yL+=13; }
+    if (senderSiret) { doc.text(`SIRET : ${senderSiret}`, mg+8, yL); yL+=13; }
+    if (senderEmail) { doc.text(senderEmail, mg+8, yL); }
+
+    // Cadre destinataire
+    doc.rect(col2, boxTop, colW, 90).strokeColor(BORDER).lineWidth(1).stroke();
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('DESTINATAIRE', col2+8, boxTop+8);
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(clientName, col2+8, boxTop+20, {width: colW-16});
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    let yR = boxTop + 36;
+    if (clientAddr)  { doc.text(clientAddr, col2+8, yR, {width:colW-16}); yR+=13; }
+    if (clientCP||clientCity) { doc.text(`${clientCP} ${clientCity}`.trim(), col2+8, yR); yR+=13; }
+    if (clientEmail) { doc.text(clientEmail, col2+8, yR); }
+
+    y = boxTop + 100;
+
+    // Échéance + Période
+    if (inv.due_date) {
+      const dueDate = new Date(inv.due_date).toLocaleDateString('fr-FR');
+      doc.font('Helvetica').fontSize(10).fillColor(GRAY).text('Échéance : ', mg, y, {continued:true});
+      doc.font('Helvetica-Bold').fillColor(DARK).text(dueDate);
+      y += 16;
+    }
+    if (inv.period_start && inv.period_end) {
+      const ps = new Date(inv.period_start).toLocaleDateString('fr-FR');
+      const pe = new Date(inv.period_end).toLocaleDateString('fr-FR');
+      doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(`Période : du ${ps} au ${pe}`, mg, y);
+      y += 16;
+    }
+    y += 4;
+
+    // En-tête tableau
+    const colDesc = mg, colBase = mg+270, colTaux = mg+360, colTotal = mg+450;
+    const rowH = 28;
+    doc.rect(mg, y, W-mg*2, rowH).fill(GREEN);
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('white');
+    doc.text('DESCRIPTION', colDesc+6, y+9, {width:260});
+    doc.text('BASE', colBase, y+9, {width:80, align:'right'});
+    doc.text('TAUX/QTÉ', colTaux, y+9, {width:80, align:'right'});
+    doc.text('TOTAL HT', colTotal, y+9, {width:W-mg-colTotal, align:'right'});
+    y += rowH;
+
+    // Lignes items
+    items.forEach((item, idx) => {
+      const bg = idx % 2 === 1 ? LIGHT : 'white';
+      doc.rect(mg, y, W-mg*2, rowH).fill(bg);
+      doc.rect(mg, y, W-mg*2, rowH).strokeColor(BORDER).lineWidth(0.5).stroke();
+
+      const desc = item.description || 'Prestation';
+      const total = parseFloat(item.total || 0);
+      let baseStr, tauxStr;
+
+      if (item.item_type === 'commission') {
+        baseStr = parseFloat(item.rental_amount||0).toFixed(2) + ' €';
+        tauxStr = parseFloat(item.commission_rate||0) + ' %';
+      } else {
+        baseStr = String(item.quantity || 1);
+        tauxStr = parseFloat(item.unit_price||0).toFixed(2) + ' €';
+      }
+
+      doc.font('Helvetica').fontSize(10).fillColor(DARK);
+      doc.text(desc, colDesc+6, y+9, {width:260});
+      doc.text(baseStr, colBase, y+9, {width:80, align:'right'});
+      doc.text(tauxStr, colTaux, y+9, {width:80, align:'right'});
+      doc.font('Helvetica-Bold').text(total.toFixed(2)+' €', colTotal, y+9, {width:W-mg-colTotal, align:'right'});
+      y += rowH;
+    });
+
+    y += 16;
+
+    // Totaux
+    const subtotal = parseFloat(inv.subtotal_ht || 0);
+    const vatAmt   = parseFloat(inv.vat_amount  || 0);
+    const totalTtc = parseFloat(inv.total_ttc   || 0);
+    const totX = W - mg - 220;
+
+    doc.font('Helvetica').fontSize(10).fillColor(GRAY);
+    doc.text('Total HT', totX, y, {width:140});
+    doc.font('Helvetica-Bold').fillColor(DARK).text(subtotal.toFixed(2)+' €', totX+140, y, {width:80, align:'right'});
+    y += 16;
+
+    if (vatAmt > 0) {
+      doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(`TVA (${inv.vat_rate}%)`, totX, y, {width:140});
+      doc.font('Helvetica-Bold').fillColor(DARK).text(vatAmt.toFixed(2)+' €', totX+140, y, {width:80, align:'right'});
+      y += 16;
+    } else {
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text('TVA non applicable, art. 293 B du CGI', mg, y);
+      y += 14;
+    }
+
+    // Ligne séparatrice total
+    doc.rect(totX, y, 220, 1.5).fill(GREEN);
+    y += 8;
+    doc.font('Helvetica-Bold').fontSize(13).fillColor(GREEN).text('Total', totX, y, {width:140});
+    doc.text(totalTtc.toFixed(2)+' €', totX+140, y, {width:80, align:'right'});
+    y += 26;
+
+    // Conditions
+    if (inv.payment_delay || inv.payment_mode || inv.late_interest || inv.notes) {
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(GREEN).text('CONDITIONS', mg, y);
+      y += 14;
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+      if (inv.payment_delay) { doc.text(`Délai de règlement : ${inv.payment_delay}`, mg, y); y+=13; }
+      if (inv.payment_mode)  { doc.text(`Mode de règlement : ${inv.payment_mode}`, mg, y); y+=13; }
+      if (inv.late_interest) { doc.text(`Intérêts de retard : ${inv.late_interest}`, mg, y); y+=13; }
+      if (inv.notes)         { doc.text(inv.notes, mg, y, {width:W-mg*2, oblique:true}); }
+    }
+
+    // Footer
+    doc.rect(mg, 800, W-mg*2, 1).fill(BORDER);
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+       .text('Facture générée via boostinghost.fr — logiciel de gestion locative', mg, 810, {width:W-mg*2, align:'center'});
+
+    // ── PAGES ANNEXES : photos des débours ──
+    const deboursWithPhotos = deboursItems.filter(it => deboursPhotos[it.debours_id]);
+    if (deboursWithPhotos.length > 0) {
+      doc.addPage();
+      let ay = mg;
+
+      doc.font('Helvetica-Bold').fontSize(16).fillColor(GREEN).text('Annexe — Justificatifs de débours', mg, ay);
+      ay += 4;
+      doc.rect(mg, ay+14, W-mg*2, 2).fill(GREEN);
+      ay += 28;
+
+      const imgW = (W - mg*2 - 20) / 2;
+      let col = 0;
+
+      for (const it of deboursWithPhotos) {
+        const photoUrl = deboursPhotos[it.debours_id];
+        const total = parseFloat(it.total||0).toFixed(2);
+        const ax = col === 0 ? mg : mg + imgW + 20;
+
+        if (col === 0 && ay + 180 > 780) {
+          doc.addPage();
+          ay = mg;
+        }
+
+        // Cadre
+        doc.rect(ax, ay, imgW, 160).strokeColor(BORDER).lineWidth(1).stroke();
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK)
+           .text(`${it.description || 'Débours'} — ${total} €`, ax+6, ay+6, {width:imgW-12});
+
+        // Télécharger et intégrer l'image
+        try {
+          const https = require('https');
+          const http = require('http');
+          const imageBuffer = await new Promise((resolve, reject) => {
+            const proto = photoUrl.startsWith('https') ? https : http;
+            proto.get(photoUrl, resp => {
+              const chunks = [];
+              resp.on('data', c => chunks.push(c));
+              resp.on('end', () => resolve(Buffer.concat(chunks)));
+              resp.on('error', reject);
+            }).on('error', reject);
+          });
+          doc.image(imageBuffer, ax+6, ay+22, {width:imgW-12, height:130, fit:[imgW-12, 130], align:'center', valign:'center'});
+        } catch(e) {
+          doc.font('Helvetica').fontSize(9).fillColor(GRAY).text('Image non disponible', ax+6, ay+80);
+        }
+
+        col++;
+        if (col >= 2) { col = 0; ay += 170; }
+      }
+    }
+
+    doc.end();
+    console.log(`✅ [PDF] Facture ${invoiceId} générée avec ${deboursWithPhotos.length} justificatif(s)`);
+
+  } catch(e) {
+    console.error('❌ GET /api/owner-invoices/:id/pdf:', e.message);
+    if (!res.headersSent) res.status(500).json({ error: e.message });
+  }
+});
+
 // CRÉER UN AVOIR SUR UNE FACTURE EXISTANTE
 app.post('/api/owner-invoices/:id/credit-note',
   authenticateAny,
