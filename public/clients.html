@@ -2775,19 +2775,15 @@ window.deleteOwnerInvoice = function (id) {
 
     // Récupérer les photos de débours associées aux items
     const token = localStorage.getItem('lcc_token');
-    console.log('[PDF] items reçus:', items.map(it => ({desc: it.description, is_debours: it.is_debours, debours_id: it.debours_id})));
     const deboursItems = items.filter(it => it.is_debours && it.debours_id);
-    console.log('[PDF] deboursItems avec debours_id:', deboursItems.length);
     const deboursPhotos = {}; // debours_id → photo_url
     await Promise.all(deboursItems.map(async it => {
       try {
         const r = await fetch(API_BASE + '/api/debours/' + it.debours_id, { headers: { Authorization: 'Bearer ' + token } });
-        const d = await r.json();
-        console.log('[PDF] debours API response:', it.debours_id, r.status, d);
-        if (r.ok && d.debours?.photo_url) deboursPhotos[it.debours_id] = d.debours.photo_url;
-      } catch(e) { console.error('[PDF] debours fetch error:', e); }
+        if (r.ok) { const d = await r.json(); if (d.debours?.photo_url) deboursPhotos[it.debours_id] = d.debours.photo_url; }
+        // Si 404, le débours a été supprimé — on ignore silencieusement
+      } catch(e) {}
     }));
-    console.log('[PDF] deboursPhotos:', deboursPhotos);
 
     const tempContainer = document.createElement('div');
     tempContainer.style.cssText = 'position:absolute;left:-9999px;top:0;width:210mm;';
