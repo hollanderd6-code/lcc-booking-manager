@@ -2775,7 +2775,9 @@ window.deleteOwnerInvoice = function (id) {
 
     // Récupérer les photos de débours associées aux items
     const token = localStorage.getItem('lcc_token');
+    console.log('[PDF DEBUG] all items:', JSON.stringify(items.map(i => ({desc:i.description, is_debours:i.is_debours, debours_id:i.debours_id}))));
     const deboursItems = items.filter(it => it.is_debours && it.debours_id);
+    console.log('[PDF DEBUG] deboursItems count:', deboursItems.length);
     const deboursPhotos = {}; // debours_id → photo_url
     await Promise.all(deboursItems.map(async it => {
       try {
@@ -2808,13 +2810,16 @@ window.deleteOwnerInvoice = function (id) {
     };
 
     function doPdf() {
-      html2pdf().set(opt).from(invoiceElement).save().then(() => {
-        document.body.removeChild(tempContainer);
-      }).catch(e => {
-        console.error('html2pdf error:', e);
-        document.body.removeChild(tempContainer);
-        alert('Erreur génération PDF');
-      });
+      // Délai pour laisser le DOM se stabiliser avant capture
+      setTimeout(() => {
+        html2pdf().set(opt).from(invoiceElement).save().then(() => {
+          document.body.removeChild(tempContainer);
+        }).catch(e => {
+          console.error('html2pdf error:', e);
+          document.body.removeChild(tempContainer);
+          alert('Erreur génération PDF');
+        });
+      }, 500);
     }
 
     if (typeof html2pdf === 'undefined') {
