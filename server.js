@@ -6905,6 +6905,9 @@ app.get('/api/user/profile', async (req, res) => {
         siret,
         logo_url,
         use_bh_stripe,
+        phone,
+        invoice_email,
+        website,
         created_at
        FROM users 
        WHERE id = $1`,
@@ -6930,6 +6933,9 @@ app.get('/api/user/profile', async (req, res) => {
       siret: row.siret,
       logoUrl: row.logo_url,
       use_bh_stripe: row.use_bh_stripe,
+      phone: row.phone,
+      invoiceEmail: row.invoice_email,
+      website: row.website,
       createdAt: row.created_at
     });
   } catch (error) {
@@ -6977,7 +6983,10 @@ app.put('/api/user/profile', upload.single('logo'), async (req, res) => {
       address,
       postalCode,
       city,
-      siret
+      siret,
+      phone,
+      invoiceEmail,
+      website
     } = req.body;
 
     // Validation du type de compte
@@ -7016,7 +7025,10 @@ if (req.file) {
          postal_code = $6,
          city = $7,
          siret = $8,
-         logo_url = COALESCE($9, logo_url)
+         logo_url = COALESCE($9, logo_url),
+         phone = COALESCE($11, phone),
+         invoice_email = COALESCE($12, invoice_email),
+         website = COALESCE($13, website)
        WHERE id = $10
        RETURNING 
          id, 
@@ -7029,8 +7041,10 @@ if (req.file) {
          postal_code,
          city,
          siret,
-         logo_url`,
-      [
+         logo_url,
+         phone,
+         invoice_email,
+         website`  [
         firstName || null,
         lastName || null,
         company || null,
@@ -7040,7 +7054,10 @@ if (req.file) {
         city || null,
         (accountType === 'business' ? siret : null) || null,
         logoUrl,
-        user.id
+        user.id,
+        phone || null,
+        invoiceEmail || null,
+        website || null
       ]
     );
 
@@ -7069,7 +7086,10 @@ if (req.file) {
         postalCode: updated.postal_code,
         city: updated.city,
         siret: updated.siret,
-        logoUrl: updated.logo_url
+        logoUrl: updated.logo_url,
+        phone: updated.phone,
+        invoiceEmail: updated.invoice_email,
+        website: updated.website
       }
     });
 
@@ -14659,10 +14679,10 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     const senderAddr  = emitter.address    || u.address      || '';
     const senderCP    = emitter.postalCode || u.postal_code  || '';
     const senderCity  = emitter.city       || u.city         || '';
-    const senderEmail = emitter.email      || u.email        || '';
+    const senderEmail = emitter.email      || u.invoice_email || u.email || '';
     const senderSiret = emitter.siret      || u.siret        || '';
-    const senderPhone = emitter.phone      || '';
-    const senderWeb   = emitter.website    || '';
+    const senderPhone = emitter.phone      || u.phone         || '';
+    const senderWeb   = emitter.website    || u.website       || '';
 
     const clientName  = client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || 'Client';
     const clientAddr  = client.address || '';
@@ -21070,6 +21090,10 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
     console.log('✅ Table debours OK');
     // Ajouter colonne debours_id si manquante
     await pool.query(`ALTER TABLE owner_invoice_items ADD COLUMN IF NOT EXISTS debours_id TEXT`);
+    // Ajouter colonnes profil émetteur à users
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS invoice_email TEXT`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS website TEXT`);
   } catch(e) {
     console.error('❌ Migration debours:', e.message);
   }
