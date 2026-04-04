@@ -7044,7 +7044,8 @@ if (req.file) {
          logo_url,
          phone,
          invoice_email,
-         website`  [
+         website`,
+      [
         firstName || null,
         lastName || null,
         company || null,
