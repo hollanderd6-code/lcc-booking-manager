@@ -14647,18 +14647,19 @@ app.get('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
       } catch(e) {}
     }));
 
-    // Profil émetteur depuis user_settings
-    const settingsRes = await pool.query('SELECT settings FROM user_settings WHERE user_id = $1', [userId]);
-    const settings = settingsRes.rows[0]?.settings || {};
-    const ep = settings.emitterProfile || {};
-    const up = settingsRes.rows[0]?.settings || {};
+    // Profil émetteur depuis la table users
+    const userRes = await pool.query(
+      'SELECT company, address, postal_code, city, siret, email FROM users WHERE id = $1',
+      [userId]
+    );
+    const u = userRes.rows[0] || {};
 
-    const senderName  = ep.company || up.company || 'Votre entreprise';
-    const senderAddr  = ep.address || '';
-    const senderCP    = ep.postalCode || '';
-    const senderCity  = ep.city || '';
-    const senderEmail = ep.email || ep.invoiceEmail || '';
-    const senderSiret = ep.siret || '';
+    const senderName  = u.company || 'Votre entreprise';
+    const senderAddr  = u.address || '';
+    const senderCP    = u.postal_code || '';
+    const senderCity  = u.city || '';
+    const senderEmail = u.email || '';
+    const senderSiret = u.siret || '';
 
     const clientName  = client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || 'Client';
     const clientAddr  = client.address || '';
