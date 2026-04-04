@@ -14637,15 +14637,18 @@ app.get('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
 
     // Récupérer photos débours
     const deboursItems = items.filter(it => it.is_debours && it.debours_id);
-    const deboursPhotos = {}; // debours_id → { photo_url, description }
+    console.log(`📎 [PDF] items débours: ${deboursItems.length}, details:`, items.map(it => ({desc:it.description, is_debours:it.is_debours, debours_id:it.debours_id})));
+    const deboursPhotos = {};
     await Promise.all(deboursItems.map(async it => {
       try {
         const dr = await pool.query('SELECT * FROM debours WHERE id = $1', [it.debours_id]);
+        console.log(`📎 [PDF] debours ${it.debours_id}: found=${dr.rows.length}, photo=${dr.rows[0]?.photo_url ? 'YES' : 'NO'}`);
         if (dr.rows.length > 0 && dr.rows[0].photo_url) {
           deboursPhotos[it.debours_id] = dr.rows[0].photo_url;
         }
-      } catch(e) {}
+      } catch(e) { console.error('❌ [PDF] debours fetch error:', e.message); }
     }));
+    console.log(`📎 [PDF] deboursPhotos count: ${Object.keys(deboursPhotos).length}`);
 
     // Profil émetteur depuis la table users
     const userRes = await pool.query(
