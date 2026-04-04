@@ -14615,7 +14615,7 @@ res.json({
   }
 });
 // ── Télécharger PDF d'une facture propriétaire (généré server-side avec PDFKit) ──
-app.get('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
+app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -14637,32 +14637,32 @@ app.get('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
 
     // Récupérer photos débours
     const deboursItems = items.filter(it => it.is_debours && it.debours_id);
-    console.log(`📎 [PDF] items débours: ${deboursItems.length}, details:`, items.map(it => ({desc:it.description, is_debours:it.is_debours, debours_id:it.debours_id})));
     const deboursPhotos = {};
     await Promise.all(deboursItems.map(async it => {
       try {
         const dr = await pool.query('SELECT * FROM debours WHERE id = $1', [it.debours_id]);
-        console.log(`📎 [PDF] debours ${it.debours_id}: found=${dr.rows.length}, photo=${dr.rows[0]?.photo_url ? 'YES' : 'NO'}`);
         if (dr.rows.length > 0 && dr.rows[0].photo_url) {
           deboursPhotos[it.debours_id] = dr.rows[0].photo_url;
         }
-      } catch(e) { console.error('❌ [PDF] debours fetch error:', e.message); }
+      } catch(e) {}
     }));
-    console.log(`📎 [PDF] deboursPhotos count: ${Object.keys(deboursPhotos).length}`);
 
-    // Profil émetteur depuis la table users
+    // Profil émetteur : priorité au body (données locales du frontend), fallback DB
+    const emitter = req.body?.emitter || {};
     const userRes = await pool.query(
       'SELECT company, address, postal_code, city, siret, email FROM users WHERE id = $1',
       [userId]
     );
     const u = userRes.rows[0] || {};
 
-    const senderName  = u.company || 'Votre entreprise';
-    const senderAddr  = u.address || '';
-    const senderCP    = u.postal_code || '';
-    const senderCity  = u.city || '';
-    const senderEmail = u.email || '';
-    const senderSiret = u.siret || '';
+    const senderName  = emitter.company    || u.company      || 'Votre entreprise';
+    const senderAddr  = emitter.address    || u.address      || '';
+    const senderCP    = emitter.postalCode || u.postal_code  || '';
+    const senderCity  = emitter.city       || u.city         || '';
+    const senderEmail = emitter.email      || u.email        || '';
+    const senderSiret = emitter.siret      || u.siret        || '';
+    const senderPhone = emitter.phone      || '';
+    const senderWeb   = emitter.website    || '';
 
     const clientName  = client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || 'Client';
     const clientAddr  = client.address || '';
@@ -14703,7 +14703,7 @@ app.get('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     const boxTop = y;
 
     // Cadre émetteur
-    doc.rect(mg, boxTop, colW, 90).strokeColor(BORDER).lineWidth(1).stroke();
+    doc.rect(mg, boxTop, colW, 120).strokeColor(BORDER).lineWidth(1).stroke();
     doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('ÉMETTEUR', mg+8, boxTop+8);
     doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(senderName, mg+8, boxTop+20, {width: colW-16});
     doc.font('Helvetica').fontSize(9).fillColor(GRAY);
@@ -14711,10 +14711,12 @@ app.get('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     if (senderAddr)  { doc.text(senderAddr, mg+8, yL, {width:colW-16}); yL+=13; }
     if (senderCP||senderCity) { doc.text(`${senderCP} ${senderCity}`.trim(), mg+8, yL); yL+=13; }
     if (senderSiret) { doc.text(`SIRET : ${senderSiret}`, mg+8, yL); yL+=13; }
-    if (senderEmail) { doc.text(senderEmail, mg+8, yL); }
+    if (senderPhone) { doc.text(senderPhone, mg+8, yL); yL+=13; }
+    if (senderEmail) { doc.text(senderEmail, mg+8, yL); yL+=13; }
+    if (senderWeb)   { doc.text(senderWeb, mg+8, yL); }
 
     // Cadre destinataire
-    doc.rect(col2, boxTop, colW, 90).strokeColor(BORDER).lineWidth(1).stroke();
+    doc.rect(col2, boxTop, colW, 120).strokeColor(BORDER).lineWidth(1).stroke();
     doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('DESTINATAIRE', col2+8, boxTop+8);
     doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(clientName, col2+8, boxTop+20, {width: colW-16});
     doc.font('Helvetica').fontSize(9).fillColor(GRAY);
@@ -14723,7 +14725,7 @@ app.get('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     if (clientCP||clientCity) { doc.text(`${clientCP} ${clientCity}`.trim(), col2+8, yR); yR+=13; }
     if (clientEmail) { doc.text(clientEmail, col2+8, yR); }
 
-    y = boxTop + 100;
+    y = boxTop + 130;
 
     // Échéance + Période
     if (inv.due_date) {
