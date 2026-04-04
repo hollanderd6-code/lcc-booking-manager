@@ -2861,6 +2861,21 @@ window.finalizeOwnerInvoice = function (id) {
       console.error(json);
       return alert(json.error || 'Erreur lors de la validation');
     }
+    // Marquer les débours liés à cette facture comme "facturés"
+    try {
+      const itemsRes = await fetch(API_BASE + '/api/owner-invoices/' + id, { headers: { Authorization: 'Bearer ' + token } });
+      if (itemsRes.ok) {
+        const invData = await itemsRes.json();
+        const deboursIds = (invData.items || []).filter(it => it.is_debours && it.debours_id).map(it => it.debours_id);
+        deboursIds.forEach(did => {
+          fetch(API_BASE + '/api/debours/' + did + '/status', {
+            method: 'PATCH',
+            headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'billed' })
+          }).catch(e => console.warn('PATCH débours:', e));
+        });
+      }
+    } catch(e) { console.warn('Débours status update skipped:', e); }
     alert('Facture passée en "Facturée" [OK]');
     loadInvoices();
   } catch (e) {
@@ -3449,17 +3464,6 @@ function getSelectedProperties() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
-        // Marquer les débours utilisés comme facturés
-        const deboursIds = prestations.filter(p => p.deboursId).map(p => p.deboursId);
-        if (deboursIds.length > 0) {
-          deboursIds.forEach(id => {
-            fetch(API_BASE + '/api/debours/' + id + '/status', {
-              method: 'PATCH',
-              headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: 'billed' })
-            }).catch(e => console.warn('Erreur PATCH débours:', e));
-          });
-        }
         alert('[OK] Facture enregistrée !');
         prestations = [];
         prestationCounter = 0;
