@@ -2788,9 +2788,9 @@ window.deleteOwnerInvoice = function (id) {
     document.body.appendChild(tempContainer);
     buildInvoiceHTML(inv, items, client, tempContainer, deboursPhotos);
 
-    // Attendre que les images soient chargées
-    const invoiceElement = document.getElementById('tempInvoicePaper');
-    const imgs = invoiceElement.querySelectorAll('img');
+    // Attendre que les images soient chargées (facture + annexes)
+    const invoiceElement = tempContainer; // inclut facture + annexe débours
+    const imgs = tempContainer.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) resolve();
       else { img.onload = resolve; img.onerror = resolve; }
@@ -4916,18 +4916,19 @@ window.saveDebours = async function() {
 };
 
 // ── Supprimer débours ──
-window.deleteDebours = async function(id) {
-  if (!confirm('Supprimer ce justificatif ?')) return;
-  try {
-    const token = localStorage.getItem('lcc_token');
-    await fetch(API_BASE + '/api/debours/' + id, {
-      method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    await loadDeboursFromAPI();
-  } catch(e) {
-    alert('❌ Erreur suppression : ' + e.message);
-  }
+window.deleteDebours = function(id) {
+  showConfirm('Supprimer ce justificatif ? Cette action est irréversible.', async function() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      await fetch(API_BASE + '/api/debours/' + id, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      await loadDeboursFromAPI();
+    } catch(e) {
+      alert('❌ Erreur suppression : ' + e.message);
+    }
+  }, 'Supprimer');
 };
 
 // ── Import dans l'éditeur de facture ──
