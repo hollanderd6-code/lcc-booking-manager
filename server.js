@@ -16105,7 +16105,8 @@ app.post('/api/owner-invoices/:id/finalize',
 // ============================================================
 // ENVOI EMAIL FACTURE PROPRIÉTAIRE
 // ============================================================
-async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret }) {
+async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret, deboursPhotos }) {
+  deboursPhotos = deboursPhotos || {};
   if (!clientEmail) throw new Error('Email client manquant');
 
   const toDateOnly = d => {
@@ -16133,7 +16134,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
   const ht         = ttc - vatAmt;
 
   // ── Générer le PDF en mémoire avec PDFKit (style référence) ──
-  const pdfBuffer = await new Promise((resolve, reject) => {
+  const pdfBuffer = await new Promise(async (resolve, reject) => {
     const chunks = [];
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
     doc.on('data', c => chunks.push(c));
@@ -16265,6 +16266,46 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
        .font('Helvetica-Bold').fillColor(GREEN).text('boostinghost.fr', { continued: true })
        .font('Helvetica').fillColor(GRAY).text(' — logiciel de gestion locative', { align: 'left' });
 
+    // ── ANNEXES : photos des débours ──
+    const deboursWithPhotos = items.filter(it => it.is_debours && it.debours_id && deboursPhotos[it.debours_id]);
+    if (deboursWithPhotos.length > 0) {
+      doc.addPage();
+      let ay = mg;
+      doc.font('Helvetica-Bold').fontSize(16).fillColor(GREEN).text('Annexe — Justificatifs de débours', mg, ay);
+      ay += 4;
+      doc.rect(mg, ay+14, W-mg*2, 2).fill(GREEN);
+      ay += 28;
+      const imgW = (W - mg*2 - 20) / 2;
+      let col = 0;
+      const https = require('https');
+      const http  = require('http');
+      for (const it of deboursWithPhotos) {
+        const photoUrl = deboursPhotos[it.debours_id];
+        const total = parseFloat(it.total||0).toFixed(2);
+        const ax = col === 0 ? mg : mg + imgW + 20;
+        if (col === 0 && ay + 180 > 780) { doc.addPage(); ay = mg; }
+        doc.rect(ax, ay, imgW, 160).strokeColor(BORDER).lineWidth(1).stroke();
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK)
+           .text(`${it.description || 'Débours'} — ${total} €`, ax+6, ay+6, {width:imgW-12});
+        try {
+          const imageBuffer = await new Promise((resolve, reject) => {
+            const proto = photoUrl.startsWith('https') ? https : http;
+            proto.get(photoUrl, resp => {
+              const chunks = [];
+              resp.on('data', c => chunks.push(c));
+              resp.on('end', () => resolve(Buffer.concat(chunks)));
+              resp.on('error', reject);
+            }).on('error', reject);
+          });
+          doc.image(imageBuffer, ax+6, ay+22, {width:imgW-12, height:130, fit:[imgW-12,130], align:'center', valign:'center'});
+        } catch(e) {
+          doc.font('Helvetica').fontSize(9).fillColor(GRAY).text('Image non disponible', ax+6, ay+80);
+        }
+        col++;
+        if (col >= 2) { col = 0; ay += 170; }
+      }
+    }
+
     doc.end();
   });
 
@@ -16389,6 +16430,18 @@ app.post('/api/owner-invoices/:id/send',
 
     if (clientEmail) {
       try {
+        // Récupérer les photos de débours
+        const deboursPhotos = {};
+        const deboursItems = itemsResult.rows.filter(it => it.is_debours && it.debours_id);
+        await Promise.all(deboursItems.map(async it => {
+          try {
+            const dr = await pool.query('SELECT photo_url, description FROM debours WHERE id = $1', [it.debours_id]);
+            if (dr.rows.length > 0 && dr.rows[0].photo_url) {
+              deboursPhotos[it.debours_id] = dr.rows[0].photo_url;
+            }
+          } catch(e) {}
+        }));
+
         await sendOwnerInvoiceEmail({
           invoiceNumber:  invoice.invoice_number,
           clientName,
@@ -16409,7 +16462,8 @@ app.post('/api/owner-invoices/:id/send',
           userAddress:    profile.address,
           userPostalCode: profile.postal_code,
           userCity:       profile.city,
-          userSiret:      profile.siret
+          userSiret:      profile.siret,
+          deboursPhotos
         });
         console.log('✅ Email facture propriétaire envoyé à:', clientEmail);
       } catch (emailErr) {
