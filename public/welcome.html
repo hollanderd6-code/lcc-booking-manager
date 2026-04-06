@@ -539,6 +539,71 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .container > .page-title {
   display: none !important;
 }
+
+/* ── Bannière promo app guest ── */
+.livret-promo-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #0D1117 0%, #1A2E24 100%);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-top: 12px;
+  border: 1px solid rgba(26,122,94,.3);
+  position: relative;
+  overflow: hidden;
+}
+.livret-promo-banner::before {
+  content: '📱';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 36px;
+  opacity: .12;
+}
+.livret-promo-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #1A7A5E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 900;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  flex-shrink: 0;
+}
+.livret-promo-text {
+  flex: 1;
+  min-width: 0;
+}
+.livret-promo-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 2px;
+  font-family: 'DM Sans', sans-serif;
+}
+.livret-promo-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,.5);
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.4;
+}
+.livret-promo-badge {
+  flex-shrink: 0;
+  background: #1A7A5E;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+}
 </style>
 </head>
 <body data-back-href="/app.html" data-page="welcome" data-title="Livret d'accueil" data-kicker="Gestion">
@@ -1730,6 +1795,14 @@ function displayLivretsList(livrets) {
         <div>
           <div class="livret-card-name">${livret.propertyName || 'Sans nom'}</div>
           <div class="livret-card-date"><i class="fas fa-clock" style="font-size:10px;"></i> Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</div>
+        </div>
+        <div class="livret-promo-banner">
+          <div class="livret-promo-logo">B</div>
+          <div class="livret-promo-text">
+            <div class="livret-promo-title">🎁 Inclus dans ce livret</div>
+            <div class="livret-promo-sub">Vos voyageurs peuvent réserver en direct sur l'app Boostinghost et bénéficier de <strong style="color:#4ADE80;">-10%</strong></div>
+          </div>
+          <div class="livret-promo-badge">-10%</div>
         </div>
         <div class="livret-card-actions">
           <button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}')"><i class="fas fa-edit"></i> Modifier</button>
