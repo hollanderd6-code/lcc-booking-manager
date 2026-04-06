@@ -18693,7 +18693,7 @@ iframe.goog-te-banner-frame{display:none!important}
   var icon = document.getElementById('promoBtnIcon');
   var label = document.getElementById('promoBtnLabel');
   if (/iPad|iPhone|iPod/.test(ua)) {
-    btn.href = 'https://apps.apple.com/app/boostinghost-guest/id6743344081';
+    btn.href = 'https://apps.apple.com/app/boostinghost-guest/id6759250200';
     icon.textContent = '';
     label.textContent = 'App Store';
   } else if (/Android/.test(ua)) {
