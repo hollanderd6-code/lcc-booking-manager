@@ -18604,9 +18604,9 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 .promo-app-title{font-family:'Jost',sans-serif;font-size:13.5px;font-weight:600;color:#fff;margin-bottom:2px}
 .promo-app-sub{font-size:12px;color:rgba(255,255,255,.75);line-height:1.5}
 .promo-app-sub strong{color:#C4B5FD}
-.promo-app-badge{flex-shrink:0;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 14px;font-size:11px;font-weight:700;color:rgba(255,255,255,.8);white-space:nowrap;text-align:center}
-.promo-app-badge span{display:block;font-size:20px;font-weight:900;color:#fff;line-height:1.1}
-@media(max-width:600px){.promo-app-banner{flex-wrap:wrap}.promo-app-badge{width:100%;text-align:center}}
+.promo-app-btn{flex-shrink:0;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);border-radius:10px;padding:8px 16px;font-family:'Jost',sans-serif;font-size:13px;font-weight:700;color:#fff;text-decoration:none;white-space:nowrap;transition:background .15s}
+.promo-app-btn:hover{background:rgba(255,255,255,.25)}
+@media(max-width:600px){.promo-app-banner{flex-wrap:wrap}.promo-app-btn{width:100%;justify-content:center}}
 #qr-modal{display:none;position:fixed;inset:0;background:rgba(8,8,6,.92);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
 @media(max-width:660px){
   .welcome-grid{grid-template-columns:1fr}
@@ -18679,10 +18679,34 @@ iframe.goog-te-banner-frame{display:none!important}
   <div class="promo-app-logo">B</div>
   <div class="promo-app-text">
     <div class="promo-app-title">📱 Boostinghost Guest</div>
-    <div class="promo-app-sub">Pour votre prochaine réservation, réservez directement sur l'application et bénéficiez de <strong>-10% de réduction</strong> garanti.</div>
+    <div class="promo-app-sub">Pour votre prochaine réservation, réservez en direct et bénéficiez de <strong>-10% de réduction</strong> garanti.</div>
   </div>
-  <div class="promo-app-badge"><span>-10%</span>appli</div>
+  <a id="promoStoreBtn" class="promo-app-btn" href="#" target="_blank" rel="noopener">
+    <span id="promoBtnIcon">⬇</span>
+    <span id="promoBtnLabel">Télécharger</span>
+  </a>
 </div>
+<script>
+(function(){
+  var ua = navigator.userAgent || '';
+  var btn = document.getElementById('promoStoreBtn');
+  var icon = document.getElementById('promoBtnIcon');
+  var label = document.getElementById('promoBtnLabel');
+  if (/iPad|iPhone|iPod/.test(ua)) {
+    btn.href = 'https://apps.apple.com/app/boostinghost-guest/id6743344081';
+    icon.textContent = '';
+    label.textContent = 'App Store';
+  } else if (/Android/.test(ua)) {
+    btn.href = 'https://play.google.com/store/apps/details?id=com.boostinghost.app';
+    icon.textContent = '';
+    label.textContent = 'Google Play';
+  } else {
+    btn.href = 'https://www.boostinghost.fr/guest-app/public/index.html';
+    icon.textContent = '🌐';
+    label.textContent = 'Réserver';
+  }
+})();
+</script>
 </div>
 <div class="wrap">
 <section class="sect" id="welcome">
