@@ -18597,6 +18597,16 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 .foot{text-align:center;padding:4rem 0 2rem;border-top:1px solid var(--border);margin-top:2rem}
 .foot-brand{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--forest);margin-bottom:.4rem}
 .foot-sub{font-size:12.5px;color:var(--muted);font-weight:300}
+.promo-app-banner{background:linear-gradient(135deg,#3B1FA3 0%,#7C3AED 100%);border-radius:16px;padding:1.1rem 1.5rem;margin:2rem 0 0;display:flex;align-items:center;gap:1rem;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(59,31,163,.3)}
+.promo-app-banner::before{content:'';position:absolute;right:-16px;top:-16px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.06)}
+.promo-app-logo{width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,.18);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px}
+.promo-app-text{flex:1;min-width:0}
+.promo-app-title{font-family:'Jost',sans-serif;font-size:13.5px;font-weight:600;color:#fff;margin-bottom:2px}
+.promo-app-sub{font-size:12px;color:rgba(255,255,255,.75);line-height:1.5}
+.promo-app-sub strong{color:#C4B5FD}
+.promo-app-badge{flex-shrink:0;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 14px;font-size:11px;font-weight:700;color:rgba(255,255,255,.8);white-space:nowrap;text-align:center}
+.promo-app-badge span{display:block;font-size:20px;font-weight:900;color:#fff;line-height:1.1}
+@media(max-width:600px){.promo-app-banner{flex-wrap:wrap}.promo-app-badge{width:100%;text-align:center}}
 #qr-modal{display:none;position:fixed;inset:0;background:rgba(8,8,6,.92);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
 @media(max-width:660px){
   .welcome-grid{grid-template-columns:1fr}
