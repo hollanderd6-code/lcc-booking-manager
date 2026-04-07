@@ -19792,6 +19792,90 @@ cron.schedule('0 18 * * *', async () => {
 });
 
 console.log('CRON rappels J-1 configure (18h quotidien)');
+
+// ============================================
+// CRON : ALERTE MÉNAGE NON VALIDÉ — 1H AVANT ARRIVÉE
+// ============================================
+// Tourne toutes les 15 minutes
+// Anti-doublon : stocke les réservations déjà alertées en mémoire
+const _cleaningAlertSent = new Set();
+
+cron.schedule('*/15 * * * *', async () => {
+  try {
+    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const in60min = new Date(nowParis.getTime() + 60 * 60 * 1000);
+    const in75min = new Date(nowParis.getTime() + 75 * 60 * 1000); // fenêtre de 15 min
+
+    // Format YYYY-MM-DD pour comparer les dates
+    const todayStr = nowParis.toISOString().split('T')[0];
+
+    // Récupère toutes les réservations dont l'arrivée est aujourd'hui
+    // + le logement a une heure d'arrivée définie
+    // + un ménage est assigné mais pas validé
+    const result = await pool.query(`
+      SELECT
+        r.uid            AS reservation_uid,
+        r.user_id,
+        r.property_id,
+        r.guest_name,
+        r.start_date,
+        p.name           AS property_name,
+        p.arrival_time,
+        cc.is_validated,
+        cc.id            AS checklist_id
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      LEFT JOIN cleaning_checklists cc ON cc.reservation_key = r.uid AND cc.user_id = r.user_id
+      WHERE
+        DATE(r.start_date) = $1
+        AND r.status NOT IN ('cancelled', 'completed')
+        AND p.arrival_time IS NOT NULL
+        AND p.arrival_time != ''
+        AND cc.id IS NOT NULL
+        AND (cc.is_validated = FALSE OR cc.is_validated IS NULL)
+    `, [todayStr]);
+
+    for (const row of result.rows) {
+      // Reconstituer l'heure d'arrivée en heure Paris
+      const [hours, minutes] = (row.arrival_time || '15:00').split(':').map(Number);
+      const arrivalDateParis = new Date(nowParis);
+      arrivalDateParis.setHours(hours, minutes || 0, 0, 0);
+
+      // Vérifier si l'arrivée est dans la fenêtre [+60min, +75min]
+      if (arrivalDateParis < in60min || arrivalDateParis > in75min) continue;
+
+      // Anti-doublon
+      const alertKey = `${row.reservation_uid}_cleaning_alert`;
+      if (_cleaningAlertSent.has(alertKey)) continue;
+      _cleaningAlertSent.add(alertKey);
+
+      // Récupérer les tokens FCM de l'hôte
+      const tokensResult = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+        [row.user_id]
+      );
+      if (tokensResult.rows.length === 0) continue;
+
+      const tokens = tokensResult.rows.map(r => r.fcm_token);
+      const guestName = row.guest_name || 'Voyageur';
+      const propName = row.property_name || 'Logement';
+      const title = `⚠️ Ménage non validé — ${propName}`;
+      const body = `${guestName} arrive dans moins d'1h et le ménage n'est pas encore validé.`;
+
+      await sendNotificationToMultiple(tokens, title, body, {
+        type: 'cleaning_alert',
+        reservation_uid: row.reservation_uid,
+        property_id: row.property_id
+      });
+
+      console.log(`🧹 Alerte ménage envoyée → ${propName} (${guestName})`);
+    }
+  } catch (err) {
+    console.error('❌ CRON alerte ménage:', err.message);
+  }
+}, { timezone: 'Europe/Paris' });
+
+console.log('CRON alerte ménage configuré (toutes les 15 min)');
 // ============================================
 // CHARGER LES RÉSERVATIONS MANUELLES DEPUIS LA DB
 // ============================================
