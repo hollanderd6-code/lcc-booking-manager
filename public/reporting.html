@@ -571,7 +571,17 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   <div class="card" id="comparatorSection" style="margin-bottom:24px;">
     <div class="card-header">
       <div class="card-title"><i class="fas fa-chart-bar"></i> Comparateur de logements</div>
-      <div style="display:flex;gap:10px;align-items:center;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select id="compareMonth" class="ctrl-select" style="min-width:130px;" onchange="renderComparator()">
+          <option value="">Toute l'année</option>
+          <option value="1">Janvier</option><option value="2">Février</option>
+          <option value="3">Mars</option><option value="4">Avril</option>
+          <option value="5">Mai</option><option value="6">Juin</option>
+          <option value="7">Juillet</option><option value="8">Août</option>
+          <option value="9">Septembre</option><option value="10">Octobre</option>
+          <option value="11">Novembre</option><option value="12">Décembre</option>
+        </select>
+        <div style="width:1px;height:24px;background:var(--border);"></div>
         <select id="compareA" class="ctrl-select" style="min-width:160px;" onchange="renderComparator()">
           <option value="">Logement A</option>
         </select>
@@ -1112,6 +1122,7 @@ function populateComparatorSelects(byProperty) {
 function renderComparator() {
   const idA = document.getElementById('compareA')?.value;
   const idB = document.getElementById('compareB')?.value;
+  const selectedMonth = parseInt(document.getElementById('compareMonth')?.value) || null;
   const container = document.getElementById('comparatorContent');
   if (!container) return;
 
@@ -1127,45 +1138,42 @@ function renderComparator() {
   const scoreA = _scores?.find(s => s.property_id === idA);
   const scoreB = _scores?.find(s => s.property_id === idB);
 
-  const metrics = [
-    {
-      label: "CA Brut",
-      valA: propA.grossRevenue, valB: propB.grossRevenue,
-      format: v => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(v||0) + ' €',
-      higher: true
-    },
-    {
-      label: "Réservations",
-      valA: propA.bookings, valB: propB.bookings,
-      format: v => v || 0,
-      higher: true
-    },
-    {
-      label: "Nuits louées",
-      valA: propA.nights, valB: propB.nights,
-      format: v => v || 0,
-      higher: true
-    },
-    {
-      label: "Taux d'occupation",
-      valA: propA.occupancyRate, valB: propB.occupancyRate,
-      format: v => (v || 0) + '%',
-      higher: true
-    },
-    {
-      label: "Revenu net",
-      valA: propA.netRevenue, valB: propB.netRevenue,
-      format: v => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(v||0) + ' €',
-      higher: true
-    },
-    {
-      label: "Score qualité",
-      valA: scoreA?.score, valB: scoreB?.score,
-      format: v => v != null ? v + '/100' : '—',
-      higher: true,
-      isScore: true,
-      colorA: scoreA?.color, colorB: scoreB?.color
+  // Si un mois est sélectionné, recalculer les métriques depuis les réservations filtrées
+  const getMetrics = (propId) => {
+    if (!selectedMonth || !_data.reservations) {
+      const p = (_data.byProperty || []).find(p => p.id === propId);
+      return { grossRevenue: p?.grossRevenue||0, bookings: p?.bookings||0, nights: p?.nights||0, occupancyRate: p?.occupancyRate||0, netRevenue: p?.netRevenue||0 };
     }
+    // Filtrer les réservations du mois sélectionné pour ce logement
+    const resas = _data.reservations.filter(r =>
+      r.propertyId === propId &&
+      new Date(r.startDate).getMonth() + 1 === selectedMonth
+    );
+    const nights = resas.reduce((s,r) => s + (r.nights||0), 0);
+    const daysInMonth = new Date(_data.year, selectedMonth, 0).getDate();
+    return {
+      grossRevenue: Math.round(resas.reduce((s,r) => s + (r.grossRevenue||0), 0) * 100) / 100,
+      bookings: resas.length,
+      nights,
+      occupancyRate: Math.round(nights / daysInMonth * 100),
+      netRevenue: Math.round(resas.reduce((s,r) => s + (r.netRevenue||0), 0) * 100) / 100
+    };
+  };
+
+  const mA = getMetrics(idA);
+  const mB = getMetrics(idB);
+
+  const periodLabel = selectedMonth
+    ? `${['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][selectedMonth-1]} ${_data.year}`
+    : `Année ${_data.year}`;
+
+  const metrics = [
+    { label: "CA Brut",           valA: mA.grossRevenue,  valB: mB.grossRevenue,  format: v => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(v||0) + ' €', higher: true },
+    { label: "Réservations",      valA: mA.bookings,      valB: mB.bookings,      format: v => v||0, higher: true },
+    { label: "Nuits louées",      valA: mA.nights,        valB: mB.nights,        format: v => v||0, higher: true },
+    { label: "Taux d'occupation", valA: mA.occupancyRate, valB: mB.occupancyRate, format: v => (v||0)+'%', higher: true },
+    { label: "Revenu net",        valA: mA.netRevenue,    valB: mB.netRevenue,    format: v => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(v||0) + ' €', higher: true },
+    { label: "Score qualité",     valA: scoreA?.score,    valB: scoreB?.score,    format: v => v != null ? v+'/100' : '—', higher: true }
   ];
 
   const renderCol = (prop, score, metrics, side) => {
@@ -1177,8 +1185,8 @@ function renderComparator() {
       const valA = side === 'A' ? m.valA : m.valB;
       const valB = side === 'A' ? m.valB : m.valA;
       const isWinner = m.higher ? (valA > valB) : (valA < valB);
-      const isTie = valA === valB;
-      const cls = isTie || valA == null ? '' : (isWinner ? 'winner' : 'loser');
+      const isTie = valA === valB || valA == null || valB == null;
+      const cls = isTie ? '' : (isWinner ? 'winner' : 'loser');
       return `
         <div class="compare-metric">
           <span class="compare-metric-label">${m.label}</span>
@@ -1186,7 +1194,6 @@ function renderComparator() {
         </div>`;
     }).join('');
 
-    // Score détail
     const detailHtml = score?.details ? Object.values(score.details).map(d => `
       <div style="display:flex;align-items:center;gap:10px;padding:6px 18px;border-top:1px solid var(--border);">
         <span style="font-size:12px;color:var(--text-muted);width:130px;flex-shrink:0;">${d.label}</span>
@@ -1199,12 +1206,10 @@ function renderComparator() {
     return `
       <div class="compare-col">
         <div class="compare-col-header" style="background:${color};">
-          <div class="score-circle" style="background:${scoreColor};font-size:18px;">
-            ${scoreVal != null ? scoreVal : '?'}
-          </div>
+          <div class="score-circle" style="background:${scoreColor};font-size:18px;">${scoreVal != null ? scoreVal : '?'}</div>
           <div>
             <div>${prop.name}</div>
-            <div style="font-size:11px;font-weight:400;opacity:.8;">Score qualité</div>
+            <div style="font-size:11px;font-weight:400;opacity:.8;">${periodLabel}</div>
           </div>
         </div>
         ${metricsHtml}
