@@ -1573,6 +1573,7 @@ html[data-theme-v3="1"] .subscription-card {
       <div class="notif-group">
         <div class="notif-group-title"><i class="fas fa-broom"></i> Ménage</div>
         <div class="notif-row"><div class="notif-info"><span class="notif-label">Ménage terminé</span><span class="notif-desc">Quand un prestataire marque le ménage comme terminé</span></div><label class="toggle-switch"><input type="checkbox" id="notif_cleaning_completed" checked><span class="toggle-slider"></span></label></div>
+        <div class="notif-row"><div class="notif-info"><span class="notif-label">⚠️ Alerte ménage non validé</span><span class="notif-desc">1h avant l'arrivée d'un voyageur si le ménage n'est pas encore validé</span></div><label class="toggle-switch"><input type="checkbox" id="notif_cleaning_alert" checked><span class="toggle-slider"></span></label></div>
         <div class="notif-row"><div class="notif-info"><span class="notif-label">Checklist validée</span><span class="notif-desc">Quand toutes les tâches d'une checklist sont cochées</span></div><label class="toggle-switch"><input type="checkbox" id="notif_checklist_done" checked><span class="toggle-slider"></span></label></div>
       </div>
       <div class="notif-group">
@@ -3098,7 +3099,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
   // ===== Notifications préférences =====
   (function() {
-    const NOTIF_KEYS = ['notif_new_reservation', 'notif_reservation_cancelled', 'notif_daily_summary', 'notif_reminder_j1', 'notif_cleaning_reminder', 'notif_cleaning_completed', 'notif_checklist_done', 'notif_deposit_request', 'notif_deposit_release', 'notif_new_message', 'notif_new_invoice'];
+    const NOTIF_KEYS = ['notif_new_reservation', 'notif_reservation_cancelled', 'notif_daily_summary', 'notif_reminder_j1', 'notif_cleaning_reminder', 'notif_cleaning_completed', 'notif_cleaning_alert', 'notif_checklist_done', 'notif_deposit_request', 'notif_deposit_release', 'notif_new_message', 'notif_new_invoice'];
     const tokenNotif = localStorage.getItem('lcc_token');
 
     async function loadNotificationSettings() {
