@@ -1708,7 +1708,8 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
   notif_deposit_request: true,
   notif_deposit_release: true,
   notif_new_message: true,
-  notif_new_invoice: true
+  notif_new_invoice: true,
+  notif_cleaning_alert: true
 };
 
 function getEmailTransporter() {
@@ -1891,6 +1892,7 @@ async function getNotificationSettings(userId) {
     notif_deposit_release: typeof raw.notif_deposit_release === 'boolean' ? raw.notif_deposit_release : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_release,
     notif_new_message: typeof raw.notif_new_message === 'boolean' ? raw.notif_new_message : DEFAULT_NOTIFICATION_SETTINGS.notif_new_message,
     notif_new_invoice: typeof raw.notif_new_invoice === 'boolean' ? raw.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
+    notif_cleaning_alert: typeof raw.notif_cleaning_alert === 'boolean' ? raw.notif_cleaning_alert : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_alert,
   };
 }
 
@@ -1927,6 +1929,7 @@ async function saveNotificationSettings(userId, settings) {
     notif_deposit_release: typeof settings.notif_deposit_release === 'boolean' ? settings.notif_deposit_release : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_release,
     notif_new_message: typeof settings.notif_new_message === 'boolean' ? settings.notif_new_message : DEFAULT_NOTIFICATION_SETTINGS.notif_new_message,
     notif_new_invoice: typeof settings.notif_new_invoice === 'boolean' ? settings.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
+    notif_cleaning_alert: typeof settings.notif_cleaning_alert === 'boolean' ? settings.notif_cleaning_alert : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_alert,
   };
 
   await pool.query(
@@ -8011,12 +8014,12 @@ app.post('/api/settings/notifications', async (req, res) => {
     try {
     const {
       newReservation, reminder, whatsappEnabled, whatsappNumber,
-      notif_new_reservation, notif_reservation_cancelled, notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder, notif_cleaning_completed, notif_checklist_done, notif_deposit_request, notif_deposit_release, notif_new_message, notif_new_invoice,
+      notif_new_reservation, notif_reservation_cancelled, notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder, notif_cleaning_completed, notif_checklist_done, notif_deposit_request, notif_deposit_release, notif_new_message, notif_new_invoice, notif_cleaning_alert,
     } = req.body || {};
 
     const saved = await saveNotificationSettings(user.id, {
       newReservation, reminder, whatsappEnabled, whatsappNumber,
-      notif_new_reservation, notif_reservation_cancelled, notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder, notif_cleaning_completed, notif_checklist_done, notif_deposit_request, notif_deposit_release, notif_new_message, notif_new_invoice,
+      notif_new_reservation, notif_reservation_cancelled, notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder, notif_cleaning_completed, notif_checklist_done, notif_deposit_request, notif_deposit_release, notif_new_message, notif_new_invoice, notif_cleaning_alert,
     });
 
     res.json({
@@ -15841,6 +15844,28 @@ app.post('/api/invoice/create',
       }
     }
     
+      // ✅ Push notification facture créée
+      try {
+        const notifSettings = await getUserNotificationSettings(pool, userId);
+        if (notifSettings.notif_new_invoice) {
+          const tokensRes = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+            [userId]
+          );
+          if (tokensRes.rows.length > 0) {
+            const tokens = tokensRes.rows.map(r => r.fcm_token);
+            await sendNotificationToMultiple(
+              tokens,
+              `📄 Facture ${invoiceNumber} envoyée`,
+              `Facture envoyée à ${clientName} pour ${propertyName}`,
+              { type: 'new_invoice', invoiceNumber }
+            );
+          }
+        }
+      } catch (pushErr) {
+        console.error('❌ Push facture:', pushErr.message);
+      }
+
     res.json({ 
       success: true, 
       invoiceNumber,
@@ -19847,6 +19872,11 @@ cron.schedule('*/15 * * * *', async () => {
       // Anti-doublon
       const alertKey = `${row.reservation_uid}_cleaning_alert`;
       if (_cleaningAlertSent.has(alertKey)) continue;
+
+      // Vérifier que l'hôte a activé cette notification
+      const notifSettings = await getUserNotificationSettings(pool, row.user_id);
+      if (!notifSettings.notif_cleaning_alert) continue;
+
       _cleaningAlertSent.add(alertKey);
 
       // Récupérer les tokens FCM de l'hôte
