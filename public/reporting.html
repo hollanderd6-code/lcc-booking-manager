@@ -913,14 +913,26 @@ function exportCSV() {
 
 function exportConcierge() {
   if (!_data) return;
-  const resas = (_data.reservations||[]).filter(r => r.conciergePct > 0);
+  // Filtrer les blocages et ne garder que les réservations avec commission
+  const resas = (_data.reservations||[]).filter(r =>
+    r.conciergePct > 0 &&
+    r.platform !== 'Block' &&
+    !String(r.uid || '').startsWith('block_')
+  );
   if (!resas.length) {
     alert('Aucune réservation avec commission conciergerie.\n\nConfigurez le % dans Mes logements → Commission conciergerie.');
     return;
   }
-  const headers = ['Logement','Plateforme','Arrivée','Départ','Nuits','Prix brut','Frais ménage','Taxe séjour','Revenu net','% Conciergerie','Commission','Versé propriétaire'];
-  const rows = resas.map(r => [r.propertyName, r.platform, r.startDate, r.endDate, r.nights, r.rawPrice, r.cleaningFee, r.touristTax, r.netRevenue, r.conciergePct+'%', r.conciergeAmount, r.ownerRevenue]);
-  dlCSV(`conciergerie_${_data.year}.csv`, headers, rows);
+  const fmtDate = d => {
+    if (!d) return '';
+    const dt = new Date(d);
+    const day = String(dt.getUTCDate()).padStart(2,'0');
+    const mon = String(dt.getUTCMonth()+1).padStart(2,'0');
+    return `${day}/${mon}/${dt.getUTCFullYear()}`;
+  };
+  const headers = ['Logement','Plateforme','Arrivee','Depart','Nuits','Prix brut','Frais menage','Taxe sejour','Revenu net','% Conciergerie','Commission','Verse proprietaire'];
+  const rows = resas.map(r => [r.propertyName, r.platform, fmtDate(r.startDate), fmtDate(r.endDate), r.nights, r.rawPrice, r.cleaningFee, r.touristTax, r.netRevenue, r.conciergePct+'%', r.conciergeAmount, r.ownerRevenue]);
+  dlCSV(`boostinghost_conciergerie_${_data.year}.csv`, headers, rows);
 }
 
 function dlCSV(name, headers, rows) {
