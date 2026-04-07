@@ -397,6 +397,65 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   .main-wrapper { margin-left: 0 !important; }
   .rp-header-btns { display: none; }
 }
+
+/* ── Comparateur ── */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media(max-width:700px){ .compare-grid { grid-template-columns: 1fr; } }
+
+.compare-col {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.compare-col-header {
+  padding: 14px 18px;
+  font-weight: 700;
+  font-size: 15px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.compare-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.compare-metric-label { color: var(--text-muted); }
+.compare-metric-value { font-weight: 700; color: var(--text); }
+.compare-metric-value.winner { color: #10B981; }
+.compare-metric-value.loser  { color: #EF4444; }
+
+/* ── Score qualité ── */
+.score-circle {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-weight: 900;
+  font-size: 22px;
+  color: white;
+  flex-shrink: 0;
+}
+.score-detail-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #E5E7EB;
+  overflow: hidden;
+  flex: 1;
+}
+.score-detail-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .4s;
+}
 </style>
 </head>
 
@@ -507,6 +566,25 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
   <!-- KPI -->
   <div class="stats-row" id="kpiGrid"></div>
+
+  <!-- Comparateur de logements -->
+  <div class="card" id="comparatorSection" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-chart-bar"></i> Comparateur de logements</div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <select id="compareA" class="ctrl-select" style="min-width:160px;" onchange="renderComparator()">
+          <option value="">Logement A</option>
+        </select>
+        <span style="color:#9CA3AF;font-weight:700;">vs</span>
+        <select id="compareB" class="ctrl-select" style="min-width:160px;" onchange="renderComparator()">
+          <option value="">Logement B</option>
+        </select>
+      </div>
+    </div>
+    <div id="comparatorContent" style="padding:16px 24px 24px;">
+      <div style="text-align:center;color:#9CA3AF;padding:24px;font-size:14px;">Sélectionnez deux logements pour comparer leurs performances</div>
+    </div>
+  </div>
 
   <!-- Conciergerie (conditionnel) -->
   <div class="concierge-section" id="conciergeSection" style="display:none;">
@@ -642,6 +720,8 @@ async function loadReport() {
     if (!r.ok) throw new Error('Erreur ' + r.status);
     _data = await r.json();
     render(_data);
+    // Charger les scores qualité en parallèle
+    loadQualityScores(year);
   } catch(e) {
     document.getElementById('loadingState').innerHTML = `
       <i class="fas fa-exclamation-circle" style="font-size:32px;color:#dc2626;"></i>
@@ -668,6 +748,7 @@ function render(d) {
   renderPieChart(d.platforms);
   renderPropTable(d.byProperty);
   renderMonthlyTable(d.monthly, d.byProperty);
+  populateComparatorSelects(d.byProperty);
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('reportContent').style.display = 'block';
@@ -982,6 +1063,160 @@ async function downloadExport(type) {
     alert('Erreur lors du téléchargement. Réessayez.');
     console.error(err);
   }
+}
+</script>
+
+<script>
+// ── Score Qualité & Comparateur ───────────────────────────────
+
+let _scores = null; // cache des scores qualité
+
+// Charge les scores depuis l'API et met à jour le comparateur
+async function loadQualityScores(year) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const r = await fetch(`${API_URL}/api/quality-score?year=${year}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+    _scores = d.scores || [];
+    renderComparator();
+  } catch(e) {
+    console.warn('Score qualité indisponible:', e.message);
+  }
+}
+
+// Remplit les selects A et B avec les logements disponibles
+function populateComparatorSelects(byProperty) {
+  const props = byProperty || [];
+  ['compareA','compareB'].forEach((id, idx) => {
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = `<option value="">Logement ${idx === 0 ? 'A' : 'B'}</option>`;
+    props.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name;
+      if (p.id === current) o.selected = true;
+      sel.appendChild(o);
+    });
+    // Pré-sélectionner les deux premiers logements différents
+    if (!current && props.length > idx) {
+      sel.value = props[idx]?.id || '';
+    }
+  });
+  renderComparator();
+}
+
+// Rendu principal du comparateur
+function renderComparator() {
+  const idA = document.getElementById('compareA')?.value;
+  const idB = document.getElementById('compareB')?.value;
+  const container = document.getElementById('comparatorContent');
+  if (!container) return;
+
+  if (!idA || !idB || idA === idB || !_data) {
+    container.innerHTML = '<div style="text-align:center;color:#9CA3AF;padding:24px;font-size:14px;">Sélectionnez deux logements différents pour comparer</div>';
+    return;
+  }
+
+  const propA = (_data.byProperty || []).find(p => p.id === idA);
+  const propB = (_data.byProperty || []).find(p => p.id === idB);
+  if (!propA || !propB) return;
+
+  const scoreA = _scores?.find(s => s.property_id === idA);
+  const scoreB = _scores?.find(s => s.property_id === idB);
+
+  const metrics = [
+    {
+      label: "CA Brut",
+      valA: propA.grossRevenue, valB: propB.grossRevenue,
+      format: v => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(v||0) + ' €',
+      higher: true
+    },
+    {
+      label: "Réservations",
+      valA: propA.bookings, valB: propB.bookings,
+      format: v => v || 0,
+      higher: true
+    },
+    {
+      label: "Nuits louées",
+      valA: propA.nights, valB: propB.nights,
+      format: v => v || 0,
+      higher: true
+    },
+    {
+      label: "Taux d'occupation",
+      valA: propA.occupancyRate, valB: propB.occupancyRate,
+      format: v => (v || 0) + '%',
+      higher: true
+    },
+    {
+      label: "Revenu net",
+      valA: propA.netRevenue, valB: propB.netRevenue,
+      format: v => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(v||0) + ' €',
+      higher: true
+    },
+    {
+      label: "Score qualité",
+      valA: scoreA?.score, valB: scoreB?.score,
+      format: v => v != null ? v + '/100' : '—',
+      higher: true,
+      isScore: true,
+      colorA: scoreA?.color, colorB: scoreB?.color
+    }
+  ];
+
+  const renderCol = (prop, score, metrics, side) => {
+    const color = prop.color || '#1A7A5E';
+    const scoreVal = score?.score;
+    const scoreColor = score?.color || '#9CA3AF';
+
+    const metricsHtml = metrics.map(m => {
+      const valA = side === 'A' ? m.valA : m.valB;
+      const valB = side === 'A' ? m.valB : m.valA;
+      const isWinner = m.higher ? (valA > valB) : (valA < valB);
+      const isTie = valA === valB;
+      const cls = isTie || valA == null ? '' : (isWinner ? 'winner' : 'loser');
+      return `
+        <div class="compare-metric">
+          <span class="compare-metric-label">${m.label}</span>
+          <span class="compare-metric-value ${cls}">${m.format(valA)}</span>
+        </div>`;
+    }).join('');
+
+    // Score détail
+    const detailHtml = score?.details ? Object.values(score.details).map(d => `
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 18px;border-top:1px solid var(--border);">
+        <span style="font-size:12px;color:var(--text-muted);width:130px;flex-shrink:0;">${d.label}</span>
+        <div class="score-detail-bar">
+          <div class="score-detail-bar-fill" style="width:${d.score != null ? Math.round(d.score/d.max*100) : 0}%;background:${scoreColor};"></div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:var(--text);width:50px;text-align:right;">${d.value || '—'}</span>
+      </div>`).join('') : '';
+
+    return `
+      <div class="compare-col">
+        <div class="compare-col-header" style="background:${color};">
+          <div class="score-circle" style="background:${scoreColor};font-size:18px;">
+            ${scoreVal != null ? scoreVal : '?'}
+          </div>
+          <div>
+            <div>${prop.name}</div>
+            <div style="font-size:11px;font-weight:400;opacity:.8;">Score qualité</div>
+          </div>
+        </div>
+        ${metricsHtml}
+        ${detailHtml ? '<div style="padding:8px 0 4px 18px;font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;border-top:1px solid var(--border);">Détail score</div>' + detailHtml : ''}
+      </div>`;
+  };
+
+  container.innerHTML = `
+    <div class="compare-grid">
+      ${renderCol(propA, scoreA, metrics, 'A')}
+      ${renderCol(propB, scoreB, metrics, 'B')}
+    </div>`;
 }
 </script>
 
