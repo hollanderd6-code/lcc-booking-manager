@@ -724,6 +724,101 @@
           </div>
         </div>
 
+        <!-- Article 6 -->
+        <div class="article-card" data-category="revenus" onclick="openModal('article6')">
+          <div class="article-cover cover-rose">
+            <div class="article-cover-icon">💳</div>
+          </div>
+          <div class="article-body">
+            <div class="article-meta">
+              <span class="article-tag tag-violet">Revenus</span>
+              <span class="article-date">3 mars 2026</span>
+            </div>
+            <h2 class="article-title">Commissions Airbnb : Pourquoi et comment lancer votre site de réservation directe ?</h2>
+            <p class="article-excerpt">Des commissions entre 15 % et 20 % sur chaque réservation. Et si vous repreniez le contrôle sur vos marges avec la réservation directe ?</p>
+            <div class="article-footer">
+              <span class="article-read"><i class="fas fa-clock"></i> 5 min de lecture</span>
+              <span class="article-cta">Lire l'article <i class="fas fa-arrow-right"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Article 7 -->
+        <div class="article-card" data-category="gestion" onclick="openModal('article7')">
+          <div class="article-cover cover-amber">
+            <div class="article-cover-icon">🔒</div>
+          </div>
+          <div class="article-body">
+            <div class="article-meta">
+              <span class="article-tag tag-amber">Sécurité & Finance</span>
+              <span class="article-date">25 février 2026</span>
+            </div>
+            <h2 class="article-title">Caution en location saisonnière : Pourquoi abandonner les chèques et le liquide ?</h2>
+            <p class="article-excerpt">Gérer une caution manuellement est risqué et dépassé. Voici pourquoi la dématérialisation protège mieux votre bien et rassure vos voyageurs.</p>
+            <div class="article-footer">
+              <span class="article-read"><i class="fas fa-clock"></i> 5 min de lecture</span>
+              <span class="article-cta">Lire l'article <i class="fas fa-arrow-right"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Article 8 -->
+        <div class="article-card" data-category="automatisation" onclick="openModal('article8')">
+          <div class="article-cover cover-blue">
+            <div class="article-cover-icon">🤖</div>
+          </div>
+          <div class="article-body">
+            <div class="article-meta">
+              <span class="article-tag tag-blue">IA & Conciergerie</span>
+              <span class="article-date">18 février 2026</span>
+            </div>
+            <h2 class="article-title">IA et Conciergerie : Comment le chat intelligent révolutionne la gestion des voyageurs</h2>
+            <p class="article-excerpt">L'IA répond à vos voyageurs 24h/24, dans leur langue, en moins de 30 secondes. Voici comment elle transforme votre gestion au quotidien.</p>
+            <div class="article-footer">
+              <span class="article-read"><i class="fas fa-clock"></i> 5 min de lecture</span>
+              <span class="article-cta">Lire l'article <i class="fas fa-arrow-right"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Article 9 -->
+        <div class="article-card" data-category="gestion" onclick="openModal('article9')">
+          <div class="article-cover cover-green">
+            <div class="article-cover-icon">🧹</div>
+          </div>
+          <div class="article-body">
+            <div class="article-meta">
+              <span class="article-tag tag-green">Gestion d'équipe</span>
+              <span class="article-date">10 février 2026</span>
+            </div>
+            <h2 class="article-title">Zéro oubli ménage : Comment coordonner vos prestataires sans passer 20 appels par jour</h2>
+            <p class="article-excerpt">Le ménage, c'est le nerf de la guerre en location courte durée. Voici comment automatiser la coordination de vos équipes pour garantir une qualité constante.</p>
+            <div class="article-footer">
+              <span class="article-read"><i class="fas fa-clock"></i> 5 min de lecture</span>
+              <span class="article-cta">Lire l'article <i class="fas fa-arrow-right"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Article 10 -->
+        <div class="article-card" data-category="gestion" onclick="openModal('article10')">
+          <div class="article-cover cover-violet">
+            <div class="article-cover-icon">📊</div>
+          </div>
+          <div class="article-body">
+            <div class="article-meta">
+              <span class="article-tag tag-violet">Logiciel de gestion</span>
+              <span class="article-date">3 février 2026</span>
+            </div>
+            <h2 class="article-title">Tableur Excel vs PMS : À quel moment faut-il investir dans un logiciel de gestion ?</h2>
+            <p class="article-excerpt">Excel fonctionne très bien au début. Mais il y a un moment où la gestion manuelle devient votre plus grand frein. Voici les signes qui ne trompent pas.</p>
+            <div class="article-footer">
+              <span class="article-read"><i class="fas fa-clock"></i> 5 min de lecture</span>
+              <span class="article-cta">Lire l'article <i class="fas fa-arrow-right"></i></span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- CTA -->
@@ -1018,5 +1113,243 @@
       });
     }
   </script>
+  <!-- Modal Article 6 — Commissions & réservation directe -->
+  <div class="modal-overlay" id="modal-article6" onclick="closeModalOnOverlay(event, 'article6')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('article6')"><i class="fas fa-times"></i></button>
+      <div class="modal-cover cover-rose"><div class="modal-cover-icon">💳</div></div>
+      <div class="modal-header">
+        <div class="modal-meta">
+          <span class="article-tag tag-violet">Revenus</span>
+          <span class="article-date">3 mars 2026</span>
+        </div>
+        <h1 class="modal-title">Commissions Airbnb : Pourquoi et comment lancer votre site de réservation directe ?</h1>
+        <p class="modal-read"><i class="fas fa-clock"></i> 5 min de lecture</p>
+      </div>
+      <div class="modal-body">
+        <p>La plupart des propriétaires commencent leur aventure sur Airbnb ou Booking.com. C'est une excellente stratégie pour gagner en visibilité rapidement. Mais avec des commissions oscillant entre 15 % et 20 %, une question finit toujours par se poser : comment reprendre le contrôle sur ses marges ?</p>
+        <p>La réponse tient en trois mots : <strong>la réservation directe.</strong></p>
+
+        <h2>1. Récupérez votre marge (le calcul est simple)</h2>
+        <p>Sur une nuitée à 100 €, une plateforme encaisse entre 15 € et 20 € de frais divers. Sur une année, cela représente des milliers d'euros qui sortent de votre poche. En proposant votre propre site, vous supprimez ces intermédiaires. Même en offrant une petite réduction de 5 % à vos voyageurs pour les inciter à réserver en direct, vous restez largement gagnant.</p>
+
+        <h2>2. Devenez propriétaire de vos données clients</h2>
+        <p>Sur Airbnb, le voyageur appartient à la plateforme. Vous n'avez pas son adresse email personnelle et vous ne pouvez pas le recontacter facilement pour lui proposer de revenir. Avec votre propre site de réservation, vous construisez votre propre base de données.</p>
+
+        <div class="highlight-box">
+          💡 Envoyez un code promo par email à vos anciens voyageurs six mois après leur séjour pour les inciter à revenir chez vous, en direct cette fois.
+        </div>
+
+        <h2>3. Protégez-vous contre la "suspension de compte"</h2>
+        <p>C'est la hantise de tout loueur : voir son annonce désactivée du jour au lendemain à cause d'un bug algorithmique ou d'un commentaire injustifié. Dépendre d'une seule plateforme est un risque majeur. Un site de réservation directe est votre "assurance vie" : quoi qu'il arrive sur les plateformes, votre boutique reste ouverte.</p>
+
+        <h2>4. Professionnalisez votre image de marque</h2>
+        <p>Avoir un site web dédié avec un nom de domaine propre change radicalement la perception des voyageurs. Cela rassure, donne une image de "professionnel de l'hébergement" et permet de mettre en avant des services que les plateformes cachent (partenariats locaux, petits-déjeuners, location de vélos).</p>
+
+        <h2>5. Comment faire sans être un expert en informatique ?</h2>
+        <p>Vous n'avez plus besoin de savoir coder ou de payer une agence Web des milliers d'euros.</p>
+
+        <div class="highlight-box">
+          ⚠️ L'erreur à éviter : créer un site vitrine sans moteur de réservation synchronisé. Si votre site ne permet pas de réserver et de payer en ligne avec un calendrier à jour, vous perdrez 90 % des clients.
+        </div>
+
+        <p><strong>La solution Boostinghost :</strong> Nous avons intégré un moteur de réservation directe directement dans votre PMS. Une réservation tombe sur votre site ? Elle bloque instantanément les dates sur Airbnb et Booking.com. Aucun risque de double réservation, que des profits supplémentaires.</p>
+      </div>
+      <div class="modal-footer">
+        <p class="modal-footer-text">Prêt à reprendre votre indépendance ? <strong>Boostinghost</strong> intègre un moteur de réservation directe dans votre PMS.</p>
+        <a href="/register.html" class="btn btn-primary"><i class="fas fa-rocket"></i> Essayer gratuitement</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Article 7 — Caution & Sécurité -->
+  <div class="modal-overlay" id="modal-article7" onclick="closeModalOnOverlay(event, 'article7')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('article7')"><i class="fas fa-times"></i></button>
+      <div class="modal-cover cover-amber"><div class="modal-cover-icon">🔒</div></div>
+      <div class="modal-header">
+        <div class="modal-meta">
+          <span class="article-tag tag-amber">Sécurité & Finance</span>
+          <span class="article-date">25 février 2026</span>
+        </div>
+        <h1 class="modal-title">Caution en location saisonnière : Pourquoi abandonner les chèques et le liquide ?</h1>
+        <p class="modal-read"><i class="fas fa-clock"></i> 5 min de lecture</p>
+      </div>
+      <div class="modal-body">
+        <p>La gestion de la caution est souvent le moment le plus inconfortable de l'accueil. Entre le propriétaire qui craint les dégradations et le voyageur qui a peur de ne pas revoir son argent, la tension est réelle. Pourtant, en 2026, gérer une caution manuellement est non seulement risqué, mais aussi totalement dépassé.</p>
+
+        <h2>1. En finir avec la friction à l'arrivée</h2>
+        <p>Demander un chèque ou des espèces à l'entrée dans les lieux casse immédiatement l'ambiance "vacances". Pour les voyageurs étrangers, c'est encore pire : ils n'ont souvent pas de chéquier et rechignent à retirer de grosses sommes en liquide. La caution en ligne permet de régler ce point <strong>avant l'arrivée</strong>, transformant le check-in en un moment purement convivial.</p>
+
+        <h2>2. Une sécurité juridique et financière réelle</h2>
+        <p>Un chèque de caution peut être sans provision, volé ou opposé. Quant aux espèces, elles posent des problèmes de traçabilité et de sécurité. Avec une empreinte bancaire (pré-autorisation), vous avez la certitude que les fonds sont disponibles. Si un incident survient, vous pouvez déclencher le prélèvement en quelques clics, avec des preuves à l'appui.</p>
+
+        <h2>3. Ne pas impacter le plafond de vos voyageurs</h2>
+        <p>C'est le grand avantage de la "pré-autorisation" intelligente : contrairement à un débit classique, l'argent n'est pas prélevé sur le compte du client. Son plafond bancaire n'est pas bloqué, ce qui évite les refus de paiement au restaurant ou lors de ses activités de vacances.</p>
+
+        <div class="highlight-box">
+          💡 Un voyageur dont le budget vacances n'est pas amputé par une caution bloquée est un voyageur plus détendu, ce qui se ressent directement sur votre note finale !
+        </div>
+
+        <h2>4. Automatiser pour ne plus oublier</h2>
+        <p>Gérer 5 logements signifie demander, suivre et rendre 5 cautions par semaine (minimum). Le risque d'oubli est immense. Un système automatisé envoie les rappels par email ou SMS à J-3, vérifie la validité de la carte et vous alerte en temps réel si la caution n'a pas été déposée. Pas de caution ? Pas de code d'accès.</p>
+
+        <h2>5. Professionnaliser la gestion des litiges</h2>
+        <p>En cas de dégradation, la gestion "à l'amiable" peut vite tourner au conflit. En passant par une plateforme de gestion de caution intégrée, le processus est documenté. Vous envoyez vos photos, votre facture de réparation, et le système gère la retenue de manière impartiale.</p>
+
+        <div class="highlight-box">
+          ⚠️ Sur certaines plateformes, le dépôt de garantie n'est pas géré automatiquement. Si vous ne demandez pas de caution via un outil tiers, vous dépendez totalement du bon vouloir de la plateforme en cas de litige.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <p class="modal-footer-text">Avec <strong>Boostinghost</strong>, la gestion des cautions est totalement intégrée à votre tunnel de réservation.</p>
+        <a href="/register.html" class="btn btn-primary"><i class="fas fa-rocket"></i> Essayer gratuitement</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Article 8 — IA & Conciergerie -->
+  <div class="modal-overlay" id="modal-article8" onclick="closeModalOnOverlay(event, 'article8')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('article8')"><i class="fas fa-times"></i></button>
+      <div class="modal-cover cover-blue"><div class="modal-cover-icon">🤖</div></div>
+      <div class="modal-header">
+        <div class="modal-meta">
+          <span class="article-tag tag-blue">IA & Conciergerie</span>
+          <span class="article-date">18 février 2026</span>
+        </div>
+        <h1 class="modal-title">IA et Conciergerie : Comment le chat intelligent révolutionne la gestion des voyageurs</h1>
+        <p class="modal-read"><i class="fas fa-clock"></i> 5 min de lecture</p>
+      </div>
+      <div class="modal-body">
+        <p>Répondre à un voyageur à 22h30 pour lui expliquer comment allumer le chauffage fait partie du métier. Mais quand vous gérez plusieurs biens, ces interruptions constantes deviennent un frein à votre croissance. L'Intelligence Artificielle n'est plus une option de science-fiction : c'est l'assistant personnel qui travaille pour vous, 24h/24.</p>
+
+        <h2>1. Une réactivité immédiate (le facteur clé du SEO Airbnb)</h2>
+        <p>Les algorithmes d'Airbnb et Booking.com adorent la réactivité. Plus vous répondez vite, mieux vous êtes classé. L'IA répond en moins de 30 secondes, même en plein milieu de la nuit. Résultat : votre taux de réponse reste à 100 %, et votre annonce remonte naturellement dans les résultats de recherche.</p>
+
+        <h2>2. Le "Chat Intelligent" : bien plus qu'une réponse automatique</h2>
+        <p>Contrairement aux messages automatiques classiques, le chat intelligent de Boostinghost analyse la question du voyageur et y répond de manière personnalisée et contextualisée.</p>
+
+        <div class="highlight-box">
+          💡 Nourrissez l'IA avec votre livret d'accueil numérique. Plus elle a d'informations sur votre logement, plus elle est précise et humaine dans ses réponses.
+        </div>
+
+        <h2>3. Brisez la barrière de la langue sans effort</h2>
+        <p>Recevoir des voyageurs du monde entier est une chance, mais la barrière de la langue peut mener à des malentendus. L'IA traduit instantanément les questions et répond dans la langue maternelle du voyageur (Anglais, Espagnol, Allemand, etc.) avec une grammaire parfaite.</p>
+
+        <h2>4. Filtrez les urgences réelles</h2>
+        <p>L'IA gère 80 % des questions répétitives (Wifi, parking, check-out). Cela signifie que lorsqu'une notification arrive enfin sur votre téléphone, c'est pour un sujet qui mérite <strong>vraiment</strong> votre attention humaine (un dégât des eaux, un voisin bruyant).</p>
+
+        <h2>5. Une expérience voyageur "Premium"</h2>
+        <p>Les voyageurs d'aujourd'hui sont impatients. Obtenir une réponse précise à minuit sans avoir l'impression de "déranger" le propriétaire améliore considérablement leur satisfaction. Une réponse rapide = un voyageur rassuré = un meilleur avis 5 étoiles à la fin du séjour.</p>
+
+        <div class="highlight-box">
+          ⚠️ L'erreur à éviter : masquer totalement l'aspect humain. L'IA doit être un assistant, pas un mur. Chez Boostinghost, vous gardez toujours la main : vous pouvez intervenir dans la conversation à tout moment.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <p class="modal-footer-text">Libérez-vous de votre messagerie. <strong>Boostinghost</strong> gère vos voyageurs 24h/24 grâce à l'IA.</p>
+        <a href="/register.html" class="btn btn-primary"><i class="fas fa-rocket"></i> Essayer gratuitement</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Article 9 — Gestion d'équipe -->
+  <div class="modal-overlay" id="modal-article9" onclick="closeModalOnOverlay(event, 'article9')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('article9')"><i class="fas fa-times"></i></button>
+      <div class="modal-cover cover-green"><div class="modal-cover-icon">🧹</div></div>
+      <div class="modal-header">
+        <div class="modal-meta">
+          <span class="article-tag tag-green">Gestion d'équipe</span>
+          <span class="article-date">10 février 2026</span>
+        </div>
+        <h1 class="modal-title">Zéro oubli ménage : Comment coordonner vos prestataires sans passer 20 appels par jour</h1>
+        <p class="modal-read"><i class="fas fa-clock"></i> 5 min de lecture</p>
+      </div>
+      <div class="modal-body">
+        <p>Dans le monde de la location courte durée, le ménage n'est pas un détail : c'est le nerf de la guerre. C'est aussi la tâche la plus difficile à déléguer sans stress. Entre les départs tardifs, les réservations de dernière minute et les imprévus des agents, la logistique peut vite devenir un enfer.</p>
+
+        <h2>1. La fin du planning manuel (SMS, WhatsApp, appels)</h2>
+        <p>Passer sa matinée à envoyer des SMS aux agents pour confirmer les entrées et sorties est une perte de temps immense. Avec un système automatisé, vos prestataires ont accès à leur propre <strong>calendrier synchronisé</strong>. Dès qu'une réservation tombe sur Airbnb ou Booking, l'intervention de ménage est créée et assignée. Vous n'avez plus rien à faire.</p>
+
+        <h2>2. La checklist photo : votre assurance qualité</h2>
+        <p>Même avec la meilleure volonté du monde, un agent peut oublier de vider le lave-vaisselle ou de changer le tapis de bain. La solution ? La <strong>checklist numérique</strong>. L'agent valide chaque étape sur son téléphone.</p>
+
+        <div class="highlight-box">
+          💡 Exigez une "photo de fin de prestation" pour les points critiques (lit fait, salle de bain impeccable). Cela responsabilise l'équipe et vous permet de vérifier la qualité à distance.
+        </div>
+
+        <h2>3. Gérez les imprévus en temps réel</h2>
+        <p>Un voyageur demande un "late check-out" ? Une réservation arrive pour le soir même à 14h ? Votre logiciel doit envoyer une <strong>alerte immédiate</strong> à votre équipe de ménage. La réactivité de votre équipe opérationnelle est ce qui vous permet d'accepter des réservations de dernière minute sans risque.</p>
+
+        <h2>4. Simplifiez la vie de vos prestataires</h2>
+        <ul>
+          <li>L'adresse exacte avec un lien GPS.</li>
+          <li>Le code de la boîte à clés ou l'accès numérique.</li>
+          <li>Les notes spécifiques (ex: "Attention, le voyageur a signalé une ampoule grillée").</li>
+        </ul>
+        <p>Plus l'information est claire, moins vous recevrez d'appels de panique à 11h00.</p>
+
+        <h2>5. Automatisez la facturation des prestataires</h2>
+        <p>À la fin du mois, compter le nombre d'interventions pour chaque logement est un casse-tête comptable. Un bon PMS génère un <strong>rapport d'activité</strong> précis pour chaque prestataire. Vous savez exactement ce que vous devez payer, et vos propriétaires savent exactement ce qui leur est facturé.</p>
+
+        <div class="highlight-box">
+          ⚠️ L'erreur à éviter : partager vos codes d'accès Airbnb/Booking avec vos agents de ménage. C'est un risque de sécurité majeur. Utilisez toujours un accès "prestataire" dédié via votre logiciel de gestion.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <p class="modal-footer-text"><strong>Boostinghost</strong> simplifie la coordination de vos équipes de nettoyage et sécurise la qualité de vos accueils.</p>
+        <a href="/register.html" class="btn btn-primary"><i class="fas fa-rocket"></i> Essayer gratuitement</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Article 10 — Excel vs PMS -->
+  <div class="modal-overlay" id="modal-article10" onclick="closeModalOnOverlay(event, 'article10')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('article10')"><i class="fas fa-times"></i></button>
+      <div class="modal-cover cover-violet"><div class="modal-cover-icon">📊</div></div>
+      <div class="modal-header">
+        <div class="modal-meta">
+          <span class="article-tag tag-violet">Logiciel de gestion</span>
+          <span class="article-date">3 février 2026</span>
+        </div>
+        <h1 class="modal-title">Tableur Excel vs PMS : À quel moment faut-il investir dans un logiciel de gestion ?</h1>
+        <p class="modal-read"><i class="fas fa-clock"></i> 5 min de lecture</p>
+      </div>
+      <div class="modal-body">
+        <p>Beaucoup de gestionnaires de biens commencent sur Excel ou Google Sheets. Au début, c'est gratuit, flexible et ça fonctionne très bien. Mais arrive un moment où la gestion manuelle devient le plus gros frein à votre croissance. Comment savoir si vous avez atteint ce point de bascule ?</p>
+
+        <h2>1. Le test de l'erreur de saisie</h2>
+        <p>Sur Excel, une cellule mal renseignée ou un oubli de mise à jour peut entraîner une double réservation catastrophique. Si vous passez plus de temps à "vérifier" vos calendriers qu'à développer votre activité, le coût de votre temps de cerveau est bien supérieur au prix d'un abonnement mensuel à un PMS.</p>
+
+        <h2>2. Le défi de la synchronisation en temps réel</h2>
+        <p>Un tableur ne communique pas avec Airbnb, Booking ou Abritel. Chaque réservation nécessite une manipulation manuelle. Pendant ces quelques minutes de saisie, un autre voyageur peut réserver sur une plateforme concurrente. Une connexion API directe synchronise les disponibilités en moins de 10 secondes.</p>
+
+        <h2>3. La centralisation vs le puzzle d'applications</h2>
+        <p>Avec un tableur, vous avez le tableau de bord sur Excel, la messagerie sur Airbnb, le suivi financier sur un logiciel comptable, et les codes d'accès envoyés par email. Le résultat : une perte d'information constante. Un PMS comme <strong>Boostinghost</strong> centralise tout au même endroit.</p>
+
+        <div class="highlight-box">
+          💡 Ne voyez pas le coût d'un PMS comme une dépense, mais comme un investissement. Si votre PMS vous permet d'économiser 5 heures de travail par semaine, il s'est déjà rentabilisé en moins d'un mois.
+        </div>
+
+        <h2>4. La scalabilité : l'étape cruciale</h2>
+        <p>Gérer 1 ou 2 logements sur Excel est un exercice de style. Gérer 5, 10 ou 20 logements devient un métier à plein temps ingérable. Un logiciel de gestion est conçu pour automatiser les tâches répétitives (envois de messages, rappels de cautions, planning ménage). Si vous passez plus de 10 heures par semaine sur l'administration, vous travaillez <em>pour</em> votre logiciel Excel.</p>
+
+        <h2>5. La professionnalisation de votre image</h2>
+        <p>Un PMS vous permet d'envoyer des emails professionnels, des livrets d'accueil numériques, et de générer des factures automatiques. C'est ce niveau de service qui transforme un simple "hôte Airbnb" en un véritable professionnel de la location courte durée.</p>
+
+        <div class="highlight-box">
+          ⚠️ Ne vous laissez pas piéger : beaucoup de propriétaires attendent d'être débordés pour s'équiper. Le meilleur moment pour migrer vers un PMS, c'est <strong>juste avant</strong> que vous ne puissiez plus gérer la charge seul.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <p class="modal-footer-text">Arrêtez de jongler entre vos feuilles de calcul. <strong>Boostinghost</strong> automatise votre gestion dès le premier logement.</p>
+        <a href="/register.html" class="btn btn-primary"><i class="fas fa-rocket"></i> Essayer gratuitement</a>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
