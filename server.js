@@ -11761,13 +11761,12 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
 app.get('/api/export/reservations', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!user) return res.status(401).json({ error: 'Non autorise' });
 
     const { month, year, property_id } = req.query;
     const selectedYear  = parseInt(year)  || new Date().getFullYear();
-    const selectedMonth = parseInt(month) || null; // null = toute l'année
+    const selectedMonth = parseInt(month) || null;
 
-    // Construire le filtre de période
     let dateFilter = `EXTRACT(YEAR FROM r.start_date) = $2`;
     const params = [user.id, selectedYear];
     if (selectedMonth) {
@@ -11779,90 +11778,148 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
       params.push(property_id);
     }
 
+    // Pas de blocages, seulement les vraies réservations
     const result = await pool.query(`
       SELECT
-        r.uid,
-        r.start_date,
-        r.end_date,
-        (r.end_date::date - r.start_date::date) AS nights,
-        r.guest_name,
-        r.nb_guests,
-        COALESCE(r.platform, r.source, 'Direct') AS platform,
-        r.price,
-        r.status,
-        p.name AS property_name,
-        p.cleaning_fee,
-        p.tourist_tax_per_night
+        r.uid, r.property_id, r.start_date, r.end_date,
+        r.price, r.platform, r.ota_name, r.status,
+        r.guest_name, r.nb_guests,
+        (r.end_date::date - r.start_date::date) AS nights
       FROM reservations r
-      JOIN properties p ON p.id = r.property_id
       WHERE r.user_id = $1
         AND r.status IN ('confirmed', 'completed')
+        AND r.uid NOT LIKE 'block_%'
+        AND COALESCE(r.source, '') NOT IN ('BLOCK', 'BLOCAGE')
+        AND COALESCE(r.platform, '') NOT IN ('BLOCK', 'Block')
         AND ${dateFilter}
       ORDER BY r.start_date ASC
     `, params);
 
-    // Infos utilisateur pour l'en-tête
+    // Propriétés avec configs financières
+    const propsResult = await pool.query(
+      `SELECT id, name, base_price, weekend_price, cleaning_fee, tourist_tax_per_night FROM properties WHERE user_id = $1`,
+      [user.id]
+    );
+    const propMap = {};
+    propsResult.rows.forEach(p => { propMap[p.id] = p; });
+
+    // Overrides de prix
+    const overridesResult = await pool.query(
+      `SELECT property_id, TO_CHAR(date, 'YYYY-MM-DD') as date, price FROM pricing_overrides WHERE user_id = $1 AND EXTRACT(YEAR FROM date) = $2`,
+      [user.id, selectedYear]
+    );
+    const overridesMap = {};
+    overridesResult.rows.forEach(o => { overridesMap[`${o.property_id}_${o.date}`] = parseFloat(o.price); });
+
+    // Infos utilisateur
     const userInfo = await pool.query('SELECT first_name, last_name, company, email FROM users WHERE id = $1', [user.id]);
     const u = userInfo.rows[0] || {};
     const userName = u.company || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
-    const periodLabel = selectedMonth
-      ? `${String(selectedMonth).padStart(2,'0')}/${selectedYear}`
-      : `Année ${selectedYear}`;
 
-    // Construction CSV
+    // Nom de fichier sans accents
+    const periodFile = selectedMonth ? `${String(selectedMonth).padStart(2,'0')}-${selectedYear}` : `${selectedYear}`;
+    const periodDisplay = selectedMonth ? `${String(selectedMonth).padStart(2,'0')}/${selectedYear}` : `Annee ${selectedYear}`;
+
+    const normPlatform = (ota, plat) => {
+      const raw = (ota || plat || '').toLowerCase();
+      if (raw.includes('abb') || raw.includes('airbnb')) return 'Airbnb';
+      if (raw.includes('bdc') || raw.includes('booking') || raw.includes('bookingcom')) return 'Booking.com';
+      if (raw.includes('exp') || raw.includes('expedia')) return 'Expedia';
+      if (raw.includes('vrbo') || raw.includes('homeaway')) return 'Vrbo';
+      if (raw.includes('guest') || raw.includes('boostinghost')) return 'Boostinghost Guest';
+      if (raw === 'manuel' || raw === 'manual') return 'Manuel';
+      if (!raw || raw === 'direct') return 'Direct';
+      return raw.charAt(0).toUpperCase() + raw.slice(1);
+    };
+
+    const fmt = v => (parseFloat(v) || 0).toFixed(2).replace('.', ',');
+    const fmtDate = d => {
+      if (!d) return '';
+      const dt = new Date(d);
+      const day = String(dt.getUTCDate()).padStart(2,'0');
+      const mon = String(dt.getUTCMonth()+1).padStart(2,'0');
+      const yr  = dt.getUTCFullYear();
+      return `${day}/${mon}/${yr}`;
+    };
+
     const lines = [];
-    lines.push(`# Export Boostinghost.fr — Réservations`);
+    lines.push(`# Export Boostinghost.fr - Reservations`);
     lines.push(`# Compte : ${userName}`);
-    lines.push(`# Période : ${periodLabel}`);
-    lines.push(`# Généré le : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}`);
+    lines.push(`# Periode : ${periodDisplay}`);
+    lines.push(`# Genere le : ${fmtDate(new Date())} a ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}`);
     lines.push(`# boostinghost.fr`);
     lines.push('');
-    lines.push(['N° réservation','Logement','Voyageur','Nb voyageurs','Plateforme','Arrivée','Départ','Nuits','Prix séjour (€)','Frais ménage (€)','Taxe séjour (€)','Statut'].join(';'));
+    lines.push(['N reservation','Logement','Voyageur','Nb voyageurs','Plateforme','Arrivee','Depart','Nuits','Prix sejour (EUR)','Frais menage (EUR)','Taxe sejour (EUR)','Total (EUR)','Statut'].join(';'));
+
+    let totalGeneral = 0;
 
     for (const r of result.rows) {
-      const nights = parseInt(r.nights) || 0;
-      const cleaningFee = parseFloat(r.cleaning_fee) || 0;
-      const touristTax  = (parseFloat(r.tourist_tax_per_night) || 0) * nights;
+      const prop = propMap[r.property_id] || {};
+      const nights = parseInt(r.nights) || 1;
+      const nbGuests = parseInt(r.nb_guests) || 1;
+
+      // Prix : r.price > overrides jour par jour > base_price/weekend_price
+      let rawPrice = parseFloat(r.price) || 0;
+      if (!rawPrice) {
+        let total = 0;
+        const start = new Date(r.start_date);
+        for (let i = 0; i < nights; i++) {
+          const d = new Date(start);
+          d.setUTCDate(start.getUTCDate() + i);
+          const dateStr = d.toISOString().split('T')[0];
+          const key = `${r.property_id}_${dateStr}`;
+          const dow = d.getUTCDay();
+          const isPremium = (dow === 5 || dow === 6);
+          const nightPrice = overridesMap[key] != null
+            ? overridesMap[key]
+            : (isPremium && prop.weekend_price ? parseFloat(prop.weekend_price) : (parseFloat(prop.base_price) || 0));
+          total += nightPrice;
+        }
+        rawPrice = total;
+      }
+
+      const cleaningFee = parseFloat(prop.cleaning_fee) || 0;
+      const touristTax  = (parseFloat(prop.tourist_tax_per_night) || 0) * nights * Math.max(nbGuests, 1);
+      const totalLine   = rawPrice + cleaningFee + touristTax;
+      totalGeneral += totalLine;
+
       lines.push([
         r.uid,
-        `"${(r.property_name || '').replace(/"/g, '""')}"`,
-        `"${(r.guest_name || '').replace(/"/g, '""')}"`,
-        r.nb_guests || '',
-        r.platform || 'Direct',
-        r.start_date ? new Date(r.start_date).toLocaleDateString('fr-FR') : '',
-        r.end_date   ? new Date(r.end_date).toLocaleDateString('fr-FR')   : '',
+        `"${(prop.name || '').replace(/"/g,'""')}"`,
+        `"${(r.guest_name || '').replace(/"/g,'""')}"`,
+        nbGuests,
+        normPlatform(r.ota_name, r.platform),
+        fmtDate(r.start_date),
+        fmtDate(r.end_date),
         nights,
-        (parseFloat(r.price) || 0).toFixed(2).replace('.',','),
-        cleaningFee.toFixed(2).replace('.',','),
-        touristTax.toFixed(2).replace('.',','),
+        fmt(rawPrice),
+        fmt(cleaningFee),
+        fmt(touristTax),
+        fmt(totalLine),
         r.status
       ].join(';'));
     }
 
-    // Total
-    const totalRevenu = result.rows.reduce((s, r) => s + (parseFloat(r.price) || 0), 0);
     lines.push('');
-    lines.push(`;;;;;;;;;;TOTAL;${totalRevenu.toFixed(2).replace('.',',')};;;`);
+    lines.push(`;;;;;;;;;Total;;${fmt(totalGeneral)};`);
 
-    const csv = lines.join('\n');
-    const filename = `boostinghost_reservations_${periodLabel.replace('/','_').replace(' ','_')}.csv`;
-
+    const filename = `boostinghost_reservations_${periodFile}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send('\uFEFF' + csv); // BOM UTF-8 pour Excel
+    res.send('\uFEFF' + lines.join('\n'));
   } catch (err) {
-    console.error('❌ Export réservations:', err);
+    console.error('Export reservations:', err);
     res.status(500).json({ error: 'Erreur export' });
   }
 });
 
 // ============================================
-// EXPORT COMPTABLE — FACTURES PROPRIÉTAIRES CSV
+// EXPORT COMPTABLE — FACTURES PROPRIETAIRES CSV
 // ============================================
 app.get('/api/export/invoices', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!user) return res.status(401).json({ error: 'Non autorise' });
 
     const { month, year } = req.query;
     const selectedYear  = parseInt(year)  || new Date().getFullYear();
@@ -11878,56 +11935,55 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
     const result = await pool.query(`
       SELECT
         COALESCE(i.invoice_number, 'Brouillon #' || i.id::text) AS invoice_number,
-        i.issue_date,
-        i.due_date,
-        i.period_start,
-        i.period_end,
+        i.issue_date, i.due_date, i.period_start, i.period_end,
         COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS client_name,
         c.email AS client_email,
-        i.subtotal_ht,
-        i.subtotal_debours,
-        i.vat_amount,
-        i.total_ttc,
-        i.status,
-        i.is_credit_note
+        i.subtotal_ht, i.subtotal_debours, i.vat_amount, i.total_ttc,
+        i.status, i.is_credit_note
       FROM owner_invoices i
       JOIN owner_clients c ON c.id = i.client_id
-      WHERE i.user_id = $1
-        AND ${dateFilter}
+      WHERE i.user_id = $1 AND ${dateFilter}
       ORDER BY i.issue_date ASC, i.id ASC
     `, params);
 
     const userInfo = await pool.query('SELECT first_name, last_name, company, email FROM users WHERE id = $1', [user.id]);
     const u = userInfo.rows[0] || {};
     const userName = u.company || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
-    const periodLabel = selectedMonth
-      ? `${String(selectedMonth).padStart(2,'0')}/${selectedYear}`
-      : `Année ${selectedYear}`;
+
+    const periodFile    = selectedMonth ? `${String(selectedMonth).padStart(2,'0')}-${selectedYear}` : `${selectedYear}`;
+    const periodDisplay = selectedMonth ? `${String(selectedMonth).padStart(2,'0')}/${selectedYear}` : `Annee ${selectedYear}`;
+
+    const fmtDate = d => {
+      if (!d) return '';
+      const dt = new Date(d);
+      const day = String(dt.getUTCDate()).padStart(2,'0');
+      const mon = String(dt.getUTCMonth()+1).padStart(2,'0');
+      return `${day}/${mon}/${dt.getUTCFullYear()}`;
+    };
+    const fmtNum = v => v != null ? parseFloat(v).toFixed(2).replace('.',',') : '0,00';
 
     const lines = [];
-    lines.push(`# Export Boostinghost.fr — Factures propriétaires`);
+    lines.push(`# Export Boostinghost.fr - Factures proprietaires`);
     lines.push(`# Compte : ${userName}`);
-    lines.push(`# Période : ${periodLabel}`);
-    lines.push(`# Généré le : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}`);
+    lines.push(`# Periode : ${periodDisplay}`);
+    lines.push(`# Genere le : ${fmtDate(new Date())} a ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}`);
     lines.push(`# boostinghost.fr`);
     lines.push('');
-    lines.push(['N° facture','Date émission','Date échéance','Période début','Période fin','Client','Email client','Sous-total HT (€)','Débours (€)','TVA (€)','Total TTC (€)','Statut','Type'].join(';'));
+    lines.push(['N facture','Date emission','Date echeance','Periode debut','Periode fin','Client','Email client','Sous-total HT (EUR)','Debours (EUR)','TVA (EUR)','Total TTC (EUR)','Statut','Type'].join(';'));
 
     for (const inv of result.rows) {
-      const fmt = d => d ? new Date(d).toLocaleDateString('fr-FR') : '';
-      const num = v => v !== null && v !== undefined ? parseFloat(v).toFixed(2).replace('.',',') : '0,00';
       lines.push([
         inv.invoice_number,
-        fmt(inv.issue_date),
-        fmt(inv.due_date),
-        fmt(inv.period_start),
-        fmt(inv.period_end),
+        fmtDate(inv.issue_date),
+        fmtDate(inv.due_date),
+        fmtDate(inv.period_start),
+        fmtDate(inv.period_end),
         `"${(inv.client_name || '').replace(/"/g,'""')}"`,
         inv.client_email || '',
-        num(inv.subtotal_ht),
-        num(inv.subtotal_debours),
-        num(inv.vat_amount),
-        num(inv.total_ttc),
+        fmtNum(inv.subtotal_ht),
+        fmtNum(inv.subtotal_debours),
+        fmtNum(inv.vat_amount),
+        fmtNum(inv.total_ttc),
         inv.status || '',
         inv.is_credit_note ? 'Avoir' : 'Facture'
       ].join(';'));
@@ -11935,16 +11991,14 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
 
     const totalTTC = result.rows.reduce((s, i) => s + (parseFloat(i.total_ttc) || 0), 0);
     lines.push('');
-    lines.push(`;;;;;;;;;;TOTAL;${totalTTC.toFixed(2).replace('.',',')};;`);
+    lines.push(`;;;;;;;;;Total;;;${fmtNum(totalTTC)};`);
 
-    const csv = lines.join('\n');
-    const filename = `boostinghost_factures_${periodLabel.replace('/','_').replace(' ','_')}.csv`;
-
+    const filename = `boostinghost_factures_${periodFile}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send('\uFEFF' + csv);
+    res.send('\uFEFF' + lines.join('\n'));
   } catch (err) {
-    console.error('❌ Export factures:', err);
+    console.error('Export factures:', err);
     res.status(500).json({ error: 'Erreur export' });
   }
 });
