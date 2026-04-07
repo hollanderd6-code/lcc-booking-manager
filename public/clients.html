@@ -1466,12 +1466,13 @@ html[data-theme-v3="1"] .invoice-paper {
             <i class="fas fa-plus"></i> Ajouter un mois
           </button>
         </div>
+        <!-- Indicateur reste à ventiler -->
+        <div id="monthlyRemaining" style="display:none;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:8px;transition:all .2s;"></div>
         <!-- Header colonnes -->
-        <div style="display:grid;grid-template-columns:1fr 80px 80px 90px 32px;gap:6px;margin-bottom:4px;padding:0 2px;">
+        <div style="display:grid;grid-template-columns:1fr 90px 110px 32px;gap:6px;margin-bottom:4px;padding:0 2px;">
           <span style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;">Mois</span>
           <span style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;text-align:center;">Heures</span>
-          <span style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;text-align:center;">Forfaits</span>
-          <span style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;text-align:center;">Montant</span>
+          <span style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;text-align:center;">Montant (€)</span>
           <span></span>
         </div>
         <div id="monthlyRows" style="display:flex;flex-direction:column;gap:6px;"></div>
@@ -4224,6 +4225,87 @@ function closeAttestationModal() {
 
 function onAttClientChange() { recalcAttTotal(); }
 
+const MOIS_OPTIONS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function addMonthlyRow() {
+  const container = document.getElementById('monthlyRows');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 90px 110px 32px;gap:6px;align-items:center;';
+  div.innerHTML = `
+    <select onchange="recalcMonthly()" style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;color:#111827;">
+      ${MOIS_OPTIONS.map(m => `<option value="${m}">${m}</option>`).join('')}
+    </select>
+    <input type="number" placeholder="h" min="0" step="0.5" oninput="recalcMonthly()" style="padding:8px 6px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;text-align:center;">
+    <input type="number" placeholder="€" min="0" step="0.01" oninput="recalcMonthly()" style="padding:8px 6px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;text-align:center;">
+    <button onclick="this.parentElement.remove();recalcMonthly();" style="width:28px;height:28px;border-radius:7px;border:none;background:#fee2e2;color:#dc2626;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  container.appendChild(div);
+  recalcMonthly();
+}
+
+function recalcMonthly() {
+  const indicator = document.getElementById('monthlyRemaining');
+  const rows = document.querySelectorAll('#monthlyRows > div');
+  if (!indicator) return;
+
+  // Total annuel saisi
+  const grandTotal = parseFloat(
+    (document.getElementById('attTotal')?.textContent || '0')
+      .replace(/\s/g,'').replace(',','.').replace('€','')
+  ) || 0;
+
+  // Somme des montants mensuels
+  let monthlyTotal = 0;
+  rows.forEach(row => {
+    const montantInput = row.querySelectorAll('input[type="number"]')[1];
+    monthlyTotal += parseFloat(montantInput?.value) || 0;
+  });
+
+  if (rows.length === 0 || grandTotal === 0) {
+    indicator.style.display = 'none';
+    return;
+  }
+
+  indicator.style.display = 'block';
+  const remaining = Math.round((grandTotal - monthlyTotal) * 100) / 100;
+  const fmtE = n => new Intl.NumberFormat('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n) + ' €';
+
+  if (remaining > 0.009) {
+    // Il reste à ventiler
+    indicator.style.background = 'rgba(245,158,11,.08)';
+    indicator.style.border = '1px solid rgba(245,158,11,.3)';
+    indicator.style.color = '#92400e';
+    indicator.innerHTML = `<i class="fas fa-info-circle"></i> Reste à ventiler : <strong>${fmtE(remaining)}</strong>`;
+    // Débloquer les inputs montant
+    rows.forEach(row => {
+      const inp = row.querySelectorAll('input[type="number"]')[1];
+      if (inp) { inp.style.borderColor = '#e5e7eb'; inp.removeAttribute('title'); }
+    });
+  } else if (Math.abs(remaining) < 0.01) {
+    // Parfait — total atteint
+    indicator.style.background = 'rgba(16,185,129,.08)';
+    indicator.style.border = '1px solid rgba(16,185,129,.3)';
+    indicator.style.color = '#065f46';
+    indicator.innerHTML = `<i class="fas fa-check-circle"></i> Total ventilé correctement — <strong>${fmtE(grandTotal)}</strong>`;
+  } else {
+    // Dépassement
+    indicator.style.background = 'rgba(239,68,68,.08)';
+    indicator.style.border = '1px solid rgba(239,68,68,.3)';
+    indicator.style.color = '#991b1b';
+    indicator.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Dépassement de <strong>${fmtE(Math.abs(remaining))}</strong> — réduisez un ou plusieurs mois`;
+    // Mettre en rouge les montants qui dépassent
+    rows.forEach(row => {
+      const inp = row.querySelectorAll('input[type="number"]')[1];
+      if (inp && parseFloat(inp.value) > 0) {
+        inp.style.borderColor = '#fca5a5';
+        inp.title = 'Le total mensuel dépasse le total annuel';
+      }
+    });
+  }
+}
+
 function addAttLine() {
   const container = document.getElementById('attLines');
   const idx = container.children.length;
@@ -4251,26 +4333,6 @@ function addAttLine() {
   container.appendChild(div);
 }
 
-const MOIS_OPTIONS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
-function addMonthlyRow() {
-  const container = document.getElementById('monthlyRows');
-  const div = document.createElement('div');
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 80px 90px 32px;gap:6px;align-items:center;';
-  div.innerHTML = `
-    <select style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;color:#111827;">
-      ${MOIS_OPTIONS.map(m => `<option value="${m}">${m}</option>`).join('')}
-    </select>
-    <input type="number" placeholder="h" min="0" step="0.5" style="padding:8px 6px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;text-align:center;">
-    <input type="number" placeholder="nb" min="0" step="1" style="padding:8px 6px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;text-align:center;">
-    <input type="number" placeholder="€" min="0" step="0.01" style="padding:8px 6px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;text-align:center;">
-    <button onclick="this.parentElement.remove();" style="width:28px;height:28px;border-radius:7px;border:none;background:#fee2e2;color:#dc2626;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;">
-      <i class="fas fa-times"></i>
-    </button>
-  `;
-  container.appendChild(div);
-}
-
 function onAttPrestChange(sel, idx) {
   if (sel.value === 'Autre (saisir manuellement)') {
     const input = document.createElement('input');
@@ -4293,6 +4355,7 @@ function recalcAttTotal() {
     }
   });
   document.getElementById('attTotal').textContent = total.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+  recalcMonthly();
 }
 
 function initAttSignature() {
@@ -4516,101 +4579,68 @@ async function generateAttestationPDF(sendByEmail = false) {
     // ── Détail mensuel (saisi manuellement) ──────────────────────
     const monthlyRows = [];
     document.querySelectorAll('#monthlyRows > div').forEach(row => {
-      const inputs = row.querySelectorAll('input[type="number"]');
       const select = row.querySelector('select');
+      const inputs = row.querySelectorAll('input[type="number"]');
       if (!select) return;
       const mois    = select.value;
       const heures  = parseFloat(inputs[0]?.value) || 0;
-      const forfaits= parseFloat(inputs[1]?.value) || 0;
-      const montant = parseFloat(inputs[2]?.value) || 0;
-      if (mois) monthlyRows.push({ mois, heures, forfaits, montant });
+      const montant = parseFloat(inputs[1]?.value) || 0;
+      if (mois && montant > 0) monthlyRows.push({ mois, heures, montant });
     });
 
     if (monthlyRows.length > 0) {
-      const totalH  = monthlyRows.reduce((s,r) => s + r.heures, 0);
-      const totalF  = monthlyRows.reduce((s,r) => s + r.forfaits, 0);
-      const totalM  = monthlyRows.reduce((s,r) => s + r.montant, 0);
       const MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-      // Trier par ordre calendaire
       monthlyRows.sort((a,b) => MOIS_FR.indexOf(a.mois) - MOIS_FR.indexOf(b.mois));
+      const totalH = monthlyRows.reduce((s,r) => s + r.heures, 0);
+      const totalM = monthlyRows.reduce((s,r) => s + r.montant, 0);
 
-      const spaceNeeded = 14 + 10 + 8 + monthlyRows.length * 8 + 14 + 18 + 8;
+      const spaceNeeded = 14 + 10 + 8 + monthlyRows.length * 8 + 16;
       if (y + spaceNeeded > 260) { doc.addPage(); y = 18; }
 
-      // Titre récap annuel
+      // Titre
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(26, 122, 94);
-      doc.text('Détails de l\'année ' + year, W / 2, y + 5, {align:'center'});
+      doc.text('Détail mensuel', W / 2, y + 5, {align:'center'});
       y += 12;
 
-      // Tableau récap annuel
-      const colW3 = col / 3;
+      // Header
+      const colWM = [col * 0.35, col * 0.30, col * 0.35];
       doc.setFillColor(26, 122, 94);
       doc.rect(margin, y, col, 8, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8.5);
-      doc.setTextColor(255,255,255);
-      ["Nombre d'heures","Nombre de forfaits","Montant total"].forEach((h,i) =>
-        doc.text(h, margin + colW3*i + colW3/2, y+5.5, {align:'center'}));
-      y += 8;
-      doc.setFillColor(249,250,251);
-      doc.setDrawColor(229,231,235);
-      doc.setLineWidth(0.3);
-      doc.rect(margin, y, col, 8, 'FD');
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(17,24,39);
-      doc.text(totalH ? String(totalH) : '—', margin + colW3*0 + colW3/2, y+5.5, {align:'center'});
-      doc.text(totalF ? String(totalF) : '—', margin + colW3*1 + colW3/2, y+5.5, {align:'center'});
-      doc.setFont('helvetica','bold');
-      doc.text(fmt(totalM), margin + colW3*2 + colW3/2, y+5.5, {align:'center'});
-      y += 14;
-
-      // Titre détail mensuel
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(26, 122, 94);
-      doc.text('Détails mensuel', W / 2, y + 5, {align:'center'});
-      y += 12;
-
-      // Header tableau mensuel
-      const colWM = [col*0.25, col*0.25, col*0.25, col*0.25];
-      doc.setFillColor(26, 122, 94);
-      doc.rect(margin, y, col, 8, 'F');
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(255,255,255);
+      doc.setTextColor(255, 255, 255);
       let xc = margin;
-      ["Mois","Nombre d'heures","Nombre de forfaits","Montant"].forEach((h,i) => {
-        doc.text(h, xc + colWM[i]/2, y+5.5, {align:'center'});
+      ['Mois', "Nombre d'heures", 'Montant'].forEach((h, i) => {
+        doc.text(h, xc + colWM[i] / 2, y + 5.5, {align:'center'});
         xc += colWM[i];
       });
       y += 8;
 
       // Lignes
-      doc.setFont('helvetica','normal');
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       monthlyRows.forEach((r, idx) => {
-        if (idx % 2 === 0) { doc.setFillColor(249,250,251); doc.rect(margin, y, col, 8, 'F'); }
-        doc.setDrawColor(229,231,235); doc.setLineWidth(0.2);
+        if (idx % 2 === 0) { doc.setFillColor(249, 250, 251); doc.rect(margin, y, col, 8, 'F'); }
+        doc.setDrawColor(229, 231, 235); doc.setLineWidth(0.2);
         doc.rect(margin, y, col, 8, 'D');
-        doc.setTextColor(17,24,39);
+        doc.setTextColor(17, 24, 39);
         xc = margin;
-        [r.mois, r.heures||'—', r.forfaits||'—', fmt(r.montant)].forEach((v,i) => {
-          doc.text(String(v), xc + colWM[i]/2, y+5.5, {align:'center'});
+        [r.mois, r.heures ? String(r.heures) + ' h' : '—', fmt(r.montant)].forEach((v, i) => {
+          doc.text(v, xc + colWM[i] / 2, y + 5.5, {align:'center'});
           xc += colWM[i];
         });
         y += 8;
       });
 
       // Ligne total
-      doc.setFillColor(240,253,244); doc.setDrawColor(110,231,183); doc.setLineWidth(0.3);
+      doc.setFillColor(240, 253, 244); doc.setDrawColor(110, 231, 183); doc.setLineWidth(0.3);
       doc.rect(margin, y, col, 8, 'FD');
-      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,122,94);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 122, 94);
       xc = margin;
-      ['Total', totalH||'—', totalF||'—', fmt(totalM)].forEach((v,i) => {
-        doc.text(String(v), xc + colWM[i]/2, y+5.5, {align:'center'});
+      ['Total', totalH ? String(totalH) + ' h' : '—', fmt(totalM)].forEach((v, i) => {
+        doc.text(v, xc + colWM[i] / 2, y + 5.5, {align:'center'});
         xc += colWM[i];
       });
       y += 14;
