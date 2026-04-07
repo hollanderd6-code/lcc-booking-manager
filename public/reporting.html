@@ -436,6 +436,63 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   <div class="ml-auto">
     <button class="btn-csv" onclick="exportCSV()"><i class="fas fa-download"></i> CSV</button>
     <button class="btn-export" onclick="exportConcierge()"><i class="fas fa-handshake"></i> Export conciergerie</button>
+    <button class="btn-export" onclick="showExportComptaModal()" style="background:#1A7A5E;">
+      <i class="fas fa-file-csv"></i> Export comptable
+    </button>
+  </div>
+</div>
+
+<!-- Modal Export Comptable -->
+<div id="exportComptaModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(13,17,23,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:20px;padding:32px;max-width:420px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.18);">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div style="width:44px;height:44px;border-radius:11px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:20px;">📊</div>
+      <div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;color:#0D1117;">Export comptable</div>
+        <div style="font-size:12px;color:#7A8695;">Fichier CSV estampillé Boostinghost</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;">Mois</label>
+        <select id="exportMonth" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fafaf8;">
+          <option value="">Toute l'année</option>
+          <option value="1">Janvier</option><option value="2">Février</option>
+          <option value="3">Mars</option><option value="4">Avril</option>
+          <option value="5">Mai</option><option value="6">Juin</option>
+          <option value="7">Juillet</option><option value="8">Août</option>
+          <option value="9">Septembre</option><option value="10">Octobre</option>
+          <option value="11">Novembre</option><option value="12">Décembre</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;">Année</label>
+        <select id="exportYear" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fafaf8;">
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+      <button onclick="downloadExport('reservations')" style="display:flex;align-items:center;gap:10px;padding:13px 18px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fafaf8;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#0D1117;text-align:left;transition:border-color .15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <span style="font-size:22px;">🏠</span>
+        <div>
+          <div>Export Réservations</div>
+          <div style="font-size:11px;color:#7A8695;font-weight:400;">Date, logement, voyageur, plateforme, montants</div>
+        </div>
+        <i class="fas fa-download" style="margin-left:auto;color:#1A7A5E;"></i>
+      </button>
+      <button onclick="downloadExport('invoices')" style="display:flex;align-items:center;gap:10px;padding:13px 18px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fafaf8;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#0D1117;text-align:left;transition:border-color .15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <span style="font-size:22px;">📄</span>
+        <div>
+          <div>Export Factures propriétaires</div>
+          <div style="font-size:11px;color:#7A8695;font-weight:400;">Numéro, client, HT, TVA, TTC, statut</div>
+        </div>
+        <i class="fas fa-download" style="margin-left:auto;color:#1A7A5E;"></i>
+      </button>
+    </div>
+
+    <button onclick="closeExportComptaModal()" style="width:100%;padding:11px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#374151;cursor:pointer;">Fermer</button>
   </div>
 </div>
 
@@ -872,6 +929,62 @@ function dlCSV(name, headers, rows) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
   a.download = name; a.click();
+}
+
+// ── Export Comptable ──────────────────────────────────────────
+function showExportComptaModal() {
+  // Pré-remplir l'année avec l'année courante du rapport
+  const yearSel = document.getElementById('exportYear');
+  yearSel.innerHTML = '';
+  const currentYear = new Date().getFullYear();
+  for (let y = currentYear; y >= currentYear - 4; y--) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === (parseInt(document.getElementById('yearSelect')?.value) || currentYear)) opt.selected = true;
+    yearSel.appendChild(opt);
+  }
+  const modal = document.getElementById('exportComptaModal');
+  modal.style.display = 'flex';
+}
+
+function closeExportComptaModal() {
+  document.getElementById('exportComptaModal').style.display = 'none';
+}
+
+// Fermer en cliquant en dehors
+document.getElementById('exportComptaModal').addEventListener('click', function(e) {
+  if (e.target === this) closeExportComptaModal();
+});
+
+async function downloadExport(type) {
+  const month = document.getElementById('exportMonth').value;
+  const year  = document.getElementById('exportYear').value;
+  const token = localStorage.getItem('lcc_token');
+
+  let url = `/api/export/${type}?year=${year}`;
+  if (month) url += `&month=${month}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Erreur serveur');
+
+    const blob = await res.blob();
+    const filename = res.headers.get('Content-Disposition')?.match(/filename="(.+?)"/)?.[1]
+      || `boostinghost_${type}_${year}.csv`;
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (err) {
+    alert('Erreur lors du téléchargement. Réessayez.');
+    console.error(err);
+  }
 }
 </script>
 
