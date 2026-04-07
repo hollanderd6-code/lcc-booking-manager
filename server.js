@@ -11756,6 +11756,200 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
 });
 
 // ============================================
+// EXPORT COMPTABLE — RÉSERVATIONS CSV
+// ============================================
+app.get('/api/export/reservations', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { month, year, property_id } = req.query;
+    const selectedYear  = parseInt(year)  || new Date().getFullYear();
+    const selectedMonth = parseInt(month) || null; // null = toute l'année
+
+    // Construire le filtre de période
+    let dateFilter = `EXTRACT(YEAR FROM r.start_date) = $2`;
+    const params = [user.id, selectedYear];
+    if (selectedMonth) {
+      dateFilter += ` AND EXTRACT(MONTH FROM r.start_date) = $${params.length + 1}`;
+      params.push(selectedMonth);
+    }
+    if (property_id) {
+      dateFilter += ` AND r.property_id = $${params.length + 1}`;
+      params.push(property_id);
+    }
+
+    const result = await pool.query(`
+      SELECT
+        r.uid,
+        r.start_date,
+        r.end_date,
+        (r.end_date::date - r.start_date::date) AS nights,
+        r.guest_name,
+        r.nb_guests,
+        COALESCE(r.platform, r.source, 'Direct') AS platform,
+        r.price,
+        r.status,
+        p.name AS property_name,
+        p.cleaning_fee,
+        p.tourist_tax_per_night
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      WHERE r.user_id = $1
+        AND r.status IN ('confirmed', 'completed')
+        AND ${dateFilter}
+      ORDER BY r.start_date ASC
+    `, params);
+
+    // Infos utilisateur pour l'en-tête
+    const userInfo = await pool.query('SELECT first_name, last_name, company, email FROM users WHERE id = $1', [user.id]);
+    const u = userInfo.rows[0] || {};
+    const userName = u.company || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
+    const periodLabel = selectedMonth
+      ? `${String(selectedMonth).padStart(2,'0')}/${selectedYear}`
+      : `Année ${selectedYear}`;
+
+    // Construction CSV
+    const lines = [];
+    lines.push(`# Export Boostinghost.fr — Réservations`);
+    lines.push(`# Compte : ${userName}`);
+    lines.push(`# Période : ${periodLabel}`);
+    lines.push(`# Généré le : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}`);
+    lines.push(`# boostinghost.fr`);
+    lines.push('');
+    lines.push(['N° réservation','Logement','Voyageur','Nb voyageurs','Plateforme','Arrivée','Départ','Nuits','Prix séjour (€)','Frais ménage (€)','Taxe séjour (€)','Statut'].join(';'));
+
+    for (const r of result.rows) {
+      const nights = parseInt(r.nights) || 0;
+      const cleaningFee = parseFloat(r.cleaning_fee) || 0;
+      const touristTax  = (parseFloat(r.tourist_tax_per_night) || 0) * nights;
+      lines.push([
+        r.uid,
+        `"${(r.property_name || '').replace(/"/g, '""')}"`,
+        `"${(r.guest_name || '').replace(/"/g, '""')}"`,
+        r.nb_guests || '',
+        r.platform || 'Direct',
+        r.start_date ? new Date(r.start_date).toLocaleDateString('fr-FR') : '',
+        r.end_date   ? new Date(r.end_date).toLocaleDateString('fr-FR')   : '',
+        nights,
+        (parseFloat(r.price) || 0).toFixed(2).replace('.',','),
+        cleaningFee.toFixed(2).replace('.',','),
+        touristTax.toFixed(2).replace('.',','),
+        r.status
+      ].join(';'));
+    }
+
+    // Total
+    const totalRevenu = result.rows.reduce((s, r) => s + (parseFloat(r.price) || 0), 0);
+    lines.push('');
+    lines.push(`;;;;;;;;;;TOTAL;${totalRevenu.toFixed(2).replace('.',',')};;;`);
+
+    const csv = lines.join('\n');
+    const filename = `boostinghost_reservations_${periodLabel.replace('/','_').replace(' ','_')}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM UTF-8 pour Excel
+  } catch (err) {
+    console.error('❌ Export réservations:', err);
+    res.status(500).json({ error: 'Erreur export' });
+  }
+});
+
+// ============================================
+// EXPORT COMPTABLE — FACTURES PROPRIÉTAIRES CSV
+// ============================================
+app.get('/api/export/invoices', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { month, year } = req.query;
+    const selectedYear  = parseInt(year)  || new Date().getFullYear();
+    const selectedMonth = parseInt(month) || null;
+
+    let dateFilter = `EXTRACT(YEAR FROM i.issue_date) = $2`;
+    const params = [user.id, selectedYear];
+    if (selectedMonth) {
+      dateFilter += ` AND EXTRACT(MONTH FROM i.issue_date) = $${params.length + 1}`;
+      params.push(selectedMonth);
+    }
+
+    const result = await pool.query(`
+      SELECT
+        COALESCE(i.invoice_number, 'Brouillon #' || i.id::text) AS invoice_number,
+        i.issue_date,
+        i.due_date,
+        i.period_start,
+        i.period_end,
+        COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS client_name,
+        c.email AS client_email,
+        i.subtotal_ht,
+        i.subtotal_debours,
+        i.vat_amount,
+        i.total_ttc,
+        i.status,
+        i.is_credit_note
+      FROM owner_invoices i
+      JOIN owner_clients c ON c.id = i.client_id
+      WHERE i.user_id = $1
+        AND ${dateFilter}
+      ORDER BY i.issue_date ASC, i.id ASC
+    `, params);
+
+    const userInfo = await pool.query('SELECT first_name, last_name, company, email FROM users WHERE id = $1', [user.id]);
+    const u = userInfo.rows[0] || {};
+    const userName = u.company || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
+    const periodLabel = selectedMonth
+      ? `${String(selectedMonth).padStart(2,'0')}/${selectedYear}`
+      : `Année ${selectedYear}`;
+
+    const lines = [];
+    lines.push(`# Export Boostinghost.fr — Factures propriétaires`);
+    lines.push(`# Compte : ${userName}`);
+    lines.push(`# Période : ${periodLabel}`);
+    lines.push(`# Généré le : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}`);
+    lines.push(`# boostinghost.fr`);
+    lines.push('');
+    lines.push(['N° facture','Date émission','Date échéance','Période début','Période fin','Client','Email client','Sous-total HT (€)','Débours (€)','TVA (€)','Total TTC (€)','Statut','Type'].join(';'));
+
+    for (const inv of result.rows) {
+      const fmt = d => d ? new Date(d).toLocaleDateString('fr-FR') : '';
+      const num = v => v !== null && v !== undefined ? parseFloat(v).toFixed(2).replace('.',',') : '0,00';
+      lines.push([
+        inv.invoice_number,
+        fmt(inv.issue_date),
+        fmt(inv.due_date),
+        fmt(inv.period_start),
+        fmt(inv.period_end),
+        `"${(inv.client_name || '').replace(/"/g,'""')}"`,
+        inv.client_email || '',
+        num(inv.subtotal_ht),
+        num(inv.subtotal_debours),
+        num(inv.vat_amount),
+        num(inv.total_ttc),
+        inv.status || '',
+        inv.is_credit_note ? 'Avoir' : 'Facture'
+      ].join(';'));
+    }
+
+    const totalTTC = result.rows.reduce((s, i) => s + (parseFloat(i.total_ttc) || 0), 0);
+    lines.push('');
+    lines.push(`;;;;;;;;;;TOTAL;${totalTTC.toFixed(2).replace('.',',')};;`);
+
+    const csv = lines.join('\n');
+    const filename = `boostinghost_factures_${periodLabel.replace('/','_').replace(' ','_')}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv);
+  } catch (err) {
+    console.error('❌ Export factures:', err);
+    res.status(500).json({ error: 'Erreur export' });
+  }
+});
+
+// ============================================
 // MODIFIER UN LOGEMENT
 // ============================================
 // PATCH /api/properties/:propertyId — Mettre à jour owner_id uniquement
