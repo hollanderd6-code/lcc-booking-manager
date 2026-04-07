@@ -12004,6 +12004,187 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
 });
 
 // ============================================
+// SCORE QUALITE PAR LOGEMENT
+// ============================================
+app.get('/api/quality-score', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorise' });
+
+    const { year } = req.query;
+    const selectedYear = parseInt(year) || new Date().getFullYear();
+    const daysInYear = 365;
+
+    // 1. Récupérer tous les logements de l'utilisateur
+    const propsResult = await pool.query(
+      `SELECT id, name, color, channex_property_id, channex_enabled FROM properties WHERE user_id = $1 ORDER BY display_order ASC, created_at ASC`,
+      [user.id]
+    );
+    const properties = propsResult.rows;
+    if (!properties.length) return res.json({ scores: [] });
+
+    const propIds = properties.map(p => p.id);
+
+    // 2. Taux d'occupation : nuits réservées / 365
+    const occResult = await pool.query(`
+      SELECT
+        r.property_id,
+        SUM(r.end_date::date - r.start_date::date) AS nights
+      FROM reservations r
+      WHERE r.user_id = $1
+        AND r.status IN ('confirmed','completed')
+        AND r.uid NOT LIKE 'block_%'
+        AND COALESCE(r.source,'') NOT IN ('BLOCK','BLOCAGE')
+        AND EXTRACT(YEAR FROM r.start_date) = $2
+        AND r.property_id = ANY($3)
+      GROUP BY r.property_id
+    `, [user.id, selectedYear, propIds]);
+
+    const occMap = {};
+    occResult.rows.forEach(r => { occMap[r.property_id] = parseInt(r.nights) || 0; });
+
+    // 3. Ménages validés à temps (avant l'arrivée du voyageur)
+    // On compare completed_at vs start_date de la réservation liée
+    const cleanResult = await pool.query(`
+      SELECT
+        cc.property_id,
+        COUNT(*) AS total,
+        SUM(CASE WHEN cc.is_validated = TRUE THEN 1 ELSE 0 END) AS validated
+      FROM cleaning_checklists cc
+      JOIN reservations r ON r.uid = cc.reservation_key
+      WHERE cc.user_id = $1
+        AND EXTRACT(YEAR FROM r.start_date) = $2
+        AND cc.property_id = ANY($3)
+      GROUP BY cc.property_id
+    `, [user.id, selectedYear, propIds]);
+
+    const cleanMap = {};
+    cleanResult.rows.forEach(r => {
+      cleanMap[r.property_id] = {
+        total: parseInt(r.total) || 0,
+        validated: parseInt(r.validated) || 0
+      };
+    });
+
+    // 4. Délai de réponse aux messages (sender_type = 'guest' puis 'owner')
+    // On calcule le délai moyen entre message guest et première réponse owner
+    const msgResult = await pool.query(`
+      SELECT
+        c.property_id,
+        AVG(EXTRACT(EPOCH FROM (m_owner.created_at - m_guest.created_at))/3600) AS avg_response_hours
+      FROM conversations c
+      JOIN messages m_guest ON m_guest.conversation_id = c.id AND m_guest.sender_type = 'guest'
+      JOIN LATERAL (
+        SELECT created_at FROM messages
+        WHERE conversation_id = c.id
+          AND sender_type = 'owner'
+          AND created_at > m_guest.created_at
+        ORDER BY created_at ASC LIMIT 1
+      ) m_owner ON TRUE
+      WHERE c.user_id = $1
+        AND c.property_id = ANY($2)
+        AND EXTRACT(YEAR FROM m_guest.created_at) = $3
+      GROUP BY c.property_id
+    `, [user.id, propIds, selectedYear]);
+
+    const responseMap = {};
+    msgResult.rows.forEach(r => {
+      responseMap[r.property_id] = parseFloat(r.avg_response_hours) || null;
+    });
+
+    // 5. Note moyenne avis Channex (appel API pour chaque logement connecté)
+    const reviewMap = {};
+    const { channexAPI } = require('./channex');
+    for (const prop of properties) {
+      if (!prop.channex_enabled || !prop.channex_property_id) continue;
+      try {
+        const scoresRes = await channexAPI.get('/reviews/scores', {
+          params: { 'filter[property_id]': prop.channex_property_id }
+        });
+        const rawScores = scoresRes.data?.data || [];
+        let totalScore = 0, count = 0;
+        rawScores.forEach(s => {
+          const attrs = s.attributes || s;
+          if (attrs.score != null) { totalScore += parseFloat(attrs.score); count++; }
+          if (attrs.scores) {
+            Object.values(attrs.scores).forEach(v => { if (v != null) { totalScore += parseFloat(v); count++; } });
+          }
+        });
+        if (count > 0) reviewMap[prop.id] = Math.round((totalScore / count) * 10) / 10;
+      } catch (e) {
+        // Channex non dispo pour ce logement, on ignore
+      }
+    }
+
+    // 6. Calcul du score final pour chaque logement
+    const scores = properties.map(prop => {
+      const nights    = occMap[prop.id] || 0;
+      const occupancy = Math.min(nights / daysInYear * 100, 100);
+
+      // Score taux d'occupation /25 (100% occ = 25pts, 50% = 12.5pts)
+      const scoreOcc = Math.round(occupancy / 100 * 25);
+
+      // Score avis /35 (note sur 10 → /10 * 35)
+      const avgRating = reviewMap[prop.id] || null;
+      const scoreReview = avgRating != null ? Math.round(avgRating / 10 * 35) : null;
+
+      // Score ménages /25 (% validés)
+      const clean = cleanMap[prop.id];
+      let scoreClean = null;
+      if (clean && clean.total > 0) {
+        scoreClean = Math.round(clean.validated / clean.total * 25);
+      }
+
+      // Score réponse /15 (< 1h = 15pts, < 3h = 10pts, < 24h = 5pts, > 24h = 0pts)
+      const avgHours = responseMap[prop.id];
+      let scoreResponse = null;
+      if (avgHours != null) {
+        if (avgHours < 1)  scoreResponse = 15;
+        else if (avgHours < 3)  scoreResponse = 10;
+        else if (avgHours < 24) scoreResponse = 5;
+        else scoreResponse = 0;
+      }
+
+      // Total : on ne compte que les critères disponibles
+      let total = 0, maxTotal = 0;
+      total += scoreOcc; maxTotal += 25;
+      if (scoreReview  != null) { total += scoreReview;   maxTotal += 35; }
+      if (scoreClean   != null) { total += scoreClean;    maxTotal += 25; }
+      if (scoreResponse != null){ total += scoreResponse; maxTotal += 15; }
+
+      // Ramener sur 100 selon les critères disponibles
+      const finalScore = maxTotal > 0 ? Math.round(total / maxTotal * 100) : null;
+
+      // Couleur selon score
+      const color = finalScore == null ? '#9CA3AF'
+        : finalScore >= 75 ? '#10B981'
+        : finalScore >= 50 ? '#F59E0B'
+        : '#EF4444';
+
+      return {
+        property_id:   prop.id,
+        property_name: prop.name,
+        property_color: prop.color,
+        score:         finalScore,
+        color,
+        details: {
+          occupancy:    { score: scoreOcc,      max: 25, value: Math.round(occupancy) + '%', label: "Taux d'occupation" },
+          reviews:      { score: scoreReview,   max: 35, value: avgRating != null ? avgRating + '/10' : null, label: 'Note moyenne avis' },
+          cleaning:     { score: scoreClean,    max: 25, value: clean?.total > 0 ? Math.round(clean.validated/clean.total*100) + '%' : null, label: 'Ménages validés' },
+          response:     { score: scoreResponse, max: 15, value: avgHours != null ? (avgHours < 1 ? '< 1h' : Math.round(avgHours) + 'h') : null, label: 'Délai de réponse' }
+        }
+      };
+    });
+
+    res.json({ year: selectedYear, scores });
+
+  } catch (err) {
+    console.error('❌ GET /api/quality-score:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // MODIFIER UN LOGEMENT
 // ============================================
 // PATCH /api/properties/:propertyId — Mettre à jour owner_id uniquement
