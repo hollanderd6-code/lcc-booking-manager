@@ -2179,20 +2179,27 @@ function populateFpSelects(invs) {
       sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
   }
 
-  // Peupler clients depuis inv.client_name (champ déjà présent sur chaque facture)
+  // Peupler clients — depuis window.clients (liste complète déjà chargée)
+  // Si pas encore dispo, on essaie depuis les factures avec tous les champs possibles
   const clientSel = document.getElementById('fpClientSelect');
   if (clientSel) {
     const clientMap = {};
-    invs.forEach(inv => {
-      if (!inv.client_id) return;
-      // Priorité : inv.client_name, sinon chercher dans window.clients
-      let name = inv.client_name;
-      if (!name || !name.trim()) {
-        const c = (window.clients || []).find(c => String(c.id) === String(inv.client_id));
-        if (c) name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-      }
-      if (name && name.trim()) clientMap[inv.client_id] = name.trim();
+
+    // Source 1 : window.clients (la plus fiable)
+    (window.clients || []).forEach(c => {
+      const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
+      if (c.id && name) clientMap[String(c.id)] = name;
     });
+
+    // Source 2 : fallback sur les factures si window.clients vide
+    if (Object.keys(clientMap).length === 0) {
+      invs.forEach(inv => {
+        const id = inv.client_id || inv.clientId;
+        const name = inv.client_name || inv.clientName;
+        if (id && name && name.trim()) clientMap[String(id)] = name.trim();
+      });
+    }
+
     const sorted = Object.entries(clientMap).sort((a,b) => a[1].localeCompare(b[1], 'fr'));
     clientSel.innerHTML = '<option value="">Tous les clients</option>' +
       sorted.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
@@ -2246,7 +2253,10 @@ function applyFpFilter() {
 
   const filtered = invs.filter(function(inv) {
     // Filtre client
-    if (selectedClient && String(inv.client_id) !== selectedClient) return false;
+    if (selectedClient) {
+      const invClientId = String(inv.client_id || inv.clientId || '');
+      if (invClientId !== selectedClient) return false;
+    }
 
     const d = inv.issue_date || inv.created_at;
     if (!d) return !selectedYear && !selectedMonth;
