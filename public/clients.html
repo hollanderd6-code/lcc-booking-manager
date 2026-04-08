@@ -1255,7 +1255,7 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 
 <div class="tab-content" id="tab-dashboard">
-<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:visible;">
+<div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
 <div class="fp-filter-bar">
   <label><i class="fas fa-calendar-alt" style="margin-right:5px;color:#1A7A5E;"></i>Période</label>
   <select class="fp-select" id="fpMonthSelect" onchange="applyFpFilter()">
@@ -2539,26 +2539,40 @@ window.toggleInvoiceActions = function (id, btn) {
   const menu = document.getElementById('invoice-actions-' + id);
   if (!menu) return;
   const wasOpen = menu.classList.contains('open');
-  // Fermer tous
+
+  // Fermer tous les menus
   document.querySelectorAll('.invoice-actions-menu.open').forEach(m => {
     m.classList.remove('open');
-    m.style.cssText = '';
   });
+
   if (!wasOpen) {
     const rect = btn.getBoundingClientRect();
-    const menuH = menu.offsetHeight || 200;
+
+    // Déplacer le menu dans le body pour éviter tout clipping
+    if (menu.parentElement !== document.body) {
+      document.body.appendChild(menu);
+    }
+
+    // Afficher d'abord pour mesurer la hauteur réelle
+    menu.style.visibility = 'hidden';
+    menu.style.display = 'block';
+    const menuH = menu.offsetHeight;
+    menu.style.display = '';
+    menu.style.visibility = '';
+
+    // Position fixed basée sur le bouton
     menu.style.position = 'fixed';
-    menu.style.left = rect.left + 'px';
     menu.style.width = rect.width + 'px';
+    menu.style.left = rect.left + 'px';
     menu.style.zIndex = '99999';
-    menu.style.bottom = '';
-    menu.style.top = '';
-    // Ouvrir vers le haut si assez de place
+
+    // Vers le haut si la place suffit, sinon vers le bas
     if (rect.top > menuH + 10) {
-      menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+      menu.style.top = (rect.top - menuH - 4) + 'px';
     } else {
       menu.style.top = (rect.bottom + 4) + 'px';
     }
+
     menu.classList.add('open');
   }
 };
@@ -2618,7 +2632,7 @@ function showConfirm(message, onOk, title) {
 // Fermer le menu si on clique ailleurs dans la page
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.invoice-row-actions') && !e.target.closest('.invoice-card-actions-btn') && !e.target.closest('.invoice-actions-menu')) {
-    document.querySelectorAll('.invoice-actions-menu.open').forEach(m => { m.classList.remove('open'); m.style.cssText = ''; });
+    document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
   }
   // Fermer modale aperçu si clic sur le backdrop
   const modal = document.getElementById('invoicePreviewModal');
