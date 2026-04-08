@@ -1206,6 +1206,10 @@ html[data-theme-v3="1"] .invoice-paper {
   <select class="fp-select" id="fpYearSelect" onchange="applyFpFilter()">
     <option value="">Toutes les années</option>
   </select>
+  <label style="margin-left:8px;"><i class="fas fa-user" style="margin-right:5px;color:#1A7A5E;"></i>Client</label>
+  <select class="fp-select" id="fpClientSelect" onchange="applyFpFilter()" style="min-width:160px;">
+    <option value="">Tous les clients</option>
+  </select>
   <button class="fp-filter-reset" onclick="resetFpFilter()"><i class="fas fa-times" style="margin-right:4px;"></i>Réinitialiser</button>
   <span class="fp-filter-label" id="fpFilterLabel"></span>
 </div>
@@ -2170,6 +2174,24 @@ function populateFpSelects(invs) {
       sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
   }
 
+  // Peupler clients (dédoublonnés, triés par nom)
+  const clientSel = document.getElementById('fpClientSelect');
+  if (clientSel) {
+    const clientMap = {};
+    invs.forEach(inv => {
+      if (inv.client_id) {
+        const name = inv.client_name ||
+          (inv.client_company_name) ||
+          ((inv.client_first_name || '') + ' ' + (inv.client_last_name || '')).trim() ||
+          'Client #' + inv.client_id;
+        clientMap[inv.client_id] = name;
+      }
+    });
+    const sorted = Object.entries(clientMap).sort((a,b) => a[1].localeCompare(b[1], 'fr'));
+    clientSel.innerHTML = '<option value="">Tous les clients</option>' +
+      sorted.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+  }
+
   // Peupler mois (filtrés selon l'année sélectionnée au moment du peuplement)
   refreshFpMonths(invs);
 }
@@ -2201,12 +2223,14 @@ function refreshFpMonths(invs) {
 
 function applyFpFilter() {
   const invs = window.ownerInvoices || [];
-  const yearSel = document.getElementById('fpYearSelect');
+  const yearSel  = document.getElementById('fpYearSelect');
   const monthSel = document.getElementById('fpMonthSelect');
+  const clientSel = document.getElementById('fpClientSelect');
   const label = document.getElementById('fpFilterLabel');
 
-  const selectedYear = yearSel ? yearSel.value : '';
-  const selectedMonth = monthSel ? monthSel.value : '';
+  const selectedYear   = yearSel   ? yearSel.value   : '';
+  const selectedMonth  = monthSel  ? monthSel.value  : '';
+  const selectedClient = clientSel ? clientSel.value : '';
 
   // Si on change l'année, rafraîchir les mois dispo
   if (document.activeElement === yearSel) {
@@ -2215,6 +2239,9 @@ function applyFpFilter() {
   }
 
   const filtered = invs.filter(function(inv) {
+    // Filtre client
+    if (selectedClient && String(inv.client_id) !== selectedClient) return false;
+
     const d = inv.issue_date || inv.created_at;
     if (!d) return !selectedYear && !selectedMonth;
     const dt = new Date(d);
@@ -2230,7 +2257,7 @@ function applyFpFilter() {
   });
 
   if (label) {
-    if (selectedMonth || selectedYear) {
+    if (selectedMonth || selectedYear || selectedClient) {
       label.textContent = filtered.length + ' facture' + (filtered.length !== 1 ? 's' : '');
     } else {
       label.textContent = '';
@@ -2241,12 +2268,14 @@ function applyFpFilter() {
 }
 
 function resetFpFilter() {
-  const yearSel = document.getElementById('fpYearSelect');
-  const monthSel = document.getElementById('fpMonthSelect');
-  const label = document.getElementById('fpFilterLabel');
-  if (yearSel) yearSel.value = '';
-  if (monthSel) monthSel.value = '';
-  if (label) label.textContent = '';
+  const yearSel   = document.getElementById('fpYearSelect');
+  const monthSel  = document.getElementById('fpMonthSelect');
+  const clientSel = document.getElementById('fpClientSelect');
+  const label     = document.getElementById('fpFilterLabel');
+  if (yearSel)   yearSel.value   = '';
+  if (monthSel)  monthSel.value  = '';
+  if (clientSel) clientSel.value = '';
+  if (label)     label.textContent = '';
   const invs = window.ownerInvoices || [];
   refreshFpMonths(invs);
   renderFpGrid(invs);
