@@ -2519,12 +2519,9 @@ function renderFpGrid(invs) {
             </div>
           </div>
           <div class="invoice-card-footer">
-            <button type="button" class="invoice-card-actions-btn" data-action="toggle" data-id="${eid}">
+            <button type="button" class="invoice-card-actions-btn" data-action="toggle" data-id="${eid}" data-actions='${JSON.stringify(actionsHtml)}'>
               <i class="fas fa-ellipsis-h"></i> Actions
             </button>
-            <div class="invoice-actions-menu" id="invoice-actions-${eid}">
-              ${actionsHtml}
-            </div>
           </div>
         </div>`;
 
@@ -2536,68 +2533,82 @@ function renderFpGrid(invs) {
 }
 
 window.toggleInvoiceActions = function (id, btn) {
-  const menu = document.getElementById('invoice-actions-' + id);
-  if (!menu) return;
-  const wasOpen = menu.classList.contains('open');
+  // Menu global unique dans le body
+  let menu = document.getElementById('_globalInvoiceMenu');
+  if (!menu) {
+    menu = document.createElement('div');
+    menu.id = '_globalInvoiceMenu';
+    menu.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:6px;z-index:99999;display:none;min-width:200px;';
+    menu.addEventListener('click', function(e) {
+      const b = e.target.closest('button[data-action][data-id]');
+      if (!b) return;
+      menu.style.display = 'none';
+      const action = b.dataset.action;
+      const mid = b.dataset.id;
+      if (action === 'view')       window.openInvoicePreview(mid);
+      else if (action === 'download')  window.downloadOwnerInvoice(mid);
+      else if (action === 'send')      window.sendOwnerInvoice(mid);
+      else if (action === 'delete')    window.deleteOwnerInvoice(mid);
+      else if (action === 'finalize')  window.finalizeOwnerInvoice(mid);
+      else if (action === 'markpaid')  window.markOwnerInvoicePaid(mid);
+      else if (action === 'creditnote') window.createOwnerCreditNote(mid);
+    });
+    document.body.appendChild(menu);
+  }
 
-  // Fermer tous les menus
-  document.querySelectorAll('.invoice-actions-menu.open').forEach(m => {
-    m.classList.remove('open');
+  // Si déjà ouvert pour ce bouton, fermer
+  if (menu.style.display !== 'none' && menu.dataset.openId === id) {
+    menu.style.display = 'none';
+    menu.dataset.openId = '';
+    return;
+  }
+
+  // Remplir avec les actions de cette facture
+  const actionsHtml = btn.dataset.actions || '';
+  menu.innerHTML = actionsHtml;
+  menu.dataset.openId = id;
+
+  // Styler les boutons internes
+  menu.querySelectorAll('button').forEach(b => {
+    b.style.cssText = 'display:block;width:100%;padding:10px 14px;background:transparent;border:none;text-align:left;font-size:13px;font-weight:500;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;color:#374151;';
+    b.onmouseenter = function() { this.style.background='rgba(26,122,94,.07)'; this.style.color='#1A7A5E'; };
+    b.onmouseleave = function() { this.style.background='transparent'; this.style.color='#374151'; };
+    if (b.style.color === 'rgb(185, 28, 28)' || b.getAttribute('style')?.includes('#b91c1c')) {
+      b.style.color = '#dc2626';
+      b.onmouseenter = function() { this.style.background='rgba(220,38,38,.07)'; };
+      b.onmouseleave = function() { this.style.background='transparent'; };
+    }
   });
 
-  if (!wasOpen) {
-    const rect = btn.getBoundingClientRect();
+  // Positionner
+  menu.style.display = 'block';
+  const rect = btn.getBoundingClientRect();
+  const menuH = menu.offsetHeight;
+  menu.style.width = rect.width + 'px';
+  menu.style.left = rect.left + 'px';
 
-    // Déplacer le menu dans le body pour éviter tout clipping
-    if (menu.parentElement !== document.body) {
-      document.body.appendChild(menu);
-    }
-
-    // Afficher d'abord pour mesurer la hauteur réelle
-    menu.style.visibility = 'hidden';
-    menu.style.display = 'block';
-    const menuH = menu.offsetHeight;
-    menu.style.display = '';
-    menu.style.visibility = '';
-
-    // Position fixed basée sur le bouton
-    menu.style.position = 'fixed';
-    menu.style.width = rect.width + 'px';
-    menu.style.left = rect.left + 'px';
-    menu.style.zIndex = '99999';
-
-    // Vers le haut si la place suffit, sinon vers le bas
-    if (rect.top > menuH + 10) {
-      menu.style.top = (rect.top - menuH - 4) + 'px';
-    } else {
-      menu.style.top = (rect.bottom + 4) + 'px';
-    }
-
-    menu.classList.add('open');
+  if (rect.top > menuH + 10) {
+    menu.style.top = (rect.top - menuH - 6) + 'px';
+  } else {
+    menu.style.top = (rect.bottom + 6) + 'px';
   }
 };
 
-// Listener délégué pour les boutons data-action dans les menus de factures
+// Fermer le menu global en cliquant ailleurs
 document.addEventListener('click', function(e) {
-  const btn = e.target.closest('[data-action][data-id]');
+  const menu = document.getElementById('_globalInvoiceMenu');
+  if (!menu) return;
+  if (!e.target.closest('.invoice-card-actions-btn') && !e.target.closest('#_globalInvoiceMenu')) {
+    menu.style.display = 'none';
+    menu.dataset.openId = '';
+  }
+});
+
+// Listener délégué pour le bouton toggle des cartes factures
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.invoice-card-actions-btn[data-action="toggle"]');
   if (!btn) return;
-  const action = btn.dataset.action;
-  const id = btn.dataset.id;
-  if (action === 'toggle') {
-    window.toggleInvoiceActions(id, btn);
-    return;
-  }
-  // Fermer le menu
-  document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
-  if (action === 'view') {
-    window.openInvoicePreview(id);
-  }
-  else if (action === 'download')  window.downloadOwnerInvoice(id);
-  else if (action === 'send')      window.sendOwnerInvoice(id);
-  else if (action === 'delete')    window.deleteOwnerInvoice(id);
-  else if (action === 'finalize')  window.finalizeOwnerInvoice(id);
-  else if (action === 'markpaid')  window.markOwnerInvoicePaid(id);
-  else if (action === 'creditnote') window.createOwnerCreditNote(id);
+  window.toggleInvoiceActions(btn.dataset.id, btn);
 });
 
 // ── Modale de confirmation custom (remplace confirm() natif) ──
