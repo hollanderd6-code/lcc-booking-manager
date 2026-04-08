@@ -129,13 +129,13 @@
 /* LES 3 PETITS POINTS*/
 .invoice-actions-menu {
   position: absolute;
-  bottom: calc(100% + 2px);
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 -4px 20px rgba(15,23,42,0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15,23,42,0.15);
   padding: 4px;
   min-width: 180px;
   display: none;
@@ -575,18 +575,26 @@ html[data-theme-v3="1"] .card,
 }
 
 html[data-theme-v3="1"] .invoice-card {
-  background: #FDFCFA !important;
-  border: 1.5px solid rgba(200,184,154,.35) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 2px 8px rgba(13,17,23,.04) !important;
+  background: #F5F0E8 !important;
+  border: 1px solid rgba(200,184,154,.4) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+html[data-theme-v3="1"] .invoice-card {
+  border-left: 3px solid #1A7A5E !important;
+  border-radius: 14px !important;
 }
 html[data-theme-v3="1"] .invoice-card:hover {
   box-shadow: 0 8px 24px rgba(13,17,23,.1) !important;
-  transform: translateY(-1px);
+}
+html[data-theme-v3="1"] .card-header {
+  background: rgba(245,240,232,.8) !important;
+  border-bottom: 1px solid rgba(200,184,154,.35) !important;
+  border-radius: 16px 16px 0 0 !important;
 }
 html[data-theme-v3="1"] .invoice-card-header,
 html[data-theme-v3="1"] .invoice-card-footer {
-  border-color: rgba(200,184,154,.2) !important;
+  border-color: rgba(200,184,154,.4) !important;
 }
 
 /* Invoice number color */
@@ -595,26 +603,20 @@ html[data-theme-v3="1"] .invoice-info-value.amount { color: #1A7A5E !important; 
 
 /* Actions dropdown */
 html[data-theme-v3="1"] .invoice-actions-menu {
-  background: #FDFCFA !important;
-  border: 1.5px solid rgba(200,184,154,.4) !important;
+  background: #F5F0E8 !important;
+  border: 1px solid rgba(200,184,154,.4) !important;
   border-radius: 12px !important;
 }
 html[data-theme-v3="1"] .invoice-actions-menu button:hover {
-  background: rgba(26,122,94,.06) !important;
-  color: #1A7A5E !important;
+  background: rgba(13,17,23,.06) !important;
 }
 html[data-theme-v3="1"] .invoice-card-actions-btn {
-  background: rgba(245,242,236,.5) !important;
-  border: 1.5px solid rgba(200,184,154,.4) !important;
-  border-radius: 12px !important;
+  background: rgba(255,255,255,.6) !important;
+  border-color: rgba(13,17,23,.12) !important;
+  border-radius: 10px !important;
   font-family: 'DM Sans', sans-serif !important;
-  color: #374151 !important;
 }
-html[data-theme-v3="1"] .invoice-card-actions-btn:hover {
-  background: white !important;
-  border-color: #1A7A5E !important;
-  color: #1A7A5E !important;
-}
+html[data-theme-v3="1"] .invoice-card-actions-btn:hover { background: white !important; }
 
 
 /* ── Inputs / Selects / Textareas — style unifié ── */
@@ -1038,63 +1040,48 @@ function openAttestationModal() {
 }
 .invoice-card {
   background: #fff;
-  border: 1.5px solid rgba(200,184,154,.35);
-  border-radius: 18px;
-  overflow: hidden;
-  transition: box-shadow .2s, transform .15s;
-  box-shadow: 0 2px 8px rgba(13,17,23,.05);
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #1A7A5E;
+  border-radius: 14px;
+  transition: box-shadow .2s;
 }
-.invoice-card:hover {
-  box-shadow: 0 8px 24px rgba(13,17,23,.1);
-  transform: translateY(-1px);
-}
+.invoice-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .invoice-card-header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 18px 12px;
-  border-bottom: 1px solid rgba(200,184,154,.2);
+  padding: 14px 16px 10px; border-bottom: 1px solid #f3f4f6;
 }
-.invoice-card-number {
-  font-weight: 800; font-size: 15px; color: #1A7A5E;
-  letter-spacing: -.01em;
-}
+.invoice-card-number { font-weight: 700; font-size: 14px; color: #1A7A5E; }
 .invoice-card-badge {
-  display: inline-flex; align-items: center;
-  padding: 4px 12px; border-radius: 999px;
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
 }
-.invoice-badge-draft    { background: rgba(107,114,128,.1);  color: #4b5563; }
-.invoice-badge-sent     { background: rgba(59,130,246,.1);   color: #1d4ed8; }
-.invoice-badge-invoiced { background: rgba(245,158,11,.1);   color: #92400e; }
-.invoice-badge-paid     { background: rgba(16,185,129,.12);  color: #065f46; }
-.invoice-badge-credit   { background: rgba(236,72,153,.1);   color: #9d174d; }
-.invoice-card-body { padding: 14px 18px 10px; }
+.invoice-badge-draft  { background: #f3f4f6; color: #6b7280; }
+.invoice-badge-sent   { background: #dbeafe; color: #1e40af; }
+.invoice-badge-invoiced { background: #fef3c7; color: #92400e; }
+.invoice-badge-paid   { background: #dcfce7; color: #166534; }
+.invoice-badge-credit { background: #fce7f3; color: #9d174d; }
+.invoice-card-body { padding: 14px 16px; }
 .invoice-info-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
 }
-.invoice-info-label {
-  font-size: 10px; color: #9ca3af; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .07em; margin-bottom: 3px;
-}
+.invoice-info-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
 .invoice-info-value { font-size: 13px; color: #374151; font-weight: 500; }
-.invoice-info-value.amount { font-size: 17px; font-weight: 800; color: #1A7A5E; }
+.invoice-info-value.amount { font-size: 15px; font-weight: 700; color: #1A7A5E; }
 .invoice-card-footer {
-  padding: 10px 18px 12px; border-top: 1px solid rgba(200,184,154,.2);
+  padding: 10px 16px; border-top: 1px solid #f3f4f6;
   display: flex; align-items: center; gap: 8px;
 }
 .invoice-card-actions-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 18px; border: 1.5px solid rgba(200,184,154,.4); border-radius: 12px;
-  background: rgba(245,242,236,.5); font-size: 13px; font-weight: 600;
-  cursor: pointer; color: #374151; font-family: 'DM Sans', sans-serif;
-  transition: all .15s; width: 100%; justify-content: center;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border: 1px solid #d1d5db; border-radius: 10px;
+  background: rgba(255,255,255,.6); font-size: 13px; font-weight: 600;
+  cursor: pointer; color: #374151;
 }
-.invoice-card-actions-btn:hover {
-  background: white; border-color: #1A7A5E; color: #1A7A5E;
-}
+.invoice-card-actions-btn:hover { background: white; }
 .invoice-actions-menu {
-  position: absolute; bottom: calc(100% + 2px); left: 0; right: 0;
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
   background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
-  box-shadow: 0 -4px 20px rgba(15,23,42,.12); padding: 4px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.15); padding: 4px; z-index: 100;
   min-width: 180px; display: none; z-index: 9999;
 }
 .invoice-actions-menu.open { display: block; }
@@ -2507,31 +2494,23 @@ function renderFpGrid(invs) {
 
       const issueDate = formatDate(inv.issue_date);
 
-      // Avatar initiales du client
-      const clientName = inv.client_name || '';
-      const initials = clientName.trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').slice(0, 2).join('');
-      const avatarColors = ['#1A7A5E','#3B82F6','#8B5CF6','#F59E0B','#EF4444','#EC4899','#06B6D4'];
-      const avatarColor = avatarColors[(clientName.charCodeAt(0) || 0) % avatarColors.length];
-
       const cardHtml = `
         <div class="invoice-card">
           <div class="invoice-card-header">
-            <div style="display:flex;align-items:center;gap:12px;">
-              <div style="width:40px;height:40px;border-radius:12px;background:${avatarColor};display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0;">${initials || '?'}</div>
-              <div>
-                <div class="invoice-card-number">${numberDisplay}</div>
-                <div style="font-size:12px;color:#6b7280;margin-top:1px;">${clientName || '-'}</div>
-              </div>
-            </div>
+            <div class="invoice-card-number">${numberDisplay}</div>
             <span class="invoice-card-badge ${statusClass}">${statusLabel}</span>
           </div>
           <div class="invoice-card-body">
             <div class="invoice-info-grid">
               <div class="invoice-info-item">
+                <div class="invoice-info-label">Client</div>
+                <div class="invoice-info-value">${inv.client_name || '-'}</div>
+              </div>
+              <div class="invoice-info-item">
                 <div class="invoice-info-label">Date</div>
                 <div class="invoice-info-value">${issueDate}</div>
               </div>
-              <div class="invoice-info-item" style="text-align:right;">
+              <div class="invoice-info-item">
                 <div class="invoice-info-label">Montant TTC</div>
                 <div class="invoice-info-value amount">${formatMoney(total)}</div>
               </div>
@@ -2539,7 +2518,7 @@ function renderFpGrid(invs) {
           </div>
           <div class="invoice-card-footer" style="position:relative;">
             <button type="button" class="invoice-card-actions-btn" data-action="toggle" data-id="${eid}">
-              <i class="fas fa-ellipsis-h"></i> Actions
+              <i class="fas fa-ellipsis-v"></i> Actions
             </button>
             <div class="invoice-actions-menu" id="invoice-actions-${eid}">
               ${actionsHtml}
