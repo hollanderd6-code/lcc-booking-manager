@@ -1787,6 +1787,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     clients = data.clients || [];
     window.clients = clients; // ✅ Exposer globalement pour la modal attestation
     document.getElementById('statsClients').textContent = clients.length;
+
+    // Repeupler le filtre client des factures maintenant qu'on a les noms
+    if (window.ownerInvoices && window.ownerInvoices.length > 0) {
+      populateFpSelects(window.ownerInvoices);
+    }
     
     // Remplir le SELECT dans l'éditeur
     const sel = document.getElementById('invoiceClientId');
@@ -2174,18 +2179,19 @@ function populateFpSelects(invs) {
       sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
   }
 
-  // Peupler clients (dédoublonnés, triés par nom)
+  // Peupler clients depuis inv.client_name (champ déjà présent sur chaque facture)
   const clientSel = document.getElementById('fpClientSelect');
   if (clientSel) {
     const clientMap = {};
     invs.forEach(inv => {
-      if (inv.client_id) {
-        const name = inv.client_name ||
-          (inv.client_company_name) ||
-          ((inv.client_first_name || '') + ' ' + (inv.client_last_name || '')).trim() ||
-          'Client #' + inv.client_id;
-        clientMap[inv.client_id] = name;
+      if (!inv.client_id) return;
+      // Priorité : inv.client_name, sinon chercher dans window.clients
+      let name = inv.client_name;
+      if (!name || !name.trim()) {
+        const c = (window.clients || []).find(c => String(c.id) === String(inv.client_id));
+        if (c) name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
       }
+      if (name && name.trim()) clientMap[inv.client_id] = name.trim();
     });
     const sorted = Object.entries(clientMap).sort((a,b) => a[1].localeCompare(b[1], 'fr'));
     clientSel.innerHTML = '<option value="">Tous les clients</option>' +
