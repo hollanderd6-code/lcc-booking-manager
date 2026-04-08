@@ -3028,35 +3028,68 @@ document.addEventListener('DOMContentLoaded', function() {
   html[data-theme-v3="1"] .team-member-card,
   html[data-theme-v3="1"] .member-card,
   .team-member-card {
-    overflow: hidden !important;
+    overflow: visible !important;
     box-sizing: border-box !important;
     padding: 14px !important;
+    width: 100% !important;
   }
+  /* Header : infos à gauche, boutons en dessous */
   .team-member-header {
-    flex-wrap: wrap !important;
-    gap: 10px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    margin-bottom: 10px !important;
   }
   .team-member-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
     min-width: 0 !important;
-    flex: 1 !important;
   }
   .team-member-details {
     min-width: 0 !important;
-    overflow: hidden !important;
+    flex: 1 !important;
   }
   .team-member-details h3 {
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    font-size: 15px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    margin-bottom: 2px !important;
+  }
+  .team-member-details p {
+    font-size: 12px !important;
+    white-space: normal !important;
+    word-break: break-all !important;
+  }
+  .team-member-role {
+    font-size: 11px !important;
+    padding: 3px 10px !important;
     white-space: nowrap !important;
   }
-  /* Actions : ligne séparée sous les infos */
+  /* Boutons actions sur une ligne sous les infos */
   .team-member-actions {
-    flex-shrink: 0 !important;
     display: flex !important;
+    flex-direction: row !important;
     gap: 8px !important;
+    width: 100% !important;
   }
   .team-member-actions button {
-    flex-shrink: 0 !important;
+    flex: 1 !important;
+    justify-content: center !important;
+    padding: 8px 0 !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(200,184,154,.4) !important;
+    background: rgba(245,242,236,.5) !important;
+  }
+  .team-member-permissions {
+    gap: 6px !important;
+    margin-top: 8px !important;
+  }
+  .permission-badge {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
   }
 
   /* 8. RADIO BUTTONS — empêcher le chevauchement */
