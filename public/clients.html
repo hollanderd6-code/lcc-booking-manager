@@ -684,7 +684,7 @@ html[data-theme-v3="1"] textarea:disabled {
   border-color: rgba(200,184,154,.3) !important;
 }
 
-/* Labels */
+/* Labels — ne pas casser le layout flex */
 html[data-theme-v3="1"] label {
   font-family: 'DM Sans', sans-serif !important;
   font-size: 12px !important;
@@ -692,11 +692,24 @@ html[data-theme-v3="1"] label {
   color: #374151 !important;
 }
 
+/* Labels dans la barre de filtres : inline */
+html[data-theme-v3="1"] .fp-filter-bar label {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #7A8695 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .07em !important;
+  white-space: nowrap !important;
+}
+
 /* fp-select override pour cohérence */
 html[data-theme-v3="1"] .fp-select {
   padding: 8px 32px 8px 12px !important;
   font-weight: 600 !important;
   min-width: 130px !important;
+  flex-shrink: 0 !important;
 }
 
 /* Buttons */
@@ -2231,20 +2244,26 @@ function populateFpSelects(invs) {
       sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
   }
 
-  // Peupler clients depuis inv.client_name (champ déjà présent sur chaque facture)
+  // Peupler clients — source principale : window.clients (liste complète)
   const clientSel = document.getElementById('fpClientSelect');
   if (clientSel) {
     const clientMap = {};
-    invs.forEach(inv => {
-      if (!inv.client_id) return;
-      // Priorité : inv.client_name, sinon chercher dans window.clients
-      let name = inv.client_name;
-      if (!name || !name.trim()) {
-        const c = (window.clients || []).find(c => String(c.id) === String(inv.client_id));
-        if (c) name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-      }
-      if (name && name.trim()) clientMap[inv.client_id] = name.trim();
+
+    // Source 1 : window.clients (la plus fiable)
+    (window.clients || []).forEach(c => {
+      const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
+      if (c.id && name) clientMap[String(c.id)] = name;
     });
+
+    // Source 2 : fallback sur les factures si window.clients vide
+    if (Object.keys(clientMap).length === 0) {
+      invs.forEach(inv => {
+        const id = inv.client_id || inv.clientId;
+        const name = inv.client_name || inv.clientName;
+        if (id && name && name.trim()) clientMap[String(id)] = name.trim();
+      });
+    }
+
     const sorted = Object.entries(clientMap).sort((a,b) => a[1].localeCompare(b[1], 'fr'));
     clientSel.innerHTML = '<option value="">Tous les clients</option>' +
       sorted.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
