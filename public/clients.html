@@ -2244,42 +2244,17 @@ function populateFpSelects(invs) {
       sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
   }
 
-  // Peupler clients — on se base sur les factures pour avoir les bons IDs
+  // Peupler clients — l'API retourne client_name (pas client_id)
+  // On filtre donc par nom directement
   const clientSel = document.getElementById('fpClientSelect');
   if (clientSel) {
-    const clientMap = {};
-
-    // Parcourir les factures pour récupérer client_id + nom
+    const names = new Set();
     invs.forEach(inv => {
-      const id = inv.client_id ?? inv.clientId;
-      if (!id) return;
-      const idStr = String(id);
-
-      // Nom : depuis la facture directement
-      let name = inv.client_name || inv.clientName;
-
-      // Fallback : chercher dans window.clients avec les deux formats d'ID
-      if (!name || !name.trim()) {
-        const c = (window.clients || []).find(c =>
-          String(c.id) === idStr
-        );
-        if (c) name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-      }
-
-      if (name && name.trim()) clientMap[idStr] = name.trim();
+      if (inv.client_name && inv.client_name.trim()) names.add(inv.client_name.trim());
     });
-
-    // Si toujours vide, utiliser window.clients directement
-    if (Object.keys(clientMap).length === 0) {
-      (window.clients || []).forEach(c => {
-        const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-        if (c.id && name) clientMap[String(c.id)] = name;
-      });
-    }
-
-    const sorted = Object.entries(clientMap).sort((a,b) => a[1].localeCompare(b[1], 'fr'));
+    const sorted = Array.from(names).sort((a,b) => a.localeCompare(b, 'fr'));
     clientSel.innerHTML = '<option value="">Tous les clients</option>' +
-      sorted.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+      sorted.map(name => `<option value="${name}">${name}</option>`).join('');
   }
 
   // Peupler mois (filtrés selon l'année sélectionnée au moment du peuplement)
@@ -2329,11 +2304,8 @@ function applyFpFilter() {
   }
 
   const filtered = invs.filter(function(inv) {
-    // Filtre client — gérer client_id (snake) et clientId (camel)
-    if (selectedClient) {
-      const invClientId = String(inv.client_id ?? inv.clientId ?? '');
-      if (invClientId !== String(selectedClient)) return false;
-    }
+    // Filtre client — comparaison par nom (l'API ne retourne pas client_id)
+    if (selectedClient && (inv.client_name || '').trim() !== selectedClient) return false;
 
     const d = inv.issue_date || inv.created_at;
     if (!d) return !selectedYear && !selectedMonth;
