@@ -618,22 +618,85 @@ html[data-theme-v3="1"] .invoice-card-actions-btn {
 }
 html[data-theme-v3="1"] .invoice-card-actions-btn:hover { background: white !important; }
 
-/* Inputs */
-html[data-theme-v3="1"] input,
+
+/* ── Inputs / Selects / Textareas — style unifié ── */
+html[data-theme-v3="1"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 html[data-theme-v3="1"] textarea,
 html[data-theme-v3="1"] select {
-  background: rgba(255,255,255,.7) !important;
-  border-color: rgba(13,17,23,.12) !important;
+  background: #ffffff !important;
+  border: 1.5px solid rgba(200,184,154,.55) !important;
   border-radius: 10px !important;
   font-family: 'DM Sans', sans-serif !important;
+  font-size: 13px !important;
+  color: #0D1117 !important;
+  padding: 9px 12px !important;
+  transition: border-color .15s, box-shadow .15s !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  outline: none !important;
 }
-html[data-theme-v3="1"] input:focus,
+
+/* Flèche custom sur les selects */
+html[data-theme-v3="1"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231A7A5E' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  padding-right: 32px !important;
+  cursor: pointer !important;
+}
+
+html[data-theme-v3="1"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
 html[data-theme-v3="1"] textarea:focus,
 html[data-theme-v3="1"] select:focus {
-  background: white !important;
+  background: #ffffff !important;
   border-color: #1A7A5E !important;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.08) !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
   outline: none !important;
+}
+
+html[data-theme-v3="1"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):hover:not(:focus),
+html[data-theme-v3="1"] textarea:hover:not(:focus),
+html[data-theme-v3="1"] select:hover:not(:focus) {
+  border-color: rgba(26,122,94,.4) !important;
+}
+
+/* Placeholder */
+html[data-theme-v3="1"] input::placeholder,
+html[data-theme-v3="1"] textarea::placeholder {
+  color: #B0BAC5 !important;
+  font-weight: 400 !important;
+}
+
+/* Textarea */
+html[data-theme-v3="1"] textarea {
+  resize: vertical !important;
+  min-height: 80px !important;
+  line-height: 1.5 !important;
+}
+
+/* Disabled */
+html[data-theme-v3="1"] input:disabled,
+html[data-theme-v3="1"] select:disabled,
+html[data-theme-v3="1"] textarea:disabled {
+  background: #F5F2EC !important;
+  color: #9CA3AF !important;
+  cursor: not-allowed !important;
+  border-color: rgba(200,184,154,.3) !important;
+}
+
+/* Labels */
+html[data-theme-v3="1"] label {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+}
+
+/* fp-select override pour cohérence */
+html[data-theme-v3="1"] .fp-select {
+  padding: 8px 32px 8px 12px !important;
+  font-weight: 600 !important;
+  min-width: 130px !important;
 }
 
 /* Buttons */
@@ -1034,17 +1097,6 @@ html[data-theme-v3="1"] .clients-section,
 html[data-theme-v3="1"] .card-body,
 html[data-theme-v3="1"] .card-content {
   background: #F5F0E8 !important;
-}
-/* Inputs restent semi-transparents sur fond beige */
-html[data-theme-v3="1"] input,
-html[data-theme-v3="1"] textarea,
-html[data-theme-v3="1"] select {
-  background: rgba(255,255,255,.65) !important;
-}
-html[data-theme-v3="1"] input:focus,
-html[data-theme-v3="1"] textarea:focus,
-html[data-theme-v3="1"] select:focus {
-  background: white !important;
 }
 /* Bouton Nouveau Client */
 html[data-theme-v3="1"] .btn-primary {
@@ -2179,27 +2231,20 @@ function populateFpSelects(invs) {
       sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
   }
 
-  // Peupler clients — depuis window.clients (liste complète déjà chargée)
-  // Si pas encore dispo, on essaie depuis les factures avec tous les champs possibles
+  // Peupler clients depuis inv.client_name (champ déjà présent sur chaque facture)
   const clientSel = document.getElementById('fpClientSelect');
   if (clientSel) {
     const clientMap = {};
-
-    // Source 1 : window.clients (la plus fiable)
-    (window.clients || []).forEach(c => {
-      const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-      if (c.id && name) clientMap[String(c.id)] = name;
+    invs.forEach(inv => {
+      if (!inv.client_id) return;
+      // Priorité : inv.client_name, sinon chercher dans window.clients
+      let name = inv.client_name;
+      if (!name || !name.trim()) {
+        const c = (window.clients || []).find(c => String(c.id) === String(inv.client_id));
+        if (c) name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
+      }
+      if (name && name.trim()) clientMap[inv.client_id] = name.trim();
     });
-
-    // Source 2 : fallback sur les factures si window.clients vide
-    if (Object.keys(clientMap).length === 0) {
-      invs.forEach(inv => {
-        const id = inv.client_id || inv.clientId;
-        const name = inv.client_name || inv.clientName;
-        if (id && name && name.trim()) clientMap[String(id)] = name.trim();
-      });
-    }
-
     const sorted = Object.entries(clientMap).sort((a,b) => a[1].localeCompare(b[1], 'fr'));
     clientSel.innerHTML = '<option value="">Tous les clients</option>' +
       sorted.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
@@ -2253,10 +2298,7 @@ function applyFpFilter() {
 
   const filtered = invs.filter(function(inv) {
     // Filtre client
-    if (selectedClient) {
-      const invClientId = String(inv.client_id || inv.clientId || '');
-      if (invClientId !== selectedClient) return false;
-    }
+    if (selectedClient && String(inv.client_id) !== selectedClient) return false;
 
     const d = inv.issue_date || inv.created_at;
     if (!d) return !selectedYear && !selectedMonth;
