@@ -575,40 +575,48 @@ html[data-theme-v3="1"] .card,
 }
 
 html[data-theme-v3="1"] .invoice-card {
-  background: #FDFCFA !important;
-  border: 1.5px solid rgba(200,184,154,.35) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 2px 8px rgba(13,17,23,.04) !important;
+  background: #F5F0E8 !important;
+  border: 1px solid rgba(200,184,154,.4) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+html[data-theme-v3="1"] .invoice-card {
+  border-left: 3px solid #1A7A5E !important;
+  border-radius: 14px !important;
 }
 html[data-theme-v3="1"] .invoice-card:hover {
   box-shadow: 0 8px 24px rgba(13,17,23,.1) !important;
 }
+html[data-theme-v3="1"] .card-header {
+  background: rgba(245,240,232,.8) !important;
+  border-bottom: 1px solid rgba(200,184,154,.35) !important;
+  border-radius: 16px 16px 0 0 !important;
+}
 html[data-theme-v3="1"] .invoice-card-header,
 html[data-theme-v3="1"] .invoice-card-footer {
-  border-color: rgba(200,184,154,.2) !important;
+  border-color: rgba(200,184,154,.4) !important;
 }
+
+/* Invoice number color */
 html[data-theme-v3="1"] .invoice-card-number { color: #1A7A5E !important; }
 html[data-theme-v3="1"] .invoice-info-value.amount { color: #1A7A5E !important; }
+
+/* Actions dropdown */
 html[data-theme-v3="1"] .invoice-actions-menu {
-  background: #FDFCFA !important;
-  border: 1.5px solid rgba(200,184,154,.4) !important;
-  border-radius: 14px !important;
+  background: #F5F0E8 !important;
+  border: 1px solid rgba(200,184,154,.4) !important;
+  border-radius: 12px !important;
 }
 html[data-theme-v3="1"] .invoice-actions-menu button:hover {
-  background: rgba(26,122,94,.06) !important;
-  color: #1A7A5E !important;
+  background: rgba(13,17,23,.06) !important;
 }
 html[data-theme-v3="1"] .invoice-card-actions-btn {
-  background: rgba(245,242,236,.5) !important;
-  border: 1.5px solid rgba(200,184,154,.4) !important;
-  border-radius: 12px !important;
+  background: rgba(255,255,255,.6) !important;
+  border-color: rgba(13,17,23,.12) !important;
+  border-radius: 10px !important;
   font-family: 'DM Sans', sans-serif !important;
 }
-html[data-theme-v3="1"] .invoice-card-actions-btn:hover {
-  background: white !important;
-  border-color: #1A7A5E !important;
-  color: #1A7A5E !important;
-}
+html[data-theme-v3="1"] .invoice-card-actions-btn:hover { background: white !important; }
 
 
 /* ── Inputs / Selects / Textareas — style unifié ── */
@@ -1032,58 +1040,56 @@ function openAttestationModal() {
 }
 .invoice-card {
   background: #fff;
-  border: 1.5px solid rgba(200,184,154,.35);
-  border-radius: 18px;
-  box-shadow: 0 2px 8px rgba(13,17,23,.05);
-  transition: box-shadow .2s, transform .15s;
-  position: relative;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #1A7A5E;
+  border-radius: 14px;
+  transition: box-shadow .2s;
 }
-.invoice-card:hover { box-shadow: 0 8px 24px rgba(13,17,23,.1); transform: translateY(-1px); }
+.invoice-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .invoice-card-header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 18px 12px; border-bottom: 1px solid rgba(200,184,154,.2);
+  padding: 14px 16px 10px; border-bottom: 1px solid #f3f4f6;
 }
-.invoice-card-number { font-weight: 800; font-size: 15px; color: #1A7A5E; letter-spacing:-.01em; }
+.invoice-card-number { font-weight: 700; font-size: 14px; color: #1A7A5E; }
 .invoice-card-badge {
-  display: inline-flex; align-items: center;
-  padding: 4px 12px; border-radius: 999px;
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
 }
-.invoice-badge-draft    { background: rgba(107,114,128,.1); color: #4b5563; }
-.invoice-badge-sent     { background: rgba(59,130,246,.1);  color: #1d4ed8; }
-.invoice-badge-invoiced { background: rgba(245,158,11,.1);  color: #92400e; }
-.invoice-badge-paid     { background: rgba(16,185,129,.12); color: #065f46; }
-.invoice-badge-credit   { background: rgba(236,72,153,.1);  color: #9d174d; }
-.invoice-card-body { padding: 14px 18px 10px; }
-.invoice-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.invoice-info-label { font-size: 10px; color: #9ca3af; font-weight: 700; text-transform: uppercase; letter-spacing:.07em; margin-bottom: 3px; }
+.invoice-badge-draft  { background: #f3f4f6; color: #6b7280; }
+.invoice-badge-sent   { background: #dbeafe; color: #1e40af; }
+.invoice-badge-invoiced { background: #fef3c7; color: #92400e; }
+.invoice-badge-paid   { background: #dcfce7; color: #166534; }
+.invoice-badge-credit { background: #fce7f3; color: #9d174d; }
+.invoice-card-body { padding: 14px 16px; }
+.invoice-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.invoice-info-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
 .invoice-info-value { font-size: 13px; color: #374151; font-weight: 500; }
-.invoice-info-value.amount { font-size: 17px; font-weight: 800; color: #1A7A5E; }
+.invoice-info-value.amount { font-size: 15px; font-weight: 700; color: #1A7A5E; }
 .invoice-card-footer {
-  padding: 10px 18px 12px; border-top: 1px solid rgba(200,184,154,.2);
-  display: flex; align-items: center; gap: 8px; position: relative;
+  padding: 10px 16px; border-top: 1px solid #f3f4f6;
+  display: flex; align-items: center; gap: 8px;
 }
 .invoice-card-actions-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 9px 18px; border: 1.5px solid rgba(200,184,154,.4); border-radius: 12px;
-  background: rgba(245,242,236,.5); font-size: 13px; font-weight: 600;
-  cursor: pointer; color: #374151; font-family: 'DM Sans', sans-serif;
-  transition: all .15s;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border: 1px solid #d1d5db; border-radius: 10px;
+  background: rgba(255,255,255,.6); font-size: 13px; font-weight: 600;
+  cursor: pointer; color: #374151;
 }
-.invoice-card-actions-btn:hover { background: white; border-color: #1A7A5E; color: #1A7A5E; }
+.invoice-card-actions-btn:hover { background: white; }
 .invoice-actions-menu {
-  position: absolute; bottom: calc(100% + 4px); left: 0; right: 0;
-  background: #fff; border: 1.5px solid rgba(200,184,154,.4); border-radius: 14px;
-  box-shadow: 0 -4px 24px rgba(15,23,42,.12); padding: 6px;
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.15); padding: 4px; z-index: 100;
   min-width: 180px; display: none; z-index: 9999;
 }
 .invoice-actions-menu.open { display: block; }
 .invoice-actions-menu button {
-  width: 100%; padding: 10px 14px; background: transparent;
-  border: none; text-align: left; font-size: 13px; font-weight: 500;
-  border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; color: #374151;
+  width: 100%; padding: 9px 12px; background: transparent;
+  border: none; text-align: left; font-size: 13px; border-radius: 6px; cursor: pointer;
 }
-.invoice-actions-menu button:hover { background: rgba(26,122,94,.06); color: #1A7A5E; }
+.invoice-actions-menu button:hover { background: #f3f4f6; }
 
 /* ── Tout le blanc → beige ── */
 html[data-theme-v3="1"] .tab-content,
@@ -2488,39 +2494,31 @@ function renderFpGrid(invs) {
 
       const issueDate = formatDate(inv.issue_date);
 
-      // Avatar initiales
-      const clientName = inv.client_name || '';
-      const initials = clientName.trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').slice(0,2).join('') || '?';
-      const avatarColors = ['#1A7A5E','#3B82F6','#8B5CF6','#F59E0B','#EF4444','#EC4899','#06B6D4'];
-      const avatarColor = avatarColors[(clientName.charCodeAt(0) || 0) % avatarColors.length];
-
       const cardHtml = `
         <div class="invoice-card">
           <div class="invoice-card-header">
-            <div style="display:flex;align-items:center;gap:12px;">
-              <div style="width:40px;height:40px;border-radius:12px;background:${avatarColor};display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0;">${initials}</div>
-              <div>
-                <div class="invoice-card-number">${numberDisplay}</div>
-                <div style="font-size:12px;color:#6b7280;margin-top:1px;">${clientName || '-'}</div>
-              </div>
-            </div>
+            <div class="invoice-card-number">${numberDisplay}</div>
             <span class="invoice-card-badge ${statusClass}">${statusLabel}</span>
           </div>
           <div class="invoice-card-body">
             <div class="invoice-info-grid">
               <div class="invoice-info-item">
+                <div class="invoice-info-label">Client</div>
+                <div class="invoice-info-value">${inv.client_name || '-'}</div>
+              </div>
+              <div class="invoice-info-item">
                 <div class="invoice-info-label">Date</div>
                 <div class="invoice-info-value">${issueDate}</div>
               </div>
-              <div class="invoice-info-item" style="text-align:right;">
+              <div class="invoice-info-item">
                 <div class="invoice-info-label">Montant TTC</div>
                 <div class="invoice-info-value amount">${formatMoney(total)}</div>
               </div>
             </div>
           </div>
-          <div class="invoice-card-footer">
+          <div class="invoice-card-footer" style="position:relative;">
             <button type="button" class="invoice-card-actions-btn" data-action="toggle" data-id="${eid}">
-              <i class="fas fa-ellipsis-h"></i> Actions
+              <i class="fas fa-ellipsis-v"></i> Actions
             </button>
             <div class="invoice-actions-menu" id="invoice-actions-${eid}">
               ${actionsHtml}
@@ -2539,8 +2537,40 @@ window.toggleInvoiceActions = function (id, btn) {
   const menu = document.getElementById('invoice-actions-' + id);
   if (!menu) return;
   const wasOpen = menu.classList.contains('open');
-  document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
-  if (!wasOpen) menu.classList.add('open');
+
+  // Fermer tous les menus ouverts
+  document.querySelectorAll('.invoice-actions-menu.open').forEach(m => {
+    m.classList.remove('open');
+    m.style.position = '';
+    m.style.top = '';
+    m.style.left = '';
+    m.style.right = '';
+    m.style.width = '';
+    m.style.zIndex = '';
+  });
+
+  if (!wasOpen) {
+    // Calculer la position du bouton dans le viewport
+    const rect = btn.getBoundingClientRect();
+    const menuH = 220; // hauteur estimée du menu
+
+    // Positionner en fixed au-dessus du bouton
+    menu.style.position = 'fixed';
+    menu.style.left = rect.left + 'px';
+    menu.style.width = rect.width + 'px';
+    menu.style.zIndex = '99999';
+
+    // Ouvrir vers le haut si assez de place, sinon vers le bas
+    if (rect.top > menuH + 10) {
+      menu.style.top = (rect.top - menuH - 4) + 'px';
+      menu.style.bottom = '';
+    } else {
+      menu.style.top = (rect.bottom + 4) + 'px';
+      menu.style.bottom = '';
+    }
+
+    menu.classList.add('open');
+  }
 };
 
 // Listener délégué pour les boutons data-action dans les menus de factures
@@ -2598,7 +2628,14 @@ function showConfirm(message, onOk, title) {
 // Fermer le menu si on clique ailleurs dans la page
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.invoice-row-actions') && !e.target.closest('.invoice-card-actions-btn') && !e.target.closest('.invoice-actions-menu')) {
-    document.querySelectorAll('.invoice-actions-menu.open').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.invoice-actions-menu.open').forEach(m => {
+      m.classList.remove('open');
+      m.style.position = '';
+      m.style.top = '';
+      m.style.left = '';
+      m.style.width = '';
+      m.style.zIndex = '';
+    });
   }
   // Fermer modale aperçu si clic sur le backdrop
   const modal = document.getElementById('invoicePreviewModal');
