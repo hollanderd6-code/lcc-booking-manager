@@ -1561,6 +1561,32 @@ html[data-theme-v3="1"] .sidebar {
 <small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">% prélevé par la conciergerie sur le revenu brut</small>
 </div>
 
+<!-- Commissions OTA pour calcul rentabilité -->
+<div class="form-grid-2" style="margin-top:8px;">
+<div class="form-group">
+<label for="propertyAirbnbCommissionPct">
+<i class="fab fa-airbnb"></i>
+<span>Commission Airbnb</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyAirbnbCommissionPct" min="0" max="100" placeholder="Ex: 3" step="0.5" type="number"/>
+<span>%</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">% prélevé par Airbnb sur le prix (défaut : 3%)</small>
+</div>
+<div class="form-group">
+<label for="propertyBookingCommissionPct">
+<i class="fas fa-bed"></i>
+<span>Commission Booking</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyBookingCommissionPct" min="0" max="100" placeholder="Ex: 15" step="0.5" type="number"/>
+<span>%</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">% prélevé par Booking.com (défaut : 15%)</small>
+</div>
+</div>
+
 <!-- ✅ SECTION : RÈGLES DE TARIFICATION AVANCÉE -->
 <div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-tags"></i>
