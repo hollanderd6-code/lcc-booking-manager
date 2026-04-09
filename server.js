@@ -5996,6 +5996,105 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
     }
   }
 });
+// ── PUT /api/reservations/manual/:uid — Modifier une résa manuelle ──
+app.put('/api/reservations/manual/:uid', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { uid } = req.params;
+    const { propertyId, start, end, guestName, notes, phone, email, platform, price,
+            guest_country, occupancy_adults, amount_rooms, amount_cleaning, amount_taxes, ota_commission } = req.body;
+
+    if (!propertyId || !start || !end) return res.status(400).json({ error: 'propertyId, start et end requis' });
+
+    // Récupérer les anciennes dates avant mise à jour
+    const oldResa = await pool.query(
+      'SELECT start_date, end_date FROM reservations WHERE uid = $1 AND user_id = $2',
+      [uid, user.id]
+    );
+    if (oldResa.rows.length === 0) return res.status(404).json({ error: 'Réservation non trouvée' });
+
+    const oldStart = oldResa.rows[0].start_date;
+    const oldEnd = oldResa.rows[0].end_date;
+
+    // Vérifier chevauchement (sauf avec soi-même)
+    const overlapCheck = await pool.query(
+      `SELECT uid FROM reservations
+       WHERE property_id = $1 AND user_id = $2 AND uid != $3
+         AND status NOT IN ('cancelled','completed')
+         AND start_date::date < $5::date AND end_date::date > $4::date`,
+      [propertyId, user.id, uid, start, end]
+    );
+    if (overlapCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'Ces dates sont déjà prises' });
+    }
+
+    // Mettre à jour en DB
+    await pool.query(
+      `UPDATE reservations SET
+        property_id = $1, start_date = $2, end_date = $3,
+        guest_name = $4, notes = $5, platform = $6, source = $6,
+        price = $7, guest_phone = $8, guest_email = $9,
+        guest_country = $10, occupancy_adults = $11,
+        amount_rooms = $12, amount_cleaning = $13, amount_taxes = $14, ota_commission = $15,
+        updated_at = NOW()
+       WHERE uid = $16 AND user_id = $17`,
+      [
+        propertyId, start, end,
+        guestName || 'Réservation manuelle', notes || null, platform || 'MANUEL',
+        price || 0, phone || null, email || null,
+        guest_country || null, occupancy_adults || null,
+        amount_rooms || null, amount_cleaning || null, amount_taxes || null, ota_commission || null,
+        uid, user.id
+      ]
+    );
+
+    // Mettre à jour reservationsStore
+    if (reservationsStore.properties) {
+      for (const pid of Object.keys(reservationsStore.properties)) {
+        const idx = reservationsStore.properties[pid]?.findIndex(r => r.uid === uid);
+        if (idx !== -1) {
+          reservationsStore.properties[pid][idx] = {
+            ...reservationsStore.properties[pid][idx],
+            start: start, end: end, start_date: start, end_date: end,
+            propertyId, guestName: guestName || 'Réservation manuelle'
+          };
+          if (pid !== propertyId) {
+            // Déplacer vers le bon logement si changement de logement
+            reservationsStore.properties[propertyId] = reservationsStore.properties[propertyId] || [];
+            reservationsStore.properties[propertyId].push(reservationsStore.properties[pid][idx]);
+            reservationsStore.properties[pid].splice(idx, 1);
+          }
+          break;
+        }
+      }
+    }
+
+    res.json({ success: true, message: 'Réservation mise à jour' });
+
+    // Sync Channex — libérer anciennes dates ET bloquer nouvelles en un seul push
+    setImmediate(async () => {
+      try {
+        // Collecter toutes les dates concernées (anciennes + nouvelles)
+        const allTargetDates = new Set();
+        const addDates = (s, e) => {
+          const d = new Date(s); const end = new Date(e);
+          while (d < end) { allTargetDates.add(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
+        };
+        addDates(oldStart, oldEnd); // anciennes dates à libérer
+        addDates(start, end);       // nouvelles dates à bloquer
+        await triggerChannexAvailabilitySync(propertyId, [...allTargetDates]);
+      } catch(e) { console.error('⚠️ [CHANNEX SYNC] Erreur modif résa:', e.message); }
+    });
+
+  } catch (err) {
+    console.error('❌ PUT /api/reservations/manual:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+
 // ============================================
 // 🧪 ROUTE DE TEST - FORMAT IDENTIQUE AU CHAT
 // ============================================
@@ -18767,11 +18866,18 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       if (io) {
         io.to('user_' + user.id).emit('calendar:block_removed', { uid, propertyId });
       }
-      // ✅ Channex sync d'abord, puis iCal (évite race condition)
+      // ✅ Channex sync — libérer les dates de la résa supprimée
       setImmediate(async () => {
-        await triggerChannexAvailabilitySync(propertyId);
+        // Récupérer les dates de la résa supprimée pour les cibler
+        const deletedRow = deleteResult.rows[0];
+        const targetDates = [];
+        if (deletedRow?.start_date && deletedRow?.end_date) {
+          const d = new Date(deletedRow.start_date);
+          const end = new Date(deletedRow.end_date);
+          while (d < end) { targetDates.push(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
+        }
+        await triggerChannexAvailabilitySync(propertyId, targetDates.length > 0 ? targetDates : null);
         syncAllCalendars();
-        // Notifier le front que le store est à jour
         if (io) {
           io.to('user_' + user.id).emit('reservations:updated', { propertyId });
         }
