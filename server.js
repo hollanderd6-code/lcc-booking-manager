@@ -10993,7 +10993,8 @@ app.post('/api/properties',
          amenities, house_rules, practical_info, auto_responses_enabled, arrival_message,
          base_price, weekend_price,
          cleaning_fee, tourist_tax_per_night, concierge_pct,
-         max_guests, bedrooms, beds, bathrooms, internal_name
+         max_guests, bedrooms, beds, bathrooms, internal_name,
+         airbnb_commission_pct, booking_commission_pct
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -11004,7 +11005,8 @@ app.post('/api/properties',
          NOW(),
          $18, $19, $20, $21, $22,
          $23, $24, $25, $26, $27,
-         $28, $29, $30, $31, $32
+         $28, $29, $30, $31, $32,
+         $33, $34
        )`,
       [
         id,
@@ -11038,7 +11040,9 @@ app.post('/api/properties',
         bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
         beds != null && beds !== '' ? parseInt(beds, 10) : null,
         bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
-        internal_name != null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null
+        internal_name != null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null,
+        body.airbnbCommissionPct != null && body.airbnbCommissionPct !== '' ? parseFloat(body.airbnbCommissionPct) : 3,
+        body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : 15
       ]
     );
 
