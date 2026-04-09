@@ -1502,30 +1502,28 @@ async function openChannexModal(propertyId, propertyName, isConnected, channelCo
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
 
-  // Si pas encore connecté à Channex → on active silencieusement
+  // Si pas encore connecté à Channex → proposer le choix du mode
   if (!isConnected) {
-    modal.innerHTML = `<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;">
-      <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#1A7A5E;"></i>
-      <div style="margin-top:12px;color:#6B7280;font-size:13px;">Activation en cours...</div>
-    </div>`;
+    // Charger d'abord les properties existantes de l'user pour savoir si le choix est pertinent
+    let existingProperties = [];
     try {
       const token = localStorage.getItem('lcc_token');
-      const r = await fetch(`${API_URL}/api/channex/connect-property`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ property_id: propertyId })
+      const r = await fetch(`${API_URL}/api/channex/list-user-properties`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Erreur activation');
-      loadProperties().catch(() => {});
-    } catch (e) {
-      modal.innerHTML = `<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:400px;">
-        <i class="fas fa-exclamation-circle" style="font-size:28px;color:#dc2626;margin-bottom:8px;display:block;"></i>
-        <div style="font-size:13px;color:#374151;">${e.message}</div>
-        <button onclick="document.getElementById('channexModal').remove()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;">Fermer</button>
-      </div>`;
+      existingProperties = d.properties || [];
+    } catch (_) {}
+
+    if (existingProperties.length === 0) {
+      // Pas d'établissement existant → connexion directe sans choix
+      await _connectAndProceed(modal, propertyId, null);
+    } else {
+      // Il y a des properties existantes → afficher le choix
+      _showPropertyTypeScreen(modal, propertyId, propertyName, existingProperties);
       return;
     }
+    if (!modal.isConnected) return; // erreur déjà affichée dans _connectAndProceed
   }
 
   // Écran 1 : sélection de la plateforme (ou aller direct à l'iframe si channelCode fourni)
@@ -1535,6 +1533,143 @@ async function openChannexModal(propertyId, propertyName, isConnected, channelCo
   } else {
     _showPlatformPicker(modal, propertyId, propertyName, isConnected);
   }
+}
+
+// ── Connexion effective à Channex (avec ou sans rattachement) ──
+async function _connectAndProceed(modal, propertyId, existingChannexPropertyId) {
+  modal.innerHTML = `<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;">
+    <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#1A7A5E;"></i>
+    <div style="margin-top:12px;color:#6B7280;font-size:13px;">Activation en cours...</div>
+  </div>`;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const body = { property_id: propertyId };
+    if (existingChannexPropertyId) body.channex_property_id = existingChannexPropertyId;
+    const r = await fetch(`${API_URL}/api/channex/connect-property`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Erreur activation');
+    loadProperties().catch(() => {});
+  } catch (e) {
+    modal.innerHTML = `<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:400px;">
+      <i class="fas fa-exclamation-circle" style="font-size:28px;color:#dc2626;margin-bottom:8px;display:block;"></i>
+      <div style="font-size:13px;color:#374151;">${e.message}</div>
+      <button onclick="document.getElementById('channexModal').remove()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;">Fermer</button>
+    </div>`;
+  }
+}
+
+// ── Écran de choix : nouveau logement indépendant ou rattachement ──
+function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProperties) {
+  let selectedExistingId = null;
+
+  const render = () => {
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:24px;max-width:480px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+          <div>
+            <div style="font-family:'Instrument Serif',Georgia,serif;font-size:19px;color:#0D1117;">Connexion OTA</div>
+            <div style="font-size:12px;color:#6B7280;margin-top:3px;">${propertyName}</div>
+          </div>
+          <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;flex-shrink:0;margin-left:12px;">✕</button>
+        </div>
+
+        <div style="font-size:13px;color:#374151;margin-bottom:14px;font-weight:500;">
+          Ce logement est-il indépendant ou fait-il partie d'un établissement déjà configuré ?
+        </div>
+
+        <!-- Option 1 : indépendant -->
+        <button onclick="_selectPropertyType('new')" style="
+          width:100%;display:flex;align-items:flex-start;gap:12px;padding:14px;margin-bottom:8px;
+          background:${!selectedExistingId ? '#f0fdf8' : '#f9fafb'};
+          border:2px solid ${!selectedExistingId ? '#1A7A5E' : '#e5e7eb'};
+          border-radius:12px;cursor:pointer;text-align:left;">
+          <i class="fas fa-home" style="color:#1A7A5E;font-size:18px;margin-top:2px;flex-shrink:0;"></i>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#111827;">Logement indépendant</div>
+            <div style="font-size:12px;color:#6B7280;margin-top:2px;">Créer un nouvel établissement Channex dédié à ce logement</div>
+          </div>
+          ${!selectedExistingId ? `<i class="fas fa-check-circle" style="margin-left:auto;color:#1A7A5E;font-size:15px;align-self:center;"></i>` : ''}
+        </button>
+
+        <!-- Option 2 : rattacher -->
+        <button onclick="_selectPropertyType('existing')" style="
+          width:100%;display:flex;align-items:flex-start;gap:12px;padding:14px;
+          background:${selectedExistingId !== null ? '#f0fdf8' : '#f9fafb'};
+          border:2px solid ${selectedExistingId !== null ? '#1A7A5E' : '#e5e7eb'};
+          border-radius:12px;cursor:pointer;text-align:left;">
+          <i class="fas fa-building" style="color:#1A7A5E;font-size:18px;margin-top:2px;flex-shrink:0;"></i>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#111827;">Partie d'un immeuble / établissement</div>
+            <div style="font-size:12px;color:#6B7280;margin-top:2px;">Rattacher à un établissement Channex existant (même Hotel ID Booking)</div>
+            ${selectedExistingId !== null ? `
+              <select id="existingPropertySelect" onchange="window._existingIdSelected = this.value" onclick="event.stopPropagation()"
+                style="margin-top:10px;width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;color:#111827;background:#fff;cursor:pointer;">
+                <option value="">— Choisir l'établissement —</option>
+                ${existingProperties.map(p => `
+                  <option value="${p.channex_property_id}">${p.name}${p.city ? ' · ' + p.city : ''}</option>
+                `).join('')}
+              </select>
+            ` : ''}
+          </div>
+          ${selectedExistingId !== null ? `<i class="fas fa-check-circle" style="margin-left:auto;color:#1A7A5E;font-size:15px;align-self:center;flex-shrink:0;"></i>` : ''}
+        </button>
+
+        <div style="margin-top:16px;">
+          <button id="btnPropertyTypeContinue"
+            onclick="_continuePropertyType('${propertyId}','${propertyName}')"
+            style="width:100%;height:44px;border-radius:10px;border:none;
+              background:linear-gradient(135deg,#1A7A5E,#2AAE86);
+              color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
+            Continuer <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  };
+
+  window._existingIdSelected = null;
+  window._propertyTypeMode = 'new';
+
+  window._selectPropertyType = (mode) => {
+    window._propertyTypeMode = mode;
+    if (mode === 'new') {
+      selectedExistingId = null;
+      window._existingIdSelected = null;
+    } else {
+      selectedExistingId = ''; // shows the select
+    }
+    render();
+  };
+
+  window._continuePropertyType = async (pid, pname) => {
+    const mode = window._propertyTypeMode;
+    let channexPropertyId = null;
+
+    if (mode === 'existing') {
+      const sel = document.getElementById('existingPropertySelect');
+      channexPropertyId = sel ? sel.value : (window._existingIdSelected || null);
+      if (!channexPropertyId) {
+        showToast('Veuillez sélectionner un établissement existant', 'warning');
+        return;
+      }
+    }
+
+    await _connectAndProceed(modal, pid, channexPropertyId || null);
+    if (!modal.isConnected) return;
+
+    // Continuer vers la sélection de plateforme
+    window._otaPropertyId = pid;
+    window._otaPropertyName = pname;
+    window._otaIsConnected = true;
+    window._otaModal = modal;
+    _showPlatformPicker(modal, pid, pname, true);
+  };
+
+  render();
 }
 
 function _showPlatformPicker(modal, propertyId, propertyName, isConnected) {
