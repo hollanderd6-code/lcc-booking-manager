@@ -8599,46 +8599,34 @@ if (editBookingForm) {
         alert('Blocage mis à jour !');
 
       } else {
-        // ── CAS RÉSERVATION MANUELLE : supprimer + recréer (pas de PUT sur le serveur) ──
+        // ── CAS RÉSERVATION MANUELLE : PUT atomique (libère anciennes dates + bloque nouvelles) ──
         const uid = currentBookingData.uid || currentBookingData.id;
         console.log('✏️ Modification réservation manuelle uid:', uid);
 
-        // 1. Supprimer l'ancienne
-        const delRes = await fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
-          method: 'POST', headers,
-          body: JSON.stringify({ propertyId: currentBookingData.propertyId, uid })
-        });
-        let delBody = {};
-        try { delBody = await delRes.json(); } catch (e) {}
-        if (!delRes.ok && delRes.status !== 404) {
-          throw new Error(delBody.error || 'Erreur suppression (' + delRes.status + ')');
-        }
-
-        // 2. Recréer avec les nouvelles données
-        const createRes = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual', {
-          method: 'POST', headers,
+        const updateRes = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual/' + encodeURIComponent(uid), {
+          method: 'PUT', headers,
           body: JSON.stringify({
             propertyId,
             start,
             end,
-            guestName:      guestName || currentBookingData.guestName || '',
-            phone:          document.getElementById('editGuestPhone')?.value || '',
-            email:          document.getElementById('editGuestEmail')?.value || '',
-            platform:       document.getElementById('editPlatform')?.value || 'direct',
-            price:          document.getElementById('editPrice')?.value ? parseFloat(document.getElementById('editPrice').value) : null,
-            notes:          notes || currentBookingData.notes || '',
-            guest_country:     document.getElementById('editGuestCountry')?.value || null,
-            occupancy_adults:  document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
-            amount_rooms:      document.getElementById('editPriceRooms')?.value ? parseFloat(document.getElementById('editPriceRooms').value) : null,
-            amount_cleaning:   document.getElementById('editPriceCleaning')?.value ? parseFloat(document.getElementById('editPriceCleaning').value) : null,
-            amount_taxes:      document.getElementById('editPriceTaxes')?.value ? parseFloat(document.getElementById('editPriceTaxes').value) : null,
-            ota_commission:    document.getElementById('editCommission')?.value ? parseFloat(document.getElementById('editCommission').value) : null,
+            guestName:        guestName || currentBookingData.guestName || '',
+            phone:            document.getElementById('editGuestPhone')?.value || '',
+            email:            document.getElementById('editGuestEmail')?.value || '',
+            platform:         document.getElementById('editPlatform')?.value || 'direct',
+            price:            document.getElementById('editPrice')?.value ? parseFloat(document.getElementById('editPrice').value) : null,
+            notes:            notes || currentBookingData.notes || '',
+            guest_country:    document.getElementById('editGuestCountry')?.value || null,
+            occupancy_adults: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
+            amount_rooms:     document.getElementById('editPriceRooms')?.value ? parseFloat(document.getElementById('editPriceRooms').value) : null,
+            amount_cleaning:  document.getElementById('editPriceCleaning')?.value ? parseFloat(document.getElementById('editPriceCleaning').value) : null,
+            amount_taxes:     document.getElementById('editPriceTaxes')?.value ? parseFloat(document.getElementById('editPriceTaxes').value) : null,
+            ota_commission:   document.getElementById('editCommission')?.value ? parseFloat(document.getElementById('editCommission').value) : null,
           })
         });
-        let createBody = {};
-        try { createBody = await createRes.json(); } catch (e) {}
-        if (!createRes.ok) {
-          throw new Error(createBody.error || 'Erreur recréation (' + createRes.status + ')');
+        let updateBody = {};
+        try { updateBody = await updateRes.json(); } catch (e) {}
+        if (!updateRes.ok) {
+          throw new Error(updateBody.error || 'Erreur mise à jour (' + updateRes.status + ')');
         }
         alert('Réservation mise à jour !');
       }
