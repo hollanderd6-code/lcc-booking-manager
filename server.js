@@ -10761,7 +10761,11 @@ app.get('/api/properties',
         abritel_id: p.abritel_id || null,
         expedia_id: p.expedia_id || null,
         channex_property_id_ext: p.channex_property_id_ext || null,
-        reservationCount: (reservationsStore.properties[p.id] || []).length
+        reservationCount: (reservationsStore.properties[p.id] || []).length,
+        airbnbCommissionPct: p.airbnbCommissionPct ?? p.airbnb_commission_pct ?? 3,
+        airbnb_commission_pct: p.airbnbCommissionPct ?? p.airbnb_commission_pct ?? 3,
+        bookingCommissionPct: p.bookingCommissionPct ?? p.booking_commission_pct ?? 15,
+        booking_commission_pct: p.bookingCommissionPct ?? p.booking_commission_pct ?? 15
       };
     });
 
@@ -12737,7 +12741,16 @@ userId: userId
     
     await loadProperties();
 
-    const updated = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    // Lire directement depuis la DB pour éviter les race conditions avec le cache
+    const dbRow = await pool.query(
+      'SELECT * FROM properties WHERE id = $1 AND user_id = $2',
+      [propertyId, userId]
+    );
+    const updated = dbRow.rows[0] ? {
+      ...dbRow.rows[0],
+      airbnbCommissionPct: parseFloat(dbRow.rows[0].airbnb_commission_pct) || 3,
+      bookingCommissionPct: parseFloat(dbRow.rows[0].booking_commission_pct) || 15,
+    } : PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     res.json({
       message: 'Logement modifié avec succès',
       property: updated
