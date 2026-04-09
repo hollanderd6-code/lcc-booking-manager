@@ -24074,7 +24074,7 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
       }),
       channexAPI.get('/reviews/scores', {
         params: { 'filter[property_id]': channexPropertyId }
-      })
+      }).catch(() => null) // non-bloquant si non supporté par cette version Channex
     ]);
 
     // 3. Formater les avis
