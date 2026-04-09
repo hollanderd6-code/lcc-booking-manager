@@ -439,8 +439,8 @@ async function saveProperty(event) {
   const cleaningFee     = cleaningFeeRaw  !== undefined && cleaningFeeRaw  !== '' ? parseFloat(cleaningFeeRaw)  : null;
   const touristTaxPerNight = touristTaxRaw !== undefined && touristTaxRaw !== '' ? parseFloat(touristTaxRaw) : null;
   const conciergePct    = conciergePctRaw !== undefined && conciergePctRaw !== '' ? parseFloat(conciergePctRaw) : null;
-  const airbnbCommPct   = airbnbCommPctRaw !== undefined && airbnbCommPctRaw !== '' ? parseFloat(airbnbCommPctRaw) : null;
-  const bookingCommPct  = bookingCommPctRaw !== undefined && bookingCommPctRaw !== '' ? parseFloat(bookingCommPctRaw) : null;
+  const airbnbCommPct   = airbnbCommPctRaw !== undefined && airbnbCommPctRaw !== '' ? parseFloat(airbnbCommPctRaw) : 3;
+  const bookingCommPct  = bookingCommPctRaw !== undefined && bookingCommPctRaw !== '' ? parseFloat(bookingCommPctRaw) : 15;
 
   const existingPhotoUrl = document.getElementById("propertyPhotoUrl")?.value || null;
   const photoInput = document.getElementById("propertyPhoto");
@@ -475,8 +475,8 @@ async function saveProperty(event) {
   if (cleaningFee     !== null) formData.append('cleaningFee',     cleaningFee);
   if (touristTaxPerNight !== null) formData.append('touristTaxPerNight', touristTaxPerNight);
   if (conciergePct    !== null) formData.append('conciergePct',         conciergePct);
-  if (airbnbCommPct   !== null) formData.append('airbnbCommissionPct',   airbnbCommPct);
-  if (bookingCommPct  !== null) formData.append('bookingCommissionPct',  bookingCommPct);
+  formData.append('airbnbCommissionPct',  airbnbCommPct);
+  formData.append('bookingCommissionPct', bookingCommPct);
 
   // Capacité d'accueil
   const maxGuests  = document.getElementById('propertyMaxGuests')?.value;
