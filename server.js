@@ -12733,6 +12733,7 @@ userId: userId
     );
     
     console.log('✅ UPDATE terminé, lignes affectées:', result.rowCount);
+    console.log('💰 [COMMISSION DEBUG] airbnb:', body.airbnbCommissionPct, '| booking:', body.bookingCommissionPct);
     
     await loadProperties();
 
