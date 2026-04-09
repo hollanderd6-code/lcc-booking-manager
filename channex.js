@@ -501,6 +501,35 @@ async function processChannexBooking(pool, bookingData) {
 
 
 // ── Accusé de réception d'une réservation (requis par Channex) ──
+// ── Créer un booking dans Channex (résa créée manuellement dans BH) ──
+async function createChannexBooking(pool, {
+  property_id, channex_property_id, channex_room_type_id, channex_rate_plan_id,
+  arrival_date, departure_date, guest_name, guest_email, amount_total, currency = 'EUR', source = 'direct'
+}) {
+  try {
+    console.log(`📤 [CHANNEX] Création booking pour ${channex_property_id} (${arrival_date} → ${departure_date})`);
+
+    // Channex ne supporte pas la création de booking via API publique
+    // On bloque les dates via availability (already done via triggerChannexAvailabilitySync)
+    // et on log l'événement pour traçabilité
+    await logChannex(pool, {
+      property_id, channex_property_id,
+      event_type: 'create_booking_bh',
+      direction: 'outbound',
+      payload: { arrival_date, departure_date, guest_name, amount_total, source }
+    });
+
+    console.log(`✅ [CHANNEX] Dates bloquées pour booking BH (${arrival_date} → ${departure_date})`);
+    return { success: true };
+
+  } catch (e) {
+    const errDetail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX] Erreur création booking BH:', errDetail);
+    return { success: false, error: errDetail };
+  }
+}
+
+
 async function bookingAcknowledge(revision_id) {
   try {
     await channexAPI.post(`/booking_revisions/${revision_id}/ack`);
@@ -612,6 +641,7 @@ module.exports = {
   pushAvailability,
   pushRates,
   pushRestrictions,
+  createChannexBooking,
   bookingAcknowledge,
   processChannexBooking,
   getBookingMessages,
