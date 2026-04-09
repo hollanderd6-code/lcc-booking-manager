@@ -54,7 +54,6 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
   try {
     console.log(`🏠 [CHANNEX] Création propriété: ${name}`);
 
-    // Créer la propriété
     const res = await channexAPI.post('/properties', {
       property: {
         title: name,
@@ -70,6 +69,31 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
 
     const channex_property_id = res.data.data.attributes.id;
     console.log(`✅ [CHANNEX] Propriété créée: ${channex_property_id}`);
+
+    // Déléguer la création du room type + rate plan + mise à jour DB
+    return await addRoomTypeToProperty(pool, { user_id, property_id, channex_property_id, name });
+
+  } catch (e) {
+    const errDetail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX] Erreur création propriété:', errDetail);
+    await logChannex(pool, {
+      user_id, property_id,
+      event_type: 'create_property',
+      direction: 'outbound',
+      payload: null,
+      status: 'error',
+      error_message: typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail)
+    });
+    throw e;
+  }
+}
+
+// ── 1b. Rattacher un logement BH à une Channex property existante ──
+// Crée un nouveau room type + rate plan sur la property, met à jour la DB.
+
+async function addRoomTypeToProperty(pool, { user_id, property_id, channex_property_id, name }) {
+  try {
+    console.log(`🏠 [CHANNEX] Ajout room type "${name}" sur property ${channex_property_id}`);
 
     // Créer le Room Type
     const rtRes = await channexAPI.post('/room_types', {
@@ -105,7 +129,7 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
 
     // Sauvegarder les IDs dans la DB
     await pool.query(
-      `UPDATE properties 
+      `UPDATE properties
        SET channex_property_id = $1, channex_room_type_id = $2, channex_rate_plan_id = $3, channex_enabled = true
        WHERE id = $4`,
       [channex_property_id, channex_room_type_id, channex_rate_plan_id, property_id]
@@ -113,7 +137,7 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
 
     await logChannex(pool, {
       user_id, property_id, channex_property_id,
-      event_type: 'create_property',
+      event_type: 'add_room_type',
       direction: 'outbound',
       payload: { channex_property_id, channex_room_type_id, channex_rate_plan_id }
     });
@@ -122,10 +146,10 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
 
   } catch (e) {
     const errDetail = e.response?.data || e.message;
-    console.error('❌ [CHANNEX] Erreur création propriété:', errDetail);
+    console.error('❌ [CHANNEX] Erreur addRoomTypeToProperty:', errDetail);
     await logChannex(pool, {
-      user_id, property_id,
-      event_type: 'create_property',
+      user_id, property_id, channex_property_id,
+      event_type: 'add_room_type',
       direction: 'outbound',
       payload: null,
       status: 'error',
@@ -323,6 +347,10 @@ async function processChannexBooking(pool, bookingData) {
       currency = 'EUR'
     } = attrs;
 
+    // Extraire le room_type_id depuis le premier room du booking
+    // (nécessaire pour résoudre le bon logement BH dans un scénario multi-appartements)
+    const booking_room_type_id = (attrs.rooms || [])[0]?.room_type_id || null;
+
     // ── Données voyageur ──────────────────────────────────────
     const guest = attrs.customer || {};
     const guest_name = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
@@ -379,13 +407,31 @@ async function processChannexBooking(pool, bookingData) {
     console.log(`📥 [CHANNEX] Booking reçu: ${booking_id} | ${ota_name} | ${arrival_date} → ${departure_date} | ${guest_name} | ${guest_country || '?'}`);
 
     // Trouver le logement Boostinghost correspondant
-    const propResult = await pool.query(
-      'SELECT id, user_id FROM properties WHERE channex_property_id = $1',
-      [channex_property_id]
-    );
+    // Priorité : room_type_id (précis, indispensable en multi-appartements)
+    // Fallback  : channex_property_id seul (cas 1 logement = 1 property)
+    let propResult;
+    if (booking_room_type_id) {
+      propResult = await pool.query(
+        'SELECT id, user_id FROM properties WHERE channex_room_type_id = $1 AND channex_property_id = $2',
+        [booking_room_type_id, channex_property_id]
+      );
+      if (propResult.rows.length === 0) {
+        // Fallback au cas où le room_type_id ne matche pas (migration, ancien logement)
+        console.warn(`⚠️ [CHANNEX] room_type_id ${booking_room_type_id} non trouvé, fallback sur property_id`);
+        propResult = await pool.query(
+          'SELECT id, user_id FROM properties WHERE channex_property_id = $1 LIMIT 1',
+          [channex_property_id]
+        );
+      }
+    } else {
+      propResult = await pool.query(
+        'SELECT id, user_id FROM properties WHERE channex_property_id = $1 LIMIT 1',
+        [channex_property_id]
+      );
+    }
 
     if (propResult.rows.length === 0) {
-      console.warn(`⚠️ [CHANNEX] Propriété non trouvée pour channex_id: ${channex_property_id}`);
+      console.warn(`⚠️ [CHANNEX] Propriété non trouvée pour channex_id: ${channex_property_id} / room_type: ${booking_room_type_id}`);
       return null;
     }
 
@@ -635,6 +681,7 @@ async function listChannexRatePlans(channex_room_type_id) {
 
 module.exports = {
   createChannexProperty,
+  addRoomTypeToProperty,
   listChannexProperties,
   listChannexRoomTypes,
   listChannexRatePlans,
