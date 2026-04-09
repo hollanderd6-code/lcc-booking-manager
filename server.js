@@ -10708,10 +10708,24 @@ app.get('/api/properties/:propertyId',
       practicalInfo: property.practical_info || '{}',
       autoResponsesEnabled: property.auto_responses_enabled !== undefined ? property.auto_responses_enabled : true,
       quick_replies: property.quick_replies || [],
-      
       icalUrls: property.icalUrls || property.ical_urls || [],
       internalName: property.internal_name || null,
       internal_name: property.internal_name || null,
+
+      // ✅ Champs financiers
+      basePrice: property.basePrice ?? property.base_price ?? null,
+      weekendPrice: property.weekendPrice ?? property.weekend_price ?? null,
+      cleaningFee: property.cleaningFee ?? property.cleaning_fee ?? null,
+      cleaning_fee: property.cleaningFee ?? property.cleaning_fee ?? null,
+      touristTaxPerNight: property.touristTaxPerNight ?? property.tourist_tax_per_night ?? null,
+      tourist_tax_per_night: property.touristTaxPerNight ?? property.tourist_tax_per_night ?? null,
+      conciergePct: property.conciergePct ?? property.concierge_pct ?? null,
+      concierge_pct: property.conciergePct ?? property.concierge_pct ?? null,
+      airbnbCommissionPct: property.airbnbCommissionPct ?? property.airbnb_commission_pct ?? 3,
+      airbnb_commission_pct: property.airbnbCommissionPct ?? property.airbnb_commission_pct ?? 3,
+      bookingCommissionPct: property.bookingCommissionPct ?? property.booking_commission_pct ?? 15,
+      booking_commission_pct: property.bookingCommissionPct ?? property.booking_commission_pct ?? 15,
+
       reservationCount: (reservationsStore.properties[property.id] || []).length
     });
   } catch (error) {
