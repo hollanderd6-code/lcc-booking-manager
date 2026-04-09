@@ -456,6 +456,80 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   border-radius: 999px;
   transition: width .4s;
 }
+
+/* ── Rentabilité ── */
+.rentab-card {
+  background: #FDFCFA;
+  border: 1.5px solid rgba(200,184,154,.35);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rentab-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0D1117;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rentab-card-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rentab-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #6b7280;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(200,184,154,.2);
+}
+.rentab-row:last-child { border-bottom: none; }
+.rentab-row-val {
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+}
+.rentab-row-val.neg { color: #dc2626; }
+.rentab-row-val.pos { color: #1A7A5E; }
+.rentab-marge-block {
+  background: #f0fdf4;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rentab-marge-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing:.06em; }
+.rentab-marge-val { font-size: 20px; font-weight: 800; color: #1A7A5E; }
+.rentab-marge-pct {
+  font-size: 12px; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px;
+  background: #1A7A5E; color: white;
+}
+.rentab-marge-pct.warn { background: #F59E0B; }
+.rentab-marge-pct.danger { background: #EF4444; }
+.rentab-table th {
+  background: #1A7A5E; color: white;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing:.05em;
+  padding: 9px 12px; text-align: left;
+}
+.rentab-table td {
+  padding: 9px 12px; font-size: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+.rentab-table tr:nth-child(even) td { background: #fafaf8; }
+.rentab-table tr:hover td { background: #f0fdf4; }
+.rentab-table td.neg { color: #dc2626; font-weight: 600; }
+.rentab-table td.pos { color: #1A7A5E; font-weight: 700; }
+.rentab-table td.muted { color: #9ca3af; }
 </style>
 </head>
 
@@ -671,6 +745,41 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- SECTION RENTABILITÉ                                    -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="card" id="rentabiliteSection" style="margin-top:24px;">
+    <div class="card-header" style="border-bottom:2px solid #1A7A5E;">
+      <div class="card-title" style="color:#1A7A5E;font-size:16px;">
+        <i class="fas fa-chart-line"></i> Score de rentabilité
+      </div>
+      <div class="view-tabs">
+        <button class="view-tab active" onclick="switchRentab('logement',this)">Par logement</button>
+        <button class="view-tab" onclick="switchRentab('mois',this)">Par mois</button>
+        <button class="view-tab" onclick="switchRentab('reservation',this)">Par réservation</button>
+      </div>
+    </div>
+
+    <!-- Vue par logement -->
+    <div id="rentabLogement">
+      <div id="rentabLogementCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:20px 0;"></div>
+    </div>
+
+    <!-- Vue par mois -->
+    <div id="rentabMois" style="display:none;">
+      <div style="overflow-x:auto;">
+        <table id="rentabMoisTable" style="width:100%;border-collapse:collapse;font-size:13px;"></table>
+      </div>
+    </div>
+
+    <!-- Vue par réservation -->
+    <div id="rentabResa" style="display:none;">
+      <div style="overflow-x:auto;">
+        <table id="rentabResaTable" style="width:100%;border-collapse:collapse;font-size:13px;"></table>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /reportContent -->
 
 </main>
@@ -784,6 +893,7 @@ function render(d) {
   renderPropTable(d.byProperty);
   renderMonthlyTable(d.monthly, d.byProperty);
   populateComparatorSelects(d.byProperty);
+  renderRentabilite(d);
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('reportContent').style.display = 'block';
@@ -1098,6 +1208,207 @@ async function downloadExport(type) {
     alert('Erreur lors du téléchargement. Réessayez.');
     console.error(err);
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENTABILITÉ
+// ══════════════════════════════════════════════════════════════
+let _rentabMode = 'logement';
+
+function switchRentab(mode, btn) {
+  _rentabMode = mode;
+  document.querySelectorAll('#rentabiliteSection .view-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('rentabLogement').style.display = mode === 'logement' ? '' : 'none';
+  document.getElementById('rentabMois').style.display     = mode === 'mois'     ? '' : 'none';
+  document.getElementById('rentabResa').style.display     = mode === 'reservation' ? '' : 'none';
+}
+
+function fmtE(n) {
+  if (n == null || isNaN(n)) return '—';
+  const abs = Math.abs(n);
+  const str = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(abs);
+  return (n < 0 ? '−' : '') + str + ' €';
+}
+
+function margeClass(pct) {
+  if (pct >= 40) return '';
+  if (pct >= 20) return 'warn';
+  return 'danger';
+}
+
+function renderRentabilite(d) {
+  renderRentabLogement(d.byProperty || []);
+  renderRentabMois(d.monthly || []);
+  renderRentabResa(d.reservations || []);
+}
+
+function renderRentabLogement(byProp) {
+  const props = Array.isArray(byProp) ? Object.values(byProp) : byProp;
+  const container = document.getElementById('rentabLogementCards');
+  if (!props || props.length === 0) {
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af;">Aucun logement</div>';
+    return;
+  }
+
+  container.innerHTML = props.map(p => {
+    const revBrut     = p.grossRevenue || 0;
+    const commOTA     = p.otaCommissionAmount || 0;
+    const fraisMenage = p.cleaningFee || 0;
+    const commConc    = p.conciergeAmount || 0;
+    const margeNette  = p.netMargin || 0;
+    const margePct    = p.netMarginPct || 0;
+    const mc          = margeClass(margePct);
+
+    return `
+    <div class="rentab-card">
+      <div class="rentab-card-name">
+        <div class="rentab-card-dot" style="background:${p.color || '#1A7A5E'};"></div>
+        ${p.name || 'Logement'}
+      </div>
+      <div>
+        <div class="rentab-row">
+          <span>Revenu brut</span>
+          <span class="rentab-row-val">${fmtE(revBrut)}</span>
+        </div>
+        <div class="rentab-row">
+          <span>− Commission OTA (${p.airbnbCommissionPct || 3}% / ${p.bookingCommissionPct || 15}%)</span>
+          <span class="rentab-row-val neg">${fmtE(-commOTA)}</span>
+        </div>
+        <div class="rentab-row">
+          <span>− Frais de ménage</span>
+          <span class="rentab-row-val neg">${fmtE(-fraisMenage)}</span>
+        </div>
+        <div class="rentab-row">
+          <span>− Commission conciergerie (${p.conciergePct || 0}%)</span>
+          <span class="rentab-row-val neg">${fmtE(-commConc)}</span>
+        </div>
+      </div>
+      <div class="rentab-marge-block">
+        <div>
+          <div class="rentab-marge-label">Marge nette</div>
+          <div class="rentab-marge-val">${fmtE(margeNette)}</div>
+        </div>
+        <span class="rentab-marge-pct ${mc}">${margePct}%</span>
+      </div>
+      <div style="font-size:11px;color:#9ca3af;text-align:center;">
+        ${p.bookings || 0} réservation${(p.bookings || 0) > 1 ? 's' : ''} · ${p.nights || 0} nuits · taux ${p.occupancyRate || 0}%
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRentabMois(monthly) {
+  const table = document.getElementById('rentabMoisTable');
+  const months = monthly.filter(m => m.bookings > 0);
+  if (!months.length) {
+    table.innerHTML = '<tr><td style="padding:20px;color:#9ca3af;text-align:center;">Aucune donnée</td></tr>';
+    return;
+  }
+
+  const thead = `<thead class="rentab-table">
+    <tr>
+      <th>Mois</th>
+      <th>Rés.</th>
+      <th>Revenu brut</th>
+      <th>Commission OTA</th>
+      <th>Frais ménage</th>
+      <th>Commission conc.</th>
+      <th>Marge nette</th>
+      <th>%</th>
+    </tr>
+  </thead>`;
+
+  const rows = months.map(m => {
+    const mc = margeClass(m.netMarginPct || 0);
+    const badgeColor = mc === '' ? '#1A7A5E' : mc === 'warn' ? '#F59E0B' : '#EF4444';
+    return `<tr>
+      <td><b>${m.label}</b></td>
+      <td class="muted">${m.bookings}</td>
+      <td>${fmtE(m.grossRevenue)}</td>
+      <td class="neg">${fmtE(-(m.otaCommissionAmount || 0))}</td>
+      <td class="neg">${fmtE(-(m.cleaningFee || 0))}</td>
+      <td class="neg">${fmtE(-(m.conciergeAmount || 0))}</td>
+      <td class="pos">${fmtE(m.netMargin)}</td>
+      <td><span style="background:${badgeColor};color:white;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">${m.netMarginPct || 0}%</span></td>
+    </tr>`;
+  }).join('');
+
+  // Totaux
+  const tot = monthly.reduce((acc, m) => {
+    acc.bookings += m.bookings || 0;
+    acc.gross    += m.grossRevenue || 0;
+    acc.ota      += m.otaCommissionAmount || 0;
+    acc.menage   += m.cleaningFee || 0;
+    acc.conc     += m.conciergeAmount || 0;
+    acc.marge    += m.netMargin || 0;
+    return acc;
+  }, { bookings:0, gross:0, ota:0, menage:0, conc:0, marge:0 });
+  const totPct = tot.gross > 0 ? Math.round(tot.marge / tot.gross * 100 * 10) / 10 : 0;
+  const totColor = margeClass(totPct) === '' ? '#1A7A5E' : margeClass(totPct) === 'warn' ? '#F59E0B' : '#EF4444';
+
+  const tfoot = `<tfoot>
+    <tr style="background:#f0fdf4;font-weight:700;">
+      <td><b>TOTAL</b></td>
+      <td>${tot.bookings}</td>
+      <td>${fmtE(tot.gross)}</td>
+      <td class="neg">${fmtE(-tot.ota)}</td>
+      <td class="neg">${fmtE(-tot.menage)}</td>
+      <td class="neg">${fmtE(-tot.conc)}</td>
+      <td class="pos">${fmtE(tot.marge)}</td>
+      <td><span style="background:${totColor};color:white;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">${totPct}%</span></td>
+    </tr>
+  </tfoot>`;
+
+  table.className = 'rentab-table';
+  table.innerHTML = thead + '<tbody>' + rows + '</tbody>' + tfoot;
+}
+
+function renderRentabResa(reservations) {
+  const table = document.getElementById('rentabResaTable');
+  const resas = (reservations || []).filter(r => r.rawPrice > 0);
+  if (!resas.length) {
+    table.innerHTML = '<tr><td style="padding:20px;color:#9ca3af;text-align:center;">Aucune réservation</td></tr>';
+    return;
+  }
+
+  const thead = `<thead class="rentab-table">
+    <tr>
+      <th>Logement</th>
+      <th>Voyageur</th>
+      <th>Plateforme</th>
+      <th>Date</th>
+      <th>Nuits</th>
+      <th>Revenu brut</th>
+      <th>Commission OTA</th>
+      <th>Ménage</th>
+      <th>Conciergerie</th>
+      <th>Marge nette</th>
+      <th>%</th>
+    </tr>
+  </thead>`;
+
+  const rows = resas.map(r => {
+    const mc = margeClass(r.netMarginPct || 0);
+    const badgeColor = mc === '' ? '#1A7A5E' : mc === 'warn' ? '#F59E0B' : '#EF4444';
+    const date = r.startDate ? new Date(r.startDate).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '—';
+    return `<tr>
+      <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.propertyColor || '#1A7A5E'};margin-right:6px;"></span>${r.propertyName || '—'}</td>
+      <td class="muted">${r.guestName || '—'}</td>
+      <td class="muted">${r.platform || '—'}</td>
+      <td class="muted">${date}</td>
+      <td class="muted">${r.nights || 0}</td>
+      <td>${fmtE(r.rawPrice)}</td>
+      <td class="neg">${fmtE(-(r.otaCommissionAmount || 0))}</td>
+      <td class="neg">${fmtE(-(r.cleaningFee || 0))}</td>
+      <td class="neg">${fmtE(-(r.conciergeAmount || 0))}</td>
+      <td class="pos">${fmtE(r.netMargin)}</td>
+      <td><span style="background:${badgeColor};color:white;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">${r.netMarginPct || 0}%</span></td>
+    </tr>`;
+  }).join('');
+
+  table.className = 'rentab-table';
+  table.innerHTML = thead + '<tbody>' + rows + '</tbody>';
 }
 </script>
 
