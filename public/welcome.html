@@ -633,6 +633,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
         <span class="welcome-tip-badge"><i class="fas fa-check"></i> QR Code inclus</span>
         <span class="welcome-tip-badge"><i class="fas fa-check"></i> Toujours à jour</span>
         <span class="welcome-tip-badge"><i class="fas fa-check"></i> Sans application</span>
+        <span class="welcome-tip-badge" style="background:rgba(74,222,128,.15);border-color:rgba(74,222,128,.3);color:#4ADE80;"><i class="fas fa-tag"></i> -10% résa directe</span>
       </div>
     </div>
     <button class="welcome-tip-cta" onclick="createNewLivret()">
@@ -1796,15 +1797,6 @@ function displayLivretsList(livrets) {
           <div class="livret-card-name">${livret.propertyName || 'Sans nom'}</div>
           <div class="livret-card-date"><i class="fas fa-clock" style="font-size:10px;"></i> Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</div>
         </div>
-        <div class="livret-promo-banner">
-          <div class="livret-promo-logo">B</div>
-          <div class="livret-promo-text">
-            <div class="livret-promo-title">🎁 Inclus dans ce livret</div>
-            <div class="livret-promo-sub">Vos voyageurs peuvent réserver en direct sur l'app Boostinghostguest et bénéficier de <strong style="color:#4ADE80;">-10%</strong></div>
-          </div>
-          <div class="livret-promo-badge">-10%</div>
-        </div>
-        <div class="livret-card-actions">
           <button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}')"><i class="fas fa-edit"></i> Modifier</button>
           <button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>
           <button class="btn-lv btn-lv-qr" onclick="copyLivretLink('${livret.uniqueId}', this)" title="Copier le lien"><i class="fas fa-link"></i></button>
