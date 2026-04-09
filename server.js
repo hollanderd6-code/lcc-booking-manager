@@ -5896,6 +5896,16 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
   reservationsStore.properties[propertyId].push(reservation);
   console.log('✅ Ajouté à reservationsStore');
 }
+    // ✅ Sync Channex — bloquer les dates de cette résa
+    setImmediate(async () => {
+      try {
+        const targetDates = [];
+        const d = new Date(start);
+        const endD = new Date(end);
+        while (d < endD) { targetDates.push(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
+        await triggerChannexAvailabilitySync(propertyId, targetDates);
+      } catch(e) { console.error('⚠️ [CHANNEX SYNC] Erreur résa manuelle:', e.message); }
+    });
     setImmediate(() => syncAllCalendars());
     // Réponse au client AVANT les notifications
     res.status(201).json({
