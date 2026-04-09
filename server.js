@@ -3810,7 +3810,9 @@ async function loadProperties() {
         beds,
         bathrooms,
         internal_name,
-        custom_auto_responses
+        custom_auto_responses,
+        airbnb_commission_pct,
+        booking_commission_pct
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -3860,6 +3862,10 @@ async function loadProperties() {
         cleaningFee: row.cleaning_fee != null ? parseFloat(row.cleaning_fee) : null,
         touristTaxPerNight: row.tourist_tax_per_night != null ? parseFloat(row.tourist_tax_per_night) : null,
         conciergePct: row.concierge_pct != null ? parseFloat(row.concierge_pct) : null,
+        airbnbCommissionPct: row.airbnb_commission_pct != null ? parseFloat(row.airbnb_commission_pct) : 3,
+        bookingCommissionPct: row.booking_commission_pct != null ? parseFloat(row.booking_commission_pct) : 15,
+        airbnb_commission_pct: row.airbnb_commission_pct != null ? parseFloat(row.airbnb_commission_pct) : 3,
+        booking_commission_pct: row.booking_commission_pct != null ? parseFloat(row.booking_commission_pct) : 15,
         max_guests: row.max_guests != null ? parseInt(row.max_guests, 10) : null,
         bedrooms: row.bedrooms != null ? parseInt(row.bedrooms, 10) : null,
         beds: row.beds != null ? parseInt(row.beds, 10) : null,
