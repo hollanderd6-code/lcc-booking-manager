@@ -1658,6 +1658,17 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Colonnes OTA properties:', e.message);
     }
 
+    // ✅ Migration : commissions plateformes pour calcul rentabilité
+    try {
+      await pool.query(`
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS airbnb_commission_pct NUMERIC(5,2) DEFAULT 3;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS booking_commission_pct NUMERIC(5,2) DEFAULT 15;
+      `);
+      console.log('✅ Colonnes commissions plateformes OK');
+    } catch (e) {
+      console.log('ℹ️ Colonnes commissions plateformes:', e.message);
+    }
+
     // ✅ Migration : table airbnb_accounts
     try {
       await pool.query(`
@@ -10922,7 +10933,7 @@ app.post('/api/properties',
            base_price = $22, weekend_price = $23,
            cleaning_fee = $24, tourist_tax_per_night = $25, concierge_pct = $26,
            max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30,
-           internal_name = $31
+           internal_name = $31, airbnb_commission_pct = $32, booking_commission_pct = $33
          WHERE id = $21`,
         [
           name,
@@ -10955,7 +10966,9 @@ app.post('/api/properties',
           bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
           beds != null && beds !== '' ? parseInt(beds, 10) : null,
           bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
-          internal_name != null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null
+          internal_name != null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null,
+          body.airbnbCommissionPct != null && body.airbnbCommissionPct !== '' ? parseFloat(body.airbnbCommissionPct) : 3,
+          body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : 15
         ]
       );
 
@@ -11507,7 +11520,9 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
     const propsResult = await pool.query(`
       SELECT id, name, color,
              base_price, weekend_price,
-             cleaning_fee, tourist_tax_per_night, concierge_pct
+             cleaning_fee, tourist_tax_per_night, concierge_pct,
+             COALESCE(airbnb_commission_pct, 3) as airbnb_commission_pct,
+             COALESCE(booking_commission_pct, 15) as booking_commission_pct
       FROM properties WHERE user_id = $1
       ${property_id ? 'AND id = $2' : ''}
       ORDER BY display_order ASC, created_at ASC
@@ -11602,6 +11617,19 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
       // Revenu propriétaire = prix - commission conciergerie
       const ownerRevenue = Math.round((rawPrice - conciergeAmount) * 100) / 100;
 
+      // Commission OTA (Airbnb, Booking selon la plateforme)
+      const airbnbCommPct = prop.airbnb_commission_pct != null ? parseFloat(prop.airbnb_commission_pct) : 3;
+      const bookingCommPct = prop.booking_commission_pct != null ? parseFloat(prop.booking_commission_pct) : 15;
+      let otaCommissionPct = 0;
+      const platformRaw = (r.ota_name || r.platform || '').toLowerCase();
+      if (platformRaw.includes('abb') || platformRaw.includes('airbnb')) otaCommissionPct = airbnbCommPct;
+      else if (platformRaw.includes('bdc') || platformRaw.includes('booking')) otaCommissionPct = bookingCommPct;
+      const otaCommissionAmount = Math.round(rawPrice * otaCommissionPct / 100 * 100) / 100;
+
+      // Marge nette = prix brut - commission OTA - frais ménage - commission conciergerie
+      const netMargin = Math.round((rawPrice - otaCommissionAmount - cleaningFee - conciergeAmount) * 100) / 100;
+      const netMarginPct = rawPrice > 0 ? Math.round(netMargin / rawPrice * 100 * 10) / 10 : 0;
+
       // Plateforme normalisée
       const platform = (() => {
         const raw = (r.ota_name || r.platform || '').toLowerCase();
@@ -11618,6 +11646,7 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
         propertyId: r.property_id,
         propertyName: prop.name || 'Logement',
         propertyColor: prop.color || '#10B981',
+        guestName: r.guest_name || '—',
         startDate: r.start_date,
         endDate: r.end_date,
         month: parseInt(r.month),
@@ -11631,7 +11660,11 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
         netRevenue: Math.round(netRevenue * 100) / 100,
         conciergeAmount: Math.round(conciergeAmount * 100) / 100,
         ownerRevenue: Math.round(ownerRevenue * 100) / 100,
-        conciergePct
+        conciergePct,
+        otaCommissionPct,
+        otaCommissionAmount: Math.round(otaCommissionAmount * 100) / 100,
+        netMargin: Math.round(netMargin * 100) / 100,
+        netMarginPct
       };
     });
 
@@ -11642,7 +11675,8 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
       bookings: 0, nights: 0,
       grossRevenue: 0, netRevenue: 0,
       touristTax: 0, cleaningFee: 0,
-      conciergeAmount: 0, ownerRevenue: 0
+      conciergeAmount: 0, ownerRevenue: 0,
+      otaCommissionAmount: 0, netMargin: 0
     }));
 
     enrichedResas.forEach(r => {
@@ -11650,20 +11684,25 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
       if (!m) return;
       m.bookings++;
       m.nights += r.nights;
-      m.grossRevenue   += r.grossRevenue;
-      m.netRevenue     += r.netRevenue;
-      m.touristTax     += r.touristTax;
-      m.cleaningFee    += r.cleaningFee;
-      m.conciergeAmount+= r.conciergeAmount;
-      m.ownerRevenue   += r.ownerRevenue;
+      m.grossRevenue        += r.grossRevenue;
+      m.netRevenue          += r.netRevenue;
+      m.touristTax          += r.touristTax;
+      m.cleaningFee         += r.cleaningFee;
+      m.conciergeAmount     += r.conciergeAmount;
+      m.ownerRevenue        += r.ownerRevenue;
+      m.otaCommissionAmount += r.otaCommissionAmount;
+      m.netMargin           += r.netMargin;
     });
     monthlyData.forEach(m => {
-      m.grossRevenue    = Math.round(m.grossRevenue * 100) / 100;
-      m.netRevenue      = Math.round(m.netRevenue * 100) / 100;
-      m.touristTax      = Math.round(m.touristTax * 100) / 100;
-      m.cleaningFee     = Math.round(m.cleaningFee * 100) / 100;
-      m.conciergeAmount = Math.round(m.conciergeAmount * 100) / 100;
-      m.ownerRevenue    = Math.round(m.ownerRevenue * 100) / 100;
+      m.grossRevenue        = Math.round(m.grossRevenue * 100) / 100;
+      m.netRevenue          = Math.round(m.netRevenue * 100) / 100;
+      m.touristTax          = Math.round(m.touristTax * 100) / 100;
+      m.cleaningFee         = Math.round(m.cleaningFee * 100) / 100;
+      m.conciergeAmount     = Math.round(m.conciergeAmount * 100) / 100;
+      m.ownerRevenue        = Math.round(m.ownerRevenue * 100) / 100;
+      m.otaCommissionAmount = Math.round(m.otaCommissionAmount * 100) / 100;
+      m.netMargin           = Math.round(m.netMargin * 100) / 100;
+      m.netMarginPct        = m.grossRevenue > 0 ? Math.round(m.netMargin / m.grossRevenue * 100 * 10) / 10 : 0;
     });
 
     // ── Agrégats par logement ───────────────────────────────────
@@ -11675,7 +11714,10 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
         grossRevenue: 0, netRevenue: 0,
         touristTax: 0, cleaningFee: 0,
         conciergeAmount: 0, ownerRevenue: 0,
+        otaCommissionAmount: 0, netMargin: 0,
         conciergePct: p.concierge_pct || 0,
+        airbnbCommissionPct: parseFloat(p.airbnb_commission_pct) || 3,
+        bookingCommissionPct: parseFloat(p.booking_commission_pct) || 15,
         platforms: {}
       };
     });
@@ -11689,8 +11731,10 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
       p.netRevenue      += r.netRevenue;
       p.touristTax      += r.touristTax;
       p.cleaningFee     += r.cleaningFee;
-      p.conciergeAmount += r.conciergeAmount;
-      p.ownerRevenue    += r.ownerRevenue;
+      p.conciergeAmount     += r.conciergeAmount;
+      p.ownerRevenue        += r.ownerRevenue;
+      p.otaCommissionAmount += r.otaCommissionAmount;
+      p.netMargin           += r.netMargin;
       p.platforms[r.platform] = (p.platforms[r.platform] || 0) + 1;
     });
 
@@ -11702,8 +11746,11 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
       p.netRevenue      = Math.round(p.netRevenue * 100) / 100;
       p.touristTax      = Math.round(p.touristTax * 100) / 100;
       p.cleaningFee     = Math.round(p.cleaningFee * 100) / 100;
-      p.conciergeAmount = Math.round(p.conciergeAmount * 100) / 100;
-      p.ownerRevenue    = Math.round(p.ownerRevenue * 100) / 100;
+      p.conciergeAmount     = Math.round(p.conciergeAmount * 100) / 100;
+      p.ownerRevenue        = Math.round(p.ownerRevenue * 100) / 100;
+      p.otaCommissionAmount = Math.round(p.otaCommissionAmount * 100) / 100;
+      p.netMargin           = Math.round(p.netMargin * 100) / 100;
+      p.netMarginPct        = p.grossRevenue > 0 ? Math.round(p.netMargin / p.grossRevenue * 100 * 10) / 10 : 0;
     });
 
     // ── Répartition par plateforme (global) ────────────────────
