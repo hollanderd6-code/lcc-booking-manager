@@ -206,8 +206,24 @@ html, body { margin: 0 !important; }
   box-shadow: 0 1px 4px rgba(0,0,0,.08);
 }
 
-/* ── Graphiques ── */
-.chart-wrap { position: relative; height: 250px; padding: 16px 20px 20px; }
+/* ── Rentabilité tabs — visibilité forcée ── */
+#rentabiliteSection .view-tabs {
+  background: rgba(0,0,0,.06) !important;
+  border: 1px solid rgba(0,0,0,.1) !important;
+}
+#rentabiliteSection .view-tab {
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+#rentabiliteSection .view-tab.active {
+  background: #1A7A5E !important;
+  color: white !important;
+  box-shadow: 0 2px 6px rgba(26,122,94,.3) !important;
+}
+#rentabiliteSection .view-tab:not(.active):hover {
+  background: rgba(26,122,94,.08) !important;
+  color: #1A7A5E !important;
+}
 .chart-mini { position: relative; height: 170px; padding: 14px 20px 16px; }
 
 /* ── Plateforme ── */
