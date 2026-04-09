@@ -432,11 +432,15 @@ async function saveProperty(event) {
   const cleaningFeeRaw     = document.getElementById('propertyCleaningFee')?.value;
   const touristTaxRaw      = document.getElementById('propertyTouristTax')?.value;
   const conciergePctRaw    = document.getElementById('propertyConciergePct')?.value;
+  const airbnbCommPctRaw   = document.getElementById('propertyAirbnbCommissionPct')?.value;
+  const bookingCommPctRaw  = document.getElementById('propertyBookingCommissionPct')?.value;
   const basePrice    = basePriceRaw    !== undefined && basePriceRaw    !== '' ? parseFloat(basePriceRaw)    : null;
   const weekendPrice = weekendPriceRaw !== undefined && weekendPriceRaw !== '' ? parseFloat(weekendPriceRaw) : null;
   const cleaningFee     = cleaningFeeRaw  !== undefined && cleaningFeeRaw  !== '' ? parseFloat(cleaningFeeRaw)  : null;
   const touristTaxPerNight = touristTaxRaw !== undefined && touristTaxRaw !== '' ? parseFloat(touristTaxRaw) : null;
   const conciergePct    = conciergePctRaw !== undefined && conciergePctRaw !== '' ? parseFloat(conciergePctRaw) : null;
+  const airbnbCommPct   = airbnbCommPctRaw !== undefined && airbnbCommPctRaw !== '' ? parseFloat(airbnbCommPctRaw) : null;
+  const bookingCommPct  = bookingCommPctRaw !== undefined && bookingCommPctRaw !== '' ? parseFloat(bookingCommPctRaw) : null;
 
   const existingPhotoUrl = document.getElementById("propertyPhotoUrl")?.value || null;
   const photoInput = document.getElementById("propertyPhoto");
@@ -470,7 +474,9 @@ async function saveProperty(event) {
   if (weekendPrice !== null) formData.append('weekendPrice', weekendPrice);
   if (cleaningFee     !== null) formData.append('cleaningFee',     cleaningFee);
   if (touristTaxPerNight !== null) formData.append('touristTaxPerNight', touristTaxPerNight);
-  if (conciergePct    !== null) formData.append('conciergePct',    conciergePct);
+  if (conciergePct    !== null) formData.append('conciergePct',         conciergePct);
+  if (airbnbCommPct   !== null) formData.append('airbnbCommissionPct',   airbnbCommPct);
+  if (bookingCommPct  !== null) formData.append('bookingCommissionPct',  bookingCommPct);
 
   // Capacité d'accueil
   const maxGuests  = document.getElementById('propertyMaxGuests')?.value;
@@ -790,6 +796,14 @@ function openEditPropertyModal(propertyId) {
   if (document.getElementById("propertyConciergePct")) {
     const cp = property.conciergePct ?? property.concierge_pct;
     document.getElementById("propertyConciergePct").value = cp != null ? cp : "";
+  }
+  if (document.getElementById("propertyAirbnbCommissionPct")) {
+    const ac = property.airbnbCommissionPct ?? property.airbnb_commission_pct;
+    document.getElementById("propertyAirbnbCommissionPct").value = ac != null ? ac : "3";
+  }
+  if (document.getElementById("propertyBookingCommissionPct")) {
+    const bc = property.bookingCommissionPct ?? property.booking_commission_pct;
+    document.getElementById("propertyBookingCommissionPct").value = bc != null ? bc : "15";
   }
 
   // Capacité d'accueil
