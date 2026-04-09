@@ -12555,6 +12555,8 @@ userId: userId
          abritel_id = $36,
          expedia_id = $37,
          channex_property_id_ext = $38,
+         airbnb_commission_pct = $39,
+         booking_commission_pct = $40,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -12583,7 +12585,9 @@ userId: userId
         newBookingId,
         newAbritelId,
         newExpediaId,
-        newChannexPropertyIdExt
+        newChannexPropertyIdExt,
+        body.airbnbCommissionPct != null && body.airbnbCommissionPct !== '' ? parseFloat(body.airbnbCommissionPct) : (property.airbnb_commission_pct ?? 3),
+        body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : (property.booking_commission_pct ?? 15)
       ]
     );
     
