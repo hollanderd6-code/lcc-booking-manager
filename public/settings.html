@@ -2320,7 +2320,7 @@ function insertVariable(textareaId, variable, event) {
 // GESTION QUOTA LOGEMENTS
 // ============================================
 (function() {
-  const API = 'https://boostinghost.fr';
+  const API = window.API_URL || 'https://lcc-booking-manager.onrender.com';
 
   // Config des plans
   const PLAN_LIMITS = {
@@ -3202,7 +3202,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ===== RACCOURCIS MESSAGES =====
 (function() {
   var MAX = 5;
-  var API = 'https://boostinghost.fr';
+  var API = window.API_URL || 'https://lcc-booking-manager.onrender.com';
 
   // --- Rendu d'un champ ---
   window.addQuickReplyField = function(value) {
