@@ -22807,7 +22807,7 @@ app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/channex/connect-property', authenticateToken, async (req, res) => {
-  const { property_id } = req.body;
+  const { property_id, channex_property_id: existing_channex_property_id } = req.body;
   const user_id = req.user.id;
 
   if (!property_id) return res.status(400).json({ error: 'property_id requis' });
@@ -22828,13 +22828,36 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       return res.status(400).json({ error: 'Ce logement est déjà connecté à Channex' });
     }
 
-    const result = await createChannexProperty(pool, {
-      user_id,
-      property_id,
-      name: property.name,
-      address: property.address,
-      city: property.city
-    });
+    let result;
+
+    if (existing_channex_property_id) {
+      // ── Scénario multi-logements : rattacher à une property Channex existante ──
+      // Vérifier que cette channex_property_id appartient bien à l'utilisateur
+      const ownerCheck = await pool.query(
+        'SELECT id FROM properties WHERE channex_property_id = $1 AND user_id = $2 LIMIT 1',
+        [existing_channex_property_id, user_id]
+      );
+      if (ownerCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Property Channex introuvable ou non autorisée' });
+      }
+
+      const { addRoomTypeToProperty } = require('./channex');
+      result = await addRoomTypeToProperty(pool, {
+        user_id,
+        property_id,
+        channex_property_id: existing_channex_property_id,
+        name: property.name
+      });
+    } else {
+      // ── Scénario standard : créer une nouvelle property Channex ──
+      result = await createChannexProperty(pool, {
+        user_id,
+        property_id,
+        name: property.name,
+        address: property.address,
+        city: property.city
+      });
+    }
 
     const resaResult = await pool.query(
       "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
@@ -22857,27 +22880,29 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       dates_blocked
     });
 
-    // ✅ Enregistrer les webhooks automatiquement
-    try {
-      const { channexAPI } = require('./channex');
-      const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
-      for (const wh of [
-        { event_mask: 'booking', callback_url: `${appUrl}/api/channex/webhook`, label: 'BH Bookings' },
-        { event_mask: 'message', callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' }
-      ]) {
-        await channexAPI.post('/webhooks', {
-          webhook: {
-            property_id: result.channex_property_id,
-            callback_url: wh.callback_url,
-            event_mask: wh.event_mask,
-            is_active: true,
-            send_data: true
-          }
-        });
-        console.log(`✅ [CHANNEX] Webhook ${wh.event_mask} enregistré pour ${result.channex_property_id}`);
+    // ✅ Enregistrer les webhooks uniquement si nouvelle property Channex
+    if (!existing_channex_property_id) {
+      try {
+        const { channexAPI } = require('./channex');
+        const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+        for (const wh of [
+          { event_mask: 'booking', callback_url: `${appUrl}/api/channex/webhook`, label: 'BH Bookings' },
+          { event_mask: 'message', callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' }
+        ]) {
+          await channexAPI.post('/webhooks', {
+            webhook: {
+              property_id: result.channex_property_id,
+              callback_url: wh.callback_url,
+              event_mask: wh.event_mask,
+              is_active: true,
+              send_data: true
+            }
+          });
+          console.log(`✅ [CHANNEX] Webhook ${wh.event_mask} enregistré pour ${result.channex_property_id}`);
+        }
+      } catch (whErr) {
+        console.warn('⚠️ [CHANNEX] Erreur enregistrement webhooks (non bloquant):', whErr.message);
       }
-    } catch (whErr) {
-      console.warn('⚠️ [CHANNEX] Erreur enregistrement webhooks (non bloquant):', whErr.message);
     }
 
     res.json({
@@ -22889,6 +22914,49 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
   } catch (e) {
     console.error('❌ [CHANNEX CONNECT]', e.message);
     res.status(500).json({ error: 'Erreur lors de la connexion Channex: ' + e.message });
+  }
+});
+
+// ── Lister les Channex properties déjà créées par l'utilisateur ─
+app.get('/api/channex/list-user-properties', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
+  try {
+    // Récupérer les properties BH de l'user qui ont déjà une channex_property_id
+    const result = await pool.query(
+      `SELECT DISTINCT channex_property_id, name as bh_name, city
+       FROM properties
+       WHERE user_id = $1 AND channex_enabled = true AND channex_property_id IS NOT NULL
+       ORDER BY name ASC`,
+      [user_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ properties: [] });
+    }
+
+    // Récupérer les noms depuis Channex pour affichage
+    const { listChannexProperties } = require('./channex');
+    let channexProps = [];
+    try {
+      channexProps = await listChannexProperties();
+    } catch (e) {
+      console.warn('⚠️ [CHANNEX] Impossible de récupérer les noms depuis Channex, fallback sur noms BH');
+    }
+
+    const channexMap = {};
+    channexProps.forEach(p => { channexMap[p.id] = p.name; });
+
+    const properties = result.rows.map(row => ({
+      channex_property_id: row.channex_property_id,
+      // Préférer le nom Channex (= nom Booking/OTA), sinon le nom BH
+      name: channexMap[row.channex_property_id] || row.bh_name,
+      city: row.city || ''
+    }));
+
+    res.json({ properties });
+  } catch (e) {
+    console.error('❌ [CHANNEX list-user-properties]', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
