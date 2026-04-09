@@ -521,7 +521,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 /* QR button on card */
 .btn-lv-qr {
   flex: 0 0 34px !important; width: 34px;
-  background: rgba(26,122,94,.1); color: #1A7A5E;
+  background: rgba(26,122,94,.08); color: #1A7A5E;
   border: 1px solid rgba(26,122,94,.2) !important;
 }
 .btn-lv-qr:hover { background: rgba(26,122,94,.2); }
@@ -1800,8 +1800,7 @@ function displayLivretsList(livrets) {
           <button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}')"><i class="fas fa-edit"></i> Modifier</button>
           <button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>
           <button class="btn-lv btn-lv-qr" onclick="copyLivretLink('${livret.uniqueId}', this)" title="Copier le lien"><i class="fas fa-link"></i></button>
-          <button class="btn-lv btn-lv-delete" onclick="deleteLivret('${livret.uniqueId}')"><i class="fas fa-trash"></i></button>
-        </div>
+          <button class="btn-lv btn-lv-delete" onclick="deleteLivret('${livret.uniqueId}')"><i class="fas fa-trash"></i></button>        </div>
       </div>
     </div>
   `;
