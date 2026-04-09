@@ -9126,7 +9126,7 @@ html[data-theme-v3="1"] body {
 }
 
 /* ── Masquer mobile-header sur desktop ── */
-@media (min-width: 1367px) {
+@media (min-width: 1024px) {
   html[data-theme-v3="1"] .mobile-header,
   html[data-theme-v3="1"] .mobile-menu-btn {
     display: none !important;
@@ -9145,7 +9145,7 @@ html[data-theme-v3="1"] main.main-content {
    top: 40px  = juste sous la barre dark
    left: 248px = juste à droite de la sidebar
 ══════════════════════════════════════ */
-@media (min-width: 1367px) {
+@media (min-width: 1024px) {
   html[data-theme-v3="1"] header.main-header,
   html[data-theme-v3="1"] #bhMainHeader {
     position: fixed !important;
@@ -10753,7 +10753,7 @@ if (window.Capacitor) {
 
 <script id="mobile-gap-fix-js">
 (function fixMobileGap() {
-  if (window.innerWidth > 768) return;
+  if (window.innerWidth >= 1024) return;
   
   function applyFix() {
     // 1. Body : supprimer padding-top
