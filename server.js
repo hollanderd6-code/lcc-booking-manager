@@ -22781,31 +22781,43 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
 
     const { channexAPI } = require('./channex');
 
-    // ✅ Sans filtre property_id (ignoré par Channex) + sans pagination
-    const response = await channexAPI.get('/channels');
+    // ✅ Récupère tous les channels sans filtre (Channex ignore filter[property_id])
+    const response = await channexAPI.get('/channels', {
+      params: { 'pagination[page_size]': 100, 'pagination[page]': 1 }
+    });
 
     const raw = response.data?.data || [];
 
-    // Log brut pour debug
-    console.log('🔍 [CHANNEX channels raw]', JSON.stringify(raw.slice(0, 3), null, 2));
-    console.log(`🔍 [CHANNEX] Total channels reçus: ${raw.length}, property_id cible: ${prop.channex_property_id}`);
+    // 🔍 Log complet pour debug
+    console.log(`🔍 [CHANNEX channels] Total reçus: ${raw.length} | property_id cible: ${prop.channex_property_id}`);
+    if (raw.length > 0) {
+      console.log('🔍 [CHANNEX channels] Exemple item[0]:', JSON.stringify(raw[0], null, 2));
+    } else {
+      console.log('⚠️ [CHANNEX channels] Aucun channel retourné — vérifier la clé API / env');
+    }
 
-    // Filtrer par property_id côté serveur + ne pas filtrer sur status (trop restrictif)
-    const channels = raw
-      .filter(c => {
-        const pid = c.attributes?.property_id || c.relationships?.property?.data?.id;
-        return pid === prop.channex_property_id;
-      })
+    // Filtrage robuste : chercher property_id dans attributes ET relationships
+    const filtered = raw.filter(c => {
+      const fromAttr = c.attributes?.property_id;
+      const fromRel  = c.relationships?.property?.data?.id;
+      const match = fromAttr === prop.channex_property_id || fromRel === prop.channex_property_id;
+      if (!match) console.log(`  ↳ skip channel ${c.id} (property_id: ${fromAttr || fromRel})`);
+      return match;
+    });
+
+    console.log(`🔍 [CHANNEX channels] Après filtre property: ${filtered.length} channels`);
+
+    const channels = filtered
       .map(c => ({
         id: c.id,
-        title: c.attributes?.title || '',
+        title: c.attributes?.title || c.attributes?.name || '',
         status: c.attributes?.status || '',
-        channel: (c.attributes?.channel || '').toLowerCase()
+        channel: (c.attributes?.channel || c.attributes?.channel_id || '').toLowerCase()
       }))
-      // ✅ Statuts élargis — inclut connected, live, active, enabled
-      .filter(c => !['disabled', 'deleted', 'inactive'].includes(c.status));
+      // Exclure seulement les statuts explicitement inactifs
+      .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status));
 
-    console.log(`✅ [CHANNEX] Channels filtrés pour ${prop.channex_property_id}:`, channels);
+    console.log(`✅ [CHANNEX channels] Résultat final pour ${prop.channex_property_id}:`, channels);
 
     res.json({ channels });
   } catch (e) {
