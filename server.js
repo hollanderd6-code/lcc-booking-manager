@@ -23836,6 +23836,62 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
   }
 });
 
+// ── Importer les bookings existants depuis Channex → BH ──────
+// Utile au premier démarrage ou après une reconnexion
+app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const propResult = await pool.query(
+      `SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user_id]
+    );
+    const prop = propResult.rows[0];
+    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    const { channexAPI, processChannexBooking, bookingAcknowledge } = require('./channex');
+
+    // Récupérer tous les bookings New/Modified depuis Channex
+    const response = await channexAPI.get('/booking_revisions', {
+      params: {
+        'filter[property_id]': prop.channex_property_id,
+        'filter[status]': 'new',
+        pagination: false
+      }
+    });
+
+    const revisions = response.data?.data || [];
+    console.log(`📥 [CHANNEX SYNC BOOKINGS] ${revisions.length} bookings à importer pour ${property_id}`);
+
+    let imported = 0;
+    let errors = 0;
+
+    for (const revision of revisions) {
+      try {
+        const bookingData = revision.attributes || revision;
+        await processChannexBooking(pool, bookingData);
+        // Acknowledge pour marquer comme traité
+        const revisionId = revision.id || bookingData.revision_id;
+        if (revisionId) await bookingAcknowledge(revisionId);
+        imported++;
+      } catch (e) {
+        console.error(`❌ [CHANNEX SYNC BOOKINGS] Erreur booking ${revision.id}:`, e.message);
+        errors++;
+      }
+    }
+
+    console.log(`✅ [CHANNEX SYNC BOOKINGS] ${imported} importés, ${errors} erreurs`);
+    res.json({ success: true, imported, errors, total: revisions.length });
+
+  } catch (e) {
+    console.error('❌ [CHANNEX SYNC BOOKINGS]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Générer un token iFrame Channex ──────────────────────────
 app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
   const { property_id } = req.body;
