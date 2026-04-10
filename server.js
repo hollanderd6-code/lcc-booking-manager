@@ -23694,6 +23694,7 @@ app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) =
     try {
       const baRes = await channexAPI.get('/billing_accounts');
       const accounts = baRes.data?.data || [];
+      console.log(`💳 [CHANNEX] billing_accounts raw:`, JSON.stringify(baRes.data?.data?.slice(0,1)));
       if (accounts.length > 0) billing_account_id = accounts[0].id || accounts[0].attributes?.id;
       if (billing_account_id) console.log(`💳 [CHANNEX] billing_account_id: ${billing_account_id}`);
     } catch (e) { /* non bloquant */ }
