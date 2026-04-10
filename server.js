@@ -23985,13 +23985,16 @@ app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) =
       try {
         const r = await channexAPI.get(`/bookings/${resa.channex_booking_id}`);
         const attrs = r.data?.data?.attributes || {};
-        const room_type_id = (attrs.rooms || [])[0]?.room_type_id || null;
-        console.log(`🔍 [REASSIGN] booking ${resa.channex_booking_id} → room_type_id: ${room_type_id} | rooms: ${JSON.stringify(attrs.rooms?.slice(0,1))}`);
+        const room = (attrs.rooms || [])[0] || {};
+        // Priorité : room_type_id (mappé) → room_type_code Booking dans meta (non mappé)
+        const room_type_id = room.room_type_id || null;
+        const room_type_code = String(room.meta?.room_type_code || '');
+        console.log(`🔍 [REASSIGN] booking ${resa.channex_booking_id} → room_type_id: ${room_type_id} | room_type_code: ${room_type_code}`);
         if (!room_type_id) continue;
 
-        const correctPropertyId = roomTypeMap[room_type_id];
+        const correctPropertyId = roomTypeMap[room_type_id] || roomTypeMap[room_type_code];
         if (!correctPropertyId) {
-          console.log(`⚠️ [REASSIGN] room_type_id ${room_type_id} non trouvé dans le map`);
+          console.log(`⚠️ [REASSIGN] ni room_type_id ${room_type_id} ni room_type_code ${room_type_code} trouvé dans le map`);
           continue;
         }
         if (correctPropertyId === resa.property_id) continue;
