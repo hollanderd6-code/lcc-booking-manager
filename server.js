@@ -18895,18 +18895,22 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       }
       // ✅ Channex sync — libérer les dates de la résa supprimée
       setImmediate(async () => {
-        // Récupérer les dates de la résa supprimée pour les cibler
-        const deletedRow = deleteResult.rows[0];
-        const targetDates = [];
-        if (deletedRow?.start_date && deletedRow?.end_date) {
-          const d = new Date(deletedRow.start_date);
-          const end = new Date(deletedRow.end_date);
-          while (d < end) { targetDates.push(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
-        }
-        await triggerChannexAvailabilitySync(propertyId, targetDates.length > 0 ? targetDates : null);
-        syncAllCalendars();
-        if (io) {
-          io.to('user_' + user.id).emit('reservations:updated', { propertyId });
+        try {
+          // Récupérer les dates de la résa supprimée pour les cibler
+          const deletedRow = deleteResult.rows[0];
+          const targetDates = [];
+          if (deletedRow?.start_date && deletedRow?.end_date) {
+            const d = new Date(deletedRow.start_date);
+            const end = new Date(deletedRow.end_date);
+            while (d < end) { targetDates.push(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
+          }
+          await triggerChannexAvailabilitySync(propertyId, targetDates.length > 0 ? targetDates : null);
+          syncAllCalendars();
+          if (io) {
+            io.to('user_' + user.id).emit('reservations:updated', { propertyId });
+          }
+        } catch (bgErr) {
+          console.error('❌ Erreur background sync après suppression:', bgErr.message);
         }
       });
       
