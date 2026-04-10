@@ -3875,7 +3875,7 @@ async function loadProperties() {
         custom_auto_responses: row.custom_auto_responses || []
       };
     });
-    console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
+    console.log(`✅ PROPERTIES chargées : ${PROPERTIES.length} logements`);
   } catch (error) {
     console.error('❌ Erreur loadProperties :', error);
     PROPERTIES = [];
@@ -6314,6 +6314,26 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     const filteredProps = req.user.isSubAccount
       ? userProps.filter(p => accessibleProperties.includes(p.id))
       : userProps;
+
+    // ✅ Enrichir avec les données Channex fraîches depuis la DB (évite les bugs de cache)
+    try {
+      const channexResult = await pool.query(
+        `SELECT id, channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id
+         FROM properties WHERE user_id = $1`,
+        [userId]
+      );
+      const channexMap = {};
+      channexResult.rows.forEach(r => { channexMap[r.id] = r; });
+      filteredProps.forEach(p => {
+        const fresh = channexMap[p.id];
+        if (fresh) {
+          p.channex_enabled = fresh.channex_enabled;
+          p.channex_property_id = fresh.channex_property_id;
+          p.channex_room_type_id = fresh.channex_room_type_id;
+          p.channex_rate_plan_id = fresh.channex_rate_plan_id;
+        }
+      });
+    } catch (e) { /* non bloquant */ }
 
     console.log(`🔍 DEBUG: userProps.length=${userProps.length}, filteredProps.length=${filteredProps.length}`);
 
@@ -22924,7 +22944,8 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
 
         for (const wh of [
           { event_mask: 'booking', callback_url: `${appUrl}/api/channex/webhook`, label: 'BH Bookings' },
-          { event_mask: 'message', callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' }
+          { event_mask: 'message', callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' },
+          { event_mask: 'review', callback_url: `${appUrl}/api/channex/webhook-review`, label: 'BH Reviews' }
         ]) {
           const payload = {
             property_id: result.channex_property_id,
@@ -22946,6 +22967,17 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       success: true,
       message: 'Logement connecté à Channex avec succès',
       channex_property_id: result.channex_property_id
+    });
+
+    // ✅ Sync auto dispo + tarifs + restrictions en arrière-plan
+    setImmediate(async () => {
+      try {
+        await triggerChannexAvailabilitySync(property_id);
+        setImmediate(() => triggerChannexRatesSync(property_id, user_id));
+        console.log(`✅ [CHANNEX CONNECT] Sync auto lancé pour ${property_id}`);
+      } catch (e) {
+        console.warn('⚠️ [CHANNEX CONNECT] Erreur sync auto (non bloquant):', e.message);
+      }
     });
 
   } catch (e) {
@@ -23554,6 +23586,59 @@ app.post('/api/channex/webhook-message', async (req, res) => {
   }
 });
 
+// ── Webhook Channex — Avis voyageurs ─────────────────────────
+app.post('/api/channex/webhook-review', async (req, res) => {
+  try {
+    const payload = req.body;
+    console.log('⭐ [CHANNEX REVIEW WEBHOOK]', JSON.stringify(payload).substring(0, 200));
+
+    const data = payload.data || payload;
+    const attrs = data.attributes || data;
+    const property_id_channex = attrs.property_id || null;
+    const reviewer_name = attrs.reviewer_name || attrs.guest_name || 'Voyageur';
+    const score = attrs.score || null;
+    const channel = attrs.channel_code || attrs.channel || '';
+
+    if (!property_id_channex) {
+      return res.status(200).json({ received: true, skipped: true });
+    }
+
+    // Trouver le logement BH
+    const propResult = await pool.query(
+      'SELECT id, user_id, name FROM properties WHERE channex_property_id = $1 LIMIT 1',
+      [property_id_channex]
+    );
+    if (propResult.rows.length === 0) {
+      return res.status(200).json({ received: true, skipped: 'not_found' });
+    }
+    const { user_id, name: propertyName } = propResult.rows[0];
+
+    // Envoyer notification push
+    if (await shouldSendNotification(user_id, 'notif_new_review').catch(() => true)) {
+      const tokensRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+        [user_id]
+      );
+      const scoreText = score ? ` — ${score}/10` : '';
+      const channelText = channel ? ` (${channel})` : '';
+      for (const tok of tokensRes.rows) {
+        await sendNotification(
+          tok.fcm_token,
+          `⭐ Nouvel avis${channelText}${scoreText}`,
+          `${reviewer_name} a laissé un avis sur ${propertyName}`,
+          { type: 'new_review', propertyId: propResult.rows[0].id }
+        );
+      }
+      console.log(`✅ [CHANNEX REVIEW] Notif envoyée pour ${propertyName} — ${reviewer_name}${scoreText}`);
+    }
+
+    res.status(200).json({ received: true });
+  } catch (e) {
+    console.error('❌ [CHANNEX REVIEW WEBHOOK]', e.message);
+    res.status(200).json({ received: true, error: e.message });
+  }
+});
+
 // ── GET messages d'une conversation (avec fetch Channex) ─────
 app.get('/api/chat/conversations/:conversationId/messages-channex', authenticateAny, async (req, res) => {
   try {
@@ -23684,6 +23769,11 @@ app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) =
         event_mask: 'message',
         callback_url: `${appUrl}/api/channex/webhook-message`,
         label: 'BH Messages'
+      },
+      {
+        event_mask: 'review',
+        callback_url: `${appUrl}/api/channex/webhook-review`,
+        label: 'BH Reviews'
       }
     ];
 
