@@ -6672,11 +6672,11 @@ function riskColor(level) {
       // Channex ota_name codes: ABB=Airbnb, BDC=Booking.com, EXP=Expedia, VRBO=Vrbo
       if (otaName) {
         var ota = String(otaName).toUpperCase();
-        if (ota === 'ABB' || ota === 'AIRBNB') return 'airbnb';
-        if (ota === 'BDC' || ota === 'BOOKING') return 'booking';
-        if (ota === 'EXP' || ota === 'EXPEDIA') return 'expedia';
-        if (ota === 'VRBO' || ota === 'HOMEAWAY') return 'vrbo';
-        if (ota === 'ABRITEL') return 'abritel';
+        if (ota === 'ABB' || ota.indexOf('AIRBNB') !== -1) return 'airbnb';
+if (ota === 'BDC' || ota.indexOf('BOOKING') !== -1) return 'booking';
+if (ota === 'EXP' || ota.indexOf('EXPEDIA') !== -1) return 'expedia';
+if (ota === 'VRBO' || ota === 'HOMEAWAY' || ota.indexOf('VRBO') !== -1) return 'vrbo';
+if (ota === 'ABRITEL' || ota.indexOf('ABRITEL') !== -1) return 'abritel';
       }
       if (!raw) return 'direct';
       var val = String(raw).toLowerCase();
