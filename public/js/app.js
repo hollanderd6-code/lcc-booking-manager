@@ -33,11 +33,21 @@ function normalizeSourceToKey(raw, otaName) {
   // Channex ota_name codes
   if (otaName) {
     const o = String(otaName).toUpperCase();
-    if (o === 'ABB' || o === 'AIRBNB')    return 'airbnb';
-    if (o === 'BDC' || o === 'BOOKING')   return 'booking';
-    if (o === 'EXP' || o === 'EXPEDIA')   return 'expedia';
-    if (o === 'VRBO' || o === 'HOMEAWAY') return 'vrbo';
+    if (o === 'ABB' || o.includes('AIRBNB'))    return 'airbnb';
+    if (o === 'BDC' || o.includes('BOOKING'))   return 'booking';
+    if (o === 'EXP' || o.includes('EXPEDIA'))   return 'expedia';
+    if (o === 'VRBO' || o === 'HOMEAWAY' || o.includes('ABRITEL') || o.includes('VRBO')) return 'vrbo';
     if (o === 'ABRITEL')                  return 'abritel';
+  }
+  if (!raw) return 'direct';
+  const v = String(raw).toLowerCase();
+  if (v.includes('airbnb'))  return 'airbnb';
+  if (v.includes('booking')) return 'booking';
+  if (v.includes('vrbo') || v.includes('abritel') || v.includes('homeaway')) return 'vrbo';
+  if (v.includes('expedia')) return 'expedia';
+  if (v.includes('block'))   return 'block';
+  return 'direct';
+}
   }
   if (!raw) return 'direct';
   const v = String(raw).toLowerCase();
