@@ -1456,6 +1456,7 @@ html[data-theme-v3="1"] .sidebar {
 <label for="propertyDeposit">
 <i class="fas fa-shield-alt"></i>
 <span>Montant de la caution</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Montant bloqué sur la carte du voyageur. Libéré après le séjour si aucun dommage.</span></span>
 </label>
 <div class="input-with-suffix">
 <input id="propertyDeposit" min="0" placeholder="Laisser vide si aucune" step="1" type="number"/>
@@ -1505,6 +1506,7 @@ html[data-theme-v3="1"] .sidebar {
 <label for="propertyBasePrice">
 <i class="fas fa-moon"></i>
 <span>Prix de base / nuit</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Prix affiché sur le calendrier les jours de semaine. Utilisé pour le calcul de rentabilité.</span></span>
 </label>
 <div class="input-with-suffix">
 <input id="propertyBasePrice" min="0" placeholder="Ex: 75" step="1" type="number"/>
@@ -1531,6 +1533,7 @@ html[data-theme-v3="1"] .sidebar {
 <label for="propertyCleaningFee">
 <i class="fas fa-broom"></i>
 <span>Frais de ménage</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Frais forfaitaires ajoutés à chaque réservation. Utilisés dans le calcul de rentabilité.</span></span>
 </label>
 <div class="input-with-suffix">
 <input id="propertyCleaningFee" min="0" placeholder="Ex: 40" step="1" type="number"/>
@@ -1542,6 +1545,7 @@ html[data-theme-v3="1"] .sidebar {
 <label for="propertyTouristTax">
 <i class="fas fa-landmark"></i>
 <span>Taxe de séjour</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Taxe collectée par nuit et par personne adulte. Varie selon la commune (ex: 0,83€ à Paris).</span></span>
 </label>
 <div class="input-with-suffix">
 <input id="propertyTouristTax" min="0" placeholder="Ex: 0.83" step="0.01" type="number"/>
@@ -1554,6 +1558,7 @@ html[data-theme-v3="1"] .sidebar {
 <label for="propertyConciergePct">
 <i class="fas fa-handshake"></i>
 <span>Commission conciergerie</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">% prélevé sur le revenu brut par la conciergerie. Utilisé dans le calcul de rentabilité propriétaire.</span></span>
 </label>
 <div class="input-with-suffix">
 <input id="propertyConciergePct" min="0" max="100" placeholder="Ex: 20" step="0.5" type="number"/>
@@ -1568,6 +1573,7 @@ html[data-theme-v3="1"] .sidebar {
 <label for="propertyAirbnbCommissionPct">
 <i class="fab fa-airbnb"></i>
 <span>Commission Airbnb</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">% prélevé par Airbnb sur chaque réservation (généralement 3%). Utilisé pour calculer votre revenu net.</span></span>
 </label>
 <div class="input-with-suffix">
 <input id="propertyAirbnbCommissionPct" min="0" max="100" placeholder="Ex: 3" step="0.5" type="number"/>
@@ -1579,6 +1585,7 @@ html[data-theme-v3="1"] .sidebar {
 <label for="propertyBookingCommissionPct">
 <i class="fas fa-bed"></i>
 <span>Commission Booking</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">% prélevé par Booking.com sur chaque réservation (généralement 15%). Utilisé pour calculer votre revenu net.</span></span>
 </label>
 <div class="input-with-suffix">
 <input id="propertyBookingCommissionPct" min="0" max="100" placeholder="Ex: 15" step="0.5" type="number"/>
