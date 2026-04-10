@@ -6465,7 +6465,11 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     for (const dbData of reservationsDbRows) {
       // Itérer sur les rows directement — pas de doublon
       {
-        if (dbData.source === 'channex' && !storeUids.has(dbData.uid)) {
+        if (dbData.source === 'channex') {
+          // Toujours utiliser la version DB pour les résas Channex (plateforme normalisée, données enrichies)
+          // Retirer la version store si elle existe
+          const existingIdx = allReservations.findIndex(r => r.uid === dbData.uid);
+          if (existingIdx !== -1) allReservations.splice(existingIdx, 1);
           // Trouver le nom de la propriété
           const prop = filteredProps.find(p => p.id === dbData.property_id);
           if (!prop) continue;
@@ -23136,13 +23140,23 @@ app.post('/api/channex/webhook', async (req, res) => {
           console.log(`✏️ [CHANNEX] Résa ${result.uid} mise à jour dans reservationsStore`);
         } else {
           // Nouvelle réservation → ajouter au store
+          const otaRaw = result.ota_name || result.platform || '';
+          const normPlatform = (() => {
+            const o = otaRaw.toLowerCase();
+            if (o.includes('airbnb') || o === 'abb') return 'airbnb';
+            if (o.includes('booking') || o === 'bdc') return 'booking';
+            if (o.includes('expedia') || o === 'exp') return 'expedia';
+            if (o.includes('vrbo') || o.includes('abritel')) return 'vrbo';
+            return 'channex';
+          })();
           reservationsStore.properties[result.property_id].push({
             uid:       result.uid,
             start:     result.start_date,
             end:       result.end_date,
             guestName: result.guest_name || '',
             source:    'channex',
-            platform:  result.platform || 'Channex',
+            platform:  normPlatform,
+            ota_name:  result.ota_name || null,
             status:    result.status || 'confirmed',
             price:     parseFloat(result.amount_total) || 0,
             currency:  result.currency || 'EUR'
