@@ -1082,11 +1082,16 @@ function renderProperties() {
             </div>
             <!-- OTA status -->
             ${p.channexEnabled ? `
-            <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border:1px solid #b8ddd4;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left;">
+            <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:4px;padding:6px 10px;background:#e8f5f1;border:1px solid #b8ddd4;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left;">
               <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
               <span style="font-size:11px;font-weight:600;color:#1A7A5E;flex:1;">Synchronisation OTA active</span>
               <i class="fas fa-cog" style="font-size:11px;color:#1A7A5E;opacity:.7;"></i>
-            </button>` : `
+            </button>
+            ${p.channexPropertyId ? `
+            <div onclick="navigator.clipboard?.writeText('${p.channexPropertyId}').then(()=>showToast('ID copié','success')).catch(()=>{})" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Cliquer pour copier">
+              <i class="fas fa-copy" style="font-size:10px;color:#94a3b8;flex-shrink:0;"></i>
+              <span style="font-size:10px;color:#64748b;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${p.channexPropertyId}</span>
+            </div>` : ''}` : `
             <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fas fa-plug"></i> Connecter mes plateformes
             </button>`}
@@ -1214,11 +1219,16 @@ function renderPropertiesFiltered(filteredProps) {
             <div class="prop-stat"><div class="prop-stat-val" style="color:#1A7A5E;">${depositShort}</div><div class="prop-stat-label">Caution</div></div>
           </div>
           ${p.channexEnabled ? `
-          <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:6px 10px;background:#e8f5f1;border:1px solid #b8ddd4;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left;">
+          <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:4px;padding:6px 10px;background:#e8f5f1;border:1px solid #b8ddd4;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left;">
             <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
             <span style="font-size:11px;font-weight:600;color:#1A7A5E;flex:1;">Synchronisation OTA active</span>
             <i class="fas fa-cog" style="font-size:11px;color:#1A7A5E;opacity:.7;"></i>
-          </button>` : `
+          </button>
+          ${p.channexPropertyId ? `
+          <div onclick="navigator.clipboard?.writeText('${p.channexPropertyId}').then(()=>showToast('ID copié','success')).catch(()=>{})" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Cliquer pour copier">
+            <i class="fas fa-copy" style="font-size:10px;color:#94a3b8;flex-shrink:0;"></i>
+            <span style="font-size:10px;color:#64748b;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${p.channexPropertyId}</span>
+          </div>` : ''}` : `
           <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fas fa-plug"></i> Connecter mes plateformes
           </button>`}
@@ -1596,7 +1606,7 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
           ${!selectedExistingId ? `<i class="fas fa-check-circle" style="margin-left:auto;color:#1A7A5E;font-size:15px;align-self:center;"></i>` : ''}
         </button>
 
-        <!-- Option 2 : rattacher -->
+        <!-- Option 2 : rattacher avec champ texte -->
         <button onclick="_selectPropertyType('existing')" style="
           width:100%;display:flex;align-items:flex-start;gap:12px;padding:14px;
           background:${selectedExistingId !== null ? '#f0fdf8' : '#f9fafb'};
@@ -1607,13 +1617,16 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
             <div style="font-size:13px;font-weight:600;color:#111827;">Partie d'un immeuble / établissement</div>
             <div style="font-size:12px;color:#6B7280;margin-top:2px;">Rattacher à un établissement Channex existant (même Hotel ID Booking)</div>
             ${selectedExistingId !== null ? `
-              <select id="existingPropertySelect" onchange="window._existingIdSelected = this.value" onclick="event.stopPropagation()"
-                style="margin-top:10px;width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;color:#111827;background:#fff;cursor:pointer;">
-                <option value="">— Choisir l'établissement —</option>
-                ${existingProperties.map(p => `
-                  <option value="${p.channex_property_id}">${p.name}${p.city ? ' · ' + p.city : ''}</option>
-                `).join('')}
-              </select>
+              <div style="margin-top:10px;" onclick="event.stopPropagation()">
+                <input id="existingPropertyIdInput" type="text" placeholder="Coller l'ID Channex de l'établissement"
+                  value="${selectedExistingId || ''}"
+                  oninput="window._existingIdSelected = this.value"
+                  style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;color:#111827;background:#fff;box-sizing:border-box;font-family:monospace;"/>
+                <div style="font-size:11px;color:#9ca3af;margin-top:4px;">
+                  Format : xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx<br>
+                  Trouvez cet ID dans Settings → logement déjà connecté → badge "Synchronisation OTA active"
+                </div>
+              </div>
             ` : ''}
           </div>
           ${selectedExistingId !== null ? `<i class="fas fa-check-circle" style="margin-left:auto;color:#1A7A5E;font-size:15px;align-self:center;flex-shrink:0;"></i>` : ''}
@@ -1641,9 +1654,12 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
       selectedExistingId = null;
       window._existingIdSelected = null;
     } else {
-      selectedExistingId = ''; // shows the select
+      selectedExistingId = ''; // shows the input
     }
     render();
+    if (mode === 'existing') {
+      setTimeout(() => document.getElementById('existingPropertyIdInput')?.focus(), 50);
+    }
   };
 
   window._continuePropertyType = async (pid, pname) => {
@@ -1651,10 +1667,15 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
     let channexPropertyId = null;
 
     if (mode === 'existing') {
-      const sel = document.getElementById('existingPropertySelect');
-      channexPropertyId = sel ? sel.value : (window._existingIdSelected || null);
+      const input = document.getElementById('existingPropertyIdInput');
+      channexPropertyId = input ? input.value.trim() : (window._existingIdSelected || null);
       if (!channexPropertyId) {
-        showToast('Veuillez sélectionner un établissement existant', 'warning');
+        showToast("Veuillez coller l'ID Channex de l'établissement", 'warning');
+        return;
+      }
+      // Validation format UUID
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(channexPropertyId)) {
+        showToast("Format d'ID invalide — doit être un UUID (ex: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)", 'error');
         return;
       }
     }
@@ -1823,25 +1844,6 @@ function _closeChannexIframe() {
   document.getElementById('channexModal')?.remove();
   showToast('Vérifiez dans quelques instants que votre plateforme apparaît bien connectée.', 'info');
   setTimeout(() => loadProperties().catch(() => {}), 1500);
-}
-
-// ── Gérer les channels existants d'un logement ───────────────
-async function _showOtaActions(propertyId, modal) {
-  const m = modal || document.getElementById('channexModal');
-  if (!m) return;
-
-  // Mémoriser pour openOtaIframe
-  window._otaPropertyId = propertyId;
-  window._otaIsConnected = true;
-
-  // Trouver le nom du logement
-  const prop = (window.allProperties || properties || []).find(p => (p._id || p.id) === propertyId);
-  const propertyName = prop?.name || 'Logement';
-  window._otaPropertyName = propertyName;
-  window._otaModal = m;
-
-  // Ouvrir directement le sélecteur de plateforme
-  _showPlatformPicker(m, propertyId, propertyName, true);
 }
 
 async function channexDisconnect(propertyId) {
