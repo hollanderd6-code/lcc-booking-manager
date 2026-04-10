@@ -1088,9 +1088,12 @@ function renderProperties() {
               <i class="fas fa-cog" style="font-size:11px;color:#1A7A5E;opacity:.7;"></i>
             </button>
             ${p.channexPropertyId ? `
-            <div onclick="navigator.clipboard?.writeText('${p.channexPropertyId}').then(()=>showToast('ID copié','success')).catch(()=>{})" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Cliquer pour copier">
+            <div onclick="navigator.clipboard?.writeText('${p.channexPropertyId}').then(()=>showToast('ID copié','success')).catch(()=>{})" style="width:100%;margin-bottom:4px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Cliquer pour copier">
               <i class="fas fa-copy" style="font-size:10px;color:#94a3b8;flex-shrink:0;"></i>
               <span style="font-size:10px;color:#64748b;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${p.channexPropertyId}</span>
+            </div>
+            <div id="channels-${p.id || id}" style="width:100%;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;min-height:20px;">
+              <span style="font-size:10px;color:#94a3b8;font-style:italic;">Chargement...</span>
             </div>` : ''}` : `
             <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fas fa-plug"></i> Connecter mes plateformes
@@ -1159,6 +1162,11 @@ function renderProperties() {
       openChannexModal(id, name, true);
     });
   });
+
+  // Charger les logos des plateformes connectées
+  properties.filter(p => p.channexEnabled && p.channexPropertyId).forEach(p => {
+    loadConnectedChannels(p.id, `channels-${p.id}`);
+  });
 }
 // Render a filtered subset of properties (preserves add card)
 function renderPropertiesFiltered(filteredProps) {
@@ -1225,9 +1233,12 @@ function renderPropertiesFiltered(filteredProps) {
             <i class="fas fa-cog" style="font-size:11px;color:#1A7A5E;opacity:.7;"></i>
           </button>
           ${p.channexPropertyId ? `
-          <div onclick="navigator.clipboard?.writeText('${p.channexPropertyId}').then(()=>showToast('ID copié','success')).catch(()=>{})" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Cliquer pour copier">
+          <div onclick="navigator.clipboard?.writeText('${p.channexPropertyId}').then(()=>showToast('ID copié','success')).catch(()=>{})" style="width:100%;margin-bottom:4px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Cliquer pour copier">
             <i class="fas fa-copy" style="font-size:10px;color:#94a3b8;flex-shrink:0;"></i>
             <span style="font-size:10px;color:#64748b;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${p.channexPropertyId}</span>
+          </div>
+          <div id="channels-${p.id || id}" style="width:100%;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;min-height:20px;">
+            <span style="font-size:10px;color:#94a3b8;font-style:italic;">Chargement...</span>
           </div>` : ''}` : `
           <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fas fa-plug"></i> Connecter mes plateformes
@@ -1262,6 +1273,11 @@ function renderPropertiesFiltered(filteredProps) {
   });
   grid.querySelectorAll(".btn-channex-manage").forEach(btn => {
     btn.addEventListener("click", () => openChannexModal(btn.getAttribute("data-id"), btn.getAttribute("data-name"), true));
+  });
+
+  // Charger les logos des plateformes connectées
+  properties.filter(p => p.channexEnabled && p.channexPropertyId).forEach(p => {
+    loadConnectedChannels(p.id, `channels-${p.id}`);
   });
 }
 
@@ -1502,6 +1518,42 @@ const OTA_PLATFORMS = [
 // Modal principale : écran 1 = choix + instructions
 //                   écran 2 = iframe
 // ─────────────────────────────────────────────────────────────
+
+// ── Logos OTA connectés ───────────────────────────────────────
+const OTA_LOGOS = {
+  airbnb:  { icon: '<i class="fa-brands fa-airbnb" style="color:#FF5A5F;font-size:14px;"></i>', label: 'Airbnb' },
+  booking: { icon: '<i class="fas fa-building" style="color:#003580;font-size:13px;"></i>', label: 'Booking.com' },
+  expedia: { icon: '<i class="fas fa-plane" style="color:#1B5E96;font-size:13px;"></i>', label: 'Expedia' },
+  vrbo:    { icon: '<i class="fas fa-home" style="color:#1C61A5;font-size:13px;"></i>', label: 'Abritel/VRBO' },
+};
+
+async function loadConnectedChannels(propertyId, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const r = await fetch(`${API_URL}/api/channex/connected-channels/${propertyId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const d = await r.json();
+    const channels = d.channels || [];
+    if (channels.length === 0) {
+      el.innerHTML = '<span style="font-size:10px;color:#94a3b8;">Aucune plateforme connectée</span>';
+      return;
+    }
+    el.innerHTML = channels.map(c => {
+      const key = Object.keys(OTA_LOGOS).find(k => c.channel.includes(k)) || null;
+      const logo = key ? OTA_LOGOS[key] : null;
+      return `<span title="${c.title}" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#fff;border:1px solid #e2e8f0;border-radius:20px;font-size:10px;color:#374151;">
+        ${logo ? logo.icon : '<i class="fas fa-globe" style="font-size:11px;color:#94a3b8;"></i>'}
+        <span>${logo ? logo.label : c.title}</span>
+      </span>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '';
+  }
+}
+
 async function openChannexModal(propertyId, propertyName, isConnected, channelCode = null) {
   const existing = document.getElementById('channexModal');
   if (existing) existing.remove();
