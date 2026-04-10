@@ -48,16 +48,6 @@ function normalizeSourceToKey(raw, otaName) {
   if (v.includes('block'))   return 'block';
   return 'direct';
 }
-  }
-  if (!raw) return 'direct';
-  const v = String(raw).toLowerCase();
-  if (v.includes('airbnb'))  return 'airbnb';
-  if (v.includes('booking')) return 'booking';
-  if (v.includes('vrbo') || v.includes('abritel') || v.includes('homeaway')) return 'vrbo';
-  if (v.includes('expedia')) return 'expedia';
-  if (v.includes('block'))   return 'block';
-  return 'direct';
-}
 
 // ========================================
 // INITIALIZATION
