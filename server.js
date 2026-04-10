@@ -23958,64 +23958,57 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
 // ── Réassigner les bookings Channex au bon logement via room_type_id ──
 app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
+  const manualMap = req.body?.room_type_map || null;
+
   try {
-    // Récupérer tous les logements de l'user avec leurs room_type_id
-    const propsResult = await pool.query(
-      'SELECT id, channex_room_type_id FROM properties WHERE user_id = $1 AND channex_enabled = true AND channex_room_type_id IS NOT NULL',
-      [user_id]
-    );
-    const roomTypeMap = {};
-    propsResult.rows.forEach(p => { roomTypeMap[p.channex_room_type_id] = p.id; });
+    let roomTypeMap = {};
+    if (manualMap && typeof manualMap === 'object') {
+      roomTypeMap = manualMap;
+      console.log('🗺️ [REASSIGN] Map manuel:', JSON.stringify(roomTypeMap));
+    } else {
+      const propsResult = await pool.query(
+        'SELECT id, channex_room_type_id FROM properties WHERE user_id = $1 AND channex_enabled = true AND channex_room_type_id IS NOT NULL',
+        [user_id]
+      );
+      propsResult.rows.forEach(p => { roomTypeMap[p.channex_room_type_id] = p.id; });
+    }
 
-    // Récupérer toutes les réservations Channex de l'user
     const resResult = await pool.query(
-      `SELECT r.id, r.channex_booking_id, r.property_id,
-              (SELECT room_type_id FROM (
-                SELECT (jsonb_each(days_breakdown::jsonb)).key as room_type_id LIMIT 1
-              ) x) as room_type_id_from_breakdown
-       FROM reservations r
-       WHERE r.user_id = $1 AND r.source = 'channex'`,
-      [user_id]
-    );
-
-    // Meilleure approche : utiliser ota_reservation_id ou chercher via channex API
-    // Pour l'instant on fait via la table reservations directement
-    // En récupérant le channex_revision_id pour retrouver le room_type
-    const resResult2 = await pool.query(
-      `SELECT id, channex_booking_id, property_id, channex_revision_id
-       FROM reservations
-       WHERE user_id = $1 AND source = 'channex'`,
+      `SELECT id, channex_booking_id, property_id FROM reservations WHERE user_id = $1 AND source = 'channex'`,
       [user_id]
     );
 
     let reassigned = 0;
     const { channexAPI } = require('./channex');
 
-    for (const resa of resResult2.rows) {
+    for (const resa of resResult.rows) {
       try {
-        // Récupérer le booking depuis Channex pour avoir le room_type_id
         const r = await channexAPI.get(`/bookings/${resa.channex_booking_id}`);
         const attrs = r.data?.data?.attributes || {};
         const room_type_id = (attrs.rooms || [])[0]?.room_type_id || null;
         if (!room_type_id) continue;
 
         const correctPropertyId = roomTypeMap[room_type_id];
-        if (!correctPropertyId) continue;
+        if (!correctPropertyId) {
+          console.log(`⚠️ [REASSIGN] room_type_id ${room_type_id} non trouvé dans le map`);
+          continue;
+        }
         if (correctPropertyId === resa.property_id) continue;
 
         await pool.query(
           'UPDATE reservations SET property_id = $1, updated_at = NOW() WHERE id = $2',
           [correctPropertyId, resa.id]
         );
-        console.log(`🔄 Booking ${resa.channex_booking_id} réassigné: ${resa.property_id} → ${correctPropertyId}`);
+        console.log(`🔄 [REASSIGN] ${resa.channex_booking_id} : ${resa.property_id} → ${correctPropertyId}`);
         reassigned++;
       } catch (e) {
-        // Ignorer les erreurs individuelles
+        console.warn(`⚠️ [REASSIGN] Erreur ${resa.channex_booking_id}:`, e.message);
       }
     }
 
     await loadProperties();
-    res.json({ success: true, reassigned, total: resResult2.rows.length });
+    console.log(`✅ [REASSIGN] ${reassigned} réassignés sur ${resResult.rows.length}`);
+    res.json({ success: true, reassigned, total: resResult.rows.length });
   } catch (e) {
     console.error('❌ [REASSIGN BOOKINGS]', e.message);
     res.status(500).json({ error: e.message });
