@@ -23887,28 +23887,65 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
       }
     });
 
-    const revisions = response.data?.data || [];
-    console.log(`📥 [CHANNEX SYNC BOOKINGS] ${revisions.length} bookings à importer pour ${property_id}`);
+    const bookings = response.data?.data || [];
+    console.log(`📥 [CHANNEX SYNC BOOKINGS] ${bookings.length} bookings trouvés pour property ${prop.channex_property_id}`);
 
     let imported = 0;
+    let updated = 0;
     let errors = 0;
 
-    for (const revision of revisions) {
+    for (const booking of bookings) {
       try {
-        const bookingData = revision.attributes || revision;
-        await processChannexBooking(pool, bookingData);
-        // Acknowledge pour marquer comme traité
-        const revisionId = revision.id || bookingData.revision_id;
-        if (revisionId) await bookingAcknowledge(revisionId);
-        imported++;
+        const attrs = booking.attributes || booking;
+        const booking_id = attrs.booking_id || booking.id;
+        const room_type_id = (attrs.rooms || [])[0]?.room_type_id || null;
+
+        // Trouver le bon logement BH via room_type_id
+        let targetPropertyId = null;
+        if (room_type_id) {
+          const rtResult = await pool.query(
+            'SELECT id FROM properties WHERE channex_room_type_id = $1 AND user_id = $2',
+            [room_type_id, user_id]
+          );
+          if (rtResult.rows.length > 0) targetPropertyId = rtResult.rows[0].id;
+        }
+        // Fallback : property_id passé en param
+        if (!targetPropertyId) targetPropertyId = property_id;
+
+        // Vérifier si déjà en DB
+        const existing = await pool.query(
+          'SELECT id, property_id FROM reservations WHERE channex_booking_id = $1',
+          [booking_id]
+        );
+
+        if (existing.rows.length > 0) {
+          // Mettre à jour le property_id si mal assigné
+          if (existing.rows[0].property_id !== targetPropertyId) {
+            await pool.query(
+              'UPDATE reservations SET property_id = $1, updated_at = NOW() WHERE channex_booking_id = $2',
+              [targetPropertyId, booking_id]
+            );
+            console.log(`🔄 [CHANNEX SYNC] Booking ${booking_id} réassigné à ${targetPropertyId}`);
+            updated++;
+          }
+        } else {
+          // Nouveau booking → importer
+          await processChannexBooking(pool, attrs);
+          imported++;
+        }
+
+        const revisionId = booking.id || attrs.revision_id;
+        if (revisionId) await bookingAcknowledge(revisionId).catch(() => {});
+
       } catch (e) {
-        console.error(`❌ [CHANNEX SYNC BOOKINGS] Erreur booking ${revision.id}:`, e.message);
+        console.error(`❌ [CHANNEX SYNC BOOKINGS] Erreur booking ${booking.id}:`, e.message);
         errors++;
       }
     }
 
-    console.log(`✅ [CHANNEX SYNC BOOKINGS] ${imported} importés, ${errors} erreurs`);
-    res.json({ success: true, imported, errors, total: revisions.length });
+    await loadProperties();
+    console.log(`✅ [CHANNEX SYNC BOOKINGS] ${imported} importés, ${updated} réassignés, ${errors} erreurs`);
+    res.json({ success: true, imported, updated, errors, total: bookings.length });
 
   } catch (e) {
     const detail = e.response?.data || e.message;
