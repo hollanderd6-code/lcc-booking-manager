@@ -22810,20 +22810,31 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
     });
 
     console.log(`🔍 [CHANNEX channels] Après filtre property: ${filtered.length} channels`);
-    filtered.forEach(c => {
-      console.log(`  channel: ${c.attributes?.channel} | is_active: ${c.attributes?.is_active} | rate_plans:`, JSON.stringify(c.attributes?.rate_plans || []));
-      console.log(`  channel: ${c.attributes?.channel} | mappingSettings:`, JSON.stringify(c.attributes?.settings?.mappingSettings || {}));
-    });
+    // Récupérer le channex_rate_plan_id du logement pour filtrer le mapping
+    const propRatePlan = await pool.query(
+      'SELECT channex_rate_plan_id FROM properties WHERE id = $1',
+      [property_id]
+    );
+    const ratePlanId = propRatePlan.rows[0]?.channex_rate_plan_id;
 
     const channels = filtered
       .map(c => ({
         id: c.id,
         title: c.attributes?.title || c.attributes?.name || '',
         status: c.attributes?.status || '',
-        channel: (c.attributes?.channel || c.attributes?.channel_id || '').toLowerCase()
+        channel: (c.attributes?.channel || c.attributes?.channel_id || '').toLowerCase(),
+        _rate_plan_ids: (c.attributes?.rate_plans || []).map(rp => rp.rate_plan_id)
       }))
-      // Exclure seulement les statuts explicitement inactifs
-      .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status));
+      // Exclure les statuts explicitement inactifs
+      .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status))
+      // ✅ Garder seulement les channels qui ont le rate_plan_id de CE logement
+      .filter(c => {
+        if (!ratePlanId || c._rate_plan_ids.length === 0) return true;
+        const mapped = c._rate_plan_ids.includes(ratePlanId);
+        if (!mapped) console.log(`  ↳ skip ${c.channel} — rate_plan ${ratePlanId} absent (a: ${c._rate_plan_ids.join(',')})`);
+        return mapped;
+      })
+      .map(({ _rate_plan_ids, ...c }) => c);
 
     console.log(`✅ [CHANNEX channels] Résultat final pour ${prop.channex_property_id}:`, channels);
 
