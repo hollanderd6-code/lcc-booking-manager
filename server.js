@@ -24032,18 +24032,30 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
 
     const { channexAPI, processChannexBooking, bookingAcknowledge } = require('./channex');
 
-    // Récupérer tous les bookings depuis Channex via /bookings
-    const response = await channexAPI.get('/bookings', {
-      params: {
-        'filter[property_id]': prop.channex_property_id,
-        'pagination[page_size]': 100,
-        'pagination[page]': 1
-      }
+    // Récupérer TOUS les bookings avec pagination complète (filter[property_id] ignoré par Channex)
+    let bookings = [];
+    let page = 1;
+    const PAGE_SIZE = 100;
+    while (true) {
+      const response = await channexAPI.get('/bookings', {
+        params: { 'pagination[page_size]': PAGE_SIZE, 'pagination[page]': page }
+      });
+      const data = response.data?.data || [];
+      const meta = response.data?.meta || {};
+      bookings = bookings.concat(data);
+      console.log(`📥 [CHANNEX SYNC BOOKINGS] Page ${page}: ${data.length} bookings | total meta: ${meta.total || '?'}`);
+      if (data.length < PAGE_SIZE) break; // dernière page
+      page++;
+      if (page > 20) break; // sécurité max 2000 bookings
+    }
+
+    // Filtrer côté serveur par channex_property_id
+    bookings = bookings.filter(b => {
+      const attrs = b.attributes || b;
+      return attrs.property_id === prop.channex_property_id;
     });
 
-    const bookings = response.data?.data || [];
-    console.log(`📥 [CHANNEX SYNC BOOKINGS] ${bookings.length} bookings trouvés pour property ${prop.channex_property_id}`);
-    console.log(`📥 [CHANNEX SYNC BOOKINGS] meta:`, JSON.stringify(response.data?.meta || {}));
+    console.log(`📥 [CHANNEX SYNC BOOKINGS] ${bookings.length} bookings filtrés pour property ${prop.channex_property_id}`);
 
     let imported = 0;
     let updated = 0;
