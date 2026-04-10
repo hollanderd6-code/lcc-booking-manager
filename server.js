@@ -22913,12 +22913,13 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         const { channexAPI } = require('./channex');
         const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
 
-        // Récupérer le billing_account_id
+        // Récupérer le billing_account_id (requis en prod Channex)
         let billing_account_id = null;
         try {
           const baRes = await channexAPI.get('/billing_accounts');
           const accounts = baRes.data?.data || [];
           if (accounts.length > 0) billing_account_id = accounts[0].id || accounts[0].attributes?.id;
+          if (billing_account_id) console.log(`💳 [CHANNEX] billing_account_id: ${billing_account_id}`);
         } catch (e) { /* non bloquant */ }
 
         for (const wh of [
@@ -23687,32 +23688,27 @@ app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) =
     ];
 
     const results = [];
-    
-    // Récupérer le billing_account_id depuis Channex
+
+    // Récupérer le billing_account_id (requis en prod Channex)
     let billing_account_id = null;
     try {
       const baRes = await channexAPI.get('/billing_accounts');
       const accounts = baRes.data?.data || [];
-      if (accounts.length > 0) {
-        billing_account_id = accounts[0].id || accounts[0].attributes?.id;
-        console.log(`💳 [CHANNEX] billing_account_id: ${billing_account_id}`);
-      }
-    } catch (e) {
-      console.warn('⚠️ [CHANNEX] Impossible de récupérer billing_account_id:', e.message);
-    }
+      if (accounts.length > 0) billing_account_id = accounts[0].id || accounts[0].attributes?.id;
+      if (billing_account_id) console.log(`💳 [CHANNEX] billing_account_id: ${billing_account_id}`);
+    } catch (e) { /* non bloquant */ }
 
     for (const wh of webhooks) {
       try {
-        const webhookPayload = {
+        const payload = {
           property_id: prop.channex_property_id,
           callback_url: wh.callback_url,
           event_mask: wh.event_mask,
           is_active: true,
           send_data: true
         };
-        if (billing_account_id) webhookPayload.billing_account_id = billing_account_id;
-
-        const r = await channexAPI.post('/webhooks', { webhook: webhookPayload });
+        if (billing_account_id) payload.billing_account_id = billing_account_id;
+        const r = await channexAPI.post('/webhooks', { webhook: payload });
         results.push({ event: wh.event_mask, status: 'created', id: r.data.data?.id });
         console.log(`✅ [CHANNEX] Webhook ${wh.event_mask} créé`);
       } catch (e) {
@@ -23886,6 +23882,70 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
 
 // ── Importer les bookings existants depuis Channex → BH ──────
 // Utile au premier démarrage ou après une reconnexion
+// ── Récupérer les réservations historiques via booking_revisions ──
+app.post('/api/channex/sync-revisions/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+  const { from_date } = req.body; // ex: '2026-01-01'
+
+  try {
+    const propResult = await pool.query(
+      `SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user_id]
+    );
+    const prop = propResult.rows[0];
+    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    const { channexAPI, processChannexBooking, bookingAcknowledge } = require('./channex');
+
+    const params = {
+      'filter[property_id]': prop.channex_property_id,
+      'pagination[page_size]': 100,
+      'pagination[page]': 1
+    };
+    if (from_date) params['filter[inserted_at][gte]'] = from_date;
+
+    const response = await channexAPI.get('/booking_revisions', { params });
+    const revisions = response.data?.data || [];
+    console.log(`📥 [CHANNEX SYNC REVISIONS] ${revisions.length} revisions pour ${property_id}`);
+
+    let imported = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (const revision of revisions) {
+      try {
+        const attrs = revision.attributes || revision;
+        const booking_id = attrs.booking_id || revision.id;
+
+        // Vérifier si déjà en DB
+        const existing = await pool.query(
+          'SELECT id FROM reservations WHERE channex_booking_id = $1',
+          [booking_id]
+        );
+        if (existing.rows.length > 0) { skipped++; continue; }
+
+        await processChannexBooking(pool, attrs);
+        await bookingAcknowledge(revision.id).catch(() => {});
+        imported++;
+      } catch (e) {
+        console.error(`❌ [SYNC REVISIONS] Erreur ${revision.id}:`, e.message);
+        errors++;
+      }
+    }
+
+    console.log(`✅ [SYNC REVISIONS] ${imported} importés, ${skipped} déjà présents, ${errors} erreurs`);
+    res.json({ success: true, imported, skipped, errors, total: revisions.length });
+
+  } catch (e) {
+    const detail = e.response?.data || e.message;
+    console.error('❌ [SYNC REVISIONS]', JSON.stringify(detail));
+    res.status(500).json({ error: e.message, detail });
+  }
+});
+
 app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
