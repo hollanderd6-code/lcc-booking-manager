@@ -630,7 +630,7 @@ async function sendBookingMessage(channex_booking_id, message) {
 async function listChannexProperties() {
   try {
     const res = await channexAPI.get('/properties', {
-      params: { pagination: false }
+      params: { 'pagination[page_size]': 100, 'pagination[page]': 1 }
     });
     const data = res.data?.data || res.data || [];
     return Array.isArray(data) ? data.map(p => ({
@@ -649,7 +649,7 @@ async function listChannexProperties() {
 async function listChannexRoomTypes(channex_property_id) {
   try {
     const res = await channexAPI.get('/room_types', {
-      params: { property_id: channex_property_id, pagination: false }
+      params: { property_id: channex_property_id, 'pagination[page_size]': 100, 'pagination[page]': 1 }
     });
     const data = res.data?.data || res.data || [];
     return Array.isArray(data) ? data.map(rt => ({
@@ -666,7 +666,7 @@ async function listChannexRoomTypes(channex_property_id) {
 async function listChannexRatePlans(channex_room_type_id) {
   try {
     const res = await channexAPI.get('/rate_plans', {
-      params: { room_type_id: channex_room_type_id, pagination: false }
+      params: { room_type_id: channex_room_type_id, 'pagination[page_size]': 100, 'pagination[page]': 1 }
     });
     const data = res.data?.data || res.data || [];
     return Array.isArray(data) ? data.map(rp => ({
