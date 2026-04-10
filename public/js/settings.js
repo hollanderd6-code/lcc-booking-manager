@@ -1558,7 +1558,24 @@ async function loadConnectedChannels(propertyId, containerId) {
     el.innerHTML = channels.map(c => {
       const key = CHANNEX_CODE_MAP[c.channel.toLowerCase()] || Object.keys(OTA_LOGOS).find(k => c.channel.toLowerCase().includes(k)) || null;
       const logo = key ? OTA_LOGOS[key] : null;
-      return `<span title="${c.title}" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#fff;border:1px solid #e2e8f0;border-radius:20px;font-size:10px;color:#374151;">
+      const colors = {
+        airbnb:  { bg: '#fff1f0', border: '#ffd6d4', color: '#e8484e' },
+        booking: { bg: '#f0f4ff', border: '#c7d7f9', color: '#003580' },
+        expedia: { bg: '#f0f6ff', border: '#c5daf7', color: '#1B5E96' },
+        vrbo:    { bg: '#f0f5ff', border: '#c9dcf7', color: '#1C61A5' },
+      };
+      const c_style = (key && colors[key]) ? colors[key] : { bg: '#f8fafc', border: '#e2e8f0', color: '#64748b' };
+      return `<span title="${c.title}" style="
+        display:inline-flex;align-items:center;gap:5px;
+        padding:4px 10px 4px 8px;
+        background:${c_style.bg};
+        border:1px solid ${c_style.border};
+        border-radius:20px;
+        font-size:11px;font-weight:600;
+        color:${c_style.color};
+        letter-spacing:0.01em;
+        box-shadow:0 1px 3px rgba(0,0,0,0.06);
+      ">
         ${logo ? logo.icon : '<i class="fas fa-globe" style="font-size:11px;color:#94a3b8;"></i>'}
         <span>${logo ? logo.label : c.title}</span>
       </span>`;
