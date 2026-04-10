@@ -1825,6 +1825,25 @@ function _closeChannexIframe() {
   setTimeout(() => loadProperties().catch(() => {}), 1500);
 }
 
+// ── Gérer les channels existants d'un logement ───────────────
+async function _showOtaActions(propertyId, modal) {
+  const m = modal || document.getElementById('channexModal');
+  if (!m) return;
+
+  // Mémoriser pour openOtaIframe
+  window._otaPropertyId = propertyId;
+  window._otaIsConnected = true;
+
+  // Trouver le nom du logement
+  const prop = (window.allProperties || properties || []).find(p => (p._id || p.id) === propertyId);
+  const propertyName = prop?.name || 'Logement';
+  window._otaPropertyName = propertyName;
+  window._otaModal = m;
+
+  // Ouvrir directement le sélecteur de plateforme
+  _showPlatformPicker(m, propertyId, propertyName, true);
+}
+
 async function channexDisconnect(propertyId) {
   const confirmed = await bhConfirm(
     'Déconnecter ce logement ?',
