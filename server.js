@@ -22811,7 +22811,8 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
 
     console.log(`🔍 [CHANNEX channels] Après filtre property: ${filtered.length} channels`);
     filtered.forEach(c => {
-      console.log(`  channel: ${c.attributes?.channel} | is_active: ${c.attributes?.is_active} | rate_plans keys:`, JSON.stringify(Object.keys(c.attributes || {})));
+      console.log(`  channel: ${c.attributes?.channel} | is_active: ${c.attributes?.is_active} | rate_plans:`, JSON.stringify(c.attributes?.rate_plans || []));
+      console.log(`  channel: ${c.attributes?.channel} | mappingSettings:`, JSON.stringify(c.attributes?.settings?.mappingSettings || {}));
     });
 
     const channels = filtered
