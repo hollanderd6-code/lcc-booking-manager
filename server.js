@@ -23990,7 +23990,6 @@ app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) =
         const room_type_id = room.room_type_id || null;
         const room_type_code = String(room.meta?.room_type_code || '');
         console.log(`🔍 [REASSIGN] booking ${resa.channex_booking_id} → room_type_id: ${room_type_id} | room_type_code: ${room_type_code}`);
-        if (!room_type_id) continue;
 
         const correctPropertyId = roomTypeMap[room_type_id] || roomTypeMap[room_type_code];
         if (!correctPropertyId) {
