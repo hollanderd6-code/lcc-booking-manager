@@ -1094,7 +1094,11 @@ function renderProperties() {
             </div>
             <div id="channels-${p.id || id}" style="width:100%;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;min-height:20px;">
               <span style="font-size:10px;color:#94a3b8;font-style:italic;">Chargement...</span>
-            </div>` : ''}` : `
+            </div>
+            <button type="button" class="btn-sync-bookings" data-id="${escapeHtml(id)}" title="Importer toutes les réservations Channex" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b;">
+              <i class="fas fa-cloud-download-alt" style="font-size:10px;"></i>
+              <span>Importer l'historique des réservations</span>
+            </button>` : ''}` : `
             <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fas fa-plug"></i> Connecter mes plateformes
             </button>`}
@@ -1161,6 +1165,10 @@ function renderProperties() {
       const name = btn.getAttribute("data-name");
       openChannexModal(id, name, true);
     });
+  });
+
+  grid.querySelectorAll(".btn-sync-bookings").forEach((btn) => {
+    btn.addEventListener("click", () => syncChannexBookings(btn.getAttribute("data-id"), btn));
   });
 
   // Charger les logos des plateformes connectées
@@ -1239,7 +1247,11 @@ function renderPropertiesFiltered(filteredProps) {
           </div>
           <div id="channels-${p.id || id}" style="width:100%;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;min-height:20px;">
             <span style="font-size:10px;color:#94a3b8;font-style:italic;">Chargement...</span>
-          </div>` : ''}` : `
+          </div>
+          <button type="button" class="btn-sync-bookings" data-id="${escapeHtml(id)}" title="Importer toutes les réservations Channex" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b;">
+            <i class="fas fa-cloud-download-alt" style="font-size:10px;"></i>
+            <span>Importer l'historique des réservations</span>
+          </button>` : ''}` : `
           <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fas fa-plug"></i> Connecter mes plateformes
           </button>`}
@@ -1273,6 +1285,9 @@ function renderPropertiesFiltered(filteredProps) {
   });
   grid.querySelectorAll(".btn-channex-manage").forEach(btn => {
     btn.addEventListener("click", () => openChannexModal(btn.getAttribute("data-id"), btn.getAttribute("data-name"), true));
+  });
+  grid.querySelectorAll(".btn-sync-bookings").forEach(btn => {
+    btn.addEventListener("click", () => syncChannexBookings(btn.getAttribute("data-id"), btn));
   });
 
   // Charger les logos des plateformes connectées
@@ -1540,6 +1555,34 @@ const CHANNEX_CODE_MAP = {
   'homeaway': 'vrbo',
   'abritel': 'vrbo',
 };
+
+async function syncChannexBookings(propertyId, btn) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:10px;"></i><span>Importation en cours...</span>';
+  btn.style.color = '#1A7A5E';
+  btn.style.borderColor = '#1A7A5E';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const r = await fetch(`${API_URL}/api/channex/sync-bookings/${propertyId}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Erreur serveur');
+    const { imported = 0, updated = 0, errors = 0, total = 0 } = d;
+    showToast(`✅ ${imported} réservation(s) importée(s), ${updated} mise(s) à jour sur ${total} trouvée(s)`, 'success');
+    btn.innerHTML = `<i class="fas fa-check" style="font-size:10px;color:#1A7A5E;"></i><span style="color:#1A7A5E;">Import terminé (${imported} nouvelles)</span>`;
+    // Refresh calendrier si dispo
+    if (typeof loadReservations === 'function') loadReservations();
+  } catch(e) {
+    showToast('Erreur import : ' + e.message, 'error');
+    btn.innerHTML = original;
+    btn.disabled = false;
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }
+}
 
 async function loadConnectedChannels(propertyId, containerId) {
   const el = document.getElementById(containerId);
