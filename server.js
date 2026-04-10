@@ -23986,6 +23986,7 @@ app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) =
         const r = await channexAPI.get(`/bookings/${resa.channex_booking_id}`);
         const attrs = r.data?.data?.attributes || {};
         const room_type_id = (attrs.rooms || [])[0]?.room_type_id || null;
+        console.log(`🔍 [REASSIGN] booking ${resa.channex_booking_id} → room_type_id: ${room_type_id} | current_prop: ${resa.property_id}`);
         if (!room_type_id) continue;
 
         const correctPropertyId = roomTypeMap[room_type_id];
