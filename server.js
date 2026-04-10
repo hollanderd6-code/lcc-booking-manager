@@ -6357,6 +6357,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           r.channex_booking_id,
           r.source,
           r.start_date,
+          r.end_date,
           c.onboarding_completed,
           c.id as conversation_id
          FROM reservations r
