@@ -1527,6 +1527,20 @@ const OTA_LOGOS = {
   vrbo:    { icon: '<i class="fas fa-home" style="color:#1C61A5;font-size:13px;"></i>', label: 'Abritel/VRBO' },
 };
 
+// ✅ Mapping codes Channex → clés OTA_LOGOS
+const CHANNEX_CODE_MAP = {
+  'abb': 'airbnb',
+  'airbnb': 'airbnb',
+  'bdc': 'booking',
+  'booking': 'booking',
+  'exp': 'expedia',
+  'expedia': 'expedia',
+  'vrb': 'vrbo',
+  'vrbo': 'vrbo',
+  'homeaway': 'vrbo',
+  'abritel': 'vrbo',
+};
+
 async function loadConnectedChannels(propertyId, containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -1542,7 +1556,7 @@ async function loadConnectedChannels(propertyId, containerId) {
       return;
     }
     el.innerHTML = channels.map(c => {
-      const key = Object.keys(OTA_LOGOS).find(k => c.channel.includes(k)) || null;
+      const key = CHANNEX_CODE_MAP[c.channel.toLowerCase()] || Object.keys(OTA_LOGOS).find(k => c.channel.toLowerCase().includes(k)) || null;
       const logo = key ? OTA_LOGOS[key] : null;
       return `<span title="${c.title}" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:#fff;border:1px solid #e2e8f0;border-radius:20px;font-size:10px;color:#374151;">
         ${logo ? logo.icon : '<i class="fas fa-globe" style="font-size:11px;color:#94a3b8;"></i>'}
