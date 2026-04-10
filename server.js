@@ -22810,34 +22810,19 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
     });
 
     console.log(`🔍 [CHANNEX channels] Après filtre property: ${filtered.length} channels`);
-
-    // Récupérer aussi le channex_room_type_id du logement pour vérifier le mapping
-    const propFull = await pool.query(
-      'SELECT channex_room_type_id FROM properties WHERE id = $1',
-      [property_id]
-    );
-    const roomTypeId = propFull.rows[0]?.channex_room_type_id;
+    filtered.forEach(c => {
+      console.log(`  channel: ${c.attributes?.channel} | is_active: ${c.attributes?.is_active} | rate_plans keys:`, JSON.stringify(Object.keys(c.attributes || {})));
+    });
 
     const channels = filtered
       .map(c => ({
         id: c.id,
         title: c.attributes?.title || c.attributes?.name || '',
         status: c.attributes?.status || '',
-        channel: (c.attributes?.channel || c.attributes?.channel_id || '').toLowerCase(),
-        rate_plans: c.attributes?.rate_plans || []
+        channel: (c.attributes?.channel || c.attributes?.channel_id || '').toLowerCase()
       }))
-      // Exclure les statuts explicitement inactifs
-      .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status))
-      // ✅ Exclure les channels sans mapping pour ce room_type
-      .filter(c => {
-        if (!roomTypeId || c.rate_plans.length === 0) return true; // pas de data = on affiche quand même
-        const mapped = c.rate_plans.some(rp =>
-          rp.room_type_id === roomTypeId || rp.id === roomTypeId
-        );
-        if (!mapped) console.log(`  ↳ skip channel ${c.channel} — pas mappé sur room_type ${roomTypeId}`);
-        return mapped;
-      })
-      .map(({ rate_plans, ...c }) => c); // ne pas exposer rate_plans au client
+      // Exclure seulement les statuts explicitement inactifs
+      .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status));
 
     console.log(`✅ [CHANNEX channels] Résultat final pour ${prop.channex_property_id}:`, channels);
 
