@@ -23886,8 +23886,9 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
     res.json({ success: true, imported, errors, total: revisions.length });
 
   } catch (e) {
-    console.error('❌ [CHANNEX SYNC BOOKINGS]', e.message);
-    res.status(500).json({ error: e.message });
+    const detail = e.response?.data || e.message;
+    console.error('❌ [CHANNEX SYNC BOOKINGS]', JSON.stringify(detail));
+    res.status(500).json({ error: e.message, detail });
   }
 });
 
