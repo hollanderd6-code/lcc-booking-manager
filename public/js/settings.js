@@ -1564,6 +1564,7 @@ async function _connectAndProceed(modal, propertyId, existingChannexPropertyId) 
 
 // ── Écran de choix : nouveau logement indépendant ou rattachement ──
 function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProperties) {
+  const safePropertyName = propertyName.replace(/'/g, "\\'");
   let selectedExistingId = null;
 
   const render = () => {
@@ -1620,7 +1621,7 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
 
         <div style="margin-top:16px;">
           <button id="btnPropertyTypeContinue"
-            onclick="_continuePropertyType('${propertyId}','${propertyName}')"
+            onclick="_continuePropertyType('${propertyId}','${safePropertyName}')"
             style="width:100%;height:44px;border-radius:10px;border:none;
               background:linear-gradient(135deg,#1A7A5E,#2AAE86);
               color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
@@ -1673,6 +1674,7 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
 }
 
 function _showPlatformPicker(modal, propertyId, propertyName, isConnected) {
+  const safePropertyName = propertyName.replace(/'/g, "\\'");
   let selected = null;
 
   const render = () => {
@@ -1723,7 +1725,7 @@ function _showPlatformPicker(modal, propertyId, propertyName, isConnected) {
           <button onclick="_showOtaActions('${propertyId}',this.closest('[style*=border-radius]').parentNode.querySelector('#channexModal'))" style="flex:1;height:42px;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;font-weight:500;cursor:pointer;">
             <i class="fas fa-cog"></i> Gérer
           </button>` : ''}
-          <button id="btnOtaContinue" onclick="_continueToIframe('${propertyId}','${propertyName}')"
+          <button id="btnOtaContinue" onclick="_continueToIframe('${propertyId}','${safePropertyName}')"
             ${selected ? '' : 'disabled'}
             style="flex:2;height:42px;border-radius:10px;border:none;
               background:${selected ? 'linear-gradient(135deg,#1A7A5E,#2AAE86)' : '#e5e7eb'};
