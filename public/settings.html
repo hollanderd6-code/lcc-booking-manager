@@ -3121,11 +3121,11 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   margin-left: 5px;
 }
 .bh-tooltip-icon {
-  width: 15px; height: 15px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   background: #e2e8f0;
   color: #64748b;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -3141,7 +3141,7 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   opacity: 0;
   pointer-events: none;
   position: absolute;
-  bottom: calc(100% + 7px);
+  top: calc(100% + 7px);
   left: 50%;
   transform: translateX(-50%);
   background: #0D1117;
@@ -3161,10 +3161,10 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 .bh-tooltip-box::after {
   content: '';
   position: absolute;
-  top: 100%; left: 50%;
+  bottom: 100%; left: 50%;
   transform: translateX(-50%);
   border: 5px solid transparent;
-  border-top-color: #0D1117;
+  border-bottom-color: #0D1117;
 }
 .bh-tooltip-wrap:hover .bh-tooltip-box {
   visibility: visible;
