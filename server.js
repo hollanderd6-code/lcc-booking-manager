@@ -6358,6 +6358,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           r.source,
           r.start_date,
           r.end_date,
+          r.ota_name,
           c.onboarding_completed,
           c.id as conversation_id
          FROM reservations r
@@ -6478,7 +6479,14 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             start: dbData.start_date,
             end: dbData.end_date || null,
             guestName: dbData.guest_name || 'Voyageur',
-            platform: (dbData.ota_name || 'channex').toLowerCase(),
+            platform: (() => {
+              const o = (dbData.ota_name || '').toLowerCase();
+              if (o.includes('airbnb') || o === 'abb') return 'airbnb';
+              if (o.includes('booking') || o === 'bdc') return 'booking';
+              if (o.includes('expedia') || o === 'exp') return 'expedia';
+              if (o.includes('vrbo') || o.includes('abritel')) return 'vrbo';
+              return 'channex';
+            })(),
             source: 'channex',
             ota_name: dbData.ota_name || null,
             price: dbData.amount_total ? parseFloat(dbData.amount_total) : null,
