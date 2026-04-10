@@ -22796,12 +22796,16 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
       console.log('⚠️ [CHANNEX channels] Aucun channel retourné — vérifier la clé API / env');
     }
 
-    // Filtrage robuste : chercher property_id dans attributes ET relationships
+    // Filtrage robuste : property_id dans attributes OU relationships.properties.data[] (tableau)
     const filtered = raw.filter(c => {
-      const fromAttr = c.attributes?.property_id;
-      const fromRel  = c.relationships?.property?.data?.id;
-      const match = fromAttr === prop.channex_property_id || fromRel === prop.channex_property_id;
-      if (!match) console.log(`  ↳ skip channel ${c.id} (property_id: ${fromAttr || fromRel})`);
+      const fromAttr  = c.attributes?.property_id;
+      const fromRel   = c.relationships?.property?.data?.id;  // singulier (ancien format)
+      const fromRelArr = (c.relationships?.properties?.data || [])
+                          .map(p => p.id);                     // ✅ tableau (format actuel Channex)
+      const match = fromAttr === prop.channex_property_id
+                 || fromRel  === prop.channex_property_id
+                 || fromRelArr.includes(prop.channex_property_id);
+      if (!match) console.log(`  ↳ skip channel ${c.id} (properties: ${fromRelArr.join(',') || fromAttr || fromRel || 'undefined'})`);
       return match;
     });
 
