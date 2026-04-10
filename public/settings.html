@@ -1407,11 +1407,12 @@ html[data-theme-v3="1"] .sidebar {
 <label for="propertyInternalName">
 <i class="fas fa-calendar-alt"></i>
 <span>Nom interne du logement</span>
+<span class="bh-tooltip-wrap">
+  <i class="bh-tooltip-icon">?</i>
+  <span class="bh-tooltip-box">Ce nom apparaîtra sur le calendrier Boostinghost. Utile si votre nom public est long.</span>
+</span>
 </label>
 <input id="propertyInternalName" placeholder="Ex : SG RDC - Interne" type="text"/>
-<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
-    Ce nom est celui qui apparaîtra sur le calendrier de Boostinghost.
-  </small>
 </div>
 <div class="form-group">
 <label for="propertyOwnerId">
@@ -3108,6 +3109,66 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
     border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
+}
+</style>
+
+<style>
+/* ── Tooltip "?" ── */
+.bh-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+}
+.bh-tooltip-icon {
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 9.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  font-style: normal;
+  line-height: 1;
+  transition: background .15s;
+}
+.bh-tooltip-icon:hover { background: #1A7A5E; color: #fff; }
+.bh-tooltip-box {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0D1117;
+  color: #f1f5f9;
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 7px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  max-width: 240px;
+  white-space: normal;
+  width: max-content;
+  z-index: 9999;
+  transition: opacity .15s;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+.bh-tooltip-box::after {
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #0D1117;
+}
+.bh-tooltip-wrap:hover .bh-tooltip-box {
+  visibility: visible;
+  opacity: 1;
 }
 </style>
 
