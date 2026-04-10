@@ -22997,6 +22997,7 @@ app.post('/api/channex/disconnect-property', authenticateToken, async (req, res)
       'UPDATE properties SET channex_enabled = false, channex_property_id = NULL, channex_room_type_id = NULL, channex_rate_plan_id = NULL WHERE id = $1 AND user_id = $2',
       [property_id, user_id]
     );
+    await loadProperties(); // Rafraîchir le cache mémoire
     res.json({ success: true, message: 'Logement déconnecté de Channex' });
   } catch (e) {
     console.error('❌ [CHANNEX DISCONNECT]', e.message);
