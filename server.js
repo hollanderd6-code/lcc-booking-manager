@@ -23858,7 +23858,8 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
     const response = await channexAPI.get('/bookings', {
       params: {
         'filter[property_id]': prop.channex_property_id,
-        pagination: false
+        'pagination[page_size]': 100,
+        'pagination[page]': 1
       }
     });
 
