@@ -23862,6 +23862,70 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
 
 // ── Importer les bookings existants depuis Channex → BH ──────
 // Utile au premier démarrage ou après une reconnexion
+// ── Récupérer les réservations historiques via booking_revisions ──
+app.post('/api/channex/sync-revisions/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+  const { from_date } = req.body; // ex: '2026-01-01'
+
+  try {
+    const propResult = await pool.query(
+      `SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user_id]
+    );
+    const prop = propResult.rows[0];
+    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    const { channexAPI, processChannexBooking, bookingAcknowledge } = require('./channex');
+
+    const params = {
+      'filter[property_id]': prop.channex_property_id,
+      'pagination[page_size]': 100,
+      'pagination[page]': 1
+    };
+    if (from_date) params['filter[inserted_at][gte]'] = from_date;
+
+    const response = await channexAPI.get('/booking_revisions', { params });
+    const revisions = response.data?.data || [];
+    console.log(`📥 [CHANNEX SYNC REVISIONS] ${revisions.length} revisions pour ${property_id}`);
+
+    let imported = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (const revision of revisions) {
+      try {
+        const attrs = revision.attributes || revision;
+        const booking_id = attrs.booking_id || revision.id;
+
+        // Vérifier si déjà en DB
+        const existing = await pool.query(
+          'SELECT id FROM reservations WHERE channex_booking_id = $1',
+          [booking_id]
+        );
+        if (existing.rows.length > 0) { skipped++; continue; }
+
+        await processChannexBooking(pool, attrs);
+        await bookingAcknowledge(revision.id).catch(() => {});
+        imported++;
+      } catch (e) {
+        console.error(`❌ [SYNC REVISIONS] Erreur ${revision.id}:`, e.message);
+        errors++;
+      }
+    }
+
+    console.log(`✅ [SYNC REVISIONS] ${imported} importés, ${skipped} déjà présents, ${errors} erreurs`);
+    res.json({ success: true, imported, skipped, errors, total: revisions.length });
+
+  } catch (e) {
+    const detail = e.response?.data || e.message;
+    console.error('❌ [SYNC REVISIONS]', JSON.stringify(detail));
+    res.status(500).json({ error: e.message, detail });
+  }
+});
+
 app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
@@ -23958,60 +24022,64 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
 // ── Réassigner les bookings Channex au bon logement via room_type_id ──
 app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
-  const manualMap = req.body?.room_type_map || null;
-
   try {
-    let roomTypeMap = {};
-    if (manualMap && typeof manualMap === 'object') {
-      roomTypeMap = manualMap;
-      console.log('🗺️ [REASSIGN] Map manuel:', JSON.stringify(roomTypeMap));
-    } else {
-      const propsResult = await pool.query(
-        'SELECT id, channex_room_type_id FROM properties WHERE user_id = $1 AND channex_enabled = true AND channex_room_type_id IS NOT NULL',
-        [user_id]
-      );
-      propsResult.rows.forEach(p => { roomTypeMap[p.channex_room_type_id] = p.id; });
-    }
+    // Récupérer tous les logements de l'user avec leurs room_type_id
+    const propsResult = await pool.query(
+      'SELECT id, channex_room_type_id FROM properties WHERE user_id = $1 AND channex_enabled = true AND channex_room_type_id IS NOT NULL',
+      [user_id]
+    );
+    const roomTypeMap = {};
+    propsResult.rows.forEach(p => { roomTypeMap[p.channex_room_type_id] = p.id; });
 
+    // Récupérer toutes les réservations Channex de l'user
     const resResult = await pool.query(
-      `SELECT id, channex_booking_id, property_id FROM reservations WHERE user_id = $1 AND source = 'channex'`,
+      `SELECT r.id, r.channex_booking_id, r.property_id,
+              (SELECT room_type_id FROM (
+                SELECT (jsonb_each(days_breakdown::jsonb)).key as room_type_id LIMIT 1
+              ) x) as room_type_id_from_breakdown
+       FROM reservations r
+       WHERE r.user_id = $1 AND r.source = 'channex'`,
+      [user_id]
+    );
+
+    // Meilleure approche : utiliser ota_reservation_id ou chercher via channex API
+    // Pour l'instant on fait via la table reservations directement
+    // En récupérant le channex_revision_id pour retrouver le room_type
+    const resResult2 = await pool.query(
+      `SELECT id, channex_booking_id, property_id, channex_revision_id
+       FROM reservations
+       WHERE user_id = $1 AND source = 'channex'`,
       [user_id]
     );
 
     let reassigned = 0;
     const { channexAPI } = require('./channex');
 
-    for (const resa of resResult.rows) {
+    for (const resa of resResult2.rows) {
       try {
+        // Récupérer le booking depuis Channex pour avoir le room_type_id
         const r = await channexAPI.get(`/bookings/${resa.channex_booking_id}`);
         const attrs = r.data?.data?.attributes || {};
-        const room = (attrs.rooms || [])[0] || {};
-        // Priorité : room_type_id (mappé) → room_type_code Booking dans meta (non mappé)
-        const room_type_id = room.room_type_id || null;
-        const room_type_code = String(room.meta?.room_type_code || '');
-        console.log(`🔍 [REASSIGN] booking ${resa.channex_booking_id} → room_type_id: ${room_type_id} | room_type_code: ${room_type_code}`);
+        const room_type_id = (attrs.rooms || [])[0]?.room_type_id || null;
+        if (!room_type_id) continue;
 
-        const correctPropertyId = roomTypeMap[room_type_id] || roomTypeMap[room_type_code];
-        if (!correctPropertyId) {
-          console.log(`⚠️ [REASSIGN] ni room_type_id ${room_type_id} ni room_type_code ${room_type_code} trouvé dans le map`);
-          continue;
-        }
+        const correctPropertyId = roomTypeMap[room_type_id];
+        if (!correctPropertyId) continue;
         if (correctPropertyId === resa.property_id) continue;
 
         await pool.query(
           'UPDATE reservations SET property_id = $1, updated_at = NOW() WHERE id = $2',
           [correctPropertyId, resa.id]
         );
-        console.log(`🔄 [REASSIGN] ${resa.channex_booking_id} : ${resa.property_id} → ${correctPropertyId}`);
+        console.log(`🔄 Booking ${resa.channex_booking_id} réassigné: ${resa.property_id} → ${correctPropertyId}`);
         reassigned++;
       } catch (e) {
-        console.warn(`⚠️ [REASSIGN] Erreur ${resa.channex_booking_id}:`, e.message);
+        // Ignorer les erreurs individuelles
       }
     }
 
     await loadProperties();
-    console.log(`✅ [REASSIGN] ${reassigned} réassignés sur ${resResult.rows.length}`);
-    res.json({ success: true, reassigned, total: resResult.rows.length });
+    res.json({ success: true, reassigned, total: resResult2.rows.length });
   } catch (e) {
     console.error('❌ [REASSIGN BOOKINGS]', e.message);
     res.status(500).json({ error: e.message });
