@@ -23854,11 +23854,10 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
 
     const { channexAPI, processChannexBooking, bookingAcknowledge } = require('./channex');
 
-    // Récupérer tous les bookings New/Modified depuis Channex
+    // Récupérer tous les bookings depuis Channex (sans filtre status qui n'est pas supporté)
     const response = await channexAPI.get('/booking_revisions', {
       params: {
         'filter[property_id]': prop.channex_property_id,
-        'filter[status]': 'new',
         pagination: false
       }
     });
