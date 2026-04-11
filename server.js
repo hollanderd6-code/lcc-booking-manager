@@ -23952,13 +23952,26 @@ N'hésitez pas à nous contacter si vous avez des questions. 😊`;
           console.error('⚠️ [CHANNEX WEBHOOK] Erreur conversation/message:', confirmErr.message);
         }
 
-        // ✅ Déclencher les templates on_booking actifs (hors du try/catch confirmErr)
+        // ✅ Déclencher les templates on_booking + on_arrival si arrivée aujourd'hui (hors du try/catch confirmErr)
         try {
-          console.log(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}`);
+          const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+          const todayStr = nowParis.toISOString().split('T')[0];
+          const arrivalStr = (result.start_date || '').substring(0, 10);
+          const isArrivalToday = arrivalStr === todayStr;
+
+          // Chercher on_booking + on_arrival si arrivée aujourd'hui
+          const triggerTypes = ['on_booking'];
+          if (isArrivalToday) triggerTypes.push('on_arrival');
+
+          // Si arrivée demain → déclencher before_arrival immédiatement
+          const tomorrowStr = new Date(nowParis.getTime() + 86400000).toISOString().split('T')[0];
+          if (arrivalStr === tomorrowStr) triggerTypes.push('before_arrival');
+
+          console.log(`🔍 [TPL] Recherche templates ${triggerTypes.join('/')} pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivee aujourdhui -> on_arrival immediat)' : ''}`);
           const templates = await pool.query(
-            `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = 'on_booking' AND active = TRUE
+            `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
              AND (property_id IS NULL OR property_id::text = $2::text)`,
-            [result.user_id, result.property_id]
+            [result.user_id, result.property_id, triggerTypes]
           );
           console.log(`🔍 [TPL] ${templates.rows.length} template(s) trouvé(s)`);
           if (templates.rows.length > 0) {
