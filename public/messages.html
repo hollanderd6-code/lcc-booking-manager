@@ -1016,6 +1016,15 @@ html[data-theme-v3="1"] .app-container {
     </div>
 
     <!-- PANEL VOYAGEURS (système existant) -->
+    <!-- Bouton mobile accès Personnalisation (visible uniquement sur mobile) -->
+    <div id="mobileTemplatesBtn" style="display:none;position:fixed;bottom:80px;right:16px;z-index:999;">
+      <button onclick="switchMsgsTab('templates')" style="display:flex;align-items:center;gap:6px;padding:10px 16px;background:#1A7A5E;color:white;border:none;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(26,122,94,.35);cursor:pointer;">
+        <i class="fas fa-robot"></i> Personnalisation
+      </button>
+    </div>
+
+    <!-- Bouton retour Messages depuis panel templates (mobile) -->
+
     <div id="panelGuests" class="msgs-panel active">
 
     <!-- SPLIT LAYOUT -->
@@ -1100,6 +1109,13 @@ html[data-theme-v3="1"] .app-container {
     <!-- ===== PANEL PERSONNALISATION ===== -->
     <div id="panelTemplates" class="msgs-panel" style="padding:20px;overflow-y:auto;">
 
+      <!-- Bouton retour mobile -->
+      <div id="mobileBackFromTemplates" style="display:none;margin-bottom:12px;">
+        <button onclick="switchMsgsTab('guests')" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1A7A5E;background:none;border:none;cursor:pointer;padding:0;">
+          <i class="fas fa-arrow-left"></i> Retour aux messages
+        </button>
+      </div>
+
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <div>
           <h2 style="font-family:'Instrument Serif',Georgia,serif;font-size:22px;color:#0D1117;margin:0;">Messages automatiques</h2>
@@ -1123,7 +1139,7 @@ html[data-theme-v3="1"] .app-container {
     </div><!-- /panelTemplates -->
 
     <!-- Modal création/édition template -->
-    <div id="templateModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div id="templateModal" data-no-native="1" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
       <div style="background:#fff;border-radius:20px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);">
         <div style="padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
           <h3 id="tplModalTitle" style="margin:0;font-size:16px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Nouveau template</h3>
@@ -2434,6 +2450,13 @@ let currentMsgsTab = 'guests';
 let channexPropertiesLoaded = false;
 
 function switchMsgsTab(tab) {
+  // Sur mobile, afficher/cacher le bouton flottant et le retour
+  const isMobile = window.innerWidth <= 1366;
+  const mobileBtn = document.getElementById('mobileTemplatesBtn');
+  const mobileBack = document.getElementById('mobileBackFromTemplates');
+  if (mobileBtn) mobileBtn.style.display = (isMobile && tab === 'guests') ? 'block' : 'none';
+  if (mobileBack) mobileBack.style.display = (isMobile && tab === 'templates') ? 'block' : 'none';
+
   currentMsgsTab = tab;
 
   document.getElementById('tabGuests').classList.toggle('active', tab === 'guests');
@@ -3377,7 +3400,7 @@ async function loadTemplateProperties() {
       const current = sel.value;
       // Garder l'option "Tous"
       while (sel.options.length > 1) sel.remove(1);
-      props.filter(p => p.channexEnabled || p.channex_enabled).forEach(p => {
+      props.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id || p._id;
         opt.textContent = p.name;
@@ -3445,6 +3468,10 @@ async function saveTemplate() {
     showBHToast(id ? '✅ Template mis à jour' : '✅ Template créé', 'success');
     closeTemplateModal();
     window._templatesLoaded = false;
+  // Init bouton mobile
+  const isMobileInit = window.innerWidth <= 1366;
+  const mbtn = document.getElementById('mobileTemplatesBtn');
+  if (mbtn) mbtn.style.display = isMobileInit ? 'block' : 'none';
     loadTemplates();
   } catch(e) {
     showBHToast('Erreur : ' + e.message, 'error');
