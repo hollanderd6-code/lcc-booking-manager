@@ -1169,10 +1169,20 @@ html[data-theme-v3="1"] .app-container {
           </div>
 
           <div style="margin-bottom:8px;">
-            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">
-              Message
-              <span style="font-weight:400;color:#9ca3af;margin-left:6px;">Variables : {prenom} {nom} {arrivee} {depart} {logement}</span>
-            </label>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Message</label>
+
+            <!-- Chips variables cliquables -->
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:10px;background:#f8fafc;border-radius:10px;border:1px solid #e5e7eb;">
+              <div style="font-size:11px;font-weight:600;color:#6b7280;width:100%;margin-bottom:4px;">
+                <i class="fas fa-mouse-pointer" style="margin-right:4px;"></i>Cliquez pour insérer :
+              </div>
+              <button type="button" onclick="insertTplVar('{prenom}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;transition:all .15s;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Prénom</button>
+              <button type="button" onclick="insertTplVar('{nom}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Nom complet</button>
+              <button type="button" onclick="insertTplVar('{logement}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Nom du logement</button>
+              <button type="button" onclick="insertTplVar('{arrivee}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Date d'arrivée</button>
+              <button type="button" onclick="insertTplVar('{depart}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Date de départ</button>
+            </div>
+
             <textarea id="tplMessage" rows="6" placeholder="Bonjour {prenom}, votre arrivée est prévue le {arrivee}..." style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
           </div>
 
@@ -3455,6 +3465,20 @@ function openTemplateModal(template = null) {
   updateOffsetLabel();
   loadTemplateProperties();
   document.getElementById('templateModal').style.display = 'flex';
+}
+
+function insertTplVar(variable) {
+  const ta = document.getElementById('tplMessage');
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const before = ta.value.substring(0, start);
+  const after = ta.value.substring(end);
+  ta.value = before + variable + after;
+  // Repositionner le curseur après la variable insérée
+  const pos = start + variable.length;
+  ta.setSelectionRange(pos, pos);
+  ta.focus();
 }
 
 function closeTemplateModal() {
