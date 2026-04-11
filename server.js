@@ -23765,6 +23765,17 @@ app.post('/api/channex/webhook', async (req, res) => {
           const notifBody  = `${guestName} · ${propertyName} · ${fmtDate(result.start_date)} → ${fmtDate(result.end_date)}`;
           const notifData  = { type: 'cancelled_booking_channex', uid: result.uid, propertyId: String(result.property_id || ''), screen: 'calendar' };
 
+          // Notifier le front pour rafraîchir le calendrier immédiatement
+          if (io) {
+            io.to(`user_${result.user_id}`).emit('reservation_cancelled', {
+              uid: result.uid,
+              property_id: result.property_id
+            });
+            io.to(`user_${result.user_id}`).emit('calendar_refresh', {
+              property_id: result.property_id
+            });
+          }
+
           if (await shouldSendNotification(result.user_id, 'notif_reservation_cancelled')) {
             const tokensRes = await pool.query(
               'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
