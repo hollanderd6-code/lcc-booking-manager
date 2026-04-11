@@ -3392,7 +3392,9 @@ async function loadTemplateProperties() {
     const token = localStorage.getItem('lcc_token');
     const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
-    const props = data.properties || data || [];
+    console.log('🏠 [TPL] properties data:', JSON.stringify(data).substring(0, 200));
+    const props = (data.properties || data || []).filter(p => p && (p.id || p._id) && (p.name));
+    console.log('🏠 [TPL] props count:', props.length);
 
     ['tplPropertyFilter', 'tplProperty'].forEach(id => {
       const sel = document.getElementById(id);
@@ -3421,7 +3423,8 @@ function openTemplateModal(template = null) {
   document.getElementById('tplModalTitle').textContent = template ? 'Modifier le template' : 'Nouveau template';
   updateOffsetLabel();
   loadTemplateProperties();
-  document.getElementById('templateModal').style.display = 'flex';
+  const modal = document.getElementById('templateModal');
+  modal.style.cssText = 'display:flex !important;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;align-items:center;justify-content:center;padding:16px;';
 }
 
 function closeTemplateModal() {
