@@ -239,6 +239,24 @@ function populateTimeSelects() {
   });
 }
 
+// ── Tooltips positionnés dynamiquement (évite débordement écran) ──
+document.addEventListener('mouseover', function(e) {
+  const icon = e.target.closest('.bh-tooltip-icon');
+  if (!icon) return;
+  const box = icon.parentElement?.querySelector('.bh-tooltip-box');
+  if (!box) return;
+  const rect = icon.getBoundingClientRect();
+  // Positionner sous l'icône
+  box.style.top = (rect.bottom + 8) + 'px';
+  // Calculer si ça dépasse à droite
+  const boxWidth = 220;
+  let left = rect.right - boxWidth;
+  if (left < 8) left = 8;
+  if (rect.left + boxWidth < window.innerWidth) left = rect.left;
+  box.style.left = left + 'px';
+  box.style.right = 'auto';
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🔧 Paramètres - Initialisation...");
 
