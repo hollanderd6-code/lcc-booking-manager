@@ -307,8 +307,11 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
           (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
         FROM conversations c
         LEFT JOIN properties p ON c.property_id = p.id
-        LEFT JOIN reservations r ON r.channex_booking_id = c.channex_booking_id
-          AND c.channex_booking_id IS NOT NULL
+        LEFT JOIN reservations r ON (
+          (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+          OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+              AND DATE(r.start_date) = DATE(c.reservation_start_date))
+        )
         WHERE c.user_id = $1
       `;
 
