@@ -1628,6 +1628,8 @@ ON invoice_download_tokens(token);
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_country TEXT;
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_language TEXT;
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_city TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_address TEXT;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS guest_zip TEXT;
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS occupancy_adults INTEGER DEFAULT 1;
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS occupancy_children INTEGER DEFAULT 0;
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS amount_total NUMERIC(10,2);
@@ -6004,7 +6006,7 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
 
     const { uid } = req.params;
     const { propertyId, start, end, guestName, notes, phone, email, platform, price,
-            guest_country, occupancy_adults, amount_rooms, amount_cleaning, amount_taxes, ota_commission } = req.body;
+            guest_country, guest_address, guest_zip, occupancy_adults, amount_rooms, amount_cleaning, amount_taxes, ota_commission } = req.body;
 
     if (!propertyId || !start || !end) return res.status(400).json({ error: 'propertyId, start et end requis' });
 
@@ -6036,15 +6038,15 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
         property_id = $1, start_date = $2, end_date = $3,
         guest_name = $4, notes = $5, platform = $6, source = $6,
         price = $7, guest_phone = $8, guest_email = $9,
-        guest_country = $10, occupancy_adults = $11,
-        amount_rooms = $12, amount_cleaning = $13, amount_taxes = $14, ota_commission = $15,
+        guest_country = $10, guest_address = $11, guest_zip = $12, occupancy_adults = $13,
+        amount_rooms = $14, amount_cleaning = $15, amount_taxes = $16, ota_commission = $17,
         updated_at = NOW()
-       WHERE uid = $16 AND user_id = $17`,
+       WHERE uid = $18 AND user_id = $19`,
       [
         propertyId, start, end,
         guestName || 'Réservation manuelle', notes || null, platform || 'MANUEL',
         price || 0, phone || null, email || null,
-        guest_country || null, occupancy_adults || null,
+        guest_country || null, guest_address || null, guest_zip || null, occupancy_adults || null,
         amount_rooms || null, amount_cleaning || null, amount_taxes || null, ota_commission || null,
         uid, user.id
       ]
@@ -6344,6 +6346,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           r.guest_country,
           r.guest_language,
           r.guest_city,
+          r.guest_address,
+          r.guest_zip,
           r.occupancy_adults,
           r.occupancy_children,
           r.amount_total,
@@ -6435,6 +6439,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           guest_country:     dbData.guest_country     || null,
           guest_language:    dbData.guest_language    || null,
           guest_city:        dbData.guest_city        || null,
+          guest_address:     dbData.guest_address     || null,
+          guest_zip:         dbData.guest_zip         || null,
           occupancy_adults:  dbData.occupancy_adults  || null,
           occupancy_children:dbData.occupancy_children|| 0,
           onboarding_completed: dbData.onboarding_completed || false,
@@ -7742,6 +7748,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
           guestPhone,
           guestEmail,
           guestCountry:      dbData?.guest_country      || null,
+          guestAddress:      dbData?.guest_address      || null,
+          guestZip:          dbData?.guest_zip          || null,
           occupancyAdults:   dbData?.occupancy_adults   || null,
           occupancyChildren: dbData?.occupancy_children || 0,
           amountTotal:    dbData?.amount_total    ? parseFloat(dbData.amount_total)    : null,
@@ -7791,6 +7799,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
             guestPhone:      dbData.guest_phone  || '',
             guestEmail:      dbData.guest_email  || '',
             guestCountry:    dbData.guest_country || null,
+            guestAddress:    dbData.guest_address || null,
+            guestZip:        dbData.guest_zip     || null,
             occupancyAdults:   dbData.occupancy_adults   || null,
             occupancyChildren: dbData.occupancy_children || 0,
             amountTotal:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
@@ -7936,6 +7946,8 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
             guestFirstName: gFirst, guestLastName: gLast, guestDisplayName: gDisplay,
             guestPhone: dbData.guest_phone || '', guestEmail: dbData.guest_email || '',
             guestCountry: dbData.guest_country || null,
+            guestAddress: dbData.guest_address || null,
+            guestZip:     dbData.guest_zip     || null,
             occupancyAdults: dbData.occupancy_adults || null,
             occupancyChildren: dbData.occupancy_children || 0,
             amountTotal:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
