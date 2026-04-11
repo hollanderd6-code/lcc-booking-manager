@@ -23926,16 +23926,27 @@ N'hésitez pas à nous contacter si vous avez des questions. 😊`;
           await sendAutoMessage(pool, io, convId, confirmMsg, result.channex_booking_id || null);
           console.log(`✅ [CHANNEX] Message de confirmation envoyé (conv ${convId})`);
 
-          // ✅ Déclencher les templates on_booking actifs
-          try {
-            const templates = await pool.query(
-              `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = 'on_booking' AND active = TRUE
-               AND (property_id IS NULL OR property_id = $2)`,
-              [result.user_id, result.property_id]
+        } catch (confirmErr) {
+          console.error('⚠️ [CHANNEX WEBHOOK] Erreur conversation/message:', confirmErr.message);
+        }
+
+        // ✅ Déclencher les templates on_booking actifs (hors du try/catch confirmErr)
+        try {
+          console.log(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}`);
+          const templates = await pool.query(
+            `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = 'on_booking' AND active = TRUE
+             AND (property_id IS NULL OR property_id::text = $2::text)`,
+            [result.user_id, result.property_id]
+          );
+          console.log(`🔍 [TPL] ${templates.rows.length} template(s) trouvé(s)`);
+          if (templates.rows.length > 0) {
+            // Retrouver la conversation créée
+            const convRow = await pool.query(
+              `SELECT * FROM conversations WHERE channex_booking_id = $1 OR (property_id = $2 AND DATE(reservation_start_date) = DATE($3)) ORDER BY created_at DESC LIMIT 1`,
+              [result.channex_booking_id || result.uid, result.property_id, result.start_date]
             );
-            if (templates.rows.length > 0) {
-              const convRow = await pool.query('SELECT * FROM conversations WHERE id = $1', [convId]);
-              const conv = { ...convRow.rows[0], user_id: result.user_id, property_name: propertyName };
+            if (convRow.rows[0]) {
+              const conv = { ...convRow.rows[0], user_id: result.user_id };
               const propRow = await pool.query(
                 'SELECT address, arrival_time, departure_time, access_code, wifi_name, wifi_password, practical_info, welcome_book_url, name FROM properties WHERE id = $1',
                 [result.property_id]
@@ -23943,15 +23954,14 @@ N'hésitez pas à nous contacter si vous avez des questions. 😊`;
               const property = propRow.rows[0] || {};
               for (const tmpl of templates.rows) {
                 await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
-                console.log(`✅ [TPL on_booking] Template "${tmpl.title}" envoyé (conv ${convId})`);
+                console.log(`✅ [TPL on_booking] Template "${tmpl.title}" envoyé`);
               }
+            } else {
+              console.warn(`⚠️ [TPL on_booking] Conversation non trouvée pour booking ${result.uid}`);
             }
-          } catch(tplErr) {
-            console.warn('⚠️ [TPL on_booking]', tplErr.message);
           }
-
-        } catch (confirmErr) {
-          console.error('⚠️ [CHANNEX WEBHOOK] Erreur conversation/message:', confirmErr.message);
+        } catch(tplErr) {
+          console.error('❌ [TPL on_booking]', tplErr.message);
         }
       }
     }
