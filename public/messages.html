@@ -2871,8 +2871,11 @@ window.openInvoiceFromConversation = function() {
 
     <div class="inv-actions">
       <button class="inv-btn inv-btn-ghost" onclick="closeInvoiceModal()">Annuler</button>
-      <button class="inv-btn inv-btn-primary" id="inv_sendBtn" onclick="sendInvoiceFromModal()" disabled>
+      <button class="inv-btn inv-btn-ghost" id="inv_emailBtn" onclick="sendInvoiceEmail()" disabled>
         <i class="fas fa-envelope"></i> Envoyer par email
+      </button>
+      <button class="inv-btn inv-btn-primary" id="inv_sendBtn" onclick="sendInvoiceFromModal()" disabled>
+        <i class="fas fa-link"></i> Générer le lien
       </button>
     </div>
   </div>
@@ -3075,11 +3078,11 @@ window.openInvoiceFromConversation = function() {
       touristTaxAmount: document.getElementById('inv_taxes')?.value || 0,
       cleaningFee:      document.getElementById('inv_cleaning')?.value || 0,
       vatRate: document.getElementById('inv_withVat')?.checked ? document.getElementById('inv_vatRate')?.value : 0,
-      sendEmail: true
+      sendEmail: false
     };
 
     const btn = document.getElementById('inv_sendBtn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération…'; }
 
     try {
       const res = await fetch('/api/invoice/create', {
@@ -3088,11 +3091,62 @@ window.openInvoiceFromConversation = function() {
         body: JSON.stringify(data)
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Erreur envoi');
-      alert('✅ Facture envoyée à ' + clientEmail);
-      closeInvoiceModal();
+      if (!res.ok) throw new Error(result.error || 'Erreur génération');
+
+      if (result.downloadUrl) {
+        // Copier le lien dans le presse-papier
+        try {
+          await navigator.clipboard.writeText(result.downloadUrl);
+          showBHToast('✅ Lien copié ! Collez-le dans le chat avec votre voyageur.', 'success');
+        } catch(e) {
+          // Fallback : afficher le lien
+          prompt('Copiez ce lien à envoyer à votre voyageur :', result.downloadUrl);
+        }
+        // Stocker le lien pour pouvoir l'envoyer via email aussi
+        window._lastInvoiceDownloadUrl = result.downloadUrl;
+        window._lastInvoiceNumber = result.invoiceNumber;
+        // Activer le bouton email
+        const emailBtn = document.getElementById('inv_emailBtn');
+        if (emailBtn) {
+          emailBtn.disabled = false;
+          emailBtn.style.borderColor = '#1A7A5E';
+          emailBtn.style.color = '#1A7A5E';
+        }
+      }
     } catch (err) {
-      alert('❌ Erreur : ' + err.message);
+      showBHToast('❌ Erreur : ' + err.message, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-link"></i> Générer le lien'; }
+    }
+  };
+
+  // ── Envoyer le lien par email ─────────────────────────────
+  window.sendInvoiceEmail = async function() {
+    const clientEmail = document.getElementById('inv_clientEmail')?.value;
+    if (!clientEmail) { showBHToast('Email voyageur requis', 'warning'); return; }
+    if (!window._lastInvoiceDownloadUrl) { showBHToast('Générez d\'abord le lien', 'warning'); return; }
+
+    const btn = document.getElementById('inv_emailBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…'; }
+
+    try {
+      const res = await fetch('/api/invoice/send-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
+        body: JSON.stringify({
+          clientEmail,
+          downloadUrl: window._lastInvoiceDownloadUrl,
+          invoiceNumber: window._lastInvoiceNumber,
+          clientName: document.getElementById('inv_clientName')?.value,
+          propertyName: document.getElementById('inv_property')?.options[document.getElementById('inv_property')?.selectedIndex]?.text
+        })
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Erreur envoi');
+      showBHToast('✅ Email envoyé à ' + clientEmail, 'success');
+      closeInvoiceModal();
+    } catch(err) {
+      showBHToast('❌ ' + err.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-envelope"></i> Envoyer par email'; }
     }
