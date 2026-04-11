@@ -1008,6 +1008,10 @@ html[data-theme-v3="1"] .app-container {
         Messages
         <span class="tab-badge" id="tabGuestsBadge" style="display:none;">0</span>
       </button>
+      <button class="msgs-tab" id="tabTemplates" onclick="switchMsgsTab('templates')">
+        <i class="fas fa-robot"></i>
+        Personnalisation
+      </button>
 
     </div>
 
@@ -1092,6 +1096,84 @@ html[data-theme-v3="1"] .app-container {
     </div>
 
     </div><!-- /panelGuests -->
+
+    <!-- ===== PANEL PERSONNALISATION ===== -->
+    <div id="panelTemplates" class="msgs-panel" style="padding:20px;overflow-y:auto;">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div>
+          <h2 style="font-family:'Instrument Serif',Georgia,serif;font-size:22px;color:#0D1117;margin:0;">Messages automatiques</h2>
+          <p style="font-size:13px;color:#6b7280;margin:4px 0 0;">Envoyés automatiquement via Booking.com / Airbnb selon le déclencheur choisi.</p>
+        </div>
+        <button onclick="openTemplateModal()" style="display:flex;align-items:center;gap:7px;padding:10px 18px;background:#1A7A5E;color:white;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">
+          <i class="fas fa-plus"></i> Nouveau template
+        </button>
+      </div>
+
+      <!-- Filtre logement -->
+      <div style="margin-bottom:16px;">
+        <select id="tplPropertyFilter" onchange="loadTemplates()" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:#374151;background:white;">
+          <option value="">Tous les logements</option>
+        </select>
+      </div>
+
+      <!-- Liste des templates -->
+      <div id="templatesList"></div>
+
+    </div><!-- /panelTemplates -->
+
+    <!-- Modal création/édition template -->
+    <div id="templateModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+      <div style="background:#fff;border-radius:20px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+        <div style="padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+          <h3 id="tplModalTitle" style="margin:0;font-size:16px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Nouveau template</h3>
+          <button onclick="closeTemplateModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
+        </div>
+        <div style="padding:20px 24px;">
+          <input type="hidden" id="tplId">
+
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Titre du template</label>
+            <input id="tplTitle" type="text" placeholder="Ex: Message de bienvenue" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;box-sizing:border-box;">
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Logement concerné</label>
+            <select id="tplProperty" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
+              <option value="">Tous les logements</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Déclencheur</label>
+            <select id="tplTrigger" onchange="updateOffsetLabel()" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
+              <option value="on_booking">À la réservation</option>
+              <option value="before_arrival">Avant l'arrivée</option>
+              <option value="on_arrival">Jour de l'arrivée</option>
+              <option value="after_departure">Après le départ</option>
+            </select>
+          </div>
+
+          <div id="tplOffsetWrap" style="margin-bottom:14px;display:none;">
+            <label id="tplOffsetLabel" style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Nombre d'heures avant l'arrivée</label>
+            <input id="tplOffset" type="number" min="1" max="720" placeholder="Ex: 24" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;box-sizing:border-box;">
+          </div>
+
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">
+              Message
+              <span style="font-weight:400;color:#9ca3af;margin-left:6px;">Variables : {prenom} {nom} {arrivee} {depart} {logement}</span>
+            </label>
+            <textarea id="tplMessage" rows="6" placeholder="Bonjour {prenom}, votre arrivée est prévue le {arrivee}..." style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:12px;">
+            <button onclick="closeTemplateModal()" style="padding:10px 20px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;cursor:pointer;">Annuler</button>
+            <button onclick="saveTemplate()" style="padding:10px 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </main>
 </div>
@@ -2353,15 +2435,23 @@ let channexPropertiesLoaded = false;
 function switchMsgsTab(tab) {
   currentMsgsTab = tab;
 
-  // Onglets
   document.getElementById('tabGuests').classList.toggle('active', tab === 'guests');
-  document.getElementById('tabOTA').classList.toggle('active', tab === 'ota');
+  const tabTpl = document.getElementById('tabTemplates');
+  if (tabTpl) tabTpl.classList.toggle('active', tab === 'templates');
+  const tabOTA = document.getElementById('tabOTA');
+  if (tabOTA) tabOTA.classList.toggle('active', tab === 'ota');
 
-  // Panels
   document.getElementById('panelGuests').classList.toggle('active', tab === 'guests');
-  document.getElementById('panelOTA').classList.toggle('active', tab === 'ota');
+  const panelTpl = document.getElementById('panelTemplates');
+  if (panelTpl) panelTpl.classList.toggle('active', tab === 'templates');
+  const panelOTA = document.getElementById('panelOTA');
+  if (panelOTA) panelOTA.classList.toggle('active', tab === 'ota');
 
-  // Charger les logements Channex au premier accès
+  if (tab === 'templates' && !window._templatesLoaded) {
+    loadTemplates();
+    loadTemplateProperties();
+    window._templatesLoaded = true;
+  }
   if (tab === 'ota' && !channexPropertiesLoaded) {
     loadChannexProperties();
   }
@@ -3201,6 +3291,204 @@ window.openInvoiceFromConversation = function() {
     conversationId: conv.id || window.currentConversationId || null,
   });
 };
+</script>
+
+
+<script>
+// ============================================================
+// TEMPLATES DE MESSAGES AUTOMATIQUES
+// ============================================================
+
+const TRIGGER_LABELS = {
+  'on_booking':      'À la réservation',
+  'before_arrival':  'Avant l'arrivée',
+  'on_arrival':      'Jour de l'arrivée',
+  'after_departure': 'Après le départ'
+};
+
+async function loadTemplates() {
+  const container = document.getElementById('templatesList');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:20px;"><i class="fas fa-spinner fa-spin"></i></div>';
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const propFilter = document.getElementById('tplPropertyFilter')?.value || '';
+    const url = '/api/message-templates' + (propFilter ? `?property_id=${propFilter}` : '');
+    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    const templates = data.templates || [];
+
+    if (templates.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:40px 20px;color:#9ca3af;">
+          <i class="fas fa-robot" style="font-size:32px;display:block;margin-bottom:12px;"></i>
+          <p style="font-weight:600;color:#374151;">Aucun template</p>
+          <p style="font-size:13px;">Créez votre premier message automatique</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = templates.map(t => `
+      <div style="background:white;border:1px solid #e5e7eb;border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:700;color:#0D1117;">${t.title}</span>
+            <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:${t.active ? '#e8f5f1' : '#f1f5f9'};color:${t.active ? '#1A7A5E' : '#9ca3af'};">
+              ${t.active ? 'Actif' : 'Inactif'}
+            </span>
+          </div>
+          <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">
+            <i class="fas fa-bolt" style="margin-right:4px;color:#1A7A5E;"></i>${TRIGGER_LABELS[t.trigger_type] || t.trigger_type}
+            ${t.trigger_offset_hours > 0 ? ` · ${t.trigger_offset_hours}h` : ''}
+            ${t.property_id ? ` · <i class="fas fa-home" style="margin:0 3px;"></i>Logement spécifique` : ' · Tous les logements'}
+          </div>
+          <div style="font-size:12px;color:#374151;background:#f9fafb;border-radius:8px;padding:8px 10px;line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden;">${t.message}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+          <button onclick="editTemplate(${t.id})" style="padding:5px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;font-size:11px;cursor:pointer;color:#374151;">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button onclick="toggleTemplate(${t.id}, ${!t.active})" style="padding:5px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;font-size:11px;cursor:pointer;color:${t.active ? '#EF4444' : '#1A7A5E'};">
+            <i class="fas fa-${t.active ? 'pause' : 'play'}"></i>
+          </button>
+          <button onclick="deleteTemplate(${t.id})" style="padding:5px 10px;border-radius:8px;border:1px solid #fde8e8;background:#fff8f8;font-size:11px;cursor:pointer;color:#EF4444;">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    container.innerHTML = '<p style="color:#EF4444;padding:16px;">Erreur de chargement</p>';
+  }
+}
+
+async function loadTemplateProperties() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    const props = data.properties || data || [];
+
+    ['tplPropertyFilter', 'tplProperty'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const current = sel.value;
+      // Garder l'option "Tous"
+      while (sel.options.length > 1) sel.remove(1);
+      props.filter(p => p.channexEnabled || p.channex_enabled).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id || p._id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+      sel.value = current;
+    });
+  } catch(e) {}
+}
+
+function openTemplateModal(template = null) {
+  document.getElementById('tplId').value = template?.id || '';
+  document.getElementById('tplTitle').value = template?.title || '';
+  document.getElementById('tplMessage').value = template?.message || '';
+  document.getElementById('tplTrigger').value = template?.trigger_type || 'on_booking';
+  document.getElementById('tplOffset').value = template?.trigger_offset_hours || '';
+  document.getElementById('tplProperty').value = template?.property_id || '';
+  document.getElementById('tplModalTitle').textContent = template ? 'Modifier le template' : 'Nouveau template';
+  updateOffsetLabel();
+  loadTemplateProperties();
+  document.getElementById('templateModal').style.display = 'flex';
+}
+
+function closeTemplateModal() {
+  document.getElementById('templateModal').style.display = 'none';
+}
+
+function updateOffsetLabel() {
+  const trigger = document.getElementById('tplTrigger').value;
+  const wrap = document.getElementById('tplOffsetWrap');
+  const label = document.getElementById('tplOffsetLabel');
+  if (trigger === 'before_arrival') {
+    wrap.style.display = 'block';
+    label.textContent = 'Nombre d'heures avant l'arrivée';
+  } else if (trigger === 'after_departure') {
+    wrap.style.display = 'block';
+    label.textContent = 'Nombre d'heures après le départ';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+async function saveTemplate() {
+  const id = document.getElementById('tplId').value;
+  const body = {
+    title: document.getElementById('tplTitle').value.trim(),
+    message: document.getElementById('tplMessage').value.trim(),
+    trigger_type: document.getElementById('tplTrigger').value,
+    trigger_offset_hours: parseInt(document.getElementById('tplOffset').value) || 0,
+    property_id: document.getElementById('tplProperty').value || null,
+  };
+
+  if (!body.title || !body.message) { showBHToast('Titre et message requis', 'warning'); return; }
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const url = id ? `/api/message-templates/${id}` : '/api/message-templates';
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+    showBHToast(id ? '✅ Template mis à jour' : '✅ Template créé', 'success');
+    closeTemplateModal();
+    window._templatesLoaded = false;
+    loadTemplates();
+  } catch(e) {
+    showBHToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function editTemplate(id) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/message-templates?property_id=`, { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    const t = (data.templates || []).find(t => t.id === id);
+    if (t) openTemplateModal(t);
+  } catch(e) {}
+}
+
+async function toggleTemplate(id, active) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(`/api/message-templates/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ active })
+    });
+    loadTemplates();
+  } catch(e) {}
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Supprimer ce template ?')) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(`/api/message-templates/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    showBHToast('Template supprimé', 'info');
+    loadTemplates();
+  } catch(e) {}
+}
+
+// Fermer modal en cliquant dehors
+document.getElementById('templateModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeTemplateModal();
+});
 </script>
 
 </body>
