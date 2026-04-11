@@ -567,12 +567,16 @@ function displayMessages(messages) {
   container.innerHTML = '';
   
   if (!messages || messages.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-comments"></i>
-        <p>Aucun message</p>
-      </div>
-    `;
+    // ✅ Attendre que les messages Channex soient injectés avant d'afficher "Aucun message"
+    container.innerHTML = `<div class="empty-state" id="emptyMsgState"><i class="fas fa-comments"></i><p>Aucun message</p></div>`;
+    setTimeout(() => {
+      const el = document.getElementById('emptyMsgState');
+      const chatEl = document.getElementById('chatMessages');
+      // S'il y a des messages Channex injectés, cacher l'empty state
+      if (el && chatEl && chatEl.children.length > 1) {
+        el.style.display = 'none';
+      }
+    }, 800);
     return;
   }
   
