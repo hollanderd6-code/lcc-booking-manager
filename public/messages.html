@@ -1184,18 +1184,15 @@ function insertTplVar(variable) {
 
           <div style="margin-bottom:14px;">
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Déclencheur</label>
-            <select id="tplTrigger" onchange="updateOffsetLabel()" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
-              <option value="on_booking">À la réservation</option>
-              <option value="before_arrival">Avant l'arrivée</option>
-              <option value="on_arrival">Jour de l'arrivée</option>
-              <option value="after_departure">Après le départ</option>
+            <select id="tplTrigger" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
+              <option value="on_booking">À la réservation (immédiat)</option>
+              <option value="before_arrival">La veille de l'arrivée à 7h</option>
+              <option value="on_arrival">Jour de l'arrivée à 7h</option>
+              <option value="after_departure">Jour du départ à 15h</option>
             </select>
           </div>
 
-          <div id="tplOffsetWrap" style="margin-bottom:14px;display:none;">
-            <label id="tplOffsetLabel" style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Nombre d'heures avant l'arrivée</label>
-            <input id="tplOffset" type="number" min="1" max="720" placeholder="Ex: 24" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;box-sizing:border-box;">
-          </div>
+          <input type="hidden" id="tplOffset" value="0">
 
           <div style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Message</label>
@@ -3416,10 +3413,10 @@ window.openInvoiceFromConversation = function() {
 // ============================================================
 
 const TRIGGER_LABELS = {
-  'on_booking':      'À la réservation',
-  'before_arrival':  "Avant l'arrivée",
-  'on_arrival':      "Jour de l'arrivée",
-  'after_departure': 'Après le départ'
+  'on_booking':      'À la réservation (immédiat)',
+  'before_arrival':  "La veille à 7h",
+  'on_arrival':      "Jour d'arrivée à 7h",
+  'after_departure': 'Jour du départ à 15h'
 };
 
 async function loadTemplates() {
@@ -3520,20 +3517,7 @@ function closeTemplateModal() {
   document.getElementById('templateModal').style.display = 'none';
 }
 
-function updateOffsetLabel() {
-  const trigger = document.getElementById('tplTrigger').value;
-  const wrap = document.getElementById('tplOffsetWrap');
-  const label = document.getElementById('tplOffsetLabel');
-  if (trigger === 'before_arrival') {
-    wrap.style.display = 'block';
-    label.textContent = "Nombre d'heures avant l'arrivée";
-  } else if (trigger === 'after_departure') {
-    wrap.style.display = 'block';
-    label.textContent = "Nombre d'heures après le départ";
-  } else {
-    wrap.style.display = 'none';
-  }
-}
+function updateOffsetLabel() {} // horaires fixes, plus de champ offset
 
 async function saveTemplate() {
   const id = document.getElementById('tplId').value;
