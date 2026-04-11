@@ -24186,6 +24186,76 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
           imported++;
         }
 
+        // ✅ Créer/lier la conversation pour ce booking
+        try {
+          const crypto = require('crypto');
+          const { sendAutoMessage } = require('./integrated-chat-handler');
+          const OTA_MAP_SYNC = {
+            'ABB': 'Airbnb', 'AIRBNB': 'Airbnb',
+            'BDC': 'Booking.com', 'BOOKING': 'Booking.com',
+            'EXP': 'Expedia', 'EXPEDIA': 'Expedia',
+            'VRBO': 'Vrbo', 'HOMEAWAY': 'Vrbo'
+          };
+          const otaLabel = OTA_MAP_SYNC[String(attrs.ota_name || '').toUpperCase()] || attrs.ota_name || 'Channex';
+          const guest = attrs.customer || {};
+          const guestName = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
+          const arrivalDate = attrs.arrival_date;
+          const departureDate = attrs.departure_date;
+
+          // Récupérer la résa en DB pour avoir property_id + user_id + start_date
+          const resaRow = await pool.query(
+            'SELECT id, property_id, user_id, start_date, end_date FROM reservations WHERE channex_booking_id = $1',
+            [booking_id]
+          );
+          const resa = resaRow.rows[0];
+          if (resa) {
+            // Chercher conversation existante
+            const existingConv = await pool.query(
+              `SELECT id FROM conversations
+               WHERE channex_booking_id = $1
+                  OR (property_id = $2 AND DATE(reservation_start_date) = DATE($3))
+               ORDER BY created_at DESC LIMIT 1`,
+              [booking_id, resa.property_id, resa.start_date || arrivalDate]
+            );
+
+            let convId = null;
+            if (existingConv.rows.length > 0) {
+              convId = existingConv.rows[0].id;
+              // Lier channex_booking_id si manquant
+              await pool.query(
+                `UPDATE conversations SET channex_booking_id = $1 WHERE id = $2 AND channex_booking_id IS NULL`,
+                [booking_id, convId]
+              );
+              console.log(`🔗 [CHANNEX SYNC] Conversation existante liée: ${convId}`);
+            } else {
+              // Créer la conversation
+              const convResult = await pool.query(
+                `INSERT INTO conversations
+                  (user_id, property_id, reservation_start_date, reservation_end_date,
+                   platform, guest_name, guest_email, pin_code, unique_token, photos_token,
+                   is_verified, status, channex_booking_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending', $11)
+                 RETURNING id`,
+                [
+                  resa.user_id, resa.property_id,
+                  resa.start_date || arrivalDate,
+                  resa.end_date || departureDate,
+                  otaLabel, guestName,
+                  guest.mail || guest.email || null,
+                  Math.floor(1000 + Math.random() * 9000).toString(),
+                  crypto.randomBytes(32).toString('hex'),
+                  crypto.randomBytes(32).toString('hex'),
+                  booking_id
+                ]
+              );
+              convId = convResult.rows[0].id;
+              console.log(`✅ [CHANNEX SYNC] Conversation créée: ${convId}`);
+            }
+          }
+        } catch (convErr) {
+          console.warn(`⚠️ [CHANNEX SYNC] Erreur conversation booking ${booking_id}:`, convErr.message);
+        }
+
         const revisionId = booking.id || attrs.revision_id;
         if (revisionId) await bookingAcknowledge(revisionId).catch(() => {});
 
