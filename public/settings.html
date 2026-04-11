@@ -3007,6 +3007,7 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 }
 .bh-tooltip-icon {
   width: 18px; height: 18px;
+  min-width: 18px;
   border-radius: 50%;
   background: #e2e8f0;
   color: #64748b;
@@ -3018,6 +3019,8 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   cursor: default;
   font-style: normal;
   line-height: 1;
+  overflow: visible;
+  flex-shrink: 0;
   transition: background .15s;
 }
 .bh-tooltip-icon:hover { background: #1A7A5E; color: #fff; }
