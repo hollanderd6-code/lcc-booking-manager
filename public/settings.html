@@ -1529,79 +1529,21 @@ html[data-theme-v3="1"] .sidebar {
             </small>
 </div>
 
-<!-- ✅ SECTION : MESSAGE D'ARRIVÉE AUTOMATIQUE -->
-<div class="form-group" style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); padding: 20px; border-radius: 12px; border: 2px solid #667eea40;">
-<label for="propertyArrivalMessage" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-<i class="fas fa-paper-plane" style="color: #667eea;"></i>
-<span style="font-weight: 600; color: #1e293b;">Message d'arrivée automatique</span>
-<span style="background: #667eea; color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">AUTO</span>
-</label>
-
-<div style="margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
-  <div style="font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 600;">
-    📋 Cliquez pour insérer :
-  </div>
-  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{guestName}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Nom du voyageur
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{propertyName}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Nom du logement
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{address}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Adresse
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{arrivalTime}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Heure d'arrivée
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{departureTime}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Heure de départ
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{accessCode}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Code d'accès
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{wifiName}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Nom du WiFi
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{wifiPassword}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Mot de passe WiFi
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{accessInstructions}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Instructions d'accès
-    </button>
-    <button type="button" class="variable-btn" onclick="insertVariable('propertyArrivalMessage', '{welcomeBookUrl}', event)" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s;">
-      Lien livret d'accueil
-    </button>
+<!-- Message d'arrivée → redirigé vers Templates -->
+<div class="form-group" style="padding:16px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <i class="fas fa-paper-plane" style="color:#1A7A5E;font-size:18px;"></i>
+    <div>
+      <div style="font-weight:600;color:#1e293b;font-size:14px;">Messages automatiques</div>
+      <div style="font-size:12px;color:#64748b;margin-top:2px;">Gérez vos templates de messages automatiques (arrivée, départ, réservation) depuis la section Messages.</div>
+    </div>
+    <a href="/messages.html" style="margin-left:auto;padding:8px 16px;background:#1A7A5E;color:white;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;">
+      <i class="fas fa-arrow-right" style="margin-right:6px;"></i>Gérer les templates
+    </a>
   </div>
 </div>
 
-<textarea 
-  id="propertyArrivalMessage" 
-  rows="8" 
-  style="font-family: 'Inter', sans-serif; line-height: 1.6;"
-  placeholder="Bienvenue {guestName} ! 🏠
 
-Voici les informations pour votre arrivée :
-
-📍 Adresse : {address}
-🕐 Heure d'arrivée : {arrivalTime}
-🔑 Code d'accès : {accessCode}
-
-📶 WiFi :
-  • Réseau : {wifiName}
-  • Mot de passe : {wifiPassword}
-
-📖 Livret d'accueil : {welcomeBookUrl}
-
-{accessInstructions}
-
-Bon séjour ! 😊"
-></textarea>
-<small style="display:block;margin-top:8px;font-size:12px;color:#64748b; line-height: 1.5;">
-  <strong style="color: #667eea;">📨 Envoyé automatiquement le jour de l'arrivée à 7h00</strong><br/>
-  (ou immédiatement si réservation le jour même)
-</small>
-</div>
 
 <style>
 .variable-btn:hover {
