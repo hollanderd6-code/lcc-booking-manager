@@ -2670,30 +2670,7 @@ function showBHToast(msg, type = 'info') {
 }
 </script>
 
-<script>
-window.openInvoiceFromConversation = function() {
-  var conv = window.currentChatConv;
-  if (!conv) return;
-  var checkin  = (conv.reservation_start_date || conv.startDate || '').split('T')[0];
-  var checkout = (conv.reservation_end_date   || conv.endDate   || '').split('T')[0];
-  var name = conv.guest_display_name || conv.guest_first_name
-    ? (conv.guest_first_name || '') + (conv.guest_last_name ? ' ' + conv.guest_last_name : '')
-    : (conv.guest_name || '');
-  openInvoiceModal({
-    guestName:      name.trim() || conv.guest_name || '',
-    guestEmail:     conv.guest_email || '',
-    propertyId:     conv.property_id || '',
-    propertyName:   conv.property_name || '',
-    checkin,
-    checkout,
-    amountRooms:    conv.amount_rooms    || null,
-    amountTaxes:    conv.amount_taxes    || null,
-    amountCleaning: conv.amount_cleaning || null,
-    amountTotal:    conv.amount_total    || null,
-    conversationId: conv.id || window.currentConversationId || null,
-  });
-};
-</script>
+
 <!-- ============================================================
      MODAL FACTURE — insérer avant </body>
      ============================================================ -->
@@ -3198,6 +3175,32 @@ ${result.downloadUrl}
     obs.observe(invModal,   { attributes: true, attributeFilter: ['style'] });
   })();
 })();
+</script>
+
+<script>
+// ── openInvoiceFromConversation — défini après openInvoiceModal ─────
+window.openInvoiceFromConversation = function() {
+  var conv = window.currentChatConv;
+  if (!conv) return;
+  var checkin  = (conv.reservation_start_date || conv.startDate || '').split('T')[0];
+  var checkout = (conv.reservation_end_date   || conv.endDate   || '').split('T')[0];
+  var name = conv.guest_display_name || conv.guest_first_name
+    ? (conv.guest_first_name || '') + (conv.guest_last_name ? ' ' + conv.guest_last_name : '')
+    : (conv.guest_name || '');
+  openInvoiceModal({
+    guestName:      name.trim() || conv.guest_name || '',
+    guestEmail:     conv.guest_email || '',
+    propertyId:     conv.property_id || '',
+    propertyName:   conv.property_name || '',
+    checkin,
+    checkout,
+    amountRooms:    conv.amount_rooms    || null,
+    amountTaxes:    conv.amount_taxes    || null,
+    amountCleaning: conv.amount_cleaning || null,
+    amountTotal:    conv.amount_total    || null,
+    conversationId: conv.id || window.currentConversationId || null,
+  });
+};
 </script>
 
 </body>
