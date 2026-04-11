@@ -483,8 +483,10 @@ function renderCalendar() {
   // Construire un Set des dates bloquées
   const bookedSet = new Set();
   (p.bookedDates || []).forEach(({ start, end }) => {
-    const s = new Date(start), e = new Date(end);
-    for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+    // Forcer midi pour éviter le décalage UTC/local
+    const s = new Date(String(start).substring(0,10) + 'T12:00:00');
+    const e = new Date(String(end).substring(0,10) + 'T12:00:00');
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
       bookedSet.add(d.toISOString().split('T')[0]);
     }
   });
@@ -507,8 +509,11 @@ function renderCalendar() {
   `;
 
   for (let day = 1; day <= lastDay.getDate(); day++) {
-    const date = new Date(year, month, day);
-    const dateStr = date.toISOString().split('T')[0];
+    // Forcer midi pour éviter décalage UTC
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    const dateStr = `${year}-${mm}-${dd}`;
+    const date = new Date(dateStr + 'T12:00:00');
     const isPast = date < today;
     const isBooked = bookedSet.has(dateStr);
     const isToday = date.toDateString() === today.toDateString();
