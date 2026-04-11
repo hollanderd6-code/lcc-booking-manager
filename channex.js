@@ -142,6 +142,32 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
       payload: { channex_property_id, channex_room_type_id, channex_rate_plan_id }
     });
 
+    // ✅ Créer automatiquement les webhooks pour ce logement
+    try {
+      await channexAPI.post('/webhooks', {
+        webhook: {
+          property_id: channex_property_id,
+          callback_url: 'https://www.boostinghost.fr/api/channex/webhook',
+          event_mask: 'booking',
+          is_active: true,
+          send_data: true
+        }
+      });
+      await channexAPI.post('/webhooks', {
+        webhook: {
+          property_id: channex_property_id,
+          callback_url: 'https://www.boostinghost.fr/api/channex/webhook-message',
+          event_mask: 'message',
+          is_active: true,
+          send_data: true
+        }
+      });
+      console.log(`✅ [CHANNEX] Webhooks créés pour property ${channex_property_id}`);
+    } catch (webhookErr) {
+      // Non bloquant — les webhooks peuvent être créés manuellement si besoin
+      console.warn(`⚠️ [CHANNEX] Erreur création webhooks (non bloquant):`, webhookErr.response?.data || webhookErr.message);
+    }
+
     return { channex_property_id, channex_room_type_id, channex_rate_plan_id };
 
   } catch (e) {
