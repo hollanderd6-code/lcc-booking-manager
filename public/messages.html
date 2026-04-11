@@ -3051,7 +3051,7 @@ window.openInvoiceFromConversation = function() {
       ${!withVat ? '<div class="inv-footer-note">TVA non applicable — Art. 293B du CGI</div>' : ''}
     `;
 
-    if (sendBtn) sendBtn.disabled = !clientEmail;
+    if (sendBtn) sendBtn.disabled = false;  // ✅ Actif dès que nom + logement sont remplis
   };
 
   window.sendInvoiceFromModal = async function() {
