@@ -19769,18 +19769,29 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
   let errorMessage = null;
 
   try {
-    // Envoyer via Channex si booking_id disponible
-    if (conv.channex_booking_id) {
-      await sendBookingMessage(conv.channex_booking_id, msg);
-    }
-
-    // Sauvegarder en DB messages
+    // Sauvegarder en DB d'abord
     const saved = await pool.query(
       `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
        VALUES ($1, 'property', $2, $3, TRUE) RETURNING *`,
       [conv.id, `tpl_${template.id}`, msg]
     );
     if (io) io.to(`conversation_${conv.id}`).emit('new_message', saved.rows[0]);
+
+    // Envoyer via Channex si booking_id disponible (non bloquant)
+    if (conv.channex_booking_id) {
+      try {
+        await sendBookingMessage(conv.channex_booking_id, msg);
+        console.log(`✅ [TPL SEND] Message envoyé via Channex (booking ${conv.channex_booking_id})`);
+      } catch(channexErr) {
+        const isThreadMissing = JSON.stringify(channexErr.response?.data || '').includes('thread_id');
+        if (isThreadMissing) {
+          console.log(`ℹ️ [TPL SEND] Pas de thread Channex pour ce booking (résa sans messagerie plateforme)`);
+        } else {
+          console.warn(`⚠️ [TPL SEND] Channex error:`, channexErr.message);
+        }
+        // Ne pas marquer comme erreur — message bien sauvé en DB
+      }
+    }
 
   } catch(e) {
     status = 'error';
