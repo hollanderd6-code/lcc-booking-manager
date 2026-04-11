@@ -2472,9 +2472,9 @@ function switchMsgsTab(tab) {
   if (panelOTA) panelOTA.classList.toggle('active', tab === 'ota');
 
   if (tab === 'templates' && !window._templatesLoaded) {
-    loadTemplates();
-    loadTemplateProperties();
     window._templatesLoaded = true;
+    // Charger les propriétés d'abord, puis les templates
+    loadTemplateProperties().then(() => loadTemplates());
   }
   if (tab === 'ota' && !channexPropertiesLoaded) {
     loadChannexProperties();
@@ -3392,8 +3392,7 @@ async function loadTemplateProperties() {
     const token = localStorage.getItem('lcc_token');
     const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
-    const props = data.properties || data || [];
-
+    const props = (data.properties || data || []).filter(p => p && (p.id || p._id) && p.name);
     window._tplProperties = props;
     ['tplPropertyFilter', 'tplProperty'].forEach(id => {
       const sel = document.getElementById(id);
@@ -3497,17 +3496,35 @@ async function toggleTemplate(id, active) {
   } catch(e) {}
 }
 
-async function deleteTemplate(id) {
-  // Pas de confirm — suppression directe
-  try {
-    const token = localStorage.getItem('lcc_token');
-    await fetch(`/api/message-templates/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    showBHToast('Template supprimé', 'info');
-    loadTemplates();
-  } catch(e) {}
+function deleteTemplate(id) {
+  // Modal confirmation custom (confirm() bloqué sur iOS)
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:24px;max-width:320px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+      <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
+      <div style="font-size:15px;font-weight:700;color:#0D1117;margin-bottom:8px;">Supprimer ce template ?</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:20px;">Cette action est irréversible.</div>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button id="tplDelCancel" style="flex:1;padding:10px;border-radius:10px;border:1px solid #e5e7eb;background:white;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">Annuler</button>
+        <button id="tplDelConfirm" style="flex:1;padding:10px;border-radius:10px;border:none;background:#EF4444;color:white;font-size:13px;font-weight:600;cursor:pointer;">Supprimer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  document.getElementById('tplDelCancel').onclick = () => overlay.remove();
+  document.getElementById('tplDelConfirm').onclick = async () => {
+    overlay.remove();
+    try {
+      const token = localStorage.getItem('lcc_token');
+      await fetch(`/api/message-templates/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      showBHToast('Template supprimé', 'info');
+      loadTemplates();
+    } catch(e) {}
+  };
 }
 
 // Fermer modal en cliquant dehors
