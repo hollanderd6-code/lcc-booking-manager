@@ -23670,7 +23670,11 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
     // Chercher le channex_booking_id lié
     const resaResult = await pool.query(
       `SELECT r.channex_booking_id FROM reservations r
-       JOIN conversations c ON c.property_id = r.property_id
+       JOIN conversations c ON (
+         (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+         OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+             AND DATE(r.start_date) = DATE(c.reservation_start_date))
+       )
        WHERE c.id = $1 AND r.channex_booking_id IS NOT NULL
        LIMIT 1`,
       [conversationId]
@@ -23711,7 +23715,11 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
     // Trouver le channex_booking_id
     const resaResult = await pool.query(
       `SELECT r.channex_booking_id, r.guest_name FROM reservations r
-       JOIN conversations c ON c.property_id = r.property_id
+       JOIN conversations c ON (
+         (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+         OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+             AND DATE(r.start_date) = DATE(c.reservation_start_date))
+       )
        WHERE c.id = $1 AND r.channex_booking_id IS NOT NULL
        LIMIT 1`,
       [conversationId]
