@@ -19805,12 +19805,27 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
 
     // Remplacer les variables dans le message
     const guestFirst = (c.guest_first_name || c.guest_name || '').split(' ')[0];
+    // Récupérer les infos du logement pour les variables avancées
+    const propInfo = await pool.query(
+      'SELECT address, arrival_time, departure_time, access_code, wifi_name, wifi_password, practical_info, welcome_book_url FROM properties WHERE id = $1',
+      [c.property_id]
+    ).catch(() => ({ rows: [{}] }));
+    const pi = propInfo.rows[0] || {};
+
     const msg = tmpl.rows[0].message
       .replace(/\{prenom\}/gi, guestFirst)
       .replace(/\{nom\}/gi, c.guest_name || '')
       .replace(/\{logement\}/gi, c.property_name || '')
       .replace(/\{arrivee\}/gi, c.reservation_start_date ? new Date(c.reservation_start_date).toLocaleDateString('fr-FR') : '')
-      .replace(/\{depart\}/gi, c.reservation_end_date ? new Date(c.reservation_end_date).toLocaleDateString('fr-FR') : '');
+      .replace(/\{depart\}/gi, c.reservation_end_date ? new Date(c.reservation_end_date).toLocaleDateString('fr-FR') : '')
+      .replace(/\{adresse\}/gi, pi.address || '')
+      .replace(/\{heure_arrivee\}/gi, pi.arrival_time || '')
+      .replace(/\{heure_depart\}/gi, pi.departure_time || '')
+      .replace(/\{code_acces\}/gi, pi.access_code || '')
+      .replace(/\{wifi_nom\}/gi, pi.wifi_name || '')
+      .replace(/\{wifi_mdp\}/gi, pi.wifi_password || '')
+      .replace(/\{instructions\}/gi, pi.practical_info || '')
+      .replace(/\{livret\}/gi, pi.welcome_book_url || '');
 
     if (c.channex_booking_id) {
       await sendBookingMessage(c.channex_booking_id, msg);
@@ -19889,7 +19904,15 @@ cron.schedule('0 * * * *', async () => {
             .replace(/{prenom}/gi, guestFirst)
             .replace(/{nom}/gi, conv.guest_name || '')
             .replace(/{arrivee}/gi, conv.reservation_start_date ? new Date(conv.reservation_start_date).toLocaleDateString('fr-FR') : '')
-            .replace(/{depart}/gi, conv.reservation_end_date ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR') : '');
+            .replace(/{depart}/gi, conv.reservation_end_date ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR') : '')
+            .replace(/{adresse}/gi, '')
+            .replace(/{heure_arrivee}/gi, '')
+            .replace(/{heure_depart}/gi, '')
+            .replace(/{code_acces}/gi, '')
+            .replace(/{wifi_nom}/gi, '')
+            .replace(/{wifi_mdp}/gi, '')
+            .replace(/{instructions}/gi, '')
+            .replace(/{livret}/gi, '');
 
           if (conv.channex_booking_id) {
             const { sendBookingMessage } = require('./channex');
