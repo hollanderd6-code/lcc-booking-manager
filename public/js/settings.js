@@ -443,7 +443,6 @@ async function saveProperty(event) {
   const wifiPassword = document.getElementById('propertyWifiPassword')?.value?.trim() || null;
   const accessInstructions = document.getElementById('propertyAccessInstructions')?.value?.trim() || null;
 
-  const arrivalMessage = document.getElementById('propertyArrivalMessage')?.value?.trim() || null;
 
   const basePriceRaw       = document.getElementById('propertyBasePrice')?.value;
   const weekendPriceRaw    = document.getElementById('propertyWeekendPrice')?.value;
@@ -487,7 +486,6 @@ async function saveProperty(event) {
   if (wifiName) formData.append('wifiName', wifiName);
   if (wifiPassword) formData.append('wifiPassword', wifiPassword);
   if (accessInstructions) formData.append('accessInstructions', accessInstructions);
-  if (arrivalMessage) formData.append('arrivalMessage', arrivalMessage);
   if (basePrice    !== null) formData.append('basePrice',    basePrice);
   if (weekendPrice !== null) formData.append('weekendPrice', weekendPrice);
   if (cleaningFee     !== null) formData.append('cleaningFee',     cleaningFee);
@@ -791,9 +789,7 @@ function openEditPropertyModal(propertyId) {
     document.getElementById("propertyAccessInstructions").value = property.accessInstructions || "";
   }
   // ✅ MESSAGE D'ARRIVÉE
-  if (document.getElementById("propertyArrivalMessage")) {
-    document.getElementById("propertyArrivalMessage").value = property.arrivalMessage || property.arrival_message || "";
-  }
+
   // ✅ PRIX PAR NUIT
   if (document.getElementById("propertyBasePrice")) {
     const bp = property.basePrice ?? property.base_price;
