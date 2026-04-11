@@ -23963,9 +23963,7 @@ N'hésitez pas à nous contacter si vous avez des questions. 😊`;
           const triggerTypes = ['on_booking'];
           if (isArrivalToday) triggerTypes.push('on_arrival');
 
-          // Si arrivée demain → déclencher before_arrival immédiatement
-          const tomorrowStr = new Date(nowParis.getTime() + 86400000).toISOString().split('T')[0];
-          if (arrivalStr === tomorrowStr) triggerTypes.push('before_arrival');
+          // before_arrival : toujours géré par le cron à 7h la veille
 
           console.log(`🔍 [TPL] Recherche templates ${triggerTypes.join('/')} pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivee aujourdhui -> on_arrival immediat)' : ''}`);
           const templates = await pool.query(
