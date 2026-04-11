@@ -1396,6 +1396,31 @@ ON invoice_download_tokens(token);
         CREATE INDEX IF NOT EXISTS idx_message_templates_property_id ON message_templates(property_id);
       `);
       console.log('✅ Table message_templates OK');
+
+    // ✅ Migration : table message_template_logs
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS message_template_logs (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          template_id INTEGER REFERENCES message_templates(id) ON DELETE SET NULL,
+          template_title TEXT,
+          conversation_id INTEGER,
+          guest_name TEXT,
+          property_name TEXT,
+          trigger_type TEXT,
+          message TEXT,
+          status TEXT NOT NULL DEFAULT 'sent',
+          error_message TEXT,
+          sent_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_tpl_logs_user_id ON message_template_logs(user_id);
+        CREATE INDEX IF NOT EXISTS idx_tpl_logs_sent_at ON message_template_logs(sent_at DESC);
+      `);
+      console.log('✅ Table message_template_logs OK');
+    } catch(e) {
+      console.log('ℹ️ message_template_logs:', e.message);
+    }
     } catch(e) {
       console.log('ℹ️ message_templates:', e.message);
     }
@@ -19716,6 +19741,73 @@ setupChatRoutes(app, pool, io, authenticateAny, checkSubscription);
 console.log('✅ Routes du chat initialisées');
 
 
+
+// ============================================================
+// 📨 HELPER : Envoyer un template et logger le résultat
+// ============================================================
+async function sendTemplateMessage(pool, io, { template, conv, property }) {
+  const { sendBookingMessage } = require('./channex');
+  const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
+
+  // Remplacer les variables
+  const msg = template.message
+    .replace(/{prenom}/gi, guestFirst)
+    .replace(/{nom}/gi, conv.guest_name || '')
+    .replace(/{logement}/gi, conv.property_name || property?.name || '')
+    .replace(/{arrivee}/gi, conv.reservation_start_date ? new Date(conv.reservation_start_date).toLocaleDateString('fr-FR') : '')
+    .replace(/{depart}/gi, conv.reservation_end_date ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR') : '')
+    .replace(/{adresse}/gi, property?.address || '')
+    .replace(/{heure_arrivee}/gi, property?.arrival_time || '')
+    .replace(/{heure_depart}/gi, property?.departure_time || '')
+    .replace(/{code_acces}/gi, property?.access_code || '')
+    .replace(/{wifi_nom}/gi, property?.wifi_name || '')
+    .replace(/{wifi_mdp}/gi, property?.wifi_password || '')
+    .replace(/{instructions}/gi, property?.practical_info || '')
+    .replace(/{livret}/gi, property?.welcome_book_url || '');
+
+  let status = 'sent';
+  let errorMessage = null;
+
+  try {
+    // Envoyer via Channex si booking_id disponible
+    if (conv.channex_booking_id) {
+      await sendBookingMessage(conv.channex_booking_id, msg);
+    }
+
+    // Sauvegarder en DB messages
+    const saved = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read)
+       VALUES ($1, 'property', $2, $3, TRUE) RETURNING *`,
+      [conv.id, `tpl_${template.id}`, msg]
+    );
+    if (io) io.to(`conversation_${conv.id}`).emit('new_message', saved.rows[0]);
+
+  } catch(e) {
+    status = 'error';
+    errorMessage = e.message;
+    console.error(`❌ [TPL SEND] Template ${template.id} conv ${conv.id}:`, e.message);
+  }
+
+  // Logger
+  try {
+    await pool.query(
+      `INSERT INTO message_template_logs
+        (user_id, template_id, template_title, conversation_id, guest_name, property_name, trigger_type, message, status, error_message)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [
+        conv.user_id, template.id, template.title,
+        conv.id, conv.guest_name || null,
+        conv.property_name || property?.name || null,
+        template.trigger_type, msg, status, errorMessage
+      ]
+    );
+  } catch(e) {
+    console.warn('⚠️ [TPL LOG]', e.message);
+  }
+
+  return { status, message: msg };
+}
+
 // ============================================================
 // 📨 ROUTES MESSAGE TEMPLATES
 // ============================================================
@@ -19840,7 +19932,42 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
 
     if (io) io.to(`conversation_${conversation_id}`).emit('new_message', saved.rows[0]);
 
+    // Logger l'envoi
+    try {
+      await pool.query(
+        `INSERT INTO message_template_logs
+          (user_id, template_id, template_title, conversation_id, guest_name, property_name, trigger_type, message, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'sent')`,
+        [userId, tmpl.rows[0].id, tmpl.rows[0].title, conversation_id,
+         c.guest_name || null, c.property_name || null, 'manual', msg]
+      );
+    } catch(e) {}
+
     res.json({ success: true, message: saved.rows[0] });
+  } catch(e) {
+    // Logger l'erreur
+    try {
+      await pool.query(
+        `INSERT INTO message_template_logs (user_id, template_id, template_title, trigger_type, message, status, error_message)
+         VALUES ($1,$2,$3,'manual','',$4,$5)`,
+        [req.user.id, req.params.id, '', 'error', e.message]
+      );
+    } catch(le) {}
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET — historique des logs d'envoi
+app.get('/api/message-template-logs', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 100;
+    const result = await pool.query(
+      `SELECT * FROM message_template_logs WHERE user_id = $1 ORDER BY sent_at DESC LIMIT $2`,
+      [userId, limit]
+    );
+    const total = await pool.query('SELECT COUNT(*) FROM message_template_logs WHERE user_id = $1', [userId]);
+    res.json({ logs: result.rows, total: parseInt(total.rows[0].count) });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
@@ -23798,6 +23925,30 @@ N'hésitez pas à nous contacter si vous avez des questions. 😊`;
 
           await sendAutoMessage(pool, io, convId, confirmMsg, result.channex_booking_id || null);
           console.log(`✅ [CHANNEX] Message de confirmation envoyé (conv ${convId})`);
+
+          // ✅ Déclencher les templates on_booking actifs
+          try {
+            const templates = await pool.query(
+              `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = 'on_booking' AND active = TRUE
+               AND (property_id IS NULL OR property_id = $2)`,
+              [result.user_id, result.property_id]
+            );
+            if (templates.rows.length > 0) {
+              const convRow = await pool.query('SELECT * FROM conversations WHERE id = $1', [convId]);
+              const conv = { ...convRow.rows[0], user_id: result.user_id, property_name: propertyName };
+              const propRow = await pool.query(
+                'SELECT address, arrival_time, departure_time, access_code, wifi_name, wifi_password, practical_info, welcome_book_url, name FROM properties WHERE id = $1',
+                [result.property_id]
+              );
+              const property = propRow.rows[0] || {};
+              for (const tmpl of templates.rows) {
+                await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
+                console.log(`✅ [TPL on_booking] Template "${tmpl.title}" envoyé (conv ${convId})`);
+              }
+            }
+          } catch(tplErr) {
+            console.warn('⚠️ [TPL on_booking]', tplErr.message);
+          }
 
         } catch (confirmErr) {
           console.error('⚠️ [CHANNEX WEBHOOK] Erreur conversation/message:', confirmErr.message);
