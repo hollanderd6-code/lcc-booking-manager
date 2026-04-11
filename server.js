@@ -19835,7 +19835,7 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
 // 📨 INITIALISATION DU CRON JOB DES MESSAGES D'ARRIVÉE
 // ============================================
 initArrivalMessagesCron(pool, io);
-console.log('✅ Cron job messages d'arrivée initialisé');
+console.log("✅ Cron job messages d'arrivée initialisé");
 
 // ✅ Cron message_templates — toutes les heures
 cron.schedule('0 * * * *', async () => {
