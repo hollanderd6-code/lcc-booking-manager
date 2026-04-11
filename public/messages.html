@@ -3365,7 +3365,7 @@ async function loadTemplates() {
           <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">
             <i class="fas fa-bolt" style="margin-right:4px;color:#1A7A5E;"></i>${TRIGGER_LABELS[t.trigger_type] || t.trigger_type}
             ${t.trigger_offset_hours > 0 ? ` · ${t.trigger_offset_hours}h` : ''}
-            ${t.property_id ? ` · <i class="fas fa-home" style="margin:0 3px;"></i>Logement spécifique` : ' · Tous les logements'}
+            ${t.property_id ? ` · <i class="fas fa-home" style="margin:0 3px;"></i>${(window._tplProperties || []).find(p => (p.id || p._id) === t.property_id)?.name || 'Logement spécifique'}` : ' · Tous les logements'}
           </div>
           <div style="font-size:12px;color:#374151;background:#f9fafb;border-radius:8px;padding:8px 10px;line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden;">${t.message}</div>
         </div>
@@ -3394,6 +3394,7 @@ async function loadTemplateProperties() {
     const data = await res.json();
     const props = data.properties || data || [];
 
+    window._tplProperties = props;
     ['tplPropertyFilter', 'tplProperty'].forEach(id => {
       const sel = document.getElementById(id);
       if (!sel) return;
@@ -3497,7 +3498,7 @@ async function toggleTemplate(id, active) {
 }
 
 async function deleteTemplate(id) {
-  if (!confirm('Supprimer ce template ?')) return;
+  // Pas de confirm — suppression directe
   try {
     const token = localStorage.getItem('lcc_token');
     await fetch(`/api/message-templates/${id}`, {
