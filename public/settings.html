@@ -1873,13 +1873,18 @@ function insertVariable(textareaId, variable, event) {
   background: rgba(26,122,94,0.04);
 }
 .chip-label:hover i { opacity: 0.8; }
-.chip-toggle:checked + .chip-label {
+.chip-toggle:checked + .chip-label,
+.form-group .chip-toggle:checked + .chip-label {
   background: #1A7A5E;
   border-color: #1A7A5E;
-  color: #fff;
+  color: #fff !important;
   box-shadow: 0 2px 8px rgba(26,122,94,0.25);
 }
-.chip-toggle:checked + .chip-label i { opacity: 1; }
+.chip-toggle:checked + .chip-label i,
+.form-group .chip-toggle:checked + .chip-label i {
+  opacity: 1;
+  color: #fff !important;
+}
 [data-theme="dark"] .chip-label {
   background: rgba(255,255,255,0.06);
   border-color: rgba(255,255,255,0.15);
