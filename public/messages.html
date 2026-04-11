@@ -2690,6 +2690,7 @@ window.openInvoiceFromConversation = function() {
     amountTaxes:    conv.amount_taxes    || null,
     amountCleaning: conv.amount_cleaning || null,
     amountTotal:    conv.amount_total    || null,
+    conversationId: conv.id || window.currentConversationId || null,
   });
 };
 </script>
@@ -2875,7 +2876,7 @@ window.openInvoiceFromConversation = function() {
         <i class="fas fa-envelope"></i> Envoyer par email
       </button>
       <button class="inv-btn inv-btn-primary" id="inv_sendBtn" onclick="sendInvoiceFromModal()" disabled>
-        <i class="fas fa-link"></i> Générer le lien
+        <i class="fas fa-paper-plane"></i> Envoyer par message
       </button>
     </div>
   </div>
@@ -2885,6 +2886,7 @@ window.openInvoiceFromConversation = function() {
 // ── Invoice Modal ────────────────────────────────────────────
 (function() {
   window.openInvoiceModal = function(data) {
+    window._invoiceConversationId = data.conversationId || null;
     // data = { guestName, guestEmail, propertyId, propertyName, checkin, checkout,
     //          amountRooms, amountTaxes, amountCleaning, guest_country, occupancy_adults }
     data = data || {};
@@ -3093,23 +3095,42 @@ window.openInvoiceFromConversation = function() {
       if (!res.ok) throw new Error(result.error || 'Erreur génération');
 
       if (result.downloadUrl) {
-        // Copier le lien dans le presse-papier
-        try {
-          await navigator.clipboard.writeText(result.downloadUrl);
-          showBHToast('✅ Lien copié ! Collez-le dans le chat avec votre voyageur.', 'success');
-        } catch(e) {
-          // Fallback : afficher le lien
-          prompt('Copiez ce lien à envoyer à votre voyageur :', result.downloadUrl);
-        }
-        // Stocker le lien pour pouvoir l'envoyer via email aussi
         window._lastInvoiceDownloadUrl = result.downloadUrl;
         window._lastInvoiceNumber = result.invoiceNumber;
+
         // Activer le bouton email
         const emailBtn = document.getElementById('inv_emailBtn');
-        if (emailBtn) {
-          emailBtn.disabled = false;
-          emailBtn.style.borderColor = '#1A7A5E';
-          emailBtn.style.color = '#1A7A5E';
+        if (emailBtn) { emailBtn.disabled = false; emailBtn.style.borderColor = '#1A7A5E'; emailBtn.style.color = '#1A7A5E'; }
+
+        // Envoyer dans le chat si conversation disponible
+        const convId = window._invoiceConversationId;
+        if (convId) {
+          const guestName = document.getElementById('inv_clientName')?.value || 'Bonjour';
+          const firstName = guestName.split(' ')[0];
+          const message = `Bonjour ${firstName},
+
+Voici votre facture pour votre séjour, il vous suffit de cliquer sur le lien suivant :
+${result.downloadUrl}
+
+À bientôt,`;
+
+          try {
+            await fetch(\`/api/chat/conversations/\${convId}/send-platform\`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
+              body: JSON.stringify({ message })
+            });
+            showBHToast('✅ Facture envoyée dans le chat !', 'success');
+            closeInvoiceModal();
+          } catch(e) {
+            // Fallback : copier le lien
+            try { await navigator.clipboard.writeText(result.downloadUrl); } catch(e2) {}
+            showBHToast('✅ Lien copié (envoi chat indisponible)', 'info');
+          }
+        } else {
+          // Pas de conversation — copier le lien
+          try { await navigator.clipboard.writeText(result.downloadUrl); } catch(e) {}
+          showBHToast('✅ Lien copié dans le presse-papier !', 'success');
         }
       }
     } catch (err) {
