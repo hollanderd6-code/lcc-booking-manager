@@ -2189,28 +2189,31 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     background: rgba(245,242,236,0.97) !important;
     backdrop-filter: blur(12px) !important;
     border-bottom: 1px solid rgba(200,184,154,0.4) !important;
+    height: 44px !important;
   }
-  .msgs-tab { padding: 10px 14px !important; font-size: 12px !important; }
+  .msgs-tab { padding: 0 14px !important; font-size: 12px !important; height: 44px !important; }
 
-  /* Décaler msgs-split sous les onglets */
+  /* msgs-split décalé sous header(60px) + onglets(44px) */
   .msgs-split,
   html[data-theme-v3="1"] .msgs-split {
     top: calc(60px + 44px + env(safe-area-inset-top, 0px)) !important;
   }
 
-  /* panelTemplates en fixed aussi pour être visible */
+  /* panelTemplates : par-dessus msgs-split quand actif */
   #panelTemplates {
+    display: none !important;
     position: fixed !important;
     top: calc(60px + 44px + env(safe-area-inset-top, 0px)) !important;
     bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
     left: 0 !important; right: 0 !important;
-    z-index: 55 !important;
+    z-index: 52 !important;
     overflow-y: auto !important;
-    display: none !important;
+    background: #F5F2EC !important;
+    padding: 16px !important;
   }
   #panelTemplates.active { display: block !important; }
 
-  /* panelGuests : visible via msgs-split */
+  /* msgs-panel */
   .msgs-panel, .msgs-panel.active {
     display: flex !important;
     flex-direction: column !important;
@@ -2222,7 +2225,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     height: auto !important;
     overflow: hidden !important;
   }
-  #panelGuests { position: static !important; height: 100% !important; }
 
   /* ── 2. CACHER ÉLÉMENTS INUTILES SUR MOBILE ── */
   #bhHeader,
@@ -2498,6 +2500,12 @@ function switchMsgsTab(tab) {
   document.getElementById('panelGuests').classList.toggle('active', tab === 'guests');
   const panelTpl = document.getElementById('panelTemplates');
   if (panelTpl) panelTpl.classList.toggle('active', tab === 'templates');
+
+  // Sur mobile : cacher/montrer msgs-split selon l'onglet
+  const msgsSplit = document.querySelector('.msgs-split');
+  if (msgsSplit && window.innerWidth <= 1366) {
+    msgsSplit.style.display = tab === 'templates' ? 'none' : '';
+  }
   const panelOTA = document.getElementById('panelOTA');
   if (panelOTA) panelOTA.classList.toggle('active', tab === 'ota');
 
