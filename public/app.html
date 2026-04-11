@@ -10645,6 +10645,18 @@ if (window.Capacitor) {
       else if (typeof refreshCalendar === 'function') refreshCalendar();
       else if (typeof renderCalendar === 'function') renderCalendar();
     });
+    s.on('reservation_cancelled', function(d) {
+      console.log('❌ Réservation annulée via socket, rafraîchissement calendrier...', d);
+      if (typeof loadCalendarData === 'function') loadCalendarData();
+      else if (typeof refreshCalendar === 'function') refreshCalendar();
+      else if (typeof renderCalendar === 'function') renderCalendar();
+    });
+    s.on('calendar_refresh', function(d) {
+      console.log('🔄 Rafraîchissement calendrier demandé via socket...');
+      if (typeof loadCalendarData === 'function') loadCalendarData();
+      else if (typeof refreshCalendar === 'function') refreshCalendar();
+      else if (typeof renderCalendar === 'function') renderCalendar();
+    });
     s.on('disconnect', function() { socketOK = false; });
     s.on('connect_error', function(e) { console.log('🧹 Socket err:', e.message); });
   }
