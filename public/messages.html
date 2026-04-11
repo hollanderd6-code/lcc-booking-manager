@@ -3055,8 +3055,7 @@ window.openInvoiceFromConversation = function() {
   };
 
   window.sendInvoiceFromModal = async function() {
-    const clientEmail = document.getElementById('inv_clientEmail')?.value;
-    if (!clientEmail) { alert('Veuillez renseigner l\'email du client'); return; }
+    const clientEmail = document.getElementById('inv_clientEmail')?.value || null;
 
     const propSel = document.getElementById('inv_propertyName');
     const data = {
