@@ -3028,30 +3028,25 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  position: absolute;
-  top: calc(100% + 7px);
-  left: auto;
-  right: 0;
-  transform: none;
+  position: fixed;
   background: #0D1117;
   color: #f1f5f9;
-  font-size: 11.5px;
-  line-height: 1.5;
-  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  padding: 8px 12px;
   border-radius: 8px;
   max-width: 220px;
   white-space: normal;
   width: max-content;
-  z-index: 9999;
+  z-index: 99999;
   transition: opacity .15s;
-  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  box-shadow: 0 4px 20px rgba(0,0,0,.25);
 }
 .bh-tooltip-box::after {
   content: '';
   position: absolute;
-  bottom: 100%; right: 4px;
-  left: auto;
-  transform: none;
+  bottom: 100%;
+  right: 6px;
   border: 5px solid transparent;
   border-bottom-color: #0D1117;
 }
