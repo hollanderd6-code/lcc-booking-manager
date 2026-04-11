@@ -3325,8 +3325,8 @@ window.openInvoiceFromConversation = function() {
 
 const TRIGGER_LABELS = {
   'on_booking':      'À la réservation',
-  'before_arrival':  'Avant l'arrivée',
-  'on_arrival':      'Jour de l'arrivée',
+  'before_arrival':  "Avant l'arrivée",
+  'on_arrival':      "Jour de l'arrivée",
   'after_departure': 'Après le départ'
 };
 
@@ -3392,9 +3392,7 @@ async function loadTemplateProperties() {
     const token = localStorage.getItem('lcc_token');
     const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
-    console.log('🏠 [TPL] properties data:', JSON.stringify(data).substring(0, 200));
-    const props = (data.properties || data || []).filter(p => p && (p.id || p._id) && (p.name));
-    console.log('🏠 [TPL] props count:', props.length);
+    const props = data.properties || data || [];
 
     ['tplPropertyFilter', 'tplProperty'].forEach(id => {
       const sel = document.getElementById(id);
@@ -3423,8 +3421,7 @@ function openTemplateModal(template = null) {
   document.getElementById('tplModalTitle').textContent = template ? 'Modifier le template' : 'Nouveau template';
   updateOffsetLabel();
   loadTemplateProperties();
-  const modal = document.getElementById('templateModal');
-  modal.style.cssText = 'display:flex !important;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;align-items:center;justify-content:center;padding:16px;';
+  document.getElementById('templateModal').style.display = 'flex';
 }
 
 function closeTemplateModal() {
@@ -3437,10 +3434,10 @@ function updateOffsetLabel() {
   const label = document.getElementById('tplOffsetLabel');
   if (trigger === 'before_arrival') {
     wrap.style.display = 'block';
-    label.textContent = 'Nombre d'heures avant l'arrivée';
+    label.textContent = "Nombre d'heures avant l'arrivée";
   } else if (trigger === 'after_departure') {
     wrap.style.display = 'block';
-    label.textContent = 'Nombre d'heures après le départ';
+    label.textContent = "Nombre d'heures après le départ";
   } else {
     wrap.style.display = 'none';
   }
@@ -3471,10 +3468,6 @@ async function saveTemplate() {
     showBHToast(id ? '✅ Template mis à jour' : '✅ Template créé', 'success');
     closeTemplateModal();
     window._templatesLoaded = false;
-  // Init bouton mobile
-  const isMobileInit = window.innerWidth <= 1366;
-  const mbtn = document.getElementById('mobileTemplatesBtn');
-  if (mbtn) mbtn.style.display = isMobileInit ? 'block' : 'none';
     loadTemplates();
   } catch(e) {
     showBHToast('Erreur : ' + e.message, 'error');
