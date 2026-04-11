@@ -2162,8 +2162,9 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   }
   /* Masquer le header injecté par bh-layout sur mobile */
   html[data-theme-v3="1"] header.main-header { display: none !important; }
-  /* Cacher l'onglet messages sur mobile (géré par mobile-header) */
-  .msgs-tabs { display: none !important; }
+  /* Sur mobile, afficher les onglets mais plus compacts */
+  .msgs-tabs { display: flex !important; padding: 0 8px !important; }
+  .msgs-tab { padding: 10px 10px !important; font-size: 11px !important; }
   /* msgs-panel remplit le split */
   .msgs-panel, .msgs-panel.active {
     display: flex !important;
