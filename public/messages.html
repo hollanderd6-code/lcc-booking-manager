@@ -2776,11 +2776,13 @@ function showBHToast(msg, type = 'info') {
   const c = document.getElementById('toastContainer');
   if (!c) return;
   const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+  const colors = { success: '#1A7A5E', error: '#EF4444', info: '#374151', warning: '#F59E0B' };
   const t = document.createElement('div');
   t.className = `toast ${type}`;
-  t.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${msg}</span>`;
+  t.style.cssText = `display:flex;align-items:center;gap:10px;padding:14px 20px;background:${colors[type]||colors.info};color:white;border-radius:14px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.18);margin-bottom:10px;`;
+  t.innerHTML = `<i class="fas ${icons[type] || icons.info}" style="font-size:16px;flex-shrink:0;"></i><span>${msg}</span>`;
   c.appendChild(t);
-  setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 300); }, 3500);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(() => t.remove(), 300); }, 3500);
 }
 </script>
 
@@ -3521,7 +3523,7 @@ function deleteTemplate(id) {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer ' + token }
       });
-      showBHToast('Template supprimé', 'info');
+      showBHToast('Template supprimé', 'success');
       loadTemplates();
     } catch(e) {}
   };
