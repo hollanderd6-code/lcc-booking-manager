@@ -2178,10 +2178,39 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   }
   /* Masquer le header injecté par bh-layout sur mobile */
   html[data-theme-v3="1"] header.main-header { display: none !important; }
-  /* Sur mobile, afficher les onglets mais plus compacts */
-  .msgs-tabs { display: flex !important; padding: 0 8px !important; }
-  .msgs-tab { padding: 10px 10px !important; font-size: 11px !important; }
-  /* msgs-panel remplit le split */
+  /* Sur mobile : onglets fixes sous le header */
+  .msgs-tabs {
+    display: flex !important;
+    position: fixed !important;
+    top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    left: 0 !important; right: 0 !important;
+    z-index: 60 !important;
+    padding: 0 !important;
+    background: rgba(245,242,236,0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200,184,154,0.4) !important;
+  }
+  .msgs-tab { padding: 10px 14px !important; font-size: 12px !important; }
+
+  /* Décaler msgs-split sous les onglets */
+  .msgs-split,
+  html[data-theme-v3="1"] .msgs-split {
+    top: calc(60px + 44px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* panelTemplates en fixed aussi pour être visible */
+  #panelTemplates {
+    position: fixed !important;
+    top: calc(60px + 44px + env(safe-area-inset-top, 0px)) !important;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 0 !important; right: 0 !important;
+    z-index: 55 !important;
+    overflow-y: auto !important;
+    display: none !important;
+  }
+  #panelTemplates.active { display: block !important; }
+
+  /* panelGuests : visible via msgs-split */
   .msgs-panel, .msgs-panel.active {
     display: flex !important;
     flex-direction: column !important;
@@ -2193,6 +2222,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     height: auto !important;
     overflow: hidden !important;
   }
+  #panelGuests { position: static !important; height: 100% !important; }
 
   /* ── 2. CACHER ÉLÉMENTS INUTILES SUR MOBILE ── */
   #bhHeader,
