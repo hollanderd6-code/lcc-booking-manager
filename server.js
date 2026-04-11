@@ -16530,10 +16530,56 @@ app.post('/api/invoice/create',
         console.error('❌ Push facture:', pushErr.message);
       }
 
+    // ✅ Toujours générer un token de téléchargement (même sans email)
+    let downloadUrl = null;
+    try {
+      const dlToken = crypto.randomBytes(32).toString('hex');
+      const dlExpires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+      const dlTotal = parseFloat(rentAmount||0) + parseFloat(touristTaxAmount||0) + parseFloat(cleaningFee||0);
+      const dlMeta = JSON.stringify({
+        clientName: clientName || '',
+        clientEmail: clientEmail || '',
+        clientAddress: clientAddress || '',
+        clientPostalCode: clientPostalCode || '',
+        clientCity: clientCity || '',
+        propertyName: propertyName || '',
+        propertyAddress: propertyAddress || '',
+        checkinDate: checkinDate || '',
+        checkoutDate: checkoutDate || '',
+        nights: nights || 0,
+        rentAmount: rentAmount || 0,
+        touristTaxAmount: touristTaxAmount || 0,
+        cleaningFee: cleaningFee || 0,
+        vatRate: vatRate || 0,
+        total: dlTotal,
+        invoiceNumber
+      });
+
+      // Générer le PDF si pas encore fait (cas sans sendEmail)
+      const pdfPath2 = path.join(INVOICE_PDF_DIR, `${invoiceNumber}.pdf`);
+      if (!fs.existsSync(pdfPath2)) {
+        await generateInvoicePdfToFile(pdfPath2);
+      }
+
+      await pool.query(
+        `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT DO NOTHING`,
+        [dlToken, userId, invoiceNumber, pdfPath2, dlExpires]
+      );
+
+      const baseUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+      downloadUrl = `${baseUrl}/api/invoice/download/${dlToken}`;
+      console.log(`✅ Lien téléchargement facture: ${downloadUrl}`);
+    } catch(dlErr) {
+      console.warn('⚠️ Erreur génération lien téléchargement:', dlErr.message);
+    }
+
     res.json({ 
       success: true, 
       invoiceNumber,
       invoiceId,
+      downloadUrl,
       message: 'Facture créée avec succès' 
     });
     
@@ -16542,6 +16588,51 @@ app.post('/api/invoice/create',
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// ── Envoyer le lien de téléchargement par email ─────────────
+app.post('/api/invoice/send-link', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { clientEmail, downloadUrl, invoiceNumber, clientName, propertyName } = req.body;
+    if (!clientEmail || !downloadUrl) return res.status(400).json({ error: 'clientEmail et downloadUrl requis' });
+
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = profileResult.rows[0];
+
+    const emailHtml = bhEmailTemplate({
+      icon: '📄',
+      title: `Facture ${invoiceNumber || ''}`,
+      subtitle: propertyName || '',
+      bodyHtml: `
+        <p>Bonjour <strong>${clientName || ''}</strong>,</p>
+        <p>Votre facture pour votre séjour à <strong>${propertyName || ''}</strong> est disponible en téléchargement :</p>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${downloadUrl}" style="display:inline-block;padding:14px 32px;background:#1A7A5E;color:white;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            📥 Télécharger ma facture
+          </a>
+        </div>
+        <p style="font-size:12px;color:#9ca3af;text-align:center;">Lien valable 1 an</p>
+        <p style="font-size:14px;color:#666;">Cordialement, <strong>${user?.company || 'Boostinghost'}</strong></p>
+      `
+    });
+
+    await sendEmailViaBrevo({
+      to: clientEmail,
+      subject: `Votre facture ${invoiceNumber || ''} – ${propertyName || ''}`,
+      html: emailHtml
+    });
+
+    console.log('✅ Email lien facture envoyé à:', clientEmail);
+    res.json({ success: true });
+  } catch(err) {
+    console.error('❌ /api/invoice/send-link:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================
 // FACTURES - ROUTES MODIFIÉES (AVEC RÉDUCTIONS)
 // ============================================
