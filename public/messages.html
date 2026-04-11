@@ -2760,7 +2760,7 @@ function _injectChannexMessages(channexMsgs, convId) {
     if (existingId) return; // déjà affiché
 
     const isGuest = m.sender === 'guest';
-    const time = m.inserted_at ? new Date(m.inserted_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const time = m.inserted_at ? new Date(m.inserted_at.endsWith('Z') ? m.inserted_at : m.inserted_at + 'Z').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
     const div = document.createElement('div');
     div.className = `chat-message ${isGuest ? 'guest' : 'owner'}`;
     div.setAttribute('data-channex-id', m.id);
@@ -2839,7 +2839,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatEl = document.getElementById('chatMessages');
         if (chatEl && data.message) {
           const m = data.message;
-          const time = new Date(m.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+          const rawTs = m.created_at || '';
+          const time = new Date(rawTs.endsWith('Z') ? rawTs : rawTs + 'Z').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
           const div = document.createElement('div');
           div.className = 'chat-message guest';
           div.innerHTML = `
