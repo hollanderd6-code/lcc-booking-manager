@@ -3092,7 +3092,7 @@ ${result.downloadUrl}
 À bientôt,`;
 
           try {
-            await fetch(\`/api/chat/conversations/\${convId}/send-platform\`, {
+            await fetch(`/api/chat/conversations/${convId}/send-platform`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
               body: JSON.stringify({ message })
