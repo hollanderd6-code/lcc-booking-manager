@@ -246,13 +246,13 @@ document.addEventListener('mouseover', function(e) {
   const box = icon.parentElement?.querySelector('.bh-tooltip-box');
   if (!box) return;
   const rect = icon.getBoundingClientRect();
-  // Positionner sous l'icône
-  box.style.top = (rect.bottom + 8) + 'px';
-  // Calculer si ça dépasse à droite
-  const boxWidth = 220;
-  let left = rect.right - boxWidth;
+  const boxWidth = 160;
+  // Positionner juste sous l'icône
+  box.style.top = (rect.bottom + 5) + 'px';
+  // Aligner à gauche de l'icône, décaler si débordement droit
+  let left = rect.left;
+  if (left + boxWidth > window.innerWidth - 8) left = window.innerWidth - boxWidth - 8;
   if (left < 8) left = 8;
-  if (rect.left + boxWidth < window.innerWidth) left = rect.left;
   box.style.left = left + 'px';
   box.style.right = 'auto';
 });
