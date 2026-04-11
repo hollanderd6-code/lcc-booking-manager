@@ -1377,6 +1377,29 @@ ON invoice_download_tokens(token);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings, cleaning_assignments, cleaning_checklists & cleaning_templates OK dans Postgres');
 
+    // ✅ Migration : table message_templates
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS message_templates (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          property_id TEXT,
+          title TEXT NOT NULL,
+          message TEXT NOT NULL,
+          trigger_type TEXT NOT NULL DEFAULT 'on_booking',
+          trigger_offset_hours INTEGER DEFAULT 0,
+          active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_message_templates_user_id ON message_templates(user_id);
+        CREATE INDEX IF NOT EXISTS idx_message_templates_property_id ON message_templates(property_id);
+      `);
+      console.log('✅ Table message_templates OK');
+    } catch(e) {
+      console.log('ℹ️ message_templates:', e.message);
+    }
+
     // Ajouter colonnes escalade sur conversations (si pas déjà existantes)
     try {
       await pool.query(`
@@ -19692,11 +19715,201 @@ io.on('connection', (socket) => {
 setupChatRoutes(app, pool, io, authenticateAny, checkSubscription);
 console.log('✅ Routes du chat initialisées');
 
+
+// ============================================================
+// 📨 ROUTES MESSAGE TEMPLATES
+// ============================================================
+
+// GET — liste des templates
+app.get('/api/message-templates', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { property_id } = req.query;
+    let q = 'SELECT * FROM message_templates WHERE user_id = $1';
+    const params = [userId];
+    if (property_id) { q += ' AND (property_id = $2 OR property_id IS NULL)'; params.push(property_id); }
+    q += ' ORDER BY created_at DESC';
+    const result = await pool.query(q, params);
+    res.json({ templates: result.rows });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST — créer un template
+app.post('/api/message-templates', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { property_id, title, message, trigger_type, trigger_offset_hours } = req.body;
+    if (!title || !message || !trigger_type) return res.status(400).json({ error: 'title, message et trigger_type requis' });
+    const result = await pool.query(
+      `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0]
+    );
+    res.json({ success: true, template: result.rows[0] });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT — modifier un template
+app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { title, message, trigger_type, trigger_offset_hours, active, property_id } = req.body;
+    const result = await pool.query(
+      `UPDATE message_templates SET
+        title = COALESCE($1, title),
+        message = COALESCE($2, message),
+        trigger_type = COALESCE($3, trigger_type),
+        trigger_offset_hours = COALESCE($4, trigger_offset_hours),
+        active = COALESCE($5, active),
+        property_id = $6,
+        updated_at = NOW()
+       WHERE id = $7 AND user_id = $8 RETURNING *`,
+      [title, message, trigger_type, trigger_offset_hours, active, property_id || null, req.params.id, userId]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Template non trouvé' });
+    res.json({ success: true, template: result.rows[0] });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE — supprimer un template
+app.delete('/api/message-templates/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM message_templates WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST — envoyer un template manuellement sur une conversation
+app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { conversation_id } = req.body;
+    if (!conversation_id) return res.status(400).json({ error: 'conversation_id requis' });
+
+    const tmpl = await pool.query('SELECT * FROM message_templates WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+    if (!tmpl.rows[0]) return res.status(404).json({ error: 'Template non trouvé' });
+
+    const conv = await pool.query('SELECT * FROM conversations WHERE id = $1 AND user_id = $2', [conversation_id, userId]);
+    if (!conv.rows[0]) return res.status(404).json({ error: 'Conversation non trouvée' });
+
+    const { sendBookingMessage } = require('./channex');
+    const c = conv.rows[0];
+
+    // Remplacer les variables dans le message
+    const guestFirst = (c.guest_first_name || c.guest_name || '').split(' ')[0];
+    const msg = tmpl.rows[0].message
+      .replace(/\{prenom\}/gi, guestFirst)
+      .replace(/\{nom\}/gi, c.guest_name || '')
+      .replace(/\{logement\}/gi, c.property_name || '')
+      .replace(/\{arrivee\}/gi, c.reservation_start_date ? new Date(c.reservation_start_date).toLocaleDateString('fr-FR') : '')
+      .replace(/\{depart\}/gi, c.reservation_end_date ? new Date(c.reservation_end_date).toLocaleDateString('fr-FR') : '');
+
+    if (c.channex_booking_id) {
+      await sendBookingMessage(c.channex_booking_id, msg);
+    }
+
+    // Sauvegarder en DB
+    const saved = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+       VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW()) RETURNING *`,
+      [conversation_id, msg]
+    );
+
+    if (io) io.to(`conversation_${conversation_id}`).emit('new_message', saved.rows[0]);
+
+    res.json({ success: true, message: saved.rows[0] });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ============================================
 // 📨 INITIALISATION DU CRON JOB DES MESSAGES D'ARRIVÉE
 // ============================================
 initArrivalMessagesCron(pool, io);
-console.log('✅ Cron job messages d\'arrivée initialisé');
+console.log('✅ Cron job messages d'arrivée initialisé');
+
+// ✅ Cron message_templates — toutes les heures
+cron.schedule('0 * * * *', async () => {
+  try {
+    const now = new Date();
+    const templates = await pool.query(
+      "SELECT * FROM message_templates WHERE active = TRUE"
+    );
+    for (const tmpl of templates.rows) {
+      // Trouver les conversations éligibles
+      let convQuery = '';
+      const params = [tmpl.user_id];
+
+      if (tmpl.trigger_type === 'on_booking') continue; // géré à la réservation
+
+      if (tmpl.trigger_type === 'before_arrival') {
+        // Envoyer X heures avant l'arrivée
+        const targetHour = new Date(now.getTime() + tmpl.trigger_offset_hours * 3600000);
+        convQuery = `SELECT c.* FROM conversations c
+          LEFT JOIN properties p ON p.id = c.property_id
+          WHERE c.user_id = $1
+          AND DATE(c.reservation_start_date) = DATE($2)
+          AND EXTRACT(HOUR FROM $2::timestamptz) = EXTRACT(HOUR FROM $2::timestamptz)
+          ${tmpl.property_id ? 'AND c.property_id = $3' : ''}`;
+        // simplified: envoyer si l'arrivée est dans trigger_offset_hours ± 1h
+      } else if (tmpl.trigger_type === 'after_booking') {
+        convQuery = null; // géré au webhook
+      } else if (tmpl.trigger_type === 'after_departure') {
+        const hoursAgo = new Date(now.getTime() - tmpl.trigger_offset_hours * 3600000);
+        convQuery = `SELECT c.* FROM conversations c WHERE c.user_id = $1
+          AND DATE(c.reservation_end_date) = DATE($2)
+          ${tmpl.property_id ? 'AND c.property_id = $3' : ''}`;
+      }
+
+      if (!convQuery) continue;
+
+      try {
+        const extraParams = tmpl.property_id ? [tmpl.user_id, now.toISOString(), tmpl.property_id] : [tmpl.user_id, now.toISOString()];
+        const convs = await pool.query(convQuery, extraParams);
+
+        for (const conv of convs.rows) {
+          // Vérifier pas déjà envoyé
+          const alreadySent = await pool.query(
+            `SELECT id FROM messages WHERE conversation_id = $1 AND sender_name = $2 AND created_at > NOW() - INTERVAL '25 hours'`,
+            [conv.id, `tpl_${tmpl.id}`]
+          );
+          if (alreadySent.rows.length > 0) continue;
+
+          const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
+          const msg = tmpl.message
+            .replace(/{prenom}/gi, guestFirst)
+            .replace(/{nom}/gi, conv.guest_name || '')
+            .replace(/{arrivee}/gi, conv.reservation_start_date ? new Date(conv.reservation_start_date).toLocaleDateString('fr-FR') : '')
+            .replace(/{depart}/gi, conv.reservation_end_date ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR') : '');
+
+          if (conv.channex_booking_id) {
+            const { sendBookingMessage } = require('./channex');
+            await sendBookingMessage(conv.channex_booking_id, msg).catch(() => {});
+          }
+
+          await pool.query(
+            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read) VALUES ($1, 'property', $2, $3, TRUE)`,
+            [conv.id, `tpl_${tmpl.id}`, msg]
+          );
+        }
+      } catch(e) {
+        console.warn(`⚠️ [MSG TPL] Erreur template ${tmpl.id}:`, e.message);
+      }
+    }
+  } catch(e) {
+    console.error('❌ [MSG TPL CRON]', e.message);
+  }
+});
+console.log('✅ Cron message_templates initialisé');
 
 // ============================================
 // 💰 INITIALISATION DU CRON JOB DES RAPPELS CAUTION
