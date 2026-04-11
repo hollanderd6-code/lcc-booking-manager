@@ -361,6 +361,8 @@ async function processChannexBooking(pool, bookingData) {
     const guest_country = guest.country || null; // code ISO ex: "FR"
     const guest_language = guest.language || null;
     const guest_city = guest.city || null;
+    const guest_address = guest.address || null;
+    const guest_zip = guest.zip || null;
 
     // ── Occupation ────────────────────────────────────────────
     const occupancy = attrs.occupancy || {};
@@ -499,19 +501,19 @@ async function processChannexBooking(pool, bookingData) {
         `UPDATE reservations SET
           start_date = $1, end_date = $2,
           guest_first_name = $3, guest_last_name = $4, guest_country = $5,
-          guest_language = $6, guest_city = $7,
-          occupancy_adults = $8, occupancy_children = $9,
-          amount_total = $10, amount_rooms = $11, amount_taxes = $12,
-          amount_cleaning = $13, ota_commission = $14,
-          days_breakdown = $15, services_raw = $16,
-          currency = $17, host_payout = $18, airbnb_data = $19,
+          guest_language = $6, guest_city = $7, guest_address = $8, guest_zip = $9,
+          occupancy_adults = $10, occupancy_children = $11,
+          amount_total = $12, amount_rooms = $13, amount_taxes = $14,
+          amount_cleaning = $15, ota_commission = $16,
+          days_breakdown = $17, services_raw = $18,
+          currency = $19, host_payout = $20, airbnb_data = $21,
           status = CASE WHEN status = 'cancelled' THEN 'confirmed' ELSE status END,
           updated_at = NOW()
-         WHERE channex_booking_id = $20`,
+         WHERE channex_booking_id = $22`,
         [
           arrival_date, departure_date,
           guest_first_name, guest_last_name, guest_country,
-          guest_language, guest_city,
+          guest_language, guest_city, guest_address, guest_zip,
           occupancy_adults, occupancy_children,
           amount_total, amount_rooms, final_amount_taxes,
           final_amount_cleaning, final_ota_commission,
@@ -536,20 +538,20 @@ async function processChannexBooking(pool, bookingData) {
       `INSERT INTO reservations 
         (uid, property_id, user_id, start_date, end_date,
          guest_name, guest_first_name, guest_last_name, guest_email, guest_phone,
-         guest_country, guest_language, guest_city,
+         guest_country, guest_language, guest_city, guest_address, guest_zip,
          occupancy_adults, occupancy_children,
          amount_total, amount_rooms, amount_taxes, amount_cleaning, ota_commission,
          days_breakdown, services_raw, currency,
          host_payout, airbnb_data,
          platform, source, status,
          channex_booking_id, channex_revision_id, ota_name, ota_reservation_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34)
        RETURNING *`,
       [
         uid, property_id, user_id,
         arrival_date, departure_date,
         guest_name, guest_first_name, guest_last_name, guest_email, guest_phone,
-        guest_country, guest_language, guest_city,
+        guest_country, guest_language, guest_city, guest_address, guest_zip,
         occupancy_adults, occupancy_children,
         amount_total, amount_rooms, final_amount_taxes, final_amount_cleaning, final_ota_commission,
         JSON.stringify(days_breakdown), JSON.stringify(all_services), currency,
