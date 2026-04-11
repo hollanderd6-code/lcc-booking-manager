@@ -19990,87 +19990,98 @@ app.get('/api/message-template-logs', authenticateToken, async (req, res) => {
 initArrivalMessagesCron(pool, io);
 console.log("✅ Cron job messages d'arrivée initialisé");
 
-// ✅ Cron message_templates — toutes les heures
-cron.schedule('0 * * * *', async () => {
+// ✅ Cron message_templates
+// - before_arrival  : la veille à 7h (Europe/Paris)
+// - on_arrival      : le jour J à 7h (Europe/Paris)
+// - after_departure : le jour du départ à 15h (Europe/Paris)
+
+async function runTemplatesCron(triggerTypes) {
   try {
-    const now = new Date();
+    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const todayStr = nowParis.toISOString().split('T')[0]; // YYYY-MM-DD heure Paris
+
     const templates = await pool.query(
-      "SELECT * FROM message_templates WHERE active = TRUE"
+      `SELECT * FROM message_templates WHERE active = TRUE AND trigger_type = ANY($1)`,
+      [triggerTypes]
     );
+    console.log(`⏰ [TPL CRON] ${triggerTypes.join('/')} — ${templates.rows.length} template(s) actif(s)`);
+
     for (const tmpl of templates.rows) {
-      // Trouver les conversations éligibles
-      let convQuery = '';
-      const params = [tmpl.user_id];
-
-      if (tmpl.trigger_type === 'on_booking') continue; // géré à la réservation
-
-      if (tmpl.trigger_type === 'before_arrival') {
-        // Envoyer X heures avant l'arrivée
-        const targetHour = new Date(now.getTime() + tmpl.trigger_offset_hours * 3600000);
-        convQuery = `SELECT c.* FROM conversations c
-          LEFT JOIN properties p ON p.id = c.property_id
-          WHERE c.user_id = $1
-          AND DATE(c.reservation_start_date) = DATE($2)
-          AND EXTRACT(HOUR FROM $2::timestamptz) = EXTRACT(HOUR FROM $2::timestamptz)
-          ${tmpl.property_id ? 'AND c.property_id = $3' : ''}`;
-        // simplified: envoyer si l'arrivée est dans trigger_offset_hours ± 1h
-      } else if (tmpl.trigger_type === 'after_booking') {
-        convQuery = null; // géré au webhook
-      } else if (tmpl.trigger_type === 'after_departure') {
-        const hoursAgo = new Date(now.getTime() - tmpl.trigger_offset_hours * 3600000);
-        convQuery = `SELECT c.* FROM conversations c WHERE c.user_id = $1
-          AND DATE(c.reservation_end_date) = DATE($2)
-          ${tmpl.property_id ? 'AND c.property_id = $3' : ''}`;
-      }
-
-      if (!convQuery) continue;
-
       try {
-        const extraParams = tmpl.property_id ? [tmpl.user_id, now.toISOString(), tmpl.property_id] : [tmpl.user_id, now.toISOString()];
-        const convs = await pool.query(convQuery, extraParams);
+        // Calculer la date cible selon le déclencheur
+        let targetDate = todayStr;
+        if (tmpl.trigger_type === 'before_arrival') {
+          // La veille → chercher les arrivées de demain
+          const tomorrow = new Date(nowParis);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          targetDate = tomorrow.toISOString().split('T')[0];
+        }
+
+        // Chercher les conversations éligibles
+        const dateCol = tmpl.trigger_type === 'after_departure'
+          ? 'reservation_end_date'
+          : 'reservation_start_date';
+
+        const convs = await pool.query(
+          `SELECT c.* FROM conversations c
+           WHERE c.user_id = $1
+           AND DATE(c.${dateCol} AT TIME ZONE 'Europe/Paris') = $2
+           AND c.status != 'cancelled'
+           ${tmpl.property_id ? 'AND c.property_id = $3' : ''}`,
+          tmpl.property_id ? [tmpl.user_id, targetDate, tmpl.property_id] : [tmpl.user_id, targetDate]
+        );
+
+        console.log(`  Template "${tmpl.title}" → ${convs.rows.length} conversation(s) ciblée(s) pour ${targetDate}`);
 
         for (const conv of convs.rows) {
-          // Vérifier pas déjà envoyé
+          // Anti-doublon : pas déjà envoyé dans les 23h
           const alreadySent = await pool.query(
-            `SELECT id FROM messages WHERE conversation_id = $1 AND sender_name = $2 AND created_at > NOW() - INTERVAL '25 hours'`,
-            [conv.id, `tpl_${tmpl.id}`]
+            `SELECT id FROM message_template_logs
+             WHERE template_id = $1 AND conversation_id = $2
+             AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent'`,
+            [tmpl.id, conv.id]
           );
-          if (alreadySent.rows.length > 0) continue;
-
-          const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
-          const msg = tmpl.message
-            .replace(/{prenom}/gi, guestFirst)
-            .replace(/{nom}/gi, conv.guest_name || '')
-            .replace(/{arrivee}/gi, conv.reservation_start_date ? new Date(conv.reservation_start_date).toLocaleDateString('fr-FR') : '')
-            .replace(/{depart}/gi, conv.reservation_end_date ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR') : '')
-            .replace(/{adresse}/gi, '')
-            .replace(/{heure_arrivee}/gi, '')
-            .replace(/{heure_depart}/gi, '')
-            .replace(/{code_acces}/gi, '')
-            .replace(/{wifi_nom}/gi, '')
-            .replace(/{wifi_mdp}/gi, '')
-            .replace(/{instructions}/gi, '')
-            .replace(/{livret}/gi, '');
-
-          if (conv.channex_booking_id) {
-            const { sendBookingMessage } = require('./channex');
-            await sendBookingMessage(conv.channex_booking_id, msg).catch(() => {});
+          if (alreadySent.rows.length > 0) {
+            console.log(`  ↳ Conv ${conv.id} déjà traitée, skip`);
+            continue;
           }
 
-          await pool.query(
-            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read) VALUES ($1, 'property', $2, $3, TRUE)`,
-            [conv.id, `tpl_${tmpl.id}`, msg]
+          // Récupérer les infos du logement
+          const propRow = await pool.query(
+            `SELECT address, arrival_time, departure_time, access_code, wifi_name,
+                    wifi_password, practical_info, welcome_book_url, name
+             FROM properties WHERE id = $1`,
+            [conv.property_id]
           );
+          const property = propRow.rows[0] || {};
+
+          await sendTemplateMessage(pool, io, {
+            template: tmpl,
+            conv: { ...conv, user_id: tmpl.user_id },
+            property
+          });
+          console.log(`  ↳ ✅ Template "${tmpl.title}" envoyé → conv ${conv.id} (${conv.guest_name})`);
         }
       } catch(e) {
-        console.warn(`⚠️ [MSG TPL] Erreur template ${tmpl.id}:`, e.message);
+        console.warn(`  ↳ ⚠️ Erreur template ${tmpl.id}:`, e.message);
       }
     }
   } catch(e) {
-    console.error('❌ [MSG TPL CRON]', e.message);
+    console.error('❌ [TPL CRON]', e.message);
   }
-});
-console.log('✅ Cron message_templates initialisé');
+}
+
+// Veille + Jour J à 7h00
+cron.schedule('0 7 * * *', () => {
+  runTemplatesCron(['before_arrival', 'on_arrival']);
+}, { timezone: 'Europe/Paris' });
+
+// Après départ à 15h00
+cron.schedule('0 15 * * *', () => {
+  runTemplatesCron(['after_departure']);
+}, { timezone: 'Europe/Paris' });
+
+console.log('✅ Cron message_templates initialisé (7h avant/arrivée, 15h après départ — Europe/Paris)');
 
 // ============================================
 // 💰 INITIALISATION DU CRON JOB DES RAPPELS CAUTION
