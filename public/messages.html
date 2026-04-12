@@ -2128,10 +2128,25 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       }).observe(list, { childList: true, subtree: true });
     }
 
-    // Watch chatMessages for image rendering
+    // Watch chatMessages for image rendering + timestamp
     var msgs = document.getElementById('chatMessages');
     if (msgs) {
-      new MutationObserver(function() { fixImageBubbles(); }).observe(msgs, { childList: true, subtree: true });
+      new MutationObserver(function() {
+        fixImageBubbles();
+        // Ajouter data-ts aux messages sans timestamp pour le tri Channex
+        msgs.querySelectorAll('.chat-message:not([data-ts])').forEach(function(el) {
+          var timeEl = el.querySelector('.chat-time, .chat-meta');
+          if (timeEl) {
+            var timeText = timeEl.textContent.trim().split('·')[0].trim(); // "20:34"
+            if (timeText && /^\d{2}:\d{2}$/.test(timeText)) {
+              var now = new Date();
+              var parts = timeText.split(':');
+              var d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(parts[0]), parseInt(parts[1]));
+              el.setAttribute('data-ts', d.getTime());
+            }
+          }
+        });
+      }).observe(msgs, { childList: true, subtree: true });
     }
   });
 
@@ -2751,25 +2766,51 @@ window.openConversation = async function(convId, ...args) {
 };
 
 function _injectChannexMessages(channexMsgs, convId) {
-  // Injecter les messages Channex qui ne sont pas déjà dans l'UI
   const chatEl = document.getElementById('chatMessages');
   if (!chatEl) return;
 
-  channexMsgs.forEach(m => {
-    const existingId = chatEl.querySelector(`[data-channex-id="${m.id}"]`);
-    if (existingId) return; // déjà affiché
+  // Trier par heure avant injection
+  const sorted = [...channexMsgs].sort((a, b) => {
+    const ta = a.inserted_at ? new Date(a.inserted_at.endsWith('Z') ? a.inserted_at : a.inserted_at + 'Z').getTime() : 0;
+    const tb = b.inserted_at ? new Date(b.inserted_at.endsWith('Z') ? b.inserted_at : b.inserted_at + 'Z').getTime() : 0;
+    return ta - tb;
+  });
+
+  sorted.forEach(m => {
+    if (chatEl.querySelector(`[data-channex-id="${m.id}"]`)) return;
 
     const isGuest = m.sender === 'guest';
-    const time = m.inserted_at ? new Date(m.inserted_at.endsWith('Z') ? m.inserted_at : m.inserted_at + 'Z').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const tsRaw = m.inserted_at || '';
+    const ts = new Date(tsRaw.endsWith('Z') ? tsRaw : tsRaw + 'Z');
+    const time = isNaN(ts) ? '' : fmtMsgTime(tsRaw);
+    const tsMs = isNaN(ts) ? 0 : ts.getTime();
+
     const div = document.createElement('div');
     div.className = `chat-message ${isGuest ? 'guest' : 'owner'}`;
     div.setAttribute('data-channex-id', m.id);
+    div.setAttribute('data-ts', tsMs);
     div.innerHTML = `
       <div class="chat-bubble">
         <div class="chat-text">${m.message}</div>
         <div class="chat-time">${time} · via plateforme</div>
       </div>`;
-    chatEl.appendChild(div);
+
+    // Insérer au bon endroit chronologiquement
+    if (tsMs > 0) {
+      const allMsgs = Array.from(chatEl.children);
+      let inserted = false;
+      for (const existing of allMsgs) {
+        const existingTs = parseInt(existing.getAttribute('data-ts') || 0);
+        if (existingTs > 0 && tsMs < existingTs) {
+          chatEl.insertBefore(div, existing);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) chatEl.appendChild(div);
+    } else {
+      chatEl.appendChild(div);
+    }
   });
 
   chatEl.scrollTop = chatEl.scrollHeight;
@@ -2839,8 +2880,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatEl = document.getElementById('chatMessages');
         if (chatEl && data.message) {
           const m = data.message;
-          const rawTs = m.created_at || '';
-          const time = new Date(rawTs.endsWith('Z') ? rawTs : rawTs + 'Z').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+          const time = fmtMsgTime(m.created_at || '');
           const div = document.createElement('div');
           div.className = 'chat-message guest';
           div.innerHTML = `
@@ -3408,6 +3448,21 @@ window.openInvoiceFromConversation = function() {
 </script>
 
 
+
+<script>
+// Helper : formater timestamp avec date si pas aujourd'hui
+function fmtMsgTime(isoStr) {
+  if (!isoStr) return '';
+  const ts = new Date(isoStr.endsWith('Z') ? isoStr : isoStr + 'Z');
+  if (isNaN(ts)) return '';
+  const now = new Date();
+  const isToday = ts.toDateString() === now.toDateString();
+  const timeStr = ts.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return timeStr;
+  const dateStr = ts.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  return `${dateStr} ${timeStr}`;
+}
+</script>
 <script>
 // ============================================================
 // TEMPLATES DE MESSAGES AUTOMATIQUES
