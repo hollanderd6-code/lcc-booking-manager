@@ -236,7 +236,9 @@ router.post('/create', authenticateUser, upload.any(), async (req, res) => {
 
     const data = {
       uniqueId,
-      propertyName, // Le titre corrigÃ©
+      propertyName, // Le titre corrigé
+      isDraft: body.isDraft === 'true',
+      lastSection: parseInt(body.lastSection) || 0,
       welcomeDescription: body.welcomeDescription || '',
       contactPhone: body.contactPhone || '',
       address: body.address || '',
@@ -306,7 +308,10 @@ router.get('/user/list', authenticateUser, async (req, res) => {
     if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant (app.locals.pool)' });
 
     const result = await pool.query(
-      `SELECT unique_id, property_name, data->'photos'->>'cover' as cover_photo, updated_at
+      `SELECT unique_id, property_name, data->'photos'->>'cover' as cover_photo,
+              (data->>'isDraft')::boolean as is_draft,
+              (data->>'lastSection')::int as last_section,
+              updated_at
        FROM public.welcome_books_v2
        WHERE user_id = $1
        ORDER BY updated_at DESC`,
@@ -319,6 +324,8 @@ router.get('/user/list', authenticateUser, async (req, res) => {
         uniqueId: r.unique_id,
         propertyName: r.property_name || '',
         coverPhoto: r.cover_photo || null,
+        isDraft: r.is_draft === true,
+        lastSection: r.last_section || 0,
         updatedAt: r.updated_at,
       };
     });
