@@ -18628,7 +18628,10 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
       `SELECT c.*, p.quick_replies, r.uid as reservation_uid
        FROM conversations c
        LEFT JOIN properties p ON p.id = c.property_id
-       LEFT JOIN reservations r ON (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date))
+       LEFT JOIN reservations r ON (
+         (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+         OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date))
+       )
        WHERE c.id = $1 AND c.user_id = $2
        LIMIT 1`,
       [convId, userId]
