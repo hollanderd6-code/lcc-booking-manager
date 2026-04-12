@@ -4524,18 +4524,24 @@ async function handleDepositPaid(depositId, io) {
     const isAfter7am = currentHour >= 7;
 
     if (isArrivalToday && isAfter7am) {
-      // ✅ Jour J après 7h → envoyer les infos d'arrivée immédiatement
-      console.log(`📨 Jour J après 7h → envoi immédiat des infos d'arrivée pour conversation ${conv.id}`);
+      // Jour J après 7h → déclencher template on_arrival immédiatement
+      console.log(`📨 Jour J après 7h → déclenchement template on_arrival immédiat pour conv ${conv.id}`);
       try {
-        const { sendImmediateArrivalMessage } = require('./arrival-messages-scheduler');
-        await sendImmediateArrivalMessage(pool, io, conv.id);
-      } catch (arrErr) {
-        console.error('⚠️ Erreur sendImmediateArrivalMessage:', arrErr);
+        const templates = await pool.query(
+          `SELECT mt.* FROM message_templates mt WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE AND (mt.property_id IS NULL OR mt.property_id = $2)`,
+          [conv.user_id, conv.property_id]
+        );
+        for (const tmpl of templates.rows) {
+          const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
+          await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
+        }
+      } catch (tplErr) {
+        console.error('⚠️ Erreur template on_arrival immédiat:', tplErr.message);
       }
     } else if (isArrivalToday && !isAfter7am) {
-      console.log(`⏰ Jour J mais ${currentHour}h < 7h → le cron enverra les infos à 7h`);
+      console.log(`⏰ Jour J mais ${currentHour}h < 7h → le cron enverra le template on_arrival à 7h`);
     } else {
-      console.log(`📅 Arrivée pas aujourd'hui → le cron enverra le jour J à 7h`);
+      console.log(`📅 Arrivée pas aujourd'hui → le cron enverra le template on_arrival le jour J à 7h`);
     }
 
   } catch (error) {
@@ -19988,8 +19994,9 @@ app.get('/api/message-template-logs', authenticateToken, async (req, res) => {
 // ============================================
 // 📨 INITIALISATION DU CRON JOB DES MESSAGES D'ARRIVÉE
 // ============================================
-initArrivalMessagesCron(pool, io);
-console.log("✅ Cron job messages d'arrivée initialisé");
+// initArrivalMessagesCron désactivé — remplacé par les templates
+// initArrivalMessagesCron(pool, io);
+console.log("ℹ️ Cron arrival-messages désactivé (remplacé par templates)");
 
 // ✅ Cron message_templates
 // - before_arrival  : la veille à 7h (Europe/Paris)
@@ -20322,14 +20329,13 @@ app.post('/api/test/arrival-messages', authenticateAny, async (req, res) => {
   try {
     console.log('🧪 TEST MANUEL : Déclenchement des messages d\'arrivée');
     
-    const { processTodayArrivals } = require('./arrival-messages-scheduler');
-    const result = await processTodayArrivals(pool, io);
-    
-    console.log('📊 Résultat du test:', result);
+    // Route de test désactivée — utiliser les templates
+    const result = { total: 0, sent: 0, skipped: 0 };
+    console.log('ℹ️ processTodayArrivals désactivé — utiliser les templates on_arrival');
     
     res.json({ 
       success: true, 
-      message: 'Messages d\'arrivée traités',
+      message: 'Système migré vers les templates — créez un template on_arrival dans Messages',
       total: result.total,
       sent: result.sent,
       skipped: result.skipped,
@@ -23948,17 +23954,8 @@ app.post('/api/channex/webhook', async (req, res) => {
             }
           }
 
-          // 3. Envoyer le message de confirmation via Channex → OTA
-          const confirmMsg = `Bonjour${guestFirst ? ' ' + guestFirst : ''} ! 👋
-
-Merci pour votre réservation via ${otaLabel} pour ${propertyName} !
-
-Vous recevrez les informations pour votre arrivée prochainement.
-
-N'hésitez pas à nous contacter si vous avez des questions. 😊`;
-
-          await sendAutoMessage(pool, io, convId, confirmMsg, result.channex_booking_id || null);
-          console.log(`✅ [CHANNEX] Message de confirmation envoyé (conv ${convId})`);
+          // Message de confirmation désactivé — géré par les templates on_booking
+          console.log(`✅ [CHANNEX] Conversation créée (conv ${convId}) — templates on_booking prendront le relais`);
 
         } catch (confirmErr) {
           console.error('⚠️ [CHANNEX WEBHOOK] Erreur conversation/message:', confirmErr.message);
