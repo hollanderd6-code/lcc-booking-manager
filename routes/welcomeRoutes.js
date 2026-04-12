@@ -151,7 +151,7 @@ router.post('/create', authenticateUser, upload.any(), async (req, res) => {
     if (clientUniqueId) {
       // Mode ÉDITION : charger les anciennes photos de CE livret
       const existingCheck = await pool.query(
-        'SELECT id, unique_id, data FROM public.welcome_books_v2 WHERE user_id =  AND unique_id =  LIMIT 1',
+        'SELECT id, unique_id, data FROM public.welcome_books_v2 WHERE user_id = $1 AND unique_id = $2 LIMIT 1',
         [req.userId, clientUniqueId]
       );
       uniqueId = clientUniqueId;
