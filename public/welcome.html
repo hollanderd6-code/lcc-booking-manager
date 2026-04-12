@@ -435,6 +435,28 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 }
 .wiz-btn-submit:hover { background: #1C2333; }
 
+/* ── Bouton brouillon ── */
+.wiz-btn-draft {
+  display: inline-flex; align-items: center; gap: 8px; height: 42px;
+  padding: 0 20px; border: 1.5px solid rgba(26,122,94,.4); border-radius: 12px;
+  background: rgba(26,122,94,.06); color: #1A7A5E; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.wiz-btn-draft:hover { background: rgba(26,122,94,.12); border-color: #1A7A5E; }
+.wiz-btn-draft:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Toast de confirmation ── */
+#draftToast {
+  position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #0D1117; color: white; padding: 12px 24px; border-radius: 12px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 10px; z-index: 9999;
+  opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none;
+  white-space: nowrap; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+}
+#draftToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#draftToast i { color: #1A7A5E; font-size: 16px; }
+
 /* Success message */
 .wiz-success {
   text-align: center; padding: 48px 24px;
@@ -725,7 +747,12 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
           </div>
         </div>
       </div>
-      <div class="wiz-nav"><div></div><button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button></div>
+      <div class="wiz-nav"><div></div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="wiz-btn-draft" type="button" onclick="saveDraft(this)"><i class="fas fa-save"></i> Enregistrer le brouillon</button>
+          <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+        </div>
+      </div>
     </div>
 
     <!-- Section 2: Accès & Arrivée -->
@@ -807,7 +834,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
       </div>
       <div class="wiz-nav">
         <button class="wiz-btn-back" onclick="prevSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
-        <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="wiz-btn-draft" type="button" onclick="saveDraft(this)"><i class="fas fa-save"></i> Enregistrer le brouillon</button>
+          <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+        </div>
       </div>
     </div>
 
@@ -845,7 +875,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
       </div>
       <div class="wiz-nav">
         <button class="wiz-btn-back" onclick="prevSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
-        <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="wiz-btn-draft" type="button" onclick="saveDraft(this)"><i class="fas fa-save"></i> Enregistrer le brouillon</button>
+          <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+        </div>
       </div>
     </div>
 
@@ -929,7 +962,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
       </div>
       <div class="wiz-nav">
         <button class="wiz-btn-back" onclick="prevSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
-        <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="wiz-btn-draft" type="button" onclick="saveDraft(this)"><i class="fas fa-save"></i> Enregistrer le brouillon</button>
+          <button class="wiz-btn-next" onclick="nextSection()" type="button">Suivant <i class="fas fa-arrow-right"></i></button>
+        </div>
       </div>
     </div>
 
@@ -983,7 +1019,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
       </div>
       <div class="wiz-nav">
         <button class="wiz-btn-back" onclick="prevSection()" type="button"><i class="fas fa-arrow-left"></i> Précédent</button>
-        <button class="wiz-btn-submit" type="submit"><i class="fas fa-check-circle"></i> Créer le livret</button>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="wiz-btn-draft" type="button" onclick="saveDraft(this)"><i class="fas fa-save"></i> Enregistrer le brouillon</button>
+          <button class="wiz-btn-submit" type="submit"><i class="fas fa-check-circle"></i> Créer le livret</button>
+        </div>
       </div>
     </div>
 
@@ -1010,6 +1049,9 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   </div>
 
 </div><!-- .welcome-container -->
+
+<!-- Toast brouillon -->
+<div id="draftToast"><i class="fas fa-check-circle"></i> <span id="draftToastMsg">Brouillon enregistré !</span></div>
 </main>
 </div>
 
@@ -1241,6 +1283,9 @@ async function saveWelcomeBook(e) {
 
   try {
     const formData = collectFormData();
+    // Marquer comme publié (pas un brouillon)
+    formData.append('isDraft', 'false');
+    formData.append('lastSection', '4');
 
     const response = await fetch(`${API_BASE}/api/welcome-books/create`, {
       method: 'POST',
@@ -1269,6 +1314,59 @@ async function saveWelcomeBook(e) {
     console.error("Erreur sauvegarde:", err);
     alert("Erreur lors de la sauvegarde.");
   }
+}
+
+// ── Enregistrer le brouillon sans quitter le formulaire ──
+async function saveDraft(btn) {
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...'; }
+
+  try {
+    const formData = collectFormData();
+    // Marquer comme brouillon + mémoriser l'étape en cours
+    formData.append('isDraft', 'true');
+    formData.append('lastSection', String(currentSectionIndex));
+
+    const response = await fetch(`${API_BASE}/api/welcome-books/create`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const raw = await response.text();
+    let data = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+
+    if (!response.ok || !data || !data.success) {
+      showDraftToast('❌ Erreur lors de l\'enregistrement', true);
+      return;
+    }
+
+    // Mémoriser l'ID pour les sauvegardes suivantes (même brouillon mis à jour)
+    if (data.uniqueId) currentUniqueId = data.uniqueId;
+
+    showDraftToast('✓ Brouillon enregistré !');
+
+    // Rafraîchir silencieusement la liste sans quitter le formulaire
+    try { await loadLivretsList(); } catch (_) {}
+
+  } catch (err) {
+    console.error("Erreur saveDraft:", err);
+    showDraftToast('❌ Erreur réseau', true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer le brouillon'; }
+  }
+}
+
+function showDraftToast(msg, isError = false) {
+  const toast = document.getElementById('draftToast');
+  const msgEl = document.getElementById('draftToastMsg');
+  if (!toast || !msgEl) return;
+  msgEl.textContent = msg;
+  toast.style.background = isError ? '#DC2626' : '#0D1117';
+  const icon = toast.querySelector('i');
+  if (icon) icon.style.color = isError ? '#FCA5A5' : '#1A7A5E';
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
 function createAnother() {
@@ -1361,7 +1459,7 @@ function viewWelcomeBook() {
 
 // Supprimer un livret
 // Modifier un livret (chargement + remplissage du formulaire)
-async function editLivret(uniqueId) {
+async function editLivret(uniqueId, startSection) {
   try {
     currentUniqueId = uniqueId;
 
@@ -1372,6 +1470,19 @@ async function editLivret(uniqueId) {
       fillFormWithData(data.book);
       document.getElementById('livretsListSection').style.display = 'none';
       setDisplayById('welcomeForm','block');
+
+      // Restaurer l'étape sauvegardée (brouillon) ou aller à l'étape 0
+      const targetSection = (startSection !== undefined && startSection !== null)
+        ? parseInt(startSection) || 0
+        : (data.book.lastSection || 0);
+      if (targetSection > 0) {
+        setTimeout(() => {
+          showSection(targetSection);
+          updateStepperDirect(targetSection);
+          updateProgressBar(targetSection);
+        }, 50);
+      }
+
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       alert((data && data.error) ? data.error : "Impossible de charger ce livret.");
@@ -1786,21 +1897,37 @@ function displayLivretsList(livrets) {
     const heroIcon = livret.coverPhoto
       ? ''
       : `<div class="livret-card-hero-icon">${emojis[idx % emojis.length]}</div>`;
+
+    // Badge : brouillon ou actif
+    const badge = livret.isDraft
+      ? `<div style="position:absolute;top:10px;right:10px;background:#F59E0B;color:white;font-size:11px;font-weight:600;padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:5px;"><i class="fas fa-pencil-alt" style="font-size:9px;"></i> Brouillon</div>`
+      : `<div style="position:absolute;top:10px;right:10px;background:#1A7A5E;color:white;font-size:11px;font-weight:600;padding:5px 12px;border-radius:999px;">● Actif</div>`;
+
+    // Bouton principal : "Continuer" pour brouillon, "Modifier" sinon
+    const editBtn = livret.isDraft
+      ? `<button class="btn-lv btn-lv-edit" style="background:#FEF3C7;color:#92400E;border-color:#F59E0B;" onclick="editLivret('${livret.uniqueId}', ${livret.lastSection || 0})"><i class="fas fa-play"></i> Continuer</button>`
+      : `<button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}', 0)"><i class="fas fa-edit"></i> Modifier</button>`;
+
+    // Bouton "Voir" désactivé pour les brouillons
+    const viewBtn = livret.isDraft
+      ? `<button class="btn-lv" style="opacity:.4;cursor:not-allowed;" disabled title="Le livret n'est pas encore publié"><i class="fas fa-eye"></i> Voir</button>`
+      : `<button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>`;
+
     return `
     <div class="livret-card">
       <div class="livret-card-hero" style="${heroStyle}">
         ${heroIcon}
-        <div style="position:absolute;top:10px;right:10px;background:#1A7A5E;color:white;font-size:11px;font-weight:600;padding:5px 12px;border-radius:999px;">● Actif</div>
+        ${badge}
       </div>
       <div class="livret-card-body">
         <div>
           <div class="livret-card-name">${livret.propertyName || 'Sans nom'}</div>
-          <div class="livret-card-date"><i class="fas fa-clock" style="font-size:10px;"></i> Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</div>
+          <div class="livret-card-date"><i class="fas fa-clock" style="font-size:10px;"></i> ${livret.isDraft ? 'Brouillon · ' : ''}Modifié le ${new Date(livret.updatedAt).toLocaleDateString('fr-FR')}</div>
         </div>
         <div class="livret-card-actions">
-          <button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}')"><i class="fas fa-edit"></i> Modifier</button>
-          <button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>
-          <button class="btn-lv btn-lv-qr" onclick="copyLivretLink('${livret.uniqueId}', this)" title="Copier le lien"><i class="fas fa-link"></i></button>
+          ${editBtn}
+          ${viewBtn}
+          <button class="btn-lv btn-lv-qr" onclick="copyLivretLink('${livret.uniqueId}', this)" title="Copier le lien"${livret.isDraft ? ' style="opacity:.4;cursor:not-allowed;" disabled' : ''}><i class="fas fa-link"></i></button>
           <button class="btn-lv btn-lv-delete" onclick="deleteLivret('${livret.uniqueId}')"><i class="fas fa-trash"></i></button>
         </div>
       </div>
