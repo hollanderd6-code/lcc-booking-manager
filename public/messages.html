@@ -1832,28 +1832,30 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     document.getElementById('chatMessages').style.display = 'flex';
     document.getElementById('chatInputArea').style.display = 'flex';
 
-    // Avatar: letter + color matching conversation list
+    // Avatar: lettre + couleur selon la plateforme réelle
     var avatarEl = document.getElementById('msgsChatAvatar');
     if (conv && avatarEl) {
       var name = conv.guest_display_name || conv.guest_first_name || conv.guest_name || 'V';
       avatarEl.textContent = name.charAt(0).toUpperCase();
-      avatarEl.style.background = conv.property_color || '#1A7A5E';
+      var platColor = (window.getPlatformColor && window.getPlatformColor(conv)) || conv.property_color || '#1A7A5E';
+      avatarEl.style.background = platColor;
     }
 
-    // Badge plateforme coloré
+    // Badge plateforme coloré (toutes OTA)
     var platBadge = document.getElementById('chatPlatformBadge');
     if (conv && platBadge) {
-      var plat = (conv.platform || '').toLowerCase();
-      var platLabel = plat.includes('airbnb') ? 'Airbnb'
-        : plat.includes('booking') ? 'Booking.com'
-        : plat === 'channex' ? 'Channex'
-        : 'Direct';
-      var platClass = plat.includes('airbnb') ? 'airbnb'
-        : plat.includes('booking') ? 'booking'
-        : plat === 'channex' ? 'channex' : 'direct';
+      // conversations.platform contient le label exact stocké par server.js
+      var plat = (conv.platform || conv.source || '').trim();
+      var platLower = plat.toLowerCase();
+      // Normaliser les codes bruts Channex si jamais ils arrivent tels quels
+      var platLabel = platLower === 'abb' ? 'Airbnb'
+        : platLower === 'bdc' ? 'Booking.com'
+        : platLower === 'exp' ? 'Expedia'
+        : platLower === 'vrbo' || platLower === 'homeaway' ? 'Vrbo'
+        : plat || 'Direct'; // sinon afficher tel quel (ex: "Airbnb", "Booking.com", "Expedia")
+      var platColor = (window.getPlatformColor && window.getPlatformColor(conv)) || '#1A7A5E';
       platBadge.textContent = platLabel;
-      platBadge.className = 'chat-platform-badge ' + platClass;
-      platBadge.style.display = 'inline-block';
+      platBadge.style.cssText = 'display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:999px;line-height:1.4;background:' + platColor + '22;color:' + platColor + ';';
     }
 
     // Dates check-in → check-out
@@ -2351,6 +2353,15 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     flex-direction: column !important;
   }
 
+  /* ── Barre de recherche visible (pas coupée) ── */
+  .msgs-search-wrap {
+    padding-top: 14px !important;
+    padding-bottom: 10px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    flex-shrink: 0 !important;
+  }
+
   /* État chat ouvert : liste glisse à gauche */
   .msgs-split.chat-open .msgs-left {
     transform: translateX(-100%) !important;
@@ -2397,6 +2408,11 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     font-size: 14px !important;
     font-weight: 600 !important;
     color: #1A7A5E !important;
+  }
+  /* S'assurer que le bouton retour est bien le premier élément */
+  #msgsMobileBack {
+    display: flex !important;
+    order: -1 !important;
   }
 
   /* ── 8. CHAT HEADER COMPACT ── */
@@ -2532,6 +2548,113 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 })();
 </script>
 
+
+<script>
+// ============================================================
+// COULEURS AVATAR SELON PLATEFORME
+// Mapping : valeur du champ platform/source → couleur
+// Channex remonte les vraies plateformes (booking, airbnb, expedia…)
+// ============================================================
+(function() {
+
+  // Palette plateforme — valeurs exactes stockées en DB par server.js (OTA_MAP / OTA_MAP_SYNC)
+  // Channex remonte ota_name brut (ex: "ABB", "BDC") → converti en label lisible avant stockage
+  // Valeurs possibles dans conversations.platform :
+  //   "Airbnb"      ← ABB / AIRBNB
+  //   "Booking.com" ← BDC / BOOKING
+  //   "Expedia"     ← EXP / EXPEDIA
+  //   "Vrbo"        ← VRBO / HOMEAWAY
+  //   valeur brute Channex si OTA inconnue (ex: "TUI", "HOLIDU"…)
+  //   "direct" / "manual" pour les réservations manuelles
+  var PLATFORM_COLORS = {
+    // Valeurs converties (stockage normal)
+    'airbnb':      '#FF5A5F',
+    'booking.com': '#003580',
+    'expedia':     '#FFC72C',
+    'vrbo':        '#3D6AFF',
+    // Codes bruts Channex (fallback si OTA non mappée)
+    'abb':         '#FF5A5F',
+    'bdc':         '#003580',
+    'exp':         '#FFC72C',
+    'homeaway':    '#3D6AFF',
+    // Autres OTA rencontrées via Channex
+    'holidu':      '#00C2A8',
+    'tui':         '#E2001A',
+    'tripadvisor': '#00AA6C',
+    'google':      '#4285F4',
+    'agoda':       '#5392FF',
+    // Direct / manuel
+    'direct':      '#1A7A5E',
+    'manual':      '#1A7A5E',
+  };
+
+  function getPlatformColor(conv) {
+    if (!conv) return '#1A7A5E';
+    // conversations.platform contient le label final (ex: "Booking.com")
+    var raw = (conv.platform || conv.source || '').toLowerCase().trim();
+    if (!raw) return '#1A7A5E';
+
+    // Correspondance exacte d'abord
+    if (PLATFORM_COLORS[raw]) return PLATFORM_COLORS[raw];
+
+    // Correspondance partielle (sécurité pour les OTAs inconnues)
+    for (var key in PLATFORM_COLORS) {
+      if (raw.includes(key)) return PLATFORM_COLORS[key];
+    }
+    return '#1A7A5E'; // fallback vert Boostinghost
+  }
+
+  function colorizeAvatars() {
+    var items = document.querySelectorAll('#conversationsList .conversation-item');
+    if (!items.length) return;
+    var allConvs = window.allConversations || [];
+
+    items.forEach(function(item) {
+      var convId = item.dataset.conversationId;
+      var avatar = item.querySelector('.conversation-avatar');
+      if (!avatar || avatar._bhColored) return; // déjà coloré
+
+      var conv = allConvs.find(function(c) { return String(c.id) === String(convId); });
+      var color = getPlatformColor(conv);
+      avatar.style.setProperty('background', color, 'important');
+      avatar.style.setProperty('background-color', color, 'important');
+      avatar._bhColored = true;
+    });
+  }
+
+  // Observer les ajouts dans la liste
+  function initAvatarColoring() {
+    var list = document.getElementById('conversationsList');
+    if (!list) return;
+
+    var observer = new MutationObserver(function() {
+      // Reset le flag si la liste est rechargée (items remplacés)
+      setTimeout(colorizeAvatars, 50);
+    });
+    observer.observe(list, { childList: true, subtree: true });
+
+    // Lancer aussi périodiquement pendant 5s (attendre allConversations)
+    var attempts = 0;
+    var interval = setInterval(function() {
+      colorizeAvatars();
+      attempts++;
+      if (attempts >= 10) clearInterval(interval);
+    }, 500);
+  }
+
+  // Exposer pour pouvoir appeler depuis showInlineChat aussi
+  window.getPlatformColor = getPlatformColor;
+  window.colorizeAvatars = colorizeAvatars;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAvatarColoring);
+  } else {
+    initAvatarColoring();
+  }
+  setTimeout(initAvatarColoring, 300);
+
+})();
+</script>
 
 <script>
 // ============================================================
