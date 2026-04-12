@@ -13,6 +13,7 @@ let socket = null;
 let currentChannexBookingId = null; // null si pas de lien Channex
 window._chatSocket = null; // exposé pour messages.html
 let allConversations = [];
+let searchQuery = '';
 let currentConversationId = null;
 let userId = null;
 
@@ -206,18 +207,29 @@ function renderConversations() {
   const container = document.getElementById('conversationsList');
   if (!container) return;
   
-  if (allConversations.length === 0) {
+  // Filtrer selon la recherche en cours
+  const q = searchQuery.toLowerCase().trim();
+  const filtered = q
+    ? allConversations.filter(conv => {
+        const name = (cleanGuestName(conv) || '').toLowerCase();
+        const prop  = (conv.property_name || '').toLowerCase();
+        const plat  = (conv.platform || '').toLowerCase();
+        return name.includes(q) || prop.includes(q) || plat.includes(q);
+      })
+    : allConversations;
+
+  if (filtered.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <i class="fas fa-comments"></i>
-        <h3>Aucune conversation</h3>
-        <p>Les conversations avec vos voyageurs apparaîtront ici.</p>
+        <h3>${q ? 'Aucun résultat' : 'Aucune conversation'}</h3>
+        <p>${q ? 'Aucune conversation ne correspond à votre recherche.' : 'Les conversations avec vos voyageurs apparaîtront ici.'}</p>
       </div>
     `;
     return;
   }
   
-  container.innerHTML = allConversations.map(conv => {
+  container.innerHTML = filtered.map(conv => {
     const unreadCount = parseInt(conv.unread_count) || 0;
     const statusClass = conv.status;
     const statusLabel = getStatusLabel(conv.status);
@@ -240,7 +252,7 @@ function renderConversations() {
     
     return `
       <div class="conversation-item" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
-        <div class="conversation-avatar" style="background: ${conv.property_color || '#10B981'};">
+        <div class="conversation-avatar" style="background: ${getPlatformColor(conv.platform)};">
           ${guestInitial}
         </div>
         
@@ -340,9 +352,21 @@ function getPlatformIcon(platform) {
 
 function getPlatformColor(platform) {
   const p = (platform || '').toLowerCase();
-  if (p.includes('airbnb')) return '#FF5A5F';
-  if (p.includes('booking')) return '#003580';
-  return '#667eea';
+  // Valeurs converties par server.js (OTA_MAP)
+  if (p.includes('airbnb') || p === 'abb') return '#FF5A5F';
+  if (p.includes('booking') || p === 'bdc') return '#003580';
+  if (p.includes('expedia') || p === 'exp') return '#FFC72C';
+  if (p.includes('vrbo') || p.includes('homeaway') || p.includes('abritel')) return '#3D6AFF';
+  // Autres OTAs
+  if (p.includes('tripadvisor')) return '#00AA6C';
+  if (p.includes('google'))      return '#4285F4';
+  if (p.includes('agoda'))       return '#5392FF';
+  if (p.includes('holidu'))      return '#00C2A8';
+  if (p.includes('tui'))         return '#E2001A';
+  // Direct / manuel
+  if (p.includes('direct') || p.includes('manual')) return '#1A7A5E';
+  // Fallback vert Boostinghost
+  return '#1A7A5E';
 }
 
 function getStatusLabel(status) {
@@ -368,6 +392,15 @@ function setupFilters() {
   
   if (propertyFilter) {
     propertyFilter.addEventListener('change', loadConversations);
+  }
+
+  // Barre de recherche (desktop + mobile)
+  const searchInput = document.getElementById('msgsSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      searchQuery = this.value;
+      renderConversations();
+    });
   }
 }
 
