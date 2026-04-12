@@ -64,7 +64,18 @@ const {
 } = require('./channex');
 
 // ============================================================
-// 🔄 CHANNEX — Sync automatique des disponibilités
+// 🏠 HELPER — Nom affiché du logement
+// Priorité : internal_name (nom court) → name (nom complet)
+// À utiliser partout où on affiche le nom d'un logement
+// ============================================================
+function displayName(property) {
+  if (!property) return 'Logement';
+  const n = property.internal_name || property.internalName;
+  if (n && String(n).trim() !== '') return String(n).trim();
+  return property.name || property.property_name || 'Logement';
+}
+
+
 // Appelé après chaque création/suppression de réservation
 // ============================================================
 async function triggerChannexAvailabilitySync(propertyId, targetDates = null) {
@@ -308,7 +319,7 @@ function generateArrivalMessage(conversation, property, hasCleaningPhotos, clean
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
   const baseUrl = appUrl.replace(/\/$/, '');
   
-  const propertyName = property.name || 'votre logement';
+  const propertyName = displayName(property);
   const chatLink = `${baseUrl}/chat/${conversation.unique_token}`;
   const cleaningPhotosLink = `${baseUrl}/chat/${conversation.photos_token}/cleaning-photos`;
   const checkoutFormLink = `${baseUrl}/chat/${conversation.photos_token}/checkout-form`;
@@ -392,7 +403,7 @@ async function sendArrivalMessage(pool, io, conversation) {
     }
 
     const propertyResult = await pool.query(
-      `SELECT id, name, welcome_book_url, arrival_time, departure_time,
+      `SELECT id, name, internal_name, welcome_book_url, arrival_time, departure_time,
               access_code, wifi_name, wifi_password
        FROM properties WHERE id = $1`,
       [conversation.property_id]
@@ -449,7 +460,7 @@ async function sendArrivalMessage(pool, io, conversation) {
       success: true,
       messageId: savedMessage.id,
       conversationId: conversation.id,
-      propertyName: property.name,
+      propertyName: displayName(property),
       guestName: conversation.guest_name,
       guestEmail: conversation.guest_email
     };
@@ -2209,7 +2220,9 @@ async function notifyOwnersAboutBookings(newReservations, cancelledReservations)
         }
 
         const propertyName =
-          res.propertyName || (res.property && res.property.name) || "Votre logement";
+          (res.property && displayName(res.property)) ||
+          res.propertyInternalName || res.internalName ||
+          res.propertyName || res.property_name || "Votre logement";
 
         const guest = res.guestName || res.guest_name || res.guest || res.name || "Un voyageur";
 
@@ -2391,8 +2404,9 @@ async function notifyCleanersAboutNewBookings(newReservations) {
       const cleanerName  = assignment.name || 'partenaire ménage';
 
       const propertyName =
-        res.propertyName ||
-        (res.property && res.property.name) ||
+        (res.property && displayName(res.property)) ||
+        res.propertyInternalName || res.internalName ||
+        res.propertyName || res.property_name ||
         'Votre logement';
 
       const guest =
@@ -2532,7 +2546,7 @@ async function sendDailyCleaningPlan() {
       }
 
       tasksByCleanerId[cleanerId].tasks.push({
-        propertyName: property.name || property.id,
+        propertyName: displayName(property) || property.id,
         guestName: r.guestName || r.guest_name || r.name || 'Voyageur',
         start: formatDateForEmail(r.start || r.startDate || r.checkIn || r.checkin),
         end: formatDateForEmail(r.end)
@@ -2750,11 +2764,12 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             // 🔔 Notif sous-comptes : paiement reçu
             try {
               const pmtRow = await pool.query(
-                `SELECT p.user_id, pr.name as property_name FROM payments p LEFT JOIN properties pr ON pr.id = p.property_id WHERE p.id = $1 OR p.stripe_session_id = $2 LIMIT 1`,
+                `SELECT p.user_id, pr.name as property_name, pr.internal_name as property_internal_name FROM payments p LEFT JOIN properties pr ON pr.id = p.property_id WHERE p.id = $1 OR p.stripe_session_id = $2 LIMIT 1`,
                 [paymentId, session.id]
               );
               if (pmtRow.rows.length > 0) {
-                const { user_id, property_name } = pmtRow.rows[0];
+                const { user_id } = pmtRow.rows[0];
+                const property_name = pmtRow.rows[0].property_internal_name || pmtRow.rows[0].property_name;
                 const amt = session.amount_total ? (session.amount_total / 100).toFixed(2) + ' €' : '';
                 await sendNotificationToSubAccountsOf(
                   user_id, 'can_view_payments',
@@ -2769,7 +2784,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             // 🔔 Notif compte principal : paiement reçu
             try {
               const pmtRow2 = await pool.query(
-                `SELECT p.user_id, r.guest_name, pr.name as property_name, p.amount_cents
+                `SELECT p.user_id, r.guest_name, pr.name as property_name, pr.internal_name as property_internal_name, p.amount_cents
                  FROM payments p
                  LEFT JOIN properties pr ON pr.id = p.property_id
                  LEFT JOIN reservations r ON r.uid = p.reservation_uid
@@ -2778,7 +2793,8 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
                 [paymentId, session.id]
               );
               if (pmtRow2.rows.length > 0) {
-                const { user_id, guest_name, property_name, amount_cents } = pmtRow2.rows[0];
+                const { user_id, guest_name, amount_cents } = pmtRow2.rows[0];
+                const property_name = pmtRow2.rows[0].property_internal_name || pmtRow2.rows[0].property_name;
                 const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
                 const guestLabel = guest_name || 'Voyageur';
                 const propLabel = property_name ? ` — ${property_name}` : '';
@@ -2835,11 +2851,12 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             // 🔔 Notif sous-comptes : caution payée
             try {
               const depRow = await pool.query(
-                `SELECT d.user_id, pr.name as property_name, d.amount_cents FROM deposits d LEFT JOIN properties pr ON pr.id = d.property_id WHERE d.id = $1 OR d.stripe_session_id = $2 LIMIT 1`,
+                `SELECT d.user_id, pr.name as property_name, pr.internal_name as property_internal_name, d.amount_cents FROM deposits d LEFT JOIN properties pr ON pr.id = d.property_id WHERE d.id = $1 OR d.stripe_session_id = $2 LIMIT 1`,
                 [depositId, session.id]
               );
               if (depRow.rows.length > 0) {
-                const { user_id, property_name, amount_cents } = depRow.rows[0];
+                const { user_id, amount_cents } = depRow.rows[0];
+                const property_name = depRow.rows[0].property_internal_name || depRow.rows[0].property_name;
                 const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
                 await sendNotificationToSubAccountsOf(
                   user_id, 'can_view_deposits',
@@ -2854,7 +2871,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
             // 🔔 Notif compte principal : caution autorisée
             try {
               const depRow2 = await pool.query(
-                `SELECT d.user_id, r.guest_name, pr.name as property_name, d.amount_cents
+                `SELECT d.user_id, r.guest_name, pr.name as property_name, pr.internal_name as property_internal_name, d.amount_cents
                  FROM deposits d
                  LEFT JOIN properties pr ON pr.id = d.property_id
                  LEFT JOIN reservations r ON r.uid = d.reservation_uid
@@ -2863,7 +2880,8 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
                 [depositId, session.id]
               );
               if (depRow2.rows.length > 0) {
-                const { user_id, guest_name, property_name, amount_cents } = depRow2.rows[0];
+                const { user_id, guest_name, amount_cents } = depRow2.rows[0];
+                const property_name = depRow2.rows[0].property_internal_name || depRow2.rows[0].property_name;
                 const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
                 const guestLabel = guest_name || 'Voyageur';
                 const propLabel = property_name ? ` — ${property_name}` : '';
@@ -4096,7 +4114,7 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
   if (await shouldSendNotification(realUserId, 'notif_new_reservation')) {
   try {
     const propResult = await pool.query(
-      'SELECT name FROM properties WHERE id = $1',
+      'SELECT name, internal_name FROM properties WHERE id = $1',
       [propertyId]
     );
     
@@ -4104,16 +4122,16 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
       await sendNewReservationNotification(
   realUserId,
   cleanGuestName(reservation.guestName, reservation.platform || reservation.source),  
-  propResult.rows[0].name,
+  displayName(propResult.rows[0]),
   reservation.start,
   reservation.end 
 );
       
-      console.log(`Notification reservation iCal envoyee pour ${propResult.rows[0].name}`);
+      console.log(`Notification reservation iCal envoyee pour ${displayName(propResult.rows[0])}`);
       // ✅ Notif sous-comptes : nouvelle réservation
       try {
         const _gN = cleanGuestName(reservation.guestName, reservation.platform || reservation.source);
-        const _pN = propResult.rows[0].name;
+        const _pN = displayName(propResult.rows[0]);
         await sendNotificationToSubAccountsOf(
           realUserId, 'can_view_calendar',
           '\uD83C\uDFE0 Nouvelle r\u00E9servation \u2014 ' + _pN,
@@ -5897,7 +5915,7 @@ app.post('/api/reservations/manual', async (req, res) => {
       notes: notes || '',
       createdAt: new Date().toISOString(),
       propertyId: property.id,
-      propertyName: property.name,
+      propertyName: displayName(property),
       propertyColor: property.color || '#3b82f6',
       userId: userId
     };
@@ -6006,21 +6024,21 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
             await sendNotificationToMultiple(
               fcmTokens,
               '📅 Nouvelle réservation',
-              `${property.name} - ${checkInDate} au ${checkOutDate}`,
+              `${displayName(property)} - ${checkInDate} au ${checkOutDate}`,
               {
                 type: 'new_reservation',
                 reservation_id: uid,
-                property_name: property.name
+                property_name: displayName(property)
               }
             );
             
-            console.log(`✅ Notification groupée envoyée à ${fcmTokens.length} appareil(s) pour ${property.name}`);
+            console.log(`✅ Notification groupée envoyée à ${fcmTokens.length} appareil(s) pour ${displayName(property)}`);
             // ✅ Notif sous-comptes : nouvelle réservation manuelle
             try {
               await sendNotificationToSubAccountsOf(
                 user.id, 'can_view_calendar',
-                '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + property.name,
-                property.name + ' \u00B7 ' + checkInDate + ' au ' + checkOutDate,
+                '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + displayName(property),
+                displayName(property) + ' \u00B7 ' + checkInDate + ' au ' + checkOutDate,
                 { type: 'new_reservation', reservation_id: uid },
                 'notif_sub_new_reservation'
               );
@@ -6036,7 +6054,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
           await notifyCleanersAboutNewBookings([{
             userId: user.id,
             propertyId: propertyId,
-            propertyName: property.name
+            propertyName: displayName(property)
           }]);
         } catch(e) { console.error('❌ Notif ménage manuelle:', e.message); }
         
@@ -6197,12 +6215,12 @@ app.get('/test-push-like-chat', async (req, res) => {
     
     // Récupérer une propriété
     const propResult = await pool.query(
-      'SELECT name FROM properties WHERE user_id = $1 LIMIT 1',
+      'SELECT name, internal_name FROM properties WHERE user_id = $1 LIMIT 1',
       [userId]
     );
     
     const propertyName = propResult.rows.length > 0 
-      ? propResult.rows[0].name 
+      ? displayName(propResult.rows[0])
       : 'Voyageur';
     
     // Envoyer aux TOUS les appareils avec le MÊME FORMAT que le chat
@@ -6726,8 +6744,8 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
       uid: reservation.uid,
       propertyId: property.id,
       property_id: property.id,
-      propertyName: property.name,
-      property_name: property.name,
+      propertyName: displayName(property),
+      property_name: displayName(property),
       propertyColor: property.color || '#3b82f6',
       property_color: property.color || '#3b82f6',
       checkIn: checkIn,
@@ -7469,7 +7487,7 @@ app.get('/api/bookings', async (req, res) => {
         bookings.push({
           id: r.uid || r.id || `${property.id}-${checkIn}-${checkOut}`,
           propertyId: property.id,
-          propertyName: property.name,
+          propertyName: displayName(property),
           propertyColor: property.color,
           checkIn,
           checkOut,
@@ -7524,7 +7542,7 @@ app.post('/api/bookings', async (req, res) => {
     const bookingForClient = {
       id: reservation.uid,
       propertyId: property.id,
-      propertyName: property.name,
+      propertyName: displayName(property),
       propertyColor: property.color,
       checkIn,
       checkOut,
@@ -7793,7 +7811,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
         result.push({
           reservationUid: r.uid,
           propertyId: property.id,
-          propertyName: property.name,
+          propertyName: displayName(property),
           startDate: r.start,
           endDate: r.end,
           guestName: guestDisplayName || r.guestName || '',
@@ -7956,7 +7974,7 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
         result.push({
           reservationUid: r.uid,
           propertyId: property.id,
-          propertyName: property.name,
+          propertyName: displayName(property),
           startDate: r.start,
           endDate: r.end,
           guestName: gDisplay || r.guestName || '',
@@ -8102,7 +8120,7 @@ app.get('/api/reservations/enriched', authenticateAny, checkSubscription, async 
         result.push({
           ...r,
           propertyId: property.id,
-          propertyName: property.name,
+          propertyName: displayName(property),
           deposit: dep,
           checklist: chk,
 
@@ -9261,7 +9279,7 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 try {
   const cleaner = cleanerResult.rows[0];
   const title = '🧹 Nouveau ménage assigné';
-  const body = property.name + ' — Vous avez un ménage à effectuer';
+  const body = displayName(property) + ' — Vous avez un ménage à effectuer';
   const data = { type: 'cleaning_assigned', reservationKey: reservationKey };
 
   // ✅ Si le cleaner est lié à un sous-compte → notif ciblée
@@ -9487,7 +9505,7 @@ if (reservation_key && reservation_key !== null) {
   
   // Récupérer le nom du logement depuis PROPERTIES
 const property = PROPERTIES.find(p => p.id === property_id);
-const propertyName = property?.name || property?.title || property?.label || property_id;
+const propertyName = displayName(property) || property_id;
   const guestName = reservation?.guestName || reservation?.name || '';
   
   tasks.push({
@@ -9511,7 +9529,7 @@ const propertyName = property?.name || property?.title || property?.label || pro
           const rStart = String(r.start || '').slice(0, 10);
           const rEnd   = String(r.end   || '').slice(0, 10);
           const reservationKey = `${property_id}_${rStart}_${rEnd}`;
-          const propertyName = r.propertyName || (r.property && r.property.name) || property_id;
+          const propertyName = (r.property && displayName(r.property)) || r.propertyInternalName || r.propertyName || property_id;
           const guestName = r.guestName || r.name || '';
           
           tasks.push({
@@ -9712,7 +9730,7 @@ app.post('/api/cleaning/checklist', async (req, res) => {
     // ============================
     try {
       const property = PROPERTIES.find(p => p.id === propertyId);
-      const propertyName = property?.name || property?.title || propertyId;
+      const propertyName = displayName(property) || propertyId;
       const durationMin = duration ? Math.round(duration / 60) : null;
 
       // ✅ Notification push Firebase — envoi direct sur TOUS les appareils du propriétaire
@@ -10307,7 +10325,7 @@ app.put('/api/cleaning/checklists/:id/validate',
       try {
         const cl = result.rows[0];
         const property = PROPERTIES.find(p => p.id === cl.property_id);
-        const propertyName = property?.name || cl.property_id;
+        const propertyName = displayName(property) || cl.property_id;
         const checkoutFmt = cl.checkout_date ? new Date(cl.checkout_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
 
         // Token FCM du cleaner (via user_fcm_tokens lié au cleaner)
@@ -10400,7 +10418,7 @@ app.put('/api/cleaning/checklists/:id/reject',
         if (cleanerResult.rows.length > 0) {
           const cleaner = cleanerResult.rows[0];
           const property = PROPERTIES.find(p => p.id === checklist.property_id);
-          const propertyName = property?.name || checklist.property_id;
+          const propertyName = displayName(property) || checklist.property_id;
 
           if (cleaner.email) {
             const subject = `⚠️ Complément demandé — ${propertyName}`;
@@ -10688,7 +10706,7 @@ app.get('/api/cleaning/qr/:propertyId',
       res.json({
         success: true,
         propertyId,
-        propertyName: property.name || property.title || propertyId,
+        propertyName: displayName(property) || propertyId,
         qrUrl,
         cleanerName: assignment.rows[0]?.name || null,
         pinCode: assignment.rows[0]?.pin_code || null
@@ -18989,11 +19007,11 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
               await sendNotification(
                 tokenRow.fcm_token,
                 '❌ Réservation annulée',
-                `${property.name} - ${cancelDate}`,
+                `${displayName(property)} - ${cancelDate}`,
                 {
                   type: 'reservation_cancelled',
                   reservation_id: uid,
-                  property_name: property.name
+                  property_name: displayName(property)
                 }
               );
               
@@ -19006,8 +19024,8 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
             const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
             await sendNotificationToSubAccountsOf(
               user.id, 'can_view_calendar',
-              '❌ Réservation annulée — ' + property.name,
-              property.name + ' - ' + cancelDate,
+              '❌ Réservation annulée — ' + displayName(property),
+              displayName(property) + ' - ' + cancelDate,
               { type: 'reservation_cancelled', reservation_id: uid },
               'notif_sub_reservation_cancelled'
             );
@@ -20266,7 +20284,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
     }
 
     const propertyResult = await pool.query(
-      'SELECT id, user_id, name, chat_pin FROM properties WHERE id = $1',
+      'SELECT id, user_id, name, internal_name, chat_pin FROM properties WHERE id = $1',
       [property_id]
     );
 
@@ -20341,7 +20359,7 @@ app.post('/api/chat/verify-by-property', async (req, res) => {
       success: true,
       conversation_id: conversation.id,
       property_id: property_id,
-      property_name: property.name
+      property_name: displayName(property)
     });
 
   } catch (error) {
@@ -23794,8 +23812,8 @@ app.post('/api/channex/webhook', async (req, res) => {
           const fmtDate   = (iso) => { try { const d = iso instanceof Date ? iso : new Date(String(iso).substring(0,10)+'T12:00:00'); return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); } catch { return String(iso); } };
           const guest     = attrs.customer || {};
           const guestName = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
-          const propRes   = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
-          const propertyName = propRes.rows[0]?.name || 'Logement';
+          const propRes   = await pool.query('SELECT name, internal_name FROM properties WHERE id = $1', [result.property_id]);
+          const propertyName = displayName(propRes.rows[0]) || 'Logement';
 
           const notifTitle = `❌ Réservation annulée`;
           const notifBody  = `${guestName} · ${propertyName} · ${fmtDate(result.start_date)} → ${fmtDate(result.end_date)}`;
@@ -23865,10 +23883,10 @@ app.post('/api/channex/webhook', async (req, res) => {
 
           // Récupérer le nom du logement depuis le résultat
           const propRes = await pool.query(
-            'SELECT name FROM properties WHERE id = $1',
+            'SELECT name, internal_name FROM properties WHERE id = $1',
             [result.property_id]
           );
-          const propertyName = propRes.rows[0]?.name || 'Logement';
+          const propertyName = displayName(propRes.rows[0]) || 'Logement';
 
           // Détecter si c'est une modification ou une nouvelle réservation
           const bookingStatus = (booking.attributes || booking).status || 'new';
@@ -23925,8 +23943,8 @@ app.post('/api/channex/webhook', async (req, res) => {
             'VRBO': 'Vrbo', 'HOMEAWAY': 'Vrbo'
           };
           const otaLabel   = OTA_MAP2[String(otaName2).toUpperCase()] || otaName2;
-          const propRes2   = await pool.query('SELECT name FROM properties WHERE id = $1', [result.property_id]);
-          const propertyName = propRes2.rows[0]?.name || 'votre logement';
+          const propRes2   = await pool.query('SELECT name, internal_name FROM properties WHERE id = $1', [result.property_id]);
+          const propertyName = displayName(propRes2.rows[0]) || 'votre logement';
           const guest      = attrs.customer || {};
           const guestName  = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
           const guestFirst = guest.name || guestName.split(' ')[0] || '';
