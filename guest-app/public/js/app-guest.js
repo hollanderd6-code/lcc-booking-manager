@@ -486,9 +486,9 @@ function renderCalendar() {
     // Forcer midi pour éviter le décalage UTC/local
     const s = new Date(String(start).substring(0,10) + 'T12:00:00');
     const e = new Date(String(end).substring(0,10) + 'T12:00:00');
-    for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-      bookedSet.add(d.toISOString().split('T')[0]);
-    }
+    for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+  bookedSet.add(d.toISOString().split('T')[0]);
+}
   });
 
   const firstDay = new Date(year, month, 1);
