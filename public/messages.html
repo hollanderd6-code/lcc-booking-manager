@@ -2318,6 +2318,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   .mobile-menu-btn, #mobileMenuBtn { display: none !important; }
 
   /* ── 4. SPLIT CONTAINER → PLEIN ÉCRAN AVEC SLIDE ── */
+  /* top = header(60px) + onglets(44px) + safe-area → barre recherche plus jamais coupée */
   .msgs-split,
   html[data-theme-v3="1"] .msgs-split {
     display: block !important;
@@ -2328,7 +2329,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     width: 100vw !important;
     position: fixed !important;
     overflow: hidden !important;
-    top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    top: calc(60px + 44px + env(safe-area-inset-top, 0px)) !important;
     bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
     left: 0 !important;
     right: 0 !important;
@@ -2491,22 +2492,46 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 (function() {
   if (window.innerWidth > 1366) return;
 
-  function init() {
+  function injectBackButton() {
     var split = document.querySelector('.msgs-split');
     var right = document.querySelector('.msgs-right');
-    if (!split || !right) return;
+    if (!split || !right) return false;
 
-    /* Injecter le bouton retour en haut du panel droit */
-    if (!document.getElementById('msgsMobileBack')) {
-      var backBar = document.createElement('div');
-      backBar.id = 'msgsMobileBack';
-      backBar.className = 'msgs-mobile-back';
-      backBar.innerHTML = '<i class="fas fa-arrow-left"></i><span>Conversations</span>';
-      backBar.addEventListener('click', function() {
-        split.classList.remove('chat-open');
-      });
-      right.insertBefore(backBar, right.firstChild);
-    }
+    // Supprimer l'ancien si existant (re-injection propre)
+    var existing = document.getElementById('msgsMobileBack');
+    if (existing) return true; // déjà là
+
+    var backBar = document.createElement('div');
+    backBar.id = 'msgsMobileBack';
+    backBar.className = 'msgs-mobile-back';
+    backBar.style.cssText = [
+      'display:flex !important',
+      'align-items:center',
+      'gap:10px',
+      'padding:12px 16px',
+      'background:rgba(245,242,236,0.97)',
+      'border-bottom:1px solid rgba(200,184,154,0.4)',
+      'flex-shrink:0',
+      'cursor:pointer',
+      'z-index:100',
+      'position:relative'
+    ].join(';');
+    backBar.innerHTML = '<i class="fas fa-arrow-left" style="color:#1A7A5E;font-size:18px;"></i><span style="font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;color:#1A7A5E;">Conversations</span>';
+    backBar.addEventListener('click', function() {
+      split.classList.remove('chat-open');
+    });
+
+    // Insérer AVANT tout autre enfant de msgs-right
+    right.insertBefore(backBar, right.firstChild);
+    return true;
+  }
+
+  function init() {
+    var split = document.querySelector('.msgs-split');
+    if (!split) return;
+
+    /* Injecter le bouton retour */
+    injectBackButton();
 
     /* Ouvrir le chat au clic sur une conversation */
     document.addEventListener('click', function(e) {
@@ -2518,7 +2543,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       }
     });
 
-    /* Patch showInlineChat pour déclencher le slide */
+    /* Patch openChat pour déclencher le slide */
     var origPatch = window._bhMobileChatPatched;
     if (!origPatch) {
       window._bhMobileChatPatched = true;
@@ -2527,6 +2552,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
           var orig = window.openChat;
           window.openChat = function(id) {
             orig.call(this, id);
+            // S'assurer que le bouton retour est là avant de slider
+            injectBackButton();
             setTimeout(function() {
               if (split) split.classList.add('chat-open');
             }, 100);
@@ -2539,12 +2566,18 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     }
   }
 
+  // Tentatives multiples pour être sûr que le DOM est prêt
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function() {
+      init();
+      setTimeout(injectBackButton, 500);
+      setTimeout(injectBackButton, 1500);
+    });
   } else {
     init();
+    setTimeout(injectBackButton, 500);
+    setTimeout(injectBackButton, 1500);
   }
-  setTimeout(init, 500);
 })();
 </script>
 
@@ -2608,17 +2641,18 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     var items = document.querySelectorAll('#conversationsList .conversation-item');
     if (!items.length) return;
     var allConvs = window.allConversations || [];
+    if (!allConvs.length) return; // pas encore chargé, réessayer plus tard
 
     items.forEach(function(item) {
       var convId = item.dataset.conversationId;
       var avatar = item.querySelector('.conversation-avatar');
-      if (!avatar || avatar._bhColored) return; // déjà coloré
+      if (!avatar) return;
 
       var conv = allConvs.find(function(c) { return String(c.id) === String(convId); });
       var color = getPlatformColor(conv);
       avatar.style.setProperty('background', color, 'important');
       avatar.style.setProperty('background-color', color, 'important');
-      avatar._bhColored = true;
+      avatar._bhColored = true; // marquer pour debug
     });
   }
 
@@ -2628,18 +2662,28 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (!list) return;
 
     var observer = new MutationObserver(function() {
-      // Reset le flag si la liste est rechargée (items remplacés)
-      setTimeout(colorizeAvatars, 50);
+      setTimeout(colorizeAvatars, 80);
     });
     observer.observe(list, { childList: true, subtree: true });
 
-    // Lancer aussi périodiquement pendant 5s (attendre allConversations)
+    // Polling jusqu'à 15s — attend que chat-owner.js peuple window.allConversations
     var attempts = 0;
     var interval = setInterval(function() {
       colorizeAvatars();
       attempts++;
-      if (attempts >= 10) clearInterval(interval);
+      if (attempts >= 30) clearInterval(interval); // 30 x 500ms = 15s
     }, 500);
+
+    // Intercepter aussi quand allConversations est assigné
+    var _orig = window.allConversations;
+    Object.defineProperty(window, 'allConversations', {
+      configurable: true,
+      get: function() { return _orig; },
+      set: function(val) {
+        _orig = val;
+        setTimeout(colorizeAvatars, 100);
+      }
+    });
   }
 
   // Exposer pour pouvoir appeler depuis showInlineChat aussi
