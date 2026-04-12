@@ -2078,18 +2078,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     });
   }
 
-  // ── Search ──
-  function initSearch() {
-    var input = document.getElementById('msgsSearchInput');
-    if (!input) return;
-    input.addEventListener('input', function() {
-      var q = this.value.toLowerCase();
-      document.querySelectorAll('#conversationsList .conversation-item').forEach(function(item) {
-        var h3 = item.querySelector('h3');
-        item.style.display = (h3 && h3.textContent.toLowerCase().includes(q)) ? '' : 'none';
-      });
-    });
-  }
+  // ── Search : géré par chat-owner.js (searchQuery + renderConversations) ──
+  function initSearch() { /* no-op */ }
 
   // ── Property label injection ──
   function injectPropertyLabels() {
@@ -2581,124 +2571,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 })();
 </script>
 
-
-<script>
-// ============================================================
-// COULEURS AVATAR SELON PLATEFORME
-// Mapping : valeur du champ platform/source → couleur
-// Channex remonte les vraies plateformes (booking, airbnb, expedia…)
-// ============================================================
-(function() {
-
-  // Palette plateforme — valeurs exactes stockées en DB par server.js (OTA_MAP / OTA_MAP_SYNC)
-  // Channex remonte ota_name brut (ex: "ABB", "BDC") → converti en label lisible avant stockage
-  // Valeurs possibles dans conversations.platform :
-  //   "Airbnb"      ← ABB / AIRBNB
-  //   "Booking.com" ← BDC / BOOKING
-  //   "Expedia"     ← EXP / EXPEDIA
-  //   "Vrbo"        ← VRBO / HOMEAWAY
-  //   valeur brute Channex si OTA inconnue (ex: "TUI", "HOLIDU"…)
-  //   "direct" / "manual" pour les réservations manuelles
-  var PLATFORM_COLORS = {
-    // Valeurs converties (stockage normal)
-    'airbnb':      '#FF5A5F',
-    'booking.com': '#003580',
-    'expedia':     '#FFC72C',
-    'vrbo':        '#3D6AFF',
-    // Codes bruts Channex (fallback si OTA non mappée)
-    'abb':         '#FF5A5F',
-    'bdc':         '#003580',
-    'exp':         '#FFC72C',
-    'homeaway':    '#3D6AFF',
-    // Autres OTA rencontrées via Channex
-    'holidu':      '#00C2A8',
-    'tui':         '#E2001A',
-    'tripadvisor': '#00AA6C',
-    'google':      '#4285F4',
-    'agoda':       '#5392FF',
-    // Direct / manuel
-    'direct':      '#1A7A5E',
-    'manual':      '#1A7A5E',
-  };
-
-  function getPlatformColor(conv) {
-    if (!conv) return '#1A7A5E';
-    // conversations.platform contient le label final (ex: "Booking.com")
-    var raw = (conv.platform || conv.source || '').toLowerCase().trim();
-    if (!raw) return '#1A7A5E';
-
-    // Correspondance exacte d'abord
-    if (PLATFORM_COLORS[raw]) return PLATFORM_COLORS[raw];
-
-    // Correspondance partielle (sécurité pour les OTAs inconnues)
-    for (var key in PLATFORM_COLORS) {
-      if (raw.includes(key)) return PLATFORM_COLORS[key];
-    }
-    return '#1A7A5E'; // fallback vert Boostinghost
-  }
-
-  function colorizeAvatars() {
-    var items = document.querySelectorAll('#conversationsList .conversation-item');
-    if (!items.length) return;
-    var allConvs = window.allConversations || [];
-    if (!allConvs.length) return; // pas encore chargé, réessayer plus tard
-
-    items.forEach(function(item) {
-      var convId = item.dataset.conversationId;
-      var avatar = item.querySelector('.conversation-avatar');
-      if (!avatar) return;
-
-      var conv = allConvs.find(function(c) { return String(c.id) === String(convId); });
-      var color = getPlatformColor(conv);
-      avatar.style.setProperty('background', color, 'important');
-      avatar.style.setProperty('background-color', color, 'important');
-      avatar._bhColored = true; // marquer pour debug
-    });
-  }
-
-  // Observer les ajouts dans la liste
-  function initAvatarColoring() {
-    var list = document.getElementById('conversationsList');
-    if (!list) return;
-
-    var observer = new MutationObserver(function() {
-      setTimeout(colorizeAvatars, 80);
-    });
-    observer.observe(list, { childList: true, subtree: true });
-
-    // Polling jusqu'à 15s — attend que chat-owner.js peuple window.allConversations
-    var attempts = 0;
-    var interval = setInterval(function() {
-      colorizeAvatars();
-      attempts++;
-      if (attempts >= 30) clearInterval(interval); // 30 x 500ms = 15s
-    }, 500);
-
-    // Intercepter aussi quand allConversations est assigné
-    var _orig = window.allConversations;
-    Object.defineProperty(window, 'allConversations', {
-      configurable: true,
-      get: function() { return _orig; },
-      set: function(val) {
-        _orig = val;
-        setTimeout(colorizeAvatars, 100);
-      }
-    });
-  }
-
-  // Exposer pour pouvoir appeler depuis showInlineChat aussi
-  window.getPlatformColor = getPlatformColor;
-  window.colorizeAvatars = colorizeAvatars;
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAvatarColoring);
-  } else {
-    initAvatarColoring();
-  }
-  setTimeout(initAvatarColoring, 300);
-
-})();
-</script>
 
 <script>
 // ============================================================
