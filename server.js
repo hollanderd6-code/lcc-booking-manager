@@ -4524,8 +4524,8 @@ async function handleDepositPaid(depositId, io) {
     const isAfter7am = currentHour >= 7;
 
     if (isArrivalToday && isAfter7am) {
-      // Jour J après 7h → déclencher template on_arrival immédiatement
-      console.log(`📨 Jour J après 7h → déclenchement template on_arrival immédiat pour conv ${conv.id}`);
+      // Jour J après 7h → déclencher template on_arrival immédiatement (caution validée)
+      console.log(`📨 Caution validée + Jour J → déclenchement template on_arrival pour conv ${conv.id}`);
       try {
         const templates = await pool.query(
           `SELECT mt.* FROM message_templates mt WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE AND (mt.property_id IS NULL OR mt.property_id = $2)`,
@@ -20052,6 +20052,31 @@ async function runTemplatesCron(triggerTypes) {
           if (alreadySent.rows.length > 0) {
             console.log(`  ↳ Conv ${conv.id} déjà traitée, skip`);
             continue;
+          }
+
+          // ✅ Vérification caution pour on_arrival et before_arrival
+          if (tmpl.trigger_type === 'on_arrival' || tmpl.trigger_type === 'before_arrival') {
+            const platform = (conv.platform || '').toLowerCase();
+            const isAirbnb = platform.includes('airbnb') || platform === 'abb';
+            if (!isAirbnb) {
+              try {
+                // Récupérer l'uid de la réservation
+                const resRow = await pool.query(
+                  `SELECT uid FROM reservations WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled' ORDER BY created_at DESC LIMIT 1`,
+                  [conv.property_id, conv.reservation_start_date]
+                );
+                if (resRow.rows[0]) {
+                  const { hasValidDeposit } = require('./deposit-messages-scheduler');
+                  const depositValid = await hasValidDeposit(pool, resRow.rows[0].uid);
+                  if (!depositValid) {
+                    console.log(`  ↳ ⏭️ Caution en attente pour conv ${conv.id} → template bloqué`);
+                    continue;
+                  }
+                }
+              } catch(depErr) {
+                console.warn(`  ↳ ⚠️ Erreur vérif caution conv ${conv.id}:`, depErr.message);
+              }
+            }
           }
 
           // Récupérer les infos du logement
