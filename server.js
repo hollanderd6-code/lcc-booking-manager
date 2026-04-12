@@ -20094,6 +20094,7 @@ async function runTemplatesCron(triggerTypes) {
             property
           });
           console.log(`  ↳ ✅ Template "${tmpl.title}" envoyé → conv ${conv.id} (${conv.guest_name})`);
+          await new Promise(r => setTimeout(r, 500)); // Éviter surcharge Channex
         }
       } catch(e) {
         console.warn(`  ↳ ⚠️ Erreur template ${tmpl.id}:`, e.message);
