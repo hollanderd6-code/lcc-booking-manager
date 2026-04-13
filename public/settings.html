@@ -2084,9 +2084,9 @@ function insertVariable(textareaId, variable, event) {
     <i class="fas fa-link"></i> Votre lien iCal Boostinghost
   </div>
   <p style="font-size:12px;color:#15803d;margin:0 0 10px;">Copiez ce lien et collez-le dans les paramètres de chaque plateforme pour synchroniser votre calendrier BH.</p>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow:hidden;">
     <input id="icalExportUrl" type="text" readonly
-      style="flex:1;min-width:0;padding:8px 12px;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;background:white;color:#374151;outline:none;cursor:text;">
+      style="flex:1;min-width:0;width:0;padding:8px 12px;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;background:white;color:#374151;outline:none;cursor:text;overflow:hidden;text-overflow:ellipsis;">
     <button type="button" onclick="copyIcalExportUrl()"
       style="flex-shrink:0;padding:8px 14px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;">
       <i class="fas fa-copy"></i> Copier
@@ -3294,6 +3294,28 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   transition: background .15s !important;
 }
 #editPropertyModal .btn-save:hover { background: #1A7A5E !important; }
+
+/* ── Mobile fixes ── */
+@media (max-width: 480px) {
+  /* Modal logement : plein écran sur très petit mobile */
+  #editPropertyModal .modal-content {
+    max-width: 100% !important;
+    border-radius: 16px !important;
+  }
+  #editPropertyModal .modal-body {
+    padding: 16px !important;
+  }
+
+  /* Modal règle de prix : 1 colonne sur petit mobile */
+  #pricingRuleModal [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* iCal export : texte tronqué proprement */
+  #icalExportUrl {
+    font-size: 11px !important;
+  }
+}
 
 /* ── iCal ── */
 #editPropertyModal #icalExportUrl {
