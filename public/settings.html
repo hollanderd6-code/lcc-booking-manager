@@ -2074,6 +2074,47 @@ function insertVariable(textareaId, variable, event) {
 </div>
 <div class="modal-actions">
 <button class="btn-cancel" onclick="closeEditModal()" type="button">Annuler</button>
+<!-- ===== SECTION : SYNCHRONISATION iCAL ===== -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-calendar-alt"></i>
+  <h3>Synchronisation iCal</h3>
+  <small>Connectez les plateformes non disponibles via Channex (Gîtes de France, Clévacances…). Les réservations seront importées automatiquement toutes les heures.</small>
+</div>
+
+<div id="icalUrlsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+
+<!-- Ajout d'un nouveau lien iCal -->
+<div style="background:#f9fafb;border:1.5px dashed #e5e7eb;border-radius:12px;padding:16px;" id="icalAddBlock">
+  <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+    <i class="fas fa-plus-circle" style="color:#1A7A5E;"></i> Ajouter une plateforme iCal
+  </div>
+
+  <!-- Sélecteur plateforme -->
+  <div style="margin-bottom:10px;">
+    <label style="font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px;">Plateforme</label>
+    <div id="icalPlatformPicker" style="display:flex;flex-wrap:wrap;gap:8px;">
+      <!-- Généré par JS -->
+    </div>
+  </div>
+
+  <!-- Champ URL -->
+  <div style="margin-bottom:10px;">
+    <label style="font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px;">Lien iCal de la plateforme</label>
+    <input id="icalNewUrl" type="url" placeholder="https://www.gites-de-france.com/export/ical/123456.ics"
+      style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;">
+  </div>
+
+  <button type="button" onclick="addIcalUrl()"
+    style="display:flex;align-items:center;gap:6px;padding:9px 18px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+    <i class="fas fa-plus"></i> Ajouter ce lien
+  </button>
+</div>
+
+<div class="info-box" style="margin-top:10px;">
+  <i class="fas fa-info-circle"></i>
+  <p>Trouvez le lien iCal dans les paramètres de chaque plateforme. Les réservations seront automatiquement importées et affichées dans votre calendrier BH.</p>
+</div>
+
 <button class="btn-save" onclick="saveProperty(event)" type="button">
 <i class="fas fa-save"></i>
 <span>Enregistrer</span>
@@ -2767,6 +2808,39 @@ html[data-theme-v3="1"] #editPropertyModal .btn-add-url,
 html[data-theme-v3="1"] #editPropertyModal [class*="add-url"],
 html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   color: #374151 !important;
+}
+
+/* iCal platform picker */
+.ical-platform-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 20px;
+  border: 1.5px solid #e5e7eb; background: white;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all .15s; font-family: 'DM Sans', sans-serif;
+  color: #374151;
+}
+.ical-platform-chip:hover { border-color: #1A7A5E; background: #f0fdf4; }
+.ical-platform-chip.selected { color: white; border-color: transparent; }
+.ical-platform-chip img { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; }
+
+/* iCal url row */
+.ical-url-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: white;
+  border: 1px solid #e5e7eb; border-radius: 10px;
+}
+.ical-url-row .ical-plat-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+  padding: 3px 10px; border-radius: 20px; color: white;
+}
+.ical-url-row .ical-url-text {
+  flex: 1; font-size: 12px; color: #6b7280;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ical-url-row .ical-remove-btn {
+  flex-shrink: 0; background: none; border: none;
+  color: #EF4444; cursor: pointer; font-size: 14px; padding: 2px 4px;
 }
 </style>
 <style id="settings-mobile-master">
