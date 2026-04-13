@@ -809,21 +809,20 @@ async function syncSingleIcalUrl(pool, property, entry) {
 
   for (const event of events) {
     if (!event.start || !event.end) continue;
-    if (event.type === 'block') continue; // Ignorer les blocages iCal (viennent de nous)
+    if (event.type === 'block') continue; // Ignorer les blocages iCal
 
     const startStr = event.start;
     const endStr = event.end;
     const guestName = event.summary || `Voyageur ${platformName}`;
     const icalUid = event.uid || `${property.id}_${platformName}_${startStr}`;
 
-    // Anti-doublon : vérifier si une réservation existe déjà sur ce logement à ces dates
+    // Anti-doublon : par ical_uid d'abord, puis par dates
     const existing = await pool.query(
       `SELECT id FROM reservations
        WHERE property_id = $1
-       AND DATE(start_date) = DATE($2)
-       AND status != 'cancelled'
+       AND (ical_uid = $2 OR (DATE(start_date) = DATE($3) AND status != 'cancelled'))
        LIMIT 1`,
-      [property.id, startStr]
+      [property.id, icalUid, startStr]
     );
 
     if (existing.rows.length > 0) { skipped++; continue; }
@@ -839,6 +838,118 @@ async function syncSingleIcalUrl(pool, property, entry) {
        platformName, 'ical', icalUid]
     );
     created++;
+
+    // ── Post-création : conversation + templates + notification push ──
+    try {
+      // 1. Créer ou réutiliser la conversation
+      const existingConv = await pool.query(
+        `SELECT id FROM conversations
+         WHERE property_id = $1 AND DATE(reservation_start_date) = DATE($2)
+         ORDER BY created_at DESC LIMIT 1`,
+        [property.id, startStr]
+      );
+
+      let convId;
+      if (existingConv.rows.length > 0) {
+        convId = existingConv.rows[0].id;
+      } else {
+        const convResult = await pool.query(
+          `INSERT INTO conversations
+            (user_id, property_id, reservation_start_date, reservation_end_date,
+             platform, guest_name, pin_code, unique_token, photos_token,
+             is_verified, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,FALSE,'pending')
+           RETURNING id`,
+          [
+            property.user_id, property.id, startStr, endStr,
+            platformName, guestName,
+            Math.floor(1000 + Math.random() * 9000).toString(),
+            crypto.randomBytes(32).toString('hex'),
+            crypto.randomBytes(32).toString('hex')
+          ]
+        );
+        convId = convResult.rows[0].id;
+        if (io) io.to(`user_${property.user_id}`).emit('new_conversation', { conversationId: convId });
+      }
+
+      // 2. Notification push propriétaire
+      try {
+        const tokensRes = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+          [property.user_id]
+        );
+        if (tokensRes.rows.length > 0 && await shouldSendNotification(property.user_id, 'notif_new_reservation')) {
+          const fcmTokens = tokensRes.rows.map(r => r.fcm_token);
+          const checkin = new Date(startStr).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+          const checkout = new Date(endStr).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+          await sendNotificationToMultiple(
+            fcmTokens,
+            `📅 Nouvelle réservation ${platformName}`,
+            `${displayName(property)} - ${checkin} au ${checkout}`,
+            { type: 'new_reservation', reservation_id: uid, property_name: displayName(property) }
+          );
+          await sendNotificationToSubAccountsOf(
+            property.user_id, 'can_view_calendar',
+            `🏠 Nouvelle réservation — ${displayName(property)}`,
+            `${guestName} · ${checkin} → ${checkout}`,
+            { type: 'new_reservation', reservation_id: uid },
+            'notif_sub_new_reservation'
+          );
+        }
+      } catch (notifErr) {
+        console.warn(`⚠️ [ICAL] Notif push ${uid}:`, notifErr.message);
+      }
+
+      // 3. Déclencher les templates on_booking
+      try {
+        const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+        const todayStr = nowParis.toISOString().split('T')[0];
+        const triggerTypes = ['on_booking'];
+        if (startStr === todayStr) triggerTypes.push('on_arrival');
+
+        const templates = await pool.query(
+          `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
+           AND (property_id IS NULL OR property_id::text = $2::text)`,
+          [property.user_id, property.id, triggerTypes]
+        );
+
+        if (templates.rows.length > 0) {
+          const convRow = await pool.query(
+            `SELECT * FROM conversations WHERE id = $1`, [convId]
+          );
+          const propInfo = await pool.query(
+            `SELECT address, arrival_time, departure_time, access_code, wifi_name,
+                    wifi_password, practical_info, welcome_book_url, name, internal_name
+             FROM properties WHERE id = $1`, [property.id]
+          );
+          if (convRow.rows[0] && propInfo.rows[0]) {
+            for (const tmpl of templates.rows) {
+              await sendTemplateMessage(pool, io, {
+                template: tmpl,
+                conv: { ...convRow.rows[0], user_id: property.user_id },
+                property: propInfo.rows[0]
+              });
+            }
+          }
+        }
+      } catch (tplErr) {
+        console.warn(`⚠️ [ICAL] Templates ${uid}:`, tplErr.message);
+      }
+
+      // 4. Notifier les cleaners
+      try {
+        await notifyCleanersAboutNewBookings([{
+          userId: property.user_id,
+          propertyId: property.id,
+          propertyName: displayName(property)
+        }]);
+      } catch (cleanErr) {
+        console.warn(`⚠️ [ICAL] Notif cleaners ${uid}:`, cleanErr.message);
+      }
+
+    } catch (postErr) {
+      console.warn(`⚠️ [ICAL] Post-création ${uid}:`, postErr.message);
+    }
   }
 
   console.log(`✅ [ICAL] ${property.name}/${platformName} : ${created} créée(s), ${skipped} doublon(s)`);
