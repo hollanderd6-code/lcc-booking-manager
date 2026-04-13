@@ -64,7 +64,141 @@ const {
 } = require('./channex');
 
 // ============================================================
-// 🏠 HELPER — Nom affiché du logement
+// 🌍 DEEPL — Traduction automatique des templates
+// Clé API : variable d'environnement DEEPL_API_KEY
+// ============================================================
+
+// Mapping code pays ISO → code langue DeepL
+const COUNTRY_TO_DEEPL_LANG = {
+  // Anglais
+  'GB': 'EN-GB', 'US': 'EN-US', 'AU': 'EN-GB', 'CA': 'EN-GB',
+  'IE': 'EN-GB', 'NZ': 'EN-GB', 'ZA': 'EN-GB', 'SG': 'EN-GB',
+  // Allemand
+  'DE': 'DE', 'AT': 'DE', 'CH': 'DE',
+  // Espagnol
+  'ES': 'ES', 'MX': 'ES', 'AR': 'ES', 'CO': 'ES', 'CL': 'ES',
+  'PE': 'ES', 'VE': 'ES', 'EC': 'ES', 'BO': 'ES', 'PY': 'ES',
+  // Italien
+  'IT': 'IT',
+  // Néerlandais
+  'NL': 'NL', 'BE': 'NL',
+  // Portugais
+  'PT': 'PT-PT', 'BR': 'PT-BR',
+  // Polonais
+  'PL': 'PL',
+  // Russe
+  'RU': 'RU',
+  // Japonais
+  'JP': 'JA',
+  // Chinois simplifié
+  'CN': 'ZH',
+  // Coréen
+  'KR': 'KO',
+  // Danois
+  'DK': 'DA',
+  // Suédois
+  'SE': 'SV',
+  // Norvégien
+  'NO': 'NB',
+  // Finnois
+  'FI': 'FI',
+  // Tchèque
+  'CZ': 'CS',
+  // Roumain
+  'RO': 'RO',
+  // Hongrois
+  'HU': 'HU',
+  // Grec
+  'GR': 'EL',
+  // Turc
+  'TR': 'TR',
+  // Ukrainien
+  'UA': 'UK',
+  // Bulgare
+  'BG': 'BG',
+  // Slovaque
+  'SK': 'SK',
+  // Slovène
+  'SI': 'SL',
+  // Croate
+  'HR': 'HR',
+  // Estonien
+  'EE': 'ET',
+  // Letton
+  'LV': 'LV',
+  // Lituanien
+  'LT': 'LT',
+  // Pays francophones → pas de traduction
+  'FR': null, 'LU': null, 'MC': null, 'MQ': null, 'GP': null,
+  'GF': null, 'RE': null, 'PM': null, 'MF': null, 'BL': null,
+  'NC': null, 'PF': null, 'WF': null, 'YT': null, 'CI': null,
+  'SN': null, 'TN': null, 'MA': null, 'DZ': null, 'CM': null,
+};
+
+/**
+ * Traduit un texte via DeepL Free API
+ * @param {string} text   — texte à traduire
+ * @param {string} target — code langue DeepL cible (ex: 'EN-GB', 'DE', 'ES')
+ * @returns {Promise<string>} texte traduit, ou texte original si erreur/pas de clé
+ */
+async function translateWithDeepL(text, target) {
+  const apiKey = process.env.DEEPL_API_KEY;
+  if (!apiKey || !target || !text) return text;
+
+  try {
+    const response = await axios.post(
+      'https://api-free.deepl.com/v2/translate',
+      new URLSearchParams({
+        auth_key: apiKey,
+        text,
+        target_lang: target,
+        source_lang: 'FR',
+        tag_handling: 'text',
+        preserve_formatting: '1',
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 8000 }
+    );
+    const translated = response.data?.translations?.[0]?.text;
+    if (translated) {
+      console.log(`🌍 [DEEPL] Traduit vers ${target} (${text.length} chars → ${translated.length} chars)`);
+      return translated;
+    }
+    return text;
+  } catch (err) {
+    // Ne jamais bloquer l'envoi du message si DeepL échoue
+    console.warn(`⚠️ [DEEPL] Erreur traduction ${target}:`, err.response?.data?.message || err.message);
+    return text;
+  }
+}
+
+/**
+ * Retourne le code langue DeepL cible à partir du pays ou de la langue du voyageur
+ * Retourne null si pays francophone ou inconnu → pas de traduction
+ */
+function getDeepLTarget(guestCountry, guestLanguage) {
+  // Priorité 1 : langue explicite si dispo (ex: "en", "de")
+  if (guestLanguage) {
+    const lang = guestLanguage.toUpperCase().split('-')[0];
+    const LANG_TO_DEEPL = {
+      'EN': 'EN-GB', 'DE': 'DE', 'ES': 'ES', 'IT': 'IT', 'NL': 'NL',
+      'PT': 'PT-PT', 'PL': 'PL', 'RU': 'RU', 'JA': 'JA', 'ZH': 'ZH',
+      'KO': 'KO', 'DA': 'DA', 'SV': 'SV', 'NB': 'NB', 'FI': 'FI',
+      'CS': 'CS', 'RO': 'RO', 'HU': 'HU', 'EL': 'EL', 'TR': 'TR',
+      'UK': 'UK', 'BG': 'BG', 'SK': 'SK', 'SL': 'SL', 'HR': 'HR',
+      'ET': 'ET', 'LV': 'LV', 'LT': 'LT',
+    };
+    if (LANG_TO_DEEPL[lang]) return LANG_TO_DEEPL[lang];
+  }
+  // Priorité 2 : code pays
+  if (guestCountry) {
+    const country = guestCountry.toUpperCase().trim();
+    const target = COUNTRY_TO_DEEPL_LANG[country];
+    return target ?? null; // null = francophone ou inconnu → pas de traduction
+  }
+  return null; // pas d'info → pas de traduction
+}
+
+
 // Priorité : internal_name (nom court) → name (nom complet)
 // À utiliser partout où on affiche le nom d'un logement
 // ============================================================
@@ -19778,7 +19912,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
   const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
 
   // Remplacer les variables
-  const msg = template.message
+  let msg = template.message
     .replace(/{prenom}/gi, guestFirst)
     .replace(/{nom}/gi, conv.guest_name || '')
     .replace(/{logement}/gi, conv.property_name || property?.name || '')
@@ -19792,6 +19926,12 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     .replace(/{wifi_mdp}/gi, property?.wifi_password || '')
     .replace(/{instructions}/gi, property?.practical_info || '')
     .replace(/{livret}/gi, property?.welcome_book_url || '');
+
+  // 🌍 Traduction automatique via DeepL selon la nationalité du voyageur
+  const deepLTarget = getDeepLTarget(conv.guest_country, conv.guest_language);
+  if (deepLTarget) {
+    msg = await translateWithDeepL(msg, deepLTarget);
+  }
 
   let status = 'sent';
   let errorMessage = null;
@@ -20052,7 +20192,15 @@ async function runTemplatesCron(triggerTypes) {
           : 'reservation_start_date';
 
         const convs = await pool.query(
-          `SELECT c.* FROM conversations c
+          `SELECT c.*,
+                  COALESCE(r.guest_country, '') as guest_country,
+                  COALESCE(r.guest_language, '') as guest_language
+           FROM conversations c
+           LEFT JOIN reservations r ON (
+             r.property_id = c.property_id
+             AND DATE(r.start_date) = DATE(c.reservation_start_date)
+             AND r.status != 'cancelled'
+           )
            WHERE c.user_id = $1
            AND DATE(c.${dateCol} AT TIME ZONE 'Europe/Paris') = $2
            AND c.status != 'cancelled'
