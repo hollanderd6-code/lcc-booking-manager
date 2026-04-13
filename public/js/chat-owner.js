@@ -155,6 +155,12 @@ async function loadConversations() {
     
     const data = await response.json();
     allConversations = data.conversations || [];
+    // Trier immédiatement par dernier message DESC
+    allConversations.sort((a, b) => {
+      const tA = new Date(a.last_message_time || a.created_at || 0).getTime();
+      const tB = new Date(b.last_message_time || b.created_at || 0).getTime();
+      return tB - tA;
+    });
     window.allConversations = allConversations; // exposé pour messages.html
     
     console.log(`📦 ${allConversations.length} conversation(s) chargée(s)`);
@@ -217,6 +223,13 @@ function renderConversations() {
         return name.includes(q) || prop.includes(q) || plat.includes(q);
       })
     : allConversations;
+
+  // Trier par dernier message DESC (ou created_at si pas de message)
+  filtered.sort((a, b) => {
+    const tA = new Date(a.last_message_time || a.created_at || 0).getTime();
+    const tB = new Date(b.last_message_time || b.created_at || 0).getTime();
+    return tB - tA;
+  });
 
   if (filtered.length === 0) {
     container.innerHTML = `
