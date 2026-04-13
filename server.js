@@ -20669,18 +20669,33 @@ app.post('/api/chat/send', async (req, res) => {
         
         // Traiter le message (onboarding + réponses auto)
         const msgNotifAllowed = await shouldSendNotification(conversation.user_id, 'notif_new_message');
-        await handleIncomingMessage(savedMessage, conversation, pool, io, { allowPushNotification: msgNotifAllowed });
+        const botHandled = await handleIncomingMessage(savedMessage, conversation, pool, io);
 
-        // 🔔 Notif sous-comptes : nouveau message
-        try {
-          await sendNotificationToSubAccountsOf(
-            conversation.user_id, 'can_view_messages',
-            '📨 Nouveau message',
-            conversation.guest_name ? `Message de ${conversation.guest_name}` : 'Un voyageur vous a envoyé un message',
-            { type: 'new_message', conversationId: String(conversation.id) },
-            'notif_sub_new_message'
-          );
-        } catch (nErr) { console.error('❌ Notif sous-comptes message:', nErr.message); }
+        // 🔔 Notifs seulement si le bot n'a PAS répondu (escalade ou non géré)
+        if (!botHandled) {
+          // Notif Firebase propriétaire
+          if (msgNotifAllowed) {
+            try {
+              await sendNewMessageNotification(
+                conversation.user_id,
+                conversation.guest_name || 'Voyageur',
+                savedMessage.message.substring(0, 100),
+                conversation.id
+              );
+            } catch (nErr) { console.error('❌ Notif Firebase message:', nErr.message); }
+          }
+
+          // 🔔 Notif sous-comptes : nouveau message
+          try {
+            await sendNotificationToSubAccountsOf(
+              conversation.user_id, 'can_view_messages',
+              '📨 Nouveau message',
+              conversation.guest_name ? `Message de ${conversation.guest_name}` : 'Un voyageur vous a envoyé un message',
+              { type: 'new_message', conversationId: String(conversation.id) },
+              'notif_sub_new_message'
+            );
+          } catch (nErr) { console.error('❌ Notif sous-comptes message:', nErr.message); }
+        }
       }
     }
 
