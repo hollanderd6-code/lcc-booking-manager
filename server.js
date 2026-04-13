@@ -24476,6 +24476,24 @@ app.post('/api/channex/webhook', async (req, res) => {
           // Message de confirmation désactivé — géré par les templates on_booking
           console.log(`✅ [CHANNEX] Conversation créée (conv ${convId}) — templates on_booking prendront le relais`);
 
+          // 📋 Demande spéciale / heure d'arrivée → message système dans la conversation
+          const specialRequest = (attrs.notes || '').trim();
+          const arrivalHourReq = attrs.arrival_hour || null;
+          const isAirbnb = (attrs.ota_name || '').toLowerCase().includes('airbnb');
+          if ((specialRequest && !isAirbnb) || arrivalHourReq) {
+            try {
+              let noteMsg = `📋 Demande(s) du voyageur :`;
+              if (arrivalHourReq) noteMsg += `
+• Heure d'arrivée souhaitée : ${arrivalHourReq}`;
+              if (specialRequest && !isAirbnb) noteMsg += `
+• Message : ${specialRequest}`;
+              await sendAutoMessage(pool, io, convId, noteMsg.trim(), result.channex_booking_id || null);
+              console.log(`📋 [CHANNEX] Demande spéciale injectée dans conv ${convId}`);
+            } catch(noteErr) {
+              console.warn('⚠️ [CHANNEX] Erreur injection demande spéciale:', noteErr.message);
+            }
+          }
+
         } catch (confirmErr) {
           console.error('⚠️ [CHANNEX WEBHOOK] Erreur conversation/message:', confirmErr.message);
         }
