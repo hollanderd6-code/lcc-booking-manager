@@ -889,12 +889,12 @@ if (sender_type === 'guest') {
     const { sendNewMessageNotification } = require('../services/notifications-service');
     
     const propertyResult = await pool.query(
-      'SELECT name FROM properties WHERE id = $1',
+      'SELECT name, internal_name FROM properties WHERE id = $1',
       [conversation.property_id]
     );
     
     const propertyName = propertyResult.rows.length > 0 
-      ? propertyResult.rows[0].name 
+      ? (propertyResult.rows[0].internal_name?.trim() || propertyResult.rows[0].name)
       : 'Votre logement';
     
     const messagePreview = message.length > 100 
@@ -920,7 +920,7 @@ if (sender_type === 'guest') {
 // ============================================
 
 // Si c'est le propriétaire qui répond, notifier le voyageur via son token guest
-if (sender_type === 'owner') {
+if (sender_type === 'owner' || sender_type === 'property') {
   try {
     // Récupérer le(s) token(s) FCM du guest pour cette conversation
     const guestTokensResult = await pool.query(
@@ -935,12 +935,12 @@ if (sender_type === 'owner') {
       
       // Récupérer le nom de la propriété
       const propertyResult = await pool.query(
-        'SELECT name FROM properties WHERE id = $1',
+        'SELECT name, internal_name FROM properties WHERE id = $1',
         [conversation.property_id]
       );
       
       const propertyName = propertyResult.rows.length > 0 
-        ? propertyResult.rows[0].name 
+        ? (propertyResult.rows[0].internal_name?.trim() || propertyResult.rows[0].name)
         : 'Votre hôte';
       
       const messagePreview = message.length > 100 
