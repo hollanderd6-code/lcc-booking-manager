@@ -325,13 +325,74 @@ Rules:
     // ÉTAPE 4 : GROQ AI
     // ========================================
     console.log('🚀 [HANDLER] Groq AI...');
+
+    // Récupérer le contenu du livret d'accueil si une URL est disponible
+    let welcomeBookData = null;
+    if (property?.welcome_book_url) {
+      try {
+        // Extraire le unique_id depuis l'URL (ex: /welcome/abc123 ou ?id=abc123)
+        const urlMatch = property.welcome_book_url.match(/\/welcome\/([a-zA-Z0-9_-]+)/);
+        const uniqueId = urlMatch ? urlMatch[1] : null;
+        if (uniqueId) {
+          const bookResult = await pool.query(
+            'SELECT data FROM welcome_books_v2 WHERE unique_id = $1',
+            [uniqueId]
+          );
+          if (bookResult.rows.length > 0) {
+            welcomeBookData = bookResult.rows[0].data || null;
+            console.log(`📖 [HANDLER] Livret d'accueil chargé pour Groq (unique_id: ${uniqueId})`);
+          }
+        }
+      } catch(e) {
+        console.warn('⚠️ [HANDLER] Erreur chargement livret pour Groq:', e.message);
+      }
+    }
+
+    // Récupérer les Q/R personnalisées pour les passer à Groq comme référence
+    let customQRSummary = null;
+    if (property) {
+      try {
+        const rawQR = property.custom_auto_responses || property.customAutoResponses;
+        const customQR = Array.isArray(rawQR) ? rawQR
+          : (typeof rawQR === 'string' ? JSON.parse(rawQR) : []);
+        if (customQR.length > 0) {
+          customQRSummary = customQR
+            .filter(qr => qr.keywords && qr.response)
+            .map(qr => `- Mots-clés: "${qr.keywords}" → Réponse: "${qr.response}"`)
+            .join('\n');
+        }
+      } catch(e) {
+        console.warn('⚠️ [HANDLER] Erreur lecture Q/R pour Groq:', e.message);
+      }
+    }
+
     const context = property ? {
       propertyName: property.name,
       welcomeBookUrl: property.welcome_book_url,
-      wifiName: property.wifi_name,
-      wifiPassword: property.wifi_password,
+      wifiName: property.wifi_name || welcomeBookData?.wifiSSID,
+      wifiPassword: property.wifi_password || welcomeBookData?.wifiPassword,
       arrivalTime: property.arrival_time,
-      departureTime: property.departure_time,
+      departureTime: property.departure_time || welcomeBookData?.checkoutTime,
+      address: property.address,
+      accessCode: property.access_code || welcomeBookData?.keyboxCode,
+      accessInstructions: property.access_instructions || welcomeBookData?.accessInstructions,
+      parkingInfo: welcomeBookData?.parkingInfo,
+      extraNotesAccess: welcomeBookData?.extraNotesAccess,
+      checkoutInstructions: welcomeBookData?.checkoutInstructions,
+      equipmentList: welcomeBookData?.equipmentList,
+      importantRules: welcomeBookData?.importantRules,
+      transportInfo: welcomeBookData?.transportInfo,
+      extraNotesPractical: welcomeBookData?.extraNotesPractical,
+      welcomeDescription: welcomeBookData?.welcomeDescription,
+      contactPhone: welcomeBookData?.contactPhone,
+      restaurants: welcomeBookData?.restaurants,
+      places: welcomeBookData?.places,
+      shopsList: welcomeBookData?.shopsList,
+      extraNotesAround: welcomeBookData?.extraNotesAround,
+      rooms: welcomeBookData?.rooms,
+      extraNotesLogement: welcomeBookData?.extraNotesLogement,
+      practicalInfo: property.practical_info,
+      customQRSummary,
       language
     } : { language };
 
