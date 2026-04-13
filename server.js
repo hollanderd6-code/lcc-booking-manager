@@ -24489,6 +24489,30 @@ app.post('/api/channex/webhook', async (req, res) => {
 • Message : ${specialRequest}`;
               await sendAutoMessage(pool, io, convId, noteMsg.trim(), result.channex_booking_id || null);
               console.log(`📋 [CHANNEX] Demande spéciale injectée dans conv ${convId}`);
+
+              // Rejouer la demande comme message guest → déclenche Groq
+              const guestMsgParts = [];
+              if (arrivalHourReq) guestMsgParts.push(`Je souhaite arriver à ${arrivalHourReq}.`);
+              if (specialRequest && !isAirbnb) guestMsgParts.push(specialRequest);
+              const guestMsgText = guestMsgParts.join(' ').trim();
+
+              if (guestMsgText) {
+                const savedGuestMsg = await pool.query(
+                  `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+                   VALUES ($1, 'guest', $2, $3, FALSE, NOW())
+                   RETURNING id, conversation_id, sender_type, sender_name, message, is_read, created_at`,
+                  [convId, guestName, guestMsgText]
+                );
+                if (io) io.to(`conversation_${convId}`).emit('new_message', savedGuestMsg.rows[0]);
+
+                // Récupérer la conversation complète pour handleIncomingMessage
+                const convForGroq = await pool.query('SELECT * FROM conversations WHERE id = $1', [convId]);
+                if (convForGroq.rows[0]) {
+                  const { handleIncomingMessage } = require('./integrated-chat-handler');
+                  await handleIncomingMessage(savedGuestMsg.rows[0], convForGroq.rows[0], pool, io);
+                  console.log(`🤖 [CHANNEX] Demande spéciale transmise à Groq pour conv ${convId}`);
+                }
+              }
             } catch(noteErr) {
               console.warn('⚠️ [CHANNEX] Erreur injection demande spéciale:', noteErr.message);
             }
