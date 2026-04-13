@@ -2069,11 +2069,6 @@ function insertVariable(textareaId, variable, event) {
   </div>
 </div>
 
-
-</form>
-</div>
-<div class="modal-actions">
-<button class="btn-cancel" onclick="closeEditModal()" type="button">Annuler</button>
 <!-- ===== SECTION : SYNCHRONISATION iCAL ===== -->
 <div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-calendar-alt"></i>
@@ -2088,7 +2083,6 @@ function insertVariable(textareaId, variable, event) {
   <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
     <i class="fas fa-plus-circle" style="color:#1A7A5E;"></i> Ajouter une plateforme iCal
   </div>
-
   <!-- Sélecteur plateforme -->
   <div style="margin-bottom:10px;">
     <label style="font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px;">Plateforme</label>
@@ -2096,31 +2090,31 @@ function insertVariable(textareaId, variable, event) {
       <!-- Généré par JS -->
     </div>
   </div>
-
   <!-- Champ URL -->
   <div style="margin-bottom:10px;">
     <label style="font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px;">Lien iCal de la plateforme</label>
     <input id="icalNewUrl" type="url" placeholder="https://www.gites-de-france.com/export/ical/123456.ics"
       style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;">
   </div>
-
   <button type="button" onclick="addIcalUrl()"
     style="display:flex;align-items:center;gap:6px;padding:9px 18px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
     <i class="fas fa-plus"></i> Ajouter ce lien
   </button>
 </div>
 
-<div class="info-box" style="margin-top:10px;">
+<div class="info-box" style="margin-top:10px;margin-bottom:8px;">
   <i class="fas fa-info-circle"></i>
   <p>Trouvez le lien iCal dans les paramètres de chaque plateforme. Les réservations seront automatiquement importées et affichées dans votre calendrier BH.</p>
 </div>
 
+</form>
+</div>
+<div class="modal-actions">
+<button class="btn-cancel" onclick="closeEditModal()" type="button">Annuler</button>
 <button class="btn-save" onclick="saveProperty(event)" type="button">
 <i class="fas fa-save"></i>
 <span>Enregistrer</span>
 </button>
-</div>
-</div>
 </div>
 <!-- Toast & Loading -->
 <div class="toast-container" id="toastContainer"></div>
