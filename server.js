@@ -8634,54 +8634,66 @@ async function logEmailSent(userId, emailType, emailData = {}) {
 // EMAIL 1 : BIENVENUE APRÈS INSCRIPTION
 // ============================================
 async function sendWelcomeEmail(email, firstName) {
-  const mailOptions = {
-    from: EMAIL_FROM,
+  const bodyHtml = `
+    <p>Bonjour <strong>${firstName}</strong>,</p>
+    <p>Votre compte est actif. Choisissez le plan qui vous convient et profitez de <strong style="color:#1A7A5E">14 jours d'essai gratuit</strong> — sans carte bancaire.</p>
+    <div class="cta-block">
+      <p>Démarrez dès maintenant</p>
+      <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/pricing.html" class="btn">Choisir mon plan →</a>
+    </div>
+    <hr class="divider">
+    <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Nos formules</p>
+    <table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:14px;margin-bottom:24px;">
+      <tr>
+        <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;">
+          <strong>Solo</strong>
+          <span style="display:block;font-size:12px;color:#888;margin-top:2px;">1 logement inclus — Pour démarrer</span>
+        </td>
+        <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;">15 €/mois</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 14px;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:8px 0 0 8px;border-right:none;">
+          <strong>Standard</strong>
+          <span style="background:linear-gradient(135deg,#1A7A5E,#145f4a);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;letter-spacing:0.04em;text-transform:uppercase;">✦ Recommandé</span>
+          <span style="display:block;font-size:12px;color:#888;margin-top:2px;">Jusqu'à 3 logements · +7 €/logement supp.</span>
+        </td>
+        <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:0 8px 8px 0;border-left:none;">29 €/mois</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;">
+          <strong>Pro</strong>
+          <span style="display:block;font-size:12px;color:#888;margin-top:2px;">Jusqu'à 6 logements · +5 €/logement supp. — Pour conciergeries</span>
+        </td>
+        <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;">49 €/mois</td>
+      </tr>
+    </table>
+    <hr class="divider">
+    <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Tout inclus dans chaque plan</p>
+    <div class="feat-row"><span class="feat-icon">📅</span><span class="feat-text"><strong>Calendrier centralisé</strong> — Synchro Airbnb, Booking &amp; toutes plateformes</span></div>
+    <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text"><strong>Messagerie intelligente par IA</strong> — Messages automatiques, traduction multilingue</span></div>
+    <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong> — Planning, checklists &amp; assignation des intervenants</span></div>
+    <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements directs</strong> — Liens Stripe en quelques secondes</span></div>
+    <div class="feat-row"><span class="feat-icon">📖</span><span class="feat-text"><strong>Livret d'accueil digital</strong> — Personnalisable par logement, accès QR Code</span></div>
+    <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong> — Voyageurs &amp; propriétaires, contrats PDF</span></div>
+    <div class="feat-row"><span class="feat-icon">📱</span><span class="feat-text"><strong>Application mobile iOS &amp; Android</strong> — Notifications push en temps réel</span></div>
+    <div class="feat-row"><span class="feat-icon">📊</span><span class="feat-text"><strong>Rapports &amp; statistiques</strong> — Revenus, attestation fiscale annuelle</span></div>
+    <div class="feat-row"><span class="feat-icon">🏡</span><span class="feat-text"><strong>App voyageur incluse</strong> — Réservations directes avec vos voyageurs</span></div>
+    <div class="feat-row"><span class="feat-icon">💬</span><span class="feat-text"><strong>Support 7j/7</strong> — Une équipe disponible tous les jours</span></div>
+    <div class="info-card" style="margin-top:24px;">
+      Une question ? Réponse rapide : <strong><a href="mailto:contact@boostinghost.fr" style="color:#1A7A5E;">contact@boostinghost.fr</a></strong>
+    </div>
+  `;
+
+  await sendEmailViaBrevo({
     to: email,
     subject: 'Bienvenue sur Boostinghost !',
     html: bhEmailTemplate({
       icon: '⚡',
       title: 'Bienvenue sur Boostinghost',
       subtitle: 'Votre outil de gestion locative, enfin simple.',
-      bodyHtml: `
-        <p>Bonjour <strong>${firstName}</strong>,</p>
-        <p>Votre compte est actif. Choisissez le plan qui vous convient et profitez de <strong style="color:#1A7A5E">14 jours d'essai gratuit</strong> — sans carte bancaire.</p>
-        <div class="cta-block">
-          <p>Démarrez dès maintenant</p>
-          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/pricing.html" class="btn">Choisir mon plan →</a>
-        </div>
-        <hr class="divider">
-        <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Nos formules</p>
-        <table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:14px;margin-bottom:24px;">
-          <tr>
-            <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;"><strong>Solo</strong><span style="display:block;font-size:12px;color:#888;margin-top:2px;">1 logement inclus</span></td>
-            <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;">15 €/mois</td>
-          </tr>
-          <tr>
-            <td style="padding:12px 14px;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:8px 0 0 8px;border-right:none;"><strong>Standard</strong> <span style="background:#1A7A5E;color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;">⭐ Recommandé</span><span style="display:block;font-size:12px;color:#888;margin-top:2px;">Jusqu'à 3 logements · +7 €/logement supp.</span></td>
-            <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:0 8px 8px 0;border-left:none;">29 €/mois</td>
-          </tr>
-          <tr>
-            <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;"><strong>Pro</strong><span style="display:block;font-size:12px;color:#888;margin-top:2px;">Jusqu'à 6 logements · +5 €/logement supp.</span></td>
-            <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;">49 €/mois</td>
-          </tr>
-        </table>
-        <hr class="divider">
-        <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Tout inclus dans chaque plan</p>
-        <div class="feat-row"><span class="feat-icon">📅</span><span class="feat-text"><strong>Calendrier unifié</strong> — Synchro iCal Airbnb &amp; Booking</span></div>
-        <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text"><strong>Messages automatiques IA</strong> — Réponses intelligentes à vos voyageurs</span></div>
-        <div class="feat-row"><span class="feat-icon">🔑</span><span class="feat-text"><strong>Serrures connectées</strong> — Codes Igloohome automatiques</span></div>
-        <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong> — Planning, checklists et suivi</span></div>
-        <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements</strong> — Liens Stripe en quelques secondes</span></div>
-        <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong> — Voyageurs &amp; propriétaires</span></div>
-        <div class="feat-row"><span class="feat-icon">💬</span><span class="feat-text"><strong>Support 7j/7</strong> — Une équipe disponible tous les jours</span></div>
-        <div class="info-card" style="margin-top:24px;">
-          Une question ? Réponse rapide : <strong><a href="mailto:contact@boostinghost.fr" style="color:#1A7A5E;">contact@boostinghost.fr</a></strong>
-        </div>
-      `
+      bodyHtml
     })
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
   console.log('✅ Email de bienvenue envoyé à:', email);
 }
 
