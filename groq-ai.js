@@ -65,13 +65,6 @@ async function getGroqResponse(userMessage, conversationContext = {}) {
 
   try {
     const language = conversationContext.language || 'fr';
-    const languageNames = {
-      fr: 'français',
-      en: 'anglais',
-      es: 'espagnol',
-      de: 'allemand',
-      it: 'italien'
-    };
 
     // Construire les sections du prompt dynamiquement selon les infos disponibles
     const sections = [];
@@ -146,7 +139,7 @@ RÈGLES IMPORTANTES :
 2. Si une information est disponible ci-dessus, utilise-la pour répondre complètement et avec précision.
 3. Si tu n'as pas l'information nécessaire pour répondre, réponds EXACTEMENT : [ESCALADE]
 4. N'essaie pas de répondre partiellement si tu n'as pas l'info — mieux vaut escalader.
-5. Réponds en ${languageNames[language] || 'français'} (toute ta réponse doit être dans cette langue).
+5. Réponds TOUJOURS dans la même langue que le message du voyageur, quelle que soit la langue utilisée. Détecte automatiquement la langue et réponds dans cette langue.
 6. Ton style : chaleureux, naturel, concis (2-4 phrases max). Utilise 1-2 emojis de façon naturelle. Tutoie si l'échange est déjà informel, vouvoie sinon.
 7. Si le voyageur semble frustré, insiste pour parler à quelqu'un, ou pose une question hors logement → [ESCALADE]
 8. Ne t'excuse jamais de ne pas avoir une info. Escalade directement sans explication.
