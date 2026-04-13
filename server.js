@@ -742,10 +742,144 @@ const smtpTransporter = nodemailer.createTransport({
 
 console.log('ℹ️ CRON messages d\'arrivée désactivé — remplacé par les templates on_arrival');
 
-// ============================================
-// CRON iCal DÉSACTIVÉ — remplacé par Channex webhooks
-// ============================================
-console.log('✅ Synchronisation iCal désactivée — Channex gère les réservations en temps réel');
+// ============================================================
+// 🗓️ CRON iCal — Synchro plateformes non Channex (toutes les heures)
+// ============================================================
+cron.schedule('0 * * * *', async () => {
+  console.log('🗓️ [ICAL CRON] Démarrage synchronisation iCal...');
+  try {
+    await syncAllIcalUrls(pool);
+  } catch (err) {
+    console.error('❌ [ICAL CRON] Erreur:', err.message);
+  }
+}, { timezone: 'Europe/Paris' });
+
+console.log('✅ CRON iCal configuré (toutes les heures)');
+
+/**
+ * Synchronise toutes les URLs iCal de tous les logements
+ */
+async function syncAllIcalUrls(pool) {
+  try {
+    const propsResult = await pool.query(
+      `SELECT id, user_id, name, ical_urls FROM properties WHERE ical_urls IS NOT NULL AND ical_urls != '[]'`
+    );
+
+    for (const prop of propsResult.rows) {
+      let icalUrls = [];
+      try {
+        icalUrls = typeof prop.ical_urls === 'string' ? JSON.parse(prop.ical_urls) : (prop.ical_urls || []);
+      } catch (_) { continue; }
+
+      if (!Array.isArray(icalUrls) || icalUrls.length === 0) continue;
+
+      for (const entry of icalUrls) {
+        const url = entry.url || entry;
+        if (!url || typeof url !== 'string') continue;
+        try {
+          await syncSingleIcalUrl(pool, prop, entry);
+        } catch (err) {
+          console.warn(`⚠️ [ICAL] Erreur sync ${url}:`, err.message);
+        }
+      }
+    }
+    console.log(`✅ [ICAL CRON] Synchronisation terminée pour ${propsResult.rows.length} logement(s)`);
+  } catch (err) {
+    console.error('❌ [ICAL CRON] syncAllIcalUrls:', err.message);
+  }
+}
+
+/**
+ * Synchronise une URL iCal pour un logement
+ */
+async function syncSingleIcalUrl(pool, property, entry) {
+  const url = entry.url || entry;
+  const platformName = entry.platformName || entry.platform || 'iCal';
+  const platformColor = entry.color || '#888888';
+
+  // Récupérer le fichier iCal
+  const response = await axios.get(url, { timeout: 10000, headers: { 'User-Agent': 'Boostinghost/1.0' } });
+  const icalText = response.data;
+
+  // Parser les événements VEVENT
+  const events = parseIcalText(icalText);
+  console.log(`📥 [ICAL] ${property.name} / ${platformName} : ${events.length} événement(s)`);
+
+  let created = 0, skipped = 0;
+
+  for (const event of events) {
+    if (!event.start || !event.end) continue;
+    if (event.type === 'block') continue; // Ignorer les blocages iCal (viennent de nous)
+
+    const startStr = event.start;
+    const endStr = event.end;
+    const guestName = event.summary || `Voyageur ${platformName}`;
+    const icalUid = event.uid || `${property.id}_${platformName}_${startStr}`;
+
+    // Anti-doublon : vérifier si une réservation existe déjà sur ce logement à ces dates
+    const existing = await pool.query(
+      `SELECT id FROM reservations
+       WHERE property_id = $1
+       AND DATE(start_date) = DATE($2)
+       AND status != 'cancelled'
+       LIMIT 1`,
+      [property.id, startStr]
+    );
+
+    if (existing.rows.length > 0) { skipped++; continue; }
+
+    // Créer la réservation
+    const uid = `ICAL_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,6)}`;
+    await pool.query(
+      `INSERT INTO reservations
+        (uid, property_id, user_id, start_date, end_date, guest_name,
+         platform, source, status, ical_uid, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'confirmed',$9,NOW(),NOW())`,
+      [uid, property.id, property.user_id, startStr, endStr, guestName,
+       platformName, 'ical', icalUid]
+    );
+    created++;
+  }
+
+  console.log(`✅ [ICAL] ${property.name}/${platformName} : ${created} créée(s), ${skipped} doublon(s)`);
+}
+
+/**
+ * Parse un fichier iCal texte et retourne les événements
+ */
+function parseIcalText(icalText) {
+  const events = [];
+  const lines = icalText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+  let current = null;
+  for (const line of lines) {
+    if (line.startsWith('BEGIN:VEVENT')) {
+      current = {};
+    } else if (line.startsWith('END:VEVENT') && current) {
+      events.push(current);
+      current = null;
+    } else if (current) {
+      if (line.startsWith('DTSTART')) {
+        const val = line.split(':').slice(1).join(':').trim();
+        // Format DATE: 20240101 ou DATETIME: 20240101T150000Z
+        current.start = val.length >= 8 ? `${val.slice(0,4)}-${val.slice(4,6)}-${val.slice(6,8)}` : null;
+      } else if (line.startsWith('DTEND')) {
+        const val = line.split(':').slice(1).join(':').trim();
+        current.end = val.length >= 8 ? `${val.slice(0,4)}-${val.slice(4,6)}-${val.slice(6,8)}` : null;
+      } else if (line.startsWith('SUMMARY')) {
+        const summary = line.split(':').slice(1).join(':').trim();
+        current.summary = summary;
+        // Détecter les blocages
+        if (/blocked|unavailable|indisponible|blocage|not available/i.test(summary)) {
+          current.type = 'block';
+        }
+      } else if (line.startsWith('UID')) {
+        current.uid = line.split(':').slice(1).join(':').trim();
+      }
+    }
+  }
+  return events;
+}
 
 // ============================================
 // CRON JOB : DEMANDE DE CAUTION J-2
@@ -1841,6 +1975,17 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonnes données voyageur enrichies OK');
     } catch (e) {
       console.log('ℹ️ Colonnes voyageur enrichies:', e.message);
+    }
+
+    // ✅ Migration : colonne ical_uid pour déduplication iCal
+    try {
+      await pool.query(`
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ical_uid TEXT;
+        CREATE INDEX IF NOT EXISTS idx_reservations_ical_uid ON reservations(ical_uid) WHERE ical_uid IS NOT NULL;
+      `);
+      console.log('✅ Colonne ical_uid OK');
+    } catch (e) {
+      console.log('ℹ️ ical_uid:', e.message);
     }
 
     // ✅ Migration : identifiants plateformes OTA sur properties
@@ -20594,7 +20739,38 @@ app.post('/api/test/deposit-reminders', authenticateAny, async (req, res) => {
 
 console.log('✅ Route de test /api/test/deposit-reminders ajoutée');
 
-console.log('Route verify-by-property ajoutee');
+// 🗓️ ROUTE : Synchronisation iCal manuelle
+app.post('/api/sync/ical', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?.userId;
+    // Sync uniquement les logements de cet utilisateur
+    const propsResult = await pool.query(
+      `SELECT id, user_id, name, ical_urls FROM properties WHERE user_id = $1 AND ical_urls IS NOT NULL AND ical_urls != '[]'`,
+      [userId]
+    );
+
+    let totalCreated = 0;
+    for (const prop of propsResult.rows) {
+      let icalUrls = [];
+      try { icalUrls = typeof prop.ical_urls === 'string' ? JSON.parse(prop.ical_urls) : (prop.ical_urls || []); } catch (_) { continue; }
+      for (const entry of icalUrls) {
+        try {
+          const before = totalCreated;
+          await syncSingleIcalUrl(pool, prop, entry);
+        } catch (e) {
+          console.warn(`⚠️ [ICAL MANUAL] ${entry.url}:`, e.message);
+        }
+      }
+    }
+
+    res.json({ success: true, message: `Synchronisation iCal terminée pour ${propsResult.rows.length} logement(s)` });
+  } catch (error) {
+    console.error('❌ Erreur sync iCal manuelle:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ Route /api/sync/ical ajoutée');
 // Route pour recuperer les messages d'une conversation
 app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => {
   try {
