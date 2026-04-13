@@ -6690,7 +6690,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             id: dbData.uid,
             uid: dbData.uid,
             propertyId: dbData.property_id,
-            propertyName: prop.name,
+            propertyName: displayName(prop),
             startDate: dbData.start_date,
             endDate: dbData.end_date || null,
             start: dbData.start_date,
@@ -7996,7 +7996,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
           result.push({
             reservationUid: dbData.uid,
             propertyId: prop.id,
-            propertyName: prop.name,
+            propertyName: displayName(prop),
             startDate: startD,
             endDate:   endD,
             guestName: gDisplay || dbData.guest_name || '',
@@ -8147,7 +8147,7 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
           const gDisplay = gFirst ? (gLast ? gFirst + ' ' + gLast : gFirst) : (dbData.guest_name || '');
           result.push({
             reservationUid: dbData.uid,
-            propertyId: prop.id, propertyName: prop.name,
+            propertyId: prop.id, propertyName: displayName(prop),
             startDate: startD, endDate: endD,
             guestName: gDisplay || dbData.guest_name || '',
             guestFirstName: gFirst, guestLastName: gLast, guestDisplayName: gDisplay,
@@ -20857,7 +20857,8 @@ app.post('/api/notifications/today-departures', authenticateAny, async (req, res
         
         p.id as property_id,
         p.name as property_name,
-        p.address as property_address,
+        p.name as property_name,
+        p.internal_name as property_internal_name,
         p.color as property_color
         
        FROM reservations r
@@ -20879,7 +20880,7 @@ if (departures.length === 0) {
 }
 
 // ✅ DÉDUPLIQUER les logements
-const uniqueProperties = [...new Set(departures.map(d => d.property_name))];
+const uniqueProperties = [...new Set(departures.map(d => d.property_internal_name?.trim() || d.property_name))];
 const uniqueCount = uniqueProperties.length;
 
 const title = `🚪 ${uniqueCount} départ(s) aujourd'hui`;
@@ -20955,7 +20956,8 @@ cron.schedule('0 8 * * *', async () => {
             r.guest_name,
             'Voyageur ' || COALESCE(r.source, 'direct')
           ) as guest_name,
-          p.name as property_name
+          p.name as property_name,
+          p.internal_name as property_internal_name
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
          LEFT JOIN conversations c ON (c.property_id = r.property_id AND DATE(c.reservation_start_date) = DATE(r.start_date))
@@ -20972,7 +20974,8 @@ cron.schedule('0 8 * * *', async () => {
       const departuresResult = await pool.query(
         `SELECT DISTINCT ON (r.id)
           r.id, r.property_id,
-          p.name as property_name
+          p.name as property_name,
+          p.internal_name as property_internal_name
          FROM reservations r
          JOIN properties p ON r.property_id = p.id
          WHERE p.user_id = $1
@@ -20982,7 +20985,7 @@ cron.schedule('0 8 * * *', async () => {
          ORDER BY r.id`,
         params
       );
-      const uniqueProps = [...new Set(departuresResult.rows.map(d => d.property_name))];
+      const uniqueProps = [...new Set(departuresResult.rows.map(d => d.property_internal_name?.trim() || d.property_name))];
       const departuresCount = uniqueProps.length;
 
       console.log(`CRON 8H user ${parentUserId} (notif:${notifUserId}): ${arrivalsCount} arrivée(s), ${departuresCount} départ(s)`);
@@ -20990,7 +20993,7 @@ cron.schedule('0 8 * * *', async () => {
       // Une seule notification groupée, envoyée même si tout est à 0
       if (await shouldSendNotification(notifUserId, 'notif_daily_summary')) {
         const arrivalsLine = arrivalsCount > 0
-          ? '📥 ' + arrivalsResult.rows.map(a => `${a.property_name} — ${a.guest_name || 'Voyageur'}`).join(', ')
+          ? '📥 ' + arrivalsResult.rows.map(a => `${a.property_internal_name?.trim() || a.property_name} — ${a.guest_name || 'Voyageur'}`).join(', ')
           : '📥 Aucune arrivée';
         const departuresLine = departuresCount > 0
           ? '🧹 Ménages : ' + uniqueProps.join(', ')
@@ -21198,6 +21201,7 @@ cron.schedule('*/15 * * * *', async () => {
         r.guest_name,
         r.start_date,
         p.name           AS property_name,
+        p.internal_name  AS property_internal_name,
         p.arrival_time,
         cc.is_validated,
         cc.id            AS checklist_id
@@ -21241,7 +21245,7 @@ cron.schedule('*/15 * * * *', async () => {
 
       const tokens = tokensResult.rows.map(r => r.fcm_token);
       const guestName = row.guest_name || 'Voyageur';
-      const propName = row.property_name || 'Logement';
+      const propName = row.property_internal_name?.trim() || row.property_name || 'Logement';
       const title = `⚠️ Ménage non validé — ${propName}`;
       const body = `${guestName} arrive dans moins d'1h et le ménage n'est pas encore validé.`;
 
@@ -25807,8 +25811,8 @@ app.post('/api/guest/book', async (req, res) => {
       if (owner?.email) {
         await sendEmailViaBrevo({
           to: owner.email,
-          subject: `🏠 Nouvelle réservation directe — ${prop.name}`,
-          text: `${guest_name} vient de réserver ${prop.name} du ${fmtDate(checkin)} au ${fmtDate(checkout)} via Boostinghost Guest.`,
+          subject: `🏠 Nouvelle réservation directe — ${displayName(prop)}`,
+          text: `${guest_name} vient de réserver ${displayName(prop)} du ${fmtDate(checkin)} au ${fmtDate(checkout)} via Boostinghost Guest.`,
           html: bhEmailTemplate({
             icon: '🏠',
             title: 'Nouvelle réservation directe',
@@ -25825,7 +25829,7 @@ app.post('/api/guest/book', async (req, res) => {
               </div>
               <div class="feat-row">
                 <div class="feat-icon">🏠</div>
-                <div class="feat-text"><strong>Logement</strong><br>${prop.name}</div>
+                <div class="feat-text"><strong>Logement</strong><br>${displayName(prop)}</div>
               </div>
               <div class="feat-row">
                 <div class="feat-icon">📅</div>
@@ -25856,7 +25860,7 @@ app.post('/api/guest/book', async (req, res) => {
       for (const tok of tokensRes.rows) {
         await sendNotification(tok.fcm_token,
           '🏠 Nouvelle réservation directe',
-          `${guest_name} · ${prop.name} · ${checkin} → ${checkout}`,
+          `${guest_name} · ${displayName(prop)} · ${checkin} → ${checkout}`,
           { type: 'new_booking_guest', uid, propertyId: property_id, screen: 'calendar' }
         );
       }
@@ -26454,7 +26458,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       );
       for (const tok of tokensRes.rows) {
         await sendNotification(tok.fcm_token, '🏠 Nouvelle réservation directe',
-          `${guest_name} · ${prop.name} · ${checkin} → ${checkout}`,
+          `${guest_name} · ${displayName(prop)} · ${checkin} → ${checkout}`,
           { type: 'new_booking_guest', uid, propertyId: property_id, screen: 'calendar' }
         );
       }
