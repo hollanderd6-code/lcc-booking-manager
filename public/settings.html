@@ -2069,11 +2069,29 @@ function insertVariable(textareaId, variable, event) {
   </div>
 </div>
 
+
+
 <!-- ===== SECTION : SYNCHRONISATION iCAL ===== -->
 <div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-calendar-alt"></i>
   <h3>Synchronisation iCal</h3>
   <small>Connectez les plateformes non disponibles via Channex (Gîtes de France, Clévacances…). Les réservations seront importées automatiquement toutes les heures.</small>
+</div>
+
+<!-- Lien iCal export -->
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+  <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+    <i class="fas fa-link"></i> Votre lien iCal Boostinghost
+  </div>
+  <p style="font-size:12px;color:#15803d;margin:0 0 10px;">Copiez ce lien et collez-le dans les paramètres de chaque plateforme pour synchroniser votre calendrier BH.</p>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <input id="icalExportUrl" type="text" readonly
+      style="flex:1;min-width:0;padding:8px 12px;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;background:white;color:#374151;outline:none;cursor:text;">
+    <button type="button" onclick="copyIcalExportUrl()"
+      style="flex-shrink:0;padding:8px 14px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;">
+      <i class="fas fa-copy"></i> Copier
+    </button>
+  </div>
 </div>
 
 <div id="icalUrlsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
@@ -2083,11 +2101,19 @@ function insertVariable(textareaId, variable, event) {
   <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
     <i class="fas fa-plus-circle" style="color:#1A7A5E;"></i> Ajouter une plateforme iCal
   </div>
-  <!-- Sélecteur plateforme -->
+  <!-- Liste déroulante plateforme -->
   <div style="margin-bottom:10px;">
     <label style="font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px;">Plateforme</label>
-    <div id="icalPlatformPicker" style="display:flex;flex-wrap:wrap;gap:8px;">
-      <!-- Généré par JS -->
+    <div style="position:relative;display:flex;align-items:center;gap:8px;">
+      <img id="icalPlatformFavicon" src="" alt=""
+        style="width:20px;height:20px;border-radius:3px;object-fit:contain;display:none;flex-shrink:0;">
+      <div style="position:relative;flex:1;">
+        <select id="icalPlatformSelect" onchange="onIcalPlatformChange()"
+          style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:white;color:#374151;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;">
+          <option value="">— Sélectionner une plateforme —</option>
+        </select>
+        <i class="fas fa-chevron-down" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:11px;pointer-events:none;"></i>
+      </div>
     </div>
   </div>
   <!-- Champ URL -->
@@ -2104,7 +2130,7 @@ function insertVariable(textareaId, variable, event) {
 
 <div class="info-box" style="margin-top:10px;margin-bottom:8px;">
   <i class="fas fa-info-circle"></i>
-  <p>Trouvez le lien iCal dans les paramètres de chaque plateforme. Les réservations seront automatiquement importées et affichées dans votre calendrier BH.</p>
+  <p>Trouvez le lien iCal dans les paramètres de chaque plateforme (Calendrier → Exporter). Les réservations seront automatiquement importées dans votre calendrier BH.</p>
 </div>
 
 </form>
