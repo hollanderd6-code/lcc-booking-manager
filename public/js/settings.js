@@ -2716,20 +2716,27 @@ async function sendReviewReply(reviewId, propertyId) {
 // ============================================================
 
 const ICAL_PLATFORMS = [
-  { id: 'gites_de_france',  name: 'Gîtes de France',   color: '#E8612C', domain: 'gites-de-france.com' },
-  { id: 'clevacances',      name: 'Clévacances',        color: '#C8002B', domain: 'clevacances.com' },
-  { id: 'leboncoin',        name: 'Leboncoin',          color: '#F55A00', domain: 'leboncoin.fr' },
-  { id: 'amivac',           name: 'Amivac',             color: '#00A6A6', domain: 'amivac.com' },
-  { id: 'casamundo',        name: 'Casamundo',          color: '#E30613', domain: 'casamundo.com' },
-  { id: 'housetrip',        name: 'Housetrip',          color: '#FF5A5F', domain: 'housetrip.com' },
-  { id: 'camping_car_park', name: 'Camping-car Park',   color: '#2E7D32', domain: 'campingcarpark.com' },
-  { id: 'holidayhome',      name: 'Holidayhome',        color: '#004B8D', domain: 'holidayhome.com' }
+  { id: 'gites_de_france',  name: 'Gîtes de France',   color: '#E8612C', domain: 'gites-de-france.com',  logo: 'https://logo.clearbit.com/gites-de-france.com' },
+  { id: 'clevacances',      name: 'Clévacances',        color: '#C8002B', domain: 'clevacances.com',       logo: 'https://logo.clearbit.com/clevacances.com' },
+  { id: 'leboncoin',        name: 'Leboncoin',          color: '#F55A00', domain: 'leboncoin.fr',          logo: 'https://logo.clearbit.com/leboncoin.fr' },
+  { id: 'amivac',           name: 'Amivac',             color: '#00A6A6', domain: 'amivac.com',            logo: 'https://logo.clearbit.com/amivac.com' },
+  { id: 'casamundo',        name: 'Casamundo',          color: '#E30613', domain: 'casamundo.com',         logo: 'https://logo.clearbit.com/casamundo.com' },
+  { id: 'housetrip',        name: 'Housetrip',          color: '#FF5A5F', domain: 'housetrip.com',         logo: 'https://logo.clearbit.com/housetrip.com' },
+  { id: 'camping_car_park', name: 'Camping-car Park',   color: '#2E7D32', domain: 'campingcarpark.com',    logo: 'https://logo.clearbit.com/campingcarpark.com' },
+  { id: 'holidayhome',      name: 'Holidayhome',        color: '#004B8D', domain: 'holidayhome.com',       logo: 'https://logo.clearbit.com/holidayhome.com' }
 ];
 
 window._currentIcalUrls = window._currentIcalUrls || [];
 
+function getLogoUrl(platform) {
+  // Clearbit pour logo haute qualité, fallback Google favicon
+  if (platform && platform.logo) return platform.logo;
+  if (platform && platform.domain) return `https://www.google.com/s2/favicons?domain=${platform.domain}&sz=32`;
+  return '';
+}
+// Alias pour compat
 function getFaviconUrl(domain) {
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+  return `https://logo.clearbit.com/${domain}`;
 }
 
 // Peupler le <select> de plateformes
@@ -2738,20 +2745,23 @@ function initIcalPlatformSelect() {
   if (!sel) return;
   sel.innerHTML = '<option value="">— Sélectionner une plateforme —</option>' +
     ICAL_PLATFORMS.map(p =>
-      `<option value="${p.id}" data-domain="${p.domain}" data-color="${p.color}">${p.name}</option>`
+      `<option value="${p.id}" data-domain="${p.domain}" data-color="${p.color}" data-logo="${p.logo || ''}">${p.name}</option>`
     ).join('');
 }
 
-// Mise à jour du favicon quand on change la sélection
+// Mise à jour du logo quand on change la sélection
 function onIcalPlatformChange() {
   const sel = document.getElementById('icalPlatformSelect');
   const favicon = document.getElementById('icalPlatformFavicon');
   if (!sel || !favicon) return;
   const opt = sel.options[sel.selectedIndex];
+  const logoUrl = opt?.dataset?.logo;
   const domain = opt?.dataset?.domain;
-  if (domain && sel.value) {
-    favicon.src = getFaviconUrl(domain);
+  if (sel.value && (logoUrl || domain)) {
+    favicon.src = logoUrl || getFaviconUrl(domain);
     favicon.style.display = 'block';
+    // Fallback si Clearbit échoue
+    favicon.onerror = function() { this.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`; this.onerror=null; };
   } else {
     favicon.style.display = 'none';
   }
@@ -2800,11 +2810,12 @@ function renderIcalUrls() {
   }
   list.innerHTML = window._currentIcalUrls.map((entry, i) => {
     const p = ICAL_PLATFORMS.find(pl => pl.id === entry.platform) || { name: entry.platformName || entry.platform, color: entry.color || '#888', domain: null };
-    const faviconUrl = (p.domain || entry.domain) ? getFaviconUrl(p.domain || entry.domain) : '';
+    const logoUrl = p.logo || (p.domain ? `https://logo.clearbit.com/${p.domain}` : '');
+    const fallbackUrl = (p.domain || entry.domain) ? `https://www.google.com/s2/favicons?domain=${p.domain||entry.domain}&sz=32` : '';
     return `
       <div class="ical-url-row">
         <div class="ical-plat-badge" style="background:${p.color};">
-          ${faviconUrl ? `<img src="${faviconUrl}" style="width:14px;height:14px;border-radius:2px;object-fit:contain;vertical-align:middle;margin-right:4px;">` : ''}
+          ${logoUrl ? `<img src="${logoUrl}" onerror="this.src='${fallbackUrl}';this.onerror=null;" style="width:14px;height:14px;border-radius:2px;object-fit:contain;vertical-align:middle;margin-right:4px;">` : ''}
           ${p.name}
         </div>
         <span class="ical-url-text" title="${entry.url}">${entry.url}</span>
@@ -2820,8 +2831,7 @@ function renderIcalUrls() {
 function initIcalExportUrl(propertyId) {
   const input = document.getElementById('icalExportUrl');
   if (!input || !propertyId) return;
-  const base = window.API_URL || 'https://lcc-booking-manager.onrender.com';
-  input.value = `${base}/ical/property/${propertyId}.ics`;
+  input.value = `https://app.boostinghost.fr/ical/property/${propertyId}.ics`;
 }
 
 function copyIcalExportUrl() {
