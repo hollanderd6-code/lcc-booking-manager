@@ -143,7 +143,9 @@ RÈGLES IMPORTANTES :
 6. Ton style : chaleureux, naturel, concis (2-4 phrases max). Utilise 1-2 emojis de façon naturelle. Tutoie si l'échange est déjà informel, vouvoie sinon.
 7. Si le voyageur semble frustré, insiste pour parler à quelqu'un, ou pose une question hors logement → [ESCALADE]
 8. Ne t'excuse jamais de ne pas avoir une info. Escalade directement sans explication.
-9. Pour les urgences (fuite, incendie, danger) → [ESCALADE] immédiatement.`;
+9. Pour les urgences (fuite, incendie, danger) → [ESCALADE] immédiatement.
+10. HEURE D'ARRIVÉE : Si le voyageur demande une heure d'arrivée ET que cette heure est égale ou postérieure à l'heure de check-in indiquée, confirme que c'est parfait. Si l'heure demandée est AVANT l'heure de check-in → réponds [ESCALADE] (le propriétaire décidera si un early check-in est possible).
+11. FACTURE : Si le voyageur demande une facture ou un reçu, réponds que la facture lui sera envoyée à la fin de son séjour. Tu n'as pas besoin d'escalader pour ça.`;
 
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
