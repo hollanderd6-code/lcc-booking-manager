@@ -395,6 +395,13 @@ async function processChannexBooking(pool, bookingData) {
     const occupancy_adults = occupancy.adults || 1;
     const occupancy_children = occupancy.children || 0;
 
+    // ── Demandes spéciales / notes voyageur ───────────────────
+    const arrival_hour = attrs.arrival_hour || null; // ex: "18:00"
+    // Pour Airbnb les notes encodent les montants — pas des demandes textuelles
+    const guest_special_request = (ota_name || '').toLowerCase().includes('airbnb')
+      ? null
+      : (attrs.notes || null);
+
     // ── Montants ─────────────────────────────────────────────
     const amount_total = parseFloat(attrs.amount || 0);
     const ota_commission = parseFloat(attrs.ota_commission || 0);
@@ -533,9 +540,10 @@ async function processChannexBooking(pool, bookingData) {
           amount_cleaning = $15, ota_commission = $16,
           days_breakdown = $17, services_raw = $18,
           currency = $19, host_payout = $20, airbnb_data = $21,
+          notes = COALESCE($22, notes),
           status = CASE WHEN status = 'cancelled' THEN 'confirmed' ELSE status END,
           updated_at = NOW()
-         WHERE channex_booking_id = $22`,
+         WHERE channex_booking_id = $23`,
         [
           arrival_date, departure_date,
           guest_first_name, guest_last_name, guest_country,
@@ -546,6 +554,7 @@ async function processChannexBooking(pool, bookingData) {
           JSON.stringify(days_breakdown), JSON.stringify(all_services),
           currency, final_host_payout,
           Object.keys(airbnbData).length ? JSON.stringify(airbnbData) : null,
+          guest_special_request,
           booking_id
         ]
       );
@@ -570,8 +579,9 @@ async function processChannexBooking(pool, bookingData) {
          days_breakdown, services_raw, currency,
          host_payout, airbnb_data,
          platform, source, status,
-         channex_booking_id, channex_revision_id, ota_name, ota_reservation_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34)
+         channex_booking_id, channex_revision_id, ota_name, ota_reservation_id,
+         notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35)
        RETURNING *`,
       [
         uid, property_id, user_id,
@@ -585,7 +595,8 @@ async function processChannexBooking(pool, bookingData) {
         Object.keys(airbnbData).length ? JSON.stringify(airbnbData) : null,
         ota_name || 'channex', 'channex', 'confirmed',
         booking_id, revision_id || null,
-        ota_name || null, ota_reservation_code || null
+        ota_name || null, ota_reservation_code || null,
+        guest_special_request || null
       ]
     );
 
