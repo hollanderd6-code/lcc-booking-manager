@@ -13403,8 +13403,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     // 🔔 NOTIFICATION NOUVELLE INSCRIPTION
     try {
-      await transporter.sendMail({
-        from: EMAIL_FROM,
+      await sendEmailViaBrevo({
         to: 'charles.induni@gmail.com',
         subject: `🎉 Nouvelle inscription — ${firstName} ${lastName}`,
         html: `
@@ -13420,9 +13419,9 @@ app.post('/api/auth/register', async (req, res) => {
           </div>
         `
       });
-      console.log('Notification inscription envoyée à contact@boostinghost.fr');
+      console.log('✅ Notification inscription envoyée à charles.induni@gmail.com');
     } catch (notifErr) {
-      console.error('Erreur notification inscription:', notifErr);
+      console.error('❌ Erreur notification inscription (non bloquant):', notifErr?.response?.body || notifErr?.message || notifErr);
       // Non bloquant
     }
 
