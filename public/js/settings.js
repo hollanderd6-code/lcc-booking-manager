@@ -938,6 +938,7 @@ function openEditPropertyModal(propertyId) {
   const existingIcal = property.icalUrls || property.ical_urls || [];
   window._currentIcalUrls = Array.isArray(existingIcal) ? existingIcal : [];
   if (typeof renderIcalUrls === 'function') renderIcalUrls();
+  if (typeof initIcalExportUrl === 'function') initIcalExportUrl(property._id || property.id);
 
   // ✅ CHARGER LES RÈGLES DE TARIFICATION
   if (typeof loadPricingRules === 'function') {
@@ -2715,133 +2716,71 @@ async function sendReviewReply(reviewId, propertyId) {
 // ============================================================
 
 const ICAL_PLATFORMS = [
-  {
-    id: 'gites_de_france',
-    name: 'Gîtes de France',
-    color: '#E8612C',
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#E8612C"/><path d="M16 6 L26 14 L26 26 L6 26 L6 14 Z" fill="white"/><rect x="12" y="18" width="8" height="8" fill="#E8612C"/><rect x="14" y="20" width="4" height="6" fill="white"/></svg>`
-  },
-  {
-    id: 'clevacances',
-    name: 'Clévacances',
-    color: '#C8002B',
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#C8002B"/><text x="16" y="22" text-anchor="middle" font-size="16" font-weight="bold" fill="white" font-family="Arial">C</text></svg>`
-  },
-  {
-    id: 'leboncoin',
-    name: 'Leboncoin',
-    color: '#F55A00',
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#F55A00"/><circle cx="16" cy="16" r="8" fill="white"/><circle cx="16" cy="16" r="5" fill="#F55A00"/></svg>`
-  },
-  {
-    id: 'amivac',
-    name: 'Amivac',
-    color: '#00A6A6',
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#00A6A6"/><text x="16" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="white" font-family="Arial">A</text></svg>`
-  },
-  {
-    id: 'casamundo',
-    name: 'Casamundo',
-    color: '#E30613',
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#E30613"/><path d="M8 20 L16 8 L24 20 Z" fill="white"/><rect x="13" y="20" width="6" height="6" fill="white"/></svg>`
-  },
-  {
-    id: 'housetrip',
-    name: 'Housetrip',
-    color: '#FF5A5F',
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#FF5A5F"/><path d="M16 7 L27 16 L24 16 L24 25 L8 25 L8 16 L5 16 Z" fill="white"/></svg>`
-  },
-  {
-    id: 'camping_car_park',
-    name: 'Camping-car Park',
-    color: '#2E7D32',
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#2E7D32"/><rect x="6" y="12" width="20" height="12" rx="2" fill="white"/><circle cx="11" cy="25" r="3" fill="#2E7D32"/><circle cx="21" cy="25" r="3" fill="#2E7D32"/><path d="M6 14 L6 10 L20 10 L26 14" stroke="white" stroke-width="2" fill="none"/></svg>`
-  },
-  {
-    id: 'holidayhome',
-    name: 'Holidayhome',
-    color: '#004B8D',
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#004B8D"/><path d="M16 7 L27 16 L24 16 L24 25 L8 25 L8 16 L5 16 Z" fill="white"/></svg>`
-  }
+  { id: 'gites_de_france',  name: 'Gîtes de France',   color: '#E8612C', domain: 'gites-de-france.com' },
+  { id: 'clevacances',      name: 'Clévacances',        color: '#C8002B', domain: 'clevacances.com' },
+  { id: 'leboncoin',        name: 'Leboncoin',          color: '#F55A00', domain: 'leboncoin.fr' },
+  { id: 'amivac',           name: 'Amivac',             color: '#00A6A6', domain: 'amivac.com' },
+  { id: 'casamundo',        name: 'Casamundo',          color: '#E30613', domain: 'casamundo.com' },
+  { id: 'housetrip',        name: 'Housetrip',          color: '#FF5A5F', domain: 'housetrip.com' },
+  { id: 'camping_car_park', name: 'Camping-car Park',   color: '#2E7D32', domain: 'campingcarpark.com' },
+  { id: 'holidayhome',      name: 'Holidayhome',        color: '#004B8D', domain: 'holidayhome.com' }
 ];
 
-// Plateforme sélectionnée pour l'ajout en cours
-window._selectedIcalPlatform = null;
 window._currentIcalUrls = window._currentIcalUrls || [];
 
-// Initialiser le picker de plateformes
-function initIcalPlatformPicker() {
-  const picker = document.getElementById('icalPlatformPicker');
-  if (!picker) return;
-
-  picker.innerHTML = ICAL_PLATFORMS.map(p => `
-    <button type="button"
-      class="ical-platform-chip"
-      id="ical-chip-${p.id}"
-      onclick="selectIcalPlatform('${p.id}')"
-      style="--plat-color:${p.color}">
-      ${p.logo}
-      ${p.name}
-    </button>
-  `).join('');
+function getFaviconUrl(domain) {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
 }
 
-function selectIcalPlatform(platformId) {
-  window._selectedIcalPlatform = platformId;
-  // Mettre à jour visuellement
-  document.querySelectorAll('.ical-platform-chip').forEach(chip => {
-    const p = ICAL_PLATFORMS.find(pl => `ical-chip-${pl.id}` === chip.id);
-    if (!p) return;
-    chip.classList.remove('selected');
-    chip.style.background = 'white';
-    chip.style.color = '#374151';
-    chip.style.borderColor = '#e5e7eb';
-  });
-  const selected = document.getElementById(`ical-chip-${platformId}`);
-  if (selected) {
-    const p = ICAL_PLATFORMS.find(pl => pl.id === platformId);
-    selected.classList.add('selected');
-    selected.style.background = p.color;
-    selected.style.color = 'white';
-    selected.style.borderColor = p.color;
+// Peupler le <select> de plateformes
+function initIcalPlatformSelect() {
+  const sel = document.getElementById('icalPlatformSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Sélectionner une plateforme —</option>' +
+    ICAL_PLATFORMS.map(p =>
+      `<option value="${p.id}" data-domain="${p.domain}" data-color="${p.color}">${p.name}</option>`
+    ).join('');
+}
+
+// Mise à jour du favicon quand on change la sélection
+function onIcalPlatformChange() {
+  const sel = document.getElementById('icalPlatformSelect');
+  const favicon = document.getElementById('icalPlatformFavicon');
+  if (!sel || !favicon) return;
+  const opt = sel.options[sel.selectedIndex];
+  const domain = opt?.dataset?.domain;
+  if (domain && sel.value) {
+    favicon.src = getFaviconUrl(domain);
+    favicon.style.display = 'block';
+  } else {
+    favicon.style.display = 'none';
   }
 }
 
 function addIcalUrl() {
+  const sel = document.getElementById('icalPlatformSelect');
   const urlInput = document.getElementById('icalNewUrl');
   const url = urlInput?.value?.trim();
+  const platformId = sel?.value;
 
-  if (!window._selectedIcalPlatform) {
-    showToast('Sélectionnez une plateforme', 'warning');
-    return;
-  }
-  if (!url || !url.startsWith('http')) {
-    showToast('Entrez un lien iCal valide', 'warning');
-    return;
-  }
-  // Vérifier doublon
-  if (window._currentIcalUrls.some(e => e.url === url)) {
-    showToast('Ce lien est déjà ajouté', 'warning');
-    return;
-  }
+  if (!platformId) { showToast('Sélectionnez une plateforme', 'warning'); return; }
+  if (!url || !url.startsWith('http')) { showToast('Entrez un lien iCal valide', 'warning'); return; }
+  if (window._currentIcalUrls.some(e => e.url === url)) { showToast('Ce lien est déjà ajouté', 'warning'); return; }
 
-  const platform = ICAL_PLATFORMS.find(p => p.id === window._selectedIcalPlatform);
+  const platform = ICAL_PLATFORMS.find(p => p.id === platformId);
   window._currentIcalUrls.push({
     platform: platform.id,
     platformName: platform.name,
     color: platform.color,
+    domain: platform.domain,
     url
   });
 
   // Reset
   urlInput.value = '';
-  window._selectedIcalPlatform = null;
-  document.querySelectorAll('.ical-platform-chip').forEach(chip => {
-    chip.classList.remove('selected');
-    chip.style.background = 'white';
-    chip.style.color = '#374151';
-    chip.style.borderColor = '#e5e7eb';
-  });
+  sel.value = '';
+  const favicon = document.getElementById('icalPlatformFavicon');
+  if (favicon) favicon.style.display = 'none';
 
   renderIcalUrls();
   showToast('Lien iCal ajouté', 'success');
@@ -2855,18 +2794,17 @@ function removeIcalUrl(index) {
 function renderIcalUrls() {
   const list = document.getElementById('icalUrlsList');
   if (!list) return;
-
   if (!window._currentIcalUrls || window._currentIcalUrls.length === 0) {
     list.innerHTML = '<p style="font-size:13px;color:#9ca3af;padding:4px 0;">Aucune plateforme iCal configurée.</p>';
     return;
   }
-
   list.innerHTML = window._currentIcalUrls.map((entry, i) => {
-    const p = ICAL_PLATFORMS.find(pl => pl.id === entry.platform) || { name: entry.platformName || entry.platform, color: entry.color || '#888', logo: '' };
+    const p = ICAL_PLATFORMS.find(pl => pl.id === entry.platform) || { name: entry.platformName || entry.platform, color: entry.color || '#888', domain: null };
+    const faviconUrl = (p.domain || entry.domain) ? getFaviconUrl(p.domain || entry.domain) : '';
     return `
       <div class="ical-url-row">
         <div class="ical-plat-badge" style="background:${p.color};">
-          ${p.logo}
+          ${faviconUrl ? `<img src="${faviconUrl}" style="width:14px;height:14px;border-radius:2px;object-fit:contain;vertical-align:middle;margin-right:4px;">` : ''}
           ${p.name}
         </div>
         <span class="ical-url-text" title="${entry.url}">${entry.url}</span>
@@ -2878,13 +2816,32 @@ function renderIcalUrls() {
   }).join('');
 }
 
-// Init au chargement du modal
+// Afficher le lien iCal export du logement courant
+function initIcalExportUrl(propertyId) {
+  const input = document.getElementById('icalExportUrl');
+  if (!input || !propertyId) return;
+  const base = window.API_URL || 'https://lcc-booking-manager.onrender.com';
+  input.value = `${base}/ical/property/${propertyId}.ics`;
+}
+
+function copyIcalExportUrl() {
+  const input = document.getElementById('icalExportUrl');
+  if (!input || !input.value || input.value === 'Chargement…') return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    showToast('Lien copié !', 'success');
+  }).catch(() => {
+    input.select();
+    document.execCommand('copy');
+    showToast('Lien copié !', 'success');
+  });
+}
+
+// Init au chargement
 document.addEventListener('DOMContentLoaded', function() {
-  initIcalPlatformPicker();
+  initIcalPlatformSelect();
   window._currentIcalUrls = [];
   renderIcalUrls();
 });
-// Aussi à l'ouverture du modal si déjà chargé
 if (document.readyState !== 'loading') {
-  initIcalPlatformPicker();
+  initIcalPlatformSelect();
 }
