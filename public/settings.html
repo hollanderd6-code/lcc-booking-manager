@@ -3097,6 +3097,207 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 }
 </style>
 
+<!-- ═══════════════════════════════════════════════
+     🎨 MODAL PREMIUM REDESIGN — Boostinghost
+════════════════════════════════════════════════ -->
+<style id="modal-premium">
+
+/* ── Backdrop ── */
+#editPropertyModal {
+  background: rgba(10, 14, 23, 0.65) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+/* ── Conteneur ── */
+#editPropertyModal .modal-content {
+  background: #FAFAF8 !important;
+  border-radius: 20px !important;
+  max-width: 640px !important;
+  box-shadow: 0 32px 80px rgba(10,14,23,.28), 0 0 0 1px rgba(255,255,255,.6) inset !important;
+}
+
+/* ── Header ── */
+#editPropertyModal .modal-header {
+  background: #0D1117 !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: none !important;
+}
+#editPropertyModal .modal-header h2 {
+  color: #FFFFFF !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 0 !important;
+}
+#editPropertyModal .modal-header h2 i {
+  width: 30px; height: 30px;
+  background: rgba(26,122,94,.3);
+  border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #4ade80;
+  flex-shrink: 0;
+}
+#editPropertyModal .modal-close {
+  width: 30px; height: 30px;
+  background: rgba(255,255,255,.08) !important;
+  border-radius: 8px !important;
+  color: rgba(255,255,255,.55) !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  transition: background .15s, color .15s !important;
+}
+#editPropertyModal .modal-close:hover {
+  background: rgba(255,255,255,.18) !important;
+  color: #fff !important;
+}
+
+/* ── Body ── */
+#editPropertyModal .modal-body {
+  padding: 20px 24px 0 !important;
+  background: #FAFAF8 !important;
+}
+#editPropertyModal .modal-body::-webkit-scrollbar { width: 4px; }
+#editPropertyModal .modal-body::-webkit-scrollbar-track { background: transparent; }
+#editPropertyModal .modal-body::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 999px; }
+
+/* ── Séparateurs de sections ── */
+#editPropertyModal .form-section-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 18px 0 10px !important;
+  margin-top: 4px !important;
+  border-top: 1px solid #EAE6DF !important;
+}
+/* Icône badge coloré par section */
+#editPropertyModal .form-section-header > i {
+  width: 28px !important; height: 28px !important; min-width: 28px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  font-size: 12px !important; flex-shrink: 0 !important;
+}
+#editPropertyModal .form-section-header .fa-tags        { background:#FEF3C7!important; color:#D97706!important; }
+#editPropertyModal .form-section-header .fa-home        { background:#DBEAFE!important; color:#2563EB!important; }
+#editPropertyModal .form-section-header .fa-list-check  { background:#FCE7F3!important; color:#DB2777!important; }
+#editPropertyModal .form-section-header .fa-circle-info { background:#F0FDF4!important; color:#16A34A!important; }
+#editPropertyModal .form-section-header .fa-broom       { background:#F5F3FF!important; color:#7C3AED!important; }
+#editPropertyModal .form-section-header .fa-robot       { background:#EFF6FF!important; color:#2563EB!important; }
+#editPropertyModal .form-section-header .fa-comments    { background:#FFF7ED!important; color:#EA580C!important; }
+#editPropertyModal .form-section-header .fa-star        { background:#FFFBEB!important; color:#F59E0B!important; }
+#editPropertyModal .form-section-header .fa-calendar-alt{ background:#F0FDF4!important; color:#1A7A5E!important; }
+#editPropertyModal .form-section-header h3,
+#editPropertyModal .form-section-header > span:first-of-type {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  letter-spacing: -0.01em !important;
+  flex: 1 !important;
+}
+#editPropertyModal .form-section-header small { display: none !important; }
+
+/* ── Labels ── */
+#editPropertyModal .form-group label {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #6B7280 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  gap: 5px !important;
+}
+#editPropertyModal .form-group label i { color: #9CA3AF !important; font-size: 10px !important; }
+
+/* ── Inputs ── */
+#editPropertyModal .form-group input:not([type=checkbox]):not([type=color]):not([type=range]),
+#editPropertyModal .form-group textarea,
+#editPropertyModal .form-group select,
+#editPropertyModal select.form-input,
+#editPropertyModal input.form-input {
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+  font-family: "DM Sans", sans-serif !important;
+  color: #111827 !important;
+  transition: border-color .15s, box-shadow .15s !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
+}
+#editPropertyModal .form-group input:focus,
+#editPropertyModal .form-group textarea:focus,
+#editPropertyModal .form-group select:focus {
+  border-color: #1A7A5E !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
+  outline: none !important;
+  background: #FFFFFF !important;
+}
+
+/* ── Info box ── */
+#editPropertyModal .info-box {
+  background: #F8FFFE !important;
+  border: 1px solid #CCFBF1 !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  font-size: 12px !important;
+  color: #065F46 !important;
+  gap: 8px !important;
+}
+#editPropertyModal .info-box i { color: #059669 !important; font-size: 13px !important; }
+
+/* ── Footer ── */
+#editPropertyModal .modal-actions {
+  background: #FFFFFF !important;
+  border-top: 1px solid #EAE6DF !important;
+  padding: 14px 24px 18px !important;
+  margin: 0 -0px !important;
+}
+#editPropertyModal .btn-cancel {
+  background: #F3F4F6 !important;
+  color: #374151 !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 10px !important;
+  padding: 9px 18px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: background .15s !important;
+}
+#editPropertyModal .btn-cancel:hover { background: #E9EAEC !important; }
+#editPropertyModal .btn-save {
+  background: #0D1117 !important;
+  color: #FFFFFF !important;
+  border-radius: 10px !important;
+  padding: 10px 24px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  box-shadow: 0 2px 8px rgba(13,17,23,.2) !important;
+  transition: background .15s !important;
+}
+#editPropertyModal .btn-save:hover { background: #1A7A5E !important; }
+
+/* ── iCal ── */
+#editPropertyModal #icalExportUrl {
+  font-size: 11.5px !important;
+  color: #065F46 !important;
+}
+#editPropertyModal .ical-url-row {
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 10px !important;
+}
+#editPropertyModal #icalAddBlock {
+  background: #FAFAFA !important;
+  border: 1.5px dashed #E5E7EB !important;
+  border-radius: 12px !important;
+}
+
+</style>
+
+
 <script>
 // Grille responsive : 3 colonnes desktop, 1 colonne mobile
 document.addEventListener('DOMContentLoaded', function() {
