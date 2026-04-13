@@ -2150,7 +2150,7 @@ function openPricingRuleModal(existingRule = null) {
 
   const modal = document.createElement('div');
   modal.id = 'pricingRuleModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;';
 
   modal.innerHTML = `
     <div style="background:#fff;border-radius:20px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;font-family:'DM Sans',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2);">
@@ -2172,17 +2172,17 @@ function openPricingRuleModal(existingRule = null) {
         <!-- Type -->
         <div style="margin-bottom:14px;">
           <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Type de règle</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
             ${[
               { val: 'period', icon: 'fa-calendar-alt', label: 'Période' },
               { val: 'weekday', icon: 'fa-clock', label: 'Jours de semaine' },
               { val: 'min_stay', icon: 'fa-moon', label: 'Séjour minimum' },
               { val: 'long_stay', icon: 'fa-percentage', label: 'Réduction longue durée' }
             ].map(t => `
-              <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid ${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#E8E0D0'};border-radius:10px;cursor:pointer;background:${(rule.rule_type || 'period') === t.val ? 'rgba(26,122,94,.06)' : '#fff'};">
+              <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid ${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#E8E0D0'};border-radius:10px;cursor:pointer;background:${(rule.rule_type || 'period') === t.val ? 'rgba(26,122,94,.06)' : '#fff'};min-width:0;">
                 <input type="radio" name="pr_type" value="${t.val}" ${(rule.rule_type || 'period') === t.val ? 'checked' : ''} onchange="updatePricingRuleForm()" style="accent-color:#1A7A5E;" />
                 <i class="fas ${t.icon}" style="color:#1A7A5E;font-size:13px;"></i>
-                <span style="font-size:13px;font-weight:500;">${t.label}</span>
+                <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.label}</span>
               </label>
             `).join('')}
           </div>
