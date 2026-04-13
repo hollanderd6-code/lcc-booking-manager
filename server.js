@@ -516,7 +516,7 @@ async function hasArrivalMessageBeenSent(pool, conversationId) {
     const result = await pool.query(
       `SELECT id FROM messages 
        WHERE conversation_id = $1 
-       AND sender_type = 'system' 
+       AND sender_type IN ('system', 'property')
        AND message LIKE '%Bienvenue dans%'
        LIMIT 1`,
       [conversationId]
@@ -577,7 +577,7 @@ async function sendArrivalMessage(pool, io, conversation) {
 
     const messageResult = await pool.query(
       `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
-       VALUES ($1, 'system', 'Bienvenue', $2, FALSE, NOW())
+       VALUES ($1, 'property', 'Boostinghost', $2, FALSE, NOW())
        RETURNING id, conversation_id, sender_type, sender_name, message, is_read, created_at`,
       [conversation.id, message]
     );
@@ -728,18 +728,19 @@ const smtpTransporter = nodemailer.createTransport({
 // CRON JOB : MESSAGES D'ARRIVÉE AUTOMATIQUES
 // ============================================
 
-cron.schedule('0 7 * * *', async () => {
-  console.log('🕐 CRON: Envoi des messages d\'arrivée à 7h00');
-  try {
-    await arrivalMessageService.processArrivalsForToday(pool, io, transporter);
-  } catch (error) {
-    console.error('❌ Erreur CRON messages d\'arrivée:', error);
-  }
-}, {
-  timezone: "Europe/Paris"
-});
+// ⚠️ CRON DÉSACTIVÉ — remplacé par les templates on_arrival (runTemplatesCron)
+// cron.schedule('0 7 * * *', async () => {
+//   console.log('🕐 CRON: Envoi des messages d\'arrivée à 7h00');
+//   try {
+//     await arrivalMessageService.processArrivalsForToday(pool, io, transporter);
+//   } catch (error) {
+//     console.error('❌ Erreur CRON messages d\'arrivée:', error);
+//   }
+// }, {
+//   timezone: "Europe/Paris"
+// });
 
-console.log('✅ CRON job messages d\'arrivée configuré (tous les jours à 7h)');
+console.log('ℹ️ CRON messages d\'arrivée désactivé — remplacé par les templates on_arrival');
 
 // ============================================
 // CRON iCal DÉSACTIVÉ — remplacé par Channex webhooks
@@ -851,18 +852,19 @@ console.log('CRON rappels liberation cautions configure (tous les jours a 10h)')
 // CRON JOB : INFOS D'ACCÈS JOUR J À 7H
 // ============================================
 
-cron.schedule('0 7 * * *', async () => {
-  console.log('🕐 CRON: Envoi infos d\'accès (jour J) à 7h00');
-  try {
-    await sendArrivalInfoMessages(io);
-  } catch (error) {
-    console.error('❌ Erreur CRON infos accès:', error);
-  }
-}, {
-  timezone: "Europe/Paris"
-});
+// ⚠️ CRON DÉSACTIVÉ — remplacé par les templates on_arrival (runTemplatesCron)
+// cron.schedule('0 7 * * *', async () => {
+//   console.log('🕐 CRON: Envoi infos d\'accès (jour J) à 7h00');
+//   try {
+//     await sendArrivalInfoMessages(io);
+//   } catch (error) {
+//     console.error('❌ Erreur CRON infos accès:', error);
+//   }
+// }, {
+//   timezone: "Europe/Paris"
+// });
 
-console.log('✅ CRON job infos d\'accès configuré (tous les jours à 7h, jour d\'arrivée)');
+console.log('ℹ️ CRON infos d\'accès désactivé — remplacé par les templates on_arrival');
 
 
 // ============================================
@@ -4360,7 +4362,7 @@ async function sendAutomatedMessage(conversationId, message, io) {
   try {
     const messageResult = await pool.query(
       `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, is_bot_response)
-       VALUES ($1, 'bot', 'Assistant automatique', $2, FALSE, TRUE)
+       VALUES ($1, 'property', 'Assistant automatique', $2, FALSE, TRUE)
        RETURNING id, conversation_id, sender_type, sender_name, message, is_read, is_bot_response, created_at`,
       [conversationId, message]
     );
@@ -19921,6 +19923,8 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     .replace(/{adresse}/gi, property?.address || '')
     .replace(/{heure_arrivee}/gi, property?.arrival_time || '')
     .replace(/{heure_depart}/gi, property?.departure_time || '')
+    .replace(/{departureTime}/gi, property?.departure_time || '')
+    .replace(/{arrivalTime}/gi, property?.arrival_time || '')
     .replace(/{code_acces}/gi, property?.access_code || '')
     .replace(/{wifi_nom}/gi, property?.wifi_name || '')
     .replace(/{wifi_mdp}/gi, property?.wifi_password || '')
@@ -20909,18 +20913,19 @@ console.log('Route messages ajoutee');
 // CRON JOB : MESSAGES D'ARRIVEE AUTOMATIQUES
 // ============================================
 
-cron.schedule('0 7 * * *', async () => {
-  console.log('CRON: Envoi des messages d arrivee a 7h00');
-  try {
-    await processArrivalsForToday(pool, io, transporter);
-  } catch (error) {
-    console.error('Erreur CRON messages arrivee:', error);
-  }
-}, {
-  timezone: "Europe/Paris"
-});
+// ⚠️ CRON DÉSACTIVÉ — doublon de arrivalMessageService (lui-même désactivé)
+// cron.schedule('0 7 * * *', async () => {
+//   console.log('CRON: Envoi des messages d arrivee a 7h00');
+//   try {
+//     await processArrivalsForToday(pool, io, transporter);
+//   } catch (error) {
+//     console.error('Erreur CRON messages arrivee:', error);
+//   }
+// }, {
+//   timezone: "Europe/Paris"
+// });
 
-console.log('CRON job messages arrivee configure (tous les jours a 7h)');
+console.log('ℹ️ CRON messages arrivée (doublon) désactivé');
 // ============================================
 // CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
 // ============================================
