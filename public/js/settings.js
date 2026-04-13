@@ -472,7 +472,7 @@ async function saveProperty(event) {
   formData.append('name', name);
   formData.append('internalName', internalName || ''); // Toujours envoyer, même vide
   formData.append('color', color);
-  formData.append('icalUrls', JSON.stringify([])); // iCal désactivé — Channex gère les OTAs
+  formData.append('icalUrls', JSON.stringify(window._currentIcalUrls || []));
   
   if (address) formData.append('address', address);
   if (arrivalTime) formData.append('arrivalTime', arrivalTime);
@@ -934,7 +934,10 @@ function openEditPropertyModal(propertyId) {
     }
   }
 
-  // populate iCal URLs supprimé — Channex gère les OTAs
+  // Charger les URLs iCal existantes
+  const existingIcal = property.icalUrls || property.ical_urls || [];
+  window._currentIcalUrls = Array.isArray(existingIcal) ? existingIcal : [];
+  if (typeof renderIcalUrls === 'function') renderIcalUrls();
 
   // ✅ CHARGER LES RÈGLES DE TARIFICATION
   if (typeof loadPricingRules === 'function') {
@@ -2706,3 +2709,182 @@ async function sendReviewReply(reviewId, propertyId) {
 }
 
 // initReviewsSection est appelé directement depuis openEditPropertyModal (settings.js)
+
+// ============================================================
+// 🗓️ SYNCHRONISATION iCAL — Plateformes non connectées à Channex
+// ============================================================
+
+const ICAL_PLATFORMS = [
+  {
+    id: 'gites_de_france',
+    name: 'Gîtes de France',
+    color: '#E8612C',
+    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#E8612C"/><path d="M16 6 L26 14 L26 26 L6 26 L6 14 Z" fill="white"/><rect x="12" y="18" width="8" height="8" fill="#E8612C"/><rect x="14" y="20" width="4" height="6" fill="white"/></svg>`
+  },
+  {
+    id: 'clevacances',
+    name: 'Clévacances',
+    color: '#C8002B',
+    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#C8002B"/><text x="16" y="22" text-anchor="middle" font-size="16" font-weight="bold" fill="white" font-family="Arial">C</text></svg>`
+  },
+  {
+    id: 'leboncoin',
+    name: 'Leboncoin',
+    color: '#F55A00',
+    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#F55A00"/><circle cx="16" cy="16" r="8" fill="white"/><circle cx="16" cy="16" r="5" fill="#F55A00"/></svg>`
+  },
+  {
+    id: 'amivac',
+    name: 'Amivac',
+    color: '#00A6A6',
+    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#00A6A6"/><text x="16" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="white" font-family="Arial">A</text></svg>`
+  },
+  {
+    id: 'casamundo',
+    name: 'Casamundo',
+    color: '#E30613',
+    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#E30613"/><path d="M8 20 L16 8 L24 20 Z" fill="white"/><rect x="13" y="20" width="6" height="6" fill="white"/></svg>`
+  },
+  {
+    id: 'housetrip',
+    name: 'Housetrip',
+    color: '#FF5A5F',
+    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#FF5A5F"/><path d="M16 7 L27 16 L24 16 L24 25 L8 25 L8 16 L5 16 Z" fill="white"/></svg>`
+  },
+  {
+    id: 'camping_car_park',
+    name: 'Camping-car Park',
+    color: '#2E7D32',
+    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#2E7D32"/><rect x="6" y="12" width="20" height="12" rx="2" fill="white"/><circle cx="11" cy="25" r="3" fill="#2E7D32"/><circle cx="21" cy="25" r="3" fill="#2E7D32"/><path d="M6 14 L6 10 L20 10 L26 14" stroke="white" stroke-width="2" fill="none"/></svg>`
+  },
+  {
+    id: 'holidayhome',
+    name: 'Holidayhome',
+    color: '#004B8D',
+    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18"><rect width="32" height="32" rx="4" fill="#004B8D"/><path d="M16 7 L27 16 L24 16 L24 25 L8 25 L8 16 L5 16 Z" fill="white"/></svg>`
+  }
+];
+
+// Plateforme sélectionnée pour l'ajout en cours
+window._selectedIcalPlatform = null;
+window._currentIcalUrls = window._currentIcalUrls || [];
+
+// Initialiser le picker de plateformes
+function initIcalPlatformPicker() {
+  const picker = document.getElementById('icalPlatformPicker');
+  if (!picker) return;
+
+  picker.innerHTML = ICAL_PLATFORMS.map(p => `
+    <button type="button"
+      class="ical-platform-chip"
+      id="ical-chip-${p.id}"
+      onclick="selectIcalPlatform('${p.id}')"
+      style="--plat-color:${p.color}">
+      ${p.logo}
+      ${p.name}
+    </button>
+  `).join('');
+}
+
+function selectIcalPlatform(platformId) {
+  window._selectedIcalPlatform = platformId;
+  // Mettre à jour visuellement
+  document.querySelectorAll('.ical-platform-chip').forEach(chip => {
+    const p = ICAL_PLATFORMS.find(pl => `ical-chip-${pl.id}` === chip.id);
+    if (!p) return;
+    chip.classList.remove('selected');
+    chip.style.background = 'white';
+    chip.style.color = '#374151';
+    chip.style.borderColor = '#e5e7eb';
+  });
+  const selected = document.getElementById(`ical-chip-${platformId}`);
+  if (selected) {
+    const p = ICAL_PLATFORMS.find(pl => pl.id === platformId);
+    selected.classList.add('selected');
+    selected.style.background = p.color;
+    selected.style.color = 'white';
+    selected.style.borderColor = p.color;
+  }
+}
+
+function addIcalUrl() {
+  const urlInput = document.getElementById('icalNewUrl');
+  const url = urlInput?.value?.trim();
+
+  if (!window._selectedIcalPlatform) {
+    showToast('Sélectionnez une plateforme', 'warning');
+    return;
+  }
+  if (!url || !url.startsWith('http')) {
+    showToast('Entrez un lien iCal valide', 'warning');
+    return;
+  }
+  // Vérifier doublon
+  if (window._currentIcalUrls.some(e => e.url === url)) {
+    showToast('Ce lien est déjà ajouté', 'warning');
+    return;
+  }
+
+  const platform = ICAL_PLATFORMS.find(p => p.id === window._selectedIcalPlatform);
+  window._currentIcalUrls.push({
+    platform: platform.id,
+    platformName: platform.name,
+    color: platform.color,
+    url
+  });
+
+  // Reset
+  urlInput.value = '';
+  window._selectedIcalPlatform = null;
+  document.querySelectorAll('.ical-platform-chip').forEach(chip => {
+    chip.classList.remove('selected');
+    chip.style.background = 'white';
+    chip.style.color = '#374151';
+    chip.style.borderColor = '#e5e7eb';
+  });
+
+  renderIcalUrls();
+  showToast('Lien iCal ajouté', 'success');
+}
+
+function removeIcalUrl(index) {
+  window._currentIcalUrls.splice(index, 1);
+  renderIcalUrls();
+}
+
+function renderIcalUrls() {
+  const list = document.getElementById('icalUrlsList');
+  if (!list) return;
+
+  if (!window._currentIcalUrls || window._currentIcalUrls.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:#9ca3af;padding:4px 0;">Aucune plateforme iCal configurée.</p>';
+    return;
+  }
+
+  list.innerHTML = window._currentIcalUrls.map((entry, i) => {
+    const p = ICAL_PLATFORMS.find(pl => pl.id === entry.platform) || { name: entry.platformName || entry.platform, color: entry.color || '#888', logo: '' };
+    return `
+      <div class="ical-url-row">
+        <div class="ical-plat-badge" style="background:${p.color};">
+          ${p.logo}
+          ${p.name}
+        </div>
+        <span class="ical-url-text" title="${entry.url}">${entry.url}</span>
+        <button type="button" class="ical-remove-btn" onclick="removeIcalUrl(${i})" title="Supprimer">
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// Init au chargement du modal
+document.addEventListener('DOMContentLoaded', function() {
+  initIcalPlatformPicker();
+  window._currentIcalUrls = [];
+  renderIcalUrls();
+});
+// Aussi à l'ouverture du modal si déjà chargé
+if (document.readyState !== 'loading') {
+  initIcalPlatformPicker();
+}
