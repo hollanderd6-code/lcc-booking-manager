@@ -740,9 +740,7 @@ async function startCheckout(plan, event) {
 
           // Bloquer si le downgrade est impossible
           if (!checkData.canDowngrade) {
-            alert('⚠️ Changement de plan impossible
-
-' + checkData.warning);
+            alert('⚠️ Changement de plan impossible\n\n' + checkData.warning);
             button.disabled = false;
             button.textContent = 'Changer de plan';
             return;
@@ -750,9 +748,7 @@ async function startCheckout(plan, event) {
 
           // Avertir si des logements supplémentaires seront facturés
           if (checkData.willPayExtra && checkData.warning) {
-            const confirmed = confirm('ℹ️ ' + checkData.warning + '
-
-Voulez-vous continuer ?');
+            const confirmed = confirm('ℹ️ ' + checkData.warning + '\n\nVoulez-vous continuer ?');
             if (!confirmed) {
               button.disabled = false;
               button.textContent = 'Changer de plan';
