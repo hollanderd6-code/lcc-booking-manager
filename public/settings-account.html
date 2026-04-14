@@ -2774,6 +2774,18 @@ document.addEventListener('DOMContentLoaded', function() {
       data.password = document.getElementById('memberPassword').value;
     }
     
+    // visible_kpis envoyé toujours, quel que soit le rôle
+    const _visibleKpis = {
+      kpi_properties: document.getElementById('perm_kpiProperties')?.checked || false,
+      kpi_checkins: document.getElementById('perm_kpiCheckins')?.checked || false,
+      kpi_cleaning: document.getElementById('perm_kpiCleaning')?.checked || false,
+      kpi_risks: document.getElementById('perm_kpiRisks')?.checked || false,
+      kpi_occupancy: document.getElementById('perm_kpiOccupancy')?.checked || false,
+      kpi_deposits: document.getElementById('perm_kpiDeposits')?.checked || false,
+      kpi_checklists: document.getElementById('perm_kpiChecklists')?.checked || false,
+      kpi_ca: document.getElementById('perm_kpiCA')?.checked || false,
+    };
+
     if (role === 'custom') {
       data.permissions = {
         can_view_reservations: document.getElementById('perm_canViewCalendar')?.checked || false,
@@ -2795,18 +2807,13 @@ document.addEventListener('DOMContentLoaded', function() {
         can_view_smart_locks: document.getElementById('perm_canViewSmartLocks')?.checked || false,
         can_manage_smart_locks: document.getElementById('perm_canManageSmartLocks')?.checked || false,
         can_view_contracts: document.getElementById('perm_canViewContracts')?.checked || false,
-        visible_kpis: {
-          kpi_properties: document.getElementById('perm_kpiProperties')?.checked || false,
-          kpi_checkins: document.getElementById('perm_kpiCheckins')?.checked || false,
-          kpi_cleaning: document.getElementById('perm_kpiCleaning')?.checked || false,
-          kpi_risks: document.getElementById('perm_kpiRisks')?.checked || false,
-          kpi_occupancy: document.getElementById('perm_kpiOccupancy')?.checked || false,
-          kpi_deposits: document.getElementById('perm_kpiDeposits')?.checked || false,
-          kpi_checklists: document.getElementById('perm_kpiChecklists')?.checked || false,
-          kpi_ca: document.getElementById('perm_kpiCA')?.checked || false,
-        },
+        visible_kpis: _visibleKpis,
       };
       console.log('🔐 Permissions:', data.permissions);
+    } else {
+      // Pour les rôles prédéfinis, on envoie quand même visible_kpis
+      data.visible_kpis = _visibleKpis;
+      console.log('🔐 visible_kpis (rôle prédéfini):', _visibleKpis);
     }
     
     try {
