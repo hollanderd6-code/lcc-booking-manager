@@ -3535,17 +3535,50 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
         else if (subscription.status === 'past_due') status = 'past_due';
         else if (subscription.status === 'unpaid') status = 'expired';
 
-        await pool.query(
-          `UPDATE subscriptions 
-           SET 
-             status = $1,
-             current_period_end = to_timestamp($2),
-             updated_at = NOW()
-           WHERE stripe_subscription_id = $3`,
-          [status, subscription.current_period_end, subscriptionId]
-        );
+        // ✅ Récupérer le nouveau plan depuis le Price ID Stripe (gère les upgrades/downgrades)
+        let updatedPlanType = null;
+        try {
+          const priceId = subscription.items?.data[0]?.price?.id;
+          if (priceId) {
+            updatedPlanType = getPlanFromPriceId(priceId);
+            console.log(`✅ Plan mis à jour depuis Price ID: ${priceId} -> ${updatedPlanType}`);
+          }
+        } catch(e) {
+          console.warn('⚠️ Impossible de lire le plan depuis subscription.updated:', e.message);
+        }
 
-        console.log(`✅ Abonnement ${subscriptionId} mis à jour: ${status}`);
+        // Vérifier le downgrade : si le nouveau plan a moins de logements inclus
+        if (updatedPlanType) {
+          const newLimits = getPlanLimits(updatedPlanType);
+          const subUserResult = await pool.query(
+            'SELECT user_id FROM subscriptions WHERE stripe_subscription_id = $1',
+            [subscriptionId]
+          );
+          if (subUserResult.rows.length > 0) {
+            const subUserId = subUserResult.rows[0].user_id;
+            const propCountResult = await pool.query(
+              'SELECT COUNT(*) AS count FROM properties WHERE user_id = $1',
+              [subUserId]
+            );
+            const propCount = parseInt(propCountResult.rows[0].count, 10);
+            if (propCount > newLimits.included && newLimits.extraPrice === null) {
+              // Plan Solo avec trop de logements → on bloque le downgrade côté info (Stripe gère le billing)
+              console.warn(`⚠️ Downgrade détecté: user ${subUserId} a ${propCount} logements mais le nouveau plan ${updatedPlanType} n'en inclut que ${newLimits.included} et ne permet pas de supplémentaires.`);
+            }
+          }
+        }
+
+        const updateQuery = updatedPlanType
+          ? `UPDATE subscriptions SET status = $1, current_period_end = to_timestamp($2), plan_type = $4, updated_at = NOW() WHERE stripe_subscription_id = $3`
+          : `UPDATE subscriptions SET status = $1, current_period_end = to_timestamp($2), updated_at = NOW() WHERE stripe_subscription_id = $3`;
+
+        const updateParams = updatedPlanType
+          ? [status, subscription.current_period_end, subscriptionId, updatedPlanType]
+          : [status, subscription.current_period_end, subscriptionId];
+
+        await pool.query(updateQuery, updateParams);
+
+        console.log(`✅ Abonnement ${subscriptionId} mis à jour: status=${status}${updatedPlanType ? ' plan=' + updatedPlanType : ''}`);
         break;
       }
 
@@ -11373,6 +11406,7 @@ app.get('/api/properties/:propertyId',
 
 app.post('/api/properties', 
   authenticateAny,
+  checkSubscription,
   requirePermission(pool, 'can_edit_properties'),
   upload.single('photo'), 
   async (req, res) => {
@@ -11439,7 +11473,7 @@ app.post('/api/properties',
       // Récupérer le plan actif de l'utilisateur
       const subResult = await pool.query(
         `SELECT plan_type, stripe_subscription_id FROM subscriptions
-         WHERE user_id = $1 AND status IN ('active', 'trialing')
+         WHERE user_id = $1 AND status IN ('active', 'trial', 'trialing')
          ORDER BY created_at DESC LIMIT 1`,
         [userId]
       );
@@ -15125,6 +15159,54 @@ app.post('/api/reservations/:reservationUid/generate-checklists', async (req, re
 // ROUTES API - ABONNEMENTS STRIPE
 // À COPIER-COLLER DANS server.js APRÈS LES AUTRES ROUTES
 // ============================================
+
+// GET - Vérifier si un downgrade vers un plan est possible (nombre de logements)
+app.get('/api/billing/check-downgrade', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { targetPlan } = req.query;
+    if (!targetPlan) return res.status(400).json({ error: 'targetPlan requis' });
+
+    const newLimits = getPlanLimits(targetPlan);
+    const propCountResult = await pool.query(
+      'SELECT COUNT(*) AS count FROM properties WHERE user_id = $1',
+      [user.id]
+    );
+    const propCount = parseInt(propCountResult.rows[0].count, 10);
+
+    const currentSubResult = await pool.query(
+      `SELECT plan_type FROM subscriptions WHERE user_id = $1 AND status IN ('active', 'trial', 'trialing') LIMIT 1`,
+      [user.id]
+    );
+    const currentPlan = currentSubResult.rows[0]?.plan_type || 'solo';
+    const currentLimits = getPlanLimits(currentPlan);
+
+    const canDowngrade = propCount <= newLimits.included || newLimits.extraPrice !== null;
+    const willPayExtra = propCount > newLimits.included && newLimits.extraPrice !== null;
+    const extraCount = Math.max(0, propCount - newLimits.included);
+
+    res.json({
+      canDowngrade,
+      willPayExtra,
+      extraCount,
+      propCount,
+      newPlanIncluded: newLimits.included,
+      newPlanExtraPrice: newLimits.extraPrice,
+      currentPlan,
+      targetPlan,
+      warning: !canDowngrade
+        ? `Impossible : vous avez ${propCount} logements mais le plan ${getPlanDisplayName(targetPlan)} est limité à ${newLimits.included} logement(s) sans option supplémentaire. Supprimez ${propCount - newLimits.included} logement(s) avant de changer de plan.`
+        : willPayExtra
+          ? `Vous avez ${extraCount} logement(s) supplémentaire(s) qui seront facturés ${newLimits.extraPrice}€/mois chacun.`
+          : null
+    });
+  } catch (err) {
+    console.error('Erreur check-downgrade:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // POST - Créer un lien vers le portail client Stripe
 app.post('/api/billing/create-portal-session', async (req, res) => {
