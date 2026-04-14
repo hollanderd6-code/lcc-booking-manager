@@ -329,7 +329,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           notif_sub_deposit_paid = $30,
           notif_sub_payment_received = $31,
           notif_sub_new_message = $32,
-          notif_sub_daily_summary = $33
+          notif_sub_daily_summary = $33,
+          visible_kpis = $34
         WHERE sub_account_id = $16
       `, [
         finalPermissions.can_view_calendar,
@@ -364,7 +365,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
         notifications.notif_sub_deposit_paid || false,
         notifications.notif_sub_payment_received || false,
         notifications.notif_sub_new_message || false,
-        notifications.notif_sub_daily_summary || false
+        notifications.notif_sub_daily_summary || false,
+        JSON.stringify(finalPermissions.visible_kpis || {})
       ]);
 
       if (propertyIds && propertyIds.length > 0) {
@@ -629,7 +631,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
              notif_sub_deposit_paid = $30,
              notif_sub_payment_received = $31,
              notif_sub_new_message = $32,
-             notif_sub_daily_summary = $33
+             notif_sub_daily_summary = $33,
+             visible_kpis = $34
          WHERE sub_account_id = $16`,
         [
           finalPermissions.can_view_calendar,
@@ -664,7 +667,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           notifications.notif_sub_deposit_paid || false,
           notifications.notif_sub_payment_received || false,
           notifications.notif_sub_new_message || false,
-          notifications.notif_sub_daily_summary || false
+          notifications.notif_sub_daily_summary || false,
+          JSON.stringify(finalPermissions.visible_kpis || {})
         ]
       );
       
@@ -787,7 +791,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
         notif_sub_deposit_paid: row.notif_sub_deposit_paid || false,
         notif_sub_payment_received: row.notif_sub_payment_received || false,
         notif_sub_new_message: row.notif_sub_new_message || false,
-        notif_sub_daily_summary: row.notif_sub_daily_summary || false
+        notif_sub_daily_summary: row.notif_sub_daily_summary || false,
+        visible_kpis: (() => { try { return typeof row.visible_kpis === 'string' ? JSON.parse(row.visible_kpis) : (row.visible_kpis || {}); } catch(e) { return {}; } })()
       }));
 
       res.json({
@@ -937,6 +942,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
             can_view_payments: subAccount.can_view_payments || false,
             can_manage_payments: subAccount.can_manage_payments || false,
             can_view_contracts: subAccount.can_view_contracts || false,
+            visible_kpis: (() => { try { return typeof subAccount.visible_kpis === 'string' ? JSON.parse(subAccount.visible_kpis) : (subAccount.visible_kpis || {}); } catch(e) { return {}; } })(),
             notif_sub_new_reservation: subAccount.notif_sub_new_reservation || false,
             notif_sub_reservation_cancelled: subAccount.notif_sub_reservation_cancelled || false,
             notif_sub_cleaning_assigned: subAccount.notif_sub_cleaning_assigned || false,
