@@ -2150,16 +2150,16 @@ function openPricingRuleModal(existingRule = null) {
 
   const modal = document.createElement('div');
   modal.id = 'pricingRuleModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;';
 
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:20px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;font-family:'DM Sans',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="background:#fff;border-radius:20px;width:480px;max-width:calc(100vw - 32px);max-height:90vh;overflow-y:auto;font-family:'DM Sans',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2);box-sizing:border-box;">
       <div style="padding:20px 24px;border-bottom:1px solid #F0EBE3;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:16px;font-weight:700;color:#0D1117;">${isEdit ? 'Modifier la règle' : 'Nouvelle règle de prix'}</div>
         <button onclick="document.getElementById('pricingRuleModal').remove()"
           style="width:32px;height:32px;border-radius:50%;border:none;background:#f3f4f6;color:#6B7280;cursor:pointer;font-size:16px;">✕</button>
       </div>
-      <div style="padding:20px 24px;">
+      <div style="padding:16px 16px;">
 
         <!-- Nom -->
         <div style="margin-bottom:14px;">
@@ -2172,17 +2172,17 @@ function openPricingRuleModal(existingRule = null) {
         <!-- Type -->
         <div style="margin-bottom:14px;">
           <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Type de règle</label>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             ${[
               { val: 'period', icon: 'fa-calendar-alt', label: 'Période' },
               { val: 'weekday', icon: 'fa-clock', label: 'Jours de semaine' },
-              { val: 'min_stay', icon: 'fa-moon', label: 'Séjour minimum' },
-              { val: 'long_stay', icon: 'fa-percentage', label: 'Réduction longue durée' }
+              { val: 'min_stay', icon: 'fa-moon', label: 'Séjour min.' },
+              { val: 'long_stay', icon: 'fa-percentage', label: 'Longue durée' }
             ].map(t => `
-              <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid ${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#E8E0D0'};border-radius:10px;cursor:pointer;background:${(rule.rule_type || 'period') === t.val ? 'rgba(26,122,94,.06)' : '#fff'};min-width:0;">
-                <input type="radio" name="pr_type" value="${t.val}" ${(rule.rule_type || 'period') === t.val ? 'checked' : ''} onchange="updatePricingRuleForm()" style="accent-color:#1A7A5E;" />
-                <i class="fas ${t.icon}" style="color:#1A7A5E;font-size:13px;"></i>
-                <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.label}</span>
+              <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px 8px;border:1.5px solid ${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#E8E0D0'};border-radius:12px;cursor:pointer;background:${(rule.rule_type || 'period') === t.val ? 'rgba(26,122,94,.06)' : '#fff'};min-height:68px;position:relative;text-align:center;">
+                <input type="radio" name="pr_type" value="${t.val}" ${(rule.rule_type || 'period') === t.val ? 'checked' : ''} onchange="updatePricingRuleForm()" style="position:absolute;opacity:0;width:0;height:0;" />
+                <i class="fas ${t.icon}" style="color:${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#9CA3AF'};font-size:20px;"></i>
+                <span style="font-size:11px;font-weight:600;color:${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#374151'};line-height:1.3;">${t.label}</span>
               </label>
             `).join('')}
           </div>
@@ -2236,27 +2236,32 @@ function updatePricingRuleForm() {
   const container = document.getElementById('pr_fields');
   if (!container) return;
 
-  // Mettre à jour le style des boutons radio
+  // Mettre à jour le style des boutons radio (chips)
   document.querySelectorAll('input[name="pr_type"]').forEach(r => {
     const label = r.closest('label');
     if (label) {
-      label.style.borderColor = r.checked ? '#1A7A5E' : '#E8E0D0';
-      label.style.background = r.checked ? 'rgba(26,122,94,.06)' : '#fff';
+      const active = r.checked;
+      label.style.borderColor = active ? '#1A7A5E' : '#E8E0D0';
+      label.style.background = active ? 'rgba(26,122,94,.06)' : '#fff';
+      const icon = label.querySelector('i');
+      if (icon) icon.style.color = active ? '#1A7A5E' : '#9CA3AF';
+      const span = label.querySelector('span');
+      if (span) span.style.color = active ? '#1A7A5E' : '#374151';
     }
   });
 
   if (type === 'period') {
     container.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-        <div>
-          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Date début</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box;overflow:hidden;">
+        <div style="min-width:0;">
+          <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Date début</label>
           <input id="pr_start" type="date" value="${rule.start_date || ''}"
-            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+            style="width:100%;padding:9px 8px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:13px;box-sizing:border-box;min-width:0;" />
         </div>
-        <div>
-          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Date fin</label>
+        <div style="min-width:0;">
+          <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Date fin</label>
           <input id="pr_end" type="date" value="${rule.end_date || ''}"
-            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+            style="width:100%;padding:9px 8px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:13px;box-sizing:border-box;min-width:0;" />
         </div>
       </div>
       <div style="margin-bottom:14px;">
@@ -2302,16 +2307,16 @@ function updatePricingRuleForm() {
     `;
   } else if (type === 'long_stay') {
     container.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-        <div>
-          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Réduction (%)</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box;overflow:hidden;">
+        <div style="min-width:0;">
+          <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Réduction (%)</label>
           <input id="pr_discount_pct" type="number" min="0" max="100" step="0.5" placeholder="Ex: 10" value="${rule.discount_pct || ''}"
-            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+            style="width:100%;padding:9px 8px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:13px;box-sizing:border-box;min-width:0;" />
         </div>
-        <div>
-          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">À partir de (nuits)</label>
+        <div style="min-width:0;">
+          <label style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">À partir de (nuits)</label>
           <input id="pr_discount_nights" type="number" min="1" step="1" placeholder="Ex: 7" value="${rule.discount_after_nights || ''}"
-            style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
+            style="width:100%;padding:9px 8px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:13px;box-sizing:border-box;min-width:0;" />
         </div>
       </div>
     `;
