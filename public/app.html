@@ -11281,7 +11281,9 @@ document.addEventListener('DOMContentLoaded', function() {
   try {
     const _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
     _userRole = _u.role || '';
-    _perms = _u.permissions || {};
+    // Les permissions sont stockées dans lcc_permissions (séparé de lcc_user)
+    const _lccp = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
+    _perms = Object.keys(_lccp).length > 0 ? _lccp : (_u.permissions || {});
   } catch(e) {}
 
   // Mapping KPI id → clé visible_kpis
