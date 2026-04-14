@@ -2668,6 +2668,10 @@ document.addEventListener('DOMContentLoaded', function() {
       editingMemberId = null;
       document.getElementById('addTeamMemberForm').reset();
       document.querySelector('#addTeamMemberModal h2').textContent = 'Ajouter un membre d\'équipe';
+      const _submitBtn = document.querySelector('#addTeamMemberForm button[type="submit"]');
+      if (_submitBtn) {
+        _submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Créer le compte';
+      }
       const pwdField = document.getElementById('memberPassword');
       if (pwdField) {
         pwdField.required = true;
@@ -2824,6 +2828,8 @@ document.addEventListener('DOMContentLoaded', function() {
       document.querySelector('.app-container') && (document.querySelector('.app-container').style.overflow = '');
       this.reset();
       editingMemberId = null;
+      const _sb = document.querySelector('#addTeamMemberForm button[type="submit"]');
+      if (_sb) _sb.innerHTML = '<i class="fas fa-user-plus"></i> Créer le compte';
       loadTeamMembers();
     } catch (error) {
       alert('❌ ' + error.message);
@@ -2899,6 +2905,10 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
+      const submitBtn = document.querySelector('#addTeamMemberForm button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer les modifications';
+      }
       
       // Restaurer les notifications
       const notifFields = ['notif_sub_new_reservation','notif_sub_reservation_cancelled','notif_sub_cleaning_assigned','notif_sub_cleaning_completed','notif_sub_deposit_paid','notif_sub_payment_received','notif_sub_new_message'];
