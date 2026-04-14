@@ -20362,7 +20362,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
         const guestLabel = conv.guest_name || 'Voyageur';
         await sendNotificationByUserId(
           conv.user_id,
-          '⚠️ Échec d'envoi message automatique',
+          "⚠️ Échec d'envoi message automatique",
           `Template "${template.title}" non envoyé à ${guestLabel} (${propName})`,
           { type: 'template_failed', conversationId: String(conv.id) }
         );
