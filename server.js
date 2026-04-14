@@ -1956,6 +1956,9 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Colonne visible_kpis déjà existante:', e.message);
     }
 
+    // ✅ Migration : notif_template_failed dans user_settings (JSONB — pas de migration nécessaire)
+    // La clé est ajoutée dynamiquement dans le JSONB notifications lors de la prochaine sauvegarde
+
     // ✅ Migration : channex_booking_id dans reservations (si pas déjà là)
     try {
       await pool.query(`
@@ -2184,7 +2187,8 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
   notif_deposit_release: true,
   notif_new_message: true,
   notif_new_invoice: true,
-  notif_cleaning_alert: true
+  notif_cleaning_alert: true,
+  notif_template_failed: true
 };
 
 function getEmailTransporter() {
@@ -2368,6 +2372,7 @@ async function getNotificationSettings(userId) {
     notif_new_message: typeof raw.notif_new_message === 'boolean' ? raw.notif_new_message : DEFAULT_NOTIFICATION_SETTINGS.notif_new_message,
     notif_new_invoice: typeof raw.notif_new_invoice === 'boolean' ? raw.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
     notif_cleaning_alert: typeof raw.notif_cleaning_alert === 'boolean' ? raw.notif_cleaning_alert : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_alert,
+    notif_template_failed: typeof raw.notif_template_failed === 'boolean' ? raw.notif_template_failed : DEFAULT_NOTIFICATION_SETTINGS.notif_template_failed,
   };
 }
 
@@ -2405,6 +2410,7 @@ async function saveNotificationSettings(userId, settings) {
     notif_new_message: typeof settings.notif_new_message === 'boolean' ? settings.notif_new_message : DEFAULT_NOTIFICATION_SETTINGS.notif_new_message,
     notif_new_invoice: typeof settings.notif_new_invoice === 'boolean' ? settings.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
     notif_cleaning_alert: typeof settings.notif_cleaning_alert === 'boolean' ? settings.notif_cleaning_alert : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_alert,
+    notif_template_failed: typeof settings.notif_template_failed === 'boolean' ? settings.notif_template_failed : DEFAULT_NOTIFICATION_SETTINGS.notif_template_failed,
   };
 
   await pool.query(
@@ -20345,6 +20351,26 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     );
   } catch(e) {
     console.warn('⚠️ [TPL LOG]', e.message);
+  }
+
+  // 🔔 Notification push si le template a échoué
+  if (status === 'error' && conv.user_id) {
+    try {
+      if (await shouldSendNotification(conv.user_id, 'notif_template_failed')) {
+        const { sendNotificationByUserId } = require('./notifications-service');
+        const propName = conv.property_name || property?.name || 'Logement';
+        const guestLabel = conv.guest_name || 'Voyageur';
+        await sendNotificationByUserId(
+          conv.user_id,
+          '⚠️ Échec d'envoi message automatique',
+          `Template "${template.title}" non envoyé à ${guestLabel} (${propName})`,
+          { type: 'template_failed', conversationId: String(conv.id) }
+        );
+        console.log(`🔔 [TPL FAIL] Notification envoyée pour template ${template.id} conv ${conv.id}`);
+      }
+    } catch(notifErr) {
+      console.warn('⚠️ [TPL FAIL NOTIF]', notifErr.message);
+    }
   }
 
   return { status, message: msg };
