@@ -83,7 +83,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
 
     <div class="cta-block">
       <p>Accédez à votre espace dès maintenant</p>
-      <a href="${APP_URL}/app-simple-subaccount.html" class="btn">Se connecter →</a>
+      <a href="${APP_URL}/login.html" class="btn">Se connecter →</a>
     </div>
 
     <p style="font-size:13px;color:#999;">Pour votre sécurité, nous vous recommandons de changer votre mot de passe après votre première connexion.</p>
