@@ -174,7 +174,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_manage_smart_locks: permissions.can_manage_smart_locks || false,
           can_view_invoices: permissions.can_view_invoices || false,
           can_manage_invoices: permissions.can_manage_invoices || false,
-          can_view_contracts: permissions.can_view_contracts || false
+          can_view_contracts: permissions.can_view_contracts || false,
+          visible_kpis: permissions.visible_kpis || {}
         };
       } else {
         switch(role) {
@@ -203,7 +204,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_invoices: true,
               can_view_payments: true,
               can_manage_payments: true,
-              can_view_contracts: true
+              can_view_contracts: true,
+              visible_kpis: {}
             };
             break;
 
@@ -232,7 +234,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_invoices: false,
               can_view_payments: true,
               can_manage_payments: true,
-              can_view_contracts: true
+              can_view_contracts: true,
+              visible_kpis: {}
             };
             break;
             
@@ -261,7 +264,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_invoices: false,
               can_view_payments: false,
               can_manage_payments: false,
-              can_view_contracts: false
+              can_view_contracts: false,
+              visible_kpis: {}
             };
             break;
             
@@ -290,7 +294,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_invoices: false,
               can_view_payments: false,
               can_manage_payments: false,
-              can_view_contracts: false
+              can_view_contracts: false,
+              visible_kpis: {}
             };
             break;
         }
@@ -479,7 +484,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_manage_smart_locks: permissions.can_manage_smart_locks || false,
           can_view_invoices: permissions.can_view_invoices || false,
           can_manage_invoices: permissions.can_manage_invoices || false,
-          can_view_contracts: permissions.can_view_contracts || false
+          can_view_contracts: permissions.can_view_contracts || false,
+          visible_kpis: permissions.visible_kpis || {}
         };
       } else {
         switch(role) {
@@ -508,7 +514,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_invoices: true,
               can_view_payments: true,
               can_manage_payments: true,
-              can_view_contracts: true
+              can_view_contracts: true,
+              visible_kpis: {}
             };
             break;
           case 'manager':
@@ -536,7 +543,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_invoices: false,
               can_view_payments: true,
               can_manage_payments: true,
-              can_view_contracts: true
+              can_view_contracts: true,
+              visible_kpis: {}
             };
             break;
           case 'cleaner':
@@ -564,7 +572,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_invoices: false,
               can_view_payments: false,
               can_manage_payments: false,
-              can_view_contracts: false
+              can_view_contracts: false,
+              visible_kpis: {}
             };
             break;
           case 'accountant':
@@ -592,7 +601,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_invoices: false,
               can_view_payments: false,
               can_manage_payments: false,
-              can_view_contracts: false
+              can_view_contracts: false,
+              visible_kpis: {}
             };
             break;
         }
