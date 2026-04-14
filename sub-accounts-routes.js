@@ -768,6 +768,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           sp.notif_sub_payment_received,
           sp.notif_sub_new_message,
           sp.notif_sub_daily_summary,
+          sp.visible_kpis,
           
           -- Propriétés accessibles (array de TEXT/VARCHAR, pas INTEGER)
           COALESCE(
