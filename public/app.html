@@ -5128,9 +5128,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
               <i class="fas ${icon}"></i> ${label} (${list.length})
             </div>
             ${list.map(r => {
-              const _norm = typeof normalizePlatform === 'function' ? normalizePlatform(r.src, r.otaName) : (r.src || 'direct').toLowerCase();
-              const platformLabel = _norm === 'airbnb' ? 'Airbnb' : _norm === 'booking' ? 'Booking.com' : _norm === 'expedia' ? 'Expedia' : _norm === 'vrbo' ? 'Vrbo' : _norm === 'abritel' ? 'Abritel' : _norm === 'gites' ? 'Gîtes de France' : 'Direct';
-              const dotColor = _norm === 'airbnb' ? '#FF5A5F' : _norm === 'booking' ? '#003580' : _norm === 'expedia' ? '#00355F' : _norm === 'vrbo' ? '#3D5A80' : _norm === 'abritel' ? '#0096D6' : _norm === 'gites' ? '#2E7D32' : '#F97316';
+              const platformLabel = window.getPlatformLabel ? window.getPlatformLabel(r.src, r.otaName) : (r.src || 'Direct');
+              const dotColor = window.getPlatformDotColor ? window.getPlatformDotColor(r.src, r.otaName) : '#F97316';
               const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
               const score = r.riskScore != null ? `${r.riskScore}/100` : '';
               return `
@@ -5211,9 +5210,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
     } else {
       content.innerHTML = rows.map(r => {
-        const _normM = typeof normalizePlatform === 'function' ? normalizePlatform(r.src, r.otaName) : (r.src || 'direct').toLowerCase();
-        const dotColor = _normM === 'airbnb' ? '#FF5A5F' : _normM === 'booking' ? '#003580' : _normM === 'expedia' ? '#00355F' : _normM === 'vrbo' ? '#3D5A80' : _normM === 'abritel' ? '#0096D6' : _normM === 'gites' ? '#2E7D32' : '#F97316';
-        const _platLabelM = _normM === 'airbnb' ? 'Airbnb' : _normM === 'booking' ? 'Booking.com' : _normM === 'expedia' ? 'Expedia' : _normM === 'vrbo' ? 'Vrbo' : _normM === 'abritel' ? 'Abritel' : _normM === 'gites' ? 'Gîtes de France' : 'Direct';
+        const _platLabelM = window.getPlatformLabel ? window.getPlatformLabel(r.src, r.otaName) : (r.src || 'Direct');
+        const dotColor = window.getPlatformDotColor ? window.getPlatformDotColor(r.src, r.otaName) : '#F97316';
         const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
         const score = r.riskScore != null ? `${r.riskScore}/100` : '';
         return `
@@ -6693,6 +6691,16 @@ if (ota === 'ABRITEL' || ota.indexOf('ABRITEL') !== -1) return 'abritel';
       if (val === 'channex') return 'direct'; // fallback si pas d'ota_name
       return 'direct';
     }
+    // Exposer globalement pour les modales KPI
+    window.normalizePlatform = normalizePlatform;
+    window.getPlatformLabel = function(src, otaName) {
+      var n = normalizePlatform(src, otaName);
+      return n === 'airbnb' ? 'Airbnb' : n === 'booking' ? 'Booking.com' : n === 'expedia' ? 'Expedia' : n === 'vrbo' ? 'Vrbo' : n === 'abritel' ? 'Abritel' : n === 'gites' ? 'Gîtes de France' : 'Direct';
+    };
+    window.getPlatformDotColor = function(src, otaName) {
+      var n = normalizePlatform(src, otaName);
+      return n === 'airbnb' ? '#FF5A5F' : n === 'booking' ? '#003580' : n === 'expedia' ? '#00355F' : n === 'vrbo' ? '#3D5A80' : n === 'abritel' ? '#0096D6' : n === 'gites' ? '#2E7D32' : '#F97316';
+    };
 
   })();
 </script>
