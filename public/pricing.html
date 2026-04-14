@@ -817,13 +817,19 @@ Voulez-vous continuer ?');
           const planMatch = onclickAttr.match(/startCheckout\(['"]([^'"]+)['"]/);
           const btnPlan = planMatch ? planMatch[1] : null;
 
-          if (data.status === 'active' || data.status === 'trial') {
+          if (data.status === 'active') {
+            // Abonnement payant actif → afficher le plan actuel
             if (btnPlan && btnPlan === currentBasePlan) {
               btn.textContent = '✅ Votre plan actuel';
               btn.disabled = true;
               btn.style.opacity = '0.7';
             } else if (btnPlan) {
               btn.textContent = 'Changer de plan';
+            }
+          } else if (data.status === 'trial') {
+            // En période d'essai → inviter à choisir ce plan
+            if (btnPlan) {
+              btn.textContent = 'Choisir ce plan';
             }
           } else if (data.status === 'expired' || data.status === 'canceled' ||
               (data.status === 'trial' && data.daysRemaining < 0)) {
