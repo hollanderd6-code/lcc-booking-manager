@@ -11314,10 +11314,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
-      // Autres KPI : masqué si visible_kpis[key] === false explicitement
-      // Par défaut (undefined) = visible, sauf si le rôle est cleaner
-      var isVisible = visibleKpis[key];
-      var shouldHide = (isVisible === false) ||
+      // Autres KPI : visible UNIQUEMENT si visible_kpis[key] === true explicitement
+      // Par défaut (undefined ou false) = masqué pour les sous-comptes
+      var shouldHide = (visibleKpis[key] !== true) ||
         (_userRole === 'cleaner' && ['kpiPropertiesCard','kpiTopRisksCard','kpiOccupancyCard','kpiDepositsCard'].includes(cardId));
 
       if (shouldHide) {
@@ -11325,8 +11324,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // Masquer checklists widget si kpi_checklists = false
-    if (visibleKpis.kpi_checklists === false) {
+    // Masquer checklists widget si kpi_checklists !== true
+    if (visibleKpis.kpi_checklists !== true) {
       var checklistWidget = document.querySelector('.cleaning-checklists-widget');
       if (checklistWidget) checklistWidget.style.display = 'none';
     }
