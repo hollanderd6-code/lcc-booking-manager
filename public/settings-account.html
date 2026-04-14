@@ -2888,13 +2888,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('perm_canViewContracts')) document.getElementById('perm_canViewContracts').checked = member.can_view_contracts || false;
         // Restauration KPI visibles
         const _kpis = member.visible_kpis || {};
-        if (document.getElementById('perm_kpiProperties')) document.getElementById('perm_kpiProperties').checked = _kpis.kpi_properties !== false;
-        if (document.getElementById('perm_kpiCheckins'))   document.getElementById('perm_kpiCheckins').checked   = _kpis.kpi_checkins !== false;
-        if (document.getElementById('perm_kpiCleaning'))   document.getElementById('perm_kpiCleaning').checked   = _kpis.kpi_cleaning !== false;
-        if (document.getElementById('perm_kpiRisks'))      document.getElementById('perm_kpiRisks').checked      = _kpis.kpi_risks !== false;
-        if (document.getElementById('perm_kpiOccupancy'))  document.getElementById('perm_kpiOccupancy').checked  = _kpis.kpi_occupancy !== false;
-        if (document.getElementById('perm_kpiDeposits'))   document.getElementById('perm_kpiDeposits').checked   = _kpis.kpi_deposits !== false;
-        if (document.getElementById('perm_kpiChecklists')) document.getElementById('perm_kpiChecklists').checked = _kpis.kpi_checklists !== false;
+        if (document.getElementById('perm_kpiProperties')) document.getElementById('perm_kpiProperties').checked = _kpis.kpi_properties === true;
+        if (document.getElementById('perm_kpiCheckins'))   document.getElementById('perm_kpiCheckins').checked   = _kpis.kpi_checkins === true;
+        if (document.getElementById('perm_kpiCleaning'))   document.getElementById('perm_kpiCleaning').checked   = _kpis.kpi_cleaning === true;
+        if (document.getElementById('perm_kpiRisks'))      document.getElementById('perm_kpiRisks').checked      = _kpis.kpi_risks === true;
+        if (document.getElementById('perm_kpiOccupancy'))  document.getElementById('perm_kpiOccupancy').checked  = _kpis.kpi_occupancy === true;
+        if (document.getElementById('perm_kpiDeposits'))   document.getElementById('perm_kpiDeposits').checked   = _kpis.kpi_deposits === true;
+        if (document.getElementById('perm_kpiChecklists')) document.getElementById('perm_kpiChecklists').checked = _kpis.kpi_checklists === true;
         if (document.getElementById('perm_kpiCA'))         document.getElementById('perm_kpiCA').checked         = _kpis.kpi_ca === true;
       }
       
