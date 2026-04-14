@@ -11271,52 +11271,110 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// ── Restrictions dashboard pour sous-compte ménage ──────────────
+// ── Restrictions dashboard pour sous-comptes ──────────────────
 (function() {
   const _accountType = localStorage.getItem('lcc_account_type');
   if (_accountType !== 'sub') return;
 
   let _userRole = '';
+  let _perms = {};
   try {
     const _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
     _userRole = _u.role || '';
+    _perms = _u.permissions || {};
   } catch(e) {}
 
-  if (_userRole !== 'cleaner') return;
+  // Mapping KPI id → clé visible_kpis
+  const KPI_MAP = {
+    kpiPropertiesCard:  'kpi_properties',
+    kpiTodayMovesCard:  'kpi_checkins',
+    kpiCleaning48hCard: 'kpi_cleaning',
+    kpiTopRisksCard:    'kpi_risks',
+    kpiOccupancyCard:   'kpi_occupancy',
+    kpiDepositsCard:    'kpi_deposits',
+    kpiChecklistsCard:  'kpi_checklists',
+    kpiCaCard:          'kpi_ca'
+  };
 
-  function applyCleanerRestrictions() {
-    // Masquer KPIs non pertinents
-    ['kpiPropertiesCard', 'kpiTopRisksCard', 'kpiOccupancyCard', 'kpiDepositsCard'].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) el.style.display = 'none';
+  // KPI cachés par défaut pour tous les sous-comptes (sauf si explicitement autorisés)
+  // Le CA est toujours masqué sauf si can_view_finances ET kpi_ca=true
+  const visibleKpis = _perms.visible_kpis || {};
+
+  function applyKpiRestrictions() {
+    Object.keys(KPI_MAP).forEach(function(cardId) {
+      var key = KPI_MAP[cardId];
+      var el = document.getElementById(cardId);
+      if (!el) return;
+
+      // CA mensuel : double protection — can_view_finances ET kpi_ca
+      if (cardId === 'kpiCaCard') {
+        if (!_perms.can_view_finances || visibleKpis.kpi_ca !== true) {
+          el.style.setProperty('display', 'none', 'important');
+        }
+        return;
+      }
+
+      // Autres KPI : masqué si visible_kpis[key] === false explicitement
+      // Par défaut (undefined) = visible, sauf si le rôle est cleaner
+      var isVisible = visibleKpis[key];
+      var shouldHide = (isVisible === false) ||
+        (_userRole === 'cleaner' && ['kpiPropertiesCard','kpiTopRisksCard','kpiOccupancyCard','kpiDepositsCard'].includes(cardId));
+
+      if (shouldHide) {
+        el.style.setProperty('display', 'none', 'important');
+      }
     });
-    // Masquer checklists
-    var checklistWidget = document.querySelector('.cleaning-checklists-widget');
-    if (checklistWidget) checklistWidget.style.display = 'none';
-    // Masquer bouton nouvelle réservation (statique + dynamique)
-    var newResBtn = document.getElementById('newReservationBtn');
-    if (newResBtn) newResBtn.style.display = 'none';
 
-    // Observer pour masquer le bouton s'il est créé dynamiquement après
+    // Masquer checklists widget si kpi_checklists = false
+    if (visibleKpis.kpi_checklists === false) {
+      var checklistWidget = document.querySelector('.cleaning-checklists-widget');
+      if (checklistWidget) checklistWidget.style.display = 'none';
+    }
+
+    // Masquer bouton nouvelle réservation pour cleaner
+    if (_userRole === 'cleaner') {
+      var newResBtn = document.getElementById('newReservationBtn');
+      if (newResBtn) newResBtn.style.display = 'none';
+    }
+
+    // Observer pour masquer les boutons créés dynamiquement
     var _btnObserver = new MutationObserver(function() {
-      var btn = document.getElementById('newReservationBtn');
-      if (btn) btn.style.setProperty('display', 'none', 'important');
-      var fab = document.getElementById('fabAddResa');
-      if (fab) fab.style.setProperty('display', 'none', 'important');
+      if (_userRole === 'cleaner') {
+        var btn = document.getElementById('newReservationBtn');
+        if (btn) btn.style.setProperty('display', 'none', 'important');
+        var fab = document.getElementById('fabAddResa');
+        if (fab) fab.style.setProperty('display', 'none', 'important');
+      }
+      // Re-appliquer les restrictions KPI si le DOM change
+      Object.keys(KPI_MAP).forEach(function(cardId) {
+        var key = KPI_MAP[cardId];
+        var el = document.getElementById(cardId);
+        if (!el) return;
+        if (cardId === 'kpiCaCard' && (!_perms.can_view_finances || visibleKpis.kpi_ca !== true)) {
+          el.style.setProperty('display', 'none', 'important');
+        }
+      });
     });
     _btnObserver.observe(document.body, { childList: true, subtree: true });
+  }
 
-    // Bloquer le clic sur les cellules vides du calendrier (openBlockModal)
-    var origOpenBlockModal = window.openBlockModal;
-    window.openBlockModal = function() { return; };
+  function applyCleanerRestrictions() {
+    // Conservé pour compatibilité — maintenant géré dans applyKpiRestrictions
+    if (_userRole === 'cleaner') {
+      // Bloquer le clic sur les cellules vides du calendrier (openBlockModal)
+      var origOpenBlockModal = window.openBlockModal;
+      window.openBlockModal = function() { return; };
 
-    // Bloquer le mousedown sur les booking-blocks (ouverture fiche réservation)
-    document.addEventListener('mousedown', function(ev) {
-      if (ev.target.closest && ev.target.closest('.booking-block')) {
-        ev.stopImmediatePropagation();
-        ev.preventDefault();
-      }
-    }, true);
+      // Bloquer le mousedown sur les booking-blocks (ouverture fiche réservation)
+      document.addEventListener('mousedown', function(ev) {
+        if (ev.target.closest && ev.target.closest('.booking-block')) {
+          ev.stopImmediatePropagation();
+          ev.preventDefault();
+        }
+      }, true);
+    }
+
+    // Faux début de bloc pour maintenir la compatibilité avec le code suivant
 
     // Bloquer aussi le touchstart pour mobile
     document.addEventListener('touchstart', function(ev) {
@@ -11336,8 +11394,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyCleanerRestrictions);
+    document.addEventListener('DOMContentLoaded', function() {
+      applyKpiRestrictions();
+      applyCleanerRestrictions();
+    });
   } else {
+    applyKpiRestrictions();
     applyCleanerRestrictions();
   }
 })();
