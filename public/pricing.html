@@ -717,9 +717,51 @@ async function startCheckout(plan, event) {
       return;
     }
 
+    const button = event.target;
+    button.disabled = true;
+    button.textContent = 'Vérification...';
+
     try {
-      const button = event.target;
-      button.disabled = true;
+      // ✅ Vérifier d'abord si l'utilisateur a déjà un abonnement actif
+      const statusRes = await fetch('/api/subscription/status', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const statusData = statusRes.ok ? await statusRes.json() : {};
+      const currentPlan = statusData.planType || null;
+      const isActiveOrTrial = ['active', 'trial'].includes(statusData.status);
+
+      // ✅ Si déjà abonné et changement de plan → vérifier downgrade
+      if (isActiveOrTrial && currentPlan && currentPlan !== plan) {
+        const checkRes = await fetch(`/api/billing/check-downgrade?targetPlan=${plan}`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+
+          // Bloquer si le downgrade est impossible
+          if (!checkData.canDowngrade) {
+            alert('⚠️ Changement de plan impossible
+
+' + checkData.warning);
+            button.disabled = false;
+            button.textContent = 'Changer de plan';
+            return;
+          }
+
+          // Avertir si des logements supplémentaires seront facturés
+          if (checkData.willPayExtra && checkData.warning) {
+            const confirmed = confirm('ℹ️ ' + checkData.warning + '
+
+Voulez-vous continuer ?');
+            if (!confirmed) {
+              button.disabled = false;
+              button.textContent = 'Changer de plan';
+              return;
+            }
+          }
+        }
+      }
+
       button.textContent = 'Redirection vers Stripe...';
 
       // Déterminer si mensuel ou annuel
@@ -750,8 +792,6 @@ async function startCheckout(plan, event) {
     } catch (err) {
       console.error('Erreur checkout:', err);
       alert('Impossible de démarrer le paiement. Réessayez plus tard.');
-      
-      const button = event.target;
       button.disabled = false;
       button.textContent = 'Essayer gratuitement 14 jours';
     }
@@ -769,14 +809,27 @@ async function startCheckout(plan, event) {
 
       if (res.ok) {
         const data = await res.json();
-        
-        if (data.status === 'expired' || data.status === 'canceled' || 
-            (data.status === 'trial' && data.daysRemaining < 0)) {
-          
-          document.querySelectorAll('button[onclick*="startCheckout"]').forEach(btn => {
+        const currentBasePlan = (data.planType || '').replace('_monthly','').replace('_annual','');
+
+        // Marquer le plan actuel
+        document.querySelectorAll('button[onclick*="startCheckout"]').forEach(btn => {
+          const onclickAttr = btn.getAttribute('onclick') || '';
+          const planMatch = onclickAttr.match(/startCheckout\(['"]([^'"]+)['"]/);
+          const btnPlan = planMatch ? planMatch[1] : null;
+
+          if (data.status === 'active' || data.status === 'trial') {
+            if (btnPlan && btnPlan === currentBasePlan) {
+              btn.textContent = '✅ Votre plan actuel';
+              btn.disabled = true;
+              btn.style.opacity = '0.7';
+            } else if (btnPlan) {
+              btn.textContent = 'Changer de plan';
+            }
+          } else if (data.status === 'expired' || data.status === 'canceled' ||
+              (data.status === 'trial' && data.daysRemaining < 0)) {
             btn.textContent = 'S\'abonner maintenant';
-          });
-        }
+          }
+        });
       }
     } catch (err) {
       console.error('Erreur:', err);
