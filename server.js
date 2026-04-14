@@ -13672,7 +13672,7 @@ app.post('/api/auth/register', async (req, res) => {
           `sub_${Date.now()}`,
           id,
           'trial',
-          'trial',
+          'pro',
           0,
           trialStartDate,
           trialEndDate
