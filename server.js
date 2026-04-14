@@ -1946,6 +1946,16 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Colonnes notif_sub_* déjà existantes:', e.message);
     }
 
+    // ✅ Migration : visible_kpis dans sub_account_permissions
+    try {
+      await pool.query(`
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS visible_kpis JSONB DEFAULT '{}'::jsonb;
+      `);
+      console.log('✅ Colonne visible_kpis ajoutée à sub_account_permissions');
+    } catch (e) {
+      console.log('ℹ️ Colonne visible_kpis déjà existante:', e.message);
+    }
+
     // ✅ Migration : channex_booking_id dans reservations (si pas déjà là)
     try {
       await pool.query(`
