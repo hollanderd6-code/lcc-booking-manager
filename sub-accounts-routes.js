@@ -178,6 +178,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           visible_kpis: permissions.visible_kpis || {}
         };
       } else {
+        // Pour les rôles prédéfinis, récupérer visible_kpis depuis le body
+        const _kpisFromBody = req.body.visible_kpis || permissions?.visible_kpis || {};
         switch(role) {
           case 'owner':
             finalPermissions = {
@@ -205,7 +207,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: true,
               can_manage_payments: true,
               can_view_contracts: true,
-              visible_kpis: {}
+              visible_kpis: _kpisFromBody
             };
             break;
 
@@ -235,7 +237,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: true,
               can_manage_payments: true,
               can_view_contracts: true,
-              visible_kpis: {}
+              visible_kpis: _kpisFromBody
             };
             break;
             
@@ -265,7 +267,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: false,
               can_manage_payments: false,
               can_view_contracts: false,
-              visible_kpis: {}
+              visible_kpis: _kpisFromBody
             };
             break;
             
@@ -295,7 +297,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: false,
               can_manage_payments: false,
               can_view_contracts: false,
-              visible_kpis: {}
+              visible_kpis: _kpisFromBody
             };
             break;
         }
@@ -488,6 +490,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           visible_kpis: permissions.visible_kpis || {}
         };
       } else {
+        // Pour les rôles prédéfinis, récupérer visible_kpis depuis le body
+        const _kpisFromBodyPut = req.body.visible_kpis || (permissions && permissions.visible_kpis) || {};
         switch(role) {
           case 'owner':
             finalPermissions = {
@@ -515,7 +519,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: true,
               can_manage_payments: true,
               can_view_contracts: true,
-              visible_kpis: {}
+              visible_kpis: _kpisFromBodyPut
             };
             break;
           case 'manager':
@@ -544,7 +548,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: true,
               can_manage_payments: true,
               can_view_contracts: true,
-              visible_kpis: {}
+              visible_kpis: _kpisFromBodyPut
             };
             break;
           case 'cleaner':
@@ -573,7 +577,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: false,
               can_manage_payments: false,
               can_view_contracts: false,
-              visible_kpis: {}
+              visible_kpis: _kpisFromBodyPut
             };
             break;
           case 'accountant':
@@ -602,7 +606,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: false,
               can_manage_payments: false,
               can_view_contracts: false,
-              visible_kpis: {}
+              visible_kpis: _kpisFromBodyPut
             };
             break;
         }
