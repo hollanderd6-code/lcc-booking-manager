@@ -609,34 +609,56 @@ formData.append('ownerId', ownerId); // Toujours envoyer, même vide (pour effac
   }
 }
 
-async function deleteProperty(propertyId) {
-  if (!confirm("Êtes-vous sûr de vouloir supprimer ce logement ?")) {
-    return;
-  }
+function deleteProperty(propertyId) {
+  // Modale custom — confirm() est bloqué sur mobile/WebView Capacitor
+  const existing = document.getElementById('_deletePropertyModal');
+  if (existing) existing.remove();
 
-  showLoading();
-  try {
-    const token = localStorage.getItem("lcc_token");
-    const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-    });
+  const prop = properties.find(p => p._id === propertyId || p.id === propertyId);
+  const propName = prop ? (prop.internalName || prop.internal_name || prop.name || 'ce logement') : 'ce logement';
 
-    if (response.ok) {
-      showToast("Logement supprimé avec succès", "success");
-      await loadProperties();
-    } else {
-      const data = await response.json();
-      showToast(data.error || "Erreur lors de la suppression", "error");
+  const modal = document.createElement('div');
+  modal.id = '_deletePropertyModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(13,17,23,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:20px;padding:28px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.15);">
+      <div style="width:52px;height:52px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;">🗑️</div>
+      <h3 style="font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:#0D1117;margin:0 0 8px;">Supprimer ce logement ?</h3>
+      <p style="font-size:13px;color:#7A8695;margin:0 0 20px;"><strong>${propName}</strong> sera définitivement supprimé. Cette action est irréversible.</p>
+      <div style="display:flex;gap:10px;">
+        <button id="_deletePropertyCancel" style="flex:1;height:44px;border-radius:12px;border:1.5px solid rgba(13,17,23,.15);background:white;color:#374151;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
+        <button id="_deletePropertyConfirm" style="flex:1;height:44px;border-radius:12px;border:none;background:#DC2626;color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Supprimer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('_deletePropertyCancel').onclick = () => modal.remove();
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  document.getElementById('_deletePropertyConfirm').onclick = async () => {
+    modal.remove();
+    showLoading();
+    try {
+      const token = localStorage.getItem("lcc_token");
+      const response = await fetch(`${API_URL}/api/properties/${propertyId}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token },
+      });
+      if (response.ok) {
+        showToast("Logement supprimé avec succès", "success");
+        await loadProperties();
+      } else {
+        const data = await response.json();
+        showToast(data.error || "Erreur lors de la suppression", "error");
+      }
+    } catch (error) {
+      console.error("Erreur suppression:", error);
+      showToast("Erreur lors de la suppression", "error");
+    } finally {
+      hideLoading();
     }
-  } catch (error) {
-    console.error("Erreur suppression:", error);
-    showToast("Erreur lors de la suppression", "error");
-  } finally {
-    hideLoading();
-  }
+  };
 }
 
 // testIcalUrl et copyIcalUrl supprimés — remplacés par Channex
