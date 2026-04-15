@@ -7045,17 +7045,30 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         }
       }
     }
-    console.log(`📅 Réservations retournées: ${allReservations.length} (${filteredProps.length} propriétés)`);
+    // ✅ Filtre final : exclure toute résa channex qui n'est plus dans la DB (ex: passée en cancelled manuellement)
+    // Le store peut contenir des résas obsolètes si elles ont été annulées sans passer par le webhook
+    const cancelledUids = new Set();
+    // Construire la liste des UIDs channex présents en DB (non cancelled)
+    const dbUids = new Set(reservationsDbRows.filter(r => r.source === 'channex').map(r => r.uid));
+    const finalReservations = allReservations.filter(r => {
+      if (r.source === 'channex' && r.uid && !dbUids.has(r.uid)) {
+        console.log(`🗑️ [FILTER] Résa ${r.uid} retirée (cancelled ou absente de la DB)`);
+        return false;
+      }
+      return true;
+    });
+
+    console.log(`📅 Réservations retournées: ${finalReservations.length} (${filteredProps.length} propriétés)`);
     
     // 🔍 DEBUG: Compter combien ont des infos guest
-    const withGuestInfo = allReservations.filter(r => r.guest_first_name);
+    const withGuestInfo = finalReservations.filter(r => r.guest_first_name);
     console.log(`👤 Réservations avec infos guest: ${withGuestInfo.length}`);
     if (withGuestInfo.length > 0) {
       console.log(`   Exemple: ${withGuestInfo[0].guest_display_name} (${withGuestInfo[0].guest_phone || 'pas de tel'})`);
     }
 
     res.json({
-      reservations: allReservations,
+      reservations: finalReservations,
       lastSync: reservationsStore.lastSync,
       syncStatus: reservationsStore.syncStatus,
       properties: filteredProps.map(p => ({
