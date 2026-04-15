@@ -1289,14 +1289,14 @@ function renderProperties() {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-id");
       deleteProperty(id);
-    });
+    }, { once: true });
   });
 
   grid.querySelectorAll(".btn-duplicate").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-id");
       duplicateProperty(id);
-    });
+    }, { once: true });
   });
 
   // event listeners iCal supprimés — remplacés par Channex
@@ -1430,11 +1430,11 @@ function renderPropertiesFiltered(filteredProps) {
     btn.addEventListener("click", () => openEditPropertyModal(btn.getAttribute("data-id")));
   });
   grid.querySelectorAll(".btn-delete").forEach(btn => {
-    btn.addEventListener("click", () => deleteProperty(btn.getAttribute("data-id")));
+    btn.addEventListener("click", () => deleteProperty(btn.getAttribute("data-id")), { once: true });
   });
 
   grid.querySelectorAll(".btn-duplicate").forEach(btn => {
-    btn.addEventListener("click", () => duplicateProperty(btn.getAttribute("data-id")));
+    btn.addEventListener("click", () => duplicateProperty(btn.getAttribute("data-id")), { once: true });
   });
   grid.querySelectorAll(".btn-channex-connect").forEach(btn => {
     btn.addEventListener("click", () => openChannexModal(btn.getAttribute("data-id"), btn.getAttribute("data-name"), false));
