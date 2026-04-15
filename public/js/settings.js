@@ -705,6 +705,12 @@ function resetPropertyForm() {
   if (document.getElementById("propertyConciergePct")) {
     document.getElementById("propertyConciergePct").value = "";
   }
+  if (document.getElementById("propertyAirbnbCommissionPct")) {
+    document.getElementById("propertyAirbnbCommissionPct").value = "3";
+  }
+  if (document.getElementById("propertyBookingCommissionPct")) {
+    document.getElementById("propertyBookingCommissionPct").value = "15";
+  }
   ['propertyMaxGuests','propertyBedrooms','propertyBeds','propertyBathrooms'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
