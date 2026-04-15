@@ -11931,6 +11931,23 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
       </div>
 
+      <!-- Jours de la semaine (optionnel) -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+          <span>Jours de la semaine <span style="font-weight:400;color:#9ca3af;">(optionnel — tous si aucun sélectionné)</span></span>
+          <button onclick="toggleAllBatchDays()" style="font-size:11px;color:#1A7A5E;background:none;border:none;cursor:pointer;font-weight:600;">Tous</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="batch-day-btn" data-day="1" onclick="toggleBatchDay(this)" style="flex:1;min-width:40px;padding:8px 4px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">Lun</button>
+          <button class="batch-day-btn" data-day="2" onclick="toggleBatchDay(this)" style="flex:1;min-width:40px;padding:8px 4px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">Mar</button>
+          <button class="batch-day-btn" data-day="3" onclick="toggleBatchDay(this)" style="flex:1;min-width:40px;padding:8px 4px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">Mer</button>
+          <button class="batch-day-btn" data-day="4" onclick="toggleBatchDay(this)" style="flex:1;min-width:40px;padding:8px 4px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">Jeu</button>
+          <button class="batch-day-btn" data-day="5" onclick="toggleBatchDay(this)" style="flex:1;min-width:40px;padding:8px 4px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">Ven</button>
+          <button class="batch-day-btn" data-day="6" onclick="toggleBatchDay(this)" style="flex:1;min-width:40px;padding:8px 4px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">Sam</button>
+          <button class="batch-day-btn" data-day="0" onclick="toggleBatchDay(this)" style="flex:1;min-width:40px;padding:8px 4px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">Dim</button>
+        </div>
+      </div>
+
       <!-- Prix (affiché uniquement en mode price) -->
       <div id="batchPriceSection">
         <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Prix par nuit</div>
@@ -11999,6 +12016,12 @@ function openBatchEditModal() {
       }).join('');
 
   setBatchAction('price');
+  // Reset jours de semaine
+  document.querySelectorAll('.batch-day-btn').forEach(b => {
+    b.style.background = 'white';
+    b.style.color = '#374151';
+    b.style.borderColor = '#e2e8f0';
+  });
 }
 
 function closeBatchEditModal() {
@@ -12017,6 +12040,30 @@ function setBatchAction(action) {
   });
   document.getElementById('batchPriceSection').style.display = action === 'price' ? 'block' : 'none';
   document.getElementById('batchReasonSection').style.display = action === 'block' ? 'block' : 'none';
+}
+
+function toggleBatchDay(btn) {
+  const active = btn.style.background === 'rgb(26, 122, 94)' || btn.style.background === '#1A7A5E';
+  btn.style.background = active ? 'white' : '#1A7A5E';
+  btn.style.color = active ? '#374151' : 'white';
+  btn.style.borderColor = active ? '#e2e8f0' : '#1A7A5E';
+}
+
+function toggleAllBatchDays() {
+  const btns = document.querySelectorAll('.batch-day-btn');
+  const allActive = Array.from(btns).every(b => b.style.background === 'rgb(26, 122, 94)' || b.style.background === '#1A7A5E');
+  btns.forEach(b => {
+    b.style.background = allActive ? 'white' : '#1A7A5E';
+    b.style.color = allActive ? '#374151' : 'white';
+    b.style.borderColor = allActive ? '#e2e8f0' : '#1A7A5E';
+  });
+}
+
+function getSelectedWeekdays() {
+  const selected = Array.from(document.querySelectorAll('.batch-day-btn'))
+    .filter(b => b.style.background === 'rgb(26, 122, 94)' || b.style.background === '#1A7A5E')
+    .map(b => parseInt(b.getAttribute('data-day')));
+  return selected; // [] = tous les jours
 }
 
 function toggleAllBatchProperties() {
@@ -12048,12 +12095,14 @@ async function applyBatchEdit() {
   try {
     const token = localStorage.getItem('lcc_token');
 
+    const weekdays = getSelectedWeekdays();
+
     if (_batchAction === 'price') {
       const price = document.getElementById('batchPrice').value;
       const res = await fetch('/api/pricing/overrides/batch', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, price: price === '' ? '' : parseFloat(price) })
+        body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, price: price === '' ? '' : parseFloat(price), weekdays })
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
@@ -12062,7 +12111,7 @@ async function applyBatchEdit() {
       const res = await fetch('/api/blocks/batch', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, reason, action: _batchAction })
+        body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, reason, action: _batchAction, weekdays })
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
