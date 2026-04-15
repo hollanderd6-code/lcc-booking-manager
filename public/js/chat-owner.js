@@ -626,7 +626,22 @@ function displayMessages(messages) {
     return;
   }
   
-  messages.forEach(msg => appendMessage(msg));
+  // ✅ Trier par created_at ASC — les messages sans date valide vont à la fin
+  const sorted = [...messages].sort((a, b) => {
+    const tA = a.created_at ? new Date(a.created_at).getTime() : Infinity;
+    const tB = b.created_at ? new Date(b.created_at).getTime() : Infinity;
+    return tA - tB;
+  });
+
+  // ✅ Filtrer les messages sans date ET sans contenu (artefacts vides)
+  const filtered = sorted.filter(msg => {
+    const hasDate = msg.created_at && !isNaN(new Date(msg.created_at).getTime());
+    const hasContent = (msg.message || '').trim().length > 0;
+    if (!hasDate && !hasContent) return false;
+    return true;
+  });
+
+  filtered.forEach(msg => appendMessage(msg));
   scrollToBottom();
 }
 
@@ -904,6 +919,13 @@ function scrollToBottom() {
   const container = document.getElementById('chatMessages');
   if (container) {
     container.scrollTop = container.scrollHeight;
+    // Retry après injection des messages Channex (asynchrone)
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+    }, 500);
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+    }, 1200);
   }
 }
 
