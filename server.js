@@ -11889,13 +11889,19 @@ app.post('/api/pricing/overrides/batch', authenticateAny, async (req, res) => {
       return res.status(403).json({ error: 'Un ou plusieurs logements sont inaccessibles' });
     }
 
-    // Générer toutes les dates entre date_from et date_to
+    // Générer toutes les dates entre date_from (inclus) et date_to (exclus)
+    // Ex: du 15 au 16 = 1 nuit (celle du 15)
+    const { weekdays } = req.body; // tableau optionnel [0,1,2,3,4,5,6] (0=dim, 1=lun, ...)
     const dates = [];
-    const cur = new Date(date_from);
-    const end = new Date(date_to);
-    while (cur <= end) {
-      dates.push(cur.toISOString().split('T')[0]);
-      cur.setDate(cur.getDate() + 1);
+    const cur = new Date(date_from + 'T12:00:00Z');
+    const end = new Date(date_to + 'T12:00:00Z');
+    while (cur < end) {
+      const dateStr = cur.toISOString().split('T')[0];
+      const dayOfWeek = cur.getUTCDay(); // 0=dim, 1=lun, ..., 6=sam
+      if (!weekdays || weekdays.length === 0 || weekdays.includes(dayOfWeek)) {
+        dates.push(dateStr);
+      }
+      cur.setUTCDate(cur.getUTCDate() + 1);
     }
 
     let count = 0;
@@ -11935,8 +11941,9 @@ app.post('/api/blocks/batch', async (req, res) => {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const { property_ids, date_from, date_to, reason, action } = req.body;
+    const { property_ids, date_from, date_to, reason, action, weekdays } = req.body;
     // action = 'block' ou 'unblock'
+    // weekdays = tableau optionnel [0,1,2,...] (0=dim, 1=lun, ...)
 
     if (!property_ids?.length || !date_from || !date_to) {
       return res.status(400).json({ error: 'property_ids, date_from et date_to sont requis' });
@@ -11973,12 +11980,15 @@ app.post('/api/blocks/batch', async (req, res) => {
     } else {
       // Bloquer chaque nuit individuellement
       for (const property_id of property_ids) {
-        const cur = new Date(date_from);
-        const end = new Date(date_to);
+        const cur = new Date(date_from + 'T12:00:00Z');
+        const end = new Date(date_to + 'T12:00:00Z');
         while (cur < end) {
+          const dayOfWeek = cur.getUTCDay();
           const dateStr = cur.toISOString().split('T')[0];
-          cur.setDate(cur.getDate() + 1);
+          cur.setUTCDate(cur.getUTCDate() + 1);
           const nextStr = cur.toISOString().split('T')[0];
+          // Filtrer par jour de semaine si spécifié
+          if (weekdays && weekdays.length > 0 && !weekdays.includes(dayOfWeek)) continue;
           const uid = `block_${Date.now()}_${property_id}_${dateStr}`;
           await pool.query(`
             INSERT INTO reservations (uid, property_id, user_id, start_date, end_date, guest_name, source, platform, reservation_type, status, notes)
