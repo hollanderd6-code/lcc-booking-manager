@@ -11491,13 +11491,14 @@ app.post('/api/properties',
     {
       // Récupérer le plan actif de l'utilisateur
       const subResult = await pool.query(
-        `SELECT plan_type, stripe_subscription_id FROM subscriptions
+        `SELECT plan_type, stripe_subscription_id, override_property_limit FROM subscriptions
          WHERE user_id = $1 AND status IN ('active', 'trial', 'trialing')
          ORDER BY created_at DESC LIMIT 1`,
         [userId]
       );
       const planType = subResult.rows[0]?.plan_type || 'solo';
       const stripeSubId = subResult.rows[0]?.stripe_subscription_id;
+      const overrideLimit = subResult.rows[0]?.override_property_limit === true;
       const limits = getPlanLimits(planType);
       const isAnnualPlan = (planType || '').toLowerCase().includes('annual');
 
@@ -11507,6 +11508,11 @@ app.post('/api/properties',
         [userId]
       );
       const currentCount = parseInt(propCountRes.rows[0].count, 10);
+
+      // ✅ Override admin : bypass total des limites de plan
+      if (overrideLimit) {
+        console.log(`✅ [OVERRIDE] Limite bypassée pour user ${userId} (${currentCount} logements)`);
+      }
 
       // Calculer le slug de la propriété qu'on essaie de créer
       const nameSlugCheck = name.toLowerCase()
@@ -11522,7 +11528,7 @@ app.post('/api/properties',
       );
       const isExistingProperty = existCheck.rows.length > 0;
 
-      if (!isExistingProperty) {
+      if (!isExistingProperty && !overrideLimit) {
         const basePlanName = getBasePlanName(planType);
 
         // Plan Solo : 1 logement max, pas de supplément possible
