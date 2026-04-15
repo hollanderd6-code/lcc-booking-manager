@@ -390,4 +390,61 @@ router.get('/public/:uniqueId', async (req, res) => {
   }
 });
 
+// ---------- DUPLICATE (copie complète avec photos) ----------
+router.post('/duplicate/:uniqueId', authenticateUser, async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    const { uniqueId } = req.params;
+    const { newName } = req.body;
+
+    // Charger le livret source (doit appartenir à l'utilisateur)
+    const sourceRes = await pool.query(
+      'SELECT unique_id, property_name, data FROM public.welcome_books_v2 WHERE unique_id = $1 AND user_id = $2 LIMIT 1',
+      [uniqueId, req.userId]
+    );
+
+    if (sourceRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Livret source introuvable ou non autorisé' });
+    }
+
+    const sourceData = sourceRes.rows[0].data || {};
+    const sourceName = sourceRes.rows[0].property_name || 'Livret';
+
+    // Générer un nouvel ID unique
+    const newUniqueId = crypto.randomBytes(16).toString('hex');
+    const duplicatedName = newName || `${sourceName} (copie)`;
+
+    // Copier toutes les données + photos (les URLs Cloudinary sont déjà stockées — pas de re-upload)
+    const duplicatedData = {
+      ...sourceData,
+      uniqueId: newUniqueId,
+      propertyName: duplicatedName,
+      isDraft: false,
+      lastSection: 0,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Insérer le nouveau livret
+    await pool.query(
+      `INSERT INTO public.welcome_books_v2 (user_id, unique_id, property_name, data, created_at, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())`,
+      [req.userId, newUniqueId, duplicatedName, JSON.stringify(duplicatedData)]
+    );
+
+    console.log(`✅ Livret dupliqué: ${uniqueId} → ${newUniqueId} (${duplicatedName})`);
+
+    const host = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    res.json({
+      success: true,
+      uniqueId: newUniqueId,
+      propertyName: duplicatedName,
+      url: `${host}/welcome/${newUniqueId}`
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur duplication livret:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur lors de la duplication' });
+  }
+});
+
 module.exports = { router, initWelcomeBookTables };
