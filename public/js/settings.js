@@ -738,6 +738,98 @@ function openAddPropertyModal() {
   if (modal) modal.classList.add("active");
 }
 
+function duplicateProperty(propertyId) {
+  const property = properties.find(p => p._id === propertyId || p.id === propertyId);
+  if (!property) { showToast('Logement introuvable', 'error'); return; }
+
+  // Ouvrir le modal en mode création
+  resetPropertyForm();
+  const modal = document.getElementById('editPropertyModal');
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.querySelector('span').textContent = 'Dupliquer un logement';
+  if (modal) modal.classList.add('active');
+
+  // Pré-remplir avec les infos du logement source (sauf nom, iCal, Channex)
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+
+  // Nom vide — l'utilisateur doit le saisir
+  setVal('propertyName', '');
+  setVal('propertyInternalName', (property.internalName || property.internal_name || '') + ' (copie)');
+  setVal('propertyAddress', property.address || '');
+
+  populateTimeSelects();
+  setVal('propertyArrivalTime', property.arrivalTime || '');
+  setVal('propertyDepartureTime', property.departureTime || '');
+  setVal('propertyDeposit', property.depositAmount != null ? property.depositAmount : '');
+
+  const colorInput = document.getElementById('propertyColor');
+  const preview = document.getElementById('colorPreview');
+  if (colorInput) colorInput.value = property.color || '#E67E50';
+  if (preview) preview.textContent = (property.color || '#E67E50').toUpperCase();
+
+  // Photo
+  setVal('propertyPhotoUrl', property.photoUrl || property.photo || '');
+
+  // Infos accès
+  setVal('propertyWelcomeBookUrl', property.welcomeBookUrl || '');
+  setVal('propertyAccessCode', property.accessCode || '');
+  setVal('propertyWifiName', property.wifiName || '');
+  setVal('propertyWifiPassword', property.wifiPassword || '');
+  setVal('propertyAccessInstructions', property.accessInstructions || '');
+
+  // Prix
+  setVal('propertyBasePrice', property.basePrice ?? property.base_price ?? '');
+  setVal('propertyWeekendPrice', property.weekendPrice ?? property.weekend_price ?? '');
+  setVal('propertyCleaningFee', property.cleaningFee ?? property.cleaning_fee ?? '');
+  setVal('propertyTouristTax', property.touristTaxPerNight ?? property.tourist_tax_per_night ?? '');
+  setVal('propertyConciergePct', property.conciergePct ?? property.concierge_pct ?? '');
+  setVal('propertyAirbnbCommissionPct', property.airbnbCommissionPct ?? property.airbnb_commission_pct ?? '3');
+  setVal('propertyBookingCommissionPct', property.bookingCommissionPct ?? property.booking_commission_pct ?? '15');
+
+  // Capacité
+  setVal('propertyMaxGuests', property.maxGuests ?? property.max_guests ?? '');
+  setVal('propertyBedrooms', property.bedrooms ?? '');
+  setVal('propertyBeds', property.beds ?? '');
+  setVal('propertyBathrooms', property.bathrooms ?? '');
+
+  // Équipements, règles, infos pratiques
+  try {
+    const amenities = property.amenities || [];
+    if (Array.isArray(amenities)) {
+      document.querySelectorAll('.amenity-checkbox').forEach(cb => {
+        cb.checked = amenities.includes(cb.value);
+      });
+    }
+  } catch(e) {}
+  try {
+    const rules = property.house_rules || property.houseRules || [];
+    if (Array.isArray(rules)) {
+      document.querySelectorAll('.rule-checkbox').forEach(cb => {
+        cb.checked = rules.includes(cb.value);
+      });
+    }
+  } catch(e) {}
+  try {
+    setVal('propertyPracticalInfo', property.practicalInfo || property.practical_info || '');
+  } catch(e) {}
+
+  // Raccourcis messages
+  try {
+    const qrList = document.getElementById('quickRepliesList');
+    const qrBtn = document.getElementById('addQuickReplyBtn');
+    if (qrList) {
+      qrList.innerHTML = '';
+      if (qrBtn) qrBtn.style.display = 'flex';
+      let replies = property.quick_replies || property.quickReplies || [];
+      if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
+      if (Array.isArray(replies)) replies.forEach(t => { if (typeof window.addQuickReplyField === 'function') window.addQuickReplyField(t); });
+    }
+  } catch(e) {}
+
+  // PAS de connexion iCal ni Channex — le nouveau logement part sans
+  showToast('Logement dupliqué — saisissez un nom et enregistrez', 'info');
+}
+
 function openEditPropertyModal(propertyId) {
   resetPropertyForm();
   const modal = document.getElementById("editPropertyModal");
@@ -1123,6 +1215,7 @@ function renderProperties() {
             <!-- Actions -->
             <div class="property-actions">
               <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
+              <button type="button" class="btn btn-outline btn-duplicate" data-id="${escapeHtml(id)}" title="Dupliquer ce logement" style="background:#f8fafc;border:1px solid #e2e8f0;color:#374151;"><i class="fas fa-copy" style="margin-right:4px;font-size:11px;"></i>Dupliquer</button>
               <button type="button" class="btn btn-jade btn-edit" data-id="${escapeHtml(id)}">Gérer</button>
             </div>
           </div>
@@ -1163,6 +1256,13 @@ function renderProperties() {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-id");
       deleteProperty(id);
+    });
+  });
+
+  grid.querySelectorAll(".btn-duplicate").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      duplicateProperty(id);
     });
   });
 
@@ -1275,6 +1375,7 @@ function renderPropertiesFiltered(filteredProps) {
           </button>`}
           <div class="property-actions">
             <button type="button" class="btn btn-delete" data-id="${escapeHtml(id)}">Supprimer</button>
+            <button type="button" class="btn btn-outline btn-duplicate" data-id="${escapeHtml(id)}" title="Dupliquer ce logement" style="background:#f8fafc;border:1px solid #e2e8f0;color:#374151;"><i class="fas fa-copy" style="margin-right:4px;font-size:11px;"></i>Dupliquer</button>
             <button type="button" class="btn btn-jade btn-edit" data-id="${escapeHtml(id)}">Gérer</button>
           </div>
         </div>
@@ -1297,6 +1398,10 @@ function renderPropertiesFiltered(filteredProps) {
   });
   grid.querySelectorAll(".btn-delete").forEach(btn => {
     btn.addEventListener("click", () => deleteProperty(btn.getAttribute("data-id")));
+  });
+
+  grid.querySelectorAll(".btn-duplicate").forEach(btn => {
+    btn.addEventListener("click", () => duplicateProperty(btn.getAttribute("data-id")));
   });
   grid.querySelectorAll(".btn-channex-connect").forEach(btn => {
     btn.addEventListener("click", () => openChannexModal(btn.getAttribute("data-id"), btn.getAttribute("data-name"), false));
