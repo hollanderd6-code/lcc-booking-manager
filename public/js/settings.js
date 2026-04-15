@@ -727,6 +727,18 @@ function resetPropertyForm() {
   if (newRuleInput) newRuleInput.value = '';
   const urlList = document.getElementById("urlList");
   if (urlList) urlList.innerHTML = "";
+
+  // ✅ Reset checkboxes équipements
+  document.querySelectorAll('.amenity-checkbox').forEach(cb => cb.checked = false);
+  // ✅ Reset checkboxes règles
+  document.querySelectorAll('.rule-checkbox').forEach(cb => cb.checked = false);
+  // ✅ Reset infos pratiques
+  ['practicalParking','practicalTrash','practicalShops','practicalTransport'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  // ✅ Reset raccourcis messages
+  const qrList = document.getElementById('quickRepliesList');
+  if (qrList) qrList.innerHTML = '';
 }
 
 function openAddPropertyModal() {
@@ -827,14 +839,6 @@ function duplicateProperty(propertyId) {
     if (document.getElementById('practicalTransport'))
       document.getElementById('practicalTransport').value = practical.public_transport || '';
   } catch(e) {}
-
-  // Q/R personnalisées
-  try {
-    const rawQR = property.custom_auto_responses || property.customAutoResponses;
-    _customQR = Array.isArray(rawQR) ? rawQR
-      : (typeof rawQR === 'string' ? JSON.parse(rawQR) : []);
-    renderCustomQR();
-  } catch(e) { _customQR = []; renderCustomQR(); }
 
   // Raccourcis messages
   try {
