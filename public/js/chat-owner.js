@@ -634,7 +634,7 @@ function appendMessage(message) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
   
-  const isOwner = message.sender_type === 'owner';
+  const isOwner = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot';
   
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
@@ -687,7 +687,7 @@ function appendMessage(message) {
   
   const status = document.createElement('span');
   status.className = 'chat-status';
-  status.textContent = (message.sender_type === 'owner') ? 'Envoyé' : '';
+  status.textContent = (message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot') ? 'Envoyé' : '';
   
   meta.appendChild(time);
   meta.appendChild(status);
