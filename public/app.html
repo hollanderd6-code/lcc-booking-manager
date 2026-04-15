@@ -2948,6 +2948,9 @@ window.closeChecklistsKpiModal = function() {
 <div class="calendar-actions-top">
   <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher"><i class="fas fa-search"></i></button>
   <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres"><i class="fas fa-sliders-h"></i></button>
+  <button class="calendar-action-btn" id="batchEditBtn" onclick="openBatchEditModal()" title="Édition groupée" style="display:flex;align-items:center;gap:6px;padding:7px 14px;font-size:12px;font-weight:600;white-space:nowrap;">
+    <i class="fas fa-layer-group"></i><span style="display:none;" class="batch-btn-label">Édition groupée</span>
+  </button>
 </div>
 </div>
 
@@ -11869,6 +11872,215 @@ document.addEventListener('DOMContentLoaded', function() {
     obs.observe(invModal,   { attributes: true, attributeFilter: ['style'] });
   })();
 })();
+</script>
+
+<!-- ============================================================ -->
+<!-- MODAL ÉDITION GROUPÉE -->
+<!-- ============================================================ -->
+<div id="batchEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.2);">
+    <!-- Header -->
+    <div style="padding:20px 24px 16px;border-bottom:1px solid #f0ede7;display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:#1A7A5E;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+          <i class="fas fa-layer-group" style="color:white;font-size:15px;"></i>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:#0D1117;">Édition groupée</div>
+          <div style="font-size:12px;color:#7A8695;">Modifier prix ou blocages sur plusieurs logements</div>
+        </div>
+      </div>
+      <button onclick="closeBatchEditModal()" style="background:none;border:none;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#7A8695;font-size:18px;">×</button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;">
+
+      <!-- Action -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Action</div>
+        <div style="display:flex;gap:10px;">
+          <button id="batchActionPrice" onclick="setBatchAction('price')" style="flex:1;padding:12px;border-radius:12px;border:2px solid #1A7A5E;background:#e8f5f1;color:#1A7A5E;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i class="fas fa-tag"></i> Changer le prix
+          </button>
+          <button id="batchActionBlock" onclick="setBatchAction('block')" style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e8f0;background:white;color:#374151;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i class="fas fa-lock"></i> Bloquer
+          </button>
+          <button id="batchActionUnblock" onclick="setBatchAction('unblock')" style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e8f0;background:white;color:#374151;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i class="fas fa-lock-open"></i> Débloquer
+          </button>
+        </div>
+      </div>
+
+      <!-- Plage de dates -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Plage de dates</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div style="flex:1;">
+            <label style="font-size:11px;color:#7A8695;display:block;margin-bottom:4px;">Du</label>
+            <input type="date" id="batchDateFrom" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;color:#0D1117;outline:none;box-sizing:border-box;" />
+          </div>
+          <div style="color:#9ca3af;font-size:18px;margin-top:16px;">→</div>
+          <div style="flex:1;">
+            <label style="font-size:11px;color:#7A8695;display:block;margin-bottom:4px;">Au</label>
+            <input type="date" id="batchDateTo" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;color:#0D1117;outline:none;box-sizing:border-box;" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Prix (affiché uniquement en mode price) -->
+      <div id="batchPriceSection">
+        <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Prix par nuit</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="number" id="batchPrice" min="0" step="0.5" placeholder="Ex: 90" style="flex:1;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;color:#0D1117;outline:none;" />
+          <span style="font-size:16px;color:#7A8695;font-weight:600;">€</span>
+        </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:6px;">Laissez vide pour supprimer les overrides et revenir au prix par défaut</div>
+      </div>
+
+      <!-- Raison blocage (affiché uniquement en mode block) -->
+      <div id="batchReasonSection" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Raison (optionnel)</div>
+        <input type="text" id="batchReason" placeholder="Ex: Travaux, usage personnel..." style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;color:#0D1117;outline:none;box-sizing:border-box;" />
+      </div>
+
+      <!-- Logements -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+          <span>Logements</span>
+          <button onclick="toggleAllBatchProperties()" style="font-size:11px;color:#1A7A5E;background:none;border:none;cursor:pointer;font-weight:600;">Tout sélectionner</button>
+        </div>
+        <div id="batchPropertiesList" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;">
+          <!-- Rempli dynamiquement -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:16px 24px;border-top:1px solid #f0ede7;display:flex;gap:10px;">
+      <button onclick="closeBatchEditModal()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
+      <button id="batchApplyBtn" onclick="applyBatchEdit()" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <i class="fas fa-check"></i> Appliquer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ÉDITION GROUPÉE — LOGIQUE
+// ============================================================
+var _batchAction = 'price'; // 'price', 'block', 'unblock'
+
+function openBatchEditModal() {
+  const modal = document.getElementById('batchEditModal');
+  modal.style.display = 'flex';
+
+  // Pré-remplir les dates avec aujourd'hui
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('batchDateFrom').value = today;
+  document.getElementById('batchDateTo').value = today;
+
+  // Remplir la liste des logements
+  const list = document.getElementById('batchPropertiesList');
+  const props = window.LCC_PROPERTIES || JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+  list.innerHTML = props.length === 0
+    ? '<div style="font-size:13px;color:#9ca3af;">Aucun logement disponible</div>'
+    : props.map(p => {
+        const name = p.internalName || p.internal_name || p.name || p.id;
+        return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;background:white;transition:all .15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor=this.querySelector('input').checked?'#1A7A5E':'#e2e8f0'">
+          <input type="checkbox" data-property-id="${p.id}" style="width:18px;height:18px;accent-color:#1A7A5E;cursor:pointer;" onchange="this.closest('label').style.borderColor=this.checked?'#1A7A5E':'#e2e8f0';this.closest('label').style.background=this.checked?'#e8f5f1':'white'" />
+          <span style="font-size:13px;font-weight:500;color:#0D1117;">${name}</span>
+        </label>`;
+      }).join('');
+
+  setBatchAction('price');
+}
+
+function closeBatchEditModal() {
+  document.getElementById('batchEditModal').style.display = 'none';
+}
+
+function setBatchAction(action) {
+  _batchAction = action;
+  const btns = { price: 'batchActionPrice', block: 'batchActionBlock', unblock: 'batchActionUnblock' };
+  Object.entries(btns).forEach(([key, id]) => {
+    const btn = document.getElementById(id);
+    const active = key === action;
+    btn.style.borderColor = active ? '#1A7A5E' : '#e2e8f0';
+    btn.style.background = active ? '#e8f5f1' : 'white';
+    btn.style.color = active ? '#1A7A5E' : '#374151';
+  });
+  document.getElementById('batchPriceSection').style.display = action === 'price' ? 'block' : 'none';
+  document.getElementById('batchReasonSection').style.display = action === 'block' ? 'block' : 'none';
+}
+
+function toggleAllBatchProperties() {
+  const checkboxes = document.querySelectorAll('#batchPropertiesList input[type="checkbox"]');
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  checkboxes.forEach(cb => {
+    cb.checked = !allChecked;
+    const label = cb.closest('label');
+    if (label) {
+      label.style.borderColor = cb.checked ? '#1A7A5E' : '#e2e8f0';
+      label.style.background = cb.checked ? '#e8f5f1' : 'white';
+    }
+  });
+}
+
+async function applyBatchEdit() {
+  const dateFrom = document.getElementById('batchDateFrom').value;
+  const dateTo = document.getElementById('batchDateTo').value;
+  const selectedProps = Array.from(document.querySelectorAll('#batchPropertiesList input[type="checkbox"]:checked')).map(cb => cb.getAttribute('data-property-id'));
+
+  if (!dateFrom || !dateTo) { alert('Veuillez sélectionner une plage de dates.'); return; }
+  if (dateTo < dateFrom) { alert('La date de fin doit être après la date de début.'); return; }
+  if (selectedProps.length === 0) { alert('Veuillez sélectionner au moins un logement.'); return; }
+
+  const btn = document.getElementById('batchApplyBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Application...';
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+
+    if (_batchAction === 'price') {
+      const price = document.getElementById('batchPrice').value;
+      const res = await fetch('/api/pricing/overrides/batch', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, price: price === '' ? '' : parseFloat(price) })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+    } else {
+      const reason = document.getElementById('batchReason').value;
+      const res = await fetch('/api/blocks/batch', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, reason, action: _batchAction })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+    }
+
+    closeBatchEditModal();
+    // Recharger le calendrier
+    if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+
+  } catch (err) {
+    alert('Erreur : ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check"></i> Appliquer';
+  }
+}
+
+// Fermer en cliquant sur le fond
+document.getElementById('batchEditModal').addEventListener('click', function(e) {
+  if (e.target === this) closeBatchEditModal();
+});
 </script>
 
 </body>
