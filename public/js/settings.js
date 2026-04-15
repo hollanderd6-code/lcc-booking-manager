@@ -828,6 +828,14 @@ function duplicateProperty(propertyId) {
       document.getElementById('practicalTransport').value = practical.public_transport || '';
   } catch(e) {}
 
+  // Q/R personnalisées
+  try {
+    const rawQR = property.custom_auto_responses || property.customAutoResponses;
+    _customQR = Array.isArray(rawQR) ? rawQR
+      : (typeof rawQR === 'string' ? JSON.parse(rawQR) : []);
+    renderCustomQR();
+  } catch(e) { _customQR = []; renderCustomQR(); }
+
   // Raccourcis messages
   try {
     const qrList = document.getElementById('quickRepliesList');
