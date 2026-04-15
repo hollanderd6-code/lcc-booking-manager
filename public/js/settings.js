@@ -813,6 +813,21 @@ function duplicateProperty(propertyId) {
     setVal('propertyPracticalInfo', property.practicalInfo || property.practical_info || '');
   } catch(e) {}
 
+  // Infos pratiques
+  try {
+    const practical = (property.practical_info || property.practicalInfo)
+      ? (() => { const v = property.practical_info || property.practicalInfo; return typeof v === 'string' ? JSON.parse(v) : v; })()
+      : {};
+    if (document.getElementById('practicalParking'))
+      document.getElementById('practicalParking').value = practical.parking_details || '';
+    if (document.getElementById('practicalTrash'))
+      document.getElementById('practicalTrash').value = practical.trash_day || '';
+    if (document.getElementById('practicalShops'))
+      document.getElementById('practicalShops').value = practical.nearby_shops || '';
+    if (document.getElementById('practicalTransport'))
+      document.getElementById('practicalTransport').value = practical.public_transport || '';
+  } catch(e) {}
+
   // Raccourcis messages
   try {
     const qrList = document.getElementById('quickRepliesList');
