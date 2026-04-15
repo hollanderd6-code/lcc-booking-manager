@@ -10658,15 +10658,21 @@ if (window.Capacitor) {
     });
     s.on('reservation_cancelled', function(d) {
       console.log('❌ Réservation annulée via socket, rafraîchissement calendrier...', d);
-      if (typeof loadCalendarData === 'function') loadCalendarData();
-      else if (typeof refreshCalendar === 'function') refreshCalendar();
-      else if (typeof renderCalendar === 'function') renderCalendar();
+      // Supprimer immédiatement du store local pour un retour visuel instantané
+      if (d && d.uid && window.LCC_RESERVATIONS) {
+        window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r) {
+          return r.uid !== d.uid && r.id !== d.uid;
+        });
+        try { localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(window.LCC_RESERVATIONS)); } catch(e) {}
+      }
+      // Recharger depuis l'API et re-render
+      if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+      else if (typeof window.renderCalendar === 'function') window.renderCalendar();
     });
     s.on('calendar_refresh', function(d) {
       console.log('🔄 Rafraîchissement calendrier demandé via socket...');
-      if (typeof loadCalendarData === 'function') loadCalendarData();
-      else if (typeof refreshCalendar === 'function') refreshCalendar();
-      else if (typeof renderCalendar === 'function') renderCalendar();
+      if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+      else if (typeof window.renderCalendar === 'function') window.renderCalendar();
     });
     s.on('disconnect', function() { socketOK = false; });
     s.on('connect_error', function(e) { console.log('🧹 Socket err:', e.message); });
