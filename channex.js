@@ -505,10 +505,34 @@ async function processChannexBooking(pool, bookingData) {
     const { id: property_id, user_id } = propResult.rows[0];
 
     // Vérifier si réservation déjà existante
-    const existing = await pool.query(
+    // 1. Par channex_booking_id exact
+    let existing = await pool.query(
       'SELECT id, uid FROM reservations WHERE channex_booking_id = $1',
       [booking_id]
     );
+
+    // 2. Fallback : même logement + mêmes dates + même voyageur (Channex peut changer le booking_id lors d'une modif)
+    if (existing.rows.length === 0 && arrival_date && departure_date && property_id) {
+      const dupCheck = await pool.query(
+        `SELECT id, uid FROM reservations
+         WHERE property_id = $1
+           AND start_date = $2
+           AND end_date = $3
+           AND status != 'cancelled'
+           AND source = 'channex'
+         ORDER BY created_at DESC LIMIT 1`,
+        [property_id, arrival_date, departure_date]
+      );
+      if (dupCheck.rows.length > 0) {
+        console.log(`⚠️ [CHANNEX] Doublon détecté par dates: booking_id=${booking_id} correspond à ${dupCheck.rows[0].uid} → mise à jour au lieu de créer`);
+        // Mettre à jour le channex_booking_id pour pointer vers le nouveau booking_id
+        await pool.query(
+          'UPDATE reservations SET channex_booking_id = $1, updated_at = NOW() WHERE id = $2',
+          [booking_id, dupCheck.rows[0].id]
+        );
+        existing = dupCheck;
+      }
+    }
 
     // Annulation
     if (booking_status === 'cancelled' || booking_status === 'canceled') {
