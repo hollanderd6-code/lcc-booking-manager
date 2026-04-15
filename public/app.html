@@ -2965,7 +2965,7 @@ window.closeChecklistsKpiModal = function() {
 </div>
 </div>
 <!-- Period Navigation -->
-<div class="period-navigation">
+<div class="period-navigation" style="display:flex;align-items:center;gap:8px;">
 <button class="period-nav-btn" id="prevPeriod">
 <i class="fas fa-chevron-left"></i>
 </button>
@@ -2975,6 +2975,9 @@ window.closeChecklistsKpiModal = function() {
 </div>
 <button class="period-nav-btn" id="nextPeriod">
 <i class="fas fa-chevron-right"></i>
+</button>
+<button onclick="openBatchEditModal()" style="margin-left:8px;display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;font-weight:600;white-space:nowrap;background:#1A7A5E;border:none;color:white;border-radius:8px;cursor:pointer;" title="Édition groupée">
+  <i class="fas fa-layer-group" style="font-size:11px;"></i><span>Édition groupée</span>
 </button>
 </div>
 <!-- Calendar Container -->
