@@ -24365,8 +24365,8 @@ app.post('/api/channex/webhook', async (req, res) => {
             currency: result.currency || 'EUR'
           };
           console.log(`✏️ [CHANNEX] Résa ${result.uid} mise à jour dans reservationsStore`);
-        } else {
-          // Nouvelle réservation → ajouter au store
+        } else if (result.status !== 'cancelled') {
+          // Nouvelle réservation non annulée → ajouter au store
           const otaRaw = result.ota_name || result.platform || '';
           const normPlatform = (() => {
             const o = otaRaw.toLowerCase();
@@ -24389,6 +24389,8 @@ app.post('/api/channex/webhook', async (req, res) => {
             currency:  result.currency || 'EUR'
           });
           console.log(`✅ [CHANNEX] Résa ${result.uid} injectée dans reservationsStore`);
+        } else {
+          console.log(`ℹ️ [CHANNEX] Résa ${result.uid} annulée ignorée (pas dans le store)`);
         }
       }
 
