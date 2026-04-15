@@ -511,7 +511,26 @@ async function processChannexBooking(pool, bookingData) {
       [booking_id]
     );
 
-    // 2. Fallback : même logement + mêmes dates + même voyageur (Channex peut changer le booking_id lors d'une modif)
+    // 2. Fallback par ota_reservation_id (numéro OTA stable même si Channex change le booking_id)
+    if (existing.rows.length === 0 && ota_reservation_code) {
+      const otaCheck = await pool.query(
+        `SELECT id, uid FROM reservations
+         WHERE ota_reservation_id = $1
+           AND status != 'cancelled'
+         ORDER BY created_at DESC LIMIT 1`,
+        [ota_reservation_code]
+      );
+      if (otaCheck.rows.length > 0) {
+        console.log(`⚠️ [CHANNEX] Doublon détecté par ota_reservation_id=${ota_reservation_code} → ${otaCheck.rows[0].uid} → mise à jour`);
+        await pool.query(
+          'UPDATE reservations SET channex_booking_id = $1, updated_at = NOW() WHERE id = $2',
+          [booking_id, otaCheck.rows[0].id]
+        );
+        existing = otaCheck;
+      }
+    }
+
+    // 3. Fallback par dates : même logement + mêmes dates (Channex peut changer le booking_id lors d'une modif)
     if (existing.rows.length === 0 && arrival_date && departure_date && property_id) {
       const dupCheck = await pool.query(
         `SELECT id, uid FROM reservations
@@ -525,7 +544,6 @@ async function processChannexBooking(pool, bookingData) {
       );
       if (dupCheck.rows.length > 0) {
         console.log(`⚠️ [CHANNEX] Doublon détecté par dates: booking_id=${booking_id} correspond à ${dupCheck.rows[0].uid} → mise à jour au lieu de créer`);
-        // Mettre à jour le channex_booking_id pour pointer vers le nouveau booking_id
         await pool.query(
           'UPDATE reservations SET channex_booking_id = $1, updated_at = NOW() WHERE id = $2',
           [booking_id, dupCheck.rows[0].id]
