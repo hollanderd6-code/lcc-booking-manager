@@ -1529,94 +1529,32 @@ async function copyWelcomeBookLink(buttonEl) {
   await editLivret(currentUniqueId);
 }
 async function duplicateLivret(uniqueId, originalName) {
+  const btn = event?.target?.closest('button');
   try {
-    // Confirmer
-    const newName = prompt(`Nom du nouveau livret (copie de "${originalName}") :`, `${originalName} (copie)`);
-    if (!newName) return; // annulé
+    const newName = prompt(`Nom du nouveau livret :`, `${originalName} (copie)`);
+    if (!newName) return;
 
-    // Afficher un feedback
-    const btn = event?.target?.closest('button');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
 
-    // Charger les données du livret source
-    const res = await fetch(`${API_BASE}/api/welcome-books/public/${uniqueId}`);
-    const data = await res.json();
-    if (!data.success || !data.book) throw new Error('Livret source introuvable');
-
-    const sourceData = data.book;
-
-    // Construire un FormData avec toutes les données texte (pas les photos — on les réutilise via URL)
-    const formData = new FormData();
-    // Pas d'uniqueId → création d'un nouveau livret
-    formData.append('propertyName', newName);
-    formData.append('isDraft', 'false');
-    formData.append('lastSection', '0');
-    formData.append('welcomeDescription', sourceData.welcomeDescription || '');
-    formData.append('contactPhone', sourceData.contactPhone || '');
-    formData.append('address', sourceData.address || '');
-    formData.append('postalCode', sourceData.postalCode || '');
-    formData.append('city', sourceData.city || '');
-    formData.append('keyboxCode', sourceData.keyboxCode || '');
-    formData.append('accessInstructions', sourceData.accessInstructions || '');
-    formData.append('parkingInfo', sourceData.parkingInfo || '');
-    formData.append('wifiSSID', sourceData.wifiSSID || '');
-    formData.append('wifiPassword', sourceData.wifiPassword || '');
-    formData.append('checkoutTime', sourceData.checkoutTime || '');
-    formData.append('checkoutInstructions', sourceData.checkoutInstructions || '');
-    formData.append('importantRules', sourceData.importantRules || '');
-    formData.append('equipmentList', sourceData.equipmentList || '');
-    formData.append('transportInfo', sourceData.transportInfo || '');
-    formData.append('shopsList', sourceData.shopsList || '');
-    formData.append('extraNotesAccess', sourceData.extraNotesAccess || '');
-    formData.append('extraNotesLogement', sourceData.extraNotesLogement || '');
-    formData.append('extraNotesPractical', sourceData.extraNotesPractical || '');
-    formData.append('extraNotesAround', sourceData.extraNotesAround || '');
-    formData.append('rooms', JSON.stringify(sourceData.rooms || []));
-    formData.append('restaurants', JSON.stringify(sourceData.restaurants || []));
-    formData.append('places', JSON.stringify(sourceData.places || []));
-
     const token = localStorage.getItem('lcc_token');
-    const saveRes = await fetch(`${API_BASE}/api/welcome-books/create`, {
+    const res = await fetch(`${API_BASE}/api/welcome-books/duplicate/${uniqueId}`, {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
-      body: formData
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ newName })
     });
-    const saveData = await saveRes.json();
-    if (!saveData.success) throw new Error(saveData.error || 'Erreur sauvegarde');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Erreur duplication');
 
-    // Les photos sont copiées manuellement via un appel PATCH si besoin
-    // Pour l'instant : mettre à jour les photos via une requête supplémentaire
-    const newUniqueId = saveData.uniqueId;
-    if (newUniqueId && sourceData.photos) {
-      // Patch des photos (URLs Cloudinary existantes — pas de re-upload)
-      const patchFormData = new FormData();
-      patchFormData.append('uniqueId', newUniqueId);
-      patchFormData.append('propertyName', newName);
-      patchFormData.append('isDraft', 'false');
-      // Réinjecter toutes les données + photos via un second POST (mode édition)
-      Object.keys(sourceData).forEach(key => {
-        if (key === 'photos' || key === 'uniqueId' || key === 'updatedAt') return;
-        if (key === 'rooms' || key === 'restaurants' || key === 'places') {
-          patchFormData.append(key, JSON.stringify(sourceData[key] || []));
-        } else if (typeof sourceData[key] === 'string' || typeof sourceData[key] === 'number') {
-          patchFormData.append(key, String(sourceData[key]));
-        }
-      });
-      patchFormData.set('propertyName', newName);
-      // On ne peut pas passer les photos en FormData sans re-upload
-      // → Les photos resteront vides sur la copie (l'utilisateur peut les rajouter)
-    }
-
-    showDraftToast(`Livret "${newName}" créé avec succès !`);
-    // Recharger la liste
-    await loadLivrets();
+    showDraftToast(`Livret "${newName}" créé avec succès — photos incluses !`);
+    await loadLivretsList();
 
   } catch (err) {
     console.error('Erreur duplication livret:', err);
     showDraftToast('Erreur lors de la duplication : ' + err.message, true);
   } finally {
-    // Réactiver le bouton si encore là
-    const btn = document.querySelector(`button[onclick*="${uniqueId}"][title*="Dupliquer"]`);
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-copy"></i>'; }
   }
 }
