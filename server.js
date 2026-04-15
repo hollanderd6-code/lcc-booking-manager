@@ -11862,6 +11862,143 @@ app.post('/api/pricing/overrides', authenticateAny, async (req, res) => {
   }
 });
 
+// POST /api/pricing/overrides/batch — Édition groupée prix
+app.post('/api/pricing/overrides/batch', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { property_ids, date_from, date_to, price } = req.body;
+
+    if (!property_ids?.length || !date_from || !date_to) {
+      return res.status(400).json({ error: 'property_ids, date_from et date_to sont requis' });
+    }
+
+    // Vérifier que tous les logements appartiennent à l'utilisateur
+    const propCheck = await pool.query(
+      'SELECT id FROM properties WHERE id = ANY($1) AND user_id = $2',
+      [property_ids, user.id]
+    );
+    if (propCheck.rows.length !== property_ids.length) {
+      return res.status(403).json({ error: 'Un ou plusieurs logements sont inaccessibles' });
+    }
+
+    // Générer toutes les dates entre date_from et date_to
+    const dates = [];
+    const cur = new Date(date_from);
+    const end = new Date(date_to);
+    while (cur <= end) {
+      dates.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    let count = 0;
+    for (const property_id of property_ids) {
+      for (const date of dates) {
+        if (price === null || price === undefined || price === '') {
+          // Supprimer l'override
+          await pool.query(
+            'DELETE FROM pricing_overrides WHERE user_id = $1 AND property_id = $2 AND date = $3',
+            [user.id, property_id, date]
+          );
+        } else {
+          await pool.query(`
+            INSERT INTO pricing_overrides (user_id, property_id, date, price, updated_at)
+            VALUES ($1, $2, $3, $4, NOW())
+            ON CONFLICT (user_id, property_id, date)
+            DO UPDATE SET price = $4, updated_at = NOW()
+          `, [user.id, property_id, date, parseFloat(price)]);
+        }
+        count++;
+      }
+      // Sync Channex en arrière-plan
+      setImmediate(() => triggerChannexRatesSync(property_id, user.id));
+    }
+
+    console.log(`✅ [BATCH PRICING] ${count} overrides appliqués pour ${property_ids.length} logements`);
+    res.json({ success: true, count, properties: property_ids.length, dates: dates.length });
+  } catch (err) {
+    console.error('❌ POST /api/pricing/overrides/batch:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/blocks/batch — Édition groupée blocage
+app.post('/api/blocks/batch', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { property_ids, date_from, date_to, reason, action } = req.body;
+    // action = 'block' ou 'unblock'
+
+    if (!property_ids?.length || !date_from || !date_to) {
+      return res.status(400).json({ error: 'property_ids, date_from et date_to sont requis' });
+    }
+
+    const propCheck = await pool.query(
+      'SELECT id FROM properties WHERE id = ANY($1) AND user_id = $2',
+      [property_ids, user.id]
+    );
+    if (propCheck.rows.length !== property_ids.length) {
+      return res.status(403).json({ error: 'Un ou plusieurs logements sont inaccessibles' });
+    }
+
+    let count = 0;
+
+    if (action === 'unblock') {
+      // Supprimer les blocages existants sur cette plage
+      for (const property_id of property_ids) {
+        const result = await pool.query(
+          `DELETE FROM reservations
+           WHERE user_id = $1 AND property_id = $2
+             AND source = 'BLOCK'
+             AND start_date >= $3 AND end_date <= $4`,
+          [user.id, property_id, date_from, date_to]
+        );
+        // Mettre à jour le store en mémoire
+        if (reservationsStore.properties[property_id]) {
+          reservationsStore.properties[property_id] = reservationsStore.properties[property_id].filter(r =>
+            !(r.source === 'BLOCK' && r.start >= date_from && r.end <= date_to)
+          );
+        }
+        count += result.rowCount || 0;
+      }
+    } else {
+      // Bloquer chaque nuit individuellement
+      for (const property_id of property_ids) {
+        const cur = new Date(date_from);
+        const end = new Date(date_to);
+        while (cur < end) {
+          const dateStr = cur.toISOString().split('T')[0];
+          cur.setDate(cur.getDate() + 1);
+          const nextStr = cur.toISOString().split('T')[0];
+          const uid = `block_${Date.now()}_${property_id}_${dateStr}`;
+          await pool.query(`
+            INSERT INTO reservations (uid, property_id, user_id, start_date, end_date, guest_name, source, platform, reservation_type, status, notes)
+            VALUES ($1,$2,$3,$4,$5,$6,'BLOCK','BLOCK','block','confirmed',$7)
+            ON CONFLICT (uid) DO NOTHING
+          `, [uid, property_id, user.id, dateStr, nextStr, reason || 'Blocage calendrier', reason || '']);
+          // Ajouter en mémoire
+          if (!reservationsStore.properties[property_id]) reservationsStore.properties[property_id] = [];
+          reservationsStore.properties[property_id].push({
+            uid, propertyId: property_id, start: dateStr, end: nextStr,
+            source: 'BLOCK', platform: 'BLOCK', type: 'block',
+            guestName: reason || 'Blocage calendrier', status: 'confirmed'
+          });
+          count++;
+        }
+      }
+    }
+
+    console.log(`✅ [BATCH BLOCK] action=${action} ${count} opérations sur ${property_ids.length} logements`);
+    res.json({ success: true, count, properties: property_ids.length });
+  } catch (err) {
+    console.error('❌ POST /api/blocks/batch:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // DELETE /api/pricing/overrides/:property_id/:date
 app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, async (req, res) => {
   try {
