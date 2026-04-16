@@ -170,6 +170,26 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     }
 
     // ========================================
+    // FILTRE : Messages système Booking/OTA
+    // Ces messages ne sont pas de vrais messages voyageur
+    // ========================================
+    const msgText = message.message || '';
+    const isOtaSystemMessage = (
+      msgText.includes('THIS RESERVATION HAS BEEN PRE-PAID') ||
+      msgText.includes('BOOKING NOTE :') ||
+      msgText.includes('BOOKING NOTE:') ||
+      msgText.includes('OTA Commission:') ||
+      msgText.includes('Payment Collect:') ||
+      msgText.includes('Meal Plan:') ||
+      msgText.includes('Smoking Preference:') ||
+      /^\*\*.*\*\*\s*\n/.test(msgText) // message qui commence par **...**
+    );
+    if (isOtaSystemMessage) {
+      console.log(`ℹ️ [HANDLER] Message système OTA ignoré (notes de réservation Booking)`);
+      return false;
+    }
+
+    // ========================================
     // ÉTAPE 1 : INTERVENTION URGENTE
     // ========================================
     if (conversation.escalated) {
