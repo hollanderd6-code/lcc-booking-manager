@@ -425,7 +425,24 @@ async function processChannexBooking(pool, bookingData) {
     const cleaning_service = all_services.find(s =>
       /clean|ménage|menage|cleaning|nettoyage/i.test(s.name || '')
     );
-    const amount_cleaning = cleaning_service ? parseFloat(cleaning_service.total_price || 0) : 0;
+
+    // Booking.com envoie les frais de ménage dans room.taxes avec type "Service Charge"
+    const cleaning_from_taxes = taxes.find(t =>
+      /clean|ménage|menage|cleaning|nettoyage|service.?charge/i.test(t.name || '') ||
+      /service.?charge/i.test(t.type || '')
+    );
+
+    const amount_cleaning = cleaning_service
+      ? parseFloat(cleaning_service.total_price || 0)
+      : cleaning_from_taxes
+        ? parseFloat(cleaning_from_taxes.total_price || 0)
+        : 0;
+
+    // Taxes pures = tout sauf les Service Charge (frais de ménage)
+    const pure_taxes = taxes.filter(t =>
+      !/service.?charge/i.test(t.type || '') &&
+      !/clean|ménage|menage|cleaning|nettoyage/i.test(t.name || '')
+    );
 
     // 🔍 Log détaillé pour debug Booking.com
     const isBookingCom = (ota_name || '').toLowerCase().includes('booking');
@@ -446,14 +463,14 @@ async function processChannexBooking(pool, bookingData) {
     // ── Booking.com : extraire taxe de séjour depuis taxes room ──────────────
     // Booking.com envoie city_tax / CITYTAX dans room.taxes
     let bdc_city_tax = 0;
-    if (isBookingCom && room.taxes && room.taxes.length > 0) {
-      const cityTax = room.taxes.find(t =>
+    if (isBookingCom && pure_taxes.length > 0) {
+      const cityTax = pure_taxes.find(t =>
         /city.?tax|taxe.?s.?jour|citytax|tourist/i.test(t.name || t.type || '')
       );
       if (cityTax) bdc_city_tax = parseFloat(cityTax.total_price || 0);
       else {
         // Si une seule taxe non-inclusive, c'est probablement la taxe de séjour
-        const nonInclusive = room.taxes.filter(t => !t.is_inclusive);
+        const nonInclusive = pure_taxes.filter(t => !t.is_inclusive);
         if (nonInclusive.length === 1) bdc_city_tax = parseFloat(nonInclusive[0].total_price || 0);
       }
     }
