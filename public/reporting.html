@@ -278,9 +278,9 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 /* ══════════════════════════════════════════
    TABS
 ══════════════════════════════════════════ */
-.view-tabs { display: flex; gap: 3px; background: var(--bg); border-radius: 9px; padding: 3px; border: 1px solid var(--border); }
-.view-tab { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text-muted); font-family: 'DM Sans', sans-serif; transition: all .12s; }
-.view-tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.view-tabs { display: flex; gap: 3px; background: #E8E0D0; border-radius: 9px; padding: 3px; border: 1px solid #D4C8B4; }
+.view-tab { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #6B7280; font-family: 'DM Sans', sans-serif; transition: all .12s; }
+.view-tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.12); font-weight: 700; }
 #rentabiliteSection .view-tabs { background: rgba(0,0,0,.06) !important; border: 1px solid rgba(0,0,0,.1) !important; }
 #rentabiliteSection .view-tab { color: #374151 !important; font-weight: 600 !important; }
 #rentabiliteSection .view-tab.active { background: #1A7A5E !important; color: white !important; box-shadow: 0 2px 6px rgba(26,122,94,.3) !important; }
@@ -418,6 +418,15 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 <!-- Contrôles -->
 <div class="reporting-controls">
   <select class="ctrl-select" id="yearSelect" onchange="loadReport()"></select>
+  <select class="ctrl-select" id="monthSelect" onchange="loadReport()">
+    <option value="">Toute l'année</option>
+    <option value="1">Janvier</option><option value="2">Février</option>
+    <option value="3">Mars</option><option value="4">Avril</option>
+    <option value="5">Mai</option><option value="6">Juin</option>
+    <option value="7">Juillet</option><option value="8">Août</option>
+    <option value="9">Septembre</option><option value="10">Octobre</option>
+    <option value="11">Novembre</option><option value="12">Décembre</option>
+  </select>
   <select class="ctrl-select" id="propertySelect" onchange="loadReport()">
     <option value="">Tous les logements</option>
   </select>
@@ -672,6 +681,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (i === y) o.selected = true;
     sel.appendChild(o);
   }
+  // Pré-sélectionner le mois courant
+  const monthSel = document.getElementById('monthSelect');
+  if (monthSel) monthSel.value = String(new Date().getMonth() + 1);
+
   await fetchProperties();
   await loadReport();
 });
@@ -694,6 +707,7 @@ async function fetchProperties() {
 
 async function loadReport() {
   const year   = document.getElementById('yearSelect').value;
+  const month  = document.getElementById('monthSelect')?.value || '';
   const propId = document.getElementById('propertySelect').value;
   const token  = localStorage.getItem('lcc_token');
 
@@ -702,6 +716,7 @@ async function loadReport() {
 
   try {
     let url = `${API_URL}/api/reporting?year=${year}`;
+    if (month) url += `&month=${month}`;
     if (propId) url += `&property_id=${propId}`;
     const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     if (!r.ok) throw new Error('Erreur ' + r.status);
@@ -764,7 +779,7 @@ function renderKPIs(s) {
   const cards = [
     { label:'Réservations', value: fmtN(s.totalBookings), sub:`Moy. ${s.avgNightsPerBooking || 0} nuits / séjour`, accent:'#f59e0b', bg:'rgba(245,158,11,.08)', icon:'fa-calendar-check' },
     { label:'Nuits louées', value: fmtN(s.totalNights), sub:`sur la période`, accent:'#8b5cf6', bg:'rgba(139,92,246,.08)', icon:'fa-moon' },
-    { label:'Commissions OTA', value: fmt(s.totalOtaCommission), sub:`déduit du CA brut`, accent:'#ef4444', bg:'rgba(239,68,68,.08)', icon:'fa-percent' },
+    { label:'Commission conciergerie', value: fmt(s.totalConcierge), sub:`déduite du revenu net`, accent:'#ef4444', bg:'rgba(239,68,68,.08)', icon:'fa-handshake' },
     { label:'Taxe de séjour', value: fmt(s.totalTouristTax), sub:`collectée`, accent:'#0ea5e9', bg:'rgba(14,165,233,.08)', icon:'fa-landmark' },
     { label:'Frais de ménage', value: fmt(s.totalCleaningFee), sub:`inclus dans CA`, accent:'#10b981', bg:'rgba(16,185,129,.08)', icon:'fa-broom' },
     { label:'Revenu propriétaire', value: fmt(s.totalOwnerRevenue), sub:`après commission conciergerie`, accent:'#6366f1', bg:'rgba(99,102,241,.08)', icon:'fa-home' },
