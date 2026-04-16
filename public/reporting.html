@@ -25,7 +25,9 @@
 html, body { margin: 0 !important; }
 .app-container { margin-top: 0 !important; }
 
-/* ── Variables ── */
+/* ══════════════════════════════════════════
+   VARIABLES
+══════════════════════════════════════════ */
 :root {
   --primary: #1A7A5E;
   --primary-light: rgba(26,122,94,.08);
@@ -37,71 +39,59 @@ html, body { margin: 0 !important; }
   --text-soft: #9CA3AF;
 }
 
-/* ── Stats row (même pattern que factures) ── */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+/* ══════════════════════════════════════════
+   LAYOUT GLOBAL
+══════════════════════════════════════════ */
+html[data-theme-v3="1"] .main-content {
+  background: #F5F2EC !important;
+  padding: 24px !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
-@media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 500px) { .stats-row { grid-template-columns: 1fr; } }
+.app-container { display: flex; min-height: 100vh; }
+.sidebar { width: 260px; background: white; border-right: 1px solid #e5e7eb; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; display: flex; flex-direction: column; }
+.main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
+.top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
+html[data-theme-v3="1"] .app-container { height: calc(100vh - 40px) !important; overflow: hidden !important; margin-top: 40px !important; }
+html[data-theme-v3="1"] .main-wrapper { height: 100% !important; overflow: hidden !important; }
+html[data-theme-v3="1"] main.main-content { overflow-y: auto !important; height: 100% !important; background: #F5F2EC !important; }
+@media (min-width: 1367px) { html[data-theme-v3="1"] main.main-content { padding-top: 70px !important; } }
+@media(max-width:1366px){ .main-wrapper { margin-left: 0 !important; } .rp-header-btns { display: none; } }
 
-.stat-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0,0,0,.05);
-  position: relative;
-  overflow: hidden;
-}
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--kpi-accent, var(--primary));
-}
-.stat-icon {
-  width: 34px; height: 34px;
-  border-radius: 9px;
-  background: var(--kpi-bg, var(--primary-light));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  color: var(--kpi-accent, var(--primary));
-  margin-bottom: 12px;
-}
-.stat-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  margin-bottom: 6px;
-}
-.stat-value {
-  display: block;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -.4px;
-}
-.stat-sub {
-  display: block;
-  font-size: 12px;
-  color: var(--primary);
-  margin-top: 5px;
-}
+/* ══════════════════════════════════════════
+   BARRE DARK + HEADER
+══════════════════════════════════════════ */
+html[data-theme-v3="1"] .sidebar { position: fixed !important; top: 40px !important; left: 0 !important; bottom: 0 !important; height: auto !important; z-index: 30 !important; }
+html[data-theme-v3="1"] .bh-demo-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #0D1117; display: flex; align-items: center; gap: 6px; padding: 0 16px; height: 40px; font-family: 'DM Sans', sans-serif; font-size: 12px; }
+.bh-demo-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.bh-demo-mode-label { color: rgba(255,255,255,.4); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
+.bh-theme-toggle { width: 36px; height: 20px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.1); cursor: pointer; position: relative; transition: all .2s; }
+.bh-theme-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.7); transition: all .2s; }
+[data-theme="dark"] .bh-theme-toggle { background: rgba(26,122,94,.5); border-color: rgba(26,122,94,.8); }
+[data-theme="dark"] .bh-theme-toggle::after { transform: translateX(16px); background: white; }
+html[data-theme-v3="1"] header.main-header { position: fixed !important; top: 40px !important; left: 0 !important; right: 0 !important; z-index: 50 !important; margin-left: 260px !important; }
+@media(max-width:1366px){ html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; } }
+html[data-theme-v3="1"] .header-actions .btn-ghost,
+html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !important; }
 
-/* ── Contrôles ── */
+/* ══════════════════════════════════════════
+   BOUTON RETOUR
+══════════════════════════════════════════ */
+.rp-header-btns { position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200; display: flex; gap: 10px; align-items: center; }
+.rp-btn-back { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 20px; border: none; border-radius: 12px; background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+.rp-btn-back:hover { background: #15624B; }
+
+/* ══════════════════════════════════════════
+   CONTRÔLES GLOBAUX
+══════════════════════════════════════════ */
 .reporting-controls {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   padding: 14px 18px;
   background: white;
   border-radius: 14px;
@@ -114,119 +104,197 @@ html, body { margin: 0 !important; }
   border-radius: 9px;
   background: var(--bg);
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  cursor: pointer;
-  outline: none;
-  min-width: 140px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text); cursor: pointer; outline: none; min-width: 140px;
 }
-.ctrl-label {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.btn-export {
-  display: flex; align-items: center; gap: 7px;
-  padding: 8px 16px;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 9px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity .15s;
-}
+.ctrl-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+.btn-export { display: flex; align-items: center; gap: 7px; padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
 .btn-export:hover { opacity: .88; }
-.btn-csv {
-  display: flex; align-items: center; gap: 7px;
-  padding: 8px 14px;
-  background: white;
-  color: var(--text);
-  border: 1.5px solid var(--border);
-  border-radius: 9px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
+.btn-csv { display: flex; align-items: center; gap: 7px; padding: 8px 14px; background: white; color: var(--text); border: 1.5px solid var(--border); border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; }
 .ml-auto { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
-/* ── Cards ── */
-.card {
+/* ══════════════════════════════════════════
+   SECTION TITRE
+══════════════════════════════════════════ */
+.rp-section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rp-section-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 12px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+
+/* ══════════════════════════════════════════
+   KPI HERO — 2 grandes cartes
+══════════════════════════════════════════ */
+.kpi-hero-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media(max-width:600px){ .kpi-hero-row { grid-template-columns: 1fr; } }
+
+.kpi-hero {
   background: white;
-  border-radius: 16px;
+  border-radius: 18px;
+  padding: 22px 24px;
   border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  position: relative;
   overflow: hidden;
-  margin-bottom: 16px;
+}
+.kpi-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -20px; right: -20px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--kpi-accent, var(--primary));
+  opacity: .06;
+}
+.kpi-hero-label {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 8px;
+}
+.kpi-hero-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px; font-weight: 400;
+  color: var(--text); letter-spacing: -.5px;
+  margin-bottom: 6px;
+  line-height: 1;
+}
+.kpi-hero-sub {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.kpi-hero-icon {
+  position: absolute;
+  top: 20px; right: 20px;
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  background: var(--kpi-bg, var(--primary-light));
+  color: var(--kpi-accent, var(--primary));
+}
+.kpi-hero-trend {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px;
+  margin-top: 6px;
+}
+
+/* ══════════════════════════════════════════
+   KPI SECONDAIRES — grille 4 colonnes
+══════════════════════════════════════════ */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 500px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
+
+.stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .15s;
+}
+.stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: var(--kpi-accent, var(--primary));
+  opacity: .6;
+}
+.stat-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--kpi-bg, var(--primary-light));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  color: var(--kpi-accent, var(--primary));
+  margin-bottom: 10px;
+}
+.stat-label {
+  display: block; font-size: 10px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: .5px; margin-bottom: 4px;
+}
+.stat-value {
+  display: block; font-size: 18px; font-weight: 700;
+  color: var(--text); letter-spacing: -.3px;
+}
+.stat-sub {
+  display: block; font-size: 11px;
+  color: var(--text-soft); margin-top: 3px;
+}
+
+/* ══════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════ */
+.card {
+  background: white; border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  overflow: hidden; margin-bottom: 16px;
 }
 .card-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px 12px;
   border-bottom: 1px solid var(--border);
 }
-.card-title {
-  font-size: 14px; font-weight: 700; color: var(--text);
-  display: flex; align-items: center; gap: 8px;
-}
+.card-title { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
 .card-title i { color: var(--primary); font-size: 13px; }
 
-/* ── Grid layouts ── */
-.grid-2-1 {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
+/* ══════════════════════════════════════════
+   GRID LAYOUTS
+══════════════════════════════════════════ */
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
 @media (max-width: 900px) { .grid-2-1 { grid-template-columns: 1fr; } }
 
-/* ── Tabs ── */
-.view-tabs {
-  display: flex; gap: 3px;
-  background: var(--bg);
-  border-radius: 9px;
-  padding: 3px;
-  border: 1px solid var(--border);
-}
-.view-tab {
-  padding: 5px 12px;
-  border-radius: 7px;
-  font-size: 12px; font-weight: 600;
-  cursor: pointer; border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: 'DM Sans', sans-serif;
-  transition: all .12s;
-}
-.view-tab.active {
-  background: white; color: var(--primary);
-  box-shadow: 0 1px 4px rgba(0,0,0,.08);
-}
+/* ══════════════════════════════════════════
+   TABS
+══════════════════════════════════════════ */
+.view-tabs { display: flex; gap: 3px; background: var(--bg); border-radius: 9px; padding: 3px; border: 1px solid var(--border); }
+.view-tab { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text-muted); font-family: 'DM Sans', sans-serif; transition: all .12s; }
+.view-tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+#rentabiliteSection .view-tabs { background: rgba(0,0,0,.06) !important; border: 1px solid rgba(0,0,0,.1) !important; }
+#rentabiliteSection .view-tab { color: #374151 !important; font-weight: 600 !important; }
+#rentabiliteSection .view-tab.active { background: #1A7A5E !important; color: white !important; box-shadow: 0 2px 6px rgba(26,122,94,.3) !important; }
+#rentabiliteSection .view-tab:not(.active):hover { background: rgba(26,122,94,.08) !important; color: #1A7A5E !important; }
 
-/* ── Rentabilité tabs — visibilité forcée ── */
-#rentabiliteSection .view-tabs {
-  background: rgba(0,0,0,.06) !important;
-  border: 1px solid rgba(0,0,0,.1) !important;
-}
-#rentabiliteSection .view-tab {
-  color: #374151 !important;
-  font-weight: 600 !important;
-}
-#rentabiliteSection .view-tab.active {
-  background: #1A7A5E !important;
-  color: white !important;
-  box-shadow: 0 2px 6px rgba(26,122,94,.3) !important;
-}
-#rentabiliteSection .view-tab:not(.active):hover {
-  background: rgba(26,122,94,.08) !important;
-  color: #1A7A5E !important;
-}
+/* ══════════════════════════════════════════
+   CHARTS
+══════════════════════════════════════════ */
+.chart-wrap { position: relative; height: 220px; padding: 16px 20px 18px; }
 .chart-mini { position: relative; height: 170px; padding: 14px 20px 16px; }
 
-/* ── Plateforme ── */
+/* ══════════════════════════════════════════
+   PLATEFORME
+══════════════════════════════════════════ */
 .platform-list { padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; }
 .platform-row { display: flex; align-items: center; gap: 10px; }
 .platform-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -236,311 +304,83 @@ html, body { margin: 0 !important; }
 .platform-pct { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 34px; text-align: right; }
 .platform-rev { font-size: 12px; color: var(--text-soft); min-width: 72px; text-align: right; }
 
-/* ── Table propriétés ── */
+/* ══════════════════════════════════════════
+   TABLES
+══════════════════════════════════════════ */
 .prop-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.prop-table th {
-  padding: 9px 16px;
-  text-align: right;
-  font-size: 11px; font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: .4px;
-  border-bottom: 2px solid var(--border);
-  background: var(--bg);
-  white-space: nowrap;
-}
+.prop-table th { padding: 9px 16px; text-align: right; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; border-bottom: 2px solid var(--border); background: var(--bg); white-space: nowrap; }
 .prop-table th:first-child { text-align: left; }
-.prop-table td {
-  padding: 12px 16px;
-  text-align: right;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-  white-space: nowrap;
-}
+.prop-table td { padding: 12px 16px; text-align: right; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
 .prop-table td:first-child { text-align: left; }
 .prop-table tr:last-child td { border-bottom: none; }
 .prop-table tr:hover td { background: var(--bg); }
-.prop-table tfoot td {
-  font-weight: 700; background: var(--primary-light);
-  color: var(--primary); border-top: 2px solid var(--primary-mid);
-  border-bottom: none;
-}
+.prop-table tfoot td { font-weight: 700; background: var(--primary-light); color: var(--primary); border-top: 2px solid var(--primary-mid); border-bottom: none; }
 
-/* ── Table mensuelle ── */
 .monthly-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.monthly-table th {
-  padding: 9px 16px; text-align: right;
-  font-size: 11px; font-weight: 700;
-  color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px;
-  border-bottom: 2px solid var(--border);
-  background: var(--bg);
-  white-space: nowrap;
-}
+.monthly-table th { padding: 9px 16px; text-align: right; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; border-bottom: 2px solid var(--border); background: var(--bg); white-space: nowrap; }
 .monthly-table th:first-child { text-align: left; }
-.monthly-table td {
-  padding: 11px 16px; text-align: right;
-  border-bottom: 1px solid var(--border); color: var(--text);
-  white-space: nowrap;
-}
+.monthly-table td { padding: 11px 16px; text-align: right; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
 .monthly-table td:first-child { text-align: left; font-weight: 600; }
 .monthly-table tr:last-child td { border-bottom: none; }
 .monthly-table tr:hover td { background: var(--bg); }
-.monthly-table tfoot td {
-  font-weight: 700; background: var(--primary-light);
-  color: var(--primary); border-top: 2px solid var(--primary-mid); border-bottom: none;
-}
+.monthly-table tfoot td { font-weight: 700; background: var(--primary-light); color: var(--primary); border-top: 2px solid var(--primary-mid); border-bottom: none; }
 .zero { color: var(--text-soft) !important; font-weight: 400 !important; }
+.occ-badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
 
-/* ── Section conciergerie ── */
-.concierge-section {
-  background: linear-gradient(135deg, rgba(26,122,94,.06), rgba(26,122,94,.02));
-  border: 1.5px solid rgba(26,122,94,.2);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
-}
-.concierge-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
-}
-.concierge-title {
-  font-size: 15px; font-weight: 700; color: var(--primary);
-  display: flex; align-items: center; gap: 8px;
-}
+/* ══════════════════════════════════════════
+   SECTION CONCIERGERIE
+══════════════════════════════════════════ */
+.concierge-section { background: linear-gradient(135deg, rgba(26,122,94,.06), rgba(26,122,94,.02)); border: 1.5px solid rgba(26,122,94,.2); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+.concierge-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.concierge-title { font-size: 15px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
 .concierge-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
 @media (max-width: 600px) { .concierge-grid { grid-template-columns: 1fr 1fr; } }
-.concierge-kpi {
-  background: white; border-radius: 12px; padding: 14px 16px;
-  border: 1px solid rgba(26,122,94,.15);
-}
+.concierge-kpi { background: white; border-radius: 12px; padding: 14px 16px; border: 1px solid rgba(26,122,94,.15); }
 .concierge-kpi-value { font-size: 19px; font-weight: 700; color: var(--primary); }
 .concierge-kpi-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .4px; }
 
-/* ── Loading ── */
-.loading-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; padding: 80px 20px; gap: 14px; color: var(--text-muted);
-}
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid var(--border); border-top-color: var(--primary);
-  border-radius: 50%; animation: spin .7s linear infinite;
-}
+/* ══════════════════════════════════════════
+   LOADING
+══════════════════════════════════════════ */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; gap: 14px; color: var(--text-muted); }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Occupancy badge ── */
-.occ-badge {
-  display: inline-flex; align-items: center;
-  padding: 3px 8px; border-radius: 6px;
-  font-size: 11px; font-weight: 700;
-}
-
-html[data-theme-v3="1"] .main-content { background: #F5F2EC !important; }
-
-/* ── Layout plein écran (copie exacte de factures-proprietaires) ── */
-.app-container { display: flex; min-height: 100vh; }
-.sidebar { width: 260px; background: white; border-right: 1px solid #e5e7eb; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; display: flex; flex-direction: column; }
-.main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
-.top-bar { background: white; height: 64px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
-html[data-theme-v3="1"] .main-content { padding: 24px !important; max-width: 1400px !important; margin: 0 auto !important; width: 100% !important; box-sizing: border-box !important; }
-
-/* ── Hauteurs corrigées pour dark bar + header fixe ── */
-html[data-theme-v3="1"] .app-container {
-  height: calc(100vh - 40px) !important;
-  overflow: hidden !important;
-  margin-top: 40px !important;
-}
-html[data-theme-v3="1"] .main-wrapper {
-  height: 100% !important;
-  overflow: hidden !important;
-}
-html[data-theme-v3="1"] main.main-content {
-  overflow-y: auto !important;
-  height: 100% !important;
-  background: #F5F2EC !important;
-}
-@media (min-width: 1367px) {
-  html[data-theme-v3="1"] main.main-content {
-    padding-top: 70px !important;
-  }
-}
-
-/* ── Dark bar ── */
-html[data-theme-v3="1"] .sidebar {
-  position: fixed !important; top: 40px !important;
-  left: 0 !important; bottom: 0 !important;
-  height: auto !important; z-index: 30 !important;
-}
-
-/* ── BARRE DARK EN HAUT ── */
-html[data-theme-v3="1"] .bh-demo-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-  background: #0D1117; display: flex; align-items: center; gap: 6px;
-  padding: 0 16px; height: 40px; font-family: 'DM Sans', sans-serif; font-size: 12px;
-}
-.bh-demo-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.bh-demo-mode-label { color: rgba(255,255,255,.4); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
-.bh-theme-toggle {
-  width: 36px; height: 20px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2);
-  background: rgba(255,255,255,.1); cursor: pointer; position: relative; transition: all .2s;
-}
-.bh-theme-toggle::after {
-  content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
-  border-radius: 50%; background: rgba(255,255,255,.7); transition: all .2s;
-}
-[data-theme="dark"] .bh-theme-toggle { background: rgba(26,122,94,.5); border-color: rgba(26,122,94,.8); }
-[data-theme="dark"] .bh-theme-toggle::after { transform: translateX(16px); background: white; }
-
-/* ── Header dark top ── */
-html[data-theme-v3="1"] header.main-header { position: fixed !important; top: 40px !important; left: 0 !important; right: 0 !important; z-index: 50 !important; margin-left: 260px !important; }
-@media(max-width:1366px){ html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; } }
-html[data-theme-v3="1"] .header-actions .btn-ghost,
-html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !important; }
-
-/* ── Boutons fixes en haut à droite ── */
-.rp-header-btns { position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200; display: flex; gap: 10px; align-items: center; }
-.rp-btn-back {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 40px; padding: 0 20px; border: none;
-  border-radius: 12px; background: #1A7A5E;
-  color: white; font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
-  white-space: nowrap;
-}
-.rp-btn-back:hover { background: #15624B; }
-
-/* ── Desktop: bouton retour fixe ── */
-@media(max-width:1366px){
-  .main-wrapper { margin-left: 0 !important; }
-  .rp-header-btns { display: none; }
-}
-
-/* ── Comparateur ── */
-.compare-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
+/* ══════════════════════════════════════════
+   COMPARATEUR
+══════════════════════════════════════════ */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 @media(max-width:700px){ .compare-grid { grid-template-columns: 1fr; } }
-
-.compare-col {
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-}
-.compare-col-header {
-  padding: 14px 18px;
-  font-weight: 700;
-  font-size: 15px;
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.compare-metric {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
-  font-size: 14px;
-}
+.compare-col { border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; }
+.compare-col-header { padding: 14px 18px; font-weight: 700; font-size: 15px; color: white; display: flex; align-items: center; gap: 10px; }
+.compare-metric { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 14px; }
 .compare-metric-label { color: var(--text-muted); }
 .compare-metric-value { font-weight: 700; color: var(--text); }
 .compare-metric-value.winner { color: #10B981; }
 .compare-metric-value.loser  { color: #EF4444; }
+.score-circle { width: 72px; height: 72px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; color: white; flex-shrink: 0; }
+.score-detail-bar { height: 6px; border-radius: 999px; background: #E5E7EB; overflow: hidden; flex: 1; }
+.score-detail-bar-fill { height: 100%; border-radius: 999px; transition: width .4s; }
 
-/* ── Score qualité ── */
-.score-circle {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  font-weight: 900;
-  font-size: 22px;
-  color: white;
-  flex-shrink: 0;
-}
-.score-detail-bar {
-  height: 6px;
-  border-radius: 999px;
-  background: #E5E7EB;
-  overflow: hidden;
-  flex: 1;
-}
-.score-detail-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width .4s;
-}
-
-/* ── Rentabilité ── */
-.rentab-card {
-  background: #FDFCFA;
-  border: 1.5px solid rgba(200,184,154,.35);
-  border-radius: 16px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.rentab-card-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0D1117;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.rentab-card-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.rentab-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: #6b7280;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(200,184,154,.2);
-}
+/* ══════════════════════════════════════════
+   RENTABILITÉ
+══════════════════════════════════════════ */
+.rentab-card { background: #FDFCFA; border: 1.5px solid rgba(200,184,154,.35); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.rentab-card-name { font-size: 14px; font-weight: 700; color: #0D1117; display: flex; align-items: center; gap: 8px; }
+.rentab-card-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.rentab-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #6b7280; padding: 4px 0; border-bottom: 1px solid rgba(200,184,154,.2); }
 .rentab-row:last-child { border-bottom: none; }
-.rentab-row-val {
-  font-weight: 600;
-  color: #374151;
-  font-size: 13px;
-}
+.rentab-row-val { font-weight: 600; color: #374151; font-size: 13px; }
 .rentab-row-val.neg { color: #dc2626; }
 .rentab-row-val.pos { color: #1A7A5E; }
-.rentab-marge-block {
-  background: #f0fdf4;
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.rentab-marge-block { background: #f0fdf4; border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
 .rentab-marge-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing:.06em; }
 .rentab-marge-val { font-size: 20px; font-weight: 800; color: #1A7A5E; }
-.rentab-marge-pct {
-  font-size: 12px; font-weight: 700;
-  padding: 3px 10px; border-radius: 999px;
-  background: #1A7A5E; color: white;
-}
+.rentab-marge-pct { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #1A7A5E; color: white; }
 .rentab-marge-pct.warn { background: #F59E0B; }
 .rentab-marge-pct.danger { background: #EF4444; }
-.rentab-table th {
-  background: #1A7A5E; color: white;
-  font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing:.05em;
-  padding: 9px 12px; text-align: left;
-}
-.rentab-table td {
-  padding: 9px 12px; font-size: 12px;
-  border-bottom: 1px solid #f3f4f6;
-  color: #374151;
-}
+.rentab-table th { background: #1A7A5E; color: white; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing:.05em; padding: 9px 12px; text-align: left; }
+.rentab-table td { padding: 9px 12px; font-size: 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
 .rentab-table tr:nth-child(even) td { background: #fafaf8; }
 .rentab-table tr:hover td { background: #f0fdf4; }
 .rentab-table td.neg { color: #dc2626; font-weight: 600; }
@@ -654,72 +494,17 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 <!-- Contenu -->
 <div id="reportContent" style="display:none;">
 
-  <!-- KPI -->
+  <!-- ── KPI HERO (2 grandes cartes) ── -->
+  <p class="rp-section-title">Vue d'ensemble</p>
+  <div class="kpi-hero-row" id="kpiHeroRow">
+    <!-- injecté par renderKPIs() -->
+  </div>
+
+  <!-- ── KPI SECONDAIRES (grille) ── -->
   <div class="stats-row" id="kpiGrid"></div>
 
-  <!-- Comparateur de logements -->
-  <div class="card" id="comparatorSection" style="margin-bottom:24px;">
-    <div class="card-header">
-      <div class="card-title"><i class="fas fa-chart-bar"></i> Comparateur de logements</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border);">
-      <!-- Colonne A -->
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Logement A</div>
-        <select id="compareA" class="ctrl-select" style="width:100%;" onchange="renderComparator()">
-          <option value="">Choisir un logement</option>
-        </select>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <select id="compareMonthA" class="ctrl-select" onchange="renderComparator()">
-            <option value="">Toute l'année</option>
-            <option value="1">Janvier</option><option value="2">Février</option>
-            <option value="3">Mars</option><option value="4">Avril</option>
-            <option value="5">Mai</option><option value="6">Juin</option>
-            <option value="7">Juillet</option><option value="8">Août</option>
-            <option value="9">Septembre</option><option value="10">Octobre</option>
-            <option value="11">Novembre</option><option value="12">Décembre</option>
-          </select>
-          <select id="compareYearA" class="ctrl-select" onchange="renderComparator()"></select>
-        </div>
-      </div>
-
-      <!-- VS -->
-      <div style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;background:var(--border);color:var(--text-muted);font-weight:800;font-size:13px;flex-shrink:0;">VS</div>
-
-      <!-- Colonne B -->
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Logement B</div>
-        <select id="compareB" class="ctrl-select" style="width:100%;" onchange="renderComparator()">
-          <option value="">Choisir un logement</option>
-        </select>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <select id="compareMonthB" class="ctrl-select" onchange="renderComparator()">
-            <option value="">Toute l'année</option>
-            <option value="1">Janvier</option><option value="2">Février</option>
-            <option value="3">Mars</option><option value="4">Avril</option>
-            <option value="5">Mai</option><option value="6">Juin</option>
-            <option value="7">Juillet</option><option value="8">Août</option>
-            <option value="9">Septembre</option><option value="10">Octobre</option>
-            <option value="11">Novembre</option><option value="12">Décembre</option>
-          </select>
-          <select id="compareYearB" class="ctrl-select" onchange="renderComparator()"></select>
-        </div>
-      </div>
-    </div>
-    <div id="comparatorContent" style="padding:16px 24px 24px;">
-      <div style="text-align:center;color:#9CA3AF;padding:24px;font-size:14px;">Sélectionnez deux logements pour comparer leurs performances</div>
-    </div>
-  </div>
-
-  <!-- Conciergerie (conditionnel) -->
-  <div class="concierge-section" id="conciergeSection" style="display:none;">
-    <div class="concierge-header">
-      <div class="concierge-title"><i class="fas fa-handshake"></i> Données conciergerie</div>
-    </div>
-    <div class="concierge-grid" id="conciergeGrid"></div>
-  </div>
-
-  <!-- Graphiques -->
+  <!-- ── GRAPHIQUES ── -->
+  <p class="rp-section-title" style="margin-top:8px;">Analyse</p>
   <div class="grid-2-1">
     <div class="card">
       <div class="card-header">
@@ -741,7 +526,16 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
     </div>
   </div>
 
-  <!-- Par logement -->
+  <!-- ── CONCIERGERIE (conditionnel) ── -->
+  <div class="concierge-section" id="conciergeSection" style="display:none;">
+    <div class="concierge-header">
+      <div class="concierge-title"><i class="fas fa-handshake"></i> Données conciergerie</div>
+    </div>
+    <div class="concierge-grid" id="conciergeGrid"></div>
+  </div>
+
+  <!-- ── PAR LOGEMENT ── -->
+  <p class="rp-section-title" style="margin-top:8px;">Détail</p>
   <div class="card">
     <div class="card-header">
       <div class="card-title"><i class="fas fa-home"></i> Par logement</div>
@@ -751,7 +545,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
     </div>
   </div>
 
-  <!-- Tableau mensuel -->
+  <!-- ── TABLEAU MENSUEL ── -->
   <div class="card">
     <div class="card-header">
       <div class="card-title"><i class="fas fa-table"></i> Détail mensuel</div>
@@ -761,10 +555,49 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════ -->
-  <!-- SECTION RENTABILITÉ                                    -->
-  <!-- ══════════════════════════════════════════════════════ -->
-  <div class="card" id="rentabiliteSection" style="margin-top:24px;">
+  <!-- ── COMPARATEUR ── -->
+  <p class="rp-section-title" style="margin-top:8px;">Comparateur</p>
+  <div class="card" id="comparatorSection" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-sliders-h"></i> Comparateur de logements</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Logement A</div>
+        <select id="compareA" class="ctrl-select" style="width:100%;" onchange="renderComparator()"><option value="">Choisir un logement</option></select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <select id="compareMonthA" class="ctrl-select" onchange="renderComparator()">
+            <option value="">Toute l'année</option>
+            <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option><option value="4">Avril</option>
+            <option value="5">Mai</option><option value="6">Juin</option><option value="7">Juillet</option><option value="8">Août</option>
+            <option value="9">Septembre</option><option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
+          <select id="compareYearA" class="ctrl-select" onchange="renderComparator()"></select>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--primary);color:white;font-weight:800;font-size:12px;flex-shrink:0;box-shadow:0 2px 8px rgba(26,122,94,.3);">VS</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Logement B</div>
+        <select id="compareB" class="ctrl-select" style="width:100%;" onchange="renderComparator()"><option value="">Choisir un logement</option></select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <select id="compareMonthB" class="ctrl-select" onchange="renderComparator()">
+            <option value="">Toute l'année</option>
+            <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option><option value="4">Avril</option>
+            <option value="5">Mai</option><option value="6">Juin</option><option value="7">Juillet</option><option value="8">Août</option>
+            <option value="9">Septembre</option><option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
+          <select id="compareYearB" class="ctrl-select" onchange="renderComparator()"></select>
+        </div>
+      </div>
+    </div>
+    <div id="comparatorContent" style="padding:16px 24px 24px;">
+      <div style="text-align:center;color:#9CA3AF;padding:24px;font-size:14px;">Sélectionnez deux logements pour comparer leurs performances</div>
+    </div>
+  </div>
+
+  <!-- ── RENTABILITÉ ── -->
+  <p class="rp-section-title" style="margin-top:8px;">Rentabilité</p>
+  <div class="card" id="rentabiliteSection">
     <div class="card-header" style="border-bottom:2px solid #1A7A5E;">
       <div class="card-title" style="color:#1A7A5E;font-size:16px;">
         <i class="fas fa-chart-line"></i> Score de rentabilité
@@ -775,20 +608,14 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
         <button class="view-tab" onclick="switchRentab('reservation',this)">Par réservation</button>
       </div>
     </div>
-
-    <!-- Vue par logement -->
     <div id="rentabLogement">
-      <div id="rentabLogementCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:20px 0;"></div>
+      <div id="rentabLogementCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:20px;"></div>
     </div>
-
-    <!-- Vue par mois -->
     <div id="rentabMois" style="display:none;">
       <div style="overflow-x:auto;">
         <table id="rentabMoisTable" style="width:100%;border-collapse:collapse;font-size:13px;"></table>
       </div>
     </div>
-
-    <!-- Vue par réservation -->
     <div id="rentabResa" style="display:none;">
       <div style="overflow-x:auto;">
         <table id="rentabResaTable" style="width:100%;border-collapse:collapse;font-size:13px;"></table>
@@ -916,11 +743,33 @@ function render(d) {
 }
 
 function renderKPIs(s) {
+  // ── 2 cartes hero (CA brut + Revenu net) ──
+  const heroCards = [
+    { label:'CA Brut', value: fmt(s.totalGrossRevenue), sub:`dont ${fmt(s.totalCleaningFee)} ménage · ${fmt(s.totalTouristTax)} taxe séjour`, accent:'#1A7A5E', bg:'rgba(26,122,94,.08)', icon:'fa-euro-sign' },
+    { label:'Revenu net', value: fmt(s.totalNetRevenue), sub:`Conciergerie : ${fmt(s.totalConcierge)} · Proprio : ${fmt(s.totalOwnerRevenue)}`, accent:'#3b82f6', bg:'rgba(59,130,246,.08)', icon:'fa-wallet' },
+  ];
+  const heroEl = document.getElementById('kpiHeroRow');
+  if (heroEl) {
+    heroEl.innerHTML = heroCards.map(c => `
+      <div class="kpi-hero" style="--kpi-accent:${c.accent};--kpi-bg:${c.bg};">
+        <div class="kpi-hero-icon"><i class="fas ${c.icon}"></i></div>
+        <div class="kpi-hero-label">${c.label}</div>
+        <div class="kpi-hero-value">${c.value}</div>
+        <div class="kpi-hero-sub">${c.sub}</div>
+      </div>
+    `).join('');
+  }
+
+  // ── Métriques secondaires ──
   const cards = [
-    { label:'CA Brut', value: fmt(s.totalGrossRevenue), sub:`dont ${fmt(s.totalCleaningFee)} ménage`, accent:'#1A7A5E', bg:'rgba(26,122,94,.08)', icon:'fa-euro-sign' },
-    { label:'Revenu net', value: fmt(s.totalNetRevenue), sub:`Taxe séjour : ${fmt(s.totalTouristTax)}`, accent:'#3b82f6', bg:'rgba(59,130,246,.08)', icon:'fa-wallet' },
-    { label:'Revenu propriétaire', value: fmt(s.totalOwnerRevenue), sub:`Conciergerie : ${fmt(s.totalConcierge)}`, accent:'#8b5cf6', bg:'rgba(139,92,246,.08)', icon:'fa-home' },
-    { label:'Réservations', value: fmtN(s.totalBookings), sub:`Moy. ${s.avgNightsPerBooking || 0} nuits / séjour`, accent:'#f59e0b', bg:'rgba(245,158,11,.08)', icon:'fa-calendar-check' }
+    { label:'Réservations', value: fmtN(s.totalBookings), sub:`Moy. ${s.avgNightsPerBooking || 0} nuits / séjour`, accent:'#f59e0b', bg:'rgba(245,158,11,.08)', icon:'fa-calendar-check' },
+    { label:'Nuits louées', value: fmtN(s.totalNights), sub:`sur la période`, accent:'#8b5cf6', bg:'rgba(139,92,246,.08)', icon:'fa-moon' },
+    { label:'Commissions OTA', value: fmt(s.totalOtaCommission), sub:`déduit du CA brut`, accent:'#ef4444', bg:'rgba(239,68,68,.08)', icon:'fa-percent' },
+    { label:'Taxe de séjour', value: fmt(s.totalTouristTax), sub:`collectée`, accent:'#0ea5e9', bg:'rgba(14,165,233,.08)', icon:'fa-landmark' },
+    { label:'Frais de ménage', value: fmt(s.totalCleaningFee), sub:`inclus dans CA`, accent:'#10b981', bg:'rgba(16,185,129,.08)', icon:'fa-broom' },
+    { label:'Revenu propriétaire', value: fmt(s.totalOwnerRevenue), sub:`après commission conciergerie`, accent:'#6366f1', bg:'rgba(99,102,241,.08)', icon:'fa-home' },
+    { label:'Moy. par réservation', value: s.totalBookings ? fmt(Math.round(s.totalGrossRevenue / s.totalBookings)) : '—', sub:`CA brut moyen`, accent:'#f97316', bg:'rgba(249,115,22,.08)', icon:'fa-chart-simple' },
+    { label:'Moy. par nuit', value: s.totalNights ? fmt(Math.round(s.totalGrossRevenue / s.totalNights)) : '—', sub:`RevPAN`, accent:'#14b8a6', bg:'rgba(20,184,166,.08)', icon:'fa-bed' },
   ];
   document.getElementById('kpiGrid').innerHTML = cards.map(c => `
     <div class="stat-card" style="--kpi-accent:${c.accent};--kpi-bg:${c.bg};">
@@ -1630,83 +1479,71 @@ function renderComparator() {
   html, body { overflow-x: hidden !important; }
   html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
-  html[data-theme-v3="1"] .app-container {
-    margin-top: 0 !important;
-    margin-left: 0 !important;
-    padding: 0 !important;
-    height: 100vh !important;
-  }
-  html[data-theme-v3="1"] .sidebar,
-  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-top: 0 !important; margin-left: 0 !important; padding: 0 !important; height: 100vh !important; }
+  html[data-theme-v3="1"] .sidebar, html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
   html[data-theme-v3="1"] .main-wrapper { margin-left: 0 !important; height: 100% !important; }
   html[data-theme-v3="1"] main.main-content {
     margin-left: 0 !important;
-    padding: 0 14px 90px !important;
-    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
-    overflow-y: auto !important;
-    height: 100% !important;
-    background: #F5F2EC !important;
-    box-sizing: border-box !important;
+    padding: 0 12px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 12px) !important;
+    overflow-y: auto !important; height: 100% !important;
+    background: #F5F2EC !important; box-sizing: border-box !important;
   }
   .rp-header-btns, header.main-header, .top-bar { display: none !important; }
 
   /* 2. CONTRÔLES */
-  .reporting-controls {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
-    padding: 12px 14px !important;
-    border-radius: 12px !important;
-  }
+  .reporting-controls { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; padding: 12px 14px !important; border-radius: 12px !important; }
   .ctrl-select { min-width: 0 !important; width: 100% !important; }
   .ctrl-label { display: none !important; }
   .ml-auto { margin-left: 0 !important; width: 100% !important; }
-  .ml-auto .btn-csv,
-  .ml-auto .btn-export { flex: 1; justify-content: center; }
+  .ml-auto .btn-csv, .ml-auto .btn-export { flex: 1; justify-content: center; }
 
-  /* 3. STATS */
-  .stats-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-  .stat-card { padding: 14px !important; border-radius: 12px !important; }
-  .stat-value { font-size: 18px !important; }
+  /* 3. KPI HERO */
+  .kpi-hero-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .kpi-hero { padding: 16px !important; border-radius: 14px !important; }
+  .kpi-hero-value { font-size: 22px !important; }
+  .kpi-hero-icon { width: 30px !important; height: 30px !important; font-size: 12px !important; }
 
-  /* 4. CHARTS */
+  /* 4. STATS SECONDAIRES */
+  .stats-row { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .stat-card { padding: 12px !important; border-radius: 12px !important; }
+  .stat-value { font-size: 16px !important; }
+  .stat-sub { font-size: 10px !important; }
+
+  /* 5. CHARTS */
   .grid-2-1 { grid-template-columns: 1fr !important; gap: 10px !important; }
   .chart-wrap { height: 200px !important; padding: 12px 14px 16px !important; }
   .chart-mini { height: 140px !important; padding: 10px 14px 12px !important; }
 
-  /* 5. TABLES */
+  /* 6. TABLES */
   .prop-table, .monthly-table { font-size: 12px !important; }
-  .prop-table th, .prop-table td,
-  .monthly-table th, .monthly-table td { padding: 8px 10px !important; }
+  .prop-table th, .prop-table td, .monthly-table th, .monthly-table td { padding: 8px 10px !important; }
 
-  /* 6. CONCIERGERIE */
+  /* 7. CONCIERGERIE */
   .concierge-grid { grid-template-columns: 1fr 1fr !important; }
   .concierge-section { padding: 14px !important; border-radius: 12px !important; }
 
-  /* 7. CARDS */
+  /* 8. CARDS */
   .card { border-radius: 12px !important; margin-bottom: 10px !important; }
   .card-header { padding: 12px 14px 10px !important; }
 
-  /* 8. TABS VIEW */
+  /* 9. TABS */
   .view-tab { padding: 4px 8px !important; font-size: 11px !important; }
 
-  /* 9. PLATFORM */
+  /* 10. PLATFORM */
   .platform-rev { display: none !important; }
 
-  /* 10. BOTTOM TABS */
-  .mobile-tabs {
-    position: fixed !important;
-    bottom: 0 !important; left: 0 !important; right: 0 !important;
-    z-index: 1000 !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(16px) !important;
-    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  }
+  /* 11. SECTION TITRE */
+  .rp-section-title { font-size: 11px !important; margin-top: 16px !important; margin-bottom: 8px !important; }
+
+  /* 12. BOTTOM TABS */
+  .mobile-tabs { position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; z-index: 1000 !important; background: rgba(245,242,236,.97) !important; backdrop-filter: blur(16px) !important; border-top: 1px solid rgba(200,184,154,.4) !important; padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
 }
 
 @media (max-width: 400px) {
-  .stats-row { grid-template-columns: 1fr !important; }
+  .kpi-hero-row { grid-template-columns: 1fr !important; }
+  .stats-row { grid-template-columns: 1fr 1fr !important; }
+  .kpi-hero-value { font-size: 20px !important; }
 }
 </style>
 </body>
