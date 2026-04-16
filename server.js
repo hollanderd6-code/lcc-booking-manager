@@ -12381,8 +12381,9 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const { year, property_id } = req.query;
+    const { year, property_id, month } = req.query;
     const selectedYear = parseInt(year) || new Date().getFullYear();
+    const selectedMonth = month ? parseInt(month) : null;
 
     // Récupérer les propriétés de l'utilisateur avec leurs configs financières
     const propsResult = await pool.query(`
@@ -12417,6 +12418,7 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
         AND r.status = 'confirmed'
         AND EXTRACT(YEAR FROM r.start_date) = $2
         AND r.property_id = ANY($3)
+        ${selectedMonth ? `AND EXTRACT(MONTH FROM r.start_date) = ${selectedMonth}` : ''}
       ORDER BY r.start_date ASC
     `, [user.id, selectedYear, propIds]);
     const reservations = resaResult.rows;
@@ -12643,13 +12645,14 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
     // ── Résumé global ───────────────────────────────────────────
     const summary = {
       totalBookings,
-      totalNights:       enrichedResas.reduce((s, r) => s + r.nights, 0),
-      totalGrossRevenue: Math.round(enrichedResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
-      totalNetRevenue:   Math.round(enrichedResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100,
-      totalTouristTax:   Math.round(enrichedResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100,
-      totalCleaningFee:  Math.round(enrichedResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100,
-      totalConcierge:    Math.round(enrichedResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100,
-      totalOwnerRevenue: Math.round(enrichedResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100,
+      totalNights:            enrichedResas.reduce((s, r) => s + r.nights, 0),
+      totalGrossRevenue:      Math.round(enrichedResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
+      totalNetRevenue:        Math.round(enrichedResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100,
+      totalTouristTax:        Math.round(enrichedResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100,
+      totalCleaningFee:       Math.round(enrichedResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100,
+      totalConcierge:         Math.round(enrichedResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100,
+      totalOwnerRevenue:      Math.round(enrichedResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100,
+      totalOtaCommission:     Math.round(enrichedResas.reduce((s, r) => s + r.otaCommissionAmount, 0) * 100) / 100,
       avgNightsPerBooking: totalBookings > 0
         ? Math.round(enrichedResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
         : 0
@@ -12657,6 +12660,7 @@ app.get('/api/reporting', authenticateAny, async (req, res) => {
 
     res.json({
       year: selectedYear,
+      month: selectedMonth,
       summary,
       monthly: monthlyData,
       byProperty: Object.values(byProperty),
