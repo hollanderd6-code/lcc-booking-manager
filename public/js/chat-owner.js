@@ -642,7 +642,18 @@ function displayMessages(messages) {
   });
 
   filtered.forEach(msg => appendMessage(msg));
-  scrollToBottom();
+
+  // ✅ Nettoyer les divs .chat-message sans contenu (artefacts DOM)
+  setTimeout(() => {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    container.querySelectorAll('.chat-message').forEach(el => {
+      const text = el.querySelector('.chat-text')?.textContent?.trim();
+      const ts = el.getAttribute('data-ts');
+      if (!text && !ts) el.remove();
+    });
+    scrollToBottom();
+  }, 100);
 }
 
 function appendMessage(message) {
@@ -875,22 +886,49 @@ async function sendMessageOwner() {
 function _injectChannexMessages(channexMsgs) {
   const chatEl = document.getElementById('chatMessages');
   if (!chatEl) return;
-  channexMsgs.forEach(m => {
+
+  // Trier les messages Channex par date avant injection
+  const sorted = [...channexMsgs].sort((a, b) => {
+    const tA = a.inserted_at ? new Date(a.inserted_at).getTime() : 0;
+    const tB = b.inserted_at ? new Date(b.inserted_at).getTime() : 0;
+    return tA - tB;
+  });
+
+  sorted.forEach(m => {
+    if (!m.id || !m.message) return; // ignorer les messages vides/invalides
     if (chatEl.querySelector(`[data-channex-id="${m.id}"]`)) return;
     const isGuest = m.sender === 'guest';
+    const ts = m.inserted_at ? new Date(m.inserted_at).getTime() : 0;
     const time = m.inserted_at
       ? new Date(m.inserted_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
       : '';
     const div = document.createElement('div');
     div.className = `chat-message${isGuest ? '' : ' owner'}`;
     div.setAttribute('data-channex-id', m.id);
+    div.setAttribute('data-ts', ts); // ✅ Ajouter data-ts pour le tri
     div.innerHTML = `
       <div class="chat-bubble">
         <div class="chat-sender">${isGuest ? 'Voyageur' : 'Vous'} <span style="font-size:10px;opacity:.6;">· via plateforme</span></div>
         <div class="chat-text">${m.message}</div>
         <div class="chat-time">${time}</div>
       </div>`;
-    chatEl.appendChild(div);
+
+    // Insérer au bon endroit chronologiquement
+    if (ts > 0) {
+      const allMsgs = Array.from(chatEl.children);
+      let inserted = false;
+      for (const existing of allMsgs) {
+        const existingTs = parseInt(existing.getAttribute('data-ts') || '0');
+        if (existingTs > 0 && ts < existingTs) {
+          chatEl.insertBefore(div, existing);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) chatEl.appendChild(div);
+    } else {
+      chatEl.appendChild(div);
+    }
   });
   chatEl.scrollTop = chatEl.scrollHeight;
 }
