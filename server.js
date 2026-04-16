@@ -8653,19 +8653,20 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
     
     if (tokensResult.rows.length > 0) {
       const propertyName = chk.propertyName || chk.title || 'Logement';
-      
-      await sendNotification(
-        tokensResult.rows[0].fcm_token,
-        '✅ Ménage terminé',
-        `${propertyName} - Checklist complétée`,
-        {
-          type: 'cleaning_completed',
-          reservation_uid: reservationUid,
-          property_name: propertyName
-        }
-      );
-      
-      console.log(`✅ Notification ménage complété envoyée pour ${propertyName}`);
+      const notifData = {
+        type: 'cleaning_completed',
+        reservation_uid: reservationUid,
+        property_name: propertyName
+      };
+      for (const tok of tokensResult.rows) {
+        await sendNotification(
+          tok.fcm_token,
+          '✅ Ménage terminé',
+          `${propertyName} - Checklist complétée`,
+          notifData
+        );
+      }
+      console.log(`✅ Notification ménage complété envoyée pour ${propertyName} (${tokensResult.rows.length} appareil(s))`);
     }
   } catch (notifError) {
     console.error('❌ Erreur notification ménage complété:', notifError.message);
