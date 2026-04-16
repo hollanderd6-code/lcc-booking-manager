@@ -25963,32 +25963,62 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
 
     // 3. Formater les avis
     const rawReviews = reviewsRes.data?.data || [];
-    if (rawReviews.length > 0) console.log('📋 [REVIEWS RAW SAMPLE]', JSON.stringify(rawReviews[0], null, 2));
     const reviews = rawReviews.map(r => {
       const attrs = r.attributes || r;
+
+      // Commentaire : dans raw_content.public_review ou content
+      const comment = attrs.raw_content?.public_review
+        || attrs.raw_content?.comment
+        || attrs.comment
+        || attrs.body
+        || null;
+
+      // Reply : objet vide {} = pas de réponse
+      const replyRaw = attrs.reply;
+      const reply = replyRaw && typeof replyRaw === 'object'
+        ? (replyRaw.text || replyRaw.body || replyRaw.content || null)
+        : (replyRaw || null);
+
+      // Note globale sur 10
+      const score = attrs.overall_score ?? attrs.score ?? null;
+
+      // Scores par catégorie : array [{category, score}] → objet {clean: {score:10}, ...}
+      const scoresArr = Array.isArray(attrs.scores) ? attrs.scores : [];
+      const categoryScores = {};
+      scoresArr.forEach(s => {
+        if (s.category) categoryScores[s.category] = { score: s.score };
+      });
+
+      // Plateforme : attrs.ota ou channel_code
+      const channel_code = (attrs.ota || attrs.channel_code || attrs.channel || '').toLowerCase();
+
       return {
-        id:             r.id,
-        reviewer_name:  attrs.reviewer_name || attrs.guest_name || 'Voyageur',
-        reviewed_at:    attrs.reviewed_at || attrs.created_at,
-        score:          attrs.score,
-        comment:        attrs.comment || attrs.body || null,
-        reply:          attrs.reply || null,
-        is_replied:     attrs.is_replied || !!attrs.reply,
-        is_hidden:      attrs.is_hidden || false,
-        channel_code:   attrs.channel_code || attrs.channel || ''
+        id:              r.id,
+        reviewer_name:   attrs.guest_name || attrs.reviewer_name || 'Voyageur',
+        reviewed_at:     attrs.received_at || attrs.reviewed_at || attrs.created_at,
+        score,
+        score_max:       10,
+        comment,
+        reply,
+        is_replied:      !!reply,
+        is_hidden:       attrs.is_hidden || false,
+        is_expired:      attrs.is_expired || false,
+        channel_code,
+        category_scores: categoryScores
       };
     });
 
-    // 4. Formater les scores par catégorie
-    const rawScores = scoresRes?.data?.data || [];
+    // 4. Scores globaux par catégorie (agrégés sur tous les avis)
     const scores = {};
-    rawScores.forEach(s => {
-      const attrs = s.attributes || s;
-      if (attrs.scores) {
-        Object.entries(attrs.scores).forEach(([key, val]) => {
-          scores[key] = val;
-        });
-      }
+    reviews.forEach(r => {
+      Object.entries(r.category_scores || {}).forEach(([key, val]) => {
+        if (!scores[key]) scores[key] = { total: 0, count: 0 };
+        scores[key].total += val.score;
+        scores[key].count += 1;
+      });
+    });
+    Object.keys(scores).forEach(k => {
+      scores[k].score = scores[k].total / scores[k].count;
     });
 
     console.log(`⭐ [CHANNEX REVIEWS] ${reviews.length} avis pour ${property_id}`);
