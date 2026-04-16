@@ -1099,6 +1099,11 @@ function openEditPropertyModal(propertyId) {
     initReviewsSection(pid, isConnected);
   }
 
+  // ✅ CHARGER LES NOTES VOYAGEURS (depuis DB reservations)
+  if (typeof initNotesSection === 'function') {
+    initNotesSection(property._id || property.id);
+  }
+
   if (modal) modal.classList.add("active");
 }
 
@@ -3019,4 +3024,170 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 if (document.readyState !== 'loading') {
   initIcalPlatformSelect();
+}
+
+// ============================================================
+// 📋 NOTES VOYAGEURS — Section dans l'onglet Avis
+// ============================================================
+
+// ── Logos plateformes ─────────────────────────────────────────
+const PLATFORM_META = {
+  BookingCom: {
+    label: 'Booking.com',
+    logo:  'https://logo.clearbit.com/booking.com',
+    color: '#003580',
+    bg:    '#EEF3FB'
+  },
+  Airbnb: {
+    label: 'Airbnb',
+    logo:  'https://logo.clearbit.com/airbnb.com',
+    color: '#FF5A5F',
+    bg:    '#FFF0F0'
+  },
+  Expedia: {
+    label: 'Expedia',
+    logo:  'https://logo.clearbit.com/expedia.com',
+    color: '#00355F',
+    bg:    '#EEF5FB'
+  },
+  Vrbo: {
+    label: 'Vrbo',
+    logo:  'https://logo.clearbit.com/vrbo.com',
+    color: '#1B5E8F',
+    bg:    '#EBF4FC'
+  },
+  default: {
+    label: 'Plateforme',
+    logo:  null,
+    color: '#6B7280',
+    bg:    '#F3F4F6'
+  }
+};
+
+function getPlatformMeta(platform) {
+  if (!platform) return PLATFORM_META.default;
+  const key = Object.keys(PLATFORM_META).find(k =>
+    k !== 'default' && platform.toLowerCase().includes(k.toLowerCase())
+  );
+  return key ? PLATFORM_META[key] : { ...PLATFORM_META.default, label: platform };
+}
+
+// ── Parser le champ notes Channex ────────────────────────────
+function parseReservationNotes(raw) {
+  if (!raw) return { comment: null, meta: [] };
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  let comment = null;
+  const meta = [];
+
+  lines.forEach(line => {
+    const noteMatch    = line.match(/^(?:BOOKING\s+)?NOTE\s*:\s*(.+)/i);
+    const mealMatch    = line.match(/^Meal Plan:\s*(.+)/i);
+    const smokingMatch = line.match(/^Smoking Preference:\s*(.+)/i);
+    const payMatch     = line.match(/^Payment Collect:\s*(.+)/i);
+    const commMatch    = line.match(/^OTA Commission:\s*(.+)/i);
+    const prepaidMatch = line.match(/\*\*.*PRE[-\s]?PAID.*\*\*/i);
+
+    if (noteMatch)    { comment = noteMatch[1].trim(); return; }
+    if (prepaidMatch) meta.push({ icon: '💳', text: 'Pré-payé OTA' });
+    if (mealMatch)    meta.push({ icon: '🍽️', text: mealMatch[1].trim() });
+    if (smokingMatch) meta.push({ icon: '🚭', text: smokingMatch[1].trim() });
+    if (payMatch)     meta.push({ icon: '💰', text: 'Paiement : ' + payMatch[1].trim() });
+    if (commMatch)    meta.push({ icon: '📊', text: 'Commission OTA : ' + commMatch[1].trim() + ' €' });
+  });
+
+  return { comment, meta };
+}
+
+// ── Construire une note card ──────────────────────────────────
+function buildNoteCard(reservation) {
+  const plt    = getPlatformMeta(reservation.platform);
+  const parsed = parseReservationNotes(reservation.notes);
+
+  const guestName = reservation.guest_name ||
+    [reservation.guest_first_name, reservation.guest_last_name].filter(Boolean).join(' ') ||
+    'Voyageur';
+
+  const initial = guestName.charAt(0).toUpperCase();
+  const dateStr = reservation.start_date
+    ? new Date(reservation.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '';
+
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#fff;border:1px solid #E8E0D0;border-radius:14px;padding:14px 16px;margin-bottom:10px;font-family:\'DM Sans\',sans-serif;';
+
+  const logoBadge = plt.logo
+    ? `<img src="${plt.logo}" onerror="this.style.display='none';this.nextElementSibling.style.display='inline';" style="width:14px;height:14px;object-fit:contain;border-radius:2px;vertical-align:middle;margin-right:4px;"><span style="display:none;">${plt.label}</span>`
+    : `<span>${plt.label}</span>`;
+
+  const platformBadge = `<div style="display:inline-flex;align-items:center;background:${plt.bg};color:${plt.color};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;flex-shrink:0;">${logoBadge}${plt.label}</div>`;
+
+  const commentHtml = parsed.comment
+    ? `<div style="font-size:13px;color:#374151;background:#FAFAF8;border-left:3px solid #1A7A5E;border-radius:0 8px 8px 0;padding:8px 12px;margin:10px 0;font-style:italic;">&ldquo;${escapeHtml(parsed.comment)}&rdquo;</div>`
+    : '';
+
+  const metaHtml = parsed.meta.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${parsed.meta.map(m => `<span style="font-size:11px;background:#F3F4F6;border-radius:20px;padding:2px 10px;color:#6B7280;">${m.icon} ${escapeHtml(m.text)}</span>`).join('')}</div>`
+    : '';
+
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:34px;height:34px;border-radius:50%;background:#E8F4F0;color:#1A7A5E;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">${initial}</div>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#0D1117;">${escapeHtml(guestName)}</div>
+          ${dateStr ? `<div style="font-size:11px;color:#9CA3AF;margin-top:1px;">${dateStr}</div>` : ''}
+        </div>
+      </div>
+      ${platformBadge}
+    </div>
+    ${commentHtml}
+    ${metaHtml}
+  `;
+  return card;
+}
+
+// ── Init section Notes ────────────────────────────────────────
+async function initNotesSection(propertyId) {
+  const section = document.getElementById('notesSection');
+  if (!section) return;
+
+  section.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:12px 0;"><i class="fas fa-spinner fa-spin" style="color:#1A7A5E;"></i><span style="font-size:13px;color:#6B7280;">Chargement des notes…</span></div>`;
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res   = await fetch('/api/reservations/notes/' + propertyId, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data  = await res.json();
+    const notes = data.notes || [];
+
+    if (notes.length === 0) {
+      section.innerHTML = `<div style="text-align:center;padding:20px;color:#9CA3AF;font-size:13px;"><i class="fas fa-comment-slash" style="font-size:24px;margin-bottom:8px;display:block;opacity:.4;"></i>Aucune note voyageur pour ce logement</div>`;
+      return;
+    }
+
+    // Stats par plateforme
+    const byPlatform = {};
+    notes.forEach(n => { const k = n.platform || 'Autre'; byPlatform[k] = (byPlatform[k] || 0) + 1; });
+
+    const statsHtml = Object.entries(byPlatform).map(([plt, count]) => {
+      const meta = getPlatformMeta(plt);
+      const logo = meta.logo ? `<img src="${meta.logo}" onerror="this.style.display='none';" style="width:13px;height:13px;object-fit:contain;border-radius:2px;margin-right:4px;vertical-align:middle;">` : '';
+      return `<span style="display:inline-flex;align-items:center;background:${meta.bg};color:${meta.color};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">${logo}${meta.label} <span style="margin-left:4px;opacity:.7;">${count}</span></span>`;
+    }).join('');
+
+    section.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.06em;">${notes.length} note${notes.length > 1 ? 's' : ''} reçue${notes.length > 1 ? 's' : ''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">${statsHtml}</div>
+      </div>
+      <div id="notesCardsList"></div>
+    `;
+
+    const list = document.getElementById('notesCardsList');
+    notes.forEach(n => list.appendChild(buildNoteCard(n)));
+
+  } catch(e) {
+    section.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:12px 0;color:#6B7280;font-size:13px;"><i class="fas fa-exclamation-circle" style="color:#ef4444;"></i> Impossible de charger les notes voyageurs</div>`;
+  }
 }
