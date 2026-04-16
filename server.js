@@ -21299,8 +21299,8 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
       await pool.query(
         `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
          VALUES ($1, $2, $3, NOW(), NOW())
-         ON CONFLICT (user_id, device_type)
-         DO UPDATE SET fcm_token = EXCLUDED.fcm_token, updated_at = NOW()`,
+         ON CONFLICT (fcm_token)
+         DO UPDATE SET user_id = EXCLUDED.user_id, device_type = EXCLUDED.device_type, updated_at = NOW()`,
         [userId, token, deviceType]
       );
 
