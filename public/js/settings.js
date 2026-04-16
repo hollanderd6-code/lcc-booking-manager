@@ -2733,7 +2733,12 @@ async function initReviewsSection(propertyId, isConnected) {
 
     if (reviews.length === 0) { empty.style.display = 'block'; return; }
 
-    const unreplied = reviews.filter(r => !r.is_replied).length;
+    const unreplied = reviews.filter(r => {
+      const rt = r.reply && typeof r.reply === 'object'
+        ? (r.reply.text || r.reply.body || r.reply.content || '')
+        : (r.reply || '');
+      return rt.trim().length === 0;
+    }).length;
     if (unreplied > 0) { badge.textContent = unreplied; badge.style.display = 'inline-block'; }
     else { badge.style.display = 'none'; }
 
@@ -2768,7 +2773,7 @@ function renderReviewScores(scores) {
 
 function buildReviewCard(review, propertyId) {
   const div = document.createElement('div');
-  div.className = 'review-card' + (review.is_replied ? '' : ' unreplied');
+  div.className = 'review-card' + (hasRealReply ? '' : ' unreplied');
   div.dataset.reviewId = review.id;
 
   const ch     = (review.channel_code || '').toLowerCase();
@@ -2776,10 +2781,12 @@ function buildReviewCard(review, propertyId) {
   const pLabel = { airbnb:'Airbnb', booking:'Booking.com', expedia:'Expedia', other: review.channel_code || 'Plateforme' }[plt];
   const pIcon  = { airbnb:'fa-brands fa-airbnb', booking:'fas fa-building', expedia:'fas fa-plane', other:'fas fa-globe' }[plt];
 
-  // S'assurer que reply est bien une string (Channex peut renvoyer un objet)
+  // S'assurer que reply est bien une string (Channex peut renvoyer un objet vide {})
   const replyText = review.reply && typeof review.reply === 'object'
-    ? (review.reply.text || review.reply.body || review.reply.content || JSON.stringify(review.reply))
+    ? (review.reply.text || review.reply.body || review.reply.content || '')
     : (review.reply || '');
+  // Considérer comme non-répondu si le texte est vide malgré is_replied=true
+  const hasRealReply = replyText.trim().length > 0;
 
   const initial = (review.reviewer_name || 'V').charAt(0).toUpperCase();
   const dateStr = review.reviewed_at
@@ -2806,12 +2813,12 @@ function buildReviewCard(review, propertyId) {
     + '</div>'
     + '<div class="review-stars">' + stars + '</div>'
     + (review.comment ? '<div class="review-text">&ldquo;' + review.comment + '&rdquo;</div>' : '')
-    + (review.is_replied && replyText ? '<div class="review-reply-existing"><i class="fas fa-reply"></i><span>' + replyText + '</span></div>' : '')
+    + (hasRealReply ? '<div class="review-reply-existing"><i class="fas fa-reply"></i><span>' + replyText + '</span></div>' : '')
     + '<div class="review-actions">'
       + '<button class="btn-reply-toggle" onclick="toggleReplyForm(\'' + review.id + '\')">'
-        + '<i class="fas fa-reply"></i> ' + (review.is_replied ? 'Modifier la réponse' : 'Répondre')
+        + '<i class="fas fa-reply"></i> ' + (hasRealReply ? 'Modifier la réponse' : 'Répondre')
       + '</button>'
-      + (!review.is_replied ? '<span style="font-size:11px;color:#f59e0b;font-weight:600;"><i class="fas fa-clock" style="margin-right:3px;"></i>Sans réponse</span>' : '')
+      + (!hasRealReply ? '<span style="font-size:11px;color:#f59e0b;font-weight:600;"><i class="fas fa-clock" style="margin-right:3px;"></i>Sans réponse</span>' : '')
     + '</div>'
     + '<div class="review-reply-form" id="replyForm_' + review.id + '">'
       + (review.is_hidden ? '<div style="font-size:11px;color:#92400e;background:#fef3c7;padding:8px 10px;border-radius:7px;margin-bottom:4px;"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Airbnb : votre réponse rendra l\'avis public.</div>' : '')
