@@ -278,9 +278,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 /* ══════════════════════════════════════════
    TABS
 ══════════════════════════════════════════ */
-.view-tabs { display: flex; gap: 3px; background: #E8E0D0; border-radius: 9px; padding: 3px; border: 1px solid #D4C8B4; }
-.view-tab { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #6B7280; font-family: 'DM Sans', sans-serif; transition: all .12s; }
-.view-tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.12); font-weight: 700; }
+.view-tabs { display: flex; gap: 3px; background: rgba(0,0,0,.06); border-radius: 9px; padding: 3px; border: 1px solid rgba(0,0,0,.1); }
+.view-tab { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #374151; font-family: 'DM Sans', sans-serif; transition: all .12s; }
+.view-tab.active { background: #1A7A5E; color: white; box-shadow: 0 2px 6px rgba(26,122,94,.3); font-weight: 700; }
+.view-tab:not(.active):hover { background: rgba(26,122,94,.08); color: #1A7A5E; }
 #rentabiliteSection .view-tabs { background: rgba(0,0,0,.06) !important; border: 1px solid rgba(0,0,0,.1) !important; }
 #rentabiliteSection .view-tab { color: #374151 !important; font-weight: 600 !important; }
 #rentabiliteSection .view-tab.active { background: #1A7A5E !important; color: white !important; box-shadow: 0 2px 6px rgba(26,122,94,.3) !important; }
@@ -681,11 +682,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (i === y) o.selected = true;
     sel.appendChild(o);
   }
+  await fetchProperties();
   // Pré-sélectionner le mois courant
   const monthSel = document.getElementById('monthSelect');
   if (monthSel) monthSel.value = String(new Date().getMonth() + 1);
-
-  await fetchProperties();
   await loadReport();
 });
 
@@ -779,7 +779,7 @@ function renderKPIs(s) {
   const cards = [
     { label:'Réservations', value: fmtN(s.totalBookings), sub:`Moy. ${s.avgNightsPerBooking || 0} nuits / séjour`, accent:'#f59e0b', bg:'rgba(245,158,11,.08)', icon:'fa-calendar-check' },
     { label:'Nuits louées', value: fmtN(s.totalNights), sub:`sur la période`, accent:'#8b5cf6', bg:'rgba(139,92,246,.08)', icon:'fa-moon' },
-    { label:'Commission conciergerie', value: fmt(s.totalConcierge), sub:`déduite du revenu net`, accent:'#ef4444', bg:'rgba(239,68,68,.08)', icon:'fa-handshake' },
+    { label:'Commissions OTA', value: fmt(s.totalOtaCommission), sub:`déduit du CA brut`, accent:'#ef4444', bg:'rgba(239,68,68,.08)', icon:'fa-percent' },
     { label:'Taxe de séjour', value: fmt(s.totalTouristTax), sub:`collectée`, accent:'#0ea5e9', bg:'rgba(14,165,233,.08)', icon:'fa-landmark' },
     { label:'Frais de ménage', value: fmt(s.totalCleaningFee), sub:`inclus dans CA`, accent:'#10b981', bg:'rgba(16,185,129,.08)', icon:'fa-broom' },
     { label:'Revenu propriétaire', value: fmt(s.totalOwnerRevenue), sub:`après commission conciergerie`, accent:'#6366f1', bg:'rgba(99,102,241,.08)', icon:'fa-home' },
