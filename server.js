@@ -25508,6 +25508,17 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
           const taxes = room.taxes || [];
           const all_services = [...(room.services || []), ...(attrs.services || [])];
 
+          console.log('🔍 [BOOKING SERVICES DEBUG]', JSON.stringify({
+            booking_id,
+            taxes: room.taxes,
+            services: room.services,
+            fees: room.fees,
+            attrs_fees: attrs.fees,
+            attrs_services: attrs.services,
+            attrs_price: attrs.price,
+            room_keys: Object.keys(room)
+          }, null, 2));
+
           const guest_address = guest.address || null;
           const guest_zip     = guest.zip     || null;
           const guest_city    = guest.city    || null;
