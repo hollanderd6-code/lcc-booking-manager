@@ -2726,9 +2726,8 @@ async function initReviewsSection(propertyId, isConnected) {
     });
     const data  = await res.json();
 
-    renderReviewScores(data.scores || {});
-
     const reviews = data.reviews || [];
+    renderReviewScores(data.scores || {}, reviews);
     loading.style.display = 'none';
 
     if (reviews.length === 0) { empty.style.display = 'block'; return; }
@@ -2750,19 +2749,27 @@ async function initReviewsSection(propertyId, isConnected) {
   }
 }
 
-function renderReviewScores(scores) {
+function renderReviewScores(scores, reviews) {
   const globalEl = document.getElementById('reviewsGlobalScore');
   const subEl    = document.getElementById('reviewsSubScores');
-  const keys     = Object.keys(scores).filter(k => k !== 'overall');
-  if (!keys.length) { globalEl.textContent = '—'; subEl.innerHTML = ''; return; }
+  const maxEl    = document.getElementById('reviewsScoreMax');
 
-  const avg = keys.reduce((s, k) => s + (scores[k]?.score || 0), 0) / keys.length;
+  // Calculer la note globale moyenne sur tous les avis
+  const validScores = (reviews || []).map(r => r.score).filter(s => s !== null && s !== undefined);
+  if (!validScores.length) { globalEl.textContent = '—'; if (subEl) subEl.innerHTML = ''; return; }
+
+  const avg = validScores.reduce((a, b) => a + b, 0) / validScores.length;
   globalEl.textContent = avg.toFixed(1);
+  if (maxEl) maxEl.textContent = '/10';
 
-  const labels = { cleanliness:'Propreté', communication:'Communication', checkin:'Arrivée', accuracy:'Exactitude', location:'Localisation', value:'Rapport qualité/prix' };
+  // Scores par catégorie
+  const keys = Object.keys(scores).filter(k => k !== 'overall');
+  if (!keys.length || !subEl) return;
+
+  const labels = { clean:'Propreté', communication:'Communication', checkin:'Arrivée', accuracy:'Exactitude', location:'Emplacement', value:'Rapport qualité/prix', comfort:'Confort', facilities:'Équipements' };
   subEl.innerHTML = keys.map(k => {
     const val = scores[k]?.score || 0;
-    const pct = Math.round((val / 5) * 100);
+    const pct = Math.round((val / 10) * 100);
     return '<div class="score-bar-wrap">'
       + '<span class="score-bar-label">' + (labels[k] || k) + '</span>'
       + '<div class="score-bar-track"><div class="score-bar-fill" style="width:' + pct + '%"></div></div>'
@@ -2773,29 +2780,30 @@ function renderReviewScores(scores) {
 
 function buildReviewCard(review, propertyId) {
   const div = document.createElement('div');
-  div.className = 'review-card' + (hasRealReply ? '' : ' unreplied');
-  div.dataset.reviewId = review.id;
 
-  const ch     = (review.channel_code || '').toLowerCase();
-  const plt    = ch.includes('airbnb') ? 'airbnb' : ch.includes('booking') ? 'booking' : ch.includes('expedia') || ch.includes('vrbo') ? 'expedia' : 'other';
+  const ch  = (review.channel_code || '').toLowerCase();
+  const plt = ch.includes('airbnb') ? 'airbnb' : ch.includes('booking') ? 'booking' : ch.includes('expedia') || ch.includes('vrbo') ? 'expedia' : 'other';
   const pLabel = { airbnb:'Airbnb', booking:'Booking.com', expedia:'Expedia', other: review.channel_code || 'Plateforme' }[plt];
   const pIcon  = { airbnb:'fa-brands fa-airbnb', booking:'fas fa-building', expedia:'fas fa-plane', other:'fas fa-globe' }[plt];
 
-  // S'assurer que reply est bien une string (Channex peut renvoyer un objet vide {})
-  const replyText = review.reply && typeof review.reply === 'object'
-    ? (review.reply.text || review.reply.body || review.reply.content || '')
-    : (review.reply || '');
-  // Considérer comme non-répondu si le texte est vide malgré is_replied=true
+  // Reply déjà normalisé côté serveur (string ou null)
+  const replyText   = typeof review.reply === 'string' ? review.reply : '';
   const hasRealReply = replyText.trim().length > 0;
+
+  div.className = 'review-card' + (hasRealReply ? '' : ' unreplied');
+  div.dataset.reviewId = review.id;
 
   const initial = (review.reviewer_name || 'V').charAt(0).toUpperCase();
   const dateStr = review.reviewed_at
     ? new Date(review.reviewed_at).toLocaleDateString('fr-FR', {day:'numeric',month:'short',year:'numeric'})
     : '';
-  const score = Math.round(review.score || 0);
-  const stars = Array.from({length:5}, function(_,i) {
-    return '<i class="' + (i < score ? 'fas' : 'far') + ' fa-star' + (i >= score ? ' star-empty' : '') + '"></i>';
-  }).join('');
+
+  // Note : affichée sur 10 avec couleur selon le score
+  const score = review.score !== null && review.score !== undefined ? parseFloat(review.score) : null;
+  const scoreColor = score === null ? '#9CA3AF' : score >= 8 ? '#1A7A5E' : score >= 6 ? '#f59e0b' : '#ef4444';
+  const scoreHtml = score !== null
+    ? '<span style="font-size:18px;font-weight:800;color:' + scoreColor + ';">' + score.toFixed(1) + '</span><span style="font-size:11px;color:#9CA3AF;">/10</span>'
+    : '';
 
   div.innerHTML =
     '<div class="review-header">'
@@ -2806,12 +2814,12 @@ function buildReviewCard(review, propertyId) {
           + '<span class="review-date">' + dateStr + '</span>'
         + '</div>'
       + '</div>'
-      + '<div style="display:flex;align-items:center;gap:6px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+        + (scoreHtml ? '<div style="display:flex;align-items:baseline;gap:2px;">' + scoreHtml + '</div>' : '')
         + (review.is_hidden ? '<span class="hidden-badge"><i class="fas fa-eye-slash" style="margin-right:3px;"></i>En attente</span>' : '')
         + '<div class="review-platform platform-' + plt + '"><i class="' + pIcon + '" style="font-size:11px;"></i> ' + pLabel + '</div>'
       + '</div>'
     + '</div>'
-    + '<div class="review-stars">' + stars + '</div>'
     + (review.comment ? '<div class="review-text">&ldquo;' + review.comment + '&rdquo;</div>' : '')
     + (hasRealReply ? '<div class="review-reply-existing"><i class="fas fa-reply"></i><span>' + replyText + '</span></div>' : '')
     + '<div class="review-actions">'
