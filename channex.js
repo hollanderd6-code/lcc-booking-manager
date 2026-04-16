@@ -456,9 +456,18 @@ async function processChannexBooking(pool, bookingData) {
 
     // Pour Airbnb : les montants détaillés sont dans notes
     const notes = attrs.notes || '';
-    const airbnbData = (ota_name || '').toLowerCase().includes('airbnb')
-      ? parseAirbnbNotes(notes)
-      : {};
+    const isAirbnb = (ota_name || '').toLowerCase().includes('airbnb');
+    const airbnbData = isAirbnb ? parseAirbnbNotes(notes) : {};
+
+    if (isAirbnb) {
+      console.log(`🔍 [AIRBNB] booking_id: ${booking_id}`);
+      console.log(`🔍 [AIRBNB] notes:`, JSON.stringify(notes));
+      console.log(`🔍 [AIRBNB] room.taxes:`, JSON.stringify(room.taxes || []));
+      console.log(`🔍 [AIRBNB] room.services:`, JSON.stringify(room_services));
+      console.log(`🔍 [AIRBNB] attrs.services:`, JSON.stringify(booking_services));
+      console.log(`🔍 [AIRBNB] airbnb_data parsed:`, JSON.stringify(airbnbData));
+      console.log(`🔍 [AIRBNB] amount_total:`, amount_total, '| amount_rooms:', amount_rooms);
+    }
 
     // ── Booking.com : extraire taxe de séjour depuis taxes room ──────────────
     // Booking.com envoie city_tax / CITYTAX dans room.taxes
