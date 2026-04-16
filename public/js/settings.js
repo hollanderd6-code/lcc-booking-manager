@@ -2772,9 +2772,14 @@ function buildReviewCard(review, propertyId) {
   div.dataset.reviewId = review.id;
 
   const ch     = (review.channel_code || '').toLowerCase();
-  const plt    = ch.includes('airbnb') ? 'airbnb' : ch.includes('booking') ? 'booking' : 'expedia';
-  const pLabel = { airbnb:'Airbnb', booking:'Booking.com', expedia:'Expedia' }[plt];
-  const pIcon  = { airbnb:'fa-brands fa-airbnb', booking:'fas fa-building', expedia:'fas fa-plane' }[plt];
+  const plt    = ch.includes('airbnb') ? 'airbnb' : ch.includes('booking') ? 'booking' : ch.includes('expedia') || ch.includes('vrbo') ? 'expedia' : 'other';
+  const pLabel = { airbnb:'Airbnb', booking:'Booking.com', expedia:'Expedia', other: review.channel_code || 'Plateforme' }[plt];
+  const pIcon  = { airbnb:'fa-brands fa-airbnb', booking:'fas fa-building', expedia:'fas fa-plane', other:'fas fa-globe' }[plt];
+
+  // S'assurer que reply est bien une string (Channex peut renvoyer un objet)
+  const replyText = review.reply && typeof review.reply === 'object'
+    ? (review.reply.text || review.reply.body || review.reply.content || JSON.stringify(review.reply))
+    : (review.reply || '');
 
   const initial = (review.reviewer_name || 'V').charAt(0).toUpperCase();
   const dateStr = review.reviewed_at
@@ -2801,7 +2806,7 @@ function buildReviewCard(review, propertyId) {
     + '</div>'
     + '<div class="review-stars">' + stars + '</div>'
     + (review.comment ? '<div class="review-text">&ldquo;' + review.comment + '&rdquo;</div>' : '')
-    + (review.is_replied && review.reply ? '<div class="review-reply-existing"><i class="fas fa-reply"></i><span>' + review.reply + '</span></div>' : '')
+    + (review.is_replied && replyText ? '<div class="review-reply-existing"><i class="fas fa-reply"></i><span>' + replyText + '</span></div>' : '')
     + '<div class="review-actions">'
       + '<button class="btn-reply-toggle" onclick="toggleReplyForm(\'' + review.id + '\')">'
         + '<i class="fas fa-reply"></i> ' + (review.is_replied ? 'Modifier la réponse' : 'Répondre')
@@ -2810,7 +2815,7 @@ function buildReviewCard(review, propertyId) {
     + '</div>'
     + '<div class="review-reply-form" id="replyForm_' + review.id + '">'
       + (review.is_hidden ? '<div style="font-size:11px;color:#92400e;background:#fef3c7;padding:8px 10px;border-radius:7px;margin-bottom:4px;"><i class="fas fa-info-circle" style="margin-right:4px;"></i>Airbnb : votre réponse rendra l\'avis public.</div>' : '')
-      + '<textarea class="review-reply-textarea" id="replyText_' + review.id + '" placeholder="Votre réponse au voyageur...">' + (review.reply || '') + '</textarea>'
+      + '<textarea class="review-reply-textarea" id="replyText_' + review.id + '" placeholder="Votre réponse au voyageur...">' + replyText + '</textarea>'
       + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
         + '<button class="btn-reply-cancel" onclick="toggleReplyForm(\'' + review.id + '\')">Annuler</button>'
         + '<button class="btn-reply-send" id="replySend_' + review.id + '" onclick="sendReviewReply(\'' + review.id + '\',\'' + propertyId + '\')">'
