@@ -25502,71 +25502,10 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
         );
 
         if (existing.rows.length > 0) {
-          // ✅ Forcer la mise à jour de tous les champs enrichis (adresse, montants, etc.)
-          const guest = attrs.customer || {};
-          const room  = (attrs.rooms || [])[0] || {};
-          const taxes = room.taxes || [];
-          const all_services = [...(room.services || []), ...(attrs.services || [])];
-
-          console.log('🔍 [BOOKING SERVICES DEBUG]', JSON.stringify({
-            booking_id,
-            taxes: room.taxes,
-            services: room.services,
-            fees: room.fees,
-            attrs_fees: attrs.fees,
-            attrs_services: attrs.services,
-            attrs_price: attrs.price,
-            room_keys: Object.keys(room)
-          }, null, 2));
-
-          const guest_address = guest.address || null;
-          const guest_zip     = guest.zip     || null;
-          const guest_city    = guest.city    || null;
-          const guest_email   = guest.mail || guest.email || null;
-          const guest_phone   = guest.phone   || null;
-          const guest_country = guest.country || null;
-
-          // Taxe de séjour BDC
-          const isBookingCom = (attrs.ota_name || '').toLowerCase().includes('booking');
-          let amount_taxes = taxes.reduce((s, t) => s + parseFloat(t.total_price || 0), 0);
-          if (isBookingCom && taxes.length > 0) {
-            const ct = taxes.find(t => /city.?tax|taxe|tourist/i.test(t.name || t.type || ''));
-            if (ct) amount_taxes = parseFloat(ct.total_price || 0);
-            else if (taxes.filter(t => !t.is_inclusive).length === 1)
-              amount_taxes = parseFloat(taxes.find(t => !t.is_inclusive).total_price || 0);
-          }
-
-          const cleaning_service = all_services.find(s => /clean|ménage|menage|nettoyage/i.test(s.name || ''));
-          const amount_cleaning = cleaning_service ? parseFloat(cleaning_service.total_price || 0) : null;
-          const ota_commission  = parseFloat(attrs.ota_commission || 0) || null;
-          const amount_rooms    = parseFloat(room.amount || attrs.amount || 0) || null;
-          const days_breakdown  = room.days || null;
-
-          await pool.query(
-            `UPDATE reservations SET
-              property_id    = $1,
-              guest_address  = COALESCE($2, guest_address),
-              guest_zip      = COALESCE($3, guest_zip),
-              guest_city     = COALESCE($4, guest_city),
-              guest_email    = COALESCE($5, guest_email),
-              guest_phone    = COALESCE($6, guest_phone),
-              guest_country  = COALESCE($7, guest_country),
-              amount_taxes   = COALESCE($8, amount_taxes),
-              amount_cleaning= COALESCE($9, amount_cleaning),
-              ota_commission = COALESCE($10, ota_commission),
-              amount_rooms   = COALESCE($11, amount_rooms),
-              days_breakdown = COALESCE($12::jsonb, days_breakdown),
-              updated_at     = NOW()
-             WHERE channex_booking_id = $13`,
-            [
-              targetPropertyId,
-              guest_address, guest_zip, guest_city, guest_email, guest_phone, guest_country,
-              amount_taxes || null, amount_cleaning, ota_commission, amount_rooms,
-              days_breakdown ? JSON.stringify(days_breakdown) : null,
-              booking_id
-            ]
-          );
-          console.log(`🔄 [CHANNEX SYNC] Booking ${booking_id} mis à jour (adresse, montants)`);
+          // ✅ Utiliser processChannexBooking pour avoir le même parsing que le webhook
+          // (inclut la détection correcte des frais de ménage dans room.taxes)
+          await processChannexBooking(pool, attrs);
+          console.log(`🔄 [CHANNEX SYNC] Booking ${booking_id} mis à jour via processChannexBooking`);
           updated++;
         } else {
           // Nouveau booking → importer
