@@ -1891,7 +1891,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (conv && avatarEl) {
       var name = conv.guest_display_name || conv.guest_first_name || conv.guest_name || 'V';
       avatarEl.textContent = name.charAt(0).toUpperCase();
-      var platColor = (window.getPlatformColor && window.getPlatformColor(conv)) || conv.property_color || '#1A7A5E';
+      var platColor = (window.getPlatformColor && window.getPlatformColor(conv.platform)) || conv.property_color || '#1A7A5E';
       avatarEl.style.background = platColor;
     }
 
