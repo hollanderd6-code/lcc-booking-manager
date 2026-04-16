@@ -25963,6 +25963,7 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
 
     // 3. Formater les avis
     const rawReviews = reviewsRes.data?.data || [];
+    if (rawReviews.length > 0) console.log('📋 [REVIEWS RAW SAMPLE]', JSON.stringify(rawReviews[0], null, 2));
     const reviews = rawReviews.map(r => {
       const attrs = r.attributes || r;
       return {
