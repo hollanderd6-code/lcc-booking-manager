@@ -25979,7 +25979,7 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
     });
 
     // 4. Formater les scores par catégorie
-    const rawScores = scoresRes.data?.data || [];
+    const rawScores = scoresRes?.data?.data || [];
     const scores = {};
     rawScores.forEach(s => {
       const attrs = s.attributes || s;
