@@ -26043,6 +26043,39 @@ app.post('/api/channex/reviews/:review_id/reply', authenticateToken, async (req,
 
 // ============================================================
 // ============================================================
+// 📋 NOTES VOYAGEURS — GET /api/reservations/notes/:property_id
+// ============================================================
+app.get('/api/reservations/notes/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+  try {
+    const propCheck = await pool.query(
+      `SELECT id FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user_id]
+    );
+    if (!propCheck.rows.length) return res.status(404).json({ error: 'Logement introuvable' });
+
+    const result = await pool.query(
+      `SELECT uid, guest_name, guest_first_name, guest_last_name,
+              notes, platform, start_date, end_date, created_at
+       FROM reservations
+       WHERE property_id = $1
+         AND notes IS NOT NULL
+         AND notes != ''
+         AND notes != 'Blocage manuel'
+         AND uid NOT LIKE 'block_%'
+       ORDER BY created_at DESC
+       LIMIT 30`,
+      [property_id]
+    );
+    res.json({ notes: result.rows });
+  } catch (e) {
+    console.error('❌ [RESERVATION NOTES]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================================
 // 📄 ATTESTATION FISCALE — Envoi par email via Brevo
 // ============================================================
 app.post('/api/attestation/send', authenticateToken, async (req, res) => {
