@@ -1907,7 +1907,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         : platLower === 'exp' ? 'Expedia'
         : platLower === 'vrbo' || platLower === 'homeaway' ? 'Vrbo'
         : plat || 'Direct'; // sinon afficher tel quel (ex: "Airbnb", "Booking.com", "Expedia")
-      var platColor = (window.getPlatformColor && window.getPlatformColor(conv)) || '#1A7A5E';
+      var platColor = (window.getPlatformColor && window.getPlatformColor(conv.platform)) || '#1A7A5E';
       platBadge.textContent = platLabel;
       platBadge.style.cssText = 'display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:999px;line-height:1.4;background:' + platColor + '22;color:' + platColor + ';';
     }
