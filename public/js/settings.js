@@ -3211,3 +3211,223 @@ async function initNotesSection(propertyId) {
     section.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:12px 0;color:#6B7280;font-size:13px;"><i class="fas fa-exclamation-circle" style="color:#ef4444;"></i> Impossible de charger les notes voyageurs</div>`;
   }
 }
+/* ============================================================
+   DRAG & DROP — Réordonnancement des logements par appui long
+   À coller à la fin de settings.js
+   ============================================================ */
+
+(function () {
+  const LONG_PRESS_MS = 500; // durée appui long en ms
+
+  let dragSrc = null;       // carte en cours de drag
+  let longPressTimer = null;
+  let isDragging = false;
+
+  /* ── Styles injectés ── */
+  const style = document.createElement('style');
+  style.textContent = `
+    .property-card.drag-ghost {
+      opacity: 0.35;
+      transform: scale(0.97);
+      transition: opacity .2s, transform .2s;
+    }
+    .property-card.drag-over {
+      outline: 2px dashed #1A7A5E;
+      outline-offset: 3px;
+      background: rgba(26,122,94,.04);
+    }
+    .property-card.drag-lifting {
+      cursor: grabbing !important;
+    }
+    .property-card .property-img {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #drag-hint-toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(13,17,23,.82);
+      color: #fff;
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      padding: 8px 18px;
+      border-radius: 999px;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .25s, transform .25s;
+      white-space: nowrap;
+    }
+    #drag-hint-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  `;
+  document.head.appendChild(style);
+
+  /* ── Toast hint ── */
+  const hintEl = document.createElement('div');
+  hintEl.id = 'drag-hint-toast';
+  hintEl.textContent = '✋ Maintenez la photo pour déplacer';
+  document.body.appendChild(hintEl);
+
+  function showHint() {
+    hintEl.classList.add('show');
+    setTimeout(() => hintEl.classList.remove('show'), 2200);
+  }
+
+  /* ── Initialiser le drag & drop sur les cartes ── */
+  function initDragDrop() {
+    const grid = document.getElementById('propertiesGrid');
+    if (!grid) return;
+
+    grid.querySelectorAll('.property-card:not(.property-card-add)').forEach(card => {
+      const imgZone = card.querySelector('.property-img');
+      if (!imgZone || imgZone._dragBound) return;
+      imgZone._dragBound = true;
+
+      /* — Appui long → activer draggable — */
+      const startLongPress = (e) => {
+        longPressTimer = setTimeout(() => {
+          card.setAttribute('draggable', 'true');
+          card.classList.add('drag-lifting');
+          // Vibration légère sur mobile
+          if (navigator.vibrate) navigator.vibrate(40);
+        }, LONG_PRESS_MS);
+      };
+
+      const cancelLongPress = () => {
+        clearTimeout(longPressTimer);
+        if (!isDragging) {
+          card.setAttribute('draggable', 'false');
+          card.classList.remove('drag-lifting');
+        }
+      };
+
+      imgZone.addEventListener('mousedown', startLongPress);
+      imgZone.addEventListener('touchstart', startLongPress, { passive: true });
+      imgZone.addEventListener('mouseup', cancelLongPress);
+      imgZone.addEventListener('mouseleave', cancelLongPress);
+      imgZone.addEventListener('touchend', cancelLongPress);
+      imgZone.addEventListener('touchcancel', cancelLongPress);
+
+      /* — Événements drag HTML5 — */
+      card.addEventListener('dragstart', (e) => {
+        isDragging = true;
+        dragSrc = card;
+        card.classList.add('drag-ghost');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      card.addEventListener('dragend', async (e) => {
+        isDragging = false;
+        card.setAttribute('draggable', 'false');
+        card.classList.remove('drag-ghost', 'drag-lifting');
+        grid.querySelectorAll('.property-card').forEach(c => c.classList.remove('drag-over'));
+        dragSrc = null;
+        await saveNewOrder();
+      });
+
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragSrc && dragSrc !== card && !card.classList.contains('property-card-add')) {
+          grid.querySelectorAll('.property-card').forEach(c => c.classList.remove('drag-over'));
+          card.classList.add('drag-over');
+        }
+      });
+
+      card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (!dragSrc || dragSrc === card || card.classList.contains('property-card-add')) return;
+
+        // Réinsérer la carte source avant ou après la cible
+        const allCards = [...grid.querySelectorAll('.property-card:not(.property-card-add)')];
+        const srcIdx  = allCards.indexOf(dragSrc);
+        const destIdx = allCards.indexOf(card);
+
+        if (srcIdx < destIdx) {
+          card.parentNode.insertBefore(dragSrc, card.nextSibling);
+        } else {
+          card.parentNode.insertBefore(dragSrc, card);
+        }
+
+        card.classList.remove('drag-over');
+      });
+    });
+  }
+
+  /* ── Sauvegarder le nouvel ordre via l'API ── */
+  async function saveNewOrder() {
+    const grid = document.getElementById('propertiesGrid');
+    if (!grid) return;
+
+    // Lire l'ordre visuel actuel
+    const newOrder = [...grid.querySelectorAll('.property-card:not(.property-card-add)')]
+      .map(c => c.getAttribute('data-id'))
+      .filter(Boolean);
+
+    // Comparer avec l'ordre actuel dans `properties`
+    const currentOrder = properties.map(p => p._id || p.id);
+
+    // Calculer les swaps nécessaires (bubble sort → séquence d'appels up/down)
+    // On reconstruit l'ordre côté client en appelant /reorder avec direction
+    // Stratégie : pour chaque position, trouver l'élément qui doit y être et le faire remonter
+    let working = [...currentOrder];
+    const calls = [];
+
+    for (let target = 0; target < newOrder.length; target++) {
+      const currentPos = working.indexOf(newOrder[target]);
+      if (currentPos === target) continue;
+      // Faire remonter l'élément de currentPos à target, un cran à la fois
+      for (let i = currentPos; i > target; i--) {
+        calls.push({ id: newOrder[target], direction: 'up' });
+        // Mettre à jour working
+        [working[i], working[i - 1]] = [working[i - 1], working[i]];
+      }
+    }
+
+    if (calls.length === 0) return;
+
+    try {
+      // Exécuter les appels en séquence
+      for (const call of calls) {
+        await fetch(`${API_URL}/api/properties/${call.id}/reorder`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...(window._authHeaders || {}) },
+          body: JSON.stringify({ direction: call.direction }),
+          credentials: 'include',
+        });
+      }
+      // Mettre à jour le tableau local sans recharger toute la page
+      const reordered = newOrder.map(id => properties.find(p => (p._id || p.id) === id)).filter(Boolean);
+      properties.length = 0;
+      reordered.forEach(p => properties.push(p));
+
+      showToast('Ordre sauvegardé ✓', 'success');
+    } catch (err) {
+      console.error('Erreur sauvegarde ordre:', err);
+      showToast('Erreur lors de la sauvegarde', 'error');
+      await loadProperties(); // fallback : recharger
+    }
+  }
+
+  /* ── Observer les re-rendus de la grille ── */
+  // Chaque fois que renderProperties() regénère le DOM, on réattache les listeners
+  const observer = new MutationObserver(() => {
+    initDragDrop();
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('propertiesGrid');
+    if (grid) {
+      observer.observe(grid, { childList: true });
+      initDragDrop();
+      // Afficher le hint au premier chargement
+      setTimeout(showHint, 1500);
+    }
+  });
+
+})();
