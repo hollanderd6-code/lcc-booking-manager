@@ -3394,11 +3394,14 @@ async function initNotesSection(propertyId) {
     try {
       // Exécuter les appels en séquence
       for (const call of calls) {
+        const token = localStorage.getItem('lcc_token');
         await fetch(`${API_URL}/api/properties/${call.id}/reorder`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...(window._authHeaders || {}) },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+          },
           body: JSON.stringify({ direction: call.direction }),
-          credentials: 'include',
         });
       }
       // Mettre à jour le tableau local sans recharger toute la page
