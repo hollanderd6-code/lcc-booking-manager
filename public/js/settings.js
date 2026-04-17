@@ -3212,38 +3212,43 @@ async function initNotesSection(propertyId) {
   }
 }
 /* ============================================================
-   DRAG & DROP — Réordonnancement des logements par appui long
-   À coller à la fin de settings.js
+
+/* ============================================================
+   DRAG & DROP — Réordonnancement des logements
+   Support desktop (mouse) + mobile (touch)
    ============================================================ */
 
 (function () {
-  const LONG_PRESS_MS = 500; // durée appui long en ms
+  const LONG_PRESS_MS = 450;
 
-  let dragSrc = null;       // carte en cours de drag
-  let longPressTimer = null;
-  let isDragging = false;
-
-  /* ── Styles injectés ── */
+  /* ── Styles ── */
   const style = document.createElement('style');
   style.textContent = `
-    .property-card.drag-ghost {
-      opacity: 0.35;
+    .property-card.dnd-ghost {
+      opacity: 0.3;
       transform: scale(0.97);
-      transition: opacity .2s, transform .2s;
     }
-    .property-card.drag-over {
+    .property-card.dnd-over {
       outline: 2px dashed #1A7A5E;
-      outline-offset: 3px;
-      background: rgba(26,122,94,.04);
+      outline-offset: 2px;
     }
-    .property-card.drag-lifting {
-      cursor: grabbing !important;
+    .dnd-floating {
+      position: fixed !important;
+      z-index: 9999 !important;
+      pointer-events: none !important;
+      opacity: 0.92 !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,.22) !important;
+      transform: scale(1.03) !important;
+      transition: none !important;
+      border-radius: 16px !important;
+      background: #fff;
     }
     .property-card .property-img {
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
-    #drag-hint-toast {
+    #dnd-hint-toast {
       position: fixed;
       bottom: 90px;
       left: 50%;
@@ -3254,137 +3259,53 @@ async function initNotesSection(propertyId) {
       font-family: 'DM Sans', sans-serif;
       padding: 8px 18px;
       border-radius: 999px;
-      z-index: 9999;
+      z-index: 99999;
       pointer-events: none;
       opacity: 0;
       transition: opacity .25s, transform .25s;
       white-space: nowrap;
     }
-    #drag-hint-toast.show {
+    #dnd-hint-toast.show {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
   `;
   document.head.appendChild(style);
 
-  /* ── Toast hint ── */
+  /* ── Hint toast ── */
   const hintEl = document.createElement('div');
-  hintEl.id = 'drag-hint-toast';
-  hintEl.textContent = '✋ Maintenez la photo pour déplacer';
+  hintEl.id = 'dnd-hint-toast';
+  hintEl.textContent = '✋ Maintenez la photo pour réorganiser';
   document.body.appendChild(hintEl);
-
   function showHint() {
     hintEl.classList.add('show');
-    setTimeout(() => hintEl.classList.remove('show'), 2200);
+    setTimeout(() => hintEl.classList.remove('show'), 2500);
   }
 
-  /* ── Initialiser le drag & drop sur les cartes ── */
-  function initDragDrop() {
-    const grid = document.getElementById('propertiesGrid');
-    if (!grid) return;
+  /* ── État global ── */
+  let srcCard = null;
+  let floatingEl = null;
+  let longPressTimer = null;
+  let touchActive = false;
+  let offsetX = 0, offsetY = 0;
 
-    grid.querySelectorAll('.property-card:not(.property-card-add)').forEach(card => {
-      const imgZone = card.querySelector('.property-img');
-      if (!imgZone || imgZone._dragBound) return;
-      imgZone._dragBound = true;
-
-      /* — Appui long → activer draggable — */
-      const startLongPress = (e) => {
-        longPressTimer = setTimeout(() => {
-          card.setAttribute('draggable', 'true');
-          card.classList.add('drag-lifting');
-          // Vibration légère sur mobile
-          if (navigator.vibrate) navigator.vibrate(40);
-        }, LONG_PRESS_MS);
-      };
-
-      const cancelLongPress = () => {
-        clearTimeout(longPressTimer);
-        if (!isDragging) {
-          card.setAttribute('draggable', 'false');
-          card.classList.remove('drag-lifting');
-        }
-      };
-
-      imgZone.addEventListener('mousedown', startLongPress);
-      imgZone.addEventListener('touchstart', startLongPress, { passive: true });
-      imgZone.addEventListener('mouseup', cancelLongPress);
-      imgZone.addEventListener('mouseleave', cancelLongPress);
-      imgZone.addEventListener('touchend', cancelLongPress);
-      imgZone.addEventListener('touchcancel', cancelLongPress);
-
-      /* — Événements drag HTML5 — */
-      card.addEventListener('dragstart', (e) => {
-        isDragging = true;
-        dragSrc = card;
-        card.classList.add('drag-ghost');
-        e.dataTransfer.effectAllowed = 'move';
-      });
-
-      card.addEventListener('dragend', async (e) => {
-        isDragging = false;
-        card.setAttribute('draggable', 'false');
-        card.classList.remove('drag-ghost', 'drag-lifting');
-        grid.querySelectorAll('.property-card').forEach(c => c.classList.remove('drag-over'));
-        dragSrc = null;
-        await saveNewOrder();
-      });
-
-      card.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        if (dragSrc && dragSrc !== card && !card.classList.contains('property-card-add')) {
-          grid.querySelectorAll('.property-card').forEach(c => c.classList.remove('drag-over'));
-          card.classList.add('drag-over');
-        }
-      });
-
-      card.addEventListener('drop', (e) => {
-        e.preventDefault();
-        if (!dragSrc || dragSrc === card || card.classList.contains('property-card-add')) return;
-
-        // Réinsérer la carte source avant ou après la cible
-        const allCards = [...grid.querySelectorAll('.property-card:not(.property-card-add)')];
-        const srcIdx  = allCards.indexOf(dragSrc);
-        const destIdx = allCards.indexOf(card);
-
-        if (srcIdx < destIdx) {
-          card.parentNode.insertBefore(dragSrc, card.nextSibling);
-        } else {
-          card.parentNode.insertBefore(dragSrc, card);
-        }
-
-        card.classList.remove('drag-over');
-      });
-    });
-  }
-
-  /* ── Sauvegarder le nouvel ordre via l'API ── */
+  /* ── Sauvegarder le nouvel ordre ── */
   async function saveNewOrder() {
     const grid = document.getElementById('propertiesGrid');
     if (!grid) return;
 
-    // Lire l'ordre visuel actuel
     const newOrder = [...grid.querySelectorAll('.property-card:not(.property-card-add)')]
-      .map(c => c.getAttribute('data-id'))
-      .filter(Boolean);
+      .map(c => c.getAttribute('data-id')).filter(Boolean);
 
-    // Comparer avec l'ordre actuel dans `properties`
     const currentOrder = properties.map(p => p._id || p.id);
 
-    // Calculer les swaps nécessaires (bubble sort → séquence d'appels up/down)
-    // On reconstruit l'ordre côté client en appelant /reorder avec direction
-    // Stratégie : pour chaque position, trouver l'élément qui doit y être et le faire remonter
     let working = [...currentOrder];
     const calls = [];
-
     for (let target = 0; target < newOrder.length; target++) {
       const currentPos = working.indexOf(newOrder[target]);
       if (currentPos === target) continue;
-      // Faire remonter l'élément de currentPos à target, un cran à la fois
       for (let i = currentPos; i > target; i--) {
         calls.push({ id: newOrder[target], direction: 'up' });
-        // Mettre à jour working
         [working[i], working[i - 1]] = [working[i - 1], working[i]];
       }
     }
@@ -3392,7 +3313,6 @@ async function initNotesSection(propertyId) {
     if (calls.length === 0) return;
 
     try {
-      // Exécuter les appels en séquence
       for (const call of calls) {
         const token = localStorage.getItem('lcc_token');
         await fetch(`${API_URL}/api/properties/${call.id}/reorder`, {
@@ -3404,31 +3324,170 @@ async function initNotesSection(propertyId) {
           body: JSON.stringify({ direction: call.direction }),
         });
       }
-      // Mettre à jour le tableau local sans recharger toute la page
       const reordered = newOrder.map(id => properties.find(p => (p._id || p.id) === id)).filter(Boolean);
       properties.length = 0;
       reordered.forEach(p => properties.push(p));
-
       showToast('Ordre sauvegardé ✓', 'success');
     } catch (err) {
       console.error('Erreur sauvegarde ordre:', err);
       showToast('Erreur lors de la sauvegarde', 'error');
-      await loadProperties(); // fallback : recharger
+      await loadProperties();
     }
   }
 
-  /* ── Observer les re-rendus de la grille ── */
-  // Chaque fois que renderProperties() regénère le DOM, on réattache les listeners
-  const observer = new MutationObserver(() => {
-    initDragDrop();
-  });
+  /* ── Trouver la carte sous un point (touch) ── */
+  function cardAtPoint(x, y) {
+    // Masquer temporairement le clone flottant pour que elementFromPoint fonctionne
+    if (floatingEl) floatingEl.style.display = 'none';
+    const el = document.elementFromPoint(x, y);
+    if (floatingEl) floatingEl.style.display = '';
+    if (!el) return null;
+    return el.closest('.property-card:not(.property-card-add)');
+  }
+
+  /* ── Créer le clone flottant (touch) ── */
+  function createFloating(card, touchX, touchY) {
+    const rect = card.getBoundingClientRect();
+    offsetX = touchX - rect.left;
+    offsetY = touchY - rect.top;
+
+    floatingEl = card.cloneNode(true);
+    floatingEl.classList.add('dnd-floating');
+    floatingEl.style.width = rect.width + 'px';
+    floatingEl.style.height = rect.height + 'px';
+    floatingEl.style.left = (touchX - offsetX) + 'px';
+    floatingEl.style.top  = (touchY - offsetY) + 'px';
+    document.body.appendChild(floatingEl);
+  }
+
+  /* ── Déplacer le clone flottant ── */
+  function moveFloating(touchX, touchY) {
+    if (!floatingEl) return;
+    floatingEl.style.left = (touchX - offsetX) + 'px';
+    floatingEl.style.top  = (touchY - offsetY) + 'px';
+  }
+
+  /* ── Insérer srcCard autour de targetCard ── */
+  function reinsert(targetCard) {
+    if (!srcCard || !targetCard || srcCard === targetCard) return;
+    const grid = document.getElementById('propertiesGrid');
+    const all = [...grid.querySelectorAll('.property-card:not(.property-card-add)')];
+    const si = all.indexOf(srcCard);
+    const ti = all.indexOf(targetCard);
+    if (si < ti) {
+      targetCard.parentNode.insertBefore(srcCard, targetCard.nextSibling);
+    } else {
+      targetCard.parentNode.insertBefore(srcCard, targetCard);
+    }
+  }
+
+  /* ── Nettoyer après drop ── */
+  function endDrag() {
+    if (floatingEl) { floatingEl.remove(); floatingEl = null; }
+    if (srcCard) { srcCard.classList.remove('dnd-ghost'); }
+    document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+    touchActive = false;
+    srcCard = null;
+  }
+
+  /* ── Init sur les cartes ── */
+  function initDragDrop() {
+    const grid = document.getElementById('propertiesGrid');
+    if (!grid) return;
+
+    grid.querySelectorAll('.property-card:not(.property-card-add)').forEach(card => {
+      const imgZone = card.querySelector('.property-img');
+      if (!imgZone || imgZone._dndBound) return;
+      imgZone._dndBound = true;
+
+      /* ══ TOUCH ══ */
+      imgZone.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        longPressTimer = setTimeout(() => {
+          touchActive = true;
+          srcCard = card;
+          card.classList.add('dnd-ghost');
+          if (navigator.vibrate) navigator.vibrate(50);
+          createFloating(card, touch.clientX, touch.clientY);
+        }, LONG_PRESS_MS);
+      }, { passive: true });
+
+      imgZone.addEventListener('touchmove', (e) => {
+        if (!touchActive) {
+          clearTimeout(longPressTimer);
+          return;
+        }
+        e.preventDefault(); // bloquer le scroll pendant le drag
+        const touch = e.touches[0];
+        moveFloating(touch.clientX, touch.clientY);
+
+        const target = cardAtPoint(touch.clientX, touch.clientY);
+        document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+        if (target && target !== srcCard) {
+          target.classList.add('dnd-over');
+          reinsert(target);
+        }
+      }, { passive: false });
+
+      imgZone.addEventListener('touchend', async (e) => {
+        clearTimeout(longPressTimer);
+        if (!touchActive) return;
+        endDrag();
+        await saveNewOrder();
+      });
+
+      imgZone.addEventListener('touchcancel', () => {
+        clearTimeout(longPressTimer);
+        endDrag();
+      });
+
+      /* ══ MOUSE (desktop) ══ */
+      imgZone.addEventListener('mousedown', () => {
+        longPressTimer = setTimeout(() => {
+          card.setAttribute('draggable', 'true');
+          card.classList.add('dnd-ghost');
+        }, LONG_PRESS_MS);
+      });
+
+      imgZone.addEventListener('mouseup', () => clearTimeout(longPressTimer));
+      imgZone.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
+
+      card.addEventListener('dragstart', (e) => {
+        srcCard = card;
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      card.addEventListener('dragend', async () => {
+        card.setAttribute('draggable', 'false');
+        card.classList.remove('dnd-ghost');
+        document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+        srcCard = null;
+        await saveNewOrder();
+      });
+
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (!srcCard || srcCard === card) return;
+        document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+        card.classList.add('dnd-over');
+      });
+
+      card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        reinsert(card);
+        card.classList.remove('dnd-over');
+      });
+    });
+  }
+
+  /* ── Observer les re-rendus ── */
+  const observer = new MutationObserver(() => initDragDrop());
 
   document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('propertiesGrid');
     if (grid) {
       observer.observe(grid, { childList: true });
       initDragDrop();
-      // Afficher le hint au premier chargement
       setTimeout(showHint, 1500);
     }
   });
