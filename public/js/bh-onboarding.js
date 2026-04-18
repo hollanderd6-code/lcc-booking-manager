@@ -288,10 +288,7 @@
         _highlightedStyle._containerZ = container.style.zIndex;
         container.style.setProperty('z-index', '100004', 'important');
       } else {
-        // Élément standalone (KPI, etc.) : monter directement l'élément
-        _highlightedStyle._standaloneEl = targetEl;
-        _highlightedStyle._standalonePosition = targetEl.style.position;
-        _highlightedStyle._standaloneZ = targetEl.style.zIndex;
+        // Pas de container : monter l'élément directement
         targetEl.style.position = 'relative';
         targetEl.style.setProperty('z-index', '100004', 'important');
       }
@@ -324,11 +321,6 @@
       // Restaurer le container
       if (_highlightedStyle._container) {
         _highlightedStyle._container.style.zIndex = _highlightedStyle._containerZ || '';
-      }
-      // Restaurer l'élément standalone (position + z-index)
-      if (_highlightedStyle._standaloneEl) {
-        _highlightedStyle._standaloneEl.style.position = _highlightedStyle._standalonePosition || '';
-        _highlightedStyle._standaloneEl.style.zIndex = _highlightedStyle._standaloneZ || '';
       }
       // Restaurer les styles de l'élément (sauf les clés internes _*)
       ['outline','outlineOffset','boxShadow','borderRadius'].forEach(k => {
