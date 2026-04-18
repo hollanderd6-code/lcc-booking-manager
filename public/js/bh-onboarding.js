@@ -1,7 +1,6 @@
 /* ============================================================
    BOOSTINGHOST — Onboarding Tour
    Ajouter dans app.html : <script src="/js/bh-onboarding.js"></script>
-   (avant la fermeture </body>)
    ============================================================ */
 
 (function () {
@@ -11,7 +10,7 @@
   const STEPS = [
     {
       id: 'welcome',
-      target: null, // pas d'élément ciblé → écran de bienvenue centré
+      target: null,
       title: '👋 Bienvenue sur Boostinghost !',
       text: 'Faisons un rapide tour de votre espace de gestion. Cela prend moins d\'une minute.',
       position: 'center',
@@ -39,21 +38,21 @@
     },
     {
       id: 'nav-settings',
-      target: () => findNavItem(['logement', 'setting', 'paramètre', 'property']),
+      target: () => document.querySelector('.nav-item[data-page="settings"]'),
       title: '🏠 Vos logements',
       text: 'Configurez chaque logement : photos, horaires d\'arrivée/départ, caution, livret d\'accueil, et connectez vos plateformes Airbnb, Booking.com...',
       position: 'right',
     },
     {
       id: 'nav-messages',
-      target: () => findNavItem(['message', 'messagerie', 'chat']),
+      target: () => document.querySelector('.nav-item[data-page="messages"]'),
       title: '💬 Messagerie',
       text: 'Centralisez tous vos échanges avec les voyageurs. L\'IA peut rédiger des réponses automatiques pour vous.',
       position: 'right',
     },
     {
       id: 'nav-reporting',
-      target: () => findNavItem(['revenu', 'reporting', 'rapport', 'statistique']),
+      target: () => document.querySelector('.nav-item[data-page="reporting"]'),
       title: '📈 Revenus & Statistiques',
       text: 'Suivez vos performances par logement, comparez les périodes, et exportez vos données comptables.',
       position: 'right',
@@ -62,21 +61,11 @@
       id: 'done',
       target: null,
       title: '🎉 Vous êtes prêt !',
-      text: 'Commencez par ajouter votre premier logement dans "Paramètres". En cas de question, retrouvez ce tour à tout moment dans votre profil.',
+      text: 'Commencez par ajouter votre premier logement dans "Mes logements". En cas de question, retrouvez ce tour à tout moment dans vos paramètres.',
       position: 'center',
       isLast: true,
     },
   ];
-
-  /* ── Trouver un nav-item par mot-clé dans son texte ───── */
-  function findNavItem(keywords) {
-    const items = document.querySelectorAll('.nav-item, [class*="nav-item"], aside a, .sidebar a, .sidebar button');
-    for (const item of items) {
-      const text = (item.textContent || '').toLowerCase();
-      if (keywords.some(k => text.includes(k.toLowerCase()))) return item;
-    }
-    return null;
-  }
 
   /* ── État ─────────────────────────────────────────────── */
   let currentStep = 0;
@@ -99,17 +88,11 @@
         z-index: 99991;
         border-radius: 12px;
         box-shadow: 0 0 0 9999px rgba(13,17,23,0.72);
-        transition: all .35s cubic-bezier(.4,0,.2,1);
+        transition: top .35s cubic-bezier(.4,0,.2,1),
+                    left .35s cubic-bezier(.4,0,.2,1),
+                    width .35s cubic-bezier(.4,0,.2,1),
+                    height .35s cubic-bezier(.4,0,.2,1);
         pointer-events: none;
-      }
-      #bh-tour-cutout.center-mode {
-        box-shadow: 0 0 0 9999px rgba(13,17,23,0.72);
-        inset: 0 !important;
-        border-radius: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        top: 0 !important;
-        left: 0 !important;
       }
       #bh-tour-bubble {
         position: fixed;
@@ -120,7 +103,6 @@
         width: min(340px, calc(100vw - 32px));
         box-shadow: 0 8px 40px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.10);
         font-family: 'DM Sans', sans-serif;
-        transition: all .3s cubic-bezier(.4,0,.2,1);
         pointer-events: all;
       }
       #bh-tour-bubble .tour-step-badge {
@@ -150,7 +132,6 @@
         width: 14px;
         height: 14px;
         background: #fff;
-        transform: rotate(45deg);
         pointer-events: none;
       }
       #bh-tour-bubble .tour-footer {
@@ -213,11 +194,11 @@
         background: linear-gradient(135deg, #1A7A5E, #2AAE86);
       }
 
-      /* Mobile : bulle toujours en bas */
+      /* Mobile : bulle toujours en bas au-dessus de la bottom bar */
       @media (max-width: 700px) {
         #bh-tour-bubble {
           position: fixed !important;
-          bottom: 90px !important;
+          bottom: 100px !important;
           left: 16px !important;
           right: 16px !important;
           top: auto !important;
@@ -230,18 +211,14 @@
     document.head.appendChild(s);
   }
 
-  /* ── Créer les éléments DOM du tour ──────────────────── */
+  /* ── Créer les éléments DOM ──────────────────────────── */
   function createDOM() {
-    // Overlay (juste pour bloquer les clics en dehors)
     overlay = document.createElement('div');
     overlay.id = 'bh-tour-overlay';
-    overlay.addEventListener('click', () => {}); // absorbe les clics
 
-    // Spotlight (découpe)
     spotlight = document.createElement('div');
     spotlight.id = 'bh-tour-cutout';
 
-    // Bulle
     bubble = document.createElement('div');
     bubble.id = 'bh-tour-bubble';
 
@@ -250,66 +227,22 @@
     document.body.appendChild(bubble);
   }
 
-  /* ── Positionner la bulle autour de l'élément cible ─── */
-  function positionBubble(targetEl, position) {
-    const isMobile = window.innerWidth <= 700;
-    if (isMobile) return; // géré par CSS
-
-    const bRect = bubble.getBoundingClientRect();
-    const bW = bRect.width || 340;
-    const bH = bRect.height || 200;
-    const margin = 16;
-
-    if (!targetEl || position === 'center') {
-      bubble.style.top = '50%';
-      bubble.style.left = '50%';
-      bubble.style.transform = 'translate(-50%, -50%)';
-      return;
-    }
-
-    bubble.style.transform = '';
-    const r = targetEl.getBoundingClientRect();
-
-    // Flèche
-    let arrow = bubble.querySelector('.tour-arrow');
-    if (!arrow) {
-      arrow = document.createElement('div');
-      arrow.className = 'tour-arrow';
-      bubble.appendChild(arrow);
-    }
-
-    let top, left;
-
-    if (position === 'bottom') {
-      top = r.bottom + 14;
-      left = r.left + r.width / 2 - bW / 2;
-      arrow.style.cssText = 'top:-7px;left:50%;transform:translateX(-50%) rotate(45deg);border-top:1px solid #f3f4f6;border-left:1px solid #f3f4f6;';
-    } else if (position === 'top') {
-      top = r.top - bH - 14;
-      left = r.left + r.width / 2 - bW / 2;
-      arrow.style.cssText = 'bottom:-7px;left:50%;transform:translateX(-50%) rotate(45deg);border-bottom:1px solid #f3f4f6;border-right:1px solid #f3f4f6;';
-    } else if (position === 'right') {
-      top = r.top + r.height / 2 - bH / 2;
-      left = r.right + 14;
-      arrow.style.cssText = 'left:-7px;top:50%;transform:translateY(-50%) rotate(45deg);border-left:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;';
-    } else {
-      top = r.bottom + 14;
-      left = r.left + r.width / 2 - bW / 2;
-      arrow.style.cssText = '';
-    }
-
-    // Clamp dans la fenêtre
-    left = Math.max(margin, Math.min(left, window.innerWidth - bW - margin));
-    top  = Math.max(margin, Math.min(top,  window.innerHeight - bH - margin));
-
-    bubble.style.top  = top + 'px';
-    bubble.style.left = left + 'px';
-  }
-
-  /* ── Mettre en avant l'élément (spotlight) ─────────── */
+  /* ── Spotlight autour de la cible ───────────────────── */
   function highlightTarget(targetEl, position) {
     if (!targetEl || position === 'center') {
-      spotlight.style.cssText = 'position:fixed;inset:0;z-index:99991;box-shadow:0 0 0 9999px rgba(13,17,23,0.72);pointer-events:none;border-radius:0;width:100%;height:100%;top:0;left:0;';
+      // Overlay plein écran sans découpe
+      spotlight.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 99991;
+        pointer-events: none;
+        box-shadow: 0 0 0 9999px rgba(13,17,23,0.72);
+        border-radius: 0;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+      `;
       return;
     }
 
@@ -325,23 +258,103 @@
       height: ${r.height + pad * 2}px;
       border-radius: 12px;
       box-shadow: 0 0 0 9999px rgba(13,17,23,0.72);
-      transition: all .35s cubic-bezier(.4,0,.2,1);
+      transition: top .35s cubic-bezier(.4,0,.2,1),
+                  left .35s cubic-bezier(.4,0,.2,1),
+                  width .35s cubic-bezier(.4,0,.2,1),
+                  height .35s cubic-bezier(.4,0,.2,1);
     `;
 
-    // Scroll vers l'élément si nécessaire
     targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /* ── Positionner la bulle ───────────────────────────── */
+  function positionBubble(targetEl, position) {
+    const isMobile = window.innerWidth <= 700;
+    if (isMobile) return; // géré par CSS
+
+    const margin = 20;
+    // Laisser le DOM se peindre pour avoir la vraie hauteur
+    const bW = 340;
+    const bH = bubble.offsetHeight || 220;
+
+    // Retirer flèche existante
+    const oldArrow = bubble.querySelector('.tour-arrow');
+    if (oldArrow) oldArrow.remove();
+
+    if (!targetEl || position === 'center') {
+      bubble.style.cssText += `
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      `;
+      return;
+    }
+
+    bubble.style.transform = '';
+    const r = targetEl.getBoundingClientRect();
+
+    const arrow = document.createElement('div');
+    arrow.className = 'tour-arrow';
+
+    let top, left;
+
+    if (position === 'bottom') {
+      top  = r.bottom + 16;
+      left = r.left + r.width / 2 - bW / 2;
+      arrow.style.cssText = `
+        top: -7px;
+        left: ${Math.min(Math.max(bW / 2, r.left + r.width / 2 - left), bW - 20)}px;
+        transform: translateX(-50%) rotate(45deg);
+        border-top: 1px solid #f3f4f6;
+        border-left: 1px solid #f3f4f6;
+      `;
+    } else if (position === 'top') {
+      top  = r.top - bH - 16;
+      left = r.left + r.width / 2 - bW / 2;
+      arrow.style.cssText = `
+        bottom: -7px;
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        border-bottom: 1px solid #f3f4f6;
+        border-right: 1px solid #f3f4f6;
+      `;
+    } else if (position === 'right') {
+      // Bulle à droite de la sidebar, centrée verticalement sur la cible
+      left = r.right + 16;
+      top  = r.top + r.height / 2 - bH / 2;
+      arrow.style.cssText = `
+        left: -7px;
+        top: 50%;
+        transform: translateY(-50%) rotate(45deg);
+        border-left: 1px solid #f3f4f6;
+        border-bottom: 1px solid #f3f4f6;
+      `;
+    } else {
+      top  = r.bottom + 16;
+      left = r.left + r.width / 2 - bW / 2;
+    }
+
+    // Clamp dans la fenêtre
+    left = Math.max(margin, Math.min(left, window.innerWidth  - bW - margin));
+    top  = Math.max(margin, Math.min(top,  window.innerHeight - bH - margin));
+
+    bubble.style.top    = top  + 'px';
+    bubble.style.left   = left + 'px';
+    bubble.style.right  = 'auto';
+    bubble.style.bottom = 'auto';
+
+    bubble.appendChild(arrow);
   }
 
   /* ── Rendre une étape ──────────────────────────────── */
   function renderStep(index) {
-    const step = STEPS[index];
+    const step    = STEPS[index];
     const targetEl = step.target ? step.target() : null;
-    const total = STEPS.length;
-    const isLast = step.isLast || index === total - 1;
+    const total   = STEPS.length;
+    const isLast  = step.isLast || index === total - 1;
 
     highlightTarget(targetEl, step.position);
 
-    // Contenu de la bulle
     bubble.innerHTML = `
       <div class="tour-step-badge">Étape ${index + 1} sur ${total}</div>
       <div class="tour-title">${step.title}</div>
@@ -353,31 +366,34 @@
         <div class="tour-actions">
           ${!isLast ? `<button class="tour-btn-skip" onclick="window.__bhTour.skip()">Passer</button>` : ''}
           <button class="tour-btn-next ${isLast ? 'tour-btn-finish' : ''}" onclick="window.__bhTour.next()">
-            ${isLast ? '<i class="fas fa-check"></i> Terminer' : 'Suivant <i class="fas fa-arrow-right"></i>'}
+            ${isLast
+              ? '<i class="fas fa-check"></i> Terminer'
+              : 'Suivant <i class="fas fa-arrow-right"></i>'}
           </button>
         </div>
       </div>
     `;
 
-    // Retirer l'ancienne flèche si mode center
-    if (!targetEl || step.position === 'center') {
-      const arrow = bubble.querySelector('.tour-arrow');
-      if (arrow) arrow.remove();
-    }
-
-    // Positionner après que le DOM est peint
-    requestAnimationFrame(() => positionBubble(targetEl, step.position));
+    // Positionner après peinture
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => positionBubble(targetEl, step.position));
+    });
   }
 
-  /* ── Démarrer le tour ──────────────────────────────── */
+  /* ── Démarrer ──────────────────────────────────────── */
   function start() {
+    // Nettoyer si déjà présent
+    ['bh-tour-overlay','bh-tour-cutout','bh-tour-bubble'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
     injectStyles();
     createDOM();
     currentStep = 0;
     renderStep(currentStep);
   }
 
-  /* ── Étape suivante ────────────────────────────────── */
+  /* ── Suivant ───────────────────────────────────────── */
   function next() {
     currentStep++;
     if (currentStep >= STEPS.length) {
@@ -387,35 +403,32 @@
     }
   }
 
-  /* ── Terminer / Passer ─────────────────────────────── */
+  /* ── Terminer ──────────────────────────────────────── */
   function finish() {
     localStorage.setItem(STORAGE_KEY, '1');
-    if (overlay)   overlay.remove();
-    if (spotlight) spotlight.remove();
-    if (bubble)    bubble.remove();
+    ['bh-tour-overlay','bh-tour-cutout','bh-tour-bubble'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
     overlay = bubble = spotlight = null;
   }
 
-  function skip() {
-    finish();
-  }
+  function skip() { finish(); }
 
   /* ── API publique ──────────────────────────────────── */
   window.__bhTour = { next, skip, start, finish };
 
-  /* ── Lancement automatique au chargement ──────────── */
+  /* ── Lancement auto ────────────────────────────────── */
   function maybeStart() {
-    // Ne pas démarrer si déjà vu
     if (localStorage.getItem(STORAGE_KEY)) return;
 
-    // Attendre que bh-layout.js ait injecté la sidebar
     let attempts = 0;
     const wait = setInterval(() => {
       attempts++;
-      const sidebarReady = document.querySelector('.nav-item, .sidebar a, aside a');
-      if (sidebarReady || attempts > 20) {
+      const sidebarReady = document.querySelector('.nav-item[data-page="settings"]');
+      if (sidebarReady || attempts > 25) {
         clearInterval(wait);
-        setTimeout(start, 600); // petit délai pour que la page soit visuellement stable
+        setTimeout(start, 600);
       }
     }, 200);
   }
