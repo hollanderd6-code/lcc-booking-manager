@@ -32,7 +32,7 @@
     {
       id: 'new-reservation',
       target: () => document.getElementById('newReservationBtn'),
-      mobile_target: () => document.getElementById('newReservationBtn'),
+      mobile_target: () => document.getElementById('fabAddResa'),
       title: '➕ Nouvelle réservation',
       text: 'Ajoutez manuellement une réservation pour vos clients directs, sans passer par une plateforme.',
       position: 'bottom',
@@ -388,7 +388,7 @@
         moreBtn.click();
         sheetOpenedByTour = true;
         // Attendre l'animation d'ouverture
-        setTimeout(resolve, 400);
+        setTimeout(resolve, 700);
       } else {
         resolve();
       }
@@ -425,28 +425,28 @@
 
     // Ouvrir le menu Plus si nécessaire
     if (isSheet) {
+      highlightTarget(null); // overlay vide pendant ouverture
       await ensureSheetOpen();
     } else if (sheetOpenedByTour) {
-      // Fermer le sheet si on n'en a plus besoin
       if (window.closeMoreMenu) window.closeMoreMenu();
       sheetOpenedByTour = false;
       await new Promise(r => setTimeout(r, 300));
     }
 
-    // Choisir la cible selon la plateforme
-    const targetEl = mobile
-      ? (step.mobile_target ? step.mobile_target() : null)
-      : (step.target ? step.target() : null);
-
     const position = mobile
       ? (step.mobile_position || step.position)
       : step.position;
 
-    // Spotlight
-    highlightTarget(targetEl);
-
-    // Contenu bulle
+    // Contenu bulle d'abord
     renderBubbleContent(step, index);
+
+    // Résoudre la cible APRÈS que le sheet soit ouvert (DOM prêt)
+    const targetEl = mobile
+      ? (step.mobile_target ? step.mobile_target() : null)
+      : (step.target ? step.target() : null);
+
+    // Spotlight sur la vraie cible
+    highlightTarget(targetEl);
 
     // Positionner après peinture
     requestAnimationFrame(() => {
