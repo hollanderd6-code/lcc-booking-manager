@@ -95,6 +95,46 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── WELCOME (Livrets d'accueil) ─────────────────────── */
+    'welcome.html': {
+      storageKey: 'bh_ob_welcome_v1',
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '📖 Livrets d\'accueil numériques',
+          text: 'Offrez à vos voyageurs toutes les infos de leur séjour via un simple lien ou QR code. Tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'tip-banner',
+          target: () => document.getElementById('welcomeTipBanner'),
+          mobile_target: () => document.getElementById('welcomeTipBanner'),
+          title: '✨ Le concept',
+          text: 'Un livret digital accessible sans application, partageable par lien ou QR code. Lien personnalisé, toujours à jour, et bonus : un code -10% pour inciter à la résa directe.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'create-cta',
+          target: () => document.querySelector('.welcome-tip-cta'),
+          mobile_target: () => document.querySelector('.welcome-tip-cta'),
+          title: '➕ Créer votre premier livret',
+          text: 'Lancez le wizard en 5 étapes : infos générales, accès & arrivée, le logement, aspects pratiques, alentours. Comptez 10-15 minutes pour un livret complet.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 Votre livret, votre signature',
+          text: 'Astuce : une fois créé, vous pouvez modifier le livret à tout moment. Les voyageurs voient toujours la dernière version via le même lien.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── SETTINGS (Mes logements) ─────────────────────────── */
     'settings.html': {
       storageKey: 'bh_ob_settings_v1',
