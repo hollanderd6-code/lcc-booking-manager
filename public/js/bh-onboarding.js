@@ -202,7 +202,7 @@
       }
       #bh-tour-clone-wrap img { pointer-events: none; }
       #bh-tour-bubble {
-        position: fixed; z-index: 100003;
+        position: fixed; z-index: 2147483647;
         background: #fff; border-radius: 16px;
         padding: 20px 22px 16px;
         width: min(320px, calc(100vw - 32px));
