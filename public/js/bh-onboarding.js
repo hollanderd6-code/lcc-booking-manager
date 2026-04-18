@@ -218,7 +218,11 @@
     document.body.appendChild(bubbleEl);
   }
 
-  /* ── Clone flottant de l'élément ciblé ───────────────── */
+  /* ── Highlighting de l'élément ciblé ─────────────────── */
+  // Garde track des éléments modifiés pour les restaurer
+  let _highlightedEl = null;
+  let _highlightedStyle = {};
+
   function showClone(targetEl) {
     removeClone();
     if (!targetEl) return;
@@ -226,6 +230,31 @@
     const r = targetEl.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) return;
 
+    // Stratégie 1 : élément dans bottom bar ou sheet → outline direct
+    const inBottomBar = targetEl.closest('.mobile-tabs, #moreMenuSheet, #moreMenuOverlay');
+    
+    if (inBottomBar || IS_MOBILE()) {
+      // Sauvegarder styles originaux
+      _highlightedEl = targetEl;
+      _highlightedStyle = {
+        outline: targetEl.style.outline,
+        outlineOffset: targetEl.style.outlineOffset,
+        boxShadow: targetEl.style.boxShadow,
+        zIndex: targetEl.style.zIndex,
+        position: targetEl.style.position,
+        borderRadius: targetEl.style.borderRadius,
+      };
+      // Appliquer highlight
+      targetEl.style.outline = '3px solid #1A7A5E';
+      targetEl.style.outlineOffset = '3px';
+      targetEl.style.boxShadow = '0 0 0 6px rgba(26,122,94,0.25)';
+      targetEl.style.zIndex = '100004';
+      targetEl.style.position = 'relative';
+      targetEl.style.borderRadius = '12px';
+      return;
+    }
+
+    // Stratégie 2 : clone flottant pour desktop
     cloneEl = document.createElement('div');
     cloneEl.id = 'bh-tour-clone-wrap';
     cloneEl.style.cssText = `
@@ -234,26 +263,26 @@
       width: ${r.width}px;
       height: ${r.height}px;
     `;
-
-    // Cloner le contenu visuel
     const inner = targetEl.cloneNode(true);
-    inner.style.cssText = `
-      width: ${r.width}px;
-      height: ${r.height}px;
-      pointer-events: none;
-      display: block;
-    `;
-    // Supprimer les onclick du clone pour éviter tout déclenchement
+    inner.style.cssText = `width:${r.width}px;height:${r.height}px;pointer-events:none;display:block;`;
     inner.querySelectorAll('[onclick]').forEach(el => el.removeAttribute('onclick'));
-
     cloneEl.appendChild(inner);
     document.body.appendChild(cloneEl);
   }
 
   function removeClone() {
+    // Retirer clone flottant
     const old = document.getElementById('bh-tour-clone-wrap');
     if (old) old.remove();
     cloneEl = null;
+    // Restaurer styles de l'élément highlighted
+    if (_highlightedEl) {
+      Object.entries(_highlightedStyle).forEach(([k, v]) => {
+        _highlightedEl.style[k] = v;
+      });
+      _highlightedEl = null;
+      _highlightedStyle = {};
+    }
   }
 
   /* ── Positionner la bulle desktop ─────────────────────── */
