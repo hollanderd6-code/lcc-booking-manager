@@ -250,6 +250,16 @@
         }
         .tour-arrow { display: none !important; }
       }
+
+      /* Élément mis en avant au-dessus de l'overlay */
+      .bh-tour-highlighted {
+        position: relative !important;
+        z-index: 99995 !important;
+        outline: 3px solid #1A7A5E !important;
+        outline-offset: 3px !important;
+        border-radius: 12px !important;
+        box-shadow: 0 0 0 4px rgba(26,122,94,0.2) !important;
+      }
     `;
     document.head.appendChild(s);
   }
@@ -264,12 +274,30 @@
     document.body.appendChild(bubble);
   }
 
+  /* ── Nettoyer les highlights précédents ─────────────── */
+  function clearHighlights() {
+    document.querySelectorAll('.bh-tour-highlighted').forEach(el => {
+      el.classList.remove('bh-tour-highlighted');
+    });
+  }
+
   /* ── Spotlight ────────────────────────────────────────── */
-  function highlightTarget(targetEl) {
+  function highlightTarget(targetEl, useOutline) {
+    clearHighlights();
+
     if (!targetEl) {
       spotlight.style.cssText = 'position:fixed;inset:0;z-index:99991;pointer-events:none;box-shadow:0 0 0 9999px rgba(13,17,23,0.72);border-radius:0;';
       return;
     }
+
+    // Mode outline : pour les éléments dans un stacking context (sheet, modal)
+    if (useOutline) {
+      spotlight.style.cssText = 'position:fixed;inset:0;z-index:99991;pointer-events:none;box-shadow:0 0 0 9999px rgba(13,17,23,0.55);border-radius:0;';
+      targetEl.classList.add('bh-tour-highlighted');
+      return;
+    }
+
+    // Mode spotlight normal : élément mis au-dessus via z-index
     const r = targetEl.getBoundingClientRect();
     const pad = 8;
     spotlight.style.cssText = `
@@ -280,6 +308,8 @@
       box-shadow:0 0 0 9999px rgba(13,17,23,0.72);
       transition:top .3s cubic-bezier(.4,0,.2,1),left .3s,width .3s,height .3s;
     `;
+    // Faire remonter l'élément au-dessus de l'overlay
+    targetEl.classList.add('bh-tour-highlighted');
   }
 
   /* ── Position bulle desktop ───────────────────────────── */
@@ -393,14 +423,7 @@
       if (moreBtn) {
         moreBtn.click();
         sheetOpenedByTour = true;
-        setTimeout(() => {
-          // Monter le sheet au-dessus de l'overlay du tour
-          const sheet = document.getElementById('moreMenuSheet');
-          const sheetOvl = document.getElementById('moreMenuOverlay');
-          if (sheet) sheet.style.zIndex = '99998';
-          if (sheetOvl) sheetOvl.style.zIndex = '99997';
-          resolve();
-        }, 600);
+        setTimeout(resolve, 600);
       } else {
         resolve();
       }
@@ -458,7 +481,8 @@
       : (step.target ? step.target() : null);
 
     // Spotlight sur la vraie cible
-    highlightTarget(targetEl);
+    // useOutline=true pour les éléments dans le sheet (stacking context)
+    highlightTarget(targetEl, isSheet);
 
     // Positionner après peinture
     requestAnimationFrame(() => {
@@ -466,7 +490,7 @@
         if (!mobile) {
           scrollSidebarTo(targetEl);
           setTimeout(() => {
-            if (targetEl) highlightTarget(targetEl);
+            if (targetEl) highlightTarget(targetEl, false);
             positionBubbleDesktop(targetEl, position);
           }, 360);
         } else {
@@ -506,11 +530,7 @@
     // Restaurer le FAB
     const fab = document.getElementById('fabAddResa');
     if (fab) fab.style.removeProperty('display');
-    // Restaurer z-index du sheet
-    const sheet2 = document.getElementById('moreMenuSheet');
-    const sheetOvl2 = document.getElementById('moreMenuOverlay');
-    if (sheet2) sheet2.style.zIndex = '10000';
-    if (sheetOvl2) sheetOvl2.style.zIndex = '9999';
+
     overlay = bubble = spotlight = null;
   }
 
