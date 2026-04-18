@@ -135,16 +135,27 @@
   ];
 
   /* ── Trouver un bouton dans le sheet ──────────────────── */
+  /* ── Trouver le sheet actif (natif ou fallback) ─────── */
+  function getActiveSheet() {
+    // Bottom sheet natif (Capacitor/iOS)
+    const nativeSheet = document.querySelector('.bottom-sheet.open .sheet-body, .bottom-sheet.open .bottom-sheet-content');
+    if (nativeSheet) return nativeSheet;
+    // Fallback web
+    const webSheet = document.getElementById('moreMenuSheet');
+    if (webSheet) return webSheet;
+    return null;
+  }
+
   function findSheetBtn(href) {
-    const sheet = document.getElementById('moreMenuSheet');
+    const sheet = getActiveSheet();
     if (!sheet) return null;
-    // Chercher dans onclick ET dans le texte du bouton
     const btns = sheet.querySelectorAll('button');
+    // Recherche par onclick
     for (const btn of btns) {
       const onclick = btn.getAttribute('onclick') || '';
       if (onclick.includes(href)) return btn;
     }
-    // Fallback : chercher par texte partiel (ex: 'Livrets', 'Contrats'...)
+    // Fallback par texte
     const labelMap = {
       'welcome.html': 'Livrets',
       'contrat.html': 'Contrats',
@@ -249,7 +260,7 @@
     if (r.width === 0 && r.height === 0) return;
 
     // Stratégie 1 : élément dans bottom bar ou sheet → outline direct
-    const inBottomBar = targetEl.closest('.mobile-tabs, #moreMenuSheet, #moreMenuOverlay');
+    const inBottomBar = targetEl.closest('.mobile-tabs, #moreMenuSheet, #moreMenuOverlay, .bottom-sheet, .bottom-sheet-content, .sheet-body');
     
     if (inBottomBar || IS_MOBILE()) {
       // Sauvegarder styles originaux de l'élément
@@ -269,6 +280,7 @@
       // Monter le parent conteneur au-dessus de l'overlay
       // (tab-btn → .mobile-tabs, bouton sheet → #moreMenuSheet)
       const container = targetEl.closest('.mobile-tabs') 
+                     || targetEl.closest('.bottom-sheet')
                      || targetEl.closest('#moreMenuSheet')
                      || targetEl.closest('#moreMenuOverlay');
       if (container) {
@@ -399,6 +411,9 @@
 
   /* ── Ouvrir le menu Plus ──────────────────────────────── */
   function isSheetVisible() {
+    // Natif
+    if (document.querySelector('.bottom-sheet.open')) return true;
+    // Fallback web
     const s = document.getElementById('moreMenuSheet');
     if (!s) return false;
     const t = s.style.transform;
