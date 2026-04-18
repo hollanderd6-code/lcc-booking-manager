@@ -220,11 +220,6 @@
       #bh-tour-clone-wrap {
         position: fixed; z-index: 100002;
         pointer-events: none;
-        border-radius: 14px;
-        outline: 3px solid #1A7A5E;
-        outline-offset: 4px;
-        box-shadow: 0 0 0 4px rgba(26,122,94,0.25);
-        overflow: hidden;
         transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
       }
       #bh-tour-clone-wrap img { pointer-events: none; }
@@ -272,74 +267,53 @@
     document.body.appendChild(bubbleEl);
   }
 
-  /* ── Highlight / Clone ────────────────────────────────── */
+  /* ── Highlight / Spotlight (unifié desktop + mobile) ──── */
   function showClone(targetEl) {
     removeClone();
     if (!targetEl) return;
     const r = targetEl.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) return;
 
-    // Stratégie mobile (ou élément dans bottom bar) : outline direct
-    const inBottomBar = targetEl.closest('.mobile-tabs, #moreMenuSheet, #moreMenuOverlay, .bottom-sheet, .bottom-sheet-content, .sheet-body');
+    // SPOTLIGHT : on découpe un "trou" dans l'overlay autour de la cible
+    // → la cible apparaît telle quelle, à sa vraie place, dans ses vraies couleurs
+    const padding = 6;
+    const radius  = 12;
+    const x = Math.max(0, r.left - padding);
+    const y = Math.max(0, r.top - padding);
+    const w = r.width  + padding * 2;
+    const h = r.height + padding * 2;
 
-    if (inBottomBar || IS_MOBILE()) {
-      // SPOTLIGHT : on découpe un "trou" dans l'overlay autour de la cible
-      // → la cible apparaît telle quelle, dans ses vraies couleurs, sans voile sombre
-      const padding = 6;
-      const radius  = 12;
-      const x = Math.max(0, r.left - padding);
-      const y = Math.max(0, r.top - padding);
-      const w = r.width  + padding * 2;
-      const h = r.height + padding * 2;
-
-      // 1) Overlay découpé (4 rectangles autour du trou) via clip-path
-      const W = window.innerWidth;
-      const H = window.innerHeight;
-      const clip = `polygon(
-        0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, 0 0,
-        ${x}px ${y}px,
-        ${x}px ${y+h}px,
-        ${x+w}px ${y+h}px,
-        ${x+w}px ${y}px,
-        ${x}px ${y}px
-      )`;
-      if (overlayEl) {
-        overlayEl.style.clipPath = clip;
-        overlayEl.style.webkitClipPath = clip;
-      }
-
-      // 2) Cadre vert par-dessus (sans toucher la cible, z-index haut)
-      cloneEl = document.createElement('div');
-      cloneEl.id = 'bh-tour-clone-wrap';
-      cloneEl.style.cssText = `
-        top: ${y}px;
-        left: ${x}px;
-        width: ${w}px;
-        height: ${h}px;
-        border-radius: ${radius}px;
-        outline: 3px solid #1A7A5E;
-        outline-offset: 0;
-        box-shadow: 0 0 0 4px rgba(26,122,94,0.25);
-        background: transparent;
-        pointer-events: none;
-      `;
-      document.body.appendChild(cloneEl);
-      return;
+    // 1) Overlay découpé via clip-path
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const clip = `polygon(
+      0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, 0 0,
+      ${x}px ${y}px,
+      ${x}px ${y+h}px,
+      ${x+w}px ${y+h}px,
+      ${x+w}px ${y}px,
+      ${x}px ${y}px
+    )`;
+    if (overlayEl) {
+      overlayEl.style.clipPath = clip;
+      overlayEl.style.webkitClipPath = clip;
     }
 
-    // Stratégie desktop : clone flottant
+    // 2) Cadre vert par-dessus
     cloneEl = document.createElement('div');
     cloneEl.id = 'bh-tour-clone-wrap';
     cloneEl.style.cssText = `
-      top: ${r.top}px;
-      left: ${r.left}px;
-      width: ${r.width}px;
-      height: ${r.height}px;
+      top: ${y}px;
+      left: ${x}px;
+      width: ${w}px;
+      height: ${h}px;
+      border-radius: ${radius}px;
+      outline: 3px solid #1A7A5E;
+      outline-offset: 0;
+      box-shadow: 0 0 0 4px rgba(26,122,94,0.25);
+      background: transparent;
+      pointer-events: none;
     `;
-    const inner = targetEl.cloneNode(true);
-    inner.style.cssText = `width:${r.width}px;height:${r.height}px;pointer-events:none;display:block;`;
-    inner.querySelectorAll('[onclick]').forEach(el => el.removeAttribute('onclick'));
-    cloneEl.appendChild(inner);
     document.body.appendChild(cloneEl);
   }
 
