@@ -95,6 +95,55 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── SETTINGS (Mes logements) ─────────────────────────── */
+    'settings.html': {
+      storageKey: 'bh_ob_settings_v1',
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '🏠 Vos logements',
+          text: 'Configurez chaque bien que vous gérez. Tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'properties-list',
+          // Si la grille est vide au premier login, on pointe le header à la place
+          target: () => {
+            const grid = document.getElementById('propertiesGrid');
+            if (grid && grid.children.length > 0) return grid;
+            return document.querySelector('.properties-section-header') || grid;
+          },
+          mobile_target: () => {
+            const grid = document.getElementById('propertiesGrid');
+            if (grid && grid.children.length > 0) return grid;
+            return document.querySelector('.properties-section-header') || grid;
+          },
+          title: '📋 Votre catalogue',
+          text: 'Tous vos logements s\'affichent ici. Touchez une carte pour modifier ses infos : horaires, prix, photos, équipements...',
+          position: 'top',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'add-property',
+          target: () => document.getElementById('btnAddProperty'),
+          mobile_target: () => document.getElementById('btnAddProperty'),
+          title: '➕ Ajouter un logement',
+          text: 'Commencez par créer votre premier logement avec le bouton "Ajouter". Vous pourrez ensuite le connecter à Airbnb et Booking.com.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 C\'est parti !',
+          text: 'Astuce : vous pouvez aussi configurer des règles de prix dynamiques (week-end, saison, long séjour) pour chaque logement.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
   };
 
   /* ============================================================
