@@ -394,6 +394,18 @@
       ? (step.mobile_position || step.position || 'top')
       : step.position;
 
+    // Gérer le FAB : visible uniquement à l'étape nouvelle-réservation
+    const fab = document.getElementById('fabAddResa');
+    if (fab) {
+      if (step.id === 'new-reservation') {
+        fab.style.removeProperty('display');
+        fab.style.setProperty('z-index', '100004', 'important'); // au-dessus de tout
+      } else {
+        fab.style.setProperty('display', 'none', 'important');
+        fab.style.removeProperty('z-index');
+      }
+    }
+
     // Contenu bulle
     renderBubble(step, index);
 
@@ -419,9 +431,7 @@
     });
     injectStyles();
     createDOM();
-    // Cacher FAB
-    const fab = document.getElementById('fabAddResa');
-    if (fab) fab.style.setProperty('display','none','important');
+    // Le FAB sera géré étape par étape
     currentStep = 0;
     renderStep(0);
   }
@@ -441,7 +451,7 @@
     });
     // Restaurer FAB
     const fab = document.getElementById('fabAddResa');
-    if (fab) fab.style.removeProperty('display');
+    if (fab) { fab.style.removeProperty('display'); fab.style.removeProperty('z-index'); }
     overlayEl = bubbleEl = null; sheetOpen = false;
   }
 
