@@ -187,16 +187,29 @@
 
     if (inBottomBar || IS_MOBILE()) {
       _highlightedEl = targetEl;
+      const csHL = window.getComputedStyle(targetEl);
       _highlightedStyle = {
         outline: targetEl.style.outline,
         outlineOffset: targetEl.style.outlineOffset,
         boxShadow: targetEl.style.boxShadow,
         borderRadius: targetEl.style.borderRadius,
+        background: targetEl.style.background,
+        backgroundColor: targetEl.style.backgroundColor,
       };
       targetEl.style.outline = '3px solid #1A7A5E';
       targetEl.style.outlineOffset = '3px';
       targetEl.style.boxShadow = '0 0 0 6px rgba(26,122,94,0.25)';
       targetEl.style.borderRadius = '12px';
+      // Forcer un fond opaque si l'élément est transparent, sinon l'overlay sombre
+      // transparaît au travers et l'élément paraît grisé
+      const bgColor = csHL.backgroundColor;
+      const isTransparent = !bgColor
+        || bgColor === 'transparent'
+        || bgColor === 'rgba(0, 0, 0, 0)'
+        || /rgba\([^)]+,\s*0\s*\)$/.test(bgColor);
+      if (isTransparent) {
+        targetEl.style.setProperty('background-color', '#ffffff', 'important');
+      }
 
       const container = targetEl.closest('.mobile-tabs')
                      || targetEl.closest('.bottom-sheet')
@@ -243,7 +256,7 @@
       if (_highlightedStyle._container) {
         _highlightedStyle._container.style.zIndex = _highlightedStyle._containerZ || '';
       }
-      ['outline','outlineOffset','boxShadow','borderRadius','position','zIndex'].forEach(k => {
+      ['outline','outlineOffset','boxShadow','borderRadius','position','zIndex','background','backgroundColor'].forEach(k => {
         if (k in _highlightedStyle) {
           _highlightedEl.style[k] = _highlightedStyle[k] || '';
         }
