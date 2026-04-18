@@ -186,49 +186,47 @@
     const inBottomBar = targetEl.closest('.mobile-tabs, #moreMenuSheet, #moreMenuOverlay, .bottom-sheet, .bottom-sheet-content, .sheet-body');
 
     if (inBottomBar || IS_MOBILE()) {
-      _highlightedEl = targetEl;
-      const csHL = window.getComputedStyle(targetEl);
-      _highlightedStyle = {
-        outline: targetEl.style.outline,
-        outlineOffset: targetEl.style.outlineOffset,
-        boxShadow: targetEl.style.boxShadow,
-        borderRadius: targetEl.style.borderRadius,
-        background: targetEl.style.background,
-        backgroundColor: targetEl.style.backgroundColor,
-      };
-      targetEl.style.outline = '3px solid #1A7A5E';
-      targetEl.style.outlineOffset = '0px';
-      targetEl.style.boxShadow = '0 0 0 3px rgba(26,122,94,0.25), 0 8px 24px rgba(0,0,0,0.15)';
-      targetEl.style.borderRadius = '12px';
-      // Forcer un fond opaque si l'élément est transparent, sinon l'overlay sombre
-      // transparaît au travers et l'élément paraît grisé
-      const bgColor = csHL.backgroundColor;
-      const isTransparent = !bgColor
-        || bgColor === 'transparent'
-        || bgColor === 'rgba(0, 0, 0, 0)'
-        || /rgba\([^)]+,\s*0\s*\)$/.test(bgColor);
-      if (isTransparent) {
-        targetEl.style.setProperty('background-color', '#ffffff', 'important');
+      // SPOTLIGHT : on découpe un "trou" dans l'overlay autour de la cible
+      // → la cible apparaît telle quelle, dans ses vraies couleurs, sans voile sombre
+      const padding = 6;
+      const radius  = 12;
+      const x = Math.max(0, r.left - padding);
+      const y = Math.max(0, r.top - padding);
+      const w = r.width  + padding * 2;
+      const h = r.height + padding * 2;
+
+      // 1) Overlay découpé (4 rectangles autour du trou) via clip-path
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const clip = `polygon(
+        0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, 0 0,
+        ${x}px ${y}px,
+        ${x}px ${y+h}px,
+        ${x+w}px ${y+h}px,
+        ${x+w}px ${y}px,
+        ${x}px ${y}px
+      )`;
+      if (overlayEl) {
+        overlayEl.style.clipPath = clip;
+        overlayEl.style.webkitClipPath = clip;
       }
 
-      const container = targetEl.closest('.mobile-tabs')
-                     || targetEl.closest('.bottom-sheet')
-                     || targetEl.closest('#moreMenuSheet')
-                     || targetEl.closest('#moreMenuOverlay');
-      if (container) {
-        _highlightedStyle._container = container;
-        _highlightedStyle._containerZ = container.style.zIndex;
-        container.style.setProperty('z-index', '100004', 'important');
-      } else {
-        // Pas de conteneur bottom-bar/sheet → remonter l'élément lui-même
-        _highlightedStyle.position = targetEl.style.position;
-        _highlightedStyle.zIndex   = targetEl.style.zIndex;
-        const cs = window.getComputedStyle(targetEl);
-        if (cs.position === 'static') {
-          targetEl.style.setProperty('position', 'relative', 'important');
-        }
-        targetEl.style.setProperty('z-index', '100004', 'important');
-      }
+      // 2) Cadre vert par-dessus (sans toucher la cible, z-index haut)
+      cloneEl = document.createElement('div');
+      cloneEl.id = 'bh-tour-clone-wrap';
+      cloneEl.style.cssText = `
+        top: ${y}px;
+        left: ${x}px;
+        width: ${w}px;
+        height: ${h}px;
+        border-radius: ${radius}px;
+        outline: 3px solid #1A7A5E;
+        outline-offset: 0;
+        box-shadow: 0 0 0 4px rgba(26,122,94,0.25), 0 8px 24px rgba(0,0,0,0.2);
+        background: transparent;
+        pointer-events: none;
+      `;
+      document.body.appendChild(cloneEl);
       return;
     }
 
@@ -252,6 +250,11 @@
     const old = document.getElementById('bh-tour-clone-wrap');
     if (old) old.remove();
     cloneEl = null;
+    // Reset spotlight (si étape précédente en avait créé un)
+    if (overlayEl) {
+      overlayEl.style.clipPath = '';
+      overlayEl.style.webkitClipPath = '';
+    }
     if (_highlightedEl) {
       if (_highlightedStyle._container) {
         _highlightedStyle._container.style.zIndex = _highlightedStyle._containerZ || '';
