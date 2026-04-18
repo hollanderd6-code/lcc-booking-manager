@@ -287,6 +287,15 @@
         _highlightedStyle._container = container;
         _highlightedStyle._containerZ = container.style.zIndex;
         container.style.setProperty('z-index', '100004', 'important');
+      } else {
+        // Pas de conteneur bottom-bar/sheet (ex: carte KPI) → remonter l'élément lui-même
+        _highlightedStyle.position = targetEl.style.position;
+        _highlightedStyle.zIndex   = targetEl.style.zIndex;
+        const cs = window.getComputedStyle(targetEl);
+        if (cs.position === 'static') {
+          targetEl.style.setProperty('position', 'relative', 'important');
+        }
+        targetEl.style.setProperty('z-index', '100004', 'important');
       }
       return;
     }
@@ -319,8 +328,10 @@
         _highlightedStyle._container.style.zIndex = _highlightedStyle._containerZ || '';
       }
       // Restaurer les styles de l'élément (sauf les clés internes _*)
-      ['outline','outlineOffset','boxShadow','borderRadius'].forEach(k => {
-        _highlightedEl.style[k] = _highlightedStyle[k] || '';
+      ['outline','outlineOffset','boxShadow','borderRadius','position','zIndex'].forEach(k => {
+        if (k in _highlightedStyle) {
+          _highlightedEl.style[k] = _highlightedStyle[k] || '';
+        }
       });
       _highlightedEl = null;
       _highlightedStyle = {};
