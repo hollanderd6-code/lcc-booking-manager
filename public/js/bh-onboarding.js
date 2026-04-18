@@ -138,9 +138,27 @@
   function findSheetBtn(href) {
     const sheet = document.getElementById('moreMenuSheet');
     if (!sheet) return null;
+    // Chercher dans onclick ET dans le texte du bouton
     const btns = sheet.querySelectorAll('button');
     for (const btn of btns) {
-      if ((btn.getAttribute('onclick') || '').includes(href)) return btn;
+      const onclick = btn.getAttribute('onclick') || '';
+      if (onclick.includes(href)) return btn;
+    }
+    // Fallback : chercher par texte partiel (ex: 'Livrets', 'Contrats'...)
+    const labelMap = {
+      'welcome.html': 'Livrets',
+      'contrat.html': 'Contrats',
+      'cleaning.html': 'Ménage',
+      'deposits.html': 'Finances',
+      'factures.html': 'Factures',
+      'clients.html': 'Clients',
+      'reporting.html': 'Revenus',
+    };
+    const label = labelMap[href];
+    if (label) {
+      for (const btn of btns) {
+        if (btn.textContent.includes(label)) return btn;
+      }
     }
     return null;
   }
@@ -335,7 +353,7 @@
   }
 
   /* ── Positionner la bulle mobile ──────────────────────── */
-  function positionMobile(targetEl) {
+  function positionMobile(targetEl, forceTop) {
     bubbleEl.querySelectorAll('.t-arrow').forEach(a => a.remove());
     if (!targetEl) {
       bubbleEl.style.top = '50%'; bubbleEl.style.bottom = 'auto';
@@ -347,19 +365,24 @@
     const bH = bubbleEl.offsetHeight || 200;
     const bottomBarH = 90;
     const topBarH = 70;
+
+    if (forceTop) {
+      // Forcer la bulle en haut (pour les étapes sheet)
+      bubbleEl.style.top = (topBarH + 12) + 'px';
+      bubbleEl.style.bottom = 'auto';
+      return;
+    }
+
     const spaceBelow = window.innerHeight - r.bottom - bottomBarH;
     const spaceAbove = r.top - topBarH;
 
     if (spaceBelow >= bH + 16) {
-      // Assez de place en dessous
       bubbleEl.style.top = (r.bottom + 12) + 'px';
       bubbleEl.style.bottom = 'auto';
     } else if (spaceAbove >= bH + 16) {
-      // Assez de place au-dessus
       bubbleEl.style.bottom = (window.innerHeight - r.top + 12) + 'px';
       bubbleEl.style.top = 'auto';
     } else {
-      // Pas de place → bulle au-dessus de la bottom bar
       bubbleEl.style.bottom = (bottomBarH + 12) + 'px';
       bubbleEl.style.top = 'auto';
     }
@@ -465,7 +488,7 @@
           }, 360);
         } else {
           showClone(resolvedTarget);
-          positionMobile(resolvedTarget);
+          positionMobile(resolvedTarget, isSheet);
         }
       }, extraDelay);
     }));
