@@ -44,7 +44,7 @@
       mobile_target: () => document.querySelector('.tab-btn[data-tab="calendar"]'),
       title: '📅 Calendrier',
       text: 'Visualisez toutes vos réservations par logement. Cliquez sur une réservation pour accéder aux détails, messages et caution.',
-      position: 'top',
+      position: 'center',
       mobile_position: 'top',
     },
     {
@@ -373,22 +373,34 @@
     sidebar.scrollTo({ top: scrollTarget, behavior: 'smooth' });
   }
 
+  /* ── Vérifier si le sheet est visible ───────────────── */
+  function isSheetOpen() {
+    const sheet = document.getElementById('moreMenuSheet');
+    if (!sheet) return false;
+    const t = sheet.style.transform;
+    // Ouvert si transform = translateY(0) ou translateY(0px)
+    return t === 'translateY(0)' || t === 'translateY(0px)' || t === '';
+  }
+
   /* ── Ouvrir le menu Plus si nécessaire ───────────────── */
   function ensureSheetOpen() {
     return new Promise(resolve => {
-      const sheet = document.getElementById('moreMenuSheet');
-      if (sheet && sheet.style.transform !== 'translateY(100%)' && sheet.style.transform !== '') {
-        // Déjà ouvert
-        resolve();
+      if (isSheetOpen()) {
+        resolve(); // déjà ouvert, rien à faire
         return;
       }
-      // Ouvrir via le bouton More ou directement
       const moreBtn = document.querySelector('.tab-btn[data-tab="more"]');
       if (moreBtn) {
         moreBtn.click();
         sheetOpenedByTour = true;
-        // Attendre l'animation d'ouverture
-        setTimeout(resolve, 700);
+        setTimeout(() => {
+          // Monter le sheet au-dessus de l'overlay du tour
+          const sheet = document.getElementById('moreMenuSheet');
+          const sheetOvl = document.getElementById('moreMenuOverlay');
+          if (sheet) sheet.style.zIndex = '99998';
+          if (sheetOvl) sheetOvl.style.zIndex = '99997';
+          resolve();
+        }, 600);
       } else {
         resolve();
       }
@@ -471,6 +483,9 @@
     });
     injectStyles();
     createDOM();
+    // Cacher le FAB pendant le tour (il gêne le bouton Suivant)
+    const fab = document.getElementById('fabAddResa');
+    if (fab) fab.style.setProperty('display', 'none', 'important');
     currentStep = 0;
     renderStep(0);
   }
@@ -488,6 +503,14 @@
     ['bh-tour-overlay','bh-tour-cutout','bh-tour-bubble'].forEach(id => {
       const el = document.getElementById(id); if (el) el.remove();
     });
+    // Restaurer le FAB
+    const fab = document.getElementById('fabAddResa');
+    if (fab) fab.style.removeProperty('display');
+    // Restaurer z-index du sheet
+    const sheet2 = document.getElementById('moreMenuSheet');
+    const sheetOvl2 = document.getElementById('moreMenuOverlay');
+    if (sheet2) sheet2.style.zIndex = '10000';
+    if (sheetOvl2) sheetOvl2.style.zIndex = '9999';
     overlay = bubble = spotlight = null;
   }
 
@@ -519,3 +542,4 @@
   }
 
 })();
+
