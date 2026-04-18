@@ -128,10 +128,18 @@
           id: 'add-property',
           target: () => document.getElementById('btnAddProperty'),
           mobile_target: () => document.getElementById('btnAddProperty'),
+          before: () => {
+            // Scroller pour amener le bouton vers le haut du viewport
+            // → laisse la place à la bulle en dessous
+            const btn = document.getElementById('btnAddProperty');
+            if (btn && btn.scrollIntoView) {
+              btn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          },
           title: '➕ Ajouter un logement',
           text: 'Commencez par créer votre premier logement avec le bouton "Ajouter". Vous pourrez ensuite le connecter à Airbnb et Booking.com.',
-          position: 'top',
-          mobile_position: 'top',
+          position: 'bottom',
+          mobile_position: 'bottom',
         },
         {
           id: 'done',
