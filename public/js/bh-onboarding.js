@@ -303,13 +303,24 @@
     }
     bubbleEl.style.transform = '';
     const r = targetEl.getBoundingClientRect();
-    const mid = r.top + r.height / 2;
-    if (mid > window.innerHeight / 2) {
-      // Élément en bas → bulle au-dessus de la bottom bar
-      bubbleEl.style.bottom = '90px'; bubbleEl.style.top = 'auto';
+    const bH = bubbleEl.offsetHeight || 200;
+    const bottomBarH = 90;
+    const topBarH = 70;
+    const spaceBelow = window.innerHeight - r.bottom - bottomBarH;
+    const spaceAbove = r.top - topBarH;
+
+    if (spaceBelow >= bH + 16) {
+      // Assez de place en dessous
+      bubbleEl.style.top = (r.bottom + 12) + 'px';
+      bubbleEl.style.bottom = 'auto';
+    } else if (spaceAbove >= bH + 16) {
+      // Assez de place au-dessus
+      bubbleEl.style.bottom = (window.innerHeight - r.top + 12) + 'px';
+      bubbleEl.style.top = 'auto';
     } else {
-      // Élément en haut → bulle en dessous
-      bubbleEl.style.top = '80px'; bubbleEl.style.bottom = 'auto';
+      // Pas de place → bulle au-dessus de la bottom bar
+      bubbleEl.style.bottom = (bottomBarH + 12) + 'px';
+      bubbleEl.style.top = 'auto';
     }
   }
 
