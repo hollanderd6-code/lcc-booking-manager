@@ -197,8 +197,8 @@
         backgroundColor: targetEl.style.backgroundColor,
       };
       targetEl.style.outline = '3px solid #1A7A5E';
-      targetEl.style.outlineOffset = '3px';
-      targetEl.style.boxShadow = '0 0 0 6px rgba(26,122,94,0.25)';
+      targetEl.style.outlineOffset = '0px';
+      targetEl.style.boxShadow = '0 0 0 3px rgba(26,122,94,0.25), 0 8px 24px rgba(0,0,0,0.15)';
       targetEl.style.borderRadius = '12px';
       // Forcer un fond opaque si l'élément est transparent, sinon l'overlay sombre
       // transparaît au travers et l'élément paraît grisé
