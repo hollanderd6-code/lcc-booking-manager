@@ -1,0 +1,493 @@
+/* ============================================================
+   BOOSTINGHOST — Onboarding Tours par page (v1)
+   Moteur partagé + configs déclaratives par page.
+   Include : <script src="/js/bh-onboarding-pages.js"></script>
+   ============================================================ */
+
+(function () {
+  const IS_MOBILE = () => window.innerWidth <= 1366;
+
+  /* ============================================================
+     REGISTRE DES TOURS PAR PAGE
+     Clé = filename (match sur location.pathname)
+     ============================================================ */
+  const PAGE_TOURS = {
+
+    /* ── MESSAGES ─────────────────────────────────────────── */
+    'messages.html': {
+      storageKey: 'bh_ob_messages_v1',
+      onStart: null,
+      onFinish: () => {
+        // Revenir à l'onglet Messages à la fin du tour
+        if (typeof window.switchMsgsTab === 'function') {
+          try { window.switchMsgsTab('guests'); } catch (e) {}
+        }
+      },
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '💬 Votre messagerie centralisée',
+          text: 'Tous vos échanges avec vos plateformes au même endroit. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'tab-guests',
+          target: () => document.getElementById('tabGuests'),
+          mobile_target: () => document.getElementById('tabGuests'),
+          before: () => {
+            if (typeof window.switchMsgsTab === 'function') {
+              try { window.switchMsgsTab('guests'); } catch (e) {}
+            }
+          },
+          title: '📨 Messages',
+          text: 'Vos conversations en cours avec les voyageurs. Le badge rouge indique les non-lus.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'conversations',
+          target: () => document.getElementById('conversationsList'),
+          mobile_target: () => document.getElementById('msgsSearchInput'),
+          title: '🔍 Vos conversations',
+          text: 'Retrouvez ici toutes vos discussions, triées par date. Recherchez un voyageur par son nom.',
+          position: 'right',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-templates',
+          target: () => document.getElementById('tabTemplates'),
+          mobile_target: () => document.getElementById('tabTemplates'),
+          before: () => {
+            if (typeof window.switchMsgsTab === 'function') {
+              try { window.switchMsgsTab('templates'); } catch (e) {}
+            }
+          },
+          title: '📝 Templates automatiques',
+          text: 'Créez des messages pré-écrits déclenchés automatiquement : confirmation, arrivée, départ, avis...',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-logs',
+          target: () => document.getElementById('tabLogs'),
+          mobile_target: () => document.getElementById('tabLogs'),
+          before: () => {
+            if (typeof window.switchMsgsTab === 'function') {
+              try { window.switchMsgsTab('logs'); } catch (e) {}
+            }
+          },
+          title: '📊 Statut des envois',
+          text: 'Vérifiez que vos messages automatiques ont bien été envoyés. En cas d\'échec, vous voyez pourquoi.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 C\'est parti !',
+          text: 'Astuce : l\'IA peut rédiger des réponses adaptées en un clic. Essayez-la dans une conversation !',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
+    // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
+
+  };
+
+  /* ============================================================
+     MOTEUR DE RENDU
+     (même mécanique que bh-onboarding-17.js : clone flottant desktop
+      + outline direct mobile + gestion overlay/bulle)
+     ============================================================ */
+
+  let currentTour = null;   // config de la page en cours
+  let currentStep = 0;
+  let overlayEl, bubbleEl, cloneEl;
+  let _highlightedEl = null;
+  let _highlightedStyle = {};
+
+  /* ── Styles ───────────────────────────────────────────── */
+  function injectStyles() {
+    if (document.getElementById('bh-tour-pages-style')) return;
+    const s = document.createElement('style');
+    s.id = 'bh-tour-pages-style';
+    s.textContent = `
+      #bh-tour-overlay {
+        position: fixed; inset: 0; z-index: 100000;
+        background: rgba(13,17,23,0.75);
+        pointer-events: none;
+      }
+      #bh-tour-clone-wrap {
+        position: fixed; z-index: 100002;
+        pointer-events: none;
+        border-radius: 14px;
+        outline: 3px solid #1A7A5E;
+        outline-offset: 4px;
+        box-shadow: 0 0 0 4px rgba(26,122,94,0.25), 0 8px 32px rgba(0,0,0,0.3);
+        overflow: hidden;
+        transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
+      }
+      #bh-tour-clone-wrap img { pointer-events: none; }
+      #bh-tour-bubble {
+        position: fixed; z-index: 2147483647;
+        background: #fff; border-radius: 16px;
+        padding: 20px 22px 16px;
+        width: min(320px, calc(100vw - 32px));
+        box-shadow: 0 8px 40px rgba(0,0,0,.25);
+        font-family: 'DM Sans', sans-serif;
+        pointer-events: all;
+      }
+      .t-badge { font-size:11px;font-weight:700;color:#1A7A5E;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;opacity:.7; }
+      .t-title { font-size:15px;font-weight:700;color:#111827;margin-bottom:7px;line-height:1.3; }
+      .t-text  { font-size:13px;color:#4B5563;line-height:1.55;margin-bottom:16px; }
+      .t-footer{ display:flex;align-items:center;justify-content:space-between;gap:8px; }
+      .t-dots  { display:flex;gap:4px;align-items:center;flex-wrap:wrap;max-width:110px; }
+      .t-dot   { width:5px;height:5px;border-radius:50%;background:#E5E7EB;flex-shrink:0;transition:background .2s,transform .2s; }
+      .t-dot.on{ background:#1A7A5E;transform:scale(1.3); }
+      .t-actions{ display:flex;gap:8px;align-items:center;flex-shrink:0; }
+      .t-skip { background:none;border:none;font-size:12px;color:#9CA3AF;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px; }
+      .t-next { background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s; }
+      .t-next:hover { background:#15624B; }
+      .t-finish { background:linear-gradient(135deg,#1A7A5E,#2AAE86) !important; }
+      .t-arrow { position:absolute;width:14px;height:14px;background:#fff;pointer-events:none; }
+
+      @media (max-width: 1366px) {
+        #bh-tour-bubble {
+          left: 16px !important; right: 16px !important;
+          width: auto !important; transform: none !important;
+        }
+        .t-arrow { display: none !important; }
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  /* ── DOM ──────────────────────────────────────────────── */
+  function createDOM() {
+    overlayEl = document.createElement('div');
+    overlayEl.id = 'bh-tour-overlay';
+    bubbleEl = document.createElement('div');
+    bubbleEl.id = 'bh-tour-bubble';
+    document.body.appendChild(overlayEl);
+    document.body.appendChild(bubbleEl);
+  }
+
+  /* ── Highlight / Clone ────────────────────────────────── */
+  function showClone(targetEl) {
+    removeClone();
+    if (!targetEl) return;
+    const r = targetEl.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
+
+    // Stratégie mobile (ou élément dans bottom bar) : outline direct
+    const inBottomBar = targetEl.closest('.mobile-tabs, #moreMenuSheet, #moreMenuOverlay, .bottom-sheet, .bottom-sheet-content, .sheet-body');
+
+    if (inBottomBar || IS_MOBILE()) {
+      _highlightedEl = targetEl;
+      _highlightedStyle = {
+        outline: targetEl.style.outline,
+        outlineOffset: targetEl.style.outlineOffset,
+        boxShadow: targetEl.style.boxShadow,
+        borderRadius: targetEl.style.borderRadius,
+      };
+      targetEl.style.outline = '3px solid #1A7A5E';
+      targetEl.style.outlineOffset = '3px';
+      targetEl.style.boxShadow = '0 0 0 6px rgba(26,122,94,0.25)';
+      targetEl.style.borderRadius = '12px';
+
+      const container = targetEl.closest('.mobile-tabs')
+                     || targetEl.closest('.bottom-sheet')
+                     || targetEl.closest('#moreMenuSheet')
+                     || targetEl.closest('#moreMenuOverlay');
+      if (container) {
+        _highlightedStyle._container = container;
+        _highlightedStyle._containerZ = container.style.zIndex;
+        container.style.setProperty('z-index', '100004', 'important');
+      } else {
+        // Pas de conteneur bottom-bar/sheet → remonter l'élément lui-même
+        _highlightedStyle.position = targetEl.style.position;
+        _highlightedStyle.zIndex   = targetEl.style.zIndex;
+        const cs = window.getComputedStyle(targetEl);
+        if (cs.position === 'static') {
+          targetEl.style.setProperty('position', 'relative', 'important');
+        }
+        targetEl.style.setProperty('z-index', '100004', 'important');
+      }
+      return;
+    }
+
+    // Stratégie desktop : clone flottant
+    cloneEl = document.createElement('div');
+    cloneEl.id = 'bh-tour-clone-wrap';
+    cloneEl.style.cssText = `
+      top: ${r.top}px;
+      left: ${r.left}px;
+      width: ${r.width}px;
+      height: ${r.height}px;
+    `;
+    const inner = targetEl.cloneNode(true);
+    inner.style.cssText = `width:${r.width}px;height:${r.height}px;pointer-events:none;display:block;`;
+    inner.querySelectorAll('[onclick]').forEach(el => el.removeAttribute('onclick'));
+    cloneEl.appendChild(inner);
+    document.body.appendChild(cloneEl);
+  }
+
+  function removeClone() {
+    const old = document.getElementById('bh-tour-clone-wrap');
+    if (old) old.remove();
+    cloneEl = null;
+    if (_highlightedEl) {
+      if (_highlightedStyle._container) {
+        _highlightedStyle._container.style.zIndex = _highlightedStyle._containerZ || '';
+      }
+      ['outline','outlineOffset','boxShadow','borderRadius','position','zIndex'].forEach(k => {
+        if (k in _highlightedStyle) {
+          _highlightedEl.style[k] = _highlightedStyle[k] || '';
+        }
+      });
+      _highlightedEl = null;
+      _highlightedStyle = {};
+    }
+  }
+
+  /* ── Positionnement bulle desktop ─────────────────────── */
+  function positionDesktop(targetEl, position) {
+    const margin = 20, bW = 320;
+    const bH = bubbleEl.offsetHeight || 220;
+    bubbleEl.querySelectorAll('.t-arrow').forEach(a => a.remove());
+
+    if (!targetEl || position === 'center') {
+      bubbleEl.style.cssText += 'top:50%;left:50%;transform:translate(-50%,-50%);right:auto;bottom:auto;';
+      return;
+    }
+
+    bubbleEl.style.transform = '';
+    const r = targetEl.getBoundingClientRect();
+    const arrow = document.createElement('div');
+    arrow.className = 't-arrow';
+    let top, left;
+
+    if (position === 'bottom') {
+      top = r.bottom + 16; left = r.left + r.width/2 - bW/2;
+      arrow.style.cssText = 'top:-7px;left:50%;transform:translateX(-50%) rotate(45deg);border-top:1px solid #f3f4f6;border-left:1px solid #f3f4f6;';
+    } else if (position === 'top') {
+      top = r.top - bH - 16; left = r.left + r.width/2 - bW/2;
+      arrow.style.cssText = 'bottom:-7px;left:50%;transform:translateX(-50%) rotate(45deg);border-bottom:1px solid #f3f4f6;border-right:1px solid #f3f4f6;';
+    } else if (position === 'right') {
+      left = r.right + 16; top = r.top + r.height/2 - bH/2;
+      arrow.style.cssText = 'left:-7px;top:50%;transform:translateY(-50%) rotate(45deg);border-left:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;';
+    } else if (position === 'left') {
+      left = r.left - bW - 16; top = r.top + r.height/2 - bH/2;
+      arrow.style.cssText = 'right:-7px;top:50%;transform:translateY(-50%) rotate(45deg);border-top:1px solid #f3f4f6;border-right:1px solid #f3f4f6;';
+    } else {
+      top = r.bottom + 16; left = r.left + r.width/2 - bW/2;
+    }
+
+    left = Math.max(margin, Math.min(left, window.innerWidth - bW - margin));
+    top  = Math.max(margin, Math.min(top, window.innerHeight - bH - margin));
+    bubbleEl.style.top = top+'px'; bubbleEl.style.left = left+'px';
+    bubbleEl.style.right = 'auto'; bubbleEl.style.bottom = 'auto';
+    bubbleEl.appendChild(arrow);
+  }
+
+  /* ── Positionnement bulle mobile ──────────────────────── */
+  function positionMobile(targetEl, forceTop) {
+    bubbleEl.querySelectorAll('.t-arrow').forEach(a => a.remove());
+    if (!targetEl) {
+      bubbleEl.style.top = '50%'; bubbleEl.style.bottom = 'auto';
+      bubbleEl.style.transform = 'translateY(-50%)';
+      return;
+    }
+    bubbleEl.style.transform = '';
+    const r = targetEl.getBoundingClientRect();
+    const bH = bubbleEl.offsetHeight || 200;
+    const bottomBarH = 90;
+    const topBarH = 70;
+
+    if (forceTop) {
+      bubbleEl.style.top = (topBarH + 12) + 'px';
+      bubbleEl.style.bottom = 'auto';
+      return;
+    }
+
+    const spaceBelow = window.innerHeight - r.bottom - bottomBarH;
+    const spaceAbove = r.top - topBarH;
+
+    if (spaceBelow >= bH + 16) {
+      bubbleEl.style.top = (r.bottom + 12) + 'px';
+      bubbleEl.style.bottom = 'auto';
+    } else if (spaceAbove >= bH + 16) {
+      bubbleEl.style.bottom = (window.innerHeight - r.top + 12) + 'px';
+      bubbleEl.style.top = 'auto';
+    } else {
+      bubbleEl.style.bottom = (bottomBarH + 12) + 'px';
+      bubbleEl.style.top = 'auto';
+    }
+  }
+
+  /* ── Contenu de la bulle ──────────────────────────────── */
+  function renderBubble(step, index) {
+    const steps = currentTour.steps;
+    const total = steps.length;
+    const isLast = step.isLast || index === total - 1;
+    bubbleEl.innerHTML = `
+      <div class="t-badge">Étape ${index+1} sur ${total}</div>
+      <div class="t-title">${step.title}</div>
+      <div class="t-text">${step.text}</div>
+      <div class="t-footer">
+        <div class="t-dots">${steps.map((_,i)=>`<div class="t-dot ${i===index?'on':''}"></div>`).join('')}</div>
+        <div class="t-actions">
+          ${!isLast?`<button class="t-skip" onclick="window.__bhPagesTour.skip()">Passer</button>`:''}
+          <button class="t-next ${isLast?'t-finish':''}" onclick="window.__bhPagesTour.next()">
+            ${isLast?'<i class="fas fa-check"></i> Terminer':'Suivant <i class="fas fa-arrow-right"></i>'}
+          </button>
+        </div>
+      </div>`;
+  }
+
+  /* ── Rendu d'une étape ────────────────────────────────── */
+  async function renderStep(index) {
+    const step = currentTour.steps[index];
+    const mobile = IS_MOBILE();
+
+    removeClone();
+
+    // Hook "before" : permet de switcher de panel/onglet avant le rendu
+    if (typeof step.before === 'function') {
+      try { step.before(); } catch (e) { console.warn('[bh-tour] step.before failed', e); }
+    }
+
+    const position = mobile
+      ? (step.mobile_position || step.position || 'top')
+      : step.position;
+
+    renderBubble(step, index);
+
+    // Laisser le temps au DOM de refléter le switch de panel
+    const extraDelay = step.before ? 200 : 0;
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      setTimeout(() => {
+        const resolvedTarget = mobile
+          ? (step.mobile_target ? step.mobile_target() : null)
+          : (step.target ? step.target() : null);
+
+        if (!mobile) {
+          // petit scroll pour mettre la cible en vue si besoin
+          if (resolvedTarget && resolvedTarget.scrollIntoView) {
+            const r = resolvedTarget.getBoundingClientRect();
+            if (r.top < 80 || r.bottom > window.innerHeight - 80) {
+              resolvedTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+          setTimeout(() => {
+            showClone(resolvedTarget);
+            positionDesktop(resolvedTarget, position);
+          }, 300);
+        } else {
+          if (resolvedTarget && resolvedTarget.scrollIntoView) {
+            const r = resolvedTarget.getBoundingClientRect();
+            if (r.top < 80 || r.bottom > window.innerHeight - 120) {
+              resolvedTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+          setTimeout(() => {
+            showClone(resolvedTarget);
+            positionMobile(resolvedTarget, false);
+          }, 300);
+        }
+      }, extraDelay);
+    }));
+  }
+
+  /* ── Lifecycle ────────────────────────────────────────── */
+  function start(tour) {
+    currentTour = tour;
+    ['bh-tour-overlay','bh-tour-bubble','bh-tour-clone-wrap'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.remove();
+    });
+    injectStyles();
+    createDOM();
+    currentStep = 0;
+    if (typeof currentTour.onStart === 'function') {
+      try { currentTour.onStart(); } catch (e) {}
+    }
+    renderStep(0);
+  }
+
+  function next() {
+    currentStep++;
+    if (currentStep >= currentTour.steps.length) finish();
+    else renderStep(currentStep);
+  }
+
+  function finish() {
+    if (currentTour && currentTour.storageKey) {
+      localStorage.setItem(currentTour.storageKey, '1');
+    }
+    removeClone();
+    ['bh-tour-overlay','bh-tour-bubble'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.remove();
+    });
+    if (currentTour && typeof currentTour.onFinish === 'function') {
+      try { currentTour.onFinish(); } catch (e) {}
+    }
+    overlayEl = bubbleEl = null;
+    currentTour = null;
+  }
+
+  function skip() { finish(); }
+
+  /* ── API publique (pour relancer manuellement depuis les paramètres) */
+  window.__bhPagesTour = {
+    next, skip, finish,
+    startForPage: (filename) => {
+      const tour = PAGE_TOURS[filename];
+      if (tour) start(tour);
+    },
+    resetPage: (filename) => {
+      const tour = PAGE_TOURS[filename];
+      if (tour && tour.storageKey) localStorage.removeItem(tour.storageKey);
+    },
+  };
+
+  /* ── Auto-start basé sur la page courante ─────────────── */
+  function detectPageFilename() {
+    const path = location.pathname || '';
+    const match = path.match(/([^\/]+\.html)$/i);
+    return match ? match[1].toLowerCase() : '';
+  }
+
+  function maybeStart() {
+    const filename = detectPageFilename();
+    const tour = PAGE_TOURS[filename];
+    if (!tour) return;
+    if (localStorage.getItem(tour.storageKey)) return;
+
+    // Attendre que la page soit prête (éléments clés rendus)
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      // Heuristique : on attend le premier target non-null du tour
+      const firstTargetStep = tour.steps.find(s => s.target || s.mobile_target);
+      const mobile = IS_MOBILE();
+      const ready = firstTargetStep
+        ? (mobile
+            ? (firstTargetStep.mobile_target && firstTargetStep.mobile_target())
+            : (firstTargetStep.target && firstTargetStep.target()))
+        : true;
+      if (ready || tries > 30) {
+        clearInterval(t);
+        setTimeout(() => start(tour), 700);
+      }
+    }, 200);
+  }
+
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', maybeStart)
+    : maybeStart();
+
+})();
