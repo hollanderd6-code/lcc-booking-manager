@@ -287,10 +287,6 @@
         _highlightedStyle._container = container;
         _highlightedStyle._containerZ = container.style.zIndex;
         container.style.setProperty('z-index', '100004', 'important');
-      } else {
-        // Pas de container : monter l'élément directement
-        targetEl.style.position = 'relative';
-        targetEl.style.setProperty('z-index', '100004', 'important');
       }
       return;
     }
