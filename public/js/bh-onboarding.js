@@ -1,5 +1,6 @@
 /* ============================================================
-   BOOSTINGHOST — Onboarding Tour v4
+   BOOSTINGHOST — Onboarding Tour v5
+   Approche : clone flottant de l'élément ciblé
    <script src="/js/bh-onboarding.js"></script> avant </body>
    ============================================================ */
 
@@ -7,11 +8,6 @@
   const STORAGE_KEY = 'bh_onboarding_done_v1';
   const IS_MOBILE   = () => window.innerWidth <= 1366;
 
-  /* ─────────────────────────────────────────────────────────
-     ÉTAPES
-     mobile_target : fonction qui retourne l'élément sur mobile
-     mobile_sheet  : ouvrir le menu Plus avant de chercher la cible
-  ───────────────────────────────────────────────────────── */
   const STEPS = [
     {
       id: 'welcome',
@@ -73,7 +69,6 @@
       title: '📖 Livrets d\'accueil',
       text: 'Créez et personnalisez vos livrets d\'accueil numériques. Vos voyageurs y retrouvent toutes les informations du logement.',
       position: 'right',
-      mobile_position: 'top',
     },
     {
       id: 'nav-contrat',
@@ -83,7 +78,6 @@
       title: '📝 Contrats',
       text: 'Générez et envoyez vos mandats de gestion et contrats de location directement depuis l\'app.',
       position: 'right',
-      mobile_position: 'top',
     },
     {
       id: 'nav-cleaning',
@@ -93,7 +87,6 @@
       title: '🧹 Gestion du ménage',
       text: 'Planifiez les ménages, assignez vos prestataires et suivez les interventions entre chaque séjour.',
       position: 'right',
-      mobile_position: 'top',
     },
     {
       id: 'nav-deposits',
@@ -103,7 +96,6 @@
       title: '💰 Finances',
       text: 'Gérez les cautions et paiements directs de vos voyageurs. Suivez les encaissements et remboursements.',
       position: 'right',
-      mobile_position: 'top',
     },
     {
       id: 'nav-factures',
@@ -113,7 +105,6 @@
       title: '🧾 Factures séjours',
       text: 'Générez automatiquement les factures pour chaque séjour et envoyez-les à vos voyageurs.',
       position: 'right',
-      mobile_position: 'top',
     },
     {
       id: 'nav-clients',
@@ -123,7 +114,6 @@
       title: '👥 Mes Clients',
       text: 'Retrouvez la fiche de chaque voyageur avec son historique de séjours, ses coordonnées et ses préférences.',
       position: 'right',
-      mobile_position: 'top',
     },
     {
       id: 'nav-reporting',
@@ -133,383 +123,294 @@
       title: '📈 Revenus',
       text: 'Suivez vos performances par logement, comparez les périodes et exportez vos données comptables.',
       position: 'right',
-      mobile_position: 'top',
     },
     {
       id: 'done',
       target: null,
       title: '🎉 Vous êtes prêt !',
-      text: 'Commencez par ajouter votre premier logement. Vous pouvez revoir ce tour à tout moment depuis vos Paramètres.',
+      text: 'Commencez par ajouter votre premier logement. Vous pouvez revoir ce tour depuis vos Paramètres.',
       position: 'center',
       isLast: true,
     },
   ];
 
-  /* ── Trouver un bouton dans le bottom sheet par href ──── */
+  /* ── Trouver un bouton dans le sheet ──────────────────── */
   function findSheetBtn(href) {
     const sheet = document.getElementById('moreMenuSheet');
     if (!sheet) return null;
     const btns = sheet.querySelectorAll('button');
     for (const btn of btns) {
-      const onclick = btn.getAttribute('onclick') || '';
-      if (onclick.includes(href)) return btn;
+      if ((btn.getAttribute('onclick') || '').includes(href)) return btn;
     }
     return null;
   }
 
   /* ── État ─────────────────────────────────────────────── */
   let currentStep = 0;
-  let overlay, bubble, spotlight;
-  let sheetOpenedByTour = false;
+  let overlayEl, bubbleEl, cloneEl;
+  let sheetOpen = false;
 
   /* ── Styles ───────────────────────────────────────────── */
   function injectStyles() {
-    if (document.getElementById('bh-onboarding-style')) return;
+    if (document.getElementById('bh-tour-style')) return;
     const s = document.createElement('style');
-    s.id = 'bh-onboarding-style';
+    s.id = 'bh-tour-style';
     s.textContent = `
       #bh-tour-overlay {
-        position: fixed; inset: 0; z-index: 99990; pointer-events: none;
-      }
-      #bh-tour-cutout {
-        position: fixed; z-index: 99991;
-        border-radius: 12px;
-        box-shadow: 0 0 0 9999px rgba(13,17,23,0.72);
+        position: fixed; inset: 0; z-index: 100000;
+        background: rgba(13,17,23,0.75);
         pointer-events: none;
-        transition: top .3s cubic-bezier(.4,0,.2,1),
-                    left .3s, width .3s, height .3s;
       }
+      #bh-tour-clone-wrap {
+        position: fixed; z-index: 100002;
+        pointer-events: none;
+        border-radius: 14px;
+        outline: 3px solid #1A7A5E;
+        outline-offset: 4px;
+        box-shadow: 0 0 0 4px rgba(26,122,94,0.25), 0 8px 32px rgba(0,0,0,0.3);
+        overflow: hidden;
+        transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
+      }
+      #bh-tour-clone-wrap img { pointer-events: none; }
       #bh-tour-bubble {
-        position: fixed; z-index: 99999;
+        position: fixed; z-index: 100003;
         background: #fff; border-radius: 16px;
         padding: 20px 22px 16px;
         width: min(320px, calc(100vw - 32px));
-        box-shadow: 0 8px 40px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.10);
+        box-shadow: 0 8px 40px rgba(0,0,0,.25);
         font-family: 'DM Sans', sans-serif;
         pointer-events: all;
       }
-      .tour-step-badge {
-        font-size: 11px; font-weight: 700; color: #1A7A5E;
-        letter-spacing: .06em; text-transform: uppercase;
-        margin-bottom: 6px; opacity: .7;
-      }
-      .tour-title {
-        font-size: 15px; font-weight: 700; color: #111827;
-        margin-bottom: 7px; line-height: 1.3;
-      }
-      .tour-text {
-        font-size: 13px; color: #4B5563;
-        line-height: 1.55; margin-bottom: 16px;
-      }
-      .tour-arrow {
-        position: absolute; width: 14px; height: 14px;
-        background: #fff; pointer-events: none;
-      }
-      .tour-footer {
-        display: flex; align-items: center;
-        justify-content: space-between; gap: 8px;
-      }
-      .tour-dots {
-        display: flex; gap: 4px; align-items: center;
-        flex-wrap: wrap; max-width: 100px;
-      }
-      .tour-dot {
-        width: 5px; height: 5px; border-radius: 50%;
-        background: #E5E7EB;
-        transition: background .2s, transform .2s;
-        flex-shrink: 0;
-      }
-      .tour-dot.active { background: #1A7A5E; transform: scale(1.3); }
-      .tour-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-      .tour-btn-skip {
-        background: none; border: none; font-size: 12px; color: #9CA3AF;
-        cursor: pointer; font-family: 'DM Sans', sans-serif;
-        padding: 4px 8px; border-radius: 6px; white-space: nowrap;
-      }
-      .tour-btn-skip:hover { color: #6B7280; }
-      .tour-btn-next {
-        background: #1A7A5E; color: #fff; border: none;
-        border-radius: 10px; padding: 8px 16px;
-        font-size: 13px; font-weight: 600; cursor: pointer;
-        font-family: 'DM Sans', sans-serif;
-        display: flex; align-items: center; gap: 6px;
-        white-space: nowrap;
-        transition: background .15s, transform .1s;
-      }
-      .tour-btn-next:hover { background: #15624B; }
-      .tour-btn-next:active { transform: scale(.97); }
-      .tour-btn-finish { background: linear-gradient(135deg,#1A7A5E,#2AAE86); }
+      .t-badge { font-size:11px;font-weight:700;color:#1A7A5E;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;opacity:.7; }
+      .t-title { font-size:15px;font-weight:700;color:#111827;margin-bottom:7px;line-height:1.3; }
+      .t-text  { font-size:13px;color:#4B5563;line-height:1.55;margin-bottom:16px; }
+      .t-footer{ display:flex;align-items:center;justify-content:space-between;gap:8px; }
+      .t-dots  { display:flex;gap:4px;align-items:center;flex-wrap:wrap;max-width:110px; }
+      .t-dot   { width:5px;height:5px;border-radius:50%;background:#E5E7EB;flex-shrink:0;transition:background .2s,transform .2s; }
+      .t-dot.on{ background:#1A7A5E;transform:scale(1.3); }
+      .t-actions{ display:flex;gap:8px;align-items:center;flex-shrink:0; }
+      .t-skip { background:none;border:none;font-size:12px;color:#9CA3AF;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px; }
+      .t-next { background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s; }
+      .t-next:hover { background:#15624B; }
+      .t-finish { background:linear-gradient(135deg,#1A7A5E,#2AAE86) !important; }
+      .t-arrow { position:absolute;width:14px;height:14px;background:#fff;pointer-events:none; }
 
-      /* ── Mobile : bulle positionnée dynamiquement ── */
       @media (max-width: 1366px) {
         #bh-tour-bubble {
-          left: 16px !important;
-          right: 16px !important;
-          width: auto !important;
-          transform: none !important;
+          left: 16px !important; right: 16px !important;
+          width: auto !important; transform: none !important;
         }
-        .tour-arrow { display: none !important; }
-      }
-
-      /* Élément mis en avant au-dessus de l'overlay */
-      .bh-tour-highlighted {
-        position: relative !important;
-        z-index: 99995 !important;
-        outline: 3px solid #1A7A5E !important;
-        outline-offset: 3px !important;
-        border-radius: 12px !important;
-        box-shadow: 0 0 0 4px rgba(26,122,94,0.2) !important;
+        .t-arrow { display: none !important; }
       }
     `;
     document.head.appendChild(s);
   }
 
-  /* ── DOM ──────────────────────────────────────────────── */
+  /* ── Créer DOM ────────────────────────────────────────── */
   function createDOM() {
-    overlay   = document.createElement('div'); overlay.id   = 'bh-tour-overlay';
-    spotlight = document.createElement('div'); spotlight.id = 'bh-tour-cutout';
-    bubble    = document.createElement('div'); bubble.id    = 'bh-tour-bubble';
-    document.body.appendChild(overlay);
-    document.body.appendChild(spotlight);
-    document.body.appendChild(bubble);
+    overlayEl = document.createElement('div');
+    overlayEl.id = 'bh-tour-overlay';
+
+    bubbleEl = document.createElement('div');
+    bubbleEl.id = 'bh-tour-bubble';
+
+    document.body.appendChild(overlayEl);
+    document.body.appendChild(bubbleEl);
   }
 
-  /* ── Nettoyer les highlights précédents ─────────────── */
-  function clearHighlights() {
-    document.querySelectorAll('.bh-tour-highlighted').forEach(el => {
-      el.classList.remove('bh-tour-highlighted');
-    });
-  }
+  /* ── Clone flottant de l'élément ciblé ───────────────── */
+  function showClone(targetEl) {
+    removeClone();
+    if (!targetEl) return;
 
-  /* ── Spotlight ────────────────────────────────────────── */
-  function highlightTarget(targetEl, useOutline) {
-    clearHighlights();
-
-    if (!targetEl) {
-      spotlight.style.cssText = 'position:fixed;inset:0;z-index:99991;pointer-events:none;box-shadow:0 0 0 9999px rgba(13,17,23,0.72);border-radius:0;';
-      return;
-    }
-
-    // Mode outline : pour les éléments dans un stacking context (sheet, modal)
-    if (useOutline) {
-      spotlight.style.cssText = 'position:fixed;inset:0;z-index:99991;pointer-events:none;box-shadow:0 0 0 9999px rgba(13,17,23,0.55);border-radius:0;';
-      targetEl.classList.add('bh-tour-highlighted');
-      return;
-    }
-
-    // Mode spotlight normal : élément mis au-dessus via z-index
     const r = targetEl.getBoundingClientRect();
-    const pad = 8;
-    spotlight.style.cssText = `
-      position:fixed;z-index:99991;pointer-events:none;
-      top:${r.top-pad}px;left:${r.left-pad}px;
-      width:${r.width+pad*2}px;height:${r.height+pad*2}px;
-      border-radius:12px;
-      box-shadow:0 0 0 9999px rgba(13,17,23,0.72);
-      transition:top .3s cubic-bezier(.4,0,.2,1),left .3s,width .3s,height .3s;
+    if (r.width === 0 && r.height === 0) return;
+
+    cloneEl = document.createElement('div');
+    cloneEl.id = 'bh-tour-clone-wrap';
+    cloneEl.style.cssText = `
+      top: ${r.top}px;
+      left: ${r.left}px;
+      width: ${r.width}px;
+      height: ${r.height}px;
     `;
-    // Faire remonter l'élément au-dessus de l'overlay
-    targetEl.classList.add('bh-tour-highlighted');
+
+    // Cloner le contenu visuel
+    const inner = targetEl.cloneNode(true);
+    inner.style.cssText = `
+      width: ${r.width}px;
+      height: ${r.height}px;
+      pointer-events: none;
+      display: block;
+    `;
+    // Supprimer les onclick du clone pour éviter tout déclenchement
+    inner.querySelectorAll('[onclick]').forEach(el => el.removeAttribute('onclick'));
+
+    cloneEl.appendChild(inner);
+    document.body.appendChild(cloneEl);
   }
 
-  /* ── Position bulle desktop ───────────────────────────── */
-  function positionBubbleDesktop(targetEl, position) {
-    const margin = 20;
-    const bW     = 320;
-    const bH     = bubble.offsetHeight || 220;
+  function removeClone() {
+    const old = document.getElementById('bh-tour-clone-wrap');
+    if (old) old.remove();
+    cloneEl = null;
+  }
 
-    bubble.querySelectorAll('.tour-arrow').forEach(a => a.remove());
+  /* ── Positionner la bulle desktop ─────────────────────── */
+  function positionDesktop(targetEl, position) {
+    const margin = 20, bW = 320;
+    const bH = bubbleEl.offsetHeight || 220;
+    bubbleEl.querySelectorAll('.t-arrow').forEach(a => a.remove());
 
     if (!targetEl || position === 'center') {
-      bubble.style.cssText += 'top:50%;left:50%;transform:translate(-50%,-50%);right:auto;bottom:auto;';
+      bubbleEl.style.cssText += 'top:50%;left:50%;transform:translate(-50%,-50%);right:auto;bottom:auto;';
       return;
     }
 
-    bubble.style.transform = '';
+    bubbleEl.style.transform = '';
     const r = targetEl.getBoundingClientRect();
     const arrow = document.createElement('div');
-    arrow.className = 'tour-arrow';
-
+    arrow.className = 't-arrow';
     let top, left;
 
     if (position === 'bottom') {
-      top  = r.bottom + 16;
-      left = r.left + r.width/2 - bW/2;
+      top = r.bottom + 16; left = r.left + r.width/2 - bW/2;
       arrow.style.cssText = 'top:-7px;left:50%;transform:translateX(-50%) rotate(45deg);border-top:1px solid #f3f4f6;border-left:1px solid #f3f4f6;';
     } else if (position === 'top') {
-      top  = r.top - bH - 16;
-      left = r.left + r.width/2 - bW/2;
+      top = r.top - bH - 16; left = r.left + r.width/2 - bW/2;
       arrow.style.cssText = 'bottom:-7px;left:50%;transform:translateX(-50%) rotate(45deg);border-bottom:1px solid #f3f4f6;border-right:1px solid #f3f4f6;';
     } else if (position === 'right') {
-      left = r.right + 16;
-      top  = r.top + r.height/2 - bH/2;
+      left = r.right + 16; top = r.top + r.height/2 - bH/2;
       arrow.style.cssText = 'left:-7px;top:50%;transform:translateY(-50%) rotate(45deg);border-left:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;';
     } else {
-      top  = r.bottom + 16;
-      left = r.left + r.width/2 - bW/2;
+      top = r.bottom + 16; left = r.left + r.width/2 - bW/2;
     }
 
-    left = Math.max(margin, Math.min(left, window.innerWidth  - bW - margin));
-    top  = Math.max(margin, Math.min(top,  window.innerHeight - bH - margin));
-
-    bubble.style.top    = top  + 'px';
-    bubble.style.left   = left + 'px';
-    bubble.style.right  = 'auto';
-    bubble.style.bottom = 'auto';
-    bubble.appendChild(arrow);
+    left = Math.max(margin, Math.min(left, window.innerWidth - bW - margin));
+    top  = Math.max(margin, Math.min(top, window.innerHeight - bH - margin));
+    bubbleEl.style.top = top+'px'; bubbleEl.style.left = left+'px';
+    bubbleEl.style.right = 'auto'; bubbleEl.style.bottom = 'auto';
+    bubbleEl.appendChild(arrow);
   }
 
-  /* ── Position bulle mobile ────────────────────────────── */
-  function positionBubbleMobile(targetEl, position) {
-    // Bottom bar height + safe area
-    const bottomBarH = 80;
-    const topBarH    = 70;
-    const margin     = 16;
-
-    bubble.querySelectorAll('.tour-arrow').forEach(a => a.remove());
-
-    if (!targetEl || position === 'center') {
-      // Centré verticalement
-      bubble.style.top    = '50%';
-      bubble.style.bottom = 'auto';
-      bubble.style.transform = 'translateY(-50%)';
+  /* ── Positionner la bulle mobile ──────────────────────── */
+  function positionMobile(targetEl) {
+    bubbleEl.querySelectorAll('.t-arrow').forEach(a => a.remove());
+    if (!targetEl) {
+      bubbleEl.style.top = '50%'; bubbleEl.style.bottom = 'auto';
+      bubbleEl.style.transform = 'translateY(-50%)';
       return;
     }
-
-    bubble.style.transform = '';
-    const r   = targetEl.getBoundingClientRect();
-    const bH  = bubble.offsetHeight || 200;
+    bubbleEl.style.transform = '';
+    const r = targetEl.getBoundingClientRect();
     const mid = r.top + r.height / 2;
-
-    if (position === 'top' || mid > window.innerHeight / 2) {
-      // Élément en bas (bottom bar) → bulle au-dessus de la bottom bar
-      bubble.style.bottom = (bottomBarH + 12) + 'px';
-      bubble.style.top    = 'auto';
+    if (mid > window.innerHeight / 2) {
+      // Élément en bas → bulle au-dessus de la bottom bar
+      bubbleEl.style.bottom = '90px'; bubbleEl.style.top = 'auto';
     } else {
-      // Élément en haut → bulle en dessous de la top bar
-      bubble.style.top    = (topBarH + 12) + 'px';
-      bubble.style.bottom = 'auto';
+      // Élément en haut → bulle en dessous
+      bubbleEl.style.top = '80px'; bubbleEl.style.bottom = 'auto';
     }
   }
 
-  /* ── Scroll sidebar (desktop) ─────────────────────────── */
-  function scrollSidebarTo(targetEl) {
-    if (!targetEl) return;
+  /* ── Scroll sidebar desktop ───────────────────────────── */
+  function scrollSidebar(el) {
+    if (!el) return;
     const sidebar = document.querySelector('.sidebar-nav, aside nav, #bhSidebar nav, #bhSidebar');
     if (!sidebar) return;
-    const sRect = sidebar.getBoundingClientRect();
-    const eRect = targetEl.getBoundingClientRect();
-    const scrollTarget = sidebar.scrollTop + (eRect.top - sRect.top) - sidebar.clientHeight/2 + eRect.height/2;
-    sidebar.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+    const sR = sidebar.getBoundingClientRect(), eR = el.getBoundingClientRect();
+    sidebar.scrollTo({ top: sidebar.scrollTop + (eR.top - sR.top) - sidebar.clientHeight/2 + eR.height/2, behavior: 'smooth' });
   }
 
-  /* ── Vérifier si le sheet est visible ───────────────── */
-  function isSheetOpen() {
-    const sheet = document.getElementById('moreMenuSheet');
-    if (!sheet) return false;
-    const t = sheet.style.transform;
-    // Ouvert si transform = translateY(0) ou translateY(0px)
-    return t === 'translateY(0)' || t === 'translateY(0px)' || t === '';
+  /* ── Ouvrir le menu Plus ──────────────────────────────── */
+  function isSheetVisible() {
+    const s = document.getElementById('moreMenuSheet');
+    if (!s) return false;
+    const t = s.style.transform;
+    return t === 'translateY(0)' || t === 'translateY(0px)';
   }
 
-  /* ── Ouvrir le menu Plus si nécessaire ───────────────── */
   function ensureSheetOpen() {
     return new Promise(resolve => {
-      if (isSheetOpen()) {
-        resolve(); // déjà ouvert, rien à faire
-        return;
-      }
-      const moreBtn = document.querySelector('.tab-btn[data-tab="more"]');
-      if (moreBtn) {
-        moreBtn.click();
-        sheetOpenedByTour = true;
-        setTimeout(resolve, 600);
-      } else {
-        resolve();
-      }
+      if (isSheetVisible()) { resolve(); return; }
+      const btn = document.querySelector('.tab-btn[data-tab="more"]');
+      if (btn) { btn.click(); sheetOpen = true; setTimeout(resolve, 650); }
+      else resolve();
     });
   }
 
-  /* ── Rendre le contenu HTML de la bulle ──────────────── */
-  function renderBubbleContent(step, index) {
-    const total  = STEPS.length;
-    const isLast = step.isLast || index === total - 1;
-    bubble.innerHTML = `
-      <div class="tour-step-badge">Étape ${index+1} sur ${total}</div>
-      <div class="tour-title">${step.title}</div>
-      <div class="tour-text">${step.text}</div>
-      <div class="tour-footer">
-        <div class="tour-dots">
-          ${STEPS.map((_, i) => `<div class="tour-dot ${i===index?'active':''}"></div>`).join('')}
-        </div>
-        <div class="tour-actions">
-          ${!isLast ? `<button class="tour-btn-skip" onclick="window.__bhTour.skip()">Passer</button>` : ''}
-          <button class="tour-btn-next ${isLast?'tour-btn-finish':''}" onclick="window.__bhTour.next()">
-            ${isLast ? '<i class="fas fa-check"></i> Terminer' : 'Suivant <i class="fas fa-arrow-right"></i>'}
+  /* ── Contenu HTML de la bulle ─────────────────────────── */
+  function renderBubble(step, index) {
+    const total = STEPS.length, isLast = step.isLast || index === total-1;
+    bubbleEl.innerHTML = `
+      <div class="t-badge">Étape ${index+1} sur ${total}</div>
+      <div class="t-title">${step.title}</div>
+      <div class="t-text">${step.text}</div>
+      <div class="t-footer">
+        <div class="t-dots">${STEPS.map((_,i)=>`<div class="t-dot ${i===index?'on':''}"></div>`).join('')}</div>
+        <div class="t-actions">
+          ${!isLast?`<button class="t-skip" onclick="window.__bhTour.skip()">Passer</button>`:''}
+          <button class="t-next ${isLast?'t-finish':''}" onclick="window.__bhTour.next()">
+            ${isLast?'<i class="fas fa-check"></i> Terminer':'Suivant <i class="fas fa-arrow-right"></i>'}
           </button>
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
   /* ── Rendre une étape ──────────────────────────────────── */
   async function renderStep(index) {
-    const step    = STEPS[index];
-    const mobile  = IS_MOBILE();
+    const step   = STEPS[index];
+    const mobile = IS_MOBILE();
     const isSheet = mobile && step.mobile_sheet;
 
-    // Ouvrir le menu Plus si nécessaire
+    removeClone();
+
+    // Gérer le sheet
     if (isSheet) {
-      highlightTarget(null); // overlay vide pendant ouverture
       await ensureSheetOpen();
-    } else if (sheetOpenedByTour) {
+    } else if (sheetOpen) {
       if (window.closeMoreMenu) window.closeMoreMenu();
-      sheetOpenedByTour = false;
+      sheetOpen = false;
       await new Promise(r => setTimeout(r, 300));
     }
 
-    const position = mobile
-      ? (step.mobile_position || step.position)
-      : step.position;
-
-    // Contenu bulle d'abord
-    renderBubbleContent(step, index);
-
-    // Résoudre la cible APRÈS que le sheet soit ouvert (DOM prêt)
+    // Résoudre la cible
     const targetEl = mobile
       ? (step.mobile_target ? step.mobile_target() : null)
       : (step.target ? step.target() : null);
 
-    // Spotlight sur la vraie cible
-    // useOutline=true pour les éléments dans le sheet (stacking context)
-    highlightTarget(targetEl, isSheet);
+    const position = mobile
+      ? (step.mobile_position || step.position || 'top')
+      : step.position;
 
-    // Positionner après peinture
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!mobile) {
-          scrollSidebarTo(targetEl);
-          setTimeout(() => {
-            if (targetEl) highlightTarget(targetEl, false);
-            positionBubbleDesktop(targetEl, position);
-          }, 360);
-        } else {
-          positionBubbleMobile(targetEl, position);
-        }
-      });
-    });
+    // Contenu bulle
+    renderBubble(step, index);
+
+    // Attendre le paint puis cloner + positionner
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!mobile) {
+        scrollSidebar(targetEl);
+        setTimeout(() => {
+          showClone(targetEl);
+          positionDesktop(targetEl, position);
+        }, 360);
+      } else {
+        showClone(targetEl);
+        positionMobile(targetEl);
+      }
+    }));
   }
 
   /* ── Lifecycle ─────────────────────────────────────────── */
   function start() {
-    ['bh-tour-overlay','bh-tour-cutout','bh-tour-bubble'].forEach(id => {
+    ['bh-tour-overlay','bh-tour-bubble','bh-tour-clone-wrap'].forEach(id => {
       const el = document.getElementById(id); if (el) el.remove();
     });
     injectStyles();
     createDOM();
-    // Cacher le FAB pendant le tour (il gêne le bouton Suivant)
+    // Cacher FAB
     const fab = document.getElementById('fabAddResa');
-    if (fab) fab.style.setProperty('display', 'none', 'important');
+    if (fab) fab.style.setProperty('display','none','important');
     currentStep = 0;
     renderStep(0);
   }
@@ -522,44 +423,36 @@
 
   function finish() {
     localStorage.setItem(STORAGE_KEY, '1');
-    // Fermer le sheet si ouvert par le tour
-    if (sheetOpenedByTour && window.closeMoreMenu) window.closeMoreMenu();
-    ['bh-tour-overlay','bh-tour-cutout','bh-tour-bubble'].forEach(id => {
+    if (sheetOpen && window.closeMoreMenu) window.closeMoreMenu();
+    removeClone();
+    ['bh-tour-overlay','bh-tour-bubble'].forEach(id => {
       const el = document.getElementById(id); if (el) el.remove();
     });
-    // Restaurer le FAB
+    // Restaurer FAB
     const fab = document.getElementById('fabAddResa');
     if (fab) fab.style.removeProperty('display');
-
-    overlay = bubble = spotlight = null;
+    overlayEl = bubbleEl = null; sheetOpen = false;
   }
 
   function skip() { finish(); }
 
-  /* ── API publique ──────────────────────────────────────── */
   window.__bhTour = { next, skip, start, finish };
 
   /* ── Auto-start ────────────────────────────────────────── */
   function maybeStart() {
     if (localStorage.getItem(STORAGE_KEY)) return;
-    let attempts = 0;
-    const wait = setInterval(() => {
-      attempts++;
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
       const ready = IS_MOBILE()
         ? document.querySelector('.tab-btn[data-tab="dashboard"]')
         : document.querySelector('.nav-item[data-page="settings"]');
-      if (ready || attempts > 30) {
-        clearInterval(wait);
-        setTimeout(start, 700);
-      }
+      if (ready || tries > 30) { clearInterval(t); setTimeout(start, 700); }
     }, 200);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', maybeStart);
-  } else {
-    maybeStart();
-  }
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', maybeStart)
+    : maybeStart();
 
 })();
-
