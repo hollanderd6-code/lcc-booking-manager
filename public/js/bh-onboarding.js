@@ -277,20 +277,21 @@
       targetEl.style.boxShadow = '0 0 0 6px rgba(26,122,94,0.25)';
       targetEl.style.borderRadius = '12px';
 
-      // Monter l'élément au-dessus de l'overlay
+      // Monter le parent conteneur au-dessus de l'overlay
+      // (tab-btn → .mobile-tabs, bouton sheet → #moreMenuSheet)
       const container = targetEl.closest('.mobile-tabs') 
                      || targetEl.closest('.bottom-sheet')
                      || targetEl.closest('#moreMenuSheet')
                      || targetEl.closest('#moreMenuOverlay');
       if (container) {
-        // Conteneur particulier (bottom bar / sheet) : monter le parent
         _highlightedStyle._container = container;
         _highlightedStyle._containerZ = container.style.zIndex;
         container.style.setProperty('z-index', '100004', 'important');
       } else {
-        // Élément standalone (KPI, FAB, etc.) : monter directement l'élément
-        _highlightedStyle.position = targetEl.style.position;
-        _highlightedStyle.zIndex = targetEl.style.zIndex;
+        // Élément standalone (KPI, etc.) : monter directement l'élément
+        _highlightedStyle._standaloneEl = targetEl;
+        _highlightedStyle._standalonePosition = targetEl.style.position;
+        _highlightedStyle._standaloneZ = targetEl.style.zIndex;
         targetEl.style.position = 'relative';
         targetEl.style.setProperty('z-index', '100004', 'important');
       }
@@ -324,11 +325,14 @@
       if (_highlightedStyle._container) {
         _highlightedStyle._container.style.zIndex = _highlightedStyle._containerZ || '';
       }
+      // Restaurer l'élément standalone (position + z-index)
+      if (_highlightedStyle._standaloneEl) {
+        _highlightedStyle._standaloneEl.style.position = _highlightedStyle._standalonePosition || '';
+        _highlightedStyle._standaloneEl.style.zIndex = _highlightedStyle._standaloneZ || '';
+      }
       // Restaurer les styles de l'élément (sauf les clés internes _*)
-      ['outline','outlineOffset','boxShadow','borderRadius','position','zIndex'].forEach(k => {
-        if (_highlightedStyle[k] !== undefined) {
-          _highlightedEl.style[k] = _highlightedStyle[k] || '';
-        }
+      ['outline','outlineOffset','boxShadow','borderRadius'].forEach(k => {
+        _highlightedEl.style[k] = _highlightedStyle[k] || '';
       });
       _highlightedEl = null;
       _highlightedStyle = {};
