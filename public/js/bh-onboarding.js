@@ -414,21 +414,17 @@
       await new Promise(r => setTimeout(r, 300));
     }
 
-    // Résoudre la cible
-    const targetEl = mobile
-      ? (step.mobile_target ? step.mobile_target() : null)
-      : (step.target ? step.target() : null);
-
     const position = mobile
       ? (step.mobile_position || step.position || 'top')
       : step.position;
 
     // Gérer le FAB : visible uniquement à l'étape nouvelle-réservation
     const fab = document.getElementById('fabAddResa');
+    const isFabStep = step.id === 'new-reservation';
     if (fab) {
-      if (step.id === 'new-reservation') {
+      if (isFabStep) {
         fab.style.removeProperty('display');
-        fab.style.setProperty('z-index', '100004', 'important'); // au-dessus de tout
+        fab.style.setProperty('z-index', '100004', 'important');
       } else {
         fab.style.setProperty('display', 'none', 'important');
         fab.style.removeProperty('z-index');
@@ -438,18 +434,28 @@
     // Contenu bulle
     renderBubble(step, index);
 
+    // Délai supplémentaire si FAB pour attendre son rendu
+    const extraDelay = isFabStep ? 100 : 0;
+
     // Attendre le paint puis cloner + positionner
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (!mobile) {
-        scrollSidebar(targetEl);
-        setTimeout(() => {
-          showClone(targetEl);
-          positionDesktop(targetEl, position);
-        }, 360);
-      } else {
-        showClone(targetEl);
-        positionMobile(targetEl);
-      }
+      setTimeout(() => {
+        // Résoudre la cible ICI après délai (FAB maintenant visible)
+        const resolvedTarget = mobile
+          ? (step.mobile_target ? step.mobile_target() : null)
+          : (step.target ? step.target() : null);
+
+        if (!mobile) {
+          scrollSidebar(resolvedTarget);
+          setTimeout(() => {
+            showClone(resolvedTarget);
+            positionDesktop(resolvedTarget, position);
+          }, 360);
+        } else {
+          showClone(resolvedTarget);
+          positionMobile(resolvedTarget);
+        }
+      }, extraDelay);
     }));
   }
 
