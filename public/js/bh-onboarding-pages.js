@@ -223,7 +223,7 @@
         border-radius: 14px;
         outline: 3px solid #1A7A5E;
         outline-offset: 4px;
-        box-shadow: 0 0 0 4px rgba(26,122,94,0.25), 0 8px 32px rgba(0,0,0,0.3);
+        box-shadow: 0 0 0 4px rgba(26,122,94,0.25);
         overflow: hidden;
         transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
       }
@@ -319,7 +319,7 @@
         border-radius: ${radius}px;
         outline: 3px solid #1A7A5E;
         outline-offset: 0;
-        box-shadow: 0 0 0 4px rgba(26,122,94,0.25), 0 8px 24px rgba(0,0,0,0.2);
+        box-shadow: 0 0 0 4px rgba(26,122,94,0.25);
         background: transparent;
         pointer-events: none;
       `;
