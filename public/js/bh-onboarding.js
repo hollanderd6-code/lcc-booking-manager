@@ -40,7 +40,7 @@
       id: 'nav-settings',
       target: () => document.querySelector('.nav-item[data-page="settings"]'),
       title: '🏠 Mes logements',
-      text: 'Configurez chaque logement : photos, horaires, caution, et connectez vos plateformes Airbnb, Booking.com via Channex.',
+      text: 'Configurez chaque logement : photos, horaires, caution, et connectez vos plateformes Airbnb, Booking.com',
       position: 'right',
     },
     {
