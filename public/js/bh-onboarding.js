@@ -234,23 +234,30 @@
     const inBottomBar = targetEl.closest('.mobile-tabs, #moreMenuSheet, #moreMenuOverlay');
     
     if (inBottomBar || IS_MOBILE()) {
-      // Sauvegarder styles originaux
+      // Sauvegarder styles originaux de l'élément
       _highlightedEl = targetEl;
       _highlightedStyle = {
         outline: targetEl.style.outline,
         outlineOffset: targetEl.style.outlineOffset,
         boxShadow: targetEl.style.boxShadow,
-        zIndex: targetEl.style.zIndex,
-        position: targetEl.style.position,
         borderRadius: targetEl.style.borderRadius,
       };
-      // Appliquer highlight
+      // Appliquer outline sur l'élément
       targetEl.style.outline = '3px solid #1A7A5E';
       targetEl.style.outlineOffset = '3px';
       targetEl.style.boxShadow = '0 0 0 6px rgba(26,122,94,0.25)';
-      targetEl.style.zIndex = '100004';
-      targetEl.style.position = 'relative';
       targetEl.style.borderRadius = '12px';
+
+      // Monter le parent conteneur au-dessus de l'overlay
+      // (tab-btn → .mobile-tabs, bouton sheet → #moreMenuSheet)
+      const container = targetEl.closest('.mobile-tabs') 
+                     || targetEl.closest('#moreMenuSheet')
+                     || targetEl.closest('#moreMenuOverlay');
+      if (container) {
+        _highlightedStyle._container = container;
+        _highlightedStyle._containerZ = container.style.zIndex;
+        container.style.setProperty('z-index', '100004', 'important');
+      }
       return;
     }
 
@@ -277,8 +284,13 @@
     cloneEl = null;
     // Restaurer styles de l'élément highlighted
     if (_highlightedEl) {
-      Object.entries(_highlightedStyle).forEach(([k, v]) => {
-        _highlightedEl.style[k] = v;
+      // Restaurer le container
+      if (_highlightedStyle._container) {
+        _highlightedStyle._container.style.zIndex = _highlightedStyle._containerZ || '';
+      }
+      // Restaurer les styles de l'élément (sauf les clés internes _*)
+      ['outline','outlineOffset','boxShadow','borderRadius'].forEach(k => {
+        _highlightedEl.style[k] = _highlightedStyle[k] || '';
       });
       _highlightedEl = null;
       _highlightedStyle = {};
