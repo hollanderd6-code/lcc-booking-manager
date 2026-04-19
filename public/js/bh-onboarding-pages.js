@@ -128,12 +128,29 @@
         },
         {
           id: 'assign-zone',
+          // Sur desktop on surligne toute la zone ; sur mobile on cible juste le header
+          // (plus petit) pour que la bulle ait la place de s'afficher
           target: () => document.getElementById('assignContainer'),
-          mobile_target: () => document.getElementById('assignContainer'),
+          mobile_target: () => {
+            const container = document.getElementById('assignContainer');
+            if (!container) return null;
+            // Remonter jusqu'à la <section class="card"> parente et prendre son card-header
+            const section = container.closest('section.card');
+            return section ? section.querySelector('.card-header') : container;
+          },
+          before: () => {
+            // S'assurer que la zone est visible (important sur mobile où la grille
+            // est empilée verticalement sous l'équipe)
+            const container = document.getElementById('assignContainer');
+            if (container) {
+              const section = container.closest('section.card') || container;
+              section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          },
           title: '📅 Assignations',
           text: 'À chaque réservation, associez un prestataire en un clic. Le ménage apparaîtra dans son planning et il sera notifié.',
           position: 'top',
-          mobile_position: 'top',
+          mobile_position: 'bottom',
         },
         {
           id: 'tab-checklists',
