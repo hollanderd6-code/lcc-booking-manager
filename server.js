@@ -24817,7 +24817,13 @@ app.post('/api/channex/webhook', async (req, res) => {
         try {
           const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
           const todayStr = nowParis.toISOString().split('T')[0];
-          const arrivalStr = (result.start_date || '').substring(0, 10);
+          // result.start_date peut être un objet Date (retour pg) ou une string "YYYY-MM-DD"
+          let arrivalStr = '';
+          if (result.start_date instanceof Date) {
+            arrivalStr = result.start_date.toISOString().slice(0, 10);
+          } else if (typeof result.start_date === 'string') {
+            arrivalStr = result.start_date.slice(0, 10);
+          }
           const isArrivalToday = arrivalStr === todayStr;
 
           // Chercher on_booking + on_arrival si arrivée aujourd'hui
