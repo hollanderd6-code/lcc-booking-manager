@@ -24888,6 +24888,8 @@ app.post('/api/channex/webhook-message', async (req, res) => {
     const sender = attrs.sender || 'guest';
 
     if (!channex_booking_id || !messageText || sender !== 'guest') {
+      console.warn(`⚠️ [CHANNEX MSG] Payload skipped — booking_id=${channex_booking_id} | sender="${sender}" | msgLen=${messageText.length}`);
+      console.warn('⚠️ [CHANNEX MSG] Full payload:', JSON.stringify(payload));
       return res.status(200).json({ received: true, skipped: true });
     }
 
