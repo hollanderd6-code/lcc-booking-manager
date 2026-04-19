@@ -24880,9 +24880,13 @@ app.post('/api/channex/webhook-message', async (req, res) => {
     const payload = req.body;
     console.log('💬 [CHANNEX MSG WEBHOOK]', JSON.stringify(payload).substring(0, 300));
 
-    // Channex envoie le message dans différents formats selon la version
-    const data = payload.data || payload;
-    const attrs = data.attributes || data;
+    // Channex envoie les données à différents emplacements selon la version/l'event :
+    //  - Ancien format : payload.data.attributes.{booking_id, message, sender}
+    //  - Format actuel : payload.payload.{booking_id, message, sender}
+    //  - Fallback      : payload.{booking_id, message, sender}
+    const attrs = (payload.payload)
+                || (payload.data && payload.data.attributes)
+                || payload;
     const channex_booking_id = attrs.booking_id || attrs.bookingId || null;
     const messageText = attrs.message || '';
     const sender = attrs.sender || 'guest';
