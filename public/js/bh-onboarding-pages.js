@@ -95,6 +95,99 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── CLEANING (Gestion du ménage) ─────────────────────── */
+    'cleaning.html': {
+      storageKey: 'bh_ob_cleaning_v1',
+      onFinish: () => {
+        // Revenir à l'onglet Équipe à la fin du tour
+        if (typeof window.switchTab === 'function') {
+          try { window.switchTab('team'); } catch (e) {}
+        }
+      },
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '🧹 Gestion du ménage',
+          text: 'Planifiez, assignez, vérifiez. Tout le cycle des ménages en un seul endroit. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'tab-team',
+          target: () => document.querySelector('.cleaning-tab[data-tab="team"]'),
+          mobile_target: () => document.querySelector('.cleaning-tab[data-tab="team"]'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('team'); } catch (e) {}
+            }
+          },
+          title: '👥 Votre équipe',
+          text: 'Ajoutez vos prestataires de ménage ici (nom, email, téléphone). Ils recevront les notifications d\'assignation.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'assign-zone',
+          target: () => document.getElementById('assignContainer'),
+          mobile_target: () => document.getElementById('assignContainer'),
+          title: '📅 Assignations',
+          text: 'À chaque réservation, associez un prestataire en un clic. Le ménage apparaîtra dans son planning et il sera notifié.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'tab-checklists',
+          target: () => document.querySelector('.cleaning-tab[data-tab="checklists"]'),
+          mobile_target: () => document.querySelector('.cleaning-tab[data-tab="checklists"]'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('checklists'); } catch (e) {}
+            }
+          },
+          title: '✅ Checklists soumises',
+          text: 'Une fois le ménage fait, le prestataire envoie sa checklist avec photos. Validez ou demandez des corrections.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-templates',
+          target: () => document.querySelector('.cleaning-tab[data-tab="templates"]'),
+          mobile_target: () => document.querySelector('.cleaning-tab[data-tab="templates"]'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('templates'); } catch (e) {}
+            }
+          },
+          title: '📋 Templates de tâches',
+          text: 'Créez vos propres listes de tâches par logement (ex: changer les draps, nettoyer le four). Les prestataires cochent au fur et à mesure.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-stats',
+          target: () => document.querySelector('.cleaning-tab[data-tab="stats"]'),
+          mobile_target: () => document.querySelector('.cleaning-tab[data-tab="stats"]'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('stats'); } catch (e) {}
+            }
+          },
+          title: '📊 Statistiques',
+          text: 'Suivez la performance : taux de validation, nombre de ménages par prestataire, temps moyen d\'exécution.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 C\'est prêt !',
+          text: 'Astuce : un QR code par logement permet aux prestataires de scanner et d\'accéder directement à leur checklist.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── WELCOME (Livrets d'accueil) ─────────────────────── */
     'welcome.html': {
       storageKey: 'bh_ob_welcome_v1',
