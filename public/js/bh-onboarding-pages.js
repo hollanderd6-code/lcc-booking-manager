@@ -95,6 +95,79 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── FACTURES (Factures de séjour) ────────────────────── */
+    'factures.html': {
+      storageKey: 'bh_ob_factures_v1',
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '🧾 Factures de séjour',
+          text: 'Émettez vos factures en quelques secondes, avec aperçu live et envoi par email. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'form',
+          // La première .card dans .invoice-grid = le formulaire (la 2ème .card est plus bas dans l'historique)
+          target: () => document.querySelector('.invoice-grid .card'),
+          mobile_target: () => document.querySelector('.invoice-grid .card'),
+          title: '📋 Informations de facturation',
+          text: 'Remplissez les infos client, sélectionnez le logement et les dates, puis indiquez les montants. Si besoin d\'une facture avec TVA, il suffit de cocher la case.',
+          position: 'right',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'preview',
+          target: () => document.getElementById('invoicePreview'),
+          mobile_target: () => document.getElementById('invoicePreview'),
+          title: '👁️ Aperçu en temps réel',
+          text: 'La facture se met à jour à chaque champ que vous remplissez. Vous voyez exactement ce que recevra votre client avant d\'envoyer.',
+          position: 'left',
+          mobile_position: 'top',
+        },
+        {
+          id: 'send',
+          target: () => document.getElementById('sendBtn'),
+          mobile_target: () => document.getElementById('sendBtn'),
+          before: () => {
+            // S'assurer que le bouton est visible
+            const btn = document.getElementById('sendBtn');
+            if (btn && btn.scrollIntoView) {
+              btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          },
+          title: '📧 Envoi en un clic',
+          text: 'Quand tout est bon, envoyez la facture par email directement au client. Un PDF est automatiquement généré et attaché.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'history',
+          target: () => document.querySelector('.history-filters'),
+          mobile_target: () => document.querySelector('.history-filters'),
+          before: () => {
+            // Scroller jusqu'à l'historique qui est plus bas
+            const hist = document.querySelector('.history-filters');
+            if (hist && hist.scrollIntoView) {
+              hist.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          },
+          title: '📚 Historique & filtres',
+          text: 'Retrouvez toutes vos factures émises, filtrez par période pour votre comptabilité. Utile pour votre déclaration annuelle.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 C\'est prêt !',
+          text: 'Astuce : le numéro de facture est généré automatiquement et chronologique, conforme aux obligations légales françaises.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── CONTRAT (Contrats & mandats) ─────────────────────── */
     'contrat.html': {
       storageKey: 'bh_ob_contrat_v1',
