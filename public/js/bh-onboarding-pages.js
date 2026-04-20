@@ -95,6 +95,85 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── DEPOSITS (Cautions & paiements) ──────────────────── */
+    'deposits.html': {
+      storageKey: 'bh_ob_deposits_v1',
+      onFinish: () => {
+        // Revenir à l'onglet Cautions à la fin du tour
+        const btn = document.querySelector('.tab-button[data-tab="deposits"]');
+        if (btn) try { btn.click(); } catch (e) {}
+      },
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '💰 Cautions & paiements',
+          text: 'Encaissez vos cautions et paiements voyageurs en toute sécurité via Stripe. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'tab-deposits',
+          target: () => document.querySelector('.tab-button[data-tab="deposits"]'),
+          mobile_target: () => document.querySelector('.tab-button[data-tab="deposits"]'),
+          before: () => {
+            const btn = document.querySelector('.tab-button[data-tab="deposits"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '🛡️ Cautions actives',
+          text: 'Pour chaque réservation, envoyez un lien sécurisé Stripe à votre voyageur. Le montant est pré-autorisé (pas débité) et peut être capturé en cas de dégâts, ou relâché en fin de séjour.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-history',
+          target: () => document.querySelector('.tab-button[data-tab="history"]'),
+          mobile_target: () => document.querySelector('.tab-button[data-tab="history"]'),
+          before: () => {
+            const btn = document.querySelector('.tab-button[data-tab="history"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '📜 Historique cautions',
+          text: 'Retrouvez toutes les cautions passées : montants, statuts, dates de capture ou de libération. Parfait pour votre suivi comptable.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-payments',
+          target: () => document.querySelector('.tab-button[data-tab="payments"]'),
+          mobile_target: () => document.querySelector('.tab-button[data-tab="payments"]'),
+          before: () => {
+            const btn = document.querySelector('.tab-button[data-tab="payments"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '💳 Paiements directs',
+          text: 'Via Stripe Connect, encaissez directement les paiements sur votre compte (loyer, frais, suppléments). Le widget en haut affiche votre solde disponible et les payouts en cours.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-payments-history',
+          target: () => document.querySelector('.tab-button[data-tab="payments-history"]'),
+          mobile_target: () => document.querySelector('.tab-button[data-tab="payments-history"]'),
+          before: () => {
+            const btn = document.querySelector('.tab-button[data-tab="payments-history"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '📊 Historique paiements',
+          text: 'Toutes vos transactions passées, filtrées par logement. Idéal pour votre déclaration annuelle.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 Prêt à encaisser !',
+          text: 'Astuce : vous pouvez aussi créer des liens "libres" (caution ou paiement) pour des clients directs sans réservation — pratique pour les ventes de chèques-cadeaux ou les arrhes.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── FACTURES (Factures de séjour) ────────────────────── */
     'factures.html': {
       storageKey: 'bh_ob_factures_v1',
