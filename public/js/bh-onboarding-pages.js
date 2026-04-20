@@ -95,6 +95,85 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── CONTRAT (Contrats & mandats) ─────────────────────── */
+    'contrat.html': {
+      storageKey: 'bh_ob_contrat_v1',
+      onFinish: () => {
+        // Revenir à l'onglet "Nouveau contrat" à la fin du tour
+        if (typeof window.switchTab === 'function') {
+          try { window.switchTab('new'); } catch (e) {}
+        }
+      },
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '📝 Contrats & mandats',
+          text: 'Générez vos contrats de location et mandats de gestion en quelques clics. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'tab-new',
+          target: () => document.getElementById('tabNew'),
+          mobile_target: () => document.getElementById('tabNew'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('new'); } catch (e) {}
+            }
+          },
+          title: '📄 Nouveau contrat',
+          text: 'Créez un contrat de location en 6 étapes : logement, voyageur, prix, règles, clauses légales, signature. Tout est pré-rempli grâce à vos logements enregistrés.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'stepper',
+          target: () => document.getElementById('contratStepper'),
+          mobile_target: () => document.getElementById('contratStepper'),
+          title: '🧭 Wizard guidé',
+          text: 'Le stepper vous accompagne à chaque étape. Vous pouvez revenir en arrière à tout moment. À la fin, vous obtenez un PDF professionnel signable.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-mandat',
+          target: () => document.getElementById('tabMandat'),
+          mobile_target: () => document.getElementById('tabMandat'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('mandat'); } catch (e) {}
+            }
+          },
+          title: '🤝 Mandat de gestion',
+          text: 'Pour les conciergeries : créez le contrat qui vous lie à un propriétaire, avec vos commissions et obligations clairement définies.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-history',
+          target: () => document.getElementById('tabHistory'),
+          mobile_target: () => document.getElementById('tabHistory'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('history'); } catch (e) {}
+            }
+          },
+          title: '📚 Historique',
+          text: 'Retrouvez tous vos contrats et mandats passés. Téléchargez, renvoyez ou dupliquez en un clic.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 Prêt à contractualiser !',
+          text: 'Astuce : tout contrat généré peut être envoyé par email directement au signataire. Il reçoit un lien pour signer numériquement.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── CLEANING (Gestion du ménage) ─────────────────────── */
     'cleaning.html': {
       storageKey: 'bh_ob_cleaning_v1',
