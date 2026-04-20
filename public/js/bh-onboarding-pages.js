@@ -95,6 +95,82 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── REPORTING (Revenus & performances) ───────────────── */
+    'reporting.html': {
+      storageKey: 'bh_ob_reporting_v1',
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '📈 Revenus & performances',
+          text: 'Analysez vos revenus, occupation et rentabilité par logement, période ou plateforme. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'controls',
+          target: () => document.querySelector('.reporting-controls'),
+          mobile_target: () => document.querySelector('.reporting-controls'),
+          title: '🎛️ Filtres & exports',
+          text: 'Filtrez par année, mois ou logement. Exportez en CSV ou au format comptable (FEC compatible Expert-Comptable) en un clic.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'kpi-hero',
+          target: () => document.getElementById('kpiHeroRow'),
+          mobile_target: () => document.getElementById('kpiHeroRow'),
+          title: '💰 Vos chiffres clés',
+          text: 'Les 2 indicateurs phares en haut : revenu brut et revenu net après commissions plateformes et taxes.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'charts',
+          target: () => document.querySelector('.grid-2-1'),
+          mobile_target: () => document.querySelector('.grid-2-1'),
+          title: '📊 Analyse graphique',
+          text: 'Visualisez l\'évolution de vos revenus mois par mois (brut / net / part propriétaire) et la répartition par plateforme Airbnb, Booking.com, etc.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'prop-table',
+          target: () => document.getElementById('propTable'),
+          mobile_target: () => document.getElementById('propTable'),
+          title: '🏠 Détail par logement',
+          text: 'Le classement de vos logements : revenus, nuitées, taux d\'occupation, prix moyen par nuit. Identifiez rapidement vos tops et flops.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'comparator',
+          target: () => document.getElementById('comparatorSection'),
+          mobile_target: () => document.getElementById('comparatorSection'),
+          title: '⚖️ Comparateur',
+          text: 'Comparez deux logements sur des périodes au choix — idéal pour benchmarker ou identifier l\'effet d\'un changement (prix, photos...).',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'rentabilite',
+          target: () => document.getElementById('rentabiliteSection'),
+          mobile_target: () => document.getElementById('rentabiliteSection'),
+          title: '🎯 Score de rentabilité',
+          text: 'Le score qui combine occupation et prix pour classer vos logements du plus au moins rentable. Visible par logement, par mois, ou par réservation.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 Prêt à analyser !',
+          text: 'Astuce : l\'export comptable génère un fichier directement importable dans votre logiciel de compta ou à envoyer à votre expert-comptable.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── CLIENTS (Facturation propriétaires) ──────────────── */
     'clients.html': {
       storageKey: 'bh_ob_clients_v1',
