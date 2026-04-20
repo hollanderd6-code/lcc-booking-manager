@@ -95,6 +95,98 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── SETTINGS-ACCOUNT (Paramètres du compte) ──────────── */
+    'settings-account.html': {
+      storageKey: 'bh_ob_settings_account_v1',
+      onFinish: () => {
+        // Revenir à l'onglet Profil à la fin du tour
+        const btn = document.querySelector('.settings-tab[data-tab="profile"]');
+        if (btn) try { btn.click(); } catch (e) {}
+      },
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '⚙️ Paramètres du compte',
+          text: 'Configurez votre profil, vos paiements, votre équipe et vos préférences. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'tab-profile',
+          target: () => document.querySelector('.settings-tab[data-tab="profile"]'),
+          mobile_target: () => document.querySelector('.settings-tab[data-tab="profile"]'),
+          before: () => {
+            const btn = document.querySelector('.settings-tab[data-tab="profile"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '👤 Profil & entreprise',
+          text: 'Vos infos personnelles et celles de votre entreprise (SIRET, adresse, logo). Ces données sont reprises automatiquement sur toutes vos factures et contrats.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-payments',
+          target: () => document.querySelector('.settings-tab[data-tab="payments"]'),
+          mobile_target: () => document.querySelector('.settings-tab[data-tab="payments"]'),
+          before: () => {
+            const btn = document.querySelector('.settings-tab[data-tab="payments"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '💳 Paiements & Stripe',
+          text: 'Connectez votre compte Stripe pour encaisser les paiements et cautions directement. Alternative : activez BH-Stripe (caution via notre compte, pas de Connect nécessaire).',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-team',
+          target: () => document.querySelector('.settings-tab[data-tab="team"]'),
+          mobile_target: () => document.querySelector('.settings-tab[data-tab="team"]'),
+          before: () => {
+            const btn = document.querySelector('.settings-tab[data-tab="team"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '👥 Équipe & Accès',
+          text: 'Ajoutez des sous-comptes pour votre équipe. Rôles prédéfinis (gérant, femme de ménage, comptable) ou personnalisés permission par permission.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-notifications',
+          target: () => document.querySelector('.settings-tab[data-tab="notifications"]'),
+          mobile_target: () => document.querySelector('.settings-tab[data-tab="notifications"]'),
+          before: () => {
+            const btn = document.querySelector('.settings-tab[data-tab="notifications"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '🔔 Notifications',
+          text: 'Activez/désactivez finement chaque type de notif push : nouvelle résa, ménage terminé, rappel caution, message voyageur...',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-subscription',
+          target: () => document.querySelector('.settings-tab[data-tab="subscription"]'),
+          mobile_target: () => document.querySelector('.settings-tab[data-tab="subscription"]'),
+          before: () => {
+            const btn = document.querySelector('.settings-tab[data-tab="subscription"]');
+            if (btn) try { btn.click(); } catch (e) {}
+          },
+          title: '👑 Mon abonnement',
+          text: 'Consultez votre plan actuel, vos factures Stripe, et changez de formule à tout moment.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 C\'est configuré !',
+          text: 'Astuce : vous pouvez revenir à ces paramètres à tout moment. Les modifications sont sauvegardées automatiquement.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── REPORTING (Revenus & performances) ───────────────── */
     'reporting.html': {
       storageKey: 'bh_ob_reporting_v1',
