@@ -95,6 +95,64 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── HELP (Aide, FAQ, Roadmap, Support) ───────────────── */
+    'help.html': {
+      storageKey: 'bh_ob_help_v1',
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '🆘 Aide & communauté',
+          text: 'Trouvez des réponses, proposez des idées, contactez-nous en direct. Tout est au même endroit. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'faq-search',
+          target: () => document.getElementById('faqSearch'),
+          mobile_target: () => document.getElementById('faqSearch'),
+          title: '❓ Questions fréquentes',
+          text: 'La plupart des réponses se trouvent ici. Tapez quelques mots pour filtrer et trouver votre sujet en un instant.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'roadmap',
+          target: () => document.getElementById('roadmapSection'),
+          mobile_target: () => document.getElementById('roadmapSection'),
+          title: '🗺️ Roadmap collaborative',
+          text: 'Découvrez ce qui est en réflexion, en cours de dev ou déjà disponible. Votez 👍 pour les fonctionnalités qui vous intéressent — ça influence vraiment nos priorités.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'suggest',
+          target: () => document.querySelector('.roadmap-suggest-form'),
+          mobile_target: () => document.querySelector('.roadmap-suggest-form'),
+          title: '💡 Proposez vos idées',
+          text: 'Une idée qui n\'est pas dans la liste ? Décrivez-la ici, on la lira attentivement. Les meilleures idées Boostinghost viennent souvent des utilisateurs.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'support-chat',
+          target: () => document.getElementById('supportSection'),
+          mobile_target: () => document.getElementById('supportSection'),
+          title: '💬 Chat avec l\'équipe',
+          text: 'Besoin d\'aide personnalisée ? Démarrez une conversation en direct avec notre équipe. Vos échanges sont sauvegardés et accessibles à tout moment.',
+          position: 'top',
+          mobile_position: 'top',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 À vous de jouer !',
+          text: 'Astuce : pour les questions urgentes, le chat est le plus rapide (réponse sous quelques heures en journée). Pour les demandes détaillées ou pièces jointes, le chat accepte aussi les images.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── SETTINGS-ACCOUNT (Paramètres du compte) ──────────── */
     'settings-account.html': {
       storageKey: 'bh_ob_settings_account_v1',
