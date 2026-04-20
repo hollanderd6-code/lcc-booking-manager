@@ -95,6 +95,113 @@
 
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
+    /* ── CLIENTS (Facturation propriétaires) ──────────────── */
+    'clients.html': {
+      storageKey: 'bh_ob_clients_v1',
+      onFinish: () => {
+        // Revenir à l'onglet "Mes Clients" à la fin du tour
+        if (typeof window.switchTab === 'function') {
+          try { window.switchTab('clients'); } catch (e) {}
+        }
+      },
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '👥 Facturation propriétaires',
+          text: 'Gérez vos clients propriétaires, émettez vos factures mensuelles et éditez des attestations fiscales. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'stats',
+          target: () => document.querySelector('.stats-row'),
+          mobile_target: () => document.querySelector('.stats-row'),
+          title: '📊 Vue d\'ensemble',
+          text: 'Suivez en un coup d\'œil votre nombre de clients, votre revenu du mois et les factures en attente. Cliquez sur chaque carte pour voir le détail.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-clients',
+          target: () => document.getElementById('btn-clients'),
+          mobile_target: () => document.getElementById('btn-clients'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('clients'); } catch (e) {}
+            }
+          },
+          title: '👤 Mes Clients',
+          text: 'Ajoutez vos propriétaires-clients avec leurs logements gérés et les conditions tarifaires (commission, forfait, pourcentage...).',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-dashboard',
+          target: () => document.getElementById('btn-dashboard'),
+          mobile_target: () => document.getElementById('btn-dashboard'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('dashboard'); } catch (e) {}
+            }
+          },
+          title: '🧾 Factures émises',
+          text: 'Retrouvez toutes vos factures par mois, année ou client. Téléchargez, renvoyez, ou marquez comme payé en un clic.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-create',
+          target: () => document.getElementById('btn-create'),
+          mobile_target: () => document.getElementById('btn-create'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('create'); } catch (e) {}
+            }
+          },
+          title: '✏️ Éditeur de facture',
+          text: 'Créez une nouvelle facture avec aperçu live. Logo, SIRET, prestations, TVA — tout est personnalisable et sauvegardé pour la prochaine fois.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-attestation',
+          target: () => document.getElementById('btn-attestation'),
+          mobile_target: () => document.getElementById('btn-attestation'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('attestation'); } catch (e) {}
+            }
+          },
+          title: '📜 Attestation fiscale',
+          text: 'Générez les attestations fiscales annuelles pour vos propriétaires — un gros gain de temps au moment des déclarations.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'tab-debours',
+          target: () => document.getElementById('btn-debours'),
+          mobile_target: () => document.getElementById('btn-debours'),
+          before: () => {
+            if (typeof window.switchTab === 'function') {
+              try { window.switchTab('debours'); } catch (e) {}
+            }
+          },
+          title: '🧾 Débours',
+          text: 'Suivez vos frais avancés (ménage, réparations, consommables) à refacturer à vos propriétaires. Joignez les justificatifs.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 Prêt à facturer !',
+          text: 'Astuce : vos logements sont synchronisés automatiquement avec les logements configurés côté "Mes logements". Une seule source de vérité.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     /* ── DEPOSITS (Cautions & paiements) ──────────────────── */
     'deposits.html': {
       storageKey: 'bh_ob_deposits_v1',
