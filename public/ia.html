@@ -106,6 +106,13 @@
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-soft);
     }
+    /* Mobile : désactiver backdrop-filter (trop coûteux en GPU) */
+    @media (max-width: 900px) {
+      .site-header {
+        background: #FAFAF8;
+        backdrop-filter: none;
+      }
+    }
     .header-inner {
       display: flex; align-items: center; justify-content: space-between;
       padding: 16px 24px;
@@ -215,6 +222,8 @@
       box-shadow: 0 20px 60px rgba(13,17,23,.08);
       max-width: 440px;
       margin-left: auto;
+      /* Isoler le rendu du chat pour éviter repaints inutiles */
+      contain: layout paint;
     }
     .hero-chat-header {
       display: flex; justify-content: space-between; align-items: center;
@@ -261,13 +270,17 @@
     .chat-typing span {
       width: 6px; height: 6px; background: var(--muted);
       border-radius: 50%;
-      animation: typing 1.4s infinite;
+      animation: typing 1.8s infinite;
     }
-    .chat-typing span:nth-child(2) { animation-delay: .2s; }
-    .chat-typing span:nth-child(3) { animation-delay: .4s; }
+    .chat-typing span:nth-child(2) { animation-delay: .25s; }
+    .chat-typing span:nth-child(3) { animation-delay: .5s; }
     @keyframes typing {
-      0%, 60%, 100% { opacity: .3; transform: translateY(0); }
-      30% { opacity: 1; transform: translateY(-4px); }
+      0%, 70%, 100% { opacity: .3; transform: translateY(0); }
+      35% { opacity: 1; transform: translateY(-3px); }
+    }
+    /* Respect user preference */
+    @media (prefers-reduced-motion: reduce) {
+      .chat-typing span, .chat-msg { animation: none !important; }
     }
 
     /* ─── PROBLEM SECTION ─── */
@@ -911,7 +924,7 @@
           <i class="fas fa-chevron-down chevron"></i>
         </button>
         <div class="faq-a">
-          <p>Oui. Via notre channel manager intégré (Channex), tous les messages Airbnb, Booking.com, Expedia et Abritel arrivent dans la messagerie Boostinghost. L'IA les traite tous de la même manière.</p>
+          <p>Oui. Via notre channel manager intégré, tous les messages Airbnb, Booking.com, Expedia et Abritel arrivent dans la messagerie Boostinghost. L'IA les traite tous de la même manière.</p>
         </div>
       </div>
 
@@ -956,7 +969,7 @@
 
 <script>
   /* ─────────────────────────────────────────────
-     HERO CHAT ANIMATION (loop)
+     HERO CHAT ANIMATION (loop, optimisée mobile)
      ───────────────────────────────────────────── */
   const heroSequence = [
     { type: 'guest', lang: '🇬🇧', text: "Hi, what's the WiFi password?", delay: 800 },
@@ -967,37 +980,91 @@
     { type: 'ai', text: 'Ich empfehle <strong>"Le Comptoir du Coin"</strong>, 5 Min. zu Fuß. Ausgezeichnete französische Küche! 🍷', meta: 'Traduit via DeepL · 1.9s', delay: 2800 },
   ];
 
+  // État animation
+  const heroChat = document.getElementById('heroChatBody');
+  let heroTimers = [];
+  let heroRunning = false;
+  let heroVisible = true;
+  // Réduire automatiquement l'animation si user préfère ça
+  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function clearHeroTimers() {
+    heroTimers.forEach(id => clearTimeout(id));
+    heroTimers = [];
+  }
+
   function runHeroAnimation() {
-    const body = document.getElementById('heroChatBody');
-    if (!body) return;
-    body.innerHTML = '';
+    if (!heroChat || !heroVisible || heroRunning) return;
+    heroRunning = true;
+    heroChat.innerHTML = '';
     let delay = 400;
 
-    heroSequence.forEach((item, i) => {
-      setTimeout(() => {
+    heroSequence.forEach((item) => {
+      const id = setTimeout(() => {
+        if (!heroVisible) return; // abort si plus visible
         if (item.type === 'typing') {
           const t = document.createElement('div');
           t.className = 'chat-typing';
           t.innerHTML = '<span></span><span></span><span></span>';
           t.id = 'tmp-typing';
-          body.appendChild(t);
+          heroChat.appendChild(t);
         } else {
           const existing = document.getElementById('tmp-typing');
           if (existing) existing.remove();
           const m = document.createElement('div');
           m.className = 'chat-msg ' + item.type;
           m.innerHTML = (item.lang ? `<small>${item.lang}</small>` : '') + item.text + (item.meta ? `<small>${item.meta}</small>` : '');
-          body.appendChild(m);
+          heroChat.appendChild(m);
         }
       }, delay);
+      heroTimers.push(id);
       delay += item.delay;
     });
 
-    // Relance en boucle
-    setTimeout(runHeroAnimation, delay + 3000);
+    // Pause de 4s entre deux cycles, puis relance (seulement si visible)
+    const loopId = setTimeout(() => {
+      heroRunning = false;
+      if (heroVisible) runHeroAnimation();
+    }, delay + 4000);
+    heroTimers.push(loopId);
   }
 
-  runHeroAnimation();
+  // Pause si user préfère motion-reduce : on joue une seule fois puis stop
+  if (prefersReduced) {
+    runHeroAnimation();
+    // on laisse tourner une seule itération (pas de relance)
+    setTimeout(() => { heroVisible = false; clearHeroTimers(); }, 15000);
+  } else if ('IntersectionObserver' in window && heroChat) {
+    // Démarrer seulement quand le chat est à l'écran, et stopper quand on scroll loin
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          heroVisible = true;
+          if (!heroRunning) runHeroAnimation();
+        } else {
+          heroVisible = false;
+          clearHeroTimers();
+          heroRunning = false;
+        }
+      });
+    }, { threshold: 0.1 });
+    observer.observe(heroChat);
+  } else {
+    // Fallback vieux navigateurs
+    runHeroAnimation();
+  }
+
+  // Pause aussi quand l'onglet passe en arrière-plan (pas de rendu inutile)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      heroVisible = false;
+      clearHeroTimers();
+      heroRunning = false;
+    } else {
+      heroVisible = true;
+      if (!heroRunning) runHeroAnimation();
+    }
+  });
 
   /* ─────────────────────────────────────────────
      DEMO INTERACTIVE
