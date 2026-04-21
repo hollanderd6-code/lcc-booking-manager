@@ -20342,7 +20342,7 @@ iframe.goog-te-banner-frame{display:none!important}
   <div class="promo-app-logo">B</div>
   <div class="promo-app-text">
     <div class="promo-app-title">📱 Boostinghost Guest</div>
-    <div class="promo-app-sub">Pour votre prochaine réservation, réservez en direct et bénéficiez de <strong>-10% de réduction</strong> garanti.</div>
+    <div class="promo-app-sub">Pour votre prochaine réservation, réservez en direct et bénéficiez de <strong>-15% de réduction</strong> garanti avec le code <strong>BHG15</strong>.</div>
   </div>
   <a id="promoStoreBtn" class="promo-app-btn" href="#" target="_blank" rel="noopener">
     <span id="promoBtnIcon">⬇</span>
