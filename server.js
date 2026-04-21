@@ -3102,6 +3102,130 @@ app.delete('/api/announcements/:id', corsAnn, bodyParser.json(), async (req, res
 
 app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
 
+// ── DEMO PUBLIQUE : IA chat pour la page /ia.html ──────────────────────
+// Rate limit : 10 messages / IP / heure (en mémoire, suffisant pour démo)
+const demoAiRateLimit = new Map();
+const DEMO_AI_LIMIT_PER_HOUR = 10;
+const DEMO_AI_WINDOW_MS = 60 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of demoAiRateLimit.entries()) {
+    if (entry.resetAt < now) demoAiRateLimit.delete(ip);
+  }
+}, 10 * 60 * 1000);
+
+const DEMO_AI_CONTEXT = `
+Tu es l'assistant IA de Boostinghost. Tu réponds à un voyageur pour le compte de l'hôte.
+
+INFORMATIONS SUR LE LOGEMENT DE DÉMONSTRATION :
+- Nom : Studio cosy près de la gare, Paris
+- Capacité : 2 voyageurs maximum
+- Adresse : 12 rue de la Paix, 75001 Paris
+- Check-in : à partir de 16h00
+- Check-out : avant 11h00
+- Code d'accès : 4821 (clavier à côté de la porte d'entrée)
+- WiFi : réseau "Studio-Guest", mot de passe "WelcomeToParis2026"
+- Parking : parking public payant "Parking Vendôme" à 200m (environ 25€/jour)
+- Chauffage : thermostat dans le salon, réglé à 20°C par défaut
+- Poubelles : locaux à droite du hall, collecte les lundis et jeudis
+- Animaux : non autorisés
+- Fumeurs : non autorisés dans le logement (balcon OK)
+- Restaurant recommandé : "Le Comptoir du Coin", à 5 minutes à pied, cuisine française traditionnelle
+- Bar à cocktails recommandé : "Bar Hemingway" au Ritz, 10 minutes à pied
+- Métro le plus proche : Opéra (ligne 3, 7, 8), 3 minutes à pied
+- Supermarché : Carrefour City à 150m, ouvert jusqu'à 22h
+
+RÈGLES DE RÉPONSE :
+1. Réponds toujours dans la langue du voyageur (détecte-la automatiquement).
+2. Sois chaleureux, concis, professionnel.
+3. Utilise UNIQUEMENT les infos ci-dessus. Si l'info n'est pas dedans, dis poliment que tu vas transférer à l'hôte.
+4. Utilise parfois un emoji léger (🏡 🗝️ 🥐 etc.) mais pas systématiquement.
+5. Maximum 4 phrases.
+`.trim();
+
+app.post('/api/demo/ai-chat', express.json(), async (req, res) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown')
+      .toString().split(',')[0].trim();
+
+    // Rate limit
+    const now = Date.now();
+    let entry = demoAiRateLimit.get(ip);
+    if (!entry || entry.resetAt < now) {
+      entry = { count: 0, resetAt: now + DEMO_AI_WINDOW_MS };
+      demoAiRateLimit.set(ip, entry);
+    }
+    if (entry.count >= DEMO_AI_LIMIT_PER_HOUR) {
+      return res.status(429).json({
+        error: 'Trop de messages. Réessayez dans une heure ou créez un compte pour un accès illimité.',
+      });
+    }
+    entry.count++;
+
+    const { message } = req.body || {};
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'message is required' });
+    }
+    if (message.length > 500) {
+      return res.status(400).json({ error: 'Message trop long (max 500 caractères)' });
+    }
+
+    // Anti prompt-injection basique
+    const lower = message.toLowerCase();
+    if (lower.includes('ignore previous') || lower.includes('system prompt') ||
+        (lower.includes('reveal') && lower.includes('instruction'))) {
+      return res.json({
+        reply: "Je suis l'assistant virtuel du logement. Je peux vous aider pour les horaires, l'accès, le WiFi, les recommandations locales. Que souhaitez-vous savoir ? 🏡",
+      });
+    }
+
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GROQ_API_KEY not configured' });
+    }
+
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: DEMO_AI_CONTEXT },
+          { role: 'user', content: message },
+        ],
+        temperature: 0.6,
+        max_tokens: 300,
+      }),
+    });
+
+    if (!groqRes.ok) {
+      const errText = await groqRes.text().catch(() => '');
+      console.error('❌ [DEMO AI] Groq error', groqRes.status, errText);
+      throw new Error(`Groq ${groqRes.status}`);
+    }
+
+    const data = await groqRes.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
+
+    if (!reply) {
+      return res.status(500).json({ error: 'Empty AI response' });
+    }
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error('❌ [DEMO AI]', err.message);
+    res.status(500).json({
+      error: 'Demo temporairement indisponible',
+      reply: "Oups, la démo est momentanément indisponible. Essayez dans quelques secondes ou créez votre compte pour tester l'IA sur vos propres logements !",
+    });
+  }
+});
+
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 const PORT = process.env.PORT || 3000;
 
