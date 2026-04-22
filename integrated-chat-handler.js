@@ -4,7 +4,6 @@
 // (Onboarding supprimé — données voyageur via Channex)
 // ============================================
 
-const { detectCategory, getAutoResponse, needsOwnerNotification } = require('./auto-responses-config-multilang');
 const { getGroqResponse, requiresHumanIntervention } = require('./groq-ai');
 
 // Stripe (pour création auto de caution)
@@ -383,24 +382,10 @@ Rules:
     }
 
     // ========================================
-    // ÉTAPE 3 : RÉPONSE PAR MOTS-CLÉS
-    // ========================================
-    const categoryMatch = detectCategory(message.message, language);
-
-    if (categoryMatch && property) {
-      console.log(`✅ [HANDLER] Match mot-clé: ${categoryMatch.category} (${language})`);
-      const response = getAutoResponse(categoryMatch.category, language, property);
-      if (response) {
-        await sendBotMessage(conversation.id, response, pool, io, channexId);
-        if (needsOwnerNotification(categoryMatch.category)) {
-          console.log('📧 [HANDLER] Notification propriétaire requise');
-        }
-        return true;
-      }
-    }
-
-    // ========================================
-    // ÉTAPE 4 : GROQ AI
+    // ÉTAPE 3 : GROQ AI (tous les messages non matchés en amont)
+    // Note: l'ancien matching mots-clés (detectCategory) a été supprimé
+    // car trop imprécis (ex: "address" matchait "access"). Groq fait tout
+    // le travail avec le contexte complet du livret d'accueil.
     // ========================================
     console.log('🚀 [HANDLER] Groq AI...');
 
