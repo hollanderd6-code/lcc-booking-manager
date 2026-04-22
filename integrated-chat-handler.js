@@ -235,9 +235,67 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     if (conversation.language && ['fr','en','es','de','it'].includes(conversation.language)) {
       language = conversation.language;
     } else {
-      // Détection basique : si le message contient des mots anglais communs
-      const enWords = ['hello', 'hi', 'what time', 'check', 'wifi', 'password', 'deposit', 'when can', 'is there'];
-      if (enWords.some(w => _msgLower.includes(w))) language = 'en';
+      // Détection élargie : compte les mots ou patterns caractéristiques de chaque langue
+      const enPatterns = /\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|who|can|could|would|should|is there|are there|do you|could you|i need|i want|i have|my|your|the|is|are|and|but|or|with|for|from|to|at|on|wifi|password|check[\s-]?in|check[\s-]?out|address|arrival|departure)\b/gi;
+      const esPatterns = /\b(hola|gracias|por favor|dónde|cuándo|cómo|qué|puedo|quiero|tengo|necesito|dirección|contraseña|llegada|salida)\b/gi;
+      const dePatterns = /\b(hallo|guten tag|danke|bitte|wo|wann|wie|was|ich|können|möchte|brauche|adresse|passwort|ankunft|abreise)\b/gi;
+      const itPatterns = /\b(ciao|grazie|per favore|dove|quando|come|cosa|posso|vorrei|ho bisogno|indirizzo|password|arrivo|partenza)\b/gi;
+      const frPatterns = /\b(bonjour|bonsoir|merci|s'il vous plaît|où|quand|comment|puis-je|voudrais|besoin|adresse|code|arrivée|départ|avez-vous|est-ce|nous|vous|je)\b/gi;
+
+      const scores = {
+        en: (message.message.match(enPatterns) || []).length,
+        es: (message.message.match(esPatterns) || []).length,
+        de: (message.message.match(dePatterns) || []).length,
+        it: (message.message.match(itPatterns) || []).length,
+        fr: (message.message.match(frPatterns) || []).length,
+      };
+
+      // Trouver la langue avec le plus de matches
+      const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+      if (best[1] > 0) {
+        language = best[0];
+      }
+      // Sinon on garde 'fr' par défaut
+
+      console.log(`🌍 [HANDLER] Langue détectée: ${language} (scores:`, scores, ')');
+    }
+
+    // ========================================
+    // ÉTAPE 2.3 : DÉTECTION REMERCIEMENT / FIN DE SÉJOUR
+    // On répond brièvement SAUF si le message contient aussi une plainte/oubli
+    // ========================================
+    {
+      const msgLow = message.message.toLowerCase();
+
+      // Patterns de remerciement par langue
+      const thanksPatterns = /\b(merci|thanks|thank you|gracias|danke|grazie|cheers|ty|tks|thx|super séjour|bon séjour|agréable séjour|great stay|lovely stay|bonne journée|have a nice|enjoyed|appreciated)\b/i;
+      // Patterns de plainte/problème qui doivent escalader malgré le "merci"
+      const problemPatterns = /\b(oublié|laissé|perdu|cassé|problème|souci|plainte|broken|lost|forgot|left behind|complaint|issue|damaged|stolen|dispute|remboursement|refund|not working|ne fonctionne|ne marche)\b/i;
+
+      const hasThanks = thanksPatterns.test(msgLow);
+      const hasProblem = problemPatterns.test(msgLow);
+      // Message court (< 25 mots) ET contient un remerciement ET ne contient PAS de problème
+      const wordCount = msgLow.split(/\s+/).filter(Boolean).length;
+
+      if (hasThanks && !hasProblem && wordCount < 25) {
+        const thanksReplies = {
+          fr: "Merci beaucoup ! 😊 Nous sommes ravis que vous appréciez votre séjour. N'hésitez pas si vous avez d'autres questions !",
+          en: "Thank you so much! 😊 We're delighted you're enjoying your stay. Don't hesitate if you have any other questions!",
+          es: "¡Muchas gracias! 😊 Nos alegra que esté disfrutando de su estancia. ¡No dude en preguntar si necesita algo más!",
+          de: "Vielen Dank! 😊 Es freut uns, dass Sie Ihren Aufenthalt genießen. Zögern Sie nicht, wenn Sie weitere Fragen haben!",
+          it: "Grazie mille! 😊 Siamo contenti che stia godendo del suo soggiorno. Non esiti a chiederci se ha altre domande!",
+        };
+        const reply = thanksReplies[language] || thanksReplies.fr;
+        console.log(`🙏 [HANDLER] Remerciement détecté → réponse courte en ${language}`);
+        await sendBotMessage(conversation.id, reply, pool, io, channexId);
+        return true;
+      }
+
+      if (hasThanks && hasProblem) {
+        console.log(`⚠️ [HANDLER] Remerciement + problème détectés → escalade (plainte/oubli)`);
+        await escalateToOwner(conversation, pool, io, language, channexId);
+        return true;
+      }
     }
 
     // ========================================
@@ -393,7 +451,16 @@ Rules:
       wifiPassword: property.wifi_password || welcomeBookData?.wifiPassword,
       arrivalTime: property.arrival_time,
       departureTime: property.departure_time || welcomeBookData?.checkoutTime,
-      address: property.address,
+      // Concaténer l'adresse complète (rue + code postal + ville) pour que l'IA
+      // puisse répondre à "what's the complete address with postal code and city"
+      address: (() => {
+        const parts = [
+          property.address || welcomeBookData?.address,
+          welcomeBookData?.postalCode,
+          welcomeBookData?.city,
+        ].filter(Boolean);
+        return parts.length > 0 ? parts.join(', ') : null;
+      })(),
       accessCode: property.access_code || welcomeBookData?.keyboxCode,
       accessInstructions: property.access_instructions || welcomeBookData?.accessInstructions,
       parkingInfo: welcomeBookData?.parkingInfo,
