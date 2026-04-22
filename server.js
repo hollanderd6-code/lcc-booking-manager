@@ -1592,6 +1592,16 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS idx_welcome_books_v2_user_id ON public.welcome_books_v2(user_id);
       CREATE INDEX IF NOT EXISTS idx_welcome_books_v2_unique_id ON public.welcome_books_v2(unique_id);
 
+      CREATE TABLE IF NOT EXISTS property_groups (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        property_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_property_groups_user_id ON property_groups(user_id);
+
       CREATE TABLE IF NOT EXISTS cleaners (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -3101,6 +3111,185 @@ app.delete('/api/announcements/:id', corsAnn, bodyParser.json(), async (req, res
 });
 
 app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
+
+// ════════════════════════════════════════════════════════════════════
+//   GROUPES DE LOGEMENTS (property_groups)
+//   Remplace l'ancien stockage localStorage côté front.
+//   Données partagées cross-device pour un même user.
+// ════════════════════════════════════════════════════════════════════
+
+// GET /api/property-groups — liste des groupes de l'utilisateur
+app.get('/api/property-groups', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await pool.query(
+      `SELECT id, name, property_ids, created_at, updated_at
+       FROM property_groups
+       WHERE user_id = $1
+       ORDER BY created_at ASC`,
+      [userId]
+    );
+    const groups = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      propertyIds: Array.isArray(row.property_ids) ? row.property_ids : [],
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+    res.json({ groups });
+  } catch (err) {
+    console.error('❌ [GROUPS] GET error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/property-groups — créer un nouveau groupe
+app.post('/api/property-groups', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id, name, propertyIds } = req.body || {};
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    if (!Array.isArray(propertyIds)) {
+      return res.status(400).json({ error: 'propertyIds must be an array' });
+    }
+
+    const groupId = id && typeof id === 'string' && id.trim()
+      ? id.trim()
+      : 'grp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+    await pool.query(
+      `INSERT INTO property_groups (id, user_id, name, property_ids, created_at, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())
+       ON CONFLICT (id) DO UPDATE
+         SET name = EXCLUDED.name,
+             property_ids = EXCLUDED.property_ids,
+             updated_at = NOW()
+         WHERE property_groups.user_id = $2`,
+      [groupId, userId, name.trim(), JSON.stringify(propertyIds)]
+    );
+
+    res.json({
+      success: true,
+      group: { id: groupId, name: name.trim(), propertyIds }
+    });
+  } catch (err) {
+    console.error('❌ [GROUPS] POST error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/property-groups/:id — mettre à jour un groupe
+app.put('/api/property-groups/:id', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const groupId = req.params.id;
+    const { name, propertyIds } = req.body || {};
+
+    const existing = await pool.query(
+      'SELECT id FROM property_groups WHERE id = $1 AND user_id = $2',
+      [groupId, userId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    const sets = [];
+    const values = [];
+    let idx = 1;
+    if (typeof name === 'string' && name.trim()) {
+      sets.push(`name = $${idx++}`);
+      values.push(name.trim());
+    }
+    if (Array.isArray(propertyIds)) {
+      sets.push(`property_ids = $${idx++}::jsonb`);
+      values.push(JSON.stringify(propertyIds));
+    }
+    if (sets.length === 0) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
+    sets.push(`updated_at = NOW()`);
+    values.push(groupId, userId);
+
+    await pool.query(
+      `UPDATE property_groups SET ${sets.join(', ')} WHERE id = $${idx++} AND user_id = $${idx}`,
+      values
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ [GROUPS] PUT error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/property-groups/:id — supprimer un groupe
+app.delete('/api/property-groups/:id', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const groupId = req.params.id;
+    const result = await pool.query(
+      'DELETE FROM property_groups WHERE id = $1 AND user_id = $2 RETURNING id',
+      [groupId, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ [GROUPS] DELETE error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/property-groups/bulk-import — migration localStorage → DB
+app.post('/api/property-groups/bulk-import', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { groups } = req.body || {};
+
+    if (!Array.isArray(groups)) {
+      return res.status(400).json({ error: 'groups must be an array' });
+    }
+
+    // Ne rien faire si la DB a déjà des groupes (éviter d'écraser)
+    const existing = await pool.query(
+      'SELECT COUNT(*)::int AS count FROM property_groups WHERE user_id = $1',
+      [userId]
+    );
+    if (existing.rows[0].count > 0) {
+      return res.json({
+        success: false,
+        skipped: true,
+        reason: 'groups already exist in DB',
+        existingCount: existing.rows[0].count,
+      });
+    }
+
+    let imported = 0;
+    for (const g of groups) {
+      if (!g || typeof g !== 'object' || !g.name) continue;
+      const groupId = g.id && typeof g.id === 'string'
+        ? g.id
+        : 'grp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const propertyIds = Array.isArray(g.propertyIds) ? g.propertyIds : [];
+      await pool.query(
+        `INSERT INTO property_groups (id, user_id, name, property_ids, created_at, updated_at)
+         VALUES ($1, $2, $3, $4::jsonb, NOW(), NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [groupId, userId, String(g.name).trim(), JSON.stringify(propertyIds)]
+      );
+      imported++;
+    }
+
+    res.json({ success: true, imported });
+  } catch (err) {
+    console.error('❌ [GROUPS] bulk-import error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ── DEMO PUBLIQUE : IA chat pour la page /ia.html ──────────────────────
 // Rate limit : 10 messages / IP / heure (en mémoire, suffisant pour démo)
