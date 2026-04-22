@@ -666,6 +666,69 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
 }
+
+/* Règles de politique d'annulation — desktop */
+.cancel-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cancel-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.cancel-field .form-input {
+  width: 90px;
+  padding-right: 42px;
+  text-align: center;
+}
+.cancel-suffix {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #7A8695;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
+.cancel-arrow {
+  color: #7A8695;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Règles de politique d'annulation — mobile */
+@media(max-width:640px){
+  .cancel-inputs {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .cancel-field .form-input {
+    width: 80px;
+  }
+  .cancel-arrow {
+    font-size: 12px;
+    width: 100%;
+    text-align: left;
+    margin: 2px 0 -2px;
+  }
+}
+
+/* Masquer le texte "Inclure" sur mobile (le checkbox coché suffit) */
+@media(max-width:640px){
+  .contrat-card-header label.include-toggle {
+    font-size: 0 !important;
+    gap: 0 !important;
+  }
+  .contrat-card-header label.include-toggle input {
+    width: 18px;
+    height: 18px;
+  }
+}
 </style>
 </head>
 <body data-page="contrat" data-title="Contrats">
@@ -1009,28 +1072,38 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
             <i class="fas fa-calendar-xmark" style="color:#1A7A5E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Politique d'annulation</span>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
+            <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
               <input type="checkbox" id="toggleAnnulation" checked style="accent-color:#1A7A5E;"/> Inclure
             </label>
           </div>
           <div class="contrat-card-body" id="annulationBody">
             <div class="form-grid-2">
-              <div class="form-group">
+              <div class="form-group cancel-rule">
                 <label class="form-label">Délai 1 – Remboursement partiel si annulation à plus de</label>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <input type="number" class="form-input" id="cancelDays1" value="30" min="1" style="width:80px;flex-shrink:0;"/>
-                  <span style="color:#7A8695;font-size:14px;">jours avant → remboursement de</span>
-                  <input type="number" class="form-input" id="cancelPct1" value="50" min="0" max="100" style="width:70px;flex-shrink:0;"/>
-                  <span style="color:#7A8695;font-size:14px;">%</span>
+                <div class="cancel-inputs">
+                  <div class="cancel-field">
+                    <input type="number" class="form-input" id="cancelDays1" value="30" min="1"/>
+                    <span class="cancel-suffix">jours</span>
+                  </div>
+                  <span class="cancel-arrow">→ remboursement de</span>
+                  <div class="cancel-field">
+                    <input type="number" class="form-input" id="cancelPct1" value="50" min="0" max="100"/>
+                    <span class="cancel-suffix">%</span>
+                  </div>
                 </div>
               </div>
-              <div class="form-group">
+              <div class="form-group cancel-rule">
                 <label class="form-label">Délai 2 – Aucun remboursement si annulation à moins de</label>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <input type="number" class="form-input" id="cancelDays2" value="7" min="1" style="width:80px;flex-shrink:0;"/>
-                  <span style="color:#7A8695;font-size:14px;">jours avant → remboursement de</span>
-                  <input type="number" class="form-input" id="cancelPct2" value="0" min="0" max="100" style="width:70px;flex-shrink:0;"/>
-                  <span style="color:#7A8695;font-size:14px;">%</span>
+                <div class="cancel-inputs">
+                  <div class="cancel-field">
+                    <input type="number" class="form-input" id="cancelDays2" value="7" min="1"/>
+                    <span class="cancel-suffix">jours</span>
+                  </div>
+                  <span class="cancel-arrow">→ remboursement de</span>
+                  <div class="cancel-field">
+                    <input type="number" class="form-input" id="cancelPct2" value="0" min="0" max="100"/>
+                    <span class="cancel-suffix">%</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1042,7 +1115,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
             <i class="fas fa-handshake" style="color:#1A7A5E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Obligations du locataire</span>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
+            <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
               <input type="checkbox" id="toggleObligations" checked style="accent-color:#1A7A5E;"/> Inclure
             </label>
           </div>
@@ -1062,7 +1135,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
             <i class="fas fa-shield-halved" style="color:#1A7A5E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Assurance responsabilité civile</span>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
+            <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
               <input type="checkbox" id="toggleAssurance" checked style="accent-color:#1A7A5E;"/> Inclure
             </label>
           </div>
@@ -1078,7 +1151,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
             <i class="fas fa-clipboard-list" style="color:#1A7A5E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">État des lieux</span>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
+            <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
               <input type="checkbox" id="toggleEDL" checked style="accent-color:#1A7A5E;"/> Inclure
             </label>
           </div>
