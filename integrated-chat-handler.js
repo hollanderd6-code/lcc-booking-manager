@@ -293,7 +293,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       if (hasThanks && hasProblem) {
         console.log(`⚠️ [HANDLER] Remerciement + problème détectés → escalade (plainte/oubli)`);
         await escalateToOwner(conversation, pool, io, language, channexId);
-        return true;
+        return false; // escalade → notif push propriétaire requise
       }
     }
 
@@ -485,7 +485,7 @@ Rules:
     // ========================================
     console.log('⚠️ [HANDLER] Aucune réponse → escalade');
     await escalateToOwner(conversation, pool, io, language, channexId);
-    return true;
+    return false; // escalade → notif push propriétaire requise
 
   } catch (error) {
     console.error('❌ [HANDLER] Erreur handleIncomingMessage:', error);
