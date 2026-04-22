@@ -660,7 +660,7 @@ function appendMessage(message) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
   
-  const isOwner = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot';
+  const isOwner = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
   
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
@@ -713,7 +713,7 @@ function appendMessage(message) {
   
   const status = document.createElement('span');
   status.className = 'chat-status';
-  status.textContent = (message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot') ? 'Envoyé' : '';
+  status.textContent = (message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system') ? 'Envoyé' : '';
   
   meta.appendChild(time);
   meta.appendChild(status);
@@ -1157,27 +1157,13 @@ function connectSocket() {
   });
 
   // ── Messages entrants depuis les plateformes (Airbnb/Booking) ──
+  // ⚠️ Ne PAS ajouter de div ici : le message est déjà affiché via 'new_message'.
+  // On garde seulement la mise à jour du badge + le toast.
   socket.on('new_platform_message', (data) => {
-    console.log('💬 [CHANNEX] Message plateforme reçu:', data);
+    console.log('💬 [CHANNEX] Message plateforme reçu (toast uniquement):', data);
 
     // Recharger la liste des conversations (badge non-lu)
     loadConversations();
-
-    // Si la conversation est ouverte, afficher le message
-    if (data.conversation_id && currentConversationId == data.conversation_id && data.message) {
-      const m = data.message;
-      const div = document.createElement('div');
-      div.className = 'chat-message';
-      const time = new Date(m.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      div.innerHTML = `
-        <div class="chat-bubble">
-          <div class="chat-sender">Voyageur <span style="font-size:10px;opacity:.6;">· via plateforme</span></div>
-          <div class="chat-text">${m.message}</div>
-          <div class="chat-time">${time}</div>
-        </div>`;
-      const chatEl = document.getElementById('chatMessages');
-      if (chatEl) { chatEl.appendChild(div); chatEl.scrollTop = chatEl.scrollHeight; }
-    }
 
     showToast('💬 Nouveau message voyageur', 'info');
   });
