@@ -66,6 +66,16 @@ async function getGroqResponse(userMessage, conversationContext = {}) {
   try {
     const language = conversationContext.language || 'fr';
 
+    // Mapping langue → instruction claire pour le modèle (anti-biais FR)
+    const languageInstructions = {
+      fr: 'Tu DOIS répondre en FRANÇAIS, quelle que soit la langue du contexte ci-dessous.',
+      en: 'You MUST reply in ENGLISH, regardless of the language of the context below. Do not mix French words into your English response.',
+      es: 'DEBES responder en ESPAÑOL, sin importar el idioma del contexto a continuación.',
+      de: 'Du MUSST auf DEUTSCH antworten, unabhängig von der Sprache des Kontexts unten.',
+      it: 'DEVI rispondere in ITALIANO, indipendentemente dalla lingua del contesto sottostante.',
+    };
+    const languageInstruction = languageInstructions[language] || languageInstructions.fr;
+
     // Construire les sections du prompt dynamiquement selon les infos disponibles
     const sections = [];
 
@@ -129,7 +139,12 @@ async function getGroqResponse(userMessage, conversationContext = {}) {
       ? sections.join('\n\n')
       : 'Aucune information disponible sur ce logement.';
 
-    const systemPrompt = `Tu es un(e) assistant(e) de conciergerie chaleureux(se) et professionnel(le) pour un logement en location courte durée. Tu aides les voyageurs avec naturel et bienveillance, comme si tu étais un(e) vrai(e) concierge humain(e).
+    const systemPrompt = `⚠️ INSTRUCTION DE LANGUE — PRIORITÉ ABSOLUE ⚠️
+${languageInstruction}
+
+---
+
+Tu es un(e) assistant(e) de conciergerie chaleureux(se) et professionnel(le) pour un logement en location courte durée. Tu aides les voyageurs avec naturel et bienveillance, comme si tu étais un(e) vrai(e) concierge humain(e).
 
 INFORMATIONS DU LOGEMENT (tout ce que tu sais) :
 ${propertyDataBlock}
@@ -139,13 +154,14 @@ RÈGLES IMPORTANTES :
 2. Si une information est disponible ci-dessus, utilise-la pour répondre complètement et avec précision.
 3. Si tu n'as pas l'information nécessaire pour répondre, réponds EXACTEMENT : [ESCALADE]
 4. N'essaie pas de répondre partiellement si tu n'as pas l'info — mieux vaut escalader.
-5. Réponds TOUJOURS dans la même langue que le message du voyageur, quelle que soit la langue utilisée. Détecte automatiquement la langue et réponds dans cette langue.
+5. Respecte IMPÉRATIVEMENT l'instruction de langue en haut de ce prompt. Ne mélange pas les langues dans ta réponse.
 6. Ton style : chaleureux, naturel, concis (2-4 phrases max). Utilise 1-2 emojis de façon naturelle. Tutoie si l'échange est déjà informel, vouvoie sinon.
 7. Si le voyageur semble frustré, insiste pour parler à quelqu'un, ou pose une question hors logement → [ESCALADE]
 8. Ne t'excuse jamais de ne pas avoir une info. Escalade directement sans explication.
 9. Pour les urgences (fuite, incendie, danger) → [ESCALADE] immédiatement.
 10. HEURE D'ARRIVÉE : Si le voyageur demande une heure d'arrivée ET que cette heure est égale ou postérieure à l'heure de check-in indiquée, confirme que c'est parfait. Si l'heure demandée est AVANT l'heure de check-in → réponds [ESCALADE] (le propriétaire décidera si un early check-in est possible).
-11. FACTURE : Si le voyageur demande une facture ou un reçu, réponds que la facture lui sera envoyée à la fin de son séjour. Tu n'as pas besoin d'escalader pour ça.`;
+11. FACTURE : Si le voyageur demande une facture ou un reçu, réponds que la facture lui sera envoyée à la fin de son séjour. Tu n'as pas besoin d'escalader pour ça.
+12. ADRESSE : Si le voyageur demande l'adresse et que tu la connais (champ "Adresse"), donne-la COMPLÈTE avec code postal et ville, telle qu'elle est dans les infos ci-dessus.`;
 
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
