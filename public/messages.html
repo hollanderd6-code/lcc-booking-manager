@@ -2975,6 +2975,8 @@ async function sendPlatformMessage(convId) {
 }
 
 // ── Socket : écouter les nouveaux messages plateforme ──────
+// ⚠️ On NE rend PAS le message ici : c'est déjà fait par chat-owner.js via 'new_message'.
+// Ce listener sert uniquement à mettre à jour le badge et afficher un toast.
 document.addEventListener('DOMContentLoaded', () => {
   // Attendre que le socket soit initialisé par chat-owner.js
   const _waitSocket = setInterval(() => {
@@ -2982,9 +2984,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!s) return;
     clearInterval(_waitSocket);
 
-    // Message entrant d'un voyageur via Channex
+    // Message entrant d'un voyageur via Channex — juste badge + toast
     s.on('new_platform_message', (data) => {
-      console.log('💬 [CHANNEX] Nouveau message plateforme reçu:', data);
+      console.log('💬 [CHANNEX] Nouveau message plateforme (badge/toast):', data);
 
       // Mettre à jour le badge non-lus
       const badge = document.getElementById('tabGuestsBadge');
@@ -2992,24 +2994,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const count = (parseInt(badge.textContent) || 0) + 1;
         badge.textContent = count;
         badge.style.display = 'inline';
-      }
-
-      // Si la conversation est ouverte, afficher le message
-      if (data.conversation_id && window._currentOpenConvId == data.conversation_id) {
-        const chatEl = document.getElementById('chatMessages');
-        if (chatEl && data.message) {
-          const m = data.message;
-          const time = fmtMsgTime(m.created_at || '');
-          const div = document.createElement('div');
-          div.className = 'chat-message guest';
-          div.innerHTML = `
-            <div class="chat-bubble">
-              <div class="chat-text">${m.message}</div>
-              <div class="chat-time">${time} · via plateforme</div>
-            </div>`;
-          chatEl.appendChild(div);
-          chatEl.scrollTop = chatEl.scrollHeight;
-        }
       }
 
       // Toast notification
