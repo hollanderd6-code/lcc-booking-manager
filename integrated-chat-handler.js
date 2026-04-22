@@ -267,9 +267,9 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       const msgLow = message.message.toLowerCase();
 
       // Patterns de remerciement par langue
-      const thanksPatterns = /\b(merci|thanks|thank you|gracias|danke|grazie|cheers|ty|tks|thx|super séjour|bon séjour|agréable séjour|great stay|lovely stay|bonne journée|have a nice|enjoyed|appreciated)\b/i;
+      const thanksPatterns = /(?<!\p{L})(merci|thanks|thank you|gracias|danke|grazie|cheers|ty|tks|thx|super séjour|bon séjour|agréable séjour|great stay|lovely stay|bonne journée|have a nice|enjoyed|appreciated)(?!\p{L})/iu;
       // Patterns de plainte/problème qui doivent escalader malgré le "merci"
-      const problemPatterns = /\b(oublié|laissé|perdu|cassé|problème|souci|plainte|broken|lost|forgot|left behind|complaint|issue|damaged|stolen|dispute|remboursement|refund|not working|ne fonctionne|ne marche)\b/i;
+      const problemPatterns = /(?<!\p{L})(oublié|laissé|perdu|cassé|problème|souci|plainte|broken|lost|forgot|left behind|complaint|issue|damaged|stolen|dispute|remboursement|refund|not working|ne fonctionne|ne marche)(?!\p{L})/iu;
 
       const hasThanks = thanksPatterns.test(msgLow);
       const hasProblem = problemPatterns.test(msgLow);
