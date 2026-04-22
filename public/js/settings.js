@@ -29,9 +29,9 @@ const GROUPS_KEY = 'bh_property_groups'; // legacy, pour migration uniquement
 let _groupsCache = [];
 let _groupsLoaded = false;
 
-// Récupère le token d'auth (stocké en localStorage par auth-fetch)
+// Récupère le token d'auth — clé 'lcc_token' utilisée partout dans l'app
 function _getAuthHeaders() {
-  const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+  const token = localStorage.getItem('lcc_token') || '';
   return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
               : { 'Content-Type': 'application/json' };
 }
@@ -39,7 +39,7 @@ function _getAuthHeaders() {
 // Charger les groupes depuis l'API + migration legacy localStorage si besoin
 async function loadGroupsFromAPI() {
   try {
-    const res = await fetch('/api/property-groups', {
+    const res = await fetch(`${API_URL}/api/property-groups`, {
       headers: _getAuthHeaders(),
       credentials: 'include',
     });
@@ -57,7 +57,7 @@ async function loadGroupsFromAPI() {
         const legacy = JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]');
         if (Array.isArray(legacy) && legacy.length > 0) {
           console.log(`🔄 [GROUPS] Migration ${legacy.length} groupe(s) localStorage → DB`);
-          const importRes = await fetch('/api/property-groups/bulk-import', {
+          const importRes = await fetch(`${API_URL}/api/property-groups/bulk-import`, {
             method: 'POST',
             headers: _getAuthHeaders(),
             credentials: 'include',
@@ -71,7 +71,7 @@ async function loadGroupsFromAPI() {
               localStorage.setItem(GROUPS_KEY + '_backup', localStorage.getItem(GROUPS_KEY) || '');
               localStorage.removeItem(GROUPS_KEY);
               // Re-fetch pour récupérer les IDs officiels
-              const reFetch = await fetch('/api/property-groups', {
+              const reFetch = await fetch(`${API_URL}/api/property-groups`, {
                 headers: _getAuthHeaders(), credentials: 'include',
               });
               if (reFetch.ok) {
@@ -249,7 +249,7 @@ async function createGroup() {
   const name = input.value.trim();
   if (!name) return;
   try {
-    const res = await fetch('/api/property-groups', {
+    const res = await fetch(`${API_URL}/api/property-groups`, {
       method: 'POST',
       headers: _getAuthHeaders(),
       credentials: 'include',
@@ -276,7 +276,7 @@ async function renameGroup(groupId, newName) {
   g.name = newName.trim();
   renderFilterBar(); // feedback immédiat
   try {
-    await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+    await fetch(`${API_URL}/api/property-groups/` + encodeURIComponent(groupId), {
       method: 'PUT',
       headers: _getAuthHeaders(),
       credentials: 'include',
@@ -295,7 +295,7 @@ async function deleteGroup(groupId) {
   renderFilterBar();
   applyFilter();
   try {
-    const res = await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+    const res = await fetch(`${API_URL}/api/property-groups/` + encodeURIComponent(groupId), {
       method: 'DELETE',
       headers: _getAuthHeaders(),
       credentials: 'include',
@@ -335,7 +335,7 @@ async function togglePropertyInGroup(groupId, propertyId, add) {
   // Persister tous les groupes modifiés côté serveur
   try {
     if (g) {
-      await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+      await fetch(`${API_URL}/api/property-groups/` + encodeURIComponent(groupId), {
         method: 'PUT',
         headers: _getAuthHeaders(),
         credentials: 'include',
@@ -345,7 +345,7 @@ async function togglePropertyInGroup(groupId, propertyId, add) {
     // Autres groupes (si le logement a été retiré d'un autre groupe)
     for (const og of _groupsCache) {
       if (og.id !== groupId) {
-        await fetch('/api/property-groups/' + encodeURIComponent(og.id), {
+        await fetch(`${API_URL}/api/property-groups/` + encodeURIComponent(og.id), {
           method: 'PUT',
           headers: _getAuthHeaders(),
           credentials: 'include',
