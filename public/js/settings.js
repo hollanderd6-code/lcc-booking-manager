@@ -19,25 +19,100 @@ let currentEditingProperty = null;
 let ownerClients = [];
 
 // ========================================
-// GROUPES DE LOGEMENTS
+// GROUPES DE LOGEMENTS — DB-SYNCED
+// Stockage DB (table property_groups), cache local en mémoire
+// pour un rendu rapide, migration automatique depuis localStorage.
 // ========================================
-const GROUPS_KEY = 'bh_property_groups';
+const GROUPS_KEY = 'bh_property_groups'; // legacy, pour migration uniquement
 
-function loadGroups() {
-  try { return JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]'); }
-  catch { return []; }
+// Cache en mémoire — rempli depuis l'API au chargement
+let _groupsCache = [];
+let _groupsLoaded = false;
+
+// Récupère le token d'auth (stocké en localStorage par auth-fetch)
+function _getAuthHeaders() {
+  const token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+  return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+              : { 'Content-Type': 'application/json' };
 }
-function saveGroups(groups) {
-  localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
+
+// Charger les groupes depuis l'API + migration legacy localStorage si besoin
+async function loadGroupsFromAPI() {
+  try {
+    const res = await fetch('/api/property-groups', {
+      headers: _getAuthHeaders(),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      console.warn('⚠️ [GROUPS] GET failed:', res.status);
+      return [];
+    }
+    const data = await res.json();
+    const groups = Array.isArray(data.groups) ? data.groups : [];
+
+    // MIGRATION : si la DB est vide MAIS qu'on a des groupes en localStorage legacy
+    // → on les pousse vers le serveur puis on les efface du localStorage.
+    if (groups.length === 0) {
+      try {
+        const legacy = JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]');
+        if (Array.isArray(legacy) && legacy.length > 0) {
+          console.log(`🔄 [GROUPS] Migration ${legacy.length} groupe(s) localStorage → DB`);
+          const importRes = await fetch('/api/property-groups/bulk-import', {
+            method: 'POST',
+            headers: _getAuthHeaders(),
+            credentials: 'include',
+            body: JSON.stringify({ groups: legacy }),
+          });
+          if (importRes.ok) {
+            const importData = await importRes.json();
+            if (importData.success) {
+              console.log(`✅ [GROUPS] ${importData.imported} groupe(s) migrés`);
+              // Nettoyer localStorage (backup "just in case")
+              localStorage.setItem(GROUPS_KEY + '_backup', localStorage.getItem(GROUPS_KEY) || '');
+              localStorage.removeItem(GROUPS_KEY);
+              // Re-fetch pour récupérer les IDs officiels
+              const reFetch = await fetch('/api/property-groups', {
+                headers: _getAuthHeaders(), credentials: 'include',
+              });
+              if (reFetch.ok) {
+                const reData = await reFetch.json();
+                return Array.isArray(reData.groups) ? reData.groups : [];
+              }
+            }
+          } else {
+            console.warn('⚠️ [GROUPS] Migration échouée:', importRes.status);
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ [GROUPS] Erreur migration legacy:', err.message);
+      }
+    }
+
+    return groups;
+  } catch (err) {
+    console.error('❌ [GROUPS] loadGroupsFromAPI error:', err.message);
+    return [];
+  }
 }
-function getGroups() { return loadGroups(); }
+
+// Charger les groupes une fois et garder en cache
+async function ensureGroupsLoaded() {
+  if (_groupsLoaded) return _groupsCache;
+  _groupsCache = await loadGroupsFromAPI();
+  _groupsLoaded = true;
+  return _groupsCache;
+}
+
+// API publique synchrone — renvoie le cache
+function getGroups() {
+  return _groupsCache || [];
+}
 
 // Filtre actif : null = tous, 'ungrouped' = non groupés, string = id du groupe
 let activeFilter = null;
 
 function getPropertyGroupId(propertyId) {
-  const groups = getGroups();
-  const group = groups.find(g => g.propertyIds && g.propertyIds.includes(propertyId));
+  const group = getGroups().find(g => g.propertyIds && g.propertyIds.includes(propertyId));
   return group ? group.id : null;
 }
 
@@ -168,55 +243,119 @@ function refreshGroupsBody() {
   if (body) body.innerHTML = renderGroupsBody();
 }
 
-function createGroup() {
+async function createGroup() {
   const input = document.getElementById('_newGroupName');
   if (!input) return;
   const name = input.value.trim();
   if (!name) return;
-  const groups = getGroups();
-  groups.push({ id: 'grp_' + Date.now(), name, propertyIds: [] });
-  saveGroups(groups);
-  input.value = '';
-  refreshGroupsBody();
-  renderFilterBar();
+  try {
+    const res = await fetch('/api/property-groups', {
+      method: 'POST',
+      headers: _getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ name, propertyIds: [] }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.success && data.group) {
+      _groupsCache.push(data.group);
+      input.value = '';
+      refreshGroupsBody();
+      renderFilterBar();
+    }
+  } catch (err) {
+    console.error('❌ [GROUPS] createGroup failed:', err.message);
+    alert('Erreur lors de la création du groupe');
+  }
 }
 
-function renameGroup(groupId, newName) {
+async function renameGroup(groupId, newName) {
   if (!newName.trim()) return;
-  const groups = getGroups();
-  const g = groups.find(g => g.id === groupId);
-  if (g) { g.name = newName.trim(); saveGroups(groups); renderFilterBar(); }
+  const g = _groupsCache.find(g => g.id === groupId);
+  if (!g) return;
+  g.name = newName.trim();
+  renderFilterBar(); // feedback immédiat
+  try {
+    await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+      method: 'PUT',
+      headers: _getAuthHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ name: g.name }),
+    });
+  } catch (err) {
+    console.error('❌ [GROUPS] renameGroup failed:', err.message);
+  }
 }
 
-function deleteGroup(groupId) {
-  const groups = getGroups().filter(g => g.id !== groupId);
-  saveGroups(groups);
-  if (activeFilter === groupId) { activeFilter = null; }
+async function deleteGroup(groupId) {
+  const before = _groupsCache;
+  _groupsCache = _groupsCache.filter(g => g.id !== groupId);
+  if (activeFilter === groupId) activeFilter = null;
   refreshGroupsBody();
   renderFilterBar();
   applyFilter();
+  try {
+    const res = await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+      method: 'DELETE',
+      headers: _getAuthHeaders(),
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+  } catch (err) {
+    console.error('❌ [GROUPS] deleteGroup failed:', err.message);
+    // Rollback en cas d'échec
+    _groupsCache = before;
+    refreshGroupsBody();
+    renderFilterBar();
+    applyFilter();
+    alert('Erreur lors de la suppression — annulée');
+  }
 }
 
-function togglePropertyInGroup(groupId, propertyId, add) {
-  const groups = getGroups();
-  // Retirer le logement de tous les autres groupes d'abord
-  groups.forEach(g => {
+async function togglePropertyInGroup(groupId, propertyId, add) {
+  // Retirer de tous les autres groupes (un logement ne peut être que dans un groupe)
+  _groupsCache.forEach(g => {
     if (g.id !== groupId) {
       g.propertyIds = (g.propertyIds || []).filter(id => id !== propertyId);
     }
   });
-  const g = groups.find(g => g.id === groupId);
+  const g = _groupsCache.find(g => g.id === groupId);
   if (g) {
-    if (add) {
-      if (!g.propertyIds.includes(propertyId)) g.propertyIds.push(propertyId);
-    } else {
+    g.propertyIds = g.propertyIds || [];
+    if (add && !g.propertyIds.includes(propertyId)) {
+      g.propertyIds.push(propertyId);
+    } else if (!add) {
       g.propertyIds = g.propertyIds.filter(id => id !== propertyId);
     }
   }
-  saveGroups(groups);
   refreshGroupsBody();
   renderFilterBar();
   applyFilter();
+
+  // Persister tous les groupes modifiés côté serveur
+  try {
+    if (g) {
+      await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+        method: 'PUT',
+        headers: _getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ propertyIds: g.propertyIds }),
+      });
+    }
+    // Autres groupes (si le logement a été retiré d'un autre groupe)
+    for (const og of _groupsCache) {
+      if (og.id !== groupId) {
+        await fetch('/api/property-groups/' + encodeURIComponent(og.id), {
+          method: 'PUT',
+          headers: _getAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ propertyIds: og.propertyIds || [] }),
+        });
+      }
+    }
+  } catch (err) {
+    console.error('❌ [GROUPS] togglePropertyInGroup sync failed:', err.message);
+  }
 }
 
 // ========================================
@@ -263,6 +402,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   populateTimeSelects();
   setupColorPicker();
   setupPhotoPreview();
+  // Charger les groupes depuis l'API (avec migration auto localStorage → DB si besoin)
+  await ensureGroupsLoaded();
   await loadProperties();
   await loadOwnerClients(); 
 
