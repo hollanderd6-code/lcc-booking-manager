@@ -24886,7 +24886,7 @@ app.post('/api/channex/webhook', async (req, res) => {
       }
 
       // ── Notification push annulation ────────────────────────
-      if (result && result.uid && result.status === 'cancelled') {
+      if (result && result.uid && result.status === 'cancelled' && !result._not_in_db) {
         try {
           const attrs     = booking.attributes || booking;
           const otaName   = attrs.ota_name || 'Channex';
