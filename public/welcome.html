@@ -729,10 +729,14 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
           </div>
           <div class="wiz-group">
             <label class="wiz-label">Photo de couverture <span class="wiz-required">*</span><span class="wiz-hint">Image principale (format recommandé: 1920x1080px)</span></label>
+            <div class="wiz-warn-box" style="font-size:12px;padding:10px 14px;margin-bottom:10px;">
+              <i class="fas fa-info-circle"></i>
+              <span>Taille maximale : <strong>20 Mo par image</strong>. Formats acceptés : JPG, PNG, WebP.</span>
+            </div>
             <div class="wiz-upload" onclick="document.getElementById('coverPhoto').click()">
               <i class="fas fa-cloud-upload-alt"></i>
               <p>Cliquez pour télécharger votre photo de couverture</p>
-              <p class="wiz-upload-hint">JPG, PNG ou WebP (max 5MB)</p>
+              <p class="wiz-upload-hint">JPG, PNG ou WebP — max 20 Mo par image</p>
             </div>
             <input accept="image/*" id="coverPhoto" style="display:none;" type="file"/>
             <div class="image-preview" id="coverPhotoPreview"></div>
@@ -795,7 +799,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
             <div class="wiz-upload" onclick="document.getElementById('entrancePhotos').click()">
               <i class="fas fa-images"></i>
               <p>Télécharger les photos de l'entrée</p>
-              <p class="wiz-upload-hint">Plusieurs images possibles</p>
+              <p class="wiz-upload-hint">Plusieurs images possibles — max 20 Mo chacune</p>
             </div>
             <input accept="image/*" id="entrancePhotos" multiple style="display:none;" type="file"/>
             <div class="image-preview" id="entrancePhotosPreview"></div>
@@ -1173,12 +1177,32 @@ function updateProgressBar(index) {
 // ----------------------------
 // Upload + preview images
 // ----------------------------
+// ----------------------------
+// Upload image : taille max & validation
+// ----------------------------
+const MAX_UPLOAD_MB = 20;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+
+function validateFilesSize(files) {
+  const oversize = Array.from(files || []).filter(f => f.size > MAX_UPLOAD_BYTES);
+  if (oversize.length === 0) return true;
+  const names = oversize.map(f => `"${f.name}" (${(f.size/1024/1024).toFixed(1)} Mo)`).join(', ');
+  const plural = oversize.length > 1 ? 's' : '';
+  showDraftToast(`❌ Image${plural} trop lourde${plural} : ${names}. Max ${MAX_UPLOAD_MB} Mo par image.`, true);
+  return false;
+}
+
 function setupImageUpload(inputId, previewId, multiple = false) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
   if (!input || !preview) return;
 
   input.addEventListener('change', () => {
+    // Validation de taille avant aperçu
+    if (!validateFilesSize(input.files)) {
+      input.value = ''; // vider la sélection invalide
+      return;
+    }
     preview.innerHTML = '';
     const files = Array.from(input.files || []);
     if (!files.length) return;
@@ -1296,6 +1320,12 @@ async function saveWelcomeBook(e) {
     let data = null;
     try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
+    // Fichier trop lourd : message explicite
+    if (response.status === 413) {
+      alert((data && data.message) || `Une image dépasse ${MAX_UPLOAD_MB} Mo. Réduisez sa taille puis réessayez.`);
+      return;
+    }
+
     if (!response.ok || !data || !data.success) {
       alert((data && (data.error || data.message)) ? (data.error || data.message) : `Erreur sauvegarde (${response.status})`);
       return;
@@ -1334,6 +1364,11 @@ async function saveDraft(btn) {
     const raw = await response.text();
     let data = null;
     try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+
+    if (response.status === 413) {
+      showDraftToast((data && data.message) || `❌ Image trop lourde (max ${MAX_UPLOAD_MB} Mo)`, true);
+      return;
+    }
 
     if (!response.ok || !data || !data.success) {
       showDraftToast('❌ Erreur lors de l\'enregistrement', true);
