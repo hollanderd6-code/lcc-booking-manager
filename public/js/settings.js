@@ -1620,6 +1620,16 @@ function renderPropertiesFiltered(filteredProps) {
 
   grid.innerHTML = cardsHtml + addCard;
 
+  // Vue liste sur mobile si activée
+  const isMobile = window.innerWidth <= 1366;
+  if (isMobile && currentView === 'list') {
+    grid.classList.add('list-view');
+    const listHtml = filteredProps.map(p => renderListItem(p)).join('');
+    grid.innerHTML = listHtml;
+  } else {
+    grid.classList.remove('list-view');
+  }
+
   grid.querySelectorAll(".btn-edit").forEach(btn => {
     btn.addEventListener("click", () => openEditPropertyModal(btn.getAttribute("data-id")));
   });
@@ -1644,6 +1654,69 @@ function renderPropertiesFiltered(filteredProps) {
   properties.filter(p => p.channexEnabled && p.channexPropertyId).forEach(p => {
     loadConnectedChannels(p.id, `channels-${p.id}`);
   });
+}
+
+// ============================================================
+// VIEW TOGGLE — GRILLE / LISTE (mobile only)
+// ============================================================
+let currentView = localStorage.getItem('bh_prop_view') || 'grid';
+
+function setPropertyView(view) {
+  currentView = view;
+  localStorage.setItem('bh_prop_view', view);
+  // Mettre à jour les boutons toggle
+  document.getElementById('btnViewGrid')?.classList.toggle('active', view === 'grid');
+  document.getElementById('btnViewList')?.classList.toggle('active', view === 'list');
+  // Re-render avec la nouvelle vue
+  applyFilter();
+}
+
+function initViewToggle() {
+  const savedView = localStorage.getItem('bh_prop_view') || 'grid';
+  currentView = savedView;
+  document.getElementById('btnViewGrid')?.classList.toggle('active', savedView === 'grid');
+  document.getElementById('btnViewList')?.classList.toggle('active', savedView === 'list');
+}
+
+// Génère le HTML d'un item en vue liste
+function renderListItem(p) {
+  const id = p._id || p.id || '';
+  const name = p.name || 'Sans nom';
+  const address = p.address || '';
+  const photoUrl = p.photoUrl || p.photo || null;
+  const propertyEmoji = photoUrl ? '' : ['🏢','🌲','🏙️','🏡','🏖️','🏔️'][Math.abs(name.charCodeAt(0)) % 6];
+
+  // Badges OTA
+  let otaBadges = '';
+  if (p.channexEnabled) {
+    otaBadges = `<span class="ota-chip"><span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;display:inline-block;"></span> Sync OTA</span>`;
+  } else {
+    otaBadges = `<span class="ota-chip" style="color:#9CA3AF;border-color:rgba(156,163,175,.3);background:rgba(156,163,175,.07);">Non connecté</span>`;
+  }
+
+  return `
+    <div class="property-list-item" data-id="${escapeHtml(id)}" onclick="openEditPropertyModal('${escapeHtml(id)}')">
+      <div class="dnd-handle-list" title="Glisser pour réorganiser" onclick="event.stopPropagation()">
+        <i class="fas fa-grip-vertical"></i>
+      </div>
+      <div class="property-list-thumb">
+        ${photoUrl
+          ? `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(name)}" />`
+          : propertyEmoji
+        }
+      </div>
+      <div class="property-list-info">
+        <div class="property-list-name">${escapeHtml(name)}</div>
+        ${address ? `<div class="property-list-address"><i class="fas fa-location-dot" style="font-size:9px;margin-right:3px;"></i>${escapeHtml(address)}</div>` : ''}
+        <div class="property-list-otas">${otaBadges}</div>
+      </div>
+      <div class="property-list-actions" onclick="event.stopPropagation()">
+        <button class="btn-list-action btn-edit" data-id="${escapeHtml(id)}" title="Gérer">
+          <i class="fas fa-cog"></i>
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 // Gérer le clic sur les boutons de réorganisation
@@ -3512,7 +3585,12 @@ async function initNotesSection(propertyId) {
     const grid = document.getElementById('propertiesGrid');
     if (!grid) return;
 
-    const newOrder = [...grid.querySelectorAll('.property-card:not(.property-card-add)')]
+    // Supporte les deux vues : grille (.property-card) et liste (.property-list-item)
+    const selector = grid.classList.contains('list-view')
+      ? '.property-list-item[data-id]'
+      : '.property-card:not(.property-card-add)';
+
+    const newOrder = [...grid.querySelectorAll(selector)]
       .map(c => c.getAttribute('data-id')).filter(Boolean);
 
     const currentOrder = properties.map(p => p._id || p.id);
@@ -3555,12 +3633,12 @@ async function initNotesSection(propertyId) {
 
   /* ── Trouver la carte sous un point (touch) ── */
   function cardAtPoint(x, y) {
-    // Masquer temporairement le clone flottant pour que elementFromPoint fonctionne
     if (floatingEl) floatingEl.style.display = 'none';
     const el = document.elementFromPoint(x, y);
     if (floatingEl) floatingEl.style.display = '';
     if (!el) return null;
-    return el.closest('.property-card:not(.property-card-add)');
+    // Supporte grille et liste
+    return el.closest('.property-card:not(.property-card-add), .property-list-item[data-id]');
   }
 
   /* ── Créer le clone flottant (touch) ── */
@@ -3589,7 +3667,11 @@ async function initNotesSection(propertyId) {
   function reinsert(targetCard) {
     if (!srcCard || !targetCard || srcCard === targetCard) return;
     const grid = document.getElementById('propertiesGrid');
-    const all = [...grid.querySelectorAll('.property-card:not(.property-card-add)')];
+    const isListView = grid?.classList.contains('list-view');
+    const selector = isListView
+      ? '.property-list-item[data-id]'
+      : '.property-card:not(.property-card-add)';
+    const all = [...grid.querySelectorAll(selector)];
     const si = all.indexOf(srcCard);
     const ti = all.indexOf(targetCard);
     if (si < ti) {
@@ -3613,6 +3695,81 @@ async function initNotesSection(propertyId) {
     const grid = document.getElementById('propertiesGrid');
     if (!grid) return;
 
+    const isListView = grid.classList.contains('list-view');
+
+    if (isListView) {
+      // ── VUE LISTE : DnD sur .property-list-item via .dnd-handle-list ──
+      grid.querySelectorAll('.property-list-item[data-id]').forEach(item => {
+        const handle = item.querySelector('.dnd-handle-list');
+        if (!handle || handle._dndBound) return;
+        handle._dndBound = true;
+
+        // Touch : activation immédiate sur le handle
+        handle.addEventListener('touchstart', (e) => {
+          e.stopPropagation();
+          touchActive = true;
+          srcCard = item;
+          item.classList.add('dnd-ghost');
+          if (navigator.vibrate) navigator.vibrate(40);
+          createFloating(item, e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
+        handle.addEventListener('touchmove', (e) => {
+          if (!touchActive) return;
+          e.preventDefault();
+          const touch = e.touches[0];
+          moveFloating(touch.clientX, touch.clientY);
+          const target = cardAtPoint(touch.clientX, touch.clientY);
+          document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+          if (target && target !== srcCard) {
+            target.classList.add('dnd-over');
+            reinsert(target);
+          }
+        }, { passive: false });
+
+        handle.addEventListener('touchend', async () => {
+          if (!touchActive) return;
+          endDrag();
+          await saveNewOrder();
+        });
+
+        handle.addEventListener('touchcancel', () => endDrag());
+
+        // Mouse : drag HTML5 via mousedown sur le handle
+        handle.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          item.setAttribute('draggable', 'true');
+          item.classList.add('dnd-ghost');
+        });
+        handle.addEventListener('mouseup', () => item.classList.remove('dnd-ghost'));
+
+        item.addEventListener('dragstart', (e) => {
+          srcCard = item;
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        item.addEventListener('dragend', async () => {
+          item.setAttribute('draggable', 'false');
+          item.classList.remove('dnd-ghost');
+          document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+          srcCard = null;
+          await saveNewOrder();
+        });
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (!srcCard || srcCard === item) return;
+          document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+          item.classList.add('dnd-over');
+        });
+        item.addEventListener('drop', (e) => {
+          e.preventDefault();
+          reinsert(item);
+          item.classList.remove('dnd-over');
+        });
+      });
+      return; // Pas de DnD grille en vue liste
+    }
+
+    // ── VUE GRILLE : DnD sur .property-card via .dnd-handle ──
     grid.querySelectorAll('.property-card:not(.property-card-add)').forEach(card => {
       const handle  = card.querySelector('.dnd-handle');
       const imgZone = card.querySelector('.property-img');
@@ -3765,6 +3922,7 @@ async function initNotesSection(propertyId) {
     const grid = document.getElementById('propertiesGrid');
     if (grid) {
       observer.observe(grid, { childList: true });
+      initViewToggle();
       initDragDrop();
       setTimeout(showHint, 1500);
     }
