@@ -730,8 +730,8 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
           <div class="wiz-group">
             <label class="wiz-label">Photo de couverture <span class="wiz-required">*</span><span class="wiz-hint">Image principale (format recommandé: 1920x1080px)</span></label>
             <div class="wiz-warn-box" style="font-size:12px;padding:10px 14px;margin-bottom:10px;">
-              <i class="fas fa-info-circle"></i>
-              <span>Taille maximale : <strong>20 Mo par image</strong>. Formats acceptés : JPG, PNG, WebP.</span>
+              <i class="fas fa-magic"></i>
+              <span>Vos photos sont <strong>compressées automatiquement</strong> avant l'envoi (max 20 Mo par image). Formats : JPG, PNG, WebP.</span>
             </div>
             <div class="wiz-upload" onclick="document.getElementById('coverPhoto').click()">
               <i class="fas fa-cloud-upload-alt"></i>
@@ -1183,6 +1183,58 @@ function updateProgressBar(index) {
 const MAX_UPLOAD_MB = 20;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
+// Compression automatique des images avant upload
+// - Ne compresse pas les fichiers déjà petits (< 2 Mo) → garde l'original
+// - Ne redimensionne pas si l'image fait déjà moins de 1920px de large
+// - Sinon : redimensionne à 1920px max + JPEG qualité 0.85
+// Résultat typique : photo iPhone 12 Mo → ~500 Ko, visuellement identique
+const COMPRESS_SKIP_IF_UNDER_BYTES = 2 * 1024 * 1024; // 2 Mo
+const COMPRESS_MAX_DIMENSION = 1920;
+const COMPRESS_JPEG_QUALITY = 0.85;
+
+async function compressImage(file) {
+  // Pas une image → on ne touche pas
+  if (!file || !file.type || !file.type.startsWith('image/')) return file;
+  // Déjà petit → pas besoin de compresser
+  if (file.size < COMPRESS_SKIP_IF_UNDER_BYTES) return file;
+  // Les GIF et WebP sont gardés tels quels (compression lossy risquée)
+  if (file.type === 'image/gif' || file.type === 'image/webp') return file;
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const { width, height } = bitmap;
+    const maxDim = Math.max(width, height);
+    // Déjà dans les dimensions cibles → on ne re-encode pas pour ne rien dégrader
+    if (maxDim <= COMPRESS_MAX_DIMENSION) { bitmap.close?.(); return file; }
+
+    const scale = COMPRESS_MAX_DIMENSION / maxDim;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', COMPRESS_JPEG_QUALITY));
+    if (!blob) return file;
+    // Si la "compression" a produit un fichier plus gros que l'original (rare, mais possible
+    // sur une photo déjà très optimisée), on garde l'original
+    if (blob.size >= file.size) return file;
+
+    const newName = file.name.replace(/\.(heic|heif|jpe?g|png|tif?f|bmp)$/i, '.jpg');
+    return new File([blob], newName, { type: 'image/jpeg', lastModified: Date.now() });
+  } catch (err) {
+    console.warn('⚠️ [COMPRESS] Échec sur', file.name, '→ upload original:', err.message);
+    return file; // On ne bloque jamais l'upload si la compression plante
+  }
+}
+
+// Compresse une liste de fichiers en parallèle
+async function compressAll(files) {
+  return Promise.all(Array.from(files || []).map(compressImage));
+}
+
 function validateFilesSize(files) {
   const oversize = Array.from(files || []).filter(f => f.size > MAX_UPLOAD_BYTES);
   if (oversize.length === 0) return true;
@@ -1232,7 +1284,7 @@ function removePreviewItem(btn) {
 // ----------------------------
 // Collecte des données + sauvegarde
 // ----------------------------
-function collectFormData() {
+async function collectFormData() {
   const formData = new FormData();
 
   // Champs texte simples
@@ -1275,26 +1327,30 @@ function collectFormData() {
   });
   formData.append('places', JSON.stringify(places));
 
-  // Fichiers
+  // Fichiers (compressés automatiquement si trop lourds)
   const cover = document.getElementById('coverPhoto')?.files?.[0];
-  if (cover) formData.append('coverPhoto', cover);
+  if (cover) {
+    const compressed = await compressImage(cover);
+    formData.append('coverPhoto', compressed);
+  }
 
-  const entrance = document.getElementById('entrancePhotos')?.files || [];
+  const entrance = await compressAll(document.getElementById('entrancePhotos')?.files);
   for (const f of entrance) formData.append('entrancePhotos', f);
 
-  const parking = document.getElementById('parkingPhotos')?.files || [];
+  const parking = await compressAll(document.getElementById('parkingPhotos')?.files);
   for (const f of parking) formData.append('parkingPhotos', f);
 
   // Photos extra sections
-  ['extraPhotosAccess','extraPhotosLogement','extraPhotosPractical','extraPhotosAround'].forEach(id => {
-    const files = document.getElementById(id)?.files || [];
+  for (const id of ['extraPhotosAccess','extraPhotosLogement','extraPhotosPractical','extraPhotosAround']) {
+    const files = await compressAll(document.getElementById(id)?.files);
     for (const f of files) formData.append(id, f);
-  });
+  }
   // Photos des pièces
-  document.querySelectorAll('[id^="roomPhotos_"]').forEach(inp => {
-    const files = inp.files || [];
+  const roomInputs = document.querySelectorAll('[id^="roomPhotos_"]');
+  for (const inp of roomInputs) {
+    const files = await compressAll(inp.files);
     for (const f of files) formData.append(inp.name, f);
-  });
+  }
 
   // uniqueId si édition
   if (currentUniqueId) formData.append('uniqueId', currentUniqueId);
@@ -1306,11 +1362,13 @@ async function saveWelcomeBook(e) {
   if (e) e.preventDefault();
 
   try {
-    const formData = collectFormData();
+    showDraftToast('⏳ Préparation des images...');
+    const formData = await collectFormData();
     // Marquer comme publié (pas un brouillon)
     formData.append('isDraft', 'false');
     formData.append('lastSection', '4');
 
+    showDraftToast('⏳ Envoi en cours...');
     const response = await fetch(`${API_BASE}/api/welcome-books/create`, {
       method: 'POST',
       body: formData
@@ -1351,7 +1409,7 @@ async function saveDraft(btn) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...'; }
 
   try {
-    const formData = collectFormData();
+    const formData = await collectFormData();
     // Marquer comme brouillon + mémoriser l'étape en cours
     formData.append('isDraft', 'true');
     formData.append('lastSection', String(currentSectionIndex));
