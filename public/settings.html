@@ -1219,6 +1219,15 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 <!-- Barre de filtre groupes -->
 <div id="filterBar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+<!-- Toggle vue grille / liste — mobile uniquement -->
+<div id="viewToggleBar" style="display:none;justify-content:flex-end;margin-bottom:12px;gap:4px;">
+  <button id="btnViewGrid" class="view-toggle-btn active" onclick="setPropertyView('grid')" title="Vue grille">
+    <i class="fas fa-grip"></i>
+  </button>
+  <button id="btnViewList" class="view-toggle-btn" onclick="setPropertyView('list')" title="Vue liste">
+    <i class="fas fa-list"></i>
+  </button>
+</div>
 
 <div class="properties-grid" id="propertiesGrid">
 <!-- Logements injectés ici par settings.js -->
@@ -1555,8 +1564,114 @@ html[data-theme-v3="1"] .sidebar {
 }
 
 /* ============================================================
-   PROPERTY CARDS — REDESIGN V3
+   VIEW TOGGLE — MOBILE ONLY
    ============================================================ */
+.view-toggle-btn {
+  width: 34px; height: 34px;
+  border: 1.5px solid rgba(200,184,154,.5);
+  background: white; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; color: #7A8695;
+  transition: all .15s;
+}
+.view-toggle-btn.active {
+  background: #1A7A5E; border-color: #1A7A5E; color: white;
+}
+.view-toggle-btn:not(.active):hover {
+  border-color: #1A7A5E; color: #1A7A5E;
+}
+
+/* ============================================================
+   PROPERTY LIST VIEW — MOBILE
+   ============================================================ */
+#propertiesGrid.list-view {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 0 !important;
+}
+#propertiesGrid.list-view .property-card-add { display: none !important; }
+
+.property-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #F5F0E8;
+  border: 1px solid rgba(200,184,154,.4);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow .15s;
+}
+.property-list-item:active {
+  box-shadow: 0 2px 8px rgba(13,17,23,.08);
+}
+.property-list-thumb {
+  width: 52px; height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(160deg, #e8e0d4 0%, #c8b89a 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.property-list-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.property-list-info {
+  flex: 1; min-width: 0;
+}
+.property-list-name {
+  font-size: 14px; font-weight: 700;
+  color: #0D1117;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.property-list-address {
+  font-size: 11px; color: #7A8695;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+.property-list-otas {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.property-list-otas .ota-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(26,122,94,.1); color: #1A7A5E;
+  border: 1px solid rgba(26,122,94,.2);
+}
+.property-list-otas .ota-chip img {
+  width: 11px; height: 11px; object-fit: contain;
+}
+.property-list-actions {
+  display: flex; gap: 6px; flex-shrink: 0;
+}
+.property-list-actions .btn-list-action {
+  width: 32px; height: 32px;
+  border: 1.5px solid rgba(200,184,154,.5);
+  background: white; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 13px; color: #7A8695;
+  transition: all .15s;
+}
+.property-list-actions .btn-list-action:hover { color: #1A7A5E; border-color: #1A7A5E; }
+
+/* DnD handle en vue liste */
+.property-list-item .dnd-handle-list {
+  flex-shrink: 0;
+  width: 24px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(13,17,23,.3); font-size: 13px;
+  cursor: grab; touch-action: none;
+  transition: color .15s;
+}
+.property-list-item .dnd-handle-list:hover { color: #1A7A5E; }
+.property-list-item .dnd-handle-list:active { cursor: grabbing; color: #1A7A5E; }
+.property-list-item.dnd-ghost { opacity: 0.35; }
+.property-list-item.dnd-over  { outline: 2px dashed #1A7A5E; outline-offset: 2px; }
 .properties-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2966,6 +3081,8 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
     width: 100% !important;
     grid-template-columns: unset !important;
   }
+  /* Afficher le toggle grille/liste uniquement sur mobile */
+  #viewToggleBar { display: flex !important; }
 
   /* ── 7. PROPERTY CARD ── */
   .property-card {
