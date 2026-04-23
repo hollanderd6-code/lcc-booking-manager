@@ -460,8 +460,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 /* Success message */
 .wiz-success {
   text-align: center; padding: 48px 24px;
+  padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
   background: white; border-radius: 16px;
   border: 1px solid rgba(200,184,154,.35);
+  margin-bottom: 100px;
 }
 .wiz-success-icon {
   width: 72px; height: 72px; border-radius: 50%;
@@ -1955,7 +1957,7 @@ function setDisplayById(id, display) {
 function hideFormShowSuccess() {
   setDisplayById('welcomeForm', 'none');
   setDisplayById('successMessage', 'block');
-  setDisplayById('livretsListSection', 'block');
+  setDisplayById('livretsListSection', 'none');
 }
 
 function showFormHideLists() {
@@ -2347,14 +2349,29 @@ document.addEventListener('DOMContentLoaded', function() {
   /* 10. NAVIGATION WIZARD (Précédent / Suivant) */
   .wiz-nav {
     display: flex !important;
+    flex-wrap: wrap !important;
     gap: 10px !important;
     margin-top: 16px !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    margin-bottom: 80px !important;
   }
   .wiz-btn-next,
   .wiz-btn-prev {
     flex: 1 !important;
     justify-content: center !important;
     padding: 12px 16px !important;
+  }
+  .wiz-btn-back {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .wiz-btn-draft,
+  .wiz-btn-submit {
+    flex: 1 1 45% !important;
+    justify-content: center !important;
+    padding: 12px 14px !important;
+    font-size: 13px !important;
+    min-width: 0 !important;
   }
 
   /* 11. BOTTOM TABS */
