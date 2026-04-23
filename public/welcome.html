@@ -1526,8 +1526,11 @@ async function loadLivretsList() {
     
     const data = await response.json();
     
-    // Toujours réafficher la section liste
-    setDisplayById('livretsListSection', 'block');
+    // Réafficher la section liste seulement si l'écran de succès n'est pas visible
+    const successVisible = document.getElementById('successMessage')?.style.display === 'block';
+    if (!successVisible) {
+      setDisplayById('livretsListSection', 'block');
+    }
 
     if (data.success && data.welcomeBooks && data.welcomeBooks.length > 0) {
       displayLivretsList(data.welcomeBooks);
