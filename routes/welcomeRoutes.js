@@ -17,6 +17,10 @@ cloudinary.config({
 // ---------- Multer (memory storage for Cloudinary) ----------
 const storage = multer.memoryStorage();
 
+// Taille max par fichier uploadé (20 MB — suffisant pour photos iPhone brutes)
+const MAX_FILE_SIZE_MB = 20;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const extname = allowedTypes.test(file.originalname.toLowerCase());
@@ -27,9 +31,39 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: MAX_FILE_SIZE_BYTES },
   fileFilter
 });
+
+// Middleware d'erreur Multer : transforme les erreurs en réponses HTTP propres
+// au lieu de laisser remonter un 500 générique avec la stack trace.
+function handleUploadErrors(err, req, res, next) {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        error: 'file_too_large',
+        message: `Fichier trop lourd. Taille maximale : ${MAX_FILE_SIZE_MB} Mo par image.`,
+        maxSize: MAX_FILE_SIZE_BYTES,
+        maxSizeMB: MAX_FILE_SIZE_MB,
+      });
+    }
+    return res.status(400).json({
+      error: 'upload_error',
+      message: err.message,
+      code: err.code,
+    });
+  }
+  // Erreur venant du fileFilter (ex: type non autorisé)
+  if (err && err.message && err.message.includes('images sont acceptées')) {
+    return res.status(400).json({
+      error: 'invalid_file_type',
+      message: err.message,
+    });
+  }
+  // Autres erreurs → passer au handler global
+  if (err) return next(err);
+  next();
+}
 
 // Helper: Upload to Cloudinary
 async function uploadToCloudinary(fileBuffer, folder = 'welcome-books') {
@@ -135,7 +169,11 @@ router.get('/my-book', authenticateUser, async (req, res) => {
   }
 });
 // ---------- CREATE OR UPDATE (CORRIGÃ‰) ----------
-router.post('/create', authenticateUser, upload.any(), async (req, res) => {
+router.post(
+  '/create',
+  authenticateUser,
+  (req, res, next) => upload.any()(req, res, (err) => err ? handleUploadErrors(err, req, res, next) : next()),
+  async (req, res) => {
   try {
     const pool = req.app.locals.pool;
     console.log("ðŸ“¥ Tentative de sauvegarde reÃ§ue..."); // Log de debug
@@ -447,4 +485,4 @@ router.post('/duplicate/:uniqueId', authenticateUser, async (req, res) => {
   }
 });
 
-module.exports = { router, initWelcomeBookTables };
+module.exports = { router, initWelcomeBookTables, MAX_FILE_SIZE_MB, MAX_FILE_SIZE_BYTES };
