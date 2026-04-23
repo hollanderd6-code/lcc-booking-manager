@@ -1218,59 +1218,6 @@ html[data-theme-v3="1"] .sidebar {
   </button>
 </div>
 <!-- Barre de filtre groupes -->
-<!-- 🔧 DEBUG TEMPORAIRE v3 -->
-<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-  <button onclick="bhDebugShow()" style="padding:10px 16px;background:#f59e0b;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📜 LOGS</button>
-  <button onclick="bhDebugForceReload()" style="padding:10px 16px;background:#10B981;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">🔄 FORCE RELOAD</button>
-  <button onclick="bhDebugClear()" style="padding:10px 16px;background:#6b7280;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">🗑️ CLEAR</button>
-</div>
-<pre id="bhDebugOutput" style="display:none;background:#0D1117;color:#5FE9A8;padding:16px;border-radius:8px;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-all;max-height:60vh;overflow-y:auto;margin-bottom:16px;font-family:ui-monospace,Menlo,monospace;"></pre>
-<script>
-function bhDebugShow() {
-  const out = document.getElementById('bhDebugOutput');
-  out.style.display = 'block';
-  const logs = JSON.parse(localStorage.getItem('bh_groups_log') || '[]');
-  const lines = [];
-  lines.push('=== ETAT ACTUEL ===');
-  lines.push('_groupsCache.length: ' + (typeof _groupsCache !== 'undefined' ? _groupsCache.length : 'UNDEF'));
-  lines.push('_groupsLoaded: ' + (typeof _groupsLoaded !== 'undefined' ? _groupsLoaded : 'UNDEF'));
-  if (typeof _groupsCache !== 'undefined' && _groupsCache.length > 0) {
-    lines.push('Groupes en cache: ' + _groupsCache.map(g => g.name).join(', '));
-  }
-  lines.push('');
-  lines.push('=== LOGS PERSISTANTS (chronologique) ===');
-  if (logs.length === 0) {
-    lines.push('(aucun log — peut-être que loadGroupsFromAPI n\'a jamais été appelée ?)');
-  } else {
-    logs.forEach(l => lines.push(l));
-  }
-  out.textContent = lines.join('\n');
-}
-
-async function bhDebugForceReload() {
-  const out = document.getElementById('bhDebugOutput');
-  out.style.display = 'block';
-  out.textContent = 'Force reload en cours...';
-  try {
-    _groupsLoaded = false;
-    _groupsCache = [];
-    const groups = await loadGroupsFromAPI();
-    _groupsCache = groups;
-    _groupsLoaded = true;
-    renderFilterBar();
-    applyFilter();
-    bhDebugShow();
-  } catch(e) {
-    out.textContent = 'Erreur: ' + e.message;
-  }
-}
-
-function bhDebugClear() {
-  localStorage.removeItem('bh_groups_log');
-  document.getElementById('bhDebugOutput').textContent = 'Logs effacés. Ferme et rouvre l\'app pour nouveau test.';
-  document.getElementById('bhDebugOutput').style.display = 'block';
-}
-</script>
 <div id="filterBar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
 
 <div class="properties-grid" id="propertiesGrid">
