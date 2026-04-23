@@ -1391,6 +1391,9 @@ function renderProperties() {
             }
             <div class="property-img-overlay"></div>
             <div class="property-img-badge active-badge">● Actif</div>
+            <div class="dnd-handle" title="Maintenir pour réorganiser" onclick="event.stopPropagation()">
+              <i class="fas fa-grip-vertical"></i>
+            </div>
           </div>
           <!-- Info -->
           <div class="property-info">
@@ -1563,6 +1566,9 @@ function renderPropertiesFiltered(filteredProps) {
           }
           <div class="property-img-overlay"></div>
           <div class="property-img-badge active-badge">● Actif</div>
+          <div class="dnd-handle" title="Maintenir pour réorganiser" onclick="event.stopPropagation()">
+            <i class="fas fa-grip-vertical"></i>
+          </div>
         </div>
         <div class="property-info">
           ${groupBadge}
@@ -3382,33 +3388,84 @@ async function initNotesSection(propertyId) {
 (function () {
   const LONG_PRESS_MS = 450;
 
-  /* ── Styles ── */
   const style = document.createElement('style');
   style.textContent = `
-    .property-card.dnd-ghost {
-      opacity: 0.3;
-      transform: scale(0.97);
+    /* ── Handle de drag ── */
+    .dnd-handle {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 28px;
+      height: 28px;
+      background: rgba(13,17,23,.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,.85);
+      font-size: 13px;
+      cursor: grab;
+      z-index: 10;
+      transition: background .15s, transform .15s, opacity .15s;
+      opacity: 0.75;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
     }
-    .property-card.dnd-over {
-      outline: 2px dashed #1A7A5E;
+    .property-card:hover .dnd-handle {
+      opacity: 1;
+      background: rgba(13,17,23,.75);
+    }
+    .dnd-handle:hover {
+      background: rgba(26,122,94,.85) !important;
+      transform: scale(1.1);
+      opacity: 1 !important;
+    }
+    .dnd-handle:active,
+    .dnd-handle.dragging {
+      cursor: grabbing !important;
+      background: rgba(26,122,94,.95) !important;
+      transform: scale(0.95);
+    }
+
+    /* ── Carte en cours de déplacement ── */
+    .property-card.dnd-ghost {
+      opacity: 0.35;
+      transform: scale(0.97);
+      outline: 2px dashed rgba(26,122,94,.5);
       outline-offset: 2px;
     }
+
+    /* ── Carte cible (drop zone) ── */
+    .property-card.dnd-over {
+      outline: 2px dashed #1A7A5E;
+      outline-offset: 3px;
+      background: rgba(26,122,94,.04);
+    }
+
+    /* ── Clone flottant (touch) ── */
     .dnd-floating {
       position: fixed !important;
       z-index: 9999 !important;
       pointer-events: none !important;
-      opacity: 0.92 !important;
-      box-shadow: 0 12px 40px rgba(0,0,0,.22) !important;
-      transform: scale(1.03) !important;
+      opacity: 0.93 !important;
+      box-shadow: 0 16px 48px rgba(0,0,0,.28), 0 4px 12px rgba(0,0,0,.12) !important;
+      transform: scale(1.04) rotate(1deg) !important;
       transition: none !important;
       border-radius: 16px !important;
       background: #fff;
     }
+
+    /* ── Empêcher la sélection de texte pendant le drag ── */
     .property-card .property-img {
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
     }
+
+    /* ── Toast hint ── */
     #dnd-hint-toast {
       position: fixed;
       bottom: 90px;
@@ -3436,7 +3493,7 @@ async function initNotesSection(propertyId) {
   /* ── Hint toast ── */
   const hintEl = document.createElement('div');
   hintEl.id = 'dnd-hint-toast';
-  hintEl.textContent = '✋ Maintenez la photo pour réorganiser';
+  hintEl.innerHTML = '<i class="fas fa-grip-vertical" style="margin-right:6px;opacity:.7;"></i> Glissez le ⠿ pour réorganiser';
   document.body.appendChild(hintEl);
   function showHint() {
     hintEl.classList.add('show');
@@ -3557,62 +3614,121 @@ async function initNotesSection(propertyId) {
     if (!grid) return;
 
     grid.querySelectorAll('.property-card:not(.property-card-add)').forEach(card => {
+      const handle  = card.querySelector('.dnd-handle');
       const imgZone = card.querySelector('.property-img');
-      if (!imgZone || imgZone._dndBound) return;
-      imgZone._dndBound = true;
 
-      /* ══ TOUCH ══ */
-      imgZone.addEventListener('touchstart', (e) => {
-        const touch = e.touches[0];
-        longPressTimer = setTimeout(() => {
-          touchActive = true;
-          srcCard = card;
-          card.classList.add('dnd-ghost');
-          if (navigator.vibrate) navigator.vibrate(50);
-          createFloating(card, touch.clientX, touch.clientY);
-        }, LONG_PRESS_MS);
-      }, { passive: true });
+      // ── Évite de binder deux fois ──
+      if (handle && handle._dndBound) return;
+      if (handle) handle._dndBound = true;
+      else if (imgZone && imgZone._dndBound) return;
+      else if (imgZone) imgZone._dndBound = true;
 
-      imgZone.addEventListener('touchmove', (e) => {
-        if (!touchActive) {
+      // Zone primaire (handle) vs zone fallback (photo entière)
+      const primaryZone  = handle  || imgZone;
+      const fallbackZone = handle  ? imgZone : null;
+
+      /* ════════════════════════════════
+         TOUCH — Handle (activation immédiate)
+      ════════════════════════════════ */
+      if (primaryZone) {
+        primaryZone.addEventListener('touchstart', (e) => {
+          const isHandle = !!handle && e.currentTarget === handle;
+          if (isHandle) {
+            // Handle → activation immédiate, pas de long press
+            e.stopPropagation();
+            touchActive = true;
+            srcCard = card;
+            card.classList.add('dnd-ghost');
+            handle.classList.add('dragging');
+            if (navigator.vibrate) navigator.vibrate(40);
+            createFloating(card, e.touches[0].clientX, e.touches[0].clientY);
+          } else {
+            // Photo → long press comme avant
+            longPressTimer = setTimeout(() => {
+              touchActive = true;
+              srcCard = card;
+              card.classList.add('dnd-ghost');
+              if (handle) handle.classList.add('dragging');
+              if (navigator.vibrate) navigator.vibrate(50);
+              createFloating(card, e.touches[0].clientX, e.touches[0].clientY);
+            }, LONG_PRESS_MS);
+          }
+        }, { passive: true });
+
+        primaryZone.addEventListener('touchmove', (e) => {
+          if (!touchActive) {
+            clearTimeout(longPressTimer);
+            return;
+          }
+          e.preventDefault();
+          const touch = e.touches[0];
+          moveFloating(touch.clientX, touch.clientY);
+          const target = cardAtPoint(touch.clientX, touch.clientY);
+          document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+          if (target && target !== srcCard) {
+            target.classList.add('dnd-over');
+            reinsert(target);
+          }
+        }, { passive: false });
+
+        primaryZone.addEventListener('touchend', async () => {
           clearTimeout(longPressTimer);
-          return;
-        }
-        e.preventDefault(); // bloquer le scroll pendant le drag
-        const touch = e.touches[0];
-        moveFloating(touch.clientX, touch.clientY);
+          if (!touchActive) return;
+          if (handle) handle.classList.remove('dragging');
+          endDrag();
+          await saveNewOrder();
+        });
 
-        const target = cardAtPoint(touch.clientX, touch.clientY);
-        document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
-        if (target && target !== srcCard) {
-          target.classList.add('dnd-over');
-          reinsert(target);
-        }
-      }, { passive: false });
+        primaryZone.addEventListener('touchcancel', () => {
+          clearTimeout(longPressTimer);
+          if (handle) handle.classList.remove('dragging');
+          endDrag();
+        });
+      }
 
-      imgZone.addEventListener('touchend', async (e) => {
-        clearTimeout(longPressTimer);
-        if (!touchActive) return;
-        endDrag();
-        await saveNewOrder();
-      });
-
-      imgZone.addEventListener('touchcancel', () => {
-        clearTimeout(longPressTimer);
-        endDrag();
-      });
-
-      /* ══ MOUSE (desktop) ══ */
-      imgZone.addEventListener('mousedown', () => {
-        longPressTimer = setTimeout(() => {
+      /* ════════════════════════════════
+         MOUSE — Handle (drag natif HTML5 immédiat)
+      ════════════════════════════════ */
+      if (handle) {
+        // Sur le handle : drag immédiat au mousedown
+        handle.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
           card.setAttribute('draggable', 'true');
           card.classList.add('dnd-ghost');
-        }, LONG_PRESS_MS);
-      });
+          handle.classList.add('dragging');
+        });
 
-      imgZone.addEventListener('mouseup', () => clearTimeout(longPressTimer));
-      imgZone.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
+        handle.addEventListener('mouseup', () => {
+          handle.classList.remove('dragging');
+        });
+      }
 
+      // Fallback long press sur la photo (si pas de handle ou en complément)
+      if (imgZone && imgZone !== primaryZone) {
+        imgZone.addEventListener('mousedown', () => {
+          longPressTimer = setTimeout(() => {
+            card.setAttribute('draggable', 'true');
+            card.classList.add('dnd-ghost');
+            if (handle) handle.classList.add('dragging');
+          }, LONG_PRESS_MS);
+        });
+        imgZone.addEventListener('mouseup',    () => clearTimeout(longPressTimer));
+        imgZone.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
+      } else if (imgZone) {
+        // Pas de handle séparé — long press sur photo
+        imgZone.addEventListener('mousedown', () => {
+          longPressTimer = setTimeout(() => {
+            card.setAttribute('draggable', 'true');
+            card.classList.add('dnd-ghost');
+          }, LONG_PRESS_MS);
+        });
+        imgZone.addEventListener('mouseup',    () => clearTimeout(longPressTimer));
+        imgZone.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
+      }
+
+      /* ════════════════════════════════
+         Drag HTML5 natif (desktop)
+      ════════════════════════════════ */
       card.addEventListener('dragstart', (e) => {
         srcCard = card;
         e.dataTransfer.effectAllowed = 'move';
@@ -3621,6 +3737,7 @@ async function initNotesSection(propertyId) {
       card.addEventListener('dragend', async () => {
         card.setAttribute('draggable', 'false');
         card.classList.remove('dnd-ghost');
+        if (handle) handle.classList.remove('dragging');
         document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
         srcCard = null;
         await saveNewOrder();
