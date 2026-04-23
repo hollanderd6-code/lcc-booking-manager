@@ -3118,8 +3118,15 @@ app.get('/api/health', (req, res) => res.status(200).send('ok-health'));
 //   Données partagées cross-device pour un même user.
 // ════════════════════════════════════════════════════════════════════
 
+// ── CORS explicite pour property-groups (routes définies avant le middleware global) ──
+const corsGroups = require('cors')();
+
+app.options('/api/property-groups', corsGroups);
+app.options('/api/property-groups/:id', corsGroups);
+app.options('/api/property-groups/bulk-import', corsGroups);
+
 // GET /api/property-groups — liste des groupes de l'utilisateur
-app.get('/api/property-groups', authenticateAny, async (req, res) => {
+app.get('/api/property-groups', corsGroups, authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await pool.query(
@@ -3144,7 +3151,7 @@ app.get('/api/property-groups', authenticateAny, async (req, res) => {
 });
 
 // POST /api/property-groups — créer un nouveau groupe
-app.post('/api/property-groups', express.json(), authenticateAny, async (req, res) => {
+app.post('/api/property-groups', corsGroups, express.json(), authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
     const { id, name, propertyIds } = req.body || {};
@@ -3182,7 +3189,7 @@ app.post('/api/property-groups', express.json(), authenticateAny, async (req, re
 });
 
 // PUT /api/property-groups/:id — mettre à jour un groupe
-app.put('/api/property-groups/:id', express.json(), authenticateAny, async (req, res) => {
+app.put('/api/property-groups/:id', corsGroups, express.json(), authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
     const groupId = req.params.id;
@@ -3226,7 +3233,7 @@ app.put('/api/property-groups/:id', express.json(), authenticateAny, async (req,
 });
 
 // DELETE /api/property-groups/:id — supprimer un groupe
-app.delete('/api/property-groups/:id', authenticateAny, async (req, res) => {
+app.delete('/api/property-groups/:id', corsGroups, authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
     const groupId = req.params.id;
@@ -3245,7 +3252,7 @@ app.delete('/api/property-groups/:id', authenticateAny, async (req, res) => {
 });
 
 // POST /api/property-groups/bulk-import — migration localStorage → DB
-app.post('/api/property-groups/bulk-import', express.json(), authenticateAny, async (req, res) => {
+app.post('/api/property-groups/bulk-import', corsGroups, express.json(), authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
     const { groups } = req.body || {};
