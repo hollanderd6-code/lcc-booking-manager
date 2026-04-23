@@ -29,10 +29,7 @@ const GROUPS_KEY = 'bh_property_groups'; // legacy, pour migration uniquement
 let _groupsCache = [];
 let _groupsLoaded = false;
 
-// Récupère le token d'auth — clé 'lcc_token' utilisée partout dans l'app
-// withBody=true uniquement pour les requêtes qui envoient du JSON (POST/PUT).
-// Sur un GET en Capacitor iOS, 'Content-Type: application/json' déclenche un
-// preflight CORS qui échoue — on l'omet donc sur les GET.
+// Récupère le token d'auth
 function _getAuthHeaders(withBody = false) {
   const token = localStorage.getItem('lcc_token') || '';
   const h = {};
@@ -41,61 +38,65 @@ function _getAuthHeaders(withBody = false) {
   return h;
 }
 
+// Détecte Capacitor iOS
+function _isCapacitor() {
+  try {
+    return !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:');
+  } catch { return false; }
+}
+
+// URL absolue en Capacitor, relative en web
+const _API_BASE = 'https://lcc-booking-manager.onrender.com';
+function _groupsUrl(path) { return _isCapacitor() ? _API_BASE + path : path; }
+
+// Logs persistants pour debug iOS
+window._groupsDebugLogs = window._groupsDebugLogs || [];
+function _glog(msg) {
+  const ts = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  window._groupsDebugLogs.push(`[${ts}] ${msg}`);
+  console.log('📦 [GROUPS]', msg);
+}
+
 // Charger les groupes depuis l'API + migration legacy localStorage si besoin
 async function loadGroupsFromAPI() {
   try {
-    const res = await fetch('/api/property-groups', {
-      headers: _getAuthHeaders(),
-      credentials: 'include',
-    });
-    if (!res.ok) {
-      console.warn('⚠️ [GROUPS] GET failed:', res.status);
-      return [];
-    }
+    const url = _groupsUrl('/api/property-groups');
+    _glog('GET ' + url + ' (capacitor=' + _isCapacitor() + ')');
+    const res = await fetch(url, { headers: _getAuthHeaders() });
+    _glog('Réponse: ' + res.status + ' ' + res.statusText);
+    if (!res.ok) { _glog('❌ GET failed: ' + res.status); return []; }
     const data = await res.json();
     const groups = Array.isArray(data.groups) ? data.groups : [];
+    _glog('✅ ' + groups.length + ' groupe(s) chargés depuis DB');
 
-    // MIGRATION : si la DB est vide MAIS qu'on a des groupes en localStorage legacy
-    // → on les pousse vers le serveur puis on les efface du localStorage.
     if (groups.length === 0) {
       try {
         const legacy = JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]');
         if (Array.isArray(legacy) && legacy.length > 0) {
-          console.log(`🔄 [GROUPS] Migration ${legacy.length} groupe(s) localStorage → DB`);
-          const importRes = await fetch('/api/property-groups/bulk-import', {
-            method: 'POST',
-            headers: _getAuthHeaders(true),
-            credentials: 'include',
+          _glog('🔄 Migration ' + legacy.length + ' groupe(s) localStorage → DB');
+          const importRes = await fetch(_groupsUrl('/api/property-groups/bulk-import'), {
+            method: 'POST', headers: _getAuthHeaders(true),
             body: JSON.stringify({ groups: legacy }),
           });
           if (importRes.ok) {
             const importData = await importRes.json();
             if (importData.success) {
-              console.log(`✅ [GROUPS] ${importData.imported} groupe(s) migrés`);
-              // Nettoyer localStorage (backup "just in case")
+              _glog('✅ ' + importData.imported + ' groupe(s) migrés');
               localStorage.setItem(GROUPS_KEY + '_backup', localStorage.getItem(GROUPS_KEY) || '');
               localStorage.removeItem(GROUPS_KEY);
-              // Re-fetch pour récupérer les IDs officiels
-              const reFetch = await fetch('/api/property-groups', {
-                headers: _getAuthHeaders(), credentials: 'include',
-              });
+              const reFetch = await fetch(_groupsUrl('/api/property-groups'), { headers: _getAuthHeaders() });
               if (reFetch.ok) {
                 const reData = await reFetch.json();
                 return Array.isArray(reData.groups) ? reData.groups : [];
               }
             }
-          } else {
-            console.warn('⚠️ [GROUPS] Migration échouée:', importRes.status);
-          }
+          } else { _glog('⚠️ Migration échouée: ' + importRes.status); }
         }
-      } catch (err) {
-        console.warn('⚠️ [GROUPS] Erreur migration legacy:', err.message);
-      }
+      } catch (err) { _glog('⚠️ Erreur migration legacy: ' + err.message); }
     }
-
     return groups;
   } catch (err) {
-    console.error('❌ [GROUPS] loadGroupsFromAPI error:', err.message);
+    _glog('❌ ERREUR: ' + err.name + ' — ' + err.message);
     return [];
   }
 }
@@ -273,10 +274,9 @@ async function createGroup() {
   const name = input.value.trim();
   if (!name) return;
   try {
-    const res = await fetch('/api/property-groups', {
+    const res = await fetch(_groupsUrl('/api/property-groups'), {
       method: 'POST',
       headers: _getAuthHeaders(true),
-      credentials: 'include',
       body: JSON.stringify({ name, propertyIds: [] }),
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -300,10 +300,9 @@ async function renameGroup(groupId, newName) {
   g.name = newName.trim();
   renderFilterBar(); // feedback immédiat
   try {
-    await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+    await fetch(_groupsUrl('/api/property-groups/' + encodeURIComponent(groupId)), {
       method: 'PUT',
       headers: _getAuthHeaders(true),
-      credentials: 'include',
       body: JSON.stringify({ name: g.name }),
     });
   } catch (err) {
@@ -319,10 +318,9 @@ async function deleteGroup(groupId) {
   renderFilterBar();
   applyFilter();
   try {
-    const res = await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+    const res = await fetch(_groupsUrl('/api/property-groups/' + encodeURIComponent(groupId)), {
       method: 'DELETE',
       headers: _getAuthHeaders(),
-      credentials: 'include',
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
   } catch (err) {
@@ -359,20 +357,18 @@ async function togglePropertyInGroup(groupId, propertyId, add) {
   // Persister tous les groupes modifiés côté serveur
   try {
     if (g) {
-      await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
+      await fetch(_groupsUrl('/api/property-groups/' + encodeURIComponent(groupId)), {
         method: 'PUT',
         headers: _getAuthHeaders(true),
-        credentials: 'include',
         body: JSON.stringify({ propertyIds: g.propertyIds }),
       });
     }
     // Autres groupes (si le logement a été retiré d'un autre groupe)
     for (const og of _groupsCache) {
       if (og.id !== groupId) {
-        await fetch('/api/property-groups/' + encodeURIComponent(og.id), {
+        await fetch(_groupsUrl('/api/property-groups/' + encodeURIComponent(og.id)), {
           method: 'PUT',
           headers: _getAuthHeaders(true),
-          credentials: 'include',
           body: JSON.stringify({ propertyIds: og.propertyIds || [] }),
         });
       }
