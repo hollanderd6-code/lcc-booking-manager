@@ -96,8 +96,11 @@ async function loadGroupsFromAPI() {
 }
 
 // Charger les groupes une fois et garder en cache
+// Si le cache est vide après un premier appel, on autorise un retry
+// (utile pour les race conditions au démarrage, ex: Capacitor iOS où auth-fetch
+// peut ne pas être totalement prêt lors du tout premier fetch)
 async function ensureGroupsLoaded() {
-  if (_groupsLoaded) return _groupsCache;
+  if (_groupsLoaded && _groupsCache && _groupsCache.length > 0) return _groupsCache;
   _groupsCache = await loadGroupsFromAPI();
   _groupsLoaded = true;
   return _groupsCache;
@@ -156,7 +159,23 @@ function renderFilterBar() {
       <i class="fas fa-layer-group"></i> Gérer les groupes
     </button>
   `;
+
+  // Auto-retry : si le cache des groupes est vide au premier rendu (race condition
+  // possible au démarrage de Capacitor où auth-fetch peut ne pas être prêt),
+  // on retente un chargement en différé. Une seule fois.
+  if (_groupsLoaded && (!_groupsCache || _groupsCache.length === 0) && !_groupsRetried) {
+    _groupsRetried = true;
+    setTimeout(async () => {
+      const fresh = await loadGroupsFromAPI();
+      if (fresh && fresh.length > 0) {
+        _groupsCache = fresh;
+        renderFilterBar();
+        applyFilter();
+      }
+    }, 800);
+  }
 }
+let _groupsRetried = false;
 
 function setFilter(id) {
   activeFilter = id;
