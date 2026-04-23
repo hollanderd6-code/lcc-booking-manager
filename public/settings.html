@@ -1218,6 +1218,54 @@ html[data-theme-v3="1"] .sidebar {
   </button>
 </div>
 <!-- Barre de filtre groupes -->
+<!-- 🔧 DEBUG TEMPORAIRE : à retirer après diagnostic -->
+<button onclick="bhDebugGroups()" style="margin-bottom:12px;padding:10px 16px;background:#f59e0b;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">🔧 DEBUG GROUPES</button>
+<script>
+async function bhDebugGroups() {
+  const lines = [];
+  lines.push('=== TOKENS ===');
+  lines.push('lcc_token: ' + (localStorage.getItem('lcc_token') ? 'OUI (' + localStorage.getItem('lcc_token').substring(0,20) + '...)' : 'NON'));
+  lines.push('authToken: ' + (localStorage.getItem('authToken') ? 'OUI' : 'NON'));
+  lines.push('token: ' + (localStorage.getItem('token') ? 'OUI' : 'NON'));
+  lines.push('');
+  lines.push('=== CODE CHARGE ===');
+  try {
+    lines.push('_getAuthHeaders source: ' + _getAuthHeaders.toString().substring(0, 200));
+  } catch(e) { lines.push('_getAuthHeaders non trouvee'); }
+  lines.push('');
+  lines.push('=== API_URL ===');
+  lines.push('API_URL: ' + (typeof API_URL !== 'undefined' ? API_URL : 'UNDEFINED'));
+  lines.push('window.location.origin: ' + window.location.origin);
+  lines.push('');
+  lines.push('=== CACHE GROUPES ===');
+  try {
+    lines.push('_groupsCache.length: ' + (typeof _groupsCache !== 'undefined' ? _groupsCache.length : 'UNDEFINED'));
+    lines.push('_groupsLoaded: ' + (typeof _groupsLoaded !== 'undefined' ? _groupsLoaded : 'UNDEFINED'));
+    if (typeof _groupsCache !== 'undefined' && _groupsCache.length > 0) {
+      lines.push('Groupes: ' + _groupsCache.map(g => g.name + '(' + (g.propertyIds||[]).length + ')').join(', '));
+    }
+  } catch(e) { lines.push('Erreur cache: ' + e.message); }
+  lines.push('');
+  lines.push('=== FETCH LIVE ===');
+  try {
+    const url = (typeof API_URL !== 'undefined' ? API_URL : '') + '/api/property-groups';
+    lines.push('URL appelee: ' + url);
+    const headers = _getAuthHeaders();
+    lines.push('Headers: ' + JSON.stringify(headers).substring(0, 150));
+    const res = await fetch(url, { headers: headers });
+    lines.push('Status HTTP: ' + res.status);
+    const text = await res.text();
+    lines.push('Reponse (300 char): ' + text.substring(0, 300));
+  } catch(e) { lines.push('Erreur fetch: ' + e.message); }
+  lines.push('');
+  lines.push('=== FILTER BAR ===');
+  const bar = document.getElementById('filterBar');
+  lines.push('filterBar existe: ' + (bar ? 'OUI' : 'NON'));
+  if (bar) lines.push('filterBar.innerHTML length: ' + bar.innerHTML.length);
+  
+  alert(lines.join('\n'));
+}
+</script>
 <div id="filterBar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
 
 <div class="properties-grid" id="propertiesGrid">
