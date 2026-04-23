@@ -30,42 +30,29 @@ let _groupsCache = [];
 let _groupsLoaded = false;
 
 // Récupère le token d'auth — clé 'lcc_token' utilisée partout dans l'app
-function _getAuthHeaders() {
+// withBody=true uniquement pour les requêtes qui envoient du JSON (POST/PUT).
+// Sur un GET en Capacitor iOS, 'Content-Type: application/json' déclenche un
+// preflight CORS qui échoue — on l'omet donc sur les GET.
+function _getAuthHeaders(withBody = false) {
   const token = localStorage.getItem('lcc_token') || '';
-  return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
-              : { 'Content-Type': 'application/json' };
-}
-
-// 🔧 DEBUG PERSISTANT : enregistre chaque étape dans localStorage pour relire plus tard
-function _bhLog(msg) {
-  try {
-    const arr = JSON.parse(localStorage.getItem('bh_groups_log') || '[]');
-    arr.push(new Date().toISOString().substring(11, 23) + ' ' + msg);
-    if (arr.length > 50) arr.shift();
-    localStorage.setItem('bh_groups_log', JSON.stringify(arr));
-  } catch {}
+  const h = {};
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  if (withBody) h['Content-Type'] = 'application/json';
+  return h;
 }
 
 // Charger les groupes depuis l'API + migration legacy localStorage si besoin
 async function loadGroupsFromAPI() {
-  _bhLog('loadGroupsFromAPI: START');
-  _bhLog('  window.fetch type=' + typeof window.fetch);
-  _bhLog('  Capacitor=' + (window.Capacitor ? window.Capacitor.isNativePlatform() : 'undef'));
-  _bhLog('  token present=' + !!localStorage.getItem('lcc_token'));
   try {
-    _bhLog('  BEFORE fetch /api/property-groups');
     const res = await fetch('/api/property-groups', {
       headers: _getAuthHeaders(),
       credentials: 'include',
     });
-    _bhLog('  AFTER fetch, ok=' + res.ok + ' status=' + res.status + ' url=' + (res.url || 'n/a'));
     if (!res.ok) {
       console.warn('⚠️ [GROUPS] GET failed:', res.status);
-      _bhLog('  EXIT: not ok');
       return [];
     }
     const data = await res.json();
-    _bhLog('  json parsed, groups.length=' + (Array.isArray(data.groups) ? data.groups.length : 'not-array'));
     const groups = Array.isArray(data.groups) ? data.groups : [];
 
     // MIGRATION : si la DB est vide MAIS qu'on a des groupes en localStorage legacy
@@ -77,7 +64,7 @@ async function loadGroupsFromAPI() {
           console.log(`🔄 [GROUPS] Migration ${legacy.length} groupe(s) localStorage → DB`);
           const importRes = await fetch('/api/property-groups/bulk-import', {
             method: 'POST',
-            headers: _getAuthHeaders(),
+            headers: _getAuthHeaders(true),
             credentials: 'include',
             body: JSON.stringify({ groups: legacy }),
           });
@@ -106,22 +93,21 @@ async function loadGroupsFromAPI() {
       }
     }
 
-    _bhLog('  RETURN groups length=' + groups.length);
     return groups;
   } catch (err) {
     console.error('❌ [GROUPS] loadGroupsFromAPI error:', err.message);
-    _bhLog('  CATCH: ' + err.name + ' - ' + err.message);
     return [];
   }
 }
 
 // Charger les groupes une fois et garder en cache
+// Si le cache est vide après un premier appel, on autorise un retry
+// (utile pour les race conditions au démarrage, ex: Capacitor iOS où auth-fetch
+// peut ne pas être totalement prêt lors du tout premier fetch)
 async function ensureGroupsLoaded() {
-  _bhLog('ensureGroupsLoaded: called, _groupsLoaded=' + _groupsLoaded);
-  if (_groupsLoaded) return _groupsCache;
+  if (_groupsLoaded && _groupsCache && _groupsCache.length > 0) return _groupsCache;
   _groupsCache = await loadGroupsFromAPI();
   _groupsLoaded = true;
-  _bhLog('ensureGroupsLoaded: DONE, cache.length=' + (_groupsCache ? _groupsCache.length : 'null'));
   return _groupsCache;
 }
 
@@ -178,7 +164,23 @@ function renderFilterBar() {
       <i class="fas fa-layer-group"></i> Gérer les groupes
     </button>
   `;
+
+  // Auto-retry : si le cache des groupes est vide au premier rendu (race condition
+  // possible au démarrage de Capacitor où auth-fetch peut ne pas être prêt),
+  // on retente un chargement en différé. Une seule fois.
+  if (_groupsLoaded && (!_groupsCache || _groupsCache.length === 0) && !_groupsRetried) {
+    _groupsRetried = true;
+    setTimeout(async () => {
+      const fresh = await loadGroupsFromAPI();
+      if (fresh && fresh.length > 0) {
+        _groupsCache = fresh;
+        renderFilterBar();
+        applyFilter();
+      }
+    }, 800);
+  }
 }
+let _groupsRetried = false;
 
 function setFilter(id) {
   activeFilter = id;
@@ -273,7 +275,7 @@ async function createGroup() {
   try {
     const res = await fetch('/api/property-groups', {
       method: 'POST',
-      headers: _getAuthHeaders(),
+      headers: _getAuthHeaders(true),
       credentials: 'include',
       body: JSON.stringify({ name, propertyIds: [] }),
     });
@@ -300,7 +302,7 @@ async function renameGroup(groupId, newName) {
   try {
     await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
       method: 'PUT',
-      headers: _getAuthHeaders(),
+      headers: _getAuthHeaders(true),
       credentials: 'include',
       body: JSON.stringify({ name: g.name }),
     });
@@ -359,7 +361,7 @@ async function togglePropertyInGroup(groupId, propertyId, add) {
     if (g) {
       await fetch('/api/property-groups/' + encodeURIComponent(groupId), {
         method: 'PUT',
-        headers: _getAuthHeaders(),
+        headers: _getAuthHeaders(true),
         credentials: 'include',
         body: JSON.stringify({ propertyIds: g.propertyIds }),
       });
@@ -369,7 +371,7 @@ async function togglePropertyInGroup(groupId, propertyId, add) {
       if (og.id !== groupId) {
         await fetch('/api/property-groups/' + encodeURIComponent(og.id), {
           method: 'PUT',
-          headers: _getAuthHeaders(),
+          headers: _getAuthHeaders(true),
           credentials: 'include',
           body: JSON.stringify({ propertyIds: og.propertyIds || [] }),
         });
