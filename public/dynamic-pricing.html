@@ -17,18 +17,42 @@
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 <style>
-/* ── Desktop layout fixes ── */
+/* ============================================================
+   DARK BAR + STICKY HEADER (identical to settings-2.html)
+   ============================================================ */
 html[data-theme-v3="1"] body { padding-top: 40px !important; }
 html[data-theme-v3="1"] .sidebar {
   position: fixed !important; top: 40px !important;
   left: 0 !important; bottom: 0 !important;
   height: auto !important; z-index: 30 !important;
 }
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important; top: 0 !important;
+  z-index: 50 !important; margin-top: 0 !important;
+}
 html[data-theme-v3="1"] main.main-content {
-  padding-top: 0 !important;
+  padding-top: 0 !important; margin-top: 0 !important;
+  position: relative !important; z-index: 35 !important;
 }
 html[data-theme-v3="1"] .app-container {
-  padding-top: 0 !important;
+  margin-top: 0 !important; padding-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content > header.main-header {
+  margin-top: 0 !important; padding-top: 0 !important;
+}
+html[data-theme-v3="1"] body {
+  background: #F5F2EC !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+html[data-theme-v3="1"] .main-content { background: #F5F2EC !important; }
+html[data-theme-v3="1"], html[data-theme-v3="1"] body {
+  overflow: hidden !important; height: 100% !important;
+}
+html[data-theme-v3="1"] .app-container {
+  height: calc(100vh - 40px) !important; overflow: hidden !important;
+}
+html[data-theme-v3="1"] .main-content {
+  overflow-y: auto !important; height: 100% !important;
 }
 
 /* ── Mobile layout — copie exacte du pattern settings-2.html ── */
