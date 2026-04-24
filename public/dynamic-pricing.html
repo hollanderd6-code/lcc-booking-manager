@@ -55,7 +55,26 @@ html[data-theme-v3="1"] .main-content {
   overflow-y: auto !important; height: 100% !important;
 }
 
-/* ── Mobile layout — copie exacte du pattern settings-2.html ── */
+/* Bouton retour — style vert arrondi */
+html[data-theme-v3="1"] .header-actions .btn.btn-ghost,
+html[data-theme-v3="1"] .header-actions .btn-ghost {
+  background: #1A7A5E !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 9px 20px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: background .15s !important;
+}
+html[data-theme-v3="1"] .header-actions .btn.btn-ghost:hover,
+html[data-theme-v3="1"] .header-actions .btn-ghost:hover {
+  background: #15624B !important;
+}
 @media (max-width: 1366px) {
   html, body { overflow-x: hidden !important; max-width: 100vw !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
