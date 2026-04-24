@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html data-theme="light" data-theme-v3="1" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Boostinghost – Dynamic Pricing</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css" rel="stylesheet"/>
+<link href="/css/bh-v3-mobile.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
+<link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/messages-badge-red.css">
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
+<style>
+/* ── Shared layout fixes ── */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important; z-index: 30 !important;
+}
+
+/* ══════════════════════════════════════════════════
+   PRICING PAGE — Root vars & resets
+══════════════════════════════════════════════════ */
+:root {
+  --pg:  #1A7A5E;
+  --pg2: #15624B;
+  --pg-soft: rgba(26,122,94,.1);
+  --pg-soft2: rgba(26,122,94,.06);
+  --cream: #F5F2EC;
+  --cream2: #FAFAF8;
+  --border: rgba(200,184,154,.4);
+  --ink: #0D1117;
+  --text: #374151;
+  --muted: #7A8695;
+  --warning: #F59E0B;
+  --danger: #DC2626;
+  --success: #10b981;
+  --r: 16px;
+}
+
+/* ══════════════════════════════════════════════════
+   PAGE LAYOUT
+══════════════════════════════════════════════════ */
+.pricing-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0 24px 100px;
+}
+
+/* ── Section header ── */
+.pricing-header {
+  padding: 28px 0 24px;
+}
+.pricing-kicker {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: rgba(13,17,23,.38); margin-bottom: 4px;
+}
+.pricing-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px; font-weight: 400; color: var(--ink);
+  margin: 0 0 4px;
+  display: flex; align-items: center; gap: 12px;
+}
+.pricing-title em { font-style: italic; color: var(--pg); }
+.pricing-title .beta-pill {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  background: rgba(245,158,11,.12); color: #B45309;
+  border: 1px solid rgba(245,158,11,.3);
+  padding: 2px 8px; border-radius: 999px;
+  vertical-align: middle; margin-top: -2px;
+}
+.pricing-subtitle {
+  font-size: 14px; color: var(--muted); line-height: 1.6;
+  max-width: 560px;
+}
+
+/* ── Tabs ── */
+.pricing-tabs {
+  display: flex; gap: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 5px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pricing-tabs::-webkit-scrollbar { display: none; }
+.ptab {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 14px;
+  border: none; background: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  cursor: pointer; white-space: nowrap;
+  transition: all .15s;
+}
+.ptab i { font-size: 12px; }
+.ptab.active {
+  background: var(--pg); color: white;
+  font-weight: 600;
+}
+.ptab:not(.active):hover { background: var(--cream); color: var(--text); }
+.ptab .tab-badge {
+  background: var(--warning); color: white;
+  font-size: 10px; font-weight: 700;
+  width: 16px; height: 16px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Tab panels ── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ══════════════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════════════ */
+.pcard {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.pcard:hover { box-shadow: 0 4px 24px rgba(13,17,23,.06); }
+.pcard-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #FAFAF8;
+}
+.pcard-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+}
+.pcard-title i { color: var(--pg); font-size: 13px; }
+.pcard-body { padding: 20px; }
+
+/* ══════════════════════════════════════════════════
+   SCREEN 1 — CONFIGURATION
+══════════════════════════════════════════════════ */
+.config-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-bottom: 20px;
+}
+.config-field label {
+  display: block; font-size: 12.5px; font-weight: 600;
+  color: var(--text); margin-bottom: 6px;
+}
+.config-field .input-wrap {
+  position: relative;
+}
+.config-field .input-wrap input {
+  width: 100%;
+  padding: 10px 36px 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 600; color: var(--ink);
+  background: var(--cream2);
+  outline: none; transition: border-color .15s;
+}
+.config-field .input-wrap input:focus { border-color: var(--pg); background: white; }
+.config-field .input-suffix {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 15px; font-weight: 600; color: var(--muted);
+  pointer-events: none;
+}
+.config-hint { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+
+/* Price range visual */
+.price-range-bar {
+  position: relative; height: 6px;
+  background: var(--border); border-radius: 999px;
+  margin: 20px 0 8px;
+}
+.price-range-fill {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, var(--pg), #2AAE86);
+  border-radius: 999px;
+  transition: all .3s;
+}
+.price-range-labels {
+  display: flex; justify-content: space-between;
+  font-size: 11px; font-weight: 600; color: var(--muted);
+}
+.price-range-center {
+  text-align: center; font-size: 11px; color: var(--pg);
+  font-weight: 600; margin-top: 4px;
+}
+
+/* Mode toggle */
+.mode-toggle {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-top: 12px;
+}
+.mode-option {
+  border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+  cursor: pointer; transition: all .15s;
+  background: var(--cream2);
+}
+.mode-option:hover { border-color: var(--pg); background: var(--pg-soft2); }
+.mode-option.selected {
+  border-color: var(--pg); background: var(--pg-soft);
+  box-shadow: 0 0 0 3px rgba(26,122,94,.08);
+}
+.mode-option h4 {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
+}
+.mode-option p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.mode-pill {
+  font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  background: var(--pg); color: white;
+  padding: 1px 7px; border-radius: 999px;
+}
+
+/* Zone analysis card */
+.zone-info {
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.zone-map-thumb {
+  width: 72px; height: 72px; border-radius: 12px;
+  background: linear-gradient(135deg, #e8f4f0 0%, #b8ddd4 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.zone-stats { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+.zone-stat { font-size: 12px; color: var(--muted); }
+.zone-stat strong { color: var(--ink); font-weight: 700; display: block; font-size: 14px; }
+
+/* ══════════════════════════════════════════════════
+   SCREEN 2 — DASHBOARD
+══════════════════════════════════════════════════ */
+/* Insight banner */
+.insight-banner {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFF3CC 100%);
+  border: 1px solid rgba(245,158,11,.3);
+  border-radius: 14px; padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.insight-icon {
+  width: 38px; height: 38px;
+  background: var(--warning); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 16px; flex-shrink: 0;
+}
+.insight-banner h3 { font-size: 14px; font-weight: 700; color: #92400E; margin-bottom: 3px; }
+.insight-banner p { font-size: 12.5px; color: #78350F; line-height: 1.5; }
+
+/* Summary stats row */
+.summary-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  margin-bottom: 20px;
+}
+.summary-stat {
+  background: white; border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+  text-align: center;
+}
+.summary-stat .val {
+  font-size: 22px; font-weight: 700; color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+}
+.summary-stat .val.green { color: var(--pg); }
+.summary-stat .val.orange { color: var(--warning); }
+.summary-stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* Property pricing card */
+.prop-pricing-card {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.prop-pricing-card:hover { box-shadow: 0 6px 28px rgba(13,17,23,.08); }
+.prop-pricing-card.pending { border-color: var(--warning); }
+.prop-pricing-card.stable { border-color: rgba(200,184,154,.3); }
+
+.prop-pricing-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: #FAFAF8;
+}
+.prop-pricing-name {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 2px;
+}
+.prop-pricing-sub { font-size: 11.5px; color: var(--muted); }
+
+.mode-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px;
+}
+.mode-badge.auto { background: var(--pg-soft); color: var(--pg); border: 1px solid rgba(26,122,94,.2); }
+.mode-badge.manual { background: rgba(245,158,11,.1); color: #B45309; border: 1px solid rgba(245,158,11,.25); }
+
+.prop-pricing-body { padding: 16px 18px; }
+
+/* Market stats */
+.market-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-bottom: 16px;
+}
+.market-stat { text-align: center; }
+.market-stat .mval {
+  font-size: 17px; font-weight: 700; color: var(--ink);
+  line-height: 1.2;
+}
+.market-stat .mlbl { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+/* Tension pills */
+.tension-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px;
+}
+.tension-pill.high { background: rgba(220,38,38,.1); color: #B91C1C; }
+.tension-pill.elevated { background: rgba(245,158,11,.12); color: #B45309; }
+.tension-pill.medium { background: rgba(59,130,246,.1); color: #1D4ED8; }
+.tension-pill.low { background: rgba(107,114,128,.1); color: #374151; }
+
+/* Price compare */
+.price-compare {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--cream2); border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+}
+.price-compare-item { flex: 1; }
+.price-compare-item .pcl { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+.price-compare-item .pcv {
+  font-size: 20px; font-weight: 700; color: var(--ink);
+  display: flex; align-items: center; gap: 6px;
+}
+.price-compare-item .pcv.recommended { color: var(--pg); }
+.price-delta {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 11px; font-weight: 700;
+  padding: 2px 6px; border-radius: 6px;
+}
+.price-delta.up { background: rgba(16,185,129,.12); color: #065F46; }
+.price-delta.down { background: rgba(220,38,38,.1); color: #B91C1C; }
+.price-delta.stable { background: rgba(107,114,128,.1); color: var(--muted); }
+.price-arrow {
+  color: var(--muted); font-size: 14px; flex-shrink: 0;
+}
+
+/* Price bar chart (week view) */
+.week-chart {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 4px; margin-top: 14px; align-items: end;
+  height: 60px;
+}
+.day-bar-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  height: 100%; justify-content: flex-end; gap: 3px;
+}
+.day-bar {
+  width: 100%; border-radius: 4px 4px 0 0;
+  background: var(--pg-soft); position: relative;
+  transition: background .2s;
+  cursor: pointer;
+}
+.day-bar.current { background: var(--pg); }
+.day-bar.recommended { background: rgba(245,158,11,.3); }
+.day-bar.weekend { background: rgba(26,122,94,.18); }
+.day-label { font-size: 9px; color: var(--muted); text-align: center; }
+.day-price { font-size: 8.5px; font-weight: 600; color: var(--muted); text-align: center; }
+
+/* Action buttons */
+.prop-pricing-actions {
+  display: flex; gap: 8px; margin-top: 14px;
+}
+.btn-accept {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 16px;
+  background: var(--pg); color: white;
+  border: none; border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.btn-accept:hover { background: var(--pg2); }
+.btn-decline {
+  padding: 9px 16px;
+  background: white; color: var(--muted);
+  border: 1.5px solid var(--border); border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s;
+}
+.btn-decline:hover { border-color: var(--danger); color: var(--danger); }
+.btn-detail {
+  padding: 9px 14px;
+  background: none; color: var(--muted);
+  border: none; border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 12px;
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+  transition: color .15s; margin-left: auto;
+}
+.btn-detail:hover { color: var(--ink); }
+
+/* Status line */
+.prop-status-line {
+  margin-top: 10px; font-size: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.prop-status-line.success { color: var(--success); }
+.prop-status-line.muted { color: var(--muted); }
+.prop-status-line.pending { color: var(--warning); }
+
+/* ══════════════════════════════════════════════════
+   SCREEN 3 — HISTORIQUE
+══════════════════════════════════════════════════ */
+.history-table {
+  width: 100%; border-collapse: collapse;
+}
+.history-table th {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: 10px 12px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: #FAFAF8;
+}
+.history-table td {
+  padding: 12px 12px; font-size: 13px; color: var(--text);
+  border-bottom: 1px solid rgba(200,184,154,.2);
+  vertical-align: middle;
+}
+.history-table tr:last-child td { border-bottom: none; }
+.history-table .prop-name { font-weight: 600; color: var(--ink); }
+.history-table .reason {
+  font-size: 11px; color: var(--muted);
+  display: block; margin-top: 2px;
+}
+.price-change {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 600;
+}
+.price-change .from { color: var(--muted); font-weight: 400; font-size: 12px; }
+.price-change .arr { color: var(--muted); font-size: 11px; }
+.price-change .to { color: var(--ink); }
+.price-change .to.up { color: var(--pg); }
+.price-change .to.down { color: var(--danger); }
+
+.hist-tension { display: flex; align-items: center; gap: 5px; }
+.hist-bar {
+  width: 40px; height: 5px; border-radius: 999px;
+  background: var(--border); overflow: hidden;
+}
+.hist-bar-fill { height: 100%; border-radius: 999px; }
+
+/* ══════════════════════════════════════════════════
+   SCREEN 4 — PARAMÈTRES
+══════════════════════════════════════════════════ */
+.settings-list { display: flex; flex-direction: column; gap: 0; }
+.setting-row {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 16px 20px; gap: 24px;
+  border-bottom: 1px solid rgba(200,184,154,.2);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.setting-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.setting-control { flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--border); border-radius: 999px;
+  transition: .2s;
+}
+.toggle-slider:before {
+  content: ''; position: absolute;
+  width: 18px; height: 18px; left: 3px; top: 3px;
+  background: white; border-radius: 50%;
+  transition: .2s; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--pg); }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+/* ══════════════════════════════════════════════════
+   ALGORITHM DETAIL MODAL
+══════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(13,17,23,.55); backdrop-filter: blur(4px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-sheet {
+  background: white; border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 560px; max-height: 85vh;
+  display: flex; flex-direction: column;
+  transform: translateY(40px); transition: transform .25s;
+}
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+.modal-sheet-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-sheet-title { font-size: 16px; font-weight: 700; color: var(--ink); }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: var(--cream); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--muted);
+}
+.modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+
+/* Algo breakdown */
+.algo-formula {
+  background: var(--cream2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  font-size: 13px; line-height: 1.8;
+}
+.algo-formula .formula-line {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 3px 0;
+}
+.algo-formula .formula-line.result {
+  font-weight: 700; color: var(--pg); font-size: 15px;
+  border-top: 1px solid var(--border); margin-top: 8px; padding-top: 10px;
+}
+.algo-formula .f-label { color: var(--text); }
+.algo-formula .f-val { font-weight: 600; color: var(--ink); }
+
+.signal-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid rgba(200,184,154,.2);
+}
+.signal-row:last-child { border-bottom: none; }
+.signal-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--pg-soft); display: flex; align-items: center;
+  justify-content: center; color: var(--pg); font-size: 13px; flex-shrink: 0;
+}
+.signal-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+.signal-val { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.signal-factor {
+  margin-left: auto; font-size: 14px; font-weight: 700;
+  padding: 2px 10px; border-radius: 8px;
+}
+.signal-factor.pos { background: rgba(16,185,129,.1); color: #065F46; }
+.signal-factor.neg { background: rgba(220,38,38,.1); color: #B91C1C; }
+.signal-factor.neu { background: rgba(107,114,128,.1); color: var(--muted); }
+
+/* ══════════════════════════════════════════════════
+   MOBILE
+══════════════════════════════════════════════════ */
+@media(max-width:1366px) {
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
+  #bhMobileHeader {
+    display: flex !important; position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+  }
+  html[data-theme-v3="1"] .page-content {
+    padding: 0 14px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    max-width: 100% !important; margin: 0 !important;
+    box-sizing: border-box !important; width: 100% !important;
+  }
+  .pricing-header { padding: 16px 0 20px; }
+  .pricing-title { font-size: 22px; }
+  .config-grid { grid-template-columns: 1fr 1fr; }
+  .market-stats { grid-template-columns: repeat(2, 1fr); }
+  .summary-row { grid-template-columns: repeat(3, 1fr); }
+  .mode-toggle { grid-template-columns: 1fr; }
+  .week-chart { height: 50px; }
+  .price-compare { flex-wrap: wrap; }
+  .history-table { font-size: 12px; }
+  .history-table th, .history-table td { padding: 9px 8px; }
+  .modal-sheet { max-width: 100%; }
+}
+
+@media(max-width:640px) {
+  .market-stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .summary-row .summary-stat .val { font-size: 18px; }
+  .pricing-page { padding: 0 0 100px; }
+  .pcard-body { padding: 14px; }
+  .prop-pricing-body { padding: 12px 14px; }
+  .history-table .prop-name-col { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Toast */
+.pricing-toast {
+  position: fixed; bottom: 90px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #0D1117; color: white;
+  padding: 10px 18px; border-radius: 12px;
+  font-size: 13px; font-weight: 500;
+  z-index: 9998; opacity: 0;
+  transition: opacity .2s, transform .2s;
+  pointer-events: none; white-space: nowrap;
+}
+.pricing-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.pricing-toast.success { background: var(--pg); }
+</style>
+</head>
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Revenus" data-page="pricing" data-subtitle="Ajustement automatique des prix selon le marché." data-title="Pricing dynamique">
+
+<div id="bhMobileHeader"></div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<div id="bhSidebar"></div>
+<main class="main-content"><div id="bhHeader"></div>
+
+<div class="page-content">
+<div class="pricing-page">
+
+  <!-- ── Header ── -->
+  <div class="pricing-header">
+    <div class="pricing-kicker">Revenus</div>
+    <h1 class="pricing-title">
+      Pricing <em>dynamique</em>
+      <span class="beta-pill">BÊTA</span>
+    </h1>
+    <p class="pricing-subtitle">Boostinghost analyse le marché local chaque semaine et ajuste vos prix automatiquement — sans aucune intervention.</p>
+  </div>
+
+  <!-- ── Tabs ── -->
+  <div class="pricing-tabs">
+    <button class="ptab active" onclick="switchTab('dashboard')" id="tab-dashboard">
+      <i class="fas fa-chart-line"></i> Dashboard
+    </button>
+    <button class="ptab" onclick="switchTab('config')" id="tab-config">
+      <i class="fas fa-sliders-h"></i> Configuration
+    </button>
+    <button class="ptab" onclick="switchTab('history')" id="tab-history">
+      <i class="fas fa-clock-rotate-left"></i> Historique
+    </button>
+    <button class="ptab" onclick="switchTab('settings')" id="tab-settings">
+      <i class="fas fa-cog"></i> Paramètres
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════
+       TAB 1 — DASHBOARD
+  ════════════════════════════════ -->
+  <div class="tab-panel active" id="panel-dashboard">
+
+    <!-- Insight banner -->
+    <div class="insight-banner">
+      <div class="insight-icon"><i class="fas fa-fire"></i></div>
+      <div>
+        <h3>Forte demande détectée sur 2 de vos logements</h3>
+        <p>Ce weekend, le marché est à 79% d'occupation à Cergy. Vos prix ont été ajustés automatiquement.</p>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="summary-row">
+      <div class="summary-stat">
+        <div class="val green">+215€</div>
+        <div class="lbl">Revenu additionnel estimé</div>
+      </div>
+      <div class="summary-stat">
+        <div class="val">3/3</div>
+        <div class="lbl">Logements analysés</div>
+      </div>
+      <div class="summary-stat">
+        <div class="val orange">1</div>
+        <div class="lbl">Suggestion en attente</div>
+      </div>
+    </div>
+
+    <!-- Logement 1 : auto, prix monté -->
+    <div class="prop-pricing-card">
+      <div class="prop-pricing-header">
+        <div>
+          <div class="prop-pricing-name">
+            <i class="fas fa-home" style="color:var(--pg);font-size:12px;"></i>
+            Studio Gare RDC
+          </div>
+          <div class="prop-pricing-sub">Cergy • Studio • 2 voy.</div>
+        </div>
+        <span class="mode-badge auto"><i class="fas fa-robot"></i> Automatique</span>
+      </div>
+      <div class="prop-pricing-body">
+        <div class="market-stats">
+          <div class="market-stat">
+            <div class="mval">92€</div>
+            <div class="mlbl">Médiane marché</div>
+          </div>
+          <div class="market-stat">
+            <div class="mval">71€–118€</div>
+            <div class="mlbl">Fourchette marché</div>
+          </div>
+          <div class="market-stat">
+            <div class="mval"><span class="tension-pill high"><i class="fas fa-fire" style="font-size:9px;"></i> Forte</span></div>
+            <div class="mlbl">79% occupé</div>
+          </div>
+          <div class="market-stat">
+            <div class="mval">68</div>
+            <div class="mlbl">Comparables</div>
+          </div>
+        </div>
+
+        <div class="price-compare">
+          <div class="price-compare-item">
+            <div class="pcl">Prix précédent</div>
+            <div class="pcv">65€</div>
+          </div>
+          <span class="price-arrow"><i class="fas fa-arrow-right"></i></span>
+          <div class="price-compare-item">
+            <div class="pcl">Prix appliqué</div>
+            <div class="pcv recommended">108€ <span class="price-delta up"><i class="fas fa-arrow-up" style="font-size:9px;"></i> +43€</span></div>
+          </div>
+          <div class="price-compare-item" style="text-align:right;">
+            <div class="pcl">Fourchette</div>
+            <div class="pcv" style="font-size:14px;color:var(--muted);">60€ – 150€</div>
+          </div>
+        </div>
+
+        <!-- Mini week chart -->
+        <div class="week-chart" id="chart-1"></div>
+
+        <div class="prop-status-line success">
+          <i class="fas fa-check-circle"></i>
+          Mis à jour sur Airbnb & Booking il y a 2 heures
+        </div>
+        <div style="margin-top:8px;">
+          <button class="btn-detail" onclick="openAlgoModal('Studio Gare RDC', 92, 108, 79, 35, 1.10)">
+            <i class="fas fa-calculator"></i> Voir le détail du calcul
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logement 2 : manuel, suggestion en attente -->
+    <div class="prop-pricing-card pending" id="pending-card">
+      <div class="prop-pricing-header">
+        <div>
+          <div class="prop-pricing-name">
+            <i class="fas fa-home" style="color:var(--pg);font-size:12px;"></i>
+            Appt Cergy Centre
+            <span style="font-size:10px;background:rgba(245,158,11,.15);color:#B45309;border-radius:6px;padding:2px 7px;font-weight:700;">Action requise</span>
+          </div>
+          <div class="prop-pricing-sub">Cergy • T2 • 4 voy.</div>
+        </div>
+        <span class="mode-badge manual"><i class="fas fa-hand-pointer"></i> Manuel</span>
+      </div>
+      <div class="prop-pricing-body">
+        <div class="market-stats">
+          <div class="market-stat">
+            <div class="mval">74€</div>
+            <div class="mlbl">Médiane marché</div>
+          </div>
+          <div class="market-stat">
+            <div class="mval">58€–96€</div>
+            <div class="mlbl">Fourchette marché</div>
+          </div>
+          <div class="market-stat">
+            <div class="mval"><span class="tension-pill medium">Moyenne</span></div>
+            <div class="mlbl">51% occupé</div>
+          </div>
+          <div class="market-stat">
+            <div class="mval">44</div>
+            <div class="mlbl">Comparables</div>
+          </div>
+        </div>
+
+        <div class="price-compare">
+          <div class="price-compare-item">
+            <div class="pcl">Prix actuel</div>
+            <div class="pcv">80€</div>
+          </div>
+          <span class="price-arrow"><i class="fas fa-arrow-right"></i></span>
+          <div class="price-compare-item">
+            <div class="pcl">Suggéré</div>
+            <div class="pcv recommended" style="color:var(--warning);">76€ <span class="price-delta down"><i class="fas fa-arrow-down" style="font-size:9px;"></i> -4€</span></div>
+          </div>
+          <div class="price-compare-item" style="text-align:right;">
+            <div class="pcl">Fourchette</div>
+            <div class="pcv" style="font-size:14px;color:var(--muted);">55€ – 120€</div>
+          </div>
+        </div>
+
+        <div class="prop-pricing-actions">
+          <button class="btn-accept" onclick="acceptSuggestion()">
+            <i class="fas fa-check"></i> Appliquer 76€
+          </button>
+          <button class="btn-decline" onclick="declineSuggestion()">
+            Garder 80€
+          </button>
+          <button class="btn-detail" onclick="openAlgoModal('Appt Cergy Centre', 74, 76, 51, 65, 0.95)">
+            <i class="fas fa-info-circle"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logement 3 : stable -->
+    <div class="prop-pricing-card stable">
+      <div class="prop-pricing-header">
+        <div>
+          <div class="prop-pricing-name">
+            <i class="fas fa-home" style="color:var(--pg);font-size:12px;"></i>
+            Village Jouy-lès-Metz
+          </div>
+          <div class="prop-pricing-sub">Metz • T2 • 3 voy.</div>
+        </div>
+        <span class="mode-badge auto"><i class="fas fa-robot"></i> Automatique</span>
+      </div>
+      <div class="prop-pricing-body">
+        <div class="price-compare">
+          <div class="price-compare-item">
+            <div class="pcl">Prix actuel</div>
+            <div class="pcv">82€</div>
+          </div>
+          <span class="price-arrow"><i class="fas fa-equals"></i></span>
+          <div class="price-compare-item">
+            <div class="pcl">Prix appliqué</div>
+            <div class="pcv">82€ <span class="price-delta stable">stable</span></div>
+          </div>
+          <div class="price-compare-item" style="text-align:right;">
+            <div class="pcl">Tension</div>
+            <div class="pcv"><span class="tension-pill low">Faible 38%</span></div>
+          </div>
+        </div>
+        <div class="prop-status-line muted" style="margin-top:12px;">
+          <i class="fas fa-check"></i>
+          Prix aligné sur le marché — aucun ajustement nécessaire
+        </div>
+      </div>
+    </div>
+
+    <!-- Last sync info -->
+    <div style="text-align:center;margin-top:20px;font-size:12px;color:var(--muted);">
+      <i class="fas fa-sync-alt" style="margin-right:4px;"></i>
+      Dernière analyse marché : lundi 21 avril à 6h02 · Prochaine : lundi 28 avril
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       TAB 2 — CONFIGURATION
+  ════════════════════════════════ -->
+  <div class="tab-panel" id="panel-config">
+
+    <!-- Studio Gare RDC -->
+    <div class="pcard">
+      <div class="pcard-header">
+        <div class="pcard-title">
+          <i class="fas fa-home"></i>
+          Studio Gare RDC
+        </div>
+        <span style="font-size:12px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
+          <i class="fas fa-circle" style="font-size:7px;"></i> Actif
+        </span>
+      </div>
+      <div class="pcard-body">
+        <div class="config-grid">
+          <div class="config-field">
+            <label>Prix minimum / nuit</label>
+            <div class="input-wrap">
+              <input type="number" value="60" id="min-1" oninput="updateBar(1)" />
+              <span class="input-suffix">€</span>
+            </div>
+            <div class="config-hint">Plancher absolu — jamais en dessous</div>
+          </div>
+          <div class="config-field">
+            <label>Prix maximum / nuit</label>
+            <div class="input-wrap">
+              <input type="number" value="150" id="max-1" oninput="updateBar(1)" />
+              <span class="input-suffix">€</span>
+            </div>
+            <div class="config-hint">Plafond absolu — jamais au-dessus</div>
+          </div>
+        </div>
+        <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:8px;">Votre fourchette de pricing</div>
+        <div class="price-range-bar"><div class="price-range-fill" id="bar-1"></div></div>
+        <div class="price-range-labels">
+          <span id="lbl-min-1">60€</span>
+          <span id="lbl-max-1">150€</span>
+        </div>
+        <div class="price-range-center">Zone automatique · Prix actuel appliqué : <strong style="color:var(--pg)">108€</strong></div>
+
+        <div style="margin-top:20px;">
+          <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:10px;">Mode de pricing</label>
+          <div class="mode-toggle">
+            <div class="mode-option" onclick="selectMode(this,'manual',1)" data-mode-group="1">
+              <h4><i class="fas fa-hand-pointer" style="color:var(--muted);font-size:12px;"></i> Manuel</h4>
+              <p>Vous recevez une suggestion chaque semaine. Vous validez chaque changement en 1 tap.</p>
+            </div>
+            <div class="mode-option selected" onclick="selectMode(this,'auto',1)" data-mode-group="1">
+              <h4><i class="fas fa-robot" style="color:var(--pg);font-size:12px;"></i> Automatique <span class="mode-pill">Recommandé</span></h4>
+              <p>Boostinghost applique les prix chaque semaine via Channex, sans aucune intervention.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Appt Cergy Centre -->
+    <div class="pcard">
+      <div class="pcard-header">
+        <div class="pcard-title">
+          <i class="fas fa-home"></i>
+          Appt Cergy Centre
+        </div>
+        <span style="font-size:12px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
+          <i class="fas fa-circle" style="font-size:7px;"></i> Actif
+        </span>
+      </div>
+      <div class="pcard-body">
+        <div class="config-grid">
+          <div class="config-field">
+            <label>Prix minimum / nuit</label>
+            <div class="input-wrap">
+              <input type="number" value="55" id="min-2" oninput="updateBar(2)" />
+              <span class="input-suffix">€</span>
+            </div>
+            <div class="config-hint">Plancher absolu — jamais en dessous</div>
+          </div>
+          <div class="config-field">
+            <label>Prix maximum / nuit</label>
+            <div class="input-wrap">
+              <input type="number" value="120" id="max-2" oninput="updateBar(2)" />
+              <span class="input-suffix">€</span>
+            </div>
+            <div class="config-hint">Plafond absolu — jamais au-dessus</div>
+          </div>
+        </div>
+        <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:8px;">Votre fourchette de pricing</div>
+        <div class="price-range-bar"><div class="price-range-fill" id="bar-2"></div></div>
+        <div class="price-range-labels">
+          <span id="lbl-min-2">55€</span>
+          <span id="lbl-max-2">120€</span>
+        </div>
+        <div class="price-range-center">Zone automatique · Prix actuel : <strong style="color:var(--warning)">80€ (suggestion 76€)</strong></div>
+
+        <div style="margin-top:20px;">
+          <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:10px;">Mode de pricing</label>
+          <div class="mode-toggle">
+            <div class="mode-option selected" onclick="selectMode(this,'manual',2)" data-mode-group="2">
+              <h4><i class="fas fa-hand-pointer" style="color:var(--muted);font-size:12px;"></i> Manuel</h4>
+              <p>Vous recevez une suggestion chaque semaine. Vous validez chaque changement en 1 tap.</p>
+            </div>
+            <div class="mode-option" onclick="selectMode(this,'auto',2)" data-mode-group="2">
+              <h4><i class="fas fa-robot" style="color:var(--pg);font-size:12px;"></i> Automatique <span class="mode-pill">Recommandé</span></h4>
+              <p>Boostinghost applique les prix chaque semaine via Channex, sans aucune intervention.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone d'analyse -->
+    <div class="pcard">
+      <div class="pcard-header">
+        <div class="pcard-title"><i class="fas fa-map-marker-alt"></i> Zone d'analyse de marché</div>
+        <span style="font-size:11.5px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
+          <i class="fas fa-check-circle"></i> Détectée automatiquement
+        </span>
+      </div>
+      <div class="pcard-body">
+        <div class="zone-info">
+          <div class="zone-map-thumb">🗺️</div>
+          <div>
+            <p style="font-size:13.5px;color:var(--text);line-height:1.6;">
+              <strong>Cercle de 1,5 km</strong> autour de chaque logement — concurrents similaires identifiés (même type et nombre de chambres).
+            </p>
+            <div class="zone-stats">
+              <div class="zone-stat"><strong>67</strong> concurrents — Cergy</div>
+              <div class="zone-stat"><strong>42</strong> concurrents — Metz</div>
+              <div class="zone-stat"><strong>Lundi 6h00</strong> analyse hebdo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-accept" style="width:100%;margin-top:4px;" onclick="savePricingConfig()">
+      <i class="fas fa-check"></i> Enregistrer la configuration
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════
+       TAB 3 — HISTORIQUE
+  ════════════════════════════════ -->
+  <div class="tab-panel" id="panel-history">
+
+    <!-- Semaine du 21 avril -->
+    <div class="pcard" style="margin-bottom:16px;">
+      <div class="pcard-header">
+        <div class="pcard-title"><i class="fas fa-calendar-week"></i> Semaine du 21 avril 2026</div>
+        <span style="font-size:12px;color:var(--pg);font-weight:600;">+215€ estimés</span>
+      </div>
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Logement</th>
+            <th>Changement</th>
+            <th>Tension</th>
+            <th>Mode</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="prop-name prop-name-col">Studio Gare RDC</span>
+              <span class="reason">Forte demande Cergy</span>
+            </td>
+            <td>
+              <div class="price-change">
+                <span class="from">65€</span>
+                <span class="arr">→</span>
+                <span class="to up">108€</span>
+              </div>
+            </td>
+            <td>
+              <div class="hist-tension">
+                <div class="hist-bar"><div class="hist-bar-fill" style="width:79%;background:var(--danger);"></div></div>
+                <span style="font-size:11px;font-weight:600;color:#B91C1C;">79%</span>
+              </div>
+            </td>
+            <td><span class="mode-badge auto" style="font-size:10px;padding:2px 7px;"><i class="fas fa-robot"></i> Auto</span></td>
+            <td><span style="font-size:11.5px;color:var(--success);font-weight:600;"><i class="fas fa-check"></i> Appliqué</span></td>
+          </tr>
+          <tr>
+            <td>
+              <span class="prop-name prop-name-col">Appt Cergy Centre</span>
+              <span class="reason">Tension moyenne</span>
+            </td>
+            <td>
+              <div class="price-change">
+                <span class="from">80€</span>
+                <span class="arr">→</span>
+                <span class="to" style="color:var(--warning);">76€ ⏳</span>
+              </div>
+            </td>
+            <td>
+              <div class="hist-tension">
+                <div class="hist-bar"><div class="hist-bar-fill" style="width:51%;background:var(--warning);"></div></div>
+                <span style="font-size:11px;font-weight:600;color:var(--warning);">51%</span>
+              </div>
+            </td>
+            <td><span class="mode-badge manual" style="font-size:10px;padding:2px 7px;"><i class="fas fa-hand-pointer"></i> Manuel</span></td>
+            <td><span style="font-size:11.5px;color:var(--warning);font-weight:600;"><i class="fas fa-clock"></i> En attente</span></td>
+          </tr>
+          <tr>
+            <td>
+              <span class="prop-name prop-name-col">Village Jouy-lès-Metz</span>
+              <span class="reason">Aligné sur le marché</span>
+            </td>
+            <td>
+              <div class="price-change">
+                <span class="from">82€</span>
+                <span class="arr">=</span>
+                <span class="to" style="color:var(--muted);">82€</span>
+              </div>
+            </td>
+            <td>
+              <div class="hist-tension">
+                <div class="hist-bar"><div class="hist-bar-fill" style="width:38%;background:var(--muted);"></div></div>
+                <span style="font-size:11px;font-weight:600;color:var(--muted);">38%</span>
+              </div>
+            </td>
+            <td><span class="mode-badge auto" style="font-size:10px;padding:2px 7px;"><i class="fas fa-robot"></i> Auto</span></td>
+            <td><span style="font-size:11.5px;color:var(--muted);font-weight:600;"><i class="fas fa-equals"></i> Stable</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Semaine du 14 avril -->
+    <div class="pcard">
+      <div class="pcard-header">
+        <div class="pcard-title"><i class="fas fa-calendar-week"></i> Semaine du 14 avril 2026</div>
+        <span style="font-size:12px;color:var(--pg);font-weight:600;">+98€ estimés</span>
+      </div>
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Logement</th>
+            <th>Changement</th>
+            <th>Tension</th>
+            <th>Mode</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="prop-name prop-name-col">Studio Gare RDC</span>
+              <span class="reason">Semaine standard</span>
+            </td>
+            <td>
+              <div class="price-change">
+                <span class="from">65€</span>
+                <span class="arr">→</span>
+                <span class="to up">80€</span>
+              </div>
+            </td>
+            <td>
+              <div class="hist-tension">
+                <div class="hist-bar"><div class="hist-bar-fill" style="width:63%;background:var(--warning);"></div></div>
+                <span style="font-size:11px;font-weight:600;color:var(--warning);">63%</span>
+              </div>
+            </td>
+            <td><span class="mode-badge auto" style="font-size:10px;padding:2px 7px;"><i class="fas fa-robot"></i> Auto</span></td>
+            <td><span style="font-size:11.5px;color:var(--success);font-weight:600;"><i class="fas fa-check"></i> Appliqué</span></td>
+          </tr>
+          <tr>
+            <td>
+              <span class="prop-name prop-name-col">Appt Cergy Centre</span>
+              <span class="reason">Faible demande</span>
+            </td>
+            <td>
+              <div class="price-change">
+                <span class="from">80€</span>
+                <span class="arr">→</span>
+                <span class="to down">70€</span>
+              </div>
+            </td>
+            <td>
+              <div class="hist-tension">
+                <div class="hist-bar"><div class="hist-bar-fill" style="width:29%;background:var(--muted);"></div></div>
+                <span style="font-size:11px;font-weight:600;color:var(--muted);">29%</span>
+              </div>
+            </td>
+            <td><span class="mode-badge manual" style="font-size:10px;padding:2px 7px;"><i class="fas fa-hand-pointer"></i> Manuel</span></td>
+            <td><span style="font-size:11.5px;color:var(--success);font-weight:600;"><i class="fas fa-check"></i> Accepté</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       TAB 4 — PARAMÈTRES
+  ════════════════════════════════ -->
+  <div class="tab-panel" id="panel-settings">
+    <div class="pcard">
+      <div class="pcard-header">
+        <div class="pcard-title"><i class="fas fa-bell"></i> Notifications</div>
+      </div>
+      <div class="settings-list">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Notification push — Ajustement automatique</div>
+            <div class="setting-desc">Recevez une notification quand un prix est modifié automatiquement (mode auto).</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" checked onchange="saveSettings()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Email récapitulatif hebdomadaire</div>
+            <div class="setting-desc">Chaque lundi matin : résumé des ajustements + revenu additionnel estimé.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" checked onchange="saveSettings()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Alerte si écart marché > 20%</div>
+            <div class="setting-desc">Notification immédiate si le marché dépasse significativement votre prix actuel.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" checked onchange="saveSettings()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="pcard">
+      <div class="pcard-header">
+        <div class="pcard-title"><i class="fas fa-calendar-alt"></i> Règles de saisonnalité</div>
+        <span style="font-size:11.5px;color:var(--muted);">Appliquées automatiquement</span>
+      </div>
+      <div class="settings-list">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Weekends (vendredi & samedi)</div>
+            <div class="setting-desc">Majoration appliquée automatiquement chaque vendredi et samedi soir.</div>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:var(--pg);">+10%</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Jours fériés</div>
+            <div class="setting-desc">14 juillet, 15 août, Noël, Jour de l'An, etc.</div>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:var(--pg);">+20%</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Vacances scolaires</div>
+            <div class="setting-desc">Basé sur les zones académiques — mis à jour chaque année.</div>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:var(--pg);">+15%</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Basse saison (novembre – mars)</div>
+            <div class="setting-desc">Hors jours fériés et vacances scolaires.</div>
+          </div>
+          <span style="font-size:14px;font-weight:700;color:var(--danger);">-10%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pcard">
+      <div class="pcard-header">
+        <div class="pcard-title"><i class="fas fa-info-circle"></i> À propos du pricing dynamique</div>
+      </div>
+      <div class="pcard-body">
+        <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px;">
+          Boostinghost analyse chaque semaine les prix et la disponibilité de <strong>50 à 200 logements similaires</strong> dans votre zone. L'algorithme combine 4 signaux : taux d'occupation du marché, prix médian, votre propre occupation et la saisonnalité.
+        </p>
+        <p style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px;">
+          <strong>Coût additionnel : 0€.</strong> La collecte de données est incluse dans votre abonnement Boostinghost. C'est l'équivalent de PriceLabs (49$/mois) ou Wheelhouse (39$/mois), intégré nativement.
+        </p>
+        <div style="display:flex;align-items:center;gap:8px;padding:12px;background:var(--pg-soft2);border-radius:10px;font-size:12.5px;color:var(--pg);font-weight:600;">
+          <i class="fas fa-shield-halved"></i>
+          Vos prix ne sortent jamais de la fourchette min/max que vous avez définie.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pricing-page -->
+</div><!-- /page-content -->
+</main>
+</div>
+
+<!-- Algorithm detail modal -->
+<div class="modal-overlay" id="algoModal" onclick="closeAlgoModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-sheet-header">
+      <div class="modal-sheet-title" id="modal-prop-name">Détail du calcul</div>
+      <button class="modal-close" onclick="document.getElementById('algoModal').classList.remove('open')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="algo-formula" id="algo-formula">
+        <div class="formula-line"><span class="f-label">Prix médian marché</span><span class="f-val" id="f-base">92€</span></div>
+        <div class="formula-line"><span class="f-label">× Tension marché (79% occupé)</span><span class="f-val" id="f-occ">× 1.18</span></div>
+        <div class="formula-line"><span class="f-label">× Votre occupation (35%)</span><span class="f-val" id="f-self">× 0.95</span></div>
+        <div class="formula-line"><span class="f-label">× Saisonnalité (vendredi)</span><span class="f-val" id="f-season">× 1.10</span></div>
+        <div class="formula-line result"><span class="f-label">= Prix recommandé</span><span id="f-result">108€</span></div>
+      </div>
+
+      <div style="font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Les 4 signaux</div>
+
+      <div class="signal-row">
+        <div class="signal-icon"><i class="fas fa-users"></i></div>
+        <div>
+          <div class="signal-name">Taux occupation marché</div>
+          <div class="signal-val" id="sig-market-occ">79% des concurrents réservés — Forte demande</div>
+        </div>
+        <span class="signal-factor pos" id="sig-factor-1">× 1.18</span>
+      </div>
+      <div class="signal-row">
+        <div class="signal-icon"><i class="fas fa-home"></i></div>
+        <div>
+          <div class="signal-name">Votre occupation</div>
+          <div class="signal-val" id="sig-self-occ">35% de vos nuits réservées ce mois — compétitif</div>
+        </div>
+        <span class="signal-factor neg" id="sig-factor-2">× 0.95</span>
+      </div>
+      <div class="signal-row">
+        <div class="signal-icon"><i class="fas fa-calendar"></i></div>
+        <div>
+          <div class="signal-name">Saisonnalité</div>
+          <div class="signal-val">Vendredi soir — majoration weekend</div>
+        </div>
+        <span class="signal-factor pos" id="sig-factor-3">× 1.10</span>
+      </div>
+      <div class="signal-row">
+        <div class="signal-icon"><i class="fas fa-shield-alt"></i></div>
+        <div>
+          <div class="signal-name">Fourchette hôte</div>
+          <div class="signal-val" id="sig-range">Fourchette 60€–150€ — prix dans les limites ✓</div>
+        </div>
+        <span class="signal-factor neu">Contraint</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="pricing-toast" id="pricingToast"></div>
+
+<script src="/js/auth-fetch.js"></script>
+<script src="/js/bh-layout.js"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
+<script src="/js/messages-badge-desktop-mobile.js"></script>
+
+<script>
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── WEEK CHART ──
+function buildWeekChart(containerId, prices, recommended) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const max = Math.max(...prices) * 1.1;
+  container.innerHTML = days.map((d, i) => {
+    const h = Math.round((prices[i] / max) * 100);
+    const isReco = prices[i] === recommended;
+    const isWe = i >= 4;
+    const cls = isReco ? 'current' : isWe ? 'weekend' : '';
+    return `<div class="day-bar-wrap">
+      <div class="day-price">${prices[i]}€</div>
+      <div class="day-bar ${cls}" style="height:${h}%;"></div>
+      <div class="day-label">${d}</div>
+    </div>`;
+  }).join('');
+}
+buildWeekChart('chart-1', [65, 65, 65, 80, 108, 108, 90], 108);
+
+// ── MODE TOGGLE ──
+function selectMode(el, mode, group) {
+  document.querySelectorAll(`[data-mode-group="${group}"]`).forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  showToast('Mode ' + (mode === 'auto' ? 'automatique' : 'manuel') + ' sélectionné', 'success');
+}
+
+// ── PRICE RANGE BAR ──
+function updateBar(id) {
+  const min = parseInt(document.getElementById('min-' + id)?.value) || 0;
+  const max = parseInt(document.getElementById('max-' + id)?.value) || 200;
+  document.getElementById('lbl-min-' + id).textContent = min + '€';
+  document.getElementById('lbl-max-' + id).textContent = max + '€';
+}
+
+// ── ACCEPT / DECLINE ──
+function acceptSuggestion() {
+  const card = document.getElementById('pending-card');
+  if (!card) return;
+  card.classList.remove('pending');
+  card.querySelector('.prop-pricing-body').innerHTML = `
+    <div class="price-compare">
+      <div class="price-compare-item"><div class="pcl">Prix précédent</div><div class="pcv">80€</div></div>
+      <span class="price-arrow"><i class="fas fa-arrow-right"></i></span>
+      <div class="price-compare-item"><div class="pcl">Prix appliqué</div>
+        <div class="pcv recommended">76€ <span class="price-delta down"><i class="fas fa-arrow-down" style="font-size:9px;"></i> -4€</span></div>
+      </div>
+      <div class="price-compare-item" style="text-align:right;"><div class="pcl">Fourchette</div><div class="pcv" style="font-size:14px;color:var(--muted);">55€–120€</div></div>
+    </div>
+    <div class="prop-status-line success" style="margin-top:12px;">
+      <i class="fas fa-check-circle"></i> Suggestion acceptée — 76€ appliqué via Channex
+    </div>`;
+  // Update summary badge
+  document.querySelector('.summary-stat .val.orange').textContent = '0';
+  showToast('76€ appliqué sur Airbnb & Booking ✓', 'success');
+}
+
+function declineSuggestion() {
+  const card = document.getElementById('pending-card');
+  if (!card) return;
+  card.classList.remove('pending');
+  card.querySelector('.prop-pricing-body').innerHTML = `
+    <div class="price-compare">
+      <div class="price-compare-item"><div class="pcl">Prix conservé</div><div class="pcv">80€</div></div>
+      <span class="price-arrow"><i class="fas fa-equals"></i></span>
+      <div class="price-compare-item"><div class="pcl">Statut</div><div class="pcv" style="color:var(--muted);">Inchangé</div></div>
+    </div>
+    <div class="prop-status-line muted" style="margin-top:12px;">
+      <i class="fas fa-hand-pointer"></i> Suggestion ignorée — prix maintenu à 80€
+    </div>`;
+  document.querySelector('.summary-stat .val.orange').textContent = '0';
+  showToast('Prix maintenu à 80€', '');
+}
+
+// ── ALGO MODAL ──
+function openAlgoModal(name, median, reco, marketOcc, selfOcc, season) {
+  const factors = getFactors(marketOcc, selfOcc, season);
+  document.getElementById('modal-prop-name').textContent = '🧮 ' + name;
+  document.getElementById('f-base').textContent = median + '€';
+  document.getElementById('f-occ').textContent = '× ' + factors.market.toFixed(2);
+  document.getElementById('f-self').textContent = '× ' + factors.self.toFixed(2);
+  document.getElementById('f-season').textContent = '× ' + season.toFixed(2);
+  document.getElementById('f-result').textContent = reco + '€';
+  document.getElementById('sig-market-occ').textContent = marketOcc + '% des concurrents réservés — ' + tensionLabel(marketOcc);
+  document.getElementById('sig-self-occ').textContent = selfOcc + '% de vos nuits réservées ce mois';
+  document.getElementById('sig-factor-1').textContent = '× ' + factors.market.toFixed(2);
+  document.getElementById('sig-factor-1').className = 'signal-factor ' + (factors.market >= 1 ? 'pos' : 'neg');
+  document.getElementById('sig-factor-2').textContent = '× ' + factors.self.toFixed(2);
+  document.getElementById('sig-factor-2').className = 'signal-factor ' + (factors.self >= 1 ? 'pos' : 'neg');
+  document.getElementById('sig-factor-3').textContent = '× ' + season.toFixed(2);
+  document.getElementById('algoModal').classList.add('open');
+}
+function closeAlgoModal(e) {
+  if (e.target === document.getElementById('algoModal')) {
+    document.getElementById('algoModal').classList.remove('open');
+  }
+}
+function getFactors(marketOcc, selfOcc, season) {
+  let market = 1;
+  if (marketOcc >= 80) market = 1.22;
+  else if (marketOcc >= 65) market = 1.15;
+  else if (marketOcc >= 45) market = 1.02;
+  else if (marketOcc >= 25) market = 0.92;
+  else market = 0.82;
+  const self = selfOcc >= 80 ? 1.08 : selfOcc >= 60 ? 1.03 : selfOcc >= 40 ? 0.98 : 0.93;
+  return { market, self };
+}
+function tensionLabel(occ) {
+  if (occ >= 80) return 'Forte demande';
+  if (occ >= 65) return 'Demande élevée';
+  if (occ >= 45) return 'Demande moyenne';
+  if (occ >= 25) return 'Faible demande';
+  return 'Très faible demande';
+}
+
+// ── SAVE CONFIG ──
+function savePricingConfig() {
+  showToast('Configuration enregistrée ✓', 'success');
+}
+function saveSettings() {
+  showToast('Préférences enregistrées ✓', 'success');
+}
+
+// ── TOAST ──
+function showToast(msg, type) {
+  const t = document.getElementById('pricingToast');
+  t.textContent = msg;
+  t.className = 'pricing-toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+
+</body>
+</html>
