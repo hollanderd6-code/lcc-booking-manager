@@ -55,26 +55,29 @@ html[data-theme-v3="1"] .main-content {
   overflow-y: auto !important; height: 100% !important;
 }
 
-/* Bouton retour — style vert arrondi */
+/* Bouton retour fixe — style vert arrondi identique à settings-2.html */
+.settings-back-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 20px;
+  border: none; border-radius: 12px;
+  background: #1A7A5E; color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+  white-space: nowrap;
+  position: fixed; top: calc(40px + 13px); right: 24px;
+  z-index: 200;
+}
+.settings-back-btn:hover { background: #15624B; }
+.settings-back-btn i { font-size: 13px; }
+
+/* Cacher le btn-ghost généré automatiquement par bh-layout (on a notre propre bouton) */
 html[data-theme-v3="1"] .header-actions .btn.btn-ghost,
-html[data-theme-v3="1"] .header-actions .btn-ghost {
-  background: #1A7A5E !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 999px !important;
-  padding: 9px 20px !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  cursor: pointer !important;
-  transition: background .15s !important;
-}
-html[data-theme-v3="1"] .header-actions .btn.btn-ghost:hover,
-html[data-theme-v3="1"] .header-actions .btn-ghost:hover {
-  background: #15624B !important;
-}
+html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
+
+/* settings-container — max-width et centrage comme settings-2.html */
+.settings-container { max-width: 1100px; margin: 0 auto; padding: 0; }
+.page-content { margin-top: 0 !important; }
 @media (max-width: 1366px) {
   html, body { overflow-x: hidden !important; max-width: 100vw !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
@@ -105,6 +108,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost:hover {
     z-index: 1100 !important;
   }
   #bhHeader { display: none !important; }
+  .settings-back-btn { display: none !important; }
   .page-content {
     padding: 0 12px 90px !important;
     padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
@@ -709,7 +713,13 @@ html[data-theme-v3="1"] .header-actions .btn-ghost:hover {
 <div id="bhSidebar"></div>
 <main class="main-content"><div id="bhHeader"></div>
 
+<!-- Bouton retour fixe — style identique à settings-2.html -->
+<button class="settings-back-btn" onclick="window.location.href='/app.html'">
+  <i class="fas fa-arrow-left"></i> Tableau de bord
+</button>
+
 <div class="page-content">
+<section class="card settings-container" style="background:transparent;border:none;box-shadow:none;">
 <div class="pricing-page">
 
   <!-- ── Header ── -->
@@ -932,6 +942,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost:hover {
   </div>
 
 </div><!-- /pricing-page -->
+</section><!-- /settings-container -->
 </div><!-- /page-content -->
 </main>
 </div>
