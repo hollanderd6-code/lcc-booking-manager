@@ -33,6 +33,7 @@ const PDFDocument = require('pdfkit');
 // ✅ NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
 // ============================================
 const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
+const { setupDynamicPricingRoutes } = require('./routes/dynamic-pricing-routes');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 
 // ============================================
@@ -18713,6 +18714,9 @@ app.post('/api/test-notif', async (req, res) => {
 app.locals.pool = pool;
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use('/api/welcome-books', welcomeRouter);
+
+// Dynamic Pricing routes
+setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail);
 // ============================================
 // ============================================
 // NOTES D'INSTALLATION
