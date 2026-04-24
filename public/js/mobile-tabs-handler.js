@@ -93,6 +93,17 @@
 
     buttons += hr;
 
+    // 4b. Pricing dynamique — compte principal uniquement
+    if (!isSubAccount) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/dynamic-pricing.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-bolt" style="color:#B45309;"></i> Pricing dynamique
+          <span style="margin-left:auto;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;">Bêta</span>
+        </button>`;
+    }
+
+    buttons += hr;
+
     // 5. Serrures connectées — bientôt disponible (non cliquable)
     buttons += `
       <button class="btn btn-secondary" disabled style="width: 100%; justify-content: flex-start; opacity: 0.45; cursor: default; pointer-events: none;">
@@ -146,7 +157,9 @@
     'reporting',
     'welcome',
     'contrat',
-    'help'
+    'help',
+    'pricing',           // Dynamic Pricing
+    'dynamic-pricing',   // fallback
   ];
 
   // ✅ Vérifier data-page="settings" en priorité
