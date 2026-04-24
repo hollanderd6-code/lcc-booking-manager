@@ -80,6 +80,8 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .page-content { margin-top: 0 !important; }
 @media (max-width: 1366px) {
   html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  /* Cacher la barre noire demo-nav sur mobile */
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
   html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
