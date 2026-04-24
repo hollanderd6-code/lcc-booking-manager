@@ -669,197 +669,40 @@ html[data-theme-v3="1"] .sidebar {
        TAB 1 — DASHBOARD
   ════════════════════════════════ -->
   <div class="tab-panel active" id="panel-dashboard">
-
-    <!-- Insight banner -->
-    <div class="insight-banner">
-      <div class="insight-icon"><i class="fas fa-fire"></i></div>
-      <div>
-        <h3>Forte demande détectée sur 2 de vos logements</h3>
-        <p>Ce weekend, le marché est à 79% d'occupation à Cergy. Vos prix ont été ajustés automatiquement.</p>
-      </div>
+    <div id="dashboard-loading" style="text-align:center;padding:48px 0;color:var(--muted);font-size:14px;">
+      <i class="fas fa-circle-notch fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>
+      Chargement du marché...
     </div>
-
-    <!-- Summary stats -->
-    <div class="summary-row">
-      <div class="summary-stat">
-        <div class="val green">+215€</div>
-        <div class="lbl">Revenu additionnel estimé</div>
-      </div>
-      <div class="summary-stat">
-        <div class="val">3/3</div>
-        <div class="lbl">Logements analysés</div>
-      </div>
-      <div class="summary-stat">
-        <div class="val orange">1</div>
-        <div class="lbl">Suggestion en attente</div>
-      </div>
+    <div id="dashboard-empty" style="display:none;text-align:center;padding:48px 24px;">
+      <div style="font-size:48px;margin-bottom:16px;">📊</div>
+      <h3 style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px;">Aucun logement configuré</h3>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Activez le pricing dynamique sur vos logements dans l'onglet Configuration.</p>
+      <button class="btn-accept" style="width:auto;padding:10px 24px;" onclick="switchTab('config')">
+        <i class="fas fa-sliders-h"></i> Configurer maintenant
+      </button>
     </div>
-
-    <!-- Logement 1 : auto, prix monté -->
-    <div class="prop-pricing-card">
-      <div class="prop-pricing-header">
-        <div>
-          <div class="prop-pricing-name">
-            <i class="fas fa-home" style="color:var(--pg);font-size:12px;"></i>
-            Studio Gare RDC
-          </div>
-          <div class="prop-pricing-sub">Cergy • Studio • 2 voy.</div>
+    <div id="dashboard-content" style="display:none;">
+      <!-- Insight banner — injecté dynamiquement -->
+      <div id="insight-banner-wrap"></div>
+      <!-- Summary stats -->
+      <div class="summary-row">
+        <div class="summary-stat">
+          <div class="val green" id="stat-gain">—</div>
+          <div class="lbl">Revenu additionnel estimé</div>
         </div>
-        <span class="mode-badge auto"><i class="fas fa-robot"></i> Automatique</span>
-      </div>
-      <div class="prop-pricing-body">
-        <div class="market-stats">
-          <div class="market-stat">
-            <div class="mval">92€</div>
-            <div class="mlbl">Médiane marché</div>
-          </div>
-          <div class="market-stat">
-            <div class="mval">71€–118€</div>
-            <div class="mlbl">Fourchette marché</div>
-          </div>
-          <div class="market-stat">
-            <div class="mval"><span class="tension-pill high"><i class="fas fa-fire" style="font-size:9px;"></i> Forte</span></div>
-            <div class="mlbl">79% occupé</div>
-          </div>
-          <div class="market-stat">
-            <div class="mval">68</div>
-            <div class="mlbl">Comparables</div>
-          </div>
+        <div class="summary-stat">
+          <div class="val" id="stat-count">—</div>
+          <div class="lbl">Logements analysés</div>
         </div>
-
-        <div class="price-compare">
-          <div class="price-compare-item">
-            <div class="pcl">Prix précédent</div>
-            <div class="pcv">65€</div>
-          </div>
-          <span class="price-arrow"><i class="fas fa-arrow-right"></i></span>
-          <div class="price-compare-item">
-            <div class="pcl">Prix appliqué</div>
-            <div class="pcv recommended">108€ <span class="price-delta up"><i class="fas fa-arrow-up" style="font-size:9px;"></i> +43€</span></div>
-          </div>
-          <div class="price-compare-item" style="text-align:right;">
-            <div class="pcl">Fourchette</div>
-            <div class="pcv" style="font-size:14px;color:var(--muted);">60€ – 150€</div>
-          </div>
-        </div>
-
-        <!-- Mini week chart -->
-        <div class="week-chart" id="chart-1"></div>
-
-        <div class="prop-status-line success">
-          <i class="fas fa-check-circle"></i>
-          Mis à jour sur Airbnb & Booking il y a 2 heures
-        </div>
-        <div style="margin-top:8px;">
-          <button class="btn-detail" onclick="openAlgoModal('Studio Gare RDC', 92, 108, 79, 35, 1.10)">
-            <i class="fas fa-calculator"></i> Voir le détail du calcul
-          </button>
+        <div class="summary-stat">
+          <div class="val orange" id="stat-pending">—</div>
+          <div class="lbl">Suggestion en attente</div>
         </div>
       </div>
-    </div>
-
-    <!-- Logement 2 : manuel, suggestion en attente -->
-    <div class="prop-pricing-card pending" id="pending-card">
-      <div class="prop-pricing-header">
-        <div>
-          <div class="prop-pricing-name">
-            <i class="fas fa-home" style="color:var(--pg);font-size:12px;"></i>
-            Appt Cergy Centre
-            <span style="font-size:10px;background:rgba(245,158,11,.15);color:#B45309;border-radius:6px;padding:2px 7px;font-weight:700;">Action requise</span>
-          </div>
-          <div class="prop-pricing-sub">Cergy • T2 • 4 voy.</div>
-        </div>
-        <span class="mode-badge manual"><i class="fas fa-hand-pointer"></i> Manuel</span>
-      </div>
-      <div class="prop-pricing-body">
-        <div class="market-stats">
-          <div class="market-stat">
-            <div class="mval">74€</div>
-            <div class="mlbl">Médiane marché</div>
-          </div>
-          <div class="market-stat">
-            <div class="mval">58€–96€</div>
-            <div class="mlbl">Fourchette marché</div>
-          </div>
-          <div class="market-stat">
-            <div class="mval"><span class="tension-pill medium">Moyenne</span></div>
-            <div class="mlbl">51% occupé</div>
-          </div>
-          <div class="market-stat">
-            <div class="mval">44</div>
-            <div class="mlbl">Comparables</div>
-          </div>
-        </div>
-
-        <div class="price-compare">
-          <div class="price-compare-item">
-            <div class="pcl">Prix actuel</div>
-            <div class="pcv">80€</div>
-          </div>
-          <span class="price-arrow"><i class="fas fa-arrow-right"></i></span>
-          <div class="price-compare-item">
-            <div class="pcl">Suggéré</div>
-            <div class="pcv recommended" style="color:var(--warning);">76€ <span class="price-delta down"><i class="fas fa-arrow-down" style="font-size:9px;"></i> -4€</span></div>
-          </div>
-          <div class="price-compare-item" style="text-align:right;">
-            <div class="pcl">Fourchette</div>
-            <div class="pcv" style="font-size:14px;color:var(--muted);">55€ – 120€</div>
-          </div>
-        </div>
-
-        <div class="prop-pricing-actions">
-          <button class="btn-accept" onclick="acceptSuggestion()">
-            <i class="fas fa-check"></i> Appliquer 76€
-          </button>
-          <button class="btn-decline" onclick="declineSuggestion()">
-            Garder 80€
-          </button>
-          <button class="btn-detail" onclick="openAlgoModal('Appt Cergy Centre', 74, 76, 51, 65, 0.95)">
-            <i class="fas fa-info-circle"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Logement 3 : stable -->
-    <div class="prop-pricing-card stable">
-      <div class="prop-pricing-header">
-        <div>
-          <div class="prop-pricing-name">
-            <i class="fas fa-home" style="color:var(--pg);font-size:12px;"></i>
-            Village Jouy-lès-Metz
-          </div>
-          <div class="prop-pricing-sub">Metz • T2 • 3 voy.</div>
-        </div>
-        <span class="mode-badge auto"><i class="fas fa-robot"></i> Automatique</span>
-      </div>
-      <div class="prop-pricing-body">
-        <div class="price-compare">
-          <div class="price-compare-item">
-            <div class="pcl">Prix actuel</div>
-            <div class="pcv">82€</div>
-          </div>
-          <span class="price-arrow"><i class="fas fa-equals"></i></span>
-          <div class="price-compare-item">
-            <div class="pcl">Prix appliqué</div>
-            <div class="pcv">82€ <span class="price-delta stable">stable</span></div>
-          </div>
-          <div class="price-compare-item" style="text-align:right;">
-            <div class="pcl">Tension</div>
-            <div class="pcv"><span class="tension-pill low">Faible 38%</span></div>
-          </div>
-        </div>
-        <div class="prop-status-line muted" style="margin-top:12px;">
-          <i class="fas fa-check"></i>
-          Prix aligné sur le marché — aucun ajustement nécessaire
-        </div>
-      </div>
-    </div>
-
-    <!-- Last sync info -->
-    <div style="text-align:center;margin-top:20px;font-size:12px;color:var(--muted);">
-      <i class="fas fa-sync-alt" style="margin-right:4px;"></i>
-      Dernière analyse marché : lundi 21 avril à 6h02 · Prochaine : lundi 28 avril
+      <!-- Cartes logements — injectées dynamiquement -->
+      <div id="dashboard-cards"></div>
+      <!-- Sync info -->
+      <div id="sync-info" style="text-align:center;margin-top:20px;font-size:12px;color:var(--muted);"></div>
     </div>
   </div>
 
@@ -867,296 +710,54 @@ html[data-theme-v3="1"] .sidebar {
        TAB 2 — CONFIGURATION
   ════════════════════════════════ -->
   <div class="tab-panel" id="panel-config">
-
-    <!-- Studio Gare RDC -->
-    <div class="pcard">
-      <div class="pcard-header">
-        <div class="pcard-title">
-          <i class="fas fa-home"></i>
-          Studio Gare RDC
-        </div>
-        <span style="font-size:12px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
-          <i class="fas fa-circle" style="font-size:7px;"></i> Actif
-        </span>
-      </div>
-      <div class="pcard-body">
-        <div class="config-grid">
-          <div class="config-field">
-            <label>Prix minimum / nuit</label>
-            <div class="input-wrap">
-              <input type="number" value="60" id="min-1" oninput="updateBar(1)" />
-              <span class="input-suffix">€</span>
-            </div>
-            <div class="config-hint">Plancher absolu — jamais en dessous</div>
-          </div>
-          <div class="config-field">
-            <label>Prix maximum / nuit</label>
-            <div class="input-wrap">
-              <input type="number" value="150" id="max-1" oninput="updateBar(1)" />
-              <span class="input-suffix">€</span>
-            </div>
-            <div class="config-hint">Plafond absolu — jamais au-dessus</div>
-          </div>
-        </div>
-        <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:8px;">Votre fourchette de pricing</div>
-        <div class="price-range-bar"><div class="price-range-fill" id="bar-1"></div></div>
-        <div class="price-range-labels">
-          <span id="lbl-min-1">60€</span>
-          <span id="lbl-max-1">150€</span>
-        </div>
-        <div class="price-range-center">Zone automatique · Prix actuel appliqué : <strong style="color:var(--pg)">108€</strong></div>
-
-        <div style="margin-top:20px;">
-          <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:10px;">Mode de pricing</label>
-          <div class="mode-toggle">
-            <div class="mode-option" onclick="selectMode(this,'manual',1)" data-mode-group="1">
-              <h4><i class="fas fa-hand-pointer" style="color:var(--muted);font-size:12px;"></i> Manuel</h4>
-              <p>Vous recevez une suggestion chaque semaine. Vous validez chaque changement en 1 tap.</p>
-            </div>
-            <div class="mode-option selected" onclick="selectMode(this,'auto',1)" data-mode-group="1">
-              <h4><i class="fas fa-robot" style="color:var(--pg);font-size:12px;"></i> Automatique <span class="mode-pill">Recommandé</span></h4>
-              <p>Boostinghost applique les prix chaque semaine via Channex, sans aucune intervention.</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div id="config-loading" style="text-align:center;padding:48px 0;color:var(--muted);font-size:14px;">
+      <i class="fas fa-circle-notch fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>
+      Chargement de la configuration...
     </div>
-
-    <!-- Appt Cergy Centre -->
-    <div class="pcard">
-      <div class="pcard-header">
-        <div class="pcard-title">
-          <i class="fas fa-home"></i>
-          Appt Cergy Centre
+    <div id="config-content" style="display:none;">
+      <!-- Cartes config — injectées dynamiquement -->
+      <div id="config-cards"></div>
+      <!-- Zone d'analyse -->
+      <div class="pcard" style="margin-bottom:16px;">
+        <div class="pcard-header">
+          <div class="pcard-title"><i class="fas fa-map-marker-alt"></i> Zone d'analyse de marché</div>
+          <span style="font-size:11.5px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
+            <i class="fas fa-check-circle"></i> Détectée automatiquement
+          </span>
         </div>
-        <span style="font-size:12px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
-          <i class="fas fa-circle" style="font-size:7px;"></i> Actif
-        </span>
-      </div>
-      <div class="pcard-body">
-        <div class="config-grid">
-          <div class="config-field">
-            <label>Prix minimum / nuit</label>
-            <div class="input-wrap">
-              <input type="number" value="55" id="min-2" oninput="updateBar(2)" />
-              <span class="input-suffix">€</span>
-            </div>
-            <div class="config-hint">Plancher absolu — jamais en dessous</div>
-          </div>
-          <div class="config-field">
-            <label>Prix maximum / nuit</label>
-            <div class="input-wrap">
-              <input type="number" value="120" id="max-2" oninput="updateBar(2)" />
-              <span class="input-suffix">€</span>
-            </div>
-            <div class="config-hint">Plafond absolu — jamais au-dessus</div>
-          </div>
-        </div>
-        <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:8px;">Votre fourchette de pricing</div>
-        <div class="price-range-bar"><div class="price-range-fill" id="bar-2"></div></div>
-        <div class="price-range-labels">
-          <span id="lbl-min-2">55€</span>
-          <span id="lbl-max-2">120€</span>
-        </div>
-        <div class="price-range-center">Zone automatique · Prix actuel : <strong style="color:var(--warning)">80€ (suggestion 76€)</strong></div>
-
-        <div style="margin-top:20px;">
-          <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:10px;">Mode de pricing</label>
-          <div class="mode-toggle">
-            <div class="mode-option selected" onclick="selectMode(this,'manual',2)" data-mode-group="2">
-              <h4><i class="fas fa-hand-pointer" style="color:var(--muted);font-size:12px;"></i> Manuel</h4>
-              <p>Vous recevez une suggestion chaque semaine. Vous validez chaque changement en 1 tap.</p>
-            </div>
-            <div class="mode-option" onclick="selectMode(this,'auto',2)" data-mode-group="2">
-              <h4><i class="fas fa-robot" style="color:var(--pg);font-size:12px;"></i> Automatique <span class="mode-pill">Recommandé</span></h4>
-              <p>Boostinghost applique les prix chaque semaine via Channex, sans aucune intervention.</p>
+        <div class="pcard-body">
+          <div class="zone-info">
+            <div class="zone-map-thumb">🗺️</div>
+            <div>
+              <p style="font-size:13.5px;color:var(--text);line-height:1.6;">
+                <strong>Cercle de 1,5 km</strong> autour de chaque logement — concurrents similaires identifiés automatiquement.
+              </p>
+              <div class="zone-stats" id="zone-stats">
+                <div class="zone-stat"><strong>Lundi 6h00</strong> analyse hebdo</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      <button class="btn-accept" style="width:100%;margin-top:4px;" onclick="savePricingConfig()">
+        <i class="fas fa-check"></i> Enregistrer la configuration
+      </button>
     </div>
-
-    <!-- Zone d'analyse -->
-    <div class="pcard">
-      <div class="pcard-header">
-        <div class="pcard-title"><i class="fas fa-map-marker-alt"></i> Zone d'analyse de marché</div>
-        <span style="font-size:11.5px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
-          <i class="fas fa-check-circle"></i> Détectée automatiquement
-        </span>
-      </div>
-      <div class="pcard-body">
-        <div class="zone-info">
-          <div class="zone-map-thumb">🗺️</div>
-          <div>
-            <p style="font-size:13.5px;color:var(--text);line-height:1.6;">
-              <strong>Cercle de 1,5 km</strong> autour de chaque logement — concurrents similaires identifiés (même type et nombre de chambres).
-            </p>
-            <div class="zone-stats">
-              <div class="zone-stat"><strong>67</strong> concurrents — Cergy</div>
-              <div class="zone-stat"><strong>42</strong> concurrents — Metz</div>
-              <div class="zone-stat"><strong>Lundi 6h00</strong> analyse hebdo</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <button class="btn-accept" style="width:100%;margin-top:4px;" onclick="savePricingConfig()">
-      <i class="fas fa-check"></i> Enregistrer la configuration
-    </button>
   </div>
 
   <!-- ════════════════════════════════
        TAB 3 — HISTORIQUE
   ════════════════════════════════ -->
   <div class="tab-panel" id="panel-history">
-
-    <!-- Semaine du 21 avril -->
-    <div class="pcard" style="margin-bottom:16px;">
-      <div class="pcard-header">
-        <div class="pcard-title"><i class="fas fa-calendar-week"></i> Semaine du 21 avril 2026</div>
-        <span style="font-size:12px;color:var(--pg);font-weight:600;">+215€ estimés</span>
-      </div>
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>Logement</th>
-            <th>Changement</th>
-            <th>Tension</th>
-            <th>Mode</th>
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <span class="prop-name prop-name-col">Studio Gare RDC</span>
-              <span class="reason">Forte demande Cergy</span>
-            </td>
-            <td>
-              <div class="price-change">
-                <span class="from">65€</span>
-                <span class="arr">→</span>
-                <span class="to up">108€</span>
-              </div>
-            </td>
-            <td>
-              <div class="hist-tension">
-                <div class="hist-bar"><div class="hist-bar-fill" style="width:79%;background:var(--danger);"></div></div>
-                <span style="font-size:11px;font-weight:600;color:#B91C1C;">79%</span>
-              </div>
-            </td>
-            <td><span class="mode-badge auto" style="font-size:10px;padding:2px 7px;"><i class="fas fa-robot"></i> Auto</span></td>
-            <td><span style="font-size:11.5px;color:var(--success);font-weight:600;"><i class="fas fa-check"></i> Appliqué</span></td>
-          </tr>
-          <tr>
-            <td>
-              <span class="prop-name prop-name-col">Appt Cergy Centre</span>
-              <span class="reason">Tension moyenne</span>
-            </td>
-            <td>
-              <div class="price-change">
-                <span class="from">80€</span>
-                <span class="arr">→</span>
-                <span class="to" style="color:var(--warning);">76€ ⏳</span>
-              </div>
-            </td>
-            <td>
-              <div class="hist-tension">
-                <div class="hist-bar"><div class="hist-bar-fill" style="width:51%;background:var(--warning);"></div></div>
-                <span style="font-size:11px;font-weight:600;color:var(--warning);">51%</span>
-              </div>
-            </td>
-            <td><span class="mode-badge manual" style="font-size:10px;padding:2px 7px;"><i class="fas fa-hand-pointer"></i> Manuel</span></td>
-            <td><span style="font-size:11.5px;color:var(--warning);font-weight:600;"><i class="fas fa-clock"></i> En attente</span></td>
-          </tr>
-          <tr>
-            <td>
-              <span class="prop-name prop-name-col">Village Jouy-lès-Metz</span>
-              <span class="reason">Aligné sur le marché</span>
-            </td>
-            <td>
-              <div class="price-change">
-                <span class="from">82€</span>
-                <span class="arr">=</span>
-                <span class="to" style="color:var(--muted);">82€</span>
-              </div>
-            </td>
-            <td>
-              <div class="hist-tension">
-                <div class="hist-bar"><div class="hist-bar-fill" style="width:38%;background:var(--muted);"></div></div>
-                <span style="font-size:11px;font-weight:600;color:var(--muted);">38%</span>
-              </div>
-            </td>
-            <td><span class="mode-badge auto" style="font-size:10px;padding:2px 7px;"><i class="fas fa-robot"></i> Auto</span></td>
-            <td><span style="font-size:11.5px;color:var(--muted);font-weight:600;"><i class="fas fa-equals"></i> Stable</span></td>
-          </tr>
-        </tbody>
-      </table>
+    <div id="history-loading" style="text-align:center;padding:48px 0;color:var(--muted);font-size:14px;">
+      <i class="fas fa-circle-notch fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>
+      Chargement de l'historique...
     </div>
-
-    <!-- Semaine du 14 avril -->
-    <div class="pcard">
-      <div class="pcard-header">
-        <div class="pcard-title"><i class="fas fa-calendar-week"></i> Semaine du 14 avril 2026</div>
-        <span style="font-size:12px;color:var(--pg);font-weight:600;">+98€ estimés</span>
-      </div>
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>Logement</th>
-            <th>Changement</th>
-            <th>Tension</th>
-            <th>Mode</th>
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <span class="prop-name prop-name-col">Studio Gare RDC</span>
-              <span class="reason">Semaine standard</span>
-            </td>
-            <td>
-              <div class="price-change">
-                <span class="from">65€</span>
-                <span class="arr">→</span>
-                <span class="to up">80€</span>
-              </div>
-            </td>
-            <td>
-              <div class="hist-tension">
-                <div class="hist-bar"><div class="hist-bar-fill" style="width:63%;background:var(--warning);"></div></div>
-                <span style="font-size:11px;font-weight:600;color:var(--warning);">63%</span>
-              </div>
-            </td>
-            <td><span class="mode-badge auto" style="font-size:10px;padding:2px 7px;"><i class="fas fa-robot"></i> Auto</span></td>
-            <td><span style="font-size:11.5px;color:var(--success);font-weight:600;"><i class="fas fa-check"></i> Appliqué</span></td>
-          </tr>
-          <tr>
-            <td>
-              <span class="prop-name prop-name-col">Appt Cergy Centre</span>
-              <span class="reason">Faible demande</span>
-            </td>
-            <td>
-              <div class="price-change">
-                <span class="from">80€</span>
-                <span class="arr">→</span>
-                <span class="to down">70€</span>
-              </div>
-            </td>
-            <td>
-              <div class="hist-tension">
-                <div class="hist-bar"><div class="hist-bar-fill" style="width:29%;background:var(--muted);"></div></div>
-                <span style="font-size:11px;font-weight:600;color:var(--muted);">29%</span>
-              </div>
-            </td>
-            <td><span class="mode-badge manual" style="font-size:10px;padding:2px 7px;"><i class="fas fa-hand-pointer"></i> Manuel</span></td>
-            <td><span style="font-size:11.5px;color:var(--success);font-weight:600;"><i class="fas fa-check"></i> Accepté</span></td>
-          </tr>
-        </tbody>
-      </table>
+    <div id="history-empty" style="display:none;text-align:center;padding:48px 24px;">
+      <div style="font-size:48px;margin-bottom:12px;">📭</div>
+      <p style="color:var(--muted);font-size:14px;">Aucun ajustement effectué pour le moment.<br>L'historique apparaîtra après la première analyse hebdomadaire.</p>
     </div>
+    <div id="history-content" style="display:none;"></div>
   </div>
 
   <!-- ════════════════════════════════
@@ -1326,26 +927,61 @@ html[data-theme-v3="1"] .sidebar {
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 
 <script>
-// ── TABS ──
+'use strict';
+
+// ── Configuration ───────────────────────────────────────────
+const API_BASE = typeof API_URL !== 'undefined' ? API_URL : '';
+const DP = '/api/dynamic-pricing';
+
+// État global (pas de redux, juste un objet simple)
+const state = {
+  dashboard: null,       // données brutes du GET /dashboard
+  configs: [],           // données brutes du GET /config
+  history: [],           // données brutes du GET /history
+  pendingConfigs: {},    // { propertyId: { priceMin, priceMax, mode } }
+  configsModified: false,
+};
+
+// ── Helpers ─────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmtEuro = n => n != null ? `${Math.round(n)}€` : '—';
+const fmtDate = iso => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+};
+const tensionCss = level => ({
+  high: 'high', elevated: 'elevated', medium: 'medium', low: 'low', very_low: 'low'
+})[level] || 'low';
+const tensionIcon = level => level === 'high' ? '<i class="fas fa-fire" style="font-size:9px;"></i> ' : '';
+
+function showToast(msg, type) {
+  const t = $('pricingToast');
+  t.textContent = msg;
+  t.className = 'pricing-toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Tabs ─────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  document.getElementById('tab-' + name).classList.add('active');
+  $('panel-' + name).classList.add('active');
+  $('tab-' + name).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (name === 'history' && !state.history.length) loadHistory();
+  if (name === 'config'  && !state.configs.length)  loadConfig();
 }
 
-// ── WEEK CHART ──
+// ── Week mini chart ──────────────────────────────────────────
 function buildWeekChart(containerId, prices, recommended) {
-  const container = document.getElementById(containerId);
+  const container = $(containerId);
   if (!container) return;
   const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   const max = Math.max(...prices) * 1.1;
   container.innerHTML = days.map((d, i) => {
     const h = Math.round((prices[i] / max) * 100);
-    const isReco = prices[i] === recommended;
-    const isWe = i >= 4;
-    const cls = isReco ? 'current' : isWe ? 'weekend' : '';
+    const cls = prices[i] === recommended ? 'current' : (i >= 4 ? 'weekend' : '');
     return `<div class="day-bar-wrap">
       <div class="day-price">${prices[i]}€</div>
       <div class="day-bar ${cls}" style="height:${h}%;"></div>
@@ -1353,118 +989,585 @@ function buildWeekChart(containerId, prices, recommended) {
     </div>`;
   }).join('');
 }
-buildWeekChart('chart-1', [65, 65, 65, 80, 108, 108, 90], 108);
 
-// ── MODE TOGGLE ──
-function selectMode(el, mode, group) {
-  document.querySelectorAll(`[data-mode-group="${group}"]`).forEach(o => o.classList.remove('selected'));
-  el.classList.add('selected');
-  showToast('Mode ' + (mode === 'auto' ? 'automatique' : 'manuel') + ' sélectionné', 'success');
+// ── Render helpers ───────────────────────────────────────────
+
+function renderTensionPill(level, label) {
+  return `<span class="tension-pill ${tensionCss(level)}">${tensionIcon(level)}${label || level}</span>`;
 }
 
-// ── PRICE RANGE BAR ──
-function updateBar(id) {
-  const min = parseInt(document.getElementById('min-' + id)?.value) || 0;
-  const max = parseInt(document.getElementById('max-' + id)?.value) || 200;
-  document.getElementById('lbl-min-' + id).textContent = min + '€';
-  document.getElementById('lbl-max-' + id).textContent = max + '€';
+function renderPriceDelta(before, after) {
+  if (after == null || before == null) return '';
+  const diff = Math.round(after - before);
+  if (diff === 0) return `<span class="price-delta stable">stable</span>`;
+  const icon = diff > 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+  const cls  = diff > 0 ? 'up' : 'down';
+  return `<span class="price-delta ${cls}"><i class="fas ${icon}" style="font-size:9px;"></i> ${diff > 0 ? '+' : ''}${diff}€</span>`;
 }
 
-// ── ACCEPT / DECLINE ──
-function acceptSuggestion() {
-  const card = document.getElementById('pending-card');
-  if (!card) return;
-  card.classList.remove('pending');
-  card.querySelector('.prop-pricing-body').innerHTML = `
-    <div class="price-compare">
-      <div class="price-compare-item"><div class="pcl">Prix précédent</div><div class="pcv">80€</div></div>
-      <span class="price-arrow"><i class="fas fa-arrow-right"></i></span>
-      <div class="price-compare-item"><div class="pcl">Prix appliqué</div>
-        <div class="pcv recommended">76€ <span class="price-delta down"><i class="fas fa-arrow-down" style="font-size:9px;"></i> -4€</span></div>
+function renderPropCard(p) {
+  const h = p.history;
+  const m = p.market;
+  const isPending = h?.status === 'pending';
+  const isStable  = !h || h.status === 'skipped';
+  const cardClass = isPending ? 'pending' : (isStable ? 'stable' : '');
+
+  const modeHtml = p.mode === 'auto'
+    ? `<span class="mode-badge auto"><i class="fas fa-robot"></i> Automatique</span>`
+    : `<span class="mode-badge manual"><i class="fas fa-hand-pointer"></i> Manuel</span>`;
+
+  // Stats marché (si données dispo)
+  const marketHtml = m ? `
+    <div class="market-stats">
+      <div class="market-stat">
+        <div class="mval">${fmtEuro(m.medianPrice)}</div>
+        <div class="mlbl">Médiane marché</div>
       </div>
-      <div class="price-compare-item" style="text-align:right;"><div class="pcl">Fourchette</div><div class="pcv" style="font-size:14px;color:var(--muted);">55€–120€</div></div>
-    </div>
-    <div class="prop-status-line success" style="margin-top:12px;">
-      <i class="fas fa-check-circle"></i> Suggestion acceptée — 76€ appliqué via Channex
+      <div class="market-stat">
+        <div class="mval" style="font-size:13px;">${fmtEuro(m.priceP25)}–${fmtEuro(m.priceP75)}</div>
+        <div class="mlbl">Fourchette marché</div>
+      </div>
+      <div class="market-stat">
+        <div class="mval">${renderTensionPill(m.tensionLevel, m.tensionLabel)}</div>
+        <div class="mlbl">${Math.round(m.occupancyRate)}% occupé</div>
+      </div>
+      <div class="market-stat">
+        <div class="mval">${m.comparableCount}</div>
+        <div class="mlbl">Comparables</div>
+      </div>
+    </div>` : `
+    <div style="padding:10px;background:var(--cream2);border-radius:10px;font-size:12.5px;color:var(--muted);margin-bottom:12px;">
+      <i class="fas fa-hourglass-half"></i> Données marché en attente — première analyse lundi prochain
     </div>`;
-  // Update summary badge
-  document.querySelector('.summary-stat .val.orange').textContent = '0';
-  showToast('76€ appliqué sur Airbnb & Booking ✓', 'success');
-}
 
-function declineSuggestion() {
-  const card = document.getElementById('pending-card');
-  if (!card) return;
-  card.classList.remove('pending');
-  card.querySelector('.prop-pricing-body').innerHTML = `
+  // Comparaison de prix
+  let priceHtml = '';
+  if (h) {
+    const displayPrice = h.priceApplied ?? h.priceCalculated;
+    const priceColor   = h.status === 'pending' ? 'color:var(--warning)' : 'color:var(--pg)';
+    const pcLabel      = h.status === 'pending' ? 'Suggéré' : (h.status === 'applied' ? 'Prix appliqué' : 'Prix actuel');
+    priceHtml = `
     <div class="price-compare">
-      <div class="price-compare-item"><div class="pcl">Prix conservé</div><div class="pcv">80€</div></div>
-      <span class="price-arrow"><i class="fas fa-equals"></i></span>
-      <div class="price-compare-item"><div class="pcl">Statut</div><div class="pcv" style="color:var(--muted);">Inchangé</div></div>
-    </div>
-    <div class="prop-status-line muted" style="margin-top:12px;">
-      <i class="fas fa-hand-pointer"></i> Suggestion ignorée — prix maintenu à 80€
+      <div class="price-compare-item">
+        <div class="pcl">Prix actuel</div>
+        <div class="pcv">${fmtEuro(h.priceBefore)}</div>
+      </div>
+      <span class="price-arrow"><i class="fas fa-${isStable ? 'equals' : 'arrow-right'}"></i></span>
+      <div class="price-compare-item">
+        <div class="pcl">${pcLabel}</div>
+        <div class="pcv recommended" style="${priceColor};">
+          ${fmtEuro(displayPrice)} ${renderPriceDelta(h.priceBefore, displayPrice)}
+        </div>
+      </div>
+      <div class="price-compare-item" style="text-align:right;">
+        <div class="pcl">Fourchette</div>
+        <div class="pcv" style="font-size:13px;color:var(--muted);">${fmtEuro(p.priceMin)}–${fmtEuro(p.priceMax)}</div>
+      </div>
     </div>`;
-  document.querySelector('.summary-stat .val.orange').textContent = '0';
-  showToast('Prix maintenu à 80€', '');
+  }
+
+  // Statut / actions
+  let actionsHtml = '';
+  if (isPending) {
+    actionsHtml = `
+    <div class="prop-pricing-actions">
+      <button class="btn-accept" onclick="submitDecision(${h._historyId ?? 'null'}, 'apply', '${p.propertyId}', ${h.priceCalculated})">
+        <i class="fas fa-check"></i> Appliquer ${fmtEuro(h.priceCalculated)}
+      </button>
+      <button class="btn-decline" onclick="submitDecision(${h._historyId ?? 'null'}, 'decline', '${p.propertyId}', ${h.priceBefore})">
+        Garder ${fmtEuro(h.priceBefore)}
+      </button>
+      <button class="btn-detail" onclick="openAlgoModal('${p.propertyName.replace(/'/g,"\\'")}', ${m?.medianPrice||0}, ${h.priceCalculated}, ${m?.occupancyRate||0}, 0, ${h.factorSeason})">
+        <i class="fas fa-info-circle"></i>
+      </button>
+    </div>`;
+  } else if (h?.status === 'applied') {
+    const ago = h.appliedAt ? ` · ${fmtDate(h.appliedAt)}` : '';
+    actionsHtml = `
+    <div class="prop-status-line success" style="margin-top:12px;">
+      <i class="fas fa-check-circle"></i> Mis à jour sur Airbnb & Booking${ago}
+    </div>
+    <button class="btn-detail" style="margin-top:6px;" onclick="openAlgoModal('${p.propertyName.replace(/'/g,"\\'")}', ${m?.medianPrice||0}, ${h.priceApplied}, ${m?.occupancyRate||0}, 0, ${h.factorSeason})">
+      <i class="fas fa-calculator"></i> Voir le détail du calcul
+    </button>`;
+  } else {
+    actionsHtml = `
+    <div class="prop-status-line muted" style="margin-top:12px;">
+      <i class="fas fa-check"></i> Prix aligné sur le marché — aucun ajustement nécessaire
+    </div>`;
+  }
+
+  // Pending badge
+  const pendingBadge = isPending
+    ? `<span style="font-size:10px;background:rgba(245,158,11,.15);color:#B45309;border-radius:6px;padding:2px 7px;font-weight:700;margin-left:6px;">Action requise</span>`
+    : '';
+
+  return `
+  <div class="prop-pricing-card ${cardClass}" id="pcard-${p.propertyId}">
+    <div class="prop-pricing-header">
+      <div>
+        <div class="prop-pricing-name">
+          <i class="fas fa-home" style="color:var(--pg);font-size:12px;"></i>
+          ${p.propertyName}${pendingBadge}
+        </div>
+        <div class="prop-pricing-sub">${p.address || ''}</div>
+      </div>
+      ${modeHtml}
+    </div>
+    <div class="prop-pricing-body">
+      ${marketHtml}
+      ${priceHtml}
+      ${actionsHtml}
+    </div>
+  </div>`;
 }
 
-// ── ALGO MODAL ──
-function openAlgoModal(name, median, reco, marketOcc, selfOcc, season) {
-  const factors = getFactors(marketOcc, selfOcc, season);
-  document.getElementById('modal-prop-name').textContent = '🧮 ' + name;
-  document.getElementById('f-base').textContent = median + '€';
-  document.getElementById('f-occ').textContent = '× ' + factors.market.toFixed(2);
-  document.getElementById('f-self').textContent = '× ' + factors.self.toFixed(2);
-  document.getElementById('f-season').textContent = '× ' + season.toFixed(2);
-  document.getElementById('f-result').textContent = reco + '€';
-  document.getElementById('sig-market-occ').textContent = marketOcc + '% des concurrents réservés — ' + tensionLabel(marketOcc);
-  document.getElementById('sig-self-occ').textContent = selfOcc + '% de vos nuits réservées ce mois';
-  document.getElementById('sig-factor-1').textContent = '× ' + factors.market.toFixed(2);
-  document.getElementById('sig-factor-1').className = 'signal-factor ' + (factors.market >= 1 ? 'pos' : 'neg');
-  document.getElementById('sig-factor-2').textContent = '× ' + factors.self.toFixed(2);
-  document.getElementById('sig-factor-2').className = 'signal-factor ' + (factors.self >= 1 ? 'pos' : 'neg');
-  document.getElementById('sig-factor-3').textContent = '× ' + season.toFixed(2);
-  document.getElementById('algoModal').classList.add('open');
-}
-function closeAlgoModal(e) {
-  if (e.target === document.getElementById('algoModal')) {
-    document.getElementById('algoModal').classList.remove('open');
+// ── Charger le dashboard ─────────────────────────────────────
+async function loadDashboard() {
+  $('dashboard-loading').style.display = 'block';
+  $('dashboard-content').style.display = 'none';
+  $('dashboard-empty').style.display   = 'none';
+
+  try {
+    const res  = await fetch(`${API_BASE}${DP}/dashboard`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state.dashboard = data;
+
+    if (!data.properties?.length) {
+      $('dashboard-loading').style.display = 'none';
+      $('dashboard-empty').style.display   = 'block';
+      return;
+    }
+
+    // Summary stats
+    $('stat-gain').textContent    = data.weeklyGain > 0 ? `+${data.weeklyGain}€` : '—';
+    $('stat-count').textContent   = `${data.properties.length}/${data.properties.length}`;
+    $('stat-pending').textContent = data.pendingCount || '0';
+
+    // Insight banner
+    const highCount = data.properties.filter(p => p.market?.tensionLevel === 'high').length;
+    if (highCount > 0) {
+      $('insight-banner-wrap').innerHTML = `
+        <div class="insight-banner">
+          <div class="insight-icon"><i class="fas fa-fire"></i></div>
+          <div>
+            <h3>Forte demande détectée sur ${highCount} logement${highCount > 1 ? 's' : ''}</h3>
+            <p>Le marché local est très occupé. C'est le bon moment pour augmenter vos prix.</p>
+          </div>
+        </div>`;
+    } else {
+      $('insight-banner-wrap').innerHTML = '';
+    }
+
+    // Cartes logements
+    $('dashboard-cards').innerHTML = data.properties.map(renderPropCard).join('');
+
+    // Sync info
+    const nextMonday = new Date();
+    const dof = nextMonday.getDay();
+    const toNext = dof === 0 ? 1 : 8 - dof;
+    nextMonday.setDate(nextMonday.getDate() + toNext);
+    $('sync-info').innerHTML = `
+      <i class="fas fa-sync-alt" style="margin-right:4px;"></i>
+      Prochaine analyse marché : ${fmtDate(nextMonday.toISOString())} à 6h00`;
+
+    $('dashboard-loading').style.display = 'none';
+    $('dashboard-content').style.display = 'block';
+
+    // Tab badge "suggestions en attente"
+    const tabBadge = $('tab-dashboard').querySelector('.tab-badge');
+    if (data.pendingCount > 0) {
+      if (!tabBadge) {
+        $('tab-dashboard').insertAdjacentHTML('beforeend', `<span class="tab-badge">${data.pendingCount}</span>`);
+      } else {
+        tabBadge.textContent = data.pendingCount;
+      }
+    } else if (tabBadge) {
+      tabBadge.remove();
+    }
+
+  } catch (err) {
+    console.error('❌ [DP] dashboard:', err);
+    $('dashboard-loading').innerHTML = `
+      <i class="fas fa-exclamation-triangle" style="color:var(--warning);font-size:24px;display:block;margin-bottom:12px;"></i>
+      Impossible de charger le dashboard. <a href="javascript:loadDashboard()" style="color:var(--pg);">Réessayer</a>`;
   }
 }
-function getFactors(marketOcc, selfOcc, season) {
-  let market = 1;
-  if (marketOcc >= 80) market = 1.22;
-  else if (marketOcc >= 65) market = 1.15;
-  else if (marketOcc >= 45) market = 1.02;
-  else if (marketOcc >= 25) market = 0.92;
-  else market = 0.82;
-  const self = selfOcc >= 80 ? 1.08 : selfOcc >= 60 ? 1.03 : selfOcc >= 40 ? 0.98 : 0.93;
-  return { market, self };
-}
-function tensionLabel(occ) {
-  if (occ >= 80) return 'Forte demande';
-  if (occ >= 65) return 'Demande élevée';
-  if (occ >= 45) return 'Demande moyenne';
-  if (occ >= 25) return 'Faible demande';
-  return 'Très faible demande';
+
+// ── Décision sur une suggestion (accept / decline) ───────────
+async function submitDecision(historyId, action, propertyId, price) {
+  const card = $('pcard-' + propertyId);
+  if (!historyId) {
+    // Pas encore en DB (données mockées ou première config) — affichage local
+    showToast(action === 'apply' ? `${fmtEuro(price)} appliqué ✓` : 'Prix conservé', action === 'apply' ? 'success' : '');
+    if (card) card.classList.remove('pending');
+    loadDashboard();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}${DP}/decision/${historyId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    showToast(
+      action === 'apply'
+        ? `${fmtEuro(data.priceApplied)} appliqué sur Airbnb & Booking ✓`
+        : 'Prix conservé',
+      action === 'apply' ? 'success' : ''
+    );
+
+    // Recharger le dashboard pour refléter le changement
+    await loadDashboard();
+
+  } catch (err) {
+    console.error('❌ [DP] decision:', err);
+    showToast('Erreur lors de la mise à jour', '');
+  }
 }
 
-// ── SAVE CONFIG ──
-function savePricingConfig() {
-  showToast('Configuration enregistrée ✓', 'success');
+// ── Charger la configuration ─────────────────────────────────
+async function loadConfig() {
+  $('config-loading').style.display  = 'block';
+  $('config-content').style.display  = 'none';
+
+  try {
+    // On utilise les données du dashboard si déjà chargées, sinon on fetche /config
+    let configs;
+    if (state.dashboard?.properties?.length) {
+      configs = state.dashboard.properties.map(p => ({
+        propertyId:   p.propertyId,
+        propertyName: p.propertyName,
+        priceMin:     p.priceMin,
+        priceMax:     p.priceMax,
+        mode:         p.mode,
+        isActive:     true,
+      }));
+    } else {
+      const res = await fetch(`${API_BASE}${DP}/config`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      configs = data.configs || [];
+    }
+    state.configs = configs;
+
+    // Initialiser les pendingConfigs
+    configs.forEach(c => {
+      state.pendingConfigs[c.propertyId] = {
+        priceMin: c.priceMin,
+        priceMax: c.priceMax,
+        mode: c.mode,
+      };
+    });
+
+    if (!configs.length) {
+      // Proposer d'activer pour tous les logements
+      $('config-cards').innerHTML = `
+        <div style="text-align:center;padding:32px 0;color:var(--muted);font-size:14px;">
+          <i class="fas fa-sliders-h" style="font-size:32px;margin-bottom:12px;display:block;color:var(--pg);"></i>
+          Aucun logement configuré — utilisez le bouton ci-dessous pour démarrer.
+        </div>`;
+    } else {
+      $('config-cards').innerHTML = configs.map((c, i) => renderConfigCard(c, i)).join('');
+    }
+
+    $('config-loading').style.display = 'none';
+    $('config-content').style.display = 'block';
+
+  } catch (err) {
+    console.error('❌ [DP] config load:', err);
+    $('config-loading').innerHTML = `
+      <i class="fas fa-exclamation-triangle" style="color:var(--warning);font-size:24px;display:block;margin-bottom:12px;"></i>
+      Impossible de charger la configuration. <a href="javascript:loadConfig()" style="color:var(--pg);">Réessayer</a>`;
+  }
 }
+
+function renderConfigCard(cfg, idx) {
+  const id = idx + 1;
+  const modeAuto   = cfg.mode === 'auto';
+  return `
+  <div class="pcard" style="margin-bottom:16px;">
+    <div class="pcard-header">
+      <div class="pcard-title">
+        <i class="fas fa-home"></i>
+        ${cfg.propertyName || cfg.propertyId}
+      </div>
+      <span style="font-size:12px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
+        <i class="fas fa-circle" style="font-size:7px;"></i> Actif
+      </span>
+    </div>
+    <div class="pcard-body">
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Prix minimum / nuit</label>
+          <div class="input-wrap">
+            <input type="number" value="${cfg.priceMin}" id="min-${id}"
+              oninput="onConfigChange('${cfg.propertyId}','priceMin',this.value); updateBar(${id})" />
+            <span class="input-suffix">€</span>
+          </div>
+          <div class="config-hint">Plancher absolu — jamais en dessous</div>
+        </div>
+        <div class="config-field">
+          <label>Prix maximum / nuit</label>
+          <div class="input-wrap">
+            <input type="number" value="${cfg.priceMax}" id="max-${id}"
+              oninput="onConfigChange('${cfg.propertyId}','priceMax',this.value); updateBar(${id})" />
+            <span class="input-suffix">€</span>
+          </div>
+          <div class="config-hint">Plafond absolu — jamais au-dessus</div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:8px;">Votre fourchette de pricing</div>
+      <div class="price-range-bar"><div class="price-range-fill" id="bar-${id}"></div></div>
+      <div class="price-range-labels">
+        <span id="lbl-min-${id}">${cfg.priceMin}€</span>
+        <span id="lbl-max-${id}">${cfg.priceMax}€</span>
+      </div>
+      <div class="price-range-center">Zone automatique</div>
+
+      <div style="margin-top:20px;">
+        <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:10px;">Mode de pricing</label>
+        <div class="mode-toggle">
+          <div class="mode-option ${!modeAuto ? 'selected' : ''}" onclick="selectMode(this,'manual','${cfg.propertyId}')" data-mode-group="${cfg.propertyId}">
+            <h4><i class="fas fa-hand-pointer" style="color:var(--muted);font-size:12px;"></i> Manuel</h4>
+            <p>Vous recevez une suggestion chaque semaine. Vous validez chaque changement en 1 tap.</p>
+          </div>
+          <div class="mode-option ${modeAuto ? 'selected' : ''}" onclick="selectMode(this,'auto','${cfg.propertyId}')" data-mode-group="${cfg.propertyId}">
+            <h4><i class="fas fa-robot" style="color:var(--pg);font-size:12px;"></i> Automatique <span class="mode-pill">Recommandé</span></h4>
+            <p>Boostinghost applique les prix chaque semaine via Channex, sans aucune intervention.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Écoute les changements dans les inputs config
+function onConfigChange(propertyId, field, value) {
+  if (!state.pendingConfigs[propertyId]) state.pendingConfigs[propertyId] = {};
+  state.pendingConfigs[propertyId][field] = parseFloat(value);
+  state.configsModified = true;
+}
+
+function selectMode(el, mode, propertyId) {
+  document.querySelectorAll(`[data-mode-group="${propertyId}"]`).forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  if (!state.pendingConfigs[propertyId]) state.pendingConfigs[propertyId] = {};
+  state.pendingConfigs[propertyId].mode = mode;
+  state.configsModified = true;
+}
+
+function updateBar(id) {
+  const min = parseInt($('min-' + id)?.value) || 0;
+  const max = parseInt($('max-' + id)?.value) || 200;
+  $('lbl-min-' + id).textContent = min + '€';
+  $('lbl-max-' + id).textContent = max + '€';
+}
+
+async function savePricingConfig() {
+  const entries = Object.entries(state.pendingConfigs);
+  if (!entries.length) { showToast('Aucune modification à enregistrer', ''); return; }
+
+  let saved = 0, errors = 0;
+  for (const [propertyId, cfg] of entries) {
+    try {
+      const base = state.configs.find(c => c.propertyId === propertyId) || {};
+      const payload = {
+        propertyId,
+        priceMin: cfg.priceMin ?? base.priceMin ?? 30,
+        priceMax: cfg.priceMax ?? base.priceMax ?? 300,
+        mode:     cfg.mode    ?? base.mode     ?? 'manual',
+        isActive: true,
+      };
+      if (parseFloat(payload.priceMin) >= parseFloat(payload.priceMax)) {
+        showToast(`Prix min doit être < prix max pour ${propertyId}`, '');
+        continue;
+      }
+      const res = await fetch(`${API_BASE}${DP}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      saved++;
+    } catch (err) {
+      console.error('❌ [DP] save config:', err);
+      errors++;
+    }
+  }
+
+  if (errors === 0) {
+    showToast(`Configuration enregistrée ✓`, 'success');
+    state.configsModified = false;
+    state.configs = []; // force reload au prochain switchTab
+    state.dashboard = null; // force reload dashboard
+  } else {
+    showToast(`${saved} enregistré(s), ${errors} erreur(s)`, '');
+  }
+}
+
+// ── Charger l'historique ─────────────────────────────────────
+async function loadHistory() {
+  $('history-loading').style.display = 'block';
+  $('history-content').style.display = 'none';
+  $('history-empty').style.display   = 'none';
+
+  try {
+    const res = await fetch(`${API_BASE}${DP}/history?limit=30`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state.history = data.history || [];
+
+    if (!state.history.length) {
+      $('history-loading').style.display = 'none';
+      $('history-empty').style.display   = 'block';
+      return;
+    }
+
+    // Grouper par semaine
+    const weeks = {};
+    state.history.forEach(h => {
+      const k = h.weekStart;
+      if (!weeks[k]) weeks[k] = [];
+      weeks[k].push(h);
+    });
+
+    $('history-content').innerHTML = Object.entries(weeks)
+      .sort((a,b) => b[0].localeCompare(a[0]))
+      .map(([weekStart, rows]) => {
+        const gain = rows.reduce((s, r) => {
+          if (r.status === 'applied' && r.priceApplied && r.priceBefore) {
+            return s + (r.priceApplied - r.priceBefore);
+          }
+          return s;
+        }, 0);
+        return renderHistoryWeek(weekStart, rows, gain);
+      }).join('');
+
+    $('history-loading').style.display = 'none';
+    $('history-content').style.display = 'block';
+
+  } catch (err) {
+    console.error('❌ [DP] history:', err);
+    $('history-loading').innerHTML = `
+      <i class="fas fa-exclamation-triangle" style="color:var(--warning);font-size:24px;display:block;margin-bottom:12px;"></i>
+      Impossible de charger l'historique. <a href="javascript:loadHistory()" style="color:var(--pg);">Réessayer</a>`;
+  }
+}
+
+function renderHistoryWeek(weekStart, rows, gain) {
+  const label = fmtDate(weekStart);
+  const gainStr = gain > 0 ? `<span style="font-size:12px;color:var(--pg);font-weight:600;">+${Math.round(gain)}€ estimés</span>` : '';
+
+  const statusHtml = s => ({
+    applied:  `<span style="font-size:11.5px;color:var(--success);font-weight:600;"><i class="fas fa-check"></i> Appliqué</span>`,
+    declined: `<span style="font-size:11.5px;color:var(--danger);font-weight:600;"><i class="fas fa-times"></i> Refusé</span>`,
+    pending:  `<span style="font-size:11.5px;color:var(--warning);font-weight:600;"><i class="fas fa-clock"></i> En attente</span>`,
+    skipped:  `<span style="font-size:11.5px;color:var(--muted);font-weight:600;"><i class="fas fa-equals"></i> Stable</span>`,
+    error:    `<span style="font-size:11.5px;color:var(--danger);font-weight:600;"><i class="fas fa-exclamation"></i> Erreur</span>`,
+  }[s] || s);
+
+  const rowsHtml = rows.map(h => {
+    const occ     = Math.round(h.marketOccupancy || 0);
+    const barColor = occ >= 65 ? 'var(--danger)' : occ >= 45 ? 'var(--warning)' : 'var(--muted)';
+    const toColor = h.status === 'applied' && h.priceApplied > h.priceBefore ? 'up'
+                  : h.status === 'applied' && h.priceApplied < h.priceBefore ? 'down' : '';
+    const afterVal = h.priceApplied ?? h.priceCalculated;
+    return `<tr>
+      <td>
+        <span class="prop-name prop-name-col">${h.propertyName}</span>
+        <span class="reason">${h.reason || tensionLabel(h.tensionLevel)}</span>
+      </td>
+      <td>
+        <div class="price-change">
+          <span class="from">${fmtEuro(h.priceBefore)}</span>
+          <span class="arr">${h.status === 'skipped' ? '=' : '→'}</span>
+          <span class="to ${toColor}">${fmtEuro(afterVal)}${h.status === 'pending' ? ' ⏳' : ''}</span>
+        </div>
+      </td>
+      <td>
+        <div class="hist-tension">
+          <div class="hist-bar"><div class="hist-bar-fill" style="width:${occ}%;background:${barColor};"></div></div>
+          <span style="font-size:11px;font-weight:600;color:${barColor};">${occ}%</span>
+        </div>
+      </td>
+      <td>
+        <span class="mode-badge ${h.modeUsed || 'auto'}" style="font-size:10px;padding:2px 7px;">
+          <i class="fas fa-${h.modeUsed === 'auto' ? 'robot' : 'hand-pointer'}"></i>
+          ${h.modeUsed === 'auto' ? 'Auto' : 'Manuel'}
+        </span>
+      </td>
+      <td>${statusHtml(h.status)}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="pcard" style="margin-bottom:16px;">
+    <div class="pcard-header">
+      <div class="pcard-title"><i class="fas fa-calendar-week"></i> Semaine du ${label}</div>
+      ${gainStr}
+    </div>
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Logement</th><th>Changement</th><th>Tension</th><th>Mode</th><th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>`;
+}
+
+// Libellé de tension depuis le level string
+function tensionLabel(level) {
+  const map = {
+    high:'Forte demande', elevated:'Demande élevée',
+    medium:'Demande moyenne', low:'Faible demande', very_low:'Très faible'
+  };
+  return map[level] || level || '';
+}
+
+// ── Sauvegarde des paramètres (toggles) ─────────────────────
 function saveSettings() {
   showToast('Préférences enregistrées ✓', 'success');
+  // TODO : appeler POST /api/dynamic-pricing/config avec les bons flags notifyPush/notifyEmail/notifyAlert
 }
 
-// ── TOAST ──
-function showToast(msg, type) {
-  const t = document.getElementById('pricingToast');
-  t.textContent = msg;
-  t.className = 'pricing-toast show' + (type ? ' ' + type : '');
-  setTimeout(() => t.classList.remove('show'), 2800);
+// ── Modale algo ──────────────────────────────────────────────
+function openAlgoModal(name, median, reco, marketOcc, selfOcc, season) {
+  const fMarket  = marketOcc >= 80 ? 1.22 : marketOcc >= 65 ? 1.15 : marketOcc >= 45 ? 1.02 : marketOcc >= 25 ? 0.92 : 0.82;
+  const fSelf    = selfOcc >= 80 ? 1.08 : selfOcc >= 60 ? 1.03 : selfOcc >= 40 ? 0.98 : 0.93;
+  const fSeason  = parseFloat(season) || 1;
+
+  $('modal-prop-name').textContent = '🧮 ' + name;
+  $('f-base').textContent   = fmtEuro(median);
+  $('f-occ').textContent    = '× ' + fMarket.toFixed(2);
+  $('f-self').textContent   = '× ' + fSelf.toFixed(2);
+  $('f-season').textContent = '× ' + fSeason.toFixed(2);
+  $('f-result').textContent = fmtEuro(reco);
+  $('sig-market-occ').textContent = `${Math.round(marketOcc)}% des concurrents réservés — ${tensionLabel(marketOcc >= 80 ? 'high' : marketOcc >= 65 ? 'elevated' : marketOcc >= 45 ? 'medium' : 'low')}`;
+  $('sig-self-occ').textContent   = `${Math.round(selfOcc)}% de vos nuits réservées ce mois`;
+  $('sig-factor-1').textContent   = '× ' + fMarket.toFixed(2);
+  $('sig-factor-1').className     = 'signal-factor ' + (fMarket >= 1 ? 'pos' : 'neg');
+  $('sig-factor-2').textContent   = '× ' + fSelf.toFixed(2);
+  $('sig-factor-2').className     = 'signal-factor ' + (fSelf >= 1 ? 'pos' : 'neg');
+  $('sig-factor-3').textContent   = '× ' + fSeason.toFixed(2);
+  $('algoModal').classList.add('open');
 }
+
+function closeAlgoModal(e) {
+  if (e.target === $('algoModal')) $('algoModal').classList.remove('open');
+}
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+});
 </script>
 
 </body>
