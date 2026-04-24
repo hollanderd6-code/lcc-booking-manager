@@ -2041,7 +2041,146 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Tables pricing:', e.message);
     }
 
-    // ✅ Migration : channex_booking_id sur conversations
+    // ✅ Tables Dynamic Pricing (market_data + pricing_config + pricing_history)
+    try {
+      await pool.query(`
+
+        -- ──────────────────────────────────────────────────────────
+        -- market_data
+        -- Stocke le snapshot hebdomadaire du marché local pour
+        -- chaque logement : prix médian, taux d'occupation des
+        -- concurrents, fourchette P25/P75, nombre de comparables.
+        -- Alimenté par le cron Apify chaque lundi à 6h.
+        -- ──────────────────────────────────────────────────────────
+        CREATE TABLE IF NOT EXISTS market_data (
+          id              SERIAL PRIMARY KEY,
+          user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          property_id     TEXT NOT NULL,
+          -- Semaine de référence (toujours un lundi)
+          week_start      DATE NOT NULL,
+          -- Données collectées par Apify
+          median_price    NUMERIC(10,2),          -- prix médian des concurrents (€/nuit)
+          price_p25       NUMERIC(10,2),          -- percentile 25 (bas de fourchette)
+          price_p75       NUMERIC(10,2),          -- percentile 75 (haut de fourchette)
+          occupancy_rate  NUMERIC(5,2),           -- taux d'occupation concurrents (0-100)
+          comparable_count INTEGER DEFAULT 0,     -- nombre de logements analysés
+          -- Tension calculée : 'very_low' | 'low' | 'medium' | 'elevated' | 'high'
+          tension_level   TEXT NOT NULL DEFAULT 'medium',
+          -- Zone géographique analysée (pour logs / debug)
+          zone_label      TEXT,                   -- ex: "Cergy-Pontoise 1.5km"
+          -- Données brutes Apify pour audit / recalcul futur
+          raw_data        JSONB DEFAULT '{}'::jsonb,
+          scraped_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          -- Un seul snapshot par logement par semaine
+          UNIQUE(property_id, week_start)
+        );
+        CREATE INDEX IF NOT EXISTS idx_market_data_user_id
+          ON market_data(user_id);
+        CREATE INDEX IF NOT EXISTS idx_market_data_property_week
+          ON market_data(property_id, week_start DESC);
+
+        -- ──────────────────────────────────────────────────────────
+        -- pricing_config
+        -- Configuration du dynamic pricing par logement :
+        -- fourchette min/max, mode (manual/auto), statut actif.
+        -- Une ligne par logement — upsert à chaque save config.
+        -- ──────────────────────────────────────────────────────────
+        CREATE TABLE IF NOT EXISTS pricing_config (
+          id              SERIAL PRIMARY KEY,
+          user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          property_id     TEXT NOT NULL,
+          -- Fourchette de prix (contrôle total de l'hôte)
+          price_min       NUMERIC(10,2) NOT NULL DEFAULT 30,
+          price_max       NUMERIC(10,2) NOT NULL DEFAULT 300,
+          -- Mode : 'manual' = suggestions uniquement / 'auto' = push direct via Channex
+          mode            TEXT NOT NULL DEFAULT 'manual'
+                            CHECK (mode IN ('manual', 'auto')),
+          -- Actif / inactif (l'hôte peut désactiver sans perdre sa config)
+          is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+          -- Préférences de notification
+          notify_push     BOOLEAN NOT NULL DEFAULT TRUE,  -- push quand prix ajusté
+          notify_email    BOOLEAN NOT NULL DEFAULT TRUE,  -- recap hebdo email
+          notify_alert    BOOLEAN NOT NULL DEFAULT TRUE,  -- alerte si écart > 20%
+          -- Zone géographique (détectée depuis l'adresse du logement)
+          zone_lat        NUMERIC(10,6),
+          zone_lng        NUMERIC(10,6),
+          zone_radius_km  NUMERIC(4,1) DEFAULT 1.5,
+          -- Type de logement pour le filtrage des comparables
+          property_type   TEXT,                   -- ex: 'studio', 't2', 't3'
+          bedrooms        INTEGER DEFAULT 1,
+          -- Timestamps
+          created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          -- Un seul config par logement par user
+          UNIQUE(user_id, property_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_pricing_config_user_id
+          ON pricing_config(user_id);
+        CREATE INDEX IF NOT EXISTS idx_pricing_config_property
+          ON pricing_config(property_id);
+        CREATE INDEX IF NOT EXISTS idx_pricing_config_active
+          ON pricing_config(user_id, is_active) WHERE is_active = TRUE;
+
+        -- ──────────────────────────────────────────────────────────
+        -- pricing_history
+        -- Trace chaque ajustement de prix effectué ou suggéré :
+        -- prix avant, prix calculé, facteurs appliqués, statut.
+        -- Alimente l'onglet Historique de l'UI et le rapport email.
+        -- ──────────────────────────────────────────────────────────
+        CREATE TABLE IF NOT EXISTS pricing_history (
+          id              SERIAL PRIMARY KEY,
+          user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          property_id     TEXT NOT NULL,
+          -- Semaine concernée
+          week_start      DATE NOT NULL,
+          -- Prix
+          price_before    NUMERIC(10,2) NOT NULL,   -- prix au moment du calcul
+          price_calculated NUMERIC(10,2) NOT NULL,  -- prix sorti de l'algorithme
+          price_applied   NUMERIC(10,2),            -- prix réellement appliqué (null si rejeté)
+          -- Données de marché utilisées pour ce calcul (snapshot)
+          market_median   NUMERIC(10,2),
+          market_occupancy NUMERIC(5,2),
+          tension_level   TEXT,
+          -- Facteurs de l'algorithme (pour la modale de détail)
+          factor_market   NUMERIC(5,3),             -- ex: 1.18
+          factor_self     NUMERIC(5,3),             -- ex: 0.95
+          factor_season   NUMERIC(5,3),             -- ex: 1.10
+          self_occupancy  NUMERIC(5,2),             -- taux occupation de l'hôte ce mois
+          -- Statut du traitement
+          -- 'pending'  : mode manual, en attente de validation
+          -- 'applied'  : appliqué (auto ou accepté manuellement)
+          -- 'declined' : rejeté manuellement par l'hôte
+          -- 'skipped'  : aucun ajustement nécessaire (stable)
+          -- 'error'    : échec du push Channex
+          status          TEXT NOT NULL DEFAULT 'pending'
+                            CHECK (status IN ('pending','applied','declined','skipped','error')),
+          -- Si appliqué via Channex : IDs de confirmation
+          channex_update_id TEXT,
+          -- Mode au moment de l'action
+          mode_used       TEXT CHECK (mode_used IN ('manual','auto')),
+          -- Raison humaine (pour l'UI historique)
+          reason          TEXT,                     -- ex: "Forte demande Cergy"
+          -- Qui a validé (null si auto)
+          applied_by      TEXT,                     -- 'auto' | user_id
+          applied_at      TIMESTAMPTZ,
+          created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          -- Un seul enregistrement par logement par semaine
+          UNIQUE(property_id, week_start)
+        );
+        CREATE INDEX IF NOT EXISTS idx_pricing_history_user_id
+          ON pricing_history(user_id);
+        CREATE INDEX IF NOT EXISTS idx_pricing_history_property_week
+          ON pricing_history(property_id, week_start DESC);
+        CREATE INDEX IF NOT EXISTS idx_pricing_history_status
+          ON pricing_history(user_id, status) WHERE status = 'pending';
+
+      `);
+      console.log('✅ Tables dynamic pricing (market_data + pricing_config + pricing_history) OK');
+    } catch (e) {
+      console.log('ℹ️ Tables dynamic pricing:', e.message);
+    }
     try {
       await pool.query(`
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS channex_booking_id TEXT;
