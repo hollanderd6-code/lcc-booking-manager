@@ -34,6 +34,7 @@ const PDFDocument = require('pdfkit');
 // ============================================
 const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
 const { setupDynamicPricingRoutes } = require('./routes/dynamic-pricing-routes');
+const { initDynamicPricingCron, runDynamicPricingJob } = require('./routes/dynamic-pricing-cron');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 
 // ============================================
@@ -18717,6 +18718,43 @@ app.use('/api/welcome-books', welcomeRouter);
 
 // Dynamic Pricing routes
 setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail);
+
+// ── Wrapper push pour le cron dynamic pricing ──
+async function sendPushForDynamicPricing(userId, { title, body, data }) {
+  try {
+    const tokensRes = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+      [userId]
+    );
+    if (tokensRes.rows.length === 0) return;
+    const tokens = tokensRes.rows.map(r => r.fcm_token);
+    await sendNotificationToMultiple(tokens, title, body, data || {});
+  } catch (err) {
+    console.error('❌ [DP-CRON] Push error:', err.message);
+  }
+}
+
+// ── Route de test manuel du cron (protégée par CRON_SECRET) ──
+// POST /api/dynamic-pricing/run-now
+// Header: x-cron-secret: VOTRE_CRON_SECRET
+app.post('/api/dynamic-pricing/run-now', express.json(), async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.cronSecret;
+  if (!secret || secret !== process.env.CRON_SECRET) {
+    return res.status(403).json({ error: 'Secret invalide' });
+  }
+  console.log('🔧 [DP-CRON] Déclenchement manuel via /api/dynamic-pricing/run-now');
+  runDynamicPricingJob(pool, sendEmail, sendPushForDynamicPricing).catch(err => {
+    console.error('❌ [DP-CRON] run-now error:', err.message);
+  });
+  res.json({
+    success: true,
+    message: 'Job démarré en arrière-plan — consultez les logs Render',
+    mockMode: !process.env.APIFY_TOKEN,
+  });
+});
+
+// ── Init du cron pricing dynamique ──
+initDynamicPricingCron(pool, sendEmail, sendPushForDynamicPricing);
 // ============================================
 // ============================================
 // NOTES D'INSTALLATION
