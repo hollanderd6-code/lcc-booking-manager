@@ -115,6 +115,18 @@ function getSidebarHTML() {
     </div>
     ` : ''}
 
+    <!-- REVENUS INTELLIGENTS -->
+    ${!isSubAccount ? `
+    <div class="nav-section">
+      <div class="nav-section-title">Revenus intelligents</div>
+      <a class="nav-item" data-page="pricing" href="/dynamic-pricing.html">
+        <i class="fas fa-bolt" style="font-size:13px;color:#B45309;"></i>
+        <span>Pricing dynamique</span>
+        <span style="margin-left:auto;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;">Bêta</span>
+      </a>
+    </div>
+    ` : ''}
+
     <!-- À VENIR -->
     <div class="nav-section">
       <div class="nav-section-title">À venir</div>
