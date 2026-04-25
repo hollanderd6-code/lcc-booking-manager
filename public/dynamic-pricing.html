@@ -195,7 +195,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 
 /* ── Tabs ── */
 .pricing-tabs {
-  display: flex; gap: 0;
+  display: flex; gap: 4px;
   background: white;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -203,6 +203,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   margin-bottom: 24px;
   overflow-x: auto;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .pricing-tabs::-webkit-scrollbar { display: none; }
 .ptab {
@@ -227,6 +228,23 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   font-size: 10px; font-weight: 700;
   width: 16px; height: 16px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Mobile : tabs scrollables avec min-width ── */
+@media (max-width: 640px) {
+  .pricing-tabs {
+    gap: 0;
+    padding: 4px;
+    border-radius: 12px;
+  }
+  .ptab {
+    flex: 0 0 auto;
+    min-width: 120px;
+    font-size: 12px;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  .ptab i { display: none; } /* cacher les icônes sur mobile pour gagner de la place */
 }
 
 /* ── Tab panels ── */
