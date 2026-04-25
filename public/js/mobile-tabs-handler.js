@@ -97,7 +97,7 @@
     if (!isSubAccount) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/dynamic-pricing.html'" style="width: 100%; justify-content: flex-start;">
-          <i class="fas fa-bolt" style="color:#B45309;"></i> Pricing dynamique
+          <i class="fas fa-bolt" style="color:#B45309;"></i> Prix dynamique
           <span style="margin-left:auto;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;">Bêta</span>
         </button>`;
     }
