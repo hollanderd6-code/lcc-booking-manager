@@ -25015,6 +25015,51 @@ app.post('/api/channex/webhook', async (req, res) => {
 
       // ── Injecter/mettre à jour dans le store mémoire ─────────
       if (result && result.property_id && result.uid) {
+
+        // ── Mettre à jour la conversation si les dates ont changé (modification) ──
+        // Sans ça, le cron des messages automatiques ne trouve pas la bonne conversation
+        // car il cherche par reservation_start_date
+        if (result.status !== 'cancelled' && result.start_date) {
+          try {
+            const convUpdateResult = await pool.query(
+              `UPDATE conversations
+               SET reservation_start_date = $1,
+                   reservation_end_date   = $2,
+                   updated_at             = NOW()
+               WHERE (
+                 channex_booking_id = $3
+                 OR (property_id = $4 AND DATE(reservation_start_date) != DATE($1)
+                     AND user_id = $5
+                     AND status != 'cancelled')
+               )
+               AND DATE(reservation_start_date) != DATE($1)
+               RETURNING id, reservation_start_date, reservation_end_date`,
+              [
+                result.start_date,
+                result.end_date,
+                result.channex_booking_id || result.uid,
+                result.property_id,
+                result.user_id,
+              ]
+            );
+            if (convUpdateResult.rows.length > 0) {
+              console.log(`✏️ [CHANNEX] Conversation(s) mise(s) à jour avec nouvelles dates: ${convUpdateResult.rows.map(r => `#${r.id} → ${r.reservation_start_date}`).join(', ')}`);
+              // Émettre un event Socket.IO pour rafraîchir les messages côté front
+              if (io) {
+                io.to(`user_${result.user_id}`).emit('conversation_updated', {
+                  property_id: result.property_id,
+                  uid: result.uid,
+                  start_date: result.start_date,
+                  end_date: result.end_date,
+                });
+              }
+            } else {
+              console.log(`ℹ️ [CHANNEX] Aucune conversation à mettre à jour (dates déjà correctes ou non trouvée)`);
+            }
+          } catch (convErr) {
+            console.error('⚠️ [CHANNEX] Erreur mise à jour conversation:', convErr.message);
+          }
+        }
         if (!reservationsStore.properties[result.property_id]) {
           reservationsStore.properties[result.property_id] = [];
         }
