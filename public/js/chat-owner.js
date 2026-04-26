@@ -23,7 +23,7 @@ const _propertiesCache = {};
 // ── Résolution des raccourcis {{variable}} ────────────────────
 // Appelée avant l'envoi si le message contient {{ }}
 async function resolveShortcuts(text, conv) {
-  if (!text || !text.includes('{{')) return text;
+  if (!text || (!text.includes('{{') && !text.includes('{'))) return text;
 
   const firstName  = conv.guest_first_name || (conv.guest_name || '').split(' ')[0] || '';
   const guestName  = [conv.guest_first_name, conv.guest_last_name].filter(Boolean).join(' ')
@@ -62,43 +62,45 @@ async function resolveShortcuts(text, conv) {
   }
 
   const vars = {
-    // Voyageur
-    '{{guest_name}}':        guestName,
-    '{{nom}}':               guestName,
-    '{{prenom}}':            firstName,
-    '{{first_name}}':        firstName,
-    '{{guest_first_name}}':  firstName,
+    // Voyageur — double ET simple accolade
+    '{{guest_name}}':        guestName,   '{guest_name}':        guestName,
+    '{{nom}}':               guestName,   '{nom}':               guestName,
+    '{{prenom}}':            firstName,   '{prenom}':            firstName,
+    '{{first_name}}':        firstName,   '{first_name}':        firstName,
+    '{{guest_first_name}}':  firstName,   '{guest_first_name}':  firstName,
     // Logement
-    '{{property_name}}':     propName,
-    '{{logement}}':          propName,
+    '{{property_name}}':     propName,    '{property_name}':     propName,
+    '{{logement}}':          propName,    '{logement}':          propName,
     // Dates
-    '{{checkin_date}}':      checkinDate,
-    '{{checkout_date}}':     checkoutDate,
-    '{{date_arrivee}}':      checkinDate,
-    '{{date_depart}}':       checkoutDate,
-    '{{arrival_date}}':      checkinDate,
-    '{{departure_date}}':    checkoutDate,
+    '{{checkin_date}}':      checkinDate, '{checkin_date}':      checkinDate,
+    '{{checkout_date}}':    checkoutDate, '{checkout_date}':    checkoutDate,
+    '{{date_arrivee}}':      checkinDate, '{date_arrivee}':      checkinDate,
+    '{{date_depart}}':      checkoutDate, '{date_depart}':      checkoutDate,
+    '{{arrival_date}}':      checkinDate, '{arrival_date}':      checkinDate,
+    '{{departure_date}}':   checkoutDate, '{departure_date}':   checkoutDate,
     // Horaires
-    '{{arrival_time}}':      prop.arrival_time    || prop.checkin_time    || '',
-    '{{departure_time}}':    prop.departure_time  || prop.checkout_time   || '',
-    '{{heure_arrivee}}':     prop.arrival_time    || prop.checkin_time    || '',
-    '{{heure_depart}}':      prop.departure_time  || prop.checkout_time   || '',
+    '{{arrival_time}}':      prop.arrival_time    || '', '{arrival_time}':      prop.arrival_time    || '',
+    '{{departure_time}}':    prop.departure_time  || '', '{departure_time}':    prop.departure_time  || '',
+    '{{heure_arrivee}}':     prop.arrival_time    || '', '{heure_arrivee}':     prop.arrival_time    || '',
+    '{{heure_depart}}':      prop.departure_time  || '', '{heure_depart}':      prop.departure_time  || '',
+    '{{departureTime}}':     prop.departure_time  || '', '{departureTime}':     prop.departure_time  || '',
+    '{{arrivalTime}}':       prop.arrival_time    || '', '{arrivalTime}':       prop.arrival_time    || '',
     // Accès
-    '{{access_code}}':       prop.access_code     || prop.keybox_code     || '',
-    '{{code_acces}}':        prop.access_code     || prop.keybox_code     || '',
-    '{{keybox_code}}':       prop.keybox_code     || prop.access_code     || '',
+    '{{access_code}}':       prop.access_code  || prop.keybox_code || '', '{access_code}':  prop.access_code  || prop.keybox_code || '',
+    '{{code_acces}}':        prop.access_code  || prop.keybox_code || '', '{code_acces}':   prop.access_code  || prop.keybox_code || '',
+    '{{keybox_code}}':       prop.keybox_code  || prop.access_code || '', '{keybox_code}':  prop.keybox_code  || prop.access_code || '',
     // Wifi
-    '{{wifi_name}}':         prop.wifi_name       || prop.wifi_ssid       || '',
-    '{{wifi_password}}':     prop.wifi_password   || '',
-    '{{wifi_ssid}}':         prop.wifi_name       || prop.wifi_ssid       || '',
-    '{{mot_de_passe_wifi}}': prop.wifi_password   || '',
+    '{{wifi_name}}':         prop.wifi_name     || '', '{wifi_name}':     prop.wifi_name     || '',
+    '{{wifi_password}}':     prop.wifi_password || '', '{wifi_password}': prop.wifi_password || '',
+    '{{wifi_ssid}}':         prop.wifi_name     || '', '{wifi_ssid}':     prop.wifi_name     || '',
+    '{{mot_de_passe_wifi}}': prop.wifi_password || '', '{mot_de_passe_wifi}': prop.wifi_password || '',
     // Livret
-    '{{welcome_book_url}}':  prop.welcome_book_url || '',
-    '{{livret}}':            prop.welcome_book_url || '',
-    '{{livret_url}}':        prop.welcome_book_url || '',
+    '{{welcome_book_url}}':  prop.welcome_book_url || '', '{welcome_book_url}': prop.welcome_book_url || '',
+    '{{livret}}':            prop.welcome_book_url || '', '{livret}':           prop.welcome_book_url || '',
+    '{{livret_url}}':        prop.welcome_book_url || '', '{livret_url}':       prop.welcome_book_url || '',
     // Adresse
-    '{{address}}':           prop.address         || '',
-    '{{adresse}}':           prop.address         || '',
+    '{{address}}':           prop.address || '', '{address}': prop.address || '',
+    '{{adresse}}':           prop.address || '', '{adresse}': prop.address || '',
   };
 
   let result = text;
@@ -935,7 +937,7 @@ async function sendMessageOwner() {
   if (!message) return;
 
   // ── Résoudre les raccourcis {{variable}} avant l'envoi ──
-  if (message.includes('{{')) {
+  if (message.includes('{{') || message.includes('{')) {
     const conv = allConversations.find(c => c.id == currentConversationId);
     if (conv) {
       const resolved = await resolveShortcuts(message, conv);
