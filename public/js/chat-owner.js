@@ -17,6 +17,99 @@ let searchQuery = '';
 let currentConversationId = null;
 let userId = null;
 
+// ── Cache propriétés pour la résolution des raccourcis ────────
+const _propertiesCache = {};
+
+// ── Résolution des raccourcis {{variable}} ────────────────────
+// Appelée avant l'envoi si le message contient {{ }}
+async function resolveShortcuts(text, conv) {
+  if (!text || !text.includes('{{')) return text;
+
+  const firstName  = conv.guest_first_name || (conv.guest_name || '').split(' ')[0] || '';
+  const guestName  = [conv.guest_first_name, conv.guest_last_name].filter(Boolean).join(' ')
+                     || conv.guest_name || 'Voyageur';
+  const propName   = conv.property_name || '';
+
+  const fmtDate = (iso) => {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }); }
+    catch { return iso; }
+  };
+
+  const checkinDate  = fmtDate(conv.reservation_start_date);
+  const checkoutDate = fmtDate(conv.reservation_end_date);
+
+  // Infos logement depuis cache ou API
+  let prop = {};
+  if (conv.property_id) {
+    if (_propertiesCache[conv.property_id]) {
+      prop = _propertiesCache[conv.property_id];
+    } else {
+      try {
+        const token = localStorage.getItem('lcc_token');
+        const res = await fetch(`${API_URL}/api/properties/${conv.property_id}`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          prop = data.property || data || {};
+          _propertiesCache[conv.property_id] = prop;
+        }
+      } catch (e) {
+        console.warn('[SHORTCUTS] Propriété non chargée:', e.message);
+      }
+    }
+  }
+
+  const vars = {
+    // Voyageur
+    '{{guest_name}}':        guestName,
+    '{{nom}}':               guestName,
+    '{{prenom}}':            firstName,
+    '{{first_name}}':        firstName,
+    '{{guest_first_name}}':  firstName,
+    // Logement
+    '{{property_name}}':     propName,
+    '{{logement}}':          propName,
+    // Dates
+    '{{checkin_date}}':      checkinDate,
+    '{{checkout_date}}':     checkoutDate,
+    '{{date_arrivee}}':      checkinDate,
+    '{{date_depart}}':       checkoutDate,
+    '{{arrival_date}}':      checkinDate,
+    '{{departure_date}}':    checkoutDate,
+    // Horaires
+    '{{arrival_time}}':      prop.arrival_time    || prop.checkin_time    || '',
+    '{{departure_time}}':    prop.departure_time  || prop.checkout_time   || '',
+    '{{heure_arrivee}}':     prop.arrival_time    || prop.checkin_time    || '',
+    '{{heure_depart}}':      prop.departure_time  || prop.checkout_time   || '',
+    // Accès
+    '{{access_code}}':       prop.access_code     || prop.keybox_code     || '',
+    '{{code_acces}}':        prop.access_code     || prop.keybox_code     || '',
+    '{{keybox_code}}':       prop.keybox_code     || prop.access_code     || '',
+    // Wifi
+    '{{wifi_name}}':         prop.wifi_name       || prop.wifi_ssid       || '',
+    '{{wifi_password}}':     prop.wifi_password   || '',
+    '{{wifi_ssid}}':         prop.wifi_name       || prop.wifi_ssid       || '',
+    '{{mot_de_passe_wifi}}': prop.wifi_password   || '',
+    // Livret
+    '{{welcome_book_url}}':  prop.welcome_book_url || '',
+    '{{livret}}':            prop.welcome_book_url || '',
+    '{{livret_url}}':        prop.welcome_book_url || '',
+    // Adresse
+    '{{address}}':           prop.address         || '',
+    '{{adresse}}':           prop.address         || '',
+  };
+
+  let result = text;
+  for (const [key, val] of Object.entries(vars)) {
+    result = result.split(key).join(val);
+  }
+  // Les {{variables_inconnues}} restantes sont laissées telles quelles
+  // pour que l'hôte puisse les voir et les corriger
+  return result;
+}
+
 // ============================================
 // DÉTECTION MOBILE (pour redirection)
 // ============================================
@@ -59,6 +152,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     chatInput.addEventListener('input', function() {
       this.style.height = 'auto';
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+      // Déclencher le popup de raccourcis si {{ détecté
+      _checkShortcutTrigger(this);
     });
     
     // Send on Ctrl+Enter or Shift+Enter, new line on Enter
@@ -68,7 +163,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         sendMessageOwner();
       }
     });
+
+    // Fermer le popup si Escape
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') _closeShortcutPopup();
+    });
   }
+
+  // Injecter le popup de raccourcis dans le DOM
+  _injectShortcutPopup();
   
   // Fermer le modal en cliquant sur l'overlay
   const chatModal = document.getElementById('chatModal');
@@ -828,8 +931,21 @@ async function sendMessageOwner() {
   const input = document.getElementById('chatInput');
   if (!input || !currentConversationId) return;
 
-  const message = input.value.trim();
+  let message = input.value.trim();
   if (!message) return;
+
+  // ── Résoudre les raccourcis {{variable}} avant l'envoi ──
+  if (message.includes('{{')) {
+    const conv = allConversations.find(c => c.id == currentConversationId);
+    if (conv) {
+      const resolved = await resolveShortcuts(message, conv);
+      if (resolved !== message) {
+        // Afficher un aperçu avant envoi si des variables ont été remplacées
+        message = resolved;
+        input.value = resolved;
+      }
+    }
+  }
 
   const sendBtn = document.getElementById('sendBtn');
   if (sendBtn) sendBtn.disabled = true;
@@ -1392,5 +1508,122 @@ async function loadQuickReplies(conversationId) {
     console.warn('Erreur loadQuickReplies:', e);
   }
 }
+
+// ============================================================
+// POPUP RACCOURCIS {{variables}}
+// Apparaît quand l'hôte tape {{ dans le textarea
+// ============================================================
+const SHORTCUTS_LIST = [
+  { key: '{{guest_name}}',       label: 'Nom du voyageur',       icon: '👤' },
+  { key: '{{prenom}}',           label: 'Prénom du voyageur',     icon: '👤' },
+  { key: '{{property_name}}',    label: 'Nom du logement',        icon: '🏠' },
+  { key: '{{checkin_date}}',     label: "Date d'arrivée",         icon: '📅' },
+  { key: '{{checkout_date}}',    label: 'Date de départ',         icon: '📅' },
+  { key: '{{arrival_time}}',     label: "Heure d'arrivée",        icon: '⏰' },
+  { key: '{{departure_time}}',   label: 'Heure de départ',        icon: '⏰' },
+  { key: '{{access_code}}',      label: "Code d'accès",           icon: '🔑' },
+  { key: '{{wifi_name}}',        label: 'Nom du WiFi',            icon: '📶' },
+  { key: '{{wifi_password}}',    label: 'Mot de passe WiFi',      icon: '📶' },
+  { key: '{{welcome_book_url}}', label: 'Lien livret d\'accueil', icon: '📖' },
+  { key: '{{adresse}}',          label: 'Adresse du logement',    icon: '📍' },
+];
+
+function _injectShortcutPopup() {
+  if (document.getElementById('shortcutPopup')) return;
+  const popup = document.createElement('div');
+  popup.id = 'shortcutPopup';
+  popup.style.cssText = [
+    'position:absolute',
+    'bottom:100%',
+    'left:0',
+    'right:0',
+    'background:white',
+    'border:1px solid rgba(200,184,154,.4)',
+    'border-radius:12px',
+    'box-shadow:0 -4px 24px rgba(13,17,23,.12)',
+    'max-height:220px',
+    'overflow-y:auto',
+    'z-index:9999',
+    'display:none',
+    'margin-bottom:6px',
+  ].join(';');
+  // Insérer dans le parent du textarea
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput && chatInput.parentElement) {
+    chatInput.parentElement.style.position = 'relative';
+    chatInput.parentElement.insertBefore(popup, chatInput);
+  } else {
+    document.body.appendChild(popup);
+  }
+}
+
+function _checkShortcutTrigger(input) {
+  const val = input.value;
+  const cursor = input.selectionStart;
+  const before = val.substring(0, cursor);
+  const match = before.match(/\{\{([^}]*)$/);
+
+  const popup = document.getElementById('shortcutPopup');
+  if (!popup) return;
+
+  if (!match) { _closeShortcutPopup(); return; }
+
+  const query = match[1].toLowerCase();
+  const filtered = SHORTCUTS_LIST.filter(s =>
+    s.key.toLowerCase().includes(query) ||
+    s.label.toLowerCase().includes(query)
+  );
+
+  if (!filtered.length) { _closeShortcutPopup(); return; }
+
+  popup.innerHTML = filtered.map((s, i) => `
+    <div class="shortcut-item" data-key="${s.key}"
+      style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;border-bottom:1px solid rgba(200,184,154,.2);transition:background .1s;"
+      onmouseenter="this.style.background='rgba(26,122,94,.06)'"
+      onmouseleave="this.style.background=''"
+      onmousedown="event.preventDefault();_selectShortcut('${s.key}')">
+      <span style="font-size:16px;">${s.icon}</span>
+      <div>
+        <div style="font-weight:600;color:#0D1117;">${s.label}</div>
+        <div style="font-size:11px;color:#7A8695;font-family:monospace;">${s.key}</div>
+      </div>
+    </div>
+  `).join('');
+
+  popup.style.display = 'block';
+}
+
+function _selectShortcut(key) {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+
+  const val = input.value;
+  const cursor = input.selectionStart;
+  const before = val.substring(0, cursor);
+  const after  = val.substring(cursor);
+
+  // Remplacer le {{ partiel par la variable complète
+  const newBefore = before.replace(/\{\{[^}]*$/, key);
+  input.value = newBefore + after;
+
+  // Replacer le curseur après la variable insérée
+  const newCursor = newBefore.length;
+  input.setSelectionRange(newCursor, newCursor);
+  input.focus();
+  input.dispatchEvent(new Event('input'));
+  _closeShortcutPopup();
+}
+
+function _closeShortcutPopup() {
+  const popup = document.getElementById('shortcutPopup');
+  if (popup) popup.style.display = 'none';
+}
+
+// Fermer le popup si on clique ailleurs
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#shortcutPopup') && e.target.id !== 'chatInput') {
+    _closeShortcutPopup();
+  }
+});
 
 console.log('✅ Chat owner initialized');
