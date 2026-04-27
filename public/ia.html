@@ -4,31 +4,19 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/png" href="/images/logo.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-  <!-- Redirection immédiate vers login si app native iOS/Android -->
   <script>
     (function() {
-      var isNative = !!(
-        window.Capacitor?.isNativePlatform?.() ||
-        window.location.protocol === 'capacitor:' ||
-        window.location.protocol === 'ionic:'
-      );
-      if (isNative) {
-        window.location.replace('login.html');
-      }
+      var isNative = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:');
+      if (isNative) { window.location.replace('login.html'); }
     })();
   </script>
 
   <title>IA pour hôtes Airbnb — Boostinghost | Réponses automatiques 24/7</title>
-
-  <!-- SEO Meta -->
   <meta name="description" content="L'assistant IA qui répond à vos voyageurs 24/7, dans 26 langues. Propulsé par Groq AI. Réponse moyenne : 3 secondes. Inclus dans Boostinghost.">
   <meta name="keywords" content="IA Airbnb, chatbot location courte durée, réponses automatiques voyageurs, IA conciergerie, traduction automatique messages Airbnb, assistant IA Booking, Groq AI">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Boostinghost">
   <link rel="canonical" href="https://www.boostinghost.fr/ia.html">
-
-  <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.boostinghost.fr/ia.html">
   <meta property="og:title" content="IA pour hôtes Airbnb — Boostinghost">
@@ -36,622 +24,344 @@
   <meta property="og:site_name" content="Boostinghost">
   <meta property="og:locale" content="fr_FR">
 
-  <!-- Schema.org SoftwareApplication -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Boostinghost IA",
-    "description": "Assistant IA pour hôtes Airbnb et conciergeries. Répond aux messages voyageurs 24/7 dans 26 langues.",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web, iOS, Android",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "EUR",
-      "description": "Inclus dans tous les plans Boostinghost"
-    }
-  }
-  </script>
-
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 
-  <style>
-    /* ─────────────────────────────────────────────────────────
-       Design system réutilisé de index.html (bh-theme-v3)
-       ───────────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<style>
+/* ─── RESET & BASE ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #1A7A5E; --primary-dark: #15624B; --primary-soft: rgba(26,122,94,.1);
+  --primary-glow: rgba(26,122,94,.2); --cream: #F5F0E8; --ink: #0D1117;
+  --muted: #7A8695; --text: #374151; --border: rgba(200,184,154,.4); --white: #FAFAF8; --radius: 20px;
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; color: var(--ink); background: var(--white); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+h1, h2 { font-family: 'Instrument Serif', serif; font-weight: 400; letter-spacing: -.01em; }
+h3 { font-family: 'DM Sans', sans-serif; font-weight: 700; }
+p { color: var(--muted); }
+a { color: var(--primary); text-decoration: none; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
 
-    :root {
-      --primary: #1A7A5E;
-      --primary-dark: #15624B;
-      --primary-soft: rgba(26,122,94,.1);
-      --cream: #F5F0E8;
-      --cream-soft: rgba(245,240,232,.6);
-      --ink: #0D1117;
-      --muted: #7A8695;
-      --text: #374151;
-      --border: rgba(200,184,154,.4);
-      --border-soft: rgba(200,184,154,.2);
-      --radius: 20px;
-    }
+/* ─── BUTTONS ─── */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: all .2s; }
+.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 16px rgba(26,122,94,.3); }
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,122,94,.35); color: white; }
+.btn-ghost { background: rgba(255,255,255,.8); color: var(--text); border: 1.5px solid rgba(13,17,23,.12); }
+.btn-ghost:hover { background: white; }
+.btn-lg { padding: 15px 28px; font-size: 15px; border-radius: 16px; }
+.btn-white { background: white; color: var(--primary); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.18); }
 
-    html, body {
-      font-family: 'DM Sans', sans-serif;
-      color: var(--ink);
-      background: #FAFAF8;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-    }
+/* ─── TOP BANNER ─── */
+.top-banner {
+  background: var(--ink); color: white; text-align: center;
+  padding: 11px 16px; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  position: relative; overflow: hidden;
+}
+.top-banner::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(26,122,94,.18) 50%, transparent 100%);
+  animation: bannerShimmer 3s ease-in-out infinite;
+}
+@keyframes bannerShimmer { 0%,100% { opacity:0; transform:translateX(-100%); } 50% { opacity:1; transform:translateX(100%); } }
+.top-banner-pill { background: var(--primary); color: white; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; flex-shrink: 0; }
+.top-banner-text { color: rgba(255,255,255,.8); }
+.top-banner-link { color: white; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; border-bottom: 1px solid rgba(255,255,255,.35); padding-bottom: 1px; transition: border-color .15s, color .15s; flex-shrink: 0; }
+.top-banner:hover .top-banner-link { border-color: white; color: #6ee7b7; }
 
-    h1, h2, h3 { letter-spacing: -0.01em; }
-    h1, h2 { font-family: 'Instrument Serif', serif; font-weight: 400; }
-    h3 { font-family: 'DM Sans', sans-serif; font-weight: 700; }
-    p { color: var(--muted); }
+/* ─── HEADER ─── */
+.site-header { position: sticky; top: 0; z-index: 200; background: rgba(250,250,248,.92); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(200,184,154,.2); }
+.header-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; max-width: 1200px; margin: 0 auto; }
+.logo-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px; }
+.logo-icon { width: 34px; height: 34px; border-radius: 9px; overflow: hidden; flex-shrink: 0; }
+.logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.brand-host { color: var(--primary); }
+.nav-main { display: flex; gap: 6px; }
+.nav-main a { color: var(--text); font-size: 14px; font-weight: 500; padding: 7px 14px; border-radius: 10px; transition: all .15s; }
+.nav-main a:hover, .nav-main a.active { color: var(--primary); background: var(--primary-soft); }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.menu-toggle { display: none; background: none; border: none; font-size: 22px; color: var(--ink); cursor: pointer; }
 
-    a { color: var(--primary); text-decoration: none; }
+/* ─── SECTION BASE ─── */
+.section { padding: 100px 0; }
+.section-kicker { display: inline-flex; align-items: center; gap: 7px; background: var(--primary-soft); color: var(--primary); border: 1px solid rgba(26,122,94,.15); padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 16px; }
+.section-title { font-size: clamp(30px, 4vw, 46px); color: var(--ink); margin-bottom: 14px; }
+.section-sub { font-size: 17px; color: var(--muted); line-height: 1.7; max-width: 580px; margin-bottom: 40px; }
 
-    /* Container & sections */
-    .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
-    section { padding: 80px 0; }
-    section.alt { background: var(--cream-soft); }
+/* ─── HERO ─── */
+.hero { min-height: 100svh; position: relative; display: flex; align-items: center; overflow: hidden; }
+.hero-bg { position: absolute; inset: 0; background: url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1600&q=80') center/cover; }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(105deg, rgba(13,17,23,.92) 0%, rgba(13,17,23,.75) 45%, rgba(13,17,23,.45) 100%); }
+.hero-content { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; padding: 80px 28px; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+.hero-left { animation: heroFadeIn .9s .1s both; }
+@keyframes heroFadeIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+.hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(26,122,94,.25); color: #6ee7b7; border: 1px solid rgba(110,231,183,.3); padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 24px; }
+.hero h1 { font-size: clamp(36px, 5vw, 58px); line-height: 1.06; color: white; margin-bottom: 22px; }
+.hero h1 em { font-style: italic; color: #6ee7b7; }
+.hero-sub { font-size: 17px; color: rgba(255,255,255,.7); line-height: 1.7; margin-bottom: 36px; max-width: 500px; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
+.hero-trust { display: flex; gap: 20px; flex-wrap: wrap; }
+.hero-trust-item { display: flex; align-items: center; gap: 7px; font-size: 13px; color: rgba(255,255,255,.55); }
+.hero-trust-item i { color: #6ee7b7; font-size: 12px; }
 
-    /* ─── HEADER ─── */
-    .site-header {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(250,250,248,.88);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-soft);
-    }
-    /* Mobile : désactiver backdrop-filter (trop coûteux en GPU) */
-    @media (max-width: 900px) {
-      .site-header {
-        background: #FAFAF8;
-        backdrop-filter: none;
-      }
-    }
-    .header-inner {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 24px;
-      max-width: 1180px; margin: 0 auto;
-    }
-    .logo-link {
-      display: flex; align-items: center; gap: 10px;
-      text-decoration: none; color: var(--ink);
-      font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px;
-    }
-    .logo-icon {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .brand-boosting { color: var(--ink); }
-    .brand-host { color: var(--primary); }
+/* ─── HERO CHAT ─── */
+.hero-right { animation: heroFadeIn .9s .35s both; }
+.hero-chat-card {
+  background: rgba(255,255,255,.07); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,.12); border-radius: 24px; overflow: hidden;
+}
+.hero-chat-header {
+  background: rgba(255,255,255,.06); padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.hero-chat-title { font-size: 13px; font-weight: 600; color: white; display: flex; align-items: center; gap: 8px; }
+.hero-chat-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+.hero-chat-tag { font-size: 11px; font-weight: 700; background: rgba(26,122,94,.3); color: #6ee7b7; border: 1px solid rgba(110,231,183,.2); padding: 3px 10px; border-radius: 999px; }
+#heroChatBody { padding: 20px; min-height: 220px; display: flex; flex-direction: column; gap: 12px; }
+.chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; animation: msgIn .3s ease; }
+@keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.chat-msg.guest { background: rgba(255,255,255,.1); color: rgba(255,255,255,.85); align-self: flex-start; border-radius: 14px 14px 14px 4px; }
+.chat-msg.ai { background: var(--primary); color: white; align-self: flex-end; border-radius: 14px 14px 4px 14px; }
+.chat-msg small { display: block; font-size: 10px; opacity: .6; margin-top: 4px; }
+.chat-typing { align-self: flex-end; background: var(--primary); padding: 10px 16px; border-radius: 14px 14px 4px 14px; display: flex; gap: 4px; align-items: center; }
+.chat-typing span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.7); animation: typingDot 1.2s infinite; }
+.chat-typing span:nth-child(2) { animation-delay: .2s; }
+.chat-typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes typingDot { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
 
-    .nav-main {
-      display: flex; gap: 28px;
-    }
-    .nav-main a {
-      color: var(--text); font-size: 14px; font-weight: 500;
-      transition: color .15s;
-    }
-    .nav-main a:hover { color: var(--primary); }
-    .nav-main a.active { color: var(--primary); font-weight: 600; }
+/* Scroll indicator */
+.hero-scroll { position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px; animation: heroFadeIn .8s 1.5s both; }
+.hero-scroll-line { width: 1px; height: 50px; background: linear-gradient(to bottom, rgba(255,255,255,.5), transparent); animation: scrollLine 2s 2s infinite; }
+@keyframes scrollLine { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.5); } }
+.hero-scroll span { font-size: 10px; color: rgba(255,255,255,.35); letter-spacing: .12em; text-transform: uppercase; }
 
-    .header-actions { display: flex; gap: 10px; }
+/* ─── STATS BAND ─── */
+.stats-band { background: white; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; background: var(--border); }
+.stat-box { background: white; padding: 32px 24px; text-align: center; }
+.stat-num { font-family: 'Instrument Serif', serif; font-size: 48px; color: var(--primary); line-height: 1; margin-bottom: 6px; }
+.stat-desc { font-size: 14px; color: var(--text); line-height: 1.4; }
 
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 18px; border-radius: 12px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px; font-weight: 600;
-      cursor: pointer; border: none; text-decoration: none;
-      transition: all .15s;
-    }
-    .btn.small { padding: 8px 14px; font-size: 13px; }
-    .btn-primary {
-      background: var(--primary); color: white;
-      box-shadow: 0 4px 12px rgba(26,122,94,.25);
-    }
-    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); color: white; }
-    .btn-ghost {
-      background: rgba(255,255,255,.6); color: var(--text);
-      border: 1.5px solid rgba(13,17,23,.12);
-    }
-    .btn-ghost:hover { background: white; }
-    .btn-large { padding: 14px 24px; font-size: 15px; }
+/* ─── PROBLEM SECTION ─── */
+.problem-section { padding: 100px 0; background: var(--ink); }
+.problem-header { text-align: center; margin-bottom: 56px; }
+.problem-header .section-kicker { background: rgba(26,122,94,.2); color: #6ee7b7; border-color: rgba(110,231,183,.2); }
+.problem-header .section-title { color: white; }
+.problem-header .section-sub { color: rgba(255,255,255,.55); margin-left: auto; margin-right: auto; }
+.problem-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; }
+.problem-card {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 20px; padding: 32px 28px;
+  transition: background .2s, border-color .2s, transform .2s;
+}
+.problem-card:hover { background: rgba(255,255,255,.07); border-color: rgba(26,122,94,.3); transform: translateY(-4px); }
+.problem-stat { font-family: 'Instrument Serif', serif; font-size: 56px; color: #6ee7b7; line-height: 1; margin-bottom: 14px; }
+.problem-card p { font-size: 15px; color: rgba(255,255,255,.6); line-height: 1.7; }
+.problem-card p strong { color: rgba(255,255,255,.9); }
+.problem-cta { text-align: center; margin-top: 48px; }
+.problem-cta p { font-size: 18px; color: rgba(255,255,255,.7); margin-bottom: 6px; }
+.problem-cta strong { color: #6ee7b7; font-size: 20px; display: block; }
 
-    /* Menu mobile toggle */
-    .menu-toggle {
-      display: none; background: none; border: none;
-      font-size: 22px; color: var(--ink); cursor: pointer;
-    }
+/* ─── HOW IT WORKS ─── */
+.how-section { padding: 100px 0; }
+.how-header { text-align: center; margin-bottom: 64px; }
+.steps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; position: relative; }
+.steps-grid::before { content: ''; position: absolute; top: 32px; left: calc(16.66% + 16px); right: calc(16.66% + 16px); height: 2px; background: linear-gradient(90deg, var(--primary), #2AAE86); }
+.step-card { text-align: center; padding: 0 32px; position: relative; z-index: 1; }
+.step-num { width: 64px; height: 64px; background: var(--primary); color: white; border-radius: 18px; display: inline-flex; align-items: center; justify-content: center; font-family: 'Instrument Serif', serif; font-size: 26px; margin-bottom: 24px; box-shadow: 0 8px 24px rgba(26,122,94,.3); }
+.step-card h3 { font-size: 18px; margin-bottom: 12px; color: var(--ink); }
+.step-card p { font-size: 14px; line-height: 1.7; }
 
-    /* ─── HERO ─── */
-    .hero {
-      padding: 80px 0 60px;
-      background: linear-gradient(180deg, #FAFAF8 0%, var(--cream-soft) 100%);
-    }
-    .hero-grid {
-      display: grid; grid-template-columns: 1.1fr 1fr;
-      gap: 56px; align-items: center;
-    }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--primary-soft);
-      color: var(--primary);
-      padding: 7px 14px;
-      border-radius: 999px;
-      font-size: 13px; font-weight: 600;
-      margin-bottom: 20px;
-    }
-    .hero h1 {
-      font-size: clamp(34px, 5vw, 52px);
-      line-height: 1.1;
-      color: var(--ink);
-      margin-bottom: 20px;
-    }
-    .hero h1 em {
-      color: var(--primary);
-      font-style: italic;
-    }
-    .hero-subtitle {
-      font-size: 17px;
-      color: var(--muted);
-      margin-bottom: 32px;
-      max-width: 540px;
-    }
-    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
-    .hero-trust {
-      display: flex; gap: 20px; flex-wrap: wrap;
-      font-size: 13px; color: var(--muted);
-    }
-    .hero-trust span i { color: var(--primary); margin-right: 5px; }
+/* ─── DEMO ─── */
+.demo-section { padding: 100px 0; background: var(--cream); }
+.demo-inner { max-width: 860px; margin: 0 auto; }
+.demo-header { text-align: center; margin-bottom: 48px; }
+.demo-box { background: white; border-radius: 24px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 20px 60px rgba(13,17,23,.08); }
+.demo-topbar { background: var(--ink); padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
+.demo-topbar-dot { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+.demo-topbar-title { font-size: 13px; font-weight: 600; color: white; }
+.demo-topbar-badge { margin-left: auto; background: rgba(26,122,94,.3); color: #6ee7b7; border: 1px solid rgba(110,231,183,.2); font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.demo-context { display: flex; align-items: flex-start; gap: 12px; background: rgba(26,122,94,.06); border-bottom: 1px solid rgba(26,122,94,.1); padding: 14px 20px; font-size: 13px; color: var(--text); }
+.demo-context i { color: var(--primary); margin-top: 2px; flex-shrink: 0; font-size: 14px; }
+.demo-chat { padding: 20px; min-height: 200px; max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.demo-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 40px 20px; align-self: center; opacity: .6; }
+.demo-msg { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.55; animation: msgIn .3s ease; }
+.demo-msg.guest { background: var(--cream); color: var(--ink); align-self: flex-start; border-radius: 14px 14px 14px 4px; }
+.demo-msg.ai { background: var(--primary); color: white; align-self: flex-end; border-radius: 14px 14px 4px 14px; }
+.demo-typing { align-self: flex-end; background: var(--primary); padding: 10px 16px; border-radius: 14px 14px 4px 14px; display: flex; gap: 4px; align-items: center; }
+.demo-typing span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.7); animation: typingDot 1.2s infinite; }
+.demo-typing span:nth-child(2) { animation-delay: .2s; }
+.demo-typing span:nth-child(3) { animation-delay: .4s; }
+.demo-input-row { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); background: white; }
+.demo-input { flex: 1; padding: 11px 16px; border: 1.5px solid rgba(13,17,23,.12); border-radius: 12px; font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color .15s; }
+.demo-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,122,94,.08); }
+.demo-send { padding: 11px 20px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: background .15s; }
+.demo-send:hover { background: var(--primary-dark); }
+.demo-send:disabled { opacity: .5; cursor: not-allowed; }
+.demo-suggestions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 20px 20px; }
+.demo-suggestion { background: var(--cream); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; color: var(--text); transition: all .15s; }
+.demo-suggestion:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
 
-    /* Chat animé à droite */
-    .hero-chat {
-      background: white;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      padding: 22px;
-      box-shadow: 0 20px 60px rgba(13,17,23,.08);
-      max-width: 440px;
-      margin-left: auto;
-      /* Isoler le rendu du chat pour éviter repaints inutiles */
-      contain: layout paint;
-    }
-    .hero-chat-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding-bottom: 14px; margin-bottom: 14px;
-      border-bottom: 1px solid var(--border-soft);
-    }
-    .hero-chat-title {
-      font-weight: 700; font-size: 14px; color: var(--ink);
-    }
-    .hero-chat-tag {
-      background: var(--primary-soft); color: var(--primary);
-      font-size: 11px; font-weight: 600;
-      padding: 4px 10px; border-radius: 999px;
-    }
-    .chat-msg {
-      max-width: 80%;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-size: 13.5px;
-      line-height: 1.5;
-      margin-bottom: 10px;
-      opacity: 0;
-      animation: fadeInMsg .5s forwards;
-    }
-    @keyframes fadeInMsg {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .chat-msg.guest {
-      background: #F3F4F6; color: var(--ink);
-      margin-left: 0; border-bottom-left-radius: 4px;
-    }
-    .chat-msg.ai {
-      background: var(--primary); color: white;
-      margin-left: auto; border-bottom-right-radius: 4px;
-    }
-    .chat-msg small { display: block; font-size: 10.5px; opacity: .7; margin-top: 4px; }
-    .chat-typing {
-      display: inline-flex; gap: 4px; padding: 10px 14px;
-      background: #F3F4F6; border-radius: 14px;
-      margin-bottom: 10px; opacity: 0;
-      animation: fadeInMsg .3s forwards;
-    }
-    .chat-typing span {
-      width: 6px; height: 6px; background: var(--muted);
-      border-radius: 50%;
-      animation: typing 1.8s infinite;
-    }
-    .chat-typing span:nth-child(2) { animation-delay: .25s; }
-    .chat-typing span:nth-child(3) { animation-delay: .5s; }
-    @keyframes typing {
-      0%, 70%, 100% { opacity: .3; transform: translateY(0); }
-      35% { opacity: 1; transform: translateY(-3px); }
-    }
-    /* Respect user preference */
-    @media (prefers-reduced-motion: reduce) {
-      .chat-typing span, .chat-msg { animation: none !important; }
-    }
+/* ─── USE CASES ─── */
+.usecases-section { padding: 100px 0; }
+.usecases-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; margin-top: 56px; }
+.usecase-card {
+  background: white; border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px 28px;
+  transition: box-shadow .2s, transform .2s;
+}
+.usecase-card:hover { box-shadow: 0 12px 40px rgba(13,17,23,.08); transform: translateY(-4px); }
+.usecase-icon { width: 54px; height: 54px; border-radius: 16px; background: var(--primary-soft); color: var(--primary); border: 1px solid rgba(26,122,94,.15); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px; }
+.usecase-card h3 { font-size: 18px; margin-bottom: 10px; color: var(--ink); }
+.usecase-card p { font-size: 14px; line-height: 1.7; }
 
-    /* ─── PROBLEM SECTION ─── */
-    .problem-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr);
-      gap: 20px; margin-top: 40px;
-    }
-    .problem-card {
-      background: white;
-      border: 1px solid var(--border-soft);
-      border-radius: 16px;
-      padding: 24px;
-    }
-    .problem-card .stat {
-      font-family: 'Instrument Serif', serif;
-      font-size: 40px;
-      color: var(--primary);
-      line-height: 1;
-      margin-bottom: 8px;
-    }
-    .problem-card p { font-size: 14px; color: var(--text); }
+/* ─── CONTROL ─── */
+.control-section { padding: 100px 0; background: var(--ink); }
+.control-header { text-align: center; margin-bottom: 56px; }
+.control-header .section-kicker { background: rgba(26,122,94,.2); color: #6ee7b7; border-color: rgba(110,231,183,.2); }
+.control-header .section-title { color: white; }
+.control-header .section-sub { color: rgba(255,255,255,.55); margin-left: auto; margin-right: auto; }
+.control-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 860px; margin: 0 auto; }
+.control-item {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px; padding: 28px 24px;
+  display: flex; gap: 16px; align-items: flex-start;
+  transition: background .2s, border-color .2s;
+}
+.control-item:hover { background: rgba(255,255,255,.07); border-color: rgba(26,122,94,.3); }
+.control-item-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(26,122,94,.2); color: #6ee7b7; border: 1px solid rgba(26,122,94,.25); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.control-item h3 { font-size: 15px; font-weight: 700; color: white; margin-bottom: 6px; }
+.control-item p { font-size: 13px; color: rgba(255,255,255,.5); line-height: 1.6; }
+.control-item p strong { color: rgba(255,255,255,.8); }
 
-    /* ─── HOW IT WORKS ─── */
-    .section-title {
-      font-size: clamp(28px, 4vw, 40px);
-      color: var(--ink);
-      text-align: center;
-      margin-bottom: 12px;
-    }
-    .section-subtitle {
-      text-align: center;
-      color: var(--muted);
-      font-size: 16px;
-      max-width: 620px;
-      margin: 0 auto 48px;
-    }
-    .steps {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-    .step {
-      text-align: center;
-      padding: 32px 24px;
-      background: white;
-      border: 1px solid var(--border-soft);
-      border-radius: var(--radius);
-      position: relative;
-    }
-    .step-num {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 44px; height: 44px;
-      background: var(--primary); color: white;
-      border-radius: 12px;
-      font-family: 'Instrument Serif', serif; font-size: 20px;
-      margin-bottom: 18px;
-    }
-    .step h3 { font-size: 17px; margin-bottom: 10px; }
-    .step p { font-size: 14px; line-height: 1.6; }
+/* ─── TESTIMONIAL ─── */
+.testimonial-section { padding: 100px 0; }
+.testimonial-card {
+  max-width: 760px; margin: 0 auto;
+  background: white; border: 1px solid var(--border);
+  border-radius: 24px; padding: 48px 44px;
+  box-shadow: 0 12px 40px rgba(13,17,23,.06);
+  text-align: center;
+}
+.testimonial-stars { display: flex; gap: 4px; justify-content: center; margin-bottom: 20px; }
+.testimonial-stars i { color: #f59e0b; font-size: 16px; }
+.testimonial-text { font-family: 'Instrument Serif', serif; font-size: 22px; line-height: 1.65; color: var(--ink); font-style: italic; margin-bottom: 28px; }
+.testimonial-author { display: flex; align-items: center; gap: 12px; justify-content: center; }
+.testimonial-avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; }
+.testimonial-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+.testimonial-role { font-size: 13px; color: var(--muted); }
 
-    /* ─── DEMO LIVE ─── */
-    .demo-wrap {
-      background: var(--ink);
-      color: white;
-      border-radius: 28px;
-      padding: 48px 40px;
-      max-width: 820px;
-      margin: 0 auto;
-    }
-    .demo-wrap h2 { color: white; text-align: center; margin-bottom: 8px; }
-    .demo-wrap .demo-sub {
-      color: rgba(255,255,255,.7); text-align: center;
-      font-size: 15px; margin-bottom: 32px;
-    }
-    .demo-context {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 12px;
-      padding: 14px 18px;
-      font-size: 13px;
-      color: rgba(255,255,255,.75);
-      margin-bottom: 20px;
-      display: flex; gap: 10px; align-items: flex-start;
-    }
-    .demo-context i { color: #4ade80; margin-top: 2px; }
-    .demo-chat {
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 16px;
-      padding: 20px;
-      min-height: 200px;
-      max-height: 360px;
-      overflow-y: auto;
-      margin-bottom: 16px;
-    }
-    .demo-msg {
-      max-width: 80%;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.5;
-      margin-bottom: 10px;
-    }
-    .demo-msg.guest {
-      background: rgba(255,255,255,.1); color: white;
-      margin-left: 0; border-bottom-left-radius: 4px;
-    }
-    .demo-msg.ai {
-      background: #1A7A5E; color: white;
-      margin-left: auto; border-bottom-right-radius: 4px;
-    }
-    .demo-empty {
-      text-align: center; color: rgba(255,255,255,.4);
-      padding: 40px 20px; font-size: 14px;
-    }
-    .demo-input-row {
-      display: flex; gap: 10px;
-    }
-    .demo-input {
-      flex: 1;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 12px;
-      padding: 12px 16px;
-      color: white;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-    }
-    .demo-input::placeholder { color: rgba(255,255,255,.4); }
-    .demo-input:focus { outline: 2px solid var(--primary); }
-    .demo-send {
-      background: var(--primary); color: white;
-      border: none; border-radius: 12px;
-      padding: 12px 22px;
-      font-weight: 600; font-size: 14px;
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      transition: background .15s;
-    }
-    .demo-send:hover { background: var(--primary-dark); }
-    .demo-send:disabled { opacity: .5; cursor: not-allowed; }
-    .demo-suggestions {
-      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;
-    }
-    .demo-suggestion {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      color: rgba(255,255,255,.85);
-      padding: 7px 14px;
-      border-radius: 999px;
-      font-size: 12.5px;
-      cursor: pointer;
-      transition: all .15s;
-      font-family: 'DM Sans', sans-serif;
-    }
-    .demo-suggestion:hover {
-      background: rgba(255,255,255,.12);
-      border-color: rgba(255,255,255,.2);
-    }
-    .demo-typing {
-      display: inline-flex; gap: 4px; padding: 10px 14px;
-      background: rgba(255,255,255,.1); border-radius: 14px;
-      margin-bottom: 10px;
-    }
-    .demo-typing span {
-      width: 6px; height: 6px; background: rgba(255,255,255,.6);
-      border-radius: 50%;
-      animation: typing 1.4s infinite;
-    }
-    .demo-typing span:nth-child(2) { animation-delay: .2s; }
-    .demo-typing span:nth-child(3) { animation-delay: .4s; }
+/* ─── FAQ ─── */
+.faq-section { padding: 100px 0; background: var(--cream); }
+.faq-header { text-align: center; margin-bottom: 56px; }
+.faq-list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 2px; }
+.faq-item { background: white; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); transition: border-color .15s; }
+.faq-item.open { border-color: rgba(26,122,94,.3); }
+.faq-q { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; color: var(--ink); text-align: left; gap: 16px; transition: color .15s; }
+.faq-q:hover { color: var(--primary); }
+.faq-item.open .faq-q { color: var(--primary); }
+.chevron { font-size: 12px; color: var(--muted); flex-shrink: 0; transition: transform .25s; }
+.faq-item.open .chevron { transform: rotate(180deg); }
+.faq-a { padding: 0 24px; max-height: 0; overflow: hidden; transition: max-height .3s ease, padding .3s; }
+.faq-item.open .faq-a { max-height: 300px; padding: 0 24px 20px; }
+.faq-a p { font-size: 14px; line-height: 1.7; color: var(--text); }
 
-    /* ─── USE CASES ─── */
-    .use-cases {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 20px; margin-top: 40px;
-    }
-    .use-case {
-      background: white;
-      border: 1px solid var(--border-soft);
-      border-radius: var(--radius);
-      padding: 28px 24px;
-    }
-    .use-case-icon {
-      width: 46px; height: 46px;
-      background: var(--primary-soft); color: var(--primary);
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      margin-bottom: 16px;
-    }
-    .use-case h3 { font-size: 16px; margin-bottom: 8px; }
-    .use-case p { font-size: 14px; line-height: 1.6; }
+/* ─── CTA ─── */
+.cta-section { padding: 80px 0 100px; }
+.cta-box { position: relative; overflow: hidden; border-radius: 28px; background: url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1400&q=80') center/cover; padding: 80px 60px; text-align: center; }
+.cta-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(13,17,23,.92) 0%, rgba(26,122,94,.7) 100%); }
+.cta-content { position: relative; z-index: 1; }
+.cta-box h2 { font-size: clamp(28px,4vw,44px); color: white; margin-bottom: 14px; }
+.cta-box p { font-size: 17px; color: rgba(255,255,255,.7); margin-bottom: 36px; }
+.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.cta-trust { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+.cta-trust span { font-size: 13px; color: rgba(255,255,255,.45); display: flex; align-items: center; gap: 7px; }
+.cta-trust span i { color: #6ee7b7; }
 
-    /* ─── CONTROL & SAFETY ─── */
-    .control-box {
-      background: white;
-      border-radius: var(--radius);
-      padding: 40px;
-      max-width: 760px;
-      margin: 0 auto;
-      border: 1px solid var(--border-soft);
-    }
-    .control-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 26px; color: var(--ink);
-      margin-bottom: 24px; text-align: center;
-    }
-    .control-list { list-style: none; }
-    .control-list li {
-      display: flex; gap: 14px; align-items: flex-start;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border-soft);
-    }
-    .control-list li:last-child { border-bottom: none; }
-    .control-list i {
-      color: var(--primary); font-size: 16px;
-      margin-top: 3px; flex-shrink: 0;
-    }
-    .control-list span { font-size: 15px; color: var(--text); line-height: 1.5; }
+/* ─── FOOTER ─── */
+.site-footer { background: var(--ink); color: rgba(255,255,255,.5); padding: 60px 0 40px; }
+.footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: start; }
+.footer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.footer-brand span { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 17px; color: white; }
+.footer-copy { font-size: 13px; margin-bottom: 8px; }
+.footer-copy a { color: rgba(255,255,255,.6); }
+.footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+.footer-links a { font-size: 12px; color: rgba(255,255,255,.35); transition: color .15s; }
+.footer-links a:hover { color: rgba(255,255,255,.7); }
+.footer-badges { display: flex; gap: 12px; align-items: center; flex-direction: column; }
+.footer-badge { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 10px 16px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); display: flex; align-items: center; gap: 7px; }
+.footer-badge i { color: #6ee7b7; }
 
-    /* ─── TESTIMONIAL ─── */
-    .testimonial {
-      background: var(--cream);
-      border-radius: var(--radius);
-      padding: 40px 36px;
-      max-width: 760px;
-      margin: 0 auto;
-      text-align: center;
-    }
-    .testimonial blockquote {
-      font-family: 'Instrument Serif', serif;
-      font-size: 22px;
-      line-height: 1.5;
-      color: var(--ink);
-      margin-bottom: 20px;
-      font-style: italic;
-    }
-    .testimonial cite {
-      display: block;
-      font-style: normal;
-      font-size: 14px;
-      color: var(--muted);
-      font-weight: 500;
-    }
+/* ─── SCROLL REVEAL ─── */
+.reveal { opacity: 0; transform: translateY(32px); transition: opacity .7s cubic-bezier(.25,0,0,1), transform .7s cubic-bezier(.25,0,0,1); }
+.reveal.visible { opacity: 1; transform: none; }
+.reveal-delay-1 { transition-delay: .1s; }
+.reveal-delay-2 { transition-delay: .2s; }
+.reveal-delay-3 { transition-delay: .3s; }
 
-    /* ─── FAQ ─── */
-    .faq-list { max-width: 760px; margin: 0 auto; }
-    .faq-item {
-      background: white;
-      border: 1px solid var(--border-soft);
-      border-radius: 14px;
-      margin-bottom: 10px;
-      overflow: hidden;
-    }
-    .faq-q {
-      width: 100%; text-align: left;
-      background: none; border: none;
-      padding: 18px 22px;
-      font-size: 15px; font-weight: 600; color: var(--ink);
-      cursor: pointer;
-      display: flex; justify-content: space-between; align-items: center;
-      font-family: 'DM Sans', sans-serif;
-    }
-    .faq-q:hover { background: #FAFAF8; }
-    .faq-q .chevron { color: var(--primary); transition: transform .25s; }
-    .faq-item.open .faq-q .chevron { transform: rotate(180deg); }
-    .faq-a {
-      display: none;
-      padding: 0 22px 18px;
-      font-size: 14px; color: var(--text);
-      line-height: 1.7;
-    }
-    .faq-item.open .faq-a { display: block; }
-
-    /* ─── PRICING CALLOUT ─── */
-    .pricing-callout {
-      background: linear-gradient(135deg, var(--primary) 0%, #2AAE86 100%);
-      color: white;
-      border-radius: 24px;
-      padding: 48px 40px;
-      text-align: center;
-      max-width: 760px;
-      margin: 0 auto;
-    }
-    .pricing-callout h2 {
-      color: white;
-      font-size: 30px;
-      margin-bottom: 10px;
-    }
-    .pricing-callout p {
-      color: rgba(255,255,255,.9);
-      font-size: 16px;
-      margin-bottom: 28px;
-      max-width: 520px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .pricing-callout .btn-primary {
-      background: white; color: var(--primary);
-    }
-    .pricing-callout .btn-primary:hover { background: var(--cream); color: var(--primary-dark); }
-    .pricing-callout .btn-ghost {
-      background: rgba(255,255,255,.15); color: white;
-      border: 1.5px solid rgba(255,255,255,.3);
-    }
-    .pricing-callout .btn-ghost:hover { background: rgba(255,255,255,.25); }
-
-    /* ─── FOOTER ─── */
-    footer {
-      background: var(--ink); color: rgba(255,255,255,.7);
-      padding: 40px 0;
-      text-align: center;
-      font-size: 13.5px;
-    }
-    footer a { color: rgba(255,255,255,.85); }
-    footer a:hover { color: white; }
-
-    /* ─── RESPONSIVE ─── */
-    @media (max-width: 900px) {
-      section { padding: 56px 0; }
-      .hero { padding: 48px 0 40px; }
-      .hero-grid { grid-template-columns: 1fr; gap: 32px; }
-      .hero-chat { margin: 0 auto; }
-      .problem-grid, .steps, .use-cases { grid-template-columns: 1fr; }
-      .demo-wrap { padding: 32px 20px; border-radius: 20px; }
-      .control-box { padding: 28px 20px; }
-      .pricing-callout { padding: 36px 20px; }
-
-      .nav-main { display: none; }
-      .menu-toggle { display: block; }
-      .nav-main.open {
-        display: flex; flex-direction: column;
-        position: absolute; top: 100%; left: 0; right: 0;
-        background: white;
-        border-top: 1px solid var(--border-soft);
-        border-bottom: 1px solid var(--border-soft);
-        padding: 16px 24px; gap: 14px;
-      }
-      .header-actions .btn.small { display: none; }
-    }
-
-    @media (max-width: 520px) {
-      .hero h1 { font-size: 28px; }
-      .hero-actions { flex-direction: column; }
-      .hero-actions .btn { width: 100%; justify-content: center; }
-      .hero-trust { gap: 12px; font-size: 12px; }
-      .demo-send { padding: 12px 16px; }
-    }
-  </style>
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1024px) {
+  .hero-content { grid-template-columns: 1fr; }
+  .hero-right { display: none; }
+  .problem-grid { grid-template-columns: 1fr; }
+  .control-grid { grid-template-columns: 1fr; }
+  .steps-grid { grid-template-columns: 1fr; gap: 32px; }
+  .steps-grid::before { display: none; }
+  .step-card { text-align: left; padding: 0 0 0 80px; position: relative; }
+  .step-num { position: absolute; left: 0; top: 0; }
+  .footer-inner { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+  .usecases-grid { grid-template-columns: 1fr; }
+  .nav-main { display: none; }
+  .menu-toggle { display: block; }
+  .nav-main.open { display: flex; flex-direction: column; position: fixed; top: 62px; left: 0; right: 0; bottom: 0; background: rgba(250,250,248,.97); backdrop-filter: blur(20px); padding: 24px 28px; gap: 4px; overflow-y: auto; z-index: 190; }
+  .nav-main.open a { padding: 12px 16px; font-size: 16px; border-radius: 12px; }
+  .header-actions .btn-ghost { display: none; }
+  .cta-box { padding: 56px 28px; }
+  .testimonial-card { padding: 36px 24px; }
+}
+@media (max-width: 520px) {
+  .hero h1 { font-size: 32px; }
+  .hero-actions { flex-direction: column; }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .problem-grid { grid-template-columns: 1fr; }
+  .demo-suggestions { flex-direction: column; }
+}
+</style>
 </head>
-
 <body>
 
-<!-- ═══════════ HEADER ═══════════ -->
+<!-- TOP BANNER -->
+<a href="/register.html" class="top-banner">
+  <span class="top-banner-pill"><i class="fas fa-sparkles" style="margin-right:4px;"></i>IA incluse</span>
+  <span class="top-banner-text">Incluse dans tous les plans · Aucun surcoût par message</span>
+  <span class="top-banner-link">Démarrer gratuitement <i class="fas fa-arrow-right" style="font-size:10px;"></i></span>
+</a>
+
+<!-- HEADER -->
 <header class="site-header">
   <div class="header-inner">
     <a href="/" class="logo-link">
-      <span class="logo-icon"><img src="data:image/png;base64,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" alt="Boostinghost"></span>
-      <span><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></span>
+      <span class="logo-icon"><img src="/images/logo.png" alt="Boostinghost"></span>
+      <span>Boosting<span class="brand-host">host</span></span>
     </a>
-
     <nav class="nav-main" id="navMain">
       <a href="/#features">Fonctionnalités</a>
-      <a href="/ia.html" class="active">IA</a>
+      <a href="/ia.html" class="active"><i class="fas fa-sparkles" style="font-size:11px;margin-right:3px;"></i>IA</a>
+      <a href="/#comment">Comment ça marche</a>
       <a href="/pricing.html">Tarifs</a>
       <a href="/blog.html">Blog</a>
     </nav>
-
     <div class="header-actions">
-      <a href="/login.html" class="btn btn-ghost small">Se connecter</a>
-      <a href="/register.html" class="btn btn-primary small">Créer un compte</a>
+      <a href="/login.html" class="btn btn-ghost" style="padding:9px 16px;font-size:13px;">Se connecter</a>
+      <a href="/register.html" class="btn btn-primary" style="padding:9px 16px;font-size:13px;">Démarrer gratuitement</a>
       <button class="menu-toggle" onclick="document.getElementById('navMain').classList.toggle('open')">
         <i class="fas fa-bars"></i>
       </button>
@@ -659,97 +369,104 @@
   </div>
 </header>
 
-<!-- ═══════════ HERO ═══════════ -->
+<!-- ═══ HERO ═══ -->
 <section class="hero">
-  <div class="container hero-grid">
-    <div>
-      <div class="hero-badge">
-        <i class="fas fa-sparkles"></i>
-        Nouveau — Propulsé par l'IA
-      </div>
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-left">
+      <div class="hero-badge"><i class="fas fa-sparkles"></i> Propulsé par Groq AI · 3 secondes</div>
       <h1>L'assistant IA qui répond à vos voyageurs <em>pendant que vous vivez votre vie.</em></h1>
-      <p class="hero-subtitle">
-        Réponses instantanées, 24h/24, dans 26 langues. L'IA connaît vos logements par cœur :
-        accès, WiFi, règles, recommandations — et sait quand vous passer la main.
-      </p>
+      <p class="hero-sub">Réponses instantanées 24h/24 dans 26 langues. L'IA connaît vos logements par cœur : accès, WiFi, règles, recommandations — et sait quand vous passer la main.</p>
       <div class="hero-actions">
-        <a href="#demo" class="btn btn-primary btn-large">
-          <i class="fas fa-play"></i>
-          Essayer l'IA maintenant
-        </a>
-        <a href="/register.html" class="btn btn-ghost btn-large">
-          <i class="fas fa-rocket"></i>
-          Créer mon compte gratuit
-        </a>
+        <a href="#demo" class="btn btn-white btn-lg"><i class="fas fa-play"></i> Essayer l'IA maintenant</a>
+        <a href="/register.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.25);color:white;"><i class="fas fa-rocket"></i> Créer mon compte gratuit</a>
       </div>
       <div class="hero-trust">
-        <span><i class="fas fa-bolt"></i>Réponse moyenne : 3 secondes</span>
-        <span><i class="fas fa-globe"></i>26 langues</span>
-        <span><i class="fas fa-brain"></i>Apprend de vos livrets</span>
+        <div class="hero-trust-item"><i class="fas fa-bolt"></i> Réponse moyenne : 3s</div>
+        <div class="hero-trust-item"><i class="fas fa-globe"></i> 26 langues</div>
+        <div class="hero-trust-item"><i class="fas fa-circle-check"></i> Incluse sans surcoût</div>
       </div>
     </div>
-
-    <!-- Chat animé à droite -->
-    <div class="hero-chat">
-      <div class="hero-chat-header">
-        <span class="hero-chat-title">Messagerie Boostinghost</span>
-        <span class="hero-chat-tag">IA active</span>
+    <div class="hero-right">
+      <div class="hero-chat-card">
+        <div class="hero-chat-header">
+          <div class="hero-chat-title"><div class="hero-chat-dot"></div> Messagerie Boostinghost</div>
+          <span class="hero-chat-tag">IA active</span>
+        </div>
+        <div id="heroChatBody"></div>
       </div>
-      <div id="heroChatBody"></div>
     </div>
+  </div>
+  <div class="hero-scroll">
+    <span>Découvrir</span>
+    <div class="hero-scroll-line"></div>
   </div>
 </section>
 
-<!-- ═══════════ PROBLÈME ═══════════ -->
-<section class="alt">
-  <div class="container">
-    <h2 class="section-title">Le problème de tous les hôtes</h2>
-    <p class="section-subtitle">Vous le vivez déjà. On l'a vécu aussi.</p>
+<!-- ═══ STATS ═══ -->
+<div class="stats-band reveal">
+  <div class="stats-grid">
+    <div class="stat-box"><div class="stat-num">3s</div><div class="stat-desc">temps de réponse<br>moyen de l'IA</div></div>
+    <div class="stat-box"><div class="stat-num">26</div><div class="stat-desc">langues gérées<br>automatiquement</div></div>
+    <div class="stat-box"><div class="stat-num">80%</div><div class="stat-desc">des questions<br>automatisées</div></div>
+    <div class="stat-box"><div class="stat-num">0€</div><div class="stat-desc">de surcoût<br>incluse dans tous les plans</div></div>
+  </div>
+</div>
 
-    <div class="problem-grid">
+<!-- ═══ PROBLEM ═══ -->
+<section class="problem-section">
+  <div class="container">
+    <div class="problem-header reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-triangle-exclamation"></i> Le problème</div>
+      <h2 class="section-title">Le problème de tous les hôtes</h2>
+      <p class="section-sub" style="margin:0 auto;">Vous le vivez déjà. On l'a vécu aussi.</p>
+    </div>
+    <div class="problem-grid reveal">
       <div class="problem-card">
-        <div class="stat">73%</div>
-        <p>des voyageurs envoient leur premier message <strong>hors heures de bureau</strong> (soir, nuit, weekend).</p>
+        <div class="problem-stat">73%</div>
+        <p>des voyageurs envoient leur premier message <strong>hors heures de bureau</strong> — soir, nuit, weekend.</p>
       </div>
       <div class="problem-card">
-        <div class="stat">80%</div>
-        <p>des questions sont les mêmes : <strong>code WiFi, heure d'arrivée, où se garer</strong>, code d'accès, recommandations.</p>
+        <div class="problem-stat">80%</div>
+        <p>des questions sont toujours les mêmes : <strong>code WiFi, heure d'arrivée, où se garer</strong>, code d'accès, recos.</p>
       </div>
       <div class="problem-card">
-        <div class="stat">3×</div>
-        <p>plus de temps pour répondre en <strong>anglais, allemand, espagnol</strong> — surtout quand on jongle avec Google Traduction.</p>
+        <div class="problem-stat">3×</div>
+        <p>plus de temps pour répondre en <strong>anglais, allemand, espagnol</strong> — surtout avec Google Traduction.</p>
       </div>
       <div class="problem-card">
-        <div class="stat">1h</div>
+        <div class="problem-stat">1h</div>
         <p>sans réponse = <strong>risque de mauvaise note</strong> Airbnb sur le critère "communication".</p>
       </div>
     </div>
-
-    <p style="text-align:center;margin-top:40px;font-size:17px;color:var(--text);">
-      Vous avez le choix : être collé à votre téléphone, ou déléguer à quelqu'un.<br>
-      <strong style="color:var(--primary);">Il y en a un troisième maintenant.</strong>
-    </p>
+    <div class="problem-cta reveal">
+      <p>Vous avez le choix : être collé à votre téléphone, ou déléguer à quelqu'un.</p>
+      <strong>Il y en a un troisième maintenant.</strong>
+    </div>
   </div>
 </section>
 
-<!-- ═══════════ COMMENT ÇA MARCHE ═══════════ -->
-<section>
+<!-- ═══ HOW IT WORKS ═══ -->
+<section class="section how-section">
   <div class="container">
-    <h2 class="section-title">3 étapes, et l'IA prend le relais</h2>
-    <p class="section-subtitle">Pas de configuration technique. Pas de scripts à écrire. Ça marche, c'est tout.</p>
-
-    <div class="steps">
-      <div class="step">
+    <div class="how-header reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-rocket"></i> Mise en route</div>
+      <h2 class="section-title" style="text-align:center;">3 étapes, et l'IA prend le relais</h2>
+      <p class="section-sub" style="margin:0 auto;">Pas de configuration technique. Pas de scripts à écrire. Ça marche, c'est tout.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal reveal-delay-1">
         <div class="step-num">1</div>
         <h3>Vous remplissez votre livret</h3>
         <p>Adresse, code d'accès, WiFi, horaires, règles, recos locales. L'IA apprend tout ce qui concerne chaque logement.</p>
       </div>
-      <div class="step">
+      <div class="step-card reveal reveal-delay-2">
         <div class="step-num">2</div>
         <h3>L'IA reçoit les messages</h3>
         <p>Airbnb, Booking, Abritel, réservations directes. Tout arrive dans votre messagerie Boostinghost, centralisée.</p>
       </div>
-      <div class="step">
+      <div class="step-card reveal reveal-delay-3">
         <div class="step-num">3</div>
         <h3>Elle répond en 3 secondes</h3>
         <p>Dans la langue du voyageur, avec les bonnes infos. Si elle doute, elle vous alerte. Vous reprenez la main en 1 clic.</p>
@@ -758,69 +475,64 @@
   </div>
 </section>
 
-<!-- ═══════════ DÉMO LIVE ═══════════ -->
-<section id="demo" class="alt">
+<!-- ═══ DEMO ═══ -->
+<section class="demo-section" id="demo">
   <div class="container">
-    <div class="demo-wrap">
-      <h2>Essayez l'IA maintenant</h2>
-      <p class="demo-sub">Posez-lui une question comme si vous étiez un voyageur. Elle répond en vrai, avec Groq AI.</p>
-
-      <div class="demo-context">
-        <i class="fas fa-home"></i>
-        <div>
-          <strong>Logement de démonstration :</strong> Studio cosy près de la gare, 2 voyageurs max, code d'accès 4821, WiFi "WelcomeToParis2026", check-in 16h, check-out 11h, restaurant recommandé "Le Comptoir du Coin".
+    <div class="demo-header reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-play-circle"></i> Démo live</div>
+      <h2 class="section-title" style="text-align:center;">Essayez l'IA maintenant</h2>
+      <p class="section-sub" style="margin:0 auto;">Posez-lui une question comme si vous étiez un voyageur. Elle répond en vrai, avec Groq AI.</p>
+    </div>
+    <div class="demo-inner reveal">
+      <div class="demo-box">
+        <div class="demo-topbar">
+          <div class="demo-topbar-dot"></div>
+          <div class="demo-topbar-title">Messagerie · Studio démo</div>
+          <div class="demo-topbar-badge"><i class="fas fa-sparkles" style="margin-right:5px;"></i>IA active</div>
         </div>
-      </div>
-
-      <div class="demo-chat" id="demoChat">
-        <div class="demo-empty" id="demoEmpty">
-          ↓ Tapez votre question ou cliquez sur une suggestion ci-dessous ↓
+        <div class="demo-context">
+          <i class="fas fa-home"></i>
+          <div><strong>Logement de démonstration :</strong> Studio cosy près de la gare, 2 voyageurs max, code d'accès 4821, WiFi "WelcomeToParis2026", check-in 16h, check-out 11h, restaurant recommandé "Le Comptoir du Coin".</div>
         </div>
-      </div>
-
-      <div class="demo-input-row">
-        <input
-          type="text"
-          id="demoInput"
-          class="demo-input"
-          placeholder="Ex: What time can we check in?"
-          onkeypress="if(event.key==='Enter') sendDemoMessage()"
-          maxlength="200"
-        >
-        <button class="demo-send" id="demoSendBtn" onclick="sendDemoMessage()">
-          <i class="fas fa-paper-plane"></i> Envoyer
-        </button>
-      </div>
-
-      <div class="demo-suggestions">
-        <button class="demo-suggestion" onclick="useSuggestion('Hi, what time can we check in tomorrow?')">🇬🇧 What time is check-in?</button>
-        <button class="demo-suggestion" onclick="useSuggestion('Hola, ¿cuál es la contraseña WiFi?')">🇪🇸 WiFi en espagnol</button>
-        <button class="demo-suggestion" onclick="useSuggestion('Guten Tag, können Sie ein Restaurant empfehlen?')">🇩🇪 Resto en allemand</button>
-        <button class="demo-suggestion" onclick="useSuggestion('Bonjour, comment accéder au logement ?')">🇫🇷 Comment accéder ?</button>
+        <div class="demo-chat" id="demoChat">
+          <div class="demo-empty" id="demoEmpty">↓ Tapez votre question ou cliquez sur une suggestion ↓</div>
+        </div>
+        <div class="demo-input-row">
+          <input type="text" id="demoInput" class="demo-input" placeholder="Ex: What time can we check in?" onkeypress="if(event.key==='Enter') sendDemoMessage()" maxlength="200">
+          <button class="demo-send" id="demoSendBtn" onclick="sendDemoMessage()"><i class="fas fa-paper-plane"></i> Envoyer</button>
+        </div>
+        <div class="demo-suggestions">
+          <button class="demo-suggestion" onclick="useSuggestion('Hi, what time can we check in tomorrow?')">🇬🇧 Check-in time?</button>
+          <button class="demo-suggestion" onclick="useSuggestion('Hola, ¿cuál es la contraseña WiFi?')">🇪🇸 WiFi en espagnol</button>
+          <button class="demo-suggestion" onclick="useSuggestion('Guten Tag, können Sie ein Restaurant empfehlen?')">🇩🇪 Resto en allemand</button>
+          <button class="demo-suggestion" onclick="useSuggestion('Bonjour, comment accéder au logement ?')">🇫🇷 Comment accéder ?</button>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ CAS D'USAGE ═══════════ -->
-<section>
+<!-- ═══ USE CASES ═══ -->
+<section class="usecases-section">
   <div class="container">
-    <h2 class="section-title">Les cas où l'IA change tout</h2>
-    <p class="section-subtitle">Trois situations vécues par tous les hôtes. Trois réponses automatiques parfaites.</p>
-
-    <div class="use-cases">
-      <div class="use-case">
-        <div class="use-case-icon"><i class="fas fa-moon"></i></div>
+    <div style="text-align:center;" class="reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-bolt"></i> Cas d'usage</div>
+      <h2 class="section-title" style="text-align:center;">Les cas où l'IA change tout</h2>
+      <p class="section-sub" style="margin:0 auto;">Trois situations vécues par tous les hôtes. Trois réponses automatiques parfaites.</p>
+    </div>
+    <div class="usecases-grid">
+      <div class="usecase-card reveal reveal-delay-1">
+        <div class="usecase-icon"><i class="fas fa-moon"></i></div>
         <h3>Message à 2h du matin</h3>
-        <p>Réponse à 2h00:03. Plus jamais de mauvaise note pour réactivité. L'IA ne dort jamais, et vous si.</p>
+        <p>Réponse à 2h00:03. Plus jamais de mauvaise note pour réactivité. L'IA ne dort jamais — et vous si.</p>
       </div>
-      <div class="use-case">
-        <div class="use-case-icon"><i class="fas fa-language"></i></div>
+      <div class="usecase-card reveal reveal-delay-2">
+        <div class="usecase-icon"><i class="fas fa-language"></i></div>
         <h3>Voyageur japonais</h3>
-        <p>Réponse en japonais.26 langues supportées sans config. Finies les copier-coller dans Google Traduction.</p>
+        <p>Réponse en japonais. 26 langues supportées sans config. Finies les copier-coller dans Google Traduction.</p>
       </div>
-      <div class="use-case">
-        <div class="use-case-icon"><i class="fas fa-key"></i></div>
+      <div class="usecase-card reveal reveal-delay-3">
+        <div class="usecase-icon"><i class="fas fa-key"></i></div>
         <h3>"C'est quoi le code WiFi ?"</h3>
         <p>Les 3 mêmes questions reviennent tout le temps : code d'accès, WiFi, heure d'arrivée. Automatisées à 100%.</p>
       </div>
@@ -828,330 +540,268 @@
   </div>
 </section>
 
-<!-- ═══════════ CONTRÔLE & SÉCURITÉ ═══════════ -->
-<section class="alt">
+<!-- ═══ CONTROL ═══ -->
+<section class="control-section">
   <div class="container">
-    <div class="control-box">
-      <div class="control-title">"Mais est-ce que l'IA répond n'importe quoi ?"</div>
-      <ul class="control-list">
-        <li>
-          <i class="fas fa-shield-check"></i>
-          <span><strong>Répond uniquement avec les infos de vos livrets</strong> et de la réservation en cours. Pas d'invention, pas d'hallucination.</span>
-        </li>
-        <li>
-          <i class="fas fa-bell"></i>
-          <span><strong>Escalade automatique</strong> si elle doute : alerte push sur votre téléphone, vous reprenez la main en 1 clic.</span>
-        </li>
-        <li>
-          <i class="fas fa-eye"></i>
-          <span><strong>Vous lisez toutes les conversations</strong> en temps réel. Historique complet : qui a dit quoi, quand, pourquoi.</span>
-        </li>
-        <li>
-          <i class="fas fa-toggle-off"></i>
-          <span><strong>Désactivable à tout moment</strong>, par logement ou globalement. Vous gardez le contrôle absolu.</span>
-        </li>
-        <li>
-          <i class="fas fa-lock"></i>
-          <span><strong>Vos données restent en Europe.</strong> Conversations chiffrées, RGPD-compliant, jamais utilisées pour entraîner des modèles tiers.</span>
-        </li>
-      </ul>
+    <div class="control-header reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-shield-halved"></i> Sécurité & contrôle</div>
+      <h2 class="section-title">"Mais est-ce que l'IA répond n'importe quoi ?"</h2>
+      <p class="section-sub" style="margin:0 auto;">Non. Voici précisément comment ça fonctionne.</p>
     </div>
-  </div>
-</section>
-
-<!-- ═══════════ TÉMOIGNAGE ═══════════ -->
-<section>
-  <div class="container">
-    <div class="testimonial">
-      <blockquote>
-        "Je gère 13 logements dans le Val d'Oise. Avant, je répondais aux messages toute la journée, même pendant les ménages, même le dimanche. Depuis l'IA, je ne réponds qu'aux vrais cas complexes. J'ai récupéré 2h par jour. Mes notes Airbnb sur la communication sont passées de 4,7 à 4,9."
-      </blockquote>
-      <cite>Simon · La Conciergerie de Simon · 13 logements</cite>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ FAQ ═══════════ -->
-<section class="alt">
-  <div class="container">
-    <h2 class="section-title">Questions fréquentes</h2>
-    <p class="section-subtitle">Tout ce que vous vous demandez avant de tester.</p>
-
-    <div class="faq-list">
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          L'IA répond-elle vraiment dans toutes les langues ?
-          <i class="fas fa-chevron-down chevron"></i>
-        </button>
-        <div class="faq-a">
-          <p>Oui, grâce à l'intégration DeepL, l'IA détecte automatiquement la langue du voyageur et répond dans celle-ci. 26 langues supportées : anglais, espagnol, allemand, italien, portugais, néerlandais, polonais, japonais, chinois, russe, et plus encore.</p>
+    <div class="control-grid reveal">
+      <div class="control-item">
+        <div class="control-item-icon"><i class="fas fa-shield-check"></i></div>
+        <div>
+          <h3>Répond uniquement avec vos infos</h3>
+          <p><strong>Pas d'invention, pas d'hallucination.</strong> L'IA utilise exclusivement ce que vous avez renseigné dans vos livrets et la réservation en cours.</p>
         </div>
       </div>
-
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          Que se passe-t-il si elle ne connaît pas la réponse ?
-          <i class="fas fa-chevron-down chevron"></i>
-        </button>
-        <div class="faq-a">
-          <p>Si la question sort du cadre de votre livret (ex : demande spécifique sur un problème technique), l'IA <strong>escalade automatiquement</strong> : elle vous envoie une notification push et met la conversation en attente de votre réponse. Vous gardez le contrôle final.</p>
+      <div class="control-item">
+        <div class="control-item-icon"><i class="fas fa-bell"></i></div>
+        <div>
+          <h3>Escalade automatique si doute</h3>
+          <p>Si elle ne sait pas : <strong>alerte push sur votre téléphone</strong>, conversation en attente. Vous reprenez la main en 1 clic.</p>
         </div>
       </div>
-
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          Peut-on désactiver l'IA sur certains logements ?
-          <i class="fas fa-chevron-down chevron"></i>
-        </button>
-        <div class="faq-a">
-          <p>Absolument. Vous pouvez activer/désactiver l'IA logement par logement, ou globalement. Certains hôtes préfèrent la garder active sur leur portefeuille standard mais la désactiver pour leur logement haut de gamme où ils veulent un contact 100% humain.</p>
+      <div class="control-item">
+        <div class="control-item-icon"><i class="fas fa-eye"></i></div>
+        <div>
+          <h3>Vous lisez tout en temps réel</h3>
+          <p>Historique complet : <strong>qui a dit quoi, quand, pourquoi</strong>. Rien ne se passe dans votre dos.</p>
         </div>
       </div>
-
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          Les conversations sont-elles privées ?
-          <i class="fas fa-chevron-down chevron"></i>
-        </button>
-        <div class="faq-a">
-          <p>Oui. Vos conversations sont stockées chiffrées sur des serveurs en Europe (UE). Elles ne sont <strong>jamais utilisées</strong> pour entraîner des modèles tiers. Groq, notre fournisseur d'inférence IA, traite chaque message sans le conserver. RGPD-compliant.</p>
+      <div class="control-item">
+        <div class="control-item-icon"><i class="fas fa-toggle-off"></i></div>
+        <div>
+          <h3>Désactivable à tout moment</h3>
+          <p>Par logement ou globalement. <strong>Vous gardez le contrôle absolu.</strong> L'IA est un outil, pas un patron.</p>
         </div>
       </div>
-
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          Ça fonctionne avec Airbnb, Booking, Abritel ?
-          <i class="fas fa-chevron-down chevron"></i>
-        </button>
-        <div class="faq-a">
-          <p>Oui. Via notre channel manager intégré, tous les messages Airbnb, Booking.com, Expedia et Abritel arrivent dans la messagerie Boostinghost. L'IA les traite tous de la même manière.</p>
-        </div>
-      </div>
-
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          Combien ça coûte en plus ?
-          <i class="fas fa-chevron-down chevron"></i>
-        </button>
-        <div class="faq-a">
-          <p><strong>Rien de plus.</strong> L'IA est incluse dans tous les plans Boostinghost, sans surcoût au message, sans limite d'utilisation. Votre abonnement mensuel couvre tout.</p>
+      <div class="control-item" style="grid-column: span 2;">
+        <div class="control-item-icon"><i class="fas fa-lock"></i></div>
+        <div>
+          <h3>Données en Europe, RGPD-compliant</h3>
+          <p>Conversations chiffrées, hébergées en UE. <strong>Jamais utilisées</strong> pour entraîner des modèles tiers. Groq traite chaque message sans le conserver.</p>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ CTA FINAL ═══════════ -->
-<section>
+<!-- ═══ TESTIMONIAL ═══ -->
+<section class="testimonial-section">
   <div class="container">
-    <div class="pricing-callout">
-      <h2>Testez gratuitement pendant 14 jours</h2>
-      <p>Aucune carte demandée. Accès complet à l'IA, à tous les logements, à toutes les fonctionnalités.</p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <a href="/register.html" class="btn btn-primary btn-large">
-          <i class="fas fa-rocket"></i>
-          Créer mon compte gratuit
-        </a>
-        <a href="/pricing.html" class="btn btn-ghost btn-large">
-          Voir les tarifs
-        </a>
+    <div class="testimonial-card reveal">
+      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+      <div class="testimonial-text">"Je gère 13 logements dans le Val d'Oise. Avant, je répondais aux messages toute la journée, même pendant les ménages, même le dimanche. Depuis l'IA, je ne réponds qu'aux vrais cas complexes. J'ai récupéré 2h par jour. Mes notes sur la communication sont passées de 4,7 à 4,9."</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">S</div>
+        <div>
+          <div class="testimonial-name">Simon</div>
+          <div class="testimonial-role">Conciergerie Val d'Oise · 13 logements</div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ FOOTER ═══════════ -->
-<footer>
+<!-- ═══ FAQ ═══ -->
+<section class="faq-section">
   <div class="container">
-    <p>© 2026 Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a> · <a href="/privacy.html">Confidentialité</a> · <a href="/cgu.html">CGU</a></p>
+    <div class="faq-header reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-circle-question"></i> FAQ</div>
+      <h2 class="section-title" style="text-align:center;">Questions fréquentes</h2>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">L'IA répond-elle vraiment dans toutes les langues ?<i class="fas fa-chevron-down chevron"></i></button>
+        <div class="faq-a"><p>Oui, grâce à l'intégration DeepL. L'IA détecte automatiquement la langue du voyageur et répond dans celle-ci. 26 langues : anglais, espagnol, allemand, italien, portugais, néerlandais, polonais, japonais, chinois, russe, et plus encore.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Que se passe-t-il si elle ne connaît pas la réponse ?<i class="fas fa-chevron-down chevron"></i></button>
+        <div class="faq-a"><p>Si la question sort du cadre de votre livret, l'IA escalade automatiquement : notification push sur votre téléphone, conversation en attente. Vous gardez le contrôle final.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Peut-on désactiver l'IA sur certains logements ?<i class="fas fa-chevron-down chevron"></i></button>
+        <div class="faq-a"><p>Absolument. Vous pouvez activer/désactiver l'IA logement par logement ou globalement. Certains hôtes préfèrent la garder active sur leur portefeuille standard et la désactiver pour leurs biens haut de gamme.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Les conversations sont-elles privées ?<i class="fas fa-chevron-down chevron"></i></button>
+        <div class="faq-a"><p>Oui. Conversations chiffrées, serveurs en Europe (UE). Jamais utilisées pour entraîner des modèles tiers. Groq traite chaque message sans le conserver. RGPD-compliant.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Ça fonctionne avec Airbnb, Booking, Abritel ?<i class="fas fa-chevron-down chevron"></i></button>
+        <div class="faq-a"><p>Oui. Via notre channel manager intégré, tous les messages Airbnb, Booking.com, Expedia et Abritel arrivent dans la messagerie Boostinghost. L'IA les traite tous de la même manière.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Combien ça coûte en plus ?<i class="fas fa-chevron-down chevron"></i></button>
+        <div class="faq-a"><p><strong>Rien de plus.</strong> L'IA est incluse dans tous les plans Boostinghost, sans surcoût au message, sans limite d'utilisation. Votre abonnement mensuel couvre tout.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-box reveal">
+      <div class="cta-overlay"></div>
+      <div class="cta-content">
+        <h2>Testez gratuitement pendant 14 jours</h2>
+        <p>Aucune carte demandée. Accès complet à l'IA, à tous les logements, à toutes les fonctionnalités.</p>
+        <div class="cta-actions">
+          <a href="/register.html" class="btn btn-white btn-lg"><i class="fas fa-rocket"></i> Créer mon compte gratuit</a>
+          <a href="/pricing.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.3);color:white;">Voir les tarifs</a>
+        </div>
+        <div class="cta-trust">
+          <span><i class="fas fa-shield-alt"></i> Données hébergées en UE</span>
+          <span><i class="fas fa-mobile-screen"></i> Web, iOS & Android</span>
+          <span><i class="fas fa-circle-check"></i> Sans engagement</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand"><span>Boosting<span class="brand-host">host</span></span></div>
+      <p class="footer-copy">© 2026 Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+      <div class="footer-links">
+        <a href="/mentions-legales.html">Mentions légales</a>
+        <a href="/politique-confidentialite.html">Confidentialité</a>
+        <a href="/cgu.html">CGU</a>
+        <a href="/cgv.html">CGV</a>
+        <a href="/">Accueil</a>
+        <a href="/pricing.html">Tarifs</a>
+      </div>
+    </div>
+    <div class="footer-badges">
+      <div class="footer-badge"><i class="fas fa-shield-alt"></i> RGPD · Données en UE</div>
+      <div class="footer-badge"><i class="fab fa-apple"></i> App Store</div>
+      <div class="footer-badge"><i class="fab fa-google-play"></i> Google Play</div>
+    </div>
   </div>
 </footer>
 
 <script>
-  /* ─────────────────────────────────────────────
-     HERO CHAT ANIMATION (loop, optimisée mobile)
-     ───────────────────────────────────────────── */
-  const heroSequence = [
-    { type: 'guest', lang: '🇬🇧', text: "Hi, what's the WiFi password?", delay: 800 },
-    { type: 'typing', delay: 700 },
-    { type: 'ai', text: 'Hello! 👋 WiFi: <strong>WelcomeToParis2026</strong>. Let me know if you need anything else!', meta: 'Répondu en 2.4s', delay: 2800 },
-    { type: 'guest', lang: '🇩🇪', text: 'Wo können wir abends essen?', delay: 1400 },
-    { type: 'typing', delay: 600 },
-    { type: 'ai', text: 'Ich empfehle <strong>"Le Comptoir du Coin"</strong>, 5 Min. zu Fuß. Ausgezeichnete französische Küche! 🍷', meta: 'Traduit via DeepL · 1.9s', delay: 2800 },
-  ];
+/* ─── Scroll reveal ─── */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  // État animation
-  const heroChat = document.getElementById('heroChatBody');
-  let heroTimers = [];
-  let heroRunning = false;
-  let heroVisible = true;
-  // Réduire automatiquement l'animation si user préfère ça
-  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* ─── Mobile menu ─── */
+document.querySelectorAll('#navMain a').forEach(a => {
+  a.addEventListener('click', () => document.getElementById('navMain').classList.remove('open'));
+});
 
-  function clearHeroTimers() {
-    heroTimers.forEach(id => clearTimeout(id));
-    heroTimers = [];
-  }
+/* ─── HERO CHAT ANIMATION ─── */
+const heroSequence = [
+  { type: 'guest', lang: '🇬🇧', text: "Hi, what's the WiFi password?", delay: 800 },
+  { type: 'typing', delay: 700 },
+  { type: 'ai', text: 'Hello! 👋 WiFi: <strong>WelcomeToParis2026</strong>. Let me know if you need anything else!', meta: 'Répondu en 2.4s', delay: 2800 },
+  { type: 'guest', lang: '🇩🇪', text: 'Wo können wir abends essen?', delay: 1400 },
+  { type: 'typing', delay: 600 },
+  { type: 'ai', text: 'Ich empfehle <strong>"Le Comptoir du Coin"</strong>, 5 Min. zu Fuß. Ausgezeichnete französische Küche! 🍷', meta: 'Traduit via DeepL · 1.9s', delay: 2800 },
+];
+const heroChat = document.getElementById('heroChatBody');
+let heroTimers = [], heroRunning = false, heroVisible = true;
+const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-  function runHeroAnimation() {
-    if (!heroChat || !heroVisible || heroRunning) return;
-    heroRunning = true;
-    heroChat.innerHTML = '';
-    let delay = 400;
+function clearHeroTimers() { heroTimers.forEach(clearTimeout); heroTimers = []; }
 
-    heroSequence.forEach((item) => {
-      const id = setTimeout(() => {
-        if (!heroVisible) return; // abort si plus visible
-        if (item.type === 'typing') {
-          const t = document.createElement('div');
-          t.className = 'chat-typing';
-          t.innerHTML = '<span></span><span></span><span></span>';
-          t.id = 'tmp-typing';
-          heroChat.appendChild(t);
-        } else {
-          const existing = document.getElementById('tmp-typing');
-          if (existing) existing.remove();
-          const m = document.createElement('div');
-          m.className = 'chat-msg ' + item.type;
-          m.innerHTML = (item.lang ? `<small>${item.lang}</small>` : '') + item.text + (item.meta ? `<small>${item.meta}</small>` : '');
-          heroChat.appendChild(m);
-        }
-      }, delay);
-      heroTimers.push(id);
-      delay += item.delay;
-    });
-
-    // Pause de 4s entre deux cycles, puis relance (seulement si visible)
-    const loopId = setTimeout(() => {
-      heroRunning = false;
-      if (heroVisible) runHeroAnimation();
-    }, delay + 4000);
-    heroTimers.push(loopId);
-  }
-
-  // Pause si user préfère motion-reduce : on joue une seule fois puis stop
-  if (prefersReduced) {
-    runHeroAnimation();
-    // on laisse tourner une seule itération (pas de relance)
-    setTimeout(() => { heroVisible = false; clearHeroTimers(); }, 15000);
-  } else if ('IntersectionObserver' in window && heroChat) {
-    // Démarrer seulement quand le chat est à l'écran, et stopper quand on scroll loin
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          heroVisible = true;
-          if (!heroRunning) runHeroAnimation();
-        } else {
-          heroVisible = false;
-          clearHeroTimers();
-          heroRunning = false;
-        }
-      });
-    }, { threshold: 0.1 });
-    observer.observe(heroChat);
-  } else {
-    // Fallback vieux navigateurs
-    runHeroAnimation();
-  }
-
-  // Pause aussi quand l'onglet passe en arrière-plan (pas de rendu inutile)
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      heroVisible = false;
-      clearHeroTimers();
-      heroRunning = false;
-    } else {
-      heroVisible = true;
-      if (!heroRunning) runHeroAnimation();
-    }
-  });
-
-  /* ─────────────────────────────────────────────
-     DEMO INTERACTIVE
-     ───────────────────────────────────────────── */
-  const demoChat = document.getElementById('demoChat');
-  const demoInput = document.getElementById('demoInput');
-  const demoSendBtn = document.getElementById('demoSendBtn');
-
-  function useSuggestion(text) {
-    demoInput.value = text;
-    sendDemoMessage();
-  }
-
-  function addDemoMsg(type, text) {
-    // Remove empty state
-    const empty = document.getElementById('demoEmpty');
-    if (empty) empty.remove();
-
-    const msg = document.createElement('div');
-    msg.className = 'demo-msg ' + type;
-    msg.textContent = text;
-    demoChat.appendChild(msg);
-    demoChat.scrollTop = demoChat.scrollHeight;
-    return msg;
-  }
-
-  function addDemoTyping() {
-    const t = document.createElement('div');
-    t.className = 'demo-typing';
-    t.id = 'demoTyping';
-    t.innerHTML = '<span></span><span></span><span></span>';
-    demoChat.appendChild(t);
-    demoChat.scrollTop = demoChat.scrollHeight;
-  }
-
-  function removeDemoTyping() {
-    const t = document.getElementById('demoTyping');
-    if (t) t.remove();
-  }
-
-  async function sendDemoMessage() {
-    const text = demoInput.value.trim();
-    if (!text) return;
-
-    addDemoMsg('guest', text);
-    demoInput.value = '';
-    demoInput.disabled = true;
-    demoSendBtn.disabled = true;
-    addDemoTyping();
-
-    try {
-      const res = await fetch('/api/demo/ai-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text })
-      });
-
-      if (!res.ok) throw new Error('API error');
-
-      const data = await res.json();
-      removeDemoTyping();
-
-      if (data.reply) {
-        addDemoMsg('ai', data.reply);
+function runHeroAnimation() {
+  if (!heroChat || !heroVisible || heroRunning) return;
+  heroRunning = true; heroChat.innerHTML = '';
+  let delay = 400;
+  heroSequence.forEach(item => {
+    const id = setTimeout(() => {
+      if (!heroVisible) return;
+      if (item.type === 'typing') {
+        const t = document.createElement('div');
+        t.className = 'chat-typing'; t.id = 'tmp-typing';
+        t.innerHTML = '<span></span><span></span><span></span>';
+        heroChat.appendChild(t);
       } else {
-        addDemoMsg('ai', "Désolé, je n'ai pas pu générer de réponse. Réessayez dans quelques secondes !");
+        document.getElementById('tmp-typing')?.remove();
+        const m = document.createElement('div');
+        m.className = 'chat-msg ' + item.type;
+        m.innerHTML = (item.lang ? `<small>${item.lang}</small>` : '') + item.text + (item.meta ? `<small>${item.meta}</small>` : '');
+        heroChat.appendChild(m);
       }
-    } catch (err) {
-      removeDemoTyping();
-      addDemoMsg('ai', "Oups, la démo est momentanément indisponible. Essayez dans quelques secondes ou créez votre compte pour tester l'IA sur vos propres logements !");
-    }
+    }, delay);
+    heroTimers.push(id); delay += item.delay;
+  });
+  const loopId = setTimeout(() => { heroRunning = false; if (heroVisible) runHeroAnimation(); }, delay + 4000);
+  heroTimers.push(loopId);
+}
 
-    demoInput.disabled = false;
-    demoSendBtn.disabled = false;
-    demoInput.focus();
-  }
+if (prefersReduced) {
+  runHeroAnimation();
+  setTimeout(() => { heroVisible = false; clearHeroTimers(); }, 15000);
+} else if ('IntersectionObserver' in window && heroChat) {
+  new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { heroVisible = true; if (!heroRunning) runHeroAnimation(); }
+      else { heroVisible = false; clearHeroTimers(); heroRunning = false; }
+    });
+  }, { threshold: 0.1 }).observe(heroChat);
+} else { runHeroAnimation(); }
 
-  /* ─────────────────────────────────────────────
-     FAQ TOGGLE
-     ───────────────────────────────────────────── */
-  function toggleFaq(btn) {
-    const item = btn.closest('.faq-item');
-    const wasOpen = item.classList.contains('open');
-    // Ferme tous les autres
-    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
-    if (!wasOpen) item.classList.add('open');
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { heroVisible = false; clearHeroTimers(); heroRunning = false; }
+  else { heroVisible = true; if (!heroRunning) runHeroAnimation(); }
+});
+
+/* ─── DEMO INTERACTIVE ─── */
+const demoChat = document.getElementById('demoChat');
+const demoInput = document.getElementById('demoInput');
+const demoSendBtn = document.getElementById('demoSendBtn');
+
+function useSuggestion(text) { demoInput.value = text; sendDemoMessage(); }
+function addDemoMsg(type, text) {
+  document.getElementById('demoEmpty')?.remove();
+  const msg = document.createElement('div');
+  msg.className = 'demo-msg ' + type; msg.textContent = text;
+  demoChat.appendChild(msg); demoChat.scrollTop = demoChat.scrollHeight;
+}
+function addDemoTyping() {
+  const t = document.createElement('div');
+  t.className = 'demo-typing'; t.id = 'demoTyping';
+  t.innerHTML = '<span></span><span></span><span></span>';
+  demoChat.appendChild(t); demoChat.scrollTop = demoChat.scrollHeight;
+}
+function removeDemoTyping() { document.getElementById('demoTyping')?.remove(); }
+
+async function sendDemoMessage() {
+  const text = demoInput.value.trim();
+  if (!text) return;
+  addDemoMsg('guest', text); demoInput.value = '';
+  demoInput.disabled = true; demoSendBtn.disabled = true;
+  addDemoTyping();
+  try {
+    const res = await fetch('/api/demo/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) });
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    removeDemoTyping();
+    addDemoMsg('ai', data.reply || "Désolé, je n'ai pas pu générer de réponse. Réessayez !");
+  } catch (err) {
+    removeDemoTyping();
+    addDemoMsg('ai', "Oups, la démo est momentanément indisponible. Créez votre compte pour tester l'IA sur vos propres logements !");
   }
+  demoInput.disabled = false; demoSendBtn.disabled = false; demoInput.focus();
+}
+
+/* ─── FAQ ─── */
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
 </script>
 
 </body>
