@@ -394,6 +394,9 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   transition: all .15s; white-space: nowrap; flex: 1;
   justify-content: center;
 }
+.wizard-step:hover:not(.active) { background: rgba(26,122,94,.06); }
+.wizard-step:hover:not(.active) .wizard-step-num { background: rgba(26,122,94,.15); color: #1A7A5E; }
+.wizard-step:hover:not(.active) .wizard-step-label { color: #1A7A5E; }
 .wizard-step-num {
   width: 26px; height: 26px; border-radius: 50%;
   background: rgba(13,17,23,.08); color: #7A8695;
@@ -1601,11 +1604,11 @@ function createAnother() {
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
-  // Clic sur les steps complétés → retour en arrière libre
+  // Clic sur n'importe quel step → navigation libre dans les deux sens
   document.querySelectorAll('.wizard-step').forEach(step => {
     step.addEventListener('click', () => {
       const target = parseInt(step.dataset.step) - 1; // data-step est 1-indexé, showSection est 0-indexé
-      if (target < currentSectionIndex) {
+      if (target !== currentSectionIndex) {
         showSection(target);
         updateStepperDirect(target);
         updateProgressBar(target);
