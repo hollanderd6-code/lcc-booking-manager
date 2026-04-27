@@ -322,14 +322,22 @@ a { color: var(--primary); text-decoration: none; }
   .menu-toggle { display: block; }
   .nav-main.open {
     display: flex; flex-direction: column;
-    position: fixed; top: 62px; left: 0; right: 0; bottom: 0;
+    position: fixed; left: 0; right: 0;
+    height: calc(100dvh - var(--nav-top, 62px));
     background: rgba(250,250,248,.97); backdrop-filter: blur(20px);
-    padding: 24px 28px; gap: 4px; overflow-y: auto; z-index: 190;
+    padding: 24px 28px; gap: 4px; overflow-y: auto; z-index: 9999;
+    box-shadow: 0 8px 40px rgba(0,0,0,.12);
   }
   .nav-main.open a { padding: 12px 16px; font-size: 16px; border-radius: 12px; }
   .header-actions .btn-ghost { display: none; }
   .cta-box { padding: 56px 28px; }
   .testimonial-card { padding: 36px 24px; }
+}
+@media (max-width: 768px) {
+  .control-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .control-item { padding: 20px 16px; gap: 12px; }
+  .control-item h3 { font-size: 14px; }
+  .control-item p { font-size: 13px; }
 }
 @media (max-width: 520px) {
   .hero h1 { font-size: 32px; }
@@ -814,11 +822,17 @@ async function sendDemoMessage() {
 
 /* ─── Menu mobile ─── */
 function toggleNav() {
-  const nav  = document.getElementById('navMain');
-  const icon = document.getElementById('menuIcon');
+  const nav    = document.getElementById('navMain');
+  const icon   = document.getElementById('menuIcon');
+  const header = document.querySelector('.site-header');
+  const topPx  = header ? header.offsetHeight : 62;
+  // Appliquer top et height via CSS custom property
+  document.documentElement.style.setProperty('--nav-top', topPx + 'px');
+  nav.style.top = topPx + 'px';
   const open = nav.classList.toggle('open');
   icon.className = open ? 'fas fa-times' : 'fas fa-bars';
-  document.body.style.overflow = open ? 'hidden' : '';
+  // Ne pas bloquer le scroll body (empêche le calcul de bottom)
+  // À la place on utilise height: calc(100dvh - topPx)
 }
 document.querySelectorAll('#navMain a').forEach(a => {
   a.addEventListener('click', () => {
