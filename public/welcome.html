@@ -191,6 +191,89 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   padding: 28px 24px 60px;
 }
 
+/* ── View toggle — mobile only ── */
+.livrets-view-toggle {
+  display: none;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.livrets-toggle-btn {
+  width: 34px; height: 34px;
+  border: 1.5px solid rgba(200,184,154,.5);
+  background: white; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; color: #7A8695;
+  transition: all .15s;
+}
+.livrets-toggle-btn.active { background: #1A7A5E; border-color: #1A7A5E; color: white; }
+.livrets-toggle-btn:not(.active):hover { border-color: #1A7A5E; color: #1A7A5E; }
+
+/* ── Vue liste livrets ── */
+#livretsList.list-view {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+#livretsList.list-view .livret-card-add { display: none !important; }
+.livret-list-item {
+  display: flex; align-items: center; gap: 12px;
+  background: #F5F0E8;
+  border: 1px solid rgba(200,184,154,.4);
+  border-radius: 14px; padding: 10px 12px;
+  position: relative; transition: box-shadow .15s;
+}
+.livret-list-thumb {
+  width: 52px; height: 52px; border-radius: 10px;
+  overflow: hidden; flex-shrink: 0;
+  background: linear-gradient(160deg, #e8e0d4 0%, #c8b89a 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 26px;
+}
+.livret-list-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.livret-list-info { flex: 1; min-width: 0; }
+.livret-list-name {
+  font-size: 14px; font-weight: 700; color: #0D1117;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+}
+.livret-list-date { font-size: 11px; color: #7A8695; }
+.livret-list-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.livret-list-actions .btn-list-act {
+  width: 32px; height: 32px;
+  border: 1.5px solid rgba(200,184,154,.5); background: white;
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 12px; color: #7A8695; transition: all .15s;
+}
+.livret-list-actions .btn-list-act:hover { color: #1A7A5E; border-color: #1A7A5E; }
+.livret-list-actions .btn-list-act.btn-edit-act { background:#1A7A5E; color:white; border-color:#1A7A5E; }
+.livret-list-dnd {
+  flex-shrink: 0; width: 24px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(13,17,23,.3); font-size: 13px;
+  cursor: grab; touch-action: none; transition: color .15s;
+}
+.livret-list-dnd:hover { color: #1A7A5E; }
+.livret-list-dnd:active { cursor: grabbing; }
+.livret-list-item.dnd-ghost { opacity: 0.35; }
+.livret-list-item.dnd-over { outline: 2px dashed #1A7A5E; outline-offset: 2px; }
+
+/* ── DnD handle sur les cartes grille ── */
+.livret-card { position: relative; }
+.livret-card .dnd-handle {
+  position: absolute; top: 8px; left: 8px;
+  width: 28px; height: 28px;
+  background: rgba(13,17,23,.55); backdrop-filter: blur(6px);
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.85); font-size: 13px;
+  cursor: grab; z-index: 10; opacity: 0.75;
+  transition: background .15s, opacity .15s;
+  touch-action: none; user-select: none;
+}
+.livret-card:hover .dnd-handle { opacity: 1; }
+.livret-card .dnd-handle:hover { background: rgba(26,122,94,.85) !important; opacity: 1; }
+.livret-card .dnd-handle:active { cursor: grabbing; }
+.livret-card.dnd-ghost { opacity: 0.35; transform: scale(0.97); outline: 2px dashed rgba(26,122,94,.5); }
+.livret-card.dnd-over { outline: 2px dashed #1A7A5E; outline-offset: 3px; }
+
 /* ── Section header ── */
 .welcome-section-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -675,6 +758,15 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
   <!-- ── Liste des livrets ── -->
   <div id="livretsListSection">
+    <!-- Toggle vue grille/liste — mobile uniquement -->
+    <div class="livrets-view-toggle" id="livretsViewToggle">
+      <button class="livrets-toggle-btn active" id="btnLivretGrid" onclick="setLivretsView('grid')" title="Vue grille">
+        <i class="fas fa-grip"></i>
+      </button>
+      <button class="livrets-toggle-btn" id="btnLivretList" onclick="setLivretsView('list')" title="Vue liste">
+        <i class="fas fa-list"></i>
+      </button>
+    </div>
     <div class="livrets-grid" id="livretsList">
       <p style="color:#7A8695;grid-column:1/-1;text-align:center;padding:24px">Chargement...</p>
     </div>
@@ -1541,6 +1633,7 @@ async function loadLivretsList() {
     }
 
     if (data.success && data.welcomeBooks && data.welcomeBooks.length > 0) {
+      initLivretsViewToggle();
       displayLivretsList(data.welcomeBooks);
     } else {
       document.getElementById('livretsList').innerHTML = '<p style="color: #64748b; text-align: center;">Aucun livret pour le moment.</p>';
@@ -2018,15 +2111,87 @@ function updateStepper(index) {
 
 // stepper updated directly in nextSection/prevSection
 
+// ── View toggle livrets ──────────────────────────────────────
+let _livretsView = localStorage.getItem('bh_livrets_view') || 'grid';
+let _livretsData = [];
+
+function setLivretsView(view) {
+  _livretsView = view;
+  localStorage.setItem('bh_livrets_view', view);
+  document.getElementById('btnLivretGrid')?.classList.toggle('active', view === 'grid');
+  document.getElementById('btnLivretList')?.classList.toggle('active', view === 'list');
+  if (_livretsData.length) displayLivretsList(_livretsData);
+}
+
+function initLivretsViewToggle() {
+  const saved = localStorage.getItem('bh_livrets_view') || 'grid';
+  _livretsView = saved;
+  document.getElementById('btnLivretGrid')?.classList.toggle('active', saved === 'grid');
+  document.getElementById('btnLivretList')?.classList.toggle('active', saved === 'list');
+}
+
+// ── Render item liste ─────────────────────────────────────────
+function renderLivretListItem(livret, idx) {
+  const emojis = ['📖','🏡','🌿','🔑','🏖️','🌄','🛋️','✨'];
+  const thumb = livret.coverPhoto
+    ? `<img src="${livret.coverPhoto}" alt="" />`
+    : emojis[idx % emojis.length];
+
+  const isDraft = livret.isDraft;
+  const dateStr = new Date(livret.updatedAt).toLocaleDateString('fr-FR');
+  const draftBadge = isDraft
+    ? `<span style="font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;margin-left:6px;">Brouillon</span>`
+    : '';
+
+  return `
+    <div class="livret-list-item" data-id="${livret.uniqueId}">
+      <div class="livret-list-dnd" title="Glisser pour réorganiser" onclick="event.stopPropagation()">
+        <i class="fas fa-grip-vertical"></i>
+      </div>
+      <div class="livret-list-thumb">${thumb}</div>
+      <div class="livret-list-info">
+        <div class="livret-list-name">${livret.propertyName || 'Sans nom'}${draftBadge}</div>
+        <div class="livret-list-date"><i class="fas fa-clock" style="font-size:9px;margin-right:3px;"></i>Modifié le ${dateStr}</div>
+      </div>
+      <div class="livret-list-actions" onclick="event.stopPropagation()">
+        ${isDraft
+          ? `<button class="btn-list-act btn-edit-act" title="Continuer" onclick="editLivret('${livret.uniqueId}', ${livret.lastSection || 0})"><i class="fas fa-play"></i></button>`
+          : `<button class="btn-list-act btn-edit-act" title="Modifier" onclick="editLivret('${livret.uniqueId}', 0)"><i class="fas fa-edit"></i></button>`}
+        ${isDraft
+          ? `<button class="btn-list-act" disabled style="opacity:.4;" title="Non publié"><i class="fas fa-eye"></i></button>`
+          : `<button class="btn-list-act" title="Voir" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i></button>`}
+        <button class="btn-list-act" title="Copier le lien" onclick="copyLivretLink('${livret.uniqueId}', this)"${isDraft ? ' disabled style="opacity:.4;"' : ''}><i class="fas fa-link"></i></button>
+        <button class="btn-list-act" title="Supprimer" onclick="deleteLivret('${livret.uniqueId}')" style="color:#DC2626;border-color:rgba(220,38,38,.3);"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`;
+}
+
 // Redesign displayLivretsList
 function displayLivretsList(livrets) {
+  _livretsData = livrets || [];
   const grid = document.getElementById('livretsList');
+  const isMobile = window.innerWidth <= 1366;
+  const useList = isMobile && _livretsView === 'list';
+
   if (!livrets || !livrets.length) {
+    grid.classList.remove('list-view');
     grid.innerHTML = '<p style="color:#7A8695;grid-column:1/-1;text-align:center;padding:24px">Aucun livret pour le moment.</p>';
     appendAddCard(grid);
     return;
   }
+
   const emojis = ['📖','🏡','🌿','🔑','🏖️','🌄','🛋️','✨'];
+
+  if (useList) {
+    // ── Vue liste ──
+    grid.classList.add('list-view');
+    grid.innerHTML = livrets.map((l, i) => renderLivretListItem(l, i)).join('');
+    initLivretsDnD();
+    return;
+  }
+
+  // ── Vue grille ──
+  grid.classList.remove('list-view');
   const html = livrets.map((livret, idx) => {
     const heroStyle = livret.coverPhoto
       ? `background-image:url('${livret.coverPhoto}');background-size:cover;background-position:center;`
@@ -2038,20 +2203,21 @@ function displayLivretsList(livrets) {
     // Badge : brouillon ou actif
     const badge = livret.isDraft
       ? `<div style="position:absolute;top:10px;right:10px;background:#F59E0B;color:white;font-size:11px;font-weight:600;padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:5px;"><i class="fas fa-pencil-alt" style="font-size:9px;"></i> Brouillon</div>`
-      : `<div style="position:absolute;top:10px;right:10px;background:#1A7A5E;color:white;font-size:11px;font-weight:600;padding:5px 12px;border-radius:999px;">● Actif</div>`;
+      : '';
 
-    // Bouton principal : "Continuer" pour brouillon, "Modifier" sinon
     const editBtn = livret.isDraft
       ? `<button class="btn-lv btn-lv-edit" style="background:#FEF3C7;color:#92400E;border-color:#F59E0B;" onclick="editLivret('${livret.uniqueId}', ${livret.lastSection || 0})"><i class="fas fa-play"></i> Continuer</button>`
       : `<button class="btn-lv btn-lv-edit" onclick="editLivret('${livret.uniqueId}', 0)"><i class="fas fa-edit"></i> Modifier</button>`;
 
-    // Bouton "Voir" désactivé pour les brouillons
     const viewBtn = livret.isDraft
       ? `<button class="btn-lv" style="opacity:.4;cursor:not-allowed;" disabled title="Le livret n'est pas encore publié"><i class="fas fa-eye"></i> Voir</button>`
       : `<button class="btn-lv btn-lv-view" onclick="viewLivret('${livret.uniqueId}')"><i class="fas fa-eye"></i> Voir</button>`;
 
     return `
-    <div class="livret-card">
+    <div class="livret-card" data-id="${livret.uniqueId}">
+      <div class="dnd-handle" title="Glisser pour réorganiser" onclick="event.stopPropagation()">
+        <i class="fas fa-grip-vertical"></i>
+      </div>
       <div class="livret-card-hero" style="${heroStyle}">
         ${heroIcon}
         ${badge}
@@ -2074,7 +2240,108 @@ function displayLivretsList(livrets) {
   }).join('');
   grid.innerHTML = html;
   appendAddCard(grid);
+  initLivretsDnD();
 }
+
+// ── Drag & Drop livrets ──────────────────────────────────────
+(function() {
+  let srcEl = null, floatingEl = null, touchActive = false;
+  const LONG_PRESS = 450;
+  let lpTimer = null;
+
+  function cardAtPoint(x, y) {
+    if (floatingEl) floatingEl.style.display = 'none';
+    const el = document.elementFromPoint(x, y);
+    if (floatingEl) floatingEl.style.display = '';
+    if (!el) return null;
+    return el.closest('.livret-card:not(.livret-card-add), .livret-list-item[data-id]');
+  }
+
+  function reinsert(target) {
+    if (!srcEl || !target || srcEl === target) return;
+    const grid = document.getElementById('livretsList');
+    const sel = grid.classList.contains('list-view') ? '.livret-list-item[data-id]' : '.livret-card:not(.livret-card-add)';
+    const all = [...grid.querySelectorAll(sel)];
+    const si = all.indexOf(srcEl), ti = all.indexOf(target);
+    if (si < ti) target.parentNode.insertBefore(srcEl, target.nextSibling);
+    else target.parentNode.insertBefore(srcEl, target);
+  }
+
+  function createFloating(card, x, y) {
+    floatingEl = card.cloneNode(true);
+    const r = card.getBoundingClientRect();
+    floatingEl.style.cssText = `position:fixed;width:${r.width}px;height:${r.height}px;top:${r.top}px;left:${r.left}px;z-index:9999;pointer-events:none;opacity:.93;box-shadow:0 16px 48px rgba(0,0,0,.28);transform:scale(1.03) rotate(1deg);border-radius:16px;background:white;transition:none;`;
+    document.body.appendChild(floatingEl);
+  }
+
+  function moveFloating(x, y) {
+    if (!floatingEl) return;
+    const r = srcEl.getBoundingClientRect();
+    floatingEl.style.left = (x - r.width / 2) + 'px';
+    floatingEl.style.top  = (y - r.height / 2) + 'px';
+  }
+
+  function endDrag() {
+    touchActive = false;
+    if (srcEl) srcEl.classList.remove('dnd-ghost');
+    if (floatingEl) { floatingEl.remove(); floatingEl = null; }
+    document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+    srcEl = null;
+  }
+
+  window.initLivretsDnD = function() {
+    const grid = document.getElementById('livretsList');
+    if (!grid) return;
+    const isListView = grid.classList.contains('list-view');
+    const items = isListView
+      ? [...grid.querySelectorAll('.livret-list-item[data-id]')]
+      : [...grid.querySelectorAll('.livret-card:not(.livret-card-add)')];
+
+    items.forEach(item => {
+      const handle = isListView
+        ? item.querySelector('.livret-list-dnd')
+        : item.querySelector('.dnd-handle');
+      if (!handle || handle._dndBound) return;
+      handle._dndBound = true;
+
+      // Touch — activation immédiate sur le handle
+      handle.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        touchActive = true;
+        srcEl = item;
+        item.classList.add('dnd-ghost');
+        if (navigator.vibrate) navigator.vibrate(40);
+        createFloating(item, e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+
+      handle.addEventListener('touchmove', (e) => {
+        if (!touchActive) return;
+        e.preventDefault();
+        const t = e.touches[0];
+        moveFloating(t.clientX, t.clientY);
+        const target = cardAtPoint(t.clientX, t.clientY);
+        document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
+        if (target && target !== srcEl) { target.classList.add('dnd-over'); reinsert(target); }
+      }, { passive: false });
+
+      handle.addEventListener('touchend',   () => { if (touchActive) endDrag(); });
+      handle.addEventListener('touchcancel',() => endDrag());
+
+      // Mouse — drag HTML5 immédiat
+      handle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        item.setAttribute('draggable', 'true');
+        item.classList.add('dnd-ghost');
+      });
+      handle.addEventListener('mouseup', () => item.classList.remove('dnd-ghost'));
+
+      item.addEventListener('dragstart', (e) => { srcEl = item; e.dataTransfer.effectAllowed = 'move'; });
+      item.addEventListener('dragend',   () => { item.setAttribute('draggable', 'false'); endDrag(); });
+      item.addEventListener('dragover',  (e) => { e.preventDefault(); if (srcEl && srcEl !== item) { document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over')); item.classList.add('dnd-over'); } });
+      item.addEventListener('drop',      (e) => { e.preventDefault(); reinsert(item); item.classList.remove('dnd-over'); });
+    });
+  };
+})();
 
 function appendAddCard(grid) {
   // Update count in header
@@ -2301,7 +2568,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   .welcome-title { font-size: 22px !important; }
 
-  /* 6. LIVRETS GRID → 1 colonne */
+  /* 6. LIVRETS GRID → 1 colonne + toggle vue */
+  .livrets-view-toggle { display: flex !important; }
   .livrets-grid {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
