@@ -20555,11 +20555,18 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 .hero-meta i{margin-right:5px;color:var(--gold)}
 .nav{position:sticky;top:0;z-index:200;background:rgba(255,253,249,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:stretch;overflow:visible;scrollbar-width:none}
 .nav::-webkit-scrollbar{display:none}
-.nav-logo{padding:0 1.4rem;font-family:'Cormorant Garamond',serif;font-size:.95rem;font-weight:600;letter-spacing:.06em;color:var(--forest);white-space:nowrap;display:flex;align-items:center;border-right:1px solid var(--border);flex-shrink:0}
-.nav-links{display:flex;overflow-x:auto;scrollbar-width:none}
+.nav-logo{padding:0 1.4rem;font-family:'Cormorant Garamond',serif;font-size:.95rem;font-weight:600;letter-spacing:.06em;color:var(--forest);white-space:nowrap;display:flex;align-items:center;border-right:1px solid var(--border);flex-shrink:0;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.nav-links{display:flex;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
 .nav-links::-webkit-scrollbar{display:none}
 .nav-links a{padding:1rem 1.2rem;font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;font-weight:500;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;transition:color .2s,border-color .2s;display:flex;align-items:center}
 .nav-links a:hover,.nav-links a.active{color:var(--forest);border-bottom-color:var(--forest)}
+/* ── Nav mobile : masquer le titre du logement, garder liens + langue ── */
+@media(max-width:640px){
+  .nav-logo{display:none}
+  .nav{overflow-x:hidden}
+  .nav-links{flex:1;overflow-x:auto}
+  .nav-links a{padding:.85rem .9rem;font-size:10px;letter-spacing:.08em}
+}
 .wrap{max-width:880px;margin:0 auto;padding:0 5vw 8rem}
 .sect{padding:5rem 0 .5rem}
 .sect-lbl{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:.5rem}
