@@ -1064,6 +1064,14 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
               <label class="wiz-label">Informations transports<span class="wiz-hint">Accès transports en commun, gares, etc.</span></label>
               <textarea class="wiz-textarea" name="transportInfo" placeholder="Ex: Bus ligne 15 à 1 minute à pied..."></textarea>
             </div>
+            <div class="wiz-group" style="margin-bottom:0">
+              <label class="wiz-label">Photos transports <span style="color:#9CA3AF;font-weight:400;">(optionnel)</span></label>
+              <div class="wiz-upload" onclick="document.getElementById('transportPhotos').click()" style="padding:10px 16px;">
+                <i class="fas fa-camera"></i><p>Ajouter des photos</p>
+              </div>
+              <input type="file" id="transportPhotos" name="transportPhotos" accept="image/*" multiple style="display:none;">
+              <div class="image-preview" id="transportPhotosPreview"></div>
+            </div>
           </div>
           <hr class="wiz-divider"/>
           <div class="wiz-subsection">
@@ -1460,7 +1468,7 @@ async function collectFormData() {
   for (const f of parking) formData.append('parkingPhotos', f);
 
   // Photos extra sections
-  for (const id of ['extraPhotosAccess','extraPhotosLogement','extraPhotosPractical','extraPhotosAround']) {
+  for (const id of ['transportPhotos','extraPhotosAccess','extraPhotosLogement','extraPhotosPractical','extraPhotosAround']) {
     const files = await compressAll(document.getElementById(id)?.files);
     for (const f of files) formData.append(id, f);
   }
@@ -1619,6 +1627,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupImageUpload('coverPhoto', 'coverPhotoPreview', false);
   setupImageUpload('entrancePhotos', 'entrancePhotosPreview', true);
   setupImageUpload('parkingPhotos', 'parkingPhotosPreview', true);
+  setupImageUpload('transportPhotos', 'transportPhotosPreview', true);
   setupImageUpload('extraPhotosAccess', 'extraPhotosAccessPreview', true);
   setupImageUpload('extraPhotosLogement', 'extraPhotosLogementPreview', true);
   setupImageUpload('extraPhotosPractical', 'extraPhotosPracticalPreview', true);
@@ -2022,6 +2031,7 @@ function fillFormWithData(data) {
   // Photos extra sections (access, logement, practical, around)
   if (data.photos) {
     const extraMap = {
+      'transportPhotos':       data.photos.transportPhotos,
       'extraPhotosAccess':     data.photos.extraPhotosAccess,
       'extraPhotosLogement':   data.photos.extraPhotosLogement,
       'extraPhotosPractical':  data.photos.extraPhotosPractical,
@@ -2128,7 +2138,7 @@ function createNewLivret() {
   const rests = document.getElementById('restaurantsContainer'); if (rests) rests.innerHTML = '';
   const places = document.getElementById('placesContainer'); if (places) places.innerHTML = '';
   roomCounter = 0; restaurantCounter = 0; placeCounter = 0;
-  ['coverPhotoPreview','entrancePhotosPreview','parkingPhotosPreview'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+  ['coverPhotoPreview','entrancePhotosPreview','parkingPhotosPreview','transportPhotosPreview'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
   showFormHideLists();
   try { addRoom(); addRestaurant(); addPlace(); } catch(_) {}
 }
