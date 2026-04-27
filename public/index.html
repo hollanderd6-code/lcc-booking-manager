@@ -729,6 +729,9 @@ a { color: var(--primary); text-decoration: none; }
   .feature-tile { flex: 0 0 270px; }
   .integrations-grid { grid-template-columns: repeat(2,1fr); }
 }
+/* ── Fix scroll horizontal mobile ── */
+html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+* { box-sizing: border-box; }
 </style>
 </head>
 <body>
@@ -758,8 +761,8 @@ a { color: var(--primary); text-decoration: none; }
     <div class="header-actions">
       <a href="/login.html" class="btn btn-ghost" style="padding:9px 16px;font-size:13px;">Se connecter</a>
       <a href="/register.html" class="btn btn-primary" style="padding:9px 16px;font-size:13px;">Démarrer gratuitement</a>
-      <button class="menu-toggle" onclick="document.getElementById('navMain').classList.toggle('open')">
-        <i class="fas fa-bars"></i>
+      <button class="menu-toggle" id="menuToggle" onclick="toggleNav()" aria-label="Menu">
+        <i class="fas fa-bars" id="menuIcon"></i>
       </button>
     </div>
   </div>
@@ -1334,7 +1337,28 @@ initDrag('featuresTrack');
 
 // ─── Mobile menu close on link click ───
 document.querySelectorAll('#navMain a').forEach(a => {
-  a.addEventListener('click', () => document.getElementById('navMain').classList.remove('open'));
+  a.addEventListener('click', () => {
+    document.getElementById('navMain').classList.remove('open');
+    document.getElementById('menuIcon').className = 'fas fa-bars';
+    document.body.style.overflow = '';
+  });
+});
+
+function toggleNav() {
+  const nav  = document.getElementById('navMain');
+  const icon = document.getElementById('menuIcon');
+  const open = nav.classList.toggle('open');
+  icon.className = open ? 'fas fa-times' : 'fas fa-bars';
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+document.addEventListener('click', (e) => {
+  const nav = document.getElementById('navMain');
+  const btn = document.getElementById('menuToggle');
+  if (nav && nav.classList.contains('open') && !nav.contains(e.target) && btn && !btn.contains(e.target)) {
+    nav.classList.remove('open');
+    document.getElementById('menuIcon').className = 'fas fa-bars';
+    document.body.style.overflow = '';
+  }
 });
 </script>
 
