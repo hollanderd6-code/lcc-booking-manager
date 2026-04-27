@@ -2005,6 +2005,15 @@ function addPlace() {
 function fillFormWithData(data) {
   if (!data) return;
 
+  // Vider tous les previews photos avant de les repeupler (évite les doublons)
+  const allPreviews = [
+    'coverPhotoPreview', 'entrancePhotosPreview', 'parkingPhotosPreview', 'transportPhotosPreview',
+    'extraPhotosAccessPreview', 'extraPhotosLogementPreview', 'extraPhotosPracticalPreview', 'extraPhotosAroundPreview'
+  ];
+  allPreviews.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+  // Vider aussi les previews des pièces existantes
+  document.querySelectorAll('[id^="roomPhotosPreview_"]').forEach(el => el.innerHTML = '');
+
   // Champs simples
   const fields = [
     'propertyName', 'welcomeDescription', 'contactPhone',
