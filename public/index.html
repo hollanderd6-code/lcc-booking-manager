@@ -709,12 +709,15 @@ a { color: var(--primary); text-decoration: none; }
   .nav-main.open {
     display: flex; flex-direction: column;
     position: fixed; left: 0; right: 0;
-    height: calc(100dvh - var(--nav-top, 62px));
-    background: rgba(250,250,248,.97); backdrop-filter: blur(20px);
-    padding: 24px 28px; gap: 4px; overflow-y: auto; z-index: 9999;
-    box-shadow: 0 8px 40px rgba(0,0,0,.12);
+    height: auto;
+    background: white;
+    border-bottom: 1px solid rgba(200,184,154,.3);
+    padding: 12px 20px 20px;
+    gap: 2px;
+    z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0,0,0,.10);
   }
-  .nav-main.open a { padding: 12px 16px; font-size: 16px; border-radius: 12px; }
+  .nav-main.open a { padding: 12px 16px; font-size: 15px; border-radius: 10px; color: var(--ink); font-weight: 500; }
   .header-actions .btn-ghost { display: none; }
   .cta-box { padding: 56px 28px; }
   .integrations-grid { grid-template-columns: repeat(3,1fr); }
@@ -1350,12 +1353,9 @@ function toggleNav() {
   const nav    = document.getElementById('navMain');
   const icon   = document.getElementById('menuIcon');
   const header = document.querySelector('.site-header');
-  // offsetHeight = hauteur réelle du header sticky (fiable même après scroll)
-  const topPx  = header ? header.offsetHeight : 62;
-  nav.style.top = topPx + 'px';
+  nav.style.top = (header ? header.offsetHeight : 62) + 'px';
   const open = nav.classList.toggle('open');
   icon.className = open ? 'fas fa-times' : 'fas fa-bars';
-  document.body.style.overflow = open ? 'hidden' : '';
 }
 document.addEventListener('click', (e) => {
   const nav = document.getElementById('navMain');
@@ -1363,7 +1363,6 @@ document.addEventListener('click', (e) => {
   if (nav && nav.classList.contains('open') && !nav.contains(e.target) && btn && !btn.contains(e.target)) {
     nav.classList.remove('open');
     document.getElementById('menuIcon').className = 'fas fa-bars';
-    document.body.style.overflow = '';
   }
 });
 </script>
