@@ -20417,11 +20417,12 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + galleryHtml(d.photos && d.photos.parking)
     ) : '';
 
-    // Transport card (sans photos)
+    // Transport card (avec ses photos)
     const accessCardTransport = d.transportInfo ? (
       '<div class="access-card"><div class="access-icon"><i class="fas fa-subway"></i></div>'
       + '<div class="access-title access-title-transport">Transports</div>'
       + '<div class="access-body" data-translatable>' + safe(d.transportInfo) + '</div></div>'
+      + galleryHtml(d.photos && d.photos.transportPhotos)
     ) : '';
 
     const accessCards = [accessCardIns, accessCardParking, accessCardTransport].join('');
