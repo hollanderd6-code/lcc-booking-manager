@@ -20399,25 +20399,32 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       ? '<div class="map-wrap"><iframe src="https://www.google.com/maps?q=' + mapsQuery + '&output=embed" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>'
       : '';
 
-    const accessCards = [
-      d.accessInstructions ? (
-        '<div class="access-card"><div class="access-icon"><i class="fas fa-door-open"></i></div>'
-        + '<div class="access-title access-title-ins">Instructions d\'accès</div>'
-        + '<div class="access-body" data-translatable>' + safe(d.accessInstructions) + '</div>'
-        + iif(d.keyboxCode, '<div class="code-chip"><i class="fas fa-hashtag"></i>' + d.keyboxCode + '</div>')
-        + '</div>'
-      ) : '',
-      d.parkingInfo ? (
-        '<div class="access-card"><div class="access-icon"><i class="fas fa-parking"></i></div>'
-        + '<div class="access-title access-title-parking">Parking</div>'
-        + '<div class="access-body" data-translatable>' + safe(d.parkingInfo) + '</div></div>'
-      ) : '',
-      d.transportInfo ? (
-        '<div class="access-card"><div class="access-icon"><i class="fas fa-subway"></i></div>'
-        + '<div class="access-title access-title-transport">Transports</div>'
-        + '<div class="access-body" data-translatable>' + safe(d.transportInfo) + '</div></div>'
-      ) : '',
-    ].join('');
+    // Instructions card (avec ses photos d'accès)
+    const accessCardIns = d.accessInstructions ? (
+      '<div class="access-card"><div class="access-icon"><i class="fas fa-door-open"></i></div>'
+      + '<div class="access-title access-title-ins">Instructions d\'accès</div>'
+      + '<div class="access-body" data-translatable>' + safe(d.accessInstructions) + '</div>'
+      + iif(d.keyboxCode, '<div class="code-chip"><i class="fas fa-hashtag"></i>' + d.keyboxCode + '</div>')
+      + '</div>'
+      + galleryHtml(d.photos && d.photos.entrance)
+    ) : '';
+
+    // Parking card (avec ses photos de parking)
+    const accessCardParking = d.parkingInfo ? (
+      '<div class="access-card"><div class="access-icon"><i class="fas fa-parking"></i></div>'
+      + '<div class="access-title access-title-parking">Parking</div>'
+      + '<div class="access-body" data-translatable>' + safe(d.parkingInfo) + '</div></div>'
+      + galleryHtml(d.photos && d.photos.parking)
+    ) : '';
+
+    // Transport card (sans photos)
+    const accessCardTransport = d.transportInfo ? (
+      '<div class="access-card"><div class="access-icon"><i class="fas fa-subway"></i></div>'
+      + '<div class="access-title access-title-transport">Transports</div>'
+      + '<div class="access-body" data-translatable>' + safe(d.transportInfo) + '</div></div>'
+    ) : '';
+
+    const accessCards = [accessCardIns, accessCardParking, accessCardTransport].join('');
 
     const accessSection = (d.accessInstructions || d.keyboxCode || d.parkingInfo || d.transportInfo
       || (d.photos && (d.photos.entrance || d.photos.parking))) ? (
@@ -20427,8 +20434,6 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + '<div class="sect-rule"></div>'
       + '<div class="access-grid">' + accessCards + '</div>'
       + iif(d.extraNotesAccess, '<div class="extra-note">' + safe(d.extraNotesAccess) + '</div>')
-      + galleryHtml(d.photos && d.photos.entrance)
-      + galleryHtml(d.photos && d.photos.parking)
       + mapEmbed
       + '</section>'
     ) : '';
@@ -20543,8 +20548,8 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 @keyframes hfade{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .hero-eye{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:1rem}
 .hero-eye span{display:block;width:32px;height:1px;background:var(--gold)}
-.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(3rem,8vw,6rem);font-weight:300;color:#fff;line-height:1.05;margin-bottom:1.4rem}
-.hero h1 em{font-style:italic}
+.hero h1{font-family:'Jost',sans-serif;font-size:clamp(2.4rem,6vw,4.5rem);font-weight:300;color:#fff;line-height:1.08;margin-bottom:1.4rem;letter-spacing:-.01em}
+.hero h1 em{font-style:normal}
 .hero-meta{display:flex;gap:1.8rem;flex-wrap:wrap;color:rgba(255,255,255,.58);font-size:13px;font-weight:300}
 .hero-meta i{margin-right:5px;color:var(--gold)}
 .nav{position:sticky;top:0;z-index:200;background:rgba(255,253,249,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:stretch;overflow:visible;scrollbar-width:none}
