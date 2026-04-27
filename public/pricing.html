@@ -48,6 +48,7 @@ a { color: var(--primary); text-decoration: none; }
 .nav-main a:hover, .nav-main a.active { color: var(--primary); background: var(--primary-soft); }
 .header-actions { display: flex; gap: 8px; }
 .btn-sm { padding: 9px 16px; font-size: 13px; border-radius: 10px; }
+.btn-label-short { display: none; }
 .menu-toggle { display: none; background: none; border: none; font-size: 22px; color: var(--ink); cursor: pointer; }
 
 /* ─── HERO ─── */
@@ -253,9 +254,11 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 @media (max-width: 768px) {
   .nav-main { display: none; }
   .menu-toggle { display: block; }
-  .nav-main.open { display: flex; flex-direction: column; position: fixed; top: 62px; left: 0; right: 0; bottom: 0; background: rgba(250,250,248,.97); backdrop-filter: blur(20px); padding: 24px 28px; gap: 4px; overflow-y: auto; z-index: 190; }
-  .nav-main.open a { padding: 12px 16px; font-size: 16px; border-radius: 12px; }
+  .nav-main.open { display: flex; flex-direction: column; position: fixed; left: 0; right: 0; height: auto; background: white; border-bottom: 1px solid rgba(200,184,154,.3); padding: 12px 20px 20px; gap: 2px; z-index: 9999; box-shadow: 0 8px 24px rgba(0,0,0,.10); }
+  .nav-main.open a { padding: 12px 16px; font-size: 15px; border-radius: 10px; color: var(--ink); font-weight: 500; }
   .header-actions .btn-outline { display: none; }
+  .header-actions .btn-primary .btn-label { display: none; }
+  .header-actions .btn-primary .btn-label-short { display: inline; }
   .slider-section { padding: 24px 20px; }
   .cta-box { padding: 52px 24px; }
 }
@@ -281,8 +284,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
     </nav>
     <div class="header-actions">
       <a href="/login.html" class="btn btn-outline btn-sm">Se connecter</a>
-      <a href="/register.html" class="btn btn-primary btn-sm"><i class="fas fa-rocket"></i> Démarrer gratuitement</a>
-      <button class="menu-toggle" onclick="document.getElementById('navMain').classList.toggle('open')"><i class="fas fa-bars"></i></button>
+      <a href="/register.html" class="btn btn-primary btn-sm"><i class="fas fa-rocket"></i> Démarrer gratuit</a>
+      <button class="menu-toggle" id="menuToggle" onclick="toggleNav()" aria-label="Menu"><i class="fas fa-bars" id="menuIcon"></i></button>
     </div>
   </div>
 </header>
@@ -777,6 +780,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // Range slider initial pct
   const slider = document.getElementById('propSlider');
   slider.style.setProperty('--pct', '0%');
+});
+
+function toggleNav() {
+  const nav = document.getElementById('navMain');
+  const icon = document.getElementById('menuIcon');
+  const header = document.querySelector('.site-header');
+  nav.style.top = (header ? header.offsetHeight : 62) + 'px';
+  const open = nav.classList.toggle('open');
+  icon.className = open ? 'fas fa-times' : 'fas fa-bars';
+}
+document.querySelectorAll('#navMain a').forEach(a => a.addEventListener('click', () => {
+  document.getElementById('navMain').classList.remove('open');
+  document.getElementById('menuIcon').className = 'fas fa-bars';
+}));
+document.addEventListener('click', (e) => {
+  const nav = document.getElementById('navMain');
+  const btn = document.getElementById('menuToggle');
+  if (nav && nav.classList.contains('open') && !nav.contains(e.target) && btn && !btn.contains(e.target)) {
+    nav.classList.remove('open');
+    document.getElementById('menuIcon').className = 'fas fa-bars';
+  }
 });
 </script>
 </body>
