@@ -394,9 +394,6 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   transition: all .15s; white-space: nowrap; flex: 1;
   justify-content: center;
 }
-.wizard-step:hover:not(.active) { background: rgba(26,122,94,.06); }
-.wizard-step:hover:not(.active) .wizard-step-num { background: rgba(26,122,94,.15); color: #1A7A5E; }
-.wizard-step:hover:not(.active) .wizard-step-label { color: #1A7A5E; }
 .wizard-step-num {
   width: 26px; height: 26px; border-radius: 50%;
   background: rgba(13,17,23,.08); color: #7A8695;
@@ -1604,11 +1601,11 @@ function createAnother() {
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
-  // Clic sur n'importe quel step → navigation libre dans les deux sens
+  // Clic sur les steps complétés → retour en arrière libre
   document.querySelectorAll('.wizard-step').forEach(step => {
     step.addEventListener('click', () => {
       const target = parseInt(step.dataset.step) - 1; // data-step est 1-indexé, showSection est 0-indexé
-      if (target !== currentSectionIndex) {
+      if (target < currentSectionIndex) {
         showSection(target);
         updateStepperDirect(target);
         updateProgressBar(target);
@@ -2019,14 +2016,45 @@ function fillFormWithData(data) {
     if (Array.isArray(data.photos.parking)) data.photos.parking.forEach(u => showExistingImage('parkingPhotosPreview', u));
   }
 
+  // Photos extra sections (access, logement, practical, around)
+  if (data.photos) {
+    const extraMap = {
+      'extraPhotosAccess':     data.photos.extraPhotosAccess,
+      'extraPhotosLogement':   data.photos.extraPhotosLogement,
+      'extraPhotosPractical':  data.photos.extraPhotosPractical,
+      'extraPhotosAround':     data.photos.extraPhotosAround,
+    };
+    Object.entries(extraMap).forEach(([id, urls]) => {
+      if (Array.isArray(urls)) urls.forEach(u => showExistingImage(id + 'Preview', u));
+    });
+  }
+
+  // Extra notes texte
+  ['extraNotesAccess','extraNotesLogement','extraNotesPractical','extraNotesAround'].forEach(f => {
+    const el = document.querySelector(`[name="${f}"]`);
+    if (el && data[f] !== undefined && data[f] !== null) el.value = data[f];
+  });
+
   // Pièces
   document.getElementById('roomsContainer').innerHTML = '';
   roomCounter = 0;
   if (Array.isArray(data.rooms) && data.rooms.length) {
-    data.rooms.forEach(r => {
+    data.rooms.forEach((r, idx) => {
       addRoom();
-      document.querySelector(`[name="room[${roomCounter}][name]"]`).value = r.name || '';
-      document.querySelector(`[name="room[${roomCounter}][description]"]`).value = r.description || '';
+      const rc = roomCounter;
+      document.querySelector(`[name="room[${rc}][name]"]`).value = r.name || '';
+      document.querySelector(`[name="room[${rc}][description]"]`).value = r.description || '';
+      if (r.extra) {
+        const extraEl = document.querySelector(`[name="room[${rc}][extra]"]`);
+        if (extraEl) extraEl.value = r.extra;
+      }
+      // Photos de la pièce
+      const roomPhotos = data.photos && data.photos.roomPhotosPerRoom && data.photos.roomPhotosPerRoom[rc];
+      if (Array.isArray(roomPhotos) && roomPhotos.length) {
+        setTimeout(() => {
+          roomPhotos.forEach(u => showExistingImage('roomPhotosPreview_' + rc, u));
+        }, 0);
+      }
     });
   } else {
     addRoom();
