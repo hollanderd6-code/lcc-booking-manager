@@ -313,6 +313,20 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   position: relative;
   display: flex; align-items: center; justify-content: center;
 }
+.livret-card-hero::after {
+  content: '\f044';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  position: absolute;
+  inset: 0;
+  background: rgba(13,17,23,.38);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; color: white;
+  opacity: 0;
+  transition: opacity .18s;
+  border-radius: 0;
+}
+.livret-card-hero:hover::after { opacity: 1; }
 .livret-card-hero-icon { font-size: 56px; opacity: .9; }
 .livret-card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
 .livret-card-icon {
@@ -2218,7 +2232,7 @@ function displayLivretsList(livrets) {
       <div class="dnd-handle" title="Glisser pour réorganiser" onclick="event.stopPropagation()">
         <i class="fas fa-grip-vertical"></i>
       </div>
-      <div class="livret-card-hero" style="${heroStyle}">
+      <div class="livret-card-hero" style="${heroStyle}cursor:pointer;" title="Modifier ce livret" onclick="editLivret('${livret.uniqueId}', 0)">
         ${heroIcon}
         ${badge}
       </div>
@@ -2287,6 +2301,31 @@ function displayLivretsList(livrets) {
     if (floatingEl) { floatingEl.remove(); floatingEl = null; }
     document.querySelectorAll('.dnd-over').forEach(c => c.classList.remove('dnd-over'));
     srcEl = null;
+    saveOrderToServer();
+  }
+
+  function saveOrderToServer() {
+    const grid = document.getElementById('livretsList');
+    if (!grid) return;
+    const isListView = grid.classList.contains('list-view');
+    const sel = isListView ? '.livret-list-item[data-id]' : '.livret-card:not(.livret-card-add)';
+    const ids = [...grid.querySelectorAll(sel)].map(el => el.dataset.id).filter(Boolean);
+    if (!ids.length) return;
+
+    fetch(`${API_BASE}/api/welcome-books/reorder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('lcc_token')
+      },
+      body: JSON.stringify({ order: ids })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) showDraftToast('✓ Ordre sauvegardé');
+      else showDraftToast('❌ Erreur sauvegarde ordre', true);
+    })
+    .catch(() => showDraftToast('❌ Erreur réseau', true));
   }
 
   window.initLivretsDnD = function() {
