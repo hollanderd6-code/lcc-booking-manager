@@ -146,7 +146,7 @@ router.get('/my-book', authenticateUser, async (req, res) => {
       `SELECT unique_id, data
        FROM welcome_books_v2
        WHERE user_id = $1
-       ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
+       ORDER BY (data->>'sortOrder')::int ASC NULLS LAST, updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
        LIMIT 1`,
       [req.userId]
     );
@@ -352,7 +352,7 @@ router.get('/user/list', authenticateUser, async (req, res) => {
               updated_at
        FROM public.welcome_books_v2
        WHERE user_id = $1
-       ORDER BY updated_at DESC`,
+       ORDER BY (data->>'sortOrder')::int ASC NULLS LAST, updated_at DESC`,
       [req.userId]
     );
 
@@ -482,6 +482,35 @@ router.post('/duplicate/:uniqueId', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('❌ Erreur duplication livret:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur lors de la duplication' });
+  }
+});
+
+// ---------- REORDER ----------
+router.post('/reorder', authenticateUser, async (req, res) => {
+  try {
+    const pool = req.app.locals.pool;
+    if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant' });
+
+    const { order } = req.body; // array of uniqueId strings
+    if (!Array.isArray(order) || !order.length) {
+      return res.status(400).json({ success: false, error: 'order manquant' });
+    }
+
+    // Stocke sortOrder dans data JSONB de chaque livret
+    const updates = order.map((uniqueId, idx) =>
+      pool.query(
+        `UPDATE public.welcome_books_v2
+         SET data = jsonb_set(data, '{sortOrder}', $1::jsonb)
+         WHERE unique_id = $2 AND user_id = $3`,
+        [String(idx), uniqueId, req.userId]
+      )
+    );
+    await Promise.all(updates);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur reorder livrets:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
   }
 });
 
