@@ -240,6 +240,7 @@ router.post(
     }
 
     // Photos extra sections
+    const transportPhotos      = files.transportPhotos      ? await uploadFiles(files.transportPhotos)      : (oldPhotos.transportPhotos      || []);
     const extraPhotosAccess    = files.extraPhotosAccess    ? await uploadFiles(files.extraPhotosAccess)    : (oldPhotos.extraPhotosAccess    || []);
     const extraPhotosLogement  = files.extraPhotosLogement  ? await uploadFiles(files.extraPhotosLogement)  : (oldPhotos.extraPhotosLogement  || []);
     const extraPhotosPractical = files.extraPhotosPractical ? await uploadFiles(files.extraPhotosPractical) : (oldPhotos.extraPhotosPractical || []);
@@ -262,6 +263,7 @@ router.post(
       placePhotos: (files.placePhotos && files.placePhotos.length > 0) 
         ? await uploadFiles(files.placePhotos) 
         : (oldPhotos.placePhotos || []),
+      transportPhotos,
       extraPhotosAccess,
       extraPhotosLogement,
       extraPhotosPractical,
