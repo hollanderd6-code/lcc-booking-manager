@@ -294,6 +294,9 @@ a { color: var(--primary); text-decoration: none; }
   z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px;
   animation: heroFadeIn .8s 1.5s both;
 }
+@media (max-width: 768px) {
+  .hero-scroll { bottom: 20px; }
+}
 .hero-scroll-line {
   width: 1px; height: 50px;
   background: linear-gradient(to bottom, rgba(255,255,255,.5), transparent);
@@ -683,7 +686,8 @@ a { color: var(--primary); text-decoration: none; }
 
 /* ─── RESPONSIVE ─── */
 @media (max-width: 1024px) {
-  .hero-content { grid-template-columns: 1fr; padding-top: 60px; }
+  .hero { align-items: flex-start; padding-bottom: 100px; }
+  .hero-content { grid-template-columns: 1fr; padding-top: 60px; padding-bottom: 0; }
   .hero-right { display: none; }
   .showcase { grid-template-columns: 1fr; gap: 40px; }
   .showcase.flip { direction: ltr; }
