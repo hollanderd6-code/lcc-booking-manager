@@ -1390,7 +1390,7 @@ function renderProperties() {
               : `<div class="property-img-placeholder" style="background: linear-gradient(160deg, #e8e0d4 0%, #c8b89a 100%); width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:52px;">${propertyEmoji}</div>`
             }
             <div class="property-img-overlay"></div>
-            <div class="property-img-badge active-badge">● Actif</div>
+
             <div class="dnd-handle" title="Maintenir pour réorganiser" onclick="event.stopPropagation()">
               <i class="fas fa-grip-vertical"></i>
             </div>
@@ -1565,7 +1565,7 @@ function renderPropertiesFiltered(filteredProps) {
             : `<div class="property-img-placeholder" style="background:linear-gradient(160deg,#e8e0d4 0%,#c8b89a 100%);width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:52px;">${propertyEmoji}</div>`
           }
           <div class="property-img-overlay"></div>
-          <div class="property-img-badge active-badge">● Actif</div>
+
           <div class="dnd-handle" title="Maintenir pour réorganiser" onclick="event.stopPropagation()">
             <i class="fas fa-grip-vertical"></i>
           </div>
