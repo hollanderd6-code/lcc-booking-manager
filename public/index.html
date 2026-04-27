@@ -5,7 +5,6 @@
   <link rel="icon" type="image/png" href="/images/logo.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-  <!-- Redirection immédiate vers login si app native iOS/Android -->
   <script>
     (function() {
       var isNative = !!(
@@ -13,694 +12,722 @@
         window.location.protocol === 'capacitor:' ||
         window.location.protocol === 'ionic:'
       );
-      if (isNative) {
-        window.location.replace('login.html');
-      }
+      if (isNative) { window.location.replace('login.html'); }
     })();
   </script>
 
   <title>Boostinghost – Logiciel gestion location courte durée | Channel Manager Airbnb Booking</title>
-
-  <!-- SEO Meta -->
   <meta name="description" content="Boostinghost est le logiciel tout-en-un pour gérer vos locations courte durée. Synchronisez Airbnb, Booking.com, Abritel, Expedia et toute plateforme via iCal. Gérez votre calendrier, encaissez les paiements, pilotez les ménages et automatisez vos messages grâce à l'IA. Idéal pour conciergeries et propriétaires multi-logements.">
-  <meta name="keywords" content="logiciel gestion location courte durée, channel manager airbnb booking abritel expedia, PMS location saisonnière, synchronisation calendrier airbnb, conciergerie logiciel, gestion multi-logements, IA Airbnb, leboncoin vacances, gites de france">
+  <meta name="keywords" content="logiciel gestion location courte durée, channel manager airbnb booking abritel expedia, PMS location saisonnière, synchronisation calendrier airbnb, conciergerie logiciel, gestion multi-logements, IA Airbnb">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Boostinghost">
   <link rel="canonical" href="https://www.boostinghost.fr/">
-
-  <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.boostinghost.fr/">
   <meta property="og:title" content="Boostinghost – Logiciel gestion location courte durée">
-  <meta property="og:description" content="Synchronisez Airbnb, Booking.com, Abritel, Expedia et toute plateforme via iCal. Gérez votre calendrier, encaissez les paiements et automatisez vos messages grâce à l'IA. Le tableau de bord tout-en-un pour conciergeries et propriétaires multi-logements.">
+  <meta property="og:description" content="Synchronisez Airbnb, Booking.com, Abritel, Expedia et toute plateforme via iCal. Calendrier, paiements, ménages, messagerie IA, facturation : tout en un.">
   <meta property="og:site_name" content="Boostinghost">
   <meta property="og:locale" content="fr_FR">
 
-  <!-- Schema.org JSON-LD -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Boostinghost",
     "url": "https://www.boostinghost.fr",
-    "description": "Logiciel tout-en-un de gestion de locations courte durée. Synchronisation Airbnb et Booking.com, calendrier, paiements, cautions, ménages, IA messagerie et facturation.",
+    "description": "Logiciel tout-en-un de gestion de locations courte durée.",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web, iOS, Android",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "EUR",
-      "description": "Essai gratuit 14 jours"
-    },
-    "featureList": [
-      "Synchronisation Airbnb, Booking.com, Abritel, Expedia + toute plateforme iCal",
-      "Compatible Leboncoin Vacances, Gîtes de France, et plus",
-      "Calendrier de réservations avec tarifs",
-      "Réservations directes et paiements en ligne",
-      "IA messagerie voyageurs 24/7 en 26 langues",
-      "Gestion des cautions",
-      "Ménage simplifié avec checklists",
-      "Facturation clients propriétaires et voyageurs",
-      "Reporting financier (CA, RevPAN, commissions)"
-    ],
-    "inLanguage": "fr",
-    "provider": {
-      "@type": "Organization",
-      "name": "Boostinghost",
-      "url": "https://www.boostinghost.fr",
-      "logo": "https://www.boostinghost.fr/images/logo.png"
-    }
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "description": "Essai gratuit 14 jours" },
+    "provider": { "@type": "Organization", "name": "Boostinghost", "url": "https://www.boostinghost.fr" }
   }
   </script>
 
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 
-  <style>
-    /* ─────────────────────────────────────────────────────────
-       BOOSTINGHOST V3 — DESIGN SYSTEM (autonome)
-       ───────────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<style>
+/* ─── RESET & BASE ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #1A7A5E;
+  --primary-dark: #15624B;
+  --primary-soft: rgba(26,122,94,.1);
+  --primary-glow: rgba(26,122,94,.2);
+  --cream: #F5F0E8;
+  --ink: #0D1117;
+  --muted: #7A8695;
+  --text: #374151;
+  --border: rgba(200,184,154,.4);
+  --white: #FAFAF8;
+  --radius: 20px;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--ink);
+  background: var(--white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+h1, h2 { font-family: 'Instrument Serif', serif; font-weight: 400; letter-spacing: -.01em; }
+h3 { font-family: 'DM Sans', sans-serif; font-weight: 700; }
+p { color: var(--muted); }
+a { color: var(--primary); text-decoration: none; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
 
-    :root {
-      --primary: #1A7A5E;
-      --primary-dark: #15624B;
-      --primary-soft: rgba(26,122,94,.1);
-      --cream: #F5F0E8;
-      --cream-soft: rgba(245,240,232,.6);
-      --ink: #0D1117;
-      --muted: #7A8695;
-      --text: #374151;
-      --border: rgba(200,184,154,.4);
-      --border-soft: rgba(200,184,154,.2);
-      --radius: 20px;
-    }
+/* ─── BUTTONS ─── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 22px; border-radius: 14px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; text-decoration: none; transition: all .2s;
+}
+.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 16px rgba(26,122,94,.3); }
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,122,94,.35); color: white; }
+.btn-ghost { background: rgba(255,255,255,.8); color: var(--text); border: 1.5px solid rgba(13,17,23,.12); backdrop-filter: blur(8px); }
+.btn-ghost:hover { background: white; border-color: rgba(13,17,23,.2); }
+.btn-lg { padding: 15px 28px; font-size: 15px; border-radius: 16px; }
+.btn-white { background: white; color: var(--primary); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.18); }
 
-    html, body {
-      font-family: 'DM Sans', sans-serif;
-      color: var(--ink);
-      background: #FAFAF8;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-    }
+/* ─── TOP BANNER ─── */
+.top-banner {
+  background: linear-gradient(90deg, var(--primary) 0%, #2AAE86 100%);
+  color: white; text-align: center;
+  padding: 10px 16px; font-size: 13px; font-weight: 500;
+}
+.top-banner a { color: white; font-weight: 700; text-decoration: underline; }
 
-    h1, h2, h3 { letter-spacing: -0.01em; }
-    h1, h2 { font-family: 'Instrument Serif', serif; font-weight: 400; }
-    h3 { font-family: 'DM Sans', sans-serif; font-weight: 700; }
-    p { color: var(--muted); }
+/* ─── HEADER ─── */
+.site-header {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(250,250,248,.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(200,184,154,.2);
+}
+.header-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px; max-width: 1200px; margin: 0 auto;
+}
+.logo-link {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: var(--ink);
+  font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px;
+}
+.logo-icon { width: 34px; height: 34px; border-radius: 9px; overflow: hidden; flex-shrink: 0; }
+.logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.brand-host { color: var(--primary); }
+.nav-main { display: flex; gap: 6px; }
+.nav-main a {
+  color: var(--text); font-size: 14px; font-weight: 500;
+  padding: 7px 14px; border-radius: 10px; transition: all .15s;
+}
+.nav-main a:hover { color: var(--primary); background: var(--primary-soft); }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.menu-toggle { display: none; background: none; border: none; font-size: 22px; color: var(--ink); cursor: pointer; }
 
-    a { color: var(--primary); text-decoration: none; }
+/* ─── HERO ─── */
+.hero {
+  min-height: 100svh;
+  position: relative;
+  display: flex; align-items: center;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0;
+  background: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80') center/cover;
+}
+.hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, rgba(13,17,23,.88) 0%, rgba(13,17,23,.72) 45%, rgba(13,17,23,.35) 100%);
+}
+.hero-content {
+  position: relative; z-index: 2;
+  max-width: 1200px; margin: 0 auto; padding: 0 28px;
+  width: 100%;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+  padding-top: 80px; padding-bottom: 80px;
+}
+.hero-left { animation: heroFadeIn .9s .1s both; }
+@keyframes heroFadeIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(26,122,94,.25); color: #6ee7b7;
+  border: 1px solid rgba(110,231,183,.3);
+  padding: 6px 14px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; margin-bottom: 24px;
+}
+.hero h1 {
+  font-size: clamp(38px, 5vw, 62px);
+  line-height: 1.05; color: white; margin-bottom: 22px;
+}
+.hero h1 em { font-style: italic; color: #6ee7b7; }
+.hero-sub {
+  font-size: 17px; color: rgba(255,255,255,.7);
+  line-height: 1.7; margin-bottom: 36px; max-width: 500px;
+}
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
+.hero-trust {
+  display: flex; gap: 20px; flex-wrap: wrap;
+}
+.hero-trust-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; color: rgba(255,255,255,.55);
+}
+.hero-trust-item i { color: #6ee7b7; font-size: 12px; }
 
-    .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
-    section { padding: 80px 0; }
-    section.alt { background: var(--cream-soft); }
+/* Hero right — floating cards */
+.hero-right { animation: heroFadeIn .9s .35s both; }
+.hero-cards { position: relative; }
+.hero-card-main {
+  background: rgba(255,255,255,.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 20px; overflow: hidden;
+}
+.hero-card-header {
+  background: rgba(255,255,255,.08);
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; font-weight: 600; color: white;
+}
+.hero-cal-row {
+  display: grid; grid-template-columns: 90px repeat(7,1fr);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  font-size: 11px;
+}
+.hero-cal-row:last-child { border-bottom: none; }
+.hero-cal-cell {
+  padding: 9px 4px; text-align: center;
+  color: rgba(255,255,255,.45);
+  border-right: 1px solid rgba(255,255,255,.06);
+  position: relative;
+}
+.hero-cal-cell:last-child { border-right: none; }
+.hero-cal-label {
+  font-weight: 600; color: rgba(255,255,255,.7);
+  text-align: left; padding-left: 12px;
+  display: flex; align-items: center; font-size: 11px;
+}
+.hero-cal-head .hero-cal-cell {
+  font-weight: 600; font-size: 10px;
+  background: rgba(255,255,255,.04); padding: 6px 4px;
+}
+.hero-booking {
+  position: absolute; top: 50%; left: 2px; right: 2px;
+  transform: translateY(-50%);
+  height: 20px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; color: white; white-space: nowrap;
+}
+.bk-air { background: #FF5A5F; }
+.bk-bk { background: #003580; }
+.bk-dir { background: var(--primary); }
+.bk-air.s3 { right: -200%; }
+.bk-bk.s2 { right: -100%; }
+.bk-dir.s4 { right: -300%; }
+.bk-bk.s3 { right: -200%; }
+.hero-rev-strip {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.hero-rev-item {
+  padding: 14px 18px;
+  border-right: 1px solid rgba(255,255,255,.08);
+}
+.hero-rev-item:last-child { border-right: none; }
+.hero-rev-label { font-size: 10px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.hero-rev-val { font-family: 'Instrument Serif', serif; font-size: 26px; color: white; line-height: 1; }
+.hero-rev-sub { font-size: 10px; color: rgba(255,255,255,.35); margin-top: 3px; }
 
-    /* ─── HEADER ─── */
-    .site-header {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(250,250,248,.88);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-soft);
-    }
-    @media (max-width: 900px) {
-      .site-header { background: #FAFAF8; backdrop-filter: none; }
-    }
-    .header-inner {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 24px; max-width: 1180px; margin: 0 auto;
-    }
-    .logo-link {
-      display: flex; align-items: center; gap: 10px;
-      text-decoration: none; color: var(--ink);
-      font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px;
-    }
-    .logo-icon {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .brand-boosting { color: var(--ink); }
-    .brand-host { color: var(--primary); }
+/* Floating notif */
+.hero-notif {
+  position: absolute; bottom: -16px; right: -12px;
+  background: var(--ink); color: white;
+  padding: 11px 16px; border-radius: 14px;
+  font-size: 12px; font-weight: 500;
+  box-shadow: 0 12px 32px rgba(0,0,0,.4);
+  display: flex; align-items: center; gap: 9px;
+  opacity: 0; animation: floatUp .6s 2s forwards;
+  border: 1px solid rgba(255,255,255,.06);
+}
+.hero-notif .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex-shrink: 0; animation: pulse 2s 2s infinite; }
+@keyframes floatUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 
-    .nav-main { display: flex; gap: 28px; }
-    .nav-main a {
-      color: var(--text); font-size: 14px; font-weight: 500;
-      transition: color .15s;
-    }
-    .nav-main a:hover { color: var(--primary); }
+/* Scroll indicator */
+.hero-scroll {
+  position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
+  z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  animation: heroFadeIn .8s 1.5s both;
+}
+.hero-scroll-line {
+  width: 1px; height: 50px;
+  background: linear-gradient(to bottom, rgba(255,255,255,.5), transparent);
+  animation: scrollLine 2s 2s infinite;
+}
+@keyframes scrollLine { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.5); } }
+.hero-scroll span { font-size: 10px; color: rgba(255,255,255,.35); letter-spacing: .12em; text-transform: uppercase; }
 
-    .header-actions { display: flex; gap: 10px; }
+/* ─── LOGOS BAND ─── */
+.logos-band {
+  background: white;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 24px 0; overflow: hidden;
+}
+.logos-label {
+  text-align: center;
+  font-size: 11px; color: var(--muted); letter-spacing: .12em;
+  text-transform: uppercase; font-weight: 600; margin-bottom: 20px;
+}
+.logos-track { display: flex; align-items: center; gap: 0; }
+.logos-inner {
+  display: flex; align-items: center; gap: 0;
+  animation: logoScroll 22s linear infinite;
+  white-space: nowrap;
+}
+@keyframes logoScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.logo-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 24px; border-right: 1px solid var(--border);
+  font-size: 15px; font-weight: 700; white-space: nowrap;
+}
 
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 18px; border-radius: 12px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px; font-weight: 600;
-      cursor: pointer; border: none; text-decoration: none;
-      transition: all .15s;
-    }
-    .btn.small { padding: 8px 14px; font-size: 13px; }
-    .btn-primary {
-      background: var(--primary); color: white;
-      box-shadow: 0 4px 12px rgba(26,122,94,.25);
-    }
-    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); color: white; }
-    .btn-ghost {
-      background: rgba(255,255,255,.6); color: var(--text);
-      border: 1.5px solid rgba(13,17,23,.12);
-    }
-    .btn-ghost:hover { background: white; }
-    .btn-large { padding: 14px 24px; font-size: 15px; }
+/* ─── STATS ─── */
+.stats-section { padding: 80px 0 60px; }
+.stats-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 2px;
+  background: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.stat-box {
+  background: white;
+  padding: 36px 28px; text-align: center;
+}
+.stat-num {
+  font-family: 'Instrument Serif', serif;
+  font-size: 52px; color: var(--primary); line-height: 1;
+  margin-bottom: 8px;
+}
+.stat-desc { font-size: 14px; color: var(--text); line-height: 1.4; }
 
-    .menu-toggle {
-      display: none; background: none; border: none;
-      font-size: 22px; color: var(--ink); cursor: pointer;
-    }
+/* ─── SECTION BASE ─── */
+.section { padding: 100px 0; }
+.section-kicker {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--primary-soft); color: var(--primary);
+  border: 1px solid rgba(26,122,94,.15);
+  padding: 5px 14px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; margin-bottom: 16px;
+}
+.section-title {
+  font-size: clamp(30px, 4vw, 46px);
+  color: var(--ink); margin-bottom: 14px;
+}
+.section-sub {
+  font-size: 17px; color: var(--muted); line-height: 1.7;
+  max-width: 580px; margin-bottom: 40px;
+}
 
-    /* ─── HERO ─── */
-    .hero { padding: 80px 0 60px; background: linear-gradient(180deg, #FAFAF8 0%, var(--cream-soft) 100%); }
-    .hero-grid {
-      display: grid; grid-template-columns: 1.1fr 1fr;
-      gap: 56px; align-items: center;
-    }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--primary-soft); color: var(--primary);
-      padding: 7px 14px; border-radius: 999px;
-      font-size: 13px; font-weight: 600; margin-bottom: 20px;
-    }
-    .hero h1 {
-      font-size: clamp(34px, 5vw, 52px);
-      line-height: 1.1; color: var(--ink); margin-bottom: 20px;
-    }
-    .hero h1 em { color: var(--primary); font-style: italic; }
-    .hero-subtitle {
-      font-size: 17px; color: var(--muted);
-      margin-bottom: 32px; max-width: 540px;
-    }
-    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
-    .hero-trust {
-      display: flex; gap: 20px; flex-wrap: wrap;
-      font-size: 13px; color: var(--muted);
-    }
-    .hero-trust span i { color: var(--primary); margin-right: 5px; }
+/* ─── FEATURE SHOWCASE — full photo left ─── */
+.showcase {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 64px; align-items: center; margin-bottom: 120px;
+}
+.showcase:last-child { margin-bottom: 0; }
+.showcase.flip { direction: rtl; }
+.showcase.flip > * { direction: ltr; }
+.showcase-photo {
+  border-radius: 24px; overflow: hidden;
+  box-shadow: 0 24px 64px rgba(13,17,23,.12);
+  aspect-ratio: 4/3; position: relative;
+}
+.showcase-photo img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform .6s cubic-bezier(.25,0,0,1);
+}
+.showcase-photo:hover img { transform: scale(1.04); }
+.showcase-photo-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(13,17,23,.6) 0%, transparent 50%);
+  pointer-events: none;
+}
+.showcase-photo-tag {
+  position: absolute; bottom: 18px; left: 18px;
+  background: rgba(255,255,255,.15); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.2);
+  color: white; font-size: 12px; font-weight: 600;
+  padding: 7px 14px; border-radius: 10px;
+  display: flex; align-items: center; gap: 7px;
+}
+.showcase-photo-tag i { color: #6ee7b7; }
 
-    /* ─── HERO DASHBOARD MOCK (fidèle au vrai produit) ─── */
-    .hero-visual { position: relative; }
-    .mock-dash {
-      background: var(--cream);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      overflow: hidden;
-      box-shadow: 0 20px 60px rgba(13,17,23,.08);
-      contain: layout paint;
-    }
+.showcase-text { padding: 0 8px; }
+.feature-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+.feature-list li {
+  display: flex; align-items: flex-start; gap: 12px;
+  font-size: 15px; color: var(--text); line-height: 1.6;
+}
+.feature-list li .check {
+  width: 22px; height: 22px; border-radius: 7px;
+  background: var(--primary-soft); color: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; flex-shrink: 0; margin-top: 1px;
+}
 
-    /* Calendrier mock */
-    .mock-cal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px;
-      background: white;
-      border-bottom: 1px solid var(--border-soft);
-      font-size: 14px; font-weight: 700; color: var(--ink);
-    }
-    .mock-cal-header span { font-weight: 400; color: var(--muted); }
-    .mock-cal-body { padding: 0; }
-    .mock-cal-row {
-      display: grid;
-      grid-template-columns: 80px repeat(7, 1fr);
-      font-size: 11.5px;
-      border-bottom: 1px solid var(--border-soft);
-    }
-    .mock-cal-row:last-child { border-bottom: none; }
-    .mock-cal-cell {
-      padding: 8px 4px;
-      text-align: center;
-      color: var(--muted);
-      border-right: 1px solid var(--border-soft);
-      position: relative;
-    }
-    .mock-cal-cell:last-child { border-right: none; }
-    .mock-cal-label {
-      font-weight: 700; color: var(--ink);
-      text-align: left; padding-left: 10px;
-      display: flex; align-items: center;
-      font-size: 12px;
-    }
-    .mock-cal-head .mock-cal-cell {
-      font-weight: 600; color: var(--muted); font-size: 10px;
-      padding: 6px 4px; background: rgba(255,255,255,.5);
-    }
-    .mock-booking {
-      position: absolute; top: 50%; left: 2px; right: 2px;
-      transform: translateY(-50%);
-      height: 22px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 9px; font-weight: 600; color: white;
-      white-space: nowrap; overflow: hidden;
-    }
-    .bk-airbnb { background: #FF5A5F; }
-    .bk-booking { background: #003580; }
-    .bk-direct { background: var(--primary); }
-    /* Bookings spanning multiple cells */
-    .mock-booking.span-3 { right: -200%; }
-    .mock-booking.span-2 { right: -100%; }
-    .mock-booking.span-4 { right: -300%; }
+/* ─── HORIZONTAL SCROLL FEATURES ─── */
+.hscroll-section { padding: 100px 0; background: var(--ink); overflow: hidden; }
+.hscroll-header { text-align: center; margin-bottom: 52px; padding: 0 28px; }
+.hscroll-header .section-kicker { background: rgba(26,122,94,.2); color: #6ee7b7; border-color: rgba(110,231,183,.2); }
+.hscroll-header .section-title { color: white; }
+.hscroll-header .section-sub { color: rgba(255,255,255,.55); margin-left: auto; margin-right: auto; }
 
-    /* Revenue cards mock */
-    .mock-revenue {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 0;
-    }
-    .mock-rev-card {
-      padding: 14px 16px;
-      border-right: 1px solid var(--border-soft);
-      border-bottom: 1px solid var(--border-soft);
-      background: white;
-    }
-    .mock-rev-card:nth-child(2n) { border-right: none; }
-    .mock-rev-label {
-      font-size: 10px; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: .5px;
-      margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
-    }
-    .mock-rev-label i { font-size: 12px; }
-    .mock-rev-value {
-      font-family: 'Instrument Serif', serif;
-      font-size: 24px; color: var(--ink); line-height: 1;
-    }
-    .mock-rev-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.hscroll-track {
+  display: flex; gap: 20px;
+  padding: 8px 28px 20px;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: none; cursor: grab;
+}
+.hscroll-track::-webkit-scrollbar { display: none; }
+.hscroll-track:active { cursor: grabbing; }
 
-    /* Chat mock */
-    .mock-chat {
-      padding: 14px 16px;
-      background: white;
-      border-top: 1px solid var(--border-soft);
-    }
-    .mock-chat-header {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 10px;
-      font-size: 12px; font-weight: 600; color: var(--ink);
-    }
-    .mock-avatar {
-      width: 28px; height: 28px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: white;
-    }
-    .mock-chat-tag {
-      margin-left: auto;
-      background: #003580; color: white;
-      font-size: 9px; font-weight: 600;
-      padding: 2px 7px; border-radius: 4px;
-    }
-    .mock-chat-bubble {
-      background: var(--ink); color: white;
-      padding: 10px 14px; border-radius: 12px;
-      font-size: 12px; line-height: 1.5;
-      max-width: 90%;
-    }
-    .mock-chat-meta {
-      font-size: 10px; color: var(--muted); margin-top: 6px;
-    }
+.feature-tile {
+  flex: 0 0 320px; scroll-snap-align: start;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 20px; padding: 28px;
+  transition: background .2s, border-color .2s, transform .2s;
+}
+.feature-tile:hover {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(26,122,94,.35);
+  transform: translateY(-4px);
+}
+.tile-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: rgba(26,122,94,.2); color: #6ee7b7;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 20px;
+  border: 1px solid rgba(26,122,94,.25);
+}
+.tile-title { font-size: 17px; font-weight: 700; color: white; margin-bottom: 10px; }
+.tile-desc { font-size: 14px; color: rgba(255,255,255,.5); line-height: 1.65; }
+.tile-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 16px; font-size: 13px; font-weight: 600; color: #6ee7b7;
+}
+.tile-link i { font-size: 10px; transition: transform .15s; }
+.tile-link:hover i { transform: translateX(3px); }
 
-    /* Floating notification */
-    .mock-notif {
-      position: absolute;
-      bottom: -18px; right: -14px;
-      background: var(--ink); color: white;
-      padding: 10px 14px; border-radius: 12px;
-      font-size: 12px;
-      box-shadow: 0 8px 24px rgba(13,17,23,.2);
-      display: flex; align-items: center; gap: 8px;
-      opacity: 0; animation: floatIn 0.6s 2.5s forwards;
-      z-index: 2;
-    }
-    .mock-notif i { color: #4ade80; }
-    @keyframes floatIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .mock-notif { animation: none; opacity: 1; }
-    }
+.hscroll-dots {
+  display: flex; justify-content: center; gap: 6px;
+  margin-top: 24px; padding: 0 28px;
+}
+.hscroll-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,.2); cursor: pointer; transition: all .2s;
+}
+.hscroll-dot.active { background: var(--primary); width: 20px; border-radius: 3px; }
 
-    /* ─── SECTION SHOWCASE (product screenshots via CSS mocks) ─── */
-    .showcase-grid {
-      display: grid; grid-template-columns: 1fr 1.2fr;
-      gap: 48px; align-items: center;
-      margin-bottom: 64px;
-    }
-    .showcase-grid.reverse { direction: rtl; }
-    .showcase-grid.reverse > * { direction: ltr; }
-    .showcase-text .showcase-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--primary-soft); color: var(--primary);
-      padding: 5px 12px; border-radius: 999px;
-      font-size: 12px; font-weight: 600; margin-bottom: 14px;
-    }
-    .showcase-text h3 {
-      font-family: 'Instrument Serif', serif; font-weight: 400;
-      font-size: 28px; color: var(--ink); margin-bottom: 12px;
-    }
-    .showcase-text p { font-size: 15px; line-height: 1.7; margin-bottom: 16px; }
-    .showcase-text ul {
-      list-style: none; display: flex; flex-direction: column; gap: 8px;
-    }
-    .showcase-text li {
-      font-size: 14px; color: var(--text);
-      display: flex; align-items: center; gap: 8px;
-    }
-    .showcase-text li i { color: var(--primary); font-size: 12px; width: 16px; }
+/* ─── PHOTO GRID SECTION ─── */
+.photo-grid-section { padding: 100px 0; }
+.photo-grid-header { text-align: center; margin-bottom: 60px; }
+.photo-masonry {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto;
+  gap: 16px;
+}
+.photo-item {
+  border-radius: 18px; overflow: hidden;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(13,17,23,.08);
+}
+.photo-item img {
+  width: 100%; height: 100%; object-fit: cover;
+  display: block; transition: transform .5s cubic-bezier(.25,0,0,1);
+}
+.photo-item:hover img { transform: scale(1.05); }
+.photo-item:nth-child(1) { grid-row: span 2; aspect-ratio: 3/4; }
+.photo-item:nth-child(2) { aspect-ratio: 4/3; }
+.photo-item:nth-child(3) { aspect-ratio: 4/3; }
+.photo-item:nth-child(4) { aspect-ratio: 4/3; }
+.photo-item:nth-child(5) { aspect-ratio: 4/3; }
+.photo-caption {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(13,17,23,.7), transparent);
+  padding: 20px 16px 14px;
+  font-size: 12px; font-weight: 600; color: white;
+  opacity: 0; transition: opacity .25s;
+}
+.photo-item:hover .photo-caption { opacity: 1; }
 
-    .showcase-visual {
-      background: var(--cream);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      box-shadow: 0 12px 40px rgba(13,17,23,.06);
-    }
+/* ─── HOW IT WORKS ─── */
+.how-section { padding: 100px 0; background: var(--cream); }
+.steps-track {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 0; position: relative;
+  margin-top: 60px;
+}
+.steps-track::before {
+  content: '';
+  position: absolute; top: 32px; left: calc(16.66% + 16px); right: calc(16.66% + 16px);
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), #2AAE86);
+}
+.step-card {
+  text-align: center; padding: 0 32px;
+  position: relative; z-index: 1;
+}
+.step-num {
+  width: 64px; height: 64px;
+  background: var(--primary); color: white;
+  border-radius: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Instrument Serif', serif; font-size: 26px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 24px rgba(26,122,94,.3);
+}
+.step-card h3 { font-size: 18px; margin-bottom: 12px; color: var(--ink); }
+.step-card p { font-size: 14px; line-height: 1.7; }
 
-    /* Mini property cards */
-    .mini-props {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    .mini-prop {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--border-soft);
-    }
-    .mini-prop-img {
-      height: 60px;
-      background: linear-gradient(135deg, #c9d6c3 0%, #a8bfa0 100%);
-      position: relative;
-    }
-    .mini-prop-badge {
-      position: absolute; top: 6px; right: 6px;
-      background: var(--primary); color: white;
-      font-size: 8px; font-weight: 700;
-      padding: 2px 6px; border-radius: 6px;
-    }
-    .mini-prop-info { padding: 8px 10px; }
-    .mini-prop-name { font-size: 10px; font-weight: 700; color: var(--ink); line-height: 1.3; }
-    .mini-prop-meta { font-size: 9px; color: var(--muted); margin-top: 2px; }
-    .mini-prop-tags { display: flex; gap: 4px; margin-top: 6px; }
-    .mini-prop-tag {
-      font-size: 8px; font-weight: 600; padding: 2px 6px;
-      border-radius: 4px; border: 1px solid;
-    }
-    .mini-prop-tag.booking { color: #003580; border-color: #003580; background: rgba(0,53,128,.06); }
-    .mini-prop-tag.airbnb { color: #FF5A5F; border-color: #FF5A5F; background: rgba(255,90,95,.06); }
+/* ─── TESTIMONIALS CAROUSEL ─── */
+.testimonials-section { padding: 100px 0; overflow: hidden; }
+.testimonials-header { text-align: center; margin-bottom: 56px; }
+.testimonials-track {
+  display: flex; gap: 24px;
+  padding: 0 28px 8px;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.testimonials-track::-webkit-scrollbar { display: none; }
+.testimonial-card {
+  flex: 0 0 360px; scroll-snap-align: start;
+  background: white; border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px 28px;
+  box-shadow: 0 4px 20px rgba(13,17,23,.04);
+  transition: box-shadow .2s, transform .2s;
+}
+.testimonial-card:hover { box-shadow: 0 12px 40px rgba(13,17,23,.1); transform: translateY(-4px); }
+.testimonial-stars { display: flex; gap: 3px; margin-bottom: 16px; }
+.testimonial-stars i { color: #f59e0b; font-size: 13px; }
+.testimonial-text {
+  font-family: 'Instrument Serif', serif;
+  font-size: 18px; line-height: 1.6; color: var(--ink);
+  font-style: italic; margin-bottom: 24px;
+}
+.testimonial-author { display: flex; align-items: center; gap: 12px; }
+.testimonial-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.testimonial-name { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.testimonial-role { font-size: 12px; color: var(--muted); }
 
-    /* Mini revenue dashboard */
-    .mini-rev-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .mini-rev-card {
-      background: white;
-      border-radius: 12px;
-      padding: 12px 14px;
-      border: 1px solid var(--border-soft);
-      border-top: 3px solid;
-    }
-    .mini-rev-card:nth-child(1) { border-top-color: var(--primary); }
-    .mini-rev-card:nth-child(2) { border-top-color: #635BFF; }
-    .mini-rev-card:nth-child(3) { border-top-color: #fb923c; }
-    .mini-rev-card:nth-child(4) { border-top-color: #3b82f6; }
-    .mini-rev-label { font-size: 9px; font-weight: 600; text-transform: uppercase; color: var(--muted); letter-spacing: .3px; }
-    .mini-rev-value { font-family: 'Instrument Serif', serif; font-size: 22px; color: var(--ink); line-height: 1; margin-top: 4px; }
-    .mini-rev-sub { font-size: 9px; color: var(--muted); margin-top: 2px; }
+/* ─── INTEGRATIONS ─── */
+.integrations-section { padding: 80px 0; background: var(--white); }
+.integrations-header { text-align: center; margin-bottom: 48px; }
+.integrations-grid {
+  display: grid; grid-template-columns: repeat(5,1fr);
+  gap: 16px; max-width: 900px; margin: 0 auto 28px;
+}
+.integration-badge {
+  background: white; border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 700; color: var(--text);
+  transition: all .2s;
+}
+.integration-badge:hover { border-color: var(--primary); box-shadow: 0 4px 16px rgba(26,122,94,.12); transform: translateY(-2px); }
+.integration-badge i { font-size: 28px; }
+.integration-ical {
+  text-align: center; font-size: 14px; color: var(--muted);
+  margin-top: 4px;
+}
+.integration-ical strong { color: var(--text); }
 
-    /* Mini chat */
-    .mini-chat-wrap {
-      background: white; border-radius: 12px;
-      border: 1px solid var(--border-soft);
-      overflow: hidden;
-    }
-    .mini-chat-tabs {
-      display: flex; font-size: 11px; font-weight: 600;
-      border-bottom: 1px solid var(--border-soft);
-    }
-    .mini-chat-tab {
-      padding: 8px 14px; color: var(--muted);
-    }
-    .mini-chat-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
-    .mini-chat-list { padding: 0; }
-    .mini-chat-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border-soft);
-    }
-    .mini-chat-item:last-child { border-bottom: none; }
-    .mini-chat-avatar {
-      width: 30px; height: 30px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: white; flex-shrink: 0;
-    }
-    .mini-chat-name { font-size: 12px; font-weight: 600; color: var(--ink); }
-    .mini-chat-preview { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
-    .mini-chat-time { font-size: 9px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+/* ─── AUDIENCE ─── */
+.audience-section { padding: 100px 0; }
+.audience-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 24px; margin-top: 56px;
+}
+.audience-card {
+  border-radius: 24px; overflow: hidden;
+  position: relative; aspect-ratio: 3/4;
+  cursor: default;
+}
+.audience-card img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform .5s cubic-bezier(.25,0,0,1);
+}
+.audience-card:hover img { transform: scale(1.06); }
+.audience-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(13,17,23,.85) 0%, rgba(13,17,23,.1) 60%, transparent 100%);
+}
+.audience-content {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 28px 24px;
+}
+.audience-icon {
+  width: 44px; height: 44px;
+  background: rgba(26,122,94,.25); color: #6ee7b7;
+  border: 1px solid rgba(110,231,183,.2);
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; margin-bottom: 14px;
+}
+.audience-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 8px; }
+.audience-desc { font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.6; }
 
-    /* ─── STATS BAR ─── */
-    .stats-bar {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      max-width: 900px; margin: 0 auto;
-      background: white;
-      border-radius: var(--radius);
-      border: 1px solid var(--border-soft);
-      overflow: hidden;
-    }
-    .stat-item {
-      text-align: center; padding: 28px 16px;
-      border-right: 1px solid var(--border-soft);
-    }
-    .stat-item:last-child { border-right: none; }
-    .stat-num {
-      font-family: 'Instrument Serif', serif;
-      font-size: 38px; color: var(--primary); line-height: 1; margin-bottom: 6px;
-    }
-    .stat-item p { font-size: 13px; color: var(--text); line-height: 1.4; }
+/* ─── CTA ─── */
+.cta-section { padding: 80px 0 100px; }
+.cta-box {
+  position: relative; overflow: hidden;
+  border-radius: 28px;
+  background: url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1400&q=80') center/cover;
+  padding: 80px 60px; text-align: center;
+}
+.cta-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(13,17,23,.92) 0%, rgba(26,122,94,.7) 100%);
+}
+.cta-content { position: relative; z-index: 1; }
+.cta-box h2 { font-size: clamp(28px,4vw,44px); color: white; margin-bottom: 14px; }
+.cta-box p { font-size: 17px; color: rgba(255,255,255,.7); margin-bottom: 36px; }
+.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.cta-trust {
+  display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
+  margin-top: 28px;
+}
+.cta-trust span { font-size: 13px; color: rgba(255,255,255,.45); display: flex; align-items: center; gap: 7px; }
+.cta-trust span i { color: #6ee7b7; }
 
-    /* ─── FEATURES ─── */
-    .section-title {
-      font-size: clamp(28px, 4vw, 40px);
-      color: var(--ink); text-align: center; margin-bottom: 12px;
-    }
-    .section-subtitle {
-      text-align: center; color: var(--muted); font-size: 16px;
-      max-width: 620px; margin: 0 auto 48px;
-    }
-    .features-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
-    }
-    .feature-card {
-      background: white;
-      border: 1px solid var(--border-soft);
-      border-radius: 16px; padding: 24px 20px;
-      transition: box-shadow .2s, transform .2s;
-    }
-    .feature-card:hover {
-      box-shadow: 0 8px 24px rgba(13,17,23,.07);
-      transform: translateY(-2px);
-    }
-    .feature-icon {
-      width: 44px; height: 44px;
-      background: var(--primary-soft); color: var(--primary);
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; margin-bottom: 16px;
-    }
-    .feature-card h3 { font-size: 16px; margin-bottom: 8px; }
-    .feature-card p { font-size: 14px; line-height: 1.6; }
-    .feature-link {
-      color: var(--primary); font-weight: 600; font-size: 13px;
-      display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
-    }
-    .feature-link i:last-child { font-size: 10px; transition: transform .15s; }
-    .feature-link:hover i:last-child { transform: translateX(3px); }
+/* ─── FOOTER ─── */
+.site-footer {
+  background: var(--ink);
+  color: rgba(255,255,255,.5);
+  padding: 60px 0 40px;
+}
+.footer-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 28px;
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 40px; align-items: start;
+}
+.footer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.footer-brand span { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 17px; color: white; }
+.footer-brand .brand-host { color: #6ee7b7; }
+.footer-copy { font-size: 13px; margin-bottom: 8px; }
+.footer-copy a { color: rgba(255,255,255,.6); }
+.footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+.footer-links a { font-size: 12px; color: rgba(255,255,255,.35); transition: color .15s; }
+.footer-links a:hover { color: rgba(255,255,255,.7); }
+.footer-badges { display: flex; gap: 12px; align-items: center; }
+.footer-badge {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px; padding: 10px 16px;
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6);
+  display: flex; align-items: center; gap: 7px;
+}
+.footer-badge i { color: #6ee7b7; }
 
-    /* ─── HOW IT WORKS ─── */
-    .steps {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
-    }
-    .step {
-      text-align: center; padding: 32px 24px;
-      background: white; border: 1px solid var(--border-soft);
-      border-radius: var(--radius);
-    }
-    .step-num {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 44px; height: 44px;
-      background: var(--primary); color: white;
-      border-radius: 12px;
-      font-family: 'Instrument Serif', serif; font-size: 20px;
-      margin-bottom: 18px;
-    }
-    .step h3 { font-size: 17px; margin-bottom: 10px; }
-    .step p { font-size: 14px; line-height: 1.6; }
+/* ─── SCROLL REVEAL ─── */
+.reveal {
+  opacity: 0; transform: translateY(32px);
+  transition: opacity .7s cubic-bezier(.25,0,0,1), transform .7s cubic-bezier(.25,0,0,1);
+}
+.reveal.visible { opacity: 1; transform: none; }
+.reveal-delay-1 { transition-delay: .1s; }
+.reveal-delay-2 { transition-delay: .2s; }
+.reveal-delay-3 { transition-delay: .3s; }
+.reveal-delay-4 { transition-delay: .4s; }
 
-    /* ─── AUDIENCE ─── */
-    .audience-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
-    }
-    .audience-card {
-      background: var(--cream); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 28px 24px;
-    }
-    .audience-icon {
-      width: 46px; height: 46px;
-      background: white; color: var(--primary);
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; margin-bottom: 16px;
-      border: 1px solid var(--border-soft);
-    }
-    .audience-card h3 { font-size: 17px; margin-bottom: 8px; }
-    .audience-card p { font-size: 14px; line-height: 1.6; }
-
-    /* ─── TESTIMONIAL ─── */
-    .testimonial {
-      background: var(--cream); border-radius: var(--radius);
-      padding: 40px 36px; max-width: 760px; margin: 0 auto;
-      text-align: center;
-    }
-    .testimonial blockquote {
-      font-family: 'Instrument Serif', serif;
-      font-size: 22px; line-height: 1.5;
-      color: var(--ink); margin-bottom: 20px; font-style: italic;
-    }
-    .testimonial cite {
-      display: block; font-style: normal;
-      font-size: 14px; color: var(--muted); font-weight: 500;
-    }
-
-    /* ─── INTEGRATIONS ─── */
-    .platforms-row {
-      display: flex; justify-content: center; align-items: center;
-      gap: 40px; flex-wrap: wrap; margin-top: 32px;
-    }
-    .platform-logo {
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      font-size: 13px; color: var(--muted); font-weight: 500;
-    }
-    .platform-logo i { font-size: 28px; }
-
-    /* ─── CTA ─── */
-    .cta-callout {
-      background: linear-gradient(135deg, var(--primary) 0%, #2AAE86 100%);
-      color: white; border-radius: 24px;
-      padding: 48px 40px; text-align: center;
-      max-width: 760px; margin: 0 auto;
-    }
-    .cta-callout h2 { color: white; font-size: 30px; margin-bottom: 10px; }
-    .cta-callout p {
-      color: rgba(255,255,255,.9); font-size: 16px;
-      margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto;
-    }
-    .cta-callout .btn-primary { background: white; color: var(--primary); }
-    .cta-callout .btn-primary:hover { background: var(--cream); color: var(--primary-dark); }
-    .cta-callout .btn-ghost {
-      background: rgba(255,255,255,.15); color: white;
-      border: 1.5px solid rgba(255,255,255,.3);
-    }
-    .cta-callout .btn-ghost:hover { background: rgba(255,255,255,.25); }
-
-    /* ─── FOOTER ─── */
-    footer {
-      background: var(--ink); color: rgba(255,255,255,.7);
-      padding: 40px 0; text-align: center; font-size: 13.5px;
-    }
-    footer a { color: rgba(255,255,255,.85); }
-    footer a:hover { color: white; }
-    .footer-links {
-      display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 12px;
-    }
-    .footer-links a { font-size: 12px; color: rgba(255,255,255,.5); }
-    .footer-links a:hover { color: rgba(255,255,255,.8); }
-
-    /* ─── IA BANNER ─── */
-    .ia-banner {
-      display: block;
-      background: linear-gradient(135deg, var(--primary) 0%, #2AAE86 100%);
-      color: white; text-align: center;
-      padding: 10px 16px; font-size: 13.5px; font-weight: 500;
-    }
-    .ia-banner strong { font-weight: 700; }
-    .ia-banner span { text-decoration: underline; }
-
-    /* ─── RESPONSIVE ─── */
-    @media (max-width: 900px) {
-      section { padding: 56px 0; }
-      .hero { padding: 48px 0 40px; }
-      .hero-grid { grid-template-columns: 1fr; gap: 32px; }
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .steps, .audience-grid { grid-template-columns: 1fr; }
-      .showcase-grid, .showcase-grid.reverse { grid-template-columns: 1fr; direction: ltr; }
-      .stats-bar { grid-template-columns: repeat(2, 1fr); }
-      .stat-item:nth-child(2) { border-right: none; }
-      .stat-item:nth-child(1), .stat-item:nth-child(2) { border-bottom: 1px solid var(--border-soft); }
-      .nav-main { display: none; }
-      .menu-toggle { display: block; }
-      .nav-main.open {
-        display: flex; flex-direction: column;
-        position: absolute; top: 100%; left: 0; right: 0;
-        background: white;
-        border-top: 1px solid var(--border-soft);
-        border-bottom: 1px solid var(--border-soft);
-        padding: 16px 24px; gap: 14px;
-      }
-      .header-actions .btn.small { display: none; }
-      .mock-notif { display: none; }
-      .mini-props { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 520px) {
-      .hero h1 { font-size: 28px; }
-      .hero-actions { flex-direction: column; }
-      .hero-actions .btn { width: 100%; justify-content: center; }
-      .hero-trust { gap: 12px; font-size: 12px; }
-      .features-grid { grid-template-columns: 1fr; }
-      .cta-callout { padding: 36px 20px; }
-      .stats-bar { grid-template-columns: 1fr; }
-      .stat-item { border-right: none !important; border-bottom: 1px solid var(--border-soft); }
-      .stat-item:last-child { border-bottom: none; }
-    }
-  </style>
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1024px) {
+  .hero-content { grid-template-columns: 1fr; padding-top: 60px; }
+  .hero-right { display: none; }
+  .showcase { grid-template-columns: 1fr; gap: 40px; }
+  .showcase.flip { direction: ltr; }
+  .integrations-grid { grid-template-columns: repeat(3,1fr); }
+  .steps-track::before { display: none; }
+  .steps-track { grid-template-columns: 1fr; gap: 32px; }
+  .step-card { text-align: left; padding: 0 0 0 80px; position: relative; }
+  .step-num { position: absolute; left: 0; top: 0; }
+  .footer-inner { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+  .audience-grid { grid-template-columns: 1fr 1fr; }
+  .audience-grid .audience-card:last-child { grid-column: span 2; aspect-ratio: 16/7; }
+  .photo-masonry { grid-template-columns: 1fr 1fr; }
+  .photo-item:nth-child(1) { grid-row: auto; aspect-ratio: 4/3; }
+  .nav-main { display: none; }
+  .menu-toggle { display: block; }
+  .nav-main.open {
+    display: flex; flex-direction: column;
+    position: fixed; top: 62px; left: 0; right: 0; bottom: 0;
+    background: rgba(250,250,248,.97); backdrop-filter: blur(20px);
+    padding: 24px 28px; gap: 4px; overflow-y: auto; z-index: 190;
+  }
+  .nav-main.open a { padding: 12px 16px; font-size: 16px; border-radius: 12px; }
+  .header-actions .btn-ghost { display: none; }
+  .cta-box { padding: 56px 28px; }
+  .integrations-grid { grid-template-columns: repeat(3,1fr); }
+  .footer-badges { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 520px) {
+  .hero h1 { font-size: 34px; }
+  .hero-actions { flex-direction: column; }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .audience-grid { grid-template-columns: 1fr; }
+  .audience-grid .audience-card:last-child { grid-column: auto; aspect-ratio: 3/4; }
+  .testimonial-card { flex: 0 0 290px; }
+  .feature-tile { flex: 0 0 270px; }
+  .integrations-grid { grid-template-columns: repeat(2,1fr); }
+}
+</style>
 </head>
-
 <body>
 
-<!-- ═══════════ IA TEASER BANNER ═══════════ -->
-<a href="/ia.html" class="ia-banner">
-  <i class="fas fa-sparkles" style="margin-right:6px;"></i>
-  <strong>Nouveau :</strong> l'IA qui répond à vos voyageurs 24/7 dans 26 langues —
-  <span>Essayer la démo →</span>
+<!-- TOP BANNER -->
+<a href="/ia.html" class="top-banner">
+  <i class="fas fa-sparkles" style="margin-right:7px;"></i>
+  <strong>Nouveau :</strong> l'IA répond à vos voyageurs 24h/24 en 26 langues —
+  <span style="text-decoration:underline;margin-left:4px;">Tester la démo →</span>
 </a>
 
-<!-- ═══════════ HEADER ═══════════ -->
+<!-- HEADER -->
 <header class="site-header">
   <div class="header-inner">
     <a href="/" class="logo-link">
-      <span class="logo-icon"><img src="data:image/png;base64,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" alt="Boostinghost"></span>
-      <span><span class="brand-boosting">Boosting</span><span class="brand-host">host</span></span>
+      <span class="logo-icon"><img src="/images/logo.png" alt="Boostinghost"></span>
+      <span>Boosting<span class="brand-host">host</span></span>
     </a>
     <nav class="nav-main" id="navMain">
       <a href="#features">Fonctionnalités</a>
-      <a href="/ia.html"><i class="fas fa-sparkles" style="margin-right:4px;font-size:11px;"></i>IA</a>
-      <a href="#how">Comment ça marche</a>
+      <a href="/ia.html"><i class="fas fa-sparkles" style="font-size:11px;margin-right:3px;color:var(--primary);"></i>IA</a>
+      <a href="#comment">Comment ça marche</a>
       <a href="#pour-qui">Pour qui ?</a>
       <a href="/pricing.html">Tarifs</a>
       <a href="/blog.html">Blog</a>
     </nav>
     <div class="header-actions">
-      <a href="/login.html" class="btn btn-ghost small">Se connecter</a>
-      <a href="/register.html" class="btn btn-primary small">Créer un compte</a>
+      <a href="/login.html" class="btn btn-ghost" style="padding:9px 16px;font-size:13px;">Se connecter</a>
+      <a href="/register.html" class="btn btn-primary" style="padding:9px 16px;font-size:13px;">Démarrer gratuitement</a>
       <button class="menu-toggle" onclick="document.getElementById('navMain').classList.toggle('open')">
         <i class="fas fa-bars"></i>
       </button>
@@ -708,578 +735,582 @@
   </div>
 </header>
 
-<!-- ═══════════ HERO ═══════════ -->
+<!-- ═══ HERO ═══ -->
 <section class="hero">
-  <div class="container hero-grid">
-    <div>
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+
+  <div class="hero-content">
+    <div class="hero-left">
       <div class="hero-badge">
-        <i class="fas fa-calendar-check"></i>
-        Tout-en-un pour la location courte durée
+        <i class="fas fa-bolt"></i> Tout-en-un · Channel Manager · IA
       </div>
       <h1>Gérez vos locations courte durée <em>sans y passer vos journées.</em></h1>
-      <p class="hero-subtitle">
-        Synchronisez Airbnb, Booking.com, Abritel, Expedia — et toute plateforme via iCal (Leboncoin Vacances, Gîtes de France…).
-        Calendrier, paiements, ménages, messagerie IA, facturation propriétaires : tout dans un seul outil.
+      <p class="hero-sub">
+        Airbnb, Booking.com, Abritel, Expedia et toute plateforme iCal — centralisés. Calendrier, paiements, ménages, messagerie IA, facturation : un seul outil, zéro jonglage.
       </p>
       <div class="hero-actions">
-        <a href="/register.html" class="btn btn-primary btn-large">
-          <i class="fas fa-rocket"></i>
-          Créer mon espace gratuitement
+        <a href="/register.html" class="btn btn-white btn-lg">
+          <i class="fas fa-rocket"></i> Créer mon espace gratuit
         </a>
-        <a href="/login.html" class="btn btn-ghost btn-large">
-          <i class="fas fa-sign-in-alt"></i>
+        <a href="/login.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.25);color:white;">
           J'ai déjà un compte
         </a>
       </div>
       <div class="hero-trust">
-        <span><i class="fas fa-shield-alt"></i>Données hébergées en UE</span>
-        <span><i class="fas fa-mobile-screen"></i>Web, iOS & Android</span>
-        <span><i class="fas fa-brain"></i>IA incluse</span>
+        <div class="hero-trust-item"><i class="fas fa-shield-alt"></i> Données hébergées en UE</div>
+        <div class="hero-trust-item"><i class="fas fa-mobile-screen"></i> Web, iOS & Android</div>
+        <div class="hero-trust-item"><i class="fas fa-circle-check"></i> 14 jours offerts</div>
       </div>
     </div>
 
-    <!-- Hero visual : calendrier + revenue mini -->
-    <div class="hero-visual">
-      <div class="mock-dash">
-        <!-- Mini calendar -->
-        <div class="mock-cal-header">
-          Avril <span>2026</span>
-        </div>
-        <div class="mock-cal-body">
-          <div class="mock-cal-row mock-cal-head">
-            <div class="mock-cal-cell mock-cal-label" style="font-size:9px;color:var(--muted);">LOGEMENTS</div>
-            <div class="mock-cal-cell">LUN 21</div>
-            <div class="mock-cal-cell">MAR 22</div>
-            <div class="mock-cal-cell">MER 23</div>
-            <div class="mock-cal-cell">JEU 24</div>
-            <div class="mock-cal-cell">VEN 25</div>
-            <div class="mock-cal-cell">SAM 26</div>
-            <div class="mock-cal-cell">DIM 27</div>
+    <div class="hero-right">
+      <div class="hero-cards">
+        <div class="hero-card-main">
+          <div class="hero-card-header">
+            <span><i class="fas fa-calendar" style="color:#6ee7b7;margin-right:7px;"></i> Calendrier · Avril 2026</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.4);">3 logements</span>
           </div>
-          <div class="mock-cal-row">
-            <div class="mock-cal-cell mock-cal-label">Studio N°2</div>
-            <div class="mock-cal-cell" style="position:relative;"><div class="mock-booking bk-booking span-3" style="font-size:8px;">B. Aurelie F.</div></div>
-            <div class="mock-cal-cell"></div>
-            <div class="mock-cal-cell"></div>
-            <div class="mock-cal-cell">75</div>
-            <div class="mock-cal-cell" style="position:relative;"><div class="mock-booking bk-airbnb span-2" style="font-size:8px;">A. Nicolas</div></div>
-            <div class="mock-cal-cell">90</div>
-            <div class="mock-cal-cell">75</div>
+          <div class="hero-cal-row hero-cal-head">
+            <div class="hero-cal-cell" style="font-size:9px;color:rgba(255,255,255,.4);">LOGEMENT</div>
+            <div class="hero-cal-cell">LU 21</div>
+            <div class="hero-cal-cell">MA 22</div>
+            <div class="hero-cal-cell">ME 23</div>
+            <div class="hero-cal-cell">JE 24</div>
+            <div class="hero-cal-cell">VE 25</div>
+            <div class="hero-cal-cell">SA 26</div>
+            <div class="hero-cal-cell">DI 27</div>
           </div>
-          <div class="mock-cal-row">
-            <div class="mock-cal-cell mock-cal-label">Appart N°3</div>
-            <div class="mock-cal-cell" style="position:relative;"><div class="mock-booking bk-direct span-4" style="font-size:8px;"><i class="fas fa-bolt" style="margin-right:3px;font-size:7px;"></i>Daguise Déco</div></div>
-            <div class="mock-cal-cell"></div>
-            <div class="mock-cal-cell"></div>
-            <div class="mock-cal-cell"></div>
-            <div class="mock-cal-cell">90</div>
-            <div class="mock-cal-cell" style="position:relative;"><div class="mock-booking bk-booking span-2" style="font-size:8px;">B. Valeria M.</div></div>
-            <div class="mock-cal-cell"></div>
+          <div class="hero-cal-row">
+            <div class="hero-cal-cell hero-cal-label">Studio N°2</div>
+            <div class="hero-cal-cell" style="position:relative;"><div class="hero-booking bk-bk s3">B. Aurélie F.</div></div>
+            <div class="hero-cal-cell"></div>
+            <div class="hero-cal-cell"></div>
+            <div class="hero-cal-cell" style="color:rgba(255,255,255,.35);">75€</div>
+            <div class="hero-cal-cell" style="position:relative;"><div class="hero-booking bk-air s2">A. Nicolas</div></div>
+            <div class="hero-cal-cell"></div>
+            <div class="hero-cal-cell" style="color:rgba(255,255,255,.35);">90€</div>
           </div>
-          <div class="mock-cal-row">
-            <div class="mock-cal-cell mock-cal-label">Appart N°4</div>
-            <div class="mock-cal-cell" style="position:relative;"><div class="mock-booking bk-airbnb span-3" style="font-size:8px;">A. Jacques L.</div></div>
-            <div class="mock-cal-cell"></div>
-            <div class="mock-cal-cell"></div>
-            <div class="mock-cal-cell">90</div>
-            <div class="mock-cal-cell">75</div>
-            <div class="mock-cal-cell">75</div>
-            <div class="mock-cal-cell">75</div>
+          <div class="hero-cal-row">
+            <div class="hero-cal-cell hero-cal-label">Appart N°3</div>
+            <div class="hero-cal-cell" style="position:relative;"><div class="hero-booking bk-dir s4"><i class="fas fa-bolt" style="font-size:7px;margin-right:3px;"></i>Direct</div></div>
+            <div class="hero-cal-cell"></div>
+            <div class="hero-cal-cell"></div>
+            <div class="hero-cal-cell"></div>
+            <div class="hero-cal-cell" style="color:rgba(255,255,255,.35);">95€</div>
+            <div class="hero-cal-cell" style="position:relative;"><div class="hero-booking bk-bk s2">B. Valeria</div></div>
+            <div class="hero-cal-cell"></div>
           </div>
-        </div>
-
-        <!-- Revenue strip -->
-        <div class="mock-revenue">
-          <div class="mock-rev-card">
-            <div class="mock-rev-label"><i class="fas fa-euro-sign" style="color:var(--primary);"></i> CA BRUT</div>
-            <div class="mock-rev-value">4 469 €</div>
-            <div class="mock-rev-sub">dont 254 € ménage</div>
-          </div>
-          <div class="mock-rev-card">
-            <div class="mock-rev-label"><i class="fas fa-building-columns" style="color:#635BFF;"></i> REVENU NET</div>
-            <div class="mock-rev-value">3 583 €</div>
-            <div class="mock-rev-sub">après commission</div>
+          <div class="hero-rev-strip">
+            <div class="hero-rev-item">
+              <div class="hero-rev-label">CA brut · ce mois</div>
+              <div class="hero-rev-val">4 469 €</div>
+              <div class="hero-rev-sub">+12% vs mois dernier</div>
+            </div>
+            <div class="hero-rev-item">
+              <div class="hero-rev-label">Revenu propriétaire</div>
+              <div class="hero-rev-val">3 583 €</div>
+              <div class="hero-rev-sub">après commissions</div>
+            </div>
           </div>
         </div>
-
-        <!-- Chat teaser -->
-        <div class="mock-chat">
-          <div class="mock-chat-header">
-            <div class="mock-avatar" style="background:#FF5A5F;">V</div>
-            Valeria Medeghini
-            <span style="font-weight:400;color:var(--muted);font-size:11px;">🇮🇹 Italie</span>
-            <span class="mock-chat-tag">BOOKING</span>
-          </div>
-          <div class="mock-chat-bubble">
-            📋 Demande du voyageur :<br>
-            Reservation pre-paid · Arrivée 27 avr. → 24 mai
-          </div>
-          <div class="mock-chat-meta">23 avr. 16:07 · via plateforme</div>
+        <div class="hero-notif">
+          <div class="dot"></div>
+          IA a répondu à Marco en 2s · 🇮🇹 Italiano
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Floating notif -->
-      <div class="mock-notif">
-        <i class="fas fa-sparkles"></i>
-        IA a répondu à Marco · 2s
+  <div class="hero-scroll">
+    <span>Découvrir</span>
+    <div class="hero-scroll-line"></div>
+  </div>
+</section>
+
+<!-- ═══ LOGOS BAND ═══ -->
+<div class="logos-band">
+  <div class="logos-label">Compatible avec toutes vos plateformes</div>
+  <div class="logos-track">
+    <div class="logos-inner" id="logosInner">
+      <div class="logo-pill"><i class="fab fa-airbnb" style="color:#FF5A5F;font-size:20px;"></i> Airbnb</div>
+      <div class="logo-pill"><i class="fas fa-bed" style="color:#003580;font-size:18px;"></i> Booking.com</div>
+      <div class="logo-pill"><i class="fas fa-house-chimney" style="color:#f59e0b;font-size:18px;"></i> Abritel</div>
+      <div class="logo-pill"><i class="fas fa-plane" style="color:#1e40af;font-size:18px;"></i> Expedia</div>
+      <div class="logo-pill"><i class="fab fa-stripe" style="color:#635BFF;font-size:20px;"></i> Stripe</div>
+      <div class="logo-pill"><i class="fas fa-link" style="color:var(--primary);font-size:16px;"></i> iCal universel</div>
+      <div class="logo-pill"><i class="fas fa-fire" style="color:#ef4444;font-size:16px;"></i> Firebase Push</div>
+      <div class="logo-pill"><i class="fas fa-envelope" style="color:#0ea5e9;font-size:16px;"></i> Brevo Mail</div>
+      <!-- Duplicate for loop -->
+      <div class="logo-pill"><i class="fab fa-airbnb" style="color:#FF5A5F;font-size:20px;"></i> Airbnb</div>
+      <div class="logo-pill"><i class="fas fa-bed" style="color:#003580;font-size:18px;"></i> Booking.com</div>
+      <div class="logo-pill"><i class="fas fa-house-chimney" style="color:#f59e0b;font-size:18px;"></i> Abritel</div>
+      <div class="logo-pill"><i class="fas fa-plane" style="color:#1e40af;font-size:18px;"></i> Expedia</div>
+      <div class="logo-pill"><i class="fab fa-stripe" style="color:#635BFF;font-size:20px;"></i> Stripe</div>
+      <div class="logo-pill"><i class="fas fa-link" style="color:var(--primary);font-size:16px;"></i> iCal universel</div>
+      <div class="logo-pill"><i class="fas fa-fire" style="color:#ef4444;font-size:16px;"></i> Firebase Push</div>
+      <div class="logo-pill"><i class="fas fa-envelope" style="color:#0ea5e9;font-size:16px;"></i> Brevo Mail</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STATS ═══ -->
+<section class="stats-section">
+  <div class="container">
+    <div class="stats-grid reveal">
+      <div class="stat-box"><div class="stat-num">500+</div><div class="stat-desc">jours synchronisés<br>par logement</div></div>
+      <div class="stat-box"><div class="stat-num">26</div><div class="stat-desc">langues gérées<br>par l'IA</div></div>
+      <div class="stat-box"><div class="stat-num">3s</div><div class="stat-desc">temps de réponse<br>moyen IA</div></div>
+      <div class="stat-box"><div class="stat-num">0€</div><div class="stat-desc">pour démarrer<br>14 jours offerts</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SHOWCASE FEATURES ═══ -->
+<section class="section" id="features">
+  <div class="container">
+
+    <!-- 1 — Calendrier -->
+    <div class="showcase reveal">
+      <div class="showcase-photo">
+        <img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80" alt="Gestion calendrier locations" loading="lazy">
+        <div class="showcase-photo-overlay"></div>
+        <div class="showcase-photo-tag"><i class="fas fa-arrows-rotate"></i> Synchro temps réel</div>
+      </div>
+      <div class="showcase-text">
+        <div class="section-kicker"><i class="fas fa-calendar-days"></i> Calendrier & réservations</div>
+        <h2 class="section-title">Toutes vos réservations, une seule vue</h2>
+        <p class="section-sub">Airbnb, Booking, Abritel, Expedia et toutes vos plateformes iCal se synchronisent automatiquement. Plus jamais de doublon.</p>
+        <ul class="feature-list">
+          <li><span class="check"><i class="fas fa-check"></i></span>Vue multi-logements avec prix par nuit et statut</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Synchronisation bidirectionnelle API directe Channex</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Import iCal universel (Leboncoin Vacances, Gîtes de France…)</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Règles tarifaires : saison, séjour minimum, weekends</li>
+        </ul>
+        <a href="/register.html" class="btn btn-primary">Essayer gratuitement <i class="fas fa-arrow-right"></i></a>
+      </div>
+    </div>
+
+    <!-- 2 — IA Messagerie -->
+    <div class="showcase flip reveal">
+      <div class="showcase-photo">
+        <img src="https://images.unsplash.com/photo-1556761175-4b46a572b786?w=900&q=80" alt="Messagerie IA voyageurs" loading="lazy">
+        <div class="showcase-photo-overlay"></div>
+        <div class="showcase-photo-tag"><i class="fas fa-sparkles"></i> IA active 24/7</div>
+      </div>
+      <div class="showcase-text">
+        <div class="section-kicker"><i class="fas fa-comments"></i> Messagerie + IA</div>
+        <h2 class="section-title">L'IA qui connaît <em>vos logements</em></h2>
+        <p class="section-sub">Toutes vos conversations dans une seule boîte. L'IA répond en 26 langues, détecte les urgences et escalade intelligemment.</p>
+        <ul class="feature-list">
+          <li><span class="check"><i class="fas fa-check"></i></span>Réponse automatique en 3s dans 26 langues</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Connaissance complète de chaque logement</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Templates avec variables dynamiques</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Escalade intelligente si doute ou urgence</li>
+        </ul>
+        <a href="/ia.html" class="btn btn-primary"><i class="fas fa-sparkles"></i> Tester l'IA en démo</a>
+      </div>
+    </div>
+
+    <!-- 3 — Revenus -->
+    <div class="showcase reveal">
+      <div class="showcase-photo">
+        <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=900&q=80" alt="Reporting financier location" loading="lazy">
+        <div class="showcase-photo-overlay"></div>
+        <div class="showcase-photo-tag"><i class="fas fa-chart-line"></i> Reporting automatique</div>
+      </div>
+      <div class="showcase-text">
+        <div class="section-kicker"><i class="fas fa-euro-sign"></i> Revenus & reporting</div>
+        <h2 class="section-title">Vos finances, limpides et automatiques</h2>
+        <p class="section-sub">CA brut, revenu net, commissions OTA, ménage, taxe de séjour — tout est calculé par logement, par mois.</p>
+        <ul class="feature-list">
+          <li><span class="check"><i class="fas fa-check"></i></span>RevPAN et moy. par réservation automatiques</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Ventilation conciergerie / propriétaire</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Factures propriétaires, attestations fiscales, débours</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Stripe intégré pour l'encaissement en ligne</li>
+        </ul>
+        <a href="/register.html" class="btn btn-primary">Voir le reporting <i class="fas fa-arrow-right"></i></a>
+      </div>
+    </div>
+
+    <!-- 4 — Ménage -->
+    <div class="showcase flip reveal">
+      <div class="showcase-photo">
+        <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=900&q=80" alt="Gestion ménage locations" loading="lazy">
+        <div class="showcase-photo-overlay"></div>
+        <div class="showcase-photo-tag"><i class="fas fa-broom"></i> Missions en temps réel</div>
+      </div>
+      <div class="showcase-text">
+        <div class="section-kicker"><i class="fas fa-broom"></i> Ménage & équipe</div>
+        <h2 class="section-title">Le ménage, simple et suivi</h2>
+        <p class="section-sub">Créez votre équipe, définissez des checklists, assignez les missions et suivez l'avancement. Notifications push instantanées.</p>
+        <ul class="feature-list">
+          <li><span class="check"><i class="fas fa-check"></i></span>Checklists personnalisées par logement</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Notification push à chaque nouvelle mission</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Stats : validés, en attente, taux de validation</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Vue par agent ou par logement</li>
+        </ul>
+        <a href="/register.html" class="btn btn-primary">Démarrer gratuitement <i class="fas fa-arrow-right"></i></a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ HORIZONTAL FEATURES ═══ -->
+<section class="hscroll-section">
+  <div class="hscroll-header">
+    <div class="section-kicker"><i class="fas fa-grid-2"></i> Tout l'écosystème</div>
+    <h2 class="section-title" style="color:white;">Tout ce qu'il faut, au même endroit</h2>
+    <p class="section-sub" style="margin:0 auto;">Plus d'aller-retours entre 5 outils. Tout est intégré, tout se parle.</p>
+  </div>
+
+  <div class="hscroll-track" id="featuresTrack">
+    <div class="feature-tile">
+      <div class="tile-icon"><i class="fas fa-arrows-rotate"></i></div>
+      <div class="tile-title">Synchronisation OTA</div>
+      <div class="tile-desc">Airbnb, Booking.com, Abritel, Expedia via API directe + toute plateforme iCal (Leboncoin, Gîtes de France…).</div>
+    </div>
+    <div class="feature-tile">
+      <div class="tile-icon"><i class="fas fa-calendar-days"></i></div>
+      <div class="tile-title">Calendrier multi-logements</div>
+      <div class="tile-desc">Vue complète avec prix par nuit, arrivées/départs, blocages manuels. Le calendrier que vous méritez.</div>
+    </div>
+    <div class="feature-tile">
+      <div class="tile-icon"><i class="fas fa-credit-card"></i></div>
+      <div class="tile-title">Paiements & réservations directes</div>
+      <div class="tile-desc">Votre app voyageur branded. Stripe Checkout, codes promo, emails automatiques Brevo. Zéro commission OTA.</div>
+    </div>
+    <div class="feature-tile">
+      <div class="tile-icon"><i class="fas fa-lock"></i></div>
+      <div class="tile-title">Cautions</div>
+      <div class="tile-desc">Demandez et suivez les cautions. Statut, historique, relance — tracé, centralisé.</div>
+    </div>
+    <div class="feature-tile">
+      <div class="tile-icon"><i class="fas fa-book-open"></i></div>
+      <div class="tile-title">Livret d'accueil</div>
+      <div class="tile-desc">Créez de beaux livrets personnalisés pour vos voyageurs. Partagé par lien, sans app à installer.</div>
+    </div>
+    <div class="feature-tile">
+      <div class="tile-icon"><i class="fas fa-users-gear"></i></div>
+      <div class="tile-title">Sous-comptes & équipe</div>
+      <div class="tile-desc">Droits par rôle, accès logement par logement. Idéal pour les assistants de conciergerie.</div>
+    </div>
+    <div class="feature-tile">
+      <div class="tile-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+      <div class="tile-title">Facturation propriétaires</div>
+      <div class="tile-desc">Fiches clients, factures numérotées, attestations fiscales, débours. Le module complet pour conciergeries.</div>
+    </div>
+    <div class="feature-tile">
+      <div class="tile-icon"><i class="fas fa-mobile-screen"></i></div>
+      <div class="tile-title">App iOS & Android</div>
+      <div class="tile-desc">Gérez tout depuis votre téléphone. Notifications push, calendrier, messages — tout y est.</div>
+    </div>
+  </div>
+  <div class="hscroll-dots" id="featuresDots"></div>
+</section>
+
+<!-- ═══ PHOTO GRID ═══ -->
+<section class="photo-grid-section">
+  <div class="container">
+    <div class="photo-grid-header reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-images"></i> Des logements comme les vôtres</div>
+      <h2 class="section-title" style="text-align:center;">Conçu pour la location courte durée</h2>
+    </div>
+    <div class="photo-masonry reveal">
+      <div class="photo-item">
+        <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=700&q=80" alt="Appartement moderne" loading="lazy">
+        <div class="photo-caption"><i class="fas fa-home" style="margin-right:6px;"></i>Studio Gare N°2 · Airbnb + Booking</div>
+      </div>
+      <div class="photo-item">
+        <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=700&q=80" alt="Chambre" loading="lazy">
+        <div class="photo-caption"><i class="fas fa-moon" style="margin-right:6px;"></i>Chambre connectée</div>
+      </div>
+      <div class="photo-item">
+        <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=700&q=80" alt="Cuisine" loading="lazy">
+        <div class="photo-caption"><i class="fas fa-utensils" style="margin-right:6px;"></i>Cuisine équipée</div>
+      </div>
+      <div class="photo-item">
+        <img src="https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=700&q=80" alt="Salon" loading="lazy">
+        <div class="photo-caption"><i class="fas fa-couch" style="margin-right:6px;"></i>Salon lumineux</div>
+      </div>
+      <div class="photo-item">
+        <img src="https://images.unsplash.com/photo-1540518614846-7eded433c457?w=700&q=80" alt="Salle de bain" loading="lazy">
+        <div class="photo-caption"><i class="fas fa-shower" style="margin-right:6px;"></i>Salle de bain moderne</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ STATS BAR ═══════════ -->
-<section style="padding:0 0 60px;">
+<!-- ═══ HOW IT WORKS ═══ -->
+<section class="how-section" id="comment">
   <div class="container">
-    <div class="stats-bar">
-      <div class="stat-item">
-        <div class="stat-num">500+</div>
-        <p>jours synchronisés<br>par logement</p>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num">26</div>
-        <p>langues supportées<br>par l'IA</p>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num">3s</div>
-        <p>temps de réponse<br>moyen de l'IA</p>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num">0€</div>
-        <p>pour démarrer<br>14 jours gratuits</p>
-      </div>
+    <div style="text-align:center;" class="reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-rocket"></i> Mise en route</div>
+      <h2 class="section-title" style="text-align:center;">Opérationnel en 3 étapes</h2>
+      <p class="section-sub" style="margin:0 auto 0;">Pas de formation, pas de migration complexe. Vous êtes prêt en 15 minutes.</p>
     </div>
-  </div>
-</section>
-
-<!-- ═══════════ SHOWCASE : LOGEMENTS ═══════════ -->
-<section id="features">
-  <div class="container">
-    <h2 class="section-title">Découvrez l'outil en action</h2>
-    <p class="section-subtitle">Chaque fonctionnalité a été conçue pour vous faire gagner du temps. Voici ce que vous verrez dès votre inscription.</p>
-
-    <!-- 1. Logements -->
-    <div class="showcase-grid">
-      <div class="showcase-text">
-        <div class="showcase-tag"><i class="fas fa-house-chimney"></i> Logements</div>
-        <h3>Vos logements, connectés et centralisés</h3>
-        <p>Ajoutez vos biens avec photos, horaires d'arrivée/départ, cautions. Connectez Airbnb, Booking.com, Abritel, Expedia — ou toute plateforme compatible iCal (Leboncoin Vacances, Gîtes de France, etc.).</p>
-        <ul>
-          <li><i class="fas fa-check"></i> Badge "Actif" avec statut synchro en temps réel</li>
-          <li><i class="fas fa-check"></i> API directe + import iCal universel</li>
-          <li><i class="fas fa-check"></i> Dupliquer, modifier, gérer en 1 clic</li>
-        </ul>
-      </div>
-      <div class="showcase-visual">
-        <div class="mini-props">
-          <div class="mini-prop">
-            <div class="mini-prop-img" style="background:linear-gradient(135deg,#b5c7a8,#8fa580);"><span class="mini-prop-badge">● Actif</span></div>
-            <div class="mini-prop-info">
-              <div class="mini-prop-name">Studio Gare N°2</div>
-              <div class="mini-prop-meta">Modifié le 23/04/2026</div>
-              <div class="mini-prop-tags"><span class="mini-prop-tag booking">Booking</span><span class="mini-prop-tag airbnb">Airbnb</span><span class="mini-prop-tag" style="color:#f59e0b;border-color:#f59e0b;background:rgba(245,158,11,.06);">Abritel</span></div>
-            </div>
-          </div>
-          <div class="mini-prop">
-            <div class="mini-prop-img" style="background:linear-gradient(135deg,#c4b5a0,#a89880);"><span class="mini-prop-badge">● Actif</span></div>
-            <div class="mini-prop-info">
-              <div class="mini-prop-name">Appart Village N°3</div>
-              <div class="mini-prop-meta">Modifié le 23/04/2026</div>
-              <div class="mini-prop-tags"><span class="mini-prop-tag booking">Booking</span><span class="mini-prop-tag airbnb">Airbnb</span><span class="mini-prop-tag" style="color:#1e40af;border-color:#1e40af;background:rgba(30,64,175,.06);">Expedia</span></div>
-            </div>
-          </div>
-          <div class="mini-prop">
-            <div class="mini-prop-img" style="background:linear-gradient(135deg,#a0b8c4,#809aa8);"><span class="mini-prop-badge">● Actif</span></div>
-            <div class="mini-prop-info">
-              <div class="mini-prop-name">Villa Deuil N°4</div>
-              <div class="mini-prop-meta">Modifié le 25/04/2026</div>
-              <div class="mini-prop-tags"><span class="mini-prop-tag booking">Booking</span><span class="mini-prop-tag" style="color:#6b7280;border-color:#6b7280;background:rgba(107,114,128,.06);">iCal</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. Revenus -->
-    <div class="showcase-grid reverse">
-      <div class="showcase-text">
-        <div class="showcase-tag"><i class="fas fa-chart-line"></i> Revenus</div>
-        <h3>Vos finances, claires et détaillées</h3>
-        <p>CA brut, revenu net, commissions OTA, frais de ménage, taxe de séjour, revenu propriétaire — tout est calculé automatiquement, par mois et par logement.</p>
-        <ul>
-          <li><i class="fas fa-check"></i> RevPAN et moyenne par réservation</li>
-          <li><i class="fas fa-check"></i> Ventilation conciergerie / propriétaire</li>
-          <li><i class="fas fa-check"></i> Export et facturation intégrée</li>
-        </ul>
-      </div>
-      <div class="showcase-visual">
-        <div class="mini-rev-grid">
-          <div class="mini-rev-card">
-            <div class="mini-rev-label">CA Brut</div>
-            <div class="mini-rev-value">4 469 €</div>
-            <div class="mini-rev-sub">dont 254 € ménage · 576 € taxe</div>
-          </div>
-          <div class="mini-rev-card">
-            <div class="mini-rev-label">Revenu Propriétaire</div>
-            <div class="mini-rev-value">3 583 €</div>
-            <div class="mini-rev-sub">après commission conciergerie</div>
-          </div>
-          <div class="mini-rev-card">
-            <div class="mini-rev-label">Commissions OTA</div>
-            <div class="mini-rev-value">527 €</div>
-            <div class="mini-rev-sub">déduit du CA brut</div>
-          </div>
-          <div class="mini-rev-card">
-            <div class="mini-rev-label">Moy. par nuit</div>
-            <div class="mini-rev-value">83 €</div>
-            <div class="mini-rev-sub">RevPAN · 54 nuits louées</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3. Messagerie -->
-    <div class="showcase-grid">
-      <div class="showcase-text">
-        <div class="showcase-tag"><i class="fas fa-comments"></i> Messagerie</div>
-        <h3>Tous vos messages, dans une seule boîte</h3>
-        <p>Airbnb, Booking, Expedia, réservations directes — toutes les conversations arrivent ici. L'IA peut répondre en 26 langues, et vous gardez le contrôle.</p>
-        <ul>
-          <li><i class="fas fa-check"></i> Historique complet par voyageur</li>
-          <li><i class="fas fa-check"></i> Templates automatiques avec variables</li>
-          <li><i class="fas fa-check"></i> IA activable logement par logement</li>
-        </ul>
-      </div>
-      <div class="showcase-visual">
-        <div class="mini-chat-wrap">
-          <div class="mini-chat-tabs">
-            <div class="mini-chat-tab active"><i class="fas fa-comments" style="margin-right:4px;font-size:10px;"></i> Messages</div>
-            <div class="mini-chat-tab"><i class="fas fa-paper-plane" style="margin-right:4px;font-size:10px;"></i> Templates</div>
-            <div class="mini-chat-tab"><i class="fas fa-clock-rotate-left" style="margin-right:4px;font-size:10px;"></i> Statut</div>
-          </div>
-          <div class="mini-chat-list">
-            <div class="mini-chat-item">
-              <div class="mini-chat-avatar" style="background:#FF5A5F;">V</div>
-              <div>
-                <div class="mini-chat-name">Valeria M. <span style="font-size:9px;background:#003580;color:white;padding:1px 5px;border-radius:3px;margin-left:4px;">BOOKING</span></div>
-                <div class="mini-chat-preview">📋 THIS RESERVATION HAS BEEN PRE-PAID...</div>
-              </div>
-              <div class="mini-chat-time">23 avr.</div>
-            </div>
-            <div class="mini-chat-item">
-              <div class="mini-chat-avatar" style="background:#f97316;">J</div>
-              <div>
-                <div class="mini-chat-name">Jacques L. <span style="font-size:9px;background:#003580;color:white;padding:1px 5px;border-radius:3px;margin-left:4px;">BOOKING</span></div>
-                <div class="mini-chat-preview">Bonjour, à quelle heure le check-in ?</div>
-              </div>
-              <div class="mini-chat-time">21 avr.</div>
-            </div>
-            <div class="mini-chat-item">
-              <div class="mini-chat-avatar" style="background:#8b5cf6;">D</div>
-              <div>
-                <div class="mini-chat-name">Daniel F. <span style="font-size:9px;background:#FF5A5F;color:white;padding:1px 5px;border-radius:3px;margin-left:4px;">AIRBNB</span></div>
-                <div class="mini-chat-preview">Hi, what's the WiFi password?</div>
-              </div>
-              <div class="mini-chat-time">19 avr.</div>
-            </div>
-            <div class="mini-chat-item">
-              <div class="mini-chat-avatar" style="background:var(--primary);">A</div>
-              <div>
-                <div class="mini-chat-name">Aurelie F. <span style="font-size:9px;background:#003580;color:white;padding:1px 5px;border-radius:3px;margin-left:4px;">BOOKING</span></div>
-                <div class="mini-chat-preview">Merci pour les instructions !</div>
-              </div>
-              <div class="mini-chat-time">16 avr.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. Ménage -->
-    <div class="showcase-grid reverse">
-      <div class="showcase-text">
-        <div class="showcase-tag"><i class="fas fa-broom"></i> Ménage</div>
-        <h3>Le ménage, simplifié et suivi</h3>
-        <p>Créez votre équipe, définissez des checklists par logement, et suivez l'avancement de chaque mission. Notifications push pour chaque assignation.</p>
-        <ul>
-          <li><i class="fas fa-check"></i> Checklists personnalisées par logement</li>
-          <li><i class="fas fa-check"></i> Statistiques : validés, en attente, rejetés</li>
-          <li><i class="fas fa-check"></i> Notifications push à chaque nouvelle mission</li>
-          <li><i class="fas fa-check"></i> Vue par agent de ménage ou par logement</li>
-        </ul>
-      </div>
-      <div class="showcase-visual">
-        <div style="background:white;border-radius:12px;border:1px solid var(--border-soft);overflow:hidden;">
-          <div style="display:flex;font-size:11px;font-weight:600;border-bottom:1px solid var(--border-soft);">
-            <div style="padding:8px 14px;color:var(--muted);">👥 Équipe</div>
-            <div style="padding:8px 14px;color:var(--muted);">✅ Checklists</div>
-            <div style="padding:8px 14px;color:var(--muted);">📝 Templates</div>
-            <div style="padding:8px 14px;background:var(--primary);color:white;border-radius:8px;margin:4px;">📊 Stats</div>
-          </div>
-          <div style="padding:16px;">
-            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px;">Statistiques ménage · 30 derniers jours</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">
-              <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center;">
-                <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--ink);">8</div>
-                <div style="font-size:10px;color:var(--muted);">Total ménages</div>
-              </div>
-              <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center;">
-                <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--primary);">7</div>
-                <div style="font-size:10px;color:var(--muted);">Validés</div>
-              </div>
-              <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center;">
-                <div style="font-family:'Instrument Serif',serif;font-size:24px;color:#f59e0b;">1</div>
-                <div style="font-size:10px;color:var(--muted);">En attente</div>
-              </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center;">
-                <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--primary);">87%</div>
-                <div style="font-size:10px;color:var(--muted);">Taux validation</div>
-              </div>
-              <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center;">
-                <div style="font-family:'Instrument Serif',serif;font-size:24px;color:#ef4444;">0</div>
-                <div style="font-size:10px;color:var(--muted);">Rejetés</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. Facturation propriétaires -->
-    <div class="showcase-grid">
-      <div class="showcase-text">
-        <div class="showcase-tag"><i class="fas fa-file-invoice-dollar"></i> Facturation</div>
-        <h3>Facturez vos clients propriétaires</h3>
-        <p>Idéal pour les conciergeries : gérez vos clients propriétaires avec fiches détaillées, factures numérotées, suivi des paiements et connexion Stripe pour l'encaissement.</p>
-        <ul>
-          <li><i class="fas fa-check"></i> Fiches clients avec email, téléphone, adresse</li>
-          <li><i class="fas fa-check"></i> Factures, éditeur, attestations fiscales, débours</li>
-          <li><i class="fas fa-check"></i> Total facturé et nb factures par client</li>
-          <li><i class="fas fa-check"></i> Connexion Stripe pour encaisser en ligne</li>
-        </ul>
-      </div>
-      <div class="showcase-visual">
-        <div style="background:white;border-radius:12px;border:1px solid var(--border-soft);overflow:hidden;">
-          <!-- Summary row -->
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--border-soft);">
-            <div style="padding:12px 14px;border-right:1px solid var(--border-soft);">
-              <div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);">Clients propriétaires</div>
-              <div style="font-family:'Instrument Serif',serif;font-size:22px;color:var(--ink);margin-top:2px;">4</div>
-            </div>
-            <div style="padding:12px 14px;border-right:1px solid var(--border-soft);">
-              <div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);">Total facturé</div>
-              <div style="font-family:'Instrument Serif',serif;font-size:22px;color:var(--ink);margin-top:2px;">3 240 €</div>
-            </div>
-            <div style="padding:12px 14px;">
-              <div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);">En attente</div>
-              <div style="font-family:'Instrument Serif',serif;font-size:22px;color:#f59e0b;margin-top:2px;">860 €</div>
-            </div>
-          </div>
-          <!-- Tabs -->
-          <div style="display:flex;font-size:11px;font-weight:600;padding:8px 14px;gap:12px;border-bottom:1px solid var(--border-soft);">
-            <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:8px;">👥 Mes Clients</span>
-            <span style="color:var(--muted);padding:4px 0;">📄 Factures</span>
-            <span style="color:var(--muted);padding:4px 0;">✏️ Éditeur</span>
-            <span style="color:var(--muted);padding:4px 0;">📋 Débours</span>
-          </div>
-          <!-- Client cards -->
-          <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div style="background:var(--cream);border-radius:10px;padding:12px;">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                <div style="width:26px;height:26px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">DI</div>
-                <div>
-                  <div style="font-size:11px;font-weight:700;color:var(--ink);">DUPONT IMMO</div>
-                  <div style="font-size:9px;color:var(--primary);font-weight:600;">Entreprise</div>
-                </div>
-              </div>
-              <div style="font-size:9px;color:var(--muted);">2 factures · 1 620 €</div>
-            </div>
-            <div style="background:var(--cream);border-radius:10px;padding:12px;">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                <div style="width:26px;height:26px;border-radius:50%;background:#635BFF;color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">SM</div>
-                <div>
-                  <div style="font-size:11px;font-weight:700;color:var(--ink);">SCI MARTIN</div>
-                  <div style="font-size:9px;color:var(--primary);font-weight:600;">Entreprise</div>
-                </div>
-              </div>
-              <div style="font-size:9px;color:var(--muted);">3 factures · 1 620 €</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ FEATURES GRID ═══════════ -->
-<section class="alt">
-  <div class="container">
-    <h2 class="section-title">Tout ce qu'il faut, au même endroit</h2>
-    <p class="section-subtitle">Plus d'aller-retours entre 5 outils. Tout est intégré.</p>
-
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-arrows-rotate"></i></div>
-        <h3>Synchronisation</h3>
-        <p>Airbnb, Booking.com, Abritel, Expedia — et toute plateforme via iCal (Leboncoin Vacances, Gîtes de France…).</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-calendar-days"></i></div>
-        <h3>Calendrier & tarifs</h3>
-        <p>Vue multi-logements avec prix par nuit, blocages, arrivées/départs. Le calendrier que vous méritez.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-credit-card"></i></div>
-        <h3>Paiements directs</h3>
-        <p>Réservations en direct via votre app voyageur. Paiements Stripe, codes promo, emails Brevo automatiques.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-lock"></i></div>
-        <h3>Cautions</h3>
-        <p>Demandez et suivez les cautions. Statut, historique, relance — centralisé et tracé.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-broom"></i></div>
-        <h3>Ménage simplifié</h3>
-        <p>Équipe, checklists, stats de validation. Assignez et suivez chaque mission avec notifications push.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-comments"></i></div>
-        <h3>Messagerie + IA</h3>
-        <p>L'IA répond 24/7 dans 26 langues. Elle connaît vos logements et escalade quand elle doute.</p>
-        <a href="/ia.html" class="feature-link">
-          <i class="fas fa-sparkles" style="font-size:11px;"></i>
-          Tester l'IA en démo
-          <i class="fas fa-arrow-right"></i>
-        </a>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-users-gear"></i></div>
-        <h3>Sous-comptes</h3>
-        <p>Travaillez en équipe : droits par rôle, assignation ménages et messages, vue par logement.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-file-invoice"></i></div>
-        <h3>Facturation propriétaires</h3>
-        <p>Idéal pour les conciergeries : fiches clients, factures numérotées, attestations fiscales, débours. Tout en un.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ COMMENT ÇA MARCHE ═══════════ -->
-<section id="how">
-  <div class="container">
-    <h2 class="section-title">Opérationnel en 3 étapes</h2>
-    <p class="section-subtitle">Pas de formation. Pas de migration complexe. Vous êtes prêt en 15 minutes.</p>
-    <div class="steps">
-      <div class="step">
+    <div class="steps-track">
+      <div class="step-card reveal reveal-delay-1">
         <div class="step-num">1</div>
         <h3>Connectez vos plateformes</h3>
-        <p>Ajoutez vos logements et liez Airbnb, Booking.com, Abritel, Expedia — ou importez via iCal (Leboncoin Vacances, Gîtes de France…). Vos réservations se synchronisent automatiquement.</p>
+        <p>Ajoutez vos logements et liez Airbnb, Booking.com, Abritel, Expedia — ou importez via iCal. Vos réservations se synchronisent automatiquement.</p>
       </div>
-      <div class="step">
+      <div class="step-card reveal reveal-delay-2">
         <div class="step-num">2</div>
         <h3>Centralisez la gestion</h3>
-        <p>Calendrier, réservations directes, paiements, cautions, équipe, ménages : tout au même endroit.</p>
+        <p>Calendrier, paiements, cautions, équipe, ménages : tout au même endroit. Une seule interface pour tout piloter.</p>
       </div>
-      <div class="step">
+      <div class="step-card reveal reveal-delay-3">
         <div class="step-num">3</div>
         <h3>Laissez l'IA vous épauler</h3>
-        <p>Messages, rappels d'accès, traductions, escalade intelligente. Vous gagnez des heures chaque semaine.</p>
+        <p>Messages, rappels, traductions, escalade intelligente. Vous gagnez des heures chaque semaine — et vos nuits aussi.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ INTÉGRATIONS ═══════════ -->
-<section class="alt">
+<!-- ═══ TESTIMONIALS ═══ -->
+<section class="testimonials-section">
   <div class="container">
-    <h2 class="section-title">Compatible avec toutes vos plateformes</h2>
-    <p class="section-subtitle">Connexion API directe ou import iCal — aucune plateforme n'est laissée de côté.</p>
-    <div class="platforms-row">
-      <div class="platform-logo"><i class="fab fa-airbnb" style="color:#FF5A5F;"></i> Airbnb</div>
-      <div class="platform-logo"><i class="fas fa-bed" style="color:#003580;"></i> Booking.com</div>
-      <div class="platform-logo"><i class="fas fa-house-chimney" style="color:#f59e0b;"></i> Abritel</div>
-      <div class="platform-logo"><i class="fas fa-plane" style="color:#1e40af;"></i> Expedia</div>
-      <div class="platform-logo"><i class="fab fa-stripe" style="color:#635BFF;"></i> Stripe</div>
+    <div class="testimonials-header reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-star"></i> Témoignages</div>
+      <h2 class="section-title" style="text-align:center;">Ce que disent nos utilisateurs</h2>
     </div>
-    <p style="text-align:center;margin-top:20px;font-size:14px;color:var(--text);">
-      <i class="fas fa-link" style="color:var(--primary);margin-right:6px;"></i>
+  </div>
+  <div class="testimonials-track">
+    <div class="testimonial-card">
+      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+      <div class="testimonial-text">"Avant Boostinghost, je jonglais entre 4 outils différents. Maintenant tout est au même endroit : calendrier, paiements, ménages, et l'IA gère 80% des messages voyageurs. J'ai récupéré mes soirées."</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar" style="background:var(--primary);">S</div>
+        <div>
+          <div class="testimonial-name">Simon L.</div>
+          <div class="testimonial-role">Conciergerie Val d'Oise · 13 logements</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+      <div class="testimonial-text">"La synchronisation avec Booking et Airbnb fonctionne parfaitement. Plus aucun doublon depuis 6 mois. Le calendrier est vraiment clair et l'app mobile est super pratique."</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar" style="background:#635BFF;">M</div>
+        <div>
+          <div class="testimonial-name">Marie D.</div>
+          <div class="testimonial-role">Propriétaire · 4 appartements · Île-de-France</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+      <div class="testimonial-text">"La partie facturation propriétaires est exactement ce dont j'avais besoin. Mes clients reçoivent leurs factures automatiquement et je n'ai plus à faire de saisie manuelle."</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar" style="background:#f59e0b;">A</div>
+        <div>
+          <div class="testimonial-name">Antoine R.</div>
+          <div class="testimonial-role">Conciergerie Normandie · 8 biens</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+      <div class="testimonial-text">"L'IA répond aux voyageurs en italien et en anglais pendant que je dors. Mes avis ont augmenté parce que les réponses sont plus rapides. Vraiment bluffant."</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar" style="background:#ef4444;">C</div>
+        <div>
+          <div class="testimonial-name">Claire M.</div>
+          <div class="testimonial-role">Hôte Airbnb · 2 studios · Paris</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ INTEGRATIONS ═══ -->
+<section class="integrations-section">
+  <div class="container">
+    <div class="integrations-header reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-puzzle-piece"></i> Intégrations</div>
+      <h2 class="section-title" style="text-align:center;">Compatible avec tout votre écosystème</h2>
+      <p class="section-sub" style="margin:0 auto;">Connexion API directe ou import iCal — aucune plateforme n'est laissée de côté.</p>
+    </div>
+    <div class="integrations-grid reveal">
+      <div class="integration-badge">
+        <i class="fab fa-airbnb" style="color:#FF5A5F;"></i>
+        Airbnb
+      </div>
+      <div class="integration-badge">
+        <i class="fas fa-bed" style="color:#003580;"></i>
+        Booking.com
+      </div>
+      <div class="integration-badge">
+        <i class="fas fa-house-chimney" style="color:#f59e0b;"></i>
+        Abritel
+      </div>
+      <div class="integration-badge">
+        <i class="fas fa-plane" style="color:#1e40af;"></i>
+        Expedia
+      </div>
+      <div class="integration-badge">
+        <i class="fab fa-stripe" style="color:#635BFF;"></i>
+        Stripe
+      </div>
+    </div>
+    <p class="integration-ical reveal">
+      <i class="fas fa-link" style="color:var(--primary);margin-right:7px;"></i>
       <strong>+ toute plateforme compatible iCal :</strong> Leboncoin Vacances, Gîtes de France, Amivac, PAP Vacances, et plus encore.
     </p>
   </div>
 </section>
 
-<!-- ═══════════ POUR QUI ═══════════ -->
-<section id="pour-qui">
+<!-- ═══ POUR QUI ═══ -->
+<section class="audience-section" id="pour-qui">
   <div class="container">
-    <h2 class="section-title">Pour qui est fait Boostinghost ?</h2>
-    <p class="section-subtitle">Que vous gériez 1 ou 50 logements, l'outil s'adapte à votre activité.</p>
+    <div style="text-align:center;" class="reveal">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-users"></i> Pour qui ?</div>
+      <h2 class="section-title" style="text-align:center;">Fait pour vous, quelle que soit votre échelle</h2>
+    </div>
     <div class="audience-grid">
-      <div class="audience-card">
-        <div class="audience-icon"><i class="fas fa-building"></i></div>
-        <h3>Conciergeries</h3>
-        <p>Vous gérez les logements de vos clients propriétaires ? Centralisez calendrier, ménages, facturation propriétaires et communication dans un seul outil. Factures, attestations fiscales, débours — tout y est.</p>
+      <div class="audience-card reveal reveal-delay-1">
+        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&q=80" alt="Conciergerie" loading="lazy">
+        <div class="audience-overlay"></div>
+        <div class="audience-content">
+          <div class="audience-icon"><i class="fas fa-building"></i></div>
+          <div class="audience-title">Conciergeries</div>
+          <div class="audience-desc">Calendrier, ménages, facturation propriétaires, sous-comptes. Tout ce qu'il faut pour gérer les biens de vos clients.</div>
+        </div>
       </div>
-      <div class="audience-card">
-        <div class="audience-icon"><i class="fas fa-house-chimney"></i></div>
-        <h3>Propriétaires multi-biens</h3>
-        <p>Plusieurs logements sur Airbnb ou Booking ? Évitez les doublons, visualisez tout d'un coup, encaissez en direct.</p>
+      <div class="audience-card reveal reveal-delay-2">
+        <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=700&q=80" alt="Propriétaire multi-biens" loading="lazy">
+        <div class="audience-overlay"></div>
+        <div class="audience-content">
+          <div class="audience-icon"><i class="fas fa-house-chimney"></i></div>
+          <div class="audience-title">Propriétaires multi-biens</div>
+          <div class="audience-desc">Évitez les doublons, visualisez tout en un coup d'œil, encaissez en direct. Zéro commission sur vos réservations directes.</div>
+        </div>
       </div>
-      <div class="audience-card">
-        <div class="audience-icon"><i class="fas fa-key"></i></div>
-        <h3>Hôtes indépendants</h3>
-        <p>Même avec 1 ou 2 logements, un bon calendrier et une IA qui répond à 2h du matin changent tout.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ TÉMOIGNAGE ═══════════ -->
-<section class="alt">
-  <div class="container">
-    <div class="testimonial">
-      <blockquote>
-        "Avant Boostinghost, je jonglais entre 4 outils différents. Maintenant tout est au même endroit : calendrier, paiements, ménages, et l'IA gère 80% des messages voyageurs. J'ai récupéré mes soirées."
-      </blockquote>
-      <cite>Simon · Conciergerie dans le Val d'Oise · 13 logements</cite>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ CTA FINAL ═══════════ -->
-<section>
-  <div class="container">
-    <div class="cta-callout">
-      <h2>Testez gratuitement pendant 14 jours</h2>
-      <p>Aucune carte demandée. Accès complet à toutes les fonctionnalités, IA comprise.</p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <a href="/register.html" class="btn btn-primary btn-large">
-          <i class="fas fa-rocket"></i>
-          Créer mon compte gratuit
-        </a>
-        <a href="/pricing.html" class="btn btn-ghost btn-large">
-          Voir les tarifs
-        </a>
+      <div class="audience-card reveal reveal-delay-3">
+        <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=700&q=80" alt="Hôte indépendant" loading="lazy">
+        <div class="audience-overlay"></div>
+        <div class="audience-content">
+          <div class="audience-icon"><i class="fas fa-key"></i></div>
+          <div class="audience-title">Hôtes indépendants</div>
+          <div class="audience-desc">Même avec 1 logement, un calendrier propre et une IA qui répond à 2h du matin changent tout pour vos avis.</div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ FOOTER ═══════════ -->
-<footer>
+<!-- ═══ CTA ═══ -->
+<section class="cta-section">
   <div class="container">
-    <p>© 2026 Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
-    <div class="footer-links">
-      <a href="/mentions-legales.html">Mentions légales</a>
-      <a href="/politique-confidentialite.html">Confidentialité</a>
-      <a href="/cgu.html">CGU</a>
-      <a href="/cgv.html">CGV</a>
+    <div class="cta-box reveal">
+      <div class="cta-overlay"></div>
+      <div class="cta-content">
+        <h2>Testez gratuitement pendant 14 jours</h2>
+        <p>Aucune carte demandée. Accès complet à toutes les fonctionnalités, IA comprise.</p>
+        <div class="cta-actions">
+          <a href="/register.html" class="btn btn-white btn-lg">
+            <i class="fas fa-rocket"></i> Créer mon compte gratuit
+          </a>
+          <a href="/pricing.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.3);color:white;">
+            Voir les tarifs
+          </a>
+        </div>
+        <div class="cta-trust">
+          <span><i class="fas fa-shield-alt"></i> Données hébergées en UE</span>
+          <span><i class="fas fa-mobile-screen"></i> Web, iOS & Android</span>
+          <span><i class="fas fa-circle-check"></i> Sans engagement</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">
+        <span>Boosting<span class="brand-host">host</span></span>
+      </div>
+      <p class="footer-copy">© 2026 Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+      <div class="footer-links">
+        <a href="/mentions-legales.html">Mentions légales</a>
+        <a href="/politique-confidentialite.html">Confidentialité</a>
+        <a href="/cgu.html">CGU</a>
+        <a href="/cgv.html">CGV</a>
+        <a href="/blog.html">Blog</a>
+        <a href="/pricing.html">Tarifs</a>
+      </div>
+    </div>
+    <div class="footer-badges">
+      <div class="footer-badge"><i class="fas fa-shield-alt"></i> RGPD · Données en UE</div>
+      <div class="footer-badge"><i class="fab fa-apple"></i> App Store</div>
+      <div class="footer-badge"><i class="fab fa-google-play"></i> Google Play</div>
     </div>
   </div>
 </footer>
+
+<script>
+// ─── Scroll reveal ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ─── Horizontal scroll drag ───
+function initDrag(trackId) {
+  const track = document.getElementById(trackId);
+  if (!track) return;
+  let isDown = false, startX, scrollLeft;
+  track.addEventListener('mousedown', e => {
+    isDown = true; track.style.cursor = 'grabbing';
+    startX = e.pageX - track.offsetLeft;
+    scrollLeft = track.scrollLeft;
+  });
+  track.addEventListener('mouseleave', () => { isDown = false; track.style.cursor = 'grab'; });
+  track.addEventListener('mouseup', () => { isDown = false; track.style.cursor = 'grab'; });
+  track.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - track.offsetLeft;
+    track.scrollLeft = scrollLeft - (x - startX) * 1.5;
+  });
+}
+initDrag('featuresTrack');
+
+// ─── Features dots ───
+(function() {
+  const track = document.getElementById('featuresTrack');
+  const dotsEl = document.getElementById('featuresDots');
+  if (!track || !dotsEl) return;
+  const tiles = track.querySelectorAll('.feature-tile');
+  const count = tiles.length;
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement('div');
+    d.className = 'hscroll-dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => { tiles[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }); };
+    dotsEl.appendChild(d);
+  }
+  track.addEventListener('scroll', () => {
+    const dots = dotsEl.querySelectorAll('.hscroll-dot');
+    const idx = Math.round(track.scrollLeft / 340);
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  });
+})();
+
+// ─── Mobile menu close on link click ───
+document.querySelectorAll('#navMain a').forEach(a => {
+  a.addEventListener('click', () => document.getElementById('navMain').classList.remove('open'));
+});
+</script>
 
 </body>
 </html>
