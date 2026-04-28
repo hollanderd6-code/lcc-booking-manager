@@ -64,17 +64,21 @@ async function getGroqResponse(userMessage, conversationContext = {}) {
   }
 
   try {
-    const language = conversationContext.language || 'fr';
+    const language = conversationContext.language || 'auto';
 
-    // Mapping langue → instruction claire pour le modèle (anti-biais FR)
+    // Mapping langue → instruction forte pour les langues connues
     const languageInstructions = {
       fr: 'Tu DOIS répondre en FRANÇAIS, quelle que soit la langue du contexte ci-dessous.',
       en: 'You MUST reply in ENGLISH, regardless of the language of the context below. Do not mix French words into your English response.',
       es: 'DEBES responder en ESPAÑOL, sin importar el idioma del contexto a continuación.',
       de: 'Du MUSST auf DEUTSCH antworten, unabhängig von der Sprache des Kontexts unten.',
       it: 'DEVI rispondere in ITALIANO, indipendentemente dalla lingua del contesto sottostante.',
+      // Auto-détection : Groq détecte et répond dans la langue du message
+      auto: 'CRITICAL: Detect the language of the guest message and reply ONLY in that same language. NEVER reply in French unless the guest wrote in French. The property data below is in French for your reference only — do not use French in your response unless the guest used French.',
     };
-    const languageInstruction = languageInstructions[language] || languageInstructions.fr;
+    const languageInstruction = languageInstructions[language] || languageInstructions.auto;
+    
+    console.log(\`🌍 [GROQ] Langue: \${language}\`);
 
     // Construire les sections du prompt dynamiquement selon les infos disponibles
     const sections = [];
