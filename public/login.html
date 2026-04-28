@@ -59,6 +59,16 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 .form-field input::placeholder { color:rgba(255,255,255,.28); }
 .form-field .tpw { background:none; border:none; cursor:pointer; color:rgba(255,255,255,.35); padding:0; display:flex; align-items:center; font-size:13px; transition:color .15s; }
 .form-field .tpw:hover { color:rgba(255,255,255,.7); }
+.faceid-btn {
+  width: 100%; padding: 13px; border-radius: 14px;
+  background: rgba(255,255,255,.07); border: 1.5px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.8); font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 10px; transition: background .2s, border-color .2s;
+}
+.faceid-btn:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.3); }
+.faceid-btn i { font-size: 20px; color: #6ee7b7; }
 .submit-btn { width:100%; height:46px; border-radius:13px; background:var(--primary); color:white; border:none; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .2s; box-shadow:0 4px 16px var(--primary-glow); margin-top:4px; }
 .submit-btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:0 8px 24px rgba(26,122,94,.45); }
 .submit-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
@@ -122,6 +132,9 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
               
             </div>
             <button type="submit" class="submit-btn" id="loginSubmit"><i class="fas fa-arrow-right-to-bracket"></i> Se connecter</button>
+            <button type="button" class="faceid-btn" id="faceIdBtn" style="display:none;" onclick="triggerFaceId()">
+              <i class="fas fa-face-viewfinder"></i> Se connecter avec Face ID
+            </button>
           </form>
           <div class="divider"><span>ou</span></div>
           <button class="magic-btn" id="magicLinkBtn"><i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email</button>
@@ -143,11 +156,63 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   function showToast(msg,type='error'){document.getElementById('bh-toast')?.remove();const c=type==='error'?'#DC2626':'#1A7A5E',ic=type==='error'?'fa-circle-exclamation':'fa-circle-check',t=document.createElement('div');t.id='bh-toast';t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#1C1C1C;border-left:4px solid ${c};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:90vw;width:380px;animation:toastIn .25s ease;`;t.innerHTML=`<i class="fas ${ic}" style="color:${c};font-size:18px;flex-shrink:0;"></i><span style="flex:1;">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;">×</button>`;if(!document.getElementById('bh-toast-style')){const s=document.createElement('style');s.id='bh-toast-style';s.textContent='@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';document.head.appendChild(s);}document.body.appendChild(t);setTimeout(()=>t?.remove(),5000);}
   async function checkAuth(){const tk=localStorage.getItem('lcc_token');if(!tk)return false;try{const r=await fetch(API_BASE+'/api/user',{headers:{'Authorization':'Bearer '+tk}});if(r.ok){window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}localStorage.removeItem('lcc_token');return false;}catch{return false;}}
   async function checkMagicToken(){const mt=new URLSearchParams(window.location.search).get('magic_token');if(!mt)return false;const ld=document.createElement('div');ld.style.cssText='position:fixed;inset:0;background:rgba(13,17,23,.7);backdrop-filter:blur(8px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';ld.innerHTML='<div style="width:52px;height:52px;border:3px solid rgba(255,255,255,.15);border-top-color:#1A7A5E;border-radius:50%;animation:spin .8s linear infinite;"></div><p style="color:white;font-family:\'DM Sans\',sans-serif;font-size:15px;">Connexion en cours…</p>';if(!document.getElementById('spin-s')){const s=document.createElement('style');s.id='spin-s';s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(s);}document.body.appendChild(ld);try{const r=await fetch(API_BASE+'/api/auth/magic-link/verify?token='+encodeURIComponent(mt));const d=await r.json();if(r.ok&&d.token){localStorage.setItem('lcc_token',d.token);if(d.user)localStorage.setItem('lcc_user',JSON.stringify(d.user));window.history.replaceState({},'','/login.html');window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}else{ld.remove();showToast(d.error||'Lien invalide ou expiré.');return false;}}catch{ld.remove();showToast('Erreur de connexion.');return false;}}
-  checkMagicToken().then(h=>{if(!h)checkAuth();});
+  checkMagicToken().then(h=>{if(!h)checkAuth();initFaceId();});
   document.getElementById('tpw').addEventListener('click',()=>{const i=document.getElementById('loginPassword'),ic=document.getElementById('tpwIcon');i.type=i.type==='password'?'text':'password';ic.className=i.type==='text'?'fas fa-eye':'fas fa-eye-slash';});
   const sw=document.getElementById('sw'),sl=document.getElementById('sl');
   
-  document.getElementById('loginForm').addEventListener('submit',async function(e){e.preventDefault();const email=document.getElementById('loginEmail').value.trim(),pwd=document.getElementById('loginPassword').value;if(!email||!pwd){showToast('Veuillez remplir tous les champs.');return;}const btn=document.getElementById('loginSubmit');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connexion…';try{const res=await fetch(API_BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data=await res.json();if(res.ok&&data.token){localStorage.setItem('lcc_token',data.token);if(data.user)localStorage.setItem('lcc_user',JSON.stringify(data.user));window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');}else{showToast(data.error||'Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}}catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
+  // ============================================
+  // 🔐 FACE ID / BIOMÉTRIE
+  // ============================================
+  async function triggerFaceId() {
+    if (!IS_NATIVE || !window.Capacitor?.Plugins?.BiometricAuth) return;
+    const { BiometricAuth } = window.Capacitor.Plugins;
+    try {
+      await BiometricAuth.authenticate({
+        reason: 'Connexion à Boostinghost',
+        cancelTitle: 'Annuler',
+        allowDeviceCredential: false,
+      });
+      // Auth biométrique OK → récupère le token sauvegardé
+      const saved = localStorage.getItem('lcc_biometric_token');
+      if (saved) {
+        localStorage.setItem('lcc_token', saved);
+        window.location.href = 'app.html';
+      } else {
+        showToast('Veuillez vous connecter une première fois avec votre mot de passe.');
+      }
+    } catch (e) {
+      if (e.code !== 'BIOMETRIC_DISMISSED') {
+        showToast('Face ID non disponible.');
+      }
+    }
+  }
+
+  async function initFaceId() {
+    if (!IS_IOS) return;
+    if (!window.Capacitor?.Plugins?.BiometricAuth) return;
+    const { BiometricAuth } = window.Capacitor.Plugins;
+    try {
+      const result = await BiometricAuth.checkBiometry();
+      const hasBiometry = result.isAvailable;
+      const hasSavedToken = !!localStorage.getItem('lcc_biometric_token');
+      // Afficher le bouton si biométrie disponible
+      if (hasBiometry) {
+        document.getElementById('faceIdBtn').style.display = 'flex';
+      }
+      // Auto-trigger si token sauvegardé
+      if (hasBiometry && hasSavedToken) {
+        setTimeout(() => triggerFaceId(), 600);
+      }
+    } catch(e) {}
+  }
+
+  // Sauvegarder le token biométrique après une connexion réussie par mot de passe
+  function saveBiometricToken(token) {
+    if (!IS_IOS || !window.Capacitor?.Plugins?.BiometricAuth) return;
+    localStorage.setItem('lcc_biometric_token', token);
+  }
+
+  document.getElementById('loginForm').addEventListener('submit',async function(e){e.preventDefault();const email=document.getElementById('loginEmail').value.trim(),pwd=document.getElementById('loginPassword').value;if(!email||!pwd){showToast('Veuillez remplir tous les champs.');return;}const btn=document.getElementById('loginSubmit');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connexion…';try{const res=await fetch(API_BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data=await res.json();if(res.ok&&data.token){localStorage.setItem('lcc_token',data.token);if(data.user)localStorage.setItem('lcc_user',JSON.stringify(data.user));saveBiometricToken(data.token);window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');}else{showToast(data.error||'Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}}catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
   document.getElementById('magicLinkBtn').addEventListener('click',async function(){const email=document.getElementById('loginEmail').value.trim();if(!email){showToast("Entrez d'abord votre adresse email.");document.getElementById('loginEmail').focus();return;}this.disabled=true;this.innerHTML='<i class="fas fa-spinner fa-spin"></i> Envoi…';try{const r=await fetch(API_BASE+'/api/auth/magic-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});const d=await r.json();if(r.ok){showToast('✉️ Lien envoyé ! Vérifiez votre boîte email.','success');this.innerHTML='<i class="fas fa-check"></i> Lien envoyé !';}else{showToast(d.error||"Erreur lors de l'envoi.");this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}}catch{showToast('Erreur réseau.');this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}});
 </script>
 </body>
