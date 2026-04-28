@@ -6,205 +6,151 @@
   <title>Vérification de votre email — Boostinghost</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --primary: #1A7A5E; --primary-dark: #15624B;
-      --primary-glow: rgba(26,122,94,.28);
-      --cream: #F5F0E8; --ink: #0D1117;
-      --muted: #7A8695; --border: rgba(200,184,154,.4);
-    }
-    html, body { height: 100%; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--ink); min-height: 100vh; display: flex; -webkit-font-smoothing: antialiased; }
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --primary:#1A7A5E; --primary-dark:#15624B; --primary-glow:rgba(26,122,94,.28); }
+html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; background:#0D1117; }
+@keyframes fadeUp  { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
+@keyframes floatUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes rotate  { to{transform:rotate(360deg)} }
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-    .page-split { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; width: 100%; }
+.hero { min-height:100vh; position:relative; display:flex; align-items:center; overflow:hidden; }
+.hero-bg { position:absolute; inset:0; background:url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80') center/cover; transform:scale(1.04); transition:transform 12s ease; }
+.hero:hover .hero-bg { transform:scale(1); }
+.hero-overlay { position:absolute; inset:0; background:linear-gradient(110deg,rgba(13,17,23,.94) 0%,rgba(13,17,23,.75) 45%,rgba(13,17,23,.6) 100%); }
+.hero-logo { position:absolute; top:36px; left:48px; z-index:10; display:flex; align-items:center; gap:10px; text-decoration:none; }
+.hero-logo-icon { width:34px; height:34px; border-radius:9px; overflow:hidden; flex-shrink:0; background:var(--primary); display:flex; align-items:center; justify-content:center; }
+.hero-logo-icon img { width:100%; height:100%; object-fit:cover; display:block; }
+.hero-logo-icon .fb { font-size:18px; font-weight:900; color:white; display:none; }
+.hero-logo-name { font-size:17px; font-weight:700; color:white; }
+.hero-logo-name em { color:#6ee7b7; font-style:normal; }
+.hero-content { position:relative; z-index:2; max-width:1160px; margin:0 auto; padding:100px 48px 80px; width:100%; display:grid; grid-template-columns:1fr 1fr; gap:72px; align-items:center; }
+.hero-left { animation:fadeUp .9s .1s both; }
+.hero-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(26,122,94,.25); color:#6ee7b7; border:1px solid rgba(110,231,183,.3); padding:6px 14px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-bottom:22px; }
+.hero h1 { font-family:'Instrument Serif',serif; font-size:clamp(34px,4.5vw,58px); line-height:1.06; color:white; margin-bottom:20px; font-weight:400; }
+.hero h1 em { color:#6ee7b7; font-style:normal; }
+.hero-sub { font-size:16px; color:rgba(255,255,255,.62); line-height:1.72; margin-bottom:36px; max-width:460px; }
+.hero-trust { display:flex; gap:20px; flex-wrap:wrap; }
+.hero-trust-item { display:flex; align-items:center; gap:7px; font-size:13px; color:rgba(255,255,255,.45); }
+.hero-trust-item i { color:#6ee7b7; font-size:11px; }
+.hero-right { animation:fadeUp .9s .3s both; }
+.form-card { background:rgba(255,255,255,.07); backdrop-filter:blur(28px); border:1px solid rgba(255,255,255,.13); border-radius:22px; overflow:hidden; }
+.form-card-header { background:rgba(255,255,255,.05); padding:18px 24px; border-bottom:1px solid rgba(255,255,255,.07); }
+.form-card-title { font-size:14px; font-weight:700; color:white; display:flex; align-items:center; gap:8px; }
+.form-card-title i { color:#6ee7b7; }
+.form-card-body { padding:32px 24px; text-align:center; }
 
-    /* Photo panel */
-    .photo-panel { position: relative; overflow: hidden; }
-    .photo-bg { position: absolute; inset: 0; background: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80') center/cover; transform: scale(1.06); transition: transform 10s ease; }
-    .photo-panel:hover .photo-bg { transform: scale(1); }
-    .photo-overlay { position: absolute; inset: 0; background: linear-gradient(155deg, rgba(13,17,23,.82) 0%, rgba(13,17,23,.5) 55%, rgba(26,122,94,.18) 100%); }
-    .photo-content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; padding: 44px 48px; }
-    .photo-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-bottom: auto; }
-    .photo-logo-icon { width: 36px; height: 36px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; }
-    .photo-logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .photo-logo-name { font-size: 18px; font-weight: 700; color: white; }
-    .photo-logo-name em { color: #6ee7b7; font-style: normal; }
-    .photo-main { flex: 1; display: flex; align-items: center; animation: fadeUp .8s .3s both; }
-    .photo-quote-tag { display: inline-flex; align-items: center; gap: 7px; background: rgba(26,122,94,.25); color: #6ee7b7; border: 1px solid rgba(110,231,183,.25); padding: 5px 14px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 22px; }
-    .photo-h2 { font-family: 'Instrument Serif', serif; font-size: clamp(26px, 3vw, 40px); color: white; line-height: 1.18; font-weight: 400; margin-bottom: 14px; }
-    .photo-h2 em { color: #6ee7b7; font-style: normal; }
-    .photo-p { font-size: 15px; color: rgba(255,255,255,.58); line-height: 1.7; max-width: 360px; margin-bottom: 32px; }
-    .photo-card { display: flex; align-items: center; gap: 14px; background: rgba(255,255,255,.07); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 16px 20px; width: fit-content; animation: fadeUp .8s .65s both; }
-    .photo-card-icon { width: 42px; height: 42px; border-radius: 11px; background: rgba(26,122,94,.3); color: #6ee7b7; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-    .photo-card-txt { font-size: 13px; color: rgba(255,255,255,.5); line-height: 1.4; }
-    .photo-card-txt strong { display: block; font-family: 'Instrument Serif', serif; font-size: 22px; color: white; font-weight: 400; margin-bottom: 1px; }
-    .photo-footer { margin-top: auto; padding-top: 32px; font-size: 12px; color: rgba(255,255,255,.28); display: flex; gap: 16px; }
-    .photo-footer a { color: rgba(255,255,255,.35); text-decoration: none; transition: color .15s; }
-    .photo-footer a:hover { color: #6ee7b7; }
-
-    /* Form panel */
-    .form-panel {
-      background: var(--cream);
-      display: flex; align-items: center; justify-content: center;
-      padding: 44px 48px; position: relative; overflow: hidden;
-    }
-    .form-panel::before {
-      content: ''; position: absolute; top: -120px; right: -120px;
-      width: 450px; height: 450px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(26,122,94,.09) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .form-panel::after {
-      content: ''; position: absolute; bottom: -80px; left: -60px;
-      width: 320px; height: 320px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(26,122,94,.05) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .form-inner { width: 100%; max-width: 400px; position: relative; z-index: 1; text-align: center; }
-
-    /* States */
-    .state { display: none; }
-    .state.active { display: flex; flex-direction: column; align-items: center; animation: fadeUp .5s both; }
-
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
-
-    .spinner { width: 72px; height: 72px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 28px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .icon-ring { width: 88px; height: 88px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 34px; position: relative; }
-    .icon-ring::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; border: 1.5px dashed currentColor; opacity: .2; animation: rotate 12s linear infinite; }
-    @keyframes rotate { to { transform: rotate(360deg); } }
-    .icon-ring.success { background: rgba(26,122,94,.12); color: var(--primary); }
-    .icon-ring.error   { background: rgba(220,38,38,.1);  color: #DC2626; }
-    .icon-ring.expired { background: rgba(217,119,6,.1);  color: #D97706; }
-
-    .state h1 { font-family: 'Instrument Serif', serif; font-size: 30px; font-weight: 400; color: var(--ink); margin-bottom: 10px; line-height: 1.2; }
-    .state p  { font-size: 15px; color: var(--muted); line-height: 1.65; margin-bottom: 5px; }
-    .hl { color: var(--primary); font-weight: 600; }
-
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      margin-top: 28px; padding: 14px 28px;
-      background: var(--primary); color: white;
-      border: none; border-radius: 14px;
-      font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-      cursor: pointer; text-decoration: none; transition: all .2s;
-      box-shadow: 0 4px 16px var(--primary-glow);
-    }
-    .btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(26,122,94,.35); }
-    .countdown { font-size: 13px; color: var(--muted); margin-top: 14px; }
-
-    @media (max-width: 768px) {
-      .page-split { grid-template-columns: 1fr; }
-      .photo-panel { display: none; }
-      .form-panel { min-height: 100vh; padding: 40px 24px; }
-    }
-  </style>
+/* States */
+.state { display:none; }
+.state.active { display:flex; flex-direction:column; align-items:center; animation:fadeUp .5s both; }
+.spinner { width:64px; height:64px; border:3px solid rgba(255,255,255,.12); border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 24px; }
+.icon-ring { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-size:30px; position:relative; }
+.icon-ring::before { content:''; position:absolute; inset:-8px; border-radius:50%; border:1.5px dashed currentColor; opacity:.2; animation:rotate 12s linear infinite; }
+.icon-ring.success { background:rgba(110,231,183,.12); color:#6ee7b7; }
+.icon-ring.error   { background:rgba(220,38,38,.12); color:#f87171; }
+.icon-ring.expired { background:rgba(251,191,36,.1); color:#fbbf24; }
+.state h1 { font-family:'Instrument Serif',serif; font-size:26px; font-weight:400; color:white; margin-bottom:8px; line-height:1.2; }
+.state p  { font-size:14px; color:rgba(255,255,255,.55); line-height:1.65; margin-bottom:4px; }
+.hl { color:#6ee7b7; font-weight:600; }
+.btn { display:inline-flex; align-items:center; gap:8px; margin-top:24px; padding:13px 26px; background:var(--primary); color:white; border:none; border-radius:13px; font-size:14px; font-weight:700; font-family:'DM Sans',sans-serif; cursor:pointer; text-decoration:none; transition:all .2s; box-shadow:0 4px 16px var(--primary-glow); }
+.btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:0 8px 24px rgba(26,122,94,.45); }
+.countdown { font-size:12px; color:rgba(255,255,255,.35); margin-top:12px; }
+.form-notif { margin-top:20px; background:rgba(26,122,94,.18); border:1px solid rgba(26,122,94,.3); border-radius:11px; padding:11px 14px; display:flex; align-items:center; gap:10px; font-size:12px; color:#6ee7b7; opacity:0; animation:floatUp .6s 1.4s both; }
+.form-notif .dot { width:7px; height:7px; border-radius:50%; background:#4ade80; flex-shrink:0; animation:pulse 2s 1.4s infinite; }
+@media(max-width:900px){.hero-content{grid-template-columns:1fr;gap:40px;padding:100px 24px 60px}.hero-right{order:-1}.hero h1{font-size:clamp(28px,8vw,40px)}}
+@media(max-width:560px){.hero-logo{left:24px}}
+</style>
 </head>
 <body>
-<div class="page-split">
-
-  <!-- LEFT photo -->
-  <div class="photo-panel">
-    <div class="photo-bg"></div>
-    <div class="photo-overlay"></div>
-    <div class="photo-content">
-      <a href="/" class="photo-logo">
-        <div class="photo-logo-icon">
-          <img src="/images/logo.png" alt="BH" onerror="this.outerHTML='<span style=&quot;font-size:18px;font-weight:900;color:white;line-height:36px;&quot;>B</span>'">
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <a href="/" class="hero-logo">
+    <div class="hero-logo-icon">
+      <img src="/images/logo.png" alt="BH" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="fb">B</span>
+    </div>
+    <div class="hero-logo-name"><em>Boosting</em>host</div>
+  </a>
+  <div class="hero-content">
+    <div class="hero-left">
+      <div class="hero-badge"><i class="fas fa-envelope-open-text"></i> Presque là</div>
+      <h1>Une dernière étape avant de<br><em>tout gérer</em></h1>
+      <p class="hero-sub">Calendrier, messages automatiques, ménage, cautions, facturation — votre plateforme vous attend.</p>
+      <div class="hero-trust">
+        <div class="hero-trust-item"><i class="fas fa-check-circle"></i> +1 200 hôtes actifs</div>
+        <div class="hero-trust-item"><i class="fas fa-check-circle"></i> Opérationnel en 15 min</div>
+        <div class="hero-trust-item"><i class="fas fa-check-circle"></i> Sans carte de crédit</div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="form-card">
+        <div class="form-card-header">
+          <div class="form-card-title"><i class="fas fa-envelope"></i> Vérification email</div>
         </div>
-        <div class="photo-logo-name"><em>Boosting</em>host</div>
-      </a>
-      <div class="photo-main">
-        <div>
-          <div class="photo-quote-tag"><i class="fas fa-envelope-open-text"></i> Presque là</div>
-          <h2 class="photo-h2">Une dernière étape avant de<br><em>tout gérer depuis un seul endroit</em></h2>
-          <p class="photo-p">Calendrier, messages automatiques, ménage, cautions, facturation — votre plateforme vous attend.</p>
-          <div class="photo-card">
-            <div class="photo-card-icon"><i class="fas fa-home"></i></div>
-            <div class="photo-card-txt">
-              <strong>+1 200</strong>
-              hôtes nous font confiance
-            </div>
+        <div class="form-card-body">
+          <div class="state active" id="state-loading">
+            <div class="spinner"></div>
+            <h1>Vérification en cours…</h1>
+            <p>Nous vérifions votre adresse email, merci de patienter.</p>
           </div>
+          <div class="state" id="state-success">
+            <div class="icon-ring success"><i class="fas fa-check"></i></div>
+            <h1>Email vérifié !</h1>
+            <p>Votre compte est maintenant activé.</p>
+            <p>Bienvenue <span class="hl" id="success-name"></span>&nbsp;!</p>
+            <a href="/login.html" class="btn"><i class="fas fa-arrow-right"></i> Accéder à mon espace</a>
+            <div class="countdown" id="countdown">Redirection dans <strong>5</strong>s…</div>
+          </div>
+          <div class="state" id="state-already">
+            <div class="icon-ring success"><i class="fas fa-check-double"></i></div>
+            <h1>Déjà vérifié</h1>
+            <p>Votre email a déjà été vérifié.</p>
+            <a href="/login.html" class="btn"><i class="fas fa-arrow-right"></i> Se connecter</a>
+          </div>
+          <div class="state" id="state-expired">
+            <div class="icon-ring expired"><i class="fas fa-clock"></i></div>
+            <h1>Lien expiré</h1>
+            <p>Ce lien a expiré (valable 24h).</p>
+            <p>Connectez-vous pour en recevoir un nouveau.</p>
+            <a href="/login.html" class="btn"><i class="fas fa-arrow-right"></i> Se connecter</a>
+          </div>
+          <div class="state" id="state-error">
+            <div class="icon-ring error"><i class="fas fa-times"></i></div>
+            <h1>Lien invalide</h1>
+            <p id="error-message">Ce lien est invalide ou a déjà été utilisé.</p>
+            <a href="/login.html" class="btn"><i class="fas fa-arrow-left"></i> Retour à la connexion</a>
+          </div>
+          <div class="form-notif"><div class="dot"></div>Vos données sont sécurisées et hébergées en France</div>
         </div>
       </div>
-      <div class="photo-footer">
-        <span>© 2025 Boostinghost</span>
-        <a href="/login.html">Connexion</a>
-        <a href="/support.html">Support</a>
-      </div>
     </div>
   </div>
-
-  <!-- RIGHT states -->
-  <div class="form-panel">
-    <div class="form-inner">
-
-      <div class="state active" id="state-loading">
-        <div class="spinner"></div>
-        <h1>Vérification en cours…</h1>
-        <p>Nous vérifions votre adresse email, merci de patienter.</p>
-      </div>
-
-      <div class="state" id="state-success">
-        <div class="icon-ring success"><i class="fas fa-check"></i></div>
-        <h1>Email vérifié !</h1>
-        <p>Votre compte est maintenant activé.</p>
-        <p>Bienvenue <span class="hl" id="success-name"></span>&nbsp;!</p>
-        <a href="/login.html" class="btn"><i class="fas fa-arrow-right"></i> Accéder à mon espace</a>
-        <div class="countdown" id="countdown">Redirection dans <strong>5</strong>s…</div>
-      </div>
-
-      <div class="state" id="state-already">
-        <div class="icon-ring success"><i class="fas fa-check-double"></i></div>
-        <h1>Déjà vérifié</h1>
-        <p>Votre email a déjà été vérifié. Vous pouvez vous connecter.</p>
-        <a href="/login.html" class="btn"><i class="fas fa-arrow-right"></i> Se connecter</a>
-      </div>
-
-      <div class="state" id="state-expired">
-        <div class="icon-ring expired"><i class="fas fa-clock"></i></div>
-        <h1>Lien expiré</h1>
-        <p>Ce lien de vérification a expiré (valable 24h).</p>
-        <p>Connectez-vous pour recevoir un nouveau lien.</p>
-        <a href="/login.html" class="btn"><i class="fas fa-arrow-right"></i> Se connecter</a>
-      </div>
-
-      <div class="state" id="state-error">
-        <div class="icon-ring error"><i class="fas fa-times"></i></div>
-        <h1>Lien invalide</h1>
-        <p id="error-message">Ce lien est invalide ou a déjà été utilisé.</p>
-        <a href="/login.html" class="btn"><i class="fas fa-arrow-left"></i> Retour à la connexion</a>
-      </div>
-
-    </div>
-  </div>
-
-</div>
+</section>
 <script>
-  const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:');
-  const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
-  function showState(id) { document.querySelectorAll('.state').forEach(s => s.classList.remove('active')); document.getElementById('state-'+id).classList.add('active'); }
-  async function verifyEmail() {
-    const token = new URLSearchParams(window.location.search).get('token');
-    if (!token) { showState('error'); document.getElementById('error-message').textContent = 'Aucun token trouvé dans le lien.'; return; }
-    try {
-      const r = await fetch(`${API_BASE}/api/verify-email?token=${encodeURIComponent(token)}`);
-      const d = await r.json();
-      if (r.ok && d.success) {
-        if (d.user?.firstName) document.getElementById('success-name').textContent = d.user.firstName;
+  const IS_NATIVE=!!(window.Capacitor?.isNativePlatform?.()||window.location.protocol==='capacitor:'||window.location.protocol==='ionic:');
+  const API_BASE=IS_NATIVE?'https://lcc-booking-manager.onrender.com':'';
+  function showState(id){document.querySelectorAll('.state').forEach(s=>s.classList.remove('active'));document.getElementById('state-'+id).classList.add('active');}
+  async function verifyEmail(){
+    const token=new URLSearchParams(window.location.search).get('token');
+    if(!token){showState('error');document.getElementById('error-message').textContent='Aucun token trouvé dans le lien.';return;}
+    try{
+      const r=await fetch(`${API_BASE}/api/verify-email?token=${encodeURIComponent(token)}`);
+      const d=await r.json();
+      if(r.ok&&d.success){
+        if(d.user?.firstName)document.getElementById('success-name').textContent=d.user.firstName;
         showState('success');
-        let s = 5; const el = document.getElementById('countdown');
-        const iv = setInterval(() => { el.innerHTML = `Redirection dans <strong>${--s}</strong>s…`; if (s <= 0) { clearInterval(iv); window.location.href = IS_NATIVE ? 'login.html' : '/login.html'; } }, 1000);
-      } else {
-        const e = d.error || '';
-        if (e.includes('expiré') || e.includes('expired')) showState('expired');
-        else if (e.includes('déjà') || e.includes('already')) showState('already');
-        else { showState('error'); document.getElementById('error-message').textContent = e || 'Une erreur est survenue.'; }
+        let s=5;const el=document.getElementById('countdown');
+        const iv=setInterval(()=>{el.innerHTML=`Redirection dans <strong>${--s}</strong>s…`;if(s<=0){clearInterval(iv);window.location.href=IS_NATIVE?'login.html':'/login.html';}},1000);
+      }else{
+        const e=d.error||'';
+        if(e.includes('expiré')||e.includes('expired'))showState('expired');
+        else if(e.includes('déjà')||e.includes('already'))showState('already');
+        else{showState('error');document.getElementById('error-message').textContent=e||'Une erreur est survenue.';}
       }
-    } catch { showState('error'); document.getElementById('error-message').textContent = 'Erreur de connexion au serveur.'; }
+    }catch{showState('error');document.getElementById('error-message').textContent='Erreur de connexion au serveur.';}
   }
   verifyEmail();
 </script>
