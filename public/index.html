@@ -87,7 +87,10 @@ a { color: var(--primary); text-decoration: none; }
 .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 16px rgba(26,122,94,.3); }
 .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,122,94,.35); color: white; }
 .btn-ghost { background: rgba(255,255,255,.8); color: var(--text); border: 1.5px solid rgba(13,17,23,.12); backdrop-filter: blur(8px); }
-.btn-ghost:hover { background: white; border-color: rgba(13,17,23,.2); }
+.btn-ghost:hover { background: white; border-color: rgba(13,17,23,.2); color: var(--text); }
+/* Ghost sur fond sombre (hero, CTA) */
+.hero .btn-ghost:hover,
+.cta-box .btn-ghost:hover { background: rgba(255,255,255,.22); color: white; border-color: rgba(255,255,255,.6); }
 .btn-lg { padding: 15px 28px; font-size: 15px; border-radius: 16px; }
 .btn-white { background: white; color: var(--primary); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
 .btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.18); }
@@ -792,7 +795,7 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
         <a href="/register.html" class="btn btn-white btn-lg">
           <i class="fas fa-rocket"></i> Créer mon espace gratuit
         </a>
-        <a href="/login.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.25);color:white;">
+        <a href="/login.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.4);color:white;background:rgba(255,255,255,.1);">
           J'ai déjà un compte
         </a>
       </div>
@@ -878,8 +881,8 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
       <div class="logo-pill"><img src="https://www.expedia.fr/favicon.ico" width="20" height="20" alt="Expedia" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Expedia</div>
       <div class="logo-pill"><i class="fab fa-stripe" style="color:#635BFF;font-size:20px;"></i> Stripe</div>
       <div class="logo-pill"><img src="https://www.leboncoin.fr/favicon.ico" width="20" height="20" alt="Leboncoin Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Leboncoin Vacances</div>
-      <div class="logo-pill"><img src="https://www.gites-de-france.com/favicon.ico" width="20" height="20" alt="Gîtes de France" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Gîtes de France</div>
-      <div class="logo-pill"><img src="https://www.pap.fr/favicon.ico" width="20" height="20" alt="PAP Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> PAP Vacances</div>
+      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="20" height="20" rx="4" fill="#4CAF50"/><text x="10" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="11" fill="white">GF</text></svg> Gîtes de France</div>
+      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="20" height="20" rx="4" fill="#E30613"/><text x="10" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="10" fill="white">PAP</text></svg> PAP Vacances</div>
       <!-- Duplicate for loop -->
       <div class="logo-pill"><i class="fab fa-airbnb" style="color:#FF5A5F;font-size:20px;"></i> Airbnb</div>
       <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="18" height="18" rx="3" fill="#003580"/><text x="9" y="13.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="13" fill="white">B</text></svg> Booking.com</div>
@@ -887,8 +890,8 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
       <div class="logo-pill"><img src="https://www.expedia.fr/favicon.ico" width="20" height="20" alt="Expedia" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Expedia</div>
       <div class="logo-pill"><i class="fab fa-stripe" style="color:#635BFF;font-size:20px;"></i> Stripe</div>
       <div class="logo-pill"><img src="https://www.leboncoin.fr/favicon.ico" width="20" height="20" alt="Leboncoin Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Leboncoin Vacances</div>
-      <div class="logo-pill"><img src="https://www.gites-de-france.com/favicon.ico" width="20" height="20" alt="Gîtes de France" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Gîtes de France</div>
-      <div class="logo-pill"><img src="https://www.pap.fr/favicon.ico" width="20" height="20" alt="PAP Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> PAP Vacances</div>
+      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="20" height="20" rx="4" fill="#4CAF50"/><text x="10" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="11" fill="white">GF</text></svg> Gîtes de France</div>
+      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="20" height="20" rx="4" fill="#E30613"/><text x="10" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="10" fill="white">PAP</text></svg> PAP Vacances</div>
     </div>
   </div>
 </div>
@@ -961,7 +964,7 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
       <div class="showcase-text">
         <div class="section-kicker"><i class="fas fa-euro-sign"></i> Revenus & reporting</div>
         <h2 class="section-title" style="font-size:clamp(36px,4.5vw,52px);">Vos revenus, sans aucun calcul manuel</h2>
-        <p class="section-sub">Du chiffre d'affaires au bénéfice net, Boosting Host calcule tout pour vous : frais de ménage, taxes de séjour et commissions des plateformes.</p>
+        <p class="section-sub">Du chiffre d'affaires au bénéfice net, Boostinghost calcule tout pour vous : frais de ménage, taxes de séjour et commissions des plateformes.</p>
         <ul class="feature-list">
           <li><span class="check"><i class="fas fa-check"></i></span>Tableaux de bord automatiques : suivez vos performances en un coup d'œil.</li>
           <li><span class="check"><i class="fas fa-check"></i></span>Partage des revenus : la répartition propriétaire / conciergerie se fait toute seule.</li>
@@ -1199,11 +1202,11 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
         Leboncoin Vacances
       </div>
       <div class="integration-badge">
-        <img src="https://www.gites-de-france.com/favicon.ico" width="28" height="28" alt="Gîtes de France" style="border-radius:6px;flex-shrink:0;" />
+        <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="28" height="28" rx="6" fill="#4CAF50"/><text x="14" y="19" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="12" fill="white">GF</text></svg>
         Gîtes de France
       </div>
       <div class="integration-badge">
-        <img src="https://www.pap.fr/favicon.ico" width="28" height="28" alt="PAP Vacances" style="border-radius:6px;flex-shrink:0;" />
+        <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="28" height="28" rx="6" fill="#E30613"/><text x="14" y="19" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="11" fill="white">PAP</text></svg>
         PAP Vacances
       </div>
     </div>
@@ -1265,7 +1268,7 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
           <a href="/register.html" class="btn btn-white btn-lg">
             <i class="fas fa-rocket"></i> Créer mon compte gratuit
           </a>
-          <a href="/pricing.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.3);color:white;">
+          <a href="/pricing.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.4);color:white;background:rgba(255,255,255,.1);">
             Voir les tarifs
           </a>
         </div>
