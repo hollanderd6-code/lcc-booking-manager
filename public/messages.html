@@ -3601,6 +3601,7 @@ async function loadTemplates() {
       return;
     }
 
+    window._lastTemplates = templates;
     container.innerHTML = templates.map(t => `
       <div style="background:white;border:1px solid #e5e7eb;border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
         <div style="flex:1;min-width:0;">
@@ -3722,16 +3723,12 @@ async function editTemplate(id) {
   } catch(e) {}
 }
 
-async function copyTemplate(id) {
-  try {
-    const token = localStorage.getItem('lcc_token');
-    const res = await fetch(`/api/message-templates?property_id=`, { headers: { 'Authorization': 'Bearer ' + token } });
-    const data = await res.json();
-    const t = (data.templates || []).find(t => t.id === id);
-    if (!t) return;
-    const copy = { ...t, title: t.title + ' (copie)', active: false };
-    openTemplateModal(copy, true); // isCopy = true → titre "Nouveau template", pas d'id
-  } catch(e) {}
+function copyTemplate(id) {
+  const templates = window._lastTemplates || [];
+  const t = templates.find(t => String(t.id) === String(id));
+  if (!t) { showBHToast('Template introuvable', 'error'); return; }
+  const copy = { ...t, id: null, title: t.title + ' (copie)', active: false };
+  openTemplateModal(copy, true);
 }
 
 async function toggleTemplate(id, active) {
