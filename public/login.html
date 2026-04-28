@@ -1,344 +1,159 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion — Boostinghost</title>
-  <meta name="description" content="Connectez-vous à votre espace Boostinghost pour gérer vos locations courte durée.">
   <meta name="robots" content="noindex">
-
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
   <script src="/js/auth-fetch.js"></script>
-
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --primary: #1A7A5E; --primary-dark: #15624B; --primary-soft: rgba(26,122,94,.1);
-  --ink: #0D1117; --muted: #7A8695; --text: #374151;
-  --border: rgba(13,17,23,.1); --cream: #F5F0E8; --white: #FAFAF8;
-}
-html, body { height: 100%; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
-body { background: var(--ink); display: flex; align-items: stretch; min-height: 100vh; overflow: hidden; }
+:root { --primary:#1A7A5E; --primary-dark:#15624B; --primary-glow:rgba(26,122,94,.28); }
+html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; background:#0D1117; }
+@keyframes fadeUp  { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
+@keyframes floatUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
 
-/* ─── LEFT PANEL ─── */
-.auth-left {
-  flex: 0 0 520px; max-width: 520px; min-width: 360px;
-  background: var(--white);
-  display: flex; flex-direction: column;
-  padding: 40px 52px;
-  overflow-y: auto;
-  position: relative; z-index: 2;
-}
-
-/* ─── RIGHT PANEL ─── */
-.auth-right { flex: 1; position: relative; overflow: hidden; }
-.auth-right-img {
-  position: absolute; inset: 0;
-  background: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80') center/cover;
-}
-.auth-right-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(13,17,23,.82) 0%, rgba(26,122,94,.45) 100%);
-}
-.auth-right-content {
-  position: relative; z-index: 2;
-  padding: 60px 52px; height: 100%;
-  display: flex; flex-direction: column; justify-content: flex-end;
-}
-.auth-right-kicker {
-  font-size: 11px; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase; color: #6ee7b7;
-  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
-}
-.auth-right-kicker::before { content: ''; width: 28px; height: 1px; background: #6ee7b7; }
-.auth-right h2 {
-  font-family: 'Instrument Serif', serif; font-weight: 400;
-  font-size: clamp(26px,2.8vw,40px); color: white; line-height: 1.15; margin-bottom: 20px;
-}
-.auth-right h2 em { color: #6ee7b7; font-style: normal; }
-.auth-right-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
-.auth-right-features li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: rgba(255,255,255,.7); }
-.auth-right-features li i { color: #6ee7b7; font-size: 12px; width: 16px; }
-.testimonial-mini {
-  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
-  border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;
-}
-.testimonial-mini p { font-size: 14px; color: rgba(255,255,255,.85); line-height: 1.6; margin-bottom: 8px; }
-.testimonial-mini cite { font-size: 12px; color: rgba(255,255,255,.5); font-style: normal; }
-.auth-right-badge { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,.5); }
-.auth-right-badge i { color: #6ee7b7; }
-
-/* ─── LOGO ─── */
-.auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; text-decoration: none; }
-.auth-logo-icon { width: 36px; height: 36px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; }
-.auth-logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.auth-logo-icon .fallback { font-size: 18px; font-weight: 900; color: white; display: none; }
-.auth-logo-name { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px; color: var(--ink); }
-.auth-logo-name span { color: var(--primary); }
-
-/* ─── FORM HEADER ─── */
-.auth-heading { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 28px; color: var(--ink); margin-bottom: 4px; }
-.auth-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
-
-/* ─── FORM ─── */
-.auth-form { display: flex; flex-direction: column; gap: 16px; }
-.form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-.form-field {
-  display: flex; align-items: center; gap: 10px;
-  border: 1.5px solid var(--border); border-radius: 12px;
-  padding: 0 14px; height: 44px; background: white;
-  transition: border-color .15s, box-shadow .15s;
-}
-.form-field:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,122,94,.08); }
-.form-field i { color: var(--muted); font-size: 14px; flex-shrink: 0; }
-.form-field input {
-  flex: 1; border: none; outline: none;
-  font-size: 14px; font-family: 'DM Sans', sans-serif;
-  color: var(--ink); background: transparent;
-}
-.form-field input::placeholder { color: #B0B8C4; }
-.form-field .toggle-pw { background: none; border: none; cursor: pointer; color: var(--muted); padding: 0; display: flex; align-items: center; font-size: 14px; transition: color .15s; }
-.form-field .toggle-pw:hover { color: var(--ink); }
-
-/* ─── PASSWORD STRENGTH ─── */
-.strength-wrap { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
-.strength-bars { display: flex; gap: 4px; flex: 1; }
-.strength-bars span { flex: 1; height: 3px; border-radius: 2px; background: rgba(13,17,23,.08); transition: background .25s; }
-.sw-weak .strength-bars span:nth-child(1) { background: #EF4444; }
-.sw-medium .strength-bars span:nth-child(-n+2) { background: #F59E0B; }
-.sw-strong .strength-bars span { background: var(--primary); }
-.strength-label { font-size: 11px; color: var(--muted); min-width: 40px; transition: color .2s; font-weight: 500; }
-.sw-weak .strength-label { color: #EF4444; }
-.sw-medium .strength-label { color: #F59E0B; }
-.sw-strong .strength-label { color: var(--primary); }
-
-/* ─── FORGOT LINK ─── */
-.form-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.forgot-link { font-size: 12px; color: var(--muted); text-decoration: none; transition: color .15s; }
-.forgot-link:hover { color: var(--primary); }
-
-/* ─── SUBMIT ─── */
-.auth-submit {
-  width: 100%; height: 48px; border-radius: 14px;
-  background: var(--primary); color: white; border: none;
-  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: background .15s, transform .15s, box-shadow .15s;
-  box-shadow: 0 4px 16px rgba(26,122,94,.3); margin-top: 4px;
-}
-.auth-submit:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(26,122,94,.35); }
-.auth-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-
-/* ─── DIVIDER ─── */
-.auth-divider { display: flex; align-items: center; gap: 12px; margin: 4px 0; }
-.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.auth-divider span { font-size: 12px; color: var(--muted); white-space: nowrap; }
-
-/* ─── MAGIC LINK ─── */
-.magic-btn {
-  width: 100%; height: 44px; border-radius: 12px;
-  background: rgba(26,122,94,.07); color: var(--primary);
-  border: 1.5px solid rgba(26,122,94,.2);
-  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: all .15s;
-}
-.magic-btn:hover { background: rgba(26,122,94,.12); border-color: rgba(26,122,94,.35); }
-
-/* ─── FOOTER ─── */
-.auth-footer { margin-top: 20px; text-align: center; font-size: 13px; color: var(--muted); }
-.auth-footer a { color: var(--primary); font-weight: 600; }
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 900px) {
-  body { overflow-y: auto; align-items: flex-start; }
-  .auth-right { display: none; }
-  .auth-left { flex: 1; max-width: 100%; padding: 36px 24px; min-height: 100vh; }
-}
-@media (max-width: 480px) { .auth-left { padding: 28px 16px; } }
+.hero { min-height:100vh; position:relative; display:flex; align-items:center; overflow:hidden; }
+.hero-bg { position:absolute; inset:0; background:url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1600&q=80') center/cover; transform:scale(1.04); transition:transform 12s ease; }
+.hero:hover .hero-bg { transform:scale(1); }
+.hero-overlay { position:absolute; inset:0; background:linear-gradient(110deg,rgba(13,17,23,.94) 0%,rgba(13,17,23,.75) 45%,rgba(13,17,23,.62) 100%); }
+.hero-logo { position:absolute; top:36px; left:48px; z-index:10; display:flex; align-items:center; gap:10px; text-decoration:none; }
+.hero-logo-icon { width:34px; height:34px; border-radius:9px; overflow:hidden; flex-shrink:0; background:var(--primary); display:flex; align-items:center; justify-content:center; }
+.hero-logo-icon img { width:100%; height:100%; object-fit:cover; display:block; }
+.hero-logo-icon .fb { font-size:18px; font-weight:900; color:white; display:none; }
+.hero-logo-name { font-size:17px; font-weight:700; color:white; }
+.hero-logo-name em { color:#6ee7b7; font-style:normal; }
+.hero-nav { position:absolute; top:36px; right:48px; z-index:10; display:flex; align-items:center; gap:8px; }
+.hero-nav a { font-size:14px; color:rgba(255,255,255,.6); text-decoration:none; padding:7px 14px; border-radius:10px; transition:all .15s; }
+.hero-nav a:hover { color:white; background:rgba(255,255,255,.08); }
+.hero-nav .nav-btn { background:rgba(255,255,255,.1); color:white; border:1px solid rgba(255,255,255,.18); font-weight:600; }
+.hero-nav .nav-btn:hover { background:rgba(255,255,255,.18); }
+.hero-content { position:relative; z-index:2; max-width:1160px; margin:0 auto; padding:100px 48px 80px; width:100%; display:grid; grid-template-columns:1fr 1fr; gap:72px; align-items:center; }
+.hero-left { animation:fadeUp .9s .1s both; }
+.hero-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(26,122,94,.25); color:#6ee7b7; border:1px solid rgba(110,231,183,.3); padding:6px 14px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-bottom:22px; }
+.hero h1 { font-family:'Instrument Serif',serif; font-size:clamp(34px,4.5vw,58px); line-height:1.06; color:white; margin-bottom:20px; font-weight:400; }
+.hero h1 em { color:#6ee7b7; font-style:normal; }
+.hero-sub { font-size:16px; color:rgba(255,255,255,.62); line-height:1.72; margin-bottom:36px; max-width:460px; }
+.hero-trust { display:flex; gap:20px; flex-wrap:wrap; }
+.hero-trust-item { display:flex; align-items:center; gap:7px; font-size:13px; color:rgba(255,255,255,.45); }
+.hero-trust-item i { color:#6ee7b7; font-size:11px; }
+.hero-right { animation:fadeUp .9s .3s both; }
+.form-card { background:rgba(255,255,255,.07); backdrop-filter:blur(28px); border:1px solid rgba(255,255,255,.13); border-radius:22px; overflow:hidden; }
+.form-card-header { background:rgba(255,255,255,.05); padding:18px 24px; border-bottom:1px solid rgba(255,255,255,.07); display:flex; align-items:center; }
+.form-card-title { font-size:14px; font-weight:700; color:white; display:flex; align-items:center; gap:8px; }
+.form-card-title i { color:#6ee7b7; }
+.form-card-body { padding:24px; }
+.form-row { margin-bottom:14px; }
+.form-label { display:block; font-size:12px; font-weight:600; color:rgba(255,255,255,.6); margin-bottom:6px; }
+.form-label-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.forgot-link { font-size:12px; color:rgba(255,255,255,.4); text-decoration:none; transition:color .15s; }
+.forgot-link:hover { color:#6ee7b7; }
+.form-field { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.08); border:1.5px solid rgba(255,255,255,.12); border-radius:11px; padding:0 14px; height:42px; transition:border-color .15s,background .15s; }
+.form-field:focus-within { border-color:rgba(110,231,183,.5); background:rgba(255,255,255,.12); }
+.form-field i.fi { color:rgba(255,255,255,.35); font-size:13px; flex-shrink:0; }
+.form-field input { flex:1; border:none; outline:none; font-size:13.5px; font-family:'DM Sans',sans-serif; color:white; background:transparent; }
+.form-field input::placeholder { color:rgba(255,255,255,.28); }
+.form-field .tpw { background:none; border:none; cursor:pointer; color:rgba(255,255,255,.35); padding:0; display:flex; align-items:center; font-size:13px; transition:color .15s; }
+.form-field .tpw:hover { color:rgba(255,255,255,.7); }
+.strength-wrap { margin-top:7px; display:flex; align-items:center; gap:8px; }
+.strength-bars { display:flex; gap:4px; flex:1; }
+.strength-bars span { flex:1; height:2.5px; border-radius:2px; background:rgba(255,255,255,.1); transition:background .25s; }
+.sw-weak   .strength-bars span:nth-child(1)    { background:#EF4444; }
+.sw-medium .strength-bars span:nth-child(-n+2) { background:#F59E0B; }
+.sw-strong .strength-bars span                 { background:#6ee7b7; }
+.strength-label { font-size:11px; color:rgba(255,255,255,.35); min-width:40px; transition:color .2s; font-weight:500; }
+.sw-weak   .strength-label { color:#EF4444; }
+.sw-medium .strength-label { color:#F59E0B; }
+.sw-strong .strength-label { color:#6ee7b7; }
+.submit-btn { width:100%; height:46px; border-radius:13px; background:var(--primary); color:white; border:none; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .2s; box-shadow:0 4px 16px var(--primary-glow); margin-top:4px; }
+.submit-btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:0 8px 24px rgba(26,122,94,.45); }
+.submit-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+.divider { display:flex; align-items:center; gap:12px; margin:14px 0; }
+.divider::before,.divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.1); }
+.divider span { font-size:11px; color:rgba(255,255,255,.3); }
+.magic-btn { width:100%; height:42px; border-radius:11px; background:rgba(255,255,255,.06); color:rgba(255,255,255,.7); border:1.5px solid rgba(255,255,255,.12); font-family:'DM Sans',sans-serif; font-size:13.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .15s; }
+.magic-btn:hover { background:rgba(255,255,255,.1); border-color:rgba(110,231,183,.3); color:white; }
+.magic-btn:disabled { opacity:.6; cursor:not-allowed; }
+.form-notif { margin-top:14px; background:rgba(26,122,94,.18); border:1px solid rgba(26,122,94,.3); border-radius:11px; padding:11px 14px; display:flex; align-items:center; gap:10px; font-size:12px; color:#6ee7b7; opacity:0; animation:floatUp .6s 1.4s both; }
+.form-notif .dot { width:7px; height:7px; border-radius:50%; background:#4ade80; flex-shrink:0; animation:pulse 2s 1.4s infinite; }
+.form-footer-link { text-align:center; margin-top:14px; font-size:13px; color:rgba(255,255,255,.35); }
+.form-footer-link a { color:#6ee7b7; font-weight:600; }
+@media(max-width:900px){.hero-content{grid-template-columns:1fr;gap:40px;padding:100px 24px 60px}.hero-right{order:-1}.hero h1{font-size:clamp(28px,8vw,40px)}.hero-nav{display:none}}
+@media(max-width:560px){.hero-logo{left:24px}}
 </style>
 </head>
 <body>
-
-<!-- LEFT PANEL -->
-<div class="auth-left">
-  <a href="/" class="auth-logo">
-    <span class="auth-logo-icon">
-      <img src="/images/logo.png" alt="Boostinghost" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-      <span class="fallback">B</span>
-    </span>
-    <span class="auth-logo-name">Boosting<span>host</span></span>
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <a href="/" class="hero-logo">
+    <div class="hero-logo-icon">
+      <img src="/images/logo.png" alt="BH" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="fb">B</span>
+    </div>
+    <div class="hero-logo-name"><em>Boosting</em>host</div>
   </a>
-
-  <h1 class="auth-heading">Bon retour 👋</h1>
-  <p class="auth-sub">Connectez-vous pour accéder à votre tableau de bord.</p>
-
-  <form class="auth-form" id="loginForm" novalidate>
-
-    <div>
-      <label class="form-label" for="loginEmail">Adresse e-mail</label>
-      <div class="form-field">
-        <i class="fas fa-envelope"></i>
-        <input type="email" id="loginEmail" name="email" placeholder="vous@exemple.com" required autocomplete="email">
+  <nav class="hero-nav">
+    <a href="/pricing.html">Tarifs</a>
+    <a href="/register.html" class="nav-btn">Créer un compte</a>
+  </nav>
+  <div class="hero-content">
+    <div class="hero-left">
+      <div class="hero-badge"><i class="fas fa-house-user"></i> +1 200 hôtes actifs</div>
+      <h1>Bon retour sur<br><em>Boostinghost</em></h1>
+      <p class="hero-sub">Votre tableau de bord, calendrier, messages et ménages vous attendent. Connectez-vous et reprenez là où vous vous êtes arrêté.</p>
+      <div class="hero-trust">
+        <div class="hero-trust-item"><i class="fas fa-check-circle"></i> Données hébergées en France</div>
+        <div class="hero-trust-item"><i class="fas fa-check-circle"></i> RGPD-compliant</div>
+        <div class="hero-trust-item"><i class="fas fa-check-circle"></i> iOS & Android inclus</div>
       </div>
     </div>
-
-    <div>
-      <div class="form-label-row">
-        <label class="form-label" for="loginPassword" style="margin-bottom:0;">Mot de passe</label>
-        <a href="/reset-password-request.html" class="forgot-link">Mot de passe oublié ?</a>
+    <div class="hero-right">
+      <div class="form-card">
+        <div class="form-card-header">
+          <div class="form-card-title"><i class="fas fa-arrow-right-to-bracket"></i> Connexion</div>
+        </div>
+        <div class="form-card-body">
+          <form id="loginForm" novalidate>
+            <div class="form-row">
+              <label class="form-label" for="loginEmail">Adresse e-mail</label>
+              <div class="form-field"><i class="fas fa-envelope fi"></i><input type="email" id="loginEmail" placeholder="vous@exemple.com" required autocomplete="email"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-label-row">
+                <label class="form-label" for="loginPassword" style="margin-bottom:0">Mot de passe</label>
+                <a href="/reset-password-request.html" class="forgot-link">Mot de passe oublié ?</a>
+              </div>
+              <div class="form-field"><i class="fas fa-lock fi"></i><input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password"><button type="button" class="tpw" id="tpw"><i class="fas fa-eye-slash" id="tpwIcon"></i></button></div>
+              <div class="strength-wrap" id="sw"><div class="strength-bars"><span></span><span></span><span></span></div><span class="strength-label" id="sl"></span></div>
+            </div>
+            <button type="submit" class="submit-btn" id="loginSubmit"><i class="fas fa-arrow-right-to-bracket"></i> Se connecter</button>
+          </form>
+          <div class="divider"><span>ou</span></div>
+          <button class="magic-btn" id="magicLinkBtn"><i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email</button>
+          <div class="form-notif"><div class="dot"></div>Connexion sécurisée · Chiffrement TLS</div>
+          <div class="form-footer-link">Pas encore de compte ? <a href="/register.html">Créer un compte gratuit</a></div>
+        </div>
       </div>
-      <div class="form-field">
-        <i class="fas fa-lock"></i>
-        <input type="password" id="loginPassword" name="password" placeholder="••••••••" required autocomplete="current-password">
-        <button type="button" class="toggle-pw" id="togglePw"><i class="fas fa-eye-slash" id="togglePwIcon"></i></button>
-      </div>
-      <div class="strength-wrap" id="strengthWrap">
-        <div class="strength-bars"><span></span><span></span><span></span></div>
-        <span class="strength-label" id="strengthLabel"></span>
-      </div>
-    </div>
-
-    <button type="submit" class="auth-submit" id="loginSubmit">
-      <i class="fas fa-arrow-right-to-bracket"></i> Se connecter
-    </button>
-
-  </form>
-
-  <div class="auth-divider"><span>ou</span></div>
-
-  <button class="magic-btn" id="magicLinkBtn">
-    <i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email
-  </button>
-
-  <div class="auth-footer">
-    Pas encore de compte ? <a href="/register.html">Créer un compte gratuit</a>
-  </div>
-</div>
-
-<!-- RIGHT PANEL -->
-<div class="auth-right">
-  <div class="auth-right-img"></div>
-  <div class="auth-right-overlay"></div>
-  <div class="auth-right-content">
-    <div class="auth-right-kicker">Déjà +1 200 hôtes nous font confiance</div>
-    <h2>Tout votre business<br>location en <em>un seul endroit</em></h2>
-    <ul class="auth-right-features">
-      <li><i class="fas fa-arrows-rotate"></i> Airbnb, Booking, Abritel, Expedia + iCal</li>
-      <li><i class="fas fa-wand-magic-sparkles"></i> IA messagerie 24/7 en 26 langues</li>
-      <li><i class="fas fa-broom"></i> Ménage simplifié avec checklists</li>
-      <li><i class="fas fa-file-invoice-dollar"></i> Facturation propriétaires & cautions Stripe</li>
-      <li><i class="fas fa-mobile-screen"></i> Web, iOS & Android inclus</li>
-    </ul>
-    <div class="testimonial-mini">
-      <p>"Avant je jonglais entre 4 outils. Maintenant tout est au même endroit. J'ai récupéré mes soirées."</p>
-      <cite>— Simon · Conciergerie Val d'Oise · 13 logements</cite>
-    </div>
-    <div class="auth-right-badge">
-      <i class="fas fa-shield-alt"></i>
-      Données hébergées en Europe · RGPD-compliant
     </div>
   </div>
-</div>
-
+</section>
 <script>
-  const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:');
-  const API_BASE = IS_NATIVE ? 'https://www.boostinghost.fr' : '';
-
-  // ─── Auth check ───
-  async function checkAuthentication() {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) return false;
-    try {
-      const r = await fetch(API_BASE + '/api/user', { headers: { 'Authorization': `Bearer ${token}` } });
-      if (r.ok) { window.location.href = IS_NATIVE ? 'app.html' : '/app.html'; return true; }
-      localStorage.removeItem('lcc_token'); return false;
-    } catch { return false; }
-  }
-  checkAuthentication();
-
-  // ─── Toggle password ───
-  document.getElementById('togglePw').addEventListener('click', () => {
-    const inp = document.getElementById('loginPassword');
-    const ico = document.getElementById('togglePwIcon');
-    inp.type = inp.type === 'password' ? 'text' : 'password';
-    ico.className = inp.type === 'text' ? 'fas fa-eye' : 'fas fa-eye-slash';
-  });
-
-  // ─── Password strength ───
-  const sw = document.getElementById('strengthWrap');
-  const sl = document.getElementById('strengthLabel');
-  document.getElementById('loginPassword').addEventListener('input', function() {
-    sw.className = 'strength-wrap';
-    if (!this.value) { sl.textContent = ''; return; }
-    if (this.value.length < 8) { sw.classList.add('sw-weak'); sl.textContent = 'Faible'; }
-    else if (this.value.length < 12 || !/[A-Z]/.test(this.value) || !/[0-9]/.test(this.value)) { sw.classList.add('sw-medium'); sl.textContent = 'Moyen'; }
-    else { sw.classList.add('sw-strong'); sl.textContent = 'Fort'; }
-  });
-
-  // ─── Toast ───
-  function showToast(message, type='error') {
-    document.getElementById('bh-toast')?.remove();
-    const color = type === 'error' ? '#DC2626' : '#1A7A5E';
-    const icon  = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
-    const toast = document.createElement('div');
-    toast.id = 'bh-toast';
-    toast.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#1C1C1C;border-left:4px solid ${color};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:90vw;width:380px;animation:toastIn .25s ease;`;
-    toast.innerHTML = `<i class="fas ${icon}" style="color:${color};font-size:18px;flex-shrink:0;"></i><span style="flex:1;">${message}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;">×</button>`;
-    if (!document.getElementById('bh-toast-style')) {
-      const s = document.createElement('style'); s.id = 'bh-toast-style';
-      s.textContent = '@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
-      document.head.appendChild(s);
-    }
-    document.body.appendChild(toast);
-    setTimeout(() => toast?.remove(), 5000);
-  }
-
-  // ─── Login form ───
-  document.getElementById('loginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const email    = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    if (!email || !password) { showToast('Veuillez remplir tous les champs.'); return; }
-
-    const btn = document.getElementById('loginSubmit');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion…';
-
-    try {
-      const res  = await fetch(API_BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-      const data = await res.json();
-
-      if (res.ok && data.token) {
-        localStorage.setItem('lcc_token', data.token);
-        if (data.user) localStorage.setItem('lcc_user', JSON.stringify(data.user));
-        window.location.href = IS_NATIVE ? 'app.html' : (data.redirect || '/app.html');
-      } else {
-        showToast(data.error || 'Email ou mot de passe incorrect.');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';
-      }
-    } catch {
-      showToast('Erreur de connexion au serveur. Vérifiez votre connexion.');
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';
-    }
-  });
-
-  // ─── Magic link ───
-  document.getElementById('magicLinkBtn').addEventListener('click', async function() {
-    const email = document.getElementById('loginEmail').value.trim();
-    if (!email) { showToast('Entrez d\'abord votre adresse email.'); document.getElementById('loginEmail').focus(); return; }
-    this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…';
-    try {
-      const r = await fetch(API_BASE + '/api/auth/magic-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-      const d = await r.json();
-      if (r.ok) { showToast('✉️ Lien envoyé ! Vérifiez votre boîte email.', 'success'); this.innerHTML = '<i class="fas fa-check"></i> Lien envoyé !'; }
-      else { showToast(d.error || 'Erreur lors de l\'envoi.'); this.disabled = false; this.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email'; }
-    } catch { showToast('Erreur réseau.'); this.disabled = false; this.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email'; }
-  });
+  const IS_NATIVE=!!(window.Capacitor?.isNativePlatform?.()||window.location.protocol==='capacitor:'||window.location.protocol==='ionic:');
+  const API_BASE=IS_NATIVE?'https://www.boostinghost.fr':'';
+  function showToast(msg,type='error'){document.getElementById('bh-toast')?.remove();const c=type==='error'?'#DC2626':'#1A7A5E',ic=type==='error'?'fa-circle-exclamation':'fa-circle-check',t=document.createElement('div');t.id='bh-toast';t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#1C1C1C;border-left:4px solid ${c};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:90vw;width:380px;animation:toastIn .25s ease;`;t.innerHTML=`<i class="fas ${ic}" style="color:${c};font-size:18px;flex-shrink:0;"></i><span style="flex:1;">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;">×</button>`;if(!document.getElementById('bh-toast-style')){const s=document.createElement('style');s.id='bh-toast-style';s.textContent='@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';document.head.appendChild(s);}document.body.appendChild(t);setTimeout(()=>t?.remove(),5000);}
+  async function checkAuth(){const tk=localStorage.getItem('lcc_token');if(!tk)return false;try{const r=await fetch(API_BASE+'/api/user',{headers:{'Authorization':'Bearer '+tk}});if(r.ok){window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}localStorage.removeItem('lcc_token');return false;}catch{return false;}}
+  async function checkMagicToken(){const mt=new URLSearchParams(window.location.search).get('magic_token');if(!mt)return false;const ld=document.createElement('div');ld.style.cssText='position:fixed;inset:0;background:rgba(13,17,23,.7);backdrop-filter:blur(8px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';ld.innerHTML='<div style="width:52px;height:52px;border:3px solid rgba(255,255,255,.15);border-top-color:#1A7A5E;border-radius:50%;animation:spin .8s linear infinite;"></div><p style="color:white;font-family:\'DM Sans\',sans-serif;font-size:15px;">Connexion en cours…</p>';if(!document.getElementById('spin-s')){const s=document.createElement('style');s.id='spin-s';s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(s);}document.body.appendChild(ld);try{const r=await fetch(API_BASE+'/api/auth/magic-link/verify?token='+encodeURIComponent(mt));const d=await r.json();if(r.ok&&d.token){localStorage.setItem('lcc_token',d.token);if(d.user)localStorage.setItem('lcc_user',JSON.stringify(d.user));window.history.replaceState({},'','/login.html');window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}else{ld.remove();showToast(d.error||'Lien invalide ou expiré.');return false;}}catch{ld.remove();showToast('Erreur de connexion.');return false;}}
+  checkMagicToken().then(h=>{if(!h)checkAuth();});
+  document.getElementById('tpw').addEventListener('click',()=>{const i=document.getElementById('loginPassword'),ic=document.getElementById('tpwIcon');i.type=i.type==='password'?'text':'password';ic.className=i.type==='text'?'fas fa-eye':'fas fa-eye-slash';});
+  const sw=document.getElementById('sw'),sl=document.getElementById('sl');
+  document.getElementById('loginPassword').addEventListener('input',function(){sw.className='strength-wrap';if(!this.value){sl.textContent='';return;}if(this.value.length<8){sw.classList.add('sw-weak');sl.textContent='Faible';}else if(this.value.length<12||!/[A-Z]/.test(this.value)||!/[0-9]/.test(this.value)){sw.classList.add('sw-medium');sl.textContent='Moyen';}else{sw.classList.add('sw-strong');sl.textContent='Fort';}});
+  document.getElementById('loginForm').addEventListener('submit',async function(e){e.preventDefault();const email=document.getElementById('loginEmail').value.trim(),pwd=document.getElementById('loginPassword').value;if(!email||!pwd){showToast('Veuillez remplir tous les champs.');return;}const btn=document.getElementById('loginSubmit');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connexion…';try{const res=await fetch(API_BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data=await res.json();if(res.ok&&data.token){localStorage.setItem('lcc_token',data.token);if(data.user)localStorage.setItem('lcc_user',JSON.stringify(data.user));window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');}else{showToast(data.error||'Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}}catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
+  document.getElementById('magicLinkBtn').addEventListener('click',async function(){const email=document.getElementById('loginEmail').value.trim();if(!email){showToast("Entrez d'abord votre adresse email.");document.getElementById('loginEmail').focus();return;}this.disabled=true;this.innerHTML='<i class="fas fa-spinner fa-spin"></i> Envoi…';try{const r=await fetch(API_BASE+'/api/auth/magic-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});const d=await r.json();if(r.ok){showToast('✉️ Lien envoyé ! Vérifiez votre boîte email.','success');this.innerHTML='<i class="fas fa-check"></i> Lien envoyé !';}else{showToast(d.error||"Erreur lors de l'envoi.");this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}}catch{showToast('Erreur réseau.');this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}});
 </script>
 </body>
 </html>
