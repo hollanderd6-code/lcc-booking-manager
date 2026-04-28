@@ -78,7 +78,7 @@ async function getGroqResponse(userMessage, conversationContext = {}) {
     };
     const languageInstruction = languageInstructions[language] || languageInstructions.auto;
     
-    console.log(\`🌍 [GROQ] Langue: \${language}\`);
+    console.log(`🌍 [GROQ] Langue: ${language}`);
 
     // Construire les sections du prompt dynamiquement selon les infos disponibles
     const sections = [];
