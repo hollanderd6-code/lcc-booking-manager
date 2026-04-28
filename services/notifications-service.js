@@ -123,10 +123,23 @@ async function sendNotification(fcmToken, title, body, data = {}) {
   } catch (error) {
     console.error('❌ Erreur envoi notification:', error.message);
     
-    // Si le token est invalide, le signaler
-    if (error.code === 'messaging/invalid-registration-token' || 
-        error.code === 'messaging/registration-token-not-registered') {
-      console.warn('⚠️  Token FCM invalide ou expiré:', fcmToken.substring(0, 20) + '...');
+    // Si le token est invalide ou introuvable, le supprimer de la DB
+    const invalidCodes = [
+      'messaging/invalid-registration-token',
+      'messaging/registration-token-not-registered',
+      'messaging/invalid-argument'
+    ];
+    const isInvalid = invalidCodes.includes(error.code) || 
+                      (error.message || '').includes('Requested entity was not found');
+    
+    if (isInvalid) {
+      console.warn('⚠️  Token FCM invalide, suppression en DB:', fcmToken.substring(0, 20) + '...');
+      try {
+        if (pool) {
+          await pool.query('DELETE FROM user_fcm_tokens WHERE fcm_token = $1', [fcmToken]);
+          console.log('🗑️ Token invalide supprimé de la DB');
+        }
+      } catch (e) {}
     }
     
     return { success: false, error: error.message };
