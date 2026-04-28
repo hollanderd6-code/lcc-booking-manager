@@ -3726,9 +3726,12 @@ async function editTemplate(id) {
 function copyTemplate(id) {
   const templates = window._lastTemplates || [];
   const t = templates.find(t => String(t.id) === String(id));
-  if (!t) { showBHToast('Template introuvable', 'error'); return; }
-  const copy = { ...t, id: null, title: t.title + ' (copie)', active: false };
-  openTemplateModal(copy, true);
+  if (!t) return;
+  navigator.clipboard.writeText(t.message).then(() => {
+    showBHToast('✅ Message copié dans le presse-papier', 'success');
+  }).catch(() => {
+    showBHToast('Erreur lors de la copie', 'error');
+  });
 }
 
 async function toggleTemplate(id, active) {
