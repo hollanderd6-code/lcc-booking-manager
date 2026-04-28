@@ -20280,14 +20280,17 @@ cron.schedule('0 9 * * *', async () => {
     for (const userRow of usersResult.rows) {
       const userId = userRow.user_id;
       
-      // Récupérer les réservations de demain pour cet utilisateur
-      const reservations = await getReservationsForUser(userId);
-      
-      // Filtrer les réservations qui finissent demain (= ménage demain)
-      const cleaningsTomorrow = reservations.filter(r => {
-        const endDate = new Date(r.endDate).toISOString().split('T')[0];
-        return endDate === tomorrowStr;
-      });
+      // Récupérer les réservations qui se terminent demain pour cet utilisateur
+      const resResult = await pool.query(
+        `SELECT r.uid as key, r.end_date as "endDate", p.name as "propertyName"
+         FROM reservations r
+         JOIN properties p ON r.property_id = p.id
+         WHERE r.user_id = $1
+           AND r.status != 'cancelled'
+           AND DATE(r.end_date) = $2`,
+        [userId, tomorrowStr]
+      );
+      const cleaningsTomorrow = resResult.rows;
       
       // Pour chaque ménage de demain, vérifier s'il y a une assignation
       for (const reservation of cleaningsTomorrow) {
@@ -22057,13 +22060,25 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
 
       console.log(`📱 [user ${userId}] Enregistrement token FCM (${deviceType})`);
 
+      // Upsert : couvre le conflit sur fcm_token ET sur (user_id, device_type)
       await pool.query(
         `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
          VALUES ($1, $2, $3, NOW(), NOW())
          ON CONFLICT (fcm_token)
          DO UPDATE SET user_id = EXCLUDED.user_id, device_type = EXCLUDED.device_type, updated_at = NOW()`,
         [userId, token, deviceType]
-      );
+      ).catch(async (err) => {
+        if (err.constraint === 'user_fcm_tokens_unique') {
+          // Conflit sur (user_id, device_type) — met à jour le token existant
+          await pool.query(
+            `UPDATE user_fcm_tokens SET fcm_token = $1, updated_at = NOW()
+             WHERE user_id = $2 AND device_type = $3`,
+            [token, userId, deviceType]
+          );
+        } else {
+          throw err;
+        }
+      });
 
       console.log(`✅ Token FCM enregistré pour user ${userId}`);
       return res.json({ success: true, message: 'Token sauvegardé' });
