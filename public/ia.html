@@ -295,9 +295,11 @@ a { color: var(--primary); text-decoration: none; }
 .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
 .footer-links a { font-size: 12px; color: rgba(255,255,255,.35); transition: color .15s; }
 .footer-links a:hover { color: rgba(255,255,255,.7); }
-.footer-badges { display: flex; gap: 12px; align-items: center; flex-direction: column; }
+.footer-badges { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .footer-badge { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 10px 16px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); display: flex; align-items: center; gap: 7px; }
 .footer-badge i { color: #6ee7b7; }
+.footer-badge-store { text-decoration: none; transition: background .2s, transform .15s; cursor: pointer; }
+.footer-badge-store:hover { background: rgba(110,231,183,.15); border-color: rgba(110,231,183,.4); transform: translateY(-1px); }
 
 /* ─── SCROLL REVEAL ─── */
 .reveal { opacity: 0; transform: translateY(32px); transition: opacity .7s cubic-bezier(.25,0,0,1), transform .7s cubic-bezier(.25,0,0,1); }
@@ -705,8 +707,8 @@ html, body {
     </div>
     <div class="footer-badges">
       <div class="footer-badge"><i class="fas fa-shield-alt"></i> RGPD · Données en UE</div>
-      <div class="footer-badge"><i class="fab fa-apple"></i> App Store</div>
-      <div class="footer-badge"><i class="fab fa-google-play"></i> Google Play</div>
+      <a href="https://apps.apple.com/fr/app/boostinghost/id6758049858" target="_blank" rel="noopener" class="footer-badge footer-badge-store"><i class="fab fa-apple"></i> App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.boostinghost.app" target="_blank" rel="noopener" class="footer-badge footer-badge-store"><i class="fab fa-google-play"></i> Google Play</a>
     </div>
   </div>
 </footer>
