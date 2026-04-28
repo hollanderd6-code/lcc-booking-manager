@@ -3,22 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="apple-itunes-app" content="app-id=6758049858">
-  <title>Connexion – Boostinghost</title>
+  <title>Connexion — Boostinghost</title>
   <meta name="description" content="Connectez-vous à votre espace Boostinghost pour gérer vos locations courte durée.">
-  <meta name="robots" content="noindex, nofollow">
-  <link rel="canonical" href="https://www.boostinghost.fr/login.html">
-
-  <script>
-    console.log('╔════════════════════════════════════════╗');
-    console.log('║  ✅ LOGIN.HTML VERSION CORRIGÉE V3    ║');
-    console.log('╚════════════════════════════════════════╝');
-    window.onerror = function(msg,url,line,col,err){ console.error('🚨 GLOBAL ERROR:',{msg,url,line,col,stack:err?.stack}); return false; };
-    window.onunhandledrejection = function(e){ console.error('🚨 UNHANDLED PROMISE:',e?.reason); };
-  </script>
+  <meta name="robots" content="noindex">
 
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <script src="/js/auth-fetch.js"></script>
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,132 +23,140 @@ body { background: var(--ink); display: flex; align-items: stretch; min-height: 
 
 /* ─── LEFT PANEL ─── */
 .auth-left {
-  flex: 0 0 480px; max-width: 480px; min-width: 340px;
+  flex: 0 0 520px; max-width: 520px; min-width: 360px;
   background: var(--white);
   display: flex; flex-direction: column;
-  padding: 48px 52px;
+  padding: 40px 52px;
   overflow-y: auto;
   position: relative; z-index: 2;
 }
 
 /* ─── RIGHT PANEL ─── */
-.auth-right {
-  flex: 1; position: relative; overflow: hidden;
-}
+.auth-right { flex: 1; position: relative; overflow: hidden; }
 .auth-right-img {
   position: absolute; inset: 0;
-  background: url('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&q=80') center/cover;
+  background: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80') center/cover;
 }
 .auth-right-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(13,17,23,.75) 0%, rgba(26,122,94,.4) 100%);
+  background: linear-gradient(135deg, rgba(13,17,23,.82) 0%, rgba(26,122,94,.45) 100%);
 }
 .auth-right-content {
   position: relative; z-index: 2;
-  padding: 60px 52px;
-  height: 100%;
+  padding: 60px 52px; height: 100%;
   display: flex; flex-direction: column; justify-content: flex-end;
 }
 .auth-right-kicker {
-  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-  color: #6ee7b7; margin-bottom: 16px;
-  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: #6ee7b7;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
 }
 .auth-right-kicker::before { content: ''; width: 28px; height: 1px; background: #6ee7b7; }
 .auth-right h2 {
   font-family: 'Instrument Serif', serif; font-weight: 400;
-  font-size: clamp(28px,3vw,42px); color: white; line-height: 1.15;
-  margin-bottom: 20px;
+  font-size: clamp(26px,2.8vw,40px); color: white; line-height: 1.15; margin-bottom: 20px;
 }
-.auth-right h2 em { color: #6ee7b7; }
-.auth-right-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 40px; }
+.auth-right h2 em { color: #6ee7b7; font-style: normal; }
+.auth-right-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
 .auth-right-features li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: rgba(255,255,255,.7); }
 .auth-right-features li i { color: #6ee7b7; font-size: 12px; width: 16px; }
-.auth-right-logos { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-.auth-right-logo { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.5); }
+.testimonial-mini {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;
+}
+.testimonial-mini p { font-size: 14px; color: rgba(255,255,255,.85); line-height: 1.6; margin-bottom: 8px; }
+.testimonial-mini cite { font-size: 12px; color: rgba(255,255,255,.5); font-style: normal; }
+.auth-right-badge { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,.5); }
+.auth-right-badge i { color: #6ee7b7; }
 
 /* ─── LOGO ─── */
-.auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 44px; text-decoration: none; }
-.auth-logo-icon { width: 36px; height: 36px; border-radius: 9px; overflow: hidden; flex-shrink: 0; }
+.auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; text-decoration: none; }
+.auth-logo-icon { width: 36px; height: 36px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; }
 .auth-logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.auth-logo-icon .fallback { font-size: 18px; font-weight: 900; color: white; display: none; }
 .auth-logo-name { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px; color: var(--ink); }
 .auth-logo-name span { color: var(--primary); }
 
 /* ─── FORM HEADER ─── */
-.auth-heading { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 30px; color: var(--ink); margin-bottom: 6px; }
-.auth-sub { font-size: 14px; color: var(--muted); margin-bottom: 36px; }
+.auth-heading { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 28px; color: var(--ink); margin-bottom: 4px; }
+.auth-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
 
 /* ─── FORM ─── */
-.auth-form { display: flex; flex-direction: column; gap: 20px; }
-.form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 7px; }
+.auth-form { display: flex; flex-direction: column; gap: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
 .form-field {
   display: flex; align-items: center; gap: 10px;
   border: 1.5px solid var(--border); border-radius: 12px;
-  padding: 0 14px; height: 46px; background: white;
+  padding: 0 14px; height: 44px; background: white;
   transition: border-color .15s, box-shadow .15s;
 }
 .form-field:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,122,94,.08); }
 .form-field i { color: var(--muted); font-size: 14px; flex-shrink: 0; }
-.form-field input { flex: 1; border: none; outline: none; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--ink); background: transparent; }
-.form-field input::placeholder { color: #B0B8C4; }
-.form-field .toggle-pw { background: none; border: none; cursor: pointer; color: var(--muted); padding: 0; display: flex; align-items: center; font-size: 14px; }
-.form-row { display: flex; align-items: center; justify-content: space-between; }
-.form-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
-.form-check input { accent-color: var(--primary); width: 15px; height: 15px; }
-.form-link { font-size: 13px; color: var(--primary); font-weight: 600; }
-.form-link:hover { color: var(--primary-dark); }
-
-/* Face ID */
-#faceIdContainer { display: none; }
-.faceid-btn {
-  width: 100%; height: 46px; border-radius: 12px;
-  background: var(--cream); border: 1.5px solid var(--border);
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-  color: var(--text); cursor: pointer; transition: all .15s;
+.form-field input {
+  flex: 1; border: none; outline: none;
+  font-size: 14px; font-family: 'DM Sans', sans-serif;
+  color: var(--ink); background: transparent;
 }
-.faceid-btn:hover { border-color: var(--primary); color: var(--primary); }
-.faceid-divider { display: flex; align-items: center; gap: 12px; font-size: 12px; color: #C0C8D4; }
-.faceid-divider::before, .faceid-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.form-field input::placeholder { color: #B0B8C4; }
+.form-field .toggle-pw { background: none; border: none; cursor: pointer; color: var(--muted); padding: 0; display: flex; align-items: center; font-size: 14px; transition: color .15s; }
+.form-field .toggle-pw:hover { color: var(--ink); }
 
-/* Submit */
+/* ─── PASSWORD STRENGTH ─── */
+.strength-wrap { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.strength-bars { display: flex; gap: 4px; flex: 1; }
+.strength-bars span { flex: 1; height: 3px; border-radius: 2px; background: rgba(13,17,23,.08); transition: background .25s; }
+.sw-weak .strength-bars span:nth-child(1) { background: #EF4444; }
+.sw-medium .strength-bars span:nth-child(-n+2) { background: #F59E0B; }
+.sw-strong .strength-bars span { background: var(--primary); }
+.strength-label { font-size: 11px; color: var(--muted); min-width: 40px; transition: color .2s; font-weight: 500; }
+.sw-weak .strength-label { color: #EF4444; }
+.sw-medium .strength-label { color: #F59E0B; }
+.sw-strong .strength-label { color: var(--primary); }
+
+/* ─── FORGOT LINK ─── */
+.form-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.forgot-link { font-size: 12px; color: var(--muted); text-decoration: none; transition: color .15s; }
+.forgot-link:hover { color: var(--primary); }
+
+/* ─── SUBMIT ─── */
 .auth-submit {
   width: 100%; height: 48px; border-radius: 14px;
   background: var(--primary); color: white; border: none;
   font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
   cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: background .15s, transform .15s, box-shadow .15s;
-  box-shadow: 0 4px 16px rgba(26,122,94,.3);
+  box-shadow: 0 4px 16px rgba(26,122,94,.3); margin-top: 4px;
 }
 .auth-submit:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(26,122,94,.35); }
 .auth-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
-/* Error */
-.auth-error { background: #FEF2F2; border: 1px solid rgba(220,38,38,.2); border-radius: 10px; padding: 11px 14px; font-size: 13px; color: #DC2626; display: flex; align-items: center; gap: 8px; }
+/* ─── DIVIDER ─── */
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 4px 0; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.auth-divider span { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
-/* Footer */
-.auth-footer { margin-top: auto; padding-top: 32px; text-align: center; font-size: 13px; color: var(--muted); }
+/* ─── MAGIC LINK ─── */
+.magic-btn {
+  width: 100%; height: 44px; border-radius: 12px;
+  background: rgba(26,122,94,.07); color: var(--primary);
+  border: 1.5px solid rgba(26,122,94,.2);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all .15s;
+}
+.magic-btn:hover { background: rgba(26,122,94,.12); border-color: rgba(26,122,94,.35); }
+
+/* ─── FOOTER ─── */
+.auth-footer { margin-top: 20px; text-align: center; font-size: 13px; color: var(--muted); }
 .auth-footer a { color: var(--primary); font-weight: 600; }
 
-/* Forgot modal */
-.modal-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(13,17,23,.55); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: white; border-radius: 20px; padding: 32px 28px; max-width: 400px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,.2); }
-.modal-title { font-family: 'Instrument Serif', serif; font-size: 22px; color: var(--ink); margin-bottom: 8px; }
-.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
-.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-.modal-cancel { flex: 1; height: 42px; border-radius: 12px; border: 1.5px solid var(--border); background: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; }
-.modal-submit { flex: 1; height: 42px; border-radius: 12px; border: none; background: var(--primary); color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; }
-
-/* Responsive */
-@media (max-width: 860px) {
+/* ─── RESPONSIVE ─── */
+@media (max-width: 900px) {
   body { overflow-y: auto; align-items: flex-start; }
   .auth-right { display: none; }
-  .auth-left { flex: 1; max-width: 100%; padding: 40px 28px; min-height: 100vh; }
+  .auth-left { flex: 1; max-width: 100%; padding: 36px 24px; min-height: 100vh; }
 }
-@media (max-width: 480px) {
-  .auth-left { padding: 32px 20px; }
-}
+@media (max-width: 480px) { .auth-left { padding: 28px 16px; } }
 </style>
 </head>
 <body>
@@ -165,50 +164,53 @@ body { background: var(--ink); display: flex; align-items: stretch; min-height: 
 <!-- LEFT PANEL -->
 <div class="auth-left">
   <a href="/" class="auth-logo">
-    <span class="auth-logo-icon"><img src="/images/logo.png" alt="Boostinghost"></span>
+    <span class="auth-logo-icon">
+      <img src="/images/logo.png" alt="Boostinghost" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="fallback">B</span>
+    </span>
     <span class="auth-logo-name">Boosting<span>host</span></span>
   </a>
 
   <h1 class="auth-heading">Bon retour 👋</h1>
-  <p class="auth-sub">Connectez-vous à votre espace de gestion.</p>
+  <p class="auth-sub">Connectez-vous pour accéder à votre tableau de bord.</p>
 
-  <form class="auth-form" id="loginForm">
+  <form class="auth-form" id="loginForm" novalidate>
+
     <div>
-      <label class="form-label" for="email">Adresse e-mail</label>
+      <label class="form-label" for="loginEmail">Adresse e-mail</label>
       <div class="form-field">
         <i class="fas fa-envelope"></i>
-        <input type="email" id="email" name="email" placeholder="vous@exemple.com" required autocomplete="email">
+        <input type="email" id="loginEmail" name="email" placeholder="vous@exemple.com" required autocomplete="email">
       </div>
     </div>
+
     <div>
-      <label class="form-label" for="password">Mot de passe</label>
+      <div class="form-label-row">
+        <label class="form-label" for="loginPassword" style="margin-bottom:0;">Mot de passe</label>
+        <a href="/reset-password-request.html" class="forgot-link">Mot de passe oublié ?</a>
+      </div>
       <div class="form-field">
         <i class="fas fa-lock"></i>
-        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
-        <button type="button" class="toggle-pw" id="togglePassword"><i class="fas fa-eye-slash" id="togglePwIcon"></i></button>
+        <input type="password" id="loginPassword" name="password" placeholder="••••••••" required autocomplete="current-password">
+        <button type="button" class="toggle-pw" id="togglePw"><i class="fas fa-eye-slash" id="togglePwIcon"></i></button>
+      </div>
+      <div class="strength-wrap" id="strengthWrap">
+        <div class="strength-bars"><span></span><span></span><span></span></div>
+        <span class="strength-label" id="strengthLabel"></span>
       </div>
     </div>
-
-    <div class="form-row">
-      <label class="form-check">
-        <input type="checkbox" name="remember"> Se souvenir de moi
-      </label>
-      <a href="#" class="form-link" onclick="document.getElementById('forgotModal').classList.add('open');return false;">Mot de passe oublié ?</a>
-    </div>
-
-    <div id="loginError" class="auth-error" style="display:none;"></div>
 
     <button type="submit" class="auth-submit" id="loginSubmit">
       <i class="fas fa-arrow-right-to-bracket"></i> Se connecter
     </button>
+
   </form>
 
-  <div id="faceIdContainer">
-    <div class="faceid-divider" style="margin-top:20px;">ou</div>
-    <button class="faceid-btn" id="faceIdBtn" style="margin-top:12px;">
-      <i class="fas fa-face-viewfinder"></i> Se connecter avec Face ID
-    </button>
-  </div>
+  <div class="auth-divider"><span>ou</span></div>
+
+  <button class="magic-btn" id="magicLinkBtn">
+    <i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email
+  </button>
 
   <div class="auth-footer">
     Pas encore de compte ? <a href="/register.html">Créer un compte gratuit</a>
@@ -220,75 +222,29 @@ body { background: var(--ink); display: flex; align-items: stretch; min-height: 
   <div class="auth-right-img"></div>
   <div class="auth-right-overlay"></div>
   <div class="auth-right-content">
-    <div class="auth-right-kicker">Boostinghost PMS</div>
-    <h2>Toutes vos plateformes,<br>un seul endroit.</h2>
+    <div class="auth-right-kicker">Déjà +1 200 hôtes nous font confiance</div>
+    <h2>Tout votre business<br>location en <em>un seul endroit</em></h2>
     <ul class="auth-right-features">
-      <li><i class="fas fa-arrows-rotate"></i> Synchronisation Airbnb, Booking, Abritel, Expedia</li>
-      <li><i class="fas fa-calendar-days"></i> Calendrier multi-logements avec tarifs</li>
+      <li><i class="fas fa-arrows-rotate"></i> Airbnb, Booking, Abritel, Expedia + iCal</li>
       <li><i class="fas fa-wand-magic-sparkles"></i> IA messagerie 24/7 en 26 langues</li>
-      <li><i class="fas fa-broom"></i> Gestion ménages & équipe</li>
-      <li><i class="fas fa-file-invoice-dollar"></i> Facturation propriétaires</li>
+      <li><i class="fas fa-broom"></i> Ménage simplifié avec checklists</li>
+      <li><i class="fas fa-file-invoice-dollar"></i> Facturation propriétaires & cautions Stripe</li>
+      <li><i class="fas fa-mobile-screen"></i> Web, iOS & Android inclus</li>
     </ul>
-    <div class="auth-right-logos">
-      <!-- Airbnb -->
-      <div class="auth-right-logo">
-        <i class="fab fa-airbnb" style="color:#FF5A5F;font-size:18px;"></i> Airbnb
-      </div>
-      <!-- Booking.com — "B" bleu sans cercle -->
-      <div class="auth-right-logo">
-        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-          <rect width="18" height="18" rx="3" fill="#003580"/>
-          <text x="9" y="13.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="13" fill="white">B</text>
-        </svg>
-        Booking
-      </div>
-      <!-- Abritel -->
-      <div class="auth-right-logo">
-        <img src="https://www.abritel.fr/favicon.ico" width="18" height="18" alt="Abritel" style="border-radius:4px;flex-shrink:0;" />
-        Abritel
-      </div>
-      <!-- Expedia -->
-      <div class="auth-right-logo">
-        <img src="https://www.expedia.fr/favicon.ico" width="18" height="18" alt="Expedia" style="border-radius:4px;flex-shrink:0;" />
-        Expedia
-      </div>
+    <div class="testimonial-mini">
+      <p>"Avant je jonglais entre 4 outils. Maintenant tout est au même endroit. J'ai récupéré mes soirées."</p>
+      <cite>— Simon · Conciergerie Val d'Oise · 13 logements</cite>
+    </div>
+    <div class="auth-right-badge">
+      <i class="fas fa-shield-alt"></i>
+      Données hébergées en Europe · RGPD-compliant
     </div>
   </div>
 </div>
 
-<!-- MODAL MOT DE PASSE OUBLIÉ -->
-<div class="modal-overlay" id="forgotModal">
-  <div class="modal-box">
-    <div class="modal-title">Réinitialiser le mot de passe</div>
-    <p class="modal-sub">Entrez votre adresse e-mail et nous vous enverrons un lien de réinitialisation.</p>
-    <form id="forgotPasswordForm">
-      <label class="form-label" for="forgotEmail">Adresse e-mail</label>
-      <div class="form-field">
-        <i class="fas fa-envelope"></i>
-        <input type="email" id="forgotEmail" name="email" placeholder="vous@exemple.com" required>
-      </div>
-      <div id="forgotMsg" style="display:none;margin-top:12px;font-size:13px;color:var(--primary);background:var(--primary-soft);padding:10px 14px;border-radius:10px;"></div>
-      <div class="modal-actions">
-        <button type="button" class="modal-cancel" onclick="document.getElementById('forgotModal').classList.remove('open')">Annuler</button>
-        <button type="submit" class="modal-submit" id="forgotSubmit">Envoyer</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script src="/js/auth-fetch.js"></script>
 <script>
-  // ─── Toggle password ───
-  document.getElementById('togglePassword').addEventListener('click', () => {
-    const input = document.getElementById('password');
-    const icon = document.getElementById('togglePwIcon');
-    if (input.type === 'password') { input.type = 'text'; icon.className = 'fas fa-eye'; }
-    else { input.type = 'password'; icon.className = 'fas fa-eye-slash'; }
-  });
-
-  // ─── Native detection ───
-  const IS_NATIVE = !!( window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:' );
-  const API_BASE = IS_NATIVE ? 'https://lcc-booking-manager.onrender.com' : '';
+  const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:');
+  const API_BASE = IS_NATIVE ? 'https://www.boostinghost.fr' : '';
 
   // ─── Auth check ───
   async function checkAuthentication() {
@@ -302,89 +258,87 @@ body { background: var(--ink); display: flex; align-items: stretch; min-height: 
   }
   checkAuthentication();
 
-  // ─── Login form ───
-  function setup() {
-    const form = document.getElementById('loginForm');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const errorDiv = document.getElementById('loginError');
-    const submitBtn = document.getElementById('loginSubmit');
-    if (!form) return;
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = emailInput.value.trim().toLowerCase();
-      const password = passwordInput.value.trim();
-      if (!email || !password) { errorDiv.style.display='flex'; errorDiv.innerHTML='<i class="fas fa-circle-exclamation"></i> Veuillez remplir tous les champs'; return; }
-      errorDiv.style.display = 'none';
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
-      try {
-        let response = await fetch(API_BASE + '/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password}) });
-        if (response.status === 401 || response.status === 403) {
-          response = await fetch(API_BASE + '/api/sub-accounts/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password}) });
-        }
-        const ct = response.headers.get('content-type') || '';
-        const data = ct.includes('application/json') ? await response.json() : { error: 'Réponse serveur invalide' };
-        if (!response.ok) {
-          errorDiv.style.display='flex'; errorDiv.innerHTML='<i class="fas fa-circle-exclamation"></i> '+(data.error||'Email ou mot de passe incorrect');
-          submitBtn.disabled=false; submitBtn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter'; return;
-        }
-        localStorage.setItem('lcc_token', data.token);
-        if (window._syncTokenToNative) window._syncTokenToNative(data.token);
-        if (window._onLoginSuccess) await window._onLoginSuccess(data.token);
-        const accountType = data.accountType || (data.subAccount ? 'sub' : 'main');
-        localStorage.setItem('lcc_account_type', accountType);
-        localStorage.setItem('lcc_user', JSON.stringify(data.user || data.subAccount));
-        if (accountType === 'sub') {
-          localStorage.setItem('lcc_permissions', JSON.stringify(data.subAccount?.permissions || data.permissions || {}));
-          localStorage.setItem('lcc_parent_logo', data.subAccount?.parentLogoUrl || '');
-        }
-        window.location.href = IS_NATIVE ? 'app.html' : '/app.html';
-      } catch (err) {
-        errorDiv.style.display='flex'; errorDiv.innerHTML='<i class="fas fa-wifi"></i> Erreur réseau — Vérifiez votre connexion';
-        submitBtn.disabled=false; submitBtn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';
-      }
-    });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
-  else setup();
-
-  // ─── Forgot password ───
-  document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('forgotSubmit');
-    const msg = document.getElementById('forgotMsg');
-    const email = document.getElementById('forgotEmail').value.trim();
-    btn.disabled = true; btn.textContent = 'Envoi...';
-    try {
-      await fetch('/api/auth/forgot-password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email}) });
-      msg.style.display='block'; msg.innerHTML='<i class="fas fa-check" style="margin-right:6px;"></i>Email envoyé si ce compte existe.';
-    } catch { msg.style.display='block'; msg.textContent='Erreur réseau. Réessayez.'; msg.style.color='#DC2626'; }
-    btn.disabled=false; btn.textContent='Envoyer';
+  // ─── Toggle password ───
+  document.getElementById('togglePw').addEventListener('click', () => {
+    const inp = document.getElementById('loginPassword');
+    const ico = document.getElementById('togglePwIcon');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    ico.className = inp.type === 'text' ? 'fas fa-eye' : 'fas fa-eye-slash';
   });
 
-  // ─── Close modal on backdrop ───
-  document.getElementById('forgotModal').addEventListener('click', (e) => { if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
+  // ─── Password strength ───
+  const sw = document.getElementById('strengthWrap');
+  const sl = document.getElementById('strengthLabel');
+  document.getElementById('loginPassword').addEventListener('input', function() {
+    sw.className = 'strength-wrap';
+    if (!this.value) { sl.textContent = ''; return; }
+    if (this.value.length < 8) { sw.classList.add('sw-weak'); sl.textContent = 'Faible'; }
+    else if (this.value.length < 12 || !/[A-Z]/.test(this.value) || !/[0-9]/.test(this.value)) { sw.classList.add('sw-medium'); sl.textContent = 'Moyen'; }
+    else { sw.classList.add('sw-strong'); sl.textContent = 'Fort'; }
+  });
 
-  // ─── Face ID ───
-  const FACE_ID_KEY = 'lcc_faceid_enabled';
-  const FACE_ID_TOKEN_KEY = 'lcc_faceid_token';
-  function isBiometricAvailable() { return new Promise(r => { if(!IS_NATIVE||!window._checkBiometryAvailable) return r(false); window._faceIDCheckCallback=res=>r(res===true); window._checkBiometryAvailable(window._faceIDCheckCallback); setTimeout(()=>r(false),3000); }); }
-  function authenticateWithFaceID() { return new Promise(r => { if(!IS_NATIVE||!window._authenticateWithFaceID) return r(false); window._faceIDAuthCallback=res=>r(res===true); window._authenticateWithFaceID(window._faceIDAuthCallback); setTimeout(()=>r(false),30000); }); }
-  async function initFaceID() {
-    if(!IS_NATIVE) return;
-    const faceIdEnabled = localStorage.getItem(FACE_ID_KEY)==='true';
-    const savedToken = localStorage.getItem(FACE_ID_TOKEN_KEY);
-    if(faceIdEnabled&&savedToken) {
-      document.getElementById('faceIdContainer').style.display='block';
-      setTimeout(async()=>{ const ok=await authenticateWithFaceID(); if(ok){localStorage.setItem('lcc_token',savedToken);if(window._syncTokenToNative)window._syncTokenToNative(savedToken);window.location.href='app.html';} },500);
+  // ─── Toast ───
+  function showToast(message, type='error') {
+    document.getElementById('bh-toast')?.remove();
+    const color = type === 'error' ? '#DC2626' : '#1A7A5E';
+    const icon  = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
+    const toast = document.createElement('div');
+    toast.id = 'bh-toast';
+    toast.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#1C1C1C;border-left:4px solid ${color};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:90vw;width:380px;animation:toastIn .25s ease;`;
+    toast.innerHTML = `<i class="fas ${icon}" style="color:${color};font-size:18px;flex-shrink:0;"></i><span style="flex:1;">${message}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;">×</button>`;
+    if (!document.getElementById('bh-toast-style')) {
+      const s = document.createElement('style'); s.id = 'bh-toast-style';
+      s.textContent = '@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+      document.head.appendChild(s);
     }
-    const faceIdBtn=document.getElementById('faceIdBtn');
-    if(faceIdBtn&&faceIdEnabled&&savedToken) { faceIdBtn.addEventListener('click',async()=>{ const ok=await authenticateWithFaceID(); if(ok){localStorage.setItem('lcc_token',savedToken);if(window._syncTokenToNative)window._syncTokenToNative(savedToken);window.location.href='app.html';} }); }
+    document.body.appendChild(toast);
+    setTimeout(() => toast?.remove(), 5000);
   }
-  window._onLoginSuccess=async function(token){ if(!IS_NATIVE) return; const alreadyEnabled=localStorage.getItem(FACE_ID_KEY)==='true'; if(alreadyEnabled) return; const available=await isBiometricAvailable(); if(!available) return; if(confirm('Activer Face ID pour vous connecter plus rapidement ?')){localStorage.setItem(FACE_ID_KEY,'true');localStorage.setItem(FACE_ID_TOKEN_KEY,token);} };
-  document.addEventListener('DOMContentLoaded', initFaceID);
+
+  // ─── Login form ───
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) { showToast('Veuillez remplir tous les champs.'); return; }
+
+    const btn = document.getElementById('loginSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion…';
+
+    try {
+      const res  = await fetch(API_BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const data = await res.json();
+
+      if (res.ok && data.token) {
+        localStorage.setItem('lcc_token', data.token);
+        if (data.user) localStorage.setItem('lcc_user', JSON.stringify(data.user));
+        window.location.href = IS_NATIVE ? 'app.html' : (data.redirect || '/app.html');
+      } else {
+        showToast(data.error || 'Email ou mot de passe incorrect.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';
+      }
+    } catch {
+      showToast('Erreur de connexion au serveur. Vérifiez votre connexion.');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';
+    }
+  });
+
+  // ─── Magic link ───
+  document.getElementById('magicLinkBtn').addEventListener('click', async function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) { showToast('Entrez d\'abord votre adresse email.'); document.getElementById('loginEmail').focus(); return; }
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…';
+    try {
+      const r = await fetch(API_BASE + '/api/auth/magic-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+      const d = await r.json();
+      if (r.ok) { showToast('✉️ Lien envoyé ! Vérifiez votre boîte email.', 'success'); this.innerHTML = '<i class="fas fa-check"></i> Lien envoyé !'; }
+      else { showToast(d.error || 'Erreur lors de l\'envoi.'); this.disabled = false; this.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email'; }
+    } catch { showToast('Erreur réseau.'); this.disabled = false; this.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email'; }
+  });
 </script>
 </body>
 </html>
