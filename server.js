@@ -75,6 +75,10 @@ const COUNTRY_TO_DEEPL_LANG = {
   // Anglais
   'GB': 'EN-GB', 'US': 'EN-US', 'AU': 'EN-GB', 'CA': 'EN-GB',
   'IE': 'EN-GB', 'NZ': 'EN-GB', 'ZA': 'EN-GB', 'SG': 'EN-GB',
+  'GY': 'EN-GB', 'JM': 'EN-GB', 'TT': 'EN-GB', 'BB': 'EN-GB',
+  'BS': 'EN-GB', 'BZ': 'EN-GB', 'GH': 'EN-GB', 'NG': 'EN-GB',
+  'KE': 'EN-GB', 'IN': 'EN-GB', 'PK': 'EN-GB', 'PH': 'EN-GB',
+  'MY': 'EN-GB', 'HK': 'EN-GB',
   // Allemand
   'DE': 'DE', 'AT': 'DE', 'CH': 'DE',
   // Espagnol
