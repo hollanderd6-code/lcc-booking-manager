@@ -9343,6 +9343,8 @@ function bhEmailTemplate({ icon, title, subtitle, tag, bodyHtml, footerNote, acc
   </style>
 </head>
 <body style="margin:0;padding:0;background-color:#EDEAE3;">
+<!-- Preheader invisible -->
+<div style="display:none;font-size:1px;color:#EDEAE3;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${title}${tagLabel ? ' — ' + tagLabel : ''}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EDEAE3;">
   <tr>
     <td align="center" style="padding:28px 16px;">
@@ -9357,8 +9359,8 @@ function bhEmailTemplate({ icon, title, subtitle, tag, bodyHtml, footerNote, acc
                 <td>
                   <table role="presentation" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="background-color:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
-                        <span style="font-size:18px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;line-height:32px;">B</span>
+                      <td style="width:32px;height:32px;text-align:center;vertical-align:middle;">
+                        <span style="font-size:26px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;line-height:32px;">B</span>
                       </td>
                       <td style="padding-left:10px;vertical-align:middle;">
                         <span style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.7);font-family:Arial,Helvetica,sans-serif;">Boostinghost</span>
