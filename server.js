@@ -2808,16 +2808,21 @@ Séjour  : du ${start} au ${end}
 
 Vous pouvez retrouver tous les détails dans votre tableau de bord Boostinghost.`;
 
-          htmlBody = `
-            <p>${hello}</p>
-            <p>Une nouvelle réservation vient d'être enregistrée via <strong>${source}</strong>.</p>
-            <ul>
-              <li><strong>Logement :</strong> ${propertyName}</li>
-              <li><strong>Voyageur :</strong> ${guest}</li>
-              <li><strong>Séjour :</strong> du ${start} au ${end}</li>
-            </ul>
-            <p>Vous pouvez retrouver tous les détails dans votre tableau de bord Boostinghost.</p>
-          `;
+          htmlBody = bhEmailTemplate({
+            icon: '🛎️',
+            title: 'Nouvelle réservation',
+            tag: propertyName,
+            bodyHtml: `
+              <p>${hello}</p>
+              <p>Une nouvelle réservation vient d'être enregistrée via <strong>${source}</strong>.</p>
+              <div class="info-card">
+                <strong>Logement :</strong> ${propertyName}<br>
+                <strong>Voyageur :</strong> ${guest}<br>
+                <strong>Séjour :</strong> du ${start} au ${end}
+              </div>
+              <p>Retrouvez tous les détails dans votre tableau de bord Boostinghost.</p>
+            `
+          });
         } else {
           subject = `⚠️ Réservation annulée – ${propertyName}`;
           textBody = `${hello}
@@ -2830,16 +2835,22 @@ Séjour initial : du ${start} au ${end}
 
 Pensez à vérifier votre calendrier et vos blocages si nécessaire.`;
 
-          htmlBody = `
-            <p>${hello}</p>
-            <p>Une réservation vient d'être <strong>annulée</strong> sur <strong>${source}</strong>.</p>
-            <ul>
-              <li><strong>Logement :</strong> ${propertyName}</li>
-              <li><strong>Voyageur :</strong> ${guest}</li>
-              <li><strong>Séjour initial :</strong> du ${start} au ${end}</li>
-            </ul>
-            <p>Pensez à vérifier votre calendrier et vos blocages si nécessaire.</p>
-          `;
+          htmlBody = bhEmailTemplate({
+            icon: '⚠️',
+            title: 'Réservation annulée',
+            tag: propertyName,
+            accentColor: '#D97706',
+            bodyHtml: `
+              <p>${hello}</p>
+              <p>Une réservation vient d'être <strong>annulée</strong> sur <strong>${source}</strong>.</p>
+              <div class="alert-card">
+                <strong>Logement :</strong> ${propertyName}<br>
+                <strong>Voyageur :</strong> ${guest}<br>
+                <strong>Séjour initial :</strong> du ${start} au ${end}
+              </div>
+              <p>Pensez à vérifier votre calendrier et vos blocages si nécessaire.</p>
+            `
+          });
         }
 
         try {
@@ -2999,18 +3010,21 @@ Ménage à prévoir : le ${end} après le départ des voyageurs
 Merci beaucoup,
 L'équipe Boostinghost`;
 
-        const htmlBody = `
-          <p>${hello}</p>
-          <p>Un nouveau séjour vient d'être réservé pour le logement <strong>${propertyName}</strong>.</p>
-          <ul>
-            <li><strong>Voyageur :</strong> ${guest}</li>
-            <li><strong>Séjour :</strong> du ${start} au ${end}</li>
-            <li><strong>Ménage à prévoir :</strong> le ${end} après le départ des voyageurs</li>
-          </ul>
-          <p style="font-size:13px;color:#6b7280;">
-            Heure exacte de check-out à confirmer avec la conciergerie.
-          </p>
-        `;
+        const htmlBody = bhEmailTemplate({
+          icon: '🧹',
+          title: 'Nouveau ménage à prévoir',
+          tag: propertyName,
+          bodyHtml: `
+            <p>${hello}</p>
+            <p>Un nouveau séjour vient d'être réservé pour le logement <strong>${propertyName}</strong>.</p>
+            <div class="info-card">
+              <strong>Voyageur :</strong> ${guest}<br>
+              <strong>Séjour :</strong> du ${start} au ${end}<br>
+              <strong>Ménage à prévoir :</strong> le ${end} après le départ
+            </div>
+            <p>Heure exacte de check-out à confirmer avec la conciergerie.</p>
+          `
+        });
 
         tasks.push(
           (useBrevo
@@ -3139,11 +3153,21 @@ if ((useBrevo || transporter) && cleanerEmail) {
   textBody += '\nMerci beaucoup,\nL\'équipe Boostinghost';
 
   // Construction du htmlBody
-  let htmlBody = `<p>${hello}</p><p>Planning ménage de demain (${tomorrowIso}):</p><ul>`;
-  jobs.forEach((job) => {
-    htmlBody += `<li><strong>${job.propertyName}</strong> – départ le ${job.end} (${job.guestName})</li>`;
+  const jobsHtml = jobs.map(job => `
+    <div class="feat-row">
+      <div class="feat-icon">🏠</div>
+      <div class="feat-text"><strong>${job.propertyName}</strong> — départ le ${job.end} (${job.guestName})</div>
+    </div>`).join('');
+  let htmlBody = bhEmailTemplate({
+    icon: '🧹',
+    title: 'Planning ménage',
+    tag: `Demain — ${tomorrowIso}`,
+    bodyHtml: `
+      <p>${hello}</p>
+      <p>Voici votre planning ménage pour demain :</p>
+      <div class="info-card">${jobsHtml}</div>
+    `
   });
-  htmlBody += `</ul><p>Merci beaucoup,<br>L'équipe Boostinghost</p>`;
 
   tasks.push(
     (useBrevo
@@ -9270,69 +9294,126 @@ function generateVerificationToken() {
 // ============================================
 // HELPER : Template HTML commun pour tous les emails Boostinghost
 // ============================================
-function bhEmailTemplate({ icon, title, subtitle, bodyHtml, footerNote }) {
+function bhEmailTemplate({ icon, title, subtitle, tag, bodyHtml, footerNote, accentColor }) {
   const year = new Date().getFullYear();
+  const accent = accentColor || '#1A7A5E';
+  const accentDark = accentColor ? accentColor : '#0A3D2B';
+  const tagLabel = tag || subtitle || '';
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body{margin:0;padding:0;background:#E8E4DC;font-family:Arial,Helvetica,sans-serif;}
-    .wrap{max-width:600px;margin:0 auto;padding:32px 16px;}
-    .header{background:#1A7A5E;border-radius:12px 12px 0 0;padding:36px 40px 28px;text-align:center;position:relative;overflow:hidden;}
-    .header::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.06);}
-    .header::after{content:'';position:absolute;bottom:-40px;left:-40px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.04);}
-    .header-icon{display:inline-block;width:52px;height:52px;line-height:52px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);border-radius:12px;font-size:24px;margin-bottom:14px;}
-    .header h1{margin:0 0 6px;color:#fff;font-size:24px;font-weight:700;letter-spacing:-0.3px;}
-    .header p{margin:0;color:rgba(255,255,255,0.72);font-size:14px;}
-    .body{background:#fff;padding:36px 40px;border-left:1px solid #DDD8CE;border-right:1px solid #DDD8CE;}
-    .footer-bar{background:#1C2B25;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;}
-    .footer-bar p{margin:0 0 4px;font-size:11px;color:rgba(255,255,255,0.38);}
-    .footer-bar a{color:rgba(255,255,255,0.38);text-decoration:none;}
-    .footer-name{font-size:13px;font-weight:700;color:rgba(255,255,255,0.65);letter-spacing:1.5px;margin-bottom:8px !important;}
-    .btn{display:inline-block;background:#1A7A5E;color:#fff !important;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:0.2px;}
-    .cta-block{background:#F5F2EC;border:1px solid #DDD8CE;border-radius:10px;padding:24px;text-align:center;margin:24px 0;}
-    .cta-block p{margin:0 0 14px;font-size:13px;color:#777;}
-    .info-card{background:#F5F2EC;border-left:3px solid #1A7A5E;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0;font-size:14px;color:#444;}
-    .info-card strong{color:#1A7A5E;}
-    .alert-card{background:#FEF9EC;border-left:3px solid #D97706;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0;font-size:14px;color:#92400E;}
-    .danger-card{background:#FEF2F2;border-left:3px solid #DC2626;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0;font-size:14px;color:#991B1B;}
-    .success-card{background:#F0F8F5;border-left:3px solid #1A7A5E;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0;font-size:14px;color:#166534;}
-    .plan-badge{display:inline-block;background:#1A7A5E;color:#fff;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:8px;}
-    .amount-big{font-size:36px;font-weight:800;color:#1A7A5E;line-height:1.1;margin:4px 0;}
-    .amount-sub{font-size:13px;color:#888;margin:0;}
+    body{margin:0;padding:0;background:#EDEAE3;font-family:Arial,Helvetica,sans-serif;}
+    .wrap{max-width:580px;margin:0 auto;padding:28px 16px;}
+    .card{border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.10);border:1px solid #E0DBD0;}
+    .hdr{position:relative;height:200px;overflow:hidden;}
+    .hdr-body{background:#fff;padding:32px 36px;}
+    .hdr-body p{margin:0 0 14px;font-size:15px;color:#374151;line-height:1.75;}
+    .hdr-body p strong{color:#111;}
+    .btn{display:inline-block;background:${accent};color:#fff !important;text-decoration:none;padding:13px 30px;border-radius:9px;font-size:14px;font-weight:700;letter-spacing:.1px;}
+    .cta-block{background:#F5F2EC;border:1px solid #E0DBD0;border-radius:12px;padding:22px;text-align:center;margin:22px 0;}
+    .cta-hint{font-size:12px;color:#9CA3AF;margin:0 0 12px;}
+    .info-card{background:#F5F2EC;border-left:3px solid ${accent};border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:14px;color:#444;line-height:1.65;}
+    .info-card strong{color:${accent};}
+    .alert-card{background:#FFFBEB;border-radius:12px;padding:16px 18px;margin:18px 0;font-size:14px;color:#92400E;border:1px solid #FDE68A;}
+    .danger-card{background:#FEF2F2;border-radius:12px;padding:16px 18px;margin:18px 0;font-size:14px;color:#991B1B;border:1px solid #FECACA;}
+    .success-card{background:#F0FAF5;border-left:3px solid ${accent};border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:14px;color:#166534;}
+    .plan-badge{display:inline-block;background:#E8F5F0;color:${accent};font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:10px;border:1px solid #C6E8D9;}
+    .amount-big{font-size:44px;font-weight:900;color:${accent};line-height:1;letter-spacing:-2px;margin:6px 0;}
+    .amount-sub{font-size:12px;color:#9CA3AF;margin-bottom:16px;}
     .feat-row{display:table;width:100%;padding:10px 0;border-bottom:1px solid #F0EBE1;}
     .feat-row:last-child{border-bottom:none;}
-    .feat-icon{display:table-cell;width:36px;vertical-align:middle;font-size:18px;}
-    .feat-text{display:table-cell;vertical-align:middle;font-size:14px;color:#444;padding-left:4px;}
-    .feat-text strong{color:#1C1C1C;}
-    .divider{border:none;border-top:2px solid #F0EBE1;margin:24px 0;}
-    .link-fallback{font-size:12px;color:#999;word-break:break-all;}
-    .link-fallback a{color:#1A7A5E;}
-    p{margin:0 0 14px;font-size:15px;color:#333;line-height:1.65;}
-    ul{margin:0 0 14px;padding-left:20px;}
+    .feat-icon{display:table-cell;width:36px;vertical-align:middle;font-size:16px;}
+    .feat-text{display:table-cell;vertical-align:middle;font-size:14px;color:#374151;padding-left:4px;}
+    .feat-text strong{color:#111;}
+    .booking-grid{width:100%;border-collapse:separate;border-spacing:8px;margin:16px 0;}
+    .booking-cell{background:#F9F8F5;border:1px solid #EAE6DD;border-radius:10px;padding:10px 12px;font-size:13px;}
+    .booking-lbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#9CA3AF;font-weight:600;display:block;margin-bottom:3px;}
+    .booking-val{font-size:14px;color:#111;font-weight:600;}
+    .booking-val-green{font-size:14px;color:${accent};font-weight:600;}
+    .divider{border:none;border-top:1px solid #F0EBE1;margin:20px 0;}
+    .link-fallback{font-size:11.5px;color:#C4BEAF;word-break:break-all;line-height:1.6;margin-top:14px;}
+    .link-fallback a{color:${accent};}
+    .signoff{font-size:13px;color:#9CA3AF;margin-top:22px;padding-top:16px;border-top:1px solid #F0EBE1;}
+    .footer{background:#F5F2EC;padding:18px 36px;text-align:center;border-top:1px solid #E8E4DC;}
+    .footer p{font-size:11px;color:#B8B2A7;line-height:1.7;}
+    .footer a{color:${accent};text-decoration:none;}
+    ul{margin:0 0 14px;padding-left:18px;}
     ul li{font-size:14px;color:#444;line-height:1.8;}
-    .signoff{font-size:14px;color:#888;margin-top:24px;}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="header">
-    <div class="header-icon">${icon}</div>
-    <h1>${title}</h1>
-    ${subtitle ? `<p>${subtitle}</p>` : ''}
+<div class="card">
+  <div class="hdr">
+    <svg width="100%" height="200" viewBox="0 0 580 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${accentDark}"/>
+          <stop offset="100%" stop-color="${accent}"/>
+        </linearGradient>
+      </defs>
+      <rect width="580" height="200" fill="url(#bhg)"/>
+      <circle cx="480" cy="100" r="140" fill="rgba(255,255,255,.03)"/>
+      <circle cx="480" cy="100" r="95" fill="rgba(255,255,255,.04)"/>
+      <line x1="355" y1="62" x2="400" y2="92" stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="4 3"/>
+      <line x1="445" y1="44" x2="400" y2="92" stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="4 3"/>
+      <line x1="400" y1="128" x2="400" y2="92" stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="4 3"/>
+      <line x1="352" y1="145" x2="400" y2="128" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="4 3"/>
+      <line x1="468" y1="138" x2="400" y2="128" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="4 3"/>
+      <line x1="510" y1="74" x2="445" y2="44" stroke="rgba(255,255,255,.08)" stroke-width="1" stroke-dasharray="4 3"/>
+      <circle cx="400" cy="110" r="26" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" stroke-width="1.5"/>
+      <rect x="389" y="99" width="22" height="22" rx="5" fill="${accent}"/>
+      <text x="400" y="115" text-anchor="middle" font-size="13" font-weight="900" fill="white" font-family="Arial,sans-serif">B</text>
+      <rect x="325" y="40" width="42" height="42" rx="11" fill="#FF5A5F" opacity=".93"/>
+      <text x="346" y="67" text-anchor="middle" font-size="20" font-weight="900" fill="white" font-family="Arial,sans-serif">A</text>
+      <rect x="418" y="22" width="42" height="42" rx="11" fill="#003580" opacity=".93"/>
+      <text x="439" y="49" text-anchor="middle" font-size="18" font-weight="900" fill="white" font-family="Arial,sans-serif">B.</text>
+      <rect x="484" y="52" width="38" height="38" rx="10" fill="#F5A623" opacity=".9"/>
+      <text x="503" y="76" text-anchor="middle" font-size="16" font-weight="900" fill="white" font-family="Arial,sans-serif">E</text>
+      <rect x="502" y="18" width="36" height="24" rx="7" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
+      <text x="520" y="34" text-anchor="middle" font-size="8" font-weight="700" fill="rgba(255,255,255,.6)" font-family="Arial,sans-serif">VRBO</text>
+      <rect x="325" y="118" width="40" height="40" rx="10" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
+      <rect x="331" y="124" width="28" height="5" rx="2" fill="rgba(255,255,255,.4)"/>
+      <rect x="331" y="134" width="8" height="8" rx="2" fill="rgba(255,255,255,.28)"/>
+      <rect x="343" y="134" width="8" height="8" rx="2" fill="rgba(255,255,255,.28)"/>
+      <rect x="331" y="146" width="8" height="8" rx="2" fill="rgba(255,255,255,.18)"/>
+      <rect x="343" y="146" width="8" height="8" rx="2" fill="rgba(255,255,255,.32)"/>
+      <rect x="446" y="112" width="40" height="40" rx="10" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
+      <rect x="453" y="122" width="26" height="4" rx="2" fill="rgba(255,255,255,.38)"/>
+      <rect x="453" y="130" width="18" height="4" rx="2" fill="rgba(255,255,255,.22)"/>
+      <rect x="453" y="138" width="22" height="4" rx="2" fill="rgba(255,255,255,.18)"/>
+      <circle cx="478" cy="144" r="3.5" fill="rgba(255,255,255,.22)"/>
+    </svg>
+    <!-- Header text overlay -->
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:center;padding:0 32px;">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;">
+        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="rgba(255,255,255,.18)"/>
+          <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+          <text x="16" y="22" text-anchor="middle" font-size="17" font-weight="900" fill="white" font-family="Arial,sans-serif">B</text>
+        </svg>
+        <span style="font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,.7);">Boostinghost</span>
+      </div>
+      ${tagLabel ? `<div style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.85);background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);margin-bottom:10px;width:fit-content;">${tagLabel}</div>` : ''}
+      <div style="font-size:23px;font-weight:800;color:#fff;letter-spacing:-.4px;line-height:1.15;">${title}</div>
+    </div>
   </div>
-  <div class="body">
+  <div class="hdr-body">
     ${bodyHtml}
     <p class="signoff">L'équipe Boostinghost</p>
   </div>
-  <div class="footer-bar">
-    <p class="footer-name">BOOSTINGHOST</p>
+  <div class="footer">
+    <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><rect width="18" height="18" rx="4" fill="${accent}"/><text x="9" y="13" text-anchor="middle" font-size="10" font-weight="900" fill="white" font-family="Arial,sans-serif">B</text></svg>
+      <span style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;">Boostinghost</span>
+    </div>
     ${footerNote ? `<p>${footerNote}</p>` : ''}
-    <p>© ${year} Boostinghost · Tous droits réservés</p>
-    <p><a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
+    <p>© ${year} Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
   </div>
+</div>
 </div>
 </body>
 </html>`;
@@ -11350,15 +11431,18 @@ app.put('/api/cleaning/checklists/:id/reject',
 
           if (cleaner.email) {
             const subject = `⚠️ Complément demandé — ${propertyName}`;
-            const htmlBody = `
-              <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
-                <h2 style="color: #f59e0b;">⚠️ Complément de ménage demandé</h2>
+            const htmlBody = bhEmailTemplate({
+              icon: '⚠️',
+              title: 'Complément de ménage demandé',
+              tag: propertyName,
+              accentColor: '#D97706',
+              bodyHtml: `
                 <p>Bonjour <strong>${cleaner.name}</strong>,</p>
                 <p>Le propriétaire demande un complément pour le ménage de <strong>${propertyName}</strong>.</p>
-                ${notes ? `<div style="padding:12px 16px; background:#fef3c7; border-radius:8px; margin:16px 0;"><strong>Message :</strong> ${notes}</div>` : ''}
+                ${notes ? `<div class="alert-card"><strong>Message :</strong> ${notes}</div>` : ''}
                 <p>Merci de repasser dès que possible.</p>
-              </div>
-            `;
+              `
+            });
 
             const useBrevo = !!process.env.BREVO_API_KEY;
             if (useBrevo) {
@@ -14356,18 +14440,20 @@ app.post('/api/auth/register', async (req, res) => {
       await sendEmailViaBrevo({
         to: 'charles.induni@gmail.com',
         subject: `🎉 Nouvelle inscription — ${firstName} ${lastName}`,
-        html: `
-          <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#f9fafb;border-radius:12px;">
-            <h2 style="color:#10B981;margin-top:0;">Nouvelle inscription 🎉</h2>
-            <table style="width:100%;border-collapse:collapse;">
-              <tr><td style="padding:8px 0;color:#6B7280;width:140px;">Nom</td><td style="padding:8px 0;font-weight:600;">${firstName} ${lastName}</td></tr>
-              <tr><td style="padding:8px 0;color:#6B7280;">Email</td><td style="padding:8px 0;font-weight:600;">${email}</td></tr>
-              <tr><td style="padding:8px 0;color:#6B7280;">Société</td><td style="padding:8px 0;font-weight:600;">${company || '—'}</td></tr>
-              <tr><td style="padding:8px 0;color:#6B7280;">Date</td><td style="padding:8px 0;font-weight:600;">${new Date().toLocaleString('fr-FR')}</td></tr>
-              <tr><td style="padding:8px 0;color:#6B7280;">Trial jusqu'au</td><td style="padding:8px 0;font-weight:600;">${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}</td></tr>
-            </table>
-          </div>
-        `
+        html: bhEmailTemplate({
+          icon: '🎉',
+          title: 'Nouvelle inscription',
+          tag: 'Notification admin',
+          bodyHtml: `
+            <div class="info-card">
+              <strong>Nom :</strong> ${firstName} ${lastName}<br>
+              <strong>Email :</strong> ${email}<br>
+              <strong>Société :</strong> ${company || '—'}<br>
+              <strong>Date :</strong> ${new Date().toLocaleString('fr-FR')}<br>
+              <strong>Trial jusqu'au :</strong> ${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}
+            </div>
+          `
+        })
       });
       console.log('✅ Notification inscription envoyée à charles.induni@gmail.com');
     } catch (notifErr) {
@@ -22476,28 +22562,18 @@ app.delete('/api/account/delete', authenticateToken, async (req, res) => {
           from: `Boostinghost <${process.env.EMAIL_FROM}>`,
           to: userEmail,
           subject: 'Votre compte Boostinghost a été supprimé',
-          html: `
-            <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px;">
-              <div style="text-align:center;margin-bottom:24px;">
-                <img src="https://www.boostinghost.fr/logo.png" alt="Boostinghost" style="height:40px;" onerror="this.style.display='none'"/>
-              </div>
-              <h2 style="color:#111827;margin:0 0 16px;">Compte supprimé</h2>
-              <p style="color:#6b7280;line-height:1.6;">Bonjour ${userName},</p>
-              <p style="color:#6b7280;line-height:1.6;">
-                Votre compte Boostinghost associé à l'adresse <strong>${userEmail}</strong> a bien été supprimé le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.
-              </p>
-              <p style="color:#6b7280;line-height:1.6;">
-                Toutes vos données ont été définitivement effacées de nos serveurs conformément à votre demande.
-              </p>
-              <p style="color:#6b7280;line-height:1.6;">
-                Si vous n'êtes pas à l'origine de cette action, contactez-nous immédiatement à <a href="mailto:support@boostinghost.fr" style="color:#1A7A5E;">support@boostinghost.fr</a>.
-              </p>
-              <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;"/>
-              <p style="color:#9ca3af;font-size:12px;text-align:center;">
-                Boostinghost — <a href="https://www.boostinghost.fr" style="color:#9ca3af;">www.boostinghost.fr</a>
-              </p>
-            </div>
-          `
+          html: bhEmailTemplate({
+            icon: '🗑️',
+            title: 'Compte supprimé',
+            tag: 'Confirmation de suppression',
+            bodyHtml: `
+              <p>Bonjour <strong>${userName}</strong>,</p>
+              <p>Votre compte Boostinghost associé à l'adresse <strong>${userEmail}</strong> a bien été supprimé le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
+              <p>Toutes vos données ont été définitivement effacées de nos serveurs conformément à votre demande.</p>
+              <div class="danger-card">Si vous n'êtes pas à l'origine de cette action, contactez-nous immédiatement à <a href="mailto:support@boostinghost.fr" style="color:#1A7A5E;">support@boostinghost.fr</a>.</div>
+            `,
+            footerNote: 'Cet email confirme la suppression définitive de votre compte.'
+          })
         });
         console.log(`📧 Email confirmation suppression envoyé à ${userEmail}`);
       } catch(emailErr) {
@@ -26655,34 +26731,18 @@ app.post('/api/attestation/send', authenticateToken, async (req, res) => {
 
     const fileName = `attestation-fiscale-${year}-${(clientName || 'client').replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
-    const htmlBody = `
-      <div style="font-family:'DM Sans',Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#111827;">
-        <div style="background:#1A7A5E;border-radius:12px 12px 0 0;padding:24px;text-align:center;">
-          <div style="color:white;font-size:18px;font-weight:700;">Attestation fiscale ${year}</div>
-          <div style="color:rgba(255,255,255,.8);font-size:13px;margin-top:4px;">Services à la personne</div>
-        </div>
-        <div style="background:white;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;padding:28px 24px;">
-          <p style="font-size:14px;line-height:1.7;color:#374151;">Bonjour,</p>
-          <p style="font-size:14px;line-height:1.7;color:#374151;">
-            Veuillez trouver en pièce jointe votre <strong>attestation fiscale pour l'année ${year}</strong> 
-            concernant les services à la personne fournis par <strong>${fromName}</strong>.
-          </p>
-          <p style="font-size:14px;line-height:1.7;color:#374151;">
-            Ce document vous permettra de bénéficier du <strong>crédit d'impôt pour l'emploi d'un salarié à domicile</strong> 
-            (art. 199 sexdecies du CGI) lors de votre déclaration de revenus.
-          </p>
-          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin:20px 0;font-size:13px;color:#065f46;">
-            💡 <strong>Conseil :</strong> Conservez ce document pour votre déclaration de revenus ${parseInt(year) + 1}.
-          </div>
-          <p style="font-size:13px;color:#6b7280;margin-top:20px;">
-            Pour toute question, n'hésitez pas à nous contacter.<br>
-            Cordialement,<br><strong>${fromName}</strong>
-          </p>
-        </div>
-        <div style="text-align:center;padding:16px;font-size:11px;color:#9ca3af;">
-          Attestation générée via <strong>boostinghost.fr</strong>
-        </div>
-      </div>`;
+    const htmlBody = bhEmailTemplate({
+      icon: '🧾',
+      title: `Attestation fiscale ${year}`,
+      tag: 'Services à la personne',
+      bodyHtml: `
+        <p>Bonjour,</p>
+        <p>Veuillez trouver en pièce jointe votre <strong>attestation fiscale pour l'année ${year}</strong> concernant les services à la personne fournis par <strong>${fromName}</strong>.</p>
+        <p>Ce document vous permettra de bénéficier du <strong>crédit d'impôt pour l'emploi d'un salarié à domicile</strong> (art. 199 sexdecies du CGI) lors de votre déclaration de revenus.</p>
+        <div class="info-card">💡 <strong>Conseil :</strong> Conservez ce document pour votre déclaration de revenus ${parseInt(year) + 1}.</div>
+        <p>Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${fromName}</strong></p>
+      `
+    });
 
     const brevoSender = getBrevoSender();
     console.log('📧 [ATTESTATION] Expéditeur Brevo:', JSON.stringify(brevoSender));
@@ -26976,7 +27036,7 @@ app.post('/api/guest/book', async (req, res) => {
         html: bhEmailTemplate({
           icon: '🏠',
           title: 'Réservation confirmée !',
-          subtitle: prop.name,
+          tag: prop.name,
           bodyHtml: `
             <div class="success-card">
               <strong>Votre réservation est confirmée</strong><br>
@@ -27047,7 +27107,7 @@ app.post('/api/guest/book', async (req, res) => {
           html: bhEmailTemplate({
             icon: '🏠',
             title: 'Nouvelle réservation directe',
-            subtitle: `Via Boostinghost Guest`,
+            tag: 'Réservation directe',
             bodyHtml: `
               <div class="info-card">
                 <strong>Réservation reçue !</strong><br>
