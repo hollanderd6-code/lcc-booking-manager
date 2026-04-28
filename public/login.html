@@ -99,7 +99,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   </a>
   <nav class="hero-nav">
     <a href="/pricing.html">Tarifs</a>
-    <a href="/register.html" class="nav-btn">Créer un compte</a>
+    <a href="/register.html" class="nav-btn" id="navRegisterBtn">Créer un compte</a>
   </nav>
   <div class="hero-content">
     <div class="hero-left">
@@ -136,7 +136,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
           <div class="divider"><span>ou</span></div>
           <button class="magic-btn" id="magicLinkBtn"><i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email</button>
           <div class="form-notif"><div class="dot"></div>Connexion sécurisée · Chiffrement TLS</div>
-          <div class="form-footer-link">Pas encore de compte ? <a href="/register.html">Créer un compte gratuit</a></div>
+          <div class="form-footer-link" id="registerFooter">Pas encore de compte ? <a href="/register.html">Créer un compte gratuit</a></div>
         </div>
       </div>
     </div>
@@ -144,6 +144,11 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 </section>
 <script>
   const IS_NATIVE=!!(window.Capacitor?.isNativePlatform?.()||window.location.protocol==='capacitor:'||window.location.protocol==='ionic:');
+  const IS_IOS = IS_NATIVE && (window.Capacitor?.getPlatform?.() === 'ios');
+  if (IS_IOS) {
+    document.getElementById('navRegisterBtn')?.style && (document.getElementById('navRegisterBtn').style.display = 'none');
+    document.getElementById('registerFooter')?.style && (document.getElementById('registerFooter').style.display = 'none');
+  }
   const API_BASE=IS_NATIVE?'https://www.boostinghost.fr':'';
   function showToast(msg,type='error'){document.getElementById('bh-toast')?.remove();const c=type==='error'?'#DC2626':'#1A7A5E',ic=type==='error'?'fa-circle-exclamation':'fa-circle-check',t=document.createElement('div');t.id='bh-toast';t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#1C1C1C;border-left:4px solid ${c};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:90vw;width:380px;animation:toastIn .25s ease;`;t.innerHTML=`<i class="fas ${ic}" style="color:${c};font-size:18px;flex-shrink:0;"></i><span style="flex:1;">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;">×</button>`;if(!document.getElementById('bh-toast-style')){const s=document.createElement('style');s.id='bh-toast-style';s.textContent='@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';document.head.appendChild(s);}document.body.appendChild(t);setTimeout(()=>t?.remove(),5000);}
   async function checkAuth(){const tk=localStorage.getItem('lcc_token');if(!tk)return false;try{const r=await fetch(API_BASE+'/api/user',{headers:{'Authorization':'Bearer '+tk}});if(r.ok){window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}localStorage.removeItem('lcc_token');return false;}catch{return false;}}
