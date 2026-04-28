@@ -25039,20 +25039,13 @@ app.post('/api/channex/webhook', async (req, res) => {
                SET reservation_start_date = $1,
                    reservation_end_date   = $2,
                    updated_at             = NOW()
-               WHERE (
-                 channex_booking_id = $3
-                 OR (property_id = $4 AND DATE(reservation_start_date) != DATE($1)
-                     AND user_id = $5
-                     AND status != 'cancelled')
-               )
+               WHERE channex_booking_id = $3
                AND DATE(reservation_start_date) != DATE($1)
                RETURNING id, reservation_start_date, reservation_end_date`,
               [
                 result.start_date,
                 result.end_date,
                 result.channex_booking_id || result.uid,
-                result.property_id,
-                result.user_id,
               ]
             );
             if (convUpdateResult.rows.length > 0) {
