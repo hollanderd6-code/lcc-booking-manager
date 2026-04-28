@@ -230,33 +230,34 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     // Détecter la langue depuis le message plutôt que conversation.language
     // car conversation.language peut être null ou mal renseigné
     const _msgLower = message.message.toLowerCase();
-    let language = 'fr'; // défaut français
+    let language = 'auto'; // défaut : Groq détecte automatiquement
     if (conversation.language && ['fr','en','es','de','it'].includes(conversation.language)) {
+      // Langue explicite connue depuis la plateforme → on l'utilise directement
       language = conversation.language;
     } else {
-      // Détection élargie : compte les mots ou patterns caractéristiques de chaque langue
-      const enPatterns = /\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|who|can|could|would|should|is there|are there|do you|could you|i need|i want|i have|my|your|the|is|are|and|but|or|with|for|from|to|at|on|wifi|password|check[\s-]?in|check[\s-]?out|address|arrival|departure)\b/gi;
-      const esPatterns = /\b(hola|gracias|por favor|dónde|cuándo|cómo|qué|puedo|quiero|tengo|necesito|dirección|contraseña|llegada|salida)\b/gi;
-      const dePatterns = /\b(hallo|guten tag|danke|bitte|wo|wann|wie|was|ich|können|möchte|brauche|adresse|passwort|ankunft|abreise)\b/gi;
-      const itPatterns = /\b(ciao|grazie|per favore|dove|quando|come|cosa|posso|vorrei|ho bisogno|indirizzo|password|arrivo|partenza)\b/gi;
-      const frPatterns = /\b(bonjour|bonsoir|merci|s'il vous plaît|où|quand|comment|puis-je|voudrais|besoin|adresse|code|arrivée|départ|avez-vous|est-ce|nous|vous|je)\b/gi;
+      // Détection locale rapide pour les 5 langues principales
+      const enP = /\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|can|could|would|i need|i want|wifi|password|check.in|check.out|address|arrival|departure)\b/gi;
+      const esP = /\b(hola|gracias|por favor|dónde|cuándo|puedo|quiero|necesito|contraseña|llegada|salida)\b/gi;
+      const deP = /\b(hallo|danke|bitte|wo|wann|wie|was|ich|können|möchte|passwort|ankunft|abreise)\b/gi;
+      const itP = /\b(ciao|grazie|dove|quando|posso|vorrei|ho bisogno|indirizzo|arrivo|partenza)\b/gi;
+      const frP = /\b(bonjour|bonsoir|merci|où|quand|comment|puis-je|voudrais|besoin|arrivée|départ|avez-vous|est-ce|nous|vous|je)\b/gi;
 
       const scores = {
-        en: (message.message.match(enPatterns) || []).length,
-        es: (message.message.match(esPatterns) || []).length,
-        de: (message.message.match(dePatterns) || []).length,
-        it: (message.message.match(itPatterns) || []).length,
-        fr: (message.message.match(frPatterns) || []).length,
+        en: (message.message.match(enP) || []).length,
+        es: (message.message.match(esP) || []).length,
+        de: (message.message.match(deP) || []).length,
+        it: (message.message.match(itP) || []).length,
+        fr: (message.message.match(frP) || []).length,
       };
 
-      // Trouver la langue avec le plus de matches
       const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
-      if (best[1] > 0) {
+      if (best[1] >= 2) {
+        // Score suffisant → langue identifiée localement
         language = best[0];
       }
-      // Sinon on garde 'fr' par défaut
+      // Sinon language reste 'auto' → Groq détecte (japonais, arabe, russe, néerlandais, etc.)
 
-      console.log(`🌍 [HANDLER] Langue détectée: ${language} (scores:`, scores, ')');
+      console.log('🌍 [HANDLER] Langue:', language, '(scores:', scores, ')');
     }
 
     // ========================================
