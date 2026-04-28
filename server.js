@@ -9826,6 +9826,139 @@ async function sendRenewalReminderEmail(email, firstName, plan, amount, renewalD
 // ============================================
 
 // ============================================
+// ROUTES - LIEN MAGIQUE (connexion sans mot de passe)
+// ============================================
+
+// Créer la table si elle n'existe pas
+pool.query(`
+  CREATE TABLE IF NOT EXISTS user_magic_tokens (
+    id SERIAL PRIMARY KEY,
+    email TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(e => console.error('❌ user_magic_tokens table:', e.message));
+
+// POST /api/auth/magic-link — génère et envoie le lien
+app.post('/api/auth/magic-link', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email requis' });
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
+
+    // Vérifier que l'utilisateur existe
+    const userResult = await pool.query(
+      'SELECT id, first_name, email_verified FROM users WHERE LOWER(email) = $1',
+      [normalizedEmail]
+    );
+
+    // Répondre toujours 200 pour ne pas exposer si l'email existe
+    if (userResult.rows.length === 0) {
+      return res.json({ success: true, message: 'Si cet email existe, un lien a été envoyé.' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Supprimer les anciens tokens pour cet email
+    await pool.query('DELETE FROM user_magic_tokens WHERE email = $1', [normalizedEmail]);
+
+    // Générer un token sécurisé
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await pool.query(
+      'INSERT INTO user_magic_tokens (email, token, expires_at) VALUES ($1, $2, $3)',
+      [normalizedEmail, token, expiresAt]
+    );
+
+    const magicLink = `${appUrl}/login.html?magic_token=${token}`;
+
+    // Envoyer l'email
+    await sendEmailViaBrevo({
+      to: normalizedEmail,
+      subject: 'Votre lien de connexion — Boostinghost',
+      text: `Cliquez sur ce lien pour vous connecter : ${magicLink}\n\nCe lien est valable 15 minutes.`,
+      html: bhEmailTemplate({
+        icon: '🔑',
+        title: 'Votre lien de connexion',
+        tag: 'Connexion sans mot de passe',
+        bodyHtml: `
+          <p>Bonjour <strong>${user.first_name || 'là'}</strong>,</p>
+          <p>Vous avez demandé à vous connecter à votre espace Boostinghost sans mot de passe. Cliquez sur le bouton ci-dessous :</p>
+          <div class="cta-block">
+            <p class="cta-hint">Lien valide pendant <strong style="color:rgba(0,0,0,.6)">15 minutes</strong></p>
+            <a href="${magicLink}" class="btn">Me connecter maintenant →</a>
+          </div>
+          <div class="danger-card">Si vous n'avez pas demandé ce lien, ignorez cet email. Votre compte reste sécurisé.</div>
+          <p class="link-fallback">Lien de secours :<br><a href="${magicLink}">${magicLink}</a></p>
+        `,
+        footerNote: 'Lien valable 15 minutes · Ne partagez pas ce lien'
+      })
+    });
+
+    console.log(`✅ Magic link envoyé à ${normalizedEmail}`);
+    res.json({ success: true, message: 'Lien de connexion envoyé par email.' });
+
+  } catch (err) {
+    console.error('❌ Erreur magic-link:', err);
+    res.status(500).json({ error: "Erreur lors de l'envoi du lien." });
+  }
+});
+
+// GET /api/auth/magic-link/verify — vérifie le token et retourne un JWT
+app.get('/api/auth/magic-link/verify', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: 'Token manquant' });
+
+    const tokenResult = await pool.query(
+      'SELECT * FROM user_magic_tokens WHERE token = $1 AND used = FALSE AND expires_at > NOW()',
+      [token]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Lien invalide ou expiré. Demandez un nouveau lien.' });
+    }
+
+    const magicToken = tokenResult.rows[0];
+
+    // Marquer comme utilisé
+    await pool.query('UPDATE user_magic_tokens SET used = TRUE WHERE token = $1', [token]);
+
+    const userResult = await pool.query(
+      'SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id, logo_url FROM users WHERE LOWER(email) = $1',
+      [magicToken.email]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Utilisateur introuvable.' });
+    }
+
+    const row = userResult.rows[0];
+    const user = {
+      id: row.id, company: row.company,
+      firstName: row.first_name, lastName: row.last_name,
+      email: row.email, passwordHash: row.password_hash,
+      createdAt: row.created_at, stripeAccountId: row.stripe_account_id,
+      logoUrl: row.logo_url || null
+    };
+
+    const jwtToken = generateToken(user);
+    console.log(`✅ Magic link vérifié pour ${row.email}`);
+    res.json({ success: true, token: jwtToken, user: publicUser(user) });
+
+  } catch (err) {
+    console.error('❌ Erreur magic-link verify:', err);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ============================================
 // ROUTES - MOT DE PASSE OUBLIÉ
 // ============================================
 
