@@ -676,6 +676,8 @@ a { color: var(--primary); text-decoration: none; }
   display: flex; align-items: center; gap: 7px;
 }
 .footer-badge i { color: #6ee7b7; }
+.footer-badge-store { text-decoration: none; transition: background .2s, transform .15s; cursor: pointer; }
+.footer-badge-store:hover { background: rgba(110,231,183,.15); border-color: rgba(110,231,183,.4); transform: translateY(-1px); }
 
 /* ─── SCROLL REVEAL ─── */
 .reveal {
@@ -1301,8 +1303,12 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
     </div>
     <div class="footer-badges">
       <div class="footer-badge"><i class="fas fa-shield-alt"></i> RGPD · Données en UE</div>
-      <div class="footer-badge"><i class="fab fa-apple"></i> App Store</div>
-      <div class="footer-badge"><i class="fab fa-google-play"></i> Google Play</div>
+      <a href="https://apps.apple.com/fr/app/boostinghost/id6758049858" target="_blank" rel="noopener" class="footer-badge footer-badge-store">
+        <i class="fab fa-apple"></i> App Store
+      </a>
+      <a href="https://play.google.com/store/apps/details?id=com.boostinghost.app" target="_blank" rel="noopener" class="footer-badge footer-badge-store">
+        <i class="fab fa-google-play"></i> Google Play
+      </a>
     </div>
   </div>
 </footer>
