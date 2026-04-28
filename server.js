@@ -3595,7 +3595,16 @@ const PORT = process.env.PORT || 3000;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || null;
 
 // ✅ WEBHOOK STRIPE (AVANT LES AUTRES MIDDLEWARES)
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+app.post('/api/webhooks/stripe', (req, res, next) => {
+  let data = '';
+  req.setEncoding('utf8');
+  req.on('data', chunk => { data += chunk; });
+  req.on('end', () => {
+    req.rawBody = data;
+    req.body = Buffer.from(data);
+    next();
+  });
+}, async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const webhookSecretPlatform = process.env.STRIPE_WEBHOOK_SECRET_PLATFORM;
@@ -3616,7 +3625,7 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   let lastErr;
   for (const { secret, label } of secretsToTry) {
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, secret);
+      event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, secret);
       console.log(`Webhook valide avec secret ${label}`);
       break;
     } catch (err) {
