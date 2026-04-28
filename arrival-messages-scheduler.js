@@ -6,6 +6,67 @@
 
 const { sendAutoMessage } = require('./integrated-chat-handler');
 
+// 🌍 Traduction DeepL pour les messages d'arrivée
+const COUNTRY_TO_LANG = {
+  'GB':'EN-GB','US':'EN-US','AU':'EN-GB','CA':'EN-GB','IE':'EN-GB','NZ':'EN-GB',
+  'ZA':'EN-GB','SG':'EN-GB','GY':'EN-GB','JM':'EN-GB','TT':'EN-GB','BB':'EN-GB',
+  'BS':'EN-GB','BZ':'EN-GB','GH':'EN-GB','NG':'EN-GB','KE':'EN-GB','IN':'EN-GB',
+  'PK':'EN-GB','PH':'EN-GB','MY':'EN-GB','HK':'EN-GB',
+  'DE':'DE','AT':'DE','CH':'DE',
+  'ES':'ES','MX':'ES','AR':'ES','CO':'ES','CL':'ES','PE':'ES',
+  'IT':'IT','NL':'NL','BE':'NL','PT':'PT-PT','BR':'PT-BR',
+  'PL':'PL','RU':'RU','JP':'JA','CN':'ZH','KR':'KO',
+  'DK':'DA','SE':'SV','NO':'NB','FI':'FI','CZ':'CS','RO':'RO',
+  'HU':'HU','GR':'EL','TR':'TR','UA':'UK','BG':'BG',
+  // Francophones → null
+  'FR':null,'LU':null,'MC':null,'BE':null,'CH':null,
+  'CI':null,'SN':null,'TN':null,'MA':null,'DZ':null,'CM':null,
+};
+const LANG_TO_DEEPL = {
+  'EN':'EN-GB','DE':'DE','ES':'ES','IT':'IT','NL':'NL','PT':'PT-PT',
+  'PL':'PL','RU':'RU','JA':'JA','ZH':'ZH','KO':'KO','DA':'DA',
+  'SV':'SV','NB':'NB','FI':'FI','CS':'CS','RO':'RO','HU':'HU',
+  'EL':'EL','TR':'TR','UK':'UK','BG':'BG',
+};
+
+async function translateArrivalMessage(text, guestCountry, guestLanguage) {
+  const apiKey = process.env.DEEPL_API_KEY;
+  if (!apiKey || !text) return text;
+
+  // Priorité 1 : langue explicite
+  let target = null;
+  if (guestLanguage) {
+    const lang = guestLanguage.toUpperCase().split('-')[0];
+    target = LANG_TO_DEEPL[lang] || null;
+    if (lang === 'FR') return text; // francophone → pas de traduction
+  }
+  // Priorité 2 : code pays
+  if (!target && guestCountry) {
+    const c = guestCountry.toUpperCase().trim();
+    if (COUNTRY_TO_LANG[c] === null) return text; // francophone
+    target = COUNTRY_TO_LANG[c] || null;
+  }
+  if (!target) return text;
+
+  try {
+    const axios = require('axios');
+    const response = await axios.post(
+      'https://api-free.deepl.com/v2/translate',
+      new URLSearchParams({ auth_key: apiKey, text, target_lang: target, source_lang: 'FR', preserve_formatting: '1' }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 8000 }
+    );
+    const translated = response.data?.translations?.[0]?.text;
+    if (translated) {
+      console.log(\`🌍 [ARRIVAL] Traduit vers \${target}\`);
+      return translated;
+    }
+    return text;
+  } catch (err) {
+    console.warn(\`⚠️ [ARRIVAL] DeepL erreur (\${target}):\`, err.message);
+    return text;
+  }
+}
+
 function replaceMessageVariables(template, data) {
   if (!template) return '';
   return template
@@ -85,7 +146,13 @@ async function sendArrivalMessage(pool, io, conversation, property) {
     });
 
     const channexId = conversation.channex_booking_id || null;
-    await sendAutoMessage(pool, io, conversation.id, finalMessage, channexId);
+
+    // 🌍 Traduction automatique selon la nationalité du voyageur
+    const guestCountry = conversation.guest_country || null;
+    const guestLanguage = conversation.guest_language || null;
+    const translatedMessage = await translateArrivalMessage(finalMessage, guestCountry, guestLanguage);
+
+    await sendAutoMessage(pool, io, conversation.id, translatedMessage, channexId);
 
     console.log(`✅ Message d'arrivée envoyé — ${property.name} — ${guestName} (conv ${conversation.id}) | Channex: ${channexId || 'non'}`);
     return true;
@@ -107,6 +174,8 @@ async function processTodayArrivals(pool, io) {
       `SELECT
         c.id, c.property_id, c.platform, c.channex_booking_id,
         c.guest_first_name, c.guest_last_name, c.guest_name, c.reservation_start_date,
+        COALESCE(r.guest_country, '') as guest_country,
+        COALESCE(r.guest_language, '') as guest_language,
         r.uid as reservation_uid,
         r.guest_first_name as r_guest_first_name,
         r.guest_last_name  as r_guest_last_name,
