@@ -3662,14 +3662,14 @@ async function loadTemplateProperties() {
   } catch(e) {}
 }
 
-function openTemplateModal(template = null) {
-  document.getElementById('tplId').value = template?.id || '';
+function openTemplateModal(template = null, isCopy = false) {
+  document.getElementById('tplId').value = (template?.id && !isCopy) ? template.id : '';
   document.getElementById('tplTitle').value = template?.title || '';
   document.getElementById('tplMessage').value = template?.message || '';
   document.getElementById('tplTrigger').value = template?.trigger_type || 'on_booking';
   document.getElementById('tplOffset').value = template?.trigger_offset_hours || '';
   document.getElementById('tplProperty').value = template?.property_id || '';
-  document.getElementById('tplModalTitle').textContent = template ? 'Modifier le template' : 'Nouveau template';
+  document.getElementById('tplModalTitle').textContent = (template && !isCopy) ? 'Modifier le template' : 'Nouveau template';
   updateOffsetLabel();
   loadTemplateProperties();
   document.getElementById('templateModal').style.display = 'flex';
@@ -3729,14 +3729,8 @@ async function copyTemplate(id) {
     const data = await res.json();
     const t = (data.templates || []).find(t => t.id === id);
     if (!t) return;
-    // Ouvrir le modal pré-rempli avec les données copiées, sans id (= création)
-    const copy = {
-      ...t,
-      id: null,
-      title: t.title + ' (copie)',
-      active: false
-    };
-    openTemplateModal(copy);
+    const copy = { ...t, title: t.title + ' (copie)', active: false };
+    openTemplateModal(copy, true); // isCopy = true → titre "Nouveau template", pas d'id
   } catch(e) {}
 }
 
