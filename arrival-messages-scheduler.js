@@ -57,12 +57,12 @@ async function translateArrivalMessage(text, guestCountry, guestLanguage) {
     );
     const translated = response.data?.translations?.[0]?.text;
     if (translated) {
-      console.log(\`🌍 [ARRIVAL] Traduit vers \${target}\`);
+      console.log(`🌍 [ARRIVAL] Traduit vers ${target}`);
       return translated;
     }
     return text;
   } catch (err) {
-    console.warn(\`⚠️ [ARRIVAL] DeepL erreur (\${target}):\`, err.message);
+    console.warn(`⚠️ [ARRIVAL] DeepL erreur (${target}):`, err.message);
     return text;
   }
 }
