@@ -190,8 +190,9 @@ a { color: var(--primary); text-decoration: none; }
   text-transform: uppercase; margin-bottom: 24px;
 }
 .hero h1 {
-  font-size: clamp(38px, 5vw, 62px);
+  font-size: clamp(42px, 5.5vw, 68px);
   line-height: 1.05; color: white; margin-bottom: 22px;
+  font-style: normal;
 }
 .hero h1 em { color: #6ee7b7; }
 .hero-sub {
@@ -570,7 +571,7 @@ a { color: var(--primary); text-decoration: none; }
 .integrations-section { padding: 80px 0; background: var(--white); }
 .integrations-header { text-align: center; margin-bottom: 48px; }
 .integrations-grid {
-  display: grid; grid-template-columns: repeat(5,1fr);
+  display: grid; grid-template-columns: repeat(4,1fr);
   gap: 16px; max-width: 900px; margin: 0 auto 28px;
 }
 .integration-badge {
@@ -781,11 +782,11 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
   <div class="hero-content">
     <div class="hero-left">
       <div class="hero-badge">
-        <i class="fas fa-bolt"></i> Tout-en-un · Channel Manager · IA
+        <i class="fas fa-bolt"></i> Channel Manager tout-en-un boosté à l'IA
       </div>
-      <h1>Gérez vos locations courte durée sans y passer vos journées.</h1>
+      <h1>Gérez vos locations courte durée sans y passer vos journées</h1>
       <p class="hero-sub">
-        Airbnb, Booking.com, Abritel, Expedia et toute plateforme iCal — centralisés. Calendrier, paiements, ménages, messagerie IA, facturation : un seul outil, zéro jonglage.
+        Airbnb, Booking, Expedia et plus : tout est là. Calendrier, paiements, ménages et messagerie IA réunis dans un outil unique. Arrêtez de jongler, commencez à piloter.
       </p>
       <div class="hero-actions">
         <a href="/register.html" class="btn btn-white btn-lg">
@@ -876,14 +877,18 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
       <div class="logo-pill"><img src="https://www.abritel.fr/favicon.ico" width="20" height="20" alt="Abritel" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Abritel</div>
       <div class="logo-pill"><img src="https://www.expedia.fr/favicon.ico" width="20" height="20" alt="Expedia" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Expedia</div>
       <div class="logo-pill"><i class="fab fa-stripe" style="color:#635BFF;font-size:20px;"></i> Stripe</div>
-      <div class="logo-pill"><i class="fas fa-link" style="color:var(--primary);font-size:16px;"></i> iCal universel</div>
+      <div class="logo-pill"><img src="https://www.leboncoin.fr/favicon.ico" width="20" height="20" alt="Leboncoin Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Leboncoin Vacances</div>
+      <div class="logo-pill"><img src="https://www.gites-de-france.com/favicon.ico" width="20" height="20" alt="Gîtes de France" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Gîtes de France</div>
+      <div class="logo-pill"><img src="https://www.pap.fr/favicon.ico" width="20" height="20" alt="PAP Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> PAP Vacances</div>
       <!-- Duplicate for loop -->
       <div class="logo-pill"><i class="fab fa-airbnb" style="color:#FF5A5F;font-size:20px;"></i> Airbnb</div>
       <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="18" height="18" rx="3" fill="#003580"/><text x="9" y="13.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="13" fill="white">B</text></svg> Booking.com</div>
       <div class="logo-pill"><img src="https://www.abritel.fr/favicon.ico" width="20" height="20" alt="Abritel" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Abritel</div>
       <div class="logo-pill"><img src="https://www.expedia.fr/favicon.ico" width="20" height="20" alt="Expedia" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Expedia</div>
       <div class="logo-pill"><i class="fab fa-stripe" style="color:#635BFF;font-size:20px;"></i> Stripe</div>
-      <div class="logo-pill"><i class="fas fa-link" style="color:var(--primary);font-size:16px;"></i> iCal universel</div>
+      <div class="logo-pill"><img src="https://www.leboncoin.fr/favicon.ico" width="20" height="20" alt="Leboncoin Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Leboncoin Vacances</div>
+      <div class="logo-pill"><img src="https://www.gites-de-france.com/favicon.ico" width="20" height="20" alt="Gîtes de France" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Gîtes de France</div>
+      <div class="logo-pill"><img src="https://www.pap.fr/favicon.ico" width="20" height="20" alt="PAP Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> PAP Vacances</div>
     </div>
   </div>
 </div>
@@ -913,13 +918,13 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
       </div>
       <div class="showcase-text">
         <div class="section-kicker"><i class="fas fa-calendar-days"></i> Calendrier & réservations</div>
-        <h2 class="section-title">Toutes vos réservations, une seule vue</h2>
+        <h2 class="section-title" style="font-size:clamp(36px,4.5vw,52px);">Toutes vos réservations, une seule vue</h2>
         <p class="section-sub">Airbnb, Booking, Abritel, Expedia et toutes vos plateformes iCal se synchronisent automatiquement. Plus jamais de doublon.</p>
         <ul class="feature-list">
-          <li><span class="check"><i class="fas fa-check"></i></span>Vue multi-logements avec prix par nuit et statut</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Synchronisation bidirectionnelle API directe Channex</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Import iCal universel (Leboncoin Vacances, Gîtes de France…)</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Règles tarifaires : saison, séjour minimum, weekends</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Vue multi-logements avec prix par nuit, statut et disponibilités</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Synchronisation bidirectionnelle en temps réel</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Import universel (Leboncoin Vacances, Gîtes de France, PAP Vacances…)</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Règles tarifaires avancées : saison, séjour minimum, weekends</li>
         </ul>
         <a href="/register.html" class="btn btn-primary">Essayer gratuitement <i class="fas fa-arrow-right"></i></a>
       </div>
@@ -935,12 +940,12 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
       <div class="showcase-text">
         <div class="section-kicker"><i class="fas fa-comments"></i> Messagerie + IA</div>
         <h2 class="section-title">L'IA qui connaît vos logements</h2>
-        <p class="section-sub">Toutes vos conversations dans une seule boîte. L'IA répond en 26 langues, détecte les urgences et escalade intelligemment.</p>
+        <p class="section-sub">Ne laissez plus aucun message sans réponse. Notre IA gère vos conversations en 26 langues, détecte les priorités et vous alerte instantanément en cas d'urgence.</p>
         <ul class="feature-list">
           <li><span class="check"><i class="fas fa-check"></i></span>Réponse automatique en 3s dans 26 langues</li>
           <li><span class="check"><i class="fas fa-check"></i></span>Connaissance complète de chaque logement</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Templates avec variables dynamiques</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Escalade intelligente si doute ou urgence</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Vos propres réponses automatiques enregistrées</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Alerte intelligente si doute ou urgence</li>
         </ul>
         <a href="/ia.html" class="btn btn-primary"><i class="fas fa-sparkles"></i> Tester l'IA en démo</a>
       </div>
@@ -955,13 +960,13 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
       </div>
       <div class="showcase-text">
         <div class="section-kicker"><i class="fas fa-euro-sign"></i> Revenus & reporting</div>
-        <h2 class="section-title">Vos finances, limpides et automatiques</h2>
-        <p class="section-sub">CA brut, revenu net, commissions OTA, ménage, taxe de séjour — tout est calculé par logement, par mois.</p>
+        <h2 class="section-title" style="font-size:clamp(36px,4.5vw,52px);">Vos revenus, sans aucun calcul manuel</h2>
+        <p class="section-sub">Du chiffre d'affaires au bénéfice net, Boosting Host calcule tout pour vous : frais de ménage, taxes de séjour et commissions des plateformes.</p>
         <ul class="feature-list">
-          <li><span class="check"><i class="fas fa-check"></i></span>RevPAN et moy. par réservation automatiques</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Ventilation conciergerie / propriétaire</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Factures propriétaires, attestations fiscales, débours</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Stripe intégré pour l'encaissement en ligne</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Tableaux de bord automatiques : suivez vos performances en un coup d'œil.</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Partage des revenus : la répartition propriétaire / conciergerie se fait toute seule.</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Compta en 1 clic : factures, attestations fiscales et frais avancés générés instantanément.</li>
+          <li><span class="check"><i class="fas fa-check"></i></span>Paiements sécurisés : encaissez vos voyageurs par carte bancaire avec Stripe.</li>
         </ul>
         <a href="/register.html" class="btn btn-primary">Voir le reporting <i class="fas fa-arrow-right"></i></a>
       </div>
@@ -1081,7 +1086,7 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
   <div class="container">
     <div style="text-align:center;" class="reveal">
       <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-rocket"></i> Mise en route</div>
-      <h2 class="section-title" style="text-align:center;">Opérationnel en 3 étapes</h2>
+      <h2 class="section-title" style="text-align:center;font-size:clamp(36px,4.5vw,52px);">Opérationnel en 3 étapes</h2>
       <p class="section-sub" style="margin:0 auto 0;">Pas de formation, pas de migration complexe. Vous êtes prêt en 15 minutes.</p>
     </div>
     <div class="steps-track">
@@ -1178,21 +1183,33 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
         Booking.com
       </div>
       <div class="integration-badge">
-        <img src="https://www.abritel.fr/favicon.ico" width="20" height="20" alt="Abritel" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" />
+        <img src="https://www.abritel.fr/favicon.ico" width="28" height="28" alt="Abritel" style="border-radius:6px;flex-shrink:0;" />
         Abritel
       </div>
       <div class="integration-badge">
-        <img src="https://www.expedia.fr/favicon.ico" width="20" height="20" alt="Expedia" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" />
+        <img src="https://www.expedia.fr/favicon.ico" width="28" height="28" alt="Expedia" style="border-radius:6px;flex-shrink:0;" />
         Expedia
       </div>
       <div class="integration-badge">
         <i class="fab fa-stripe" style="color:#635BFF;"></i>
         Stripe
       </div>
+      <div class="integration-badge">
+        <img src="https://www.leboncoin.fr/favicon.ico" width="28" height="28" alt="Leboncoin Vacances" style="border-radius:6px;flex-shrink:0;" />
+        Leboncoin Vacances
+      </div>
+      <div class="integration-badge">
+        <img src="https://www.gites-de-france.com/favicon.ico" width="28" height="28" alt="Gîtes de France" style="border-radius:6px;flex-shrink:0;" />
+        Gîtes de France
+      </div>
+      <div class="integration-badge">
+        <img src="https://www.pap.fr/favicon.ico" width="28" height="28" alt="PAP Vacances" style="border-radius:6px;flex-shrink:0;" />
+        PAP Vacances
+      </div>
     </div>
     <p class="integration-ical reveal">
       <i class="fas fa-link" style="color:var(--primary);margin-right:7px;"></i>
-      <strong>+ toute plateforme compatible iCal :</strong> Leboncoin Vacances, Gîtes de France, Amivac, PAP Vacances, et plus encore.
+      <strong>+ toute plateforme compatible iCal</strong> — Amivac, Abritel et plus encore.
     </p>
   </div>
 </section>
@@ -1206,12 +1223,12 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
     </div>
     <div class="audience-grid">
       <div class="audience-card reveal reveal-delay-1">
-        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&q=80" alt="Conciergerie" loading="lazy">
+        <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=700&q=80" alt="Hôte indépendant" loading="lazy">
         <div class="audience-overlay"></div>
         <div class="audience-content">
-          <div class="audience-icon"><i class="fas fa-building"></i></div>
-          <div class="audience-title">Conciergeries</div>
-          <div class="audience-desc">Calendrier, ménages, facturation propriétaires, sous-comptes. Tout ce qu'il faut pour gérer les biens de vos clients.</div>
+          <div class="audience-icon"><i class="fas fa-key"></i></div>
+          <div class="audience-title">Hôtes indépendants</div>
+          <div class="audience-desc">Même avec 1 logement, un calendrier propre et une IA qui répond à 2h du matin changent tout pour vos avis.</div>
         </div>
       </div>
       <div class="audience-card reveal reveal-delay-2">
@@ -1224,12 +1241,12 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
         </div>
       </div>
       <div class="audience-card reveal reveal-delay-3">
-        <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=700&q=80" alt="Hôte indépendant" loading="lazy">
+        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&q=80" alt="Conciergerie" loading="lazy">
         <div class="audience-overlay"></div>
         <div class="audience-content">
-          <div class="audience-icon"><i class="fas fa-key"></i></div>
-          <div class="audience-title">Hôtes indépendants</div>
-          <div class="audience-desc">Même avec 1 logement, un calendrier propre et une IA qui répond à 2h du matin changent tout pour vos avis.</div>
+          <div class="audience-icon"><i class="fas fa-building"></i></div>
+          <div class="audience-title">Conciergeries</div>
+          <div class="audience-desc">Calendrier, ménages, facturation propriétaires, sous-comptes. Tout ce qu'il faut pour gérer les biens de vos clients.</div>
         </div>
       </div>
     </div>
