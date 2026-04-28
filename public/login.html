@@ -59,16 +59,6 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 .form-field input::placeholder { color:rgba(255,255,255,.28); }
 .form-field .tpw { background:none; border:none; cursor:pointer; color:rgba(255,255,255,.35); padding:0; display:flex; align-items:center; font-size:13px; transition:color .15s; }
 .form-field .tpw:hover { color:rgba(255,255,255,.7); }
-.strength-wrap { margin-top:7px; display:flex; align-items:center; gap:8px; }
-.strength-bars { display:flex; gap:4px; flex:1; }
-.strength-bars span { flex:1; height:2.5px; border-radius:2px; background:rgba(255,255,255,.1); transition:background .25s; }
-.sw-weak   .strength-bars span:nth-child(1)    { background:#EF4444; }
-.sw-medium .strength-bars span:nth-child(-n+2) { background:#F59E0B; }
-.sw-strong .strength-bars span                 { background:#6ee7b7; }
-.strength-label { font-size:11px; color:rgba(255,255,255,.35); min-width:40px; transition:color .2s; font-weight:500; }
-.sw-weak   .strength-label { color:#EF4444; }
-.sw-medium .strength-label { color:#F59E0B; }
-.sw-strong .strength-label { color:#6ee7b7; }
 .submit-btn { width:100%; height:46px; border-radius:13px; background:var(--primary); color:white; border:none; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .2s; box-shadow:0 4px 16px var(--primary-glow); margin-top:4px; }
 .submit-btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:0 8px 24px rgba(26,122,94,.45); }
 .submit-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
@@ -129,7 +119,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
                 <a href="/reset-password-request.html" class="forgot-link">Mot de passe oublié ?</a>
               </div>
               <div class="form-field"><i class="fas fa-lock fi"></i><input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password"><button type="button" class="tpw" id="tpw"><i class="fas fa-eye-slash" id="tpwIcon"></i></button></div>
-              <div class="strength-wrap" id="sw"><div class="strength-bars"><span></span><span></span><span></span></div><span class="strength-label" id="sl"></span></div>
+              
             </div>
             <button type="submit" class="submit-btn" id="loginSubmit"><i class="fas fa-arrow-right-to-bracket"></i> Se connecter</button>
           </form>
@@ -156,7 +146,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   checkMagicToken().then(h=>{if(!h)checkAuth();});
   document.getElementById('tpw').addEventListener('click',()=>{const i=document.getElementById('loginPassword'),ic=document.getElementById('tpwIcon');i.type=i.type==='password'?'text':'password';ic.className=i.type==='text'?'fas fa-eye':'fas fa-eye-slash';});
   const sw=document.getElementById('sw'),sl=document.getElementById('sl');
-  document.getElementById('loginPassword').addEventListener('input',function(){sw.className='strength-wrap';if(!this.value){sl.textContent='';return;}if(this.value.length<8){sw.classList.add('sw-weak');sl.textContent='Faible';}else if(this.value.length<12||!/[A-Z]/.test(this.value)||!/[0-9]/.test(this.value)){sw.classList.add('sw-medium');sl.textContent='Moyen';}else{sw.classList.add('sw-strong');sl.textContent='Fort';}});
+  
   document.getElementById('loginForm').addEventListener('submit',async function(e){e.preventDefault();const email=document.getElementById('loginEmail').value.trim(),pwd=document.getElementById('loginPassword').value;if(!email||!pwd){showToast('Veuillez remplir tous les champs.');return;}const btn=document.getElementById('loginSubmit');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connexion…';try{const res=await fetch(API_BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data=await res.json();if(res.ok&&data.token){localStorage.setItem('lcc_token',data.token);if(data.user)localStorage.setItem('lcc_user',JSON.stringify(data.user));window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');}else{showToast(data.error||'Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}}catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
   document.getElementById('magicLinkBtn').addEventListener('click',async function(){const email=document.getElementById('loginEmail').value.trim();if(!email){showToast("Entrez d'abord votre adresse email.");document.getElementById('loginEmail').focus();return;}this.disabled=true;this.innerHTML='<i class="fas fa-spinner fa-spin"></i> Envoi…';try{const r=await fetch(API_BASE+'/api/auth/magic-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});const d=await r.json();if(r.ok){showToast('✉️ Lien envoyé ! Vérifiez votre boîte email.','success');this.innerHTML='<i class="fas fa-check"></i> Lien envoyé !';}else{showToast(d.error||"Erreur lors de l'envoi.");this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}}catch{showToast('Erreur réseau.');this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}});
 </script>
