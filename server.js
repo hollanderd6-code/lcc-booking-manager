@@ -9300,121 +9300,142 @@ function bhEmailTemplate({ icon, title, subtitle, tag, bodyHtml, footerNote, acc
   const accentDark = accentColor ? accentColor : '#0A3D2B';
   const tagLabel = tag || subtitle || '';
   return `<!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
   <style>
-    body{margin:0;padding:0;background:#EDEAE3;font-family:Arial,Helvetica,sans-serif;}
-    .wrap{max-width:580px;margin:0 auto;padding:28px 16px;}
-    .card{border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.10);border:1px solid #E0DBD0;}
-    .hdr{position:relative;height:200px;overflow:hidden;}
-    .hdr-body{background:#fff;padding:32px 36px;}
-    .hdr-body p{margin:0 0 14px;font-size:15px;color:#374151;line-height:1.75;}
-    .hdr-body p strong{color:#111;}
-    .btn{display:inline-block;background:${accent};color:#fff !important;text-decoration:none;padding:13px 30px;border-radius:9px;font-size:14px;font-weight:700;letter-spacing:.1px;}
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+    body{margin:0;padding:0;background-color:#EDEAE3;font-family:Arial,Helvetica,sans-serif;}
+    table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;}
+    img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;}
+    .btn{display:inline-block;background:${accent};color:#ffffff !important;text-decoration:none;padding:13px 30px;border-radius:9px;font-size:14px;font-weight:700;font-family:Arial,Helvetica,sans-serif;mso-padding-alt:0;text-align:center;}
     .cta-block{background:#F5F2EC;border:1px solid #E0DBD0;border-radius:12px;padding:22px;text-align:center;margin:22px 0;}
-    .cta-hint{font-size:12px;color:#9CA3AF;margin:0 0 12px;}
-    .info-card{background:#F5F2EC;border-left:3px solid ${accent};border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:14px;color:#444;line-height:1.65;}
+    .cta-hint{font-size:12px;color:#9CA3AF;margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;}
+    .info-card{background:#F5F2EC;border-left:4px solid ${accent};padding:14px 18px;margin:18px 0;font-size:14px;color:#444444;line-height:1.65;font-family:Arial,Helvetica,sans-serif;}
     .info-card strong{color:${accent};}
-    .alert-card{background:#FFFBEB;border-radius:12px;padding:16px 18px;margin:18px 0;font-size:14px;color:#92400E;border:1px solid #FDE68A;}
-    .danger-card{background:#FEF2F2;border-radius:12px;padding:16px 18px;margin:18px 0;font-size:14px;color:#991B1B;border:1px solid #FECACA;}
-    .success-card{background:#F0FAF5;border-left:3px solid ${accent};border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0;font-size:14px;color:#166534;}
-    .plan-badge{display:inline-block;background:#E8F5F0;color:${accent};font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:10px;border:1px solid #C6E8D9;}
-    .amount-big{font-size:44px;font-weight:900;color:${accent};line-height:1;letter-spacing:-2px;margin:6px 0;}
-    .amount-sub{font-size:12px;color:#9CA3AF;margin-bottom:16px;}
+    .alert-card{background:#FFFBEB;padding:16px 18px;margin:18px 0;font-size:14px;color:#92400E;border:1px solid #FDE68A;font-family:Arial,Helvetica,sans-serif;}
+    .danger-card{background:#FEF2F2;padding:16px 18px;margin:18px 0;font-size:14px;color:#991B1B;border:1px solid #FECACA;font-family:Arial,Helvetica,sans-serif;}
+    .success-card{background:#F0FAF5;border-left:4px solid ${accent};padding:14px 18px;margin:18px 0;font-size:14px;color:#166534;font-family:Arial,Helvetica,sans-serif;}
+    .plan-badge{display:inline-block;background:#E8F5F0;color:${accent};font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:10px;border:1px solid #C6E8D9;font-family:Arial,Helvetica,sans-serif;}
+    .amount-big{font-size:44px;font-weight:900;color:${accent};line-height:1;letter-spacing:-2px;margin:6px 0;font-family:Arial,Helvetica,sans-serif;}
+    .amount-sub{font-size:12px;color:#9CA3AF;margin-bottom:16px;font-family:Arial,Helvetica,sans-serif;}
     .feat-row{display:table;width:100%;padding:10px 0;border-bottom:1px solid #F0EBE1;}
     .feat-row:last-child{border-bottom:none;}
-    .feat-icon{display:table-cell;width:36px;vertical-align:middle;font-size:16px;}
-    .feat-text{display:table-cell;vertical-align:middle;font-size:14px;color:#374151;padding-left:4px;}
-    .feat-text strong{color:#111;}
-    .booking-grid{width:100%;border-collapse:separate;border-spacing:8px;margin:16px 0;}
-    .booking-cell{background:#F9F8F5;border:1px solid #EAE6DD;border-radius:10px;padding:10px 12px;font-size:13px;}
-    .booking-lbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#9CA3AF;font-weight:600;display:block;margin-bottom:3px;}
-    .booking-val{font-size:14px;color:#111;font-weight:600;}
-    .booking-val-green{font-size:14px;color:${accent};font-weight:600;}
+    .feat-icon{display:table-cell;width:32px;vertical-align:middle;font-size:16px;}
+    .feat-text{display:table-cell;vertical-align:middle;font-size:14px;color:#374151;padding-left:6px;font-family:Arial,Helvetica,sans-serif;}
+    .feat-text strong{color:#111111;}
     .divider{border:none;border-top:1px solid #F0EBE1;margin:20px 0;}
-    .link-fallback{font-size:11.5px;color:#C4BEAF;word-break:break-all;line-height:1.6;margin-top:14px;}
+    .link-fallback{font-size:11px;color:#C4BEAF;word-break:break-all;line-height:1.6;margin-top:14px;font-family:Arial,Helvetica,sans-serif;}
     .link-fallback a{color:${accent};}
-    .signoff{font-size:13px;color:#9CA3AF;margin-top:22px;padding-top:16px;border-top:1px solid #F0EBE1;}
-    .footer{background:#F5F2EC;padding:18px 36px;text-align:center;border-top:1px solid #E8E4DC;}
-    .footer p{font-size:11px;color:#B8B2A7;line-height:1.7;}
-    .footer a{color:${accent};text-decoration:none;}
+    .signoff{font-size:13px;color:#9CA3AF;margin-top:22px;padding-top:16px;border-top:1px solid #F0EBE1;font-family:Arial,Helvetica,sans-serif;}
+    p{margin:0 0 14px;font-size:15px;color:#374151;line-height:1.75;font-family:Arial,Helvetica,sans-serif;}
+    p strong{color:#111111;}
     ul{margin:0 0 14px;padding-left:18px;}
-    ul li{font-size:14px;color:#444;line-height:1.8;}
+    ul li{font-size:14px;color:#444444;line-height:1.8;font-family:Arial,Helvetica,sans-serif;}
+    .booking-grid{width:100%;border-collapse:separate;border-spacing:8px;margin:16px 0;}
+    .booking-cell{background:#F9F8F5;border:1px solid #EAE6DD;padding:10px 12px;}
+    .booking-lbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#9CA3AF;font-weight:700;display:block;margin-bottom:3px;font-family:Arial,Helvetica,sans-serif;}
+    .booking-val{font-size:14px;color:#111111;font-weight:700;font-family:Arial,Helvetica,sans-serif;}
+    .booking-val-green{font-size:14px;color:${accent};font-weight:700;font-family:Arial,Helvetica,sans-serif;}
   </style>
 </head>
-<body>
-<div class="wrap">
-<div class="card">
-  <div class="hdr">
-    <svg width="100%" height="200" viewBox="0 0 580 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bhg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="${accentDark}"/>
-          <stop offset="100%" stop-color="${accent}"/>
-        </linearGradient>
-      </defs>
-      <rect width="580" height="200" fill="url(#bhg)"/>
-      <circle cx="480" cy="100" r="140" fill="rgba(255,255,255,.03)"/>
-      <circle cx="480" cy="100" r="95" fill="rgba(255,255,255,.04)"/>
-      <line x1="355" y1="62" x2="400" y2="92" stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="4 3"/>
-      <line x1="445" y1="44" x2="400" y2="92" stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="4 3"/>
-      <line x1="400" y1="128" x2="400" y2="92" stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="4 3"/>
-      <line x1="352" y1="145" x2="400" y2="128" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="4 3"/>
-      <line x1="468" y1="138" x2="400" y2="128" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="4 3"/>
-      <line x1="510" y1="74" x2="445" y2="44" stroke="rgba(255,255,255,.08)" stroke-width="1" stroke-dasharray="4 3"/>
-      <circle cx="400" cy="110" r="26" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" stroke-width="1.5"/>
-      <rect x="389" y="99" width="22" height="22" rx="5" fill="${accent}"/>
-      <text x="400" y="115" text-anchor="middle" font-size="13" font-weight="900" fill="white" font-family="Arial,sans-serif">B</text>
-      <rect x="325" y="40" width="42" height="42" rx="11" fill="#FF5A5F" opacity=".93"/>
-      <text x="346" y="67" text-anchor="middle" font-size="20" font-weight="900" fill="white" font-family="Arial,sans-serif">A</text>
-      <rect x="418" y="22" width="42" height="42" rx="11" fill="#003580" opacity=".93"/>
-      <text x="439" y="49" text-anchor="middle" font-size="18" font-weight="900" fill="white" font-family="Arial,sans-serif">B.</text>
-      <rect x="484" y="52" width="38" height="38" rx="10" fill="#F5A623" opacity=".9"/>
-      <text x="503" y="76" text-anchor="middle" font-size="16" font-weight="900" fill="white" font-family="Arial,sans-serif">E</text>
-      <rect x="502" y="18" width="36" height="24" rx="7" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
-      <text x="520" y="34" text-anchor="middle" font-size="8" font-weight="700" fill="rgba(255,255,255,.6)" font-family="Arial,sans-serif">VRBO</text>
-      <rect x="325" y="118" width="40" height="40" rx="10" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
-      <rect x="331" y="124" width="28" height="5" rx="2" fill="rgba(255,255,255,.4)"/>
-      <rect x="331" y="134" width="8" height="8" rx="2" fill="rgba(255,255,255,.28)"/>
-      <rect x="343" y="134" width="8" height="8" rx="2" fill="rgba(255,255,255,.28)"/>
-      <rect x="331" y="146" width="8" height="8" rx="2" fill="rgba(255,255,255,.18)"/>
-      <rect x="343" y="146" width="8" height="8" rx="2" fill="rgba(255,255,255,.32)"/>
-      <rect x="446" y="112" width="40" height="40" rx="10" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
-      <rect x="453" y="122" width="26" height="4" rx="2" fill="rgba(255,255,255,.38)"/>
-      <rect x="453" y="130" width="18" height="4" rx="2" fill="rgba(255,255,255,.22)"/>
-      <rect x="453" y="138" width="22" height="4" rx="2" fill="rgba(255,255,255,.18)"/>
-      <circle cx="478" cy="144" r="3.5" fill="rgba(255,255,255,.22)"/>
-    </svg>
-    <!-- Header text overlay -->
-    <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:center;padding:0 32px;">
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;">
-        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-          <rect width="32" height="32" rx="8" fill="rgba(255,255,255,.18)"/>
-          <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
-          <text x="16" y="22" text-anchor="middle" font-size="17" font-weight="900" fill="white" font-family="Arial,sans-serif">B</text>
-        </svg>
-        <span style="font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,.7);">Boostinghost</span>
-      </div>
-      ${tagLabel ? `<div style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.85);background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);margin-bottom:10px;width:fit-content;">${tagLabel}</div>` : ''}
-      <div style="font-size:23px;font-weight:800;color:#fff;letter-spacing:-.4px;line-height:1.15;">${title}</div>
-    </div>
-  </div>
-  <div class="hdr-body">
-    ${bodyHtml}
-    <p class="signoff">L'équipe Boostinghost</p>
-  </div>
-  <div class="footer">
-    <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><rect width="18" height="18" rx="4" fill="${accent}"/><text x="9" y="13" text-anchor="middle" font-size="10" font-weight="900" fill="white" font-family="Arial,sans-serif">B</text></svg>
-      <span style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;">Boostinghost</span>
-    </div>
-    ${footerNote ? `<p>${footerNote}</p>` : ''}
-    <p>© ${year} Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
-  </div>
-</div>
-</div>
+<body style="margin:0;padding:0;background-color:#EDEAE3;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EDEAE3;">
+  <tr>
+    <td align="center" style="padding:28px 16px;">
+      <table role="presentation" width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E0DBD0;">
+
+        <!-- HEADER -->
+        <tr>
+          <td style="background-color:${accentDark};padding:32px 32px 24px 32px;">
+            <!-- Logo row -->
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td>
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="background-color:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
+                        <span style="font-size:18px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;line-height:32px;">B</span>
+                      </td>
+                      <td style="padding-left:10px;vertical-align:middle;">
+                        <span style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.7);font-family:Arial,Helvetica,sans-serif;">Boostinghost</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td align="right" style="vertical-align:top;">
+                  <!-- Platform icons -->
+                  <table role="presentation" cellpadding="0" cellspacing="4">
+                    <tr>
+                      <td style="background-color:#FF5A5F;border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
+                        <span style="font-size:15px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">A</span>
+                      </td>
+                      <td style="background-color:#003580;border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
+                        <span style="font-size:13px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">B.</span>
+                      </td>
+                      <td style="background-color:#F5A623;border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
+                        <span style="font-size:13px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">E</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            <!-- Tag + Title -->
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:20px;">
+              <tr>
+                <td>
+                  ${tagLabel ? `<div style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.85);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);margin-bottom:12px;font-family:Arial,Helvetica,sans-serif;">${tagLabel}</div><br>` : ''}
+                  <span style="font-size:24px;font-weight:800;color:#ffffff;letter-spacing:-0.3px;line-height:1.2;font-family:Arial,Helvetica,sans-serif;">${title}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- BODY -->
+        <tr>
+          <td style="background-color:#ffffff;padding:32px 36px;">
+            ${bodyHtml}
+            <p class="signoff">L'équipe Boostinghost</p>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="background-color:#F5F2EC;padding:18px 36px;text-align:center;border-top:1px solid #E8E4DC;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td align="center" style="padding-bottom:8px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="background-color:${accent};border-radius:5px;width:20px;height:20px;text-align:center;vertical-align:middle;">
+                        <span style="font-size:11px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;line-height:20px;">B</span>
+                      </td>
+                      <td style="padding-left:7px;vertical-align:middle;">
+                        <span style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,Helvetica,sans-serif;">Boostinghost</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              ${footerNote ? `<tr><td align="center" style="font-size:11px;color:#B8B2A7;line-height:1.7;font-family:Arial,Helvetica,sans-serif;padding-bottom:4px;">${footerNote}</td></tr>` : ''}
+              <tr>
+                <td align="center" style="font-size:11px;color:#B8B2A7;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
+                  &copy; ${year} Boostinghost &middot; <a href="mailto:contact@boostinghost.fr" style="color:${accent};text-decoration:none;">contact@boostinghost.fr</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
 </body>
 </html>`;
 }
