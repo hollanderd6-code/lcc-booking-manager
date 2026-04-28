@@ -3621,6 +3621,9 @@ async function loadTemplates() {
           <button onclick="editTemplate(${t.id})" style="padding:5px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;font-size:11px;cursor:pointer;color:#374151;">
             <i class="fas fa-edit"></i>
           </button>
+          <button onclick="copyTemplate(${t.id})" style="padding:5px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;font-size:11px;cursor:pointer;color:#374151;" title="Dupliquer">
+            <i class="fas fa-copy"></i>
+          </button>
           <button onclick="toggleTemplate(${t.id}, ${!t.active})" style="padding:5px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;font-size:11px;cursor:pointer;color:${t.active ? '#EF4444' : '#1A7A5E'};">
             <i class="fas fa-${t.active ? 'pause' : 'play'}"></i>
           </button>
@@ -3716,6 +3719,24 @@ async function editTemplate(id) {
     const data = await res.json();
     const t = (data.templates || []).find(t => t.id === id);
     if (t) openTemplateModal(t);
+  } catch(e) {}
+}
+
+async function copyTemplate(id) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`/api/message-templates?property_id=`, { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    const t = (data.templates || []).find(t => t.id === id);
+    if (!t) return;
+    // Ouvrir le modal pré-rempli avec les données copiées, sans id (= création)
+    const copy = {
+      ...t,
+      id: null,
+      title: t.title + ' (copie)',
+      active: false
+    };
+    openTemplateModal(copy);
   } catch(e) {}
 }
 
