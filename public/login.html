@@ -56,6 +56,16 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 .form-field:focus-within { border-color:rgba(110,231,183,.5); background:rgba(255,255,255,.12); }
 .form-field i.fi { color:rgba(255,255,255,.35); font-size:13px; flex-shrink:0; }
 .form-field input { flex:1; border:none; outline:none; font-size:13.5px; font-family:'DM Sans',sans-serif; color:white; background:transparent; }
+.form-field input:-webkit-autofill,
+.form-field input:-webkit-autofill:hover,
+.form-field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: white !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  background-color: transparent !important;
+  caret-color: white;
+}
 .form-field input::placeholder { color:rgba(255,255,255,.28); }
 .form-field .tpw { background:none; border:none; cursor:pointer; color:rgba(255,255,255,.35); padding:0; display:flex; align-items:center; font-size:13px; transition:color .15s; }
 .form-field .tpw:hover { color:rgba(255,255,255,.7); }
@@ -262,6 +272,5 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   document.getElementById('loginForm').addEventListener('submit',async function(e){e.preventDefault();const email=document.getElementById('loginEmail').value.trim(),pwd=document.getElementById('loginPassword').value;if(!email||!pwd){showToast('Veuillez remplir tous les champs.');return;}const btn=document.getElementById('loginSubmit');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connexion…';try{const res=await fetch(API_BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data=await res.json();if(res.ok&&data.token){localStorage.setItem('lcc_token',data.token);if(data.user)localStorage.setItem('lcc_user',JSON.stringify(data.user));if(window._onLoginSuccess)window._onLoginSuccess(data.token);window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');}else{showToast(data.error||'Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}}catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
   document.getElementById('magicLinkBtn').addEventListener('click',async function(){const email=document.getElementById('loginEmail').value.trim();if(!email){showToast("Entrez d'abord votre adresse email.");document.getElementById('loginEmail').focus();return;}this.disabled=true;this.innerHTML='<i class="fas fa-spinner fa-spin"></i> Envoi…';try{const r=await fetch(API_BASE+'/api/auth/magic-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});const d=await r.json();if(r.ok){showToast('✉️ Lien envoyé ! Vérifiez votre boîte email.','success');this.innerHTML='<i class="fas fa-check"></i> Lien envoyé !';}else{showToast(d.error||"Erreur lors de l'envoi.");this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}}catch{showToast('Erreur réseau.');this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}});
 </script>
-<script src="/js/cookies-banner.js"></script>  
 </body>
 </html>
