@@ -6,6 +6,10 @@
 (function () {
   'use strict';
 
+  // Ne pas afficher sur app native iOS/Android
+  const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:');
+  if (IS_NATIVE) return;
+
   const COOKIE_KEY = 'bh_cookie_consent';
   const COOKIE_VERSION = '1';
 
