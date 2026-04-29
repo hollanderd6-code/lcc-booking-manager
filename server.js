@@ -199,9 +199,10 @@ function getDeepLTarget(guestCountry, guestLanguage) {
   if (guestCountry) {
     const country = guestCountry.toUpperCase().trim();
     const target = COUNTRY_TO_DEEPL_LANG[country];
-    return target ?? null; // null = francophone ou inconnu → pas de traduction
+    if (target === null) return null; // francophone explicite → pas de traduction
+    return target || 'EN-GB'; // pays inconnu → anglais par défaut
   }
-  return null; // pas d'info → pas de traduction
+  return 'EN-GB'; // pas d'info pays/langue → anglais par défaut
 }
 
 
@@ -921,7 +922,12 @@ async function syncSingleIcalUrl(pool, property, entry) {
 
         if (templates.rows.length > 0) {
           const convRow = await pool.query(
-            `SELECT * FROM conversations WHERE id = $1`, [convId]
+            `SELECT c.*, r.guest_country, r.guest_language
+             FROM conversations c
+             LEFT JOIN reservations r ON (
+               r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL
+             )
+             WHERE c.id = $1 LIMIT 1`, [convId]
           );
           const propInfo = await pool.query(
             `SELECT address, arrival_time, departure_time, access_code, wifi_name,
@@ -25654,7 +25660,11 @@ app.post('/api/channex/webhook', async (req, res) => {
           if (templates.rows.length > 0) {
             // Retrouver la conversation créée
             const convRow = await pool.query(
-              `SELECT * FROM conversations WHERE channex_booking_id = $1 OR (property_id = $2 AND DATE(reservation_start_date) = DATE($3)) ORDER BY created_at DESC LIMIT 1`,
+              `SELECT c.*, r.guest_country, r.guest_language
+               FROM conversations c
+               LEFT JOIN reservations r ON (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
+               WHERE c.channex_booking_id = $1 OR (c.property_id = $2 AND DATE(c.reservation_start_date) = DATE($3))
+               ORDER BY c.created_at DESC LIMIT 1`,
               [result.channex_booking_id || result.uid, result.property_id, result.start_date]
             );
             if (convRow.rows[0]) {
