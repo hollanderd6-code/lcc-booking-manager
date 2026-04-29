@@ -9544,6 +9544,11 @@ async function sendWelcomeEmail(email, firstName) {
       <p>Démarrez dès maintenant</p>
       <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/pricing.html" class="btn">Choisir mon plan →</a>
     </div>
+    <div style="background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:12px;padding:20px 24px;margin:20px 0;text-align:center;">
+      <p style="font-size:16px;margin:0 0 6px;font-weight:700;color:#1C1C1C;">🎯 Démarrage accompagné offert</p>
+      <p style="font-size:13px;color:#555;margin:0 0 16px;line-height:1.6;">Prenez 45 minutes avec nous pour configurer votre compte ensemble — connexion des plateformes, paramétrage des logements, messagerie IA. Gratuit, inclus avec tous les plans.</p>
+      <a href="https://calendly.com/boostinghost/demarrage-accompagne" style="display:inline-block;background:#1A7A5E;color:white;font-weight:700;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">📅 Réserver ma session →</a>
+    </div>
     <hr class="divider">
     <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Nos formules</p>
     <table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:14px;margin-bottom:24px;">
