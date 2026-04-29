@@ -3676,6 +3676,16 @@ async function loadTemplateProperties() {
   } catch(e) {}
 }
 
+function updateTriggerHint(val) {
+  const btn = document.getElementById('triggerHintBtn');
+  if (!btn) return;
+  if (val === 'on_arrival' || val === 'before_arrival') {
+    btn.style.display = 'block';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
 function openTemplateModal(template = null, isCopy = false) {
   document.getElementById('tplId').value = (template?.id && !isCopy) ? template.id : '';
   document.getElementById('tplTitle').value = template?.title || '';
