@@ -181,8 +181,7 @@
     <div class="bh-cookie-body">
       <div class="bh-cookie-title">Ce site utilise des cookies</div>
       <div class="bh-cookie-text">
-        Nous utilisons des cookies nécessaires au fonctionnement du service (session, authentification, paiements).
-        <a href="/politique-confidentialite.html">En savoir plus</a>
+        Cookies nécessaires au fonctionnement du service. <a href="/politique-confidentialite.html">En savoir plus</a>
       </div>
     </div>
     <div class="bh-cookie-actions">
