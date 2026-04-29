@@ -1230,12 +1230,25 @@ function insertTplVar(variable) {
 
           <div style="margin-bottom:14px;">
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Déclencheur</label>
-            <select id="tplTrigger" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
-              <option value="on_booking">À la réservation (immédiat)</option>
-              <option value="before_arrival">La veille de l'arrivée à 7h</option>
-              <option value="on_arrival">Jour de l'arrivée à 7h</option>
-              <option value="after_departure">Jour du départ à 15h</option>
-            </select>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <select id="tplTrigger" onchange="updateTriggerHint(this.value)" style="flex:1;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
+                <option value="on_booking">À la réservation (immédiat)</option>
+                <option value="before_arrival">La veille de l'arrivée à 7h</option>
+                <option value="on_arrival">Jour de l'arrivée à 7h</option>
+                <option value="after_departure">Jour du départ à 15h</option>
+              </select>
+              <div id="triggerHintBtn" style="display:none;position:relative;">
+                <button type="button" id="triggerHintTrigger"
+                  style="width:22px;height:22px;border-radius:50%;background:#E0F2EC;border:1.5px solid #1A7A5E;color:#1A7A5E;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+                  onmouseenter="document.getElementById('triggerHintBox').style.display='block'"
+                  onmouseleave="document.getElementById('triggerHintBox').style.display='none'">?</button>
+                <div id="triggerHintBox" style="display:none;position:absolute;right:0;bottom:30px;width:260px;background:#1A7A5E;color:white;font-size:12px;line-height:1.6;padding:10px 14px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:100;font-family:'DM Sans',sans-serif;">
+                  <strong>⚠️ Conditionné à la caution</strong><br>
+                  Ce message ne sera envoyé que si la caution a été validée par le voyageur. Sans caution confirmée, les informations d'arrivée ne seront pas transmises.
+                  <div style="position:absolute;bottom:-6px;right:10px;width:12px;height:12px;background:#1A7A5E;transform:rotate(45deg);border-radius:2px;"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <input type="hidden" id="tplOffset" value="0">
@@ -3668,6 +3681,7 @@ function openTemplateModal(template = null, isCopy = false) {
   document.getElementById('tplTitle').value = template?.title || '';
   document.getElementById('tplMessage').value = template?.message || '';
   document.getElementById('tplTrigger').value = template?.trigger_type || 'on_booking';
+  updateTriggerHint(template?.trigger_type || 'on_booking');
   document.getElementById('tplOffset').value = template?.trigger_offset_hours || '';
   document.getElementById('tplProperty').value = template?.property_id || '';
   document.getElementById('tplModalTitle').textContent = (template && !isCopy) ? 'Modifier le template' : 'Nouveau template';
