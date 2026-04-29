@@ -5,6 +5,55 @@
 
 const { sendAutoMessage } = require('./integrated-chat-handler');
 
+// 🌍 Traduction DeepL (même logique que server.js)
+const COUNTRY_TO_LANG = {
+  'GB':'EN-GB','US':'EN-US','AU':'EN-GB','CA':'EN-GB','IE':'EN-GB','NZ':'EN-GB',
+  'ZA':'EN-GB','SG':'EN-GB','GY':'EN-GB','JM':'EN-GB','TT':'EN-GB','IN':'EN-GB',
+  'PK':'EN-GB','PH':'EN-GB','MY':'EN-GB','HK':'EN-GB','NG':'EN-GB','KE':'EN-GB',
+  'DE':'DE','AT':'DE','ES':'ES','MX':'ES','AR':'ES','IT':'IT','NL':'NL',
+  'PT':'PT-PT','BR':'PT-BR','PL':'PL','RU':'RU','JP':'JA','CN':'ZH','KR':'KO',
+  'DK':'DA','SE':'SV','NO':'NB','FI':'FI','CZ':'CS','RO':'RO','HU':'HU',
+  'GR':'EL','TR':'TR','UA':'UK','BG':'BG',
+  'FR':null,'LU':null,'MC':null,'CI':null,'SN':null,'TN':null,'MA':null,'DZ':null,
+};
+
+async function translateDepositMessage(text, guestCountry, guestLanguage) {
+  const apiKey = process.env.DEEPL_API_KEY;
+  if (!apiKey || !text) return text;
+  let target = null;
+  if (guestLanguage) {
+    const lang = guestLanguage.toUpperCase().split('-')[0];
+    const LANG_MAP = { 'EN':'EN-GB','DE':'DE','ES':'ES','IT':'IT','NL':'NL','PT':'PT-PT',
+      'PL':'PL','RU':'RU','JA':'JA','ZH':'ZH','KO':'KO','DA':'DA','SV':'SV','NB':'NB',
+      'FI':'FI','CS':'CS','RO':'RO','HU':'HU','EL':'EL','TR':'TR','UK':'UK','BG':'BG' };
+    if (lang === 'FR') return text;
+    target = LANG_MAP[lang] || null;
+  }
+  if (!target && guestCountry) {
+    const c = guestCountry.toUpperCase().trim();
+    if (COUNTRY_TO_LANG[c] === null) return text;
+    target = COUNTRY_TO_LANG[c] || 'EN-GB';
+  }
+  if (!target) target = 'EN-GB'; // fallback anglais
+  try {
+    const axios = require('axios');
+    const response = await axios.post(
+      'https://api-free.deepl.com/v2/translate',
+      new URLSearchParams({ auth_key: apiKey, text, target_lang: target, source_lang: 'FR', preserve_formatting: '1' }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 8000 }
+    );
+    const translated = response.data?.translations?.[0]?.text;
+    if (translated) {
+      console.log(`🌍 [DEPOSIT] Traduit vers ${target}`);
+      return translated;
+    }
+    return text;
+  } catch (err) {
+    console.warn(`⚠️ [DEPOSIT] DeepL erreur (${target}):`, err.message);
+    return text;
+  }
+}
+
 /**
  * Récupérer les infos de la propriété pour le message
  */
@@ -27,7 +76,7 @@ async function getPropertyInfo(pool, propertyId) {
 async function getConversationFromReservation(pool, reservationUid) {
   try {
     const resResult = await pool.query(
-      'SELECT id, property_id, start_date, channex_booking_id FROM reservations WHERE uid = $1',
+      'SELECT id, property_id, start_date, channex_booking_id, guest_country, guest_language FROM reservations WHERE uid = $1',
       [reservationUid]
     );
     if (resResult.rows.length === 0) return null;
@@ -41,7 +90,7 @@ async function getConversationFromReservation(pool, reservationUid) {
       );
       if (byChannex.rows.length > 0) {
         console.log(`✅ Conversation trouvée par channex_booking_id pour ${reservationUid}`);
-        return { id: byChannex.rows[0].id, channexId: byChannex.rows[0].channex_booking_id };
+        return { id: byChannex.rows[0].id, channexId: byChannex.rows[0].channex_booking_id, guestCountry: res.guest_country || null, guestLanguage: res.guest_language || null };
       }
     }
 
@@ -54,7 +103,7 @@ async function getConversationFromReservation(pool, reservationUid) {
     );
     if (byDate.rows.length > 0) {
       console.log(`🔄 Conversation trouvée par property+date pour ${reservationUid}`);
-      return { id: byDate.rows[0].id, channexId: byDate.rows[0].channex_booking_id || null };
+      return { id: byDate.rows[0].id, channexId: byDate.rows[0].channex_booking_id || null, guestCountry: res.guest_country || null, guestLanguage: res.guest_language || null };
     }
     return null;
   } catch (error) {
@@ -166,7 +215,8 @@ L'autorisation ne débite généralement pas votre carte immédiatement : le mon
 
 Merci ! 😊`;
 
-        const success = await sendDepositMessage(pool, io, conversationId, message, channexId);
+        const translatedMsg = await translateDepositMessage(message, conv?.guestCountry || null, conv?.guestLanguage || null);
+        const success = await sendDepositMessage(pool, io, conversationId, translatedMsg, channexId);
 
         if (success) {
           // Marquer le reminder comme envoyé
@@ -289,7 +339,8 @@ Vous recevrez les informations d'arrivée pour ${propertyName} le jour de votre 
     }
 
     // Envoyer le message de confirmation
-    await sendDepositMessage(pool, io, conversationId, confirmMessage, conv?.channexId || null);
+    const tConfirm = await translateDepositMessage(confirmMessage, conv?.guestCountry || null, conv?.guestLanguage || null);
+    await sendDepositMessage(pool, io, conversationId, tConfirm, conv?.channexId || null);
 
     // ✅ ENVOYER LE MESSAGE D'ARRIVÉE SI JOUR J APRÈS 7H
     if (shouldSendNow) {
@@ -357,7 +408,8 @@ Bonne nouvelle ! Votre caution de ${amountEuros}€ pour ${propertyName} a été
 Merci pour votre séjour et à très bientôt ! 😊`;
 
     // Envoyer le message
-    return await sendDepositMessage(pool, io, conversationId, message, conv?.channexId || null);
+    const tMsg1 = await translateDepositMessage(message, conv?.guestCountry || null, conv?.guestLanguage || null);
+    return await sendDepositMessage(pool, io, conversationId, tMsg1, conv?.channexId || null);
 
   } catch (error) {
     console.error(`❌ Erreur sendDepositReleasedMessage:`, error);
@@ -437,7 +489,8 @@ Si le problème persiste, contactez votre banque ou utilisez une autre carte.
 Merci ! 😊`;
 
     // Envoyer le message
-    return await sendDepositMessage(pool, io, conversationId, message, conv?.channexId || null);
+    const tMsg1 = await translateDepositMessage(message, conv?.guestCountry || null, conv?.guestLanguage || null);
+    return await sendDepositMessage(pool, io, conversationId, tMsg1, conv?.channexId || null);
 
   } catch (error) {
     console.error(`❌ Erreur sendDepositFailedMessage:`, error);
