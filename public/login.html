@@ -163,22 +163,31 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   // ============================================
   // 🔐 FACE ID / BIOMÉTRIE
   // ============================================
-  function getBiometricPlugin() {
-    // @aparajita/capacitor-biometric-auth s'enregistre sous 'BiometricAuth'
-    return window.Capacitor?.Plugins?.BiometricAuth || null;
+  // ============================================
+  // 🔐 FACE ID via bridge natif AppDelegate.swift
+  // Utilise window._checkBiometryAvailable et window._authenticateWithFaceID
+  // ============================================
+
+  function checkBiometryAvailable() {
+    return new Promise((resolve) => {
+      if (!IS_IOS || !window._checkBiometryAvailable) return resolve(false);
+      window._faceIDCheckCallback = (available) => resolve(available === true);
+      window._checkBiometryAvailable(null);
+    });
+  }
+
+  function authenticateWithFaceID() {
+    return new Promise((resolve) => {
+      if (!IS_IOS || !window._authenticateWithFaceID) return resolve(false);
+      window._faceIDAuthCallback = (success) => resolve(success === true);
+      window._authenticateWithFaceID(null);
+    });
   }
 
   async function triggerFaceId() {
-    if (!IS_NATIVE) return;
-    const plugin = getBiometricPlugin();
-    if (!plugin) { showToast('Plugin biométrique non disponible.'); return; }
-    try {
-      await plugin.authenticate({
-        reason: 'Connexion à Boostinghost',
-        cancelTitle: 'Annuler',
-        allowDeviceCredential: false,
-        iosFallbackTitle: 'Utiliser le code',
-      });
+    if (!IS_IOS) return;
+    const success = await authenticateWithFaceID();
+    if (success) {
       const saved = localStorage.getItem('lcc_biometric_token');
       if (saved) {
         localStorage.setItem('lcc_token', saved);
@@ -186,33 +195,22 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
       } else {
         showToast("Connectez-vous d'abord avec votre mot de passe.");
       }
-    } catch (e) {
-      const msg = (e?.code || e?.message || '').toLowerCase();
-      if (!msg.includes('cancel') && !msg.includes('dismiss') && !msg.includes('user')) {
-        showToast('Face ID non disponible.');
-      }
     }
+    // Si échec/annulation → on ne fait rien
   }
 
   async function initFaceId() {
-    if (!IS_NATIVE) return;
-    // Attendre que Capacitor charge les plugins
-    await new Promise(r => setTimeout(r, 300));
-    const plugin = getBiometricPlugin();
-    if (!plugin) { console.warn('BiometricAuth plugin absent'); return; }
-    try {
-      const result = await plugin.checkBiometry();
-      console.log('BiometricAuth checkBiometry:', JSON.stringify(result));
-      const hasBiometry = result?.isAvailable === true;
-      const hasSavedToken = !!localStorage.getItem('lcc_biometric_token');
-      if (hasBiometry) {
-        document.getElementById('faceIdBtn').style.display = 'flex';
-      }
-      if (hasBiometry && hasSavedToken) {
-        setTimeout(() => triggerFaceId(), 700);
-      }
-    } catch(e) {
-      console.warn('BiometricAuth init error:', e);
+    if (!IS_IOS) return;
+    // Attendre que le bridge natif soit injecté par AppDelegate (après didFinish)
+    await new Promise(r => setTimeout(r, 800));
+    const available = await checkBiometryAvailable();
+    console.log('[FaceID] Disponible:', available);
+    const hasSavedToken = !!localStorage.getItem('lcc_biometric_token');
+    if (available) {
+      document.getElementById('faceIdBtn').style.display = 'flex';
+    }
+    if (available && hasSavedToken) {
+      setTimeout(() => triggerFaceId(), 400);
     }
   }
 
