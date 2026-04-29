@@ -132,9 +132,17 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
               
             </div>
             <button type="submit" class="submit-btn" id="loginSubmit"><i class="fas fa-arrow-right-to-bracket"></i> Se connecter</button>
-            <button type="button" class="faceid-btn" id="faceIdBtn" style="display:none;" onclick="triggerFaceId()">
-              <i class="fas fa-face-viewfinder"></i> Se connecter avec Face ID
-            </button>
+            <!-- Face ID - visible uniquement si activé -->
+            <div id="faceIdContainer" style="display:none; margin-top:12px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <div style="flex:1;height:1px;background:rgba(255,255,255,.15);"></div>
+                <span style="color:rgba(255,255,255,.4);font-size:13px;">ou</span>
+                <div style="flex:1;height:1px;background:rgba(255,255,255,.15);"></div>
+              </div>
+              <button id="faceIdBtn" type="button" style="width:100%;padding:14px;background:rgba(0,0,0,.4);color:white;border:1.5px solid rgba(255,255,255,.2);border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans',sans-serif;">
+                <i class="fas fa-face-viewfinder" style="font-size:20px;color:#6ee7b7;"></i> Se connecter avec Face ID
+              </button>
+            </div>
           </form>
           <div class="divider"><span>ou</span></div>
           <button class="magic-btn" id="magicLinkBtn"><i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email</button>
@@ -165,62 +173,93 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   // ============================================
   // ============================================
   // 🔐 FACE ID via bridge natif AppDelegate.swift
-  // Utilise window._checkBiometryAvailable et window._authenticateWithFaceID
   // ============================================
+  const FACE_ID_KEY = 'lcc_faceid_enabled';
+  const FACE_ID_TOKEN_KEY = 'lcc_faceid_token';
 
-  function checkBiometryAvailable() {
-    return new Promise((resolve) => {
-      if (!IS_IOS || !window._checkBiometryAvailable) return resolve(false);
-      window._faceIDCheckCallback = (available) => resolve(available === true);
-      window._checkBiometryAvailable(null);
+  function isBiometricAvailable() {
+    return new Promise(resolve => {
+      if (!IS_NATIVE || !window._checkBiometryAvailable) {
+        console.warn('🔍 Face ID bridge non disponible');
+        return resolve(false);
+      }
+      window._faceIDCheckCallback = function(result) {
+        console.log('🔍 Face ID disponible:', result);
+        resolve(result === true);
+      };
+      window._checkBiometryAvailable(window._faceIDCheckCallback);
+      setTimeout(() => resolve(false), 3000);
     });
   }
 
   function authenticateWithFaceID() {
-    return new Promise((resolve) => {
-      if (!IS_IOS || !window._authenticateWithFaceID) return resolve(false);
-      window._faceIDAuthCallback = (success) => resolve(success === true);
-      window._authenticateWithFaceID(null);
+    return new Promise(resolve => {
+      if (!IS_NATIVE || !window._authenticateWithFaceID) {
+        console.warn('🔐 Face ID bridge non disponible');
+        return resolve(false);
+      }
+      window._faceIDAuthCallback = function(result) {
+        console.log('🔐 Face ID résultat:', result);
+        resolve(result === true);
+      };
+      window._authenticateWithFaceID(window._faceIDAuthCallback);
+      setTimeout(() => resolve(false), 30000);
     });
   }
 
-  async function triggerFaceId() {
-    if (!IS_IOS) return;
-    const success = await authenticateWithFaceID();
-    if (success) {
-      const saved = localStorage.getItem('lcc_biometric_token');
-      if (saved) {
-        localStorage.setItem('lcc_token', saved);
-        window.location.href = 'app.html';
-      } else {
-        showToast("Connectez-vous d'abord avec votre mot de passe.");
-      }
+  async function initFaceID() {
+    if (!IS_NATIVE) return;
+    const faceIdEnabled = localStorage.getItem(FACE_ID_KEY) === 'true';
+    const savedToken = localStorage.getItem(FACE_ID_TOKEN_KEY);
+
+    if (faceIdEnabled && savedToken) {
+      const container = document.getElementById('faceIdContainer');
+      if (container) container.style.display = 'block';
+      setTimeout(async () => {
+        const ok = await authenticateWithFaceID();
+        if (ok) {
+          localStorage.setItem('lcc_token', savedToken);
+          if (window._syncTokenToNative) window._syncTokenToNative(savedToken);
+          window.location.href = 'app.html';
+        }
+      }, 500);
     }
-    // Si échec/annulation → on ne fait rien
+
+    const faceIdBtn = document.getElementById('faceIdBtn');
+    if (faceIdBtn && faceIdEnabled && savedToken) {
+      document.getElementById('faceIdContainer').style.display = 'block';
+      faceIdBtn.addEventListener('click', async () => {
+        const ok = await authenticateWithFaceID();
+        if (ok) {
+          localStorage.setItem('lcc_token', savedToken);
+          if (window._syncTokenToNative) window._syncTokenToNative(savedToken);
+          window.location.href = 'app.html';
+        }
+      });
+    }
   }
 
-  async function initFaceId() {
-    if (!IS_IOS) return;
-    // Attendre que le bridge natif soit injecté par AppDelegate (après didFinish)
-    await new Promise(r => setTimeout(r, 800));
-    const available = await checkBiometryAvailable();
-    console.log('[FaceID] Disponible:', available);
-    const hasSavedToken = !!localStorage.getItem('lcc_biometric_token');
-    if (available) {
-      document.getElementById('faceIdBtn').style.display = 'flex';
+  // Proposer d'activer Face ID après un login réussi par mot de passe
+  window._onLoginSuccess = async function(token) {
+    if (!IS_NATIVE) return;
+    const alreadyEnabled = localStorage.getItem(FACE_ID_KEY) === 'true';
+    if (alreadyEnabled) return;
+    const available = await isBiometricAvailable();
+    if (!available) return;
+    const confirm = window.confirm('Activer Face ID pour vous connecter plus rapidement ?');
+    if (confirm) {
+      localStorage.setItem(FACE_ID_KEY, 'true');
+      localStorage.setItem(FACE_ID_TOKEN_KEY, token);
+      console.log('✅ Face ID activé');
     }
-    if (available && hasSavedToken) {
-      setTimeout(() => triggerFaceId(), 400);
-    }
-  }
+  };
+
+  document.addEventListener('DOMContentLoaded', initFaceID);
 
   // Sauvegarder le token biométrique après une connexion réussie par mot de passe
-  function saveBiometricToken(token) {
-    if (!IS_IOS || !window.Capacitor?.Plugins?.BiometricAuth) return;
-    localStorage.setItem('lcc_biometric_token', token);
-  }
 
-  document.getElementById('loginForm').addEventListener('submit',async function(e){e.preventDefault();const email=document.getElementById('loginEmail').value.trim(),pwd=document.getElementById('loginPassword').value;if(!email||!pwd){showToast('Veuillez remplir tous les champs.');return;}const btn=document.getElementById('loginSubmit');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connexion…';try{const res=await fetch(API_BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data=await res.json();if(res.ok&&data.token){localStorage.setItem('lcc_token',data.token);if(data.user)localStorage.setItem('lcc_user',JSON.stringify(data.user));saveBiometricToken(data.token);window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');}else{showToast(data.error||'Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}}catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
+
+  document.getElementById('loginForm').addEventListener('submit',async function(e){e.preventDefault();const email=document.getElementById('loginEmail').value.trim(),pwd=document.getElementById('loginPassword').value;if(!email||!pwd){showToast('Veuillez remplir tous les champs.');return;}const btn=document.getElementById('loginSubmit');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connexion…';try{const res=await fetch(API_BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data=await res.json();if(res.ok&&data.token){localStorage.setItem('lcc_token',data.token);if(data.user)localStorage.setItem('lcc_user',JSON.stringify(data.user));if(window._onLoginSuccess)window._onLoginSuccess(data.token);window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');}else{showToast(data.error||'Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}}catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
   document.getElementById('magicLinkBtn').addEventListener('click',async function(){const email=document.getElementById('loginEmail').value.trim();if(!email){showToast("Entrez d'abord votre adresse email.");document.getElementById('loginEmail').focus();return;}this.disabled=true;this.innerHTML='<i class="fas fa-spinner fa-spin"></i> Envoi…';try{const r=await fetch(API_BASE+'/api/auth/magic-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});const d=await r.json();if(r.ok){showToast('✉️ Lien envoyé ! Vérifiez votre boîte email.','success');this.innerHTML='<i class="fas fa-check"></i> Lien envoyé !';}else{showToast(d.error||"Erreur lors de l'envoi.");this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}}catch{showToast('Erreur réseau.');this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}});
 </script>
 </body>
