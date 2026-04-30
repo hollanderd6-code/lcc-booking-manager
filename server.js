@@ -26503,8 +26503,8 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
 });
 
 // ── Pull Future Bookings depuis Booking.com via Channex ──────────────
-// Déclenche le "Pull Future Reservations" automatiquement pour tous les
-// channels Booking.com connectés à un logement, puis sync les bookings.
+// Étape 1 : déclenche le pull sur chaque channel Booking.com de la property
+// Étape 2 : attend 5s puis appelle sync-bookings pour importer dans BH
 app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
@@ -26519,88 +26519,39 @@ app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (re
       return res.status(400).json({ error: 'Logement non connecté à Channex' });
     }
 
-    // 1. Récupérer tous les channels connectés à cette property
-    const channelsRes = await channexAPI.get('/channels');
+    const channexPropertyId = prop.channex_property_id;
+
+    // 1. Récupérer les channels de cette property spécifique (filtre par property_id)
+    const channelsRes = await channexAPI.get('/channels', {
+      params: { 'filter[property_id]': channexPropertyId }
+    });
     const allChannels = channelsRes.data?.data || [];
 
-    // Filtrer les channels Booking.com de cette property
+    // Garder uniquement Booking.com
     const bdcChannels = allChannels.filter(ch => {
-      const attrs = ch.attributes || ch;
-      const propId = attrs.property_id || ch.relationships?.property?.data?.id;
-      const channelCode = (attrs.channel || attrs.ota_code || '').toLowerCase();
-      return propId === prop.channex_property_id && channelCode.includes('booking');
+      const channelCode = (ch.attributes?.channel || ch.attributes?.ota_code || '').toLowerCase();
+      return channelCode.includes('booking');
     });
 
-    console.log(`🔄 [PULL BOOKINGS] ${bdcChannels.length} channel(s) Booking.com trouvé(s) pour ${prop.channex_property_id}`);
+    console.log(`🔄 [PULL BOOKINGS] ${bdcChannels.length} channel(s) BDC pour property ${channexPropertyId}`);
 
     let pullResults = [];
-
-    // 2. Déclencher le pull sur chaque channel Booking.com
     for (const ch of bdcChannels) {
-      const channelId = ch.id || ch.attributes?.id;
+      const channelId = ch.id;
       try {
-        // Endpoint interne Channex pour "Pull Future Reservations"
-        const pullRes = await channexAPI.post(`/channels/${channelId}/pull_bookings`);
-        console.log(`✅ [PULL BOOKINGS] Pull déclenché pour channel ${channelId}`);
+        await channexAPI.post(`/channels/${channelId}/pull_bookings`);
+        console.log(`✅ [PULL BOOKINGS] Pull OK channel ${channelId}`);
         pullResults.push({ channelId, success: true });
       } catch (pullErr) {
         const errDetail = pullErr.response?.data || pullErr.message;
-        console.warn(`⚠️ [PULL BOOKINGS] Erreur channel ${channelId}:`, errDetail);
+        console.warn(`⚠️ [PULL BOOKINGS] channel ${channelId}:`, errDetail);
         pullResults.push({ channelId, success: false, error: JSON.stringify(errDetail) });
       }
     }
 
-    // 3. Attendre 3s que Channex reçoive les bookings de Booking.com
-    await new Promise(r => setTimeout(r, 3000));
-
-    // 4. Sync les bookings reçus dans BH
-    let bookings = [];
-    let page = 1;
-    while (true) {
-      const response = await channexAPI.get('/bookings', {
-        params: {
-          'pagination[page_size]': 100,
-          'pagination[page]': page,
-          'filter[departure_date][gte]': new Date().toISOString().split('T')[0]
-        }
-      });
-      const data = response.data?.data || [];
-      bookings = bookings.concat(data);
-      if (data.length < 100) break;
-      page++;
-      if (page > 10) break;
-    }
-
-    bookings = bookings.filter(b => {
-      const attrs = b.attributes || b;
-      return attrs.property_id === prop.channex_property_id;
-    });
-
-    let imported = 0, updated = 0, errors = 0;
-    for (const booking of bookings) {
-      try {
-        const attrs = booking.attributes || booking;
-        const existing = await pool.query(
-          'SELECT id FROM reservations WHERE channex_booking_id = $1',
-          [attrs.booking_id || booking.id]
-        );
-        await processChannexBooking(pool, attrs);
-        if (existing.rows.length > 0) updated++; else imported++;
-      } catch (e) {
-        errors++;
-        console.error('❌ [PULL BOOKINGS] Erreur booking:', e.message);
-      }
-    }
-
-    console.log(`✅ [PULL BOOKINGS] ${imported} importés, ${updated} mis à jour, ${errors} erreurs`);
-    res.json({
-      success: true,
-      pullResults,
-      imported,
-      updated,
-      errors,
-      total: bookings.length
-    });
+    // 2. Répondre immédiatement avec le résultat du pull
+    // (le sync sera déclenché séparément dans settings.js après ce call)
+    res.json({ success: true, pullResults, channelsFound: bdcChannels.length });
 
   } catch (e) {
     console.error('❌ [PULL BOOKINGS]', e.message);
