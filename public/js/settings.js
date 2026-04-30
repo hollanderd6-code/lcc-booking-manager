@@ -2431,7 +2431,10 @@ async function _closeChannexIframe(propertyId) {
     }).catch(() => {});
 
     // 4. Pull des réservations existantes depuis la plateforme
-    const platformLabel = window._otaSelected === 'airbnb' ? 'Airbnb' : 'Booking.com';
+    const platformLabel = window._otaSelected === 'airbnb' ? 'Airbnb' 
+      : window._otaSelected === 'bookingcom' ? 'Booking.com'
+      : window._otaSelected === 'expedia' ? 'Expedia'
+      : 'la plateforme';
     updateStatus(`📦 Récupération des réservations existantes depuis ${platformLabel}…`);
     const pullRes = await fetch(`${API_URL}/api/channex/pull-bookings/${pid}`, {
       method: 'POST',
@@ -2472,7 +2475,7 @@ async function _closeChannexIframe(propertyId) {
             ✅ ${imported} réservation(s) importée(s)<br>
             ✅ Calendrier mis à jour
           </div>
-          <button onclick="document.getElementById('channexModal').remove();loadProperties();" 
+          <button onclick="document.getElementById('channexModal').remove();window.location.href='/app.html';" 
             style="width:100%;height:44px;border-radius:10px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
             Voir mon calendrier <i class="fas fa-arrow-right"></i>
           </button>
