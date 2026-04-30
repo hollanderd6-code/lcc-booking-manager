@@ -687,7 +687,7 @@ async function getStripeForProperty(pool, propertyId, userId) {
     );
     const owner = ownerRes.rows[0];
     if (owner?.stripe_account_id && !owner?.use_bh_stripe) {
-      return { stripeAccountId: owner.stripe_account_id, applyFee: false };
+      return { stripeAccountId: owner.stripe_account_id, applyFee: true }; // ✅ 3% même sur compte connecté
     }
   }
 
@@ -699,7 +699,7 @@ async function getStripeForProperty(pool, propertyId, userId) {
     );
     const user = userRes.rows[0];
     if (user?.stripe_account_id && !user?.use_bh_stripe) {
-      return { stripeAccountId: user.stripe_account_id, applyFee: false };
+      return { stripeAccountId: user.stripe_account_id, applyFee: true }; // ✅ 3% même sur compte connecté
     }
   }
 
@@ -15502,14 +15502,14 @@ app.put('/api/payments/:paymentId',
     }
 
     const amountCents = Math.round(amount * 100);
-    const platformFee = Math.round(amountCents * 0.08); // ⏸️ Commission en pause — remplacer 0 par platformFee pour réactiver
+    const platformFee = Math.round(amountCents * 0.03); // ✅ Commission 3% Boostinghost
     const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [{ price_data: { currency: 'eur', product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
-      payment_intent_data: { application_fee_amount: 0, on_behalf_of: user.stripeAccountId, transfer_data: { destination: user.stripeAccountId }, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
+      payment_intent_data: { application_fee_amount: platformFee, on_behalf_of: user.stripeAccountId, transfer_data: { destination: user.stripeAccountId }, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`
