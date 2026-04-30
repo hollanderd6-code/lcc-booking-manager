@@ -1972,6 +1972,14 @@ ON invoice_download_tokens(token);
     try {
       await pool.query(`
         ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS visible_kpis JSONB DEFAULT '{}'::jsonb;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_pricing BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_manage_pricing BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_reporting BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_debours BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_manage_debours BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_welcome_book BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_templates BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_manage_templates BOOLEAN DEFAULT FALSE;
       `);
       console.log('✅ Colonne visible_kpis ajoutée à sub_account_permissions');
     } catch (e) {
@@ -12511,7 +12519,7 @@ app.post('/api/properties',
 // ============================================
 
 // GET /api/pricing/overrides?property_id=X&from=YYYY-MM-DD&to=YYYY-MM-DD
-app.get('/api/pricing/overrides', authenticateAny, async (req, res) => {
+app.get('/api/pricing/overrides', authenticateAny, requirePermission(pool, 'can_view_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -12549,7 +12557,7 @@ app.get('/api/pricing/overrides', authenticateAny, async (req, res) => {
 });
 
 // POST /api/pricing/overrides — Créer ou mettre à jour un prix
-app.post('/api/pricing/overrides', authenticateAny, async (req, res) => {
+app.post('/api/pricing/overrides', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -12595,7 +12603,7 @@ app.post('/api/pricing/overrides', authenticateAny, async (req, res) => {
 });
 
 // POST /api/pricing/overrides/batch — Édition groupée prix
-app.post('/api/pricing/overrides/batch', authenticateAny, async (req, res) => {
+app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -12742,7 +12750,7 @@ app.post('/api/blocks/batch', async (req, res) => {
 });
 
 // DELETE /api/pricing/overrides/:property_id/:date
-app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, async (req, res) => {
+app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -12767,7 +12775,7 @@ app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, async (
 // ============================================
 
 // GET /api/pricing/rules?property_id=X
-app.get('/api/pricing/rules', authenticateAny, async (req, res) => {
+app.get('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_view_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -12791,7 +12799,7 @@ app.get('/api/pricing/rules', authenticateAny, async (req, res) => {
 });
 
 // POST /api/pricing/rules — Créer une règle
-app.post('/api/pricing/rules', authenticateAny, async (req, res) => {
+app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -12839,7 +12847,7 @@ app.post('/api/pricing/rules', authenticateAny, async (req, res) => {
 });
 
 // PUT /api/pricing/rules/:id — Modifier une règle
-app.put('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
+app.put('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -12888,7 +12896,7 @@ app.put('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
 });
 
 // DELETE /api/pricing/rules/:id
-app.delete('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
+app.delete('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -12903,7 +12911,7 @@ app.delete('/api/pricing/rules/:id', authenticateAny, async (req, res) => {
 });
 
 // POST /api/pricing/rules/push-channex/:property_id — Calculer et pousser prix + restrictions vers Channex
-app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async (req, res) => {
+app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -13101,7 +13109,7 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, async 
 // REPORTING — Revenus et statistiques
 // ============================================
 
-app.get('/api/reporting', authenticateAny, async (req, res) => {
+app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_reporting'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -24079,7 +24087,7 @@ const uploadDebours = multer({
 });
 
 // POST /api/debours — créer un justificatif
-app.post('/api/debours', authenticateAny, uploadDebours.single('photo'), async (req, res) => {
+app.post('/api/debours', authenticateAny, requirePermission(pool, 'can_manage_debours'), uploadDebours.single('photo'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -24122,7 +24130,7 @@ app.post('/api/debours', authenticateAny, uploadDebours.single('photo'), async (
 });
 
 // GET /api/debours — liste des justificatifs
-app.get('/api/debours', authenticateAny, async (req, res) => {
+app.get('/api/debours', authenticateAny, requirePermission(pool, 'can_view_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -24147,7 +24155,7 @@ app.get('/api/debours', authenticateAny, async (req, res) => {
 
 // PATCH /api/debours/:id/status — changer le statut
 // GET /api/debours/:id — récupérer un justificatif par ID
-app.get('/api/debours/:id', authenticateAny, async (req, res) => {
+app.get('/api/debours/:id', authenticateAny, requirePermission(pool, 'can_view_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -24162,7 +24170,7 @@ app.get('/api/debours/:id', authenticateAny, async (req, res) => {
   }
 });
 
-app.patch('/api/debours/:id/status', authenticateAny, async (req, res) => {
+app.patch('/api/debours/:id/status', authenticateAny, requirePermission(pool, 'can_manage_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -24184,7 +24192,7 @@ app.patch('/api/debours/:id/status', authenticateAny, async (req, res) => {
 });
 
 // DELETE /api/debours/:id
-app.delete('/api/debours/:id', authenticateAny, async (req, res) => {
+app.delete('/api/debours/:id', authenticateAny, requirePermission(pool, 'can_manage_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
