@@ -2455,7 +2455,6 @@ async function _closeChannexIframe(propertyId) {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     }).catch(() => {});
-    const syncData = syncRes ? await syncRes.json().catch(() => {}) : {};
 
     // 8. Succès
     if (modal) {
