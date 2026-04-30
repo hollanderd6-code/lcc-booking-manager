@@ -26500,6 +26500,115 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
   }
 });
 
+// ── Pull Future Bookings depuis Booking.com via Channex ──────────────
+// Déclenche le "Pull Future Reservations" automatiquement pour tous les
+// channels Booking.com connectés à un logement, puis sync les bookings.
+app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (req, res) => {
+  const { property_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const propResult = await pool.query(
+      'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, user_id]
+    );
+    const prop = propResult.rows[0];
+    if (!prop?.channex_enabled || !prop?.channex_property_id) {
+      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    }
+
+    const { channexAPI } = require('./channex');
+
+    // 1. Récupérer tous les channels connectés à cette property
+    const channelsRes = await channexAPI.get('/channels');
+    const allChannels = channelsRes.data?.data || [];
+
+    // Filtrer les channels Booking.com de cette property
+    const bdcChannels = allChannels.filter(ch => {
+      const attrs = ch.attributes || ch;
+      const propId = attrs.property_id || ch.relationships?.property?.data?.id;
+      const channelCode = (attrs.channel || attrs.ota_code || '').toLowerCase();
+      return propId === prop.channex_property_id && channelCode.includes('booking');
+    });
+
+    console.log(`🔄 [PULL BOOKINGS] ${bdcChannels.length} channel(s) Booking.com trouvé(s) pour ${prop.channex_property_id}`);
+
+    let pullResults = [];
+
+    // 2. Déclencher le pull sur chaque channel Booking.com
+    for (const ch of bdcChannels) {
+      const channelId = ch.id || ch.attributes?.id;
+      try {
+        // Endpoint interne Channex pour "Pull Future Reservations"
+        const pullRes = await channexAPI.post(`/channels/${channelId}/pull_bookings`);
+        console.log(`✅ [PULL BOOKINGS] Pull déclenché pour channel ${channelId}`);
+        pullResults.push({ channelId, success: true });
+      } catch (pullErr) {
+        const errDetail = pullErr.response?.data || pullErr.message;
+        console.warn(`⚠️ [PULL BOOKINGS] Erreur channel ${channelId}:`, errDetail);
+        pullResults.push({ channelId, success: false, error: JSON.stringify(errDetail) });
+      }
+    }
+
+    // 3. Attendre 3s que Channex reçoive les bookings de Booking.com
+    await new Promise(r => setTimeout(r, 3000));
+
+    // 4. Sync les bookings reçus dans BH
+    const { channexAPI: api2, processChannexBooking } = require('./channex');
+    let bookings = [];
+    let page = 1;
+    while (true) {
+      const response = await api2.get('/bookings', {
+        params: {
+          'pagination[page_size]': 100,
+          'pagination[page]': page,
+          'filter[departure_date][gte]': new Date().toISOString().split('T')[0]
+        }
+      });
+      const data = response.data?.data || [];
+      bookings = bookings.concat(data);
+      if (data.length < 100) break;
+      page++;
+      if (page > 10) break;
+    }
+
+    bookings = bookings.filter(b => {
+      const attrs = b.attributes || b;
+      return attrs.property_id === prop.channex_property_id;
+    });
+
+    let imported = 0, updated = 0, errors = 0;
+    for (const booking of bookings) {
+      try {
+        const attrs = booking.attributes || booking;
+        const existing = await pool.query(
+          'SELECT id FROM reservations WHERE channex_booking_id = $1',
+          [attrs.booking_id || booking.id]
+        );
+        await processChannexBooking(pool, attrs);
+        if (existing.rows.length > 0) updated++; else imported++;
+      } catch (e) {
+        errors++;
+        console.error('❌ [PULL BOOKINGS] Erreur booking:', e.message);
+      }
+    }
+
+    console.log(`✅ [PULL BOOKINGS] ${imported} importés, ${updated} mis à jour, ${errors} erreurs`);
+    res.json({
+      success: true,
+      pullResults,
+      imported,
+      updated,
+      errors,
+      total: bookings.length
+    });
+
+  } catch (e) {
+    console.error('❌ [PULL BOOKINGS]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Réassigner les bookings Channex au bon logement via room_type_id ──
 app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
