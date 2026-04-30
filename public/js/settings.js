@@ -2459,7 +2459,7 @@ async function _closeChannexIframe(propertyId) {
 
     // 8. Succès
     if (modal) {
-      const imported = syncData?.imported || 0;
+      const imported = (syncData?.imported || 0) + (syncData?.updated || 0);
       const updated = syncData?.updated || 0;
       modal.innerHTML = `
         <div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
