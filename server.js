@@ -5298,8 +5298,9 @@ async function sendDepositRequestMessages(io) {
           : {};
 
         if (stripeTarget.applyFee) {
-          sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * 0.03);
-          console.log(`✅ Caution automatique Booking sur compte plateforme BH (frais 3%)`);
+          const feeRate = stripeTarget.stripeAccountId ? 0.03 : 0.05; // 3% compte connecté, 5% compte BH
+          sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * feeRate);
+          console.log(`✅ Caution automatique BH (frais ${feeRate*100}%)`);;
         } else {
           console.log(`✅ Caution automatique Booking sur Stripe proprio/user : ${stripeTarget.stripeAccountId}`);
         }
@@ -15332,9 +15333,10 @@ app.post('/api/deposits',
       : {};
 
     if (stripeTarget.applyFee) {
-      // Stripe BH platform : on ajoute 3% de frais
-      sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * 0.03);
-      console.log(`✅ Création caution sur compte plateforme BH (frais 3% : ${sessionParams.payment_intent_data.application_fee_amount} cts)`);
+      // Stripe : 3% compte connecté, 5% compte BH plateforme
+      const feeRate2 = stripeTarget.stripeAccountId ? 0.03 : 0.05;
+      sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * feeRate2);
+      console.log(`✅ Création caution BH (frais ${feeRate2*100}% : ${sessionParams.payment_intent_data.application_fee_amount} cts)`);
     } else {
       console.log(`✅ Création caution sur Stripe proprio/user : ${stripeTarget.stripeAccountId}`);
     }
@@ -15502,7 +15504,8 @@ app.put('/api/payments/:paymentId',
     }
 
     const amountCents = Math.round(amount * 100);
-    const platformFee = Math.round(amountCents * 0.03); // ✅ Commission 3% Boostinghost
+    const feeRatePayment = user.stripeAccountId ? 0.03 : 0.05; // 3% compte connecté, 5% compte BH
+    const platformFee = Math.round(amountCents * feeRatePayment); // ✅ Commission Boostinghost
     const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
 
     const session = await stripe.checkout.sessions.create({
