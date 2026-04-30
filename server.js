@@ -26538,14 +26538,31 @@ app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (re
     let pullResults = [];
     for (const ch of bdcChannels) {
       const channelId = ch.id;
-      try {
-        await channexAPI.post(`/channels/${channelId}/pull_bookings`);
-        console.log(`✅ [PULL BOOKINGS] Pull OK channel ${channelId}`);
-        pullResults.push({ channelId, success: true });
-      } catch (pullErr) {
-        const errDetail = pullErr.response?.data || pullErr.message;
-        console.warn(`⚠️ [PULL BOOKINGS] channel ${channelId}:`, errDetail);
-        pullResults.push({ channelId, success: false, error: JSON.stringify(errDetail) });
+      // Essayer plusieurs endpoints possibles pour "Pull Future Reservations"
+      const endpoints = [
+        `/channels/${channelId}/pull_bookings`,
+        `/channels/${channelId}/pull_future_bookings`,
+        `/channels/${channelId}/sync`,
+        `/properties/${channexPropertyId}/pull_bookings`
+      ];
+      let pulled = false;
+      for (const endpoint of endpoints) {
+        try {
+          await channexAPI.post(endpoint);
+          console.log(`✅ [PULL BOOKINGS] Pull OK via ${endpoint}`);
+          pullResults.push({ channelId, success: true, endpoint });
+          pulled = true;
+          break;
+        } catch (pullErr) {
+          const status = pullErr.response?.status;
+          if (status !== 404 && status !== 422) {
+            // Erreur inattendue, on log mais on continue
+            console.warn(`⚠️ [PULL BOOKINGS] ${endpoint}: ${pullErr.response?.data?.errors?.code || pullErr.message}`);
+          }
+        }
+      }
+      if (!pulled) {
+        pullResults.push({ channelId, success: false, error: 'Aucun endpoint pull trouvé' });
       }
     }
 
