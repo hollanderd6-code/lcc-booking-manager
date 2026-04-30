@@ -1469,6 +1469,26 @@ html[data-theme-v3="1"] #templatesList > div {
   <main class="main-content"><div id="bhHeader"></div>
 <button class="cleaning-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
 
+<!-- Restrictions rôle ménage -->
+<script>
+(function() {
+  try {
+    var isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true'
+                    || localStorage.getItem('lcc_account_type') === 'sub';
+    if (!isSubAccount) return;
+    var role = '';
+    try { role = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}').role || ''; } catch(e) {}
+    try { if (!role) role = JSON.parse(localStorage.getItem('lcc_user') || '{}').role || ''; } catch(e) {}
+    if (role !== 'cleaner') return;
+    var style = document.createElement('style');
+    style.textContent = `
+      [data-tab="checklists"], [data-tab="templates"], [data-tab="stats"] { display: none !important; }
+      #cleanerForm, #assignContainer { display: none !important; }
+    `;
+    document.head.appendChild(style);
+  } catch(e) {}
+})();
+</script>
 <!-- Contenu -->
 <div class="page-content">
 
