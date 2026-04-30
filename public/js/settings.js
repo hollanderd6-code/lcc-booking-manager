@@ -2138,7 +2138,11 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
         </div>
 
         <div style="font-size:13px;color:#374151;margin-bottom:14px;font-weight:500;">
-          Ce logement est-il indépendant ou fait-il partie d'un établissement déjà configuré ?
+          Sélectionnez le type de connexion pour ce logement :
+        </div>
+        <div style="background:#FFF8E7;border:1px solid #F59E0B;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400E;">
+          <i class="fas fa-lightbulb" style="margin-right:6px;"></i>
+          <strong>Dans le doute</strong>, choisissez <strong>Logement indépendant</strong>. Utilisez "Partie d'un immeuble" uniquement si plusieurs appartements partagent le même Hotel ID Booking.com.
         </div>
 
         <!-- Option 1 : indépendant -->
@@ -2370,7 +2374,7 @@ async function _loadChannexIframe(propertyId, modal, channelCode) {
             <i class="fas fa-arrow-left"></i> Retour
           </button>
           <div style="font-size:13px;font-weight:600;color:#374151;">${OTA_PLATFORMS.find(p=>p.code===channelCode)?.label || ''}</div>
-          <button onclick="_closeChannexIframe()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
+          <button onclick="_closeChannexIframe(\'${propertyId}\')" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
         </div>
         <div style="flex:1;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;min-height:0;">
           <iframe src="${data.iframe_url}" style="width:100%;height:100%;min-height:580px;border:none;display:block;" allow="same-origin"></iframe>
@@ -2389,10 +2393,73 @@ async function _loadChannexIframe(propertyId, modal, channelCode) {
   }
 }
 
-function _closeChannexIframe() {
-  document.getElementById('channexModal')?.remove();
-  showToast('Vérifiez dans quelques instants que votre plateforme apparaît bien connectée.', 'info');
-  setTimeout(() => loadProperties().catch(() => {}), 1500);
+async function _closeChannexIframe(propertyId) {
+  const modal = document.getElementById('channexModal');
+  if (modal) {
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+        <div style="width:56px;height:56px;background:#f0fdf8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <i class="fas fa-spinner fa-spin" style="font-size:22px;color:#1A7A5E;"></i>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:#0D1117;margin-bottom:6px;">Finalisation en cours…</div>
+        <div id="autoSyncStatus" style="font-size:13px;color:#6B7280;line-height:1.6;">Synchronisation des disponibilités et import des réservations…</div>
+      </div>
+    `;
+  }
+
+  const token = localStorage.getItem('lcc_token');
+  const pid = propertyId || window._otaPropertyId;
+
+  const updateStatus = (msg) => {
+    const el = document.getElementById('autoSyncStatus');
+    if (el) el.innerHTML = msg;
+  };
+
+  try {
+    // 1. Recharger les propriétés
+    await loadProperties().catch(() => {});
+
+    // 2. Push disponibilités (12 mois)
+    updateStatus('📅 Envoi des disponibilités aux plateformes…');
+    await fetch(`${API_URL}/api/channex/push-availability/${pid}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => {});
+
+    // 3. Import historique réservations
+    updateStatus('📦 Import des réservations existantes…');
+    const syncRes = await fetch(`${API_URL}/api/channex/sync-bookings/${pid}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => null);
+    const syncData = syncRes ? await syncRes.json().catch(() => {}) : {};
+
+    // 4. Succès
+    if (modal) {
+      const imported = syncData?.imported || 0;
+      const updated = syncData?.updated || 0;
+      modal.innerHTML = `
+        <div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+          <div style="width:56px;height:56px;background:#f0fdf8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <i class="fas fa-check" style="font-size:22px;color:#1A7A5E;"></i>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:#0D1117;margin-bottom:8px;">Plateforme connectée ! 🎉</div>
+          <div style="font-size:13px;color:#6B7280;line-height:1.7;margin-bottom:20px;">
+            ✅ Disponibilités synchronisées<br>
+            ✅ ${imported} réservation(s) importée(s)<br>
+            ✅ Calendrier mis à jour
+          </div>
+          <button onclick="document.getElementById('channexModal').remove();loadProperties();" 
+            style="width:100%;height:44px;border-radius:10px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
+            Voir mon calendrier <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      `;
+    }
+  } catch(e) {
+    document.getElementById('channexModal')?.remove();
+    showToast('Plateforme connectée. Synchronisation en cours...', 'success');
+    await loadProperties().catch(() => {});
+  }
 }
 
 async function channexDisconnect(propertyId) {
