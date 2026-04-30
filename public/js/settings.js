@@ -2430,7 +2430,14 @@ async function _closeChannexIframe(propertyId) {
       headers: { 'Authorization': `Bearer ${token}` }
     }).catch(() => null);
 
-    // 4. Push disponibilités (12 mois) APRÈS import des réservations
+    // 4. Push des tarifs (365 jours)
+    updateStatus('💶 Envoi des tarifs aux plateformes…');
+    await fetch(`${API_URL}/api/pricing/rules/push-channex/${pid}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => {});
+
+    // 5. Push disponibilités (500 jours) APRÈS import des réservations
     updateStatus('📅 Envoi des disponibilités aux plateformes…');
     await fetch(`${API_URL}/api/channex/push-availability/${pid}`, {
       method: 'POST',
