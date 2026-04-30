@@ -227,6 +227,9 @@
 
     // Lire depuis localStorage
     let user = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+    // Nouveau système sous-compte — priorité sur lcc_user
+    const subAccountData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+    if (subAccountData.firstName) user = { ...user, ...subAccountData };
 
     // Si pas de logoUrl, refetch depuis l'API (fix iOS Capacitor)
     if (!user.logoUrl) {
