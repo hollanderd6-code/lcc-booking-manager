@@ -26527,13 +26527,10 @@ app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (re
     });
     const allChannels = channelsRes.data?.data || [];
 
-    // Garder uniquement Booking.com
-    const bdcChannels = allChannels.filter(ch => {
-      const channelCode = (ch.attributes?.channel || ch.attributes?.ota_code || '').toLowerCase();
-      return channelCode.includes('booking');
-    });
+    // Tous les channels connectés (Booking.com, Airbnb, Expedia, etc.)
+    const bdcChannels = allChannels.filter(ch => ch.id); // tous les channels valides
 
-    console.log(`🔄 [PULL BOOKINGS] ${bdcChannels.length} channel(s) BDC pour property ${channexPropertyId}`);
+    console.log(`🔄 [PULL BOOKINGS] ${bdcChannels.length} channel(s) pour property ${channexPropertyId}`);
 
     let pullResults = [];
     for (const ch of bdcChannels) {
