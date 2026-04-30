@@ -25,19 +25,53 @@
   // ✅ PERMISSIONS - même logique que bh-layout.js
   // ============================================
 
-  const accountType = localStorage.getItem('lcc_account_type');
-  const isSubAccount = (accountType === 'sub');
+  const isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true'
+                    || localStorage.getItem('lcc_account_type') === 'sub';
+
+  let role = 'main';
   let permissions = {};
+
   if (isSubAccount) {
     try {
+      const subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+      role = subData.role || 'custom';
+      if (subData.permissions) permissions = subData.permissions;
+    } catch(e) {}
+    try {
       const permData = localStorage.getItem('lcc_permissions');
-      if (permData) permissions = JSON.parse(permData);
-    } catch (e) {}
+      if (permData) permissions = Object.assign(JSON.parse(permData), permissions);
+    } catch(e) {}
+    try {
+      if (role === 'main' || role === 'custom') {
+        const u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+        if (u.role) role = u.role;
+      }
+    } catch(e) {}
   }
 
-  const hasPermission = (perm) => {
+  const ROLE_PAGES = {
+    cleaner:      ['calendar', 'cleaning'],
+    proprietaire: ['dashboard', 'calendar', 'messages', 'settings', 'welcome', 'cleaning', 'deposits', 'factures', 'clients', 'reporting'],
+    manager:      ['dashboard', 'calendar', 'messages', 'settings', 'welcome', 'contrat', 'cleaning', 'deposits', 'factures', 'clients'],
+    comptable:    ['factures', 'clients', 'reporting'],
+    custom:       null
+  };
+
+  const allowedPages = isSubAccount ? (ROLE_PAGES[role] || null) : null;
+
+  const canSeePage = (page) => {
     if (!isSubAccount) return true;
-    return permissions[perm] === true;
+    if (allowedPages) return allowedPages.includes(page);
+    const permMap = {
+      dashboard: 'can_view_reservations', calendar: 'can_view_reservations',
+      messages: 'can_view_messages', settings: 'can_view_properties',
+      welcome: 'can_view_properties', contrat: 'can_view_contracts',
+      cleaning: 'can_view_cleaning', deposits: 'can_view_deposits',
+      factures: 'can_view_invoices', clients: 'can_view_invoices',
+      reporting: 'can_view_reporting',
+    };
+    const perm = permMap[page];
+    return perm ? permissions[perm] === true : false;
   };
 
   // ============================================
@@ -48,19 +82,19 @@
     const hr = `<hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
     let buttons = '';
 
-    // 1. Livrets d'accueil
-    if (hasPermission('can_view_properties')) {
+    if (canSeePage('welcome')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-book-open"></i> Livrets d'accueil
-        </button>
+        </button>`;
+    }
+    if (canSeePage('contrat')) {
+      buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/contrat.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-file-contract"></i> Contrats
         </button>`;
     }
-
-    // 2. Ménages
-    if (hasPermission('can_view_cleaning') || hasPermission('can_manage_cleaning')) {
+    if (canSeePage('cleaning')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-broom"></i> Ménages
@@ -69,23 +103,23 @@
 
     buttons += hr;
 
-    // 3. Finances
-    if (hasPermission('can_view_deposits') || hasPermission('can_manage_deposits')) {
+    if (canSeePage('deposits')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-wallet"></i> Finances
         </button>`;
     }
-
-    // 4. Factures + Factures propriétaires + Revenus
-    if (hasPermission('can_view_invoices') || hasPermission('can_manage_invoices')) {
+    if (canSeePage('factures')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-file-invoice"></i> Factures séjours
         </button>
         <button class="btn btn-secondary" onclick="window.location.href='/clients.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-users"></i> Mes Clients
-        </button>
+        </button>`;
+    }
+    if (canSeePage('reporting')) {
+      buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/reporting.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-chart-bar"></i> Revenus
         </button>`;
@@ -93,18 +127,15 @@
 
     buttons += hr;
 
-    // 4b. Pricing dynamique — compte principal uniquement
     if (!isSubAccount) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/dynamic-pricing.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-bolt" style="color:#B45309;"></i> Prix dynamique
           <span style="margin-left:auto;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;">Bêta</span>
         </button>`;
+      buttons += hr;
     }
 
-    buttons += hr;
-
-    // 5. Serrures connectées — bientôt disponible (non cliquable)
     buttons += `
       <button class="btn btn-secondary" disabled style="width: 100%; justify-content: flex-start; opacity: 0.45; cursor: default; pointer-events: none;">
         <i class="fas fa-lock"></i> Serrures connectées
@@ -113,17 +144,11 @@
 
     buttons += hr;
 
-    // 6. Paramètres — compte principal uniquement
     if (!isSubAccount) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-user-cog"></i> Paramètres du compte
-        </button>`;
-    }
-
-    // 7. Support — compte principal uniquement
-    if (!isSubAccount) {
-      buttons += `
+        </button>
         <button class="btn btn-secondary" onclick="window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-headset"></i> Support
         </button>`;
@@ -318,9 +343,26 @@
       localStorage.removeItem('lcc_user');
       localStorage.removeItem('lcc_account_type');
       localStorage.removeItem('lcc_permissions');
+      localStorage.removeItem('lcc_is_sub_account');
+      localStorage.removeItem('lcc_sub_account');
       window.location.href = '/login.html';
     }
   };
+
+  // Masquer les onglets du bas selon le rôle
+  function applyMobileTabRestrictions() {
+    if (!isSubAccount) return;
+    setTimeout(() => {
+      const tabs = document.querySelectorAll('.tab-btn[data-tab]');
+      tabs.forEach(tab => {
+        const t = tab.dataset.tab;
+        if (t === 'dashboard' && !canSeePage('dashboard')) tab.style.display = 'none';
+        if (t === 'messages'  && !canSeePage('messages'))  tab.style.display = 'none';
+        if (t === 'properties'&& !canSeePage('settings'))  tab.style.display = 'none';
+        if (t === 'calendar'  && !canSeePage('calendar'))  tab.style.display = 'none';
+      });
+    }, 150);
+  }
 
   // ============================================
   // METTRE L'ONGLET ACTIF AU CHARGEMENT
@@ -343,9 +385,10 @@
 
   // Initialiser
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setActiveTab);
+    document.addEventListener('DOMContentLoaded', () => { setActiveTab(); applyMobileTabRestrictions(); });
   } else {
     setActiveTab();
+    applyMobileTabRestrictions();
   }
 
   console.log('✅ Gestion des onglets mobile initialisée (page:', activeTab, ')');
