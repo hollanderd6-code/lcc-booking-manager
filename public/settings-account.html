@@ -2621,6 +2621,11 @@ document.addEventListener('DOMContentLoaded', function() {
       if (member.can_view_properties) permissions.push({ icon: 'home', label: 'Logements' });
       if (member.can_view_deposits) permissions.push({ icon: 'shield-alt', label: 'Cautions' });
       if (member.can_view_smart_locks || member.can_manage_smart_locks) permissions.push({ icon: 'lock', label: 'Serrures' });
+      if (member.can_view_pricing || member.can_manage_pricing) permissions.push({ icon: 'chart-line', label: 'Tarification' });
+      if (member.can_view_reporting) permissions.push({ icon: 'chart-bar', label: 'Revenus' });
+      if (member.can_view_debours || member.can_manage_debours) permissions.push({ icon: 'receipt', label: 'Débours' });
+      if (member.can_view_welcome_book) permissions.push({ icon: 'book-open', label: 'Livret' });
+      if (member.can_view_templates || member.can_manage_templates) permissions.push({ icon: 'envelope', label: 'Templates' });
       
       const roleLabels = { owner: '🏠 Propriétaire', manager: '👔 Manager', cleaner: '🧹 Ménage', accountant: '📊 Comptable', custom: '🎨 Personnalisé' };
       
@@ -2808,6 +2813,14 @@ document.addEventListener('DOMContentLoaded', function() {
         can_view_smart_locks: document.getElementById('perm_canViewSmartLocks')?.checked || false,
         can_manage_smart_locks: document.getElementById('perm_canManageSmartLocks')?.checked || false,
         can_view_contracts: document.getElementById('perm_canViewContracts')?.checked || false,
+        can_view_pricing: document.getElementById('perm_canViewPricing')?.checked || false,
+        can_manage_pricing: document.getElementById('perm_canManagePricing')?.checked || false,
+        can_view_reporting: document.getElementById('perm_canViewReporting')?.checked || false,
+        can_view_debours: document.getElementById('perm_canViewDebours')?.checked || false,
+        can_manage_debours: document.getElementById('perm_canManageDebours')?.checked || false,
+        can_view_welcome_book: document.getElementById('perm_canViewWelcomeBook')?.checked || false,
+        can_view_templates: document.getElementById('perm_canViewTemplates')?.checked || false,
+        can_manage_templates: document.getElementById('perm_canManageTemplates')?.checked || false,
         visible_kpis: _visibleKpis,
       };
       console.log('🔐 Permissions:', data.permissions);
@@ -2900,6 +2913,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('perm_canViewSmartLocks')) document.getElementById('perm_canViewSmartLocks').checked = member.can_view_smart_locks || false;
         if (document.getElementById('perm_canManageSmartLocks')) document.getElementById('perm_canManageSmartLocks').checked = member.can_manage_smart_locks || false;
         if (document.getElementById('perm_canViewContracts')) document.getElementById('perm_canViewContracts').checked = member.can_view_contracts || false;
+        if (document.getElementById('perm_canViewPricing')) document.getElementById('perm_canViewPricing').checked = member.can_view_pricing || false;
+        if (document.getElementById('perm_canManagePricing')) document.getElementById('perm_canManagePricing').checked = member.can_manage_pricing || false;
+        if (document.getElementById('perm_canViewReporting')) document.getElementById('perm_canViewReporting').checked = member.can_view_reporting || false;
+        if (document.getElementById('perm_canViewDebours')) document.getElementById('perm_canViewDebours').checked = member.can_view_debours || false;
+        if (document.getElementById('perm_canManageDebours')) document.getElementById('perm_canManageDebours').checked = member.can_manage_debours || false;
+        if (document.getElementById('perm_canViewWelcomeBook')) document.getElementById('perm_canViewWelcomeBook').checked = member.can_view_welcome_book || false;
+        if (document.getElementById('perm_canViewTemplates')) document.getElementById('perm_canViewTemplates').checked = member.can_view_templates || false;
+        if (document.getElementById('perm_canManageTemplates')) document.getElementById('perm_canManageTemplates').checked = member.can_manage_templates || false;
         // Restauration KPI visibles
         const _kpis = member.visible_kpis || {};
         if (document.getElementById('perm_kpiProperties')) document.getElementById('perm_kpiProperties').checked = _kpis.kpi_properties === true;
@@ -3474,6 +3495,73 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="checkbox" id="perm_canViewContracts" style="width:18px;height:18px;cursor:pointer;" />
                   </td>
                   <td style="padding:4px 0; vertical-align:middle;">Voir les contrats</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Dynamic Pricing -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
+              <div style="font-weight:600; margin-bottom:8px;">📈 Tarification dynamique</div>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;"><input type="checkbox" id="perm_canViewPricing" style="width:18px;height:18px;cursor:pointer;" /></td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les règles tarifaires</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;"><input type="checkbox" id="perm_canManagePricing" style="width:18px;height:18px;cursor:pointer;" /></td>
+                  <td style="padding:4px 0; vertical-align:middle;">Modifier les règles tarifaires</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Reporting -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
+              <div style="font-weight:600; margin-bottom:8px;">📊 Reporting & Revenus</div>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;"><input type="checkbox" id="perm_canViewReporting" style="width:18px;height:18px;cursor:pointer;" /></td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les revenus et rapports</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Débours -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
+              <div style="font-weight:600; margin-bottom:8px;">🧾 Débours</div>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;"><input type="checkbox" id="perm_canViewDebours" style="width:18px;height:18px;cursor:pointer;" /></td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les débours</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;"><input type="checkbox" id="perm_canManageDebours" style="width:18px;height:18px;cursor:pointer;" /></td>
+                  <td style="padding:4px 0; vertical-align:middle;">Créer et gérer les débours</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Livret d'accueil -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
+              <div style="font-weight:600; margin-bottom:8px;">📖 Livret d'accueil</div>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;"><input type="checkbox" id="perm_canViewWelcomeBook" style="width:18px;height:18px;cursor:pointer;" /></td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir et modifier le livret d'accueil</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Templates messages -->
+            <div style="padding:12px; background:#f9fafb; border-radius:8px; margin-bottom:12px;">
+              <div style="font-weight:600; margin-bottom:8px;">✉️ Messages automatiques</div>
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;"><input type="checkbox" id="perm_canViewTemplates" style="width:18px;height:18px;cursor:pointer;" /></td>
+                  <td style="padding:4px 0; vertical-align:middle;">Voir les templates</td>
+                </tr>
+                <tr>
+                  <td style="width:32px; padding:4px 0; vertical-align:middle;"><input type="checkbox" id="perm_canManageTemplates" style="width:18px;height:18px;cursor:pointer;" /></td>
+                  <td style="padding:4px 0; vertical-align:middle;">Créer et modifier les templates</td>
                 </tr>
               </table>
             </div>
