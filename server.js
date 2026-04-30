@@ -62,7 +62,9 @@ const {
   bookingAcknowledge,
   processChannexBooking,
   getBookingMessages,
-  sendBookingMessage
+  sendBookingMessage,
+  channexAPI,
+  logChannex
 } = require('./channex');
 
 // ============================================================
@@ -26517,8 +26519,6 @@ app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (re
       return res.status(400).json({ error: 'Logement non connecté à Channex' });
     }
 
-    const { channexAPI } = require('./channex');
-
     // 1. Récupérer tous les channels connectés à cette property
     const channelsRes = await channexAPI.get('/channels');
     const allChannels = channelsRes.data?.data || [];
@@ -26554,11 +26554,10 @@ app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (re
     await new Promise(r => setTimeout(r, 3000));
 
     // 4. Sync les bookings reçus dans BH
-    const { channexAPI: api2, processChannexBooking } = require('./channex');
     let bookings = [];
     let page = 1;
     while (true) {
-      const response = await api2.get('/bookings', {
+      const response = await channexAPI.get('/bookings', {
         params: {
           'pagination[page_size]': 100,
           'pagination[page]': page,
