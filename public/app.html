@@ -2661,28 +2661,38 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 // Masquage immédiat selon le rôle (avant rendu)
 (function() {
   try {
-    var role = 'main';
     var isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true' 
                     || localStorage.getItem('lcc_account_type') === 'sub';
-    
-    if (isSubAccount) {
-      try {
-        var subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
-        role = subData.role || JSON.parse(localStorage.getItem('lcc_user') || '{}').role || 'custom';
-      } catch(e) {}
-    }
+    if (!isSubAccount) return;
 
-    if (!isSubAccount) return; // compte principal = rien à masquer
+    var role = 'custom';
+    var visibleKpis = null;
+    try {
+      var subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+      role = subData.role || 'custom';
+      if (subData.permissions && subData.permissions.visible_kpis) {
+        visibleKpis = subData.permissions.visible_kpis;
+      }
+    } catch(e) {}
 
     var style = document.createElement('style');
     style.id = 'role-restrictions-css';
 
     if (role === 'cleaner') {
-      // Ménage : masquer tout sauf logements actifs, check-in/out, ménages à prévoir
-      style.textContent = '#kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, #kpiChecklistsCard, #kpiRevenueCard, #newReservationBtn, #fabAddResa { display: none !important; }';
+      style.textContent = '#kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, #kpiChecklistsCard, #kpiCaCard, #newReservationBtn, #fabAddResa { display: none !important; }';
     } else if (role === 'comptable') {
-      // Comptable : masquer le dashboard KPI et calendrier
       style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
+    } else if (role === 'custom' && visibleKpis) {
+      var hide = [];
+      if (!visibleKpis.kpi_properties)  hide.push('#kpiPropertiesCard');
+      if (!visibleKpis.kpi_checkins)    hide.push('#kpiTodayMovesCard');
+      if (!visibleKpis.kpi_cleaning)    hide.push('#kpiCleaning48hCard');
+      if (!visibleKpis.kpi_risks)       hide.push('#kpiTopRisksCard');
+      if (!visibleKpis.kpi_occupancy)   hide.push('#kpiOccupancyCard');
+      if (!visibleKpis.kpi_deposits)    hide.push('#kpiDepositsCard');
+      if (!visibleKpis.kpi_checklists)  hide.push('#kpiChecklistsCard');
+      if (!visibleKpis.kpi_ca)          hide.push('#kpiCaCard');
+      if (hide.length) style.textContent = hide.join(', ') + ' { display: none !important; }';
     }
 
     if (style.textContent) document.head.appendChild(style);
@@ -12104,99 +12114,5 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 });
 </script>
 <script src="/js/bh-onboarding.js"></script>
-
-<!-- ═══════════════════════════════════════════════
-     FEATURE 1 : Sticky calendar header (scroll vertical de la page)
-     FEATURE 2 : Row highlight on click
-     ═══════════════════════════════════════════════ -->
-<style>
-/* ── Feature 1 : sticky dans la page ── */
-/* Le wrapper ne doit PAS avoir de scroll interne - on retire tout ce qu'on aurait pu ajouter */
-.calendar-wrapper {
-  max-height: none !important;
-  overflow-y: visible !important;
-  overflow-x: visible !important;
-}
-
-/* L'en-tête noir calendrier colle en haut lors du scroll de page */
-.calendar-modern-header {
-  position: sticky;
-  /* top calculé par JS selon hauteur réelle du main-header */
-  top: var(--cal-header-sticky-top, 40px);
-  z-index: 190;
-}
-
-/* La barre de nav mois colle juste sous le header noir */
-.period-navigation {
-  position: sticky;
-  top: var(--cal-nav-sticky-top, 110px);
-  z-index: 189;
-}
-
-/* ── Feature 2 : assombrir les property-items non sélectionnés ── */
-/* Complète la fonction selectProperty() qui gère déjà les calendar-row */
-.property-list-items:has(.property-item.selected) .property-item:not(.selected) {
-  opacity: 0.25;
-}
-.property-item {
-  transition: opacity 0.2s ease;
-}
-.property-item.selected {
-  font-weight: 700 !important;
-  background: var(--primary-light, #e6f4f0) !important;
-}
-</style>
-
-<script>
-(function() {
-  function updateStickyTops() {
-    var demoBand = document.querySelector('.bh-demo-nav');
-    var mainHeader = document.getElementById('bhMainHeader');
-    var calHeader = document.querySelector('.calendar-modern-header');
-    var calNav = document.querySelector('.period-navigation');
-    if (!calHeader || !calNav) return;
-
-    var demoBandH = demoBand ? demoBand.offsetHeight : 40;
-    var mainHeaderH = mainHeader ? mainHeader.offsetHeight : 0;
-
-    // Sur desktop la barre dark est fixed à 40px, le main-header n'est pas sticky
-    // Sur mobile le main-header est sticky à top:0
-    var isDesktop = window.innerWidth > 1366;
-    var stickyBase = isDesktop ? demoBandH : (mainHeaderH || 0);
-
-    var calHeaderH = calHeader.offsetHeight;
-    var calNavH    = calNav.offsetHeight;
-
-    document.documentElement.style.setProperty('--cal-header-sticky-top', stickyBase + 'px');
-    document.documentElement.style.setProperty('--cal-nav-sticky-top', (stickyBase + calHeaderH) + 'px');
-  }
-
-  window.addEventListener('resize', updateStickyTops);
-  // Laisser le DOM se stabiliser
-  setTimeout(updateStickyTops, 300);
-  setTimeout(updateStickyTops, 1000);
-
-  /* ── Feature 2 : patch selectProperty pour assombrir aussi la colonne logements ── */
-  function patchSelectProperty() {
-    if (typeof window.selectProperty !== 'function') return false;
-    var orig = window.selectProperty;
-    window.selectProperty = function(propertyId) {
-      orig.call(this, propertyId);
-      var items = document.querySelectorAll('.property-item');
-      var hasSelected = !!document.querySelector('.property-item.selected');
-      items.forEach(function(it) {
-        it.style.opacity = (!hasSelected || it.classList.contains('selected')) ? '1' : '0.25';
-      });
-    };
-    return true;
-  }
-
-  var tries = 0;
-  var iv = setInterval(function() {
-    tries++;
-    if (patchSelectProperty() || tries > 60) clearInterval(iv);
-  }, 200);
-})();
-</script>
 </body>
 </html>
