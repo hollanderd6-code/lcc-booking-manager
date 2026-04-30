@@ -2698,6 +2698,16 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     if (style.textContent) document.head.appendChild(style);
+
+    // Forcer via JS après rendu (override inline styles)
+    document.addEventListener('DOMContentLoaded', function() {
+      var btn = document.getElementById('newReservationBtn');
+      var fab = document.getElementById('fabAddResa');
+      if (role === 'cleaner' || role === 'comptable' || role === 'proprietaire' || role === 'custom') {
+        if (btn) btn.style.setProperty('display', 'none', 'important');
+        if (fab) fab.style.setProperty('display', 'none', 'important');
+      }
+    });
   } catch(e) {}
 })();
 </script>
@@ -2719,9 +2729,23 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   <a class="mobile-logo" href="/app.html">
     <span class="mobile-logo-text"></span>
   </a>
-  <button class="btn-icon" id="syncBtnMobile" title="Synchroniser les calendriers" style="margin-left:auto;margin-right:96px;background:transparent;border:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1A7A5E;font-size:18px;">
-    <i class="fas fa-sync-alt"></i>
-  </button>
+  <span id="bh-mobile-page-title" style="font-family:'DM Sans',system-ui,sans-serif;font-size:14px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;letter-spacing:-0.01em;">Home</span>
+  <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;">
+    <button class="btn-icon" id="syncBtnMobile" title="Synchroniser" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1A7A5E;font-size:16px;">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+    <div id="bh-mobile-svc" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:0 4px;" title="Statut des services">
+      <div style="display:flex;align-items:center;gap:3px;">
+        <i class="fas fa-server" style="font-size:9px;color:#9CA3AF;"></i>
+        <span id="msvc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
+      </div>
+      <div style="width:1px;height:8px;background:rgba(0,0,0,.15);"></div>
+      <div style="display:flex;align-items:center;gap:3px;">
+        <i class="fas fa-plug" style="font-size:9px;color:#9CA3AF;"></i>
+        <span id="msvc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
+      </div>
+    </div>
+  </div>
 </div>
 <button class="mobile-menu-btn" id="mobileMenuBtn">
 <i class="fas fa-bars"></i>
