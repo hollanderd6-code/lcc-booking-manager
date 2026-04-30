@@ -2430,16 +2430,17 @@ async function _closeChannexIframe(propertyId) {
       headers: { 'Authorization': `Bearer ${token}` }
     }).catch(() => {});
 
-    // 4. Pull des réservations existantes depuis Booking.com
-    updateStatus('📦 Récupération des réservations existantes depuis Booking.com…');
+    // 4. Pull des réservations existantes depuis la plateforme
+    const platformLabel = window._otaSelected === 'airbnb' ? 'Airbnb' : 'Booking.com';
+    updateStatus(`📦 Récupération des réservations existantes depuis ${platformLabel}…`);
     const pullRes = await fetch(`${API_URL}/api/channex/pull-bookings/${pid}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     }).catch(() => null);
     const pullData = pullRes ? await pullRes.json().catch(() => {}) : {};
 
-    // 5. Attendre 5s que Booking.com envoie les réservations à Channex
-    await new Promise(r => setTimeout(r, 5000));
+    // 5. Attendre 8s que la plateforme envoie les réservations à Channex
+    await new Promise(r => setTimeout(r, 8000));
 
     // 6. Sync les réservations dans BH
     updateStatus('📥 Import des réservations dans Boostinghost…');
@@ -2449,7 +2450,7 @@ async function _closeChannexIframe(propertyId) {
     }).catch(() => null);
     const syncData = syncRes ? await syncRes.json().catch(() => {}) : {};
 
-    // 5. Push disponibilités (500 jours) APRÈS pull des réservations
+    // 7. Push disponibilités (500 jours) APRÈS pull des réservations
     updateStatus('📅 Envoi des disponibilités aux plateformes…');
     await fetch(`${API_URL}/api/channex/push-availability/${pid}`, {
       method: 'POST',
