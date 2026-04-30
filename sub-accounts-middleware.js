@@ -128,7 +128,28 @@ function requirePermission(pool, permission) {
 
         // Paiements directs
         'can_view_payments': 'can_view_payments',
-        'can_manage_payments': 'can_manage_payments'
+        'can_manage_payments': 'can_manage_payments',
+
+        // Dynamic Pricing
+        'can_view_pricing': 'can_view_pricing',
+        'can_manage_pricing': 'can_manage_pricing',
+
+        // Reporting / Revenus
+        'can_view_reporting': 'can_view_reporting',
+
+        // Débours
+        'can_view_debours': 'can_view_debours',
+        'can_manage_debours': 'can_manage_debours',
+
+        // Livret d'accueil
+        'can_view_welcome_book': 'can_view_welcome_book',
+
+        // Templates messages automatiques
+        'can_view_templates': 'can_view_templates',
+        'can_manage_templates': 'can_manage_templates',
+
+        // Contrats
+        'can_view_contracts': 'can_view_contracts'
       };
       
       const dbPermission = permissionMapping[permission] || permission;
