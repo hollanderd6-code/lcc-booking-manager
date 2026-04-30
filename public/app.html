@@ -2682,8 +2682,10 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       style.textContent = '#kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, #kpiChecklistsCard, #kpiCaCard, #newReservationBtn, #fabAddResa { display: none !important; }';
     } else if (role === 'comptable') {
       style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
+    } else if (role === 'proprietaire') {
+      style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
     } else if (role === 'custom' && visibleKpis) {
-      var hide = [];
+      var hide = ['#newReservationBtn', '#fabAddResa']; // toujours caché pour custom
       if (!visibleKpis.kpi_properties)  hide.push('#kpiPropertiesCard');
       if (!visibleKpis.kpi_checkins)    hide.push('#kpiTodayMovesCard');
       if (!visibleKpis.kpi_cleaning)    hide.push('#kpiCleaning48hCard');
