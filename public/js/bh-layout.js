@@ -217,10 +217,13 @@ function getSidebarHTML() {
 `;
 }
 
+  const _isSubForBrand = localStorage.getItem('lcc_is_sub_account') === 'true'
+                       || localStorage.getItem('lcc_account_type') === 'sub';
+  const _subtitleText = _isSubForBrand ? 'ESPACE COLLABORATEUR' : 'Smart Property Manager';
   const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
     <span style="color:#1A7A5E; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
   </span>
-  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Smart Property Manager</span>`;
+  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">${_subtitleText}</span>`;
 
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
@@ -407,6 +410,7 @@ function getSidebarHTML() {
     // Considérer iPad et tablettes tactiles comme mobile (pointer:coarse = écran tactile)
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
     if (window.innerWidth > 1400 && !isTouch) return;
+    if (document.getElementById('bh-mobile-page-title')) return;
 
     // Lire le titre depuis data-title ou page
     const page = document.body.getAttribute('data-page');
@@ -443,12 +447,14 @@ function getSidebarHTML() {
     // Trouver ou créer la mobile-header
     let mobileHeader = document.querySelector('.mobile-header');
     if (!mobileHeader) {
+      // Créer une mobile-header avec logo si elle n'existe pas
       mobileHeader = document.createElement('div');
       mobileHeader.className = 'mobile-header';
       mobileHeader.id = 'bhMobileHeader';
       mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;"><span class="mobile-logo-text"></span></a>';
       const appContainer = document.querySelector('.app-container') || document.querySelector('.main-content') || document.body;
       appContainer.parentNode.insertBefore(mobileHeader, appContainer);
+      // Laisser normalizeBranding injecter le bon logo
       if (window.bhLayout && window.bhLayout.normalizeBranding) {
         setTimeout(function(){ window.bhLayout.normalizeBranding(); }, 50);
       }
@@ -470,14 +476,18 @@ function getSidebarHTML() {
     mobileHeader.style.setProperty('backdrop-filter', 'blur(12px)', 'important');
     mobileHeader.style.setProperty('border-bottom', '1px solid rgba(200,184,154,0.4)', 'important');
 
-    // Injecter le titre après le logo (seulement s'il n'existe pas)
-    if (!document.getElementById('bh-mobile-page-title')) {
-      const titleEl = document.createElement('span');
-      titleEl.id = 'bh-mobile-page-title';
-      titleEl.textContent = title;
-      titleEl.style.cssText = 'font-family:"DM Sans",system-ui,sans-serif;font-size:14px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;letter-spacing:-0.01em;margin-left:10px;';
-      const logo = mobileHeader.querySelector('.mobile-logo');
-      if (logo) { logo.after(titleEl); } else { mobileHeader.appendChild(titleEl); }
+    // Injecter le titre après le logo
+    const titleEl = document.createElement('span');
+    titleEl.id = 'bh-mobile-page-title';
+    titleEl.textContent = title;
+    titleEl.style.cssText = 'font-family:"DM Sans",system-ui,sans-serif;font-size:14px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;letter-spacing:-0.01em;';
+
+    // Wrapper colonne pour logo+titre à gauche, pastilles en dessous
+    const logo = mobileHeader.querySelector('.mobile-logo');
+    if (logo) {
+      logo.after(titleEl);
+    } else {
+      mobileHeader.appendChild(titleEl);
     }
 
     // Pastilles statut sous le titre (si pas déjà présentes)
@@ -712,8 +722,9 @@ function getSidebarHTML() {
     setTimeout(() => {
       forceUpdateSidebarLogo();
       normalizeBranding();
+      injectMobileTitle();
       applyDesktopLayout();
-    }, 500);
+    }, 800);
 
     // Réappliquer au resize (changement orientation / fenêtre)
     let _resizeTimer;
