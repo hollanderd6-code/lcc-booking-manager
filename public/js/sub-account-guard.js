@@ -23,8 +23,22 @@
   
   // Récupérer les infos du compte
   const token = localStorage.getItem('lcc_token');
-  const accountType = localStorage.getItem('lcc_account_type');
-  const permissions = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
+
+  // Compatible nouveau système (lcc_is_sub_account) ET ancien (lcc_account_type)
+  const isSubAccountNew = localStorage.getItem('lcc_is_sub_account') === 'true';
+  const isSubAccountOld = localStorage.getItem('lcc_account_type') === 'sub';
+  const accountType = isSubAccountNew ? 'sub' : (localStorage.getItem('lcc_account_type') || 'main');
+
+  // Permissions : nouveau système prioritaire
+  let permissions = {};
+  try {
+    const subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+    if (subData.permissions) permissions = subData.permissions;
+  } catch(e) {}
+  // Fallback ancien système
+  if (Object.keys(permissions).length === 0) {
+    try { permissions = JSON.parse(localStorage.getItem('lcc_permissions') || '{}'); } catch(e) {}
+  }
   
   // Si pas de token → login
   if (!token) {
@@ -43,13 +57,18 @@
     return;
   }
 
+  // Assurer la compatibilité avec les anciens scripts
+  if (isSubAccountNew && !isSubAccountOld) {
+    localStorage.setItem('lcc_account_type', 'sub');
+  }
+
   // Déterminer la page courante (déclaré tôt pour les vérifications suivantes)
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
   // Bloquer settings et support pour tous les sous-comptes
   if (BLOCKED_PAGES.includes(currentPage)) {
     console.log('🚫 Page bloquée pour les sous-comptes:', currentPage);
-    window.location.href = '/app-simple-subaccount.html';
+    window.location.href = '/app.html';
     return;
   }
   
@@ -75,7 +94,7 @@
     if (!hasViewPermission) {
       console.log('❌ Permission refusée pour', currentPage);
       alert('Vous n\'avez pas accès à cette page.');
-      window.location.href = '/sub-account.html';
+      window.location.href = '/app.html';
       return;
     }
     
@@ -138,6 +157,10 @@
         // Ne pas masquer les boutons de navigation
         const text = btn.textContent.trim().toLowerCase();
         if (text.includes('retour') || text.includes('annuler') || text.includes('fermer')) {
+          return;
+        }
+        // Ne pas masquer les boutons de nav mobile
+        if (btn.closest('.mobile-nav') || btn.closest('.tab-bar') || btn.classList.contains('tab-btn') || btn.id === 'mobileMenuBtn') {
           return;
         }
         
