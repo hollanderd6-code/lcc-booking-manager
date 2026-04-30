@@ -2419,25 +2419,26 @@ async function _closeChannexIframe(propertyId) {
     // 1. Recharger les propriétés
     await loadProperties().catch(() => {});
 
-    // 2. Attendre 4s pour que Channex/Booking.com établisse la connexion
+    // 2. Attendre 5s pour que Channex/Booking.com établisse la connexion
     updateStatus('🔗 Établissement de la connexion avec la plateforme…');
-    await new Promise(r => setTimeout(r, 4000));
+    await new Promise(r => setTimeout(r, 5000));
 
-    // 3. Import historique réservations EN PREMIER (pour bloquer les bonnes dates)
-    updateStatus('📦 Import des réservations existantes…');
-    const syncRes = await fetch(`${API_URL}/api/channex/sync-bookings/${pid}`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    }).catch(() => null);
-
-    // 4. Push des tarifs (365 jours)
+    // 3. Push des tarifs (500 jours) — requis pour que Booking.com ouvre le logement
     updateStatus('💶 Envoi des tarifs aux plateformes…');
     await fetch(`${API_URL}/api/pricing/rules/push-channex/${pid}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     }).catch(() => {});
 
-    // 5. Push disponibilités (500 jours) APRÈS import des réservations
+    // 4. Pull des réservations existantes depuis Booking.com (+ sync dans BH)
+    updateStatus('📦 Récupération des réservations existantes depuis Booking.com…');
+    const pullRes = await fetch(`${API_URL}/api/channex/pull-bookings/${pid}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => null);
+    const pullData = pullRes ? await pullRes.json().catch(() => {}) : {};
+
+    // 5. Push disponibilités (500 jours) APRÈS pull des réservations
     updateStatus('📅 Envoi des disponibilités aux plateformes…');
     await fetch(`${API_URL}/api/channex/push-availability/${pid}`, {
       method: 'POST',
@@ -2445,10 +2446,10 @@ async function _closeChannexIframe(propertyId) {
     }).catch(() => {});
     const syncData = syncRes ? await syncRes.json().catch(() => {}) : {};
 
-    // 4. Succès
+    // 6. Succès
     if (modal) {
-      const imported = syncData?.imported || 0;
-      const updated = syncData?.updated || 0;
+      const imported = pullData?.imported || 0;
+      const updated = pullData?.updated || 0;
       modal.innerHTML = `
         <div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
           <div style="width:56px;height:56px;background:#f0fdf8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
