@@ -2430,13 +2430,24 @@ async function _closeChannexIframe(propertyId) {
       headers: { 'Authorization': `Bearer ${token}` }
     }).catch(() => {});
 
-    // 4. Pull des réservations existantes depuis Booking.com (+ sync dans BH)
+    // 4. Pull des réservations existantes depuis Booking.com
     updateStatus('📦 Récupération des réservations existantes depuis Booking.com…');
     const pullRes = await fetch(`${API_URL}/api/channex/pull-bookings/${pid}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     }).catch(() => null);
     const pullData = pullRes ? await pullRes.json().catch(() => {}) : {};
+
+    // 5. Attendre 5s que Booking.com envoie les réservations à Channex
+    await new Promise(r => setTimeout(r, 5000));
+
+    // 6. Sync les réservations dans BH
+    updateStatus('📥 Import des réservations dans Boostinghost…');
+    const syncRes = await fetch(`${API_URL}/api/channex/sync-bookings/${pid}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => null);
+    const syncData = syncRes ? await syncRes.json().catch(() => {}) : {};
 
     // 5. Push disponibilités (500 jours) APRÈS pull des réservations
     updateStatus('📅 Envoi des disponibilités aux plateformes…');
@@ -2446,10 +2457,10 @@ async function _closeChannexIframe(propertyId) {
     }).catch(() => {});
     const syncData = syncRes ? await syncRes.json().catch(() => {}) : {};
 
-    // 6. Succès
+    // 8. Succès
     if (modal) {
-      const imported = pullData?.imported || 0;
-      const updated = pullData?.updated || 0;
+      const imported = syncData?.imported || 0;
+      const updated = syncData?.updated || 0;
       modal.innerHTML = `
         <div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
           <div style="width:56px;height:56px;background:#f0fdf8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
