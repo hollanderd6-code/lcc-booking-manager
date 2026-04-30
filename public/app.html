@@ -12104,5 +12104,106 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 });
 </script>
 <script src="/js/bh-onboarding.js"></script>
+
+<!-- ═══════════════════════════════════════════════
+     FEATURE 1 : Sticky calendar header (scroll vertical)
+     FEATURE 2 : Row highlight on click
+     ═══════════════════════════════════════════════ -->
+<style>
+/* ── Sticky header inside calendar-wrapper ── */
+.calendar-wrapper {
+  /* Le wrapper devient le conteneur de scroll vertical */
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* L'en-tête noir reste collé en haut lors du scroll vertical */
+.calendar-modern-header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+/* La barre de navigation mois reste collée juste en dessous */
+.period-navigation {
+  position: sticky;
+  top: var(--calendar-header-height, 72px);
+  z-index: 199;
+}
+
+/* L'en-tête des jours reste collé lors du scroll horizontal ET vertical */
+.calendar-grid-wrapper .days-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* La colonne logements : le header "Logements" reste sticky en haut */
+.property-list-header {
+  position: sticky;
+  top: 0;
+  z-index: 101;
+}
+
+/* ── Row highlight on click ── */
+/* Les .property-item non sélectionnés s'assombrissent quand un est sélectionné */
+.property-list-items:has(.property-item.selected) .property-item:not(.selected) {
+  opacity: 0.25;
+  transition: opacity 0.2s ease;
+}
+.property-item.selected {
+  font-weight: 700 !important;
+  background: var(--primary-light, #e6f4f0) !important;
+}
+
+/* Transition douce pour tous les éléments */
+.calendar-row,
+.property-item {
+  transition: opacity 0.2s ease;
+}
+</style>
+
+<script>
+(function() {
+  /* ── FEATURE 1 : Calcul dynamique de la hauteur du header pour sticky ── */
+  function updateStickyOffsets() {
+    var header = document.querySelector('.calendar-modern-header');
+    var nav    = document.querySelector('.period-navigation');
+    if (header && nav) {
+      var h = header.offsetHeight;
+      nav.style.top = h + 'px';
+    }
+  }
+  window.addEventListener('resize', updateStickyOffsets);
+  setTimeout(updateStickyOffsets, 500);
+
+  /* ── FEATURE 2 : Assombrir les autres property-items lors d'une sélection ──
+     La fonction selectProperty() dans app.js gère déjà les calendar-row.
+     On patch ici pour que la colonne logements soit aussi assombrie. */
+  function patchSelectProperty() {
+    var orig = window.selectProperty;
+    if (typeof orig !== 'function') return false; // pas encore dispo
+    window.selectProperty = function(propertyId) {
+      orig.call(this, propertyId);
+      // Après l'appel original, on synchronise l'opacité des property-items
+      // (la classe .selected est déjà gérée par orig)
+      var items = document.querySelectorAll('.property-item');
+      var hasSelected = document.querySelector('.property-item.selected') !== null;
+      items.forEach(function(it) {
+        it.style.opacity = (!hasSelected || it.classList.contains('selected')) ? '1' : '0.25';
+      });
+    };
+    return true;
+  }
+
+  var tries = 0;
+  var iv = setInterval(function() {
+    tries++;
+    if (patchSelectProperty() || tries > 60) clearInterval(iv);
+  }, 200);
+})();
+</script>
 </body>
 </html>
