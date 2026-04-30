@@ -2658,16 +2658,34 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-// Masquage immédiat pour le rôle ménage (avant rendu)
+// Masquage immédiat selon le rôle (avant rendu)
 (function() {
   try {
-    var _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    if (_u.role === 'cleaner' && localStorage.getItem('lcc_account_type') === 'sub') {
-      var style = document.createElement('style');
-      style.id = 'cleaner-restrictions-css';
-      style.textContent = '#kpiPropertiesCard, #kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, .cleaning-checklists-widget, #newReservationBtn, #fabAddResa { display: none !important; }';
-      document.head.appendChild(style);
+    var role = 'main';
+    var isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true' 
+                    || localStorage.getItem('lcc_account_type') === 'sub';
+    
+    if (isSubAccount) {
+      try {
+        var subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+        role = subData.role || JSON.parse(localStorage.getItem('lcc_user') || '{}').role || 'custom';
+      } catch(e) {}
     }
+
+    if (!isSubAccount) return; // compte principal = rien à masquer
+
+    var style = document.createElement('style');
+    style.id = 'role-restrictions-css';
+
+    if (role === 'cleaner') {
+      // Ménage : masquer tout sauf logements actifs, check-in/out, ménages à prévoir
+      style.textContent = '#kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, #kpiChecklistsCard, #kpiRevenueCard, #newReservationBtn, #fabAddResa { display: none !important; }';
+    } else if (role === 'comptable') {
+      // Comptable : masquer le dashboard KPI et calendrier
+      style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
+    }
+
+    if (style.textContent) document.head.appendChild(style);
   } catch(e) {}
 })();
 </script>
