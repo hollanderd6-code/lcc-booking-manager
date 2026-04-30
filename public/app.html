@@ -12106,91 +12106,84 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 <script src="/js/bh-onboarding.js"></script>
 
 <!-- ═══════════════════════════════════════════════
-     FEATURE 1 : Sticky calendar header (scroll vertical)
+     FEATURE 1 : Sticky calendar header (scroll vertical de la page)
      FEATURE 2 : Row highlight on click
      ═══════════════════════════════════════════════ -->
 <style>
-/* ── Sticky header inside calendar-wrapper ── */
+/* ── Feature 1 : sticky dans la page ── */
+/* Le wrapper ne doit PAS avoir de scroll interne - on retire tout ce qu'on aurait pu ajouter */
 .calendar-wrapper {
-  /* Le wrapper devient le conteneur de scroll vertical */
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  position: relative;
+  max-height: none !important;
+  overflow-y: visible !important;
+  overflow-x: visible !important;
 }
 
-/* L'en-tête noir reste collé en haut lors du scroll vertical */
+/* L'en-tête noir calendrier colle en haut lors du scroll de page */
 .calendar-modern-header {
   position: sticky;
-  top: 0;
-  z-index: 200;
+  /* top calculé par JS selon hauteur réelle du main-header */
+  top: var(--cal-header-sticky-top, 40px);
+  z-index: 190;
 }
 
-/* La barre de navigation mois reste collée juste en dessous */
+/* La barre de nav mois colle juste sous le header noir */
 .period-navigation {
   position: sticky;
-  top: var(--calendar-header-height, 72px);
-  z-index: 199;
+  top: var(--cal-nav-sticky-top, 110px);
+  z-index: 189;
 }
 
-/* L'en-tête des jours reste collé lors du scroll horizontal ET vertical */
-.calendar-grid-wrapper .days-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-/* La colonne logements : le header "Logements" reste sticky en haut */
-.property-list-header {
-  position: sticky;
-  top: 0;
-  z-index: 101;
-}
-
-/* ── Row highlight on click ── */
-/* Les .property-item non sélectionnés s'assombrissent quand un est sélectionné */
+/* ── Feature 2 : assombrir les property-items non sélectionnés ── */
+/* Complète la fonction selectProperty() qui gère déjà les calendar-row */
 .property-list-items:has(.property-item.selected) .property-item:not(.selected) {
   opacity: 0.25;
+}
+.property-item {
   transition: opacity 0.2s ease;
 }
 .property-item.selected {
   font-weight: 700 !important;
   background: var(--primary-light, #e6f4f0) !important;
 }
-
-/* Transition douce pour tous les éléments */
-.calendar-row,
-.property-item {
-  transition: opacity 0.2s ease;
-}
 </style>
 
 <script>
 (function() {
-  /* ── FEATURE 1 : Calcul dynamique de la hauteur du header pour sticky ── */
-  function updateStickyOffsets() {
-    var header = document.querySelector('.calendar-modern-header');
-    var nav    = document.querySelector('.period-navigation');
-    if (header && nav) {
-      var h = header.offsetHeight;
-      nav.style.top = h + 'px';
-    }
-  }
-  window.addEventListener('resize', updateStickyOffsets);
-  setTimeout(updateStickyOffsets, 500);
+  function updateStickyTops() {
+    var demoBand = document.querySelector('.bh-demo-nav');
+    var mainHeader = document.getElementById('bhMainHeader');
+    var calHeader = document.querySelector('.calendar-modern-header');
+    var calNav = document.querySelector('.period-navigation');
+    if (!calHeader || !calNav) return;
 
-  /* ── FEATURE 2 : Assombrir les autres property-items lors d'une sélection ──
-     La fonction selectProperty() dans app.js gère déjà les calendar-row.
-     On patch ici pour que la colonne logements soit aussi assombrie. */
+    var demoBandH = demoBand ? demoBand.offsetHeight : 40;
+    var mainHeaderH = mainHeader ? mainHeader.offsetHeight : 0;
+
+    // Sur desktop la barre dark est fixed à 40px, le main-header n'est pas sticky
+    // Sur mobile le main-header est sticky à top:0
+    var isDesktop = window.innerWidth > 1366;
+    var stickyBase = isDesktop ? demoBandH : (mainHeaderH || 0);
+
+    var calHeaderH = calHeader.offsetHeight;
+    var calNavH    = calNav.offsetHeight;
+
+    document.documentElement.style.setProperty('--cal-header-sticky-top', stickyBase + 'px');
+    document.documentElement.style.setProperty('--cal-nav-sticky-top', (stickyBase + calHeaderH) + 'px');
+  }
+
+  window.addEventListener('resize', updateStickyTops);
+  // Laisser le DOM se stabiliser
+  setTimeout(updateStickyTops, 300);
+  setTimeout(updateStickyTops, 1000);
+
+  /* ── Feature 2 : patch selectProperty pour assombrir aussi la colonne logements ── */
   function patchSelectProperty() {
+    if (typeof window.selectProperty !== 'function') return false;
     var orig = window.selectProperty;
-    if (typeof orig !== 'function') return false; // pas encore dispo
     window.selectProperty = function(propertyId) {
       orig.call(this, propertyId);
-      // Après l'appel original, on synchronise l'opacité des property-items
-      // (la classe .selected est déjà gérée par orig)
       var items = document.querySelectorAll('.property-item');
-      var hasSelected = document.querySelector('.property-item.selected') !== null;
+      var hasSelected = !!document.querySelector('.property-item.selected');
       items.forEach(function(it) {
         it.style.opacity = (!hasSelected || it.classList.contains('selected')) ? '1' : '0.25';
       });
