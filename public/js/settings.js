@@ -2419,18 +2419,23 @@ async function _closeChannexIframe(propertyId) {
     // 1. Recharger les propriétés
     await loadProperties().catch(() => {});
 
-    // 2. Push disponibilités (12 mois)
+    // 2. Attendre 4s pour que Channex/Booking.com établisse la connexion
+    updateStatus('🔗 Établissement de la connexion avec la plateforme…');
+    await new Promise(r => setTimeout(r, 4000));
+
+    // 3. Import historique réservations EN PREMIER (pour bloquer les bonnes dates)
+    updateStatus('📦 Import des réservations existantes…');
+    const syncRes = await fetch(`${API_URL}/api/channex/sync-bookings/${pid}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => null);
+
+    // 4. Push disponibilités (12 mois) APRÈS import des réservations
     updateStatus('📅 Envoi des disponibilités aux plateformes…');
     await fetch(`${API_URL}/api/channex/push-availability/${pid}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     }).catch(() => {});
-
-    // 3. Import historique réservations
-    updateStatus('📦 Import des réservations existantes…');
-    const syncRes = await fetch(`${API_URL}/api/channex/sync-bookings/${pid}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }).catch(() => null);
     const syncData = syncRes ? await syncRes.json().catch(() => {}) : {};
 
     // 4. Succès
