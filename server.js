@@ -26283,6 +26283,48 @@ app.post('/api/channex/sync-revisions/:property_id', authenticateToken, async (r
   }
 });
 
+// ── Push disponibilités complet (toutes dates ouvertes sauf réservations existantes) ──
+app.post('/api/channex/push-availability/:property_id', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+
+    const property_id = req.params.property_id;
+    const prop = await pool.query(
+      'SELECT channex_property_id, channex_room_type_id, channex_rate_plan_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, user.id]
+    );
+    if (!prop.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+    const { channex_property_id, channex_room_type_id, channex_enabled } = prop.rows[0];
+    if (!channex_enabled || !channex_property_id) return res.status(400).json({ error: 'Logement non connecté à Channex' });
+
+    // Récupérer toutes les réservations actives pour bloquer les dates
+    const resaResult = await pool.query(
+      `SELECT start_date, end_date FROM reservations 
+       WHERE property_id = $1 AND status != 'cancelled' AND end_date >= NOW()`,
+      [property_id]
+    );
+
+    const dates_blocked = [];
+    for (const r of resaResult.rows) {
+      const start = new Date(r.start_date);
+      const end = new Date(r.end_date);
+      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        dates_blocked.push(d.toISOString().split('T')[0]);
+      }
+    }
+
+    await pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked });
+
+    console.log(`✅ [PUSH-AVAIL] ${property_id} : ${dates_blocked.length} dates bloquées, reste ouvert`);
+    res.json({ success: true, blocked: dates_blocked.length, message: `Disponibilités synchronisées (${dates_blocked.length} dates bloquées)` });
+
+  } catch (e) {
+    console.error('❌ Erreur push-availability:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
