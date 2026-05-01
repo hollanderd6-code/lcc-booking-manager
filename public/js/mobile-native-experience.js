@@ -485,3 +485,104 @@
   }
 
 })();
+
+
+// ============================================
+// 🔔 GESTION DES NOTIFICATIONS PUSH (Capacitor)
+// ============================================
+// Définie ici et exposée globalement — appelée depuis app.html
+// après le chargement de Capacitor Core.
+//
+// Payload FCM attendu (data) :
+//   type            : 'new_message' | 'new_chat_message' | 'new_reservation' | ...
+//   conversationId  : ID numérique de la conversation  (new_message)
+//   conversation_id : même chose, nom alternatif       (new_chat_message)
+//   reservation_id  : ID de la réservation             (new_reservation)
+
+window.initPushNotifications = async function initPushNotifications() {
+  try {
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+
+    const { PushNotifications } = window.Capacitor.Plugins;
+    if (!PushNotifications) {
+      console.warn('⚠️ PushNotifications plugin non disponible');
+      return;
+    }
+
+    // ── Demande de permission ─────────────────────────────────
+    const permission = await PushNotifications.requestPermissions();
+    if (permission.receive !== 'granted') {
+      console.warn('⚠️ Permission notifications refusée');
+      return;
+    }
+
+    await PushNotifications.register();
+
+    // ── Token FCM → envoi au serveur ──────────────────────────
+    PushNotifications.addListener('registration', async (token) => {
+      console.log('📱 Token FCM reçu:', token.value.substring(0, 30) + '...');
+      try {
+        const authToken = localStorage.getItem('lcc_token');
+        if (!authToken) return;
+        const API_URL = window.location.origin;
+        await fetch(`${API_URL}/api/push/register-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + authToken
+          },
+          body: JSON.stringify({ token: token.value, platform: window.Capacitor.getPlatform() })
+        });
+        console.log('✅ Token FCM enregistré sur le serveur');
+      } catch (e) {
+        console.error('❌ Erreur enregistrement token:', e);
+      }
+    });
+
+    PushNotifications.addListener('registrationError', (err) => {
+      console.error('❌ Erreur enregistrement push:', err);
+    });
+
+    // ── Notification reçue en foreground (app ouverte) ────────
+    // Juste un log — on ne force pas la navigation si l'user est déjà dans l'app
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      console.log('🔔 Notification reçue (foreground):', notification);
+    });
+
+    // ── Clic sur une notification (app fermée ou background) ──
+    // C'est ici qu'on redirige vers la bonne conversation
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      console.log('👆 Clic notification:', action);
+
+      const data = action.notification?.data || {};
+      const type = data.type || '';
+
+      // Résoudre l'ID de conversation (deux noms de champs possibles selon le service)
+      const rawConvId = data.conversationId || data.conversation_id || null;
+      const convId = rawConvId ? parseInt(rawConvId, 10) : null;
+
+      if ((type === 'new_message' || type === 'new_chat_message') && convId && !isNaN(convId)) {
+        // → Ouvrir directement la bonne conversation
+        console.log('💬 Redirection vers conversation', convId);
+        window.location.href = '/messages.html?conv=' + convId;
+        return;
+      }
+
+      if (type === 'new_reservation') {
+        // → Ouvrir l'app sur le calendrier (comportement actuel)
+        console.log('📅 Redirection vers app (nouvelle réservation)');
+        window.location.href = '/app.html';
+        return;
+      }
+
+      // Fallback : retour à l'app principale
+      console.log('🏠 Redirection fallback vers app.html');
+      window.location.href = '/app.html';
+    });
+
+    console.log('✅ Push notifications initialisées');
+
+  } catch (e) {
+    console.error('❌ Erreur initPushNotifications:', e);
+  }
+};
