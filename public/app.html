@@ -12337,10 +12337,13 @@ function openBatchEditModal() {
   const modal = document.getElementById('batchEditModal');
   modal.style.display = 'flex';
 
-  // Pré-remplir les dates avec aujourd'hui
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('batchDateFrom').value = today;
-  document.getElementById('batchDateTo').value = today;
+  // Pré-remplir : aujourd'hui → demain
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const fmt = d => d.toISOString().split('T')[0];
+  document.getElementById('batchDateFrom').value = fmt(today);
+  document.getElementById('batchDateTo').value = fmt(tomorrow);
 
   // Remplir la liste des logements
   const list = document.getElementById('batchPropertiesList');
