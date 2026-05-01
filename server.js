@@ -1804,6 +1804,8 @@ ON invoice_download_tokens(token);
           message TEXT NOT NULL,
           trigger_type TEXT NOT NULL DEFAULT 'on_booking',
           trigger_offset_hours INTEGER DEFAULT 0,
+          trigger_offset_days INTEGER DEFAULT 0,
+          send_condition TEXT DEFAULT 'always',
           active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -1811,6 +1813,9 @@ ON invoice_download_tokens(token);
         CREATE INDEX IF NOT EXISTS idx_message_templates_user_id ON message_templates(user_id);
         CREATE INDEX IF NOT EXISTS idx_message_templates_property_id ON message_templates(property_id);
       `);
+      // Migrations colonnes si table existe déjà
+      await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS trigger_offset_days INTEGER DEFAULT 0`).catch(()=>{});
+      await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS send_condition TEXT DEFAULT 'always'`).catch(()=>{});
       console.log('✅ Table message_templates OK');
 
     // ✅ Migration : table message_template_logs
@@ -21382,12 +21387,12 @@ app.get('/api/message-templates', authenticateToken, async (req, res) => {
 app.post('/api/message-templates', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { property_id, title, message, trigger_type, trigger_offset_hours } = req.body;
+    const { property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition } = req.body;
     if (!title || !message || !trigger_type) return res.status(400).json({ error: 'title, message et trigger_type requis' });
     const result = await pool.query(
-      `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0]
+      `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always']
     );
     res.json({ success: true, template: result.rows[0] });
   } catch(e) {
@@ -21399,7 +21404,7 @@ app.post('/api/message-templates', authenticateToken, async (req, res) => {
 app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { title, message, trigger_type, trigger_offset_hours, active, property_id } = req.body;
+    const { title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, active, property_id } = req.body;
     const result = await pool.query(
       `UPDATE message_templates SET
         title = COALESCE($1, title),
@@ -21408,9 +21413,13 @@ app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
         trigger_offset_hours = COALESCE($4, trigger_offset_hours),
         active = COALESCE($5, active),
         property_id = $6,
+        trigger_offset_days = COALESCE($9, trigger_offset_days),
+        send_condition = COALESCE($10, send_condition),
         updated_at = NOW()
        WHERE id = $7 AND user_id = $8 RETURNING *`,
-      [title, message, trigger_type, trigger_offset_hours, active, property_id || null, req.params.id, userId]
+      [title, message, trigger_type, trigger_offset_hours, active, property_id || null, req.params.id, userId,
+       trigger_offset_days !== undefined ? trigger_offset_days : null,
+       send_condition || null]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Template non trouvé' });
     res.json({ success: true, template: result.rows[0] });
@@ -21550,19 +21559,22 @@ async function runTemplatesCron(triggerTypes) {
 
     for (const tmpl of templates.rows) {
       try {
-        // Calculer la date cible selon le déclencheur
+        // Calculer la date cible selon le déclencheur + offset en jours
+        const offsetDays = tmpl.trigger_offset_days || Math.round(Math.abs(tmpl.trigger_offset_hours || 0) / 24) || 0;
+        const isBefore = tmpl.trigger_type.startsWith('before_');
+        const isAfter  = tmpl.trigger_type.startsWith('after_');
+        const isOn     = tmpl.trigger_type.startsWith('on_') || tmpl.trigger_type === 'on_booking';
+
         let targetDate = todayStr;
-        if (tmpl.trigger_type === 'before_arrival') {
-          // La veille → chercher les arrivées de demain
-          const tomorrow = new Date(nowParis);
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          targetDate = tomorrow.toISOString().split('T')[0];
+        if (!isOn) {
+          const d = new Date(nowParis);
+          d.setDate(d.getDate() + (isBefore ? offsetDays : isAfter ? -offsetDays : 0));
+          targetDate = d.toISOString().split('T')[0];
         }
 
         // Chercher les conversations éligibles
-        const dateCol = tmpl.trigger_type === 'after_departure'
-          ? 'reservation_end_date'
-          : 'reservation_start_date';
+        const isDepRelated = tmpl.trigger_type.includes('departure') || tmpl.trigger_type === 'after_departure';
+        const dateCol = isDepRelated ? 'reservation_end_date' : 'reservation_start_date';
 
         const convs = await pool.query(
           `SELECT c.*,
@@ -21584,6 +21596,45 @@ async function runTemplatesCron(triggerTypes) {
         console.log(`  Template "${tmpl.title}" → ${convs.rows.length} conversation(s) ciblée(s) pour ${targetDate}`);
 
         for (const conv of convs.rows) {
+          // Vérifier send_condition
+          const sendCond = tmpl.send_condition || 'always';
+          if (sendCond !== 'always') {
+            const platform = (conv.platform || '').toLowerCase();
+            if (sendCond === 'platform_booking' && !platform.includes('booking') && platform !== 'bdc') {
+              console.log(`  ↳ Skip conv ${conv.id} : condition platform_booking non remplie (platform=${platform})`);
+              continue;
+            }
+            if (sendCond === 'platform_airbnb' && !platform.includes('airbnb') && platform !== 'abb') {
+              console.log(`  ↳ Skip conv ${conv.id} : condition platform_airbnb non remplie`);
+              continue;
+            }
+            if (sendCond === 'platform_direct' && platform !== 'direct' && platform !== '') {
+              console.log(`  ↳ Skip conv ${conv.id} : condition platform_direct non remplie`);
+              continue;
+            }
+            if (sendCond === 'deposit_active' || sendCond === 'deposit_pending') {
+              const resRow = await pool.query(
+                `SELECT uid FROM reservations WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled' ORDER BY created_at DESC LIMIT 1`,
+                [conv.property_id, conv.reservation_start_date]
+              ).catch(() => ({ rows: [] }));
+              if (resRow.rows[0]) {
+                const dep = await pool.query(
+                  `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
+                  [resRow.rows[0].uid]
+                ).catch(() => ({ rows: [] }));
+                const depStatus = dep.rows[0]?.status;
+                if (sendCond === 'deposit_active' && !['pending','authorized'].includes(depStatus)) {
+                  console.log(`  ↳ Skip conv ${conv.id} : condition deposit_active non remplie (status=${depStatus})`);
+                  continue;
+                }
+                if (sendCond === 'deposit_pending' && depStatus !== 'pending') {
+                  console.log(`  ↳ Skip conv ${conv.id} : condition deposit_pending non remplie (status=${depStatus})`);
+                  continue;
+                }
+              }
+            }
+          }
+
           // Anti-doublon : pas déjà envoyé dans les 23h
           const alreadySent = await pool.query(
             `SELECT id FROM message_template_logs
@@ -21649,7 +21700,7 @@ async function runTemplatesCron(triggerTypes) {
 
 // Veille + Jour J à 7h00
 cron.schedule('0 7 * * *', () => {
-  runTemplatesCron(['before_arrival', 'on_arrival']);
+  runTemplatesCron(['before_arrival', 'on_arrival', 'after_arrival', 'before_departure', 'on_departure', 'after_departure']);
 }, { timezone: 'Europe/Paris' });
 
 // Après départ à 15h00
