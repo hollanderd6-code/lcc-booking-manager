@@ -7974,7 +7974,7 @@ console.log('👤 DEBUG GUEST:', {
       </div>
 
       <!-- ── LOGEMENT + DATES ── -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;">
+      <div data-info-cards="1" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;">
         <!-- Logement -->
         <div style="background:rgba(255,255,255,.55);border-radius:14px;padding:12px 14px;">
           <div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Logement</div>
@@ -8263,6 +8263,14 @@ try {
         group.setAttribute('data-cleaning-info', '1');
         group.style.cssText = 'margin-bottom:18px;';
         detailsContent.appendChild(group);
+      }
+
+      // Déplacer le bloc ménage juste après les 3 cards (logement/arrivée/départ)
+      const infoCards = detailsContent.querySelector('[data-info-cards="1"]');
+      if (infoCards && infoCards.nextSibling) {
+        detailsContent.insertBefore(group, infoCards.nextSibling);
+      } else if (infoCards) {
+        infoCards.parentNode.insertBefore(group, infoCards.nextSibling);
       }
 
       const isAssigned = statusText !== 'Pas encore assigné';
