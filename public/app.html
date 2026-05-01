@@ -4970,7 +4970,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     const caVal = document.getElementById('kpiCaValue');
     const caSub = document.getElementById('kpiCaSub');
     if (caVal) {
-      const formatted = caTotal >= 1000 ? (Math.round(caTotal/100)/10).toFixed(1) + 'k€' : Math.round(caTotal) + '€';
+      const formatted = Math.round(caTotal).toLocaleString('fr-FR') + '€';
       caVal.textContent = caTotal > 0 ? formatted : '0€';
       caVal.style.color = '#1A7A5E';
       caVal.style.fontWeight = '700';
@@ -5012,7 +5012,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     var mNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
     var caByProp = window._kpiCaByProperty || {};
     var caTotal2 = window._kpiCaTotal || 0;
-    var fmtAmt = function(v) { return v >= 1000 ? (Math.round(v/100)/10).toFixed(1)+'k€' : Math.round(v)+'€'; };
+    var fmtAmt = function(v) { return Math.round(v).toLocaleString('fr-FR') + '€'; };
     var entries = Object.values(caByProp).sort(function(a,b){return b.amount-a.amount;});
 
     if (subtitle) subtitle.textContent = mNames[now2.getMonth()] + ' ' + now2.getFullYear();
