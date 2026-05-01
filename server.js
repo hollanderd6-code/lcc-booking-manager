@@ -25729,9 +25729,12 @@ app.post('/api/channex/webhook-message', async (req, res) => {
                 || payload;
     const channex_booking_id = attrs.booking_id || attrs.bookingId || null;
     const messageText = attrs.message || '';
-    const sender = attrs.sender || 'guest';
+    const sender = (attrs.sender || 'guest').toLowerCase();
 
-    if (!channex_booking_id || !messageText || sender !== 'guest') {
+    // Accepter guest, traveler, customer — rejeter seulement host/system/auto
+    const isGuestMessage = !['host', 'system', 'auto', 'property', 'manager'].includes(sender);
+
+    if (!channex_booking_id || !messageText || !isGuestMessage) {
       console.warn(`⚠️ [CHANNEX MSG] Payload skipped — booking_id=${channex_booking_id} | sender="${sender}" | msgLen=${messageText.length}`);
       console.warn('⚠️ [CHANNEX MSG] Full payload:', JSON.stringify(payload));
       return res.status(200).json({ received: true, skipped: true });
