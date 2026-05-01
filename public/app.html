@@ -175,6 +175,40 @@ html[data-theme-v3="1"] #themeToggle i,
 html[data-theme-v3="1"] .header-actions .btn-icon i { animation: none !important; }
 /* ── Logo sidebar géré par bh-layout.js ── */
 html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !important; }
+
+    /* ── Masquer les flèches sur tous les inputs number ── */
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* ── Styles communs modaux bottom-sheet ── */
+    .bh-sheet-label {
+      font-size: 10px; font-weight: 700; color: #9CA3AF;
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 6px; display: block;
+    }
+    .bh-sheet-input {
+      width: 100%; box-sizing: border-box;
+      background: rgba(255,255,255,.7);
+      border: 1.5px solid rgba(200,184,154,.5);
+      border-radius: 12px; padding: 10px 13px;
+      font-size: 14px; font-family: 'DM Sans', sans-serif;
+      color: #111827; outline: none; transition: border-color .15s;
+    }
+    .bh-sheet-input:focus { border-color: #1A7A5E; background: #fff; }
+    .bh-sheet-input::placeholder { color: #9CA3AF; }
+    .bh-sheet-select { appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px; cursor: pointer;
+    }
+    .bh-sheet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .bh-field { margin-bottom: 12px; }
+    .bh-section-title {
+      font-size: 10px; font-weight: 700; color: #9CA3AF;
+      text-transform: uppercase; letter-spacing: .06em;
+      margin: 16px 0 10px; display: flex; align-items: center; gap: 6px;
+    }
 </style>    
 <style>
     html, body {
@@ -3133,124 +3167,160 @@ window.closeChecklistsKpiModal = function() {
 </div>
 </div>
 <!-- New Manual Reservation Modal -->
-<div class="modal" id="newReservationModal">
-<div class="modal-content">
-<div class="modal-header">
-<h2>Nouvelle réservation</h2>
-<button class="modal-close" id="newReservationClose">
-<i class="fas fa-times"></i>
-</button>
-</div>
-<div class="modal-body" style="overflow-y:auto;flex:1;min-height:0;">
-<form class="booking-form" id="newReservationForm">
-<div class="form-group">
-<label for="nrProperty">Logement</label>
-<select id="nrProperty" name="propertyId" required="">
-<!-- On remplira en JS suivant PROPERTIES -->
-</select>
-</div>
-<div class="form-row">
-<div class="form-group">
-<label for="nrStartDate">Arrivée</label>
-<input id="nrStartDate" name="startDate" required="" type="date"/>
-</div>
-<div class="form-group">
-<label for="nrEndDate">Départ</label>
-<input id="nrEndDate" name="endDate" required="" type="date"/>
-</div>
-</div>
-<div class="form-group">
-<label for="nrGuestName">Nom du client</label>
-<input id="nrGuestName" name="guestName" required="" type="text" placeholder="Ex: Jean Dupont"/>
-</div>
-<div class="form-group">
-<label for="nrPhone">Téléphone</label>
-<input id="nrPhone" name="phone" type="tel" placeholder="Ex: +33 6 12 34 56 78"/>
-</div>
-<div class="form-group">
-<label for="nrEmail">Email</label>
-<input id="nrEmail" name="email" type="email" placeholder="Ex: client@email.com"/>
-</div>
-<div class="form-row">
-<div class="form-group">
-<label for="nrCountry">Nationalité</label>
-<select id="nrCountry" name="country">
-<option value="">-- Sélectionner --</option>
-<option value="FR">🇫🇷 France</option>
-<option value="GB">🇬🇧 Royaume-Uni</option>
-<option value="DE">🇩🇪 Allemagne</option>
-<option value="ES">🇪🇸 Espagne</option>
-<option value="IT">🇮🇹 Italie</option>
-<option value="BE">🇧🇪 Belgique</option>
-<option value="CH">🇨🇭 Suisse</option>
-<option value="NL">🇳🇱 Pays-Bas</option>
-<option value="PT">🇵🇹 Portugal</option>
-<option value="US">🇺🇸 États-Unis</option>
-<option value="CA">🇨🇦 Canada</option>
-<option value="MA">🇲🇦 Maroc</option>
-<option value="DZ">🇩🇿 Algérie</option>
-<option value="TN">🇹🇳 Tunisie</option>
-<option value="AU">🇦🇺 Australie</option>
-<option value="JP">🇯🇵 Japon</option>
-<option value="CN">🇨🇳 Chine</option>
-<option value="BR">🇧🇷 Brésil</option>
-<option value="RU">🇷🇺 Russie</option>
-<option value="AE">🇦🇪 Émirats arabes unis</option>
-</select>
-</div>
-<div class="form-group">
-<label for="nrAdults">Adultes</label>
-<input id="nrAdults" name="adults" type="number" min="1" max="20" placeholder="2"/>
-</div>
-</div>
-<div class="form-group">
-<label for="nrPlatform">Plateforme</label>
-<select id="nrPlatform" name="platform">
-<option value="direct">Direct</option>
-<option value="booking">Booking.com</option>
-<option value="airbnb">Airbnb</option>
-<option value="abritel">Abritel / VRBO</option>
-<option value="gites">Gîtes de France</option>
-<option value="expedia">Expedia</option>
-<option value="hotels">Hotels.com</option>
-</select>
-</div>
-<div class="form-group">
-<label for="nrPrice">Prix total (€)</label>
-<input id="nrPrice" name="price" min="0" placeholder="Ex: 250" step="0.01" type="number"/>
-</div>
-<div class="form-row">
-<div class="form-group">
-<label for="nrPriceRooms">Nuits (€)</label>
-<input id="nrPriceRooms" name="priceRooms" min="0" placeholder="Ex: 180" step="0.01" type="number"/>
-</div>
-<div class="form-group">
-<label for="nrPriceCleaning">Ménage (€)</label>
-<input id="nrPriceCleaning" name="priceCleaning" min="0" placeholder="Ex: 60" step="0.01" type="number"/>
-</div>
-</div>
-<div class="form-row">
-<div class="form-group">
-<label for="nrPriceTaxes">Taxe de séjour (€)</label>
-<input id="nrPriceTaxes" name="priceTaxes" min="0" placeholder="Ex: 9.60" step="0.01" type="number"/>
-</div>
-<div class="form-group">
-<label for="nrCommission">Commission OTA (€)</label>
-<input id="nrCommission" name="commission" min="0" placeholder="Ex: 25" step="0.01" type="number"/>
-</div>
-</div>
+<div id="newReservationModal" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.6);backdrop-filter:blur(4px);z-index:9999;align-items:flex-end;justify-content:center;">
+  <div style="background:#F5F0E8;border-radius:24px 24px 0 0;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
 
-<div class="form-group">
-<label for="nrNotes">Notes</label>
-<textarea id="nrNotes" name="notes" rows="3" placeholder="Notes supplémentaires..."></textarea>
-</div>
-<div class="modal-actions">
-<button class="btn btn-ghost" id="newReservationCancel" type="button">Annuler</button>
-<button class="btn btn-primary" type="submit">Enregistrer</button>
-</div>
-</form>
-</div>
-</div>
+    <!-- Drag handle -->
+    <div style="display:flex;justify-content:center;padding:10px 0 4px;flex-shrink:0;">
+      <div style="width:36px;height:4px;border-radius:99px;background:rgba(0,0,0,.15);"></div>
+    </div>
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 20px 14px;flex-shrink:0;">
+      <h2 style="font-size:15px;font-weight:600;color:#6B7280;margin:0;letter-spacing:.02em;">Nouvelle réservation</h2>
+      <button id="newReservationClose" style="background:rgba(0,0,0,.07);border:none;border-radius:50%;width:30px;height:30px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6B7280;">×</button>
+    </div>
+
+    <!-- Scrollable body -->
+    <div style="overflow-y:auto;flex:1;padding:0 16px 8px;">
+      <form id="newReservationForm" onsubmit="return false;">
+
+        <!-- Logement -->
+        <div class="bh-field">
+          <label class="bh-sheet-label" for="nrProperty">Logement</label>
+          <select id="nrProperty" name="propertyId" required class="bh-sheet-input bh-sheet-select">
+            <!-- rempli en JS -->
+          </select>
+        </div>
+
+        <!-- Dates -->
+        <div class="bh-sheet-row">
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrStartDate">Arrivée</label>
+            <input id="nrStartDate" name="startDate" required type="date" class="bh-sheet-input"/>
+          </div>
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrEndDate">Départ</label>
+            <input id="nrEndDate" name="endDate" required type="date" class="bh-sheet-input"/>
+          </div>
+        </div>
+
+        <!-- Section voyageur -->
+        <div class="bh-section-title"><i class="fas fa-user" style="font-size:10px;"></i> Voyageur</div>
+
+        <div class="bh-field">
+          <label class="bh-sheet-label" for="nrGuestName">Nom complet</label>
+          <input id="nrGuestName" name="guestName" required type="text" placeholder="Ex : Jean Dupont" class="bh-sheet-input"/>
+        </div>
+
+        <div class="bh-sheet-row">
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrPhone">Téléphone</label>
+            <input id="nrPhone" name="phone" type="tel" placeholder="+33 6 12 34 56 78" class="bh-sheet-input"/>
+          </div>
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrEmail">Email</label>
+            <input id="nrEmail" name="email" type="email" placeholder="client@email.com" class="bh-sheet-input"/>
+          </div>
+        </div>
+
+        <div class="bh-sheet-row">
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrCountry">Nationalité</label>
+            <select id="nrCountry" name="country" class="bh-sheet-input bh-sheet-select">
+              <option value="">— Sélectionner —</option>
+              <option value="FR">🇫🇷 France</option>
+              <option value="GB">🇬🇧 Royaume-Uni</option>
+              <option value="DE">🇩🇪 Allemagne</option>
+              <option value="ES">🇪🇸 Espagne</option>
+              <option value="IT">🇮🇹 Italie</option>
+              <option value="BE">🇧🇪 Belgique</option>
+              <option value="CH">🇨🇭 Suisse</option>
+              <option value="NL">🇳🇱 Pays-Bas</option>
+              <option value="PT">🇵🇹 Portugal</option>
+              <option value="US">🇺🇸 États-Unis</option>
+              <option value="CA">🇨🇦 Canada</option>
+              <option value="MA">🇲🇦 Maroc</option>
+              <option value="DZ">🇩🇿 Algérie</option>
+              <option value="TN">🇹🇳 Tunisie</option>
+              <option value="AU">🇦🇺 Australie</option>
+              <option value="JP">🇯🇵 Japon</option>
+              <option value="CN">🇨🇳 Chine</option>
+              <option value="BR">🇧🇷 Brésil</option>
+              <option value="RU">🇷🇺 Russie</option>
+              <option value="AE">🇦🇪 Émirats arabes unis</option>
+            </select>
+          </div>
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrAdults">Adultes</label>
+            <input id="nrAdults" name="adults" type="number" min="1" max="20" placeholder="2" class="bh-sheet-input"/>
+          </div>
+        </div>
+
+        <!-- Section réservation -->
+        <div class="bh-section-title"><i class="fas fa-tag" style="font-size:10px;"></i> Réservation</div>
+
+        <div class="bh-field">
+          <label class="bh-sheet-label" for="nrPlatform">Plateforme</label>
+          <select id="nrPlatform" name="platform" class="bh-sheet-input bh-sheet-select">
+            <option value="direct">Direct</option>
+            <option value="booking">Booking.com</option>
+            <option value="airbnb">Airbnb</option>
+            <option value="abritel">Abritel / VRBO</option>
+            <option value="gites">Gîtes de France</option>
+            <option value="expedia">Expedia</option>
+            <option value="hotels">Hotels.com</option>
+          </select>
+        </div>
+
+        <!-- Section prix -->
+        <div class="bh-section-title"><i class="fas fa-euro-sign" style="font-size:10px;"></i> Prix</div>
+
+        <div class="bh-field">
+          <label class="bh-sheet-label" for="nrPrice">Total (€)</label>
+          <input id="nrPrice" name="price" min="0" placeholder="Ex : 250" step="0.01" type="number" class="bh-sheet-input"/>
+        </div>
+
+        <div class="bh-sheet-row">
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrPriceRooms">Nuits (€)</label>
+            <input id="nrPriceRooms" name="priceRooms" min="0" placeholder="180" step="0.01" type="number" class="bh-sheet-input"/>
+          </div>
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrPriceCleaning">Ménage (€)</label>
+            <input id="nrPriceCleaning" name="priceCleaning" min="0" placeholder="60" step="0.01" type="number" class="bh-sheet-input"/>
+          </div>
+        </div>
+
+        <div class="bh-sheet-row">
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrPriceTaxes">Taxe de séjour (€)</label>
+            <input id="nrPriceTaxes" name="priceTaxes" min="0" placeholder="9.60" step="0.01" type="number" class="bh-sheet-input"/>
+          </div>
+          <div class="bh-field">
+            <label class="bh-sheet-label" for="nrCommission">Commission OTA (€)</label>
+            <input id="nrCommission" name="commission" min="0" placeholder="25" step="0.01" type="number" class="bh-sheet-input"/>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="bh-section-title"><i class="fas fa-sticky-note" style="font-size:10px;"></i> Notes</div>
+        <div class="bh-field">
+          <textarea id="nrNotes" name="notes" rows="3" placeholder="Notes supplémentaires..." class="bh-sheet-input" style="resize:none;line-height:1.5;"></textarea>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:12px 16px 32px;display:flex;gap:8px;align-items:center;border-top:1px solid rgba(200,184,154,.35);background:#F5F0E8;flex-shrink:0;">
+      <button class="btn btn-ghost" id="newReservationCancel" type="button" style="height:42px;padding:0 18px;border-radius:12px;font-size:13px;font-weight:600;">Annuler</button>
+      <button id="newReservationSubmit" type="button" style="flex:1;height:42px;border-radius:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#1A7A5E,#0f5c46);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+        <i class="fas fa-check" style="font-size:13px;"></i> Enregistrer
+      </button>
+    </div>
+
+  </div>
 </div>
 <!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay">
@@ -4325,6 +4395,14 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }
       if (newReservationCancel) {
         newReservationCancel.addEventListener('click', closeNewReservationModal);
+      }
+
+      // Bouton Enregistrer du nouveau design (remplace type="submit")
+      const nrSubmitBtn = document.getElementById('newReservationSubmit');
+      if (nrSubmitBtn && newReservationForm) {
+        nrSubmitBtn.addEventListener('click', function() {
+          newReservationForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
       }
 
       /* Notifications */
