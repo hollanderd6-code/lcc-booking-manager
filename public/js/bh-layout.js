@@ -291,6 +291,9 @@ function getSidebarHTML() {
     const subAccountData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
     const displayUser = subAccountData.firstName ? subAccountData : user;
 
+    // Toujours appliquer le branding (logo), indépendamment de l'utilisateur
+    normalizeBranding();
+
     if (displayUser.firstName) {
       const nameEl = document.getElementById('sidebarUserName');
       const avatarEl = document.getElementById('sidebarUserAvatar');
@@ -363,6 +366,12 @@ function getSidebarHTML() {
     if (!mobileLogoText) {
       // Chercher hors de mobile-logo (ancienne structure)
       mobileLogoText = document.querySelector(".mobile-logo-text");
+    }
+    // Créer .mobile-logo-text s'il n'existe nulle part
+    if (!mobileLogoText) {
+      mobileLogoText = document.createElement('span');
+      mobileLogoText.className = 'mobile-logo-text';
+      mobileLogo.appendChild(mobileLogoText);
     }
 
     // Injecter le logo SVG si absent ou incorrect
@@ -439,7 +448,8 @@ function getSidebarHTML() {
     };
     if (title && h1Mappings[title]) title = h1Mappings[title];
 
-    if (!title) return;
+    // 4. Dernier fallback sur document.title (toujours créer le header pour avoir le logo)
+    if (!title) title = document.title || '';
 
     // Trouver ou créer la mobile-header
     let mobileHeader = document.querySelector('.mobile-header');
@@ -451,10 +461,10 @@ function getSidebarHTML() {
       mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;"><span class="mobile-logo-text"></span></a>';
       const appContainer = document.querySelector('.app-container') || document.querySelector('.main-content') || document.body;
       appContainer.parentNode.insertBefore(mobileHeader, appContainer);
-      // Laisser normalizeBranding injecter le bon logo
-      if (window.bhLayout && window.bhLayout.normalizeBranding) {
-        setTimeout(function(){ window.bhLayout.normalizeBranding(); }, 50);
-      }
+      // Injecter le logo SVG immédiatement, puis re-vérifier après rendu
+      normalizeBranding();
+      setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); }, 100);
+      setTimeout(function(){ normalizeBranding(); }, 400);
     }
 
     // Forcer l'affichage (certaines pages ont display:none inline)
