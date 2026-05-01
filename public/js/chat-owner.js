@@ -141,7 +141,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Charger les conversations
   await loadConversations();
-  
+
+  // ── Auto-ouvrir une conversation depuis ?conv=ID dans l'URL ──
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const convIdParam = urlParams.get('conv');
+    if (convIdParam) {
+      const convId = parseInt(convIdParam, 10);
+      if (!isNaN(convId)) {
+        // Petit délai pour laisser le DOM des conversation-items se rendre
+        setTimeout(async () => {
+          await openChat(convId);
+          // Scroller l'item dans la liste pour le rendre visible
+          const item = document.querySelector(`[data-conversation-id="${convId}"]`);
+          if (item) {
+            item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            item.classList.add('active');
+          }
+          // Nettoyer l'URL sans recharger la page
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, '', cleanUrl);
+        }, 400);
+      }
+    }
+  } catch (e) {
+    console.warn('[chat-owner] Erreur auto-open conv:', e);
+  }
+
   // Connecter Socket.IO
   connectSocket();
   
