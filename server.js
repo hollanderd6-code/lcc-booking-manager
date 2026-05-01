@@ -22381,6 +22381,8 @@ cron.schedule('0 8 * * *', async () => {
          WHERE p.user_id = $1
          AND DATE(r.start_date) = $2
          AND r.status != 'cancelled'
+         AND r.source != 'BLOCK'
+         AND r.type != 'block'
          ${propertyFilter}
          ORDER BY r.id`,
         params
@@ -22398,6 +22400,8 @@ cron.schedule('0 8 * * *', async () => {
          WHERE p.user_id = $1
          AND DATE(r.end_date) = $2
          AND r.status != 'cancelled'
+         AND r.source != 'BLOCK'
+         AND r.type != 'block'
          ${propertyFilter}
          ORDER BY r.id`,
         params
