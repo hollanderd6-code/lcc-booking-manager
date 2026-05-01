@@ -1230,12 +1230,15 @@ function insertTplVar(variable) {
 
           <div style="margin-bottom:14px;">
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Déclencheur</label>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <select id="tplTrigger" onchange="updateTriggerHint(this.value)" style="flex:1;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <select id="tplTrigger" onchange="updateTriggerHint(this.value);updateTriggerOffsetVisibility()" style="flex:1;min-width:180px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
                 <option value="on_booking">À la réservation (immédiat)</option>
-                <option value="before_arrival">La veille de l'arrivée à 7h</option>
+                <option value="before_arrival">Avant l'arrivée</option>
                 <option value="on_arrival">Jour de l'arrivée à 7h</option>
-                <option value="after_departure">Jour du départ à 15h</option>
+                <option value="after_arrival">Après l'arrivée</option>
+                <option value="before_departure">Avant le départ</option>
+                <option value="on_departure">Jour du départ à 15h</option>
+                <option value="after_departure">Après le départ</option>
               </select>
               <div id="triggerHintBtn" style="display:none;position:relative;">
                 <button type="button" id="triggerHintTrigger"
@@ -1251,7 +1254,27 @@ function insertTplVar(variable) {
             </div>
           </div>
 
+          <!-- Champ jours — visible seulement si before/after -->
+          <div id="tplOffsetGroup" style="display:none;margin-top:10px;margin-bottom:0;">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;" id="tplOffsetLabel">Nombre de jours avant l'arrivée</label>
+            <input id="tplOffsetDays" type="number" min="1" max="30" value="2" placeholder="2"
+              style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;box-sizing:border-box;font-family:'DM Sans',sans-serif;"
+              onchange="document.getElementById('tplOffset').value = this.value * (document.getElementById('tplTrigger').value.startsWith('after') ? 24 : -24)">
+          </div>
           <input type="hidden" id="tplOffset" value="0">
+
+          <!-- Condition d'envoi -->
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Condition d'envoi</label>
+            <select id="tplCondition" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
+              <option value="always">Toujours envoyer</option>
+              <option value="deposit_pending">Seulement si caution non payée</option>
+              <option value="deposit_active">Seulement si caution active (pending ou autorisée)</option>
+              <option value="platform_booking">Seulement si Booking.com</option>
+              <option value="platform_airbnb">Seulement si Airbnb</option>
+              <option value="platform_direct">Seulement si Direct</option>
+            </select>
+          </div>
 
           <div style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Message</label>
@@ -1270,6 +1293,7 @@ function insertTplVar(variable) {
               <button type="button" onclick="insertTplVar('{wifi_mdp}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Mot de passe WiFi</button>
               <button type="button" onclick="insertTplVar('{instructions}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Instructions d'accès</button>
               <button type="button" onclick="insertTplVar('{livret}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Lien livret d'accueil</button>
+              <button type="button" onclick="insertTplVar('{caution_url}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #FDE68A;background:#FEF3C7;font-size:12px;cursor:pointer;color:#92400E;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#F59E0B';this.style.color='white';this.style.borderColor='#F59E0B'" onmouseout="this.style.background='#FEF3C7';this.style.color='#92400E';this.style.borderColor='#FDE68A'">🔒 Lien caution</button>
             </div>
             <textarea id="tplMessage" rows="6" placeholder="Bonjour {prenom}, votre arrivée est prévue le {arrivee}..." style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
             <!-- Mention traduction automatique -->
@@ -3628,10 +3652,13 @@ function fmtMsgTime(isoStr) {
 // ============================================================
 
 const TRIGGER_LABELS = {
-  'on_booking':      'À la réservation (immédiat)',
-  'before_arrival':  "La veille à 7h",
-  'on_arrival':      "Jour d'arrivée à 7h",
-  'after_departure': 'Jour du départ à 15h'
+  on_booking: 'À la réservation',
+  before_arrival: 'Avant l'arrivée',
+  on_arrival: 'Jour d'arrivée à 7h',
+  after_arrival: 'Après l'arrivée',
+  before_departure: 'Avant le départ',
+  on_departure: 'Jour du départ à 15h',
+  after_departure: 'Après le départ'
 };
 
 async function loadTemplates() {
@@ -3669,7 +3696,13 @@ async function loadTemplates() {
           </div>
           <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">
             <i class="fas fa-bolt" style="margin-right:4px;color:#1A7A5E;"></i>${TRIGGER_LABELS[t.trigger_type] || t.trigger_type}
-            ${t.trigger_offset_hours > 0 ? ` · ${t.trigger_offset_hours}h` : ''}
+            ${(()=>{
+              const d = t.trigger_offset_days || Math.abs(Math.round((t.trigger_offset_hours||0)/24)) || 0;
+              const isBefore = (t.trigger_type||'').startsWith('before_');
+              const isAfter  = (t.trigger_type||'').startsWith('after_');
+              return (isBefore||isAfter) && d > 0 ? ` · J${isBefore?'-':'+'}${d}` : '';
+            })()}
+            ${t.send_condition && t.send_condition !== 'always' ? ` · <span style="color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:99px;font-size:10px;">${{'deposit_pending':'Caution non payée','deposit_active':'Caution active','platform_booking':'Booking','platform_airbnb':'Airbnb','platform_direct':'Direct'}[t.send_condition]||t.send_condition}</span>` : ''}
             ${t.property_id ? ` · <i class="fas fa-home" style="margin:0 3px;"></i>${(window._tplProperties || []).find(p => (p.id || p._id) === t.property_id)?.name || 'Logement spécifique'}` : ' · Tous les logements'}
           </div>
           <div style="font-size:12px;color:#374151;background:#f9fafb;border-radius:8px;padding:8px 10px;line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden;">${t.message}</div>
@@ -3722,11 +3755,14 @@ async function loadTemplateProperties() {
 function updateTriggerHint(val) {
   const btn = document.getElementById('triggerHintBtn');
   if (!btn) return;
+  // Afficher le hint caution pour les triggers arrivée
   if (val === 'on_arrival' || val === 'before_arrival') {
     btn.style.display = 'block';
   } else {
     btn.style.display = 'none';
   }
+  // Aussi mettre à jour la visibilité du champ jours
+  updateTriggerOffsetVisibility();
 }
 
 function openTemplateModal(template = null, isCopy = false) {
@@ -3738,7 +3774,16 @@ function openTemplateModal(template = null, isCopy = false) {
   document.getElementById('tplOffset').value = template?.trigger_offset_hours || '';
   document.getElementById('tplProperty').value = template?.property_id || '';
   document.getElementById('tplModalTitle').textContent = (template && !isCopy) ? 'Modifier le template' : 'Nouveau template';
+
+  // Nouveaux champs
+  const offsetDays = template?.trigger_offset_days
+    || Math.abs(Math.round((template?.trigger_offset_hours || 0) / 24))
+    || 2;
+  document.getElementById('tplOffsetDays').value = offsetDays;
+  document.getElementById('tplCondition').value = template?.send_condition || 'always';
+
   updateOffsetLabel();
+  updateTriggerOffsetVisibility();
   loadTemplateProperties();
   document.getElementById('templateModal').style.display = 'flex';
 }
@@ -3749,13 +3794,40 @@ function closeTemplateModal() {
 
 function updateOffsetLabel() {} // horaires fixes, plus de champ offset
 
+function updateTriggerOffsetVisibility() {
+  const trigger = document.getElementById('tplTrigger')?.value || '';
+  const group = document.getElementById('tplOffsetGroup');
+  const label = document.getElementById('tplOffsetLabel');
+  if (!group) return;
+
+  const hasOffset = trigger === 'before_arrival' || trigger === 'after_arrival'
+    || trigger === 'before_departure' || trigger === 'after_departure';
+
+  group.style.display = hasOffset ? '' : 'none';
+
+  if (label) {
+    const labels = {
+      before_arrival: 'Nombre de jours avant l'arrivée',
+      after_arrival:  'Nombre de jours après l'arrivée',
+      before_departure: 'Nombre de jours avant le départ',
+      after_departure:  'Nombre de jours après le départ'
+    };
+    label.textContent = labels[trigger] || 'Nombre de jours';
+  }
+}
+
 async function saveTemplate() {
   const id = document.getElementById('tplId').value;
+  const trigger = document.getElementById('tplTrigger').value;
+  const offsetDays = parseInt(document.getElementById('tplOffsetDays').value) || 0;
+  const isAfter = trigger.startsWith('after');
   const body = {
     title: document.getElementById('tplTitle').value.trim(),
     message: document.getElementById('tplMessage').value.trim(),
-    trigger_type: document.getElementById('tplTrigger').value,
-    trigger_offset_hours: parseInt(document.getElementById('tplOffset').value) || 0,
+    trigger_type: trigger,
+    trigger_offset_days: offsetDays,
+    trigger_offset_hours: isAfter ? offsetDays * 24 : -(offsetDays * 24),
+    send_condition: document.getElementById('tplCondition').value || 'always',
     property_id: document.getElementById('tplProperty').value || null,
   };
 
