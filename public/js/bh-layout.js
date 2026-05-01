@@ -217,13 +217,10 @@ function getSidebarHTML() {
 `;
 }
 
-  const _isSubForBrand = localStorage.getItem('lcc_is_sub_account') === 'true'
-                       || localStorage.getItem('lcc_account_type') === 'sub';
-  const _subtitleText = _isSubForBrand ? 'ESPACE COLLABORATEUR' : 'Smart Property Manager';
   const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
     <span style="color:#1A7A5E; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
   </span>
-  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">${_subtitleText}</span>`;
+  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Smart Property Manager</span>`;
 
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
@@ -359,29 +356,29 @@ function getSidebarHTML() {
 
   function normalizeBranding() {
     const mobileLogo = document.querySelector(".mobile-logo");
-    const mobileLogoText = document.querySelector(".mobile-logo-text");
+    if (!mobileLogo) return;
 
+    // S'assurer que .mobile-logo-text existe DANS .mobile-logo
+    let mobileLogoText = mobileLogo.querySelector(".mobile-logo-text");
+    if (!mobileLogoText) {
+      // Chercher hors de mobile-logo (ancienne structure)
+      mobileLogoText = document.querySelector(".mobile-logo-text");
+    }
+
+    // Injecter le logo SVG si absent ou incorrect
+    const existingImg = mobileLogo.querySelector("img[src^='data:']");
+    const existingSvg = mobileLogo.querySelector("svg");
+    if (!existingImg && !existingSvg) {
+      const oldIcon = mobileLogo.querySelector("i.fas, i.fa, img");
+      if (oldIcon) oldIcon.remove();
+      mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
+    }
+
+    // Injecter le texte si absent ou incorrect
     if (mobileLogoText) {
       const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
       if (!hasCorrectBranding) {
         mobileLogoText.innerHTML = BRAND_TEXT_HTML;
-      }
-    }
-
-    if (mobileLogo) {
-      const existingLogo = mobileLogo.querySelector("img, svg");
-
-      const needsUpdate =
-        !existingLogo ||
-        (existingLogo.tagName.toLowerCase() === "img" &&
-          !(existingLogo.getAttribute("src") || "").includes("boostinghost-icon-circle.png") || (existingLogo.getAttribute("src") || "").startsWith("data:image")) ||
-        existingLogo.tagName.toLowerCase() === "svg";
-
-      if (needsUpdate) {
-        const oldIcon = mobileLogo.querySelector("i.fas, i.fa, i[class*='fa-'], svg, img");
-        if (oldIcon) oldIcon.remove();
-
-        mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
       }
     }
   }
@@ -722,9 +719,8 @@ function getSidebarHTML() {
     setTimeout(() => {
       forceUpdateSidebarLogo();
       normalizeBranding();
-      injectMobileTitle();
       applyDesktopLayout();
-    }, 800);
+    }, 500);
 
     // Réappliquer au resize (changement orientation / fenêtre)
     let _resizeTimer;
