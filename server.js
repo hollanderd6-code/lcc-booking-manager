@@ -26559,6 +26559,84 @@ app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (re
   }
 });
 
+// ── Sync rétroactif des messages Channex pour une réservation ──────────
+app.post('/api/channex/sync-messages/:reservation_uid', authenticateToken, async (req, res) => {
+  const { reservation_uid } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    // Trouver la réservation
+    const resaRes = await pool.query(
+      `SELECT r.*, c.id as conv_id
+       FROM reservations r
+       LEFT JOIN conversations c ON c.channex_booking_id = r.channex_booking_id
+       WHERE r.uid = $1 AND r.user_id = $2`,
+      [reservation_uid, user_id]
+    );
+
+    if (resaRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Réservation non trouvée' });
+    }
+
+    const resa = resaRes.rows[0];
+    if (!resa.channex_booking_id) {
+      return res.status(400).json({ error: 'Pas de channex_booking_id sur cette réservation' });
+    }
+
+    // Récupérer les messages depuis Channex
+    const messages = await getBookingMessages(resa.channex_booking_id);
+    if (!messages || messages.length === 0) {
+      return res.json({ success: true, imported: 0, message: 'Aucun message trouvé sur Channex' });
+    }
+
+    const conv_id = resa.conv_id;
+    if (!conv_id) {
+      return res.status(400).json({ error: 'Pas de conversation associée à cette réservation' });
+    }
+
+    let imported = 0, skipped = 0;
+    for (const msg of messages) {
+      const attrs = msg.attributes || msg;
+      const sender = (attrs.sender || 'guest').toLowerCase();
+      const messageText = attrs.message || attrs.body || '';
+      if (!messageText) { skipped++; continue; }
+
+      const isGuest = !['host', 'system', 'auto', 'property', 'manager'].includes(sender);
+      const sender_type = isGuest ? 'guest' : 'host';
+      const created_at = attrs.inserted_at || attrs.created_at || new Date().toISOString();
+
+      // Éviter les doublons
+      const existing = await pool.query(
+        `SELECT id FROM messages WHERE conversation_id = $1 AND message = $2 AND sender_type = $3`,
+        [conv_id, messageText, sender_type]
+      );
+      if (existing.rows.length > 0) { skipped++; continue; }
+
+      await pool.query(
+        `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+         VALUES ($1, $2, $3, $4, TRUE, $5)`,
+        [conv_id, sender_type, resa.guest_name || 'Voyageur', messageText, created_at]
+      );
+      imported++;
+    }
+
+    // Mettre à jour last_message_at
+    if (imported > 0) {
+      await pool.query(
+        `UPDATE conversations SET last_message_at = NOW(), updated_at = NOW() WHERE id = $1`,
+        [conv_id]
+      );
+    }
+
+    console.log(`✅ [SYNC MESSAGES] ${imported} importés, ${skipped} skippés pour ${reservation_uid}`);
+    res.json({ success: true, imported, skipped, total: messages.length });
+
+  } catch (e) {
+    console.error('❌ [SYNC MESSAGES]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Réassigner les bookings Channex au bon logement via room_type_id ──
 app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
