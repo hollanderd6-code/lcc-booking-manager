@@ -5222,19 +5222,34 @@ async function sendDepositRequestMessages(io) {
       LEFT JOIN users u ON u.id = c.user_id
       LEFT JOIN reservations r ON r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date)
       WHERE DATE(c.reservation_start_date) = $1
-      AND LOWER(c.platform) = 'booking'
+      AND (
+        LOWER(c.platform) = 'booking'
+        OR LOWER(c.platform) = 'booking.com'
+        OR LOWER(c.platform) = 'bdc'
+        OR LOWER(c.platform) LIKE '%booking%'
+      )
       AND c.status != 'cancelled'
     `, [targetDateStr]);
 
     const conversations = conversationsResult.rows;
-    console.log(`📋 ${conversations.length} réservations Booking dans 2 jours`);
+    console.log(`📋 ${conversations.length} réservations Booking dans 2 jours (date cible: ${targetDateStr})`);
+    if (conversations.length === 0) {
+      // Debug : voir toutes les réservations J+2 peu importe platform
+      const allJ2 = await pool.query(
+        `SELECT c.id, c.platform, c.guest_name, c.reservation_start_date
+         FROM conversations c WHERE DATE(c.reservation_start_date) = $1 AND c.status != 'cancelled'`,
+        [targetDateStr]
+      );
+      console.log(`🔍 [DEBUG] Toutes les conv J+2 (${allJ2.rows.length}):`, allJ2.rows.map(r => `${r.guest_name} | platform="${r.platform}"`).join(', '));
+    }
 
     for (const conv of conversations) {
       // Vérifier si une caution est obligatoire pour ce logement
       if (!conv.deposit_amount || parseFloat(conv.deposit_amount) <= 0) {
-        console.log(`⏭️ Pas de caution pour ${conv.property_name}`);
+        console.log(`⏭️ Pas de caution pour ${conv.property_name} (deposit_amount=${conv.deposit_amount})`);
         continue;
       }
+      console.log(`💰 Caution ${conv.deposit_amount}€ requise pour ${conv.guest_name} - ${conv.property_name}`);
 
       // Vérifier si un lien de caution existe déjà
       const depositResult = await pool.query(
