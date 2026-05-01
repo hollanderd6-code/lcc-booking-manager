@@ -8270,6 +8270,128 @@ try {
       console.warn("Erreur lors de l\'injection des infos ménage dans le modal", e);
     }
 
+    // 7️⃣ Raccourcis rapides : Messages + Caution + Paiement
+    try {
+      const existingShortcuts = detailsContent.querySelector('[data-shortcuts="1"]');
+      if (!existingShortcuts) {
+        const shortcutsDiv = document.createElement('div');
+        shortcutsDiv.setAttribute('data-shortcuts', '1');
+        shortcutsDiv.style.cssText = 'margin-top:16px;display:flex;flex-direction:column;gap:10px;';
+
+        const reservationUidLocal = booking.uid || booking.reservationKey || booking.id || '';
+        const guestPhoneLocal = booking.guest_phone || booking.guestPhone || '';
+        const isDirectOrManual = ['DIRECT','MANUEL','MANUAL'].includes(String(booking.source || booking.platform || '').toUpperCase());
+
+        // Bouton Messages
+        shortcutsDiv.innerHTML += `
+          <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;">Raccourcis rapides</div>
+          <button id="btnQuickMessage" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface-secondary,#F5F0E8);border:1.5px solid var(--border-color,#E8E0D0);border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-primary,#1A1A1A);">
+            <i class="fas fa-comment-dots" style="color:#1A7A5E;font-size:16px;width:20px;text-align:center;"></i>
+            Ouvrir la conversation
+          </button>
+          ${isDirectOrManual ? `
+          <button id="btnQuickDeposit" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface-secondary,#F5F0E8);border:1.5px solid var(--border-color,#E8E0D0);border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-primary,#1A1A1A);">
+            <i class="fas fa-shield-alt" style="color:#F59E0B;font-size:16px;width:20px;text-align:center;"></i>
+            Envoyer un lien de caution
+          </button>
+          <button id="btnQuickPayment" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface-secondary,#F5F0E8);border:1.5px solid var(--border-color,#E8E0D0);border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-primary,#1A1A1A);">
+            <i class="fas fa-credit-card" style="color:#6366F1;font-size:16px;width:20px;text-align:center;"></i>
+            Envoyer un lien de paiement
+          </button>
+          ` : ''}
+        `;
+
+        detailsContent.appendChild(shortcutsDiv);
+
+        // ── Bouton Messages ──────────────────────────────────────
+        document.getElementById('btnQuickMessage')?.addEventListener('click', async () => {
+          const token = localStorage.getItem('lcc_token');
+          // Chercher la conversation liée
+          try {
+            const r = await fetch(`${API_URL}/api/chat/conversations`, { headers: { 'Authorization': 'Bearer ' + token } });
+            const d = await r.json();
+            const convs = d.conversations || [];
+            const conv = convs.find(c =>
+              (reservationUidLocal && (c.reservation_uid === reservationUidLocal || c.uid === reservationUidLocal)) ||
+              (c.channex_booking_id && booking.channexBookingId && c.channex_booking_id === booking.channexBookingId) ||
+              (c.guest_name === (booking.guestName || booking.guest_display_name))
+            );
+            if (conv) {
+              window.location.href = `/messages.html?conv=${conv.id}`;
+            } else {
+              window.location.href = '/messages.html';
+            }
+          } catch(e) {
+            window.location.href = '/messages.html';
+          }
+        });
+
+        // ── Bouton Caution ───────────────────────────────────────
+        if (isDirectOrManual) {
+          document.getElementById('btnQuickDeposit')?.addEventListener('click', async () => {
+            const amount = prompt('Montant de la caution (€) ?', '300');
+            if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return;
+            const token = localStorage.getItem('lcc_token');
+            const btn = document.getElementById('btnQuickDeposit');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...'; }
+            try {
+              const r = await fetch(`${API_URL}/api/deposits`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reservationUid: reservationUidLocal, amount: parseFloat(amount) })
+              });
+              const d = await r.json();
+              const url = d.checkoutUrl || d.checkout_url;
+              if (url) {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
+                showToast('✅ Lien de caution copié dans le presse-papier', 'success');
+                setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;font-size:16px;width:20px;text-align:center;"></i> Envoyer un lien de caution'; } }, 3000);
+              } else {
+                showToast('❌ ' + (d.error || 'Erreur création caution'), 'error');
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;"></i> Envoyer un lien de caution'; }
+              }
+            } catch(e) {
+              showToast('❌ Erreur réseau', 'error');
+              if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;"></i> Envoyer un lien de caution'; }
+            }
+          });
+
+          // ── Bouton Paiement ──────────────────────────────────────
+          document.getElementById('btnQuickPayment')?.addEventListener('click', async () => {
+            const amount = prompt('Montant du paiement (€) ?', '100');
+            if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return;
+            const token = localStorage.getItem('lcc_token');
+            const btn = document.getElementById('btnQuickPayment');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...'; }
+            try {
+              const r = await fetch(`${API_URL}/api/payments`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reservationUid: reservationUidLocal, amount: parseFloat(amount) })
+              });
+              const d = await r.json();
+              const url = d.checkoutUrl || d.checkout_url;
+              if (url) {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
+                showToast('✅ Lien de paiement copié dans le presse-papier', 'success');
+                setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;font-size:16px;width:20px;text-align:center;"></i> Envoyer un lien de paiement'; } }, 3000);
+              } else {
+                showToast('❌ ' + (d.error || 'Erreur création paiement'), 'error');
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;"></i> Envoyer un lien de paiement'; }
+              }
+            } catch(e) {
+              showToast('❌ Erreur réseau', 'error');
+              if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;"></i> Envoyer un lien de paiement'; }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Erreur injection raccourcis modal', e);
+    }
+
     // 6️⃣ Ouverture du modal et datasets utiles
     window.hideFab();
     window.hideFab();
