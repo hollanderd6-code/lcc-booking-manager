@@ -7821,18 +7821,24 @@ console.log('👤 DEBUG GUEST:', {
     const guestPhone = window.getGuestPhone(booking);
 
     const platformRaw = booking.source || booking.platform || 'Direct';
-    const otaName     = booking.ota_name || booking.otaName || null;
+    // Chercher ota_name sous toutes ses formes possibles
+    const otaName = booking.ota_name || booking.otaName || booking.OtaName
+      || (booking.channex && booking.channex.ota_name)
+      || null;
     const platformKey = (function normPlatformModal(raw, ota) {
+      // Priorité 1 : ota_name Channex (le plus fiable)
       if (ota) {
-        var o = String(ota).toUpperCase();
-        if (o === 'ABB' || o === 'AIRBNB')   return 'airbnb';
-        if (o === 'BDC' || o === 'BOOKING')  return 'booking';
-        if (o === 'EXP' || o === 'EXPEDIA')  return 'expedia';
-        if (o === 'VRBO' || o === 'HOMEAWAY') return 'vrbo';
-        if (o === 'ABRITEL') return 'abritel';
+        var o = String(ota).toUpperCase().trim();
+        if (o === 'ABB' || o.includes('AIRBNB'))   return 'airbnb';
+        if (o === 'BDC' || o.includes('BOOKING'))  return 'booking';
+        if (o === 'EXP' || o.includes('EXPEDIA'))  return 'expedia';
+        if (o === 'VRBO' || o === 'HOMEAWAY' || o.includes('VRBO')) return 'vrbo';
+        if (o.includes('ABRITEL')) return 'abritel';
       }
+      // Priorité 2 : champ source/platform
       if (!raw) return 'direct';
-      var v = String(raw).toLowerCase();
+      var v = String(raw).toLowerCase().trim();
+      if (v === 'channex') return 'direct'; // channex sans ota_name = direct
       if (v.includes('airbnb'))  return 'airbnb';
       if (v.includes('booking')) return 'booking';
       if (v.includes('expedia')) return 'expedia';
@@ -8113,17 +8119,17 @@ try {
       <div style="background:rgba(255,255,255,.55);border-radius:16px;padding:14px 16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
           <div>
-            <div style="font-weight:800;font-size:17px;color:\${barColor};line-height:1.1;">\${riskLabel}</div>
-            <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">\${Math.round(riskScore)}/100\${riskSummary ? ' · '+riskSummary : ''}</div>
+            <div style="font-weight:800;font-size:17px;color:${barColor};line-height:1.1;">${riskLabel}</div>
+            <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">${Math.round(riskScore)}/100${riskSummary ? ' · '+riskSummary : ''}</div>
           </div>
           <div style="min-width:100px;">
             <div style="height:8px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;">
-              <div style="height:8px;width:\${Math.max(0,Math.min(100,riskScore))}%;background:\${barColor};border-radius:99px;transition:width .4s ease;"></div>
+              <div style="height:8px;width:${Math.max(0,Math.min(100,riskScore))}%;background:${barColor};border-radius:99px;transition:width .4s ease;"></div>
             </div>
           </div>
         </div>
-        \${tagsHtml}
-        \${recommendationsHtml}
+        ${tagsHtml}
+        ${recommendationsHtml}
       </div>
     `;
   }
@@ -8250,23 +8256,35 @@ try {
         }
       } catch(e) { console.warn('⚠️ Assignments API:', e.message); }
 
-      // Injection / mise à jour du bloc "Ménage"
+      // Injection / mise à jour du bloc "Ménage" — card moderne
       let group = detailsContent.querySelector('[data-cleaning-info="1"]');
       if (!group) {
         group = document.createElement('div');
-        group.className = 'detail-group';
         group.setAttribute('data-cleaning-info', '1');
-        group.innerHTML = `
-          <label><i class="fas fa-broom"></i> Ménage</label>
-          <div class="detail-value"></div>
-        `;
+        group.style.cssText = 'margin-bottom:18px;';
         detailsContent.appendChild(group);
       }
 
-      const valueEl = group.querySelector('.detail-value');
-      if (valueEl) {
-        valueEl.textContent = statusText;
-      }
+      const isAssigned = statusText !== 'Pas encore assigné';
+      const iconColor  = isAssigned ? '#1A7A5E' : '#9CA3AF';
+      const bgColor    = isAssigned ? 'rgba(26,122,94,.08)' : 'rgba(255,255,255,.55)';
+      const borderStyle = isAssigned ? '1.5px solid rgba(26,122,94,.25)' : '1.5px solid transparent';
+
+      group.innerHTML = `
+        <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+          <i class="fas fa-broom" style="font-size:11px;"></i> Ménage
+        </div>
+        <div style="background:${bgColor};border:${borderStyle};border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:10px;background:${isAssigned ? 'rgba(26,122,94,.15)' : 'rgba(0,0,0,.06)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-broom" style="font-size:13px;color:${iconColor};"></i>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:${isAssigned ? '600' : '400'};color:${isAssigned ? '#111827' : '#9CA3AF'};">${statusText}</div>
+            ${isAssigned ? '<div style="font-size:11px;color:#6B7280;margin-top:1px;">Ménage assigné</div>' : ''}
+          </div>
+          ${isAssigned ? '<div style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></div>' : ''}
+        </div>
+      `;
     } catch (e) {
       console.warn("Erreur lors de l\'injection des infos ménage dans le modal", e);
     }
