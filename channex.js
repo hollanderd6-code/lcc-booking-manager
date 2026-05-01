@@ -142,29 +142,35 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
       payload: { channex_property_id, channex_room_type_id, channex_rate_plan_id }
     });
 
-    // ✅ Créer automatiquement les webhooks pour ce logement
+    // ✅ Créer automatiquement les webhooks — avec déduplication
     try {
-      await channexAPI.post('/webhooks', {
-        webhook: {
-          property_id: channex_property_id,
-          callback_url: 'https://www.boostinghost.fr/api/channex/webhook',
-          event_mask: 'booking',
-          is_active: true,
-          send_data: true
-        }
+      const existingWebhooks = await channexAPI.get('/webhooks', {
+        params: { 'filter[property_id]': channex_property_id }
       });
-      await channexAPI.post('/webhooks', {
-        webhook: {
-          property_id: channex_property_id,
-          callback_url: 'https://www.boostinghost.fr/api/channex/webhook-message',
-          event_mask: 'message',
-          is_active: true,
-          send_data: true
-        }
-      });
-      console.log(`✅ [CHANNEX] Webhooks créés pour property ${channex_property_id}`);
+      const existing = existingWebhooks.data?.data || [];
+      const existingUrls = existing.map(w => (w.attributes?.callback_url || '').replace('http://', 'https://').replace('boostinghost.fr', 'www.boostinghost.fr'));
+
+      const bookingUrl = 'https://www.boostinghost.fr/api/channex/webhook';
+      const messageUrl = 'https://www.boostinghost.fr/api/channex/webhook-message';
+
+      if (!existingUrls.some(u => u.includes('/webhook') && !u.includes('webhook-message'))) {
+        await channexAPI.post('/webhooks', {
+          webhook: { property_id: channex_property_id, callback_url: bookingUrl, event_mask: 'booking', is_active: true, send_data: true }
+        });
+        console.log(`✅ [CHANNEX] Webhook booking créé pour ${channex_property_id}`);
+      } else {
+        console.log(`ℹ️ [CHANNEX] Webhook booking déjà existant pour ${channex_property_id}`);
+      }
+
+      if (!existingUrls.some(u => u.includes('webhook-message'))) {
+        await channexAPI.post('/webhooks', {
+          webhook: { property_id: channex_property_id, callback_url: messageUrl, event_mask: 'message', is_active: true, send_data: true }
+        });
+        console.log(`✅ [CHANNEX] Webhook message créé pour ${channex_property_id}`);
+      } else {
+        console.log(`ℹ️ [CHANNEX] Webhook message déjà existant pour ${channex_property_id}`);
+      }
     } catch (webhookErr) {
-      // Non bloquant — les webhooks peuvent être créés manuellement si besoin
       console.warn(`⚠️ [CHANNEX] Erreur création webhooks (non bloquant):`, webhookErr.response?.data || webhookErr.message);
     }
 
