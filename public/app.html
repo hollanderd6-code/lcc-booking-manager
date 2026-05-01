@@ -6806,28 +6806,51 @@ if (ota === 'ABRITEL' || ota.indexOf('ABRITEL') !== -1) return 'abritel';
 </div>
 <!-- MODALS DU CALENDRIER MODERNE -->
 <!-- Reservation Details Modal -->
-<div id="reservationDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;">
-<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
-<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
-  <h2 id="detailsModalTitle" style="font-size:16px;font-weight:700;color:#0D1117;margin:0;">Détails de la réservation</h2>
-  <button id="closeDetailsModal" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
-</div>
-<div class="reservation-details" id="reservationDetailsContent" style="overflow-y:auto;padding:16px 20px;flex:1;">
-<!-- Le contenu sera inséré dynamiquement -->
-</div>
-<div class="modal-actions" id="detailsModalActions" style="padding:12px 20px 32px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid rgba(200,184,154,.3);">
-<button class="btn btn-danger" id="deleteBookingBtn" style="margin-right: auto;" type="button">
-<i class="fas fa-trash"></i> Supprimer
+<div id="reservationDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.6);backdrop-filter:blur(4px);z-index:9999;align-items:flex-end;justify-content:center;">
+  <div id="reservationDetailsSheet" style="background:#F5F0E8;border-radius:24px 24px 0 0;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
+
+    <!-- Drag handle -->
+    <div style="display:flex;justify-content:center;padding:10px 0 4px;">
+      <div style="width:36px;height:4px;border-radius:99px;background:rgba(0,0,0,.15);"></div>
+    </div>
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 20px 14px;">
+      <h2 id="detailsModalTitle" style="font-size:15px;font-weight:600;color:#6B7280;margin:0;letter-spacing:.02em;">Détails de la réservation</h2>
+      <button id="closeDetailsModal" style="background:rgba(0,0,0,.07);border:none;border-radius:50%;width:30px;height:30px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6B7280;transition:background .15s;" onmouseover="this.style.background='rgba(0,0,0,.12)'" onmouseout="this.style.background='rgba(0,0,0,.07)'">×</button>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="reservation-details" id="reservationDetailsContent" style="overflow-y:auto;padding:0 20px 8px;flex:1;">
+    </div>
+
+    <!-- Footer actions -->
+    <div id="detailsModalActions" style="padding:12px 16px 32px;display:flex;gap:8px;align-items:center;border-top:1px solid rgba(200,184,154,.35);background:#F5F0E8;">
+      <!-- Supprimer — gauche -->
+      <button class="btn btn-danger" id="deleteBookingBtn" type="button" style="flex-shrink:0;height:42px;padding:0 14px;border-radius:12px;font-size:13px;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-trash" style="font-size:13px;"></i> Supprimer
       </button>
-<button class="btn btn-ghost" id="closeDetailsBtn" type="button">Fermer</button>
-<button class="btn btn-ghost" id="invoiceBookingBtn" type="button" onclick="openInvoiceFromBooking()" style="display:none;">
-<i class="fas fa-file-invoice"></i> Facture
+      <!-- Spacer -->
+      <div style="flex:1;"></div>
+      <!-- Fermer -->
+      <button class="btn btn-ghost" id="closeDetailsBtn" type="button" style="height:42px;padding:0 16px;border-radius:12px;font-size:13px;font-weight:600;">
+        Fermer
       </button>
-<button class="btn btn-primary" id="editBookingBtn" type="button">
-<i class="fas fa-edit"></i> Modifier
+      <!-- Message -->
+      <button id="footerMsgBtn" type="button" style="height:42px;padding:0 14px;border-radius:12px;font-size:13px;font-weight:600;background:rgba(26,122,94,.1);border:1.5px solid rgba(26,122,94,.25);color:#1A7A5E;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;" onmouseover="this.style.background='rgba(26,122,94,.18)'" onmouseout="this.style.background='rgba(26,122,94,.1)'">
+        <i class="fas fa-comment-dots" style="font-size:13px;"></i> Message
       </button>
-</div>
-</div>
+      <!-- Facture -->
+      <button class="btn btn-ghost" id="invoiceBookingBtn" type="button" onclick="openInvoiceFromBooking()" style="display:none;height:42px;padding:0 14px;border-radius:12px;font-size:13px;display:none;align-items:center;gap:6px;">
+        <i class="fas fa-file-invoice"></i> Facture
+      </button>
+      <!-- Modifier -->
+      <button class="btn btn-primary" id="editBookingBtn" type="button" style="height:42px;padding:0 16px;border-radius:12px;font-size:13px;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-edit"></i> Modifier
+      </button>
+    </div>
+
+  </div>
 </div>
 <!-- Cleaning Today Modal -->
 <div class="booking-modal" id="cleaningTodayModal">
@@ -7913,148 +7936,122 @@ console.log('👤 DEBUG GUEST:', {
     // 4️⃣ Contenu "de base" du modal
     detailsContent.innerHTML = `
 
-      <!-- BADGE PLATEFORME en haut -->
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
-        <span style="
-          display:inline-flex; align-items:center; gap:7px;
-          padding:6px 14px; border-radius:999px;
-          background:${pc.bg}; color:${pc.color};
-          font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
-        ">
-          <i class="${pc.icon}" style="font-size:13px;"></i>
-          ${pc.label}
-          ${otaReservationId ? `<span style="opacity:.7;font-weight:500;font-size:10px;">#${otaReservationId}</span>` : ''}
-        </span>
-        ${priceFormatted ? `
-          <div style="text-align:right;">
-            <div style="font-size:20px; font-weight:800; color:#1A7A5E;">${priceFormatted}</div>
-            ${nights ? `<div style="font-size:11px; color:#9CA3AF;">${nights} nuit${nights > 1 ? 's' : ''}</div>` : ''}
-          </div>
-        ` : nights ? `
-          <div style="font-size:13px; color:#6B7280; font-weight:600;">
-            <i class="fas fa-moon" style="margin-right:4px;"></i>${nights} nuit${nights > 1 ? 's' : ''}
-          </div>
-        ` : ''}
-      </div>
+      <!-- ── HERO : avatar + nom + badge plateforme ── -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid rgba(200,184,154,.35);">
+        <!-- Avatar -->
+        <div style="
+          width:52px;height:52px;border-radius:16px;flex-shrink:0;
+          background:${pc.bg};color:${pc.color};
+          display:flex;align-items:center;justify-content:center;
+          font-weight:800;font-size:20px;letter-spacing:-.5px;
+          box-shadow:0 4px 12px rgba(0,0,0,.12);
+        ">${guestInitial}</div>
 
-      <!-- VOYAGEUR -->
-      <div class="detail-group">
-        <label>VOYAGEUR</label>
-        <div style="display:flex; align-items:center; gap:12px; margin-top:8px;">
-          <div style="
-            width:48px; height:48px; border-radius:50%; flex-shrink:0;
-            background:${pc.bg}; color:${pc.color};
-            display:flex; align-items:center; justify-content:center;
-            font-weight:700; font-size:18px;
-          ">${guestInitial}</div>
-          <div style="flex:1; min-width:0;">
-            <div class="detail-value" style="font-weight:700; margin-bottom:4px;">${guest}</div>
-            ${guestCountryName ? `
-              <div style="font-size:13px; color:#4B5563; margin-bottom:4px; font-weight:500;">
-                ${guestCountryFlag ? `<span style="margin-right:4px;">${guestCountryFlag}</span>` : ''}${guestCountryName}
-              </div>
-            ` : ''}
-            ${occupancyAdults ? `
-              <div style="font-size:12px; color:#9CA3AF; margin-bottom:4px;">
-                <i class="fas fa-user" style="width:14px; margin-right:4px;"></i>${occupancyAdults} adulte${occupancyAdults > 1 ? 's' : ''}${occupancyChildren ? ` · ${occupancyChildren} enfant${occupancyChildren > 1 ? 's' : ''}` : ''}
-              </div>
-            ` : ''}
-            ${guestPhone && guestPhone !== 'Non renseigné' ? `
-              <div style="font-size:13px; color:#6b7280; margin-bottom:2px;">
-                <i class="fas fa-phone" style="width:14px; margin-right:4px;"></i>
-                <a href="tel:${guestPhone}" style="color:#1A7A5E; text-decoration:none;">${guestPhone}</a>
-              </div>
-            ` : ''}
-            ${guestEmail ? `
-              <div style="font-size:13px; color:#6b7280;">
-                <i class="fas fa-envelope" style="width:14px; margin-right:4px;"></i>
-                <a href="mailto:${guestEmail}" style="color:#1A7A5E; text-decoration:none; word-break:break-all;">${guestEmail}</a>
-              </div>
-            ` : ''}
+        <!-- Nom + meta -->
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:17px;color:#111827;line-height:1.2;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${guest}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            ${occupancyAdults ? `<span style="font-size:12px;color:#6B7280;display:flex;align-items:center;gap:3px;"><i class="fas fa-user" style="font-size:10px;opacity:.7;"></i> ${occupancyAdults}${occupancyChildren ? '+'+occupancyChildren : ''}</span>` : ''}
+            ${guestCountryFlag ? `<span style="font-size:13px;">${guestCountryFlag} <span style="font-size:12px;color:#6B7280;">${guestCountryName}</span></span>` : ''}
+            ${guestPhone && guestPhone !== 'Non renseigné' ? `<a href="tel:${guestPhone}" style="font-size:12px;color:#1A7A5E;text-decoration:none;display:flex;align-items:center;gap:3px;"><i class="fas fa-phone" style="font-size:10px;"></i> ${guestPhone}</a>` : ''}
           </div>
+        </div>
+
+        <!-- Badge plateforme + prix -->
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:${pc.bg};color:${pc.color};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">
+            <i class="${pc.icon}" style="font-size:11px;"></i> ${pc.label}
+          </div>
+          ${priceFormatted ? `<div style="font-size:19px;font-weight:800;color:#1A7A5E;line-height:1;">${priceFormatted}</div>` : ''}
+          ${nights ? `<div style="font-size:11px;color:#9CA3AF;margin-top:1px;">${nights} nuit${nights>1?'s':''}</div>` : ''}
         </div>
       </div>
 
-      <!-- LOGEMENT -->
-      <div class="detail-group">
-        <label>LOGEMENT</label>
-        <div class="detail-value">${propertyName || 'Logement inconnu'}</div>
+      <!-- ── LOGEMENT + DATES ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;">
+        <!-- Logement -->
+        <div style="background:rgba(255,255,255,.55);border-radius:14px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Logement</div>
+          <div style="font-size:14px;font-weight:700;color:#111827;">${propertyName || '—'}</div>
+        </div>
+        <!-- Arrivée -->
+        <div style="background:rgba(255,255,255,.55);border-radius:14px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Arrivée</div>
+          <div style="font-size:14px;font-weight:700;color:#111827;">${start}</div>
+        </div>
+        <!-- Départ -->
+        <div style="background:rgba(255,255,255,.55);border-radius:14px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Départ</div>
+          <div style="font-size:14px;font-weight:700;color:#111827;">${end}</div>
+        </div>
       </div>
 
-      <!-- DATES -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
-        <div>
-          <label>Arrivée</label>
-          <div class="detail-value">${start}</div>
-        </div>
-        <div>
-          <label>Départ</label>
-          <div class="detail-value">${end}</div>
-        </div>
-      </div>
-
-      <!-- PRIX DÉTAILLÉ -->
-      ${amountTotalFmt ? `
-        <div class="detail-group">
-          <label>PRIX DÉTAILLÉ</label>
-          <div style="margin-top:8px; background:#F9F7F4; border-radius:10px; padding:12px 14px;">
-
-            ${amountRoomsFmt ? `
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
-                <span style="color:#6b7280;"><i class="fas fa-moon" style="width:14px;margin-right:6px;opacity:.6;"></i>Nuits</span>
-                <span style="font-weight:600;">${amountRoomsFmt}</span>
-              </div>
-            ` : ''}
-
-            ${nightsBreakdownHTML ? `
-              <div style="padding:6px 0 4px 20px; border-bottom:1px solid rgba(0,0,0,.06);">
-                ${nightsBreakdownHTML}
-              </div>
-            ` : ''}
-
-            ${amountCleaningFmt ? `
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
-                <span style="color:#6b7280;"><i class="fas fa-broom" style="width:14px;margin-right:6px;opacity:.6;"></i>Ménage</span>
-                <span style="font-weight:600;">${amountCleaningFmt}</span>
-              </div>
-            ` : ''}
-
-            ${amountTaxesFmt ? `
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
-                <span style="color:#6b7280;"><i class="fas fa-landmark" style="width:14px;margin-right:6px;opacity:.6;"></i>Taxe de séjour</span>
-                <span style="font-weight:600;">${amountTaxesFmt}</span>
-              </div>
-            ` : ''}
-
-            ${otaCommissionFmt ? `
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06);">
-                <span style="color:#6b7280;"><i class="fas fa-percent" style="width:14px;margin-right:6px;opacity:.6;"></i>Commission OTA</span>
-                <span style="font-weight:600;color:#EF4444;">${otaCommissionFmt}</span>
-              </div>
-            ` : ''}
-
-            <div style="display:flex;justify-content:space-between;font-size:14px;padding:8px 0 2px;">
-              <span style="font-weight:700;">Total</span>
-              <span style="font-weight:800;color:#1A7A5E;">${amountTotalFmt}</span>
-            </div>
-
-            ${hostPayoutFmt ? `
-              <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#6b7280;">
-                <span><i class="fas fa-wallet" style="width:14px;margin-right:6px;opacity:.6;"></i>Reversement hôte</span>
-                <span style="font-weight:600;color:#1A7A5E;">${hostPayoutFmt}</span>
-              </div>
-            ` : ''}
-
-          </div>
+      <!-- ── EMAIL (si dispo) ── -->
+      ${guestEmail ? `
+        <div style="margin-bottom:14px;">
+          <a href="mailto:${guestEmail}" style="display:inline-flex;align-items:center;gap:7px;padding:8px 13px;background:rgba(255,255,255,.55);border-radius:10px;font-size:12px;color:#1A7A5E;text-decoration:none;font-weight:500;">
+            <i class="fas fa-envelope" style="font-size:11px;opacity:.8;"></i> ${guestEmail}
+          </a>
         </div>
       ` : ''}
 
-      <!-- NOTES -->
-      <div class="detail-group">
-        <label>NOTES</label>
+      <!-- ── PRIX DÉTAILLÉ ── -->
+      ${amountTotalFmt ? `
+        <div style="background:rgba(255,255,255,.55);border-radius:16px;padding:14px 16px;margin-bottom:18px;">
+          <div style="font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Prix détaillé</div>
+
+          ${amountRoomsFmt ? `
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05);">
+              <span style="color:#6B7280;display:flex;align-items:center;gap:6px;"><i class="fas fa-moon" style="width:12px;opacity:.5;"></i> Nuits</span>
+              <span style="font-weight:600;">${amountRoomsFmt}</span>
+            </div>
+          ` : ''}
+
+          ${nightsBreakdownHTML ? `
+            <div style="padding:4px 0 4px 18px;border-bottom:1px solid rgba(0,0,0,.05);">${nightsBreakdownHTML}</div>
+          ` : ''}
+
+          ${amountCleaningFmt ? `
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05);">
+              <span style="color:#6B7280;display:flex;align-items:center;gap:6px;"><i class="fas fa-broom" style="width:12px;opacity:.5;"></i> Ménage</span>
+              <span style="font-weight:600;">${amountCleaningFmt}</span>
+            </div>
+          ` : ''}
+
+          ${amountTaxesFmt ? `
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05);">
+              <span style="color:#6B7280;display:flex;align-items:center;gap:6px;"><i class="fas fa-landmark" style="width:12px;opacity:.5;"></i> Taxe séjour</span>
+              <span style="font-weight:600;">${amountTaxesFmt}</span>
+            </div>
+          ` : ''}
+
+          ${otaCommissionFmt ? `
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05);">
+              <span style="color:#6B7280;display:flex;align-items:center;gap:6px;"><i class="fas fa-percent" style="width:12px;opacity:.5;"></i> Commission OTA</span>
+              <span style="font-weight:600;color:#EF4444;">${otaCommissionFmt}</span>
+            </div>
+          ` : ''}
+
+          <div style="display:flex;justify-content:space-between;padding:9px 0 2px;margin-top:2px;">
+            <span style="font-size:13px;font-weight:700;color:#111827;">Total</span>
+            <span style="font-size:15px;font-weight:800;color:#1A7A5E;">${amountTotalFmt}</span>
+          </div>
+
+          ${hostPayoutFmt ? `
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#6B7280;">
+              <span style="display:flex;align-items:center;gap:6px;"><i class="fas fa-wallet" style="width:12px;opacity:.5;"></i> Reversement hôte</span>
+              <span style="font-weight:600;color:#1A7A5E;">${hostPayoutFmt}</span>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+
+      <!-- ── NOTES ── -->
+      <div class="detail-group" style="margin-bottom:6px;">
+        <label style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:block;">Notes</label>
         ${notes
-          ? `<div class="detail-value" style="white-space:pre-wrap;font-size:13px;color:#4B5563;">${notes}</div>`
-          : `<div class="detail-value" style="font-size:13px;color:#9CA3AF;font-style:italic;">Aucune note</div>`
+          ? `<div style="background:rgba(255,255,255,.55);border-radius:12px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.5;">${notes}</div>`
+          : `<div style="background:rgba(255,255,255,.35);border-radius:12px;padding:10px 14px;font-size:13px;color:#9CA3AF;font-style:italic;">Aucune note</div>`
         }
       </div>
     `;
@@ -8110,23 +8107,23 @@ try {
       : '';
 
     riskGroup.innerHTML = `
-      <label><i class="fas fa-shield-alt"></i> Analyse de risque</label>
-      <div class="detail-value">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+        <i class="fas fa-shield-alt" style="font-size:11px;"></i> Analyse de risque
+      </div>
+      <div style="background:rgba(255,255,255,.55);border-radius:16px;padding:14px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
           <div>
-            <div style="font-weight:800; font-size:18px; color:${barColor};">
-              ${riskLabel} — ${Math.round(riskScore)}/100
-            </div>
-            ${riskSummary ? `<div style="margin-top:4px; font-size:13px; opacity:.8;">${riskSummary}</div>` : ''}
+            <div style="font-weight:800;font-size:17px;color:\${barColor};line-height:1.1;">\${riskLabel}</div>
+            <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">\${Math.round(riskScore)}/100\${riskSummary ? ' · '+riskSummary : ''}</div>
           </div>
-          <div style="min-width:120px;">
-            <div style="height:12px; background:#e5e7eb; border-radius:999px; overflow:hidden;">
-              <div style="height:12px; width:${Math.max(0, Math.min(100, riskScore))}%; background:${barColor}; transition: width 0.3s ease;"></div>
+          <div style="min-width:100px;">
+            <div style="height:8px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;">
+              <div style="height:8px;width:\${Math.max(0,Math.min(100,riskScore))}%;background:\${barColor};border-radius:99px;transition:width .4s ease;"></div>
             </div>
           </div>
         </div>
-        ${tagsHtml}
-        ${recommendationsHtml}
+        \${tagsHtml}
+        \${recommendationsHtml}
       </div>
     `;
   }
@@ -8441,6 +8438,7 @@ try {
     }
 
     // 6️⃣ Ouverture du modal et datasets utiles
+    window._currentDetailsBooking = booking; // Mémorisé pour les boutons footer
     window.hideFab();
     window.hideFab();
     detailsModal.style.display = 'flex';
@@ -9509,6 +9507,31 @@ html[data-theme-v3="1"] .sidebar .nav-section {
     const closeDetailsX   = document.getElementById('closeDetailsModal');   // croix
     const closeDetailsBtn = document.getElementById('closeDetailsBtn');     // bouton "Fermer"
     const detailsOverlay  = document.getElementById('detailsModalOverlay'); // fond gris
+
+    // ── Bouton Message footer ────────────────────────────────
+    const footerMsgBtnEl = document.getElementById('footerMsgBtn');
+    if (footerMsgBtnEl) {
+      footerMsgBtnEl.addEventListener('click', async function() {
+        const token = localStorage.getItem('lcc_token');
+        const bookingForMsg = window._currentDetailsBooking;
+        if (!bookingForMsg) { window.location.href = '/messages.html'; return; }
+        try {
+          const r = await fetch((typeof API_URL !== 'undefined' ? API_URL : '') + '/api/chat/conversations', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          const d = await r.json();
+          const convs = d.conversations || [];
+          const guestN = bookingForMsg.guestName || bookingForMsg.guest_display_name || bookingForMsg.guest || '';
+          const propId = bookingForMsg.propertyId || bookingForMsg.property_id || '';
+          const startD = (bookingForMsg.startDate || bookingForMsg.start || '').toString().split('T')[0];
+          const conv = convs.find(c => bookingForMsg.channexBookingId && c.channex_booking_id && String(c.channex_booking_id) === String(bookingForMsg.channexBookingId))
+            || convs.find(c => startD && propId && c.property_id === propId && c.reservation_start_date && c.reservation_start_date.toString().split('T')[0] === startD)
+            || convs.find(c => guestN && c.guest_name && c.guest_name.trim().toLowerCase() === guestN.trim().toLowerCase() && c.property_id === propId)
+            || convs.find(c => guestN && c.guest_name && c.guest_name.trim().toLowerCase() === guestN.trim().toLowerCase());
+          window.location.href = conv ? '/messages.html?conv=' + conv.id : '/messages.html';
+        } catch(e) { window.location.href = '/messages.html'; }
+      });
+    }
 
     function closeDetailsModalSafe() {
       if (!detailsModal) return;
