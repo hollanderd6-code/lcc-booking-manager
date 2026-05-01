@@ -142,31 +142,24 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
       payload: { channex_property_id, channex_room_type_id, channex_rate_plan_id }
     });
 
-    // ✅ Créer automatiquement les webhooks pour ce logement
+    // ✅ Installer automatiquement l'app Messages & Reviews sur ce logement
     try {
-      await channexAPI.post('/webhooks', {
-        webhook: {
+      await channexAPI.post('/applications/install', {
+        application_installation: {
           property_id: channex_property_id,
-          callback_url: 'https://www.boostinghost.fr/api/channex/webhook',
-          event_mask: 'booking',
-          is_active: true,
-          send_data: true
+          application_code: 'messages_and_reviews'
         }
       });
-      await channexAPI.post('/webhooks', {
-        webhook: {
-          property_id: channex_property_id,
-          callback_url: 'https://www.boostinghost.fr/api/channex/webhook-message',
-          event_mask: 'message',
-          is_active: true,
-          send_data: true
-        }
-      });
-      console.log(`✅ [CHANNEX] Webhooks créés pour property ${channex_property_id}`);
-    } catch (webhookErr) {
-      // Non bloquant — les webhooks peuvent être créés manuellement si besoin
-      console.warn(`⚠️ [CHANNEX] Erreur création webhooks (non bloquant):`, webhookErr.response?.data || webhookErr.message);
+      console.log(`✅ [CHANNEX] App Messages & Reviews installée pour property ${channex_property_id}`);
+    } catch (appErr) {
+      // Peut échouer si déjà installée — non bloquant
+      const errMsg = appErr.response?.data?.errors?.title || appErr.message;
+      console.warn(`⚠️ [CHANNEX] Installation app messages (non bloquant): ${errMsg}`);
     }
+
+    // ✅ Les webhooks sont gérés via Global Webhooks dans Channex
+    // (pas de création de Property Webhooks pour éviter les doublons)
+    console.log(`✅ [CHANNEX] Property ${channex_property_id} prête — webhooks globaux actifs`);
 
     return { channex_property_id, channex_room_type_id, channex_rate_plan_id };
 
