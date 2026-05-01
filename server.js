@@ -25255,6 +25255,26 @@ app.post('/api/channex/webhook', async (req, res) => {
       return res.json({ success: true });
     }
 
+    // ── Gérer Accepted/Declined Reservation (demandes Airbnb) ──
+    const eventType = payload.event || payload.event_type || '';
+    if (eventType === 'accepted_reservation') {
+      await pool.query(
+        `UPDATE reservations SET status = 'confirmed', updated_at = NOW() WHERE channex_booking_id = $1`,
+        [bookingId]
+      );
+      await pool.query(
+        `UPDATE conversations SET status = 'active', updated_at = NOW() WHERE channex_booking_id = $1`,
+        [bookingId]
+      );
+      console.log(`✅ [CHANNEX WEBHOOK] Réservation ${bookingId} acceptée automatiquement`);
+    } else if (eventType === 'declined_reservation') {
+      await pool.query(
+        `UPDATE reservations SET status = 'cancelled', updated_at = NOW() WHERE channex_booking_id = $1`,
+        [bookingId]
+      );
+      console.log(`✅ [CHANNEX WEBHOOK] Réservation ${bookingId} refusée`);
+    }
+
     const bookings = [fullBooking];
     for (let booking of bookings) {
       // bookingId et revisionId déjà définis plus haut
@@ -25904,9 +25924,10 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
       [conversationId]
     );
 
-    // Chercher le channex_booking_id lié
+    // Chercher le channex_booking_id lié + statut réservation
     const resaResult = await pool.query(
-      `SELECT r.channex_booking_id FROM reservations r
+      `SELECT r.channex_booking_id, r.uid as reservation_uid, r.status as reservation_status
+       FROM reservations r
        JOIN conversations c ON (
          (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
          OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
@@ -25929,7 +25950,9 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
     res.json({
       messages: dbMessages.rows,
       channex_messages: channexMessages,
-      channex_booking_id: resaResult.rows[0]?.channex_booking_id || null
+      channex_booking_id: resaResult.rows[0]?.channex_booking_id || null,
+      reservation_uid: resaResult.rows[0]?.reservation_uid || null,
+      reservation_status: resaResult.rows[0]?.reservation_status || null
     });
 
   } catch (err) {
@@ -26634,6 +26657,73 @@ app.post('/api/channex/sync-messages/:reservation_uid', authenticateToken, async
   } catch (e) {
     console.error('❌ [SYNC MESSAGES]', e.message);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Accepter une demande de réservation Airbnb ──────────────────────
+app.post('/api/channex/accept-booking/:reservation_uid', authenticateToken, async (req, res) => {
+  const { reservation_uid } = req.params;
+  const user_id = req.user.id;
+  try {
+    const resaRes = await pool.query(
+      `SELECT r.*, p.channex_property_id FROM reservations r
+       JOIN properties p ON p.id = r.property_id
+       WHERE r.uid = $1 AND r.user_id = $2 AND r.status = 'pending_approval'`,
+      [reservation_uid, user_id]
+    );
+    if (resaRes.rows.length === 0) return res.status(404).json({ error: 'Demande non trouvée' });
+    const resa = resaRes.rows[0];
+
+    // Appeler Channex pour accepter
+    await channexAPI.post(`/bookings/${resa.channex_booking_id}/accept`);
+
+    // Mettre à jour le statut en DB
+    await pool.query(
+      `UPDATE reservations SET status = 'confirmed', updated_at = NOW() WHERE uid = $1`,
+      [reservation_uid]
+    );
+
+    // Mettre à jour la conversation
+    await pool.query(
+      `UPDATE conversations SET status = 'active', updated_at = NOW() WHERE channex_booking_id = $1`,
+      [resa.channex_booking_id]
+    );
+
+    console.log(`✅ [ACCEPT BOOKING] Réservation ${reservation_uid} acceptée`);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('❌ [ACCEPT BOOKING]', e.message);
+    res.status(500).json({ error: e.response?.data || e.message });
+  }
+});
+
+// ── Refuser une demande de réservation Airbnb ──────────────────────
+app.post('/api/channex/decline-booking/:reservation_uid', authenticateToken, async (req, res) => {
+  const { reservation_uid } = req.params;
+  const user_id = req.user.id;
+  try {
+    const resaRes = await pool.query(
+      `SELECT r.* FROM reservations r
+       WHERE r.uid = $1 AND r.user_id = $2 AND r.status = 'pending_approval'`,
+      [reservation_uid, user_id]
+    );
+    if (resaRes.rows.length === 0) return res.status(404).json({ error: 'Demande non trouvée' });
+    const resa = resaRes.rows[0];
+
+    // Appeler Channex pour refuser
+    await channexAPI.post(`/bookings/${resa.channex_booking_id}/decline`);
+
+    // Mettre à jour le statut
+    await pool.query(
+      `UPDATE reservations SET status = 'cancelled', updated_at = NOW() WHERE uid = $1`,
+      [reservation_uid]
+    );
+
+    console.log(`✅ [DECLINE BOOKING] Réservation ${reservation_uid} refusée`);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('❌ [DECLINE BOOKING]', e.message);
+    res.status(500).json({ error: e.response?.data || e.message });
   }
 });
 
