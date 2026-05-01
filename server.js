@@ -21283,6 +21283,33 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     .replace(/{instructions}/gi, property?.practical_info || '')
     .replace(/{livret}/gi, property?.welcome_book_url || '');
 
+  // Résoudre {caution_url} — chercher le lien Stripe dans deposits
+  if (msg.includes('{caution_url}')) {
+    try {
+      const resRow = await pool.query(
+        `SELECT uid FROM reservations
+         WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled'
+         ORDER BY created_at DESC LIMIT 1`,
+        [conv.property_id, conv.reservation_start_date]
+      ).catch(() => ({ rows: [] }));
+      let cautionUrl = '';
+      if (resRow.rows[0]) {
+        const dep = await pool.query(
+          `SELECT checkout_url FROM deposits
+           WHERE reservation_uid = $1 AND status IN ('pending','authorized')
+           ORDER BY created_at DESC LIMIT 1`,
+          [resRow.rows[0].uid]
+        ).catch(() => ({ rows: [] }));
+        cautionUrl = dep.rows[0]?.checkout_url || '';
+      }
+      msg = msg.replace(/{caution_url}/gi, cautionUrl);
+      if (!cautionUrl) console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — aucun deposit trouvé`);
+    } catch(e) {
+      msg = msg.replace(/{caution_url}/gi, '');
+      console.warn('⚠️ [TPL] Erreur résolution {caution_url}:', e.message);
+    }
+  }
+
   // 🌍 Traduction automatique via DeepL selon la nationalité du voyageur
   const deepLTarget = getDeepLTarget(conv.guest_country, conv.guest_language);
   if (deepLTarget) {
@@ -21480,15 +21507,42 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
       .replace(/\{instructions\}/gi, pi.practical_info || '')
       .replace(/\{livret\}/gi, pi.welcome_book_url || '');
 
+    // Résoudre {caution_url} si présent
+    let finalMsg = msg;
+    if (finalMsg.includes('{caution_url}')) {
+      try {
+        const resRow2 = await pool.query(
+          `SELECT uid FROM reservations
+           WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled'
+           ORDER BY created_at DESC LIMIT 1`,
+          [c.property_id, c.reservation_start_date]
+        ).catch(() => ({ rows: [] }));
+        let cautionUrl = '';
+        if (resRow2.rows[0]) {
+          const dep2 = await pool.query(
+            `SELECT checkout_url FROM deposits
+             WHERE reservation_uid = $1 AND status IN ('pending','authorized')
+             ORDER BY created_at DESC LIMIT 1`,
+            [resRow2.rows[0].uid]
+          ).catch(() => ({ rows: [] }));
+          cautionUrl = dep2.rows[0]?.checkout_url || '';
+        }
+        finalMsg = finalMsg.replace(/{caution_url}/gi, cautionUrl);
+        if (!cautionUrl) console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id}`);
+      } catch(e) {
+        finalMsg = finalMsg.replace(/{caution_url}/gi, '');
+      }
+    }
+
     if (c.channex_booking_id) {
-      await sendBookingMessage(c.channex_booking_id, msg);
+      await sendBookingMessage(c.channex_booking_id, finalMsg);
     }
 
     // Sauvegarder en DB
     const saved = await pool.query(
       `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
        VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW()) RETURNING *`,
-      [conversation_id, msg]
+      [conversation_id, finalMsg]
     );
 
     if (io) io.to(`conversation_${conversation_id}`).emit('new_message', saved.rows[0]);
