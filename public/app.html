@@ -8337,33 +8337,33 @@ try {
 
             const guestNameLocal = booking.guestName || booking.guest_display_name || booking.guest || '';
             const propertyIdLocal = booking.propertyId || booking.property_id || '';
-            const reservationKey = booking.reservationKey || booking.reservation_key || reservationUidLocal;
+            // Date d'arrivée normalisée (YYYY-MM-DD) — clé de liaison principale avec conversations
+            const bookingStart = booking.startDate || booking.start || booking.checkIn || booking.check_in || '';
+            const bookingStartNorm = bookingStart ? bookingStart.toString().split('T')[0] : '';
 
+            // Matching cascade :
+            // 1. channex_booking_id (le plus fiable pour réservations OTA)
+            // 2. property_id + reservation_start_date (clé de liaison DB)
+            // 3. nom voyageur + property_id
+            // 4. nom voyageur seul (fallback)
             const conv = convs.find(c =>
-              reservationUidLocal && (
-                c.reservation_uid === reservationUidLocal ||
-                c.uid === reservationUidLocal ||
-                c.reservation_key === reservationUidLocal ||
-                c.booking_id === reservationUidLocal
-              )
-            ) || convs.find(c =>
-              reservationKey && (
-                c.reservation_key === reservationKey ||
-                c.reservation_uid === reservationKey
-              )
-            ) || convs.find(c =>
               booking.channexBookingId && c.channex_booking_id &&
-              c.channex_booking_id === booking.channexBookingId
+              String(c.channex_booking_id) === String(booking.channexBookingId)
+            ) || convs.find(c =>
+              bookingStartNorm && propertyIdLocal &&
+              c.property_id === propertyIdLocal &&
+              c.reservation_start_date && c.reservation_start_date.toString().split('T')[0] === bookingStartNorm
             ) || convs.find(c =>
               guestNameLocal && c.guest_name &&
               c.guest_name.trim().toLowerCase() === guestNameLocal.trim().toLowerCase() &&
-              propertyIdLocal && (c.property_id === propertyIdLocal || c.propertyId === propertyIdLocal)
+              propertyIdLocal && c.property_id === propertyIdLocal
             ) || convs.find(c =>
               guestNameLocal && c.guest_name &&
               c.guest_name.trim().toLowerCase() === guestNameLocal.trim().toLowerCase()
             );
 
-            console.log('🔍 [Messages] conv trouvée:', conv ? {id: conv.id, guest_name: conv.guest_name} : 'aucune');
+            console.log('🔍 [Messages] booking start:', bookingStartNorm, '| propertyId:', propertyIdLocal, '| channex:', booking.channexBookingId);
+            console.log('🔍 [Messages] conv trouvée:', conv ? {id: conv.id, guest_name: conv.guest_name, start: conv.reservation_start_date} : 'aucune — fallback messages.html');
             if (conv) {
               window.location.href = `/messages.html?conv=${conv.id}`;
             } else {
