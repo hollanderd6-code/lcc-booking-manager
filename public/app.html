@@ -4912,11 +4912,13 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
 
       const sStr = dateOnlyStr(rawStart);
       const eStr = dateOnlyStr(rawEnd);
-      if (sStr === todayStr) checkinsToday += 1;
-      if (eStr === todayStr) checkoutsToday += 1;
-
-      const endDay = startOfDay(end);
-      if (endDay >= today0 && endDay < window48End) cleaning48h += 1;
+      // Exclure les blocages des compteurs checkin/checkout/ménage
+      if (!isBlock) {
+        if (sStr === todayStr) checkinsToday += 1;
+        if (eStr === todayStr) checkoutsToday += 1;
+        const endDay = startOfDay(end);
+        if (endDay >= today0 && endDay < window48End) cleaning48h += 1;
+      }
     });
 
     // Union des intervalles → nuits réelles sans double-comptage
@@ -5220,6 +5222,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         const rawStart = r.start || r.startDate;
         const rawEnd = r.end || r.endDate;
         if (!rawStart || !rawEnd) return null;
+        // Exclure les blocages (manuels, iCal, Channex)
+        if (r.type === 'block' || r.source === 'BLOCK' || (r.platform || '').toUpperCase() === 'BLOCK') return null;
 
         const s = dateOnlyStr(rawStart);
         const e = dateOnlyStr(rawEnd);
@@ -5327,6 +5331,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         const rawEnd = r.end || r.endDate;
         const rawStart = r.start || r.startDate;
         if (!rawEnd || !rawStart) return null;
+        // Exclure les blocages — pas de ménage à faire
+        if (r.type === 'block' || r.source === 'BLOCK' || (r.platform || '').toUpperCase() === 'BLOCK') return null;
 
         const end = parseDateSafe(rawEnd);
         if (!end) return null;
