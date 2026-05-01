@@ -3128,19 +3128,7 @@ function formatDateFr(dateStr) {
           loadLocalData();
           await loadRemoteData();
 
-          // Récupérer l'email du sous-compte connecté
-          let subEmail = '';
-          try {
-            const _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-            subEmail = (_u.email || '').toLowerCase().trim();
-          } catch(e) {}
-
-          // Filtrer : ne montrer que le cleaner lié à cet email
-          if (subEmail) {
-            cleaners = cleaners.filter(c => (c.email || '').toLowerCase().trim() === subEmail);
-          } else {
-            cleaners = [];
-          }
+          // Sous-compte : accès lecture seule à tous les membres de l'équipe
 
           // Changer le titre de la section
           if (cleanerList) {
