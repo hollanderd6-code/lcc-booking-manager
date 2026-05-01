@@ -7845,7 +7845,7 @@ console.log('👤 DEBUG GUEST:', {
     }
 
     // Notes
-    const notes = booking.notes || booking.comment || booking.description || '';
+    const notes = booking.notes || booking.note || booking.comment || booking.comments || booking.description || booking.internal_notes || booking.internalNotes || '';
 
     // Channex OTA reservation ID
     const otaReservationId = booking.ota_reservation_id || booking.otaReservationId || null;
@@ -8050,12 +8050,13 @@ console.log('👤 DEBUG GUEST:', {
       ` : ''}
 
       <!-- NOTES -->
-      ${notes ? `
-        <div class="detail-group">
-          <label>NOTES</label>
-          <div class="detail-value" style="white-space:pre-wrap;font-size:13px;color:#4B5563;">${notes}</div>
-        </div>
-      ` : ''}
+      <div class="detail-group">
+        <label>NOTES</label>
+        ${notes
+          ? `<div class="detail-value" style="white-space:pre-wrap;font-size:13px;color:#4B5563;">${notes}</div>`
+          : `<div class="detail-value" style="font-size:13px;color:#9CA3AF;font-style:italic;">Aucune note</div>`
+        }
+      </div>
     `;
 // =========================
 // ✅ Injection RISQUE + CHECKLIST
@@ -8301,7 +8302,14 @@ try {
           ` : ''}
         `;
 
-        detailsContent.appendChild(shortcutsDiv);
+        // Insérer les raccourcis AVANT le bloc risque (data-risk-info) s'il existe,
+        // sinon en dernier — ainsi l'analyse de risque reste toujours tout en bas
+        const existingRiskBlock = detailsContent.querySelector('[data-risk-info="1"]');
+        if (existingRiskBlock) {
+          detailsContent.insertBefore(shortcutsDiv, existingRiskBlock);
+        } else {
+          detailsContent.appendChild(shortcutsDiv);
+        }
 
         // ── Bouton Messages ──────────────────────────────────────
         document.getElementById('btnQuickMessage')?.addEventListener('click', async () => {
@@ -8311,10 +8319,18 @@ try {
             const r = await fetch(`${API_URL}/api/chat/conversations`, { headers: { 'Authorization': 'Bearer ' + token } });
             const d = await r.json();
             const convs = d.conversations || [];
+            // Matching prioritaire : uid exact → channex id → nom voyageur + logement
+            const guestNameLocal = booking.guestName || booking.guest_display_name || booking.guest || '';
+            const propertyIdLocal = booking.propertyId || booking.property_id || '';
             const conv = convs.find(c =>
-              (reservationUidLocal && (c.reservation_uid === reservationUidLocal || c.uid === reservationUidLocal)) ||
-              (c.channex_booking_id && booking.channexBookingId && c.channex_booking_id === booking.channexBookingId) ||
-              (c.guest_name === (booking.guestName || booking.guest_display_name))
+              (reservationUidLocal && (c.reservation_uid === reservationUidLocal || c.uid === reservationUidLocal || c.reservation_key === reservationUidLocal))
+            ) || convs.find(c =>
+              (booking.channexBookingId && c.channex_booking_id && c.channex_booking_id === booking.channexBookingId)
+            ) || convs.find(c =>
+              (guestNameLocal && c.guest_name && c.guest_name.trim().toLowerCase() === guestNameLocal.trim().toLowerCase() &&
+               propertyIdLocal && (c.property_id === propertyIdLocal || c.propertyId === propertyIdLocal))
+            ) || convs.find(c =>
+              (guestNameLocal && c.guest_name && c.guest_name.trim().toLowerCase() === guestNameLocal.trim().toLowerCase())
             );
             if (conv) {
               window.location.href = `/messages.html?conv=${conv.id}`;
