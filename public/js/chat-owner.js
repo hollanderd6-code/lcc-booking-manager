@@ -795,6 +795,10 @@ function appendMessage(message) {
   
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
+  if (message.id) messageDiv.setAttribute('data-msg-id', String(message.id));
+  if (message.created_at) messageDiv.setAttribute('data-ts', String(new Date(message.created_at).getTime()));
+  // Stocker le texte normalisé pour déduplication avec messages Channex
+  if (message.message) messageDiv.setAttribute('data-msg-text', message.message.trim().toLowerCase().substring(0, 100));
   
   const avatar = document.createElement('div');
   avatar.className = 'chat-avatar';
@@ -1038,9 +1042,19 @@ function _injectChannexMessages(channexMsgs) {
     return tA - tB;
   });
 
+  // Construire un set des textes déjà affichés (messages DB) pour déduplication
+  const existingTexts = new Set(
+    Array.from(chatEl.querySelectorAll('[data-msg-text]'))
+      .map(el => el.getAttribute('data-msg-text') || '')
+      .filter(Boolean)
+  );
+
   sorted.forEach(m => {
     if (!m.id || !m.message) return; // ignorer les messages vides/invalides
     if (chatEl.querySelector(`[data-channex-id="${m.id}"]`)) return;
+    // Vérifier si ce texte est déjà affiché via un message DB
+    const mTextNorm = m.message.trim().toLowerCase().substring(0, 100);
+    if (existingTexts.has(mTextNorm)) return;
     const isGuest = m.sender === 'guest';
     const ts = m.inserted_at ? new Date(m.inserted_at).getTime() : 0;
     const time = m.inserted_at
