@@ -8079,6 +8079,9 @@ try {
       riskGroup = document.createElement('div');
       riskGroup.className = 'detail-group';
       riskGroup.setAttribute('data-risk-info', '1');
+      riskGroup.style.marginTop = '24px';
+      riskGroup.style.paddingTop = '20px';
+      riskGroup.style.borderTop = '1.5px solid rgba(0,0,0,.08)';
       detailsContent.appendChild(riskGroup);
     }
 
@@ -8319,19 +8322,48 @@ try {
             const r = await fetch(`${API_URL}/api/chat/conversations`, { headers: { 'Authorization': 'Bearer ' + token } });
             const d = await r.json();
             const convs = d.conversations || [];
-            // Matching prioritaire : uid exact → channex id → nom voyageur + logement
+
+            // Debug : voir les champs réels des conversations et du booking
+            console.log('🔍 [Messages] booking:', {
+              uid: booking.uid, id: booking.id, reservationKey: booking.reservationKey,
+              guestName: booking.guestName, guest: booking.guest, guest_display_name: booking.guest_display_name,
+              propertyId: booking.propertyId, property_id: booking.property_id,
+              channexBookingId: booking.channexBookingId, source: booking.source
+            });
+            console.log('🔍 [Messages] convs sample (3 premières):', convs.slice(0,3).map(c => ({
+              id: c.id, uid: c.uid, reservation_uid: c.reservation_uid, reservation_key: c.reservation_key,
+              guest_name: c.guest_name, property_id: c.property_id, channex_booking_id: c.channex_booking_id
+            })));
+
             const guestNameLocal = booking.guestName || booking.guest_display_name || booking.guest || '';
             const propertyIdLocal = booking.propertyId || booking.property_id || '';
+            const reservationKey = booking.reservationKey || booking.reservation_key || reservationUidLocal;
+
             const conv = convs.find(c =>
-              (reservationUidLocal && (c.reservation_uid === reservationUidLocal || c.uid === reservationUidLocal || c.reservation_key === reservationUidLocal))
+              reservationUidLocal && (
+                c.reservation_uid === reservationUidLocal ||
+                c.uid === reservationUidLocal ||
+                c.reservation_key === reservationUidLocal ||
+                c.booking_id === reservationUidLocal
+              )
             ) || convs.find(c =>
-              (booking.channexBookingId && c.channex_booking_id && c.channex_booking_id === booking.channexBookingId)
+              reservationKey && (
+                c.reservation_key === reservationKey ||
+                c.reservation_uid === reservationKey
+              )
             ) || convs.find(c =>
-              (guestNameLocal && c.guest_name && c.guest_name.trim().toLowerCase() === guestNameLocal.trim().toLowerCase() &&
-               propertyIdLocal && (c.property_id === propertyIdLocal || c.propertyId === propertyIdLocal))
+              booking.channexBookingId && c.channex_booking_id &&
+              c.channex_booking_id === booking.channexBookingId
             ) || convs.find(c =>
-              (guestNameLocal && c.guest_name && c.guest_name.trim().toLowerCase() === guestNameLocal.trim().toLowerCase())
+              guestNameLocal && c.guest_name &&
+              c.guest_name.trim().toLowerCase() === guestNameLocal.trim().toLowerCase() &&
+              propertyIdLocal && (c.property_id === propertyIdLocal || c.propertyId === propertyIdLocal)
+            ) || convs.find(c =>
+              guestNameLocal && c.guest_name &&
+              c.guest_name.trim().toLowerCase() === guestNameLocal.trim().toLowerCase()
             );
+
+            console.log('🔍 [Messages] conv trouvée:', conv ? {id: conv.id, guest_name: conv.guest_name} : 'aucune');
             if (conv) {
               window.location.href = `/messages.html?conv=${conv.id}`;
             } else {
