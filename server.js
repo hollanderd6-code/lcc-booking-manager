@@ -22381,8 +22381,6 @@ cron.schedule('0 8 * * *', async () => {
          WHERE p.user_id = $1
          AND DATE(r.start_date) = $2
          AND r.status != 'cancelled'
-         AND r.source != 'BLOCK'
-         AND r.type != 'block'
          ${propertyFilter}
          ORDER BY r.id`,
         params
@@ -22400,8 +22398,6 @@ cron.schedule('0 8 * * *', async () => {
          WHERE p.user_id = $1
          AND DATE(r.end_date) = $2
          AND r.status != 'cancelled'
-         AND r.source != 'BLOCK'
-         AND r.type != 'block'
          ${propertyFilter}
          ORDER BY r.id`,
         params
@@ -25945,7 +25941,28 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
     let channexMessages = [];
     if (resaResult.rows.length > 0 && resaResult.rows[0].channex_booking_id) {
       try {
-        channexMessages = await getBookingMessages(resaResult.rows[0].channex_booking_id);
+        const allChannexMsgs = await getBookingMessages(resaResult.rows[0].channex_booking_id);
+
+        // ── Filtrer les messages Channex déjà en DB pour éviter le doublon ──
+        // Un message Channex est "déjà en DB" si son texte exact se retrouve dans
+        // les messages de la conversation (comparaison normalisée)
+        const dbTexts = new Set(
+          dbMessages.rows
+            .filter(m => m.sender_type === 'guest')
+            .map(m => (m.message || '').trim().toLowerCase())
+        );
+
+        channexMessages = allChannexMsgs.filter(cm => {
+          const cmText = (cm.message || '').trim().toLowerCase();
+          if (!cmText) return false;
+          if (dbTexts.has(cmText)) {
+            console.log(`[CHANNEX DEDUP] Message déjà en DB, exclu: "${cmText.substring(0, 50)}"`);
+            return false;
+          }
+          return true;
+        });
+
+        console.log(`[CHANNEX MSGS] ${allChannexMsgs.length} total, ${channexMessages.length} non-DB pour conv ${conversationId}`);
       } catch (e) {
         console.warn('⚠️ Channex messages non récupérables:', e.message);
       }
