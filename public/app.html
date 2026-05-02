@@ -537,6 +537,9 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       background: #0D1117;
       color: white;
       padding: 0;
+      position: sticky;
+      top: 0; /* sera ajusté dynamiquement par JS */
+      z-index: 40;
     }
 
     .calendar-header-top {
@@ -779,6 +782,10 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
     /* Days Header */
     .days-header {
+      position: sticky;
+      top: 0; /* sera ajusté par JS */
+      z-index: 39;
+      background: var(--surface-color, #F5F0E8);
       height: var(--day-header-height);
       display: flex;
       background: var(--bg-tertiary);
@@ -12452,5 +12459,39 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 });
 </script>
 <script src="/js/bh-onboarding.js"></script>
+<script>
+// ── Sticky calendar header : calculer les top dynamiques ──────
+(function initStickyCalendarHeader() {
+  function updateStickyTops() {
+    const appHeader = document.querySelector('header.main-header');
+    const calHeader = document.querySelector('.calendar-modern-header');
+    const daysHeader = document.getElementById('daysHeader');
+
+    if (!calHeader) return;
+
+    const appHeaderH = appHeader ? appHeader.getBoundingClientRect().height : 0;
+    const calHeaderH = calHeader ? calHeader.getBoundingClientRect().height : 0;
+
+    // calendar-modern-header se colle sous le app-header
+    calHeader.style.top = appHeaderH + 'px';
+
+    // days-header se colle sous le calendar-modern-header
+    if (daysHeader) {
+      daysHeader.style.position = 'sticky';
+      daysHeader.style.zIndex = '39';
+      daysHeader.style.top = (appHeaderH + calHeaderH) + 'px';
+      daysHeader.style.background = 'var(--surface-color, #F5F0E8)';
+    }
+  }
+
+  // Appliquer au chargement + resize
+  document.addEventListener('DOMContentLoaded', updateStickyTops);
+  window.addEventListener('resize', updateStickyTops);
+
+  // Réappliquer après un court délai (pour les renders async)
+  setTimeout(updateStickyTops, 300);
+  setTimeout(updateStickyTops, 800);
+})();
+</script>
 </body>
 </html>
