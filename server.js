@@ -21345,6 +21345,7 @@ console.log('✅ Routes du chat initialisées');
 
 // ── Helper : créer ou réutiliser un lien court boostinghost.fr/c/XXXX ─────
 async function makeShortLink(pool, longUrl, userId) {
+  if (!longUrl || !longUrl.startsWith('http')) return longUrl || '';
   try {
     const existing = await pool.query(
       'SELECT code FROM short_links WHERE url = $1 LIMIT 1', [longUrl]
@@ -21397,11 +21398,15 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
   // Résoudre {caution_url} — chercher le lien Stripe dans deposits
   if (msg.includes('{caution_url}')) {
     try {
+      // Chercher la réservation via channex_booking_id (priorité) ou property_id+date
       const resRow = await pool.query(
         `SELECT uid FROM reservations
-         WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled'
-         ORDER BY created_at DESC LIMIT 1`,
-        [conv.property_id, conv.reservation_start_date]
+         WHERE (
+           ($3::text IS NOT NULL AND channex_booking_id = $3)
+           OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
+         )
+         ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
+        [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
       ).catch(() => ({ rows: [] }));
       let cautionUrl = '';
       if (resRow.rows[0]) {
@@ -21411,10 +21416,16 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
            ORDER BY created_at DESC LIMIT 1`,
           [resRow.rows[0].uid]
         ).catch(() => ({ rows: [] }));
-        cautionUrl = await makeShortLink(pool, dep.rows[0]?.checkout_url || '', conv.user_id);
+        const rawDepUrl = dep.rows[0]?.checkout_url || '';
+        cautionUrl = rawDepUrl ? await makeShortLink(pool, rawDepUrl, conv.user_id) : '';
       }
-      msg = msg.replace(/{caution_url}/gi, cautionUrl);
-      if (!cautionUrl) console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — aucun deposit trouvé`);
+      if (!cautionUrl) {
+        console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — aucun deposit trouvé`);
+        // Laisser {caution_url} visible dans le message plutôt que de le supprimer silencieusement
+        // Le message ne sera pas envoyé via Channex dans ce cas
+      } else {
+        msg = msg.replace(/{caution_url}/gi, cautionUrl);
+      }
     } catch(e) {
       msg = msg.replace(/{caution_url}/gi, '');
       console.warn('⚠️ [TPL] Erreur résolution {caution_url}:', e.message);
@@ -21651,8 +21662,11 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
           ).catch(() => ({ rows: [] }));
           cautionUrl = await makeShortLink(pool, dep2.rows[0]?.checkout_url || '', c.user_id);
         }
+        if (!cautionUrl) {
+          console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id} — message non envoyé`);
+          continue; // Skip cet envoi — pas de lien disponible
+        }
         finalMsg = finalMsg.replace(/{caution_url}/gi, cautionUrl);
-        if (!cautionUrl) console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id}`);
       } catch(e) {
         finalMsg = finalMsg.replace(/{caution_url}/gi, '');
       }
