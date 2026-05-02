@@ -1208,7 +1208,7 @@ function insertTplVar(variable) {
 }
 </script>
     <div id="templateModal" data-no-native="1" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;padding:0;">
-      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:580px;height:92svh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.18);padding-bottom:env(safe-area-inset-bottom, 0px);box-sizing:border-box;">
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:580px;max-height:90%;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
         <div style="padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
           <h3 id="tplModalTitle" style="margin:0;font-size:16px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Nouveau template</h3>
           <button onclick="closeTemplateModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
@@ -1271,7 +1271,8 @@ function insertTplVar(variable) {
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Condition d'envoi</label>
             <select id="tplCondition" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
               <option value="always">Toujours envoyer</option>
-              <option value="deposit_captured">Seulement si caution capturée (prélevée)</option>
+              <option value="deposit_pending">Seulement si caution non payée</option>
+              <option value="deposit_active">Seulement si caution active (pending ou autorisée)</option>
               <option value="platform_booking">Seulement si Booking.com</option>
               <option value="platform_airbnb">Seulement si Airbnb</option>
               <option value="platform_direct">Seulement si Direct</option>
@@ -1310,7 +1311,7 @@ function insertTplVar(variable) {
 
         </div>
         <!-- Footer sticky — hors du scroll -->
-        <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px 20px;border-top:1px solid #f1f5f9;background:#fff;">
+        <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px 40px;border-top:1px solid #f1f5f9;background:#fff;">
           <button onclick="closeTemplateModal()" style="padding:10px 20px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Annuler</button>
           <button onclick="saveTemplate()" style="padding:10px 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Enregistrer</button>
         </div>
@@ -3705,7 +3706,7 @@ async function loadTemplates() {
               const isAfter  = (t.trigger_type||'').startsWith('after_');
               return (isBefore||isAfter) && d > 0 ? ` · J${isBefore?'-':'+'}${d}` : '';
             })()}
-            ${t.send_condition && t.send_condition !== 'always' ? ` · <span style="color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:99px;font-size:10px;">${{'deposit_captured':'Caution capturée','platform_booking':'Booking','platform_airbnb':'Airbnb','platform_direct':'Direct'}[t.send_condition]||t.send_condition}</span>` : ''}
+            ${t.send_condition && t.send_condition !== 'always' ? ` · <span style="color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:99px;font-size:10px;">${{'deposit_pending':'Caution non payée','deposit_active':'Caution active','platform_booking':'Booking','platform_airbnb':'Airbnb','platform_direct':'Direct'}[t.send_condition]||t.send_condition}</span>` : ''}
             ${(() => {
               const ids = t.property_ids
                 ? (Array.isArray(t.property_ids) ? t.property_ids : (() => { try { return JSON.parse(t.property_ids); } catch(e) { return []; } })())
