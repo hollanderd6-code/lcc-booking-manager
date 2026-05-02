@@ -1819,6 +1819,21 @@ ON invoice_download_tokens(token);
       await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS property_ids JSONB DEFAULT '[]'`).catch(()=>{});
       console.log('✅ Table message_templates OK');
 
+      // Table blocages d'envoi par réservation
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS message_template_blocks (
+          id SERIAL PRIMARY KEY,
+          template_id INTEGER NOT NULL REFERENCES message_templates(id) ON DELETE CASCADE,
+          conversation_id INTEGER NOT NULL,
+          user_id TEXT NOT NULL,
+          blocked_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(template_id, conversation_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_tpl_blocks_conv ON message_template_blocks(conversation_id);
+        CREATE INDEX IF NOT EXISTS idx_tpl_blocks_tmpl ON message_template_blocks(template_id);
+      `).catch(()=>{});
+      console.log('✅ Table message_template_blocks OK');
+
       // Table short_links pour les liens raccourcis boostinghost.fr/c/:code
       await pool.query(`
         CREATE TABLE IF NOT EXISTS short_links (
@@ -21718,6 +21733,142 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
 });
 
 // GET — historique des logs d'envoi
+// ── GET prochains envois planifiés (J+7) ───────────────────────
+app.get('/api/message-template-scheduled', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+
+    // Récupérer tous les templates actifs de l'utilisateur
+    const templates = await pool.query(
+      `SELECT * FROM message_templates WHERE user_id = $1 AND active = TRUE
+       AND trigger_type NOT IN ('on_booking')
+       ORDER BY title`,
+      [userId]
+    );
+
+    const scheduled = [];
+
+    for (const tmpl of templates.rows) {
+      const offsetDays = tmpl.trigger_offset_days || Math.round(Math.abs(tmpl.trigger_offset_hours || 0) / 24) || 0;
+      const isBefore = tmpl.trigger_type.startsWith('before_');
+      const isAfter  = tmpl.trigger_type.startsWith('after_');
+      const isDepRelated = tmpl.trigger_type.includes('departure');
+      const dateCol = isDepRelated ? 'reservation_end_date' : 'reservation_start_date';
+
+      // Pour chaque jour dans J+7
+      for (let d = 0; d <= 7; d++) {
+        const checkDate = new Date(nowParis);
+        checkDate.setDate(checkDate.getDate() + d);
+        const checkDateStr = checkDate.toISOString().split('T')[0];
+
+        // La date de réservation ciblée = checkDate ± offset
+        let targetDate;
+        if (isBefore) {
+          const t = new Date(checkDate);
+          t.setDate(t.getDate() + offsetDays);
+          targetDate = t.toISOString().split('T')[0];
+        } else if (isAfter) {
+          const t = new Date(checkDate);
+          t.setDate(t.getDate() - offsetDays);
+          targetDate = t.toISOString().split('T')[0];
+        } else {
+          targetDate = checkDateStr;
+        }
+
+        // Construire le filtre property_ids
+        const propIds = tmpl.property_ids
+          ? (Array.isArray(tmpl.property_ids) ? tmpl.property_ids : (() => { try { return JSON.parse(tmpl.property_ids); } catch(e) { return []; } })())
+          : (tmpl.property_id ? [tmpl.property_id] : []);
+        const propFilter = propIds.length > 0
+          ? `AND c.property_id IN (${propIds.map(id => `'${id.replace(/'/g,"''")}'`).join(',')})`
+          : '';
+
+        const convs = await pool.query(
+          `SELECT c.id, c.guest_name, c.property_name, c.property_id, c.reservation_start_date, c.reservation_end_date, c.platform
+           FROM conversations c
+           WHERE c.user_id = $1
+           AND DATE(c.${dateCol} AT TIME ZONE 'Europe/Paris') = $2
+           AND c.status != 'cancelled'
+           ${propFilter}`,
+          [userId, targetDate]
+        );
+
+        for (const conv of convs.rows) {
+          // Vérifier si déjà envoyé (anti-doublon 23h)
+          const sent = await pool.query(
+            `SELECT id FROM message_template_logs WHERE template_id = $1 AND conversation_id = $2 AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent'`,
+            [tmpl.id, conv.id]
+          );
+          if (sent.rows.length > 0) continue;
+
+          // Vérifier si bloqué
+          const blocked = await pool.query(
+            `SELECT id FROM message_template_blocks WHERE template_id = $1 AND conversation_id = $2`,
+            [tmpl.id, conv.id]
+          );
+
+          const TRIGGER_LABELS = {
+            before_arrival: `J-${offsetDays} avant arrivée`,
+            on_arrival: "Jour d'arrivée à 7h",
+            after_arrival: `J+${offsetDays} après arrivée`,
+            before_departure: `J-${offsetDays} avant départ`,
+            on_departure: "Jour de départ à 15h",
+            after_departure: `J+${offsetDays} après départ`,
+          };
+
+          scheduled.push({
+            template_id: tmpl.id,
+            template_title: tmpl.title,
+            trigger_label: TRIGGER_LABELS[tmpl.trigger_type] || tmpl.trigger_type,
+            send_date: checkDateStr,
+            conversation_id: conv.id,
+            guest_name: conv.guest_name,
+            property_name: conv.property_name,
+            platform: conv.platform,
+            is_blocked: blocked.rows.length > 0,
+          });
+        }
+      }
+    }
+
+    // Trier par date puis par nom voyageur
+    scheduled.sort((a, b) => a.send_date.localeCompare(b.send_date) || (a.guest_name||'').localeCompare(b.guest_name||''));
+
+    res.json({ scheduled });
+  } catch(e) {
+    console.error('❌ GET scheduled:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST bloquer un envoi ────────────────────────────────────
+app.post('/api/message-template-blocks', authenticateToken, async (req, res) => {
+  try {
+    const { template_id, conversation_id } = req.body;
+    const userId = req.user.id;
+    await pool.query(
+      `INSERT INTO message_template_blocks (template_id, conversation_id, user_id)
+       VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+      [template_id, conversation_id, userId]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── DELETE débloquer un envoi ────────────────────────────────
+app.delete('/api/message-template-blocks', authenticateToken, async (req, res) => {
+  try {
+    const { template_id, conversation_id } = req.body;
+    const userId = req.user.id;
+    await pool.query(
+      `DELETE FROM message_template_blocks WHERE template_id = $1 AND conversation_id = $2 AND user_id = $3`,
+      [template_id, conversation_id, userId]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/message-template-logs', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -21842,6 +21993,16 @@ async function runTemplatesCron(triggerTypes) {
                 continue;
               }
             }
+          }
+
+          // Check blocage : l'hôte a-t-il bloqué cet envoi pour cette conversation ?
+          const isBlocked = await pool.query(
+            `SELECT id FROM message_template_blocks WHERE template_id = $1 AND conversation_id = $2 LIMIT 1`,
+            [tmpl.id, conv.id]
+          );
+          if (isBlocked.rows.length > 0) {
+            console.log(`  ↳ Conv ${conv.id} bloquée pour template ${tmpl.id}, skip`);
+            continue;
           }
 
           // Anti-doublon : pas déjà envoyé dans les 23h
