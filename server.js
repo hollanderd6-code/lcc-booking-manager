@@ -1010,18 +1010,10 @@ function parseIcalText(icalText) {
 // CRON JOB : DEMANDE DE CAUTION J-2
 // ============================================
 
-cron.schedule('0 10 * * *', async () => {
-  console.log('🕐 CRON: Envoi demandes de caution (J-2) à 10h00');
-  try {
-    await sendDepositRequestMessages(io);
-  } catch (error) {
-    console.error('❌ Erreur CRON demandes caution:', error);
-  }
-}, {
-  timezone: "Europe/Paris"
-});
-
-console.log('✅ CRON job demandes de caution configuré (tous les jours à 10h, J-2 avant arrivée)');
+// ⚠️ CRON sendDepositRequestMessages désactivé — remplacé par le système de templates
+// Les templates avec {caution_url} créent automatiquement le deposit si besoin
+// cron.schedule('0 10 * * *', async () => { await sendDepositRequestMessages(io); }, { timezone: "Europe/Paris" });
+console.log('ℹ️ CRON demandes caution legacy désactivé — géré par runTemplatesCron');
 
 // ============================================
 // CRON JOB : RAPPEL LIBERATION CAUTION J-1
@@ -21283,27 +21275,91 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     .replace(/{instructions}/gi, property?.practical_info || '')
     .replace(/{livret}/gi, property?.welcome_book_url || '');
 
-  // Résoudre {caution_url} — chercher le lien Stripe dans deposits
+  // Résoudre {caution_url} — chercher ou créer automatiquement le deposit Stripe
   if (msg.includes('{caution_url}')) {
     try {
       const resRow = await pool.query(
-        `SELECT uid FROM reservations
+        `SELECT uid, id FROM reservations
          WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled'
          ORDER BY created_at DESC LIMIT 1`,
         [conv.property_id, conv.reservation_start_date]
       ).catch(() => ({ rows: [] }));
+
       let cautionUrl = '';
+
       if (resRow.rows[0]) {
+        const reservationUid = resRow.rows[0].uid;
+
+        // Chercher un deposit existant
         const dep = await pool.query(
-          `SELECT checkout_url FROM deposits
+          `SELECT checkout_url, status FROM deposits
            WHERE reservation_uid = $1 AND status IN ('pending','authorized')
            ORDER BY created_at DESC LIMIT 1`,
-          [resRow.rows[0].uid]
+          [reservationUid]
         ).catch(() => ({ rows: [] }));
-        cautionUrl = dep.rows[0]?.checkout_url || '';
+
+        if (dep.rows[0]) {
+          cautionUrl = dep.rows[0].checkout_url || '';
+          console.log(`✅ [TPL] Deposit existant trouvé pour ${reservationUid}`);
+        } else if (conv.deposit_amount && parseFloat(conv.deposit_amount) > 0) {
+          // Créer automatiquement le deposit Stripe
+          console.log(`🔗 [TPL] Création automatique deposit pour conv ${conv.id} — ${conv.guest_name}`);
+          try {
+            const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            const amountCents = Math.round(parseFloat(conv.deposit_amount) * 100);
+            const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+
+            const sessionParams = {
+              payment_method_types: ['card'],
+              mode: 'payment',
+              line_items: [{
+                price_data: {
+                  currency: 'eur',
+                  unit_amount: amountCents,
+                  product_data: {
+                    name: `Caution - ${conv.property_name || ''}`,
+                    description: `Réservation du ${conv.reservation_start_date} au ${conv.reservation_end_date}`
+                  }
+                },
+                quantity: 1
+              }],
+              payment_intent_data: {
+                capture_method: 'manual',
+                metadata: { deposit_id: depositId, reservation_uid: reservationUid }
+              },
+              metadata: { deposit_id: depositId, reservation_uid: reservationUid },
+              success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
+              cancel_url:  `${appUrl}/caution-cancel.html?depositId=${depositId}`
+            };
+
+            const stripeTarget = await getStripeForProperty(pool, conv.property_id, conv.user_id);
+            const sessionOptions = stripeTarget.stripeAccountId
+              ? { stripeAccount: stripeTarget.stripeAccountId } : {};
+            if (stripeTarget.applyFee) {
+              const feeRate = stripeTarget.stripeAccountId ? 0.03 : 0.05;
+              sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * feeRate);
+            }
+
+            const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+
+            await pool.query(
+              `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, NOW(), NOW())`,
+              [depositId, conv.user_id, reservationUid, conv.property_id, amountCents, session.id, session.url]
+            );
+
+            cautionUrl = session.url;
+            console.log(`✅ [TPL] Deposit créé automatiquement : ${depositId}`);
+          } catch(stripeErr) {
+            console.error(`❌ [TPL] Erreur création deposit Stripe:`, stripeErr.message);
+          }
+        } else {
+          console.warn(`⚠️ [TPL] {caution_url} : pas de deposit_amount sur le logement conv ${conv.id}`);
+        }
       }
+
       msg = msg.replace(/{caution_url}/gi, cautionUrl);
-      if (!cautionUrl) console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — aucun deposit trouvé`);
+      if (!cautionUrl) console.warn(`⚠️ [TPL] {caution_url} vide pour conv ${conv.id}`);
     } catch(e) {
       msg = msg.replace(/{caution_url}/gi, '');
       console.warn('⚠️ [TPL] Erreur résolution {caution_url}:', e.message);
