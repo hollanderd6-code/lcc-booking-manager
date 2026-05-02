@@ -14,32 +14,10 @@ function initDepositRemindersCron(pool, io) {
   // Format : minute heure jour mois jour-semaine
   // '0 9 * * *' = 0 minutes, 9 heures, tous les jours
   
-  cron.schedule('0 9 * * *', async () => {
-    console.log('\n⏰ ============================================');
-    console.log('⏰ CRON JOB : Rappels caution J-2 - 9h00');
-    console.log('⏰ ============================================\n');
-    
-    try {
-      await sendDepositReminderJ2(pool, io);
-    } catch (error) {
-      console.error('❌ Erreur cron job rappels caution:', error);
-    }
-  }, {
-    timezone: "Europe/Paris"  // Heure de Paris
-  });
-
-  console.log('✅ Cron job initialisé : Rappels caution J-2 quotidiens à 9h00 (Europe/Paris)');
-  
-  // Optionnel : Exécuter immédiatement au démarrage du serveur
-  // pour traiter les rappels du jour si le serveur redémarre
-  setTimeout(async () => {
-    console.log('🚀 Vérification des rappels caution au démarrage du serveur...');
-    try {
-      await sendDepositReminderJ2(pool, io);
-    } catch (error) {
-      console.error('❌ Erreur vérification au démarrage:', error);
-    }
-  }, 5000); // Attendre 5 secondes après le démarrage
+  // ⚠️ Cron J-2 désactivé — remplacé par le système de templates (messages.html)
+  // Les templates avec {caution_url} gèrent l'envoi et la création du lien Stripe
+  // cron.schedule('0 9 * * *', async () => { await sendDepositReminderJ2(pool, io); }, { timezone: "Europe/Paris" });
+  console.log('ℹ️ Cron caution J-2 legacy désactivé — géré par runTemplatesCron');
 }
 
 module.exports = {
