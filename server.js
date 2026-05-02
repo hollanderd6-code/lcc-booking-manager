@@ -21644,6 +21644,7 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
 
     // Résoudre {caution_url} si présent
     let finalMsg = msg;
+    let skipSend = false;
     if (finalMsg.includes('{caution_url}')) {
       try {
         const resRow2 = await pool.query(
@@ -21664,13 +21665,16 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
         }
         if (!cautionUrl) {
           console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id} — message non envoyé`);
-          continue; // Skip cet envoi — pas de lien disponible
+          skipSend = true;
+        } else {
+          finalMsg = finalMsg.replace(/{caution_url}/gi, cautionUrl);
         }
-        finalMsg = finalMsg.replace(/{caution_url}/gi, cautionUrl);
       } catch(e) {
         finalMsg = finalMsg.replace(/{caution_url}/gi, '');
       }
     }
+
+    if (!skipSend) {
 
     if (c.channex_booking_id) {
       await sendBookingMessage(c.channex_booking_id, finalMsg);
@@ -21697,6 +21701,7 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
     } catch(e) {}
 
     res.json({ success: true, message: saved.rows[0] });
+    } // end if (!skipSend)
   } catch(e) {
     // Logger l'erreur
     try {
