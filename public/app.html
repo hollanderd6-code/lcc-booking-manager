@@ -537,9 +537,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       background: #0D1117;
       color: white;
       padding: 0;
-      position: sticky;
-      top: 0; /* sera ajusté dynamiquement par JS */
-      z-index: 40;
     }
 
     .calendar-header-top {
@@ -782,10 +779,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
     /* Days Header */
     .days-header {
-      position: sticky;
-      top: 0; /* sera ajusté par JS */
-      z-index: 39;
-      background: var(--surface-color, #F5F0E8);
       height: var(--day-header-height);
       display: flex;
       background: var(--bg-tertiary);
@@ -2623,6 +2616,18 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
    Uniquement sur vrais mobiles
    ================================================================ */
 @media (max-width: 768px) {
+  /* ── Sticky calendar header sur mobile uniquement ── */
+  .calendar-modern-header {
+    position: sticky !important;
+    top: 0;
+    z-index: 40;
+  }
+  #daysHeader {
+    position: sticky !important;
+    z-index: 39;
+    background: var(--surface-color, #F5F0E8) !important;
+  }
+
   .kpi-grid {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
@@ -12463,6 +12468,15 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 // ── Sticky calendar header : calculer les top dynamiques ──────
 (function initStickyCalendarHeader() {
   function updateStickyTops() {
+    // Sticky uniquement sur mobile (≤768px)
+    if (window.innerWidth > 768) {
+      const calHeader = document.querySelector('.calendar-modern-header');
+      const daysHeader = document.getElementById('daysHeader');
+      if (calHeader) { calHeader.style.position = ''; calHeader.style.top = ''; }
+      if (daysHeader) { daysHeader.style.position = ''; daysHeader.style.top = ''; }
+      return;
+    }
+
     const appHeader = document.querySelector('header.main-header');
     const calHeader = document.querySelector('.calendar-modern-header');
     const daysHeader = document.getElementById('daysHeader');
@@ -12472,13 +12486,9 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     const appHeaderH = appHeader ? appHeader.getBoundingClientRect().height : 0;
     const calHeaderH = calHeader ? calHeader.getBoundingClientRect().height : 0;
 
-    // calendar-modern-header se colle sous le app-header
     calHeader.style.top = appHeaderH + 'px';
 
-    // days-header se colle sous le calendar-modern-header
     if (daysHeader) {
-      daysHeader.style.position = 'sticky';
-      daysHeader.style.zIndex = '39';
       daysHeader.style.top = (appHeaderH + calHeaderH) + 'px';
       daysHeader.style.background = 'var(--surface-color, #F5F0E8)';
     }
