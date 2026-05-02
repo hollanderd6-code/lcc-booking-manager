@@ -277,7 +277,22 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       // Message court (< 25 mots) ET contient un remerciement ET ne contient PAS de problème
       const wordCount = msgLow.split(/\s+/).filter(Boolean).length;
 
-      if (hasThanks && !hasProblem && wordCount < 25) {
+      // Patterns qui indiquent que le "merci" est de politesse, pas un retour de séjour
+      // Ex: "merci bonne journée", "merci j'annule", "merci je serai là à 19h"
+      const practicalPatterns = /(?<!\p{L})(caution|annul|arriver|arrive|arrival|heure|time|tonight|ce soir|demain|demain|tomorrow|annulerai|annulation|cancel|check.in|check.out|je serai|j'arrive|j'arriverai|on arrive|we.ll arrive|arriving|code|wifi|access|clé|key|parking)(?!\p{L})/iu;
+      const hasPractical = practicalPatterns.test(msgLow);
+
+      // Ne répondre "ravi de votre séjour" QUE si :
+      // - Message de remerciement pur (pas de pratique, pas de problème)
+      // - Voyageur est en cours de séjour (check-in passé et check-out pas encore passé)
+      const now = new Date();
+      const checkinDate = conversation.reservation_start_date ? new Date(conversation.reservation_start_date) : null;
+      const checkoutDate = conversation.reservation_end_date ? new Date(conversation.reservation_end_date) : null;
+      const isDuringStay = checkinDate && checkoutDate
+        ? now >= checkinDate && now <= checkoutDate
+        : false;
+
+      if (hasThanks && !hasProblem && !hasPractical && wordCount < 25 && isDuringStay) {
         const thanksReplies = {
           fr: "Merci beaucoup ! 😊 Nous sommes ravis que vous appréciez votre séjour. N'hésitez pas si vous avez d'autres questions !",
           en: "Thank you so much! 😊 We're delighted you're enjoying your stay. Don't hesitate if you have any other questions!",
