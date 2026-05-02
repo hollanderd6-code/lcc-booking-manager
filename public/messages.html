@@ -3706,7 +3706,15 @@ async function loadTemplates() {
               return (isBefore||isAfter) && d > 0 ? ` · J${isBefore?'-':'+'}${d}` : '';
             })()}
             ${t.send_condition && t.send_condition !== 'always' ? ` · <span style="color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:99px;font-size:10px;">${{'deposit_pending':'Caution non payée','deposit_active':'Caution active','platform_booking':'Booking','platform_airbnb':'Airbnb','platform_direct':'Direct'}[t.send_condition]||t.send_condition}</span>` : ''}
-            ${t.property_id ? ` · <i class="fas fa-home" style="margin:0 3px;"></i>${(window._tplProperties || []).find(p => (p.id || p._id) === t.property_id)?.name || 'Logement spécifique'}` : ' · Tous les logements'}
+            ${(() => {
+              const ids = t.property_ids
+                ? (Array.isArray(t.property_ids) ? t.property_ids : (() => { try { return JSON.parse(t.property_ids); } catch(e) { return []; } })())
+                : (t.property_id ? [t.property_id] : []);
+              if (ids.length === 0) return ' · Tous les logements';
+              const props = window._tplProperties || [];
+              const names = ids.map(id => props.find(p => (p.id||p._id) === id)?.name || id).join(', ');
+              return ` · <i class="fas fa-home" style="margin:0 3px;"></i>${names}`;
+            })()}
           </div>
           <div style="font-size:12px;color:#374151;background:#f9fafb;border-radius:8px;padding:8px 10px;line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden;">${t.message}</div>
         </div>
