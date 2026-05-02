@@ -261,6 +261,89 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     }
 
     // ========================================
+    // ÉTAPE 2.2 : CAS SPÉCIAUX — CAUTION & HEURE D'ARRIVÉE
+    // Traités avant Groq car réponses fixes, pas besoin d'IA
+    // ========================================
+    {
+      const msgLow = message.message.toLowerCase();
+
+      // ── CAS A : Caution — contestation / refus / incompréhension ───
+      // "je n'ai pas l'argent", "je savais pas", "c'est quoi cette caution",
+      // "je veux pas payer la caution", "j'annule à cause de la caution"
+      const depositComplaintPattern = /(?<!\p{L})(caution|dépôt de garantie|deposit|garantie|je n'?ai pas|pas l'argent|pas assez|je savais pas|je ne savais pas|savais pas qu|je comprends pas|c'est quoi|pourquoi une caution|annul.*caution|caution.*annul|refus.*caution|caution.*refus|je veux pas payer|je ne veux pas payer|je peux pas payer|impossible de payer)(?!\p{L})/iu;
+
+      if (depositComplaintPattern.test(msgLow) && msgLow.includes('caution') || 
+          (msgLow.includes('caution') && (msgLow.includes('annul') || msgLow.includes("pas l'argent") || msgLow.includes('je n') || msgLow.includes('savais') || msgLow.includes('refus') || msgLow.includes('comprends')))) {
+        
+        const depositReplies = {
+          fr: `Bonjour 😊
+
+Merci de nous avoir contactés. Nous comprenons que cette information puisse parfois surprendre.
+
+La caution fait partie intégrante de nos conditions de réservation — elle est mentionnée dans l'annonce et est malheureusement obligatoire pour confirmer votre séjour. Elle vous sera intégralement restituée après votre départ, dès lors qu'aucun dommage n'est constaté. 🏠✨
+
+Si vous souhaitez annuler votre réservation, vous pouvez en faire la demande directement via la plateforme. Sachez cependant que selon nos conditions d'annulation, des frais peuvent s'appliquer — nous ne sommes pas en mesure de garantir une annulation gratuite.
+
+N'hésitez pas si vous avez des questions, nous sommes là pour vous aider ! 🙏`,
+          en: `Hello 😊
+
+Thank you for reaching out. We understand this may come as a surprise.
+
+The security deposit is a mandatory part of our booking conditions — it is mentioned in the listing and is required to confirm your stay. It will be fully refunded after your check-out, provided no damages are found. 🏠✨
+
+If you'd like to cancel your reservation, you can do so directly through the platform. Please note that cancellation fees may apply depending on our cancellation policy — we cannot guarantee a free cancellation.
+
+Feel free to reach out if you have any questions! 🙏`,
+          es: `¡Hola! 😊
+
+Gracias por contactarnos. Entendemos que esta información pueda sorprenderle.
+
+El depósito de seguridad forma parte de nuestras condiciones de reserva — está indicado en el anuncio y es obligatorio para confirmar su estancia. Le será devuelto íntegramente tras su salida, siempre que no haya daños. 🏠✨
+
+Si desea cancelar su reserva, puede hacerlo directamente desde la plataforma. Tenga en cuenta que pueden aplicarse gastos de cancelación según nuestras condiciones — no podemos garantizar una cancelación gratuita.
+
+¡No dude en contactarnos si tiene alguna pregunta! 🙏`
+        };
+
+        const reply = depositReplies[language] || depositReplies.fr;
+        console.log(`💰 [HANDLER] Contestation caution → réponse automatique (lang: ${language})`);
+        await sendBotMessage(conversation.id, reply, pool, io, channexId);
+        return true;
+      }
+
+      // ── CAS B : Heure d'arrivée — le voyageur INFORME de son heure ───
+      // "j'arrive à 19h", "je serai là vers 18h", "on arrive vers 20h"
+      // Distinguer "informer" (→ confirmer) de "demander" (→ Groq/escalade)
+      const arrivalInfoPattern = /(?:je serai|j'arrive|j'arriverai|j'arriverais|on arrive|nous arriverons|nous arrivons|on sera|we.ll arrive|we.?re arriving|i.?ll be there|i arrive|arriving around|arriving at)\s+(?:vers?|around|at|à)?\s*(\d{1,2})[h:]\s*(\d{0,2})/i;
+      const arrivalMatch = message.message.match(arrivalInfoPattern);
+
+      if (arrivalMatch) {
+        const hour = parseInt(arrivalMatch[1]);
+        const checkinHour = property?.arrival_time
+          ? parseInt(property.arrival_time.split(':')[0] || property.arrival_time.split('h')[0])
+          : 15; // fallback 15h si pas défini
+
+        if (hour >= checkinHour) {
+          // Heure OK — confirmer simplement
+          const arrivalReplies = {
+            fr: `Parfait, pas de problème ! 😊 On vous attend vers ${arrivalMatch[1]}h, à tout à l'heure ! 🏠`,
+            en: `Perfect, no problem! 😊 We'll be expecting you around ${arrivalMatch[1]}:00, see you soon! 🏠`,
+            es: `¡Perfecto, no hay problema! 😊 Le esperamos alrededor de las ${arrivalMatch[1]}h, ¡hasta pronto! 🏠`
+          };
+          const reply = arrivalReplies[language] || arrivalReplies.fr;
+          console.log(`🕐 [HANDLER] Heure d'arrivée OK (${hour}h >= check-in ${checkinHour}h) → confirmation`);
+          await sendBotMessage(conversation.id, reply, pool, io, channexId);
+          return true;
+        } else {
+          // Arrivée avant le check-in → escalader
+          console.log(`🕐 [HANDLER] Arrivée anticipée (${hour}h < check-in ${checkinHour}h) → escalade`);
+          await escalateToOwner(conversation, pool, io, language, channexId);
+          return false;
+        }
+      }
+    }
+
+    // ========================================
     // ÉTAPE 2.3 : DÉTECTION REMERCIEMENT / FIN DE SÉJOUR
     // On répond brièvement SAUF si le message contient aussi une plainte/oubli
     // ========================================
