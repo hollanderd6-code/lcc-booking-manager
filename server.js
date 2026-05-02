@@ -15391,9 +15391,10 @@ await pool.query(`
   WHERE id = $3
 `, [session.id, session.url, deposit.id]);
 
+    const shortCheckoutUrl = await makeShortLink(pool, session.url, req.user?.id || null);
     return res.json({
       deposit,
-      checkoutUrl: session.url
+      checkoutUrl: shortCheckoutUrl
     });
   } catch (err) {
     console.error('Erreur création caution:', err);
@@ -15456,7 +15457,8 @@ app.put('/api/deposits/:depositId',
 
     await pool.query('UPDATE deposits SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
     console.log(`✅ Caution ${existing.id} modifiée : ${existing.amount_cents} → ${amountCents} cents`);
-    return res.json({ deposit: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: session.url }, checkoutUrl: session.url });
+    const shortUrl2 = await makeShortLink(pool, session.url, req.user?.id || null);
+    return res.json({ deposit: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: shortUrl2 }, checkoutUrl: shortUrl2 });
   } catch (err) {
     console.error('Erreur modification caution:', err);
     return res.status(500).json({ error: 'Erreur lors de la modification : ' + (err.message || 'Erreur interne') });
@@ -15556,7 +15558,8 @@ app.put('/api/payments/:paymentId',
 
     await pool.query('UPDATE payments SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
     console.log(`✅ Paiement ${existing.id} modifié : ${existing.amount_cents} → ${amountCents} cents`);
-    return res.json({ payment: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: session.url }, checkoutUrl: session.url });
+    const shortPayUrl2 = await makeShortLink(pool, session.url, req.user?.id || null);
+    return res.json({ payment: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: shortPayUrl2 }, checkoutUrl: shortPayUrl2 });
   } catch (err) {
     console.error('Erreur modification paiement:', err);
     return res.status(500).json({ error: 'Erreur lors de la modification : ' + (err.message || 'Erreur interne') });
@@ -15727,9 +15730,10 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
 
     console.log(`✅ Paiement créé: ${payment.id} - Montant: ${amount}€ - Commission: ${(platformFeeActive/100).toFixed(2)}€ (en pause) - Propriétaire reçoit: ${(ownerReceives/100).toFixed(2)}€`);
 
+    const shortPayUrl = await makeShortLink(pool, session.url, req.user?.id || null);
     return res.json({
       payment,
-      checkoutUrl: session.url,
+      checkoutUrl: shortPayUrl,
       amount: amount,
       platformFee: platformFeeActive / 100,
       ownerReceives: ownerReceives / 100
