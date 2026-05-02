@@ -415,10 +415,10 @@ function renderConversations() {
         </div>
 
         <div class="conversation-content">
-          <!-- Ligne 1 : Nom + heure -->
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px;">
+          <!-- Ligne 1 : Nom + heure + badge -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1px;">
             <h3 style="font-size:13.5px;font-weight:${isUnread ? '800' : '600'};color:${isUnread ? '#0D1117' : '#374151'};margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62%;font-family:'DM Sans',sans-serif;">${guestName}</h3>
-            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
               <span style="font-size:11px;color:${isUnread ? '#1A7A5E' : '#B0BAC5'};font-weight:${isUnread ? '600' : '400'};white-space:nowrap;">${lastMessageTime}</span>
               ${unreadCount > 0 ? `<span style="min-width:18px;height:18px;padding:0 5px;background:#1A7A5E;color:#fff;font-size:10px;font-weight:700;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;">${unreadCount}</span>` : ''}
             </div>
@@ -445,7 +445,7 @@ function renderConversations() {
             <button class="btn-delete-conversation" onclick="deleteConversation(${conv.id}, event)" title="Supprimer"><i class="fas fa-trash"></i></button>
           </div>
           <div class="status-badge ${statusClass}" style="display:none;">${statusLabel}</div>
-          <div class="unread-badge" style="display:none;">${unreadCount}</div>
+          <div class="unread-badge" style="display:none;">${unreadCount > 0 ? unreadCount : ""}</div>
           <div class="meta" style="display:none;"></div>
         </div>
       </div>
