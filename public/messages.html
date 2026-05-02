@@ -1226,13 +1226,13 @@ function insertTplVar(variable) {
             <!-- Afficheur cliquable -->
             <div id="tplPropertyDisplay" onclick="document.getElementById('tplPropertyDropdown').style.display = document.getElementById('tplPropertyDropdown').style.display==='none'?'block':'none'"
               style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;background:white;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;">
-              <span id="tplPropertyLabel" style="color:#374151;">Tous les logements</span>
+              <span id="tplPropertyLabel" style="color:#9CA3AF;">Sélectionner un ou plusieurs logements...</span>
               <span style="color:#9CA3AF;font-size:11px;">▼</span>
             </div>
             <!-- Dropdown checkboxes -->
             <div id="tplPropertyDropdown" style="display:none;border:1px solid #e5e7eb;border-radius:10px;margin-top:4px;background:white;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.08);">
               <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;" id="tplPropAllLabel">
-                <input type="checkbox" id="tplPropAll" checked onchange="onTplPropAllChange(this)" style="width:15px;height:15px;accent-color:#1A7A5E;">
+                <input type="checkbox" id="tplPropAll" onchange="onTplPropAllChange(this)" style="width:15px;height:15px;accent-color:#1A7A5E;">
                 <span style="font-size:13px;color:#374151;font-weight:600;">Tous les logements</span>
               </label>
               <div id="tplPropertyCheckboxes"></div>
@@ -3753,14 +3753,21 @@ function updateTplPropertyLabel() {
   const labelEl = document.getElementById('tplPropertyLabel');
   if (!labelEl) return;
 
-  if (checked.length === 0 || checked.length === checkboxes.length) {
+  if (checked.length === 0) {
+    if (allCb) allCb.checked = false;
+    labelEl.textContent = 'Sélectionner un ou plusieurs logements...';
+    labelEl.style.color = '#9CA3AF';
+    document.getElementById('tplProperty').value = '';
+  } else if (checked.length === checkboxes.length) {
     if (allCb) allCb.checked = true;
     labelEl.textContent = 'Tous les logements';
+    labelEl.style.color = '#374151';
     document.getElementById('tplProperty').value = '';
   } else {
     if (allCb) allCb.checked = false;
     const names = checked.map(c => c.dataset.name).join(', ');
     labelEl.textContent = names;
+    labelEl.style.color = '#374151';
     // Pour la compatibilité, mettre le premier ID dans tplProperty
     document.getElementById('tplProperty').value = checked[0].value;
   }
@@ -3779,8 +3786,8 @@ function setTplPropertyIds(ids) {
   const checkboxes = [...document.querySelectorAll('#tplPropertyCheckboxes input[type=checkbox]')];
 
   if (!ids || ids.length === 0) {
-    if (allCb) allCb.checked = true;
-    checkboxes.forEach(c => c.checked = true);
+    if (allCb) allCb.checked = false;
+    checkboxes.forEach(c => c.checked = false);
   } else {
     if (allCb) allCb.checked = false;
     checkboxes.forEach(c => { c.checked = ids.includes(c.value); });
