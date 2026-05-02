@@ -122,8 +122,23 @@ async function sendNewMessageNotification(recipientUserId, messageDataOrGuestNam
     .replace(/https?:\/\/\S+/g, '🔗 Lien')
     .substring(0, 80);
 
+  // Récupérer le nom du logement depuis la conversation si possible
+  let propertyName = '';
+  try {
+    if (conversationId && db) {
+      const convRow = await db.query(
+        'SELECT property_name FROM conversations WHERE id = $1 LIMIT 1',
+        [conversationId]
+      ).catch(() => ({ rows: [] }));
+      propertyName = convRow.rows[0]?.property_name || '';
+    }
+  } catch(e) {}
+
+  const titleParts = ['💬', guestName];
+  if (propertyName) titleParts.push('·', propertyName);
+
   const notification = {
-    title: `💬 ${guestName}`,
+    title: titleParts.join(' '),
     body: preview || 'Nouveau message',
     data: {
       type: 'new_chat_message',
