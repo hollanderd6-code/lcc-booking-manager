@@ -21818,10 +21818,14 @@ async function runTemplatesCron(triggerTypes) {
               console.log(`  ↳ Skip conv ${conv.id} : condition platform_direct non remplie`);
               continue;
             }
-            if (sendCond === 'deposit_active' || sendCond === 'deposit_pending') {
+            if (sendCond === 'deposit_captured') {
+              // N'envoyer que si la caution est capturée (prélevée) — statut 'captured'
               const resRow = await pool.query(
-                `SELECT uid FROM reservations WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled' ORDER BY created_at DESC LIMIT 1`,
-                [conv.property_id, conv.reservation_start_date]
+                `SELECT uid FROM reservations
+                 WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
+                    OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
+                 ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
+                [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
               ).catch(() => ({ rows: [] }));
               if (resRow.rows[0]) {
                 const dep = await pool.query(
@@ -21829,14 +21833,13 @@ async function runTemplatesCron(triggerTypes) {
                   [resRow.rows[0].uid]
                 ).catch(() => ({ rows: [] }));
                 const depStatus = dep.rows[0]?.status;
-                if (sendCond === 'deposit_active' && !['pending','authorized'].includes(depStatus)) {
-                  console.log(`  ↳ Skip conv ${conv.id} : condition deposit_active non remplie (status=${depStatus})`);
+                if (depStatus !== 'captured') {
+                  console.log(`  ↳ Skip conv ${conv.id} : caution non capturée (status=${depStatus || 'aucune'})`);
                   continue;
                 }
-                if (sendCond === 'deposit_pending' && depStatus !== 'pending') {
-                  console.log(`  ↳ Skip conv ${conv.id} : condition deposit_pending non remplie (status=${depStatus})`);
-                  continue;
-                }
+              } else {
+                console.log(`  ↳ Skip conv ${conv.id} : aucune réservation trouvée pour vérif caution`);
+                continue;
               }
             }
           }
