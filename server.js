@@ -26331,17 +26331,53 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
 
     const { channex_booking_id, guest_name } = resaResult.rows[0];
 
+    // Résoudre {caution_url} si présent dans le message
+    let finalMessage = message;
+    if (finalMessage.includes('{caution_url}')) {
+      try {
+        const convRow = await pool.query(
+          `SELECT c.property_id, c.reservation_start_date, c.channex_booking_id, c.user_id
+           FROM conversations c WHERE c.id = $1 LIMIT 1`, [conversationId]
+        );
+        const cv = convRow.rows[0];
+        if (cv) {
+          const resRow = await pool.query(
+            `SELECT uid FROM reservations
+             WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
+                OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
+             ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
+            [cv.property_id, cv.reservation_start_date, cv.channex_booking_id || null]
+          ).catch(() => ({ rows: [] }));
+          if (resRow.rows[0]) {
+            const dep = await pool.query(
+              `SELECT checkout_url FROM deposits
+               WHERE reservation_uid = $1 AND status IN ('pending','authorized')
+               ORDER BY created_at DESC LIMIT 1`,
+              [resRow.rows[0].uid]
+            ).catch(() => ({ rows: [] }));
+            const rawUrl = dep.rows[0]?.checkout_url || '';
+            if (rawUrl) {
+              const shortUrl = await makeShortLink(pool, rawUrl, cv.user_id);
+              finalMessage = finalMessage.replace(/{caution_url}/gi, shortUrl);
+            } else {
+              console.warn(`⚠️ [send-platform] {caution_url} : pas de deposit trouvé pour conv ${conversationId}`);
+            }
+          }
+        }
+      } catch(e) {
+        console.warn('⚠️ [send-platform] Erreur résolution {caution_url}:', e.message);
+      }
+    }
+
     // Booking.com bloque les URLs dans les messages via API
-    const hasUrl = /https?:\/\/\S+/i.test(message);
+    const hasUrl = /https?:\/\/\S+/i.test(finalMessage);
     const convPlatform = (resaResult.rows[0].platform || '').toLowerCase();
     const isBookingPlatform = convPlatform.includes('booking') || convPlatform === 'bdc';
 
     if (hasUrl && isBookingPlatform) {
       console.log(`ℹ️ [send-platform] Skip Channex — Booking.com bloque les URLs, message sauvé en DB`);
-      // On continue sans envoyer via Channex — le message sera quand même en DB
     } else {
-      // Envoyer via Channex
-      await sendBookingMessage(channex_booking_id, message);
+      await sendBookingMessage(channex_booking_id, finalMessage);
     }
 
     // Sauvegarder en DB
@@ -26349,7 +26385,7 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
       `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
        VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW())
        RETURNING *`,
-      [conversationId, message]
+      [conversationId, finalMessage]
     );
 
     const savedMsg = msgResult.rows[0];
