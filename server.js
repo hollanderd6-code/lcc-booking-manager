@@ -22039,8 +22039,9 @@ app.post('/api/chat/send', async (req, res) => {
               await sendNewMessageNotification(
                 conversation.user_id,
                 conversation.guest_name || 'Voyageur',
-                savedMessage.message.substring(0, 100),
-                conversation.id
+                savedMessage.message,
+                conversation.id,
+                pool
               );
             } catch (nErr) { console.error('❌ Notif Firebase message:', nErr.message); }
           }
@@ -22049,9 +22050,14 @@ app.post('/api/chat/send', async (req, res) => {
           try {
             await sendNotificationToSubAccountsOf(
               conversation.user_id, 'can_view_messages',
-              '📨 Nouveau message',
-              conversation.guest_name ? `Message de ${conversation.guest_name}` : 'Un voyageur vous a envoyé un message',
-              { type: 'new_message', conversationId: String(conversation.id) },
+              `💬 ${conversation.guest_name || 'Voyageur'}`,
+              (() => {
+                const preview = (savedMessage.message || '')
+                  .replace(/https?:\/\/\S+/g, '🔗 Lien')
+                  .substring(0, 80);
+                return preview || 'Nouveau message';
+              })(),
+              { type: 'new_chat_message', conversationId: String(conversation.id), conversation_id: String(conversation.id) },
               'notif_sub_new_message'
             );
           } catch (nErr) { console.error('❌ Notif sous-comptes message:', nErr.message); }
