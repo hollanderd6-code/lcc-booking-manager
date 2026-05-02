@@ -539,13 +539,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       padding: 0;
     }
 
-    /* Surlignage colonne date sélectionnée */
-    .calendar-cell.calendar-col-highlight {
-      background: rgba(26,122,94,.06) !important;
-      border-left: 2px solid rgba(26,122,94,.3) !important;
-      border-right: 2px solid rgba(26,122,94,.3) !important;
-    }
-
     .calendar-header-top {
       display: flex;
       align-items: center;
@@ -2623,18 +2616,6 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
    Uniquement sur vrais mobiles
    ================================================================ */
 @media (max-width: 768px) {
-  /* ── Sticky calendar header sur mobile uniquement ── */
-  .calendar-modern-header {
-    position: sticky !important;
-    top: 0;
-    z-index: 40;
-  }
-  #daysHeader {
-    position: sticky !important;
-    z-index: 39;
-    background: var(--surface-color, #F5F0E8) !important;
-  }
-
   .kpi-grid {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
@@ -6315,16 +6296,6 @@ window.LCC_PROPERTIES = properties;
         numSpan.className = 'day-number';
         numSpan.textContent = String(d.getDate());
 
-        var dateStr = d.getFullYear() + '-'
-          + String(d.getMonth()+1).padStart(2,'0') + '-'
-          + String(d.getDate()).padStart(2,'0');
-        div.setAttribute('data-date', dateStr);
-        div.style.cursor = 'pointer';
-        div.title = 'Cliquer pour filtrer par date';
-        (function(ds) {
-          div.addEventListener('click', function() { selectDate(ds); });
-        })(dateStr);
-
         div.appendChild(nameSpan);
         div.appendChild(numSpan);
 
@@ -6790,58 +6761,7 @@ function riskColor(level) {
         row.style.opacity = (!propertyId || row.getAttribute('data-property-id') === String(propertyId)) ? '1' : '0.25';
         row.style.transition = 'opacity 0.2s ease';
       }
-
-      // Si une date est sélectionnée, la désélectionner
-      if (propertyId && state.selectedDateStr) {
-        selectDate(state.selectedDateStr); // toggle off
-      }
     }
-
-    // ── Sélection colonne date — surlignage uniquement, sans griser ──
-    function selectDate(dateStr) {
-      // Toggle
-      if (state.selectedDateStr === dateStr) {
-        state.selectedDateStr = null;
-        dateStr = null;
-      } else {
-        state.selectedDateStr = dateStr;
-      }
-
-      // Retirer tous les surlignages existants
-      document.querySelectorAll('.calendar-col-highlight').forEach(function(el) {
-        el.classList.remove('calendar-col-highlight');
-      });
-      document.querySelectorAll('.day-header[data-date]').forEach(function(h) {
-        h.style.background = '';
-        h.style.borderRadius = '';
-        h.style.fontWeight = '';
-        h.style.color = '';
-      });
-
-      if (!dateStr) return;
-
-      // Surligner le day-header sélectionné
-      var selHeader = document.querySelector('.day-header[data-date="' + dateStr + '"]');
-      if (selHeader) {
-        selHeader.style.background = 'rgba(26,122,94,.18)';
-        selHeader.style.borderRadius = '8px';
-        selHeader.style.fontWeight = '700';
-        selHeader.style.color = '#1A7A5E';
-      }
-
-      // Surligner toutes les cellules de la colonne
-      document.querySelectorAll('.calendar-cell[data-date="' + dateStr + '"]').forEach(function(c) {
-        c.classList.add('calendar-col-highlight');
-      });
-
-      // Si une propriété est sélectionnée, la désélectionner
-      if (state.selectedPropertyId) {
-        selectProperty(state.selectedPropertyId);
-      }
-    }
-
-    // Initialiser selectedDateStr dans state si absent
-    if (!('selectedDateStr' in state)) state.selectedDateStr = null;
 
     function computeMonthStats(year, monthIndex) {
       var start = new Date(year, monthIndex, 1);
@@ -12532,48 +12452,5 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 });
 </script>
 <script src="/js/bh-onboarding.js"></script>
-<script>
-// ── Sticky calendar header : calculer les top dynamiques ──────
-(function initStickyCalendarHeader() {
-  function updateStickyTops() {
-    // Sticky uniquement sur mobile (≤768px)
-    if (window.innerWidth > 768) {
-      const calHeader = document.querySelector('.calendar-modern-header');
-      const daysHeader = document.getElementById('daysHeader');
-      if (calHeader) { calHeader.style.position = ''; calHeader.style.top = ''; }
-      if (daysHeader) { daysHeader.style.position = ''; daysHeader.style.top = ''; }
-      return;
-    }
-
-    const appHeader = document.querySelector('header.main-header');
-    const calHeader = document.querySelector('.calendar-modern-header');
-    const daysHeader = document.getElementById('daysHeader');
-
-    if (!calHeader) return;
-
-    const appHeaderH = appHeader ? appHeader.getBoundingClientRect().height : 0;
-    const calHeaderH = calHeader ? calHeader.getBoundingClientRect().height : 0;
-
-    calHeader.style.position = 'sticky';
-    calHeader.style.top = appHeaderH + 'px';
-    calHeader.style.zIndex = '40';
-
-    if (daysHeader) {
-      daysHeader.style.position = 'sticky';
-      daysHeader.style.top = (appHeaderH + calHeaderH) + 'px';
-      daysHeader.style.zIndex = '39';
-      daysHeader.style.background = 'var(--surface-color, #F5F0E8)';
-    }
-  }
-
-  // Appliquer au chargement + resize
-  document.addEventListener('DOMContentLoaded', updateStickyTops);
-  window.addEventListener('resize', updateStickyTops);
-
-  // Réappliquer après un court délai (pour les renders async)
-  setTimeout(updateStickyTops, 300);
-  setTimeout(updateStickyTops, 800);
-})();
-</script>
 </body>
 </html>
