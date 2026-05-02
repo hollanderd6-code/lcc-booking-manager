@@ -96,20 +96,42 @@ async function sendPushNotification(userId, notification, db) {
  * @param {Object} messageData - Données du message
  * @param {Object} db - Instance de la base de données
  */
-async function sendNewMessageNotification(recipientUserId, messageData, db) {
+async function sendNewMessageNotification(recipientUserId, messageDataOrGuestName, messageTextOrDb, conversationIdOrUndefined, dbOrUndefined) {
+  // Support deux signatures :
+  // 1. (userId, messageData{...}, db)               — ancien format objet
+  // 2. (userId, guestName, messageText, convId, db) — format direct depuis server.js
+  let guestName, messageText, conversationId, db;
+
+  if (typeof messageDataOrGuestName === 'object' && messageDataOrGuestName !== null) {
+    // Format objet
+    const messageData = messageDataOrGuestName;
+    db = messageTextOrDb;
+    guestName     = messageData.senderName || messageData.guestName || 'Voyageur';
+    messageText   = messageData.message || '';
+    conversationId = messageData.conversationId;
+  } else {
+    // Format direct : (userId, guestName, message, convId, db)
+    guestName      = messageDataOrGuestName || 'Voyageur';
+    messageText    = messageTextOrDb || '';
+    conversationId = conversationIdOrUndefined;
+    db             = dbOrUndefined;
+  }
+
+  // Aperçu du message : tronquer à 80 chars, masquer les URLs
+  const preview = (messageText || '')
+    .replace(/https?:\/\/\S+/g, '🔗 Lien')
+    .substring(0, 80);
+
   const notification = {
-    title: messageData.propertyName || 'Nouveau message',
-    body: messageData.senderName 
-      ? `${messageData.senderName}: ${messageData.message}`
-      : messageData.message,
+    title: `💬 ${guestName}`,
+    body: preview || 'Nouveau message',
     data: {
       type: 'new_chat_message',
-      conversation_id: messageData.conversationId.toString(),
-      property_id: messageData.propertyId || '',
-      sender_id: messageData.senderId || ''
+      conversationId: conversationId ? conversationId.toString() : '',
+      conversation_id: conversationId ? conversationId.toString() : '',
     }
   };
-  
+
   return await sendPushNotification(recipientUserId, notification, db);
 }
 
