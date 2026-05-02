@@ -1208,7 +1208,7 @@ function insertTplVar(variable) {
 }
 </script>
     <div id="templateModal" data-no-native="1" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;padding:0;">
-      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:580px;height:calc(95dvh - env(safe-area-inset-bottom, 0px));max-height:95dvh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:580px;height:92svh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.18);padding-bottom:env(safe-area-inset-bottom, 0px);box-sizing:border-box;">
         <div style="padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
           <h3 id="tplModalTitle" style="margin:0;font-size:16px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Nouveau template</h3>
           <button onclick="closeTemplateModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
@@ -1310,7 +1310,7 @@ function insertTplVar(variable) {
 
         </div>
         <!-- Footer sticky — hors du scroll -->
-        <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:12px 24px;padding-bottom:max(20px, calc(16px + env(safe-area-inset-bottom, 0px)));border-top:1px solid #f1f5f9;background:#fff;">
+        <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px 20px;border-top:1px solid #f1f5f9;background:#fff;">
           <button onclick="closeTemplateModal()" style="padding:10px 20px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Annuler</button>
           <button onclick="saveTemplate()" style="padding:10px 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Enregistrer</button>
         </div>
