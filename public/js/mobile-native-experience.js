@@ -552,30 +552,48 @@ window.initPushNotifications = async function initPushNotifications() {
     // ── Clic sur une notification (app fermée ou background) ──
     // C'est ici qu'on redirige vers la bonne conversation
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('👆 Clic notification:', action);
+      console.log('👆 Clic notification:', JSON.stringify(action));
 
-      const data = action.notification?.data || {};
-      const type = data.type || '';
+      // iOS/Capacitor peut mettre les data à plusieurs endroits selon la version et l'état de l'app
+      const data = action.notification?.data
+        || action.notification?.extra
+        || action.data
+        || {};
 
-      // Résoudre l'ID de conversation (deux noms de champs possibles selon le service)
-      const rawConvId = data.conversationId || data.conversation_id || null;
+      // Sur iOS les valeurs FCM "data" arrivent parfois dans notification directement
+      const notif = action.notification || {};
+      const type = data.type || notif.type || '';
+
+      // conversationId peut être dans data ou au niveau notification
+      const rawConvId = data.conversationId
+        || data.conversation_id
+        || notif.conversationId
+        || notif.conversation_id
+        || null;
       const convId = rawConvId ? parseInt(rawConvId, 10) : null;
 
+      console.log('🔍 type:', type, '| convId:', convId, '| data:', JSON.stringify(data));
+
       if ((type === 'new_message' || type === 'new_chat_message') && convId && !isNaN(convId)) {
-        // → Ouvrir directement la bonne conversation
         console.log('💬 Redirection vers conversation', convId);
         window.location.href = '/messages.html?conv=' + convId;
         return;
       }
 
+      // Si on a un convId même sans type reconnu → aller dans messages
+      if (convId && !isNaN(convId)) {
+        console.log('💬 Redirection fallback conv', convId);
+        window.location.href = '/messages.html?conv=' + convId;
+        return;
+      }
+
       if (type === 'new_reservation') {
-        // → Ouvrir l'app sur le calendrier (comportement actuel)
         console.log('📅 Redirection vers app (nouvelle réservation)');
         window.location.href = '/app.html';
         return;
       }
 
-      // Fallback : retour à l'app principale
+      // Fallback
       console.log('🏠 Redirection fallback vers app.html');
       window.location.href = '/app.html';
     });
