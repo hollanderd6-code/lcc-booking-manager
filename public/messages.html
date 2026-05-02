@@ -1207,13 +1207,13 @@ function insertTplVar(variable) {
   ta.focus();
 }
 </script>
-    <div id="templateModal" data-no-native="1" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-      <div style="background:#fff;border-radius:20px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+    <div id="templateModal" data-no-native="1" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;padding:0;">
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:580px;height:95dvh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
         <div style="padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
           <h3 id="tplModalTitle" style="margin:0;font-size:16px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Nouveau template</h3>
           <button onclick="closeTemplateModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
         </div>
-        <div style="padding:20px 24px;">
+        <div style="padding:20px 24px;overflow-y:auto;flex:1;">
           <input type="hidden" id="tplId">
 
           <div style="margin-bottom:14px;">
@@ -1222,10 +1222,23 @@ function insertTplVar(variable) {
           </div>
 
           <div style="margin-bottom:14px;">
-            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Logement concerné</label>
-            <select id="tplProperty" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
-              <option value="">Tous les logements</option>
-            </select>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Logements concernés</label>
+            <!-- Afficheur cliquable -->
+            <div id="tplPropertyDisplay" onclick="document.getElementById('tplPropertyDropdown').style.display = document.getElementById('tplPropertyDropdown').style.display==='none'?'block':'none'"
+              style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;background:white;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;">
+              <span id="tplPropertyLabel" style="color:#374151;">Tous les logements</span>
+              <span style="color:#9CA3AF;font-size:11px;">▼</span>
+            </div>
+            <!-- Dropdown checkboxes -->
+            <div id="tplPropertyDropdown" style="display:none;border:1px solid #e5e7eb;border-radius:10px;margin-top:4px;background:white;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.08);">
+              <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;" id="tplPropAllLabel">
+                <input type="checkbox" id="tplPropAll" checked onchange="onTplPropAllChange(this)" style="width:15px;height:15px;accent-color:#1A7A5E;">
+                <span style="font-size:13px;color:#374151;font-weight:600;">Tous les logements</span>
+              </label>
+              <div id="tplPropertyCheckboxes"></div>
+            </div>
+            <!-- Champ caché pour compatibilité legacy (1 logement) -->
+            <input type="hidden" id="tplProperty" value="">
           </div>
 
           <div style="margin-bottom:14px;">
@@ -1240,17 +1253,7 @@ function insertTplVar(variable) {
                 <option value="on_departure">Jour du départ à 15h</option>
                 <option value="after_departure">Après le départ</option>
               </select>
-              <div id="triggerHintBtn" style="display:none;position:relative;">
-                <button type="button" id="triggerHintTrigger"
-                  style="width:22px;height:22px;border-radius:50%;background:#E0F2EC;border:1.5px solid #1A7A5E;color:#1A7A5E;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"
-                  onmouseenter="document.getElementById('triggerHintBox').style.display='block'"
-                  onmouseleave="document.getElementById('triggerHintBox').style.display='none'">?</button>
-                <div id="triggerHintBox" style="display:none;position:absolute;right:0;bottom:30px;width:260px;background:#1A7A5E;color:white;font-size:12px;line-height:1.6;padding:10px 14px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:100;font-family:'DM Sans',sans-serif;">
-                  <strong>⚠️ Conditionné à la caution</strong><br>
-                  Ce message ne sera envoyé que si la caution a été validée par le voyageur. Sans caution confirmée, les informations d'arrivée ne seront pas transmises.
-                  <div style="position:absolute;bottom:-6px;right:10px;width:12px;height:12px;background:#1A7A5E;transform:rotate(45deg);border-radius:2px;"></div>
-                </div>
-              </div>
+<!-- triggerHintBtn supprimé -->
             </div>
           </div>
 
@@ -3728,6 +3731,64 @@ async function loadTemplates() {
   }
 }
 
+// ── Helpers multi-select logements ──────────────────────────
+function onTplPropAllChange(cb) {
+  const allChecked = cb.checked;
+  document.querySelectorAll('#tplPropertyCheckboxes input[type=checkbox]').forEach(c => c.checked = allChecked);
+  updateTplPropertyLabel();
+}
+
+function updateTplPropertyLabel() {
+  const allCb = document.getElementById('tplPropAll');
+  const checkboxes = [...document.querySelectorAll('#tplPropertyCheckboxes input[type=checkbox]')];
+  const checked = checkboxes.filter(c => c.checked);
+  const labelEl = document.getElementById('tplPropertyLabel');
+  if (!labelEl) return;
+
+  if (checked.length === 0 || checked.length === checkboxes.length) {
+    if (allCb) allCb.checked = true;
+    labelEl.textContent = 'Tous les logements';
+    document.getElementById('tplProperty').value = '';
+  } else {
+    if (allCb) allCb.checked = false;
+    const names = checked.map(c => c.dataset.name).join(', ');
+    labelEl.textContent = names;
+    // Pour la compatibilité, mettre le premier ID dans tplProperty
+    document.getElementById('tplProperty').value = checked[0].value;
+  }
+}
+
+function getTplSelectedPropertyIds() {
+  const allCb = document.getElementById('tplPropAll');
+  if (allCb?.checked) return []; // tous = []
+  const checkboxes = [...document.querySelectorAll('#tplPropertyCheckboxes input[type=checkbox]')];
+  return checkboxes.filter(c => c.checked).map(c => c.value);
+}
+
+function setTplPropertyIds(ids) {
+  // ids = [] → tous, ids = ['id1','id2'] → sélection
+  const allCb = document.getElementById('tplPropAll');
+  const checkboxes = [...document.querySelectorAll('#tplPropertyCheckboxes input[type=checkbox]')];
+
+  if (!ids || ids.length === 0) {
+    if (allCb) allCb.checked = true;
+    checkboxes.forEach(c => c.checked = true);
+  } else {
+    if (allCb) allCb.checked = false;
+    checkboxes.forEach(c => { c.checked = ids.includes(c.value); });
+  }
+  updateTplPropertyLabel();
+}
+
+// Fermer le dropdown si clic extérieur
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('tplPropertyDropdown');
+  const display = document.getElementById('tplPropertyDisplay');
+  if (dd && display && !dd.contains(e.target) && !display.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
 async function loadTemplateProperties() {
   try {
     const token = localStorage.getItem('lcc_token');
@@ -3735,20 +3796,36 @@ async function loadTemplateProperties() {
     const data = await res.json();
     const props = (data.properties || data || []).filter(p => p && (p.id || p._id) && p.name);
     window._tplProperties = props;
-    ['tplPropertyFilter', 'tplProperty'].forEach(id => {
-      const sel = document.getElementById(id);
-      if (!sel) return;
-      const current = sel.value;
-      // Garder l'option "Tous"
-      while (sel.options.length > 1) sel.remove(1);
+
+    // Mettre à jour le select filtre (inchangé)
+    const filterSel = document.getElementById('tplPropertyFilter');
+    if (filterSel) {
+      const current = filterSel.value;
+      while (filterSel.options.length > 1) filterSel.remove(1);
       props.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id || p._id;
         opt.textContent = p.name;
-        sel.appendChild(opt);
+        filterSel.appendChild(opt);
       });
-      sel.value = current;
-    });
+      filterSel.value = current;
+    }
+
+    // Remplir les checkboxes multi-select du modal
+    const cbContainer = document.getElementById('tplPropertyCheckboxes');
+    if (cbContainer) {
+      cbContainer.innerHTML = '';
+      props.forEach((p, i) => {
+        const id = p.id || p._id;
+        const label = document.createElement('label');
+        label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;' + (i < props.length-1 ? 'border-bottom:1px solid #f3f4f6;' : '');
+        label.innerHTML = `<input type="checkbox" value="${id}" data-name="${p.name}"
+          style="width:15px;height:15px;accent-color:#1A7A5E;"
+          onchange="document.getElementById('tplPropAll').checked=false;updateTplPropertyLabel()">
+          <span style="font-size:13px;color:#374151;">${p.name}</span>`;
+        cbContainer.appendChild(label);
+      });
+    }
   } catch(e) {}
 }
 
@@ -3773,6 +3850,12 @@ function openTemplateModal(template = null, isCopy = false) {
   updateTriggerHint(template?.trigger_type || 'on_booking');
   document.getElementById('tplOffset').value = template?.trigger_offset_hours || '';
   document.getElementById('tplProperty').value = template?.property_id || '';
+  // Multi-select : charger les property_ids
+  const propIds = template?.property_ids
+    ? (Array.isArray(template.property_ids) ? template.property_ids : JSON.parse(template.property_ids || '[]'))
+    : (template?.property_id ? [template.property_id] : []);
+  // Attendre que les checkboxes soient chargées
+  setTimeout(() => setTplPropertyIds(propIds), 200);
   document.getElementById('tplModalTitle').textContent = (template && !isCopy) ? 'Modifier le template' : 'Nouveau template';
 
   // Nouveaux champs
@@ -3829,6 +3912,7 @@ async function saveTemplate() {
     trigger_offset_hours: isAfter ? offsetDays * 24 : -(offsetDays * 24),
     send_condition: document.getElementById('tplCondition').value || 'always',
     property_id: document.getElementById('tplProperty').value || null,
+    property_ids: getTplSelectedPropertyIds(),
   };
 
   if (!body.title || !body.message) { showBHToast('Titre et message requis', 'warning'); return; }
