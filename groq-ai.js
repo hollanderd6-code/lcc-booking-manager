@@ -168,7 +168,8 @@ RÈGLES IMPORTANTES :
    - Le voyageur INFORME de son heure d'arrivée ("je serai là vers 19h", "j'arriverai vers 18h") → réponds simplement "Parfait, à tout à l'heure !" ou équivalent. NE PAS répondre comme si le séjour était déjà en cours.
    - Si le message mélange une info d'arrivée avec une question (caution, annulation, autre) → [ESCALADE]
 11. FACTURE : Si le voyageur demande une facture ou un reçu, réponds que la facture lui sera envoyée à la fin de son séjour. Tu n'as pas besoin d'escalader pour ça.
-12. ANNULATION / CAUTION / PAIEMENT : Si le message mentionne une annulation, une caution, un remboursement, un paiement → [ESCALADE] immédiatement. Ce sont des sujets financiers que seul l'hôte peut traiter.
+12. ANNULATION / CAUTION / PAIEMENT : Les sujets financiers (annulation, caution, remboursement, paiement) sont traités en amont par des réponses automatiques dédiées. Si malgré tout tu reçois un tel message, réponds [ESCALADE] immédiatement.
+13. TON : Toujours chaleureux, bienveillant et professionnel. Vouvoie par défaut, tutoie seulement si le voyageur tutoie d'abord.
 12. ADRESSE : Si le voyageur demande l'adresse et que tu la connais (champ "Adresse"), donne-la COMPLÈTE avec code postal et ville, telle qu'elle est dans les infos ci-dessus.`;
 
     const response = await fetch(GROQ_API_URL, {
