@@ -394,53 +394,64 @@ function renderConversations() {
     const platformIcon = getPlatformIcon(conv.platform);
     const platformColor = getPlatformColor(conv.platform);
     
+    // ── Préparation du snippet du dernier message ──────────────
+    const rawSnippet = conv.last_message || '';
+    const cleanSnippet = rawSnippet
+      .replace(/\{[^}]+\}/g, '')           // supprimer les variables non résolues
+      .replace(/https?:\/\/\S+/g, '🔗 Lien') // remplacer les URLs par un label
+      .replace(/\s+/g, ' ').trim();
+    const snippet = cleanSnippet.length > 72 ? cleanSnippet.substring(0, 72) + '…' : cleanSnippet;
+    const isUnread = unreadCount > 0;
+
     return `
-      <div class="conversation-item" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
-        <div class="conversation-avatar" style="background: ${getPlatformColor(conv.platform)};">
-          ${guestInitial}
+      <div class="conversation-item ${isUnread ? 'conv-unread' : ''}" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
+
+        <!-- Avatar avec indicateur non-lu -->
+        <div style="position:relative;flex-shrink:0;">
+          <div class="conversation-avatar" style="background: ${getPlatformColor(conv.platform)};">
+            ${guestInitial}
+          </div>
+          ${isUnread ? `<div style="position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#1A7A5E;border:2px solid white;"></div>` : ''}
         </div>
-        
+
         <div class="conversation-content">
-          <div class="conversation-header">
-            <div class="conversation-info">
-              <h3>${guestName}</h3>
-              ${guestPhone ? `<span class="conversation-phone">${guestPhone}</span>` : ''}
-              <div class="meta">
-                <span class="property-badge" style="background: ${conv.property_color || '#10B981'}20; color: ${conv.property_color || '#10B981'};">
-                  ${conv.property_name || 'Logement'}
-                </span>
-                <span><i class="fas fa-calendar"></i> ${checkinDate}</span>
-                <span class="platform-badge" style="background-color: ${platformColor}20; color: ${platformColor};">
-                  <i class="fas ${platformIcon}"></i>
-                  ${conv.platform || 'direct'}
-                </span>
-              </div>
-            </div>
-            
-            <div class="conversation-status">
-              <!-- Bouton de suppression -->
-              <div class="conversation-actions">
-                <button class="btn-delete-conversation" 
-                        onclick="deleteConversation(${conv.id}, event)" 
-                        title="Supprimer la conversation">
-                  <i class="fas fa-trash"></i>
-                  Supprimer
-                </button>
-              </div>
-              
-              <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;">
-                ${(function() {
-                  const ageMs = Date.now() - new Date(conv.created_at).getTime();
-                  const openedIds = JSON.parse(localStorage.getItem('bh_opened_convs') || '[]');
-                  const isNew = ageMs < 24 * 60 * 60 * 1000 && unreadCount === 0 && !openedIds.includes(conv.id);
-                  return isNew ? `<span class="conv-new-badge" data-conv-id="${conv.id}" style="background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:.04em;">NEW</span>` : '';
-                })()}
-                <div class="conversation-time">${lastMessageTime}</div>
-              </div>
-              <div class="status-badge ${statusClass}">${statusLabel}</div>
-              ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+          <!-- Ligne 1 : Nom + heure -->
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px;">
+            <h3 style="font-size:13.5px;font-weight:${isUnread ? '800' : '600'};color:${isUnread ? '#0D1117' : '#374151'};margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62%;font-family:'DM Sans',sans-serif;">${guestName}</h3>
+            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+              ${(function() {
+                const ageMs = Date.now() - new Date(conv.created_at).getTime();
+                const openedIds = JSON.parse(localStorage.getItem('bh_opened_convs') || '[]');
+                const isNew = ageMs < 24 * 60 * 60 * 1000 && unreadCount === 0 && !openedIds.includes(conv.id);
+                return isNew ? `<span class="conv-new-badge" data-conv-id="${conv.id}" style="background:#1A7A5E;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:.04em;">NEW</span>` : '';
+              })()}
+              <span style="font-size:11px;color:${isUnread ? '#1A7A5E' : '#B0BAC5'};font-weight:${isUnread ? '600' : '400'};white-space:nowrap;">${lastMessageTime}</span>
             </div>
           </div>
+
+          <!-- Ligne 2 : Logement · Date · Plateforme -->
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;overflow:hidden;">
+            <span style="font-size:11px;font-weight:600;color:${conv.property_color || '#10B981'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${conv.property_name || 'Logement'}</span>
+            <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
+            <span style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">${checkinDate}</span>
+            <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
+            <span style="font-size:11px;color:${platformColor};font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fas ${platformIcon}" style="font-size:9px;margin-right:2px;"></i>${(conv.platform || 'direct').toUpperCase()}</span>
+          </div>
+
+          <!-- Ligne 3 : Aperçu dernier message -->
+          ${snippet ? `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+            <p style="font-size:12px;color:${isUnread ? '#374151' : '#94A3B8'};font-weight:${isUnread ? '500' : '400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0;flex:1;font-family:'DM Sans',sans-serif;">${snippet}</p>
+            ${isUnread ? `<div style="width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></div>` : ''}
+          </div>` : ''}
+
+          <!-- Éléments cachés pour compatibilité (delete, status, unread-badge, meta) -->
+          <div class="conversation-actions" style="display:none;">
+            <button class="btn-delete-conversation" onclick="deleteConversation(${conv.id}, event)" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </div>
+          <div class="status-badge ${statusClass}" style="display:none;">${statusLabel}</div>
+          <div class="unread-badge" style="display:none;">${unreadCount}</div>
+          <div class="meta" style="display:none;"></div>
         </div>
       </div>
     `;
