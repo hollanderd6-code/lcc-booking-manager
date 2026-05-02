@@ -1816,6 +1816,7 @@ ON invoice_download_tokens(token);
       // Migrations colonnes si table existe déjà
       await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS trigger_offset_days INTEGER DEFAULT 0`).catch(()=>{});
       await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS send_condition TEXT DEFAULT 'always'`).catch(()=>{});
+      await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS property_ids JSONB DEFAULT '[]'`).catch(()=>{});
       console.log('✅ Table message_templates OK');
 
       // Table short_links pour les liens raccourcis boostinghost.fr/c/:code
@@ -21549,12 +21550,13 @@ app.get('/api/message-templates', authenticateToken, async (req, res) => {
 app.post('/api/message-templates', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition } = req.body;
+    const { property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, property_ids } = req.body;
     if (!title || !message || !trigger_type) return res.status(400).json({ error: 'title, message et trigger_type requis' });
     const result = await pool.query(
-      `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always']
+      `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, property_ids)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always',
+       JSON.stringify(property_ids && property_ids.length > 0 ? property_ids : [])]
     );
     res.json({ success: true, template: result.rows[0] });
   } catch(e) {
@@ -21786,8 +21788,15 @@ async function runTemplatesCron(triggerTypes) {
            WHERE c.user_id = $1
            AND DATE(c.${dateCol} AT TIME ZONE 'Europe/Paris') = $2
            AND c.status != 'cancelled'
-           ${tmpl.property_id ? 'AND c.property_id = $3' : ''}`,
-          tmpl.property_id ? [tmpl.user_id, targetDate, tmpl.property_id] : [tmpl.user_id, targetDate]
+           ${(() => {
+             const ids = tmpl.property_ids
+               ? (Array.isArray(tmpl.property_ids) ? tmpl.property_ids : (() => { try { return JSON.parse(tmpl.property_ids); } catch(e) { return []; } })())
+               : (tmpl.property_id ? [tmpl.property_id] : []);
+             if (ids.length === 0) return '';
+             if (ids.length === 1) return `AND c.property_id = '${ids[0].replace(/'/g,"''")}'`;
+             return `AND c.property_id IN (${ids.map(id => `'${id.replace(/'/g,"''")}'`).join(',')})`;
+           })()}`,
+          [tmpl.user_id, targetDate]
         );
 
         console.log(`  Template "${tmpl.title}" → ${convs.rows.length} conversation(s) ciblée(s) pour ${targetDate}`);
