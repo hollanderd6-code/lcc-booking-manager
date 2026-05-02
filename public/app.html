@@ -6258,6 +6258,11 @@ window.LCC_PROPERTIES = properties;
         return;
       }
 
+      if (state.currentView === 'day') {
+        renderDayView();
+        return;
+      }
+
       var range = getCurrentRange();
       renderDaysHeader(range);
       renderGrid(range);
@@ -6762,6 +6767,130 @@ function riskColor(level) {
         row.style.transition = 'opacity 0.2s ease';
       }
     }
+
+    // ═══════════════════════════════════════════
+    // VUE JOUR
+    // ═══════════════════════════════════════════
+    function renderDayView() {
+      var d = new Date(state.currentDate.getTime());
+      var dateStr = d.getFullYear() + '-'
+        + String(d.getMonth()+1).padStart(2,'0') + '-'
+        + String(d.getDate()).padStart(2,'0');
+
+      var dayNames = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+      var dayName  = dayNames[d.getDay()];
+      var dayNum   = d.getDate();
+      var monthName= CONFIG.MONTHS[d.getMonth()];
+      var isToday  = dateStr === new Date().toISOString().split('T')[0];
+
+      // Cacher le calendrier tableau
+      var calContainer = document.querySelector('.calendar-container');
+      var daysHeaderEl  = document.getElementById('daysHeader');
+      if (calContainer) calContainer.style.display = 'none';
+      if (daysHeaderEl)  daysHeaderEl.style.display  = 'none';
+
+      // Créer ou réutiliser le conteneur vue jour
+      var el = document.getElementById('calDayView');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'calDayView';
+        var wrapper = document.querySelector('.calendar-wrapper');
+        if (wrapper) wrapper.appendChild(el); else document.body.appendChild(el);
+      }
+      el.style.display = 'block';
+      updatePeriodDisplay();
+
+      // Compter les réservations
+      var checkins = 0, checkouts = 0, staying = 0, guests = 0;
+      var seen = {}, list = [];
+      var pColors = { airbnb:'#FF5A5F', booking:'#003580', bdc:'#003580', direct:'#1A7A5E' };
+
+      (window.enrichedReservations || []).forEach(function(r) {
+        var src = (r.source||r.platform||'').toUpperCase();
+        if (r.type === 'block' || src === 'BLOCK') return;
+        var s = (r.start || r.startDate || '').toString().split('T')[0];
+        var e = (r.end   || r.endDate   || '').toString().split('T')[0];
+        if (!s || !e) return;
+        var ok = (s === dateStr || e === dateStr || (s < dateStr && e > dateStr));
+        if (!ok) return;
+        var key = r.uid || r.id || (s + e + (r.guestName||''));
+        if (seen[key]) return;
+        seen[key] = true;
+        if (s === dateStr) checkins++;
+        if (e === dateStr) checkouts++;
+        if (s < dateStr && e > dateStr) staying++;
+        if (s <= dateStr && e > dateStr) guests += parseInt(r.adults || r.occupancyAdults || 1);
+        list.push(r);
+      });
+
+      // Cartes réservations
+      var cards = list.map(function(r) {
+        var guest = r.guestName || r.guest_display_name || 'Voyageur';
+        var prop  = r.propertyName || r.property_name || '';
+        var s = (r.start || r.startDate || '').toString().split('T')[0];
+        var e = (r.end   || r.endDate   || '').toString().split('T')[0];
+        var fmt = function(ds) { return ds ? new Date(ds+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : ''; };
+        var plt = (r.platform || r.source || 'direct').toLowerCase().replace(/\.com$/,'');
+        var pc  = pColors[plt] || '#6B7280';
+        var badge = s===dateStr ? '🟢 Arrivée' : e===dateStr ? '🔴 Départ' : '🏠 En séjour';
+        return '<div style="background:white;border-radius:14px;padding:14px 16px;'
+          + 'border:1px solid #F1F5F9;margin-bottom:10px;cursor:pointer;" '
+          + 'onclick="openBookingDetails && openBookingDetails(' + JSON.stringify(r).replace(/'/g,"\'") + ')">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">'
+          + '<span style="font-size:14px;font-weight:700;color:#111827;">' + guest + '</span>'
+          + '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:' + pc + '20;color:' + pc + ';">' + plt.toUpperCase() + '</span>'
+          + '</div>'
+          + '<div style="font-size:12px;color:#6B7280;margin-bottom:5px;"><i class="fas fa-home" style="margin-right:4px;font-size:10px;"></i>' + prop + '</div>'
+          + '<div style="display:flex;justify-content:space-between;">'
+          + '<span style="font-size:12px;color:#9CA3AF;">' + fmt(s) + ' → ' + fmt(e) + '</span>'
+          + '<span style="font-size:12px;font-weight:600;">' + badge + '</span>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+
+      el.innerHTML = '<div style="padding:16px 20px 24px;">'
+        // En-tête date
+        + '<div style="text-align:center;margin-bottom:22px;">'
+        + '<div style="font-size:12px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.1em;font-weight:700;">' + dayName + '</div>'
+        + '<div style="font-size:52px;font-weight:800;line-height:1;color:' + (isToday?'#1A7A5E':'#0D1117') + ';margin:4px 0;">' + dayNum + '</div>'
+        + '<div style="font-size:16px;color:#6B7280;font-weight:500;">' + monthName + ' ' + d.getFullYear() + '</div>'
+        + (isToday ? '<div style="margin-top:6px;display:inline-block;padding:3px 14px;background:#1A7A5E;color:white;border-radius:99px;font-size:11px;font-weight:700;">Aujourd'hui</div>' : '')
+        + '</div>'
+        // Grille stats
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;">'
+        + _statCard(checkins, 'Arrivées', '#1A7A5E', 'fa-sign-in-alt')
+        + _statCard(checkouts, 'Départs', '#EF4444', 'fa-sign-out-alt')
+        + _statCard(list.length, 'Réservations', '#6366F1', 'fa-calendar-check')
+        + _statCard(guests, 'Voyageurs', '#F59E0B', 'fa-users')
+        + '</div>'
+        // Liste
+        + (list.length
+            ? '<div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Détail</div>' + cards
+            : '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;background:white;border-radius:14px;border:1px solid #F1F5F9;">Aucune réservation ce jour</div>')
+        + '</div>';
+    }
+
+    function _statCard(val, label, color, icon) {
+      return '<div style="background:white;border-radius:14px;padding:14px;text-align:center;border:1px solid #F1F5F9;">'
+        + '<div style="font-size:28px;font-weight:800;color:' + color + ';line-height:1;">' + val + '</div>'
+        + '<div style="font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:4px;">'
+        + '<i class="fas ' + icon + '" style="margin-right:3px;font-size:9px;"></i>' + label + '</div>'
+        + '</div>';
+    }
+
+    // Remettre le calendrier normal en quittant la vue jour
+    document.addEventListener('click', function(e) {
+      var tab = e.target.closest && e.target.closest('.view-tab');
+      if (!tab) return;
+      if (tab.getAttribute('data-view') !== 'day') {
+        var dv = document.getElementById('calDayView');
+        if (dv) dv.style.display = 'none';
+        var cc = document.querySelector('.calendar-container');
+        if (cc) cc.style.display = '';
+        var dh = document.getElementById('daysHeader');
+        if (dh) dh.style.display = '';
+      }
+    });
 
     function computeMonthStats(year, monthIndex) {
       var start = new Date(year, monthIndex, 1);
@@ -12452,5 +12581,40 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 });
 </script>
 <script src="/js/bh-onboarding.js"></script>
+
+<script>
+// ── Sticky calendar header sur mobile uniquement ──────────────
+(function() {
+  function updateStickyTops() {
+    if (window.innerWidth > 768) {
+      // Desktop : retirer le sticky
+      ['calendar-modern-header','daysHeader'].forEach(function(id) {
+        var el = id === 'daysHeader' ? document.getElementById(id) : document.querySelector('.' + id);
+        if (el) { el.style.position = ''; el.style.top = ''; el.style.zIndex = ''; }
+      });
+      return;
+    }
+    var appHeader = document.querySelector('header.main-header');
+    var calHeader = document.querySelector('.calendar-modern-header');
+    var daysHeader = document.getElementById('daysHeader');
+    if (!calHeader) return;
+    var appH = appHeader ? appHeader.getBoundingClientRect().height : 0;
+    var calH = calHeader.getBoundingClientRect().height;
+    calHeader.style.position = 'sticky';
+    calHeader.style.top = appH + 'px';
+    calHeader.style.zIndex = '40';
+    if (daysHeader) {
+      daysHeader.style.position = 'sticky';
+      daysHeader.style.top = (appH + calH) + 'px';
+      daysHeader.style.zIndex = '39';
+      daysHeader.style.background = 'var(--surface-color, #F5F0E8)';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', updateStickyTops);
+  window.addEventListener('resize', updateStickyTops);
+  setTimeout(updateStickyTops, 300);
+  setTimeout(updateStickyTops, 800);
+})();
+</script>
 </body>
 </html>
