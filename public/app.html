@@ -539,6 +539,13 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       padding: 0;
     }
 
+    /* Surlignage colonne date sélectionnée */
+    .calendar-cell.calendar-col-highlight {
+      background: rgba(26,122,94,.06) !important;
+      border-left: 2px solid rgba(26,122,94,.3) !important;
+      border-right: 2px solid rgba(26,122,94,.3) !important;
+    }
+
     .calendar-header-top {
       display: flex;
       align-items: center;
@@ -6790,7 +6797,7 @@ function riskColor(level) {
       }
     }
 
-    // ── Sélection colonne date (symétrique à selectProperty) ──
+    // ── Sélection colonne date — surlignage uniquement, sans griser ──
     function selectDate(dateStr) {
       // Toggle
       if (state.selectedDateStr === dateStr) {
@@ -6800,42 +6807,36 @@ function riskColor(level) {
         state.selectedDateStr = dateStr;
       }
 
-      // Mettre à jour le style des day-headers
-      var headers = document.querySelectorAll('.day-header[data-date]');
-      for (var i = 0; i < headers.length; i++) {
-        var h = headers[i];
-        var hd = h.getAttribute('data-date');
-        if (!dateStr) {
-          h.style.opacity = '1';
-          h.style.background = '';
-          h.style.borderRadius = '';
-        } else if (hd === dateStr) {
-          h.style.opacity = '1';
-          h.style.background = 'rgba(26,122,94,.15)';
-          h.style.borderRadius = '8px';
-        } else {
-          h.style.opacity = '0.25';
-          h.style.background = '';
-          h.style.borderRadius = '';
-        }
+      // Retirer tous les surlignages existants
+      document.querySelectorAll('.calendar-col-highlight').forEach(function(el) {
+        el.classList.remove('calendar-col-highlight');
+      });
+      document.querySelectorAll('.day-header[data-date]').forEach(function(h) {
+        h.style.background = '';
+        h.style.borderRadius = '';
+        h.style.fontWeight = '';
+        h.style.color = '';
+      });
+
+      if (!dateStr) return;
+
+      // Surligner le day-header sélectionné
+      var selHeader = document.querySelector('.day-header[data-date="' + dateStr + '"]');
+      if (selHeader) {
+        selHeader.style.background = 'rgba(26,122,94,.18)';
+        selHeader.style.borderRadius = '8px';
+        selHeader.style.fontWeight = '700';
+        selHeader.style.color = '#1A7A5E';
       }
 
-      // Griser les cellules qui ne sont PAS dans cette colonne
-      var cells = document.querySelectorAll('.calendar-cell[data-date]');
-      for (var j = 0; j < cells.length; j++) {
-        var c = cells[j];
-        var cd = c.getAttribute('data-date');
-        if (!dateStr) {
-          c.style.opacity = '1';
-        } else {
-          c.style.opacity = (cd === dateStr) ? '1' : '0.25';
-          c.style.transition = 'opacity 0.2s ease';
-        }
-      }
+      // Surligner toutes les cellules de la colonne
+      document.querySelectorAll('.calendar-cell[data-date="' + dateStr + '"]').forEach(function(c) {
+        c.classList.add('calendar-col-highlight');
+      });
 
-      // Si une propriété est déjà sélectionnée, la désélectionner
-      if (dateStr && state.selectedPropertyId) {
-        selectProperty(state.selectedPropertyId); // toggle off
+      // Si une propriété est sélectionnée, la désélectionner
+      if (state.selectedPropertyId) {
+        selectProperty(state.selectedPropertyId);
       }
     }
 
