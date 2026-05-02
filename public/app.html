@@ -6308,6 +6308,16 @@ window.LCC_PROPERTIES = properties;
         numSpan.className = 'day-number';
         numSpan.textContent = String(d.getDate());
 
+        var dateStr = d.getFullYear() + '-'
+          + String(d.getMonth()+1).padStart(2,'0') + '-'
+          + String(d.getDate()).padStart(2,'0');
+        div.setAttribute('data-date', dateStr);
+        div.style.cursor = 'pointer';
+        div.title = 'Cliquer pour filtrer par date';
+        (function(ds) {
+          div.addEventListener('click', function() { selectDate(ds); });
+        })(dateStr);
+
         div.appendChild(nameSpan);
         div.appendChild(numSpan);
 
@@ -6773,7 +6783,64 @@ function riskColor(level) {
         row.style.opacity = (!propertyId || row.getAttribute('data-property-id') === String(propertyId)) ? '1' : '0.25';
         row.style.transition = 'opacity 0.2s ease';
       }
+
+      // Si une date est sélectionnée, la désélectionner
+      if (propertyId && state.selectedDateStr) {
+        selectDate(state.selectedDateStr); // toggle off
+      }
     }
+
+    // ── Sélection colonne date (symétrique à selectProperty) ──
+    function selectDate(dateStr) {
+      // Toggle
+      if (state.selectedDateStr === dateStr) {
+        state.selectedDateStr = null;
+        dateStr = null;
+      } else {
+        state.selectedDateStr = dateStr;
+      }
+
+      // Mettre à jour le style des day-headers
+      var headers = document.querySelectorAll('.day-header[data-date]');
+      for (var i = 0; i < headers.length; i++) {
+        var h = headers[i];
+        var hd = h.getAttribute('data-date');
+        if (!dateStr) {
+          h.style.opacity = '1';
+          h.style.background = '';
+          h.style.borderRadius = '';
+        } else if (hd === dateStr) {
+          h.style.opacity = '1';
+          h.style.background = 'rgba(26,122,94,.15)';
+          h.style.borderRadius = '8px';
+        } else {
+          h.style.opacity = '0.25';
+          h.style.background = '';
+          h.style.borderRadius = '';
+        }
+      }
+
+      // Griser les cellules qui ne sont PAS dans cette colonne
+      var cells = document.querySelectorAll('.calendar-cell[data-date]');
+      for (var j = 0; j < cells.length; j++) {
+        var c = cells[j];
+        var cd = c.getAttribute('data-date');
+        if (!dateStr) {
+          c.style.opacity = '1';
+        } else {
+          c.style.opacity = (cd === dateStr) ? '1' : '0.25';
+          c.style.transition = 'opacity 0.2s ease';
+        }
+      }
+
+      // Si une propriété est déjà sélectionnée, la désélectionner
+      if (dateStr && state.selectedPropertyId) {
+        selectProperty(state.selectedPropertyId); // toggle off
+      }
+    }
+
+    // Initialiser selectedDateStr dans state si absent
+    if (!('selectedDateStr' in state)) state.selectedDateStr = null;
 
     function computeMonthStats(year, monthIndex) {
       var start = new Date(year, monthIndex, 1);
@@ -12486,10 +12553,14 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     const appHeaderH = appHeader ? appHeader.getBoundingClientRect().height : 0;
     const calHeaderH = calHeader ? calHeader.getBoundingClientRect().height : 0;
 
+    calHeader.style.position = 'sticky';
     calHeader.style.top = appHeaderH + 'px';
+    calHeader.style.zIndex = '40';
 
     if (daysHeader) {
+      daysHeader.style.position = 'sticky';
       daysHeader.style.top = (appHeaderH + calHeaderH) + 'px';
+      daysHeader.style.zIndex = '39';
       daysHeader.style.background = 'var(--surface-color, #F5F0E8)';
     }
   }
