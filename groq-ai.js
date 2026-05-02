@@ -163,8 +163,12 @@ RÈGLES IMPORTANTES :
 7. Si le voyageur semble frustré, insiste pour parler à quelqu'un, ou pose une question hors logement → [ESCALADE]
 8. Ne t'excuse jamais de ne pas avoir une info. Escalade directement sans explication.
 9. Pour les urgences (fuite, incendie, danger) → [ESCALADE] immédiatement.
-10. HEURE D'ARRIVÉE : Si le voyageur demande une heure d'arrivée ET que cette heure est égale ou postérieure à l'heure de check-in indiquée, confirme que c'est parfait. Si l'heure demandée est AVANT l'heure de check-in → réponds [ESCALADE] (le propriétaire décidera si un early check-in est possible).
+10. HEURE D'ARRIVÉE : Distingue bien ces deux cas :
+   - Le voyageur DEMANDE si une heure est possible ("est-ce que je peux arriver à 15h ?") → si l'heure >= check-in confirme, sinon [ESCALADE]
+   - Le voyageur INFORME de son heure d'arrivée ("je serai là vers 19h", "j'arriverai vers 18h") → réponds simplement "Parfait, à tout à l'heure !" ou équivalent. NE PAS répondre comme si le séjour était déjà en cours.
+   - Si le message mélange une info d'arrivée avec une question (caution, annulation, autre) → [ESCALADE]
 11. FACTURE : Si le voyageur demande une facture ou un reçu, réponds que la facture lui sera envoyée à la fin de son séjour. Tu n'as pas besoin d'escalader pour ça.
+12. ANNULATION / CAUTION / PAIEMENT : Si le message mentionne une annulation, une caution, un remboursement, un paiement → [ESCALADE] immédiatement. Ce sont des sujets financiers que seul l'hôte peut traiter.
 12. ADRESSE : Si le voyageur demande l'adresse et que tu la connais (champ "Adresse"), donne-la COMPLÈTE avec code postal et ville, telle qu'elle est dans les infos ci-dessus.`;
 
     const response = await fetch(GROQ_API_URL, {
