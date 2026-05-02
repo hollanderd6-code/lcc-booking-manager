@@ -634,14 +634,27 @@
     
     /* ========== BOUTONS PLUS PETITS ========== */
     .btn-xs {
-      padding: 5px 10px !important;
-      font-size: 11px !important;
-      white-space: nowrap !important;
-      flex-shrink: 0 !important;
+      padding: 5px 12px;
+      font-size: 12px;
+      white-space: nowrap;
     }
-    /* Sur très petits écrans : icône seulement */
-    @media (max-width: 400px) {
-      .btn-label-hide-xs { display: none !important; }
+    .deposits-main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .deposits-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 520px) {
+      .deposits-main-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   /* ============================================================
    DARK BAR + STICKY HEADER (identical to app.html)
@@ -1185,16 +1198,16 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 <!-- ONGLET : CAUTIONS ACTIVES -->
 <div class="tab-pane active" id="tab-deposits">
 <section class="card">
-<div class="card-header" style="flex-wrap:wrap;gap:8px 12px;">
-<div class="card-title" style="flex:1;min-width:0;">
+<div class="card-header deposits-main-header">
+<div class="card-title">
 <i class="fas fa-list"></i>
-<span style="white-space:nowrap;">Réservations &amp; cautions</span>
+<span>Réservations &amp; cautions</span>
 </div>
-<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-<button class="btn btn-primary btn-xs" onclick="openFreeDepositModal()" style="width:auto;white-space:nowrap;">
+<div class="deposits-header-actions">
+<button class="btn btn-primary btn-xs" onclick="openFreeDepositModal()">
 <i class="fas fa-plus"></i> Caution libre
 </button>
-<button class="btn btn-ghost btn-xs" id="refreshBtn" style="width:auto;white-space:nowrap;">
+<button class="btn btn-ghost btn-xs" id="refreshBtn">
 <i class="fas fa-sync-alt"></i> Actualiser
 </button>
 </div>
