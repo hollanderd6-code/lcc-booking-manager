@@ -1206,7 +1206,24 @@ html[data-theme-v3="1"] .app-container {
         <div id="logsCount" style="font-size:12px;color:#9ca3af;margin-top:8px;display:none;"></div>
       </div>
 
-      <div id="logsList"></div>
+      <!-- ── PROCHAINS ENVOIS ── -->
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h3 style="font-size:14px;font-weight:700;color:#0D1117;margin:0;display:flex;align-items:center;gap:7px;">
+            <i class="fas fa-clock" style="color:#1A7A5E;font-size:13px;"></i> Prochains envois (J+7)
+          </h3>
+          <span style="font-size:11px;color:#9CA3AF;">Cliquez 🚫 pour bloquer un envoi spécifique</span>
+        </div>
+        <div id="scheduledList"></div>
+      </div>
+
+      <!-- ── HISTORIQUE ── -->
+      <div>
+        <h3 style="font-size:14px;font-weight:700;color:#0D1117;margin:0 0 10px;display:flex;align-items:center;gap:7px;">
+          <i class="fas fa-history" style="color:#6B7280;font-size:13px;"></i> Historique des envois
+        </h3>
+        <div id="logsList"></div>
+      </div>
     </div><!-- /panelLogs -->
 
     <!-- Modal création/édition template -->
@@ -2751,7 +2768,7 @@ function switchMsgsTab(tab) {
     window._templatesLoaded = true;
     loadTemplateProperties().then(() => loadTemplates());
   }
-  if (tab === 'logs') { loadLogs(); }
+  if (tab === 'logs') { loadLogs(); loadScheduled(); }
   if (tab === 'ota' && !channexPropertiesLoaded) {
     loadChannexProperties();
   }
@@ -4043,6 +4060,104 @@ document.getElementById('templateModal')?.addEventListener('click', function(e) 
 // ============================================================
 // ── Cache des logs bruts (pour filtrage côté client) ──
 let _allLogs = [];
+
+// ── Prochains envois planifiés ──────────────────────────────
+async function loadScheduled() {
+  const container = document.getElementById('scheduledList');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:12px;"><i class="fas fa-spinner fa-spin"></i></div>';
+
+  const token = localStorage.getItem('lcc_token');
+  try {
+    const res = await fetch('/api/message-template-scheduled', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    const items = data.scheduled || [];
+
+    if (items.length === 0) {
+      container.innerHTML = '<div style="text-align:center;color:#9CA3AF;font-size:13px;padding:16px;background:white;border-radius:12px;border:1px solid #f1f5f9;">Aucun envoi planifié dans les 7 prochains jours.</div>';
+      return;
+    }
+
+    const platformColors = { airbnb:'#FF5A5F', booking:'#003580', direct:'#1A7A5E', bdc:'#003580' };
+    const platformIcons = { airbnb:'fa-home', booking:'fa-bed', direct:'fa-user', bdc:'fa-bed' };
+
+    // Grouper par date
+    const byDate = {};
+    items.forEach(item => {
+      if (!byDate[item.send_date]) byDate[item.send_date] = [];
+      byDate[item.send_date].push(item);
+    });
+
+    let html = '';
+    Object.entries(byDate).forEach(([date, dayItems]) => {
+      const d = new Date(date + 'T12:00:00');
+      const today = new Date(); today.setHours(0,0,0,0);
+      const isToday = d.toDateString() === new Date().toDateString();
+      const isTomorrow = d.toDateString() === new Date(Date.now()+86400000).toDateString();
+      const dateLabel = isToday ? "Aujourd'hui" : isTomorrow ? 'Demain'
+        : d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
+
+      html += `<div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;padding-left:4px;">${dateLabel} — ${date}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">`;
+
+      dayItems.forEach(item => {
+        const plt = (item.platform || 'direct').toLowerCase().replace('.com','');
+        const pColor = platformColors[plt] || '#6B7280';
+        const pIcon = platformIcons[plt] || 'fa-user';
+        const blocked = item.is_blocked;
+
+        html += `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${blocked ? '#FEF2F2' : 'white'};border:1px solid ${blocked ? '#FECACA' : '#F1F5F9'};border-radius:12px;transition:all .15s;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;flex-wrap:wrap;">
+                <span style="font-size:13px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">${item.guest_name || 'Voyageur'}</span>
+                <span style="font-size:11px;color:${pColor};font-weight:600;"><i class="fas ${pIcon}" style="font-size:9px;margin-right:2px;"></i>${plt.toUpperCase()}</span>
+              </div>
+              <div style="font-size:11px;color:#6B7280;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span><i class="fas fa-home" style="font-size:9px;margin-right:2px;"></i>${item.property_name || ''}</span>
+                <span style="color:#CBD5E1;">·</span>
+                <span style="color:#1A7A5E;font-weight:600;"><i class="fas fa-bolt" style="font-size:9px;"></i> ${item.trigger_label}</span>
+                <span style="color:#CBD5E1;">·</span>
+                <span style="font-weight:600;color:#374151;">${item.template_title}</span>
+              </div>
+            </div>
+            <button onclick="toggleBlock(${item.template_id}, ${item.conversation_id}, ${blocked}, this)"
+              title="${blocked ? 'Débloquer cet envoi' : 'Bloquer cet envoi'}"
+              style="flex-shrink:0;width:34px;height:34px;border-radius:10px;border:1.5px solid ${blocked ? '#FCA5A5' : '#E5E7EB'};background:${blocked ? '#FEE2E2' : '#F9FAFB'};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;"
+              onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+              ${blocked ? '✅' : '🚫'}
+            </button>
+          </div>`;
+      });
+
+      html += `</div></div>`;
+    });
+
+    container.innerHTML = html;
+  } catch(e) {
+    container.innerHTML = '<div style="color:#EF4444;font-size:13px;padding:12px;">Erreur de chargement</div>';
+  }
+}
+
+async function toggleBlock(templateId, convId, isCurrentlyBlocked, btn) {
+  const token = localStorage.getItem('lcc_token');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:11px;color:#9CA3AF;"></i>';
+  try {
+    const method = isCurrentlyBlocked ? 'DELETE' : 'POST';
+    await fetch('/api/message-template-blocks', {
+      method,
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template_id: templateId, conversation_id: convId })
+    });
+    await loadScheduled(); // Recharger
+    if (window.showToast) showToast(isCurrentlyBlocked ? '✅ Envoi débloqué' : '🚫 Envoi bloqué', 'success');
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = isCurrentlyBlocked ? '✅' : '🚫';
+  }
+}
 
 async function loadLogs() {
   const container = document.getElementById('logsList');
