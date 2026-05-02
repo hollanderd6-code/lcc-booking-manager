@@ -445,7 +445,7 @@ function renderConversations() {
             <button class="btn-delete-conversation" onclick="deleteConversation(${conv.id}, event)" title="Supprimer"><i class="fas fa-trash"></i></button>
           </div>
           <div class="status-badge ${statusClass}" style="display:none;">${statusLabel}</div>
-          <div class="unread-badge" style="display:none;">${unreadCount > 0 ? unreadCount : ""}</div>
+<!-- unread-badge supprimé -->
           <div class="meta" style="display:none;"></div>
         </div>
       </div>
