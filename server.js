@@ -1818,6 +1818,20 @@ ON invoice_download_tokens(token);
       await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS send_condition TEXT DEFAULT 'always'`).catch(()=>{});
       console.log('✅ Table message_templates OK');
 
+      // Table short_links pour les liens raccourcis boostinghost.fr/c/:code
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS short_links (
+          id SERIAL PRIMARY KEY,
+          code TEXT NOT NULL UNIQUE,
+          url TEXT NOT NULL,
+          user_id TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          hits INTEGER DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_short_links_code ON short_links(code);
+      `);
+      console.log('✅ Table short_links OK');
+
     // ✅ Migration : table message_template_logs
     try {
       await pool.query(`
@@ -21324,6 +21338,36 @@ console.log('✅ Routes du chat initialisées');
 // ============================================================
 // 📨 HELPER : Envoyer un template et logger le résultat
 // ============================================================
+
+// ── Helper : créer ou réutiliser un lien court boostinghost.fr/c/XXXX ─────
+async function makeShortLink(pool, longUrl, userId) {
+  try {
+    const existing = await pool.query(
+      'SELECT code FROM short_links WHERE url = $1 LIMIT 1', [longUrl]
+    ).catch(() => ({ rows: [] }));
+    if (existing.rows[0]) {
+      const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+      return `${appUrl}/c/${existing.rows[0].code}`;
+    }
+    const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+    let code; let tries = 0;
+    do {
+      code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      const chk = await pool.query('SELECT id FROM short_links WHERE code = $1', [code]).catch(() => ({ rows: [1] }));
+      if (chk.rows.length === 0) break;
+      tries++;
+    } while (tries < 10);
+    await pool.query(
+      'INSERT INTO short_links (code, url, user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+      [code, longUrl, userId || null]
+    ).catch(() => {});
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+    return `${appUrl}/c/${code}`;
+  } catch(e) {
+    return longUrl; // fallback URL brute
+  }
+}
+
 async function sendTemplateMessage(pool, io, { template, conv, property }) {
   const { sendBookingMessage } = require('./channex');
   const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
@@ -21363,7 +21407,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
            ORDER BY created_at DESC LIMIT 1`,
           [resRow.rows[0].uid]
         ).catch(() => ({ rows: [] }));
-        cautionUrl = dep.rows[0]?.checkout_url || '';
+        cautionUrl = await makeShortLink(pool, dep.rows[0]?.checkout_url || '', conv.user_id);
       }
       msg = msg.replace(/{caution_url}/gi, cautionUrl);
       if (!cautionUrl) console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — aucun deposit trouvé`);
@@ -21393,17 +21437,30 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
 
     // Envoyer via Channex si booking_id disponible (non bloquant)
     if (conv.channex_booking_id) {
-      try {
-        await sendBookingMessage(conv.channex_booking_id, msg);
-        console.log(`✅ [TPL SEND] Message envoyé via Channex (booking ${conv.channex_booking_id})`);
-      } catch(channexErr) {
-        const isThreadMissing = JSON.stringify(channexErr.response?.data || '').includes('thread_id');
-        if (isThreadMissing) {
-          console.log(`ℹ️ [TPL SEND] Pas de thread Channex pour ce booking (résa sans messagerie plateforme)`);
-        } else {
-          console.warn(`⚠️ [TPL SEND] Channex error:`, channexErr.message);
+      // Booking.com bloque les URLs dans les messages via API
+      // Si le message contient un lien ET que la plateforme est Booking → skip Channex
+      const hasUrl = /https?:\/\/\S+/i.test(msg);
+      const platform = (conv.platform || '').toLowerCase();
+      const isBooking = platform.includes('booking') || platform === 'bdc';
+      const skipChannex = hasUrl && isBooking;
+
+      if (skipChannex) {
+        console.log(`ℹ️ [TPL SEND] Skip Channex (Booking.com bloque les URLs) — message sauvé en DB uniquement`);
+      } else {
+        try {
+          await sendBookingMessage(conv.channex_booking_id, msg);
+          console.log(`✅ [TPL SEND] Message envoyé via Channex (booking ${conv.channex_booking_id})`);
+        } catch(channexErr) {
+          const isThreadMissing = JSON.stringify(channexErr.response?.data || '').includes('thread_id');
+          const isForbidden = channexErr.response?.status === 403;
+          if (isThreadMissing) {
+            console.log(`ℹ️ [TPL SEND] Pas de thread Channex pour ce booking`);
+          } else if (isForbidden) {
+            console.log(`ℹ️ [TPL SEND] 403 Channex — probablement URL bloquée par l'OTA, message sauvé en DB`);
+          } else {
+            console.warn(`⚠️ [TPL SEND] Channex error:`, channexErr.message);
+          }
         }
-        // Ne pas marquer comme erreur — message bien sauvé en DB
       }
     }
 
@@ -21588,7 +21645,7 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
              ORDER BY created_at DESC LIMIT 1`,
             [resRow2.rows[0].uid]
           ).catch(() => ({ rows: [] }));
-          cautionUrl = dep2.rows[0]?.checkout_url || '';
+          cautionUrl = await makeShortLink(pool, dep2.rows[0]?.checkout_url || '', c.user_id);
         }
         finalMsg = finalMsg.replace(/{caution_url}/gi, cautionUrl);
         if (!cautionUrl) console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id}`);
@@ -26165,6 +26222,62 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
   }
 });
 
+// ── Liens courts boostinghost.fr/c/:code ──────────────────────
+// POST /api/short-link  → crée un lien court pour une URL
+app.post('/api/short-link', authenticateAny, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || !url.startsWith('http')) return res.status(400).json({ error: 'url invalide' });
+    const userId = req.user?.id || null;
+
+    // Chercher si ce lien existe déjà
+    const existing = await pool.query(
+      `SELECT code FROM short_links WHERE url = $1 LIMIT 1`, [url]
+    );
+    if (existing.rows[0]) {
+      const code = existing.rows[0].code;
+      const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+      return res.json({ shortUrl: `${appUrl}/c/${code}`, code });
+    }
+
+    // Générer un code unique 6 chars
+    const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+    let code;
+    let tries = 0;
+    do {
+      code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      const check = await pool.query('SELECT id FROM short_links WHERE code = $1', [code]);
+      if (check.rows.length === 0) break;
+      tries++;
+    } while (tries < 10);
+
+    await pool.query(
+      `INSERT INTO short_links (code, url, user_id) VALUES ($1, $2, $3)`,
+      [code, url, userId]
+    );
+
+    const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+    res.json({ shortUrl: `${appUrl}/c/${code}`, code });
+  } catch(e) {
+    console.error('❌ short-link:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /c/:code → redirige vers l'URL originale
+app.get('/c/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const result = await pool.query(
+      `UPDATE short_links SET hits = hits + 1 WHERE code = $1 RETURNING url`, [code]
+    );
+    if (!result.rows[0]) return res.status(404).send('Lien introuvable');
+    res.redirect(301, result.rows[0].url);
+  } catch(e) {
+    res.status(500).send('Erreur serveur');
+  }
+});
+
 // ── POST envoyer un message vers la plateforme via Channex ────
 app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAny, async (req, res) => {
   try {
@@ -26195,8 +26308,18 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
 
     const { channex_booking_id, guest_name } = resaResult.rows[0];
 
-    // Envoyer via Channex
-    await sendBookingMessage(channex_booking_id, message);
+    // Booking.com bloque les URLs dans les messages via API
+    const hasUrl = /https?:\/\/\S+/i.test(message);
+    const convPlatform = (resaResult.rows[0].platform || '').toLowerCase();
+    const isBookingPlatform = convPlatform.includes('booking') || convPlatform === 'bdc';
+
+    if (hasUrl && isBookingPlatform) {
+      console.log(`ℹ️ [send-platform] Skip Channex — Booking.com bloque les URLs, message sauvé en DB`);
+      // On continue sans envoyer via Channex — le message sera quand même en DB
+    } else {
+      // Envoyer via Channex
+      await sendBookingMessage(channex_booking_id, message);
+    }
 
     // Sauvegarder en DB
     const msgResult = await pool.query(
