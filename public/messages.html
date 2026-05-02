@@ -908,22 +908,12 @@ html[data-theme-v3="1"] .app-container {
   .msgs-tab { padding: 12px 14px; font-size: 12px; }
   #panelOTA { height: calc(100vh - 180px); }
 }
-
-/* ── FIX MOBILE : templateModal boutons toujours visibles ── */
+</style>
+<style>
+/* Fix templateModal boutons cachés sous bottom bar sur mobile */
 @media (max-width: 768px) {
   #templateModal {
-    align-items: flex-end !important;
-  }
-  #templateModal > div {
-    /* Hauteur fixe = viewport - barres nav haut et bas */
-    height: calc(100vh - 120px) !important;
-    max-height: calc(100vh - 120px) !important;
-    border-radius: 20px 20px 0 0 !important;
-  }
-  /* S'assurer que le footer reste toujours visible */
-  #templateModal > div > div:last-child {
-    flex-shrink: 0 !important;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 </style>
@@ -1226,7 +1216,7 @@ function insertTplVar(variable) {
 }
 </script>
     <div id="templateModal" data-no-native="1" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;padding:0;">
-      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:580px;height:90%;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:580px;max-height:90%;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
         <div style="padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
           <h3 id="tplModalTitle" style="margin:0;font-size:16px;font-weight:700;color:#0D1117;font-family:'DM Sans',sans-serif;">Nouveau template</h3>
           <button onclick="closeTemplateModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
@@ -1329,7 +1319,7 @@ function insertTplVar(variable) {
 
         </div>
         <!-- Footer sticky — hors du scroll -->
-        <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;padding-bottom:max(14px, env(safe-area-inset-bottom));border-top:1px solid #f1f5f9;background:#fff;">
+        <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px 40px;border-top:1px solid #f1f5f9;background:#fff;">
           <button onclick="closeTemplateModal()" style="padding:10px 20px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Annuler</button>
           <button onclick="saveTemplate()" style="padding:10px 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Enregistrer</button>
         </div>
