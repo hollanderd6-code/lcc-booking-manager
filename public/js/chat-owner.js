@@ -419,13 +419,8 @@ function renderConversations() {
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px;">
             <h3 style="font-size:13.5px;font-weight:${isUnread ? '800' : '600'};color:${isUnread ? '#0D1117' : '#374151'};margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62%;font-family:'DM Sans',sans-serif;">${guestName}</h3>
             <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
-              ${(function() {
-                const ageMs = Date.now() - new Date(conv.created_at).getTime();
-                const openedIds = JSON.parse(localStorage.getItem('bh_opened_convs') || '[]');
-                const isNew = ageMs < 24 * 60 * 60 * 1000 && unreadCount === 0 && !openedIds.includes(conv.id);
-                return isNew ? `<span class="conv-new-badge" data-conv-id="${conv.id}" style="background:#1A7A5E;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:.04em;">NEW</span>` : '';
-              })()}
               <span style="font-size:11px;color:${isUnread ? '#1A7A5E' : '#B0BAC5'};font-weight:${isUnread ? '600' : '400'};white-space:nowrap;">${lastMessageTime}</span>
+              ${unreadCount > 0 ? `<span style="min-width:18px;height:18px;padding:0 5px;background:#1A7A5E;color:#fff;font-size:10px;font-weight:700;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;">${unreadCount}</span>` : ''}
             </div>
           </div>
 
