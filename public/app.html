@@ -5737,6 +5737,7 @@ try {
     date: new Date(),        // reference date
     bookings: [],
     properties: [],
+    initialLoad: true,       // scroll to today only on first render
   };
   window.__bhCalendarState = state;
   window.calendarState = state;
@@ -6238,7 +6239,7 @@ try {
       var inMonth = dayDate.getMonth()===month;
       var isToday = dstr2===today;
       var isWknd = dayDate.getDay()===0||dayDate.getDay()===6;
-      var hcell = div('width:'+colW+'px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;'
+      var hcell = div('width:'+colW+'px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;border-right:1px solid #F0EDE8;'
         +(isToday?'background:rgba(26,122,94,.08);':'')
         +(isWknd&&!isToday?'background:rgba(220,38,38,.03);':''));
       hcell.innerHTML='<span style="font-size:11px;font-weight:600;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.04em;">'+DAYS_MIN[dayDate.getDay()]+'</span>'
