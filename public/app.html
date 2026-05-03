@@ -6794,7 +6794,7 @@ function riskColor(level) {
         var ds = toDateStr(d);
         var isSel = ds === selStr;
         var isTod = ds === toDateStr(today);
-        selectorHtml += '<button onclick="selectDayViewDate('' + ds + '')" '
+        selectorHtml += '<button onclick="selectDayViewDate(\'' + ds + '\')" '
           + 'style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;'
           + 'padding:8px 12px;border-radius:14px;border:none;cursor:pointer;min-width:48px;'
           + 'background:' + (isSel ? '#1A7A5E' : isTod ? 'rgba(26,122,94,.12)' : 'white') + ';'
