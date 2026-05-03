@@ -2752,6 +2752,28 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   } catch(e) {}
 })();
 </script>
+
+<style id="bh-cal-v4">
+/* BH Calendar V4 */
+#bhCalRoot { font-family: 'DM Sans', 'Inter', sans-serif; }
+.bh-cal-header { flex-wrap: wrap; }
+.bh-view-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.bh-view-tabs::-webkit-scrollbar { display: none; }
+.bh-desktop-only { display: inline; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .bh-cal-header { padding: 0 10px !important; gap: 8px !important; }
+  .bh-desktop-only { display: none !important; }
+  .bh-view-tabs button span { font-size: 11px !important; }
+}
+
+/* Scroll sync */
+#bhCalRoot .bh-cal-body { min-height: 300px; }
+
+/* Pricing cells */
+.cell-price { pointer-events: none; user-select: none; }
+</style>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -5657,1663 +5679,876 @@ try {
 })();
 </script>
 <script>
-  // ============================================
-  // CALENDRIER MODERNE - Vue tableau par logement
-  // S\'alimente via window.renderModernCalendar(reservations, properties)
-  // ============================================
-  (function() {
-    'use strict';
+(function() {
+  'use strict';
 
-    var CONFIG = {
-      MONTHS: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
-      DAYS_SHORT: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
-      PLATFORMS: {
-        airbnb:  { icon: 'fa-airbnb' },
-        booking: { icon: 'fa-bed' },
-        expedia: { icon: 'fa-plane' },
-        vrbo:    { icon: 'fa-house-user' },
-        hotels:  { icon: 'fa-hotel' },
-        direct:  { icon: 'fa-user' }
-      }
-    };
-  var MS_PER_DAY = 24 * 60 * 60 * 1000;
+  // ─────────────────────────────────────────
+  // CONFIG
+  // ─────────────────────────────────────────
+  var MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var DAYS_SHORT = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  var DAYS_MIN   = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+  var MS = 86400000;
 
-  // ========================================
-  // SYSTÈME DE CALCUL DE RISQUE
-  // ========================================
-  function calculateBookingRisk(booking) {
-    var score = 0;
-    var tags = [];
-    var recommendations = [];
-    
-    // Calculer la durée du séjour
-    var start = new Date(booking.startDate);
-    var end = new Date(booking.endDate);
-    var nights = Math.round((end - start) / MS_PER_DAY);
-    
-    // Calculer le délai de réservation (si createdAt disponible)
-    var now = new Date();
-    var daysUntilArrival = Math.round((start - now) / MS_PER_DAY);
-    
-    // CRITÈRE 1: Caution non prise (CRITIQUE pour Booking)
-    var platform = (booking.platform || booking.source || '').toLowerCase();
-    var isBooking = platform.includes('booking');
-    var isAirbnb = platform.includes('airbnb');
-    
-    if (isBooking && !booking.hasDeposit) {
-      score += 50;
-      tags.push('🚫 Pas de caution');
-      recommendations.push('⚠️ URGENT : Demander une caution via le système');
-    }
-    
-    // CRITÈRE 2: Réservation last minute
-    if (daysUntilArrival >= 0) {
-      if (daysUntilArrival < 2) {
-        score += 40;
-        tags.push('⚡ Last minute (<48h)');
-        recommendations.push('Vérifier l\'identité du voyageur');
-      } else if (daysUntilArrival < 7) {
-        score += 10;
-        tags.push('⏰ Résa récente (<7j)');
-      }
-    }
-    
-    // CRITÈRE 3: Durée très courte
-    if (nights === 1) {
-      score += 30;
-      tags.push('🌙 1 nuit');
-      recommendations.push('Risque de fête : à surveiller');
-    } else if (nights === 2) {
-      score += 20;
-      tags.push('📅 2 nuits');
-    }
-    
-    // CRITÈRE 4: Weekend + courte durée
-    var dayOfWeek = start.getDay();
-    var isFriday = dayOfWeek === 5;
-    var isSaturday = dayOfWeek === 6;
-    if ((isFriday || isSaturday) && nights <= 2) {
-      score += 15;
-      tags.push('🎉 Weekend court');
-      recommendations.push('Risque fête : rappeler les règles de la maison');
-    }
-    
-    // CRITÈRE 5: Airbnb (pas de caution possible)
-    if (isAirbnb) {
-      score += 15;
-      tags.push('🏠 Airbnb (pas de caution)');
-      recommendations.push('Demander photo d\'identité par message');
-    }
-    
-    // CRITÈRE 6: Checklist non validée (si on a l\'info)
-    // Note: On pourrait enrichir avec l\'historique du logement
-    if (window.cleaningChecklists) {
-      var recentChecklists = window.cleaningChecklists.filter(function(c) {
-        return c.property_id === booking.propertyId && !c.is_validated;
-      });
-      if (recentChecklists.length > 0) {
-        score += 10;
-        tags.push('⚠️ Checklist précédente non validée');
-      }
-    }
-    
-    // BONUS: Réduire le risque pour les bons cas
-    if (booking.hasDeposit && booking.depositAmount > 0) {
-      score -= 20;
-      tags.push('✅ Caution OK');
-    }
-    
-    if (daysUntilArrival > 14) {
-      score -= 15;
-      tags.push('📆 Résa anticipée');
-    }
-    
-    if (nights > 7) {
-      score -= 10;
-      tags.push('🏖️ Long séjour');
-    }
-    
-    if (platform === 'direct') {
-      score -= 5;
-      tags.push('👤 Direct');
-    }
-    
-    // CRITÈRE NATIONALITÉ : voyageur étranger non francophone
-    var country = (booking.guest_country || '').toUpperCase();
-    var frenchSpeaking = ['FR','BE','CH','LU','CA','MC','SN','CI','MA','DZ','TN'];
-    if (country && !frenchSpeaking.includes(country)) {
-      score += 5;
-      tags.push('🌍 Voyageur étranger');
-      recommendations.push('Communiquer en anglais ou utiliser la traduction automatique');
-    }
-    // Occupation élevée = plus de risque de dégradation
-    var adults = booking.occupancy_adults || 1;
-    if (adults >= 4) {
-      score += 10;
-      tags.push('👥 Groupe (' + adults + ' pers.)');
-      recommendations.push('Groupe important : rappeler les règles de la maison');
-    } else if (adults >= 6) {
-      score += 20;
-      tags.push('👥 Grand groupe (' + adults + ' pers.)');
-      recommendations.push('Grand groupe : caution renforcée recommandée');
-    }
+  var PLT = {
+    airbnb:  { bg:'#FF5A5F', label:'Airbnb',       cls:'airbnb'  },
+    booking: { bg:'#003580', label:'Booking.com',   cls:'booking' },
+    bdc:     { bg:'#003580', label:'Booking.com',   cls:'booking' },
+    direct:  { bg:'#F97316', label:'Direct',        cls:'direct'  },
+    abritel: { bg:'#0096D6', label:'Abritel',       cls:'abritel' },
+    expedia: { bg:'#FFC72C', label:'Expedia',       cls:'expedia' },
+    vrbo:    { bg:'#1569C7', label:'Vrbo',          cls:'vrbo'    },
+    gites:   { bg:'#2E7D32', label:'Gîtes',         cls:'gites'   },
+  };
 
-    // Limiter le score entre 0 et 100
-    score = Math.max(0, Math.min(100, score));
-    
-    // Déterminer le niveau et le label
-    var level, label;
-    if (score >= 71) {
-      level = 'critical';
-      label = 'CRITIQUE';
-    } else if (score >= 51) {
-      level = 'red';
-      label = 'ÉLEVÉ';
-    } else if (score >= 31) {
-      level = 'orange';
-      label = 'MOYEN';
-    } else {
-      level = 'green';
-      label = 'FAIBLE';
-    }
-    
-    // Créer le résumé
-    var summary = nights + ' nuit' + (nights > 1 ? 's' : '') + ' • ';
-    if (isBooking) summary += 'Booking';
-    else if (isAirbnb) summary += 'Airbnb';
-    else summary += 'Direct';
-    
-    if (booking.hasDeposit) summary += ' • Caution OK';
-    if (booking.guest_country) summary += ' • ' + (booking.guest_country === 'FR' ? '🇫🇷' : '🌍') + ' ' + booking.guest_country;
-    
-    return {
-      score: score,
-      level: level,
-      label: label,
-      summary: summary,
-      tags: tags,
-      recommendations: recommendations
-    };
+  function pltInfo(r) {
+    var k = ((r.platform||r.source||'direct').toLowerCase().replace(/\.com$/,'').replace(/booking\.com/,'booking'));
+    return PLT[k] || { bg:'#6B7280', label:(k||'Direct'), cls:'direct' };
   }
-  
 
-    function getCountryFlag(code) {
-      if (!code) return '';
-      const flags = {
-        FR:'🇫🇷',GB:'🇬🇧',DE:'🇩🇪',ES:'🇪🇸',IT:'🇮🇹',BE:'🇧🇪',CH:'🇨🇭',
-        NL:'🇳🇱',PT:'🇵🇹',US:'🇺🇸',CA:'🇨🇦',MA:'🇲🇦',DZ:'🇩🇿',TN:'🇹🇳',
-        AU:'🇦🇺',JP:'🇯🇵',CN:'🇨🇳',BR:'🇧🇷',RU:'🇷🇺',AE:'🇦🇪',
-        LU:'🇱🇺',IE:'🇮🇪',SE:'🇸🇪',NO:'🇳🇴',DK:'🇩🇰',PL:'🇵🇱',AT:'🇦🇹',
-        GR:'🇬🇷',TR:'🇹🇷',SG:'🇸🇬',MX:'🇲🇽',IN:'🇮🇳',ZA:'🇿🇦'
-      };
-      return flags[code.toUpperCase()] || code;
+  function ds(d) {
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function dFromStr(s) { return new Date(s+'T12:00:00'); }
+  function nights(r) {
+    var s = r.startDate||r.start||r.checkIn||'';
+    var e = r.endDate||r.end||r.checkOut||'';
+    if (!s||!e) return 0;
+    return Math.round((new Date(e.split('T')[0]+'T12:00:00')-new Date(s.split('T')[0]+'T12:00:00'))/MS);
+  }
+  function guests(r) { return parseInt(r.occupancy_adults||r.adults||r.occupancyAdults||1); }
+  function guestName(r) {
+    return window.cleanGuestName ? window.cleanGuestName(r, r.platform||r.source) : (r.guestName||r.guest_display_name||r.customerName||'Voyageur');
+  }
+  function openBooking(r) {
+    if (!r) return;
+    window.currentBookingData = r;
+    window.currentBooking = r;
+    var fake = document.createElement('div');
+    fake.dataset.bookingId = String(r.id||'');
+    if (typeof window.fixModalContent === 'function') window.fixModalContent(fake);
+  }
+
+  // ─────────────────────────────────────────
+  // STATE
+  // ─────────────────────────────────────────
+  var state = {
+    view: 'month',           // day | week | month | year
+    date: new Date(),        // reference date
+    bookings: [],
+    properties: [],
+  };
+  window.__bhCalendarState = state;
+  window.calendarState = state;
+
+  // ─────────────────────────────────────────
+  // DOM HELPERS
+  // ─────────────────────────────────────────
+  function el(tag, css, html) {
+    var e = document.createElement(tag);
+    if (css) e.style.cssText = css;
+    if (html) e.innerHTML = html;
+    return e;
+  }
+  function div(css, html) { return el('div', css, html); }
+
+  // Platform badge HTML
+  function pltBadge(r, size) {
+    size = size || 20;
+    var p = pltInfo(r);
+    var radius = p.cls === 'booking' ? '4px' : '50%';
+    var text = p.cls === 'booking' ? 'B' : (p.cls === 'airbnb' ? '✦' : p.label[0]);
+    return '<div style="width:'+size+'px;height:'+size+'px;background:'+p.bg+';border-radius:'+radius+';display:flex;align-items:center;justify-content:center;font-size:'+(size*0.55)+'px;font-weight:800;color:white;flex-shrink:0;">'+text+'</div>';
+  }
+
+  // ─────────────────────────────────────────
+  // WRAPPER: the calendar lives here
+  // ─────────────────────────────────────────
+  var wrap = null;
+
+  function getWrap() {
+    if (wrap && document.body.contains(wrap)) return wrap;
+    wrap = document.getElementById('bhCalRoot');
+    if (!wrap) {
+      // Replace old calendar-wrapper
+      var old = document.querySelector('.calendar-wrapper');
+      if (old) {
+        wrap = div('');
+        wrap.id = 'bhCalRoot';
+        old.parentNode.insertBefore(wrap, old);
+        old.style.display = 'none';
+      } else {
+        wrap = div('');
+        wrap.id = 'bhCalRoot';
+        document.body.appendChild(wrap);
+      }
     }
-    function getCountryLabel(code) {
-      if (!code) return '';
-      const names = {
-        FR:'France',GB:'Royaume-Uni',DE:'Allemagne',ES:'Espagne',IT:'Italie',
-        BE:'Belgique',CH:'Suisse',NL:'Pays-Bas',PT:'Portugal',US:'États-Unis',
-        CA:'Canada',MA:'Maroc',DZ:'Algérie',TN:'Tunisie',AU:'Australie',
-        JP:'Japon',CN:'Chine',BR:'Brésil',RU:'Russie',AE:'Émirats arabes unis',
-      };
-      return names[code.toUpperCase()] || code;
-    }
-  // Rendre la fonction accessible globalement
-  window.calculateBookingRisk = calculateBookingRisk;
-  // ========================================
+    return wrap;
+  }
 
-    var state = {
-      currentView: 'month',
-      currentDate: new Date(),
-      properties: [],
-      bookings: [],
-      selectedPropertyId: null,
-      searchQuery: ''
-    };
+  // ─────────────────────────────────────────
+  // HEADER (always visible)
+  // ─────────────────────────────────────────
+  function renderHeader() {
+    var w = getWrap();
+    var existing = w.querySelector('.bh-cal-header');
+    if (existing) existing.remove();
 
-    document.addEventListener('DOMContentLoaded', function () {
-      if (!document.getElementById('calendarGrid')) return;
+    var hdr = div('background:#0D1117;border-radius:16px 16px 0 0;padding:0 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0;min-height:60px;');
+    hdr.className = 'bh-cal-header';
 
-      attachCalendarEventListeners();
-      updatePeriodDisplay();
-      renderCalendar(); // affichage vide au début
-      // Appliquer les préférences sauvegardées
-      (function() {
-        var initPrefs = {};
-        try { initPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-        var sEl = document.getElementById('bhCalPrefsStyle');
-        if (!sEl) { sEl = document.createElement('style'); sEl.id = 'bhCalPrefsStyle'; document.head.appendChild(sEl); }
-        if (initPrefs.showPrices === false) sEl.textContent = '.cell-price { display: none !important; }';
-        if (initPrefs.defaultView) {
-          var viewMap2 = { jour:'day', semaine:'week', mois:'month', année:'year' };
-          var v2 = viewMap2[initPrefs.defaultView] || initPrefs.defaultView;
-          if (['day','week','month','year'].includes(v2)) {
-            state.currentView = v2;
-            var tabs = document.querySelectorAll('.view-tab');
-            for (var ti=0;ti<tabs.length;ti++) {
-              var isA = tabs[ti].getAttribute('data-view') === v2;
-              tabs[ti].classList.toggle('active', isA);
-              tabs[ti].style.background = isA ? '#1A7A5E' : 'transparent';
-              tabs[ti].style.color = isA ? 'white' : 'rgba(255,255,255,.6)';
-              tabs[ti].style.fontWeight = isA ? '600' : '500';
-            }
-            renderCalendar();
-          }
-        }
-      })();
+    // Left: logo + title
+    var left = div('display:flex;align-items:center;gap:10px;padding:12px 0;');
+    left.innerHTML = '<div style="background:#1A7A5E;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-calendar-alt" style="font-size:14px;color:white;"></i></div>'
+      + '<div><div style="font-size:15px;font-weight:600;color:white;line-height:1.2;">Calendrier des <em style="color:#4ADE80;font-style:italic;">réservations</em></div>'
+      + '<div id="bhCalSubtitle" style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">Vue mensuelle</div></div>';
+
+    // Center: tabs
+    var tabs = div('display:flex;background:rgba(255,255,255,.07);border-radius:999px;padding:3px;gap:2px;border:1px solid rgba(255,255,255,.1);');
+    tabs.className = 'bh-view-tabs';
+    [['day','Jour','fa-calendar-day'],['week','Sem.','fa-calendar-week'],['month','Mois','fa-calendar-alt'],['year','Année','fa-calendar']].forEach(function(v) {
+      var btn = el('button','padding:5px 11px;border-radius:999px;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:4px;transition:all .15s;font-family:inherit;white-space:nowrap;');
+      btn.dataset.view = v[0];
+      btn.innerHTML = '<i class="fas '+v[2]+'" style="font-size:10px;"></i><span>'+v[1]+'</span>';
+      btn.onclick = function() { switchView(v[0]); };
+      tabs.appendChild(btn);
     });
 
-    // ============================================
-    // API PUBLIQUE - appelée par app.js
-    // ============================================
-    window.renderModernCalendar = function(reservations, properties) {
-      try {
-        reservations = Array.isArray(reservations) ? reservations : [];
-        properties = Array.isArray(properties) ? properties : [];
+    // Right: actions
+    var right = div('display:flex;align-items:center;gap:6px;padding:12px 0;');
+    right.innerHTML = '<button id="bhCalSearchBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Rechercher"><i class="fas fa-search" style="font-size:13px;"></i></button>'
+      + '<button id="bhCalSettingsBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Paramètres"><i class="fas fa-sliders-h" style="font-size:13px;"></i></button>'
+      + '<button onclick="openBatchEditModal && openBatchEditModal()" style="display:flex;align-items:center;gap:5px;padding:0 12px;height:34px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:9px;color:white;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-layer-group" style="font-size:12px;"></i><span class="bh-desktop-only">Édition groupée</span></button>';
 
-        // Construire la liste des propriétés
-        var props = [];
-        if (properties.length) {
-          for (var i = 0; i < properties.length; i++) {
-            var p = properties[i] || {};
-            var pid = p.id != null ? String(p.id) : String(i);
-            var name = p.internalName || p.internal_name || p.name || ('Logement ' + (i + 1));
-            var color = p.color || '#10B981';
-            props.push({
-              id: pid,
-              name: name,
-              color: color,
-              basePrice:    p.basePrice    || p.base_price    || p.defaultPrice || p.default_price || null,
-              weekendPrice: p.weekendPrice || p.weekend_price || null,
-              raw: p
-            });
-          }
-        } else {
-          // déduction depuis les réservations
-          var map = {};
-          for (var j = 0; j < reservations.length; j++) {
-            var r = reservations[j];
-            if (!r || !r.property || r.property.id == null) continue;
-            var rid = String(r.property.id);
-            if (!map[rid]) {
-              map[rid] = {
-                id: rid,
-                name: r.property.internalName || r.property.internal_name || r.property.name || 'Logement',
-                color: r.property.color || '#10B981',
-                raw: r.property
-              };
-            }
-          }
-          for (var key in map) {
-            if (Object.prototype.hasOwnProperty.call(map, key)) {
-              props.push(map[key]);
-            }
-          }
-        }
-        state.properties = props;
+    hdr.appendChild(left);
+    hdr.appendChild(tabs);
+    hdr.appendChild(right);
+    w.insertBefore(hdr, w.firstChild);
 
-        // Réservations normalisées
-        var bookings = [];
-        for (var k = 0; k < reservations.length; k++) {
-          var r2 = reservations[k];
-          if (!r2) continue;
-          var bpropId = r2.property && r2.property.id != null
-            ? String(r2.property.id)
-            : (r2.propertyId != null ? String(r2.propertyId) : null);
-          var start = r2.start || r2.checkIn || r2.startDate;
-          var end = r2.end || r2.checkOut || r2.endDate;
-          if (!start || !end) continue;
-          bookings.push({
-            id: String(r2.id || k),
-            uid: r2.uid || null,
-            reservationKey: r2.reservationKey || null,
-            propertyId: bpropId,
-            propertyName: r2.propertyName || (r2.property && (r2.property.internalName || r2.property.internal_name || r2.property.name)) || '',
-            startDate: start,
-            endDate: end,
-            guestName: r2.guestName || r2.customerName || '',
-            platform: normalizePlatform(r2.source || r2.platform || 'direct', r2.ota_name || r2.otaName),
-            source: r2.source || r2.platform || 'direct',
-            ota_name: r2.ota_name || r2.otaName || null,
-            price: r2.price || r2.amount || r2.totalPrice || r2.total_price || null,
-            createdAt: r2.createdAt || r2.created_at || null,
-            hasDeposit: r2.hasDeposit || r2.has_deposit || false,
-            depositAmount: r2.depositAmount || r2.deposit_amount || 0,
-            // ✅ Champs enrichis depuis les conversations (onboarding)
-            guest_first_name: r2.guest_first_name || null,
-            guest_last_name: r2.guest_last_name || null,
-            guest_phone: r2.guest_phone || null,
-            guest_display_name: r2.guest_display_name || null,
-            guest_initial: r2.guest_initial || null,
-            onboarding_completed: r2.onboarding_completed || false,
-            type: r2.type || null,
-            // Infos voyageur enrichies (Channex)
-            guest_email:        r2.guest_email        || null,
-            guest_country:      r2.guest_country      || null,
-            guest_language:     r2.guest_language     || null,
-            guest_city:         r2.guest_city         || null,
-            occupancy_adults:   r2.occupancy_adults   || null,
-            occupancy_children: r2.occupancy_children || 0,
-            // Montants Channex
-            amount_total:    r2.amount_total    || null,
-            amount_rooms:    r2.amount_rooms    || null,
-            amount_taxes:    r2.amount_taxes    || null,
-            amount_cleaning: r2.amount_cleaning || null,
-            ota_commission:  r2.ota_commission  || null,
-            host_payout:     r2.host_payout     || null,
-            days_breakdown:  r2.days_breakdown  || null,
-            currency:        r2.currency        || 'EUR'
-          });
-        }
-        
-        console.log('🎲 Calcul de risque pour', bookings.length, 'réservations...');
-        
-        // Calculer le risque pour chaque réservation
-        bookings = bookings.map(function(booking) {
-          var risk = calculateBookingRisk(booking);
-          booking.riskScore = risk.score;
-          booking.riskLevel = risk.level;
-          booking.riskLabel = risk.label;
-          booking.riskSummary = risk.summary;
-          booking.riskTags = risk.tags;
-          booking.riskRecommendations = risk.recommendations;
-          return booking;
-        });
-        
-        console.log('✅ Risques calculés:', bookings.map(b => ({ 
-          name: b.guestName, 
-          score: b.riskScore, 
-          level: b.riskLevel,
-          tags: b.riskTags 
-        })));
-        
-        state.bookings = bookings;
-        window.__bhCalendarState = state; // ✅ Exposer pour le KPI risques
-        
-        // Rendre state.bookings accessible globalement pour findReservationForBlock
-        window.calendarState = state;
+    updateTabStyles();
 
-        console.info('✅ Calendrier moderne: ' + state.properties.length +
-                     ' logements / ' + state.bookings.length + ' réservations');
+    // Settings btn
+    var sBtn = w.querySelector('#bhCalSettingsBtn');
+    if (sBtn) sBtn.onclick = openSettingsPanel;
+    // Search btn
+    var srBtn = w.querySelector('#bhCalSearchBtn');
+    if (srBtn) srBtn.onclick = toggleSearchPanel;
+  }
 
-        // Mettre à jour le sous-titre avec le nombre de logements
-        var sub = document.getElementById('calendarSubtitle');
-        if (sub) sub.textContent = state.properties.length + ' logement' + (state.properties.length > 1 ? 's' : '') + ' · Vue mensuelle';
+  function updateTabStyles() {
+    var w = getWrap();
+    w.querySelectorAll('.bh-view-tabs button').forEach(function(btn) {
+      var active = btn.dataset.view === state.view;
+      btn.style.background = active ? '#1A7A5E' : 'transparent';
+      btn.style.color = active ? 'white' : 'rgba(255,255,255,.6)';
+      btn.style.fontWeight = active ? '600' : '500';
+    });
+    var sub = document.getElementById('bhCalSubtitle');
+    if (sub) sub.textContent = {day:'Vue journalière',week:'Vue hebdomadaire',month:'Vue mensuelle',year:'Vue annuelle'}[state.view]||'';
+  }
 
-        renderPropertyList();
-        renderCalendar();
+  // ─────────────────────────────────────────
+  // NAV BAR (period nav)
+  // ─────────────────────────────────────────
+  function renderNav() {
+    var w = getWrap();
+    var existing = w.querySelector('.bh-cal-nav');
+    if (existing) existing.remove();
+    if (state.view === 'day') return; // day view has its own date selector
 
-        // Charger et appliquer les prix personnalisés depuis l'API
-        loadPricingOverrides(state.properties);
-        // Charger et appliquer les règles de tarification
-        if (typeof window.loadPricingRules === 'function') {
-          window.loadPricingRules(state.properties);
-        }
-        
-                
-        // Mettre à jour le KPI des risques APRÈS que le DOM soit complètement chargé
-        console.log('⏰ Programmation du setTimeout pour updateTopRisksKpi dans 500ms...');
-        setTimeout(() => {
-          console.log('⏰ setTimeout déclenché! Type de window.updateTopRisksKpi:', typeof window.updateTopRisksKpi);
-          console.log('📦 state.bookings disponible:', state.bookings ? state.bookings.length : 'AUCUN');
-          if (typeof window.updateTopRisksKpi === 'function') {
-            window.updateTopRisksKpi(state.bookings);
-          } else {
-            console.error('❌ window.updateTopRisksKpi n\'est PAS une fonction!');
-          }
-        }, 500);
-      } catch (e) {
-        console.error('Erreur renderModernCalendar', e);
-      }
-    };
+    var nav = div('display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F5F2EC;border-bottom:1px solid rgba(0,0,0,.06);');
+    nav.className = 'bh-cal-nav';
 
-    // ============================================
-    // Navigation & vues
-    // ============================================
-    function attachCalendarEventListeners() {
-      // Onglets Jour / Semaine / Mois / Année
-      var viewTabs = document.querySelectorAll('.view-tab');
+    var prev = el('button','width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
+    prev.innerHTML = '<i class="fas fa-chevron-left" style="font-size:11px;"></i>';
+    prev.onclick = function() { navigate(-1); };
 
-      for (var i = 0; i < viewTabs.length; i++) {
-        (function(tab) {
-          tab.addEventListener('click', function() {
-            var view = tab.getAttribute('data-view') || 'month';
-            state.currentView = view;
+    var label = div('flex:1;text-align:center;font-size:15px;font-weight:700;color:#1A1F2E;');
+    label.id = 'bhCalPeriodLabel';
+    label.textContent = getPeriodLabel();
 
-            for (var j = 0; j < viewTabs.length; j++) {
-              var t = viewTabs[j];
-              var isActive = t.getAttribute('data-view') === view;
-              t.classList.toggle('active', isActive);
-              // Mettre à jour les styles inline des tabs du nouveau header
-              if (t.style.background !== undefined) {
-                t.style.background = isActive ? '#1A7A5E' : 'transparent';
-                t.style.color = isActive ? 'white' : 'rgba(255,255,255,.6)';
-                t.style.fontWeight = isActive ? '600' : '500';
-              }
-            }
+    var next = el('button','width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
+    next.innerHTML = '<i class="fas fa-chevron-right" style="font-size:11px;"></i>';
+    next.onclick = function() { navigate(1); };
 
-            // Mettre à jour le sous-titre
-            var subtitles = {day:'Vue journalière', week:'Vue hebdomadaire', month:'Vue mensuelle', year:'Vue annuelle'};
-            var sub = document.getElementById('calendarSubtitle');
-            if (sub) sub.textContent = subtitles[view] || '';
+    nav.appendChild(prev);
+    nav.appendChild(label);
+    nav.appendChild(next);
 
-            updatePeriodDisplay();
-            renderCalendar();
-          });
-        })(viewTabs[i]);
-      }
-
-      // Flèches précédent / suivant
-      var prev = document.getElementById('prevPeriod');
-      var next = document.getElementById('nextPeriod');
-
-      if (prev) {
-        prev.addEventListener('click', function() { navigate(-1); });
-      }
-      if (next) {
-        next.addEventListener('click', function() { navigate(1); });
-      }
-
-      // 🔍 Bouton recherche
-      var searchBtn = document.getElementById('calendarSearchBtn');
-      if (searchBtn) {
-        searchBtn.addEventListener('click', function () {
-          toggleSearchPanel();
-        });
-      }
-
-      // ⚙️ Bouton paramètres : panel réel
-      var settingsBtn = document.getElementById('calendarSettingsBtn');
-      if (settingsBtn) {
-        settingsBtn.addEventListener('click', function () {
-          openCalendarSettingsPanel();
-        });
-      }
+    // Insert after header
+    var hdr = w.querySelector('.bh-cal-header');
+    if (hdr && hdr.nextSibling) {
+      w.insertBefore(nav, hdr.nextSibling);
+    } else {
+      w.appendChild(nav);
     }
+  }
 
-    // ── Panel Paramètres Calendrier ──
-    function openCalendarSettingsPanel() {
-      if (document.getElementById('calSettingsPanel')) {
-        document.getElementById('calSettingsPanel').remove();
-        var ov = document.getElementById('calSettingsOverlay');
-        if (ov) ov.remove();
-        return;
-      }
-
-      // Charger les prefs
-      var prefs = {};
-      try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-      var showPrices = prefs.showPrices !== false;
-      var defaultView = prefs.defaultView || 'month';
-      var platforms = prefs.platforms || { airbnb:true, booking:true, direct:true, abritel:true };
-
-      // Overlay
-      var overlay = document.createElement('div');
-      overlay.id = 'calSettingsOverlay';
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;';
-      overlay.onclick = function() { bhCloseCalSettings(); };
-      document.body.appendChild(overlay);
-
-      // Panel
-      var panel = document.createElement('div');
-      panel.id = 'calSettingsPanel';
-      panel.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:320px;max-width:95vw;background:white;z-index:9999;box-shadow:-4px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column;font-family:inherit;animation:slideInRight .2s ease;';
-      document.body.appendChild(panel);
-
-      // Header
-      var hdr = document.createElement('div');
-      hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid #F1F5F9;';
-      hdr.innerHTML = '<div style="font-size:15px;font-weight:700;color:#111827;">Paramètres du calendrier</div>';
-      var closeBtn = document.createElement('button');
-      closeBtn.textContent = '✕';
-      closeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 8px;color:#6B7280;font-size:18px;';
-      closeBtn.onclick = function() { bhCloseCalSettings(); };
-      hdr.appendChild(closeBtn);
-      panel.appendChild(hdr);
-
-      // Body
-      var body = document.createElement('div');
-      body.style.cssText = 'flex:1;overflow-y:auto;padding:16px 18px;';
-      panel.appendChild(body);
-
-      // ── Section Affichage ──
-      var sec1 = document.createElement('div');
-      sec1.style.marginBottom = '20px';
-      sec1.innerHTML = '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Affichage</div>';
-
-      var row1 = document.createElement('label');
-      row1.style.cssText = 'display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 12px;background:#F9FAFB;border-radius:10px;';
-      row1.innerHTML = '<span style="font-size:13px;font-weight:500;color:#374151;">Afficher les prix dans les cellules</span>';
-
-      var tog1 = document.createElement('div');
-      tog1.style.cssText = 'width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;';
-      tog1.style.background = showPrices ? '#1A7A5E' : '#D1D5DB';
-      var tog1knob = document.createElement('div');
-      tog1knob.style.cssText = 'position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);';
-      tog1knob.style.left = showPrices ? '20px' : '3px';
-      tog1.appendChild(tog1knob);
-      tog1.onclick = function() {
-        var p = {};
-        try { p = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-        if (p.showPrices === undefined) p.showPrices = true;
-        p.showPrices = !p.showPrices;
-        localStorage.setItem('bhCalPrefs', JSON.stringify(p));
-        tog1.style.background = p.showPrices ? '#1A7A5E' : '#D1D5DB';
-        tog1knob.style.left = p.showPrices ? '20px' : '3px';
-      };
-      row1.appendChild(tog1);
-      sec1.appendChild(row1);
-      body.appendChild(sec1);
-
-      // ── Section Vue par défaut ──
-      var sec2 = document.createElement('div');
-      sec2.style.marginBottom = '20px';
-      sec2.innerHTML = '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Vue par défaut</div>';
-      var grid2 = document.createElement('div');
-      grid2.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
-      ['jour','semaine','mois','année'].forEach(function(v) {
-        var btn = document.createElement('button');
-        var active = defaultView === v;
-        btn.textContent = v;
-        btn.id = 'bhDefView_' + v;
-        btn.style.cssText = 'padding:8px;border-radius:8px;font-size:12px;cursor:pointer;text-transform:capitalize;border:2px solid ' + (active?'#1A7A5E':'#E5E7EB') + ';background:' + (active?'rgba(26,122,94,.08)':'white') + ';color:' + (active?'#1A7A5E':'#374151') + ';font-weight:' + (active?'700':'500') + ';';
-        btn.onclick = function() { bhSetDefaultView(v); };
-        grid2.appendChild(btn);
-      });
-      sec2.appendChild(grid2);
-      body.appendChild(sec2);
-
-      // ── Section Plateformes ──
-      var sec3 = document.createElement('div');
-      sec3.style.marginBottom = '20px';
-      sec3.innerHTML = '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Plateformes visibles</div>';
-      [{id:'airbnb',label:'Airbnb',color:'#FF5A5F'},{id:'booking',label:'Booking.com',color:'#003580'},{id:'direct',label:'Direct',color:'#1A7A5E'},{id:'abritel',label:'Abritel',color:'#F97316'}].forEach(function(p) {
-        var on = platforms[p.id] !== false;
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#F9FAFB;border-radius:10px;margin-bottom:6px;cursor:pointer;';
-        var left = document.createElement('div');
-        left.style.cssText = 'display:flex;align-items:center;gap:8px;';
-        left.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:' + p.color + ';flex-shrink:0;"></div><span style="font-size:13px;font-weight:500;color:#374151;">' + p.label + '</span>';
-        var tog = document.createElement('div');
-        tog.style.cssText = 'width:40px;height:22px;border-radius:11px;position:relative;flex-shrink:0;transition:background .2s;';
-        tog.style.background = on ? '#1A7A5E' : '#D1D5DB';
-        var knob = document.createElement('div');
-        knob.style.cssText = 'position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);';
-        knob.style.left = on ? '20px' : '3px';
-        tog.appendChild(knob);
-        row.appendChild(left);
-        row.appendChild(tog);
-        row.onclick = function() {
-          var pr = {};
-          try { pr = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-          if (!pr.platforms) pr.platforms = {airbnb:true,booking:true,direct:true,abritel:true};
-          if (pr.platforms[p.id] === undefined) pr.platforms[p.id] = true;
-          pr.platforms[p.id] = !pr.platforms[p.id];
-          localStorage.setItem('bhCalPrefs', JSON.stringify(pr));
-          var nowOn = pr.platforms[p.id];
-          tog.style.background = nowOn ? '#1A7A5E' : '#D1D5DB';
-          knob.style.left = nowOn ? '20px' : '3px';
-        };
-        sec3.appendChild(row);
-      });
-      body.appendChild(sec3);
-
-      // Footer
-      var footer = document.createElement('div');
-      footer.style.cssText = 'padding:14px 18px;border-top:1px solid #F1F5F9;';
-      var applyBtn = document.createElement('button');
-      applyBtn.textContent = 'Appliquer';
-      applyBtn.style.cssText = 'width:100%;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;';
-      applyBtn.onclick = function() { bhApplyCalPrefs(); };
-      footer.appendChild(applyBtn);
-      panel.appendChild(footer);
+  function getPeriodLabel() {
+    var d = state.date;
+    if (state.view === 'month') return MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+    if (state.view === 'year') return String(d.getFullYear());
+    if (state.view === 'week') {
+      var mon = weekStart(d);
+      var sun = new Date(mon); sun.setDate(sun.getDate()+6);
+      return mon.getDate()+' '+MONTHS[mon.getMonth()].slice(0,3)+' – '+sun.getDate()+' '+MONTHS[sun.getMonth()].slice(0,3)+' '+sun.getFullYear();
     }
+    return '';
+  }
 
-    window.bhCloseCalSettings = function() {
-      var p = document.getElementById('calSettingsPanel');
-      var o = document.getElementById('calSettingsOverlay');
-      if (p) p.remove();
-      if (o) o.remove();
-    };
+  function weekStart(d) {
+    var day = d.getDay();
+    var diff = day === 0 ? -6 : 1 - day;
+    var mon = new Date(d); mon.setDate(d.getDate()+diff); return mon;
+  }
 
-    window.bhSetDefaultView = function(v) {
-      var prefs = {};
-      try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-      prefs.defaultView = v;
-      localStorage.setItem('bhCalPrefs', JSON.stringify(prefs));
-      ['jour','semaine','mois','année'].forEach(function(view) {
-        var btn = document.getElementById('bhDefView_'+view);
-        if (!btn) return;
-        var active = view === v;
-        btn.style.borderColor = active ? '#1A7A5E' : '#E5E7EB';
-        btn.style.background = active ? 'rgba(26,122,94,.08)' : 'white';
-        btn.style.color = active ? '#1A7A5E' : '#374151';
-        btn.style.fontWeight = active ? '700' : '500';
-      });
-    };
+  function navigate(dir) {
+    var d = state.date;
+    if (state.view === 'month') d.setMonth(d.getMonth()+dir);
+    else if (state.view === 'week') d.setDate(d.getDate()+dir*7);
+    else if (state.view === 'year') d.setFullYear(d.getFullYear()+dir);
+    else if (state.view === 'day') { d.setDate(d.getDate()+dir); }
+    render();
+  }
 
-    window.bhApplyCalPrefs = function() {
-      bhCloseCalSettings();
-      // Appliquer showPrices
-      var prefs2 = {};
-      try { prefs2 = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-      var styleEl = document.getElementById('bhCalPrefsStyle');
-      if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'bhCalPrefsStyle'; document.head.appendChild(styleEl); }
-      if (prefs2.showPrices === false) {
-        styleEl.textContent = '.cell-price { display: none !important; }';
-      } else {
-        styleEl.textContent = '';
-      }
-      // Appliquer vue par défaut (ne change pas la vue actuelle, juste mémorisé)
-      renderCalendar();
-      if (typeof showToast === 'function') showToast('Paramètres appliqués ✓', 'success');
-    };
+  // ─────────────────────────────────────────
+  // SWITCH VIEW
+  // ─────────────────────────────────────────
+  function switchView(v) {
+    state.view = v;
+    render();
+  }
 
-    // Barre de recherche au-dessus du calendrier
-    function toggleSearchPanel() {
-      var panel = document.getElementById('calendarSearchPanel');
+  // ─────────────────────────────────────────
+  // MAIN RENDER
+  // ─────────────────────────────────────────
+  function render() {
+    var w = getWrap();
+    // Remove body
+    var body = w.querySelector('.bh-cal-body');
+    if (body) body.remove();
+    // Remove nav
+    var nav = w.querySelector('.bh-cal-nav');
+    if (nav) nav.remove();
+    // Remove search panel
+    var sp = w.querySelector('.bh-search-panel');
+    if (sp) sp.remove();
 
-      // Création la première fois
-      if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'calendarSearchPanel';
-        panel.className = 'calendar-search-panel';
+    updateTabStyles();
+    renderNav();
 
-        panel.innerHTML =
-          '<i class="fas fa-search"></i>' +
-          '<input id="calendarSearchInput" type="text" ' +
-          'placeholder="Rechercher un voyageur ou un logement..." />';
+    var body = div('');
+    body.className = 'bh-cal-body';
 
-        var nav = document.querySelector('.period-navigation');
-        if (nav && nav.parentNode) {
-          nav.parentNode.insertBefore(panel, nav.nextSibling);
-        } else {
-          var wrap = document.querySelector('.calendar-wrapper');
-          if (wrap) wrap.insertBefore(panel, wrap.firstChild);
-        }
+    if (state.view === 'day')   renderDay(body);
+    else if (state.view === 'week')  renderWeek(body);
+    else if (state.view === 'month') renderMonth(body);
+    else if (state.view === 'year')  renderYear(body);
 
-        var input = document.getElementById('calendarSearchInput');
-        if (input) {
-          input.addEventListener('input', function (e) {
-            state.searchQuery = (e.target.value || '').trim().toLowerCase();
-            renderCalendar();
-          });
-        }
-      }
+    w.appendChild(body);
 
-      panel.classList.toggle('hidden');
+    // Scroll into view on mobile
+    setTimeout(function() {
+      var w2 = getWrap();
+      if (w2) w2.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 60);
 
-      if (panel.classList.contains('hidden')) {
-        // On ferme : on réinitialise la recherche
-        state.searchQuery = '';
-        var inputEl = document.getElementById('calendarSearchInput');
-        if (inputEl) inputEl.value = '';
-        renderCalendar();
-      } else {
-        var inputFocus = document.getElementById('calendarSearchInput');
-        if (inputFocus) inputFocus.focus();
-      }
-    }
-
-    function navigate(direction) {
-      var dir = direction < 0 ? -1 : 1;
-      var d = state.currentDate;
-
-      if (state.currentView === 'day') {
-        d.setDate(d.getDate() + dir);
-      } else if (state.currentView === 'week') {
-        d.setDate(d.getDate() + dir * 7);
-      } else if (state.currentView === 'month') {
-        d.setMonth(d.getMonth() + dir);
-      } else if (state.currentView === 'year') {
-        d.setFullYear(d.getFullYear() + dir);
-      } else {
-        d.setMonth(d.getMonth() + dir);
-      }
-
-      updatePeriodDisplay();
-      renderCalendar();
-      // Réappliquer les overrides sur les nouvelles cellules (depuis le cache mémoire)
-      applyPricingOverridesFromCache();
-    }
-
-    function updatePeriodDisplay() {
-      var monthEl = document.getElementById('currentMonth');
-      var yearEl = document.getElementById('currentYear');
-
-      if (!monthEl || !yearEl) return;
-
-      var year = state.currentDate.getFullYear();
-
-      if (state.currentView === 'year') {
-        monthEl.textContent = 'Année';
-      } else {
-        var monthName = CONFIG.MONTHS[state.currentDate.getMonth()];
-        monthEl.textContent = monthName;
-      }
-
-      yearEl.textContent = String(year);
-    }
-
-        // On force toujours une vue "mois complet"
-    function getCurrentRange() {
-      var base = new Date(state.currentDate.getTime());
-      var start, end;
-
-      // 1. VUE JOUR
-      if (state.currentView === 'day') {
-        start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-        end = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-      } 
-      // 2. VUE SEMAINE (Commence le Lundi)
-      else if (state.currentView === 'week') {
-        var day = base.getDay(); // 0 (Dim) à 6 (Sam)
-        // Calcul du Lundi de la semaine courante
-        // Si on est dimanche (0), on recule de 6 jours. Sinon on recule de (day - 1).
-        var diff = base.getDate() - day + (day === 0 ? -6 : 1);
-        
-        start = new Date(base.setDate(diff));
-        end = new Date(start);
-        end.setDate(start.getDate() + 6); // Fin le dimanche (+6 jours)
-      } 
-      // 3. VUE MOIS (Défaut)
-      else {
-        start = new Date(base.getFullYear(), base.getMonth(), 1);
-        end = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-      }
-
-      // Important : Heures précises pour inclure toutes les réservations
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-
-      return {
-        start: start,
-        end: end
-      };
-    }
-
-
-    // ============================================
-    // Rendu principal
-    // ============================================
-    function renderCalendar() {
-      // Toujours masquer calDayView sauf si vue jour
-      var dvEl = document.getElementById('calDayView');
-      if (state.currentView !== 'day' && dvEl) dvEl.style.display = 'none';
-      // Toujours montrer le wrapper sauf si vue jour
-      if (state.currentView !== 'day') {
-        var cwEl = document.querySelector('.calendar-wrapper');
-        if (cwEl) cwEl.style.display = '';
-      }
-
-      var container = document.querySelector('.calendar-container');
-      if (container) {
-        if (state.currentView === 'year') {
-          container.classList.add('year-view');
-        } else {
-          container.classList.remove('year-view');
-        }
-      }
-
-      if (state.currentView === 'year') {
-        renderYearView();
-        return;
-      }
-
-      if (state.currentView === 'day') {
-        renderDayView();
-        return;
-      }
-
-      var range = getCurrentRange();
-      renderDaysHeader(range);
-      renderGrid(range);
-      setTimeout(initScrollSync, 150);
-      // Réappliquer les overrides après chaque rendu
-      setTimeout(applyPricingOverridesFromCache, 50);
-      // Appliquer aussi les règles après chaque rendu
+    // Apply pricing after month render
+    if (state.view === 'month') {
       setTimeout(function() {
+        if (typeof window.applyPricingOverridesFromCache === 'function') window.applyPricingOverridesFromCache();
         if (typeof window.applyPricingRulesToCells === 'function') window.applyPricingRulesToCells();
       }, 80);
     }
 
-        function renderDaysHeader(range) {
-      var header = document.getElementById('daysHeader');
-      if (!header) return;
-      header.innerHTML = '';
+    // Update period label in compat elements
+    var oldMonth = document.getElementById('currentMonth');
+    var oldYear = document.getElementById('currentYear');
+    if (oldMonth) oldMonth.textContent = MONTHS[state.date.getMonth()];
+    if (oldYear) oldYear.textContent = state.date.getFullYear();
+  }
 
-      // nombre de jours dans la plage actuelle
-      var daysCount = Math.round((range.end - range.start) / MS_PER_DAY) + 1;
-      // chaque jour ~48px
-      header.style.minWidth = (daysCount * 48) + 'px';
+  // ─────────────────────────────────────────
+  // VUE JOUR
+  // ─────────────────────────────────────────
+  function renderDay(body) {
+    var today = new Date();
+    var todayStr = ds(today);
+    var selStr = ds(state.date);
 
-      var d = new Date(range.start.getTime());
-      while (d <= range.end) {
-        var dow = d.getDay();
-        var div = document.createElement('div');
-        div.className = 'day-header';
-        if (dow === 5 || dow === 6) div.classList.add('weekend'); // ven+sam = nuits premium
-        if (isToday(d)) div.classList.add('today');
-
-        var nameSpan = document.createElement('span');
-        nameSpan.className = 'day-name';
-        nameSpan.textContent = CONFIG.DAYS_SHORT[dow];
-
-        var numSpan = document.createElement('span');
-        numSpan.className = 'day-number';
-        numSpan.textContent = String(d.getDate());
-
-        div.appendChild(nameSpan);
-        div.appendChild(numSpan);
-
-        header.appendChild(div);
-        d.setDate(d.getDate() + 1);
-      }
+    // Date scroller
+    var scroller = div('display:flex;align-items:center;padding:10px 12px;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:#F5F2EC;border-bottom:1px solid rgba(26,122,94,.1);');
+    scroller.style.cssText += '-ms-overflow-style:none;';
+    var dates = [];
+    for (var i = -4; i <= 16; i++) {
+      var d2 = new Date(today); d2.setDate(today.getDate()+i); dates.push(d2);
     }
-
-
-        function renderGrid(range) {
-      var grid = document.getElementById('calendarGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      if (!state.properties.length) {
-        var emptyRow = document.createElement('div');
-        emptyRow.className = 'calendar-row';
-        var emptyCell = document.createElement('div');
-        emptyCell.className = 'calendar-cell';
-        emptyCell.style.justifyContent = 'center';
-        emptyCell.style.alignItems = 'center';
-        emptyCell.style.color = 'var(--text-secondary)';
-        emptyCell.textContent = 'Aucun logement configuré';
-        emptyRow.appendChild(emptyCell);
-        grid.appendChild(emptyRow);
-        return;
+    var selBtn = null;
+    dates.forEach(function(d2) {
+      var dstr = ds(d2);
+      var isSel = dstr === selStr;
+      var isTod = dstr === todayStr;
+      var btn = el('button',
+        'flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 10px;border-radius:12px;border:none;cursor:pointer;min-width:44px;font-family:inherit;transition:all .15s;'
+        +'background:'+(isSel?'#1A7A5E':isTod?'rgba(26,122,94,.1)':'white')
+        +';color:'+(isSel?'white':isTod?'#1A7A5E':'#374151')
+        +';box-shadow:'+(isSel?'0 2px 8px rgba(26,122,94,.28)':'0 1px 3px rgba(0,0,0,.06)')+';');
+      btn.innerHTML = '<span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;opacity:'+(isSel?1:.55)+'">'+DAYS_MIN[d2.getDay()]+'</span>'
+        +'<span style="font-size:17px;font-weight:'+(isSel||isTod?800:600)+'">'+d2.getDate()+'</span>';
+      (function(str){ btn.onclick = function(){ state.date = dFromStr(str); render(); }; })(dstr);
+      if (isSel) selBtn = btn;
+      scroller.appendChild(btn);
+    });
+    body.appendChild(scroller);
+    setTimeout(function() {
+      if (selBtn) {
+        var sl = selBtn.offsetLeft - scroller.offsetWidth/2 + selBtn.offsetWidth/2;
+        scroller.scrollLeft = sl;
       }
-
-      // même calcul que pour le header
-      var daysCount = Math.round((range.end - range.start) / MS_PER_DAY) + 1;
-      var rowWidth = (daysCount * 48) + 'px';
-
-      for (var i = 0; i < state.properties.length; i++) {
-        var p = state.properties[i];
-        var row = document.createElement('div');
-        row.className = 'calendar-row';
-        row.setAttribute('data-property-id', p.id);
-
-        // largeur minimale identique au header
-        row.style.minWidth = rowWidth;
-
-        var d = new Date(range.start.getTime());
-        while (d <= range.end) {
-          row.appendChild(createCalendarCell(p, d));
-          d.setDate(d.getDate() + 1);
-        }
-        console.log('🗓️ Ligne créée pour:', p.id, '- cellules:', row.children.length);
-
-        grid.appendChild(row);
-      }
-
-      renderBookingsInCells(range);
-    }
-
-    function createCalendarCell(property, dateObj) {
-      var cell = document.createElement('div');
-      cell.className = 'calendar-cell';
-      cell.setAttribute('data-property-id', property.id);
-
-      var y = dateObj.getFullYear();
-      var m = String(dateObj.getMonth() + 1).padStart(2, '0');
-      var d = String(dateObj.getDate()).padStart(2, '0');
-      var dateStr = y + '-' + m + '-' + d;
-      cell.setAttribute('data-date', dateStr);
-
-      var dow = dateObj.getDay();
-      var isWeekend = (dow === 5 || dow === 6); // ven+sam = nuits premium
-      if (isWeekend) cell.classList.add('weekend');
-      if (isToday(dateObj)) cell.classList.add('today');
-
-      // Prix de nuit dans la cellule
-      // Priorité : override manuel > règle active > prix de base
-      var cacheKeyCell = property.id + '_' + dateStr;
-      var nightPrice = null;
-      var hasRule = false;
-
-      if (window._pricingOverrides && window._pricingOverrides[cacheKeyCell] != null) {
-        // Override manuel
-        nightPrice = window._pricingOverrides[cacheKeyCell];
-      } else if (window._pricingRulesCache && window._pricingRulesCache[property.id]) {
-        // Règle active pour ce logement + date
-        var rulePrice = getCalculatedPriceForDate(window._pricingRulesCache[property.id], dateStr, dow, property);
-        if (rulePrice != null) {
-          nightPrice = rulePrice.price;
-          hasRule = rulePrice.hasRule;
-        }
-      } else {
-        // Prix de base
-        if (isWeekend && property.weekendPrice != null) {
-          nightPrice = property.weekendPrice;
-        } else if (property.basePrice != null) {
-          nightPrice = property.basePrice;
-        }
-      }
-
-      if (hasRule) cell.classList.add('has-rule');
-
-      if (nightPrice != null) {
-        var priceEl = document.createElement('span');
-        priceEl.className = 'cell-price';
-        priceEl.textContent = Math.round(nightPrice);
-        cell.appendChild(priceEl);
-      }
-
-      // Fix Safari: mousedown au lieu de click
-      cell.addEventListener('mousedown', function(ev) {
-        if (ev.button !== 0) return;
-        var blockHit = ev.target.closest ? ev.target.closest('.booking-block') : null;
-        if (blockHit) return;
-        if (typeof window.openCellModal === 'function') {
-          window.openCellModal(dateStr, property.id);
-        } else if (typeof window.openBlockModal === 'function') {
-          window.openBlockModal(dateStr, property.id);
-        }
-      });
-
-      return cell;
-    }
-function riskColor(level) {
-  if (level === 'critical') return '#dc2626'; // Rouge foncé
-  if (level === 'red') return '#ef4444';
-  if (level === 'orange') return '#f59e0b';
-  return '#10b981';
-}
-
-    function renderBookingsInCells(range) {
-      var activeFilters = (window.activeFilters instanceof Set) ? window.activeFilters : null;
-      var search = (state.searchQuery || '').toLowerCase();
-
-      for (var i = 0; i < state.bookings.length; i++) {
-        var b = state.bookings[i];
-        if (!b.startDate || !b.endDate) continue;
-
-        // Filtre par logements
-        if (activeFilters && activeFilters.size && b.propertyId && !activeFilters.has(b.propertyId)) {
-          continue;
-        }
-
-        // Filtre texte (voyageur / logement)
-        if (search) {
-          var g = (b.guestName || '').toLowerCase();
-          var pn = (b.propertyName || '').toLowerCase();
-          if (g.indexOf(search) === -1 && pn.indexOf(search) === -1) {
-            continue;
-          }
-        }
-
-        var startDate = new Date(b.startDate);
-        var endDate = new Date(b.endDate);
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
-
-        // Nuits : du jour d\'arrivée au jour AVANT le checkout
-        // Les dates API sont en UTC minuit (ex: 2026-03-01T00:00:00.000Z)
-        // On lit en UTC pour éviter le décalage Paris UTC+1 qui ferait glisser d\'un jour
-        var startDay = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
-        var endDay   = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
-
-        if (endDay <= startDay) {
-          endDay = new Date(startDay.getTime() + 24 * 60 * 60 * 1000);
-        }
-
-        var lastNight = new Date(endDay.getTime() - 24 * 60 * 60 * 1000);
-
-        // ✅ CORRECTION : Ne plus filtrer les réservations passées
-        // On garde toutes les réservations pour l\'historique
-        // Ancien code : if (lastNight < range.start || startDay > range.end) continue;
-        
-        // Nouveau : on affiche seulement si la réservation est visible dans la plage
-        if (startDay > range.end) continue; // Trop dans le futur
-        // On garde les réservations passées pour l\'historique
-
-        var cells = [];
-        var cur = new Date(startDay.getTime());
-        while (cur <= lastNight) {
-          var dateStr = formatDateForCell(cur);
-          var selector =
-            '.calendar-cell[data-date="' + dateStr + '"][data-property-id="' + (b.propertyId || '') + '"]';
-          var cell = document.querySelector(selector);
-          if (cell) cells.push(cell);
-          cur.setDate(cur.getDate() + 1);
-        }
-
-        if (!cells.length) continue;
-
-        // ── UN SEUL BLOC par réservation ──
-        var firstCell = cells[0];
-        var lastCell  = cells[cells.length - 1];
-
-        var platform = normalizePlatform(b.platform, b.ota_name || b.otaName);
-        var isBlock  = b.type === 'block' || b.source === 'BLOCK' || platform === 'block';
-
-        var block = document.createElement('div');
-        block.className = isBlock ? 'booking-block booking-blocked' : 'booking-block ' + platform;
-        block.setAttribute('data-booking-id', b.id);
-
-        // Largeur calculée via getBoundingClientRect après rendu
-        (function(block2, firstCell2, lastCell2) {
-          function setWidth() {
-            var fr = firstCell2.getBoundingClientRect();
-            var lr = lastCell2.getBoundingClientRect();
-            if (!fr.width) return; // pas encore visible
-            // de left+4 jusqu'à right de lastCell+10 (débord checkout)
-            block2.style.width = (lr.right - fr.left - 4 + 10) + 'px';
-          }
-          requestAnimationFrame(function() {
-            setWidth();
-            // recalcul si le calendrier est redimensionné
-            window.addEventListener('resize', setWidth);
-          });
-        })(block, firstCell, lastCell);
-
-        // Contenu : dot risque + icône plateforme + nom invité
-        if (isBlock) {
-          var crossEl = document.createElement('span');
-          crossEl.innerHTML = '&#10005;';
-          crossEl.style.cssText = 'font-size:13px;font-weight:900;color:#ef4444;margin-right:4px;flex-shrink:0;';
-          block.appendChild(crossEl);
-          block.appendChild(document.createTextNode('Bloqué'));
-        } else {
-          var rawLevel = (b.riskLevel || b.riskLabel || '').toString().toLowerCase();
-          var level = 'green';
-          if (rawLevel.includes('critical') || rawLevel.includes('critique')) level = 'critical';
-          else if (rawLevel.includes('red') || rawLevel.includes('rouge') || rawLevel.includes('high') || rawLevel.includes('élev')) level = 'red';
-          else if (rawLevel.includes('orange') || rawLevel.includes('medium') || rawLevel.includes('moy')) level = 'orange';
-
-          var dot = document.createElement('span');
-          dot.style.cssText = 'width:8px;height:8px;border-radius:999px;display:inline-block;flex-shrink:0;background:' + riskColor(level) + ';';
-          block.appendChild(dot);
-
-          var iconEl;
-          if (platform === 'airbnb') {
-            iconEl = document.createElement('i');
-            iconEl.className = 'fa-brands fa-airbnb platform-icon';
-          } else if (platform === 'booking') {
-            iconEl = document.createElement('span');
-            iconEl.className = 'platform-icon booking-letter';
-            iconEl.textContent = 'B.';
-          } else if (platform === 'expedia') {
-            iconEl = document.createElement('span');
-            iconEl.className = 'platform-icon booking-letter';
-            iconEl.textContent = 'E.';
-          } else if (platform === 'vrbo') {
-            iconEl = document.createElement('span');
-            iconEl.className = 'platform-icon booking-letter';
-            iconEl.textContent = 'V.';
-          } else if (platform === 'abritel') {
-            iconEl = document.createElement('span');
-            iconEl.className = 'platform-icon booking-letter';
-            iconEl.textContent = 'Ab.';
-          } else if (platform === 'gites') {
-            iconEl = document.createElement('span');
-            iconEl.className = 'platform-icon booking-letter';
-            iconEl.textContent = 'G.';
-          } else {
-            iconEl = document.createElement('i');
-            iconEl.className = 'fas platform-icon ' + (CONFIG.PLATFORMS[platform] ? CONFIG.PLATFORMS[platform].icon : 'fa-user');
-          }
-          block.appendChild(iconEl);
-
-          var guestLabel = window.cleanGuestName ? window.cleanGuestName(b, platform) : (b.guestName || 'Réservation');
-          if (platform === 'booking' && !guestLabel) guestLabel = 'Voyageur';
-          var labelEl = document.createElement('span');
-          labelEl.className = 'booking-guest-label';
-          labelEl.textContent = guestLabel;
-          block.appendChild(labelEl);
-        }
-
-        // Clic → modal réservation
-        (function(bookingData, blockEl) {
-          blockEl.addEventListener('mousedown', function(ev) {
-            if (ev.button !== 0) return;
-            ev.stopPropagation();
-            var found = null;
-            var bookings = [];
-            if (window.calendarState && Array.isArray(window.calendarState.bookings)) {
-              bookings = window.calendarState.bookings;
-            } else if (Array.isArray(window.LCC_RESERVATIONS)) {
-              bookings = window.LCC_RESERVATIONS;
-            }
-            var idStr = String(bookingData.id);
-            found = bookings.find(function(r) {
-              if (!r) return false;
-              return String(r.id) === idStr || String(r.uid) === idStr || String(r.reservationKey) === idStr;
-            });
-            if (!found) {
-              var idx = parseInt(idStr, 10);
-              if (!isNaN(idx) && bookings[idx]) found = bookings[idx];
-            }
-            if (found) {
-              window.currentBookingData = found;
-              window.currentBooking = found;
-            }
-            setTimeout(function() {
-              if (typeof window.fixModalContent === 'function') window.fixModalContent(blockEl);
-            }, 200);
-          });
-        })(b, block);
-
-        firstCell.appendChild(block);
-      }
-    }
-
-    function renderYearView() {
-      var grid = document.getElementById('calendarGrid');
-      var header = document.getElementById('daysHeader');
-
-      if (!grid || !header) return;
-
-      header.innerHTML = '';
-
-      var year = state.currentDate.getFullYear();
-
-      grid.innerHTML = '';
-
-      var yearGrid = document.createElement('div');
-      yearGrid.className = 'year-grid';
-
-      for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
-        var stats = computeMonthStats(year, monthIndex);
-
-        var card = document.createElement('div');
-        card.className = 'year-month-card';
-        card.setAttribute('data-month-index', String(monthIndex));
-
-        card.innerHTML =
-          '<div class="year-month-title">' + CONFIG.MONTHS[monthIndex] + '</div>' +
-          '<div class="year-month-stats">' +
-            '<div class="year-month-stat">' +
-              '<i class="fas fa-calendar-check"></i>' +
-              '<span>' + stats.bookings + ' réserv.</span>' +
-            '</div>' +
-            '<div class="year-month-stat">' +
-              '<i class="fas fa-moon"></i>' +
-              '<span>' + stats.nights + ' nuits</span>' +
-            '</div>' +
-          '</div>';
-
-        (function(mIndex) {
-          card.addEventListener('click', function() {
-            state.currentView = 'month';
-            state.currentDate = new Date(year, mIndex, 1);
-
-            var viewTabs = document.querySelectorAll('.view-tab');
-            for (var i = 0; i < viewTabs.length; i++) {
-              var v = viewTabs[i].getAttribute('data-view');
-              viewTabs[i].classList.toggle('active', v === 'month');
-            }
-
-            updatePeriodDisplay();
-            renderCalendar();
-          });
-        })(monthIndex);
-
-        yearGrid.appendChild(card);
-      }
-
-      grid.appendChild(yearGrid);
-    }
-
-    // ============================================
-    // Propriétés - colonne de gauche
-    // ============================================
-    function renderPropertyList() {
-      var wrapper = document.getElementById('propertyList');
-      if (!wrapper) return;
-      wrapper.innerHTML = '';
-
-      if (!state.properties.length) {
-        var div = document.createElement('div');
-        div.className = 'property-item';
-        var span = document.createElement('span');
-        span.style.color = 'var(--text-secondary)';
-        span.textContent = 'Aucun logement';
-        div.appendChild(span);
-        wrapper.appendChild(div);
-        return;
-      }
-
-      for (var i = 0; i < state.properties.length; i++) {
-        var p = state.properties[i];
-
-        var item = document.createElement('div');
-        item.className = 'property-item';
-        item.setAttribute('data-property-id', p.id);
-
-        var nameSpan = document.createElement('span');
-        nameSpan.className = 'property-name';
-        nameSpan.textContent = p.name;
-
-        item.appendChild(nameSpan);
-
-        wrapper.appendChild(item);
-      }
-
-      // Délégation : 1 seul listener sur le container, survivant aux déplacements DOM
-      wrapper.removeEventListener('click', wrapper._selectHandler);
-      wrapper._selectHandler = function(e) {
-        var item = e.target.closest('.property-item[data-property-id]');
-        if (item) selectProperty(item.getAttribute('data-property-id'));
-      };
-      wrapper.addEventListener('click', wrapper._selectHandler);
-    }
-
-    // ============================================
-    // SYNCHRONISATION DU SCROLL VERTICAL
-    // ============================================
-    function initScrollSync() {
-      var propertyList = document.getElementById('propertyList');
-      var calendarGrid = document.getElementById('calendarGrid');
-      
-      if (!propertyList || !calendarGrid) return;
-      
-      var isPropertyScrolling = false;
-      var isCalendarScrolling = false;
-      
-      // Synchroniser le scroll du calendrier vers la liste
-      calendarGrid.addEventListener('scroll', function() {
-        if (isPropertyScrolling) return;
-        isCalendarScrolling = true;
-        propertyList.scrollTop = calendarGrid.scrollTop;
-        setTimeout(function() { isCalendarScrolling = false; }, 10);
-      });
-      
-      // Synchroniser le scroll de la liste vers le calendrier
-      propertyList.addEventListener('scroll', function() {
-        if (isCalendarScrolling) return;
-        isPropertyScrolling = true;
-        calendarGrid.scrollTop = propertyList.scrollTop;
-        setTimeout(function() { isPropertyScrolling = false; }, 10);
-      });
-
-      // Scroll horizontal vers aujourd\'hui
-      var todayHeader = document.querySelector('#daysHeader .day-header.today');
-      if (todayHeader) {
-        var daysHeader = document.getElementById('daysHeader');
-        var container = daysHeader ? daysHeader.parentElement : null;
-        if (container) {
-          var offset = todayHeader.offsetLeft - (container.clientWidth / 2) + (todayHeader.offsetWidth / 2);
-          container.scrollLeft = Math.max(0, offset);
-        }
-      }
-    }
-
-    function selectProperty(propertyId) {
-      console.log('🏠 selectProperty appelé:', propertyId, '| rows:', document.querySelectorAll('.calendar-row').length);
-      // Toggle : si déjà sélectionné, désélectionner
-      if (state.selectedPropertyId === propertyId) {
-        state.selectedPropertyId = null;
-        propertyId = null;
-      } else {
-        state.selectedPropertyId = propertyId;
-      }
-
-      var items = document.querySelectorAll('.property-item');
-      for (var i = 0; i < items.length; i++) {
-        var it = items[i];
-        it.classList.toggle('selected', propertyId && it.getAttribute('data-property-id') === String(propertyId));
-      }
-
-      var rows = document.querySelectorAll('.calendar-row');
-      for (var j = 0; j < rows.length; j++) {
-        var row = rows[j];
-        row.style.opacity = (!propertyId || row.getAttribute('data-property-id') === String(propertyId)) ? '1' : '0.25';
-        row.style.transition = 'opacity 0.2s ease';
-      }
-    }
-
-    // ═══════════════════════════════════════════
-    // VUE JOUR — style sélecteur dates horizontal
-    // ═══════════════════════════════════════════
-    function renderDayView() {
-      // Masquer tout le calendrier classique
-      var calWrapper = document.querySelector('.calendar-wrapper');
-      if (calWrapper) calWrapper.style.display = 'none';
-
-      var el = document.getElementById('calDayView');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'calDayView';
-        var calSection = document.querySelector('.calendar-wrapper');
-        if (calSection && calSection.parentNode) {
-          calSection.parentNode.insertBefore(el, calSection);
-        } else {
-          document.body.appendChild(el);
-        }
-      }
-      el.style.cssText = 'display:block;background:#F5F2EC;overflow-y:auto;border-radius:var(--radius-2xl,16px);box-shadow:var(--shadow-lg);border:1px solid var(--border-color,#E5E7EB);';
-
-      var selected = new Date(state.currentDate.getTime());
-      var selStr = toDateStr(selected);
-      updatePeriodDisplay();
-
-      // Source de données
-      var allRes = (state.bookings && state.bookings.length > 0)
-        ? state.bookings
-        : (window.enrichedReservations || window.LCC_RESERVATIONS || []);
-
-      // Calcul stats
-      var checkins = 0, checkouts = 0, totalGuests = 0, seen = {}, list = [];
-      allRes.forEach(function(r) {
-        var src = (r.source || r.platform || '').toUpperCase();
-        if (r.type === 'block' || src === 'BLOCK') return;
-        var s = (r.startDate || r.start || r.checkIn || '').toString().split('T')[0];
-        var e = (r.endDate   || r.end   || r.checkOut || '').toString().split('T')[0];
-        if (!s || !e) return;
-        if (!(s === selStr || e === selStr || (s < selStr && e > selStr))) return;
-        var key = r.uid || r.id || (s + e + (r.guestName || ''));
-        if (seen[key]) return;
-        seen[key] = true;
-        if (s === selStr) checkins++;
-        if (e === selStr) checkouts++;
-        totalGuests += parseInt(r.occupancy_adults || r.adults || r.occupancyAdults || 1);
-        list.push(r);
-      });
-
-      el.innerHTML = '';
-
-      // ── Header avec tabs vue ──
-      var header = document.createElement('div');
-      header.style.cssText = 'background:#0D1117;border-radius:var(--radius-2xl,16px) var(--radius-2xl,16px) 0 0;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;';
-
-      var titleDiv = document.createElement('div');
-      titleDiv.style.cssText = 'display:flex;align-items:center;gap:10px;';
-      titleDiv.innerHTML = '<span style="background:#1A7A5E;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-calendar-alt" style="font-size:14px;color:white;"></i></span>'
-        + '<div><div style="font-size:15px;font-weight:600;color:white;">Calendrier des <em style="color:#4ADE80;font-style:italic;">réservations</em></div>'
-        + '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:1px;">Vue journalière</div></div>';
-
-      var tabsDiv = document.createElement('div');
-      tabsDiv.style.cssText = 'display:flex;background:rgba(255,255,255,.07);border-radius:999px;padding:3px;gap:2px;border:1px solid rgba(255,255,255,.1);';
-      var views = [{key:'day',label:'Jour',icon:'fa-calendar-day'},{key:'week',label:'Sem.',icon:'fa-calendar-week'},{key:'month',label:'Mois',icon:'fa-calendar-alt'},{key:'year',label:'Année',icon:'fa-calendar'}];
-      views.forEach(function(v) {
-        var btn = document.createElement('button');
-        var isActive = v.key === 'day';
-        btn.style.cssText = 'padding:5px 12px;border-radius:999px;border:none;cursor:pointer;font-size:12px;font-weight:' + (isActive?'600':'500') + ';display:flex;align-items:center;gap:4px;transition:all .15s;background:' + (isActive?'#1A7A5E':'transparent') + ';color:' + (isActive?'white':'rgba(255,255,255,.6)') + ';';
-        btn.innerHTML = '<i class="fas ' + v.icon + '" style="font-size:11px;"></i><span>' + v.label + '</span>';
-        btn.onclick = function() {
-          state.currentView = v.key;
-          document.querySelectorAll('.view-tab').forEach(function(t) {
-            var a = t.getAttribute('data-view') === v.key;
-            t.classList.toggle('active', a);
-            t.style.background = a ? '#1A7A5E' : 'transparent';
-            t.style.color = a ? 'white' : 'rgba(255,255,255,.6)';
-          });
-          renderCalendar();
-        };
-        tabsDiv.appendChild(btn);
-      });
-
-      header.appendChild(titleDiv);
-      header.appendChild(tabsDiv);
-      el.appendChild(header);
-
-      // ── Sélecteur de dates horizontal ──
-      var today = new Date();
-      var todayStr = toDateStr(today);
-      var dates = [];
-      for (var i = -3; i <= 14; i++) {
-        var d = new Date(today);
-        d.setDate(today.getDate() + i);
-        dates.push(d);
-      }
-      var dayShort = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
-
-      var scroller = document.createElement('div');
-      scroller.style.cssText = 'background:#F5F2EC;display:flex;align-items:center;padding:12px 16px;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-bottom:1px solid rgba(26,122,94,.12);';
-      dates.forEach(function(d) {
-        var ds = toDateStr(d);
-        var isSel = ds === selStr;
-        var isTod = ds === todayStr;
-        var btn = document.createElement('button');
-        btn.style.cssText = 'flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 11px;border-radius:12px;border:none;cursor:pointer;min-width:46px;font-family:inherit;transition:all .15s;'
-          + 'background:' + (isSel ? '#1A7A5E' : isTod ? 'rgba(26,122,94,.1)' : 'white') + ';'
-          + 'color:' + (isSel ? 'white' : isTod ? '#1A7A5E' : '#374151') + ';'
-          + 'box-shadow:' + (isSel ? '0 2px 8px rgba(26,122,94,.3)' : '0 1px 3px rgba(0,0,0,.06)') + ';';
-        btn.innerHTML = '<span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;opacity:' + (isSel?1:.6) + '">' + dayShort[d.getDay()] + '</span>'
-          + '<span style="font-size:17px;font-weight:' + (isSel||isTod?'800':'600') + '">' + d.getDate() + '</span>';
-        (function(ds2){ btn.onclick = function() { selectDayViewDate(ds2); }; })(ds);
-        scroller.appendChild(btn);
-      });
-      el.appendChild(scroller);
-
-      // ── Body ──
-      var body = document.createElement('div');
-
-      // Cartes stats
-      var statsDiv = document.createElement('div');
-      statsDiv.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 16px 0;';
-
-      var cardIn = document.createElement('div');
-      cardIn.style.cssText = 'background:white;border-radius:16px;padding:20px 14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid rgba(26,122,94,.1);';
-      cardIn.innerHTML = '<div style="width:48px;height:48px;border-radius:50%;border:2.5px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div><div style="font-size:34px;font-weight:800;color:#1A1F2E;line-height:1;">' + checkins + '</div><div style="font-size:11px;color:#9CA3AF;margin-top:5px;font-weight:500;">Nombre de checkins</div>';
-
-      var cardOut = document.createElement('div');
-      cardOut.style.cssText = 'background:#1A7A5E;border-radius:16px;padding:20px 14px;text-align:center;box-shadow:0 4px 14px rgba(26,122,94,.3);';
-      cardOut.innerHTML = '<div style="width:48px;height:48px;border-radius:50%;border:2.5px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></div><div style="font-size:34px;font-weight:800;color:white;line-height:1;">' + checkouts + '</div><div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:5px;font-weight:500;">Nombre de checkouts</div>';
-
-      statsDiv.appendChild(cardIn);
-      statsDiv.appendChild(cardOut);
-      body.appendChild(statsDiv);
-
-      // Liste réservations
-      var listDiv = document.createElement('div');
-      listDiv.style.cssText = 'padding:12px 16px 8px;';
-
-      if (list.length === 0) {
-        var empty = document.createElement('div');
-        empty.style.cssText = 'text-align:center;padding:28px;color:#9CA3AF;font-size:13px;background:white;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.07);';
-        empty.textContent = 'Aucune réservation ce jour';
-        listDiv.appendChild(empty);
-      } else {
-        list.forEach(function(r) {
-          var guest = r.guestName || r.guest_display_name || r.customerName || 'Voyageur';
-          var prop  = r.propertyName || r.property_name || '';
-          var notes = r.notes || r.specialRequests || r.note || r.special_requests || '';
-          var s = (r.startDate || r.start || r.checkIn || '').toString().split('T')[0];
-          var e = (r.endDate   || r.end   || r.checkOut || '').toString().split('T')[0];
-          var nights = s && e ? Math.round((new Date(e) - new Date(s)) / 86400000) : 0;
-          var adults = parseInt(r.occupancy_adults || r.adults || r.occupancyAdults || 1);
-          var plt = (r.platform || r.source || 'direct').toLowerCase().replace(/\.com$/, '');
-          var isIn = s === selStr, isOut = e === selStr;
-          var badgeColor = isIn ? '#1A7A5E' : isOut ? '#145f4a' : '#6366F1';
-
-          var pIconHtml;
-          if (plt === 'airbnb') {
-            pIconHtml = '<div style="width:22px;height:22px;background:#FF5A5F;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>';
-          } else if (plt.includes('book') || plt === 'bdc') {
-            pIconHtml = '<div style="width:22px;height:22px;background:#003580;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white;flex-shrink:0;">B</div>';
-          } else {
-            pIconHtml = '<div style="width:22px;height:22px;background:#1A7A5E;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;flex-shrink:0;">D</div>';
-          }
-
-          var arrowSvg = isOut
-            ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="' + badgeColor + '" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'
-            : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="' + badgeColor + '" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
-
-          var card = document.createElement('div');
-          card.style.cssText = 'background:white;border-radius:14px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s;';
-          card.onmouseover = function(){ this.style.boxShadow='0 3px 10px rgba(0,0,0,.12)'; };
-          card.onmouseout  = function(){ this.style.boxShadow='0 1px 4px rgba(0,0,0,.07)'; };
-
-          var iconCircle = document.createElement('div');
-          iconCircle.style.cssText = 'width:32px;height:32px;border-radius:50%;border:2px solid ' + badgeColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;';
-          iconCircle.innerHTML = arrowSvg;
-
-          var mid = document.createElement('div');
-          mid.style.cssText = 'flex:1;min-width:0;';
-          mid.innerHTML = '<div style="font-size:14px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + guest + '</div>'
-            + (prop ? '<div style="font-size:11px;color:#9CA3AF;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + prop + '</div>' : '')
-            + (notes ? '<div style="font-size:11px;color:#6B7280;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.7;">' + notes + '</div>' : '');
-
-          var right = document.createElement('div');
-          right.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;';
-          right.innerHTML = pIconHtml
-            + '<div style="display:flex;align-items:center;gap:5px;color:#9CA3AF;">'
-              + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span style="font-size:11px;">' + adults + '</span>'
-              + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span style="font-size:11px;">' + nights + '</span>'
-            + '</div>';
-
-          card.appendChild(iconCircle);
-          card.appendChild(mid);
-          card.appendChild(right);
-          listDiv.appendChild(card);
-        });
-      }
-      body.appendChild(listDiv);
-
-      // Stats bas
-      if (list.length > 0) {
-        var bottomDiv = document.createElement('div');
-        bottomDiv.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 16px 24px;';
-        bottomDiv.innerHTML = '<div style="background:white;border-radius:14px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-            + '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" style="display:block;margin:0 auto 8px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
-            + '<div style="font-size:26px;font-weight:800;color:#1A1F2E;">' + list.length + '</div>'
-            + '<div style="font-size:11px;color:#9CA3AF;margin-top:3px;">Réservations</div></div>'
-          + '<div style="background:white;border-radius:14px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-            + '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" style="display:block;margin:0 auto 8px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
-            + '<div style="font-size:26px;font-weight:800;color:#1A1F2E;">' + totalGuests + '</div>'
-            + '<div style="font-size:11px;color:#9CA3AF;margin-top:3px;">Voyageurs</div></div>';
-        body.appendChild(bottomDiv);
-      }
-
-      el.appendChild(body);
-
-      // Scroll jour sélectionné au centre du sélecteur
-      setTimeout(function() {
-        var btns = scroller.querySelectorAll('button');
-        for (var i = 0; i < btns.length; i++) {
-          if (btns[i].style.background && btns[i].style.background.includes('1A7A5E')) {
-            var scrollLeft = btns[i].offsetLeft - scroller.offsetWidth / 2 + btns[i].offsetWidth / 2;
-            scroller.scrollLeft = scrollLeft;
-            break;
-          }
-        }
-        // Scroll page vers calDayView
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 80);
-    }
-    function toDateStr(d) {
-      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    }
-
-    function selectDayViewDate(dateStr) {
-      state.currentDate = new Date(dateStr + 'T12:00:00');
-      renderDayView();
-    }
-
-    // Remettre le calendrier normal en quittant la vue jour
-    document.addEventListener('click', function(e) {
-      var tab = e.target.closest && e.target.closest('.view-tab');
-      if (!tab) return;
-      if (tab.getAttribute('data-view') !== 'day') {
-        var dv = document.getElementById('calDayView');
-        if (dv) dv.style.display = 'none';
-        var cw = document.querySelector('.calendar-wrapper');
-        if (cw) cw.style.display = '';
-      }
+    }, 30);
+
+    // Compute stats
+    var checkins=0, checkouts=0, totalG=0, seen={}, list=[];
+    state.bookings.forEach(function(r) {
+      if (r.type==='block') return;
+      var s=(r.startDate||r.start||'').split('T')[0];
+      var e=(r.endDate||r.end||'').split('T')[0];
+      if (!s||!e) return;
+      if (!(s===selStr||e===selStr||(s<selStr&&e>selStr))) return;
+      var key=r.id||(s+e+(r.guestName||''));
+      if (seen[key]) return; seen[key]=true;
+      if (s===selStr) checkins++;
+      if (e===selStr) checkouts++;
+      totalG+=guests(r);
+      list.push(r);
     });
 
-    
-    function computeMonthStats(year, monthIndex) {
-      var start = new Date(year, monthIndex, 1);
-      var end = new Date(year, monthIndex + 1, 0);
+    // Stats row
+    var stats = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 14px 0;');
+    var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid rgba(26,122,94,.08);');
+    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2.5px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
+    var cardOut = div('background:#1A7A5E;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 12px rgba(26,122,94,.28);');
+    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2.5px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px;">Checkouts</div>';
+    stats.appendChild(cardIn); stats.appendChild(cardOut);
+    body.appendChild(stats);
 
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+    // Reservations list
+    var listDiv = div('padding:12px 14px 8px;');
+    if (list.length===0) {
+      listDiv.appendChild(div('background:white;border-radius:14px;padding:28px;text-align:center;color:#9CA3AF;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.07);','Aucune réservation ce jour'));
+    } else {
+      list.forEach(function(r) {
+        var s=(r.startDate||r.start||'').split('T')[0];
+        var e=(r.endDate||r.end||'').split('T')[0];
+        var isIn=s===selStr, isOut=e===selStr;
+        var col=isIn?'#1A7A5E':isOut?'#145f4a':'#6366F1';
+        var arrowPath=isOut?'M19 12H5M12 19l-7-7 7-7':'M5 12h14M12 5l7 7-7 7';
+        var card = div('background:white;border-radius:14px;padding:13px 15px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;gap:11px;cursor:pointer;transition:box-shadow .15s;');
+        card.onmouseover=function(){this.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';};
+        card.onmouseout=function(){this.style.boxShadow='0 1px 4px rgba(0,0,0,.07)';};
+        card.onclick=function(){ openBooking(r); };
 
-      var bookingsCount = 0;
-      var nightsCount = 0;
+        var circle = div('width:30px;height:30px;border-radius:50%;border:2px solid '+col+';display:flex;align-items:center;justify-content:center;flex-shrink:0;');
+        circle.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'+col+'" stroke-width="2.5"><path d="'+arrowPath+'"/></svg>';
 
-      for (var i = 0; i < state.bookings.length; i++) {
-        var b = state.bookings[i];
-        if (!b.startDate || !b.endDate) continue;
+        var mid = div('flex:1;min-width:0;');
+        mid.innerHTML='<div style="font-size:14px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</div>'
+          +(r.propertyName?'<div style="font-size:11px;color:#9CA3AF;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.propertyName+'</div>':'');
 
-        var startDate = new Date(b.startDate);
-        var endDate = new Date(b.endDate);
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) continue;
+        var right = div('display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;');
+        right.innerHTML=pltBadge(r,20)
+          +'<div style="display:flex;align-items:center;gap:5px;color:#9CA3AF;">'
+          +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'
+          +'<span style="font-size:11px;">'+guests(r)+'</span>'
+          +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+          +'<span style="font-size:11px;">'+nights(r)+'</span>'
+          +'</div>';
 
-        if (endDate < start || startDate > end) continue;
+        card.appendChild(circle); card.appendChild(mid); card.appendChild(right);
+        listDiv.appendChild(card);
+      });
+    }
+    body.appendChild(listDiv);
 
-        bookingsCount++;
+    // Bottom stats
+    if (list.length>0) {
+      var bot = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 20px;');
+      bot.innerHTML='<div style="background:white;border-radius:14px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        +'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" style="display:block;margin:0 auto 6px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+        +'<div style="font-size:24px;font-weight:800;color:#1A1F2E;">'+list.length+'</div>'
+        +'<div style="font-size:11px;color:#9CA3AF;margin-top:2px;">Réservations</div></div>'
+        +'<div style="background:white;border-radius:14px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        +'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" style="display:block;margin:0 auto 6px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+        +'<div style="font-size:24px;font-weight:800;color:#1A1F2E;">'+totalG+'</div>'
+        +'<div style="font-size:11px;color:#9CA3AF;margin-top:2px;">Voyageurs</div></div>';
+      body.appendChild(bot);
+    }
+  }
 
-        var effStart = startDate < start ? start : startDate;
-        var effEnd = endDate > end ? end : endDate;
+  // ─────────────────────────────────────────
+  // VUE SEMAINE
+  // ─────────────────────────────────────────
+  function renderWeek(body) {
+    var mon = weekStart(state.date);
+    var days = [];
+    for (var i=0;i<7;i++) { var d2=new Date(mon); d2.setDate(mon.getDate()+i); days.push(d2); }
+    var today = ds(new Date());
 
-        var diffMs = effEnd - effStart;
-        if (diffMs > 0) {
-          nightsCount += Math.round(diffMs / (1000 * 60 * 60 * 24));
+    var container = div('background:white;overflow:hidden;');
+
+    // Header row
+    var hrow = div('display:grid;grid-template-columns:80px repeat(7,1fr);border-bottom:2px solid #F5F2EC;');
+    hrow.appendChild(div('padding:10px;background:#F5F2EC;border-right:1px solid #E5E7EB;'));
+    days.forEach(function(d2) {
+      var dstr = ds(d2);
+      var isToday = dstr===today;
+      var cell = div('padding:8px 4px;text-align:center;border-right:1px solid #F5F2EC;'+(isToday?'background:rgba(26,122,94,.06);':''));
+      cell.innerHTML='<div style="font-size:10px;font-weight:600;color:'+(isToday?'#1A7A5E':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.05em;">'+DAYS_MIN[d2.getDay()]+'</div>'
+        +'<div style="font-size:16px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'white':'#374151')+';'+(isToday?'background:#1A7A5E;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:3px auto 0;':'margin-top:3px;')+'">'+d2.getDate()+'</div>';
+      hrow.appendChild(cell);
+    });
+    container.appendChild(hrow);
+
+    // Property rows
+    state.properties.forEach(function(prop) {
+      var row = div('display:grid;grid-template-columns:80px repeat(7,1fr);border-bottom:1px solid #F5F2EC;min-height:56px;');
+
+      var propCell = div('padding:10px 8px;background:#FAFAF9;border-right:1px solid #E5E7EB;display:flex;align-items:center;');
+      propCell.innerHTML='<div style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+prop.name+'</div>';
+      row.appendChild(propCell);
+
+      days.forEach(function(d2) {
+        var dstr = ds(d2);
+        var isToday = dstr===today;
+        var cell = div('border-right:1px solid #F5F2EC;position:relative;min-height:56px;'+(isToday?'background:rgba(26,122,94,.03);':''));
+
+        // Find bookings for this cell
+        state.bookings.forEach(function(r) {
+          if (r.type==='block') return;
+          if (String(r.propertyId) !== String(prop.id)) return;
+          var s=(r.startDate||r.start||'').split('T')[0];
+          var e=(r.endDate||r.end||'').split('T')[0];
+          if (!(s===dstr||(s<dstr&&e>dstr))) return;
+          var isStart=s===dstr, isEnd=e===dstr||false;
+          var p=pltInfo(r);
+          var blk = div('position:absolute;inset:4px 2px;border-radius:8px;padding:4px 7px;display:flex;align-items:center;gap:4px;cursor:pointer;overflow:hidden;background:'+p.bg+';color:white;');
+          blk.innerHTML='<span style="font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+          blk.onclick=function(){ openBooking(r); };
+          cell.appendChild(blk);
+        });
+
+        // Block
+        state.bookings.forEach(function(r) {
+          if (r.type!=='block') return;
+          if (String(r.propertyId) !== String(prop.id)) return;
+          var s=(r.startDate||r.start||'').split('T')[0];
+          var e=(r.endDate||r.end||'').split('T')[0];
+          if (!(s===dstr||(s<dstr&&e>dstr))) return;
+          var blk = div('position:absolute;inset:4px 2px;border-radius:8px;padding:4px 7px;display:flex;align-items:center;gap:4px;overflow:hidden;background:repeating-linear-gradient(45deg,#E5E7EB,#E5E7EB 4px,#F9FAFB 4px,#F9FAFB 8px);');
+          blk.innerHTML='<span style="font-size:10px;font-weight:600;color:#9CA3AF;">Bloqué</span>';
+          cell.appendChild(blk);
+        });
+
+        row.appendChild(cell);
+      });
+      container.appendChild(row);
+    });
+
+    body.appendChild(container);
+  }
+
+  // ─────────────────────────────────────────
+  // VUE MOIS
+  // ─────────────────────────────────────────
+  function renderMonth(body) {
+    var year = state.date.getFullYear();
+    var month = state.date.getMonth();
+    var firstDay = new Date(year, month, 1);
+    var lastDay = new Date(year, month+1, 0);
+    var today = ds(new Date());
+
+    // Build date range: start on Monday before firstDay
+    var startOff = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1;
+    var rangeStart = new Date(firstDay); rangeStart.setDate(1-startOff);
+    var totalCells = Math.ceil((startOff + lastDay.getDate())/7)*7;
+
+    // Outer wrapper
+    var outer = div('background:white;overflow:hidden;');
+
+    // Property column + scrollable grid
+    var layout = div('display:flex;overflow:hidden;');
+
+    // Left: property list
+    var propCol = div('flex-shrink:0;width:90px;background:#FAFAF9;border-right:2px solid #F0EDE8;');
+    // Header spacer
+    propCol.appendChild(div('height:36px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;','<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
+    state.properties.forEach(function(prop) {
+      var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:default;');
+      pc.innerHTML='<span style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
+      propCol.appendChild(pc);
+    });
+
+    // Right: scrollable days grid
+    var gridWrap = div('flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;');
+
+    // Days per column = totalCells
+    var numDays = totalCells;
+    var colW = 42; // px per day
+
+    var grid = div('min-width:'+(numDays*colW)+'px;');
+
+    // Days header
+    var daysHdr = div('display:flex;height:36px;border-bottom:2px solid #F0EDE8;position:sticky;top:0;background:white;z-index:2;');
+    for (var di=0; di<numDays; di++) {
+      var dayDate = new Date(rangeStart); dayDate.setDate(rangeStart.getDate()+di);
+      var dstr2 = ds(dayDate);
+      var inMonth = dayDate.getMonth()===month;
+      var isToday = dstr2===today;
+      var isWknd = dayDate.getDay()===0||dayDate.getDay()===6;
+      var hcell = div('width:'+colW+'px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;'
+        +(isToday?'background:rgba(26,122,94,.08);':'')
+        +(isWknd&&!isToday?'background:rgba(220,38,38,.03);':''));
+      hcell.innerHTML='<span style="font-size:9px;font-weight:600;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.04em;">'+DAYS_MIN[dayDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
+      daysHdr.appendChild(hcell);
+    }
+    grid.appendChild(daysHdr);
+
+    // Property rows
+    state.properties.forEach(function(prop) {
+      var propRow = div('display:flex;height:52px;border-bottom:1px solid #F0EDE8;position:relative;');
+
+      // Build map of bookings for this property
+      var bookMap = {};
+      state.bookings.forEach(function(r) {
+        if (String(r.propertyId) !== String(prop.id)) return;
+        var s=(r.startDate||r.start||'').split('T')[0];
+        var e=(r.endDate||r.end||'').split('T')[0];
+        if (!s) return;
+        if (!bookMap[s]) bookMap[s]=[];
+        bookMap[s].push(r);
+      });
+
+      for (var di2=0; di2<numDays; di2++) {
+        var dayDate2 = new Date(rangeStart); dayDate2.setDate(rangeStart.getDate()+di2);
+        var dstr3 = ds(dayDate2);
+        var inMonth2 = dayDate2.getMonth()===month;
+        var isWknd2 = dayDate2.getDay()===0||dayDate2.getDay()===6;
+        var isToday2 = dstr3===today;
+
+        var dcell = div('width:'+colW+'px;flex-shrink:0;height:52px;position:relative;box-sizing:border-box;border-right:1px solid #F5F2EC;'
+          +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(220,38,38,.02);':''));
+        dcell.dataset.date = dstr3;
+        dcell.dataset.propertyId = String(prop.id);
+        dcell.className = 'calendar-cell' + (isWknd2?' weekend':'');
+
+        // Price display
+        if (inMonth2) {
+          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:'+(isWknd2?'#dc2626':'#1A7A5E')+';pointer-events:none;user-select:none;');
+          priceEl.className = 'cell-price';
+          if (prop.basePrice) priceEl.textContent = Math.round(isWknd2 ? (prop.weekendPrice||prop.basePrice) : prop.basePrice);
+          dcell.appendChild(priceEl);
         }
+
+        // Click to create block/reservation
+        (function(dstr4, propId4) {
+          dcell.addEventListener('click', function(e) {
+            if (e.target.closest('.booking-block-bh')) return;
+            // open block modal if available
+            if (typeof window.openBlockModal === 'function') window.openBlockModal(dstr4, propId4);
+          });
+        })(dstr3, String(prop.id));
+
+        propRow.appendChild(dcell);
       }
 
-      return {
-        bookings: bookingsCount,
-        nights: nightsCount
-      };
-    }
+      // Overlay booking blocks (absolutely positioned over the row)
+      var overlayRow = div('position:absolute;inset:0;pointer-events:none;');
+      state.bookings.forEach(function(r) {
+        if (String(r.propertyId) !== String(prop.id)) return;
+        var s=(r.startDate||r.start||'').split('T')[0];
+        var e=(r.endDate||r.end||'').split('T')[0];
+        if (!s||!e) return;
 
-    // ============================================
-    // Utils
-    // ============================================
-    function isToday(date) {
-      var today = new Date();
-      return date.getDate() === today.getDate() &&
-             date.getMonth() === today.getMonth() &&
-             date.getFullYear() === today.getFullYear();
-    }
+        // Find column indices
+        var startD = new Date(s+'T12:00:00');
+        var endD   = new Date(e+'T12:00:00');
+        var colStart = Math.round((startD - rangeStart)/MS);
+        var colEnd   = Math.round((endD   - rangeStart)/MS);
 
-    function formatDateForCell(date) {
-      var y = date.getFullYear();
-      var m = String(date.getMonth() + 1);
-      if (m.length < 2) m = '0' + m;
-      var d = String(date.getDate());
-      if (d.length < 2) d = '0' + d;
-      return y + '-' + m + '-' + d;
-    }
+        // Clip to visible range
+        if (colEnd < 0 || colStart >= numDays) return;
+        colStart = Math.max(0, colStart);
+        colEnd   = Math.min(numDays, colEnd);
+        if (colStart >= colEnd) return;
 
-    function normalizePlatform(raw, otaName) {
-      // Channex ota_name codes: ABB=Airbnb, BDC=Booking.com, EXP=Expedia, VRBO=Vrbo
-      if (otaName) {
-        var ota = String(otaName).toUpperCase();
-        if (ota === 'ABB' || ota.indexOf('AIRBNB') !== -1) return 'airbnb';
-if (ota === 'BDC' || ota.indexOf('BOOKING') !== -1) return 'booking';
-if (ota === 'EXP' || ota.indexOf('EXPEDIA') !== -1) return 'expedia';
-if (ota === 'VRBO' || ota === 'HOMEAWAY' || ota.indexOf('VRBO') !== -1) return 'vrbo';
-if (ota === 'ABRITEL' || ota.indexOf('ABRITEL') !== -1) return 'abritel';
+        var isBlock = r.type==='block';
+        var p2 = pltInfo(r);
+
+        var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:1;');
+        blk.className = 'booking-block-bh';
+        blk.style.left = (colStart*colW+2)+'px';
+        blk.style.width = ((colEnd-colStart)*colW-4)+'px';
+
+        if (isBlock) {
+          blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
+          blk.innerHTML='<i class="fas fa-ban" style="font-size:10px;color:#9CA3AF;flex-shrink:0;"></i><span style="font-size:11px;font-weight:600;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
+        } else {
+          blk.style.background = p2.bg;
+          blk.style.color = 'white';
+          blk.style.boxShadow = '0 2px 6px rgba(0,0,0,.2)';
+          blk.innerHTML='<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>'
+            +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+          blk.onmouseover=function(){this.style.filter='brightness(1.1)';};
+          blk.onmouseout=function(){this.style.filter='';};
+          blk.onclick=function(e){ e.stopPropagation(); openBooking(r); };
+          // Compat: expose dataset for fixModalContent
+          blk.dataset.bookingId = String(r.id||'');
+        }
+        overlayRow.appendChild(blk);
+      });
+
+      propRow.style.position = 'relative';
+      propRow.appendChild(overlayRow);
+      grid.appendChild(propRow);
+    });
+
+    gridWrap.appendChild(grid);
+    layout.appendChild(propCol);
+    layout.appendChild(gridWrap);
+    outer.appendChild(layout);
+    body.appendChild(outer);
+
+    // Scroll to today
+    setTimeout(function() {
+      var todayCol = grid.querySelector('[data-date="'+today+'"]');
+      if (todayCol && gridWrap) {
+        gridWrap.scrollLeft = todayCol.offsetLeft - gridWrap.offsetWidth/2 + colW/2;
       }
-      if (!raw) return 'direct';
-      var val = String(raw).toLowerCase();
-      if (val.indexOf('airbnb') !== -1) return 'airbnb';
-      if (val.indexOf('booking') !== -1) return 'booking';
-      if (val.indexOf('expedia') !== -1) return 'expedia';
-      if (val.indexOf('vrbo') !== -1 || val.indexOf('homeaway') !== -1) return 'vrbo';
-      if (val.indexOf('abritel') !== -1) return 'abritel';
-      if (val.indexOf('gite') !== -1) return 'gites';
-      if (val.indexOf('hotel') !== -1) return 'hotels';
-      if (val === 'channex') return 'direct'; // fallback si pas d'ota_name
-      return 'direct';
-    }
-    // Exposer globalement pour les modales KPI
-    window.normalizePlatform = normalizePlatform;
-    window.getPlatformLabel = function(src, otaName) {
-      var n = normalizePlatform(src, otaName);
-      return n === 'airbnb' ? 'Airbnb' : n === 'booking' ? 'Booking.com' : n === 'expedia' ? 'Expedia' : n === 'vrbo' ? 'Vrbo' : n === 'abritel' ? 'Abritel' : n === 'gites' ? 'Gîtes de France' : 'Direct';
-    };
-    window.getPlatformDotColor = function(src, otaName) {
-      var n = normalizePlatform(src, otaName);
-      return n === 'airbnb' ? '#FF5A5F' : n === 'booking' ? '#003580' : n === 'expedia' ? '#00355F' : n === 'vrbo' ? '#3D5A80' : n === 'abritel' ? '#0096D6' : n === 'gites' ? '#2E7D32' : '#F97316';
-    };
+    }, 60);
+  }
 
-  })();
+  // ─────────────────────────────────────────
+  // VUE ANNÉE
+  // ─────────────────────────────────────────
+  function renderYear(body) {
+    var year = state.date.getFullYear();
+    var today = ds(new Date());
+    var outer = div('padding:14px;background:#F5F2EC;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;');
+    // Mobile: 2 cols
+    outer.style.cssText += '';
+
+    for (var m=0; m<12; m++) {
+      var mcard = div('background:white;border-radius:14px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer;transition:box-shadow .15s;');
+      mcard.onmouseover=function(){this.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';};
+      mcard.onmouseout=function(){this.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';};
+      (function(mo){ mcard.onclick=function(){ state.date=new Date(year,mo,1); state.view='month'; render(); }; })(m);
+
+      var firstD = new Date(year,m,1);
+      var lastD  = new Date(year,m+1,0);
+      // Count bookings
+      var count = 0;
+      var mStart = ds(firstD), mEnd = ds(lastD);
+      state.bookings.forEach(function(r) {
+        if (r.type==='block') return;
+        var s=(r.startDate||r.start||'').split('T')[0];
+        if (s>=mStart && s<=mEnd) count++;
+      });
+
+      mcard.innerHTML='<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;">'+MONTHS[m].slice(0,3)+'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;">'
+        +['Lu','Ma','Me','Je','Ve','Sa','Di'].map(function(d){return '<div style="font-size:8px;font-weight:600;color:#C4C4C4;text-align:center;padding-bottom:2px;">'+d+'</div>';}).join('')
+        +(function(){
+          var startOff = firstD.getDay()===0?6:firstD.getDay()-1;
+          var cells='';
+          for(var blank=0;blank<startOff;blank++) cells+='<div></div>';
+          for(var day=1;day<=lastD.getDate();day++){
+            var dstr=year+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+            var isT=dstr===today;
+            var hasBk=state.bookings.some(function(r){
+              if(r.type==='block') return false;
+              var s=(r.startDate||r.start||'').split('T')[0];
+              var e=(r.endDate||r.end||'').split('T')[0];
+              return s<=dstr&&e>dstr;
+            });
+            cells+='<div style="font-size:8px;text-align:center;border-radius:3px;padding:1px 0;'
+              +(isT?'background:#1A7A5E;color:white;font-weight:800;':hasBk?'background:rgba(26,122,94,.15);color:#1A7A5E;font-weight:600;':'color:#6B7280;')+'">'
+              +day+'</div>';
+          }
+          return cells;
+        })()
+        +'</div>'
+        +(count>0?'<div style="margin-top:8px;font-size:11px;color:#1A7A5E;font-weight:600;">'+count+' rés.</div>':'');
+      outer.appendChild(mcard);
+    }
+    body.appendChild(outer);
+  }
+
+  // ─────────────────────────────────────────
+  // SEARCH PANEL
+  // ─────────────────────────────────────────
+  function toggleSearchPanel() {
+    var w = getWrap();
+    var existing = w.querySelector('.bh-search-panel');
+    if (existing) { existing.remove(); return; }
+    var panel = div('padding:10px 14px;background:#F5F2EC;border-bottom:1px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:8px;');
+    panel.className = 'bh-search-panel';
+    var input = el('input','flex:1;padding:9px 12px;border-radius:10px;border:1.5px solid rgba(26,122,94,.2);background:white;font-size:13px;color:#374151;outline:none;font-family:inherit;');
+    input.placeholder = 'Rechercher un voyageur ou un logement…';
+    input.oninput = function() {
+      var q = input.value.toLowerCase().trim();
+      var w2 = getWrap();
+      w2.querySelectorAll('.booking-block-bh').forEach(function(blk) {
+        blk.style.opacity = (!q || blk.textContent.toLowerCase().includes(q)) ? '1' : '0.15';
+      });
+    };
+    panel.appendChild(input);
+    var close = el('button','background:none;border:none;cursor:pointer;color:#6B7280;font-size:16px;padding:4px;');
+    close.innerHTML='✕';
+    close.onclick=function(){ panel.remove(); };
+    panel.appendChild(close);
+    var hdr = w.querySelector('.bh-cal-header');
+    var nav = w.querySelector('.bh-cal-nav');
+    var after = nav||hdr;
+    if (after&&after.nextSibling) w.insertBefore(panel,after.nextSibling);
+    else w.appendChild(panel);
+    setTimeout(function(){input.focus();},50);
+  }
+
+  // ─────────────────────────────────────────
+  // SETTINGS PANEL
+  // ─────────────────────────────────────────
+  function openSettingsPanel() {
+    if (document.getElementById('bhCalSettings')) {
+      document.getElementById('bhCalSettings').remove();
+      var ov2=document.getElementById('bhCalSettingsOv'); if(ov2)ov2.remove();
+      return;
+    }
+    var prefs={}; try{prefs=JSON.parse(localStorage.getItem('bhCalPrefs')||'{}');}catch(e){}
+    var showPrices = prefs.showPrices!==false;
+
+    var ov = div('position:fixed;inset:0;z-index:9998;');
+    ov.id='bhCalSettingsOv';
+    ov.onclick=function(){panel.remove();ov.remove();};
+    document.body.appendChild(ov);
+
+    var panel = div('position:fixed;top:0;right:0;bottom:0;width:300px;max-width:93vw;background:white;z-index:9999;box-shadow:-4px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column;');
+    panel.id='bhCalSettings';
+
+    var hdr2 = div('display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid #F1F5F9;');
+    hdr2.innerHTML='<div style="font-size:15px;font-weight:700;color:#111827;">Paramètres</div>';
+    var cBtn = el('button','background:none;border:none;cursor:pointer;color:#6B7280;font-size:18px;padding:4px 8px;');
+    cBtn.textContent='✕'; cBtn.onclick=function(){panel.remove();ov.remove();};
+    hdr2.appendChild(cBtn);
+
+    var bdy2 = div('flex:1;overflow-y:auto;padding:16px 18px;');
+
+    // Show prices toggle
+    var sec1 = div('margin-bottom:20px;');
+    sec1.innerHTML='<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Affichage</div>';
+    var row1 = div('display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#F9FAFB;border-radius:10px;cursor:pointer;');
+    row1.innerHTML='<span style="font-size:13px;font-weight:500;color:#374151;">Afficher les prix</span>';
+    var tog = div('width:40px;height:22px;border-radius:11px;position:relative;transition:background .2s;flex-shrink:0;');
+    tog.style.background = showPrices?'#1A7A5E':'#D1D5DB';
+    var knob = div('position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);');
+    knob.style.left = showPrices?'20px':'3px';
+    tog.appendChild(knob);
+    row1.appendChild(tog);
+    row1.onclick=function(){
+      var p2={}; try{p2=JSON.parse(localStorage.getItem('bhCalPrefs')||'{}');}catch(e){}
+      if(p2.showPrices===undefined) p2.showPrices=true;
+      p2.showPrices=!p2.showPrices;
+      localStorage.setItem('bhCalPrefs',JSON.stringify(p2));
+      tog.style.background=p2.showPrices?'#1A7A5E':'#D1D5DB';
+      knob.style.left=p2.showPrices?'20px':'3px';
+      applyPrefs();
+    };
+    sec1.appendChild(row1);
+    bdy2.appendChild(sec1);
+
+    var foot = div('padding:14px 18px;border-top:1px solid #F1F5F9;');
+    var applyBtn = el('button','width:100%;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;');
+    applyBtn.textContent='Fermer';
+    applyBtn.onclick=function(){panel.remove();ov.remove();};
+    foot.appendChild(applyBtn);
+
+    panel.appendChild(hdr2); panel.appendChild(bdy2); panel.appendChild(foot);
+    document.body.appendChild(panel);
+  }
+
+  function applyPrefs() {
+    var prefs={}; try{prefs=JSON.parse(localStorage.getItem('bhCalPrefs')||'{}');}catch(e){}
+    var sEl=document.getElementById('bhCalPrefsStyle');
+    if(!sEl){sEl=document.createElement('style');sEl.id='bhCalPrefsStyle';document.head.appendChild(sEl);}
+    sEl.textContent = prefs.showPrices===false ? '.cell-price{display:none!important}' : '';
+  }
+
+  // ─────────────────────────────────────────
+  // MAIN ENTRY POINT
+  // ─────────────────────────────────────────
+  window.renderModernCalendar = function(reservations, properties) {
+    try {
+      reservations = Array.isArray(reservations)?reservations:[];
+      properties   = Array.isArray(properties)?properties:[];
+
+      // Normalize bookings
+      state.bookings = reservations.map(function(r,i) {
+        if (!r) return null;
+        var propId = r.property&&r.property.id!=null?String(r.property.id):(r.propertyId!=null?String(r.propertyId):null);
+        var s = r.startDate||r.start||r.checkIn;
+        var e = r.endDate||r.end||r.checkOut;
+        if (!s||!e) return null;
+        return Object.assign({}, r, {
+          id: String(r.id||i),
+          propertyId: propId,
+          startDate: s.split('T')[0],
+          endDate: e.split('T')[0],
+          guestName: r.guestName||r.guest_display_name||r.customerName||'Voyageur',
+          platform: (r.platform||r.source||'direct').toLowerCase().replace(/\.com$/,''),
+        });
+      }).filter(Boolean);
+
+      // Normalize properties
+      if (properties.length) {
+        state.properties = properties.map(function(p,i) {
+          return { id: p.id!=null?String(p.id):String(i), name: p.internalName||p.internal_name||p.name||('Logement '+(i+1)), basePrice: p.basePrice||p.base_price||p.defaultPrice||null, weekendPrice: p.weekendPrice||p.weekend_price||null, color: p.color||'#1A7A5E' };
+        });
+      } else {
+        var map={};
+        state.bookings.forEach(function(r){
+          if(r.propertyId&&!map[r.propertyId]) map[r.propertyId]={id:r.propertyId,name:r.propertyName||('Logement '+r.propertyId),basePrice:null,weekendPrice:null,color:'#1A7A5E'};
+        });
+        state.properties = Object.values(map);
+      }
+
+      // Expose for compat
+      window.__bhCalendarState = state;
+      window.calendarState = state;
+
+      // Render
+      applyPrefs();
+      var w = getWrap();
+      w.style.cssText = 'background:#F5F2EC;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.09);border:1px solid rgba(0,0,0,.07);';
+      renderHeader();
+      render();
+
+      // Top risks KPI
+      if (typeof window.updateTopRisksKpi === 'function') {
+        try { window.updateTopRisksKpi(state.bookings); } catch(e){}
+      }
+
+      console.log('✅ BH Calendar: '+state.properties.length+' logements / '+state.bookings.length+' réservations');
+    } catch(e) {
+      console.error('BH Calendar error:', e);
+    }
+  };
+
+  // Compat: expose state for external scripts
+  window.__bhCalSwitchView = switchView;
+
+})();
 </script>
+
 <!-- Modal blocage calendrier -->
 <div id="blockModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;">
 <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
