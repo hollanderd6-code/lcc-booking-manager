@@ -3087,6 +3087,8 @@ window.closeChecklistsKpiModal = function() {
 </div>
 </div>
 </div>
+<!-- Vue Jour -->
+<div id="calDayView" style="display:none;background:#F5F2EC;min-height:500px;overflow-y:auto;"></div>
 </section>
 </div>
 <!-- Notifications Panel -->
@@ -6436,6 +6438,13 @@ try {
     // Rendu principal
     // ============================================
     function renderCalendar() {
+      // Toujours masquer calDayView sauf si vue jour
+      var dvEl = document.getElementById('calDayView');
+      if (state.currentView !== 'day' && dvEl) dvEl.style.display = 'none';
+      // Toujours montrer le wrapper sauf si vue jour
+      var cwEl = document.querySelector('.calendar-wrapper');
+      if (state.currentView !== 'day' && cwEl) cwEl.style.display = '';
+
       var container = document.querySelector('.calendar-container');
       if (container) {
         if (state.currentView === 'year') {
@@ -6964,22 +6973,22 @@ function riskColor(level) {
     // VUE JOUR — style sélecteur dates horizontal
     // ═══════════════════════════════════════════
     function renderDayView() {
-      var calContainer = document.querySelector('.calendar-container');
-      var daysHeaderEl  = document.getElementById('daysHeader');
-      var periodNav = document.querySelector('.period-navigation');
-      if (calContainer) calContainer.style.display = 'none';
-      if (daysHeaderEl)  daysHeaderEl.style.display  = 'none';
-      if (periodNav) periodNav.style.display = 'none';
+      var calWrapper = document.querySelector('.calendar-wrapper');
+      if (calWrapper) calWrapper.style.display = 'none';
 
       var el = document.getElementById('calDayView');
       if (!el) {
+        // Fallback : créer si absent
         el = document.createElement('div');
         el.id = 'calDayView';
-        // Placé directement dans calendar-wrapper, après le header
-        var wrapper = document.querySelector('.calendar-wrapper');
-        if (wrapper) wrapper.appendChild(el);
+        var calSection = document.querySelector('.calendar-wrapper');
+        if (calSection && calSection.parentNode) {
+          calSection.parentNode.insertBefore(el, calSection.nextSibling);
+        } else {
+          document.body.appendChild(el);
+        }
       }
-      el.style.cssText = 'display:block;background:#F5F2EC;min-height:400px;overflow-y:auto;';
+      el.style.cssText = 'display:block;background:#F5F2EC;min-height:500px;overflow-y:auto;';
 
       var selected = new Date(state.currentDate.getTime());
       var selStr = toDateStr(selected);
@@ -7154,12 +7163,8 @@ function riskColor(level) {
       if (tab.getAttribute('data-view') !== 'day') {
         var dv = document.getElementById('calDayView');
         if (dv) dv.style.display = 'none';
-        var cc = document.querySelector('.calendar-container');
-        if (cc) cc.style.display = '';
-        var dh = document.getElementById('daysHeader');
-        if (dh) dh.style.display = '';
-        var pn = document.querySelector('.period-navigation');
-        if (pn) pn.style.display = '';
+        var cw = document.querySelector('.calendar-wrapper');
+        if (cw) cw.style.display = '';
       }
     });
 
