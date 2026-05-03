@@ -2989,6 +2989,8 @@ window.closeChecklistsKpiModal = function() {
 <h2 class="section-title">
 </h2>
 </div>
+<!-- Vue Jour -->
+<div id="calDayView" style="display:none;background:#F5F2EC;min-height:500px;overflow-y:auto;border-radius:var(--radius-2xl);box-shadow:var(--shadow-lg);border:1px solid var(--border-color);"></div>
 <!-- NOUVEAU CALENDRIER MODERNE -->
 <div class="calendar-wrapper">
 <!-- Calendar Header -->
@@ -3087,8 +3089,6 @@ window.closeChecklistsKpiModal = function() {
 </div>
 </div>
 </div>
-<!-- Vue Jour -->
-<div id="calDayView" style="display:none;background:#F5F2EC;min-height:500px;overflow-y:auto;"></div>
 </section>
 </div>
 <!-- Notifications Panel -->
@@ -6984,7 +6984,6 @@ function riskColor(level) {
       if (periodNav) periodNav.style.display = 'none';
 
       var el = document.getElementById('calDayView');
-      console.log('[DayView] el found:', !!el, el ? el.style.display : 'N/A');
       if (!el) {
         el = document.createElement('div');
         el.id = 'calDayView';
@@ -6994,14 +6993,8 @@ function riskColor(level) {
         } else {
           document.body.appendChild(el);
         }
-        console.log('[DayView] el created and inserted');
       }
       el.style.cssText = 'display:block;background:#F5F2EC;min-height:500px;overflow-y:auto;';
-      console.log('[DayView] el display after set:', el.style.display, 'offsetHeight:', el.offsetHeight);
-      var calContainer2 = document.querySelector('.calendar-container');
-      var periodNav2 = document.querySelector('.period-navigation');
-      console.log('[DayView] calContainer hidden:', calContainer2 ? calContainer2.style.display : 'not found');
-      console.log('[DayView] periodNav hidden:', periodNav2 ? periodNav2.style.display : 'not found');
 
       var selected = new Date(state.currentDate.getTime());
       var selStr = toDateStr(selected);
@@ -7177,7 +7170,10 @@ function riskColor(level) {
             break;
           }
         }
-      }, 50);
+        // Scroll la page vers calDayView
+        var dvEl = document.getElementById('calDayView');
+        if (dvEl) dvEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
     }
     function toDateStr(d) {
       return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -11645,6 +11641,12 @@ if (window.Capacitor) {
 <script>
 (function() {
   function doScroll() {
+    // Si vue Jour active, scroller vers calDayView
+    var dv = document.getElementById('calDayView');
+    if (dv && dv.style.display === 'block') {
+      dv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     var el = document.getElementById('calendarSection');
     if (!el) return;
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
