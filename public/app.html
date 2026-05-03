@@ -6054,8 +6054,8 @@ try {
     var activeFilter = null;
     var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:all .2s;');
     cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
-    var cardOut = div('background:#DC2626;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 12px rgba(220,38,38,.28);cursor:pointer;transition:all .2s;border:2px solid transparent;');
-    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #DC2626;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:4px;">Checkouts</div>';
+    var cardOut = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;transition:all .2s;border:2px solid transparent;');
+    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #DC2626;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkouts</div>';
     stats.appendChild(cardIn); stats.appendChild(cardOut);
     body.appendChild(stats);
 
@@ -6282,16 +6282,30 @@ try {
 
       (function(idx5, el){ el.onclick = function(){
         var active = el.classList.contains('bh-col-active');
+        // Reset tout
         outer.querySelectorAll('.bh-day-hcell').forEach(function(c){c.classList.remove('bh-col-active');c.style.background='';});
         outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
-        // Reset booking blocks
-        outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';b.style.filter='';});
+        outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
         if(!active){
           el.classList.add('bh-col-active');
           el.style.background='rgba(26,122,94,.13)';
-          outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity=c.dataset.colIdx===String(idx5)?'1':'0.2';});
-          // Les blocs réservations restent toujours visibles (opacity:1 via leur propre style)
-          outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
+          // Dim les dcells (sauf colonne active)
+          outer.querySelectorAll('.bh-day-cell').forEach(function(c){
+            if(c.dataset.colIdx!==String(idx5)) c.style.opacity='0.25';
+          });
+          // Pour chaque bloc: visible si il COUVRE la colonne cliquée
+          outer.querySelectorAll('.booking-block-bh').forEach(function(b){
+            var anchorCell = b.parentElement;
+            if(!anchorCell) { b.style.opacity='0.25'; return; }
+            var startCol = parseInt(anchorCell.dataset.colIdx||'0');
+            // Nb de colonnes couvertes = largeur du bloc / colW (48px)
+            var nCols = Math.max(1, Math.round(b.offsetWidth / 48));
+            var endCol = startCol + nCols;
+            // Le bloc est visible si la colonne active est dans [startCol, endCol[
+            b.style.opacity = (idx5 >= startCol && idx5 < endCol) ? '1' : '0.2';
+            // Forcer opacity:1 sur les dcells parentes des blocs visibles
+            if(idx5 >= startCol && idx5 < endCol) anchorCell.style.opacity='1';
+          });
         }
       };})(di, hcell);
       grid.appendChild(hcell);
@@ -11332,15 +11346,32 @@ function savePropertyOrder() {
   const order = items.map(x => x.getAttribute('data-id'));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
   closeReorderModal();
-  // Réapplique immédiatement
-  _reapplying = false;
-  reapplyOrderToDOM();
-  // Feedback visuel
-  const btn = document.getElementById('btnReorderProperties');
-  if (btn) {
-    btn.innerHTML = '<i class="fas fa-check" style="color:#1A7A5E;"></i>';
-    setTimeout(function() { btn.innerHTML = '<i class="fas fa-arrows-up-down"></i>'; }, 1500);
+
+  // Réappliquer l'ordre sur calendarState.properties et re-render
+  if (window.calendarState && window.calendarState.properties && window.calendarState.properties.length) {
+    var props = window.calendarState.properties;
+    var ordered = [];
+    order.forEach(function(id) {
+      var p = props.find(function(x){ return String(x.id)===String(id); });
+      if (p) ordered.push(p);
+    });
+    props.forEach(function(p) {
+      if (!ordered.find(function(x){ return String(x.id)===String(p.id); })) ordered.push(p);
+    });
+    window.calendarState.properties = ordered;
+    if (typeof window.__bhCalendarRender === 'function') window.__bhCalendarRender();
+    else if (window.__bhCalendarState && typeof window.render === 'function') window.render();
+  } else {
+    _reapplying = false;
+    reapplyOrderToDOM();
   }
+
+  // Toast de confirmation
+  var toast = document.createElement('div');
+  toast.textContent = '✓ Ordre des logements sauvegardé';
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1A7A5E;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.2);transition:opacity .4s;';
+  document.body.appendChild(toast);
+  setTimeout(function(){ toast.style.opacity='0'; setTimeout(function(){ toast.remove(); }, 400); }, 2000);
 }
 
 function resetPropertyOrder() {
