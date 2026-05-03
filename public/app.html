@@ -6289,7 +6289,8 @@ try {
         outer.querySelectorAll('.bh-prop-cell').forEach(function(c){c.classList.remove('bh-row-active');c.style.background='';});
         outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
         outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
-        if(!active){\n          el.classList.add('bh-col-active');
+        if(!active){
+          el.classList.add('bh-col-active');
           el.style.background='rgba(26,122,94,.13)';
           // Dim les dcells (sauf colonne active)
           outer.querySelectorAll('.bh-day-cell').forEach(function(c){
