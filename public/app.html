@@ -6639,6 +6639,11 @@ try {
         state.properties = Object.values(map);
       }
 
+      // Appliquer l'ordre sauvegardé
+      if (typeof applyPropertyOrder === 'function') {
+        state.properties = applyPropertyOrder(state.properties);
+      }
+
       // Expose for compat
       window.__bhCalendarState = state;
       window.calendarState = state;
