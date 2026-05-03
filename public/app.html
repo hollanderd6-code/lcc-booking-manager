@@ -6369,7 +6369,10 @@ try {
           blk.style.background = p2.bg;
           blk.style.color      = 'white';
           blk.style.boxShadow  = '0 2px 6px rgba(0,0,0,.22)';
-          blk.innerHTML = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>'
+          var iconInner = p2.cls === 'airbnb'
+            ? '<i class="fa-brands fa-airbnb" style="font-size:8px;color:white;"></i>'
+            : (p2.cls === 'booking' ? '<span style="font-size:8px;font-weight:800;color:white;">B</span>' : '<span style="font-size:8px;font-weight:800;color:white;">'+p2.label[0]+'</span>');
+          blk.innerHTML = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+iconInner+'</div>'
             +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
           blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
           blk.onmouseout  = function(){ this.style.filter=''; };
