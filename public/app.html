@@ -6358,8 +6358,8 @@ try {
         blk.className = 'booking-block-bh';
         blk.style.top    = (rowTop + 7) + 'px';
         blk.style.height = (rowH - 14) + 'px';
-        blk.style.left   = (propW + clippedStart*colW + 2) + 'px';
-        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - 3 + colW*0.4) + 'px';
+        blk.style.left   = (propW + clippedStart*colW + colW*0.75) + 'px';
+        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - colW*0.5) + 'px';
 
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
@@ -6390,7 +6390,7 @@ try {
     body.appendChild(outer);
 
     // Stocker pour scroll après insertion dans le DOM (dans render())
-    var todayIdx = Math.floor((new Date(today+'T00:00:00') - rangeStart)/MS);
+    var todayIdx = Math.round((new Date(today+'T00:00:00') - new Date(ds(rangeStart)+'T00:00:00'))/MS);
     body._gridWrap = outer;
     body._scrollLeft = (todayIdx >= 0 && todayIdx < numDays) ? propW + todayIdx * colW : -1;
   }
