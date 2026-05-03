@@ -6389,10 +6389,13 @@ try {
     outer.appendChild(inner);
     body.appendChild(outer);
 
-    // Stocker pour scroll après insertion dans le DOM (dans render())
-    var todayIdx = Math.floor((new Date(today+'T00:00:00') - rangeStart)/MS);
-    body._gridWrap = outer;
-    body._scrollLeft = (todayIdx >= 0 && todayIdx < numDays) ? propW + todayIdx * colW : -1;
+    // Scroll vers aujourd'hui
+    setTimeout(function() {
+      var todayIdx = Math.round((new Date(today+'T12:00:00') - rangeStart)/MS);
+      if (todayIdx>=0) {
+        outer.scrollLeft = Math.max(0, propW + todayIdx*colW - outer.offsetWidth/2 + colW/2);
+      }
+    }, 80);
   }
   function renderYear(body) {
     var year = state.date.getFullYear();
