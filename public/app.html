@@ -6051,9 +6051,9 @@ try {
     var stats = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 14px 0;');
     var activeFilter = null;
     var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:all .2s;');
-    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
+    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:#F0FBF7;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
     var cardOut = div('background:#DC2626;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 12px rgba(220,38,38,.28);cursor:pointer;transition:all .2s;border:2px solid transparent;');
-    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:4px;">Checkouts</div>';
+    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:4px;">Checkouts</div>';
     stats.appendChild(cardIn); stats.appendChild(cardOut);
     body.appendChild(stats);
 
@@ -6254,7 +6254,11 @@ try {
     var corner = div('position:sticky;left:0;z-index:12;background:#F0EDE8;border-right:2px solid #DDD9D3;border-bottom:2px solid #E8E4DF;display:flex;align-items:center;justify-content:center;box-sizing:border-box;');
     corner.style.gridColumn = '1';
     corner.style.gridRow    = '1';
-    corner.innerHTML = '<span style="font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>';
+    corner.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">'
+      +'<span style="font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'
+      +'<button onclick="openReorderModal()" title="Réorganiser" style="background:none;border:none;cursor:pointer;padding:2px;color:#9CA3AF;display:flex;align-items:center;transition:color .15s;" onmouseover="this.style.color=\'#1A7A5E\'" onmouseout="this.style.color=\'#9CA3AF\'">'
+      +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l4-4 4 4M7 5v14M21 15l-4 4-4-4M17 19V5"/></svg>'
+      +'</button></div>';
     grid.appendChild(corner);
 
     // Cellules jours header
@@ -6364,8 +6368,8 @@ try {
         var e = (r.endDate  ||r.end  ||'').split('T')[0];
         if (!s||!e) return;
 
-        var colStart = Math.round((new Date(s+'T12:00:00') - rangeStart)/MS);
-        var colEnd   = Math.round((new Date(e+'T12:00:00') - rangeStart)/MS);
+        var colStart = Math.round((new Date(s+'T00:00:00') - new Date(ds(rangeStart)+'T00:00:00'))/MS);
+        var colEnd   = Math.round((new Date(e+'T00:00:00') - new Date(ds(rangeStart)+'T00:00:00'))/MS);
         if (colEnd<=0||colStart>=numDays) return;
         var clippedStart = Math.max(0, colStart);
         var clippedEnd   = Math.min(numDays, colEnd);
@@ -6413,23 +6417,24 @@ try {
     outer.appendChild(inner);
     body.appendChild(outer);
 
-    // Reposition overlay blocks using real DOM measurements (fixes PC alignment)
-    setTimeout(function() {
-      var outerEl = body.querySelector('#bhMonthOuter');
-      if (!outerEl) return;
-      var outerRect = outerEl.getBoundingClientRect();
-      if (!outerRect.width) return;
-      outerEl.querySelectorAll('.booking-block-bh').forEach(function(blk) {
-        var propId = blk.dataset.propId;
-        var pc = outerEl.querySelector('.bh-prop-cell[data-prop-id="'+propId+'"]');
-        if (!pc) return;
-        var pcRect = pc.getBoundingClientRect();
-        var realTop = pcRect.top - outerRect.top + outerEl.scrollTop;
-        var realH   = pcRect.height;
-        blk.style.top    = (realTop + 6) + 'px';
-        blk.style.height = (realH  - 12) + 'px';
+    // Recentrage des blocs après paint réel (fix PC) — double rAF
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        var outerEl = document.getElementById('bhMonthOuter');
+        if (!outerEl) return;
+        var outerRect = outerEl.getBoundingClientRect();
+        if (!outerRect.width) return;
+        outerEl.querySelectorAll('.booking-block-bh').forEach(function(blk) {
+          var propId = blk.dataset.propId;
+          var pc = outerEl.querySelector('.bh-prop-cell[data-prop-id="'+propId+'"]');
+          if (!pc) return;
+          var pcRect = pc.getBoundingClientRect();
+          var realTop = pcRect.top - outerRect.top + outerEl.scrollTop;
+          blk.style.top    = (realTop + 6) + 'px';
+          blk.style.height = (pcRect.height - 12) + 'px';
+        });
       });
-    }, 0);
+    });
 
     // Stocker pour scroll synchrone
     var todayIdx2 = -1;
