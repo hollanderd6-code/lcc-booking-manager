@@ -11340,6 +11340,8 @@ function openReorderModal() {
     row.addEventListener('dragend', onDragEnd);
     row.addEventListener('mouseenter', function(){ this.style.background='#f3f4f6'; this.style.borderColor='#1A7A5E'; });
     row.addEventListener('mouseleave', function(){ this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb'; });
+    // Touch drag support for mobile
+    addTouchDrag(row);
     reorderList.appendChild(row);
   });
 
@@ -11349,6 +11351,47 @@ function openReorderModal() {
 
 function closeReorderModal() {
   document.getElementById('reorderModal').style.display = 'none';
+}
+
+// Touch drag for mobile reorder
+function addTouchDrag(row) {
+  var startY = 0, startIdx = 0, dragging = false, clone = null, list = null;
+  var grip = row.querySelector('.fa-grip-vertical') ? row.querySelector('.fa-grip-vertical').parentElement : row;
+  
+  row.addEventListener('touchstart', function(e) {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+    e.stopPropagation();
+    startY = e.touches[0].clientY;
+    list = row.parentElement;
+    var items = Array.from(list.children);
+    startIdx = items.indexOf(row);
+    dragging = true;
+    row.style.opacity = '0.5';
+    row.style.boxShadow = '0 4px 12px rgba(0,0,0,.2)';
+  }, { passive: true });
+
+  row.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    var y = e.touches[0].clientY;
+    var dy = y - startY;
+    var items = Array.from(list.children);
+    var rowH = row.offsetHeight + 6;
+    var moveSteps = Math.round(dy / rowH);
+    var curIdx = items.indexOf(row);
+    var targetIdx = Math.max(0, Math.min(items.length - 1, startIdx + moveSteps));
+    if (targetIdx !== curIdx) {
+      if (targetIdx > curIdx) list.insertBefore(items[targetIdx], row);
+      else list.insertBefore(row, items[targetIdx]);
+    }
+  }, { passive: false });
+
+  row.addEventListener('touchend', function(e) {
+    if (!dragging) return;
+    dragging = false;
+    row.style.opacity = '1';
+    row.style.boxShadow = '';
+  }, { passive: true });
 }
 
 function moveReorderItem(el, dir) {
