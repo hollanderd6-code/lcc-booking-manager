@@ -6327,20 +6327,27 @@ try {
       pc.innerHTML = '<span style="font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
       (function(pid, el){ el.onclick = function(){
         var active = el.classList.contains('bh-row-active');
-        // Reset complet : logement ET colonne
-        outer.querySelectorAll('.bh-prop-cell').forEach(function(c){c.classList.remove('bh-row-active');c.style.background='';});
+        // Reset complet
+        outer.querySelectorAll('.bh-prop-cell').forEach(function(c){
+          c.classList.remove('bh-row-active');
+          c.style.background='';
+          c.style.opacity='1';
+        });
         outer.querySelectorAll('.bh-day-hcell').forEach(function(c){c.classList.remove('bh-col-active');c.style.background='';});
         outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
         outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
         if(!active){
           el.classList.add('bh-row-active');
-          el.style.background='rgba(26,122,94,.1)';
-          outer.querySelectorAll('.bh-day-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.15';});
-          outer.querySelectorAll('.bh-prop-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.background='rgba(0,0,0,.03)';});
+          el.style.background='rgba(26,122,94,.08)';
+          // Dim autres logements via opacity sur propCell ET dcells
+          outer.querySelectorAll('.bh-prop-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.3';c.style.background='';});
+          outer.querySelectorAll('.bh-day-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.2';});
           outer.querySelectorAll('.booking-block-bh').forEach(function(b){
             b.style.opacity = b.dataset.propId===pid ? '1' : '0.15';
           });
+          // S assurer que le logement actif est 100% visible
           outer.querySelectorAll('.bh-day-cell[data-prop-id="'+pid+'"]').forEach(function(c){c.style.opacity='1';});
+          el.style.opacity='1';
         }
       };})(String(prop.id), pc);
       grid.appendChild(pc);
