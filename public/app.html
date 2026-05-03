@@ -6366,7 +6366,7 @@ try {
         var colStart = Math.round((new Date(s+'T00:00:00') - new Date(ds(rangeStart)+'T00:00:00'))/MS);
         var colEnd   = Math.round((new Date(e+'T00:00:00') - new Date(ds(rangeStart)+'T00:00:00'))/MS);
         if (colEnd<=0||colStart>=numDays) return;
-        var clippedStart = Math.max(0, colStart);\
+        var clippedStart = Math.max(0, colStart);
         var clippedEnd   = Math.min(numDays, colEnd);
         if (clippedStart>=clippedEnd) return;
 
@@ -11291,8 +11291,8 @@ function openReorderModal() {
     row.innerHTML = '<i class="fas fa-grip-vertical" style="color:#9CA3AF;font-size:13px;flex-shrink:0;"></i>'
       + '<span style="flex:1;font-size:13px;font-weight:500;color:#111827;">' + (prop.name || String(prop.id)) + '</span>'
       + '<div style="display:flex;flex-direction:column;gap:2px;">'
-      + '<button onclick="moveReorderItem(this.closest('[data-id]'),-1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:#9CA3AF;font-size:10px;"><i class="fas fa-chevron-up"></i></button>'
-      + '<button onclick="moveReorderItem(this.closest('[data-id]'),1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:#9CA3AF;font-size:10px;"><i class="fas fa-chevron-down"></i></button>'
+      + '<button onclick="moveReorderItem(this.closest(\"[data-id]\"),-1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:#9CA3AF;font-size:10px;"><i class="fas fa-chevron-up"></i></button>'
+      + '<button onclick="moveReorderItem(this.closest(\"[data-id]\"),1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:#9CA3AF;font-size:10px;"><i class="fas fa-chevron-down"></i></button>'
       + '</div>';
     row.addEventListener('dragstart', onDragStart);
     row.addEventListener('dragover', onDragOver);
