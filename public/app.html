@@ -6356,8 +6356,12 @@ try {
 
         var blk = div('position:absolute;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;');
         blk.className = 'booking-block-bh';
-        blk.style.top    = (rowTop + 7) + 'px';
-        blk.style.height = (rowH - 14) + 'px';
+        blk.style.top    = rowTop + 'px';
+        blk.style.height = rowH + 'px';
+        blk.style.paddingTop = '7px';
+        blk.style.paddingBottom = '7px';
+        blk.style.boxSizing = 'border-box';
+        blk.style.alignItems = 'center';
         blk.style.left   = (propW + clippedStart*colW + colW*0.25) + 'px';
         blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - colW*0.25 + colW*0.25) + 'px';
 
@@ -6390,9 +6394,14 @@ try {
     body.appendChild(outer);
 
     // Stocker pour scroll après insertion dans le DOM (dans render())
-    var todayIdx = Math.round((new Date(today+'T00:00:00') - new Date(ds(rangeStart)+'T00:00:00'))/MS);
+    // Trouver todayIdx en cherchant la colonne dont la date == today
+    var todayIdx = -1;
+    for (var ti=0; ti<numDays; ti++) {
+      var td = new Date(rangeStart); td.setDate(rangeStart.getDate()+ti);
+      if (ds(td) === today) { todayIdx = ti; break; }
+    }
     body._gridWrap = outer;
-    body._scrollLeft = (todayIdx >= 0 && todayIdx < numDays) ? propW + todayIdx * colW : -1;
+    body._scrollLeft = todayIdx >= 0 ? propW + todayIdx * colW : -1;
   }
   function renderYear(body) {
     var year = state.date.getFullYear();
