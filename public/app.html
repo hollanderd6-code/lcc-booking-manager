@@ -6205,51 +6205,33 @@ try {
     var lastDay = new Date(year, month+1, 0);
     var today = ds(new Date());
 
-    // Build date range: start on Monday before firstDay
     var startOff = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1;
     var rangeStart = new Date(firstDay); rangeStart.setDate(1-startOff);
     var totalCells = Math.ceil((startOff + lastDay.getDate())/7)*7;
+    var numDays = totalCells;
+    var colW = 48;
 
-    // Outer wrapper
+    // ── Layout : outer flex
+    // propCol (fixe 90px) | gridWrap (scroll horizontal)
+    // daysHdr EST dans grid, sticky via JS transform au scroll
     var outer = div('background:white;overflow:hidden;');
-
-    // Property column + scrollable grid
     var layout = div('display:flex;overflow:hidden;');
 
-    // Left: property list
+    // Colonne gauche propriétés
     var propCol = div('flex-shrink:0;width:90px;background:#FAFAF9;border-right:2px solid #F0EDE8;');
-    // Header spacer
-    propCol.appendChild(div('height:44px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;','<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
-    state.properties.forEach(function(prop) {
-      var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:pointer;transition:background .15s;');
-      pc.className = 'bh-prop-cell';
-      pc.innerHTML='<span style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
-      (function(pid) {
-        pc.onclick = function() {
-          var isActive = pc.classList.contains('bh-row-active');
-          propCol.querySelectorAll('.bh-prop-cell').forEach(function(c) { c.classList.remove('bh-row-active'); c.style.background=''; });
-          grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity='1'; });
-          if (!isActive) {
-            pc.classList.add('bh-row-active');
-            pc.style.background = 'rgba(26,122,94,.1)';
-            grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity = r2.dataset.propId===pid ? '1' : '0.2'; });
-          }
-        };
-      })(String(prop.id));
-      propCol.appendChild(pc);
-    });
+    propCol.appendChild(div('height:44px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;',
+      '<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
 
-    // Right: scrollable days grid
+    // Grille scrollable
     var gridWrap = div('flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;');
 
-    // Days per column = totalCells
-    var numDays = totalCells;
-    var colW = 48; // px per day
+    // Grid container
+    var grid = div('min-width:'+(numDays*colW)+'px;position:relative;');
 
-    var grid = div('min-width:'+(numDays*colW)+'px;');
-
-    // Days header
-    var daysHdr = div('display:flex;height:44px;border-bottom:2px solid #F0EDE8;position:sticky;top:0;background:white;z-index:2;');
+    // Header des jours — position:sticky top:0 DANS grid (pas dans gridWrap)
+    // sticky fonctionne car l'ancêtre scrollant est gridWrap (overflow-x:auto)
+    // et on fait sticky sur l'axe Y (la page scrolle verticalement)
+    var daysHdr = div('display:flex;width:'+(numDays*colW)+'px;height:44px;border-bottom:2px solid #F0EDE8;position:sticky;top:0;background:white;z-index:4;');
     for (var di=0; di<numDays; di++) {
       var dayDate = new Date(rangeStart); dayDate.setDate(rangeStart.getDate()+di);
       var dstr2 = ds(dayDate);
@@ -6262,85 +6244,48 @@ try {
       hcell.innerHTML='<span style="font-size:11px;font-weight:600;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.04em;">'+DAYS_MIN[dayDate.getDay()]+'</span>'
         +'<span style="font-size:15px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
       hcell.style.cursor = 'pointer';
+      hcell.className = 'bh-day-hcell';
+      hcell.dataset.date = dstr2;
       (function(dstr5, idx5) {
         hcell.onclick = function() {
           var isActive = hcell.classList.contains('bh-col-active');
-          // Reset all
-          daysHdr.querySelectorAll('.bh-day-hcell').forEach(function(c) {
-            c.classList.remove('bh-col-active');
-            c.style.background = '';
-          });
-          grid.querySelectorAll('.bh-day-cell').forEach(function(c) {
-            c.style.opacity = '1';
-          });
+          daysHdr.querySelectorAll('.bh-day-hcell').forEach(function(c) { c.classList.remove('bh-col-active'); c.style.background=''; });
+          grid.querySelectorAll('.bh-day-cell').forEach(function(c) { c.style.opacity='1'; });
           if (!isActive) {
             hcell.classList.add('bh-col-active');
             hcell.style.background = 'rgba(26,122,94,.12)';
-            grid.querySelectorAll('.bh-day-cell').forEach(function(c) {
-              c.style.opacity = c.dataset.colIdx === String(idx5) ? '1' : '0.25';
-            });
+            grid.querySelectorAll('.bh-day-cell').forEach(function(c) { c.style.opacity = c.dataset.colIdx===String(idx5)?'1':'0.25'; });
           }
         };
       })(dstr2, di);
-      hcell.className = 'bh-day-hcell';
-      hcell.dataset.date = dstr2;
       daysHdr.appendChild(hcell);
     }
-    // ── Structure simple et robuste ──
-    // outer = flex row : propCol fixe | gridWrap scrollable
-    // gridWrap contient : daysHdr sticky + grid (rows)
-    // propCol = label "Logements" + une ligne par propriété, hauteurs identiques
+    grid.appendChild(daysHdr);
 
-    var propCol = div('flex-shrink:0;width:90px;background:#FAFAF9;border-right:2px solid #F0EDE8;position:sticky;left:0;z-index:5;');
-
-    // Header spacer aligné sur daysHdr (44px)
-    propCol.appendChild(div('height:44px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;background:#FAFAF9;',
-      '<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
-
-    // daysHdr sticky dans gridWrap
-    daysHdr.style.minWidth = (numDays * colW) + 'px';
-    daysHdr.style.position = 'sticky';
-    daysHdr.style.top = '0';
-    daysHdr.style.zIndex = '4';
-    daysHdr.style.background = 'white';
-    gridWrap.appendChild(daysHdr);
-    // grid appended after rows are built below
-
-    // Property rows dans grid + labels dans propCol
+    // Rows
     state.properties.forEach(function(prop) {
-      // Label dans propCol
+      // Label propCol
       var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:pointer;transition:background .15s;');
       pc.className = 'bh-prop-cell';
       pc.innerHTML = '<span style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
-      (function(pid, pcc) {
-        pcc.onclick = function() {
-          var isActive = pcc.classList.contains('bh-row-active');
+      (function(pid) {
+        pc.onclick = function() {
+          var isActive = pc.classList.contains('bh-row-active');
           propCol.querySelectorAll('.bh-prop-cell').forEach(function(c) { c.classList.remove('bh-row-active'); c.style.background=''; });
           grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity='1'; });
           if (!isActive) {
-            pcc.classList.add('bh-row-active');
-            pcc.style.background = 'rgba(26,122,94,.1)';
-            grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity = r2.dataset.propId===pid ? '1' : '0.2'; });
+            pc.classList.add('bh-row-active');
+            pc.style.background = 'rgba(26,122,94,.1)';
+            grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity = r2.dataset.propId===pid?'1':'0.2'; });
           }
         };
-      })(String(prop.id), pc);
+      })(String(prop.id));
       propCol.appendChild(pc);
 
-      // Row de données dans grid
-      var propRow = div('display:flex;height:52px;border-bottom:1px solid #F0EDE8;position:relative;transition:opacity .2s;');
+      // Row dans grid
+      var propRow = div('display:flex;width:'+(numDays*colW)+'px;height:52px;border-bottom:1px solid #F0EDE8;position:relative;transition:opacity .2s;');
       propRow.className = 'bh-prop-row';
       propRow.dataset.propId = String(prop.id);
-
-      // Build map of bookings for this property
-      var bookMap = {};
-      state.bookings.forEach(function(r) {
-        if (String(r.propertyId) !== String(prop.id)) return;
-        var s=(r.startDate||r.start||'').split('T')[0];
-        var e=(r.endDate||r.end||'').split('T')[0];
-        if (!s) return;
-        if (!bookMap[s]) bookMap[s]=[];
-        bookMap[s].push(r);
-      });
 
       for (var di2=0; di2<numDays; di2++) {
         var dayDate2 = new Date(rangeStart); dayDate2.setDate(rangeStart.getDate()+di2);
@@ -6348,65 +6293,49 @@ try {
         var inMonth2 = dayDate2.getMonth()===month;
         var isWknd2 = dayDate2.getDay()===0||dayDate2.getDay()===6;
         var isToday2 = dstr3===today;
-
         var dcell = div('width:'+colW+'px;flex-shrink:0;height:52px;position:relative;box-sizing:border-box;border-right:1px solid #F5F2EC;'
           +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(220,38,38,.02);':''));
         dcell.dataset.date = dstr3;
         dcell.dataset.propertyId = String(prop.id);
         dcell.dataset.colIdx = String(di2);
-        dcell.className = 'calendar-cell bh-day-cell' + (isWknd2?' weekend':'');
-
-        // Price display
+        dcell.className = 'calendar-cell bh-day-cell'+(isWknd2?' weekend':'');
         if (inMonth2) {
           var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:'+(isWknd2?'#dc2626':'#1A7A5E')+';pointer-events:none;user-select:none;');
           priceEl.className = 'cell-price';
-          if (prop.basePrice) priceEl.textContent = Math.round(isWknd2 ? (prop.weekendPrice||prop.basePrice) : prop.basePrice);
+          if (prop.basePrice) priceEl.textContent = Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice);
           dcell.appendChild(priceEl);
         }
-
-        // Click to create block/reservation
         (function(dstr4, propId4) {
           dcell.addEventListener('click', function(e) {
             if (e.target.closest('.booking-block-bh')) return;
-            // open block modal if available
             if (typeof window.openBlockModal === 'function') window.openBlockModal(dstr4, propId4);
           });
         })(dstr3, String(prop.id));
-
         propRow.appendChild(dcell);
       }
 
-      // Overlay booking blocks (absolutely positioned over the row)
-      var overlayRow = div('position:absolute;inset:0;pointer-events:none;');
+      // Overlay réservations
+      var overlayRow = div('position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;');
       state.bookings.forEach(function(r) {
         if (String(r.propertyId) !== String(prop.id)) return;
         var s=(r.startDate||r.start||'').split('T')[0];
         var e=(r.endDate||r.end||'').split('T')[0];
         if (!s||!e) return;
-
-        // Find column indices
         var startD = new Date(s+'T12:00:00');
         var endD   = new Date(e+'T12:00:00');
-        var colStart = Math.round((startD - rangeStart)/MS);
-        var colEnd   = Math.round((endD   - rangeStart)/MS);
-
-        // Clip to visible range
-        if (colEnd < 0 || colStart >= numDays) return;
-        colStart = Math.max(0, colStart);
-        colEnd   = Math.min(numDays, colEnd);
-        if (colStart >= colEnd) return;
+        var colStart = Math.round((startD-rangeStart)/MS);
+        var colEnd   = Math.round((endD-rangeStart)/MS);
+        if (colEnd<0||colStart>=numDays) return;
+        colStart = Math.max(0,colStart);
+        colEnd   = Math.min(numDays,colEnd);
+        if (colStart>=colEnd) return;
 
         var isBlock = r.type==='block';
         var p2 = pltInfo(r);
-
         var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:1;');
         blk.className = 'booking-block-bh';
-        // Checkin à 25% du jour d'arrivée, checkout à 25% du jour de départ → largeur = (colEnd-colStart)*colW
-        var leftPx  = colStart * colW + colW * 0.25;
-        var widthPx = (colEnd - colStart) * colW;
-        blk.style.left  = leftPx + 'px';
-        blk.style.width = widthPx + 'px';
-
+        blk.style.left  = (colStart*colW + colW*0.25)+'px';
+        blk.style.width = ((colEnd-colStart)*colW)+'px';
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
           blk.innerHTML='<i class="fas fa-ban" style="font-size:10px;color:#9CA3AF;flex-shrink:0;"></i><span style="font-size:11px;font-weight:600;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
@@ -6414,43 +6343,35 @@ try {
           blk.style.background = p2.bg;
           blk.style.color = 'white';
           blk.style.boxShadow = '0 2px 6px rgba(0,0,0,.2)';
-          var iconHtml;
-          if (p2.cls === 'airbnb') {
-            iconHtml = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-brands fa-airbnb" style="font-size:8px;color:white;"></i></div>';
-          } else {
-            iconHtml = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>';
-          }
-          blk.innerHTML=iconHtml+'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+          var iconHtml = p2.cls==='airbnb'
+            ? '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-brands fa-airbnb" style="font-size:8px;color:white;"></i></div>'
+            : '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>';
+          blk.innerHTML = iconHtml+'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
           blk.onmouseover=function(){this.style.filter='brightness(1.1)';};
           blk.onmouseout=function(){this.style.filter='';};
           blk.onclick=function(e){ e.stopPropagation(); openBooking(r); };
-          // Compat: expose dataset for fixModalContent
           blk.dataset.bookingId = String(r.id||'');
         }
         overlayRow.appendChild(blk);
       });
-
       propRow.style.position = 'relative';
       propRow.appendChild(overlayRow);
       grid.appendChild(propRow);
     });
 
-    // Assembler outer = propCol | gridWrap
     gridWrap.appendChild(grid);
-    var layout = div('display:flex;overflow:hidden;');
     layout.appendChild(propCol);
     layout.appendChild(gridWrap);
     outer.appendChild(layout);
     body.appendChild(outer);
 
-    // Stocker les infos pour scroll synchrone après insertion dans le DOM
-    var todayD = new Date(today + 'T00:00:00');
-    var todayIdx = Math.floor((todayD - rangeStart) / MS);
+    // Scroll synchrone vers aujourd'hui
+    var todayD = new Date(today+'T00:00:00');
+    var todayIdx = Math.floor((todayD-rangeStart)/MS);
     body._gridWrap = gridWrap;
-    body._scrollLeft = (todayIdx >= 0 && todayIdx < numDays) ? todayIdx * colW : -1;
+    body._scrollLeft = (todayIdx>=0 && todayIdx<numDays) ? todayIdx*colW : -1;
   }
 
-  // ─────────────────────────────────────────
   // VUE ANNÉE
   // ─────────────────────────────────────────
   function renderYear(body) {
