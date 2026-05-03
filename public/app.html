@@ -6405,8 +6405,8 @@ try {
     body.appendChild(outer);
 
     // Stocker les infos pour scroll synchrone après insertion dans le DOM
-    var todayD = new Date(today + 'T12:00:00');
-    var todayIdx = Math.round((todayD - rangeStart) / MS);
+    var todayD = new Date(today + 'T00:00:00');
+    var todayIdx = Math.floor((todayD - rangeStart) / MS);
     body._gridWrap = gridWrap;
     body._scrollLeft = (todayIdx >= 0 && todayIdx < numDays) ? todayIdx * colW : -1;
   }
