@@ -5954,17 +5954,6 @@ try {
 
     w.appendChild(body);
 
-    // Scroll to today — aujourd'hui en première colonne visible
-    if (state.view === 'month' && body._gridWrap) {
-      setTimeout(function() {
-        var gw = body._gridWrap;
-        var todayCol = gw.querySelector('[data-date="'+body._today+'"]');
-        if (todayCol) {
-          gw.scrollLeft = Math.max(0, todayCol.offsetLeft - 1);
-        }
-      }, 300);
-    }
-
     // Scroll into view on mobile
     setTimeout(function() {
       var w2 = getWrap();
@@ -6410,10 +6399,13 @@ try {
     outer.appendChild(layout);
     body.appendChild(outer);
 
-    // Store gridWrap ref so render() can scroll after appending body to DOM
-    body._gridWrap = gridWrap;
-    body._today = today;
-    body._colW = colW;
+    // Scroll immédiat — calculé mathématiquement (pas besoin du DOM)
+    // todayIndex = nb de jours entre rangeStart et aujourd'hui
+    var todayD = new Date(today + 'T12:00:00');
+    var todayIdx = Math.round((todayD - rangeStart) / MS);
+    if (todayIdx >= 0 && todayIdx < numDays) {
+      gridWrap.scrollLeft = todayIdx * colW;
+    }
   }
 
   // ─────────────────────────────────────────
