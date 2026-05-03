@@ -6049,12 +6049,32 @@ try {
 
     // Stats row
     var stats = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 14px 0;');
-    var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid rgba(26,122,94,.08);');
+    // activeFilter: null | 'checkins' | 'checkouts'
+    var activeFilter = null;
+
+    var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:all .2s;');
     cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2.5px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
-    var cardOut = div('background:#1A7A5E;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 12px rgba(26,122,94,.28);');
+    var cardOut = div('background:#DC2626;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 12px rgba(220,38,38,.28);cursor:pointer;transition:all .2s;border:2px solid transparent;');
     cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2.5px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px;">Checkouts</div>';
     stats.appendChild(cardIn); stats.appendChild(cardOut);
     body.appendChild(stats);
+
+    function applyFilter() {
+      listDiv.querySelectorAll('.bh-section-block').forEach(function(sec) {
+        var type = sec.dataset.type;
+        if (!activeFilter) { sec.style.display = ''; }
+        else if (activeFilter === 'checkins') { sec.style.display = type === 'arrivees' ? '' : 'none'; }
+        else { sec.style.display = type === 'departs' ? '' : 'none'; }
+      });
+      // Card styles
+      cardIn.style.border = activeFilter === 'checkins' ? '2px solid #1A7A5E' : '2px solid transparent';
+      cardIn.style.background = activeFilter === 'checkins' ? 'rgba(26,122,94,.08)' : 'white';
+      cardOut.style.opacity = activeFilter === 'checkins' ? '0.5' : '1';
+      cardIn.style.opacity = activeFilter === 'checkouts' ? '0.5' : '1';
+      cardOut.style.border = activeFilter === 'checkouts' ? '2px solid white' : '2px solid transparent';
+    }
+    cardIn.onclick = function() { activeFilter = activeFilter === 'checkins' ? null : 'checkins'; applyFilter(); };
+    cardOut.onclick = function() { activeFilter = activeFilter === 'checkouts' ? null : 'checkouts'; applyFilter(); };
 
     // Reservations list — 3 sections : Arrivées / En cours / Départs
     var listDiv = div('padding:12px 14px 8px;');
@@ -6095,16 +6115,22 @@ try {
       listDiv.appendChild(div('background:white;border-radius:14px;padding:28px;text-align:center;color:#9CA3AF;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.07);','Aucune réservation ce jour'));
     } else {
       if (arrivees.length>0) {
-        listDiv.appendChild(makeSectionLabel('Arrivées', '#1A7A5E'));
-        arrivees.forEach(function(r){ listDiv.appendChild(makeBookingCard(r,'#1A7A5E','M5 12h14M12 5l7 7-7 7')); });
+        var secIn = div(''); secIn.className='bh-section-block'; secIn.dataset.type='arrivees';
+        secIn.appendChild(makeSectionLabel('Arrivées', '#1A7A5E'));
+        arrivees.forEach(function(r){ secIn.appendChild(makeBookingCard(r,'#1A7A5E','M5 12h14M12 5l7 7-7 7')); });
+        listDiv.appendChild(secIn);
       }
       if (departs.length>0) {
-        listDiv.appendChild(makeSectionLabel('Départs', '#DC2626'));
-        departs.forEach(function(r){ listDiv.appendChild(makeBookingCard(r,'#DC2626','M19 12H5M12 19l-7-7 7-7')); });
+        var secOut = div(''); secOut.className='bh-section-block'; secOut.dataset.type='departs';
+        secOut.appendChild(makeSectionLabel('Départs', '#DC2626'));
+        departs.forEach(function(r){ secOut.appendChild(makeBookingCard(r,'#DC2626','M19 12H5M12 19l-7-7 7-7')); });
+        listDiv.appendChild(secOut);
       }
       if (enCours.length>0) {
-        listDiv.appendChild(makeSectionLabel('En séjour', '#6366F1'));
-        enCours.forEach(function(r){ listDiv.appendChild(makeBookingCard(r,'#6366F1','M5 12h14')); });
+        var secStay = div(''); secStay.className='bh-section-block'; secStay.dataset.type='encours';
+        secStay.appendChild(makeSectionLabel('En séjour', '#6366F1'));
+        enCours.forEach(function(r){ secStay.appendChild(makeBookingCard(r,'#6366F1','M5 12h14')); });
+        listDiv.appendChild(secStay);
       }
     }
     body.appendChild(listDiv);
@@ -6356,10 +6382,10 @@ try {
 
         var blk = div('position:absolute;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;');
         blk.className = 'booking-block-bh';
-        blk.style.top    = (rowTop + 9) + 'px';
-        blk.style.height = (rowH - 18) + 'px';
-        blk.style.left   = (propW + clippedStart*colW + colW*0.25) + 'px';
-        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW) + 'px';
+        blk.style.top    = (rowTop + 6) + 'px';
+        blk.style.height = (rowH - 12) + 'px';
+        blk.style.left   = (propW + clippedStart*colW + 2) + 'px';
+        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - 3 + colW*0.4) + 'px';
 
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
