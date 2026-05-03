@@ -5960,6 +5960,11 @@ try {
       body._gridWrap.scrollLeft = body._scrollLeft;
     }
 
+    // Repositionner les blocs avec vraies mesures DOM (fix alignement PC)
+    if (state.view === 'month' && body._fixBlocks) {
+      requestAnimationFrame(function() { body._fixBlocks(); });
+    }
+
     // Scroll into view on mobile
     setTimeout(function() {
       var w2 = getWrap();
@@ -6051,9 +6056,9 @@ try {
     var stats = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 14px 0;');
     var activeFilter = null;
     var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:all .2s;');
-    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:#F0FBF7;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
+    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
     var cardOut = div('background:#DC2626;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 12px rgba(220,38,38,.28);cursor:pointer;transition:all .2s;border:2px solid transparent;');
-    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:4px;">Checkouts</div>';
+    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #DC2626;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:4px;">Checkouts</div>';
     stats.appendChild(cardIn); stats.appendChild(cardOut);
     body.appendChild(stats);
 
@@ -6408,8 +6413,7 @@ try {
       });
     });
 
-    // L'overlay est dans un wrapper qui scrolle avec outer
-    // On enveloppe grid+overlay dans un div de taille fixe
+    // Assembler grid dans le DOM d'abord, puis lire les vraies positions
     outer.innerHTML = '';
     var inner = div('position:relative;width:'+totalW+'px;min-height:'+totalH+'px;');
     inner.appendChild(grid);
@@ -6417,24 +6421,24 @@ try {
     outer.appendChild(inner);
     body.appendChild(outer);
 
-    // Recentrage des blocs après paint réel (fix PC) — double rAF
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        var outerEl = document.getElementById('bhMonthOuter');
-        if (!outerEl) return;
+    // Repositionner les blocs avec les vraies hauteurs de row (fix PC)
+    // On lit après que body est dans le DOM via render()
+    body._fixBlocks = function() {
+      var outerEl = document.getElementById('bhMonthOuter');
+      if (!outerEl) return;
+      state.properties.forEach(function(prop) {
+        var pc = outerEl.querySelector('.bh-prop-cell[data-prop-id="'+prop.id+'"]');
+        if (!pc) return;
+        var pcRect = pc.getBoundingClientRect();
         var outerRect = outerEl.getBoundingClientRect();
-        if (!outerRect.width) return;
-        outerEl.querySelectorAll('.booking-block-bh').forEach(function(blk) {
-          var propId = blk.dataset.propId;
-          var pc = outerEl.querySelector('.bh-prop-cell[data-prop-id="'+propId+'"]');
-          if (!pc) return;
-          var pcRect = pc.getBoundingClientRect();
-          var realTop = pcRect.top - outerRect.top + outerEl.scrollTop;
+        var realTop = pcRect.top - outerRect.top + outerEl.scrollTop;
+        var realH = pcRect.height;
+        outerEl.querySelectorAll('.booking-block-bh[data-prop-id="'+prop.id+'"]').forEach(function(blk) {
           blk.style.top    = (realTop + 6) + 'px';
-          blk.style.height = (pcRect.height - 12) + 'px';
+          blk.style.height = (realH - 12) + 'px';
         });
       });
-    });
+    };
 
     // Stocker pour scroll synchrone
     var todayIdx2 = -1;
