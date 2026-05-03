@@ -6325,31 +6325,7 @@ try {
       pc.className = 'bh-prop-cell';
       pc.dataset.propId = String(prop.id);
       pc.innerHTML = '<span style="font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
-      (function(pid, el){ el.onclick = function(){
-        var active = el.classList.contains('bh-row-active');
-        // Reset complet
-        outer.querySelectorAll('.bh-prop-cell').forEach(function(c){
-          c.classList.remove('bh-row-active');
-          c.style.background='';
-          c.style.opacity='1';
-        });
-        outer.querySelectorAll('.bh-day-hcell').forEach(function(c){c.classList.remove('bh-col-active');c.style.background='';});
-        outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
-        outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
-        if(!active){
-          el.classList.add('bh-row-active');
-          el.style.background='rgba(26,122,94,.08)';
-          // Dim autres logements via opacity sur propCell ET dcells
-          outer.querySelectorAll('.bh-prop-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.3';c.style.background='';});
-          outer.querySelectorAll('.bh-day-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.2';});
-          outer.querySelectorAll('.booking-block-bh').forEach(function(b){
-            b.style.opacity = b.dataset.propId===pid ? '1' : '0.15';
-          });
-          // S assurer que le logement actif est 100% visible
-          outer.querySelectorAll('.bh-day-cell[data-prop-id="'+pid+'"]').forEach(function(c){c.style.opacity='1';});
-          el.style.opacity='1';
-        }
-      };})(String(prop.id), pc);
+// clic logement supprimé
       grid.appendChild(pc);
 
       // Cellules jours
@@ -11142,7 +11118,7 @@ html[data-theme-v3="1"] .booking-block.gites,   .booking-block.gites   { backgro
      MODAL RÉORGANISATION LOGEMENTS
 ════════════════════════════════════════════════════ -->
 <div id="reorderModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
-  <div style="background:var(--bg-primary,#fff);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:360px;max-width:90vw;overflow:hidden;">
+  <div style="background:var(--bg-primary,#fff);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:360px;max-width:92vw;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;">
     <!-- Header -->
     <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border-color,#e5e7eb);display:flex;align-items:center;justify-content:space-between;">
       <div>
@@ -11154,7 +11130,7 @@ html[data-theme-v3="1"] .booking-block.gites,   .booking-block.gites   { backgro
       </button>
     </div>
     <!-- List -->
-    <div id="reorderList" style="padding:12px;max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+    <div id="reorderList" style="padding:12px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;min-height:0;">
       <!-- items injected by JS -->
     </div>
     <!-- Footer -->
