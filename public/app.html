@@ -6219,7 +6219,7 @@ try {
     // Left: property list
     var propCol = div('flex-shrink:0;width:90px;background:#FAFAF9;border-right:2px solid #F0EDE8;');
     // Header spacer
-    propCol.appendChild(div('height:36px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;','<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
+    propCol.appendChild(div('height:44px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;','<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
     state.properties.forEach(function(prop) {
       var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:pointer;transition:background .15s;');
       pc.className = 'bh-prop-cell';
@@ -6244,23 +6244,23 @@ try {
 
     // Days per column = totalCells
     var numDays = totalCells;
-    var colW = 42; // px per day
+    var colW = 48; // px per day
 
     var grid = div('min-width:'+(numDays*colW)+'px;');
 
     // Days header
-    var daysHdr = div('display:flex;height:36px;border-bottom:2px solid #F0EDE8;position:sticky;top:0;background:white;z-index:2;');
+    var daysHdr = div('display:flex;height:44px;border-bottom:2px solid #F0EDE8;position:sticky;top:0;background:white;z-index:2;');
     for (var di=0; di<numDays; di++) {
       var dayDate = new Date(rangeStart); dayDate.setDate(rangeStart.getDate()+di);
       var dstr2 = ds(dayDate);
       var inMonth = dayDate.getMonth()===month;
       var isToday = dstr2===today;
       var isWknd = dayDate.getDay()===0||dayDate.getDay()===6;
-      var hcell = div('width:'+colW+'px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;'
+      var hcell = div('width:'+colW+'px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;'
         +(isToday?'background:rgba(26,122,94,.08);':'')
         +(isWknd&&!isToday?'background:rgba(220,38,38,.03);':''));
-      hcell.innerHTML='<span style="font-size:9px;font-weight:600;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.04em;">'+DAYS_MIN[dayDate.getDay()]+'</span>'
-        +'<span style="font-size:12px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
+      hcell.innerHTML='<span style="font-size:11px;font-weight:600;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.04em;">'+DAYS_MIN[dayDate.getDay()]+'</span>'
+        +'<span style="font-size:15px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
       hcell.style.cursor = 'pointer';
       (function(dstr5, idx5) {
         hcell.onclick = function() {
@@ -6286,6 +6286,7 @@ try {
       hcell.dataset.date = dstr2;
       daysHdr.appendChild(hcell);
     }
+    daysHdr.style.minWidth = (numDays * colW) + 'px';
     grid.appendChild(daysHdr);
 
     // Property rows
