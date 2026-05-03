@@ -6114,86 +6114,141 @@ try {
         if (ov) ov.remove();
         return;
       }
-      var panel = document.createElement('div');
-      panel.id = 'calSettingsPanel';
-      panel.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:320px;max-width:95vw;background:white;z-index:9999;box-shadow:-4px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column;font-family:inherit;';
 
+      // Charger les prefs
       var prefs = {};
       try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
       var showPrices = prefs.showPrices !== false;
       var defaultView = prefs.defaultView || 'month';
       var platforms = prefs.platforms || { airbnb:true, booking:true, direct:true, abritel:true };
 
-      panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid #F1F5F9;">'
-        + '<div style="font-size:15px;font-weight:700;color:#111827;">Paramètres du calendrier</div>'
-        + '<button onclick="document.getElementById(\'calSettingsPanel\').remove();var ov=document.getElementById(\'calSettingsOverlay\');if(ov)ov.remove();" style="background:none;border:none;cursor:pointer;padding:4px;color:#6B7280;font-size:18px;">✕</button>'
-      + '</div>'
-      + '<div style="flex:1;overflow-y:auto;padding:16px 18px;">'
-        + '<div style="margin-bottom:20px;">'
-          + '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Affichage</div>'
-          + '<label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 12px;background:#F9FAFB;border-radius:10px;">'
-            + '<span style="font-size:13px;font-weight:500;color:#374151;">Afficher les prix dans les cellules</span>'
-            + '<div id="togglePrices" onclick="bhTogglePref(\'showPrices\',this)" style="width:40px;height:22px;border-radius:11px;background:' + (showPrices?'#1A7A5E':'#D1D5DB') + ';position:relative;cursor:pointer;transition:background .2s;">'
-              + '<div style="position:absolute;top:3px;left:' + (showPrices?'20px':'3px') + ';width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>'
-            + '</div>'
-          + '</label>'
-        + '</div>'
-        + '<div style="margin-bottom:20px;">'
-          + '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Vue par défaut</div>'
-          + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-          + ['jour','semaine','mois','année'].map(function(v) {
-              var active = defaultView === v;
-              return '<button onclick=\"bhSetDefaultView(\\'' + v + '\\')\" id=\"bhDefView_' + v + '\" style=\"padding:8px;border-radius:8px;border:2px solid ' + (active?'#1A7A5E':'#E5E7EB') + ';background:' + (active?'rgba(26,122,94,.08)':'white') + ';color:' + (active?'#1A7A5E':'#374151') + ';font-size:12px;font-weight:' + (active?'700':'500') + ';cursor:pointer;text-transform:capitalize;\">' + v + '</button>';
-            }).join('')
-          + '</div>'
-        + '</div>'
-        + '<div style="margin-bottom:20px;">'
-          + '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Plateformes visibles</div>'
-          + [
-              {id:'airbnb', label:'Airbnb', color:'#FF5A5F'},
-              {id:'booking', label:'Booking.com', color:'#003580'},
-              {id:'direct', label:'Direct', color:'#1A7A5E'},
-              {id:'abritel', label:'Abritel', color:'#F97316'},
-            ].map(function(p) {
-              var on = platforms[p.id] !== false;
-              return '<label style=\"display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:9px 12px;background:#F9FAFB;border-radius:10px;margin-bottom:6px;\">'
-                + '<div style=\"display:flex;align-items:center;gap:8px;\">'
-                  + '<div style=\"width:10px;height:10px;border-radius:50%;background:' + p.color + ';\"></div>'
-                  + '<span style=\"font-size:13px;font-weight:500;color:#374151;\">' + p.label + '</span>'
-                + '</div>'
-                + '<div id=\"togglePlt_' + p.id + '\" onclick=\"bhTogglePlatform(\\'' + p.id + '\\',this)\" style=\"width:40px;height:22px;border-radius:11px;background:' + (on?'#1A7A5E':'#D1D5DB') + ';position:relative;cursor:pointer;transition:background .2s;\">'
-                  + '<div style=\"position:absolute;top:3px;left:' + (on?'20px':'3px') + ';width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);\"></div>'
-                + '</div>'
-              + '</label>';
-            }).join('')
-        + '</div>'
-      + '</div>'
-      + '<div style="padding:14px 18px;border-top:1px solid #F1F5F9;">'
-        + '<button onclick="bhApplyCalPrefs()" style="width:100%;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Appliquer</button>'
-      + '</div>';
-
-      document.body.appendChild(panel);
-
+      // Overlay
       var overlay = document.createElement('div');
       overlay.id = 'calSettingsOverlay';
       overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;';
-      overlay.onclick = function() {
-        var p = document.getElementById('calSettingsPanel');
-        if (p) p.remove();
-        overlay.remove();
+      overlay.onclick = function() { bhCloseCalSettings(); };
+      document.body.appendChild(overlay);
+
+      // Panel
+      var panel = document.createElement('div');
+      panel.id = 'calSettingsPanel';
+      panel.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:320px;max-width:95vw;background:white;z-index:9999;box-shadow:-4px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column;font-family:inherit;animation:slideInRight .2s ease;';
+      document.body.appendChild(panel);
+
+      // Header
+      var hdr = document.createElement('div');
+      hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid #F1F5F9;';
+      hdr.innerHTML = '<div style="font-size:15px;font-weight:700;color:#111827;">Paramètres du calendrier</div>';
+      var closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 8px;color:#6B7280;font-size:18px;';
+      closeBtn.onclick = function() { bhCloseCalSettings(); };
+      hdr.appendChild(closeBtn);
+      panel.appendChild(hdr);
+
+      // Body
+      var body = document.createElement('div');
+      body.style.cssText = 'flex:1;overflow-y:auto;padding:16px 18px;';
+      panel.appendChild(body);
+
+      // ── Section Affichage ──
+      var sec1 = document.createElement('div');
+      sec1.style.marginBottom = '20px';
+      sec1.innerHTML = '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Affichage</div>';
+
+      var row1 = document.createElement('label');
+      row1.style.cssText = 'display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 12px;background:#F9FAFB;border-radius:10px;';
+      row1.innerHTML = '<span style="font-size:13px;font-weight:500;color:#374151;">Afficher les prix dans les cellules</span>';
+
+      var tog1 = document.createElement('div');
+      tog1.style.cssText = 'width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;';
+      tog1.style.background = showPrices ? '#1A7A5E' : '#D1D5DB';
+      var tog1knob = document.createElement('div');
+      tog1knob.style.cssText = 'position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);';
+      tog1knob.style.left = showPrices ? '20px' : '3px';
+      tog1.appendChild(tog1knob);
+      tog1.onclick = function() {
+        var p = {};
+        try { p = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+        if (p.showPrices === undefined) p.showPrices = true;
+        p.showPrices = !p.showPrices;
+        localStorage.setItem('bhCalPrefs', JSON.stringify(p));
+        tog1.style.background = p.showPrices ? '#1A7A5E' : '#D1D5DB';
+        tog1knob.style.left = p.showPrices ? '20px' : '3px';
       };
-      document.body.insertBefore(overlay, panel);
+      row1.appendChild(tog1);
+      sec1.appendChild(row1);
+      body.appendChild(sec1);
+
+      // ── Section Vue par défaut ──
+      var sec2 = document.createElement('div');
+      sec2.style.marginBottom = '20px';
+      sec2.innerHTML = '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Vue par défaut</div>';
+      var grid2 = document.createElement('div');
+      grid2.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+      ['jour','semaine','mois','année'].forEach(function(v) {
+        var btn = document.createElement('button');
+        var active = defaultView === v;
+        btn.textContent = v;
+        btn.id = 'bhDefView_' + v;
+        btn.style.cssText = 'padding:8px;border-radius:8px;font-size:12px;cursor:pointer;text-transform:capitalize;border:2px solid ' + (active?'#1A7A5E':'#E5E7EB') + ';background:' + (active?'rgba(26,122,94,.08)':'white') + ';color:' + (active?'#1A7A5E':'#374151') + ';font-weight:' + (active?'700':'500') + ';';
+        btn.onclick = function() { bhSetDefaultView(v); };
+        grid2.appendChild(btn);
+      });
+      sec2.appendChild(grid2);
+      body.appendChild(sec2);
+
+      // ── Section Plateformes ──
+      var sec3 = document.createElement('div');
+      sec3.style.marginBottom = '20px';
+      sec3.innerHTML = '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Plateformes visibles</div>';
+      [{id:'airbnb',label:'Airbnb',color:'#FF5A5F'},{id:'booking',label:'Booking.com',color:'#003580'},{id:'direct',label:'Direct',color:'#1A7A5E'},{id:'abritel',label:'Abritel',color:'#F97316'}].forEach(function(p) {
+        var on = platforms[p.id] !== false;
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#F9FAFB;border-radius:10px;margin-bottom:6px;cursor:pointer;';
+        var left = document.createElement('div');
+        left.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        left.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:' + p.color + ';flex-shrink:0;"></div><span style="font-size:13px;font-weight:500;color:#374151;">' + p.label + '</span>';
+        var tog = document.createElement('div');
+        tog.style.cssText = 'width:40px;height:22px;border-radius:11px;position:relative;flex-shrink:0;transition:background .2s;';
+        tog.style.background = on ? '#1A7A5E' : '#D1D5DB';
+        var knob = document.createElement('div');
+        knob.style.cssText = 'position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);';
+        knob.style.left = on ? '20px' : '3px';
+        tog.appendChild(knob);
+        row.appendChild(left);
+        row.appendChild(tog);
+        row.onclick = function() {
+          var pr = {};
+          try { pr = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+          if (!pr.platforms) pr.platforms = {airbnb:true,booking:true,direct:true,abritel:true};
+          if (pr.platforms[p.id] === undefined) pr.platforms[p.id] = true;
+          pr.platforms[p.id] = !pr.platforms[p.id];
+          localStorage.setItem('bhCalPrefs', JSON.stringify(pr));
+          var nowOn = pr.platforms[p.id];
+          tog.style.background = nowOn ? '#1A7A5E' : '#D1D5DB';
+          knob.style.left = nowOn ? '20px' : '3px';
+        };
+        sec3.appendChild(row);
+      });
+      body.appendChild(sec3);
+
+      // Footer
+      var footer = document.createElement('div');
+      footer.style.cssText = 'padding:14px 18px;border-top:1px solid #F1F5F9;';
+      var applyBtn = document.createElement('button');
+      applyBtn.textContent = 'Appliquer';
+      applyBtn.style.cssText = 'width:100%;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;';
+      applyBtn.onclick = function() { bhApplyCalPrefs(); };
+      footer.appendChild(applyBtn);
+      panel.appendChild(footer);
     }
 
-    window.bhTogglePref = function(key, el) {
-      var prefs = {};
-      try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-      if (prefs[key] === undefined) prefs[key] = true;
-      prefs[key] = !prefs[key];
-      localStorage.setItem('bhCalPrefs', JSON.stringify(prefs));
-      var on = prefs[key];
-      el.style.background = on ? '#1A7A5E' : '#D1D5DB';
-      el.querySelector('div').style.left = on ? '20px' : '3px';
+    window.bhCloseCalSettings = function() {
+      var p = document.getElementById('calSettingsPanel');
+      var o = document.getElementById('calSettingsOverlay');
+      if (p) p.remove();
+      if (o) o.remove();
     };
 
     window.bhSetDefaultView = function(v) {
@@ -6212,23 +6267,8 @@ try {
       });
     };
 
-    window.bhTogglePlatform = function(id, el) {
-      var prefs = {};
-      try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-      if (!prefs.platforms) prefs.platforms = { airbnb:true, booking:true, direct:true, abritel:true };
-      if (prefs.platforms[id] === undefined) prefs.platforms[id] = true;
-      prefs.platforms[id] = !prefs.platforms[id];
-      localStorage.setItem('bhCalPrefs', JSON.stringify(prefs));
-      var on = prefs.platforms[id];
-      el.style.background = on ? '#1A7A5E' : '#D1D5DB';
-      el.querySelector('div').style.left = on ? '20px' : '3px';
-    };
-
     window.bhApplyCalPrefs = function() {
-      var panel = document.getElementById('calSettingsPanel');
-      var overlay = document.getElementById('calSettingsOverlay');
-      if (panel) panel.remove();
-      if (overlay) overlay.remove();
+      bhCloseCalSettings();
       renderCalendar();
       if (typeof showToast === 'function') showToast('Paramètres appliqués ✓', 'success');
     };
