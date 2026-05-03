@@ -913,8 +913,8 @@ async function syncSingleIcalUrl(pool, property, entry) {
       try {
         const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
         const todayStr = nowParis.toISOString().split('T')[0];
+        // ⚠️ on_arrival géré séparément avec vérification caution — ne pas l'inclure ici
         const triggerTypes = ['on_booking'];
-        if (startStr === todayStr) triggerTypes.push('on_arrival');
 
         const templates = await pool.query(
           `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
