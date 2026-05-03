@@ -6358,8 +6358,8 @@ try {
         blk.className = 'booking-block-bh';
         blk.style.top    = (rowTop + 7) + 'px';
         blk.style.height = (rowH - 14) + 'px';
-        blk.style.left   = (propW + clippedStart*colW + colW*0.75) + 'px';
-        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - colW*0.5) + 'px';
+        blk.style.left   = (propW + clippedStart*colW + colW*0.25) + 'px';
+        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - colW*0.25 + colW*0.25) + 'px';
 
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
