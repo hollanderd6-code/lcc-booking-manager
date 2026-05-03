@@ -5694,7 +5694,7 @@ try {
     airbnb:  { bg:'#FF5A5F', label:'Airbnb',       cls:'airbnb'  },
     booking: { bg:'#003580', label:'Booking.com',   cls:'booking' },
     bdc:     { bg:'#003580', label:'Booking.com',   cls:'booking' },
-    direct:  { bg:'#F97316', label:'Direct',        cls:'direct'  },
+    direct:  { bg:'#1A7A5E', label:'Direct',        cls:'direct'  },
     abritel: { bg:'#0096D6', label:'Abritel',       cls:'abritel' },
     expedia: { bg:'#FFC72C', label:'Expedia',       cls:'expedia' },
     vrbo:    { bg:'#1569C7', label:'Vrbo',          cls:'vrbo'    },
@@ -5757,8 +5757,17 @@ try {
     size = size || 20;
     var p = pltInfo(r);
     var radius = p.cls === 'booking' ? '4px' : '50%';
-    var text = p.cls === 'booking' ? 'B' : (p.cls === 'airbnb' ? '✦' : p.label[0]);
-    return '<div style="width:'+size+'px;height:'+size+'px;background:'+p.bg+';border-radius:'+radius+';display:flex;align-items:center;justify-content:center;font-size:'+(size*0.55)+'px;font-weight:800;color:white;flex-shrink:0;">'+text+'</div>';
+    var inner;
+    if (p.cls === 'airbnb') {
+      // Vrai logo Airbnb (bélo)
+      var s = Math.round(size * 0.62);
+      inner = '<svg width="'+s+'" height="'+s+'" viewBox="0 0 32 32" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M16 1C10.925 1 7.5 5.637 7.5 10.5c0 3.426 1.574 6.41 3.47 9.012C13.09 22.46 16 25.5 16 25.5s2.91-3.04 5.03-5.988C22.926 16.91 24.5 13.926 24.5 10.5 24.5 5.637 21.075 1 16 1zm0 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 14.5c-1.5-1.8-8.5-8.5-8.5-17.5C7.5 4.701 11.358 0 16 0s8.5 4.701 8.5 11c0 9-7 15.7-8.5 17.5z"/></svg>';
+    } else if (p.cls === 'booking') {
+      inner = '<span style="font-size:'+(size*0.55)+'px;font-weight:800;color:white;line-height:1;">B</span>';
+    } else {
+      inner = '<span style="font-size:'+(size*0.55)+'px;font-weight:800;color:white;line-height:1;">'+p.label[0]+'</span>';
+    }
+    return '<div style="width:'+size+'px;height:'+size+'px;background:'+p.bg+';border-radius:'+radius+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+inner+'</div>';
   }
 
   // ─────────────────────────────────────────
@@ -6271,6 +6280,7 @@ try {
         };
       })(dstr2, di);
       hcell.className = 'bh-day-hcell';
+      hcell.dataset.date = dstr2;
       daysHdr.appendChild(hcell);
     }
     grid.appendChild(daysHdr);
@@ -6351,9 +6361,9 @@ try {
 
         var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:1;');
         blk.className = 'booking-block-bh';
-        // Le checkout est le matin du dernier jour → le bloc dépasse à moitié sur ce jour
-        var leftPx  = colStart * colW + 3;
-        var widthPx = (colEnd - colStart) * colW - 3 + colW * 0.25; // dépasse légèrement sur le matin du checkout
+        // Checkin à 25% du jour d'arrivée, checkout à 25% du jour de départ → largeur = (colEnd-colStart)*colW
+        var leftPx  = colStart * colW + colW * 0.25;
+        var widthPx = (colEnd - colStart) * colW;
         blk.style.left  = leftPx + 'px';
         blk.style.width = widthPx + 'px';
 
@@ -6364,8 +6374,13 @@ try {
           blk.style.background = p2.bg;
           blk.style.color = 'white';
           blk.style.boxShadow = '0 2px 6px rgba(0,0,0,.2)';
-          blk.innerHTML='<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>'
-            +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+          var iconHtml;
+          if (p2.cls === 'airbnb') {
+            iconHtml = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="9" height="9" viewBox="0 0 32 32" fill="white"><path d="M16 1C10.925 1 7.5 5.637 7.5 10.5c0 3.426 1.574 6.41 3.47 9.012C13.09 22.46 16 25.5 16 25.5s2.91-3.04 5.03-5.988C22.926 16.91 24.5 13.926 24.5 10.5 24.5 5.637 21.075 1 16 1zm0 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 14.5c-1.5-1.8-8.5-8.5-8.5-17.5C7.5 4.701 11.358 0 16 0s8.5 4.701 8.5 11c0 9-7 15.7-8.5 17.5z"/></svg></div>';
+          } else {
+            iconHtml = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>';
+          }
+          blk.innerHTML=iconHtml+'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
           blk.onmouseover=function(){this.style.filter='brightness(1.1)';};
           blk.onmouseout=function(){this.style.filter='';};
           blk.onclick=function(e){ e.stopPropagation(); openBooking(r); };
