@@ -6043,41 +6043,56 @@ try {
     stats.appendChild(cardIn); stats.appendChild(cardOut);
     body.appendChild(stats);
 
-    // Reservations list
+    // Reservations list — 3 sections : Arrivées / En cours / Départs
     var listDiv = div('padding:12px 14px 8px;');
+
+    function makeBookingCard(r, col, arrowPath) {
+      var card = div('background:white;border-radius:14px;padding:13px 15px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;gap:11px;cursor:pointer;transition:box-shadow .15s;');
+      card.onmouseover=function(){this.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';};
+      card.onmouseout=function(){this.style.boxShadow='0 1px 4px rgba(0,0,0,.07)';};
+      card.onclick=function(){ openBooking(r); };
+      var circle = div('width:30px;height:30px;border-radius:50%;border:2px solid '+col+';display:flex;align-items:center;justify-content:center;flex-shrink:0;');
+      circle.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'+col+'" stroke-width="2.5"><path d="'+arrowPath+'"/></svg>';
+      var mid = div('flex:1;min-width:0;');
+      mid.innerHTML='<div style="font-size:14px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</div>'
+        +(r.propertyName?'<div style="font-size:11px;color:#9CA3AF;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.propertyName+'</div>':'');
+      var right = div('display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;');
+      right.innerHTML=pltBadge(r,20)
+        +'<div style="display:flex;align-items:center;gap:5px;color:#9CA3AF;">'
+        +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'
+        +'<span style="font-size:11px;">'+guests(r)+'</span>'
+        +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+        +'<span style="font-size:11px;">'+nights(r)+'</span>'
+        +'</div>';
+      card.appendChild(circle); card.appendChild(mid); card.appendChild(right);
+      return card;
+    }
+
+    function makeSectionLabel(label, color) {
+      var lbl = div('font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:'+color+';margin:10px 0 6px;padding:0 2px;');
+      lbl.textContent = label;
+      return lbl;
+    }
+
+    var arrivees  = list.filter(function(r){ var s=(r.startDate||r.start||'').split('T')[0]; return s===selStr; });
+    var departs   = list.filter(function(r){ var e=(r.endDate||r.end||'').split('T')[0]; return e===selStr; });
+    var enCours   = list.filter(function(r){ var s=(r.startDate||r.start||'').split('T')[0]; var e=(r.endDate||r.end||'').split('T')[0]; return s!==selStr && e!==selStr; });
+
     if (list.length===0) {
       listDiv.appendChild(div('background:white;border-radius:14px;padding:28px;text-align:center;color:#9CA3AF;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.07);','Aucune réservation ce jour'));
     } else {
-      list.forEach(function(r) {
-        var s=(r.startDate||r.start||'').split('T')[0];
-        var e=(r.endDate||r.end||'').split('T')[0];
-        var isIn=s===selStr, isOut=e===selStr;
-        var col=isIn?'#1A7A5E':isOut?'#145f4a':'#6366F1';
-        var arrowPath=isOut?'M19 12H5M12 19l-7-7 7-7':'M5 12h14M12 5l7 7-7 7';
-        var card = div('background:white;border-radius:14px;padding:13px 15px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;gap:11px;cursor:pointer;transition:box-shadow .15s;');
-        card.onmouseover=function(){this.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';};
-        card.onmouseout=function(){this.style.boxShadow='0 1px 4px rgba(0,0,0,.07)';};
-        card.onclick=function(){ openBooking(r); };
-
-        var circle = div('width:30px;height:30px;border-radius:50%;border:2px solid '+col+';display:flex;align-items:center;justify-content:center;flex-shrink:0;');
-        circle.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'+col+'" stroke-width="2.5"><path d="'+arrowPath+'"/></svg>';
-
-        var mid = div('flex:1;min-width:0;');
-        mid.innerHTML='<div style="font-size:14px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</div>'
-          +(r.propertyName?'<div style="font-size:11px;color:#9CA3AF;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.propertyName+'</div>':'');
-
-        var right = div('display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;');
-        right.innerHTML=pltBadge(r,20)
-          +'<div style="display:flex;align-items:center;gap:5px;color:#9CA3AF;">'
-          +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'
-          +'<span style="font-size:11px;">'+guests(r)+'</span>'
-          +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
-          +'<span style="font-size:11px;">'+nights(r)+'</span>'
-          +'</div>';
-
-        card.appendChild(circle); card.appendChild(mid); card.appendChild(right);
-        listDiv.appendChild(card);
-      });
+      if (arrivees.length>0) {
+        listDiv.appendChild(makeSectionLabel('Arrivées', '#1A7A5E'));
+        arrivees.forEach(function(r){ listDiv.appendChild(makeBookingCard(r,'#1A7A5E','M5 12h14M12 5l7 7-7 7')); });
+      }
+      if (departs.length>0) {
+        listDiv.appendChild(makeSectionLabel('Départs', '#DC2626'));
+        departs.forEach(function(r){ listDiv.appendChild(makeBookingCard(r,'#DC2626','M19 12H5M12 19l-7-7 7-7')); });
+      }
+      if (enCours.length>0) {
+        listDiv.appendChild(makeSectionLabel('En séjour', '#6366F1'));
+        enCours.forEach(function(r){ listDiv.appendChild(makeBookingCard(r,'#6366F1','M5 12h14')); });
+      }
     }
     body.appendChild(listDiv);
 
@@ -6338,7 +6353,7 @@ try {
         blk.className = 'booking-block-bh';
         // Le checkout est le matin du dernier jour → le bloc dépasse à moitié sur ce jour
         var leftPx  = colStart * colW + 3;
-        var widthPx = (colEnd - colStart) * colW - 3 + colW * 0.45; // dépasse sur le jour de départ
+        var widthPx = (colEnd - colStart) * colW - 3 + colW * 0.25; // dépasse légèrement sur le matin du checkout
         blk.style.left  = leftPx + 'px';
         blk.style.width = widthPx + 'px';
 
@@ -6371,13 +6386,16 @@ try {
     outer.appendChild(layout);
     body.appendChild(outer);
 
-    // Scroll to today
-    setTimeout(function() {
-      var todayCol = grid.querySelector('[data-date="'+today+'"]');
-      if (todayCol && gridWrap) {
-        gridWrap.scrollLeft = todayCol.offsetLeft - gridWrap.offsetWidth/2 + colW/2;
-      }
-    }, 60);
+    // Scroll to today — double rAF pour que le layout soit calculé
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        var todayCol = grid.querySelector('[data-date="'+today+'"]');
+        if (todayCol && gridWrap) {
+          var offset = todayCol.offsetLeft - gridWrap.offsetWidth/2 + colW/2;
+          gridWrap.scrollLeft = Math.max(0, offset);
+        }
+      });
+    });
   }
 
   // ─────────────────────────────────────────
