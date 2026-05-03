@@ -6356,12 +6356,8 @@ try {
 
         var blk = div('position:absolute;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;');
         blk.className = 'booking-block-bh';
-        blk.style.top    = rowTop + 'px';
-        blk.style.height = rowH + 'px';
-        blk.style.paddingTop = '7px';
-        blk.style.paddingBottom = '7px';
-        blk.style.boxSizing = 'border-box';
-        blk.style.alignItems = 'center';
+        blk.style.top    = (rowTop + 7) + 'px';
+        blk.style.height = (rowH - 14) + 'px';
         blk.style.left   = (propW + clippedStart*colW + colW*0.25) + 'px';
         blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - colW*0.25 + colW*0.25) + 'px';
 
@@ -6401,7 +6397,7 @@ try {
       if (ds(td) === today) { todayIdx = ti; break; }
     }
     body._gridWrap = outer;
-    body._scrollLeft = todayIdx >= 0 ? propW + todayIdx * colW : -1;
+    body._scrollLeft = todayIdx >= 0 ? todayIdx * colW : -1;
   }
   function renderYear(body) {
     var year = state.date.getFullYear();
