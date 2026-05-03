@@ -6211,27 +6211,24 @@ try {
     var totalCells = Math.ceil((startOff + lastDay.getDate())/7)*7;
     var numDays = totalCells;
     var colW = 48;
+    var propW = 90; // largeur colonne logements
 
-    // ── Layout : outer flex
-    // propCol (fixe 90px) | gridWrap (scroll horizontal)
-    // daysHdr EST dans grid, sticky via JS transform au scroll
+    // ── Structure : 1 seul conteneur scroll horizontal
+    // À l'intérieur : propCol sticky left + grid des jours
+    // Le header des jours est la 1ère row du grid, sticky top
     var outer = div('background:white;overflow:hidden;');
-    var layout = div('display:flex;overflow:hidden;');
+    var scroller = div('overflow-x:auto;-webkit-overflow-scrolling:touch;');
+    var inner = div('display:flex;min-width:'+(propW + numDays*colW)+'px;position:relative;');
 
-    // Colonne gauche propriétés
-    var propCol = div('flex-shrink:0;width:90px;background:#FAFAF9;border-right:2px solid #F0EDE8;');
-    propCol.appendChild(div('height:44px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;',
+    // Colonne gauche — sticky left à l'intérieur du scroller
+    var propCol = div('flex-shrink:0;width:'+propW+'px;background:#FAFAF9;border-right:2px solid #F0EDE8;position:sticky;left:0;z-index:6;');
+    propCol.appendChild(div('height:44px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;background:#FAFAF9;',
       '<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
 
-    // Grille scrollable
-    var gridWrap = div('flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;');
+    // Grille droite
+    var gridWrap = div('flex:1;min-width:'+(numDays*colW)+'px;position:relative;');
 
-    // Grid container
-    var grid = div('min-width:'+(numDays*colW)+'px;position:relative;');
-
-    // Header des jours — position:sticky top:0 DANS grid (pas dans gridWrap)
-    // sticky fonctionne car l'ancêtre scrollant est gridWrap (overflow-x:auto)
-    // et on fait sticky sur l'axe Y (la page scrolle verticalement)
+    // Header des jours sticky top (dans gridWrap)
     var daysHdr = div('display:flex;width:'+(numDays*colW)+'px;height:44px;border-bottom:2px solid #F0EDE8;position:sticky;top:0;background:white;z-index:4;');
     for (var di=0; di<numDays; di++) {
       var dayDate = new Date(rangeStart); dayDate.setDate(rangeStart.getDate()+di);
@@ -6239,7 +6236,7 @@ try {
       var inMonth = dayDate.getMonth()===month;
       var isToday = dstr2===today;
       var isWknd = dayDate.getDay()===0||dayDate.getDay()===6;
-      var hcell = div('width:'+colW+'px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;border-right:1px solid #F0EDE8;'
+      var hcell = div('width:'+colW+'px;flex-shrink:0;box-sizing:border-box;border-right:1px solid #F0EDE8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;'
         +(isToday?'background:rgba(26,122,94,.08);':'')
         +(isWknd&&!isToday?'background:rgba(220,38,38,.03);':''));
       hcell.innerHTML='<span style="font-size:11px;font-weight:600;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.04em;">'+DAYS_MIN[dayDate.getDay()]+'</span>'
@@ -6251,39 +6248,39 @@ try {
         hcell.onclick = function() {
           var isActive = hcell.classList.contains('bh-col-active');
           daysHdr.querySelectorAll('.bh-day-hcell').forEach(function(c) { c.classList.remove('bh-col-active'); c.style.background=''; });
-          grid.querySelectorAll('.bh-day-cell').forEach(function(c) { c.style.opacity='1'; });
+          gridWrap.querySelectorAll('.bh-day-cell').forEach(function(c) { c.style.opacity='1'; });
           if (!isActive) {
             hcell.classList.add('bh-col-active');
             hcell.style.background = 'rgba(26,122,94,.12)';
-            grid.querySelectorAll('.bh-day-cell').forEach(function(c) { c.style.opacity = c.dataset.colIdx===String(idx5)?'1':'0.25'; });
+            gridWrap.querySelectorAll('.bh-day-cell').forEach(function(c) { c.style.opacity = c.dataset.colIdx===String(idx5)?'1':'0.25'; });
           }
         };
       })(dstr2, di);
       daysHdr.appendChild(hcell);
     }
-    grid.appendChild(daysHdr);
+    gridWrap.appendChild(daysHdr);
 
-    // Rows
+    // Rows propriétés
     state.properties.forEach(function(prop) {
-      // Label propCol
-      var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:pointer;transition:background .15s;');
+      // Label dans propCol
+      var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:pointer;transition:background .15s;background:#FAFAF9;');
       pc.className = 'bh-prop-cell';
       pc.innerHTML = '<span style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
       (function(pid) {
         pc.onclick = function() {
           var isActive = pc.classList.contains('bh-row-active');
-          propCol.querySelectorAll('.bh-prop-cell').forEach(function(c) { c.classList.remove('bh-row-active'); c.style.background=''; });
-          grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity='1'; });
+          propCol.querySelectorAll('.bh-prop-cell').forEach(function(c) { c.classList.remove('bh-row-active'); c.style.background='#FAFAF9'; });
+          gridWrap.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity='1'; });
           if (!isActive) {
             pc.classList.add('bh-row-active');
             pc.style.background = 'rgba(26,122,94,.1)';
-            grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity = r2.dataset.propId===pid?'1':'0.2'; });
+            gridWrap.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity = r2.dataset.propId===pid?'1':'0.2'; });
           }
         };
       })(String(prop.id));
       propCol.appendChild(pc);
 
-      // Row dans grid
+      // Row dans gridWrap
       var propRow = div('display:flex;width:'+(numDays*colW)+'px;height:52px;border-bottom:1px solid #F0EDE8;position:relative;transition:opacity .2s;');
       propRow.className = 'bh-prop-row';
       propRow.dataset.propId = String(prop.id);
@@ -6357,20 +6354,23 @@ try {
       });
       propRow.style.position = 'relative';
       propRow.appendChild(overlayRow);
-      grid.appendChild(propRow);
+      gridWrap.appendChild(propRow);
     });
 
-    gridWrap.appendChild(grid);
-    layout.appendChild(propCol);
-    layout.appendChild(gridWrap);
-    outer.appendChild(layout);
+    inner.appendChild(propCol);
+    inner.appendChild(gridWrap);
+    scroller.appendChild(inner);
+    outer.appendChild(scroller);
     body.appendChild(outer);
 
-    // Scroll synchrone vers aujourd'hui
+    // Scroll vers aujourd'hui
     var todayD = new Date(today+'T00:00:00');
     var todayIdx = Math.floor((todayD-rangeStart)/MS);
-    body._gridWrap = gridWrap;
-    body._scrollLeft = (todayIdx>=0 && todayIdx<numDays) ? todayIdx*colW : -1;
+    if (todayIdx >= 0 && todayIdx < numDays) {
+      scroller.scrollLeft = propW + todayIdx * colW;
+    }
+    body._gridWrap = scroller;
+    body._scrollLeft = (todayIdx>=0 && todayIdx<numDays) ? propW + todayIdx*colW : -1;
   }
 
   // VUE ANNÉE
