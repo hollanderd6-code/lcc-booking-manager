@@ -5954,6 +5954,11 @@ try {
 
     w.appendChild(body);
 
+    // Scroll synchrone vers aujourd'hui — juste après insertion dans le DOM
+    if (state.view === 'month' && body._gridWrap && body._scrollLeft >= 0) {
+      body._gridWrap.scrollLeft = body._scrollLeft;
+    }
+
     // Scroll into view on mobile
     setTimeout(function() {
       var w2 = getWrap();
@@ -6399,13 +6404,11 @@ try {
     outer.appendChild(layout);
     body.appendChild(outer);
 
-    // Scroll immédiat — calculé mathématiquement (pas besoin du DOM)
-    // todayIndex = nb de jours entre rangeStart et aujourd'hui
+    // Stocker les infos pour scroll synchrone après insertion dans le DOM
     var todayD = new Date(today + 'T12:00:00');
     var todayIdx = Math.round((todayD - rangeStart) / MS);
-    if (todayIdx >= 0 && todayIdx < numDays) {
-      gridWrap.scrollLeft = todayIdx * colW;
-    }
+    body._gridWrap = gridWrap;
+    body._scrollLeft = (todayIdx >= 0 && todayIdx < numDays) ? todayIdx * colW : -1;
   }
 
   // ─────────────────────────────────────────
