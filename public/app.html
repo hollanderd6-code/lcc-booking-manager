@@ -5531,6 +5531,14 @@ localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(reservations));
 localStorage.setItem('LCC_PROPERTIES', JSON.stringify(properties));
 window.LCC_RESERVATIONS = reservations;
 window.LCC_PROPERTIES = properties;
+// Pour la vue Jour
+try {
+  if (typeof enrichReservationsWithPropertyNames === 'function') {
+    window.enrichedReservations = enrichReservationsWithPropertyNames(reservations);
+  } else {
+    window.enrichedReservations = reservations;
+  }
+} catch(e) { window.enrichedReservations = reservations; }
       } else {
         const rRaw = localStorage.getItem('LCC_RESERVATIONS');
         const pRaw = localStorage.getItem('LCC_PROPERTIES');
@@ -6089,18 +6097,141 @@ window.LCC_PROPERTIES = properties;
         });
       }
 
-      // ⚙️ Bouton paramètres : simple toast pour l\'instant
+      // ⚙️ Bouton paramètres : panel réel
       var settingsBtn = document.getElementById('calendarSettingsBtn');
       if (settingsBtn) {
         settingsBtn.addEventListener('click', function () {
-          if (typeof showToast === 'function') {
-            showToast('Les paramètres avancés du calendrier arrivent bientôt.', 'info');
-          } else {
-            alert('Les paramètres avancés du calendrier arrivent bientôt.');
-          }
+          openCalendarSettingsPanel();
         });
       }
     }
+
+    // ── Panel Paramètres Calendrier ──
+    function openCalendarSettingsPanel() {
+      if (document.getElementById('calSettingsPanel')) {
+        document.getElementById('calSettingsPanel').remove();
+        var ov = document.getElementById('calSettingsOverlay');
+        if (ov) ov.remove();
+        return;
+      }
+      var panel = document.createElement('div');
+      panel.id = 'calSettingsPanel';
+      panel.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:320px;max-width:95vw;background:white;z-index:9999;box-shadow:-4px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column;font-family:inherit;';
+
+      var prefs = {};
+      try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+      var showPrices = prefs.showPrices !== false;
+      var defaultView = prefs.defaultView || 'month';
+      var platforms = prefs.platforms || { airbnb:true, booking:true, direct:true, abritel:true };
+
+      panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid #F1F5F9;">'
+        + '<div style="font-size:15px;font-weight:700;color:#111827;">Paramètres du calendrier</div>'
+        + '<button onclick="document.getElementById(\'calSettingsPanel\').remove();var ov=document.getElementById(\'calSettingsOverlay\');if(ov)ov.remove();" style="background:none;border:none;cursor:pointer;padding:4px;color:#6B7280;font-size:18px;">✕</button>'
+      + '</div>'
+      + '<div style="flex:1;overflow-y:auto;padding:16px 18px;">'
+        + '<div style="margin-bottom:20px;">'
+          + '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Affichage</div>'
+          + '<label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 12px;background:#F9FAFB;border-radius:10px;">'
+            + '<span style="font-size:13px;font-weight:500;color:#374151;">Afficher les prix dans les cellules</span>'
+            + '<div id="togglePrices" onclick="bhTogglePref(\'showPrices\',this)" style="width:40px;height:22px;border-radius:11px;background:' + (showPrices?'#1A7A5E':'#D1D5DB') + ';position:relative;cursor:pointer;transition:background .2s;">'
+              + '<div style="position:absolute;top:3px;left:' + (showPrices?'20px':'3px') + ';width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>'
+            + '</div>'
+          + '</label>'
+        + '</div>'
+        + '<div style="margin-bottom:20px;">'
+          + '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Vue par défaut</div>'
+          + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+          + ['jour','semaine','mois','année'].map(function(v) {
+              var active = defaultView === v;
+              return '<button onclick=\"bhSetDefaultView(\\'' + v + '\\')\" id=\"bhDefView_' + v + '\" style=\"padding:8px;border-radius:8px;border:2px solid ' + (active?'#1A7A5E':'#E5E7EB') + ';background:' + (active?'rgba(26,122,94,.08)':'white') + ';color:' + (active?'#1A7A5E':'#374151') + ';font-size:12px;font-weight:' + (active?'700':'500') + ';cursor:pointer;text-transform:capitalize;\">' + v + '</button>';
+            }).join('')
+          + '</div>'
+        + '</div>'
+        + '<div style="margin-bottom:20px;">'
+          + '<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Plateformes visibles</div>'
+          + [
+              {id:'airbnb', label:'Airbnb', color:'#FF5A5F'},
+              {id:'booking', label:'Booking.com', color:'#003580'},
+              {id:'direct', label:'Direct', color:'#1A7A5E'},
+              {id:'abritel', label:'Abritel', color:'#F97316'},
+            ].map(function(p) {
+              var on = platforms[p.id] !== false;
+              return '<label style=\"display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:9px 12px;background:#F9FAFB;border-radius:10px;margin-bottom:6px;\">'
+                + '<div style=\"display:flex;align-items:center;gap:8px;\">'
+                  + '<div style=\"width:10px;height:10px;border-radius:50%;background:' + p.color + ';\"></div>'
+                  + '<span style=\"font-size:13px;font-weight:500;color:#374151;\">' + p.label + '</span>'
+                + '</div>'
+                + '<div id=\"togglePlt_' + p.id + '\" onclick=\"bhTogglePlatform(\\'' + p.id + '\\',this)\" style=\"width:40px;height:22px;border-radius:11px;background:' + (on?'#1A7A5E':'#D1D5DB') + ';position:relative;cursor:pointer;transition:background .2s;\">'
+                  + '<div style=\"position:absolute;top:3px;left:' + (on?'20px':'3px') + ';width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);\"></div>'
+                + '</div>'
+              + '</label>';
+            }).join('')
+        + '</div>'
+      + '</div>'
+      + '<div style="padding:14px 18px;border-top:1px solid #F1F5F9;">'
+        + '<button onclick="bhApplyCalPrefs()" style="width:100%;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Appliquer</button>'
+      + '</div>';
+
+      document.body.appendChild(panel);
+
+      var overlay = document.createElement('div');
+      overlay.id = 'calSettingsOverlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;';
+      overlay.onclick = function() {
+        var p = document.getElementById('calSettingsPanel');
+        if (p) p.remove();
+        overlay.remove();
+      };
+      document.body.insertBefore(overlay, panel);
+    }
+
+    window.bhTogglePref = function(key, el) {
+      var prefs = {};
+      try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+      if (prefs[key] === undefined) prefs[key] = true;
+      prefs[key] = !prefs[key];
+      localStorage.setItem('bhCalPrefs', JSON.stringify(prefs));
+      var on = prefs[key];
+      el.style.background = on ? '#1A7A5E' : '#D1D5DB';
+      el.querySelector('div').style.left = on ? '20px' : '3px';
+    };
+
+    window.bhSetDefaultView = function(v) {
+      var prefs = {};
+      try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+      prefs.defaultView = v;
+      localStorage.setItem('bhCalPrefs', JSON.stringify(prefs));
+      ['jour','semaine','mois','année'].forEach(function(view) {
+        var btn = document.getElementById('bhDefView_'+view);
+        if (!btn) return;
+        var active = view === v;
+        btn.style.borderColor = active ? '#1A7A5E' : '#E5E7EB';
+        btn.style.background = active ? 'rgba(26,122,94,.08)' : 'white';
+        btn.style.color = active ? '#1A7A5E' : '#374151';
+        btn.style.fontWeight = active ? '700' : '500';
+      });
+    };
+
+    window.bhTogglePlatform = function(id, el) {
+      var prefs = {};
+      try { prefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+      if (!prefs.platforms) prefs.platforms = { airbnb:true, booking:true, direct:true, abritel:true };
+      if (prefs.platforms[id] === undefined) prefs.platforms[id] = true;
+      prefs.platforms[id] = !prefs.platforms[id];
+      localStorage.setItem('bhCalPrefs', JSON.stringify(prefs));
+      var on = prefs.platforms[id];
+      el.style.background = on ? '#1A7A5E' : '#D1D5DB';
+      el.querySelector('div').style.left = on ? '20px' : '3px';
+    };
+
+    window.bhApplyCalPrefs = function() {
+      var panel = document.getElementById('calSettingsPanel');
+      var overlay = document.getElementById('calSettingsOverlay');
+      if (panel) panel.remove();
+      if (overlay) overlay.remove();
+      renderCalendar();
+      if (typeof showToast === 'function') showToast('Paramètres appliqués ✓', 'success');
+    };
 
     // Barre de recherche au-dessus du calendrier
     function toggleSearchPanel() {
@@ -6763,11 +6894,20 @@ function riskColor(level) {
       if (calContainer) calContainer.style.display = 'none';
       if (daysHeaderEl)  daysHeaderEl.style.display  = 'none';
 
+      // S'assurer que window.enrichedReservations est à jour
+      if (!window.enrichedReservations || window.enrichedReservations.length === 0) {
+        var raws = window.LCC_RESERVATIONS || [];
+        try {
+          window.enrichedReservations = (typeof enrichReservationsWithPropertyNames === 'function')
+            ? enrichReservationsWithPropertyNames(raws) : raws;
+        } catch(e) { window.enrichedReservations = raws; }
+      }
+
       var el = document.getElementById('calDayView');
       if (!el) {
         el = document.createElement('div');
         el.id = 'calDayView';
-        el.style.cssText = 'background:var(--surface-color,#F5F0E8);';
+        el.style.cssText = 'background:#F5F2EC;overflow-y:auto;height:100%;';
         var wrapper = document.querySelector('.calendar-wrapper');
         if (wrapper) wrapper.appendChild(el);
       }
@@ -6777,38 +6917,8 @@ function riskColor(level) {
       var selStr   = toDateStr(selected);
       updatePeriodDisplay();
 
-      // ── Sélecteur de dates horizontal (7 jours autour de today) ──
-      var today = new Date();
-      var dates = [];
-      for (var i = -3; i <= 10; i++) {
-        var d = new Date(today);
-        d.setDate(today.getDate() + i);
-        dates.push(d);
-      }
-
-      var pColors = { airbnb:'#FF5A5F', booking:'#003580', bdc:'#003580', direct:'#1A7A5E' };
-      var dayShort = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
-
-      var selectorHtml = '<div style="display:flex;gap:8px;overflow-x:auto;padding:14px 16px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">';
-      dates.forEach(function(d) {
-        var ds = toDateStr(d);
-        var isSel = ds === selStr;
-        var isTod = ds === toDateStr(today);
-        selectorHtml += '<button onclick="selectDayViewDate(\'' + ds + '\')" '
-          + 'style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;'
-          + 'padding:8px 12px;border-radius:14px;border:none;cursor:pointer;min-width:48px;'
-          + 'background:' + (isSel ? '#1A7A5E' : isTod ? 'rgba(26,122,94,.12)' : 'white') + ';'
-          + 'color:' + (isSel ? 'white' : '#374151') + ';'
-          + 'box-shadow:' + (isSel ? '0 4px 12px rgba(26,122,94,.3)' : '0 1px 3px rgba(0,0,0,.08)') + ';'
-          + 'font-family:sans-serif;">'
-          + '<span style="font-size:10px;font-weight:600;opacity:' + (isSel ? '1' : '.6') + ';text-transform:uppercase;letter-spacing:.04em;">' + dayShort[d.getDay()] + '</span>'
-          + '<span style="font-size:18px;font-weight:' + (isSel||isTod ? '800' : '600') + ';">' + d.getDate() + '</span>'
-          + '</button>';
-      });
-      selectorHtml += '</div>';
-
-      // ── Stats du jour sélectionné ──
-      var checkins = 0, checkouts = 0, seen = {}, list = [];
+      // ── Calcul stats ──
+      var checkins = 0, checkouts = 0, totalGuests = 0, seen = {}, list = [];
       (window.enrichedReservations || []).forEach(function(r) {
         var src = (r.source||r.platform||'').toUpperCase();
         if (r.type === 'block' || src === 'BLOCK') return;
@@ -6821,70 +6931,139 @@ function riskColor(level) {
         seen[key] = true;
         if (s === selStr) checkins++;
         if (e === selStr) checkouts++;
+        totalGuests += parseInt(r.adults || r.occupancyAdults || 1);
         list.push(r);
       });
 
+      // ── Sélecteur de dates horizontal ──
+      var today = new Date();
+      var todayStr = toDateStr(today);
+      var dates = [];
+      for (var i = -3; i <= 14; i++) {
+        var d = new Date(today);
+        d.setDate(today.getDate() + i);
+        dates.push(d);
+      }
+      var dayShort = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+
+      var selectorHtml = '<div style="background:white;border-bottom:1px solid #E5E7EB;">'
+        + '<div style="display:flex;align-items:center;padding:10px 12px;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;" id="dayViewScroller">';
+      dates.forEach(function(d) {
+        var ds = toDateStr(d);
+        var isSel = ds === selStr;
+        var isTod = ds === todayStr;
+        selectorHtml += '<button onclick="selectDayViewDate(\'' + ds + '\')" '
+          + 'style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:1px;'
+          + 'padding:6px 10px;border-radius:50px;border:none;cursor:pointer;min-width:44px;'
+          + 'background:' + (isSel ? '#1A7A5E' : 'transparent') + ';'
+          + 'color:' + (isSel ? 'white' : isTod ? '#1A7A5E' : '#374151') + ';'
+          + 'font-family:inherit;transition:all .15s;">'
+          + '<span style="font-size:10px;font-weight:500;text-transform:lowercase;letter-spacing:.01em;">' + dayShort[d.getDay()] + '</span>'
+          + '<span style="font-size:17px;font-weight:' + (isSel ? '800' : isTod ? '700' : '500') + ';">' + d.getDate() + '</span>'
+          + '</button>';
+      });
+      selectorHtml += '</div></div>';
+
+      // ── Cartes stats (style screen 3) ──
+      var pColors = { airbnb:'#FF5A5F', booking:'#003580', bdc:'#003580', direct:'#1A7A5E' };
+
+      var statsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 14px 0;">'
+        // Checkins — fond blanc, cercle vert
+        + '<div style="background:white;border-radius:16px;padding:18px 14px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06);">'
+          + '<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>'
+          + '<div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1;">' + checkins + '</div>'
+          + '<div style="font-size:12px;color:#9CA3AF;margin-top:4px;">Nombre de checkins</div>'
+        + '</div>'
+        // Checkouts — fond rouge vif
+        + '<div style="background:#D72B2B;border-radius:16px;padding:18px 14px;text-align:center;box-shadow:0 4px 14px rgba(215,43,43,.35);">'
+          + '<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></div>'
+          + '<div style="font-size:32px;font-weight:800;color:white;line-height:1;">' + checkouts + '</div>'
+          + '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:4px;">Nombre de checkouts</div>'
+        + '</div>'
+      + '</div>';
+
       // ── Cartes réservations ──
-      var cards = list.map(function(r) {
+      var cardsHtml = list.map(function(r) {
         var guest = r.guestName || r.guest_display_name || 'Voyageur';
-        var prop  = r.propertyName || r.property_name || '';
+        var prop  = r.propertyName || r.property_name || r.propertyLabel || '';
+        var notes = r.notes || r.specialRequests || r.note || '';
         var s = (r.start || r.startDate || '').toString().split('T')[0];
         var e = (r.end   || r.endDate   || '').toString().split('T')[0];
         var nights = s && e ? Math.round((new Date(e)-new Date(s))/(86400000)) : 0;
         var adults = parseInt(r.adults || r.occupancyAdults || 1);
         var plt = (r.platform || r.source || 'direct').toLowerCase().replace(/\.com$/,'');
-        var pc  = pColors[plt] || '#6B7280';
         var isIn = s === selStr, isOut = e === selStr;
-        var badge = isIn ? '← Arrivée' : isOut ? '→ Départ' : '⌂ En séjour';
-        var badgeColor = isIn ? '#1A7A5E' : isOut ? '#EF4444' : '#6366F1';
-        var pIcon = plt === 'airbnb' ? '⊕' : plt.includes('book') || plt === 'bdc' ? 'B' : '⊙';
-        return '<div style="background:white;border-radius:14px;padding:14px 16px;'
-          + 'border:1px solid #F1F5F9;margin-bottom:8px;">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
-          + '<div>'
-            + '<div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:2px;">' + guest + '</div>'
-            + '<div style="font-size:12px;color:#6B7280;">' + prop + '</div>'
+        var badgeColor = isIn ? '#1A7A5E' : isOut ? '#D72B2B' : '#6366F1';
+        var badgeBg = isIn ? 'rgba(26,122,94,.1)' : isOut ? 'rgba(215,43,43,.1)' : 'rgba(99,102,241,.1)';
+
+        // Icône plateforme style screen 3
+        var pIconHtml;
+        if (plt === 'airbnb') {
+          pIconHtml = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#FF5A5F"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
+        } else if (plt.includes('book') || plt === 'bdc') {
+          pIconHtml = '<div style="width:18px;height:18px;background:#003580;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:white;">B</div>';
+        } else {
+          pIconHtml = '<div style="width:18px;height:18px;background:#1A7A5E;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;">D</div>';
+        }
+
+        var managerLabel = (r.managerName || r.assignedTo || '');
+
+        return '<div style="background:white;border-radius:14px;padding:14px 16px;margin:0 14px 10px;box-shadow:0 1px 6px rgba(0,0,0,.06);">'
+          + '<div style="display:flex;align-items:flex-start;gap:10px;">'
+            + '<div style="margin-top:2px;flex-shrink:0;">'
+              + '<div style="width:28px;height:28px;border-radius:50%;border:2px solid ' + badgeColor + ';display:flex;align-items:center;justify-content:center;">'
+                + (isOut ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="'+badgeColor+'" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="'+badgeColor+'" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>')
+              + '</div>'
+            + '</div>'
+            + '<div style="flex:1;min-width:0;">'
+              + '<div style="font-size:14px;font-weight:700;color:#111827;">' + guest + '</div>'
+              + (prop ? '<div style="font-size:11px;color:#9CA3AF;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + prop + '</div>' : '')
+              + (notes ? '<div style="font-size:11px;color:#6B7280;margin-top:4px;padding:5px 8px;background:#F9FAFB;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" style="vertical-align:middle;margin-right:3px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' + notes + '</div>' : '')
+            + '</div>'
+            + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">'
+              + pIconHtml
+              + '<div style="display:flex;align-items:center;gap:4px;">'
+                + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span style="font-size:11px;color:#6B7280;">' + adults + '</span>'
+                + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" style="margin-left:4px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span style="font-size:11px;color:#6B7280;">' + nights + '</span>'
+              + '</div>'
+              + (managerLabel ? '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;background:#1A7A5E;color:white;">' + managerLabel + '</span>' : '')
+            + '</div>'
           + '</div>'
-          + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
-            + '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:' + pc + '20;color:' + pc + ';">' + plt.toUpperCase() + '</span>'
-            + '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:' + badgeColor + '15;color:' + badgeColor + ';">' + badge + '</span>'
-          + '</div>'
-          + '</div>'
-          + '<div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#9CA3AF;">'
-            + '<span>👥 ' + adults + '</span>'
-            + '<span>🌙 ' + nights + ' nuit' + (nights>1?'s':'') + '</span>'
-          + '</div>'
-          + '</div>';
+        + '</div>';
       }).join('');
 
-      var selDate = new Date(selStr + 'T12:00:00');
-      var selLabel = selDate.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+      // ── Stats bas (total réservations + voyageurs) ──
+      var bottomStats = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 14px 20px;">'
+        + '<div style="background:white;border-radius:16px;padding:18px 14px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06);">'
+          + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D72B2B" stroke-width="1.8" style="display:block;margin:0 auto 8px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+          + '<div style="font-size:28px;font-weight:800;color:#1A1F2E;">' + list.length + '</div>'
+          + '<div style="font-size:12px;color:#9CA3AF;margin-top:3px;">Nombre de réservations</div>'
+        + '</div>'
+        + '<div style="background:white;border-radius:16px;padding:18px 14px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06);">'
+          + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D72B2B" stroke-width="1.8" style="display:block;margin:0 auto 8px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+          + '<div style="font-size:28px;font-weight:800;color:#1A1F2E;">' + totalGuests + '</div>'
+          + '<div style="font-size:12px;color:#9CA3AF;margin-top:3px;">Total de clients</div>'
+        + '</div>'
+      + '</div>';
 
       el.innerHTML = selectorHtml
-        + '<div style="padding:0 16px 24px;">'
-        // Label date
-        + '<div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:capitalize;margin-bottom:12px;">' + selLabel + '</div>'
-        // Stats
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">'
-          + '<div style="background:white;border-radius:14px;padding:14px;text-align:center;border:1px solid #F1F5F9;">'
-            + '<div style="font-size:28px;font-weight:800;color:#1A7A5E;">' + checkins + '</div>'
-            + '<div style="font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;">Arrivées</div>'
-          + '</div>'
-          + '<div style="background:white;border-radius:14px;padding:14px;text-align:center;border:1px solid #F1F5F9;">'
-            + '<div style="font-size:28px;font-weight:800;color:#EF4444;">' + checkouts + '</div>'
-            + '<div style="font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;">Départs</div>'
-          + '</div>'
+        + '<div style="padding-bottom:4px;">'
+        + statsHtml
+        + '<div style="padding:14px 14px 8px;">'
+          + (list.length === 0 ? '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;background:white;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.06);">Aucune réservation ce jour</div>' : cardsHtml)
         + '</div>'
-        // Liste
-        + (list.length ? cards : '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;background:white;border-radius:14px;border:1px solid #F1F5F9;">Aucune réservation</div>')
+        + (list.length > 0 ? bottomStats : '')
         + '</div>';
 
-      // Scroll le bouton sélectionné au centre
+      // Scroll le jour sélectionné au centre
       setTimeout(function() {
-        var btns = el.querySelectorAll('button');
+        var scroller = el.querySelector('#dayViewScroller');
+        if (!scroller) return;
+        var btns = scroller.querySelectorAll('button');
         for (var i=0;i<btns.length;i++) {
-          if (btns[i].style.background.includes('#1A7A5E')) {
-            btns[i].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+          if (btns[i].style.background && btns[i].style.background.includes('1A7A5E')) {
+            var scrollLeft = btns[i].offsetLeft - scroller.offsetWidth/2 + btns[i].offsetWidth/2;
+            scroller.scrollLeft = scrollLeft;
             break;
           }
         }
