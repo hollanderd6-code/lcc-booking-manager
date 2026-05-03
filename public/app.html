@@ -6007,7 +6007,18 @@ try {
       }
     }, 30);
 
-    // Compute stats
+    // Compute stats — fallback to LCC_RESERVATIONS si state.bookings vide
+    if ((!state.bookings || state.bookings.length === 0) && window.LCC_RESERVATIONS) {
+      var raw = window.LCC_RESERVATIONS;
+      state.bookings = raw.map(function(r,i) {
+        if (!r) return null;
+        var propId = r.property&&r.property.id!=null?String(r.property.id):(r.propertyId!=null?String(r.propertyId):null);
+        var s = (r.startDate||r.start||r.checkIn||'').split('T')[0];
+        var e = (r.endDate||r.end||r.checkOut||'').split('T')[0];
+        if (!s||!e) return null;
+        return Object.assign({}, r, { id:String(r.id||i), propertyId:propId, startDate:s, endDate:e, platform:(r.platform||r.source||'direct').toLowerCase().replace(/\.com$/,'') });
+      }).filter(Boolean);
+    }
     var checkins=0, checkouts=0, totalG=0, seen={}, list=[];
     state.bookings.forEach(function(r) {
       if (r.type==='block') return;
@@ -6183,8 +6194,21 @@ try {
     // Header spacer
     propCol.appendChild(div('height:36px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;','<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
     state.properties.forEach(function(prop) {
-      var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:default;');
+      var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:pointer;transition:background .15s;');
+      pc.className = 'bh-prop-cell';
       pc.innerHTML='<span style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
+      (function(pid) {
+        pc.onclick = function() {
+          var isActive = pc.classList.contains('bh-row-active');
+          propCol.querySelectorAll('.bh-prop-cell').forEach(function(c) { c.classList.remove('bh-row-active'); c.style.background=''; });
+          grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity='1'; });
+          if (!isActive) {
+            pc.classList.add('bh-row-active');
+            pc.style.background = 'rgba(26,122,94,.1)';
+            grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity = r2.dataset.propId===pid ? '1' : '0.2'; });
+          }
+        };
+      })(String(prop.id));
       propCol.appendChild(pc);
     });
 
@@ -6210,13 +6234,37 @@ try {
         +(isWknd&&!isToday?'background:rgba(220,38,38,.03);':''));
       hcell.innerHTML='<span style="font-size:9px;font-weight:600;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.04em;">'+DAYS_MIN[dayDate.getDay()]+'</span>'
         +'<span style="font-size:12px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
+      hcell.style.cursor = 'pointer';
+      (function(dstr5, idx5) {
+        hcell.onclick = function() {
+          var isActive = hcell.classList.contains('bh-col-active');
+          // Reset all
+          daysHdr.querySelectorAll('.bh-day-hcell').forEach(function(c) {
+            c.classList.remove('bh-col-active');
+            c.style.background = '';
+          });
+          grid.querySelectorAll('.bh-day-cell').forEach(function(c) {
+            c.style.opacity = '1';
+          });
+          if (!isActive) {
+            hcell.classList.add('bh-col-active');
+            hcell.style.background = 'rgba(26,122,94,.12)';
+            grid.querySelectorAll('.bh-day-cell').forEach(function(c) {
+              c.style.opacity = c.dataset.colIdx === String(idx5) ? '1' : '0.25';
+            });
+          }
+        };
+      })(dstr2, di);
+      hcell.className = 'bh-day-hcell';
       daysHdr.appendChild(hcell);
     }
     grid.appendChild(daysHdr);
 
     // Property rows
     state.properties.forEach(function(prop) {
-      var propRow = div('display:flex;height:52px;border-bottom:1px solid #F0EDE8;position:relative;');
+      var propRow = div('display:flex;height:52px;border-bottom:1px solid #F0EDE8;position:relative;transition:opacity .2s;');
+      propRow.className = 'bh-prop-row';
+      propRow.dataset.propId = String(prop.id);
 
       // Build map of bookings for this property
       var bookMap = {};
@@ -6240,7 +6288,8 @@ try {
           +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(220,38,38,.02);':''));
         dcell.dataset.date = dstr3;
         dcell.dataset.propertyId = String(prop.id);
-        dcell.className = 'calendar-cell' + (isWknd2?' weekend':'');
+        dcell.dataset.colIdx = String(di2);
+        dcell.className = 'calendar-cell bh-day-cell' + (isWknd2?' weekend':'');
 
         // Price display
         if (inMonth2) {
@@ -6287,8 +6336,11 @@ try {
 
         var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:1;');
         blk.className = 'booking-block-bh';
-        blk.style.left = (colStart*colW+2)+'px';
-        blk.style.width = ((colEnd-colStart)*colW-4)+'px';
+        // Le checkout est le matin du dernier jour → le bloc dépasse à moitié sur ce jour
+        var leftPx  = colStart * colW + 3;
+        var widthPx = (colEnd - colStart) * colW - 3 + colW * 0.45; // dépasse sur le jour de départ
+        blk.style.left  = leftPx + 'px';
+        blk.style.width = widthPx + 'px';
 
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
