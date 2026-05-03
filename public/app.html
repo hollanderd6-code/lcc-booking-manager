@@ -6344,8 +6344,8 @@ try {
         var e = (r.endDate  ||r.end  ||'').split('T')[0];
         if (!s||!e) return;
 
-        var colStart = Math.round((new Date(s+'T00:00:00') - rangeStart)/MS);
-        var colEnd   = Math.round((new Date(e+'T00:00:00') - rangeStart)/MS);
+        var colStart = Math.round((new Date(s+'T12:00:00') - rangeStart)/MS);
+        var colEnd   = Math.round((new Date(e+'T12:00:00') - rangeStart)/MS);
         if (colEnd<=0||colStart>=numDays) return;
         var clippedStart = Math.max(0, colStart);
         var clippedEnd   = Math.min(numDays, colEnd);
@@ -6356,10 +6356,10 @@ try {
 
         var blk = div('position:absolute;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;');
         blk.className = 'booking-block-bh';
-        blk.style.top    = (rowTop + 7) + 'px';
-        blk.style.height = (rowH - 14) + 'px';
-        blk.style.left   = (propW + clippedStart*colW + colW*0.25) + 'px';
-        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - colW*0.25 + colW*0.25) + 'px';
+        blk.style.top    = (rowTop + 9) + 'px';
+        blk.style.height = (rowH - 18) + 'px';
+        blk.style.left   = (propW + clippedStart*colW + 2) + 'px';
+        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - 3 + colW*0.4) + 'px';
 
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
@@ -6389,15 +6389,13 @@ try {
     outer.appendChild(inner);
     body.appendChild(outer);
 
-    // Stocker pour scroll après insertion dans le DOM (dans render())
-    // Trouver todayIdx en cherchant la colonne dont la date == today
-    var todayIdx = -1;
-    for (var ti=0; ti<numDays; ti++) {
-      var td = new Date(rangeStart); td.setDate(rangeStart.getDate()+ti);
-      if (ds(td) === today) { todayIdx = ti; break; }
-    }
-    body._gridWrap = outer;
-    body._scrollLeft = todayIdx >= 0 ? todayIdx * colW : -1;
+    // Scroll vers aujourd'hui
+    setTimeout(function() {
+      var todayIdx = Math.round((new Date(today+'T12:00:00') - rangeStart)/MS);
+      if (todayIdx>=0) {
+        outer.scrollLeft = Math.max(0, propW + todayIdx*colW - outer.offsetWidth/2 + colW/2);
+      }
+    }, 80);
   }
   function renderYear(body) {
     var year = state.date.getFullYear();
