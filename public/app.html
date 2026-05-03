@@ -5961,9 +5961,6 @@ try {
     }
 
     // Repositionner les blocs avec vraies mesures DOM (fix alignement PC)
-    if (state.view === 'month' && body._fixBlocks) {
-      requestAnimationFrame(function() { body._fixBlocks(); });
-    }
 
     // Scroll into view on mobile
     setTimeout(function() {
@@ -6058,7 +6055,7 @@ try {
     var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:all .2s;');
     cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
     var cardOut = div('background:#DC2626;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 12px rgba(220,38,38,.28);cursor:pointer;transition:all .2s;border:2px solid transparent;');
-    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #DC2626;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:4px;">Checkouts</div>';
+    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:4px;">Checkouts</div>';
     stats.appendChild(cardIn); stats.appendChild(cardOut);
     body.appendChild(stats);
 
@@ -6357,16 +6354,9 @@ try {
 
     outer.appendChild(grid);
 
-    // ── OVERLAY : les blocs réservations sont dans un div SÉPARÉ ──
-    // positionné en absolute par rapport à outer, avec left/top calculés en px
-    // Cela évite le problème Safari tr/position:absolute
-    var overlay = div('position:absolute;top:0;left:0;pointer-events:none;');
-    overlay.style.width  = totalW + 'px';
-    overlay.style.height = totalH + 'px';
-
+    // ── BLOCS : placés directement dans les dcell (pas d'overlay absolu)
+    // Chaque bloc est position:absolute dans sa dcell de départ, width calculée en px
     state.properties.forEach(function(prop, rowIdx) {
-      var rowTop = hdrH + rowIdx * rowH;
-
       state.bookings.forEach(function(r) {
         if (String(r.propertyId) !== String(prop.id)) return;
         var s = (r.startDate||r.start||'').split('T')[0];
@@ -6376,20 +6366,24 @@ try {
         var colStart = Math.round((new Date(s+'T00:00:00') - new Date(ds(rangeStart)+'T00:00:00'))/MS);
         var colEnd   = Math.round((new Date(e+'T00:00:00') - new Date(ds(rangeStart)+'T00:00:00'))/MS);
         if (colEnd<=0||colStart>=numDays) return;
-        var clippedStart = Math.max(0, colStart);
+        var clippedStart = Math.max(0, colStart);\
         var clippedEnd   = Math.min(numDays, colEnd);
         if (clippedStart>=clippedEnd) return;
+
+        // Trouver la dcell de départ (anchor)
+        var anchorCell = grid.querySelector('.bh-day-cell[data-property-id="'+prop.id+'"][data-col-idx="'+clippedStart+'"]');
+        if (!anchorCell) return;
 
         var isBlock = r.type==='block';
         var p2 = pltInfo(r);
 
-        var blk = div('position:absolute;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;');
+        // Le bloc est position:absolute dans anchorCell, width = nb cols * colW
+        var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:3;');
         blk.className = 'booking-block-bh';
         blk.dataset.propId = String(prop.id);
-        blk.style.top    = (rowTop + 6) + 'px';
-        blk.style.height = (rowH - 12) + 'px';
-        blk.style.left   = (propW + clippedStart*colW + colW*0.25) + 'px';
-        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW) + 'px';
+        // left = 25% du colStart (déjà dans anchorCell donc left=25% de sa width)
+        blk.style.left  = (colW * 0.25) + 'px';
+        blk.style.width = ((clippedEnd - clippedStart) * colW) + 'px';
 
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
@@ -6406,39 +6400,19 @@ try {
             +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
           blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
           blk.onmouseout  = function(){ this.style.filter=''; };
-          blk.onclick     = function(e){ e.stopPropagation(); openBooking(r); };
+          blk.onclick     = function(evt){ evt.stopPropagation(); openBooking(r); };
           blk.dataset.bookingId = String(r.id||'');
         }
-        overlay.appendChild(blk);
+        anchorCell.appendChild(blk);
       });
     });
 
-    // Assembler grid dans le DOM d'abord, puis lire les vraies positions
+    // Assembler
     outer.innerHTML = '';
     var inner = div('position:relative;width:'+totalW+'px;min-height:'+totalH+'px;');
     inner.appendChild(grid);
-    inner.appendChild(overlay);
     outer.appendChild(inner);
     body.appendChild(outer);
-
-    // Repositionner les blocs avec les vraies hauteurs de row (fix PC)
-    // On lit après que body est dans le DOM via render()
-    body._fixBlocks = function() {
-      var outerEl = document.getElementById('bhMonthOuter');
-      if (!outerEl) return;
-      state.properties.forEach(function(prop) {
-        var pc = outerEl.querySelector('.bh-prop-cell[data-prop-id="'+prop.id+'"]');
-        if (!pc) return;
-        var pcRect = pc.getBoundingClientRect();
-        var outerRect = outerEl.getBoundingClientRect();
-        var realTop = pcRect.top - outerRect.top + outerEl.scrollTop;
-        var realH = pcRect.height;
-        outerEl.querySelectorAll('.booking-block-bh[data-prop-id="'+prop.id+'"]').forEach(function(blk) {
-          blk.style.top    = (realTop + 6) + 'px';
-          blk.style.height = (realH - 12) + 'px';
-        });
-      });
-    };
 
     // Stocker pour scroll synchrone
     var todayIdx2 = -1;
@@ -11292,36 +11266,40 @@ function reapplyOrderToDOM() {
 // ── MODAL ──────────────────────────────────────────────
 
 function openReorderModal() {
-  const list = document.getElementById('propertyList');
   const reorderList = document.getElementById('reorderList');
-  if (!list || !reorderList) return;
+  if (!reorderList) return;
+
+  // Source: calendarState.properties ou DOM fallback
+  var props = [];
+  if (window.calendarState && window.calendarState.properties && window.calendarState.properties.length) {
+    props = window.calendarState.properties;
+  } else {
+    const domList = document.getElementById('propertyList');
+    if (domList) {
+      Array.from(domList.querySelectorAll('.property-item[data-property-id]')).forEach(function(item) {
+        props.push({ id: item.getAttribute('data-property-id'), name: (item.querySelector('.property-name') || item).textContent.trim() });
+      });
+    }
+  }
 
   reorderList.innerHTML = '';
-
-  // Récupère les propriétés dans l\'ordre actuel du DOM
-  const items = Array.from(list.querySelectorAll('.property-item[data-property-id]'));
-  items.forEach(function(item) {
-    const id = item.getAttribute('data-property-id');
-    const name = item.querySelector('.property-name') ? item.querySelector('.property-name').textContent : id;
+  props.forEach(function(prop) {
     const row = document.createElement('div');
-    row.setAttribute('data-id', id);
+    row.setAttribute('data-id', String(prop.id));
     row.setAttribute('draggable', 'true');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-secondary,#f9fafb);border:1px solid var(--border-color,#e5e7eb);border-radius:10px;cursor:grab;user-select:none;transition:all .15s;';
-    row.innerHTML = `
-      <i class="fas fa-grip-vertical" style="color:var(--text-secondary,#9CA3AF);font-size:13px;flex-shrink:0;"></i>
-      <span style="flex:1;font-size:13px;font-weight:500;color:var(--text-primary,#0D1117);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
-      <div style="display:flex;flex-direction:column;gap:2px;">
-        <button onclick="moveReorderItem(this.closest('[data-id]'), -1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:var(--text-secondary,#9CA3AF);font-size:10px;" title="Monter"><i class="fas fa-chevron-up"></i></button>
-        <button onclick="moveReorderItem(this.closest('[data-id]'), 1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:var(--text-secondary,#9CA3AF);font-size:10px;" title="Descendre"><i class="fas fa-chevron-down"></i></button>
-      </div>
-    `;
-    // Drag & drop
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;cursor:grab;user-select:none;transition:all .15s;';
+    row.innerHTML = '<i class="fas fa-grip-vertical" style="color:#9CA3AF;font-size:13px;flex-shrink:0;"></i>'
+      + '<span style="flex:1;font-size:13px;font-weight:500;color:#111827;">' + (prop.name || String(prop.id)) + '</span>'
+      + '<div style="display:flex;flex-direction:column;gap:2px;">'
+      + '<button onclick="moveReorderItem(this.closest('[data-id]'),-1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:#9CA3AF;font-size:10px;"><i class="fas fa-chevron-up"></i></button>'
+      + '<button onclick="moveReorderItem(this.closest('[data-id]'),1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:#9CA3AF;font-size:10px;"><i class="fas fa-chevron-down"></i></button>'
+      + '</div>';
     row.addEventListener('dragstart', onDragStart);
     row.addEventListener('dragover', onDragOver);
     row.addEventListener('drop', onDrop);
     row.addEventListener('dragend', onDragEnd);
-    row.addEventListener('mouseenter', function() { this.style.background = 'var(--bg-hover,#f3f4f6)'; this.style.borderColor = '#1A7A5E'; });
-    row.addEventListener('mouseleave', function() { this.style.background = 'var(--bg-secondary,#f9fafb)'; this.style.borderColor = 'var(--border-color,#e5e7eb)'; });
+    row.addEventListener('mouseenter', function(){ this.style.background='#f3f4f6'; this.style.borderColor='#1A7A5E'; });
+    row.addEventListener('mouseleave', function(){ this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb'; });
     reorderList.appendChild(row);
   });
 
