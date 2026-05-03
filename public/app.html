@@ -590,6 +590,15 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       display: none !important; /* Tabs moved to calendar dark header */
     }
 
+    @media (max-width: 768px) {
+      .calendar-legends { display: none !important; }
+    }
+    /* Toujours afficher les view-tabs dans le header */
+    .calendar-header-top .view-tabs {
+      display: flex !important;
+      flex-shrink: 0;
+    }
+
     .view-tabs {
       display: flex;
       gap: 8px;
@@ -3002,8 +3011,8 @@ window.closeChecklistsKpiModal = function() {
 
 <!-- Centre : légendes + vue toggle -->
 <div style="display:flex;align-items:center;gap:16px;">
-  <!-- Légendes plateformes -->
-  <div style="display:flex;align-items:center;gap:12px;padding:6px 14px;background:rgba(255,255,255,.07);border-radius:999px;border:1px solid rgba(255,255,255,.1);">
+  <!-- Légendes plateformes — cachées sur mobile, visibles desktop -->
+  <div class="calendar-legends" style="display:flex;align-items:center;gap:12px;padding:6px 14px;background:rgba(255,255,255,.07);border-radius:999px;border:1px solid rgba(255,255,255,.1);">
     <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
       <span style="width:8px;height:8px;border-radius:50%;background:#FF5A5F;flex-shrink:0;"></span>Airbnb
     </span>
