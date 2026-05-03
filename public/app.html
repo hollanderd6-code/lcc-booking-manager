@@ -6389,11 +6389,10 @@ try {
     outer.appendChild(inner);
     body.appendChild(outer);
 
-    // Scroll vers aujourd'hui — aujourd'hui en 1ère colonne visible
+    // Stocker pour scroll après insertion dans le DOM (dans render())
     var todayIdx = Math.floor((new Date(today+'T00:00:00') - rangeStart)/MS);
-    if (todayIdx >= 0 && todayIdx < numDays) {
-      outer.scrollLeft = propW + todayIdx * colW;
-    }
+    body._gridWrap = outer;
+    body._scrollLeft = (todayIdx >= 0 && todayIdx < numDays) ? propW + todayIdx * colW : -1;
   }
   function renderYear(body) {
     var year = state.date.getFullYear();
