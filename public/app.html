@@ -6209,34 +6209,35 @@ try {
     var startOff   = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1;
     var rangeStart = new Date(firstDay); rangeStart.setDate(1-startOff);
     var numDays    = Math.ceil((startOff + lastDay.getDate())/7)*7;
-    var propW      = 76;   // largeur colonne logements
-    var colW       = 48;   // largeur colonne jour
-    var rowH       = 52;   // hauteur ligne
-    var hdrH       = 44;   // hauteur header
+    var propW = 76;
+    var colW  = 48;
+    var rowH  = 52;
+    var hdrH  = 44;
+    var nRows = state.properties.length;
 
-    // ── Approche TABLE ──
-    // On utilise une vraie <table> avec:
-    //   - première colonne sticky left (th/td avec position:sticky;left:0)
-    //   - thead sticky top
-    //   => synchronisation parfaite mobile + desktop, pas de flex weirdness
-    var outer = div('overflow:auto;-webkit-overflow-scrolling:touch;background:white;');
+    // Un seul scroll container
+    var outer = div('overflow:auto;-webkit-overflow-scrolling:touch;background:white;position:relative;');
     outer.id = 'bhMonthOuter';
 
-    var table = document.createElement('table');
-    table.style.cssText = 'border-collapse:collapse;table-layout:fixed;min-width:'+(propW+numDays*colW)+'px;width:'+(propW+numDays*colW)+'px;';
+    // La grille interne a une largeur fixe
+    var totalW = propW + numDays * colW;
+    var totalH = hdrH + nRows * rowH;
 
-    // ── THEAD ──
-    var thead = document.createElement('thead');
-    var hdrTr = document.createElement('tr');
-    hdrTr.style.cssText = 'height:'+hdrH+'px;';
+    // ── GRID : on utilise un CSS grid strict ──
+    var grid = div('display:grid;position:relative;');
+    grid.style.width       = totalW + 'px';
+    grid.style.gridTemplateColumns = propW + 'px repeat(' + numDays + ', ' + colW + 'px)';
+    grid.style.gridTemplateRows    = hdrH + 'px repeat(' + nRows + ', ' + rowH + 'px)';
 
-    // Coin "LOGEMENTS"
-    var thCorner = document.createElement('th');
-    thCorner.style.cssText = 'width:'+propW+'px;min-width:'+propW+'px;max-width:'+propW+'px;position:sticky;left:0;top:0;z-index:12;background:#F0EDE8;border-right:2px solid #DDD9D3;border-bottom:2px solid #E8E4DF;padding:0;vertical-align:middle;text-align:center;';
-    thCorner.innerHTML = '<span style="font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>';
-    hdrTr.appendChild(thCorner);
+    // ── HEADER ROW ──
+    // Coin "Logements"
+    var corner = div('position:sticky;left:0;z-index:12;background:#F0EDE8;border-right:2px solid #DDD9D3;border-bottom:2px solid #E8E4DF;display:flex;align-items:center;justify-content:center;box-sizing:border-box;');
+    corner.style.gridColumn = '1';
+    corner.style.gridRow    = '1';
+    corner.innerHTML = '<span style="font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>';
+    grid.appendChild(corner);
 
-    // Cellules jours
+    // Cellules jours header
     for (var di=0; di<numDays; di++) {
       var dayDate = new Date(rangeStart); dayDate.setDate(rangeStart.getDate()+di);
       var dstr2   = ds(dayDate);
@@ -6244,60 +6245,52 @@ try {
       var isToday = dstr2===today;
       var isWknd  = dayDate.getDay()===0||dayDate.getDay()===6;
 
-      var th = document.createElement('th');
-      th.style.cssText = 'width:'+colW+'px;min-width:'+colW+'px;max-width:'+colW+'px;position:sticky;top:0;z-index:8;'
-        +'background:'+(isToday?'rgba(26,122,94,.08)':'white')+';'
-        +'border-right:1px solid #F0EDE8;border-bottom:2px solid #E8E4DF;'
-        +'padding:0;vertical-align:middle;cursor:pointer;';
-      th.className = 'bh-day-hcell';
-      th.dataset.colIdx = String(di);
-      th.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:'+hdrH+'px;">'
-        +'<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
-        +'<span style="font-size:12px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>'
-        +'</div>';
+      var hcell = div('position:sticky;top:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-bottom:2px solid #E8E4DF;cursor:pointer;user-select:none;'
+        +(isToday?'background:rgba(26,122,94,.08);':'background:white;'));
+      hcell.style.gridColumn = String(di+2);
+      hcell.style.gridRow    = '1';
+      hcell.className = 'bh-day-hcell';
+      hcell.dataset.colIdx = String(di);
+      hcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
 
-      (function(idx5, thEl){ thEl.onclick = function(){
-        var active = thEl.classList.contains('bh-col-active');
+      (function(idx5, el){ el.onclick = function(){
+        var active = el.classList.contains('bh-col-active');
         outer.querySelectorAll('.bh-day-hcell').forEach(function(c){c.classList.remove('bh-col-active');c.style.background='';});
         outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
         if(!active){
-          thEl.classList.add('bh-col-active');
-          thEl.style.background='rgba(26,122,94,.13)';
+          el.classList.add('bh-col-active');
+          el.style.background='rgba(26,122,94,.13)';
           outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity=c.dataset.colIdx===String(idx5)?'1':'0.2';});
         }
-      };})(di, th);
-      hdrTr.appendChild(th);
+      };})(di, hcell);
+      grid.appendChild(hcell);
     }
-    thead.appendChild(hdrTr);
-    table.appendChild(thead);
 
-    // ── TBODY ──
-    var tbody = document.createElement('tbody');
+    // ── PROPERTY ROWS ──
+    state.properties.forEach(function(prop, rowIdx) {
+      var gridRow = String(rowIdx + 2); // rows start at 2
 
-    state.properties.forEach(function(prop) {
-      var tr = document.createElement('tr');
-      tr.style.cssText = 'height:'+rowH+'px;position:relative;';
-      tr.className = 'bh-prop-row';
-      tr.dataset.propId = String(prop.id);
-
-      // Cellule logement — sticky left:0
-      var tdProp = document.createElement('td');
-      tdProp.style.cssText = 'width:'+propW+'px;min-width:'+propW+'px;max-width:'+propW+'px;position:sticky;left:0;z-index:4;'
-        +'background:#FAFAF9;border-right:2px solid #DDD9D3;border-bottom:1px solid #EEEBE6;'
-        +'padding:0 8px;vertical-align:middle;cursor:pointer;transition:background .15s;box-sizing:border-box;';
-      tdProp.className = 'bh-prop-cell';
-      tdProp.innerHTML = '<span style="font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;" title="'+prop.name+'">'+prop.name+'</span>';
-      (function(pid, tdEl){ tdEl.onclick = function(){
-        var active = tdEl.classList.contains('bh-row-active');
+      // Cellule logement sticky left
+      var pc = div('position:sticky;left:0;z-index:4;background:#FAFAF9;border-right:2px solid #DDD9D3;border-bottom:1px solid #EEEBE6;display:flex;align-items:center;padding:0 8px;cursor:pointer;box-sizing:border-box;transition:background .15s;overflow:hidden;');
+      pc.style.gridColumn = '1';
+      pc.style.gridRow    = gridRow;
+      pc.className = 'bh-prop-cell';
+      pc.dataset.propId = String(prop.id);
+      pc.innerHTML = '<span style="font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
+      (function(pid, el){ el.onclick = function(){
+        var active = el.classList.contains('bh-row-active');
         outer.querySelectorAll('.bh-prop-cell').forEach(function(c){c.classList.remove('bh-row-active');c.style.background='';});
-        outer.querySelectorAll('.bh-prop-row').forEach(function(r2){r2.style.opacity='1';});
+        outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
         if(!active){
-          tdEl.classList.add('bh-row-active');
-          tdEl.style.background='rgba(26,122,94,.1)';
-          outer.querySelectorAll('.bh-prop-row').forEach(function(r2){r2.style.opacity=r2.dataset.propId===pid?'1':'0.2';});
+          el.classList.add('bh-row-active');
+          el.style.background='rgba(26,122,94,.1)';
+          outer.querySelectorAll('.bh-day-cell[data-prop-id="'+pid+'"]').forEach(function(c){c.style.opacity='1';});
+          outer.querySelectorAll('.bh-day-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.2';});
+          outer.querySelectorAll('.bh-prop-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.background='rgba(0,0,0,.03)';});
         }
-      };})(String(prop.id), tdProp);
-      tr.appendChild(tdProp);
+      };})(String(prop.id), pc);
+      grid.appendChild(pc);
 
       // Cellules jours
       for (var di2=0; di2<numDays; di2++) {
@@ -6307,33 +6300,44 @@ try {
         var isWknd2  = dayDate2.getDay()===0||dayDate2.getDay()===6;
         var isToday2 = dstr3===today;
 
-        var td = document.createElement('td');
-        td.style.cssText = 'width:'+colW+'px;min-width:'+colW+'px;max-width:'+colW+'px;height:'+rowH+'px;position:relative;vertical-align:middle;border-right:1px solid #F5F2EC;border-bottom:1px solid #EEEBE6;padding:0;'
-          +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(220,38,38,.02);':'');
-        td.className = 'calendar-cell bh-day-cell'+(isWknd2?' weekend':'');
-        td.dataset.date       = dstr3;
-        td.dataset.propertyId = String(prop.id);
-        td.dataset.colIdx     = String(di2);
+        var dcell = div('box-sizing:border-box;border-right:1px solid #F5F2EC;border-bottom:1px solid #EEEBE6;position:relative;overflow:hidden;'
+          +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(220,38,38,.02);':''));
+        dcell.style.gridColumn = String(di2+2);
+        dcell.style.gridRow    = gridRow;
+        dcell.className = 'calendar-cell bh-day-cell'+(isWknd2?' weekend':'');
+        dcell.dataset.date       = dstr3;
+        dcell.dataset.propertyId = String(prop.id);
+        dcell.dataset.propId     = String(prop.id);
+        dcell.dataset.colIdx     = String(di2);
 
         if (inMonth2) {
-          var priceEl = document.createElement('span');
+          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#dc2626':'#1A7A5E')+';');
           priceEl.className = 'cell-price';
-          priceEl.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:'+(isWknd2?'#dc2626':'#1A7A5E')+';pointer-events:none;';
           if (prop.basePrice) priceEl.textContent = Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice);
-          td.appendChild(priceEl);
+          dcell.appendChild(priceEl);
         }
 
-        (function(d3,pid3){ td.addEventListener('click',function(e){
+        (function(d3,pid3){ dcell.addEventListener('click',function(e){
           if(e.target.closest('.booking-block-bh')) return;
           if(typeof window.openBlockModal==='function') window.openBlockModal(d3,pid3);
         });})(dstr3, String(prop.id));
 
-        tr.appendChild(td);
+        grid.appendChild(dcell);
       }
-      tbody.appendChild(tr);
+    });
 
-      // ── Blocs réservations : on les ajoute APRÈS les tds, en position:absolute sur le tr ──
-      // Le tr a position:relative, les blocs sont z-index:2 (< z-index sticky td=4)
+    outer.appendChild(grid);
+
+    // ── OVERLAY : les blocs réservations sont dans un div SÉPARÉ ──
+    // positionné en absolute par rapport à outer, avec left/top calculés en px
+    // Cela évite le problème Safari tr/position:absolute
+    var overlay = div('position:absolute;top:0;left:0;pointer-events:none;');
+    overlay.style.width  = totalW + 'px';
+    overlay.style.height = totalH + 'px';
+
+    state.properties.forEach(function(prop, rowIdx) {
+      var rowTop = hdrH + rowIdx * rowH;
+
       state.bookings.forEach(function(r) {
         if (String(r.propertyId) !== String(prop.id)) return;
         var s = (r.startDate||r.start||'').split('T')[0];
@@ -6342,31 +6346,29 @@ try {
 
         var colStart = Math.round((new Date(s+'T12:00:00') - rangeStart)/MS);
         var colEnd   = Math.round((new Date(e+'T12:00:00') - rangeStart)/MS);
-        if (colEnd<0||colStart>=numDays) return;
-        colStart = Math.max(0,colStart);
-        colEnd   = Math.min(numDays,colEnd);
-        if (colStart>=colEnd) return;
+        if (colEnd<=0||colStart>=numDays) return;
+        var clippedStart = Math.max(0, colStart);
+        var clippedEnd   = Math.min(numDays, colEnd);
+        if (clippedStart>=clippedEnd) return;
 
         var isBlock = r.type==='block';
         var p2 = pltInfo(r);
 
-        var blk = document.createElement('div');
+        var blk = div('position:absolute;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;');
         blk.className = 'booking-block-bh';
-        blk.style.cssText = 'position:absolute;top:7px;bottom:7px;z-index:2;border-radius:10px;'
-          +'display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;'
-          +'pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;'
-          // left part: propW accounts for sticky col (already rendered as td, not offset)
-          // In a table, absolute positioning on tr is relative to tr itself
-          // The prop td is 76px wide, so blk starts at propW + colStart*colW
-          +'left:'+(propW + colStart*colW + 2)+'px;'
-          +'width:'+Math.max(20,(colEnd-colStart)*colW - 3 + colW*0.4)+'px;';
+        blk.style.top    = (rowTop + 7) + 'px';
+        blk.style.height = (rowH - 14) + 'px';
+        blk.style.left   = (propW + clippedStart*colW + 2) + 'px';
+        blk.style.width  = Math.max(20, (clippedEnd - clippedStart)*colW - 3 + colW*0.4) + 'px';
 
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
           blk.innerHTML = '<i class="fas fa-ban" style="font-size:10px;color:#9CA3AF;flex-shrink:0;"></i>'
             +'<span style="font-size:11px;font-weight:600;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
         } else {
-          blk.style.cssText += 'background:'+p2.bg+';color:white;box-shadow:0 2px 6px rgba(0,0,0,.22);';
+          blk.style.background = p2.bg;
+          blk.style.color      = 'white';
+          blk.style.boxShadow  = '0 2px 6px rgba(0,0,0,.22)';
           blk.innerHTML = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>'
             +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
           blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
@@ -6374,12 +6376,17 @@ try {
           blk.onclick     = function(e){ e.stopPropagation(); openBooking(r); };
           blk.dataset.bookingId = String(r.id||'');
         }
-        tr.appendChild(blk);
+        overlay.appendChild(blk);
       });
     });
 
-    table.appendChild(tbody);
-    outer.appendChild(table);
+    // L'overlay est dans un wrapper qui scrolle avec outer
+    // On enveloppe grid+overlay dans un div de taille fixe
+    outer.innerHTML = '';
+    var inner = div('position:relative;width:'+totalW+'px;min-height:'+totalH+'px;');
+    inner.appendChild(grid);
+    inner.appendChild(overlay);
+    outer.appendChild(inner);
     body.appendChild(outer);
 
     // Scroll vers aujourd'hui
@@ -6388,7 +6395,7 @@ try {
       if (todayIdx>=0) {
         outer.scrollLeft = Math.max(0, propW + todayIdx*colW - outer.offsetWidth/2 + colW/2);
       }
-    }, 60);
+    }, 80);
   }
   function renderYear(body) {
     var year = state.date.getFullYear();
