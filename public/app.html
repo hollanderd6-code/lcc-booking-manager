@@ -590,9 +590,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       display: none !important; /* Tabs moved to calendar dark header */
     }
 
-    @media (max-width: 768px) {
-      .calendar-legends { display: none !important; }
-    }
     /* Toujours afficher les view-tabs dans le header */
     .calendar-header-top .view-tabs {
       display: flex !important;
@@ -3010,25 +3007,6 @@ window.closeChecklistsKpiModal = function() {
 
 <!-- Centre : légendes + vue toggle -->
 <div style="display:flex;align-items:center;gap:16px;">
-  <!-- Légendes plateformes — cachées sur mobile, visibles desktop -->
-  <div class="calendar-legends" style="display:flex;align-items:center;gap:12px;padding:6px 14px;background:rgba(255,255,255,.07);border-radius:999px;border:1px solid rgba(255,255,255,.1);">
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
-      <span style="width:8px;height:8px;border-radius:50%;background:#FF5A5F;flex-shrink:0;"></span>Airbnb
-    </span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
-      <span style="width:8px;height:8px;border-radius:50%;background:#003580;flex-shrink:0;"></span>Booking
-    </span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
-      <span style="width:8px;height:8px;border-radius:50%;background:#F97316;flex-shrink:0;"></span>Direct
-    </span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
-      <span style="width:8px;height:8px;border-radius:50%;background:#0096D6;flex-shrink:0;"></span>Abritel
-    </span>
-    <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.7);">
-      <span style="width:8px;height:8px;border-radius:50%;background:#2E7D32;flex-shrink:0;"></span>Gîtes
-    </span>
-  </div>
-
   <!-- Vue tabs -->
   <div class="view-tabs" style="background:rgba(255,255,255,.07);border-radius:999px;padding:3px;display:flex;gap:2px;border:1px solid rgba(255,255,255,.1);">
     <button class="view-tab" data-view="day" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
@@ -6777,113 +6755,149 @@ function riskColor(level) {
     }
 
     // ═══════════════════════════════════════════
-    // VUE JOUR
+    // VUE JOUR — style sélecteur dates horizontal
     // ═══════════════════════════════════════════
     function renderDayView() {
-      var d = new Date(state.currentDate.getTime());
-      var dateStr = d.getFullYear() + '-'
-        + String(d.getMonth()+1).padStart(2,'0') + '-'
-        + String(d.getDate()).padStart(2,'0');
-
-      var dayNames = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-      var dayName  = dayNames[d.getDay()];
-      var dayNum   = d.getDate();
-      var monthName= CONFIG.MONTHS[d.getMonth()];
-      var isToday  = dateStr === new Date().toISOString().split('T')[0];
-
-      // Cacher le calendrier tableau
       var calContainer = document.querySelector('.calendar-container');
       var daysHeaderEl  = document.getElementById('daysHeader');
       if (calContainer) calContainer.style.display = 'none';
       if (daysHeaderEl)  daysHeaderEl.style.display  = 'none';
 
-      // Créer ou réutiliser le conteneur vue jour
       var el = document.getElementById('calDayView');
       if (!el) {
         el = document.createElement('div');
         el.id = 'calDayView';
+        el.style.cssText = 'background:var(--surface-color,#F5F0E8);';
         var wrapper = document.querySelector('.calendar-wrapper');
-        if (wrapper) wrapper.appendChild(el); else document.body.appendChild(el);
+        if (wrapper) wrapper.appendChild(el);
       }
       el.style.display = 'block';
+
+      var selected = new Date(state.currentDate.getTime());
+      var selStr   = toDateStr(selected);
       updatePeriodDisplay();
 
-      // Compter les réservations
-      var checkins = 0, checkouts = 0, staying = 0, guests = 0;
-      var seen = {}, list = [];
-      var pColors = { airbnb:'#FF5A5F', booking:'#003580', bdc:'#003580', direct:'#1A7A5E' };
+      // ── Sélecteur de dates horizontal (7 jours autour de today) ──
+      var today = new Date();
+      var dates = [];
+      for (var i = -3; i <= 10; i++) {
+        var d = new Date(today);
+        d.setDate(today.getDate() + i);
+        dates.push(d);
+      }
 
+      var pColors = { airbnb:'#FF5A5F', booking:'#003580', bdc:'#003580', direct:'#1A7A5E' };
+      var dayShort = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+
+      var selectorHtml = '<div style="display:flex;gap:8px;overflow-x:auto;padding:14px 16px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">';
+      dates.forEach(function(d) {
+        var ds = toDateStr(d);
+        var isSel = ds === selStr;
+        var isTod = ds === toDateStr(today);
+        selectorHtml += '<button onclick="selectDayViewDate('' + ds + '')" '
+          + 'style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;'
+          + 'padding:8px 12px;border-radius:14px;border:none;cursor:pointer;min-width:48px;'
+          + 'background:' + (isSel ? '#1A7A5E' : isTod ? 'rgba(26,122,94,.12)' : 'white') + ';'
+          + 'color:' + (isSel ? 'white' : '#374151') + ';'
+          + 'box-shadow:' + (isSel ? '0 4px 12px rgba(26,122,94,.3)' : '0 1px 3px rgba(0,0,0,.08)') + ';'
+          + 'font-family:'DM Sans',sans-serif;">'
+          + '<span style="font-size:10px;font-weight:600;opacity:' + (isSel ? '1' : '.6') + ';text-transform:uppercase;letter-spacing:.04em;">' + dayShort[d.getDay()] + '</span>'
+          + '<span style="font-size:18px;font-weight:' + (isSel||isTod ? '800' : '600') + ';">' + d.getDate() + '</span>'
+          + '</button>';
+      });
+      selectorHtml += '</div>';
+
+      // ── Stats du jour sélectionné ──
+      var checkins = 0, checkouts = 0, seen = {}, list = [];
       (window.enrichedReservations || []).forEach(function(r) {
         var src = (r.source||r.platform||'').toUpperCase();
         if (r.type === 'block' || src === 'BLOCK') return;
         var s = (r.start || r.startDate || '').toString().split('T')[0];
         var e = (r.end   || r.endDate   || '').toString().split('T')[0];
         if (!s || !e) return;
-        var ok = (s === dateStr || e === dateStr || (s < dateStr && e > dateStr));
-        if (!ok) return;
-        var key = r.uid || r.id || (s + e + (r.guestName||''));
+        if (!(s === selStr || e === selStr || (s < selStr && e > selStr))) return;
+        var key = r.uid || r.id || (s+e+(r.guestName||''));
         if (seen[key]) return;
         seen[key] = true;
-        if (s === dateStr) checkins++;
-        if (e === dateStr) checkouts++;
-        if (s < dateStr && e > dateStr) staying++;
-        if (s <= dateStr && e > dateStr) guests += parseInt(r.adults || r.occupancyAdults || 1);
+        if (s === selStr) checkins++;
+        if (e === selStr) checkouts++;
         list.push(r);
       });
 
-      // Cartes réservations
+      // ── Cartes réservations ──
       var cards = list.map(function(r) {
         var guest = r.guestName || r.guest_display_name || 'Voyageur';
         var prop  = r.propertyName || r.property_name || '';
         var s = (r.start || r.startDate || '').toString().split('T')[0];
         var e = (r.end   || r.endDate   || '').toString().split('T')[0];
-        var fmt = function(ds) { return ds ? new Date(ds+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : ''; };
+        var nights = s && e ? Math.round((new Date(e)-new Date(s))/(86400000)) : 0;
+        var adults = parseInt(r.adults || r.occupancyAdults || 1);
         var plt = (r.platform || r.source || 'direct').toLowerCase().replace(/\.com$/,'');
         var pc  = pColors[plt] || '#6B7280';
-        var badge = s===dateStr ? '🟢 Arrivée' : e===dateStr ? '🔴 Départ' : '🏠 En séjour';
+        var isIn = s === selStr, isOut = e === selStr;
+        var badge = isIn ? '← Arrivée' : isOut ? '→ Départ' : '⌂ En séjour';
+        var badgeColor = isIn ? '#1A7A5E' : isOut ? '#EF4444' : '#6366F1';
+        var pIcon = plt === 'airbnb' ? '⊕' : plt.includes('book') || plt === 'bdc' ? 'B' : '⊙';
         return '<div style="background:white;border-radius:14px;padding:14px 16px;'
-          + 'border:1px solid #F1F5F9;margin-bottom:10px;cursor:pointer;" '
-          + 'onclick="openBookingDetails && openBookingDetails(' + JSON.stringify(r).replace(/'/g,"\'") + ')">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;">'
-          + '<span style="font-size:14px;font-weight:700;color:#111827;">' + guest + '</span>'
-          + '<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:' + pc + '20;color:' + pc + ';">' + plt.toUpperCase() + '</span>'
+          + 'border:1px solid #F1F5F9;margin-bottom:8px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
+          + '<div>'
+            + '<div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:2px;">' + guest + '</div>'
+            + '<div style="font-size:12px;color:#6B7280;">' + prop + '</div>'
           + '</div>'
-          + '<div style="font-size:12px;color:#6B7280;margin-bottom:5px;"><i class="fas fa-home" style="margin-right:4px;font-size:10px;"></i>' + prop + '</div>'
-          + '<div style="display:flex;justify-content:space-between;">'
-          + '<span style="font-size:12px;color:#9CA3AF;">' + fmt(s) + ' → ' + fmt(e) + '</span>'
-          + '<span style="font-size:12px;font-weight:600;">' + badge + '</span>'
+          + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+            + '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:' + pc + '20;color:' + pc + ';">' + plt.toUpperCase() + '</span>'
+            + '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:' + badgeColor + '15;color:' + badgeColor + ';">' + badge + '</span>'
+          + '</div>'
+          + '</div>'
+          + '<div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#9CA3AF;">'
+            + '<span>👥 ' + adults + '</span>'
+            + '<span>🌙 ' + nights + ' nuit' + (nights>1?'s':'') + '</span>'
           + '</div>'
           + '</div>';
       }).join('');
 
-      el.innerHTML = '<div style="padding:16px 20px 24px;">'
-        // En-tête date
-        + '<div style="text-align:center;margin-bottom:22px;">'
-        + '<div style="font-size:12px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.1em;font-weight:700;">' + dayName + '</div>'
-        + '<div style="font-size:52px;font-weight:800;line-height:1;color:' + (isToday?'#1A7A5E':'#0D1117') + ';margin:4px 0;">' + dayNum + '</div>'
-        + '<div style="font-size:16px;color:#6B7280;font-weight:500;">' + monthName + ' ' + d.getFullYear() + '</div>'
-        + (isToday ? '<div style="margin-top:6px;display:inline-block;padding:3px 14px;background:#1A7A5E;color:white;border-radius:99px;font-size:11px;font-weight:700;">Aujourd&#39;hui</div>' : '')
-        + '</div>'
-        // Grille stats
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;">'
-        + _statCard(checkins, 'Arrivées', '#1A7A5E', 'fa-sign-in-alt')
-        + _statCard(checkouts, 'Départs', '#EF4444', 'fa-sign-out-alt')
-        + _statCard(list.length, 'Réservations', '#6366F1', 'fa-calendar-check')
-        + _statCard(guests, 'Voyageurs', '#F59E0B', 'fa-users')
+      var selDate = new Date(selStr + 'T12:00:00');
+      var selLabel = selDate.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+
+      el.innerHTML = selectorHtml
+        + '<div style="padding:0 16px 24px;">'
+        // Label date
+        + '<div style="font-size:13px;font-weight:700;color:#6B7280;text-transform:capitalize;margin-bottom:12px;">' + selLabel + '</div>'
+        // Stats
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">'
+          + '<div style="background:white;border-radius:14px;padding:14px;text-align:center;border:1px solid #F1F5F9;">'
+            + '<div style="font-size:28px;font-weight:800;color:#1A7A5E;">' + checkins + '</div>'
+            + '<div style="font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;">Arrivées</div>'
+          + '</div>'
+          + '<div style="background:white;border-radius:14px;padding:14px;text-align:center;border:1px solid #F1F5F9;">'
+            + '<div style="font-size:28px;font-weight:800;color:#EF4444;">' + checkouts + '</div>'
+            + '<div style="font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;">Départs</div>'
+          + '</div>'
         + '</div>'
         // Liste
-        + (list.length
-            ? '<div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Détail</div>' + cards
-            : '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;background:white;border-radius:14px;border:1px solid #F1F5F9;">Aucune réservation ce jour</div>')
+        + (list.length ? cards : '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;background:white;border-radius:14px;border:1px solid #F1F5F9;">Aucune réservation</div>')
         + '</div>';
+
+      // Scroll le bouton sélectionné au centre
+      setTimeout(function() {
+        var btns = el.querySelectorAll('button');
+        for (var i=0;i<btns.length;i++) {
+          if (btns[i].style.background.includes('#1A7A5E')) {
+            btns[i].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+            break;
+          }
+        }
+      }, 50);
     }
 
-    function _statCard(val, label, color, icon) {
-      return '<div style="background:white;border-radius:14px;padding:14px;text-align:center;border:1px solid #F1F5F9;">'
-        + '<div style="font-size:28px;font-weight:800;color:' + color + ';line-height:1;">' + val + '</div>'
-        + '<div style="font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:4px;">'
-        + '<i class="fas ' + icon + '" style="margin-right:3px;font-size:9px;"></i>' + label + '</div>'
-        + '</div>';
+    function toDateStr(d) {
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function selectDayViewDate(dateStr) {
+      state.currentDate = new Date(dateStr + 'T12:00:00');
+      renderDayView();
     }
 
     // Remettre le calendrier normal en quittant la vue jour
@@ -6900,6 +6914,7 @@ function riskColor(level) {
       }
     });
 
+    
     function computeMonthStats(year, monthIndex) {
       var start = new Date(year, monthIndex, 1);
       var end = new Date(year, monthIndex + 1, 0);
