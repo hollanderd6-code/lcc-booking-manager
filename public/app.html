@@ -6055,7 +6055,7 @@ try {
     var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:all .2s;');
     cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
     var cardOut = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;transition:all .2s;border:2px solid transparent;');
-    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #DC2626;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkouts</div>';
+    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #DC2626;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:#DC2626;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkouts</div>';
     stats.appendChild(cardIn); stats.appendChild(cardOut);
     body.appendChild(stats);
 
@@ -6068,6 +6068,8 @@ try {
       cardIn.style.background = activeFilter==='checkins' ? 'rgba(26,122,94,.08)' : 'white';
       cardIn.style.opacity = activeFilter==='checkouts' ? '0.45' : '1';
       cardOut.style.opacity = activeFilter==='checkins' ? '0.45' : '1';
+      cardOut.style.border = activeFilter==='checkouts' ? '2px solid #DC2626' : '2px solid transparent';
+      cardOut.style.background = activeFilter==='checkouts' ? 'rgba(220,38,38,.05)' : 'white';
     }
     cardIn.onclick  = function(){ activeFilter = activeFilter==='checkins'  ? null : 'checkins';  applyFilter(); };
     cardOut.onclick = function(){ activeFilter = activeFilter==='checkouts' ? null : 'checkouts'; applyFilter(); };
@@ -6324,14 +6326,22 @@ try {
       pc.innerHTML = '<span style="font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
       (function(pid, el){ el.onclick = function(){
         var active = el.classList.contains('bh-row-active');
+        // Reset tout
         outer.querySelectorAll('.bh-prop-cell').forEach(function(c){c.classList.remove('bh-row-active');c.style.background='';});
         outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
+        outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
         if(!active){
           el.classList.add('bh-row-active');
           el.style.background='rgba(26,122,94,.1)';
-          outer.querySelectorAll('.bh-day-cell[data-prop-id="'+pid+'"]').forEach(function(c){c.style.opacity='1';});
-          outer.querySelectorAll('.bh-day-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.2';});
+          // Dim les cells des autres logements
+          outer.querySelectorAll('.bh-day-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.15';});
           outer.querySelectorAll('.bh-prop-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.background='rgba(0,0,0,.03)';});
+          // Blocs: dim ceux des autres logements, garder les siens
+          outer.querySelectorAll('.booking-block-bh').forEach(function(b){
+            b.style.opacity = b.dataset.propId===pid ? '1' : '0.15';
+          });
+          // S'assurer que les cells du logement actif sont bien visibles
+          outer.querySelectorAll('.bh-day-cell[data-prop-id="'+pid+'"]').forEach(function(c){c.style.opacity='1';});
         }
       };})(String(prop.id), pc);
       grid.appendChild(pc);
@@ -6655,6 +6665,7 @@ try {
 
   // Compat: expose state for external scripts
   window.__bhCalSwitchView = switchView;
+  window.__bhCalendarRender = render;
 
 })();
 </script>
@@ -11369,7 +11380,7 @@ function savePropertyOrder() {
   // Toast de confirmation
   var toast = document.createElement('div');
   toast.textContent = '✓ Ordre des logements sauvegardé';
-  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1A7A5E;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.2);transition:opacity .4s;';
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1A7A5E;color:white;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.2);transition:opacity .4s;';
   document.body.appendChild(toast);
   setTimeout(function(){ toast.style.opacity='0'; setTimeout(function(){ toast.remove(); }, 400); }, 2000);
 }
