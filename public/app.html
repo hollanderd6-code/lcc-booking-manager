@@ -5957,6 +5957,7 @@ try {
     // Scroll synchrone vers aujourd'hui — juste après insertion dans le DOM
     if (state.view === 'month' && body._gridWrap && body._scrollLeft >= 0) {
       body._gridWrap.scrollLeft = body._scrollLeft;
+      if (body._daysHdrWrap) body._daysHdrWrap.scrollLeft = body._scrollLeft;
     }
 
     // Scroll into view on mobile
@@ -6286,10 +6287,55 @@ try {
       hcell.dataset.date = dstr2;
       daysHdr.appendChild(hcell);
     }
-    daysHdr.style.minWidth = (numDays * colW) + 'px';
-    grid.appendChild(daysHdr);
+    // ── Structure : stickyHeader | scrollBody
+    // stickyHeader = [propLabel | daysHdr] collés ensemble, sticky top:0
+    // scrollBody   = [propRows  | gridWrap(grid sans header)]
 
-    // Property rows
+    var stickyHeader = div('display:flex;position:sticky;top:0;z-index:10;background:white;border-bottom:2px solid #F0EDE8;flex-shrink:0;');
+
+    // Coin supérieur gauche "LOGEMENTS"
+    var propLabel = div('flex-shrink:0;width:90px;background:#FAFAF9;border-right:2px solid #F0EDE8;height:44px;display:flex;align-items:center;justify-content:center;padding:0 8px;');
+    propLabel.innerHTML = '<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>';
+
+    // daysHdr dans un wrapper overflow:hidden qui suit le scroll de gridWrap
+    var daysHdrWrap = div('flex:1;overflow:hidden;');
+    daysHdr.style.minWidth = (numDays * colW) + 'px';
+    daysHdrWrap.appendChild(daysHdr);
+
+    stickyHeader.appendChild(propLabel);
+    stickyHeader.appendChild(daysHdrWrap);
+
+    // Corps : propRows + gridWrap côte à côte
+    var scrollBody = div('display:flex;overflow:hidden;');
+
+    // Colonne propriétés (sans le header)
+    var propRowsCol = div('flex-shrink:0;width:90px;background:#FAFAF9;border-right:2px solid #F0EDE8;');
+    state.properties.forEach(function(prop) {
+      var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:pointer;transition:background .15s;');
+      pc.className = 'bh-prop-cell';
+      pc.innerHTML = '<span style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
+      (function(pid, pcc) {
+        pcc.onclick = function() {
+          var isActive = pcc.classList.contains('bh-row-active');
+          propRowsCol.querySelectorAll('.bh-prop-cell').forEach(function(c) { c.classList.remove('bh-row-active'); c.style.background=''; });
+          grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity='1'; });
+          if (!isActive) {
+            pcc.classList.add('bh-row-active');
+            pcc.style.background = 'rgba(26,122,94,.1)';
+            grid.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity = r2.dataset.propId===pid ? '1' : '0.2'; });
+          }
+        };
+      })(String(prop.id), pc);
+      propRowsCol.appendChild(pc);
+    });
+
+    scrollBody.appendChild(propRowsCol);
+    scrollBody.appendChild(gridWrap);
+
+    outer.appendChild(stickyHeader);
+    outer.appendChild(scrollBody);
+
+    // Property rows dans grid (données uniquement, pas les labels)
     state.properties.forEach(function(prop) {
       var propRow = div('display:flex;height:52px;border-bottom:1px solid #F0EDE8;position:relative;transition:opacity .2s;');
       propRow.className = 'bh-prop-row';
@@ -6400,15 +6446,17 @@ try {
     });
 
     gridWrap.appendChild(grid);
-    layout.appendChild(propCol);
-    layout.appendChild(gridWrap);
-    outer.appendChild(layout);
-    body.appendChild(outer);
+
+    // Synchroniser le scroll du header avec la grille
+    gridWrap.addEventListener('scroll', function() {
+      daysHdrWrap.scrollLeft = gridWrap.scrollLeft;
+    });
 
     // Stocker les infos pour scroll synchrone après insertion dans le DOM
     var todayD = new Date(today + 'T00:00:00');
     var todayIdx = Math.floor((todayD - rangeStart) / MS);
     body._gridWrap = gridWrap;
+    body._daysHdrWrap = daysHdrWrap;
     body._scrollLeft = (todayIdx >= 0 && todayIdx < numDays) ? todayIdx * colW : -1;
   }
 
