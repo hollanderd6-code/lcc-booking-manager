@@ -6284,12 +6284,12 @@ try {
 
       (function(idx5, el){ el.onclick = function(){
         var active = el.classList.contains('bh-col-active');
-        // Reset tout
+        // Reset tout : colonne ET logement
         outer.querySelectorAll('.bh-day-hcell').forEach(function(c){c.classList.remove('bh-col-active');c.style.background='';});
+        outer.querySelectorAll('.bh-prop-cell').forEach(function(c){c.classList.remove('bh-row-active');c.style.background='';});
         outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
         outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
-        if(!active){
-          el.classList.add('bh-col-active');
+        if(!active){\n          el.classList.add('bh-col-active');
           el.style.background='rgba(26,122,94,.13)';
           // Dim les dcells (sauf colonne active)
           outer.querySelectorAll('.bh-day-cell').forEach(function(c){
@@ -6326,21 +6326,19 @@ try {
       pc.innerHTML = '<span style="font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
       (function(pid, el){ el.onclick = function(){
         var active = el.classList.contains('bh-row-active');
-        // Reset tout
+        // Reset complet : logement ET colonne
         outer.querySelectorAll('.bh-prop-cell').forEach(function(c){c.classList.remove('bh-row-active');c.style.background='';});
+        outer.querySelectorAll('.bh-day-hcell').forEach(function(c){c.classList.remove('bh-col-active');c.style.background='';});
         outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
         outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
         if(!active){
           el.classList.add('bh-row-active');
           el.style.background='rgba(26,122,94,.1)';
-          // Dim les cells des autres logements
           outer.querySelectorAll('.bh-day-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.opacity='0.15';});
           outer.querySelectorAll('.bh-prop-cell:not([data-prop-id="'+pid+'"])').forEach(function(c){c.style.background='rgba(0,0,0,.03)';});
-          // Blocs: dim ceux des autres logements, garder les siens
           outer.querySelectorAll('.booking-block-bh').forEach(function(b){
             b.style.opacity = b.dataset.propId===pid ? '1' : '0.15';
           });
-          // S'assurer que les cells du logement actif sont bien visibles
           outer.querySelectorAll('.bh-day-cell[data-prop-id="'+pid+'"]').forEach(function(c){c.style.opacity='1';});
         }
       };})(String(prop.id), pc);
