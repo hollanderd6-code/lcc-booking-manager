@@ -5876,6 +5876,30 @@ try {
       attachCalendarEventListeners();
       updatePeriodDisplay();
       renderCalendar(); // affichage vide au début
+      // Appliquer les préférences sauvegardées
+      (function() {
+        var initPrefs = {};
+        try { initPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+        var sEl = document.getElementById('bhCalPrefsStyle');
+        if (!sEl) { sEl = document.createElement('style'); sEl.id = 'bhCalPrefsStyle'; document.head.appendChild(sEl); }
+        if (initPrefs.showPrices === false) sEl.textContent = '.cell-price { display: none !important; }';
+        if (initPrefs.defaultView) {
+          var viewMap2 = { jour:'day', semaine:'week', mois:'month', année:'year' };
+          var v2 = viewMap2[initPrefs.defaultView] || initPrefs.defaultView;
+          if (['day','week','month','year'].includes(v2)) {
+            state.currentView = v2;
+            var tabs = document.querySelectorAll('.view-tab');
+            for (var ti=0;ti<tabs.length;ti++) {
+              var isA = tabs[ti].getAttribute('data-view') === v2;
+              tabs[ti].classList.toggle('active', isA);
+              tabs[ti].style.background = isA ? '#1A7A5E' : 'transparent';
+              tabs[ti].style.color = isA ? 'white' : 'rgba(255,255,255,.6)';
+              tabs[ti].style.fontWeight = isA ? '600' : '500';
+            }
+            renderCalendar();
+          }
+        }
+      })();
     });
 
     // ============================================
@@ -6269,6 +6293,17 @@ try {
 
     window.bhApplyCalPrefs = function() {
       bhCloseCalSettings();
+      // Appliquer showPrices
+      var prefs2 = {};
+      try { prefs2 = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+      var styleEl = document.getElementById('bhCalPrefsStyle');
+      if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'bhCalPrefsStyle'; document.head.appendChild(styleEl); }
+      if (prefs2.showPrices === false) {
+        styleEl.textContent = '.cell-price { display: none !important; }';
+      } else {
+        styleEl.textContent = '';
+      }
+      // Appliquer vue par défaut (ne change pas la vue actuelle, juste mémorisé)
       renderCalendar();
       if (typeof showToast === 'function') showToast('Paramètres appliqués ✓', 'success');
     };
@@ -6931,18 +6966,20 @@ function riskColor(level) {
     function renderDayView() {
       var calContainer = document.querySelector('.calendar-container');
       var daysHeaderEl  = document.getElementById('daysHeader');
+      var periodNav = document.querySelector('.period-navigation');
       if (calContainer) calContainer.style.display = 'none';
       if (daysHeaderEl)  daysHeaderEl.style.display  = 'none';
+      if (periodNav) periodNav.style.display = 'none';
 
       var el = document.getElementById('calDayView');
       if (!el) {
         el = document.createElement('div');
         el.id = 'calDayView';
-        el.style.cssText = 'background:#F5F2EC;overflow-y:auto;';
+        // Placé directement dans calendar-wrapper, après le header
         var wrapper = document.querySelector('.calendar-wrapper');
         if (wrapper) wrapper.appendChild(el);
       }
-      el.style.display = 'block';
+      el.style.cssText = 'display:block;background:#F5F2EC;min-height:400px;overflow-y:auto;';
 
       var selected = new Date(state.currentDate.getTime());
       var selStr = toDateStr(selected);
@@ -7121,6 +7158,8 @@ function riskColor(level) {
         if (cc) cc.style.display = '';
         var dh = document.getElementById('daysHeader');
         if (dh) dh.style.display = '';
+        var pn = document.querySelector('.period-navigation');
+        if (pn) pn.style.display = '';
       }
     });
 
