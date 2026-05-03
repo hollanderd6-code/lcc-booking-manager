@@ -6984,6 +6984,7 @@ function riskColor(level) {
       if (periodNav) periodNav.style.display = 'none';
 
       var el = document.getElementById('calDayView');
+      console.log('[DayView] el found:', !!el, el ? el.style.display : 'N/A');
       if (!el) {
         el = document.createElement('div');
         el.id = 'calDayView';
@@ -6993,8 +6994,14 @@ function riskColor(level) {
         } else {
           document.body.appendChild(el);
         }
+        console.log('[DayView] el created and inserted');
       }
       el.style.cssText = 'display:block;background:#F5F2EC;min-height:500px;overflow-y:auto;';
+      console.log('[DayView] el display after set:', el.style.display, 'offsetHeight:', el.offsetHeight);
+      var calContainer2 = document.querySelector('.calendar-container');
+      var periodNav2 = document.querySelector('.period-navigation');
+      console.log('[DayView] calContainer hidden:', calContainer2 ? calContainer2.style.display : 'not found');
+      console.log('[DayView] periodNav hidden:', periodNav2 ? periodNav2.style.display : 'not found');
 
       var selected = new Date(state.currentDate.getTime());
       var selStr = toDateStr(selected);
