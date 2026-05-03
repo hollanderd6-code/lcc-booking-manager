@@ -6200,181 +6200,193 @@ try {
   // VUE MOIS
   // ─────────────────────────────────────────
   function renderMonth(body) {
-    var year = state.date.getFullYear();
+    var year  = state.date.getFullYear();
     var month = state.date.getMonth();
     var firstDay = new Date(year, month, 1);
-    var lastDay = new Date(year, month+1, 0);
-    var today = ds(new Date());
+    var lastDay  = new Date(year, month+1, 0);
+    var today    = ds(new Date());
 
-    var startOff = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1;
+    var startOff   = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1;
     var rangeStart = new Date(firstDay); rangeStart.setDate(1-startOff);
     var totalCells = Math.ceil((startOff + lastDay.getDate())/7)*7;
-    var numDays = totalCells;
-    var colW = 48;
-    var propW = 90; // largeur colonne logements
+    var numDays    = totalCells;
+    var propW      = 72;   // largeur colonne logements (px)
+    var colW       = 48;   // largeur colonne jour (px)
+    var rowH       = 52;   // hauteur ligne (px)
+    var hdrH       = 44;   // hauteur header jours (px)
 
-    // ── Structure : 1 seul conteneur scroll horizontal
-    // À l'intérieur : propCol sticky left + grid des jours
-    // Le header des jours est la 1ère row du grid, sticky top
-    var outer = div('background:white;overflow:hidden;');
-    var scroller = div('overflow-x:auto;-webkit-overflow-scrolling:touch;');
-    var inner = div('display:flex;min-width:'+(propW + numDays*colW)+'px;position:relative;');
+    // ── UN SEUL container de scroll horizontal + vertical ──
+    // La colonne "Logements" est sticky left=0 DANS ce container
+    // Le header des jours est sticky top=0 DANS ce container
+    // => parfaite synchronisation sur mobile et desktop
 
-    // Colonne gauche — sticky left à l'intérieur du scroller
-    var propCol = div('flex-shrink:0;width:'+propW+'px;background:#FAFAF9;border-right:2px solid #F0EDE8;position:sticky;left:0;z-index:6;');
-    propCol.appendChild(div('height:44px;border-bottom:2px solid #F0EDE8;display:flex;align-items:center;justify-content:center;padding:0 8px;background:#FAFAF9;',
-      '<span style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'));
+    var outer = div('overflow:auto;-webkit-overflow-scrolling:touch;position:relative;background:white;');
+    outer.id = 'bhMonthOuter';
 
-    // Grille droite
-    var gridWrap = div('flex:1;min-width:'+(numDays*colW)+'px;position:relative;');
+    // Total width = propW + numDays * colW
+    var totalW = propW + numDays * colW;
 
-    // Header des jours sticky top (dans gridWrap)
-    var daysHdr = div('display:flex;width:'+(numDays*colW)+'px;height:44px;border-bottom:2px solid #F0EDE8;position:sticky;top:0;background:white;z-index:4;');
+    // ── Header row : coin "Logements" + jours ──
+    var hdrRow = div('display:flex;position:sticky;top:0;z-index:6;width:'+totalW+'px;height:'+hdrH+'px;background:white;border-bottom:2px solid #F0EDE8;');
+
+    // Coin sticky gauche
+    var corner = div('flex-shrink:0;width:'+propW+'px;height:'+hdrH+'px;position:sticky;left:0;z-index:7;background:#F5F2EC;border-right:2px solid #E0DDD8;display:flex;align-items:center;justify-content:center;');
+    corner.innerHTML = '<span style="font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>';
+    hdrRow.appendChild(corner);
+
+    // Cellules jours
     for (var di=0; di<numDays; di++) {
       var dayDate = new Date(rangeStart); dayDate.setDate(rangeStart.getDate()+di);
-      var dstr2 = ds(dayDate);
+      var dstr2   = ds(dayDate);
       var inMonth = dayDate.getMonth()===month;
       var isToday = dstr2===today;
-      var isWknd = dayDate.getDay()===0||dayDate.getDay()===6;
-      var hcell = div('width:'+colW+'px;flex-shrink:0;box-sizing:border-box;border-right:1px solid #F0EDE8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;'
-        +(isToday?'background:rgba(26,122,94,.08);':'')
-        +(isWknd&&!isToday?'background:rgba(220,38,38,.03);':''));
-      hcell.innerHTML='<span style="font-size:11px;font-weight:600;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.04em;">'+DAYS_MIN[dayDate.getDay()]+'</span>'
-        +'<span style="font-size:15px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
-      hcell.style.cursor = 'pointer';
+      var isWknd  = dayDate.getDay()===0||dayDate.getDay()===6;
+
+      var hcell = div('flex-shrink:0;width:'+colW+'px;height:'+hdrH+'px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #F0EDE8;cursor:pointer;'
+        +(isToday?'background:rgba(26,122,94,.07);':'')+(isWknd&&!isToday?'background:rgba(220,38,38,.02);':''));
       hcell.className = 'bh-day-hcell';
-      hcell.dataset.date = dstr2;
-      (function(dstr5, idx5) {
+      hcell.dataset.colIdx = String(di);
+      hcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
+
+      (function(idx5) {
         hcell.onclick = function() {
           var isActive = hcell.classList.contains('bh-col-active');
-          daysHdr.querySelectorAll('.bh-day-hcell').forEach(function(c) { c.classList.remove('bh-col-active'); c.style.background=''; });
-          gridWrap.querySelectorAll('.bh-day-cell').forEach(function(c) { c.style.opacity='1'; });
+          outer.querySelectorAll('.bh-day-hcell').forEach(function(c){c.classList.remove('bh-col-active');c.style.background='';});
+          outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
           if (!isActive) {
             hcell.classList.add('bh-col-active');
-            hcell.style.background = 'rgba(26,122,94,.12)';
-            gridWrap.querySelectorAll('.bh-day-cell').forEach(function(c) { c.style.opacity = c.dataset.colIdx===String(idx5)?'1':'0.25'; });
+            hcell.style.background = 'rgba(26,122,94,.13)';
+            outer.querySelectorAll('.bh-day-cell').forEach(function(c){
+              c.style.opacity = c.dataset.colIdx===String(idx5) ? '1' : '0.22';
+            });
           }
         };
-      })(dstr2, di);
-      daysHdr.appendChild(hcell);
+      })(di);
+
+      hdrRow.appendChild(hcell);
     }
-    gridWrap.appendChild(daysHdr);
+    outer.appendChild(hdrRow);
 
-    // Rows propriétés
+    // ── Lignes propriétés ──
     state.properties.forEach(function(prop) {
-      // Label dans propCol
-      var pc = div('height:52px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #F0EDE8;cursor:pointer;transition:background .15s;background:#FAFAF9;');
-      pc.className = 'bh-prop-cell';
-      pc.innerHTML = '<span style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
-      (function(pid) {
-        pc.onclick = function() {
-          var isActive = pc.classList.contains('bh-row-active');
-          propCol.querySelectorAll('.bh-prop-cell').forEach(function(c) { c.classList.remove('bh-row-active'); c.style.background='#FAFAF9'; });
-          gridWrap.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity='1'; });
-          if (!isActive) {
-            pc.classList.add('bh-row-active');
-            pc.style.background = 'rgba(26,122,94,.1)';
-            gridWrap.querySelectorAll('.bh-prop-row').forEach(function(r2) { r2.style.opacity = r2.dataset.propId===pid?'1':'0.2'; });
-          }
-        };
-      })(String(prop.id));
-      propCol.appendChild(pc);
-
-      // Row dans gridWrap
-      var propRow = div('display:flex;width:'+(numDays*colW)+'px;height:52px;border-bottom:1px solid #F0EDE8;position:relative;transition:opacity .2s;');
+      var propRow = div('display:flex;position:relative;width:'+totalW+'px;height:'+rowH+'px;border-bottom:1px solid #F0EDE8;transition:opacity .2s;');
       propRow.className = 'bh-prop-row';
       propRow.dataset.propId = String(prop.id);
 
+      // Cellule logement — sticky left=0
+      var pc = div('flex-shrink:0;width:'+propW+'px;height:'+rowH+'px;position:sticky;left:0;z-index:3;background:#FAFAF9;border-right:2px solid #E0DDD8;display:flex;align-items:center;padding:0 8px;cursor:pointer;transition:background .15s;box-sizing:border-box;');
+      pc.className = 'bh-prop-cell';
+      pc.innerHTML = '<span style="font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
+      (function(pid) {
+        pc.onclick = function() {
+          var isActive = pc.classList.contains('bh-row-active');
+          outer.querySelectorAll('.bh-prop-cell').forEach(function(c){c.classList.remove('bh-row-active');c.style.background='';});
+          outer.querySelectorAll('.bh-prop-row').forEach(function(r2){r2.style.opacity='1';});
+          if (!isActive) {
+            pc.classList.add('bh-row-active');
+            pc.style.background = 'rgba(26,122,94,.1)';
+            outer.querySelectorAll('.bh-prop-row').forEach(function(r2){
+              r2.style.opacity = r2.dataset.propId===pid ? '1' : '0.22';
+            });
+          }
+        };
+      })(String(prop.id));
+      propRow.appendChild(pc);
+
+      // Cellules jours
       for (var di2=0; di2<numDays; di2++) {
         var dayDate2 = new Date(rangeStart); dayDate2.setDate(rangeStart.getDate()+di2);
-        var dstr3 = ds(dayDate2);
+        var dstr3    = ds(dayDate2);
         var inMonth2 = dayDate2.getMonth()===month;
-        var isWknd2 = dayDate2.getDay()===0||dayDate2.getDay()===6;
+        var isWknd2  = dayDate2.getDay()===0||dayDate2.getDay()===6;
         var isToday2 = dstr3===today;
-        var dcell = div('width:'+colW+'px;flex-shrink:0;height:52px;position:relative;box-sizing:border-box;border-right:1px solid #F5F2EC;'
+
+        var dcell = div('flex-shrink:0;width:'+colW+'px;height:'+rowH+'px;position:relative;box-sizing:border-box;border-right:1px solid #F5F2EC;'
           +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(220,38,38,.02);':''));
-        dcell.dataset.date = dstr3;
-        dcell.dataset.propertyId = String(prop.id);
-        dcell.dataset.colIdx = String(di2);
         dcell.className = 'calendar-cell bh-day-cell'+(isWknd2?' weekend':'');
+        dcell.dataset.date       = dstr3;
+        dcell.dataset.propertyId = String(prop.id);
+        dcell.dataset.colIdx     = String(di2);
+
+        // Prix
         if (inMonth2) {
-          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:'+(isWknd2?'#dc2626':'#1A7A5E')+';pointer-events:none;user-select:none;');
+          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:'+(isWknd2?'#dc2626':'#1A7A5E')+';pointer-events:none;');
           priceEl.className = 'cell-price';
           if (prop.basePrice) priceEl.textContent = Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice);
           dcell.appendChild(priceEl);
         }
-        (function(dstr4, propId4) {
+
+        // Clic cellule → bloquer
+        (function(d3, pid3) {
           dcell.addEventListener('click', function(e) {
             if (e.target.closest('.booking-block-bh')) return;
-            if (typeof window.openBlockModal === 'function') window.openBlockModal(dstr4, propId4);
+            if (typeof window.openBlockModal === 'function') window.openBlockModal(d3, pid3);
           });
         })(dstr3, String(prop.id));
+
         propRow.appendChild(dcell);
       }
 
-      // Overlay réservations
-      var overlayRow = div('position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;');
+      // ── Overlay réservations (absolue sur la ligne) ──
+      // On décale le left de propW pour ne pas couvrir la colonne sticky
       state.bookings.forEach(function(r) {
         if (String(r.propertyId) !== String(prop.id)) return;
-        var s=(r.startDate||r.start||'').split('T')[0];
-        var e=(r.endDate||r.end||'').split('T')[0];
+        var s = (r.startDate||r.start||'').split('T')[0];
+        var e = (r.endDate  ||r.end  ||'').split('T')[0];
         if (!s||!e) return;
+
         var startD = new Date(s+'T12:00:00');
         var endD   = new Date(e+'T12:00:00');
-        var colStart = Math.round((startD-rangeStart)/MS);
-        var colEnd   = Math.round((endD-rangeStart)/MS);
-        if (colEnd<0||colStart>=numDays) return;
-        colStart = Math.max(0,colStart);
-        colEnd   = Math.min(numDays,colEnd);
+        var colStart = Math.round((startD - rangeStart)/MS);
+        var colEnd   = Math.round((endD   - rangeStart)/MS);
+
+        if (colEnd<0 || colStart>=numDays) return;
+        colStart = Math.max(0, colStart);
+        colEnd   = Math.min(numDays, colEnd);
         if (colStart>=colEnd) return;
 
         var isBlock = r.type==='block';
         var p2 = pltInfo(r);
-        var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:1;');
+
+        var blk = div('position:absolute;top:7px;bottom:7px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:2;');
         blk.className = 'booking-block-bh';
-        blk.style.left  = (colStart*colW + colW*0.25)+'px';
-        blk.style.width = ((colEnd-colStart)*colW)+'px';
+        // left = propW (colonne sticky) + colStart * colW + small margin
+        blk.style.left  = (propW + colStart*colW + 2)+'px';
+        // width = span des jours + demi-jour pour le checkout
+        blk.style.width = ((colEnd-colStart)*colW - 3 + colW*0.4)+'px';
+
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
-          blk.innerHTML='<i class="fas fa-ban" style="font-size:10px;color:#9CA3AF;flex-shrink:0;"></i><span style="font-size:11px;font-weight:600;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
+          blk.innerHTML = '<i class="fas fa-ban" style="font-size:10px;color:#9CA3AF;flex-shrink:0;"></i>'
+            +'<span style="font-size:11px;font-weight:600;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
         } else {
-          blk.style.background = p2.bg;
-          blk.style.color = 'white';
-          blk.style.boxShadow = '0 2px 6px rgba(0,0,0,.2)';
-          var iconHtml = p2.cls==='airbnb'
-            ? '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-brands fa-airbnb" style="font-size:8px;color:white;"></i></div>'
-            : '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>';
-          blk.innerHTML = iconHtml+'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
-          blk.onmouseover=function(){this.style.filter='brightness(1.1)';};
-          blk.onmouseout=function(){this.style.filter='';};
-          blk.onclick=function(e){ e.stopPropagation(); openBooking(r); };
+          blk.style.background  = p2.bg;
+          blk.style.color       = 'white';
+          blk.style.boxShadow   = '0 2px 6px rgba(0,0,0,.22)';
+          blk.innerHTML = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;font-weight:800;">'+p2.label[0]+'</div>'
+            +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+          blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
+          blk.onmouseout  = function(){ this.style.filter=''; };
+          blk.onclick     = function(e){ e.stopPropagation(); openBooking(r); };
           blk.dataset.bookingId = String(r.id||'');
         }
-        overlayRow.appendChild(blk);
+        propRow.appendChild(blk);
       });
-      propRow.style.position = 'relative';
-      propRow.appendChild(overlayRow);
-      gridWrap.appendChild(propRow);
+
+      outer.appendChild(propRow);
     });
 
-    inner.appendChild(propCol);
-    inner.appendChild(gridWrap);
-    scroller.appendChild(inner);
-    outer.appendChild(scroller);
     body.appendChild(outer);
 
     // Scroll vers aujourd'hui
-    var todayD = new Date(today+'T00:00:00');
-    var todayIdx = Math.floor((todayD-rangeStart)/MS);
-    if (todayIdx >= 0 && todayIdx < numDays) {
-      scroller.scrollLeft = propW + todayIdx * colW;
-    }
-    body._gridWrap = scroller;
-    body._scrollLeft = (todayIdx>=0 && todayIdx<numDays) ? propW + todayIdx*colW : -1;
+    setTimeout(function() {
+      var todayIdx = Math.round((new Date(today+'T12:00:00') - rangeStart) / MS);
+      if (todayIdx >= 0) {
+        outer.scrollLeft = Math.max(0, propW + todayIdx*colW - outer.offsetWidth/2 + colW/2);
+      }
+    }, 60);
   }
-
-  // VUE ANNÉE
-  // ─────────────────────────────────────────
   function renderYear(body) {
     var year = state.date.getFullYear();
     var today = ds(new Date());
