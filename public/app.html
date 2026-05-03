@@ -6051,9 +6051,9 @@ try {
     var stats = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 14px 0;');
     var activeFilter = null;
     var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:all .2s;');
-    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2.5px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
+    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
     var cardOut = div('background:#DC2626;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 4px 12px rgba(220,38,38,.28);cursor:pointer;transition:all .2s;border:2px solid transparent;');
-    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2.5px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px;">Checkouts</div>';
+    cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:white;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:4px;">Checkouts</div>';
     stats.appendChild(cardIn); stats.appendChild(cardOut);
     body.appendChild(stats);
 
@@ -6376,6 +6376,7 @@ try {
 
         var blk = div('position:absolute;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;');
         blk.className = 'booking-block-bh';
+        blk.dataset.propId = String(prop.id);
         blk.style.top    = (rowTop + 6) + 'px';
         blk.style.height = (rowH - 12) + 'px';
         blk.style.left   = (propW + clippedStart*colW + colW*0.25) + 'px';
@@ -6412,13 +6413,32 @@ try {
     outer.appendChild(inner);
     body.appendChild(outer);
 
-    // Scroll vers aujourd'hui
+    // Reposition overlay blocks using real DOM measurements (fixes PC alignment)
     setTimeout(function() {
-      var todayIdx = Math.round((new Date(today+'T12:00:00') - rangeStart)/MS);
-      if (todayIdx>=0) {
-        outer.scrollLeft = Math.max(0, propW + todayIdx*colW - outer.offsetWidth/2 + colW/2);
-      }
-    }, 80);
+      var outerEl = body.querySelector('#bhMonthOuter');
+      if (!outerEl) return;
+      var outerRect = outerEl.getBoundingClientRect();
+      if (!outerRect.width) return;
+      outerEl.querySelectorAll('.booking-block-bh').forEach(function(blk) {
+        var propId = blk.dataset.propId;
+        var pc = outerEl.querySelector('.bh-prop-cell[data-prop-id="'+propId+'"]');
+        if (!pc) return;
+        var pcRect = pc.getBoundingClientRect();
+        var realTop = pcRect.top - outerRect.top + outerEl.scrollTop;
+        var realH   = pcRect.height;
+        blk.style.top    = (realTop + 6) + 'px';
+        blk.style.height = (realH  - 12) + 'px';
+      });
+    }, 0);
+
+    // Stocker pour scroll synchrone
+    var todayIdx2 = -1;
+    for (var ti=0; ti<numDays; ti++) {
+      var td2 = new Date(rangeStart); td2.setDate(rangeStart.getDate()+ti);
+      if (ds(td2) === today) { todayIdx2 = ti; break; }
+    }
+    body._gridWrap = outer;
+    body._scrollLeft = todayIdx2 >= 0 ? todayIdx2 * colW : -1;
   }
   function renderYear(body) {
     var year = state.date.getFullYear();
