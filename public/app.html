@@ -6452,6 +6452,8 @@ try {
       daysHdrWrap.scrollLeft = gridWrap.scrollLeft;
     });
 
+    body.appendChild(outer);
+
     // Stocker les infos pour scroll synchrone après insertion dans le DOM
     var todayD = new Date(today + 'T00:00:00');
     var todayIdx = Math.floor((todayD - rangeStart) / MS);
