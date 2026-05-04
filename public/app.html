@@ -6416,8 +6416,7 @@ try {
           if (r.notes) {
             var nb = document.createElement('span');
             nb.title = r.notes;
-            nb.style.cssText = 'position:absolute;top:2px;right:2px;background:#EF4444;color:white;border-radius:50%;width:14px;height:14px;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:10;pointer-events:none;';
-            nb.textContent = '✏';
+            nb.style.cssText = 'position:absolute;top:4px;right:4px;background:#EF4444;border-radius:50%;width:8px;height:8px;z-index:10;pointer-events:none;';
             anchorCell.appendChild(nb);
           }
           blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
@@ -8582,10 +8581,12 @@ function handleEditBooking() {
     var hasNote = !!(currentBookingData.notes && currentBookingData.notes.trim());
     if (editNotesLabel) editNotesLabel.style.color = hasNote ? '#EF4444' : '';
     editNotesEl.style.borderColor = hasNote ? '#EF4444' : '';
+    editNotesEl.style.color = hasNote ? '#EF4444' : '';
     editNotesEl.addEventListener('input', function() {
       var h = !!(this.value && this.value.trim());
       if (editNotesLabel) editNotesLabel.style.color = h ? '#EF4444' : '';
       this.style.borderColor = h ? '#EF4444' : '';
+      this.style.color = h ? '#EF4444' : '';
     });
   }
 
