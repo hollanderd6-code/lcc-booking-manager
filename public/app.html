@@ -12287,9 +12287,10 @@ async function applyBatchEdit() {
   try {
     const token = localStorage.getItem('lcc_token');
 
+    const _API = (typeof API_URL !== 'undefined') ? API_URL : 'https://lcc-booking-manager.onrender.com';
     if (_batchAction === 'price') {
       const price = document.getElementById('batchPrice').value;
-      const res = await fetch('/api/pricing/overrides/batch', {
+      const res = await fetch(_API + '/api/pricing/overrides/batch', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, price: price === '' ? '' : parseFloat(price) })
@@ -12298,7 +12299,7 @@ async function applyBatchEdit() {
       if (!data.success) throw new Error(data.error);
     } else {
       const reason = document.getElementById('batchReason').value;
-      const res = await fetch('/api/blocks/batch', {
+      const res = await fetch(_API + '/api/blocks/batch', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, reason, action: _batchAction })
