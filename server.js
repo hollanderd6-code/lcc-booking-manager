@@ -7149,7 +7149,10 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
           reservationsStore.properties[pid][idx] = {
             ...reservationsStore.properties[pid][idx],
             start: start, end: end, start_date: start, end_date: end,
-            propertyId, guestName: guestName || 'Réservation manuelle'
+            propertyId, guestName: guestName || 'Réservation manuelle',
+            notes: notes || null,
+            phone: phone || null, email: email || null,
+            platform: platform || 'MANUEL'
           };
           if (pid !== propertyId) {
             // Déplacer vers le bon logement si changement de logement
