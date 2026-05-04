@@ -2077,38 +2077,31 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (!orig || orig._bhPatched) return;
 
     window.openChat = async function(conversationId) {
+      // Set window.currentConversationId so photo upload + close work
       window.currentConversationId = conversationId;
 
-      // Trouver la conv dans la liste
-      var conv = (window.allConversations || []).find(function(c) {
-        return String(c.id) === String(conversationId);
-      });
-
-      // Marquer comme active dans la liste
+      // Marquer actif dans la liste
       document.querySelectorAll('#conversationsList .conversation-item').forEach(function(el) {
         el.classList.remove('active');
       });
-      var activeItem = document.querySelector('#conversationsList [data-conversation-id="' + conversationId + '"]');
+      var activeItem = document.querySelector('[data-conversation-id="' + conversationId + '"]');
       if (activeItem) activeItem.classList.add('active');
 
-      // Afficher le panel inline (header + input)
+      // Force desktop mode (prevent redirect to chat-mobile.html)
+      var origIsMobile = window.isMobileDevice;
+      window.isMobileDevice = function() { return false; };
+
+      // Afficher d'abord le panel (header visible immédiatement)
+      var conv = (window.allConversations || []).find(function(c) {
+        return String(c.id) === String(conversationId);
+      });
       showInlineChat(conv || { id: conversationId });
 
-      // Charger les messages via la fonction native de chat-owner.js
-      if (typeof window.loadMessages === 'function') {
-        await window.loadMessages(conversationId);
-      }
+      // Attendre que openChat async charge les messages
+      await orig.call(this, conversationId);
 
-      // Marquer comme lu
-      var token = localStorage.getItem('lcc_token');
-      fetch('/api/chat/mark-read/' + conversationId, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token }
-      }).catch(function(){});
-
-      // Rejoindre la room Socket.IO
-      if (window.socket) window.socket.emit('join_conversation', conversationId);
-      if (window._chatSocket) window._chatSocket.emit('join_conversation', conversationId);
+      // Restore
+      window.isMobileDevice = origIsMobile;
     };
     window.openChat._bhPatched = true;
   }
