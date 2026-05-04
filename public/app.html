@@ -12309,7 +12309,12 @@ async function applyBatchEdit() {
     }
 
     closeBatchEditModal();
-    // Recharger le calendrier
+    // Recharger prix ET calendrier
+    if (typeof window.loadPricingOverrides === 'function') {
+      var props = window.LCC_PROPERTIES || window.allProperties || [];
+      await window.loadPricingOverrides(props);
+    }
+    if (typeof window.applyPricingRulesToCells === 'function') window.applyPricingRulesToCells();
     if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
 
   } catch (err) {
