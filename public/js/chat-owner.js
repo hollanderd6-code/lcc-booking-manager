@@ -75,7 +75,9 @@ async function resolveShortcuts(text, conv) {
     '{{checkin_date}}':      checkinDate, '{checkin_date}':      checkinDate,
     '{{checkout_date}}':    checkoutDate, '{checkout_date}':    checkoutDate,
     '{{date_arrivee}}':      checkinDate, '{date_arrivee}':      checkinDate,
+    '{{arrivee}}':           checkinDate, '{arrivee}':           checkinDate,
     '{{date_depart}}':      checkoutDate, '{date_depart}':      checkoutDate,
+    '{{depart}}':           checkoutDate, '{depart}':           checkoutDate,
     '{{arrival_date}}':      checkinDate, '{arrival_date}':      checkinDate,
     '{{departure_date}}':   checkoutDate, '{departure_date}':   checkoutDate,
     // Horaires
@@ -182,6 +184,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
       // Déclencher le popup de raccourcis si {{ détecté
       _checkShortcutTrigger(this);
+    });
+
+    // ── Résolution automatique des raccourcis au collage ──────────
+    chatInput.addEventListener('paste', function() {
+      const inputEl = this;
+      setTimeout(async function() {
+        const text = inputEl.value;
+        if (!text || (!text.includes('{') && !text.includes('{'))) return;
+        const convId = currentConversationId || window.currentConversationId;
+        if (!convId) return;
+        const conv = (typeof allConversations !== 'undefined' ? allConversations : [])
+          .find(c => c.id == convId);
+        if (!conv) return;
+        const resolved = await resolveShortcuts(text, conv);
+        if (resolved !== text) {
+          inputEl.value = resolved;
+          inputEl.style.height = 'auto';
+          inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+        }
+      }, 50); // Attendre que le texte collé soit dans l'input
     });
     
     // Send on Ctrl+Enter or Shift+Enter, new line on Enter
