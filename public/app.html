@@ -7059,7 +7059,9 @@ try {
     if (blockId) { switchBlockTab('unblock'); } else { switchBlockTab('block'); }
   };
 
+  window._activeBlockTab = 'block';
   function switchBlockTab(tab) {
+    window._activeBlockTab = tab;
     ['block','price','resa','unblock'].forEach(function(t){
       var T=t.charAt(0).toUpperCase()+t.slice(1);
       var btn=document.getElementById('tab'+T), con=document.getElementById('tabContent'+T), on=t===tab;
@@ -7078,7 +7080,7 @@ try {
   window.handleBlockModalSave = async function() {
     var API2=(typeof API_URL!=='undefined')?API_URL:'https://lcc-booking-manager.onrender.com';
     var token=localStorage.getItem('lcc_token');
-    var activeTab=['block','price','resa','unblock'].find(function(t){var el=document.getElementById('tabContent'+t.charAt(0).toUpperCase()+t.slice(1));return el&&window.getComputedStyle(el).display!=='none';})||'block';
+    var activeTab = window._activeBlockTab || 'block';
     console.log('🎯 handleBlockModalSave activeTab:', activeTab);
     var btn=document.getElementById('blockSaveBtn');btn.disabled=true;
     try {
@@ -7096,17 +7098,33 @@ try {
         } else { throw new Error(db.error||'Erreur blocage'); }
         btn.disabled=false;return;
       } else if(activeTab==='unblock'){
-        // Toujours utiliser batch unblock par dates (DELETE /api/blocks/:id n'existe pas)
-        var bProp2=document.getElementById('blockPropertySelect').value;
-        var bFrom=document.getElementById('blockStartDate').value;
-        var bTo=document.getElementById('blockEndDate').value;
-        console.log('🔓 Batch unblock:', bProp2, bFrom, bTo);
-        var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
-        var du2=await ru2.json();
-        console.log('🔓 Batch unblock response:', du2);
-        if(!du2.success)throw new Error(du2.error||'Erreur déblocage');
+        var blockId=window._currentBlockId;
+        console.log('🔓 Déblocage blockId:', blockId);
+        var unblockOk=false;
+        // 1. Essayer DELETE par ID (route maintenant disponible)
+        if(blockId){
+          try{
+            var ru=await fetch(API2+'/api/blocks/'+blockId,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+            var du=await ru.json();
+            console.log('🔓 DELETE response:', ru.status, du);
+            if(ru.ok) unblockOk=true;
+          }catch(e){console.warn('DELETE failed:', e);}
+        }
+        // 2. Fallback: batch par dates avec plage élargie
+        if(!unblockOk){
+          var bProp2=document.getElementById('blockPropertySelect').value;
+          var bFrom=document.getElementById('blockStartDate').value;
+          var bTo=document.getElementById('blockEndDate').value;
+          console.log('🔓 Fallback batch:', bProp2, bFrom, bTo);
+          var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
+          var du2=await ru2.json();
+          console.log('🔓 Batch response:', du2);
+          if(!du2.success&&du2.count===0)throw new Error('Blocage introuvable — essayez depuis le bouton de la réservation');
+        }
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
         window._currentBlockId=null;
+        // Toast succès
+        if(typeof window.showToast==='function')window.showToast('✅ Blocage supprimé','success');
         if(typeof window.loadCalendarData==='function')window.loadCalendarData();
         else if(typeof window.__bhCalendarRender==='function')window.__bhCalendarRender();
       } else if(activeTab==='price'){
