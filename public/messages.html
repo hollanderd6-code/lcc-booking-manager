@@ -2697,8 +2697,9 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       var checkInterval = setInterval(function() {
         if (window.openChat && !window.openChat._mobileSlidePatch) {
           var orig = window.openChat;
-          window.openChat = function(id) {
-            orig.call(this, id);
+          // ⚠️ async pour ne pas casser le await sur loadMessages
+          window.openChat = async function(id) {
+            await orig.call(this, id);
             // S'assurer que le bouton retour est là avant de slider
             injectBackButton();
             setTimeout(function() {
