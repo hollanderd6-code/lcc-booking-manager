@@ -2074,7 +2074,8 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   // ── Override openChat after chat-owner.js loaded ──
   function patchOpenChat() {
     var orig = window.openChat;
-    if (!orig || orig._bhPatched) return;
+    if (!orig) return;
+    // Toujours ré-appliquer notre patch (il est le patch final)
 
     window.openChat = async function(conversationId) {
       window.currentConversationId = conversationId;
@@ -2294,16 +2295,22 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     }
   });
 
-  // Patch openChat as soon as it's available
+  // Patch openChat — appliqué en dernier pour être sûr d'être le patch final
   var interval = setInterval(function() {
     if (window.openChat) { patchOpenChat(); clearInterval(interval); }
   }, 50);
 
+  // Ré-appliquer après tous les autres patches (slide mobile se met en place à 200ms)
   setTimeout(function() {
     patchOpenChat();
     hideBackBtn();
     injectPropertyLabels();
   }, 1000);
+
+  // Dernier recours : forcer après 2s
+  setTimeout(function() {
+    patchOpenChat();
+  }, 2000);
 
 })();
 </script>
