@@ -21636,7 +21636,7 @@ app.post('/api/message-templates', authenticateToken, async (req, res) => {
 app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, active, property_id } = req.body;
+    const { title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, active, property_id, property_ids } = req.body;
     const result = await pool.query(
       `UPDATE message_templates SET
         title = COALESCE($1, title),
@@ -21645,13 +21645,15 @@ app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
         trigger_offset_hours = COALESCE($4, trigger_offset_hours),
         active = COALESCE($5, active),
         property_id = $6,
+        property_ids = $11::jsonb,
         trigger_offset_days = COALESCE($9, trigger_offset_days),
         send_condition = COALESCE($10, send_condition),
         updated_at = NOW()
        WHERE id = $7 AND user_id = $8 RETURNING *`,
       [title, message, trigger_type, trigger_offset_hours, active, property_id || null, req.params.id, userId,
        trigger_offset_days !== undefined ? trigger_offset_days : null,
-       send_condition || null]
+       send_condition || null,
+       JSON.stringify(Array.isArray(property_ids) && property_ids.length > 0 ? property_ids : [])]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Template non trouvé' });
     res.json({ success: true, template: result.rows[0] });
@@ -22058,16 +22060,38 @@ async function runTemplatesCron(triggerTypes) {
             continue;
           }
 
-          // Anti-doublon : pas déjà envoyé dans les 23h
-          const alreadySent = await pool.query(
+          // Anti-doublon : check dans message_template_logs
+          const alreadySentLog = await pool.query(
             `SELECT id FROM message_template_logs
              WHERE template_id = $1 AND conversation_id = $2
              AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent'`,
             [tmpl.id, conv.id]
           );
-          if (alreadySent.rows.length > 0) {
-            console.log(`  ↳ Conv ${conv.id} déjà traitée, skip`);
+          if (alreadySentLog.rows.length > 0) {
+            console.log(`  ↳ Conv ${conv.id} déjà traitée (log), skip`);
             continue;
+          }
+          // Double-check dans messages pour éviter doublons cross-systèmes (webhook + cron)
+          if (tmpl.trigger_type === 'on_arrival' || tmpl.trigger_type === 'before_arrival') {
+            const alreadySentMsg = await pool.query(
+              `SELECT id FROM messages
+               WHERE conversation_id = $1
+               AND sender_type IN ('property','system','bot')
+               AND created_at > NOW() - INTERVAL '23 hours'
+               AND (
+                 message ILIKE '%instructions pour votre arrivée%'
+                 OR message ILIKE '%Bienvenue à%'
+                 OR message ILIKE '%Welcome to%'
+                 OR message ILIKE '%boîte à clés%'
+                 OR message ILIKE '%Il ne vous reste plus qu%'
+                 OR message ILIKE '%boite à clés%'
+               )`,
+              [conv.id]
+            );
+            if (alreadySentMsg.rows.length > 0) {
+              console.log(`  ↳ Conv ${conv.id} message arrivée déjà envoyé (cross-check messages), skip`);
+              continue;
+            }
           }
 
           // ✅ Vérification caution pour on_arrival et before_arrival
@@ -26177,42 +26201,125 @@ app.post('/api/channex/webhook', async (req, res) => {
           }
           const isArrivalToday = arrivalStr === todayStr;
 
-          // Chercher on_booking + on_arrival si arrivée aujourd'hui
+          // ⚠️ on_arrival JAMAIS déclenché ici — géré par runTemplatesCron avec vérif caution
+          // Seul on_booking est déclenché immédiatement
           const triggerTypes = ['on_booking'];
-          if (isArrivalToday) triggerTypes.push('on_arrival');
 
-          // before_arrival : toujours géré par le cron à 7h la veille
+          console.log(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivée aujourd\'hui)' : ''}`);
 
-          console.log(`🔍 [TPL] Recherche templates ${triggerTypes.join('/')} pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivee aujourdhui -> on_arrival immediat)' : ''}`);
+          // Requête avec support property_ids (multi-logements)
           const templates = await pool.query(
-            `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
-             AND (property_id IS NULL OR property_id::text = $2::text)`,
+            `SELECT * FROM message_templates
+             WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
+             AND (
+               property_id IS NULL
+               OR property_id::text = $2::text
+               OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                   AND property_ids @> to_jsonb($2::text))
+             )`,
             [result.user_id, result.property_id, triggerTypes]
           );
-          console.log(`🔍 [TPL] ${templates.rows.length} template(s) trouvé(s)`);
-          if (templates.rows.length > 0) {
-            // Retrouver la conversation créée
-            const convRow = await pool.query(
-              `SELECT c.*, r.guest_country, r.guest_language
-               FROM conversations c
-               LEFT JOIN reservations r ON (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
-               WHERE c.channex_booking_id = $1 OR (c.property_id = $2 AND DATE(c.reservation_start_date) = DATE($3))
-               ORDER BY c.created_at DESC LIMIT 1`,
-              [result.channex_booking_id || result.uid, result.property_id, result.start_date]
-            );
-            if (convRow.rows[0]) {
-              const conv = { ...convRow.rows[0], user_id: result.user_id };
-              const propRow = await pool.query(
-                'SELECT address, arrival_time, departure_time, access_code, wifi_name, wifi_password, practical_info, welcome_book_url, name FROM properties WHERE id = $1',
-                [result.property_id]
+
+          // Retrouver la conversation
+          const convRow = await pool.query(
+            `SELECT c.*, r.guest_country, r.guest_language
+             FROM conversations c
+             LEFT JOIN reservations r ON (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
+             WHERE c.channex_booking_id = $1 OR (c.property_id = $2 AND DATE(c.reservation_start_date) = DATE($3))
+             ORDER BY c.created_at DESC LIMIT 1`,
+            [result.channex_booking_id || result.uid, result.property_id, result.start_date]
+          );
+          const conv = convRow.rows[0] ? { ...convRow.rows[0], user_id: result.user_id } : null;
+          const propRow = await pool.query(
+            'SELECT * FROM properties WHERE id = $1',
+            [result.property_id]
+          );
+          const property = propRow.rows[0] || {};
+
+          // Envoyer les templates on_booking
+          if (templates.rows.length > 0 && conv) {
+            console.log(`🔍 [TPL] ${templates.rows.length} template(s) on_booking trouvé(s)`);
+            for (const tmpl of templates.rows) {
+              await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
+              console.log(`✅ [TPL on_booking] Template "${tmpl.title}" envoyé`);
+              await new Promise(r => setTimeout(r, 400));
+            }
+          } else if (!conv) {
+            console.warn(`⚠️ [TPL on_booking] Conversation non trouvée pour booking ${result.uid}`);
+          }
+
+          // ── Gestion last-minute : arrivée aujourd'hui ──
+          if (isArrivalToday && conv) {
+            const platform = (conv.platform || result.platform || '').toLowerCase();
+            const isAirbnb = platform.includes('airbnb') || platform === 'abb';
+
+            if (!isAirbnb) {
+              // Non-Airbnb + arrivée aujourd'hui → envoyer la caution immédiatement
+              // Le template on_arrival sera déclenché par le webhook Stripe après paiement
+              const depositTpls = await pool.query(
+                `SELECT * FROM message_templates
+                 WHERE user_id = $1 AND active = TRUE
+                 AND trigger_type = 'before_arrival'
+                 AND (
+                   message ILIKE '%caution%' OR message ILIKE '%dépôt%'
+                   OR message ILIKE '%garantie%' OR message ILIKE '%caution_url%'
+                   OR title ILIKE '%caution%' OR title ILIKE '%dépôt%'
+                 )
+                 AND (
+                   property_id IS NULL
+                   OR property_id::text = $2::text
+                   OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                       AND property_ids @> to_jsonb($2::text))
+                 )
+                 LIMIT 1`,
+                [result.user_id, result.property_id]
               );
-              const property = propRow.rows[0] || {};
-              for (const tmpl of templates.rows) {
-                await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
-                console.log(`✅ [TPL on_booking] Template "${tmpl.title}" envoyé`);
+
+              if (depositTpls.rows.length > 0) {
+                // Vérifier que la caution n'a pas déjà été envoyée dans les 23h
+                const cautionAlreadySent = await pool.query(
+                  `SELECT 1 FROM message_template_logs
+                   WHERE conversation_id = $1 AND template_id = $2
+                   AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
+                  [conv.id, depositTpls.rows[0].id]
+                );
+                if (cautionAlreadySent.rows.length === 0) {
+                  await sendTemplateMessage(pool, io, { template: depositTpls.rows[0], conv, property });
+                  console.log(`✅ [TPL caution last-minute] Envoyé — conv ${conv.id}`);
+                } else {
+                  console.log(`⏭️ [TPL caution last-minute] Déjà envoyée — conv ${conv.id}`);
+                }
+              } else {
+                console.log(`⚠️ [TPL caution last-minute] Aucun template caution trouvé pour property ${result.property_id}`);
               }
             } else {
-              console.warn(`⚠️ [TPL on_booking] Conversation non trouvée pour booking ${result.uid}`);
+              // Airbnb + arrivée aujourd'hui → envoyer on_arrival directement (pas de caution)
+              const alreadySentArrival = await pool.query(
+                `SELECT 1 FROM message_template_logs
+                 WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
+                 AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
+                [conv.id]
+              );
+              if (alreadySentArrival.rows.length === 0) {
+                const arrivalTpls = await pool.query(
+                  `SELECT * FROM message_templates
+                   WHERE user_id = $1 AND trigger_type = 'on_arrival' AND active = TRUE
+                   AND (
+                     property_id IS NULL
+                     OR property_id::text = $2::text
+                     OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                         AND property_ids @> to_jsonb($2::text))
+                   )`,
+                  [result.user_id, result.property_id]
+                );
+                for (const tmpl of arrivalTpls.rows) {
+                  await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
+                  console.log(`✅ [TPL on_arrival Airbnb last-minute] Envoyé — conv ${conv.id}`);
+                  await new Promise(r => setTimeout(r, 400));
+                }
+              } else {
+                console.log(`⏭️ [TPL on_arrival] Déjà envoyé — conv ${conv.id}`);
+              }
             }
           }
         } catch(tplErr) {
