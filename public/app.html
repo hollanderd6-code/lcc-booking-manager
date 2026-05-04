@@ -6416,9 +6416,9 @@ try {
           if (r.notes) {
             var nb = document.createElement('span');
             nb.title = r.notes;
-            nb.style.cssText = 'position:absolute;top:-4px;right:-3px;background:#EF4444;color:white;border-radius:50%;width:14px;height:14px;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:4;';
+            nb.style.cssText = 'position:absolute;top:2px;right:2px;background:#EF4444;color:white;border-radius:50%;width:14px;height:14px;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:10;pointer-events:none;';
             nb.textContent = '✏';
-            blk.appendChild(nb);
+            anchorCell.appendChild(nb);
           }
           blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
           blk.onmouseout  = function(){ this.style.filter=''; };
