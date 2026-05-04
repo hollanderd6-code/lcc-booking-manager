@@ -1010,18 +1010,13 @@ function parseIcalText(icalText) {
 // CRON JOB : DEMANDE DE CAUTION J-2
 // ============================================
 
-cron.schedule('0 10 * * *', async () => {
-  console.log('🕐 CRON: Envoi demandes de caution (J-2) à 10h00');
-  try {
-    await sendDepositRequestMessages(io);
-  } catch (error) {
-    console.error('❌ Erreur CRON demandes caution:', error);
-  }
-}, {
-  timezone: "Europe/Paris"
-});
-
-console.log('✅ CRON job demandes de caution configuré (tous les jours à 10h, J-2 avant arrivée)');
+// ⚠️ CRON DÉSACTIVÉ — doublon du système templates (runTemplatesCron before_arrival)
+// sendDepositRequestMessages envoyait son propre message caution en doublon avec les templates
+// La caution est maintenant entièrement gérée par les templates before_arrival
+// cron.schedule('0 10 * * *', async () => {
+//   await sendDepositRequestMessages(io);
+// }, { timezone: "Europe/Paris" });
+console.log('✅ CRON demandes de caution désactivé — géré par templates before_arrival');
 
 // ============================================
 // CRON JOB : RAPPEL LIBERATION CAUTION J-1
@@ -5427,7 +5422,7 @@ async function sendArrivalInfoMessages(io) {
         );
 
         const depositStatus = depositResult.rows[0]?.status;
-        if (!depositStatus || !['authorized', 'captured', 'paid'].includes(depositStatus)) {
+        if (!depositStatus || depositStatus !== 'captured') {
           console.log(`⏸️ Caution non autorisée pour ${conv.guest_name} (status: ${depositStatus || 'aucune'}), pas d'envoi infos`);
           
           // Envoyer un rappel
@@ -5553,7 +5548,14 @@ async function handleDepositPaid(depositId, io) {
       console.log(`📨 Caution validée + Jour J → déclenchement template on_arrival pour conv ${conv.id}`);
       try {
         const templates = await pool.query(
-          `SELECT mt.* FROM message_templates mt WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE AND (mt.property_id IS NULL OR mt.property_id = $2)`,
+          `SELECT mt.* FROM message_templates mt
+           WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
+           AND (
+             mt.property_id IS NULL
+             OR mt.property_id::text = $2::text
+             OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
+                 AND mt.property_ids @> to_jsonb($2::text))
+           )`,
           [conv.user_id, conv.property_id]
         );
         for (const tmpl of templates.rows) {
@@ -22027,7 +22029,7 @@ async function runTemplatesCron(triggerTypes) {
               continue;
             }
             if (sendCond === 'deposit_captured') {
-              // N'envoyer que si la caution est capturée (prélevée) — statut 'captured'
+              // N'envoyer que si la caution est validée — statut 'authorized' (empreinte) ou 'captured' (prélevée)
               const resRow = await pool.query(
                 `SELECT uid FROM reservations
                  WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
@@ -22041,8 +22043,8 @@ async function runTemplatesCron(triggerTypes) {
                   [resRow.rows[0].uid]
                 ).catch(() => ({ rows: [] }));
                 const depStatus = dep.rows[0]?.status;
-                if (depStatus !== 'captured') {
-                  console.log(`  ↳ Skip conv ${conv.id} : caution non capturée (status=${depStatus || 'aucune'})`);
+                if (depStatus !== 'captured' && depStatus !== 'authorized') {
+                  console.log(`  ↳ Skip conv ${conv.id} : caution non validée (status=${depStatus || 'aucune'})`);
                   continue;
                 }
               } else {
@@ -22096,22 +22098,31 @@ async function runTemplatesCron(triggerTypes) {
             }
           }
 
-          // ✅ Vérification caution pour on_arrival et before_arrival
-          if (tmpl.trigger_type === 'on_arrival' || tmpl.trigger_type === 'before_arrival') {
+          // ✅ Vérification caution pour on_arrival UNIQUEMENT
+          // before_arrival = envoi de la caution elle-même → pas de vérif caution
+          if (tmpl.trigger_type === 'on_arrival') {
             const platform = (conv.platform || '').toLowerCase();
             const isAirbnb = platform.includes('airbnb') || platform === 'abb';
             if (!isAirbnb) {
               try {
-                // Récupérer l'uid de la réservation
+                // Récupérer l'uid de la réservation via channex_booking_id (priorité) ou property+date
                 const resRow = await pool.query(
-                  `SELECT uid FROM reservations WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled' ORDER BY created_at DESC LIMIT 1`,
-                  [conv.property_id, conv.reservation_start_date]
+                  `SELECT uid FROM reservations
+                   WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
+                      OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
+                   ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
+                  [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
                 );
                 if (resRow.rows[0]) {
-                  const { hasValidDeposit } = require('./deposit-messages-scheduler');
-                  const depositValid = await hasValidDeposit(pool, resRow.rows[0].uid);
-                  if (!depositValid) {
-                    console.log(`  ↳ ⏭️ Caution en attente pour conv ${conv.id} → template bloqué`);
+                  // Vérifier que la caution est bien CAPTURÉE (prélevée)
+                  const dep = await pool.query(
+                    `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
+                    [resRow.rows[0].uid]
+                  ).catch(() => ({ rows: [] }));
+                  const depStatus = dep.rows[0]?.status;
+                  // ✅ Accepter 'authorized' (empreinte bancaire) ET 'captured' (prélevée)
+                  if (depStatus !== 'captured' && depStatus !== 'authorized') {
+                    console.log(`  ↳ ⏭️ Caution non validée (status=${depStatus || 'aucune'}) pour conv ${conv.id} → on_arrival bloqué`);
                     continue;
                   }
                 }
