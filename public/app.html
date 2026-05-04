@@ -6400,7 +6400,7 @@ try {
           blk.style.cursor = 'pointer';
           blk.innerHTML = '<i class="fas fa-ban" style="font-size:10px;color:#9CA3AF;flex-shrink:0;"></i>'
             +'<span style="font-size:11px;font-weight:600;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
-          blk.onclick = (function(rr){ return function(evt){ evt.stopPropagation(); openBlockModal(rr.startDate||rr.start||'', rr.propertyId, rr.id); }; })(r);
+          blk.onclick = (function(rr){ return function(evt){ evt.stopPropagation(); openBlockModal(rr.startDate||rr.start||'', rr.propertyId, rr.id, rr.endDate||rr.end||''); }; })(r);
         } else {
           blk.style.background = p2.bg;
           blk.style.color      = 'white';
@@ -7039,23 +7039,25 @@ try {
   });
   
   window._currentBlockId = null;
-  window.openBlockModal = function openBlockModal(date, propertyId, blockId) {
+  window.openBlockModal = function openBlockModal(date, propertyId, blockId, endDate) {
     const modal = document.getElementById('blockModal');
     if (!modal) return;
     window.hideFab();
     modal.style.display = 'flex';
     window._currentBlockId = blockId || null;
-    // Calculer J+1 sans objet Date pour éviter problèmes timezone
     var dateStr = (date||'').split('T')[0];
+    // J+1 pour nouvelle résa/blocage (quand pas de endDate fournie)
     var parts = dateStr.split('-');
     var y=parseInt(parts[0]),mo=parseInt(parts[1])-1,day=parseInt(parts[2]);
     var d1 = new Date(y,mo,day+1);
     var nextDay = d1.getFullYear()+'-'+String(d1.getMonth()+1).padStart(2,'0')+'-'+String(d1.getDate()).padStart(2,'0');
-    console.log('📅 openBlockModal date:', dateStr, '-> J+1:', nextDay);
+    // Si on clique sur un bloc existant, utiliser ses vraies dates
+    var endStr = endDate ? (endDate||'').split('T')[0] : nextDay;
+    window._currentBlockEnd = endStr;
+    console.log('📅 openBlockModal:', dateStr, '->', endStr, 'blockId:', blockId);
     ['blockStartDate','dayPriceFrom'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=dateStr;});
-    ['blockEndDate','dayPriceTo'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=nextDay;});
+    ['blockEndDate','dayPriceTo'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=endStr;});
     ['blockPropertySelect','dayPricePropertySelect'].forEach(function(id){var s=document.getElementById(id);if(s&&propertyId)s.value=propertyId;});
-    // Si c'est un bloc existant, montrer l'onglet Débloquer en premier
     if (blockId) { switchBlockTab('unblock'); } else { switchBlockTab('block'); }
   };
 
@@ -7099,34 +7101,32 @@ try {
         btn.disabled=false;return;
       } else if(activeTab==='unblock'){
         var blockId=window._currentBlockId;
-        console.log('🔓 Déblocage blockId:', blockId);
+        var bProp2=document.getElementById('blockPropertySelect').value;
+        var bFrom=document.getElementById('blockStartDate').value;
+        var bTo=window._currentBlockEnd || document.getElementById('blockEndDate').value;
+        console.log('🔓 Déblocage uid:', blockId, 'prop:', bProp2, 'dates:', bFrom, '->', bTo);
         var unblockOk=false;
-        // 1. Essayer DELETE par ID (route maintenant disponible)
+        // 1. DELETE par uid (blockId = "block_TIMESTAMP" ou id numérique)
         if(blockId){
           try{
-            var ru=await fetch(API2+'/api/blocks/'+blockId,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+            var ru=await fetch(API2+'/api/blocks/'+encodeURIComponent(blockId),{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
             var du=await ru.json();
-            console.log('🔓 DELETE response:', ru.status, du);
-            if(ru.ok) unblockOk=true;
-          }catch(e){console.warn('DELETE failed:', e);}
+            console.log('🔓 DELETE', ru.status, du);
+            if(ru.ok){ unblockOk=true; }
+          }catch(e){console.warn('DELETE failed:',e);}
         }
-        // 2. Fallback: batch par dates avec plage élargie
+        // 2. Fallback batch avec les vraies dates du bloc
         if(!unblockOk){
-          var bProp2=document.getElementById('blockPropertySelect').value;
-          var bFrom=document.getElementById('blockStartDate').value;
-          var bTo=document.getElementById('blockEndDate').value;
-          console.log('🔓 Fallback batch:', bProp2, bFrom, bTo);
+          console.log('🔓 Fallback batch unblock:', bProp2, bFrom, bTo);
           var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
           var du2=await ru2.json();
-          console.log('🔓 Batch response:', du2);
-          if(!du2.success&&du2.count===0)throw new Error('Blocage introuvable — essayez depuis le bouton de la réservation');
+          console.log('🔓 Batch:', du2);
+          if(!du2.success) throw new Error(du2.error||'Erreur déblocage');
         }
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
-        window._currentBlockId=null;
-        // Toast succès
-        if(typeof window.showToast==='function')window.showToast('✅ Blocage supprimé','success');
+        window._currentBlockId=null; window._currentBlockEnd=null;
+        if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
         if(typeof window.loadCalendarData==='function')window.loadCalendarData();
-        else if(typeof window.__bhCalendarRender==='function')window.__bhCalendarRender();
       } else if(activeTab==='price'){
         var pid3=document.getElementById('dayPricePropertySelect').value;
         var from3=document.getElementById('dayPriceFrom').value;
