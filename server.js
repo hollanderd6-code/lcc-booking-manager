@@ -12722,6 +12722,33 @@ app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool
   }
 });
 
+// DELETE /api/blocks/:id — Suppression d'un blocage par ID
+app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { id } = req.params;
+    // Supprimer par id numérique OU par uid
+    const result = await pool.query(
+      `DELETE FROM reservations 
+       WHERE (id = $1 OR uid = $2) 
+       AND user_id = $3 
+       AND (reservation_type = 'block' OR source = 'BLOCK' OR platform = 'BLOCK')
+       RETURNING id, uid, property_id`,
+      [isNaN(id) ? -1 : parseInt(id), id, user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Blocage non trouvé' });
+    }
+    const row = result.rows[0];
+    console.log(`✅ Blocage supprimé: id=${row.id} uid=${row.uid}`);
+    res.json({ success: true, deleted: row.id });
+  } catch (err) {
+    console.error('❌ DELETE /api/blocks/:id:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // POST /api/blocks/batch — Édition groupée blocage
 app.post('/api/blocks/batch', async (req, res) => {
   try {
