@@ -12774,22 +12774,23 @@ app.post('/api/blocks/batch', async (req, res) => {
     let count = 0;
 
     if (action === 'unblock') {
-      // Supprimer les blocages existants sur cette plage
+      // Supprimer les blocages existants sur cette plage (dates chevauchantes)
       for (const property_id of property_ids) {
         const result = await pool.query(
           `DELETE FROM reservations
            WHERE user_id = $1 AND property_id = $2
-             AND source = 'BLOCK'
-             AND start_date >= $3 AND end_date <= $4`,
+             AND (reservation_type = 'block' OR source = 'BLOCK' OR platform = 'BLOCK')
+             AND start_date::date < $4::date AND end_date::date > $3::date`,
           [user.id, property_id, date_from, date_to]
         );
         // Mettre à jour le store en mémoire
         if (reservationsStore.properties[property_id]) {
           reservationsStore.properties[property_id] = reservationsStore.properties[property_id].filter(r =>
-            !(r.source === 'BLOCK' && r.start >= date_from && r.end <= date_to)
+            !(( r.source === 'BLOCK' || r.platform === 'BLOCK' || r.type === 'block') && r.start < date_to && r.end > date_from)
           );
         }
         count += result.rowCount || 0;
+        console.log(`🔓 Unblock property ${property_id}: ${result.rowCount} blocage(s) supprimé(s)`);
       }
     } else {
       // Bloquer chaque nuit individuellement
