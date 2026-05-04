@@ -652,14 +652,18 @@ async function openChat(conversationId) {
   if (bookingBtn) bookingBtn.style.display = 'none';
   setTimeout(() => _checkChannexConversation(conversationId, conv), 200);
   
-  // Afficher la modal
-  const modal = document.getElementById('chatModal');
-  if (modal) {
-    modal.classList.add('active');
-  }
-  
-  // ✅ BLOQUER LE SCROLL DU BODY (FIX iOS) — seulement si pas en mode inline (messages.html)
-  if (!document.getElementById('msgsChatPlaceholder')) {
+  // ── Mode inline (messages.html) ou modal normal ──
+  const isInlineMode = !!document.getElementById('msgsChatPlaceholder');
+
+  if (isInlineMode) {
+    // Sur messages.html : utiliser showInlineChat si disponible, sinon fallback
+    if (typeof window.showInlineChat === 'function') {
+      window.showInlineChat(conversationId, conv);
+    }
+  } else {
+    // Mode modal normal (autres pages)
+    const modal = document.getElementById('chatModal');
+    if (modal) modal.classList.add('active');
     document.body.classList.add('modal-open');
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
@@ -667,7 +671,7 @@ async function openChat(conversationId) {
     document.body.style.height = '100%';
     document.documentElement.style.overflow = 'hidden';
   }
-  
+
   // Charger les messages
   await loadMessages(conversationId);
   
