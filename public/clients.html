@@ -2477,6 +2477,8 @@ function renderFpGrid(invs) {
       } else if (status === 'draft') {
         actionsHtml = [
           `<button type="button" data-action="view" data-id="${eid}">Voir la facture</button>`,
+          `<button type="button" data-action="edit" data-id="${eid}"><i class="fas fa-pen" style="margin-right:6px;font-size:11px;"></i>Modifier le brouillon</button>`,
+          `<button type="button" data-action="duplicate" data-id="${eid}"><i class="fas fa-copy" style="margin-right:6px;font-size:11px;"></i>Dupliquer</button>`,
           `<button type="button" data-action="finalize" data-id="${eid}">Passer en Facturée</button>`,
           `<button type="button" data-action="send" data-id="${eid}">Envoyer par email</button>`,
           `<button type="button" data-action="delete" data-id="${eid}" style="color:#b91c1c;">Supprimer le brouillon</button>`
@@ -2488,6 +2490,7 @@ function renderFpGrid(invs) {
         actionsHtml = [
           `<button type="button" data-action="view" data-id="${eid}">Voir la facture</button>`,
           paidBtn,
+          `<button type="button" data-action="duplicate" data-id="${eid}"><i class="fas fa-copy" style="margin-right:6px;font-size:11px;"></i>Dupliquer</button>`,
           `<button type="button" data-action="creditnote" data-id="${eid}">Créer un avoir</button>`,
           `<button type="button" data-action="download" data-id="${eid}">Télécharger (PDF)</button>`,
           `<button type="button" data-action="send" data-id="${eid}">Envoyer par email</button>`,
@@ -2560,6 +2563,8 @@ window.toggleInvoiceActions = function (id, btn) {
       else if (action === 'finalize')   window.finalizeOwnerInvoice(mid);
       else if (action === 'markpaid')   window.markOwnerInvoicePaid(mid);
       else if (action === 'creditnote') window.createOwnerCreditNote(mid);
+      else if (action === 'edit')       window.editOwnerInvoiceDraft(mid);
+      else if (action === 'duplicate')  window.duplicateOwnerInvoice(mid);
     });
     document.body.appendChild(menu);
   }
@@ -3803,6 +3808,91 @@ window.editOwnerInvoiceDraft = async function(id) {
   } catch (err) {
     console.error(err);
     alert('Erreur serveur lors du chargement du brouillon');
+  }
+};
+
+window.duplicateOwnerInvoice = async function(id) {
+  try {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!res.ok) return alert(json.error || 'Erreur lors du chargement');
+
+    const inv = json.invoice;
+    const items = json.items || [];
+
+    // Nouveau brouillon (pas d'ID d'édition = création)
+    isReadOnlyMode = false;
+    editingInvoiceId = null;
+    const sidebar = document.getElementById('editorSidebar');
+    if (sidebar) sidebar.classList.remove('readonly');
+    const banner = document.getElementById('readonlyBanner');
+    if (banner) banner.style.display = 'none';
+
+    const _numEl = document.getElementById('previewInvoiceNumber');
+    if (_numEl) _numEl.textContent = 'N° BROUILLON';
+
+    // Copier les champs (sans numéro de facture — sera généré)
+    const clientSelect = document.getElementById('invoiceClientId');
+    if (clientSelect) clientSelect.value = inv.client_id || '';
+
+    // Dates : aujourd'hui par défaut pour une duplication
+    const today = new Date().toISOString().slice(0,10);
+    const issueEl = document.getElementById('invoiceIssueDate');
+    const dueEl   = document.getElementById('invoiceDueDate');
+    if (issueEl) issueEl.value = today;
+    if (dueEl)   dueEl.value   = inv.due_date ? inv.due_date.slice(0,10) : today;
+
+    const psEl = document.getElementById('invoicePeriodStart');
+    const peEl = document.getElementById('invoicePeriodEnd');
+    if (psEl && inv.period_start) psEl.value = inv.period_start.slice(0,10);
+    if (peEl && inv.period_end)   peEl.value = inv.period_end.slice(0,10);
+
+    const vatEl  = document.getElementById('invoiceVatApplicable');
+    const rateEl = document.getElementById('invoiceVatRate');
+    if (vatEl)  vatEl.checked = !!inv.vat_applicable;
+    if (rateEl) rateEl.value  = inv.vat_rate || 20;
+
+    // Copier les lignes
+    prestations = [];
+    prestationCounter = 0;
+    items.forEach(item => {
+      prestationCounter++;
+      prestations.push({
+        id: 'p' + prestationCounter,
+        type: item.item_type,
+        description: item.description || '',
+        rentalAmount: parseFloat(item.rental_amount) || 0,
+        commissionRate: parseFloat(item.commission_rate) || 0,
+        quantity: parseFloat(item.quantity) || 0,
+        unitPrice: parseFloat(item.unit_price) || 0,
+        isDebours: item.is_debours
+      });
+    });
+
+    // Conditions de paiement
+    const pd = document.getElementById('invoicePaymentDelay');
+    const pm = document.getElementById('invoicePaymentMode');
+    const li = document.getElementById('invoiceLateInterest');
+    const nt = document.getElementById('invoiceNotes');
+    if (pd) pd.value = inv.payment_delay || '';
+    if (pm) pm.value = inv.payment_mode  || 'Virement bancaire';
+    if (li) li.value = inv.late_interest || '';
+    if (nt) nt.value = inv.notes || '';
+
+    renderEditorPrestations();
+    updatePreview();
+    switchTab('create');
+
+    // Toast de confirmation
+    if (typeof showToast === 'function') {
+      showToast('Facture dupliquée — pensez à vérifier les dates avant d'enregistrer', 'info');
+    }
+
+  } catch (err) {
+    console.error(err);
+    alert('Erreur serveur lors de la duplication');
   }
 };
 
