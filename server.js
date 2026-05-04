@@ -21847,8 +21847,11 @@ app.get('/api/message-template-scheduled', authenticateToken, async (req, res) =
           : '';
 
         const convs = await pool.query(
-          `SELECT c.id, c.guest_name, c.property_name, c.property_id, c.reservation_start_date, c.reservation_end_date, c.platform
+          `SELECT c.id, c.guest_name, p.name as property_name, c.property_id, c.reservation_start_date,
+                  COALESCE(c.reservation_end_date, c.reservation_start_date + INTERVAL '1 day') as reservation_end_date,
+                  c.platform
            FROM conversations c
+           LEFT JOIN properties p ON p.id = c.property_id
            WHERE c.user_id = $1
            AND DATE(c.${dateCol} AT TIME ZONE 'Europe/Paris') = $2
            AND c.status != 'cancelled'
