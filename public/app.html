@@ -7096,26 +7096,15 @@ try {
         } else { throw new Error(db.error||'Erreur blocage'); }
         btn.disabled=false;return;
       } else if(activeTab==='unblock'){
-        var blockId=window._currentBlockId;
-        console.log('🔓 Déblocage, blockId:', blockId);
-        var unblocked=false;
-        // Try DELETE by ID first
-        if(blockId){
-          var ru=await fetch(API2+'/api/blocks/'+blockId,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
-          console.log('DELETE status:', ru.status);
-          if(ru.ok||ru.status===404){ unblocked=true; }
-        }
-        // Fallback: batch unblock by date range
-        if(!unblocked){
-          var bProp2=document.getElementById('blockPropertySelect').value;
-          var bFrom=document.getElementById('blockStartDate').value;
-          var bTo=document.getElementById('blockEndDate').value;
-          console.log('Fallback batch unblock:', bProp2, bFrom, bTo);
-          var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
-          var du2=await ru2.json();
-          console.log('Batch unblock response:', du2);
-          if(!du2.success)throw new Error(du2.error||'Erreur déblocage');
-        }
+        // Toujours utiliser batch unblock par dates (DELETE /api/blocks/:id n'existe pas)
+        var bProp2=document.getElementById('blockPropertySelect').value;
+        var bFrom=document.getElementById('blockStartDate').value;
+        var bTo=document.getElementById('blockEndDate').value;
+        console.log('🔓 Batch unblock:', bProp2, bFrom, bTo);
+        var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
+        var du2=await ru2.json();
+        console.log('🔓 Batch unblock response:', du2);
+        if(!du2.success)throw new Error(du2.error||'Erreur déblocage');
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
         window._currentBlockId=null;
         if(typeof window.loadCalendarData==='function')window.loadCalendarData();
