@@ -2295,22 +2295,17 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     }
   });
 
-  // Patch openChat — appliqué en dernier pour être sûr d'être le patch final
+  // Patch openChat — appliqué une seule fois au chargement
   var interval = setInterval(function() {
     if (window.openChat) { patchOpenChat(); clearInterval(interval); }
   }, 50);
 
-  // Ré-appliquer après tous les autres patches (slide mobile se met en place à 200ms)
+  // Une seule ré-application après le slide mobile (200ms)
   setTimeout(function() {
     patchOpenChat();
     hideBackBtn();
     injectPropertyLabels();
-  }, 1000);
-
-  // Dernier recours : forcer après 2s
-  setTimeout(function() {
-    patchOpenChat();
-  }, 2000);
+  }, 400);
 
 })();
 </script>
@@ -2731,10 +2726,10 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             setTimeout(function() {
               if (split) split.classList.add('chat-open');
             }, 80);
-            // Charger les messages (async, non-bloquant pour le slide)
+            // Appeler notre patch principal (qui fait le fetch direct)
             await orig.call(this, id);
           };
-          window.openChat._bhPatched = true;
+          // NE PAS mettre _bhPatched = true ici — notre patch principal doit rester actif
           window.openChat._mobileSlidePatch = true;
           clearInterval(checkInterval);
         }
