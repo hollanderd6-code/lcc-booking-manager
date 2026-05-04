@@ -578,6 +578,7 @@ async function openChat(conversationId) {
   
   // 💻 SUR DESKTOP : Garder le modal (comportement actuel)
   currentConversationId = conversationId;
+  window.currentConversationId = conversationId; // sync avec messages.html
   const conv = allConversations.find(c => c.id == conversationId);
   
   if (!conv) return;
@@ -971,6 +972,13 @@ function setOwnerLang(lang) {
 
 async function sendMessageOwner() {
   const input = document.getElementById('chatInput');
+  // Sur messages.html, currentConversationId est dans window — fallback
+  if (!currentConversationId && window.currentConversationId) {
+    currentConversationId = window.currentConversationId;
+  }
+  if (!currentChannexBookingId && window._currentChannexBookingId) {
+    currentChannexBookingId = window._currentChannexBookingId;
+  }
   if (!input || !currentConversationId) return;
 
   let message = input.value.trim();
