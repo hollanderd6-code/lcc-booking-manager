@@ -7093,9 +7093,18 @@ try {
     var btn=document.getElementById('blockSaveBtn');btn.disabled=true;
     try {
       if(activeTab==='block'){
-        btn.disabled=false;
-        document.getElementById('blockSaveBtn').dispatchEvent(new CustomEvent('bh-block-save'));
-        return;
+        var bProp=document.getElementById('blockPropertySelect').value;
+        var bStart=document.getElementById('blockStartDate').value;
+        var bEnd=document.getElementById('blockEndDate').value;
+        var bReason=document.getElementById('blockReason').value;
+        if(!bProp||!bStart||!bEnd){alert('Veuillez remplir tous les champs');btn.disabled=false;return;}
+        var rb=await fetch(API2+'/api/blocks',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({propertyId:bProp,start:bStart,end:bEnd,reason:bReason||'Blocage manuel'})});
+        var db=await rb.json();
+        if(db.block||db.message||db.success){
+          document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
+          if(typeof window.loadCalendarData==='function')window.loadCalendarData();
+        } else { throw new Error(db.error||'Erreur blocage'); }
+        btn.disabled=false;return;
       } else if(activeTab==='unblock'){
         // Débloquer via l'ID du bloc ou via batch
         var blockId=window._currentBlockId;
@@ -7129,13 +7138,25 @@ try {
         var startD=document.getElementById('blockStartDate').value;
         var endD=document.getElementById('blockEndDate').value;
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
+        // Alimenter LCC_PROPERTIES depuis calendarState si vide
+        if((!window.LCC_PROPERTIES||!window.LCC_PROPERTIES.length) && window.calendarState && window.calendarState.properties){
+          window.LCC_PROPERTIES = window.calendarState.properties;
+        }
         if(typeof openNewReservationModal==='function')openNewReservationModal();
         else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}
         setTimeout(function(){
+          // Re-populate nrProperty select si vide
+          var nrSel=document.getElementById('nrProperty');
+          if(nrSel && (!nrSel.options.length || (nrSel.options.length===1 && !nrSel.options[0].value))){
+            var props2=window.LCC_PROPERTIES||window.calendarState&&window.calendarState.properties||[];
+            if(props2.length){
+              nrSel.innerHTML='<option value="">— Logement —</option>'+props2.map(function(p){return '<option value="'+p.id+'">'+p.name+'</option>';}).join('');
+            }
+          }
           var s=document.getElementById('nrStartDate');if(s)s.value=startD;
-          var e=document.getElementById('nrEndDate');if(e)e.value=endD;
-          var p=document.getElementById('nrProperty');if(p)p.value=propId;
-        },250);
+          var e2=document.getElementById('nrEndDate');if(e2)e2.value=endD;
+          if(nrSel)nrSel.value=propId;
+        },300);
         btn.disabled=false;return;
       }
     }catch(err){alert('Erreur : '+err.message);}
@@ -8880,57 +8901,7 @@ if (editBookingForm) {
   });
 }
 
-document.getElementById('blockSaveBtn')?.addEventListener('click', async function() {
-  const propertyId = document.getElementById('blockPropertySelect').value;
-  const startDate = document.getElementById('blockStartDate').value;
-  const endDate = document.getElementById('blockEndDate').value;
-  const reason = document.getElementById('blockReason').value;
-  
-  console.log('🔍 ENVOI - propertyId:', propertyId);
-  console.log('🔍 ENVOI - dates:', startDate, '->', endDate);
-  
-  if (!propertyId || !startDate || !endDate) {
-    alert('Veuillez remplir tous les champs');
-    return;
-  }
-  
-  const token = localStorage.getItem('lcc_token');
-  
-  try {
-    const response = await fetch('https://lcc-booking-manager.onrender.com/api/blocks', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        propertyId: propertyId,
-        start: startDate,
-        end: endDate,
-        reason: reason || 'Blocage manuel'
-      })
-    });
-    
-    const data = await response.json();
-    console.log('📥 Réponse serveur:', data);
-    
-    if (data.block || data.message) {
-      alert('Blocage créé !');
-      document.getElementById('blockModal').style.display = 'none'; window.showFab();
-      setTimeout(function() {
-        if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
-        else if (typeof loadCalendarData === 'function') loadCalendarData();
-        else if (typeof refreshCalendar === 'function') refreshCalendar();
-        else location.reload();
-      }, 400);
-    } else {
-      alert('Erreur: ' + (data.error || 'Erreur inconnue'));
-    }
-  } catch (err) {
-    console.error(err);
-    alert('Erreur de connexion');
-  }
-});
+// blockSaveBtn géré par handleBlockModalSave() via onclick
 
 })();
 </script>
