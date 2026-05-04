@@ -139,6 +139,15 @@ async function getGroqResponse(userMessage, conversationContext = {}) {
       sections.push(`QUESTIONS FRÉQUENTES CONFIGURÉES PAR L'HÔTE :\n${conversationContext.customQRSummary}`);
     }
 
+    // Phase du séjour
+    const phaseLabels = {
+      before: `AVANT ARRIVÉE${conversationContext.checkinDate ? ' (arrivée prévue le ' + conversationContext.checkinDate + ')' : ''}`,
+      during: `EN COURS DE SÉJOUR${conversationContext.checkoutDate ? ' (départ le ' + conversationContext.checkoutDate + ')' : ''}`,
+      after:  `APRÈS DÉPART${conversationContext.checkoutDate ? ' (départ était le ' + conversationContext.checkoutDate + ')' : ''}`,
+    };
+    const phaseLabel = phaseLabels[conversationContext.stayPhase] || 'AVANT ARRIVÉE';
+    sections.push(`STATUT DU SÉJOUR : ${phaseLabel}`);
+
     const propertyDataBlock = sections.length > 0
       ? sections.join('\n\n')
       : 'Aucune information disponible sur ce logement.';
@@ -170,7 +179,13 @@ RÈGLES IMPORTANTES :
 11. FACTURE : Si le voyageur demande une facture ou un reçu, réponds que la facture lui sera envoyée à la fin de son séjour. Tu n'as pas besoin d'escalader pour ça.
 12. ANNULATION / CAUTION / PAIEMENT : Les sujets financiers (annulation, caution, remboursement, paiement) sont traités en amont par des réponses automatiques dédiées. Si malgré tout tu reçois un tel message, réponds [ESCALADE] immédiatement.
 13. TON : Toujours chaleureux, bienveillant et professionnel. Vouvoie par défaut, tutoie seulement si le voyageur tutoie d'abord.
-12. ADRESSE : Si le voyageur demande l'adresse et que tu la connais (champ "Adresse"), donne-la COMPLÈTE avec code postal et ville, telle qu'elle est dans les infos ci-dessus.`;
+14. ADRESSE : Si le voyageur demande l'adresse et que tu la connais (champ "Adresse"), donne-la COMPLÈTE avec code postal et ville, telle qu'elle est dans les infos ci-dessus.
+15. STATUT DU SÉJOUR — adapte OBLIGATOIREMENT ton ton selon le statut indiqué dans "STATUT DU SÉJOUR" :
+   - AVANT ARRIVÉE : Le voyageur n'est pas encore là. Ne jamais dire "nous sommes ravis que vous appréciez votre séjour" ou toute formule impliquant qu'il est déjà sur place. Utilise "À très bientôt !", "Bon voyage !", "À bientôt !" etc.
+   - EN COURS DE SÉJOUR : Le voyageur est sur place. Tu peux dire "profitez bien !", "bonne continuation !". Mais NE PAS inventer qu'il apprécie son séjour si ce n'est pas dit dans son message.
+   - APRÈS DÉPART : Le séjour est terminé. Utilise "merci pour votre séjour", "à une prochaine fois !".
+16. BONJOUR : ${conversationContext.alreadyGreetedToday ? "Tu as DÉJÀ répondu aujourd\'hui à ce voyageur. Ne commence PAS ta réponse par 'Bonjour', 'Bonsoir', 'Hello' ou tout autre salutation — réponds directement à sa question." : "Tu peux utiliser une salutation si c\'est naturel."}
+17. HALLUCINATIONS INTERDITES : Ne jamais supposer ce que le voyageur ressent, pense ou a dit s'il ne l'a pas explicitement écrit. Si le message est juste "D\'accord merci", réponds simplement et brièvement — ne pas inventer qu\'il apprécie son séjour ou qu\'il est satisfait.`;
 
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
