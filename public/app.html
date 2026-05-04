@@ -6196,7 +6196,9 @@ try {
           var isStart=s===dstr, isEnd=e===dstr||false;
           var p=pltInfo(r);
           var blk = div('position:absolute;inset:4px 2px;border-radius:8px;padding:4px 7px;display:flex;align-items:center;gap:4px;cursor:pointer;overflow:hidden;background:'+p.bg+';color:white;');
-          blk.innerHTML=pltBadge(r,14)+'<span style="font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+          var noteIcon = r.notes ? '<span style="position:absolute;top:-5px;right:-3px;background:#EF4444;color:white;border-radius:50%;width:14px;height:14px;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:4;" title="'+r.notes.replace(/"/g,"&quot;")+'">✏️</span>' : '';
+          blk.style.position='relative';
+          blk.innerHTML=pltBadge(r,14)+'<span style="font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>'+noteIcon;
           blk.onclick=function(){ openBooking(r); };
           cell.appendChild(blk);
         });
@@ -6876,8 +6878,8 @@ try {
 </div>
 
 <div class="form-group">
-<label for="editNotes">Notes</label>
-<textarea id="editNotes" placeholder="Notes supplémentaires..." rows="3"></textarea>
+<label for="editNotes" style="color:#EF4444;font-weight:600;" id="editNotesLabel">Notes</label>
+<textarea id="editNotes" placeholder="Notes supplémentaires..." rows="3" style="border-color:#EF4444;"></textarea>
 </div>
 <div class="modal-actions">
 <button class="btn btn-ghost" id="cancelEditBooking" type="button">Annuler</button>
@@ -8566,7 +8568,19 @@ function handleEditBooking() {
   document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || currentBookingData.guest_phone || '';
   document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || currentBookingData.guest_email || '';
   document.getElementById('editPrice').value = currentBookingData.amount_total || currentBookingData.amount || '';
-  document.getElementById('editNotes').value = currentBookingData.notes || '';
+  var editNotesEl = document.getElementById('editNotes');
+  var editNotesLabel = document.getElementById('editNotesLabel');
+  if (editNotesEl) {
+    editNotesEl.value = currentBookingData.notes || '';
+    var hasNote = !!(currentBookingData.notes && currentBookingData.notes.trim());
+    if (editNotesLabel) editNotesLabel.style.color = hasNote ? '#EF4444' : '';
+    editNotesEl.style.borderColor = hasNote ? '#EF4444' : '';
+    editNotesEl.addEventListener('input', function() {
+      var h = !!(this.value && this.value.trim());
+      if (editNotesLabel) editNotesLabel.style.color = h ? '#EF4444' : '';
+      this.style.borderColor = h ? '#EF4444' : '';
+    });
+  }
 
   const platformSelect = document.getElementById('editPlatform');
   if (platformSelect) {
