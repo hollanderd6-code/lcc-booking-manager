@@ -4438,6 +4438,53 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           notificationsPanel.classList.remove('open');
         });
       }
+
+      // ── Cloche mobile → même panel notifications ──
+      var mobileAnnBtn = document.getElementById('bh-mobile-ann-btn');
+      if (mobileAnnBtn && notificationsPanel) {
+        mobileAnnBtn.addEventListener('click', async function() {
+          notificationsPanel.classList.toggle('open');
+          if (notificationsPanel.classList.contains('open')) {
+            await loadActivityData();
+          }
+        });
+      }
+
+      // ── Statut services mobile → petit modal ──
+      var mobileSvc = document.getElementById('bh-mobile-svc');
+      if (mobileSvc) {
+        mobileSvc.addEventListener('click', function() {
+          var existing = document.getElementById('bh-svc-modal');
+          if (existing) { existing.remove(); return; }
+          var dotR = document.getElementById('msvc-dot-render');
+          var dotC = document.getElementById('msvc-dot-channex');
+          var colorR = dotR ? dotR.style.background : '#6B7280';
+          var colorC = dotC ? dotC.style.background : '#6B7280';
+          var labelR = (colorR === 'rgb(34, 197, 94)' || colorR === '#22C55E') ? '✅ Opérationnel' : '⚠️ Indisponible';
+          var labelC = (colorC === 'rgb(34, 197, 94)' || colorC === '#22C55E') ? '✅ Opérationnel' : '⚠️ Indisponible';
+          var m = document.createElement('div');
+          m.id = 'bh-svc-modal';
+          m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+          m.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px 20px 36px;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+            + '<div style="font-size:15px;font-weight:700;color:#0D1117;">Statut des services</div>'
+            + '<button style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:30px;height:30px;font-size:18px;cursor:pointer;" onclick="document.getElementById('bh-svc-modal').remove()">×</button>'
+            + '</div>'
+            + '<div style="display:flex;flex-direction:column;gap:12px;">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;background:white;border-radius:12px;padding:14px 16px;">'
+            + '<div style="display:flex;align-items:center;gap:10px;"><i class="fas fa-server" style="color:#6B7280;font-size:14px;"></i><span style="font-size:14px;font-weight:600;color:#0D1117;">Serveur (Render)</span></div>'
+            + '<span style="font-size:13px;color:#374151;">'+labelR+'</span>'
+            + '</div>'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;background:white;border-radius:12px;padding:14px 16px;">'
+            + '<div style="display:flex;align-items:center;gap:10px;"><i class="fas fa-plug" style="color:#6B7280;font-size:14px;"></i><span style="font-size:14px;font-weight:600;color:#0D1117;">Channex</span></div>'
+            + '<span style="font-size:13px;color:#374151;">'+labelC+'</span>'
+            + '</div>'
+            + '</div>'
+            + '</div>';
+          m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
+          document.body.appendChild(m);
+        });
+      }
       
       // Fonction pour charger les données d\'activité
       async function loadActivityData() {
@@ -6423,6 +6470,12 @@ try {
           blk.onmouseout  = function(){ this.style.filter=''; };
           blk.onclick     = function(evt){ evt.stopPropagation(); openBooking(r); };
           blk.dataset.bookingId = String(r.id||'');
+          if (r.notes) {
+            var nb = document.createElement('span');
+            nb.title = r.notes;
+            nb.style.cssText = 'position:absolute;top:4px;right:4px;background:#EF4444;border-radius:50%;width:8px;height:8px;z-index:10;pointer-events:none;';
+            anchorCell.appendChild(nb);
+          }
         }
         anchorCell.appendChild(blk);
       });
