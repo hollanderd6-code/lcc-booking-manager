@@ -2077,7 +2077,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (!orig || orig._bhPatched) return;
 
     window.openChat = async function(conversationId) {
-      // Set window.currentConversationId so photo upload + close work
       window.currentConversationId = conversationId;
 
       // Marquer actif dans la liste
@@ -2087,21 +2086,43 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       var activeItem = document.querySelector('[data-conversation-id="' + conversationId + '"]');
       if (activeItem) activeItem.classList.add('active');
 
-      // Force desktop mode (prevent redirect to chat-mobile.html)
-      var origIsMobile = window.isMobileDevice;
-      window.isMobileDevice = function() { return false; };
-
-      // Afficher d'abord le panel (header visible immédiatement)
+      // Trouver la conv
       var conv = (window.allConversations || []).find(function(c) {
         return String(c.id) === String(conversationId);
       });
+
+      // 1. Afficher le panel inline (rend #chatMessages visible)
       showInlineChat(conv || { id: conversationId });
 
-      // Attendre que openChat async charge les messages
-      await orig.call(this, conversationId);
+      // 2. Charger et afficher les messages directement
+      var token = localStorage.getItem('lcc_token');
+      try {
+        var res = await fetch('/api/chat/messages/' + conversationId, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        var data = await res.json();
+        if (data.success && typeof window.displayMessages === 'function') {
+          window.displayMessages(data.messages || []);
+        }
+      } catch(e) {
+        console.error('[BH] loadMessages error:', e);
+      }
 
-      // Restore
-      window.isMobileDevice = origIsMobile;
+      // 3. Marquer comme lu
+      fetch('/api/chat/mark-read/' + conversationId, {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+      }).catch(function(){});
+
+      // 4. Socket
+      var sock = window.socket || window._chatSocket;
+      if (sock) sock.emit('join_conversation', conversationId);
+
+      // 5. Vérifier Channex en arrière-plan (non-bloquant)
+      if (typeof window._checkChannexConversation === 'function') {
+        setTimeout(function() {
+          window._checkChannexConversation(conversationId, conv || {});
+        }, 300);
+      }
     };
     window.openChat._bhPatched = true;
   }
@@ -2697,14 +2718,14 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       var checkInterval = setInterval(function() {
         if (window.openChat && !window.openChat._mobileSlidePatch) {
           var orig = window.openChat;
-          // ⚠️ async pour ne pas casser le await sur loadMessages
           window.openChat = async function(id) {
-            await orig.call(this, id);
-            // S'assurer que le bouton retour est là avant de slider
+            // Déclencher le slide immédiatement
             injectBackButton();
             setTimeout(function() {
               if (split) split.classList.add('chat-open');
-            }, 100);
+            }, 80);
+            // Charger les messages (async, non-bloquant pour le slide)
+            await orig.call(this, id);
           };
           window.openChat._bhPatched = true;
           window.openChat._mobileSlidePatch = true;
