@@ -6672,7 +6672,7 @@ try {
     <button onclick="switchBlockTab('price')" id="tabPrice" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #e5e7eb;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-tag" style="font-size:14px;"></i>Prix</button>
     <button onclick="switchBlockTab('resa')" id="tabResa" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #e5e7eb;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-plus" style="font-size:14px;"></i>Réservation</button>
   </div>
-  <div id="tabContentBlock" style="overflow-y:auto;padding:16px 20px;">
+  <div id="tabContentBlock" style="overflow-y:auto;padding:16px 20px;display:block;">
     <div class="form-group"><label for="blockPropertySelect">Logement</label><select class="form-control" id="blockPropertySelect"></select></div>
     <div class="form-group"><label for="blockStartDate">Du</label><input class="form-control" id="blockStartDate" type="date"/></div>
     <div class="form-group"><label for="blockEndDate">Au</label><input class="form-control" id="blockEndDate" type="date"/></div>
@@ -7078,7 +7078,7 @@ try {
   window.handleBlockModalSave = async function() {
     var API2=(typeof API_URL!=='undefined')?API_URL:'https://lcc-booking-manager.onrender.com';
     var token=localStorage.getItem('lcc_token');
-    var activeTab=['block','price','resa','unblock'].find(function(t){var el=document.getElementById('tabContent'+t.charAt(0).toUpperCase()+t.slice(1));return el&&el.style.display!=='none';})||'block';
+    var activeTab=['block','price','resa','unblock'].find(function(t){var el=document.getElementById('tabContent'+t.charAt(0).toUpperCase()+t.slice(1));return el&&window.getComputedStyle(el).display!=='none';})||'block';
     console.log('🎯 handleBlockModalSave activeTab:', activeTab);
     var btn=document.getElementById('blockSaveBtn');btn.disabled=true;
     try {
