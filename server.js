@@ -5340,7 +5340,8 @@ async function sendDepositRequestMessages(io) {
             reservation_uid: conv.reservation_uid || ''
           },
           success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
-          cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`
+          cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
         };
 
         // ✅ LOGIQUE PRIORITÉ STRIPE : proprio → user → BH (3%)
@@ -15425,7 +15426,8 @@ app.post('/api/deposits',
         reservation_uid: reservationUid
       },
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
-      cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`
+      cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
     };
 
     let session;
