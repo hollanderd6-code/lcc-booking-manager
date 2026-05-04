@@ -658,13 +658,15 @@ async function openChat(conversationId) {
     modal.classList.add('active');
   }
   
-  // ✅ BLOQUER LE SCROLL DU BODY (FIX iOS)
-  document.body.classList.add('modal-open');
-  document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
-  document.body.style.height = '100%';
-  document.documentElement.style.overflow = 'hidden';
+  // ✅ BLOQUER LE SCROLL DU BODY (FIX iOS) — seulement si pas en mode inline (messages.html)
+  if (!document.getElementById('msgsChatPlaceholder')) {
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    document.documentElement.style.overflow = 'hidden';
+  }
   
   // Charger les messages
   await loadMessages(conversationId);
@@ -1453,6 +1455,8 @@ async function _checkChannexConversation(conversationId, conv) {
 // EXPOSER LES FONCTIONS GLOBALEMENT
 // ============================================
 window.openChat = openChat;
+window.displayMessages = displayMessages;
+window.loadMessages = loadMessages;
 window.closeChat = closeChat;
 window.sendMessageOwner = sendMessageOwner;
 window.loadQuickReplies = loadQuickReplies;
@@ -1463,9 +1467,6 @@ window.cleanGuestName = cleanGuestName;
 window.getGuestInitial = getGuestInitial;
 window.getGuestPhone = getGuestPhone;
 window.formatRelativeTime = formatTime; // Alias pour compatibilité
-window.displayMessages = displayMessages;
-window.loadMessages = loadMessages;
-window.appendMessage = appendMessage;
 
 // ============================================
 // RACCOURCIS MESSAGES
