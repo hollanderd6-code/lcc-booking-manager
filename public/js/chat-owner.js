@@ -652,18 +652,14 @@ async function openChat(conversationId) {
   if (bookingBtn) bookingBtn.style.display = 'none';
   setTimeout(() => _checkChannexConversation(conversationId, conv), 200);
   
-  // ── Mode inline (messages.html) ou modal normal ──
-  const isInlineMode = !!document.getElementById('msgsChatPlaceholder');
-
-  if (isInlineMode) {
-    // Sur messages.html : utiliser showInlineChat si disponible, sinon fallback
-    if (typeof window.showInlineChat === 'function') {
-      window.showInlineChat(conversationId, conv);
-    }
-  } else {
-    // Mode modal normal (autres pages)
-    const modal = document.getElementById('chatModal');
-    if (modal) modal.classList.add('active');
+  // Afficher la modal
+  const modal = document.getElementById('chatModal');
+  if (modal) {
+    modal.classList.add('active');
+  }
+  
+  // ✅ BLOQUER LE SCROLL DU BODY (FIX iOS) — seulement si pas en mode inline (messages.html)
+  if (!document.getElementById('msgsChatPlaceholder')) {
     document.body.classList.add('modal-open');
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
@@ -671,7 +667,7 @@ async function openChat(conversationId) {
     document.body.style.height = '100%';
     document.documentElement.style.overflow = 'hidden';
   }
-
+  
   // Charger les messages
   await loadMessages(conversationId);
   
@@ -791,9 +787,12 @@ function displayMessages(messages) {
     const container = document.getElementById('chatMessages');
     if (!container) return;
     container.querySelectorAll('.chat-message').forEach(el => {
-      const text = el.querySelector('.chat-text')?.textContent?.trim();
-      const ts = el.getAttribute('data-ts');
-      if (!text && !ts) el.remove();
+      // Vérifier .chat-text OU .chat-bubble OU data-ts — si rien → artefact
+      const textEl = el.querySelector('.chat-text, .chat-bubble');
+      const hasText = textEl && textEl.textContent?.trim().length > 0;
+      const hasTs = !!el.getAttribute('data-ts');
+      const hasContent = el.querySelector('img, a, .chat-bubble');
+      if (!hasText && !hasTs && !hasContent) el.remove();
     });
     scrollToBottom();
   }, 100);
@@ -807,6 +806,9 @@ function appendMessage(message) {
   
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
+  if (message.created_at) {
+    messageDiv.setAttribute('data-ts', new Date(message.created_at).getTime());
+  }
   
   const avatar = document.createElement('div');
   avatar.className = 'chat-avatar';
