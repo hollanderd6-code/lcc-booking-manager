@@ -84,13 +84,38 @@ function replaceMessageVariables(template, data) {
 
 async function hasArrivalMessageBeenSent(pool, conversationId) {
   try {
-    const result = await pool.query(
+    // Vérif 1 : dans les messages (sender_type property ou system), chercher des patterns d'arrivée
+    const msgCheck = await pool.query(
       `SELECT COUNT(*) as count FROM messages
-       WHERE conversation_id = $1 AND sender_type = 'system'
-       AND message LIKE '%informations pour votre arrivée%'`,
+       WHERE conversation_id = $1
+       AND sender_type IN ('property', 'system', 'bot')
+       AND (
+         message ILIKE '%instructions pour votre arrivée%'
+         OR message ILIKE '%instructions for your arrival%'
+         OR message ILIKE '%instrucciones para su llegada%'
+         OR message ILIKE '%Bienvenue à%'
+         OR message ILIKE '%Welcome to%'
+         OR message ILIKE '%Bienvenido%'
+         OR message ILIKE '%Il ne vous reste plus qu%'
+         OR message ILIKE '%boite à clés%'
+         OR message ILIKE '%boîte à clés%'
+         OR message ILIKE '%key box%'
+       )
+       AND created_at > NOW() - INTERVAL '24 hours'`,
       [conversationId]
     );
-    return parseInt(result.rows[0].count) > 0;
+    if (parseInt(msgCheck.rows[0].count) > 0) return true;
+
+    // Vérif 2 : dans message_template_logs (envoi via templates)
+    const logCheck = await pool.query(
+      `SELECT COUNT(*) as count FROM message_template_logs
+       WHERE conversation_id = $1
+       AND trigger_type IN ('on_arrival', 'before_arrival')
+       AND status = 'sent'
+       AND sent_at > NOW() - INTERVAL '24 hours'`,
+      [conversationId]
+    );
+    return parseInt(logCheck.rows[0].count) > 0;
   } catch (error) {
     console.error('❌ Erreur vérification message envoyé:', error);
     return false;
