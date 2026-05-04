@@ -2076,7 +2076,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     var orig = window.openChat;
     if (!orig || orig._bhPatched) return;
 
-    window.openChat = function(conversationId) {
+    window.openChat = async function(conversationId) {
       // Set window.currentConversationId so photo upload + close work
       window.currentConversationId = conversationId;
 
@@ -2084,19 +2084,56 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       var origIsMobile = window.isMobileDevice;
       window.isMobileDevice = function() { return false; };
 
-      // Call original → populates #chatMessages, #chatModalTitle, etc.
-      orig.call(this, conversationId);
+      // Call original (async) → populates #chatMessages
+      await orig.call(this, conversationId);
 
       // Restore
       window.isMobileDevice = origIsMobile;
 
-      // Show our inline panel — attendre que openChat async finisse
+      // Afficher le panel inline avec les données de la conv
+      var conv = (window.allConversations || []).find(function(c) {
+        return String(c.id) === String(conversationId);
+      });
+      showInlineChat(conv || { id: conversationId });
+
+      // Sécurité : si #chatMessages est vide après le chargement original,
+      // forcer un rechargement direct
       setTimeout(function() {
-        var conv = (window.allConversations || []).find(function(c) {
-          return String(c.id) === String(conversationId);
-        });
-        showInlineChat(conv || { id: conversationId });
-      }, 600);
+        var chatEl = document.getElementById('chatMessages');
+        var isEmpty = !chatEl || chatEl.children.length === 0 ||
+          (chatEl.children.length === 1 && chatEl.querySelector('.empty-state'));
+
+        if (isEmpty) {
+          console.log('[BH] chatMessages vide après openChat — rechargement forcé');
+          var token = localStorage.getItem('lcc_token');
+          fetch('/api/chat/messages/' + conversationId, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.success && data.messages && data.messages.length > 0) {
+              if (typeof window.displayMessages === 'function') {
+                window.displayMessages(data.messages);
+              } else {
+                // Fallback : construire les bulles manuellement
+                if (!chatEl) return;
+                chatEl.innerHTML = '';
+                data.messages.forEach(function(msg) {
+                  var bubble = document.createElement('div');
+                  var isGuest = msg.sender_type === 'guest';
+                  bubble.className = 'chat-bubble ' + (isGuest ? 'guest' : 'property');
+                  bubble.style.cssText = 'padding:10px 14px;border-radius:14px;max-width:80%;margin:4px 0;font-size:13px;line-height:1.5;white-space:pre-wrap;'
+                    + (isGuest ? 'background:#F0EBE3;align-self:flex-start;' : 'background:#1A7A5E;color:white;align-self:flex-end;');
+                  bubble.textContent = msg.message || '';
+                  chatEl.appendChild(bubble);
+                });
+                chatEl.scrollTop = chatEl.scrollHeight;
+              }
+            }
+          })
+          .catch(function(e) { console.warn('[BH] Rechargement messages échoué:', e); });
+        }
+      }, 800);
     };
     window.openChat._bhPatched = true;
   }
