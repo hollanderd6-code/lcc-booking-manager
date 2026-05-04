@@ -6397,8 +6397,10 @@ try {
 
         if (isBlock) {
           blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
+          blk.style.cursor = 'pointer';
           blk.innerHTML = '<i class="fas fa-ban" style="font-size:10px;color:#9CA3AF;flex-shrink:0;"></i>'
             +'<span style="font-size:11px;font-weight:600;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
+          blk.onclick = (function(rr){ return function(evt){ evt.stopPropagation(); openBlockModal(rr.startDate||rr.start||'', rr.propertyId, rr.id); }; })(r);
         } else {
           blk.style.background = p2.bg;
           blk.style.color      = 'white';
@@ -6666,6 +6668,7 @@ try {
   </div>
   <div style="display:flex;gap:8px;padding:14px 20px 0;">
     <button onclick="switchBlockTab('block')" id="tabBlock" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #1A7A5E;background:#1A7A5E;color:white;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-lock" style="font-size:14px;"></i>Bloquer</button>
+    <button onclick="switchBlockTab('unblock')" id="tabUnblock" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #e5e7eb;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;display:none;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-lock-open" style="font-size:14px;"></i>Débloquer</button>
     <button onclick="switchBlockTab('price')" id="tabPrice" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #e5e7eb;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-tag" style="font-size:14px;"></i>Prix</button>
     <button onclick="switchBlockTab('resa')" id="tabResa" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #e5e7eb;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-plus" style="font-size:14px;"></i>Réservation</button>
   </div>
@@ -6675,17 +6678,21 @@ try {
     <div class="form-group"><label for="blockEndDate">Au</label><input class="form-control" id="blockEndDate" type="date"/></div>
     <div class="form-group"><label for="blockReason">Motif (facultatif)</label><input class="form-control" id="blockReason" placeholder="Blocage perso, travaux, famille..." type="text"/></div>
   </div>
+  <div id="tabContentUnblock" style="display:none;overflow-y:auto;padding:24px 20px;text-align:center;">
+    <i class="fas fa-lock-open" style="font-size:40px;color:#DC2626;margin-bottom:12px;"></i>
+    <p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 6px;">Débloquer ces dates ?</p>
+    <p style="font-size:13px;color:#6B7280;margin:0;">Cette action supprimera le blocage et rendra le logement disponible à la réservation.</p>
+  </div>
   <div id="tabContentPrice" style="display:none;overflow-y:auto;padding:16px 20px;">
     <div class="form-group"><label>Logement</label><select class="form-control" id="dayPricePropertySelect"></select></div>
     <div class="form-group"><label for="dayPriceFrom">Du</label><input class="form-control" id="dayPriceFrom" type="date"/></div>
     <div class="form-group"><label for="dayPriceTo">Au</label><input class="form-control" id="dayPriceTo" type="date"/></div>
     <div class="form-group"><label for="dayPriceValue">Prix (€) — vide = revenir au prix de base</label><input class="form-control" id="dayPriceValue" type="number" min="0" placeholder="ex: 85"/></div>
   </div>
-  <div id="tabContentResa" style="display:none;overflow-y:auto;padding:16px 20px;">
-    <p style="font-size:13px;color:#6B7280;margin:0 0 12px;">Créer une réservation manuelle pour ce logement.</p>
-    <div class="form-group"><label>Logement</label><select class="form-control" id="dayResaPropertySelect"></select></div>
-    <div class="form-group"><label for="dayResaFrom">Arrivée</label><input class="form-control" id="dayResaFrom" type="date"/></div>
-    <div class="form-group"><label for="dayResaTo">Départ</label><input class="form-control" id="dayResaTo" type="date"/></div>
+  <div id="tabContentResa" style="display:none;overflow-y:auto;padding:24px 20px;text-align:center;">
+    <i class="fas fa-calendar-plus" style="font-size:40px;color:#1A7A5E;margin-bottom:12px;"></i>
+    <p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 6px;">Nouvelle réservation</p>
+    <p style="font-size:13px;color:#6B7280;margin:0;">Ouvre le formulaire complet pré-rempli avec le logement et les dates sélectionnés.</p>
   </div>
   <div style="padding:12px 20px 32px;display:flex;gap:8px;border-top:1px solid rgba(200,184,154,.3);">
     <button class="btn btn-secondary" id="blockModalCancel">Annuler</button>
@@ -7046,67 +7053,89 @@ try {
     loadPropertiesInBlockModal();
   });
   
-  window.openBlockModal = function openBlockModal(date, propertyId) {
+  window._currentBlockId = null;
+  window.openBlockModal = function openBlockModal(date, propertyId, blockId) {
     const modal = document.getElementById('blockModal');
     if (!modal) return;
     window.hideFab();
     modal.style.display = 'flex';
-    var d0 = new Date(date+'T00:00:00'), d1 = new Date(d0);
+    window._currentBlockId = blockId || null;
+    var d0 = new Date((date||'').split('T')[0]+'T00:00:00'), d1 = new Date(d0);
     d1.setDate(d1.getDate()+1);
     var fmt = function(d){return d.toISOString().slice(0,10);};
-    ['blockStartDate','dayPriceFrom','dayResaFrom'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=fmt(d0);});
-    ['blockEndDate','dayPriceTo','dayResaTo'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=fmt(d1);});
-    ['blockPropertySelect','dayPricePropertySelect','dayResaPropertySelect'].forEach(function(id){var s=document.getElementById(id);if(s&&propertyId)s.value=propertyId;});
-    switchBlockTab('block');
+    ['blockStartDate','dayPriceFrom'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=fmt(d0);});
+    ['blockEndDate','dayPriceTo'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=fmt(d1);});
+    ['blockPropertySelect','dayPricePropertySelect'].forEach(function(id){var s=document.getElementById(id);if(s&&propertyId)s.value=propertyId;});
+    // Si c'est un bloc existant, montrer l'onglet Débloquer en premier
+    if (blockId) { switchBlockTab('unblock'); } else { switchBlockTab('block'); }
   };
 
   function switchBlockTab(tab) {
-    ['block','price','resa'].forEach(function(t){
+    ['block','price','resa','unblock'].forEach(function(t){
       var T=t.charAt(0).toUpperCase()+t.slice(1);
       var btn=document.getElementById('tab'+T), con=document.getElementById('tabContent'+T), on=t===tab;
-      if(btn){btn.style.background=on?'#1A7A5E':'white';btn.style.color=on?'white':'#374151';btn.style.borderColor=on?'#1A7A5E':'#e5e7eb';}
+      if(btn){btn.style.background=on?(t==='unblock'?'#DC2626':'#1A7A5E'):'white';btn.style.color=on?'white':'#374151';btn.style.borderColor=on?(t==='unblock'?'#DC2626':'#1A7A5E'):'#e5e7eb';btn.style.display=(t==='unblock'&&!window._currentBlockId)?'none':'flex';}
       if(con)con.style.display=on?'block':'none';
     });
-    var icons={block:'fa-lock',price:'fa-tag',resa:'fa-plus'};
-    var labels={block:'Bloquer ces dates',price:'Appliquer le prix',resa:'Créer la réservation'};
+    var icons={block:'fa-lock',price:'fa-tag',resa:'fa-plus',unblock:'fa-lock-open'};
+    var labels={block:'Bloquer ces dates',price:'Appliquer le prix',resa:'Créer la réservation',unblock:'Débloquer ces dates'};
     var ic=document.getElementById('blockSaveIcon');if(ic)ic.className='fas '+icons[tab];
     var lb=document.getElementById('blockSaveLabel');if(lb)lb.textContent=labels[tab];
+    if(tab==='unblock'){var sb=document.getElementById('blockSaveBtn');if(sb){sb.style.background='#DC2626';}}
+    else{var sb2=document.getElementById('blockSaveBtn');if(sb2)sb2.style.background='';}
   }
   window.switchBlockTab=switchBlockTab;
 
   window.handleBlockModalSave = async function() {
     var API2=(typeof API_URL!=='undefined')?API_URL:'https://lcc-booking-manager.onrender.com';
     var token=localStorage.getItem('lcc_token');
-    var activeTab=['block','price','resa'].find(function(t){var c=document.getElementById('tabContent'+t.charAt(0).toUpperCase()+t.slice(1));return c&&c.style.display!=='none';})||'block';
+    var activeTab=['block','price','resa','unblock'].find(function(t){var el=document.getElementById('tabContent'+t.charAt(0).toUpperCase()+t.slice(1));return el&&el.style.display!=='none';})||'block';
     var btn=document.getElementById('blockSaveBtn');btn.disabled=true;
     try {
       if(activeTab==='block'){
         btn.disabled=false;
         document.getElementById('blockSaveBtn').dispatchEvent(new CustomEvent('bh-block-save'));
         return;
+      } else if(activeTab==='unblock'){
+        // Débloquer via l'ID du bloc ou via batch
+        var blockId=window._currentBlockId;
+        if(blockId){
+          var r=await fetch(API2+'/api/blocks/'+blockId,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+          var d=await r.json();if(!d.success&&r.status>=400)throw new Error(d.error||'Erreur suppression');
+        } else {
+          var pid=document.getElementById('blockPropertySelect').value;
+          var from=document.getElementById('blockStartDate').value;
+          var to=document.getElementById('blockEndDate').value;
+          var r2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[pid],date_from:from,date_to:to,action:'unblock'})});
+          var d2=await r2.json();if(!d2.success)throw new Error(d2.error||'Erreur');
+        }
+        document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
+        if(typeof window.loadCalendarData==='function')window.loadCalendarData();
+        else if(typeof window.__bhCalendarRender==='function')window.__bhCalendarRender();
       } else if(activeTab==='price'){
-        var pid=document.getElementById('dayPricePropertySelect').value;
-        var from=document.getElementById('dayPriceFrom').value;
-        var to=document.getElementById('dayPriceTo').value;
+        var pid3=document.getElementById('dayPricePropertySelect').value;
+        var from3=document.getElementById('dayPriceFrom').value;
+        var to3=document.getElementById('dayPriceTo').value;
         var price=document.getElementById('dayPriceValue').value;
-        if(!pid||!from||!to){alert('Logement et dates requis');btn.disabled=false;return;}
-        var r=await fetch(API2+'/api/pricing/overrides/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[pid],date_from:from,date_to:to,price:price===''?'':parseFloat(price)})});
-        var d=await r.json();if(!d.success)throw new Error(d.error||'Erreur');
+        if(!pid3||!from3||!to3){alert('Logement et dates requis');btn.disabled=false;return;}
+        var r3=await fetch(API2+'/api/pricing/overrides/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[pid3],date_from:from3,date_to:to3,price:price===''?'':parseFloat(price)})});
+        var d3=await r3.json();if(!d3.success)throw new Error(d3.error||'Erreur');
         if(typeof window.loadPricingOverrides==='function')await window.loadPricingOverrides(window.LCC_PROPERTIES||[]);
         if(typeof window.applyPricingRulesToCells==='function')window.applyPricingRulesToCells();
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
       } else if(activeTab==='resa'){
-        var pid2=document.getElementById('dayResaPropertySelect').value;
-        var rf=document.getElementById('dayResaFrom').value;
-        var rt=document.getElementById('dayResaTo').value;
+        // Fermer et ouvrir newReservationModal avec données pré-remplies
+        var propId=document.getElementById('blockPropertySelect').value;
+        var startD=document.getElementById('blockStartDate').value;
+        var endD=document.getElementById('blockEndDate').value;
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
         if(typeof openNewReservationModal==='function')openNewReservationModal();
         else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}
         setTimeout(function(){
-          ['checkIn','newResaCheckIn'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=rf;});
-          ['checkOut','newResaCheckOut'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=rt;});
-          ['propertyId','property_id'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=pid2;});
-        },200);
+          var s=document.getElementById('nrStartDate');if(s)s.value=startD;
+          var e=document.getElementById('nrEndDate');if(e)e.value=endD;
+          var p=document.getElementById('nrProperty');if(p)p.value=propId;
+        },250);
         btn.disabled=false;return;
       }
     }catch(err){alert('Erreur : '+err.message);}
