@@ -12727,8 +12727,9 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
-    const { id } = req.params;
-    // Supprimer par id numérique OU par uid
+    const id = decodeURIComponent(req.params.id);
+    console.log(`🔓 DELETE /api/blocks/${id} user=${user.id}`);
+    // Supprimer par id numérique OU par uid (ex: block_1746123456789)
     const result = await pool.query(
       `DELETE FROM reservations 
        WHERE (id = $1 OR uid = $2) 
@@ -12737,10 +12738,20 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
        RETURNING id, uid, property_id`,
       [isNaN(id) ? -1 : parseInt(id), id, user.id]
     );
+    console.log(`🔓 Résultat: ${result.rows.length} ligne(s) supprimée(s)`);
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Blocage non trouvé' });
+      // Pas d'erreur — le bloc n'existe peut-être plus, renvoyer succès quand même
+      return res.json({ success: true, deleted: null, warning: 'Blocage non trouvé en DB' });
     }
     const row = result.rows[0];
+    // Nettoyer le store mémoire
+    const pid = row.property_id;
+    if (reservationsStore.properties[pid]) {
+      reservationsStore.properties[pid] = reservationsStore.properties[pid].filter(r => r.uid !== row.uid && String(r.id) !== String(row.id));
+    }
+    if (MANUAL_RESERVATIONS[pid]) {
+      MANUAL_RESERVATIONS[pid] = MANUAL_RESERVATIONS[pid].filter(r => r.uid !== row.uid);
+    }
     console.log(`✅ Blocage supprimé: id=${row.id} uid=${row.uid}`);
     res.json({ success: true, deleted: row.id });
   } catch (err) {
