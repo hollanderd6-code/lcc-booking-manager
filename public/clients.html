@@ -114,8 +114,9 @@
     .btn-xs.btn-secondary:active { background: #f3f4f6; border-color: #1A7A5E; color: #1A7A5E; }
     .btn-xs.btn-secondary.just-clicked { background: #ecfdf5; border-color: #1A7A5E; color: #1A7A5E; box-shadow: 0 0 0 2px rgba(26,122,94,.2); }
     .prestation-mini-card { position: relative; }
-    .drag-handle { cursor: grab; position: absolute; top: 50%; left: 6px; transform: translateY(-50%); color: #9CA3AF; font-size: 14px; padding: 4px; border-radius: 4px; transition: color .15s; user-select: none; }
-    .drag-handle:hover { color: #1A7A5E; }
+    .drag-handle { cursor: grab; display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:#f3f4f6;border:1px solid #e5e7eb;color: #9CA3AF; font-size: 13px; transition: all .15s; user-select: none; flex-shrink:0; }
+    .drag-handle:hover { color: #1A7A5E; background:#ecfdf5; border-color:#1A7A5E; }
+    .drag-handle:active { cursor: grabbing; }
     .prestation-mini-card.dragging { opacity: .4; border: 2px dashed #1A7A5E !important; }
     .prestation-mini-card.drag-over { border-top: 3px solid #1A7A5E !important; }
 
@@ -3063,22 +3064,32 @@ window.markOwnerInvoicePaid = function (id) {
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
   window.addPrestation = function(type, btnEl) {
     if (isReadOnlyMode) return;
-    // Feedback visuel sur le bouton cliqué
-    if (btnEl) {
-      btnEl.classList.add('just-clicked');
-      setTimeout(function(){ btnEl.classList.remove('just-clicked'); }, 600);
-    }
     prestationCounter++;
     prestations.push({
       id: 'p'+prestationCounter,
       type: type,
       description: type==='commission'?'Loyer du':(type==='cleaning'?'Frais de ménage':'Débours'),
-      rentalAmount: 0, commissionRate: 20, // Spécifique Commission
-      quantity: 1, unitPrice: 0, // Spécifique Autres
+      rentalAmount: 0, commissionRate: 20,
+      quantity: 1, unitPrice: 0,
       isDebours: type === 'debours'
     });
     renderEditorPrestations();
     updatePreview();
+    // Feedback visuel APRÈS le render (sinon recrée le DOM et supprime la classe)
+    if (btnEl) {
+      btnEl.classList.add('just-clicked');
+      btnEl.style.background = '#ecfdf5';
+      btnEl.style.borderColor = '#1A7A5E';
+      btnEl.style.color = '#1A7A5E';
+      btnEl.style.boxShadow = '0 0 0 2px rgba(26,122,94,.2)';
+      setTimeout(function(){
+        btnEl.classList.remove('just-clicked');
+        btnEl.style.background = '';
+        btnEl.style.borderColor = '';
+        btnEl.style.color = '';
+        btnEl.style.boxShadow = '';
+      }, 700);
+    }
   };
 
   window.updatePrestation = function(id, key, val) {
@@ -3139,8 +3150,8 @@ window.markOwnerInvoicePaid = function (id) {
              ondragleave="handleDragLeave(event)"
              ondrop="handleDrop(event,'${p.id}')"
              ondragend="handleDragEnd(event)">
-        <span class="drag-handle" title="Déplacer"><i class="fas fa-grip-vertical"></i></span>
-<div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">
+<div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;align-items:center;">
+  <span class="drag-handle" title="Déplacer"><i class="fas fa-grip-vertical"></i></span>
   <button class="remove-line-btn" onclick="duplicatePrestation('${p.id}')" title="Dupliquer" style="background:#10b981;">
     <i class="fas fa-copy"></i>
   </button>
@@ -3148,7 +3159,7 @@ window.markOwnerInvoicePaid = function (id) {
     <i class="fas fa-times"></i>
   </button>
 </div>         
-<span class="prestation-badge ${badgeClass}" style="margin-left:20px;">${p.type.toUpperCase()}</span>
+<span class="prestation-badge ${badgeClass}">${p.type.toUpperCase()}</span>
           <div class="form-group" style="margin-bottom:8px;">
             <input type="text" class="form-control" value="${p.description}" oninput="updatePrestation('${p.id}','description',this.value)">
           </div>
