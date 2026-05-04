@@ -15525,7 +15525,8 @@ app.put('/api/deposits/:depositId',
       payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid } },
       metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid, user_id: String(userId) },
       success_url: `${appUrl}/caution-success.html?depositId=${existing.id}`,
-      cancel_url: `${appUrl}/caution-cancel.html?depositId=${existing.id}`
+      cancel_url: `${appUrl}/caution-cancel.html?depositId=${existing.id}`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
     });
 
     await pool.query('UPDATE deposits SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
@@ -15626,7 +15627,8 @@ app.put('/api/payments/:paymentId',
       payment_intent_data: { application_fee_amount: platformFee, on_behalf_of: user.stripeAccountId, transfer_data: { destination: user.stripeAccountId }, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`
+      cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
     });
 
     await pool.query('UPDATE payments SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
@@ -15788,7 +15790,8 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
         payment_type: 'location'
       },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`
+      cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
     });
 
     payment.stripeSessionId = session.id;
@@ -28800,6 +28803,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       }],
       success_url: successUrl,
       cancel_url: cancelUrl,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
       metadata: {
         property_id, checkin, checkout,
         guest_name: guest_name || '',
