@@ -858,6 +858,8 @@ function showReservationModal(reservation) {
 
 // Création d’un blocage depuis le modal
 async function submitBlockForm() {
+  // Ne rien faire si un autre onglet est actif (prix, déblocage, réservation)
+  if (window._activeBlockTab && window._activeBlockTab !== 'block') return;
   const propertySelect = document.getElementById('blockPropertySelect');
   const startInput = document.getElementById('blockStartDate');
   const endInput = document.getElementById('blockEndDate');
