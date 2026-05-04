@@ -4440,15 +4440,14 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }
 
       
-      // ── Cloche mobile → même panel notifications ──
+      // ── Cloche mobile → Annonces (bhToggleAnnouncements) ──
       var mobileAnnBtn = document.getElementById('bh-mobile-ann-btn');
-      if (mobileAnnBtn && notificationsPanel) {
-        var _annHandler = async function(e) {
+      if (mobileAnnBtn) {
+        var _annHandler = function(e) {
           e.preventDefault();
           e.stopPropagation();
-          notificationsPanel.classList.toggle('open');
-          if (notificationsPanel.classList.contains('open')) {
-            await loadActivityData();
+          if (window.bhToggleAnnouncements) {
+            window.bhToggleAnnouncements();
           }
         };
         mobileAnnBtn.addEventListener('click', _annHandler);
