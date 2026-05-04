@@ -6936,22 +6936,33 @@ app.post('/api/reservations/manual', async (req, res) => {
           start_date, end_date,
           guest_name, source, platform, reservation_type,
           price, currency, status,
+          notes, guest_phone, guest_email,
+          guest_country, occupancy_adults,
+          amount_rooms, amount_cleaning, amount_taxes, ota_commission,
           synced_at, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
-        ON CONFLICT (uid) DO NOTHING
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW(), NOW())
+        ON CONFLICT (uid) DO UPDATE SET
+          notes = EXCLUDED.notes,
+          guest_phone = EXCLUDED.guest_phone,
+          guest_email = EXCLUDED.guest_email
       `, [
-        uid,
-        propertyId,
-        user.id,
-        start,
-        end,
+        uid, propertyId, user.id,
+        start, end,
         guestName || 'Réservation manuelle',
-        'MANUEL',
-        'MANUEL',
+        req.body.platform ? req.body.platform.toUpperCase() : 'MANUEL',
+        req.body.platform ? req.body.platform.toUpperCase() : 'MANUEL',
         'manual',
-        0,
-        'EUR',
-        'confirmed'
+        req.body.price ? parseFloat(req.body.price) : 0,
+        'EUR', 'confirmed',
+        notes || null,
+        req.body.phone || null,
+        req.body.email || null,
+        req.body.guest_country || null,
+        req.body.occupancy_adults ? parseInt(req.body.occupancy_adults) : null,
+        req.body.amount_rooms ? parseFloat(req.body.amount_rooms) : null,
+        req.body.amount_cleaning ? parseFloat(req.body.amount_cleaning) : null,
+        req.body.amount_taxes ? parseFloat(req.body.amount_taxes) : null,
+        req.body.ota_commission ? parseFloat(req.body.ota_commission) : null,
       ]);
       
       console.log('✅ Réservation sauvegardée en DB');
