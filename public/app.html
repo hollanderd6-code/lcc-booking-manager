@@ -7060,11 +7060,15 @@ try {
     window.hideFab();
     modal.style.display = 'flex';
     window._currentBlockId = blockId || null;
-    var d0 = new Date((date||'').split('T')[0]+'T00:00:00'), d1 = new Date(d0);
-    d1.setDate(d1.getDate()+1);
-    var fmt = function(d){return d.toISOString().slice(0,10);};
-    ['blockStartDate','dayPriceFrom'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=fmt(d0);});
-    ['blockEndDate','dayPriceTo'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=fmt(d1);});
+    // Calculer J+1 sans objet Date pour éviter problèmes timezone
+    var dateStr = (date||'').split('T')[0];
+    var parts = dateStr.split('-');
+    var y=parseInt(parts[0]),mo=parseInt(parts[1])-1,day=parseInt(parts[2]);
+    var d1 = new Date(y,mo,day+1);
+    var nextDay = d1.getFullYear()+'-'+String(d1.getMonth()+1).padStart(2,'0')+'-'+String(d1.getDate()).padStart(2,'0');
+    console.log('📅 openBlockModal date:', dateStr, '-> J+1:', nextDay);
+    ['blockStartDate','dayPriceFrom'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=dateStr;});
+    ['blockEndDate','dayPriceTo'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=nextDay;});
     ['blockPropertySelect','dayPricePropertySelect'].forEach(function(id){var s=document.getElementById(id);if(s&&propertyId)s.value=propertyId;});
     // Si c'est un bloc existant, montrer l'onglet Débloquer en premier
     if (blockId) { switchBlockTab('unblock'); } else { switchBlockTab('block'); }
@@ -7090,6 +7094,7 @@ try {
     var API2=(typeof API_URL!=='undefined')?API_URL:'https://lcc-booking-manager.onrender.com';
     var token=localStorage.getItem('lcc_token');
     var activeTab=['block','price','resa','unblock'].find(function(t){var el=document.getElementById('tabContent'+t.charAt(0).toUpperCase()+t.slice(1));return el&&el.style.display!=='none';})||'block';
+    console.log('🎯 handleBlockModalSave activeTab:', activeTab);
     var btn=document.getElementById('blockSaveBtn');btn.disabled=true;
     try {
       if(activeTab==='block'){
@@ -7106,19 +7111,28 @@ try {
         } else { throw new Error(db.error||'Erreur blocage'); }
         btn.disabled=false;return;
       } else if(activeTab==='unblock'){
-        // Débloquer via l'ID du bloc ou via batch
         var blockId=window._currentBlockId;
+        console.log('🔓 Déblocage, blockId:', blockId);
+        var unblocked=false;
+        // Try DELETE by ID first
         if(blockId){
-          var r=await fetch(API2+'/api/blocks/'+blockId,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
-          var d=await r.json();if(!d.success&&r.status>=400)throw new Error(d.error||'Erreur suppression');
-        } else {
-          var pid=document.getElementById('blockPropertySelect').value;
-          var from=document.getElementById('blockStartDate').value;
-          var to=document.getElementById('blockEndDate').value;
-          var r2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[pid],date_from:from,date_to:to,action:'unblock'})});
-          var d2=await r2.json();if(!d2.success)throw new Error(d2.error||'Erreur');
+          var ru=await fetch(API2+'/api/blocks/'+blockId,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+          console.log('DELETE status:', ru.status);
+          if(ru.ok||ru.status===404){ unblocked=true; }
+        }
+        // Fallback: batch unblock by date range
+        if(!unblocked){
+          var bProp2=document.getElementById('blockPropertySelect').value;
+          var bFrom=document.getElementById('blockStartDate').value;
+          var bTo=document.getElementById('blockEndDate').value;
+          console.log('Fallback batch unblock:', bProp2, bFrom, bTo);
+          var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
+          var du2=await ru2.json();
+          console.log('Batch unblock response:', du2);
+          if(!du2.success)throw new Error(du2.error||'Erreur déblocage');
         }
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
+        window._currentBlockId=null;
         if(typeof window.loadCalendarData==='function')window.loadCalendarData();
         else if(typeof window.__bhCalendarRender==='function')window.__bhCalendarRender();
       } else if(activeTab==='price'){
