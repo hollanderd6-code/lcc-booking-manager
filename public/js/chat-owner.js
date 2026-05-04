@@ -1463,6 +1463,9 @@ window.cleanGuestName = cleanGuestName;
 window.getGuestInitial = getGuestInitial;
 window.getGuestPhone = getGuestPhone;
 window.formatRelativeTime = formatTime; // Alias pour compatibilité
+window.displayMessages = displayMessages;
+window.loadMessages = loadMessages;
+window.appendMessage = appendMessage;
 
 // ============================================
 // RACCOURCIS MESSAGES
