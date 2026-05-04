@@ -109,7 +109,15 @@
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
     .btn-primary { background: var(--primary); color: white; }
     .btn-secondary { background: white; border: 1px solid #d1d5db; color: #374151; }
-    .btn-xs { padding: 4px 8px; font-size: 11px; }
+    .btn-xs { padding: 4px 8px; font-size: 11px; transition: all .15s; }
+    .btn-xs:active { transform: scale(.93); opacity: .85; }
+    .btn-xs.btn-secondary:active { background: #f3f4f6; border-color: #1A7A5E; color: #1A7A5E; }
+    .btn-xs.btn-secondary.just-clicked { background: #ecfdf5; border-color: #1A7A5E; color: #1A7A5E; box-shadow: 0 0 0 2px rgba(26,122,94,.2); }
+    .prestation-mini-card { position: relative; }
+    .drag-handle { cursor: grab; position: absolute; top: 50%; left: 6px; transform: translateY(-50%); color: #9CA3AF; font-size: 14px; padding: 4px; border-radius: 4px; transition: color .15s; user-select: none; }
+    .drag-handle:hover { color: #1A7A5E; }
+    .prestation-mini-card.dragging { opacity: .4; border: 2px dashed #1A7A5E !important; }
+    .prestation-mini-card.drag-over { border-top: 3px solid #1A7A5E !important; }
 
     /* MODALS */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -1373,10 +1381,10 @@ html[data-theme-v3="1"] .invoice-paper {
 <div class="editor-section">
 <div class="editor-section-title">Prestations</div>
 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:12px;">
-<button class="btn-xs btn-secondary" onclick="addPrestation('commission')">% Com</button>
-<button class="btn-xs btn-secondary" onclick="addPrestation('cleaning')">Ménage</button>
-<button class="btn-xs btn-secondary" onclick="addPrestation('debours')">Débours</button>
-<button class="btn-xs btn-secondary" onclick="addPrestation('other')">Autre</button>
+<button class="btn-xs btn-secondary" onclick="addPrestation('commission',this)">% Com</button>
+<button class="btn-xs btn-secondary" onclick="addPrestation('cleaning',this)">Ménage</button>
+<button class="btn-xs btn-secondary" onclick="addPrestation('debours',this)">Débours</button>
+<button class="btn-xs btn-secondary" onclick="addPrestation('other',this)">Autre</button>
 <button class="btn-xs" onclick="openImportDebours()" style="background:#f59e0b;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-receipt" style="margin-right:4px;"></i>Importer débours</button>
 </div>
 <div id="prestationsListEditor"></div>
@@ -3053,8 +3061,13 @@ window.markOwnerInvoicePaid = function (id) {
 };
 
   // --- PRESTATIONS (LOGIQUE MÉTIER RESTAURÉE) ---
-  window.addPrestation = function(type) {
+  window.addPrestation = function(type, btnEl) {
     if (isReadOnlyMode) return;
+    // Feedback visuel sur le bouton cliqué
+    if (btnEl) {
+      btnEl.classList.add('just-clicked');
+      setTimeout(function(){ btnEl.classList.remove('just-clicked'); }, 600);
+    }
     prestationCounter++;
     prestations.push({
       id: 'p'+prestationCounter,
@@ -3119,7 +3132,14 @@ window.markOwnerInvoicePaid = function (id) {
       }
 
       return `
-        <div class="prestation-mini-card">
+        <div class="prestation-mini-card" draggable="true" data-id="${p.id}"
+             ondragstart="handleDragStart(event,'${p.id}')"
+             ondragover="handleDragOver(event)"
+             ondragenter="handleDragEnter(event)"
+             ondragleave="handleDragLeave(event)"
+             ondrop="handleDrop(event,'${p.id}')"
+             ondragend="handleDragEnd(event)">
+        <span class="drag-handle" title="Déplacer"><i class="fas fa-grip-vertical"></i></span>
 <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">
   <button class="remove-line-btn" onclick="duplicatePrestation('${p.id}')" title="Dupliquer" style="background:#10b981;">
     <i class="fas fa-copy"></i>
@@ -3128,7 +3148,7 @@ window.markOwnerInvoicePaid = function (id) {
     <i class="fas fa-times"></i>
   </button>
 </div>         
-<span class="prestation-badge ${badgeClass}">${p.type.toUpperCase()}</span>
+<span class="prestation-badge ${badgeClass}" style="margin-left:20px;">${p.type.toUpperCase()}</span>
           <div class="form-group" style="margin-bottom:8px;">
             <input type="text" class="form-control" value="${p.description}" oninput="updatePrestation('${p.id}','description',this.value)">
           </div>
@@ -3140,6 +3160,43 @@ window.markOwnerInvoicePaid = function (id) {
       `;
     }).join('');
   }
+// ── Drag & drop reorder ──
+  var _dragSrcId = null;
+  window.handleDragStart = function(e, id) {
+    _dragSrcId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(function(){ e.target.classList.add('dragging'); }, 0);
+  };
+  window.handleDragOver = function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  window.handleDragEnter = function(e) {
+    var card = e.target.closest('.prestation-mini-card');
+    if (card) card.classList.add('drag-over');
+  };
+  window.handleDragLeave = function(e) {
+    var card = e.target.closest('.prestation-mini-card');
+    if (card && !card.contains(e.relatedTarget)) card.classList.remove('drag-over');
+  };
+  window.handleDrop = function(e, targetId) {
+    e.preventDefault();
+    if (_dragSrcId === targetId) return;
+    var srcIdx = prestations.findIndex(function(p){ return p.id === _dragSrcId; });
+    var tgtIdx = prestations.findIndex(function(p){ return p.id === targetId; });
+    if (srcIdx < 0 || tgtIdx < 0) return;
+    var moved = prestations.splice(srcIdx, 1)[0];
+    prestations.splice(tgtIdx, 0, moved);
+    renderEditorPrestations();
+    updatePreview();
+  };
+  window.handleDragEnd = function(e) {
+    document.querySelectorAll('.prestation-mini-card').forEach(function(c){
+      c.classList.remove('dragging','drag-over');
+    });
+    _dragSrcId = null;
+  };
+
 window.duplicatePrestation = function(id) {
   if (isReadOnlyMode) return;
   const original = prestations.find(x => x.id === id);
