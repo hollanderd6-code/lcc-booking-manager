@@ -2801,7 +2801,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       <i class="fas fa-bell"></i>
       <span id="bh-mobile-ann-badge" style="display:none;position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#EF4444;"></span>
     </button>
-    <div id="bh-mobile-svc" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:0 4px;" title="Statut des services">
+    <button id="bh-mobile-svc" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:0 4px;background:transparent;border:none;" title="Statut des services">
       <div style="display:flex;align-items:center;gap:3px;">
         <i class="fas fa-server" style="font-size:9px;color:#9CA3AF;"></i>
         <span id="msvc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
@@ -2810,7 +2810,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       <div style="display:flex;align-items:center;gap:3px;">
         <i class="fas fa-plug" style="font-size:9px;color:#9CA3AF;"></i>
         <span id="msvc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
-      </div>
+      </button>
     </div>
   </div>
 </div>
@@ -4442,12 +4442,15 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       // ── Cloche mobile → même panel notifications ──
       var mobileAnnBtn = document.getElementById('bh-mobile-ann-btn');
       if (mobileAnnBtn && notificationsPanel) {
-        mobileAnnBtn.addEventListener('click', async function() {
+        var _annHandler = async function(e) {
+          e.preventDefault();
           notificationsPanel.classList.toggle('open');
           if (notificationsPanel.classList.contains('open')) {
             await loadActivityData();
           }
-        });
+        };
+        mobileAnnBtn.addEventListener('click', _annHandler);
+        mobileAnnBtn.addEventListener('touchend', _annHandler);
       }
 
       // ── Statut services mobile → petit modal ──
