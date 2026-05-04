@@ -386,22 +386,22 @@ Si desea cancelar su reserva, puede hacerlo directamente desde la plataforma. Te
 
         const thanksReplies = {
           before: {
-            fr: 'De rien ! 😊 N'hésitez pas si vous avez d'autres questions avant votre arrivée.',
-            en: 'You're welcome! 😊 Don't hesitate if you have any questions before your arrival.',
+            fr: "De rien ! 😊 N'hésitez pas si vous avez d'autres questions avant votre arrivée.",
+            en: "You're welcome! 😊 Don't hesitate if you have any questions before your arrival.",
             es: '¡De nada! 😊 No dude en preguntar si tiene alguna pregunta antes de su llegada.',
             de: 'Gern geschehen! 😊 Zögern Sie nicht, wenn Sie vor Ihrer Ankunft Fragen haben.',
             it: 'Prego! 😊 Non esiti a chiedere se ha domande prima del suo arrivo.',
           },
           during: {
-            fr: 'Avec plaisir ! 😊 N'hésitez pas si vous avez besoin de quoi que ce soit.',
-            en: 'With pleasure! 😊 Don't hesitate if you need anything.',
+            fr: "Avec plaisir ! 😊 N'hésitez pas si vous avez besoin de quoi que ce soit.",
+            en: "With pleasure! 😊 Don't hesitate if you need anything.",
             es: '¡Con gusto! 😊 No dude en pedir lo que necesite.',
             de: 'Gerne! 😊 Zögern Sie nicht, wenn Sie etwas benötigen.',
             it: 'Con piacere! 😊 Non esiti a chiedere se ha bisogno di qualcosa.',
           },
           after: {
             fr: 'Merci à vous ! 😊 Ce fut un plaisir. À une prochaine fois peut-être !',
-            en: 'Thank you! 😊 It was a pleasure. Hope to see you again!',
+            en: "Thank you! 😊 It was a pleasure. Hope to see you again!",
             es: '¡Gracias a usted! 😊 Fue un placer. ¡Hasta la próxima!',
             de: 'Vielen Dank! 😊 Es war uns ein Vergnügen. Bis zum nächsten Mal!',
             it: 'Grazie a lei! 😊 È stato un piacere. A presto!',
