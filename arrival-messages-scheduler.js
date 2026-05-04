@@ -52,8 +52,8 @@ async function translateArrivalMessage(text, guestCountry, guestLanguage) {
     const axios = require('axios');
     const response = await axios.post(
       'https://api-free.deepl.com/v2/translate',
-      new URLSearchParams({ auth_key: apiKey, text, target_lang: target, source_lang: 'FR', preserve_formatting: '1' }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 8000 }
+      { text, target_lang: target, source_lang: 'FR', preserve_formatting: true },
+      { headers: { 'Authorization': `DeepL-Auth-Key ${apiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
     );
     const translated = response.data?.translations?.[0]?.text;
     if (translated) {
