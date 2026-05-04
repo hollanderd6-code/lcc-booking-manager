@@ -375,16 +375,41 @@ Si desea cancelar su reserva, puede hacerlo directamente desde la plataforma. Te
         ? now >= checkinDate && now <= checkoutDate
         : false;
 
-      if (hasThanks && !hasProblem && !hasPractical && wordCount < 25 && isDuringStay) {
+      if (hasThanks && !hasProblem && !hasPractical && wordCount < 25) {
+        // Adapter la réponse selon la phase du séjour
+        const nowThanks = new Date();
+        const ciDt = conversation.reservation_start_date ? new Date(conversation.reservation_start_date) : null;
+        const coDt = conversation.reservation_end_date   ? new Date(conversation.reservation_end_date)   : null;
+        let phase = 'before';
+        if (ciDt && coDt && nowThanks >= coDt) phase = 'after';
+        else if (ciDt && nowThanks >= ciDt)     phase = 'during';
+
         const thanksReplies = {
-          fr: "Merci beaucoup ! 😊 Nous sommes ravis que vous appréciez votre séjour. N'hésitez pas si vous avez d'autres questions !",
-          en: "Thank you so much! 😊 We're delighted you're enjoying your stay. Don't hesitate if you have any other questions!",
-          es: "¡Muchas gracias! 😊 Nos alegra que esté disfrutando de su estancia. ¡No dude en preguntar si necesita algo más!",
-          de: "Vielen Dank! 😊 Es freut uns, dass Sie Ihren Aufenthalt genießen. Zögern Sie nicht, wenn Sie weitere Fragen haben!",
-          it: "Grazie mille! 😊 Siamo contenti che stia godendo del suo soggiorno. Non esiti a chiederci se ha altre domande!",
+          before: {
+            fr: 'De rien ! 😊 N'hésitez pas si vous avez d'autres questions avant votre arrivée.',
+            en: 'You're welcome! 😊 Don't hesitate if you have any questions before your arrival.',
+            es: '¡De nada! 😊 No dude en preguntar si tiene alguna pregunta antes de su llegada.',
+            de: 'Gern geschehen! 😊 Zögern Sie nicht, wenn Sie vor Ihrer Ankunft Fragen haben.',
+            it: 'Prego! 😊 Non esiti a chiedere se ha domande prima del suo arrivo.',
+          },
+          during: {
+            fr: 'Avec plaisir ! 😊 N'hésitez pas si vous avez besoin de quoi que ce soit.',
+            en: 'With pleasure! 😊 Don't hesitate if you need anything.',
+            es: '¡Con gusto! 😊 No dude en pedir lo que necesite.',
+            de: 'Gerne! 😊 Zögern Sie nicht, wenn Sie etwas benötigen.',
+            it: 'Con piacere! 😊 Non esiti a chiedere se ha bisogno di qualcosa.',
+          },
+          after: {
+            fr: 'Merci à vous ! 😊 Ce fut un plaisir. À une prochaine fois peut-être !',
+            en: 'Thank you! 😊 It was a pleasure. Hope to see you again!',
+            es: '¡Gracias a usted! 😊 Fue un placer. ¡Hasta la próxima!',
+            de: 'Vielen Dank! 😊 Es war uns ein Vergnügen. Bis zum nächsten Mal!',
+            it: 'Grazie a lei! 😊 È stato un piacere. A presto!',
+          },
         };
-        const reply = thanksReplies[language] || thanksReplies.fr;
-        console.log(`🙏 [HANDLER] Remerciement détecté → réponse courte en ${language}`);
+        const phaseReplies = thanksReplies[phase] || thanksReplies.before;
+        const reply = phaseReplies[language] || phaseReplies.fr;
+        console.log(`🙏 [HANDLER] Remerciement détecté (phase=${phase}) → réponse courte en ${language}`);
         await sendBotMessage(conversation.id, reply, pool, io, channexId);
         return true;
       }
@@ -528,9 +553,41 @@ Rules:
       }
     }
 
+    // ── Phase du séjour ──────────────────────────────────────────
+    const nowForPhase = new Date();
+    const checkinDt  = conversation.reservation_start_date ? new Date(conversation.reservation_start_date) : null;
+    const checkoutDt = conversation.reservation_end_date   ? new Date(conversation.reservation_end_date)   : null;
+    let stayPhase = 'before'; // default
+    if (checkinDt && checkoutDt) {
+      if (nowForPhase >= checkoutDt) stayPhase = 'after';
+      else if (nowForPhase >= checkinDt) stayPhase = 'during';
+    } else if (checkinDt && nowForPhase >= checkinDt) {
+      stayPhase = 'during';
+    }
+    const checkinDateStr  = checkinDt  ? checkinDt.toLocaleDateString('fr-FR')  : null;
+    const checkoutDateStr = checkoutDt ? checkoutDt.toLocaleDateString('fr-FR') : null;
+
+    // ── Bonjour unique par jour ──────────────────────────────────
+    let alreadyGreetedToday = false;
+    try {
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+      const greetCheck = await pool.query(
+        `SELECT COUNT(*) as c FROM messages
+         WHERE conversation_id = $1
+         AND sender_type IN ('property','system','bot')
+         AND created_at >= $2`,
+        [conversation.id, todayStart]
+      );
+      alreadyGreetedToday = parseInt(greetCheck.rows[0].c) > 0;
+    } catch(e) {}
+
     const context = property ? {
       propertyName: property.name,
       welcomeBookUrl: property.welcome_book_url,
+      stayPhase,
+      checkinDate: checkinDateStr,
+      checkoutDate: checkoutDateStr,
+      alreadyGreetedToday,
       wifiName: property.wifi_name || welcomeBookData?.wifiSSID,
       wifiPassword: property.wifi_password || welcomeBookData?.wifiPassword,
       arrivalTime: property.arrival_time,
