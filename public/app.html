@@ -2792,9 +2792,25 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   <a class="mobile-logo" href="/app.html">
     <span class="mobile-logo-text"></span>
   </a>
+  <span id="bh-mobile-page-title" style="font-family:'DM Sans',system-ui,sans-serif;font-size:14px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;letter-spacing:-0.01em;">Home</span>
   <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;">
     <button class="btn-icon" id="syncBtnMobile" title="Synchroniser" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1A7A5E;font-size:16px;">
       <i class="fas fa-sync-alt"></i>
+    </button>
+    <button id="bh-mobile-ann-btn" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
+      <i class="fas fa-bell"></i>
+      <span id="bh-mobile-ann-badge" style="display:none;position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#EF4444;"></span>
+    </button>
+    <button id="bh-mobile-svc" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:0 4px;background:transparent;border:none;" title="Statut des services">
+      <div style="display:flex;align-items:center;gap:3px;">
+        <i class="fas fa-server" style="font-size:9px;color:#9CA3AF;"></i>
+        <span id="msvc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
+      </div>
+      <div style="width:1px;height:8px;background:rgba(0,0,0,.15);"></div>
+      <div style="display:flex;align-items:center;gap:3px;">
+        <i class="fas fa-plug" style="font-size:9px;color:#9CA3AF;"></i>
+        <span id="msvc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
+      </div>
     </button>
   </div>
 </div>
@@ -4424,6 +4440,54 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }
 
       
+      // ── Cloche mobile → même panel notifications ──
+      var mobileAnnBtn = document.getElementById('bh-mobile-ann-btn');
+      if (mobileAnnBtn && notificationsPanel) {
+        var _annHandler = async function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          notificationsPanel.classList.toggle('open');
+          if (notificationsPanel.classList.contains('open')) {
+            await loadActivityData();
+          }
+        };
+        mobileAnnBtn.addEventListener('click', _annHandler);
+        mobileAnnBtn.addEventListener('touchend', _annHandler, { passive: false });
+      }
+
+      // ── Statut services mobile ──
+      var mobileSvc = document.getElementById('bh-mobile-svc');
+      if (mobileSvc) {
+        var _svcHandler = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var existing = document.getElementById('bh-svc-popup');
+          if (existing) { existing.remove(); return; }
+          var rdot = document.getElementById('msvc-dot-render');
+          var cdot = document.getElementById('msvc-dot-channex');
+          var popup = document.createElement('div');
+          popup.id = 'bh-svc-popup';
+          popup.style.cssText = 'position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 8px);right:12px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:14px;padding:14px 16px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:200px;';
+          popup.innerHTML = '<div style="font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">Statut des services</div>'
+            + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+            + '<span style="width:8px;height:8px;border-radius:50%;background:' + (rdot ? rdot.style.background : '#6B7280') + ';display:inline-block;flex-shrink:0;"></span>'
+            + '<div><div style="font-size:13px;font-weight:500;color:#0D1117;">Fonctionnement du site</div></div>'
+            + '</div>'
+            + '<div style="display:flex;align-items:center;gap:10px;">'
+            + '<span style="width:8px;height:8px;border-radius:50%;background:' + (cdot ? cdot.style.background : '#6B7280') + ';display:inline-block;flex-shrink:0;"></span>'
+            + '<div><div style="font-size:13px;font-weight:500;color:#0D1117;">Connexion API</div></div>'
+            + '</div>';
+          document.body.appendChild(popup);
+          setTimeout(function() {
+            document.addEventListener('click', function closePopup(e) {
+              if (!popup.contains(e.target)) { popup.remove(); document.removeEventListener('click', closePopup); }
+            });
+          }, 50);
+        };
+        mobileSvc.addEventListener('click', _svcHandler);
+        mobileSvc.addEventListener('touchend', _svcHandler, { passive: false });
+      }
+
       // Fonction pour charger les données d\'activité
       async function loadActivityData() {
         const token = localStorage.getItem('lcc_token');
