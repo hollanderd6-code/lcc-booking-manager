@@ -6411,8 +6411,10 @@ try {
           var iconInner = p2.cls === 'airbnb'
             ? '<i class="fa-brands fa-airbnb" style="font-size:8px;color:white;"></i>'
             : (p2.cls === 'booking' ? '<span style="font-size:8px;font-weight:800;color:white;">B</span>' : '<span style="font-size:8px;font-weight:800;color:white;">'+p2.label[0]+'</span>');
+          var noteIcon2 = r.notes ? '<span style="position:absolute;top:-4px;right:-3px;background:#EF4444;color:white;border-radius:50%;width:14px;height:14px;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:4;" title="'+r.notes.replace(/"/g,'&quot;')+'">✏</span>' : '';
+          blk.style.position='relative';
           blk.innerHTML = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+iconInner+'</div>'
-            +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+            +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>'+noteIcon2;
           blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
           blk.onmouseout  = function(){ this.style.filter=''; };
           blk.onclick     = function(evt){ evt.stopPropagation(); openBooking(r); };
