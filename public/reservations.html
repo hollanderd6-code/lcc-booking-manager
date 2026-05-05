@@ -657,7 +657,7 @@ body {
 <div class="filters-bar">
   <div class="search-wrap">
     <i class="fas fa-search"></i>
-    <input type="text" id="searchInput" placeholder="Chercher un voyageur, logement…" oninput="applyFilters()"/>
+    <input type="text" id="searchInput" placeholder="Rechercher un voyageur, logement…" oninput="applyFilters()"/>
   </div>
   <select class="filter-select" id="statusFilter" onchange="applyFilters()">
     <option value="">Tous les statuts</option>
@@ -674,6 +674,7 @@ body {
     <option value="booking">Booking.com</option>
     <option value="direct">Direct</option>
     <option value="abritel">Abritel</option>
+    <option value="guest">Boostinghost Guest</option>
   </select>
   <select class="filter-select" id="periodFilter" onchange="applyFilters()">
     <option value="">Toute période</option>
@@ -781,7 +782,7 @@ function normPlatform(r) {
 
 function pltLabel(r) {
   const plt = normPlatform(r);
-  return { airbnb:'Airbnb', booking:'Booking.com', direct:'Direct', abritel:'Abritel', other: r.platform||r.source||'Autre' }[plt];
+  return { airbnb:'Airbnb', booking:'Booking.com', direct:'Direct', abritel:'Abritel', guest:'Boostinghost Guest', other: r.platform||r.source||'Autre' }[plt];
 }
 
 function statusLabel(s) {
@@ -1127,6 +1128,7 @@ function openDetail(r) {
     booking: { label:'Booking.com',  bg:'linear-gradient(135deg,#003580,#00224F)', color:'#fff' },
     abritel: { label:'Abritel',      bg:'linear-gradient(135deg,#0096D6,#0077B3)', color:'#fff' },
     direct:  { label:'Direct',       bg:'linear-gradient(135deg,#1A7A5E,#0f5c46)', color:'#fff' },
+    guest:   { label:'Boostinghost Guest', bg:'linear-gradient(135deg,#6366F1,#4F46E5)', color:'#fff' },
     other:   { label:pltLabel(r),    bg:'linear-gradient(135deg,#6B7280,#4B5563)', color:'#fff' },
   };
   const pc = PLT_CFG[plt] || PLT_CFG.other;
