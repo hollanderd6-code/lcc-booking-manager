@@ -67,7 +67,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  padding: 12px 28px 0;
+  padding: 4px 28px 0;
 }
 @media (max-width: 1024px) { .stats-bar { grid-template-columns: repeat(2,1fr); } }
 .stat-card {
@@ -88,14 +88,14 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   padding: 10px 28px;
   overflow-x: auto;
 }
-.search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 300px; }
+.search-wrap { position: relative; flex: 1; min-width: 160px; max-width: 240px; }
 .search-wrap input, .filter-select {
   height: 36px; border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--white); font-size: 13px; font-family: inherit; color: var(--text);
   padding: 0 12px; outline: none;
 }
 .search-wrap input { width: 100%; box-sizing: border-box; }
-.filter-select { cursor: pointer; }
+.filter-select { cursor: pointer; min-width: 0; flex-shrink: 1; }
 .results-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 
 /* ─── TABLE ─── */
@@ -686,6 +686,8 @@ loadData();
     padding-top: env(safe-area-inset-top, 0px) !important;
   }
   #bhHeader, .main-header { display: none !important; }
+  /* Espace dû au bhHeader desktop — supprimer */
+  html[data-theme-v3="1"] #bhHeader { display: none !important; height: 0 !important; }
 
   /* 3. PAGE CONTENT */
   html[data-theme-v3="1"] .main-content {
