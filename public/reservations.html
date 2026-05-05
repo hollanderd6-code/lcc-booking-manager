@@ -101,6 +101,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   background: var(--white); font-size: 13px; font-family: inherit; color: var(--text);
   padding: 0 12px; outline: none; width: 100%; box-sizing: border-box;
 }
+.filter-select:focus { outline: none !important; border-color: var(--border) !important; box-shadow: none !important; }
 .filter-select { cursor: pointer; flex: 1; min-width: 0; }
 
 /* ─── TABLE ─── */
@@ -148,7 +149,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   height: 40px; padding: 0 20px; border: none; border-radius: 12px;
   background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
-  white-space: nowrap; position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200;
+  white-space: nowrap; position: fixed; top: 16px; right: 24px; z-index: 200;
 }
 .resa-back-btn:hover { background: #15624B; }
 @media (max-width: 1366px) { .resa-back-btn { display: none !important; } }
