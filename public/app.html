@@ -6455,12 +6455,6 @@ try {
             targetCell.style.position = 'relative';
             targetCell.appendChild(nb);
           }
-          if (r.notes) {
-            var nb = document.createElement('span');
-            nb.title = r.notes;
-            nb.style.cssText = 'position:absolute;top:1px;right:-1px;background:#EF4444;border-radius:50%;width:8px;height:8px;z-index:20;pointer-events:none;box-shadow:0 0 0 1.5px white;';
-            anchorCell.appendChild(nb);
-          }
         }
         anchorCell.appendChild(blk);
       });
