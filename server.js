@@ -21543,7 +21543,31 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
   }
 
   // 🌍 Traduction automatique via DeepL selon la nationalité du voyageur
-  const deepLTarget = getDeepLTarget(conv.guest_country, conv.guest_language);
+  // Si guest_country/language absents du conv (timing webhook), on les relit depuis reservations
+  let guestCountry  = conv.guest_country  || null;
+  let guestLanguage = conv.guest_language || null;
+  if (!guestCountry && !guestLanguage && conv.id) {
+    try {
+      const langRow = await pool.query(
+        `SELECT r.guest_country, r.guest_language
+         FROM reservations r
+         WHERE (r.channex_booking_id = $1 AND $1 IS NOT NULL)
+            OR (r.property_id = $2 AND DATE(r.start_date) = DATE($3) AND r.status != 'cancelled')
+         ORDER BY (r.channex_booking_id = $1) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+        [conv.channex_booking_id || null, conv.property_id, conv.reservation_start_date]
+      );
+      if (langRow.rows[0]) {
+        guestCountry  = langRow.rows[0].guest_country  || null;
+        guestLanguage = langRow.rows[0].guest_language || null;
+        if (guestCountry || guestLanguage) {
+          console.log(`🌍 [TPL] guest_country=${guestCountry} guest_language=${guestLanguage} (récupérés depuis reservations)`);
+        }
+      }
+    } catch(e) {
+      console.warn('⚠️ [TPL] Erreur récupération langue voyageur:', e.message);
+    }
+  }
+  const deepLTarget = getDeepLTarget(guestCountry, guestLanguage);
   if (deepLTarget) {
     msg = await translateWithDeepL(msg, deepLTarget);
   }
