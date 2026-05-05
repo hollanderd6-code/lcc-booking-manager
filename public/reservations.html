@@ -8,13 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <link href="/css/style.css?v=3" rel="stylesheet"/>
-<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
-<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
-<link href="/css/bh-v3-mobile.css" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-theme-v3.css?v=5"/>
-<link rel="stylesheet" href="/css/menu-plus-fixes.css"/>
-<link rel="stylesheet" href="/css/menu-active-button.css"/>
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
 <style>
 :root {
   --green: #1A7A5E;
@@ -613,22 +609,26 @@ body {
 @media (max-width: 1024px) {
   .stats-bar { grid-template-columns: repeat(2,1fr); }
 }
+
+/* ── Masquer mobile-header en v3 desktop ── */
+html[data-theme-v3="1"] .mobile-header {
+  display: none !important;
+}
 </style>
-<!-- Override mobile — inspiré de factures.html -->
+<!-- Override mobile — pattern identique aux pages de référence (deposits, help) -->
 <style id="resa-mobile-override">
 @media (max-width: 1366px) {
 
   /* 1. LAYOUT */
   html, body { overflow-x: hidden !important; }
-  body { overflow-y: auto !important; height: auto !important; }
   html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
   html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
-  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; display: block !important; }
-  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; display: block !important; width: 100% !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
 
-  /* 2. MOBILE HEADER */
+  /* 2. MOBILE HEADER — override le display:none!important inline */
   .mobile-header {
     display: flex !important;
     position: fixed !important;
@@ -636,55 +636,64 @@ body {
     height: calc(60px + env(safe-area-inset-top, 0px)) !important;
     z-index: 1100 !important;
     align-items: center !important;
+    justify-content: center !important;
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(12px) !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
     padding-top: env(safe-area-inset-top, 0px) !important;
   }
-  .mobile-menu-btn, #mobileMenuBtn, #bhHeader { display: none !important; }
+  .mobile-menu-btn, #mobileMenuBtn,
+  .help-back-btn, #bhHeader, .main-header { display: none !important; }
 
-  /* 3. PAGE CONTENT */
-  .main-content {
+  /* 3. PAGE CONTENT — laisser le body gérer le scroll */
+  html[data-theme-v3="1"] .main-content {
     padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    overflow-y: auto !important;
-    height: 100vh !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: visible !important;
   }
-  /* Barre crème = stats-bar en transition — on force height:0 */
-  #statsBar { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
-  /* Cacher le page-header desktop sur mobile */
-  .page-header { display: none !important; }
 
   /* 4. CACHER ÉLÉMENTS DESKTOP */
-  .stats-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
+  .stats-bar, #statsBar { display: none !important; height: 0 !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
   .filters-bar { display: none !important; }
   .table-wrap { display: none !important; }
   .pagination { display: none !important; }
   .page-header { display: none !important; }
 
   /* 5. VUE MOBILE */
-  .mobile-view { 
+  .mobile-view {
     display: block !important;
-    padding-top: 12px !important;
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 12px 14px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
   }
-  /* 6. BOTTOM NAV — forcer l'affichage */
-  .mobile-tabs, #mobileTabsNav, nav.mobile-tabs {
-    display: flex !important;
+
+  /* 6. BOTTOM TABS */
+  .mobile-tabs {
     position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
     z-index: 1000 !important;
-    background: rgba(245,242,236,0.97) !important;
-    border-top: 1px solid rgba(200,184,154,0.4) !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
 }
 </style>
 </head>
-<body data-page="calendar" data-title="Réservations" data-theme-v3="1" data-theme="light">
+<body data-page="reservations" data-title="Réservations" data-kicker="Réservations" data-subtitle="Gérez toutes vos réservations" data-back-href="/app.html" data-back-label="Retour au dashboard" data-theme-v3="1" data-theme="light">
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
+
+<!-- MOBILE HEADER — display:none desktop, affiché via @media override -->
+<div class="mobile-header" style="display:none!important;">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Boostinghost</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <!-- Structure requise par bh-layout.js -->
 <div class="app-container">
@@ -692,6 +701,7 @@ body {
 
 <!-- MAIN CONTENT (bh-layout.js injecte la sidebar autour) -->
 <div class="main-content" id="mainContent" style="padding:0;">
+<div id="bhHeader"></div>
 
 <!-- STATS -->
 <div class="stats-bar" id="statsBar">
@@ -1370,7 +1380,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 300);
 });
 </script>
-<script src="/js/mobile-native-experience.js"></script>
-<script src="/js/mobile-tabs-handler.js?v=2"></script>
 </div><!-- /app-container -->
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
 </body>
