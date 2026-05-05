@@ -129,10 +129,13 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 }
 .search-wrap { position: relative; flex: 1; min-width: 0; max-width: 220px; }
 .search-wrap input, .filter-select {
-  height: 38px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--white); font-size: 13px; font-family: inherit; color: var(--text);
   padding: 0 12px; outline: none; width: 100%; box-sizing: border-box;
-  line-height: 38px; overflow: visible;
+}
+.filter-select {
+  padding-top: 2px;
+  padding-bottom: 4px;
 }
 .filter-select:focus { outline: none !important; border-color: var(--border) !important; box-shadow: none !important; }
 .filter-select { cursor: pointer; flex: 1; min-width: 130px; }
