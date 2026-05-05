@@ -48,8 +48,19 @@ body {
 }
 
 /* Adapter au layout bh avec sidebar */
-.main-content {
+.app-container {
+  display: flex;
   min-height: 100vh;
+}
+.main-content {
+  flex: 1;
+  min-height: 100vh;
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .main-content {
+    margin-left: 260px;
+  }
 }
 
 /* ─── LOADING ─── */
@@ -602,6 +613,10 @@ body {
 <body data-page="reservations" data-theme-v3="1" data-theme="light">
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
+
+<!-- Structure requise par bh-layout.js -->
+<div class="app-container">
+<div id="bhSidebar"></div>
 
 <!-- MAIN CONTENT (bh-layout.js injecte la sidebar autour) -->
 <div class="main-content" id="mainContent" style="padding:0;">
@@ -1282,5 +1297,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js?v=2"></script>
+</div><!-- /app-container -->
 </body>
-</html>
