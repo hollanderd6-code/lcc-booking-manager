@@ -602,7 +602,9 @@ async function openChat(conversationId) {
   console.log('💬 Ouverture conversation:', conversationId);
   
   // 🔥 SUR MOBILE : Rediriger vers une page dédiée
-  if (isMobileDevice()) {
+  // Exception : sur messages.html, rester en mode inline même sur mobile
+  const isMessagesPage = !!document.getElementById('msgsChatPlaceholder');
+  if (isMobileDevice() && !isMessagesPage) {
     // Sauvegarder l'ID de conversation
     sessionStorage.setItem('current_conversation_id', conversationId);
     
