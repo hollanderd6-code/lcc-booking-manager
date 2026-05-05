@@ -22,7 +22,7 @@ const { Pool } = require('pg');
 // ============================================
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
 // ============================================
-const { handleIncomingMessage } = require('./integrated-chat-handler');
+const { handleIncomingMessageDebounced } = require('./integrated-chat-handler');
 // onboarding-system supprimé — données voyageur via Channex
 const crypto = require('crypto');
 const axios = require('axios');
@@ -22371,7 +22371,7 @@ app.post('/api/chat/send', async (req, res) => {
         
         // Traiter le message (onboarding + réponses auto)
         const msgNotifAllowed = await shouldSendNotification(conversation.user_id, 'notif_new_message');
-        const botHandled = await handleIncomingMessage(savedMessage, conversation, pool, io);
+        const botHandled = await handleIncomingMessageDebounced(savedMessage, conversation, pool, io);
 
         // 🔔 Notifs seulement si le bot n'a PAS répondu (escalade ou non géré)
         if (!botHandled) {
@@ -25473,7 +25473,7 @@ async function processIncomingGuestMessage(savedMessage, conversationId) {
     const conversation = convResult.rows[0];
 
     // Traiter le message (onboarding + réponses auto)
-    await handleIncomingMessage(savedMessage, conversation, pool, io);
+    await handleIncomingMessageDebounced(savedMessage, conversation, pool, io);
 
   } catch (error) {
     console.error('❌ Erreur processIncomingGuestMessage:', error);
@@ -26278,8 +26278,8 @@ app.post('/api/channex/webhook', async (req, res) => {
                 // Récupérer la conversation complète pour handleIncomingMessage
                 const convForGroq = await pool.query('SELECT * FROM conversations WHERE id = $1', [convId]);
                 if (convForGroq.rows[0]) {
-                  const { handleIncomingMessage } = require('./integrated-chat-handler');
-                  await handleIncomingMessage(savedGuestMsg.rows[0], convForGroq.rows[0], pool, io);
+                  const { handleIncomingMessageDebounced } = require('./integrated-chat-handler');
+                  await handleIncomingMessageDebounced(savedGuestMsg.rows[0], convForGroq.rows[0], pool, io);
                   console.log(`🤖 [CHANNEX] Demande spéciale transmise à Groq pour conv ${convId}`);
                 }
               }
@@ -26582,7 +26582,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
 
     // ── Réponses automatiques (après res.json pour ne pas bloquer) ──
     try {
-      const { handleIncomingMessage } = require('./integrated-chat-handler');
+      const { handleIncomingMessageDebounced } = require('./integrated-chat-handler');
 
       // Récupérer la conversation complète pour le handler
       const convResult = await pool.query(
@@ -26605,7 +26605,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
             conversation.escalated = false;
             console.log(`🔄 [CHANNEX MSG] Escalade réinitialisée pour conv ${conversation_id}`);
           }
-          const handled = await handleIncomingMessage(savedMsg, conversation, pool, io);
+          const handled = await handleIncomingMessageDebounced(savedMsg, conversation, pool, io);
           console.log(`🤖 [CHANNEX MSG] handleIncomingMessage retourné: ${handled}`);
 
           // Notif push seulement si PAS de réponse auto (escalade ou aucune réponse)
