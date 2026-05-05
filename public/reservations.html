@@ -470,13 +470,9 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()"/>
   </div>
-  <div style="display:flex;gap:8px;padding:0 0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
-    <select id="mobileStatusFilter" onchange="applyFilters()" style="flex-shrink:0;height:44px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 24px 4px 12px;background:white;min-width:130px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
-      <option value="">Tous statuts</option>
-      <option value="confirmed">Confirmé</option>
-      <option value="modified">Modifié</option>
-      <option value="cancelled">Annulé</option>
-      <option value="completed">Terminé</option>
+  <div style="display:flex;gap:8px;padding:0 0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+    <select id="mobilePropFilter" onchange="applyFilters()" style="flex-shrink:0;height:44px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 24px 4px 12px;background:white;min-width:150px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
+      <option value="">Tous logements</option>
     </select>
     <select id="mobilePlatformFilter" onchange="applyFilters()" style="flex-shrink:0;height:44px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 24px 4px 12px;background:white;min-width:150px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
       <option value="">Toutes plateformes</option>
@@ -491,6 +487,13 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
       <option value="current">En cours</option>
       <option value="upcoming">À venir</option>
       <option value="past">Passées</option>
+    </select>
+    <select id="mobileStatusFilter" onchange="applyFilters()" style="flex-shrink:0;height:44px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 24px 4px 12px;background:white;min-width:130px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
+      <option value="">Tous statuts</option>
+      <option value="confirmed">Confirmé</option>
+      <option value="modified">Modifié</option>
+      <option value="cancelled">Annulé</option>
+      <option value="completed">Terminé</option>
     </select>
   </div>
   <div id="mobileCards"></div>
@@ -587,12 +590,14 @@ async function loadData() {
     allProperties   = data.properties || [];
 
     const propSel = document.getElementById('propFilter');
+    const mobilePropSel = document.getElementById('mobilePropFilter');
     const uniqueProps = [...new Map(allReservations.map(r => [r.propertyId||r.property_id, r.propertyName])).entries()];
     uniqueProps.forEach(([id, name]) => {
       if (!name) return;
       const opt = document.createElement('option');
       opt.value = id; opt.textContent = name;
       propSel.appendChild(opt);
+      if (mobilePropSel) mobilePropSel.appendChild(opt.cloneNode(true));
     });
 
     applyFilters();
@@ -609,9 +614,10 @@ function applyFilters() {
   const mobileStatus = document.getElementById('mobileStatusFilter')?.value || '';
   const mobilePlatform = document.getElementById('mobilePlatformFilter')?.value || '';
   const mobilePeriod = document.getElementById('mobilePeriodFilter')?.value || '';
+  const mobileProp = document.getElementById('mobilePropFilter')?.value || '';
   const q      = (document.getElementById('searchInput')?.value || document.getElementById('mobileSearch')?.value || '').toLowerCase().trim();
   const status = document.getElementById('statusFilter')?.value || mobileStatus || '';
-  const prop   = document.getElementById('propFilter')?.value   || '';
+  const prop   = document.getElementById('propFilter')?.value   || mobileProp || '';
   const plat   = document.getElementById('platFilter')?.value   || mobilePlatform || '';
   const period = document.getElementById('periodFilter')?.value || mobilePeriod || '';
   const now    = new Date();
