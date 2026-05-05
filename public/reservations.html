@@ -110,14 +110,35 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   padding: 10px 28px;
 }
 .search-wrap { position: relative; flex: 0 0 260px; min-width: 0; }
-.search-wrap input, .filter-select {
-  height: 38px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+.search-wrap input {
+  height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--white); font-size: 13px; font-family: inherit; color: var(--text);
-  padding: 0 12px; outline: none; width: 100%; box-sizing: border-box;
-  line-height: 38px; overflow: visible;
+  padding: 0 12px 0 38px; outline: none; width: 100%; box-sizing: border-box;
+}
+/* Wrapper pour les selects — donne le contrôle du clipping */
+.select-wrap {
+  position: relative; flex: 1; min-width: 130px;
+}
+.select-wrap::after {
+  content: '';
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 0; height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #9CA3AF;
+  pointer-events: none;
+}
+.filter-select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%; height: 44px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--white); font-size: 13px; font-family: inherit; color: var(--text);
+  padding: 0 30px 4px 12px;
+  cursor: pointer; box-sizing: border-box; outline: none;
 }
 .filter-select:focus { outline: none !important; border-color: var(--border) !important; box-shadow: none !important; }
-.filter-select { cursor: pointer; flex: 1; min-width: 130px; }
+
 
 /* ─── TABLE ─── */
 .table-wrap { padding: 0 28px 28px; overflow-x: auto; }
@@ -381,21 +402,27 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="searchInput" placeholder="Rechercher un voyageur…" oninput="applyFilters()" style="padding-left:38px !important;"/>
   </div>
-  <select class="filter-select" id="propFilter" onchange="applyFilters()"><option value="">Tous les logements</option></select>
-  <select class="filter-select" id="platFilter" onchange="applyFilters()">
-    <option value="">Toutes les plateformes</option>
-    <option value="airbnb">Airbnb</option>
-    <option value="booking">Booking.com</option>
-    <option value="direct">Direct</option>
-    <option value="abritel">Abritel</option>
-    <option value="guest">Boostinghost Guest</option>
-  </select>
-  <select class="filter-select" id="periodFilter" onchange="applyFilters()">
-    <option value="">Toute période</option>
-    <option value="current">En cours</option>
-    <option value="upcoming">À venir</option>
-    <option value="past">Passées</option>
-  </select>
+  <div class="select-wrap">
+    <select class="filter-select" id="propFilter" onchange="applyFilters()"><option value="">Tous les logements</option></select>
+  </div>
+  <div class="select-wrap">
+    <select class="filter-select" id="platFilter" onchange="applyFilters()">
+      <option value="">Toutes les plateformes</option>
+      <option value="airbnb">Airbnb</option>
+      <option value="booking">Booking.com</option>
+      <option value="direct">Direct</option>
+      <option value="abritel">Abritel</option>
+      <option value="guest">Boostinghost Guest</option>
+    </select>
+  </div>
+  <div class="select-wrap">
+    <select class="filter-select" id="periodFilter" onchange="applyFilters()">
+      <option value="">Toute période</option>
+      <option value="current">En cours</option>
+      <option value="upcoming">À venir</option>
+      <option value="past">Passées</option>
+    </select>
+  </div>
 </div>
 
 <!-- TABLE (desktop) -->
