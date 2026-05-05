@@ -318,14 +318,25 @@ body[data-page="reservations"] .tab-btn[data-tab="calendar"] {
   color: #1A7A5E !important;
   opacity: 1 !important;
 }
+/* Accueil ne doit PAS être actif sur cette page */
+body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
+  color: inherit !important;
+  opacity: 0.5 !important;
+}
 </style>
 
 <style id="resa-mobile-master">
 
+/* Masquer bhMobileHeader et bhHeader sur desktop */
+@media (min-width: 1367px) {
+  .mobile-header { display: none !important; }
+  #bhHeader { display: none !important; }
+}
+
 @media (max-width: 1366px) {
 
   /* 1. LAYOUT */
-  html, body { overflow-x: hidden !important; height: auto !important; }
+  html, body { overflow-x: hidden !important; }
   html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
@@ -333,21 +344,23 @@ body[data-page="reservations"] .tab-btn[data-tab="calendar"] {
   html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
   html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
 
-  /* 2. MOBILE HEADER */
-  #bhMobileHeader {
+  /* 2. MOBILE HEADER — bh-layout.js crée .mobile-header dynamiquement */
+  .mobile-header {
     display: flex !important;
     position: fixed !important;
     top: 0 !important; left: 0 !important; right: 0 !important;
     height: calc(60px + env(safe-area-inset-top, 0px)) !important;
     z-index: 1100 !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(12px) !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding: env(safe-area-inset-top, 0px) 16px 0 !important;
+    gap: 12px !important;
   }
-  /* bhHeader visible sur desktop, caché sur mobile géré par bh-layout */
+  .resa-back-btn { display: none !important; }
+  #bhHeader { display: none !important; }
 
   /* 3. PAGE CONTENT */
   html[data-theme-v3="1"] .main-content {
@@ -385,7 +398,6 @@ body[data-page="reservations"] .tab-btn[data-tab="calendar"] {
 </head>
 <body data-page="reservations" data-title="Réservations" data-kicker="Planning" data-back-href="/app.html" data-back-label="Tableau de bord">
 
-<div id="bhMobileHeader" class="mobile-header"></div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
 <div id="bhSidebar"></div>
