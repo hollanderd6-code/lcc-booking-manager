@@ -104,8 +104,8 @@ function getSidebarHTML() {
       </a>
       ` : ''}
       ${canSeePage('calendar') ? `
-      <a class="nav-item" href="/app.html?scroll=calendar" id="navCalendarLink">
-        <i class="fas fa-calendar"></i><span>Calendrier</span>
+      <a class="nav-item" data-page="reservations" href="/reservations.html" id="navCalendarLink">
+        <i class="fas fa-calendar-check"></i><span>Réservations</span>
       </a>
       ` : ''}
       ${canSeePage('messages') ? `
