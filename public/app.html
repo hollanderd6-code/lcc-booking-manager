@@ -6321,9 +6321,9 @@ try {
             var colStartR = parseInt(b.dataset.colStart || '0');
             var colEndR   = parseInt(b.dataset.colEnd   || '1');
             // Visible si la date cliquée est dans le séjour, SANS le jour de checkout
-            // colEnd est exclusif donc le dernier jour de nuit = colEnd-1
-            // → visible si colStart <= idx5 <= colEnd-2  (soit idx5 < colEnd-1)
-            var visible = (idx5 >= colStartR && idx5 < colEndR - 1);
+            // Visible si la date cliquée est dans [colStart, colEnd] inclus
+            // colEnd = index du jour de checkout → on l'inclut pour montrer les départs
+            var visible = (idx5 >= colStartR && idx5 <= colEndR);
             b.style.opacity = visible ? '1' : '0.2';
             if (visible && b.parentElement) b.parentElement.style.opacity = '1';
           });
