@@ -679,8 +679,9 @@ body {
   /* 3. PAGE CONTENT */
   .main-content {
     padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    overflow-y: auto !important;
-    height: 100vh !important;
+    overflow-y: visible !important;
+    height: auto !important;
+    min-height: 100vh !important;
   }
   /* Barre crème = stats-bar en transition — on force height:0 */
   #statsBar { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
