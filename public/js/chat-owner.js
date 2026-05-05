@@ -151,19 +151,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (convIdParam) {
       const convId = parseInt(convIdParam, 10);
       if (!isNaN(convId)) {
-        // Petit délai pour laisser le DOM des conversation-items se rendre
-        setTimeout(async () => {
-          await openChat(convId);
-          // Scroller l'item dans la liste pour le rendre visible
+        const tryOpenConv = async (attempts) => {
           const item = document.querySelector(`[data-conversation-id="${convId}"]`);
           if (item) {
+            await openChat(convId);
             item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             item.classList.add('active');
+            window.history.replaceState({}, '', window.location.pathname);
+          } else if (attempts > 0) {
+            setTimeout(() => tryOpenConv(attempts - 1), 300);
           }
-          // Nettoyer l'URL sans recharger la page
-          const cleanUrl = window.location.pathname;
-          window.history.replaceState({}, '', cleanUrl);
-        }, 400);
+        };
+        setTimeout(() => tryOpenConv(10), 500);
       }
     }
   } catch (e) {
@@ -184,6 +183,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       this.style.height = Math.min(this.scrollHeight, 120) + 'px';
       // Déclencher le popup de raccourcis si {{ détecté
       _checkShortcutTrigger(this);
+    });
+
+    // ── Résolution automatique des raccourcis au collage ──
+    chatInput.addEventListener('paste', function() {
+      const inputEl = this;
+      setTimeout(async function() {
+        const text = inputEl.value;
+        if (!text || !text.includes('{')) return;
+        const convId = currentConversationId || window.currentConversationId;
+        if (!convId) return;
+        const conv = (typeof allConversations !== 'undefined' ? allConversations : [])
+          .find(c => c.id == convId);
+        if (!conv) return;
+        const resolved = await resolveShortcuts(text, conv);
+        if (resolved !== text) {
+          inputEl.value = resolved;
+          inputEl.style.height = 'auto';
+          inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+        }
+      }, 50);
     });
 
     // ── Résolution automatique des raccourcis au collage ──────────
@@ -600,6 +619,7 @@ async function openChat(conversationId) {
   
   // 💻 SUR DESKTOP : Garder le modal (comportement actuel)
   currentConversationId = conversationId;
+  window.currentConversationId = conversationId;
   window.currentConversationId = conversationId; // sync avec messages.html
   const conv = allConversations.find(c => c.id == conversationId);
   
@@ -829,6 +849,9 @@ function appendMessage(message) {
   
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
+  if (message.created_at) {
+    messageDiv.setAttribute('data-ts', new Date(message.created_at).getTime());
+  }
   if (message.created_at) {
     messageDiv.setAttribute('data-ts', new Date(message.created_at).getTime());
   }
