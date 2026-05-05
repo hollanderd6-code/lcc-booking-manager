@@ -13,11 +13,8 @@
 <link href="/css/bh-v3-mobile.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/bh-theme-v3.css?v=5"/>
-<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/menu-plus-fixes.css"/>
 <link rel="stylesheet" href="/css/menu-active-button.css"/>
-<link rel="stylesheet" href="/css/mobile-native-styles.css"/>
-<link rel="stylesheet" href="/css/messages-badge-desktop.css"/>
 <style>
 :root {
   --green: #1A7A5E;
@@ -335,33 +332,6 @@ body {
 .empty-state i { font-size: 40px; opacity: .25; margin-bottom: 12px; display: block; }
 .empty-state p { font-size: 14px; }
 
-/* ─── MOBILE HEADER (caché sur desktop) ─── */
-.mobile-header {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  background: rgba(245, 242, 236, 0.97);
-  border-bottom: 1px solid rgba(200, 184, 154, 0.4);
-}
-.mobile-logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  color: var(--text);
-  font-weight: 700;
-  font-size: 17px;
-}
-.mobile-logo i {
-  color: var(--green);
-  font-size: 18px;
-}
-.mobile-logo-text {
-  font-family: 'Instrument Serif', serif;
-  font-size: 18px;
-}
-
 /* ─── MOBILE CARDS ─── */
 .mobile-view { display: none; padding: 0 14px 80px; }
 
@@ -666,23 +636,18 @@ body {
     height: calc(60px + env(safe-area-inset-top, 0px)) !important;
     z-index: 1100 !important;
     align-items: center !important;
-    justify-content: space-between !important;
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(12px) !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
     padding-top: env(safe-area-inset-top, 0px) !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
   }
-  #mobileMenuBtn, #bhHeader { display: none !important; }
-  .main-header { display: none !important; }
+  .mobile-menu-btn, #mobileMenuBtn, #bhHeader { display: none !important; }
 
   /* 3. PAGE CONTENT */
   .main-content {
     padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    overflow-y: visible !important;
-    height: auto !important;
-    min-height: 100vh !important;
+    overflow-y: auto !important;
+    height: 100vh !important;
   }
   /* Barre crème = stats-bar en transition — on force height:0 */
   #statsBar { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
@@ -717,23 +682,11 @@ body {
 }
 </style>
 </head>
-<body data-page="reservations" data-title="Réservations" data-kicker="Réservations" data-subtitle="Gérez toutes vos réservations" data-back-href="/app.html" data-back-label="Retour au dashboard" data-theme-v3="1" data-theme="light">
+<body data-page="calendar" data-title="Réservations" data-theme-v3="1" data-theme="light">
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
 
 <!-- Structure requise par bh-layout.js -->
-<!-- MOBILE HEADER -->
-<div class="mobile-header">
-  <a class="mobile-logo" href="/app.html">
-    <i class="fas fa-calendar-check"></i>
-    <span class="mobile-logo-text">Boostinghost</span>
-  </a>
-  <button class="mobile-menu-btn" id="mobileMenuBtn">
-    <i class="fas fa-bars"></i>
-  </button>
-</div>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
 <div class="app-container">
 <div id="bhSidebar"></div>
 
