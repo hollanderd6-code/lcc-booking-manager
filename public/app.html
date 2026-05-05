@@ -6790,29 +6790,29 @@ try {
     </div>
 
     <!-- Footer actions -->
-    <div id="detailsModalActions" style="padding:12px 16px 32px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid rgba(200,184,154,.35);background:#F5F0E8;">
-      <!-- Supprimer — gauche -->
-      <button class="btn btn-danger" id="deleteBookingBtn" type="button" style="flex-shrink:0;height:42px;padding:0 14px;border-radius:12px;font-size:13px;display:flex;align-items:center;gap:6px;">
-        <i class="fas fa-trash" style="font-size:13px;"></i> Supprimer
+    <div id="detailsModalActions" style="padding:12px 16px 32px;display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(200,184,154,.35);background:#F5F0E8;">
+      <!-- Ligne 1 : Message (plein largeur, action principale) -->
+      <button id="footerMsgBtn" type="button" style="width:100%;height:46px;border-radius:12px;font-size:14px;font-weight:600;background:#1A7A5E;border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;" onmouseover="this.style.background='#15624B'" onmouseout="this.style.background='#1A7A5E'">
+        <i class="fas fa-comment-dots" style="font-size:14px;"></i> Message
       </button>
-      <!-- Spacer -->
-      <div style="flex:1;min-width:8px;"></div>
-      <!-- Fermer -->
-      <button class="btn btn-ghost" id="closeDetailsBtn" type="button" style="height:42px;padding:0 14px;border-radius:12px;font-size:13px;font-weight:600;">
-        Fermer
-      </button>
-      <!-- Message -->
-      <button id="footerMsgBtn" type="button" style="height:42px;padding:0 14px;border-radius:12px;font-size:13px;font-weight:600;background:rgba(26,122,94,.1);border:1.5px solid rgba(26,122,94,.25);color:#1A7A5E;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;" onmouseover="this.style.background='rgba(26,122,94,.18)'" onmouseout="this.style.background='rgba(26,122,94,.1)'">
-        <i class="fas fa-comment-dots" style="font-size:13px;"></i> Message
-      </button>
-      <!-- Facture -->
-      <button class="btn btn-ghost" id="invoiceBookingBtn" type="button" onclick="openInvoiceFromBooking()" style="display:none;height:42px;padding:0 14px;border-radius:12px;font-size:13px;align-items:center;gap:6px;">
-        <i class="fas fa-file-invoice"></i> Facture
-      </button>
-      <!-- Modifier -->
-      <button class="btn btn-primary" id="editBookingBtn" type="button" style="height:42px;padding:0 16px;border-radius:12px;font-size:13px;display:flex;align-items:center;gap:6px;">
-        <i class="fas fa-edit"></i> Modifier
-      </button>
+      <!-- Ligne 2 : Modifier + Facture -->
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="editBookingBtn" type="button" style="flex:1;height:42px;border-radius:12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <i class="fas fa-edit"></i> Modifier
+        </button>
+        <button class="btn btn-ghost" id="invoiceBookingBtn" type="button" onclick="openInvoiceFromBooking()" style="flex:1;height:42px;border-radius:12px;font-size:13px;display:none;align-items:center;justify-content:center;gap:6px;">
+          <i class="fas fa-file-invoice"></i> Facture
+        </button>
+      </div>
+      <!-- Ligne 3 : Fermer + Supprimer -->
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" id="closeDetailsBtn" type="button" style="flex:1;height:42px;border-radius:12px;font-size:13px;font-weight:600;">
+          Fermer
+        </button>
+        <button class="btn btn-danger" id="deleteBookingBtn" type="button" style="flex:1;height:42px;border-radius:12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <i class="fas fa-trash" style="font-size:13px;"></i> Supprimer
+        </button>
+      </div>
     </div>
 
   </div>
