@@ -14754,7 +14754,10 @@ app.post('/api/auth/register', async (req, res) => {
     // 🔔 NOTIFICATION NOUVELLE INSCRIPTION
     try {
       await sendEmailViaBrevo({
-        to: 'charles.induni@gmail.com',
+  to: [
+    'contact@boostinghost.fr',
+    'charles.induni@gmail.com'
+  ],
         subject: `🎉 Nouvelle inscription — ${firstName} ${lastName}`,
         html: bhEmailTemplate({
           icon: '🎉',
