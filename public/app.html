@@ -4653,10 +4653,10 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       const navCalendarLink = document.getElementById('navCalendarLink');
       const calendarSection = document.getElementById('calendarSection');
 
-      if (navCalendarLink && calendarSection) {
+      if (navCalendarLink) {
         navCalendarLink.addEventListener('click', function (e) {
           e.preventDefault();
-          calendarSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          window.location.href = '/reservations.html';
         });
       }
     });
@@ -11143,9 +11143,7 @@ if (window.Capacitor) {
       dv.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    var el = document.getElementById('calendarSection');
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.location.href = '/reservations.html';
   }
 
   function bindCalendarLink() {
