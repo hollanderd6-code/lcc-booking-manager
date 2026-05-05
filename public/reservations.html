@@ -615,12 +615,13 @@ html[data-theme-v3="1"] .mobile-header {
   display: none !important;
 }
 </style>
+<script src="/js/auth-fetch.js"></script>
 <!-- Override mobile — pattern identique aux pages de référence (deposits, help) -->
 <style id="resa-mobile-override">
 @media (max-width: 1366px) {
 
   /* 1. LAYOUT */
-  html, body { overflow-x: hidden !important; }
+  html, body { overflow-x: hidden !important; height: auto !important; min-height: 100% !important; }
   html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
@@ -793,7 +794,6 @@ html[data-theme-v3="1"] .mobile-header {
 
 <!-- MOBILE VIEW -->
 <div class="mobile-view">
-  <div class="mobile-tabs" style="display:none;"></div>
   <div class="mobile-search">
     <div class="mobile-search-wrap">
       <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
