@@ -846,14 +846,18 @@ function displayMessages(messages) {
 function appendMessage(message) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
-  
+
+  // ── Anti-doublon : ne pas afficher deux fois le même message ──
+  if (message.id && container.querySelector(`[data-msg-id="${message.id}"]`)) {
+    console.log(`⏭️ [CHAT] Message ${message.id} déjà affiché — skip`);
+    return;
+  }
+
   const isOwner = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
   
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
-  if (message.created_at) {
-    messageDiv.setAttribute('data-ts', new Date(message.created_at).getTime());
-  }
+  if (message.id) messageDiv.setAttribute('data-msg-id', message.id);
   if (message.created_at) {
     messageDiv.setAttribute('data-ts', new Date(message.created_at).getTime());
   }
@@ -981,34 +985,43 @@ function appendMessage(message) {
   scrollToBottom();
 }
 
-// ── Traduction MyMemory ──────────────────────────────────────────────────
+// ── Traduction via DeepL (proxy backend) ────────────────────────────────
 const _txCache = {};
 async function chatTranslate(text, targetLang) {
-  const langMap = { fr: 'en|fr', en: 'fr|en', de: 'fr|de', it: 'fr|it', nl: 'fr|nl', zh: 'fr|zh-CN' };
-  const langpair = langMap[targetLang] || 'en|fr';
-  const key = langpair + '|' + text.slice(0, 60);
+  // targetLang : 'fr' (→ français) ou 'en' (→ anglais)
+  const deeplTarget = targetLang === 'fr' ? 'FR' : 'EN-GB';
+  const key = deeplTarget + '|' + text.slice(0, 60);
   if (_txCache[key]) return _txCache[key];
-  
-  // Découper si > 450 chars
-  if (text.length <= 450) {
-    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`);
+
+  try {
+    const r = await fetch(`${API_URL}/api/translate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('lcc_token') || '')
+      },
+      body: JSON.stringify({ text, target_lang: deeplTarget })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
-    if (d.responseStatus === 200) {
-      _txCache[key] = d.responseData.translatedText;
+    const translated = d.translated || d.text || d.translation;
+    if (!translated) throw new Error('Pas de traduction retournée');
+    _txCache[key] = translated;
+    return translated;
+  } catch (err) {
+    console.warn('⚠️ [TRANSLATE] Erreur DeepL backend:', err.message);
+    // Fallback MyMemory si le backend échoue
+    const langMap = { fr: 'en|fr', en: 'fr|en' };
+    const langpair = langMap[targetLang] || 'en|fr';
+    const r2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0,450))}&langpair=${langpair}`);
+    const d2 = await r2.json();
+    if (d2.responseStatus === 200) {
+      _txCache[key] = d2.responseData.translatedText;
       return _txCache[key];
     }
     throw new Error('Translation failed');
   }
-  
-  // Texte long : découper par phrases
-  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
-  const parts = [];
-  for (const s of sentences) {
-    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(s.trim())}&langpair=${langpair}`);
-    const d = await r.json();
-    parts.push(d.responseStatus === 200 ? d.responseData.translatedText : s);
-  }
-  _txCache[key] = parts.join(' ');
+}
   return _txCache[key];
 }
 
