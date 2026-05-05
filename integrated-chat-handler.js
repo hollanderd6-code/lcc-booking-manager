@@ -12,6 +12,104 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
+
+// ============================================
+// ⏳ DEBOUNCE — Grouper les messages rapprochés
+// Si plusieurs messages arrivent en moins de DEBOUNCE_DELAY ms,
+// ils sont fusionnés et traités ensemble en un seul appel Groq.
+// ============================================
+
+const DEBOUNCE_DELAY = 90 * 1000; // 90 secondes
+
+// Map conversationId → { timer, messages: [], conversation, pool, io }
+const _debounceMap = new Map();
+
+/**
+ * Point d'entrée public — appelé à chaque message entrant.
+ * Si un timer est déjà en cours pour cette conv, on ajoute le message et on repart.
+ * Sinon on démarre un nouveau timer.
+ */
+async function handleIncomingMessageDebounced(message, conversation, pool, io) {
+  const convId = conversation.id;
+
+  // ── Cas où on NE debounce PAS ──────────────────────────────────────────
+  // 1. Urgences → répondre immédiatement
+  // 2. Messages système OTA → ignorer immédiatement
+  // 3. Sender non-guest → ignorer immédiatement
+  if (message.sender_type !== 'guest') {
+    return handleIncomingMessage(message, conversation, pool, io);
+  }
+  const msgText = message.message || '';
+  const isOtaSystem = (
+    msgText.includes('THIS RESERVATION HAS BEEN PRE-PAID') ||
+    msgText.includes('BOOKING NOTE :') ||
+    msgText.includes('BOOKING NOTE:') ||
+    msgText.includes('OTA Commission:') ||
+    msgText.includes('Payment Collect:')
+  );
+  if (isOtaSystem) {
+    return handleIncomingMessage(message, conversation, pool, io);
+  }
+  if (requiresHumanIntervention(msgText)) {
+    // Urgence → pas de délai
+    console.log(`⚡ [DEBOUNCE] Urgence conv ${convId} → traitement immédiat`);
+    return handleIncomingMessage(message, conversation, pool, io);
+  }
+
+  // ── Debounce normal ─────────────────────────────────────────────────────
+  if (_debounceMap.has(convId)) {
+    // Timer existant → on ajoute le message et on repart à zéro
+    const state = _debounceMap.get(convId);
+    state.messages.push(message);
+    state.conversation = conversation; // mettre à jour au cas où
+    clearTimeout(state.timer);
+    console.log(`⏳ [DEBOUNCE] Conv ${convId} — ${state.messages.length} message(s) en attente, timer reset`);
+    state.timer = setTimeout(() => _flushDebounce(convId, pool, io), DEBOUNCE_DELAY);
+  } else {
+    // Nouveau timer
+    console.log(`⏳ [DEBOUNCE] Conv ${convId} — démarrage timer (${DEBOUNCE_DELAY/1000}s)`);
+    const timer = setTimeout(() => _flushDebounce(convId, pool, io), DEBOUNCE_DELAY);
+    _debounceMap.set(convId, {
+      timer,
+      messages: [message],
+      conversation,
+    });
+  }
+}
+
+/**
+ * Déclenché après le délai de silence.
+ * Fusionne tous les messages en attente et appelle handleIncomingMessage une seule fois.
+ */
+async function _flushDebounce(convId, pool, io) {
+  const state = _debounceMap.get(convId);
+  _debounceMap.delete(convId);
+  if (!state || state.messages.length === 0) return;
+
+  const { messages, conversation } = state;
+
+  if (messages.length === 1) {
+    // Un seul message → comportement normal
+    console.log(`⏳ [DEBOUNCE] Conv ${convId} — 1 message → traitement normal`);
+    await handleIncomingMessage(messages[0], conversation, pool, io);
+    return;
+  }
+
+  // Plusieurs messages → fusionner
+  console.log(`⏳ [DEBOUNCE] Conv ${convId} — ${messages.length} messages fusionnés → 1 appel Groq`);
+  const combinedText = messages.map(m => m.message).join('\n');
+
+  // Créer un message synthétique avec le texte fusionné
+  // On garde les métadonnées du dernier message (le plus récent)
+  const lastMsg = messages[messages.length - 1];
+  const combinedMessage = {
+    ...lastMsg,
+    message: combinedText,
+  };
+
+  await handleIncomingMessage(combinedMessage, conversation, pool, io);
+}
+
 // ============================================
 // 🔧 UTILITAIRE : Envoyer un message (DB + Channex si dispo)
 // ============================================
@@ -701,6 +799,7 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
 
 module.exports = {
   handleIncomingMessage,
+  handleIncomingMessageDebounced,
   sendBotMessage,
   sendAutoMessage
 };
