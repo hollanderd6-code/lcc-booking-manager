@@ -6318,11 +6318,12 @@ try {
           });
           // Pour chaque bloc: visible si il COUVRE la colonne cliquée (checkout exclu)
           outer.querySelectorAll('.booking-block-bh').forEach(function(b){
-            var startCol = parseInt(b.dataset.colStart || b.parentElement?.dataset?.colIdx || '0');
-            var endCol   = parseInt(b.dataset.colEnd   || (startCol + Math.max(1, Math.round(b.offsetWidth / 48))));
-            // Visible si la date cliquée est dans [startCol, endCol-1[
-            // endCol-1 = jour de checkout → on ne filtre PAS cette réservation
-            var visible = (idx5 >= startCol && idx5 < endCol - 1);
+            var colStartR = parseInt(b.dataset.colStart || '0');
+            var colEndR   = parseInt(b.dataset.colEnd   || '1');
+            // Visible si la date cliquée est dans le séjour, SANS le jour de checkout
+            // colEnd est exclusif donc le dernier jour de nuit = colEnd-1
+            // → visible si colStart <= idx5 <= colEnd-2  (soit idx5 < colEnd-1)
+            var visible = (idx5 >= colStartR && idx5 < colEndR - 1);
             b.style.opacity = visible ? '1' : '0.2';
             if (visible && b.parentElement) b.parentElement.style.opacity = '1';
           });
@@ -6408,8 +6409,8 @@ try {
         var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:3;');
         blk.className = 'booking-block-bh';
         blk.dataset.propId   = String(prop.id);
-        blk.dataset.colStart = String(clippedStart);
-        blk.dataset.colEnd   = String(clippedEnd);   // jour de checkout exclusif
+        blk.dataset.colStart = String(colStart);   // vrai début (peut être négatif)
+        blk.dataset.colEnd   = String(colEnd);     // vrai checkout exclusif
         // left = 25% du colStart (déjà dans anchorCell donc left=25% de sa width)
         blk.style.left  = (colW * 0.25) + 'px';
         blk.style.width = ((clippedEnd - clippedStart) * colW) + 'px';
