@@ -146,7 +146,7 @@
       // Onglets de base — toujours visibles si permission
       const allTabs = [
         { id: 'dashboard',   icon: 'fa-home',       label: 'Accueil',    perm: 'can_view_reservations' },
-        { id: 'calendar',    icon: 'fa-calendar',   label: 'Calendrier', perm: 'can_view_reservations' },
+        { id: 'calendar',    icon: 'fa-calendar-check', label: 'Réservations', perm: 'can_view_reservations' },
         { id: 'messages',    icon: 'fa-comment',    label: 'Messages',   perm: 'can_view_messages', badge: 0 },
         { id: 'properties',  icon: 'fa-building',   label: 'Logements',  perm: 'can_view_properties' },
         { id: 'more',        icon: 'fa-ellipsis-h', label: 'Plus',       perm: null }
