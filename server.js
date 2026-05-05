@@ -5540,20 +5540,32 @@ async function handleDepositPaid(depositId, io) {
       // Jour J après 7h → déclencher template on_arrival immédiatement (caution validée)
       console.log(`📨 Caution validée + Jour J → déclenchement template on_arrival pour conv ${conv.id}`);
       try {
-        const templates = await pool.query(
-          `SELECT mt.* FROM message_templates mt
-           WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
-           AND (
-             mt.property_id IS NULL
-             OR mt.property_id::text = $2::text
-             OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
-                 AND mt.property_ids @> to_jsonb($2::text))
-           )`,
-          [conv.user_id, conv.property_id]
+        // Anti-doublon : vérifier que on_arrival n'a pas déjà été envoyé dans les 23h
+        const alreadySent = await pool.query(
+          `SELECT 1 FROM message_template_logs
+           WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
+           AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
+          [conv.id]
         );
-        for (const tmpl of templates.rows) {
-          const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
-          await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
+        if (alreadySent.rows.length > 0) {
+          console.log(`⏭️ [Stripe webhook] on_arrival déjà envoyé pour conv ${conv.id} — skip`);
+        } else {
+          const templates = await pool.query(
+            `SELECT mt.* FROM message_templates mt
+             WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
+             AND (
+               mt.property_id IS NULL
+               OR mt.property_id::text = $2::text
+               OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
+                   AND mt.property_ids @> to_jsonb($2::text))
+             )`,
+            [conv.user_id, conv.property_id]
+          );
+          for (const tmpl of templates.rows) {
+            const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
+            await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
+            await new Promise(r => setTimeout(r, 400));
+          }
         }
       } catch (tplErr) {
         console.error('⚠️ Erreur template on_arrival immédiat:', tplErr.message);
@@ -26330,8 +26342,43 @@ app.post('/api/channex/webhook', async (req, res) => {
                 } else {
                   console.log(`⏭️ [TPL caution last-minute] Déjà envoyée — conv ${conv.id}`);
                 }
+                // ⚠️ on_arrival sera déclenché par le webhook Stripe après paiement caution
               } else {
-                console.log(`⚠️ [TPL caution last-minute] Aucun template caution trouvé pour property ${result.property_id}`);
+                // Pas de template caution → vérifier si le logement a une caution configurée
+                const depositAmount = parseFloat(property.deposit_amount || 0);
+                if (depositAmount <= 0) {
+                  // Pas de caution → envoyer on_arrival directement
+                  console.log(`⚠️ [TPL last-minute] Pas de caution sur ce logement → on_arrival immédiat`);
+                  const alreadySentArrival = await pool.query(
+                    `SELECT 1 FROM message_template_logs
+                     WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
+                     AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
+                    [conv.id]
+                  );
+                  if (alreadySentArrival.rows.length === 0) {
+                    const arrivalTpls = await pool.query(
+                      `SELECT * FROM message_templates
+                       WHERE user_id = $1 AND trigger_type = 'on_arrival' AND active = TRUE
+                       AND (
+                         property_id IS NULL
+                         OR property_id::text = $2::text
+                         OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                             AND property_ids @> to_jsonb($2::text))
+                       )`,
+                      [result.user_id, result.property_id]
+                    );
+                    for (const tmpl of arrivalTpls.rows) {
+                      await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
+                      console.log(`✅ [TPL on_arrival last-minute sans caution] Envoyé — conv ${conv.id}`);
+                      await new Promise(r => setTimeout(r, 400));
+                    }
+                  } else {
+                    console.log(`⏭️ [TPL on_arrival] Déjà envoyé — conv ${conv.id}`);
+                  }
+                } else {
+                  // Caution configurée mais pas de template → on_arrival bloqué jusqu'au paiement Stripe
+                  console.log(`⚠️ [TPL last-minute] Caution configurée (${depositAmount}€) mais pas de template caution → on_arrival bloqué jusqu'au paiement`);
+                }
               }
             } else {
               // Airbnb + arrivée aujourd'hui → envoyer on_arrival directement (pas de caution)
