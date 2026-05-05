@@ -620,6 +620,7 @@ body {
 
   /* 1. LAYOUT */
   html, body { overflow-x: hidden !important; }
+  body { overflow-y: auto !important; height: auto !important; }
   html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
@@ -645,6 +646,8 @@ body {
   /* 3. PAGE CONTENT */
   .main-content {
     padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    overflow-y: auto !important;
+    height: 100vh !important;
   }
   /* Barre crème = stats-bar en transition — on force height:0 */
   #statsBar { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
