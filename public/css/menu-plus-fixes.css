@@ -65,6 +65,12 @@ body[data-page="help"] .tab-btn[data-tab="more"] {
   opacity: 1;
 }
 
+/* Page réservations — onglet calendar actif */
+body[data-page="reservations"] .tab-btn[data-tab="calendar"] {
+  color: var(--primary-color, #1A7A5E) !important;
+  opacity: 1;
+}
+
 /* Indicateur visuel sous l'onglet Plus quand actif */
 body[data-page="settings-account"] .tab-btn[data-tab="more"]::before,
 body[data-page="notifications"] .tab-btn[data-tab="more"]::before,
