@@ -49,16 +49,18 @@ body {
 
 /* Adapter au layout bh avec sidebar */
 .app-container {
-  display: flex;
   min-height: 100vh;
 }
 .main-content {
-  flex: 1;
   min-height: 100vh;
   min-width: 0;
 }
 @media (min-width: 1024px) {
+  .app-container {
+    display: flex;
+  }
   .main-content {
+    flex: 1;
     margin-left: 260px;
   }
 }
