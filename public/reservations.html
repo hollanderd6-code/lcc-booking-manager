@@ -614,11 +614,6 @@ body {
 html[data-theme-v3="1"] .mobile-header {
   display: none !important;
 }
-
-/* ── Masquer le header desktop sur mobile (injecté dynamiquement par bh-layout.js) ── */
-@media (max-width: 1366px) {
-  .main-header, header.main-header { display: none !important; }
-}
 </style>
 <script src="/js/auth-fetch.js"></script>
 <!-- Override mobile — pattern identique aux pages de référence (deposits, help) -->
@@ -626,7 +621,7 @@ html[data-theme-v3="1"] .mobile-header {
 @media (max-width: 1366px) {
 
   /* 1. LAYOUT */
-  html, body { overflow-x: hidden !important; height: auto !important; min-height: 100% !important; }
+  html, body { overflow-x: hidden !important; }
   html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
   html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
@@ -649,11 +644,7 @@ html[data-theme-v3="1"] .mobile-header {
     padding-top: env(safe-area-inset-top, 0px) !important;
   }
   .mobile-menu-btn, #mobileMenuBtn,
-  .help-back-btn, #bhHeader,
-  .main-header, header.main-header,
-  #bhHeader .main-header,
-  .main-content > header,
-  .main-content .main-header { display: none !important; }
+  .help-back-btn, #bhHeader, .main-header { display: none !important; }
 
   /* 3. PAGE CONTENT — laisser le body gérer le scroll */
   html[data-theme-v3="1"] .main-content {
@@ -803,6 +794,7 @@ html[data-theme-v3="1"] .mobile-header {
 
 <!-- MOBILE VIEW -->
 <div class="mobile-view">
+  <div class="mobile-tabs" style="display:none;"></div>
   <div class="mobile-search">
     <div class="mobile-search-wrap">
       <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1374,32 +1366,6 @@ loadData();
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/bh-layout.js?v=2"></script>
 <script>
-// ─── MASQUER HEADER DESKTOP SUR MOBILE ────────────────────────
-// bh-layout.js injecte .main-header dynamiquement APRÈS le CSS → on le cache via JS
-(function hideMobileHeader() {
-  const isMobile = window.innerWidth <= 1366;
-  if (!isMobile) return;
-  
-  function hideHeader() {
-    document.querySelectorAll('.main-header, header.main-header').forEach(el => {
-      el.style.setProperty('display', 'none', 'important');
-    });
-  }
-  
-  // Immédiat + après les setTimeout de bh-layout.js (150ms, 500ms)
-  hideHeader();
-  setTimeout(hideHeader, 50);
-  setTimeout(hideHeader, 200);
-  setTimeout(hideHeader, 600);
-  
-  // Observer pour catcher l'injection dynamique
-  const obs = new MutationObserver(hideHeader);
-  obs.observe(document.body, { childList: true, subtree: true });
-  // Arrêter après 2s (largement suffisant)
-  setTimeout(() => obs.disconnect(), 2000);
-})();
-</script>
-<script>
 // Ajouter bouton Exporter dans le header après chargement bh-layout
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
@@ -1418,4 +1384,54 @@ document.addEventListener('DOMContentLoaded', function() {
 </div><!-- /app-container -->
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
+
+<script>
+// ─── DEBUG PANEL MOBILE ─────────────────────────────────────
+(function() {
+  function createPanel() {
+    var p = document.createElement('div');
+    p.id = 'bh-debug';
+    p.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font-family:monospace;font-size:10px;padding:6px 8px;max-height:40vh;overflow-y:auto;';
+    document.body.appendChild(p);
+    return p;
+  }
+  var panel = createPanel();
+  
+  function log(msg) {
+    var line = document.createElement('div');
+    line.textContent = new Date().toISOString().substr(11,8) + ' ' + msg;
+    panel.appendChild(line);
+    panel.scrollTop = panel.scrollHeight;
+    console.log('[DEBUG]', msg);
+  }
+  
+  log('START w=' + window.innerWidth + ' h=' + window.innerHeight);
+  log('token=' + (localStorage.getItem('lcc_token') ? 'OK' : 'MISSING'));
+  
+  window.addEventListener('load', function() {
+    log('LOAD done');
+    var mh = document.querySelector('.main-header');
+    log('main-header: ' + (mh ? 'EXISTS h=' + mh.offsetHeight + ' display=' + getComputedStyle(mh).display : 'ABSENT'));
+    var mv = document.querySelector('.mobile-view');
+    log('mobile-view: ' + (mv ? 'EXISTS h=' + mv.offsetHeight + ' display=' + getComputedStyle(mv).display : 'ABSENT'));
+    var mc = document.getElementById('mobileCards');
+    log('mobileCards: ' + (mc ? 'EXISTS innerHTML.len=' + mc.innerHTML.length : 'ABSENT'));
+    var tabs = document.querySelector('.mobile-tabs');
+    log('mobile-tabs: ' + (tabs ? 'EXISTS display=' + getComputedStyle(tabs).display : 'ABSENT'));
+    var body = document.body;
+    log('body h=' + body.offsetHeight + ' scrollH=' + document.documentElement.scrollHeight);
+    log('main-content h=' + (document.querySelector('.main-content') ? document.querySelector('.main-content').offsetHeight : 'N/A'));
+  });
+  
+  // Intercepter les redirections
+  var origHref = Object.getOwnPropertyDescriptor(window.location, 'href');
+  var origAssign = window.location.assign;
+  window.location.assign = function(url) { log('REDIRECT assign: ' + url); };
+  
+  // Détecter si la page devient invisible
+  document.addEventListener('visibilitychange', function() {
+    log('visibility: ' + document.visibilityState);
+  });
+})();
+</script>
 </body>
