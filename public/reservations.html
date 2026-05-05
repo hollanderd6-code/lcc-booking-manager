@@ -1,11 +1,20 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme-v3="1">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="utf-8"/>
+<meta content="no-store, no-cache, must-revalidate, max-age=0" http-equiv="Cache-Control"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Réservations — Boostinghost</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="/css/style.css?v=3" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
+<link href="/css/bh-v3-mobile.css" rel="stylesheet"/>
+<link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=5"/>
+<link rel="stylesheet" href="/css/menu-plus-fixes.css"/>
+<link rel="stylesheet" href="/css/menu-active-button.css"/>
 <style>
 :root {
   --green: #1A7A5E;
@@ -31,11 +40,16 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', 'DM Sans', sans-serif;
   background: var(--cream);
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Adapter au layout bh avec sidebar */
+.main-content {
+  min-height: 100vh;
 }
 
 /* ─── LOADING ─── */
@@ -53,42 +67,7 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ─── PAGE HEADER ─── */
-.page-header {
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
-  padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.page-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.page-title .icon-wrap {
-  width: 36px; height: 36px;
-  background: var(--green);
-  border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-
-.page-title .icon-wrap i { color: white; font-size: 15px; }
-
-.header-actions {
-  display: flex; align-items: center; gap: 8px;
-}
+/* header injected by bh-layout.js */
 
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -620,27 +599,12 @@ body {
 }
 </style>
 </head>
-<body data-page="reservations">
+<body data-page="reservations" data-theme-v3="1" data-theme="light">
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
 
-<!-- HEADER -->
-<header class="page-header">
-  <div class="page-title">
-    <div class="icon-wrap"><i class="fas fa-calendar-check"></i></div>
-    <span>Réservations</span>
-  </div>
-  <div class="header-actions">
-    <button class="btn btn-secondary" onclick="exportCSV()">
-      <i class="fas fa-download"></i>
-      <span class="desktop-only">Exporter</span>
-    </button>
-    <button class="btn btn-primary" onclick="window.location.href='/app.html'">
-      <i class="fas fa-home"></i>
-      <span class="desktop-only">Dashboard</span>
-    </button>
-  </div>
-</header>
+<!-- MAIN CONTENT (bh-layout.js injecte la sidebar autour) -->
+<div class="main-content" id="mainContent" style="padding:0;">
 
 <!-- STATS -->
 <div class="stats-bar" id="statsBar">
@@ -752,6 +716,9 @@ body {
   <div class="bh-resa-body" id="detailBody"></div>
 </div>
 
+</div><!-- /main-content -->
+
+<script src="/js/auth-fetch.js"></script>
 <script>
 // ─── CONFIG ───────────────────────────────
 const API_URL = (function() {
@@ -852,7 +819,7 @@ async function loadData() {
     const res = await fetch(API_URL + '/api/reservations', {
       headers: { Authorization: 'Bearer ' + token }
     });
-    if (res.status === 401) { window.location.href = '/login.html'; return; }
+    if (res.status === 401 || res.status === 403) { window.location.href = '/login.html'; return; }
     const data = await res.json();
 
     allReservations = (data.reservations || []).filter(r => r.type !== 'block');
@@ -1295,5 +1262,25 @@ function exportCSV() {
 // ─── INIT ─────────────────────────────────
 loadData();
 </script>
+<script src="/js/messages-badge-desktop-mobile.js"></script>
+<script src="/js/bh-layout.js?v=2"></script>
+<script>
+// Ajouter bouton Exporter dans le header après chargement bh-layout
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    var headerActions = document.querySelector('.header-actions');
+    if (headerActions) {
+      var exportBtn = document.createElement('button');
+      exportBtn.className = 'btn btn-sm btn-secondary';
+      exportBtn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:7px 13px;font-size:12px;font-weight:600;border-radius:8px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;';
+      exportBtn.innerHTML = '<i class="fas fa-download"></i> Exporter';
+      exportBtn.onclick = exportCSV;
+      headerActions.insertBefore(exportBtn, headerActions.firstChild);
+    }
+  }, 300);
+});
+</script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js?v=2"></script>
 </body>
 </html>
