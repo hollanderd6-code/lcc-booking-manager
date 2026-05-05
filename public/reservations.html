@@ -67,7 +67,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  padding: 20px 28px 0;
+  padding: 12px 28px 0;
 }
 @media (max-width: 1024px) { .stats-bar { grid-template-columns: repeat(2,1fr); } }
 .stat-card {
@@ -84,10 +84,11 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 
 /* ─── FILTERS BAR ─── */
 .filters-bar {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 16px 28px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+  padding: 10px 28px;
+  overflow-x: auto;
 }
-.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 300px; }
 .search-wrap input, .filter-select {
   height: 36px; border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--white); font-size: 13px; font-family: inherit; color: var(--text);
@@ -308,8 +309,25 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 <!-- MOBILE VIEW -->
 <div class="mobile-view" id="mobileView">
   <div class="mobile-search">
-    <i class="fas fa-search"></i>
-    <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()"/>
+    <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()" style="padding-left:36px !important;"/>
+  </div>
+  <div style="display:flex;gap:8px;padding:0 0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+    <select class="filter-select" id="mobileStatusFilter" onchange="applyFilters()" style="flex-shrink:0;height:34px;font-size:12px;border-radius:8px;border:1px solid #E5E7EB;padding:0 8px;background:white;min-width:120px;">
+      <option value="">Tous statuts</option>
+      <option value="confirmed">Confirmé</option>
+      <option value="pending">En attente</option>
+      <option value="cancelled">Annulé</option>
+      <option value="completed">Terminé</option>
+    </select>
+    <select class="filter-select" id="mobilePlatformFilter" onchange="applyFilters()" style="flex-shrink:0;height:34px;font-size:12px;border-radius:8px;border:1px solid #E5E7EB;padding:0 8px;background:white;min-width:130px;">
+      <option value="">Toutes plateformes</option>
+      <option value="airbnb">Airbnb</option>
+      <option value="booking">Booking.com</option>
+      <option value="direct">Direct</option>
+      <option value="abritel">Abritel</option>
+      <option value="guest">Boostinghost Guest</option>
+    </select>
   </div>
   <div id="mobileCards"></div>
 </div>
@@ -435,10 +453,12 @@ function updateStats() {
 
 // ─── FILTERS ──────────────────────────────
 function applyFilters() {
+  const mobileStatus = document.getElementById('mobileStatusFilter')?.value || '';
+  const mobilePlatform = document.getElementById('mobilePlatformFilter')?.value || '';
   const q      = (document.getElementById('searchInput')?.value || document.getElementById('mobileSearch')?.value || '').toLowerCase().trim();
-  const status = document.getElementById('statusFilter')?.value || '';
+  const status = document.getElementById('statusFilter')?.value || mobileStatus || '';
   const prop   = document.getElementById('propFilter')?.value   || '';
-  const plat   = document.getElementById('platFilter')?.value   || '';
+  const plat   = document.getElementById('platFilter')?.value   || mobilePlatform || '';
   const period = document.getElementById('periodFilter')?.value || '';
   const now    = new Date();
 
