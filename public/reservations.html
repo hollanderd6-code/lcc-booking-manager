@@ -121,7 +121,16 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 
 /* ─── TABLE ─── */
 .table-wrap { padding: 0 28px 28px; overflow-x: auto; }
-.reservations-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.reservations-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.reservations-table col.col-logement   { width: 11%; }
+.reservations-table col.col-voyageur   { width: 14%; }
+.reservations-table col.col-reservele  { width: 12%; }
+.reservations-table col.col-checkin    { width: 12%; }
+.reservations-table col.col-checkout   { width: 12%; }
+.reservations-table col.col-nuits      { width: 7%; }
+.reservations-table col.col-pers       { width: 7%; }
+.reservations-table col.col-plateforme { width: 14%; }
+.reservations-table col.col-montant    { width: 11%; }
 .reservations-table thead th {
   text-align: left; padding: 10px 12px; font-weight: 600; font-size: 11px;
   color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em;
@@ -228,11 +237,14 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 }
 @media (min-width: 1025px) {
   .bh-resa-sheet {
-    left: 260px; /* décalé de la sidebar */
-    max-width: 560px;
-    margin: 0 auto;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    right: auto;
+    width: 560px;
     border-radius: 20px 20px 0 0;
+  }
+  .bh-resa-sheet.open {
+    transform: translateX(-50%) translateY(0);
   }
 }
 .bh-resa-sheet.open { transform: translateY(0); }
@@ -367,7 +379,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <div class="filters-bar">
   <div class="search-wrap">
     <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="searchInput" placeholder="Rechercher un voyageur, logement…" oninput="applyFilters()" style="padding-left:38px !important;"/>
+    <input type="text" id="searchInput" placeholder="Rechercher un voyageur…" oninput="applyFilters()" style="padding-left:38px !important;"/>
   </div>
   <select class="filter-select" id="propFilter" onchange="applyFilters()"><option value="">Tous les logements</option></select>
   <select class="filter-select" id="platFilter" onchange="applyFilters()">
@@ -389,6 +401,11 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <!-- TABLE (desktop) -->
 <div class="table-wrap">
   <table class="reservations-table" id="resaTable">
+    <colgroup>
+      <col class="col-logement"><col class="col-voyageur"><col class="col-reservele">
+      <col class="col-checkin"><col class="col-checkout"><col class="col-nuits">
+      <col class="col-pers"><col class="col-plateforme"><col class="col-montant">
+    </colgroup>
     <thead>
       <tr>
         <th onclick="sortBy('propertyName')" class="sorted" data-col="propertyName">Logement <span class="sort-icon">↕</span></th>
