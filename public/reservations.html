@@ -22,6 +22,11 @@
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 <style>
 /* Hide bh-layout back button on desktop */
+/* Masquer le bouton retour natif bh-layout (remplacé par .resa-back-btn) */
+html[data-theme-v3="1"] .header-actions .btn-ghost,
+html[data-theme-v3="1"] .header-actions .btn.btn-ghost {
+  display: none !important;
+}
 .resa-back-btn {
   display: inline-flex;
   align-items: center;
@@ -40,11 +45,13 @@
   white-space: nowrap;
   position: fixed;
   top: calc(40px + 13px);
-  right: 24px;
+  right: 28px;
   z-index: 200;
+  max-width: calc(100vw - 280px - 48px);
+  overflow: hidden;
 }
 .resa-back-btn:hover { background: #15624B; }
-.resa-back-btn i { font-size: 13px; }
+.resa-back-btn i { font-size: 13px; flex-shrink: 0; }
 @media (max-width: 1366px) { .resa-back-btn { display: none !important; } }
 
 :root {
@@ -122,9 +129,10 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 }
 .search-wrap { position: relative; flex: 1; min-width: 0; max-width: 220px; }
 .search-wrap input, .filter-select {
-  height: 36px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  height: 38px; border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--white); font-size: 13px; font-family: inherit; color: var(--text);
   padding: 0 12px; outline: none; width: 100%; box-sizing: border-box;
+  line-height: 38px; overflow: visible;
 }
 .filter-select:focus { outline: none !important; border-color: var(--border) !important; box-shadow: none !important; }
 .filter-select { cursor: pointer; flex: 1; min-width: 130px; }
