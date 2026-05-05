@@ -656,7 +656,7 @@ body {
 <!-- DESKTOP FILTERS -->
 <div class="filters-bar">
   <div class="search-wrap">
-    <i class="fas fa-search"></i>
+    <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--text-light,#9CA3AF);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="searchInput" placeholder="Rechercher un voyageur, logement…" oninput="applyFilters()"/>
   </div>
   <select class="filter-select" id="statusFilter" onchange="applyFilters()">
@@ -776,6 +776,7 @@ function normPlatform(r) {
   if (p.includes('airbnb')) return 'airbnb';
   if (p.includes('booking')) return 'booking';
   if (p.includes('abritel') || p.includes('vrbo') || p.includes('homeaway')) return 'abritel';
+  if (p === 'guest' || p.includes('boostinghost')) return 'guest';
   if (p === 'direct' || p === 'manuel' || p === 'manual' || !p) return 'direct';
   return 'other';
 }
