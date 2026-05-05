@@ -646,6 +646,8 @@ body {
   .main-content {
     padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
   }
+  /* Barre crème = stats-bar en transition — on force height:0 */
+  #statsBar { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
   /* Cacher le page-header desktop sur mobile */
   .page-header { display: none !important; }
 
@@ -677,7 +679,7 @@ body {
 }
 </style>
 </head>
-<body data-page="reservations" data-title="Réservations" data-theme-v3="1" data-theme="light">
+<body data-page="calendar" data-title="Réservations" data-theme-v3="1" data-theme="light">
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
 
