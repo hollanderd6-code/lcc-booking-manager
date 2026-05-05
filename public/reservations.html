@@ -3,11 +3,19 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Boostinghost – Réservations</title>
+<title>Réservations</title>
+<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- CSS plateforme -->
 <link href="/css/style.css" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
+<link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
+<link href="/css/menu-plus-fixes.css" rel="stylesheet"/>
+<link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/messages-badge-red.css">
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
@@ -220,14 +228,86 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .bh-modal-row-val { font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
 .bh-modal-amount-total { font-size: 20px; font-weight: 800; color: var(--green); padding: 14px; }
 </style>
+<style id="resa-mobile-master">
+
+@media (max-width: 1366px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; height: auto !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
+
+  /* 2. MOBILE HEADER */
+  #bhMobileHeader {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  #bhHeader, .main-header { display: none !important; }
+  /* Espace dû au bhHeader desktop — supprimer */
+  html[data-theme-v3="1"] #bhHeader { display: none !important; height: 0 !important; }
+
+  /* 3. PAGE CONTENT */
+  html[data-theme-v3="1"] .main-content {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: visible !important;
+  }
+
+  /* 4. CACHER DESKTOP */
+  .stats-bar, #statsBar { display: none !important; }
+  .filters-bar          { display: none !important; }
+  .table-wrap           { display: none !important; }
+  .pagination           { display: none !important; }
+
+  /* 5. MOBILE VIEW */
+  .mobile-view {
+    display: block !important;
+    padding: 8px 14px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* 6. BOTTOM TABS */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+
+</style>
 </head>
 <body data-page="calendar" data-title="Réservations" data-kicker="Planning" data-back-href="/app.html" data-back-label="Tableau de bord">
+
+<div id="bhMobileHeader"></div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<div id="bhSidebar"></div>
+<main class="main-content"><div id="bhHeader"></div>
+
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
 
 <div id="bhMobileHeader"></div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
+<div id="bhSidebar"></div>
 <main class="main-content"><div id="bhHeader" style="display:none;height:0;overflow:hidden;"></div>
 
 <!-- STATS -->
@@ -340,6 +420,10 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   </div>
   <div class="bh-resa-body" id="detailBody"></div>
 </div>
+
+</main>
+</div><!-- /app-container -->
+
 
 </main>
 </div><!-- /app-container -->
@@ -650,87 +734,12 @@ function closeDetail() {
 }
 
 loadData();
+
 </script>
 
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
-
-<style id="resa-mobile-master">
-@media (max-width: 1366px) {
-
-  /* 1. LAYOUT */
-  html, body { overflow-x: hidden !important; height: auto !important; }
-  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
-  html[data-theme-v3="1"] body { padding-top: 0 !important; }
-  html[data-theme-v3="1"] .sidebar,
-  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
-  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
-  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
-
-  /* 2. MOBILE HEADER */
-  #bhMobileHeader {
-    display: flex !important;
-    position: fixed !important;
-    top: 0 !important; left: 0 !important; right: 0 !important;
-    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    z-index: 1100 !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(12px) !important;
-    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
-  }
-  #bhHeader, .main-header { display: none !important; }
-  /* Espace dû au bhHeader desktop — supprimer */
-  html[data-theme-v3="1"] #bhHeader { display: none !important; height: 0 !important; }
-
-  /* 3. PAGE CONTENT */
-  html[data-theme-v3="1"] .main-content {
-    padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    height: auto !important;
-    min-height: 100vh !important;
-    overflow-y: visible !important;
-  }
-
-  /* 4. CACHER DESKTOP */
-  .stats-bar, #statsBar { display: none !important; }
-  .filters-bar          { display: none !important; }
-  .table-wrap           { display: none !important; }
-  .pagination           { display: none !important; }
-
-  /* 5. MOBILE VIEW */
-  .mobile-view {
-    display: block !important;
-    padding: 8px 14px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* 6. BOTTOM TABS */
-  .mobile-tabs {
-    position: fixed !important;
-    bottom: 0 !important; left: 0 !important; right: 0 !important;
-    z-index: 1000 !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(16px) !important;
-    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  }
-}
-</style>
-
-<script>
-/* Injecter le logo dans bhMobileHeader sur mobile — même pattern que deposits */
-(function() {
-  if (window.innerWidth > 1366) return;
-  var mh = document.getElementById('bhMobileHeader');
-  if (mh && !mh.querySelector('a')) {
-    mh.innerHTML = '<a href="/app.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;"><img src="/images/logo-bh.png" onerror="this.style.display=\'none\'" style="height:32px;"><span style="font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;color:#0D1117;">Boostinghost</span></a>';
-  }
-})();
-</script>
-
-<script src="/js/bh-onboarding-pages.js"></script>
 </body>
 </html>
