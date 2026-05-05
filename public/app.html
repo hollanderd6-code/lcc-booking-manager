@@ -2947,15 +2947,15 @@ window.closeChecklistsKpiModal = function() {
 <span class="kpi-sub" id="kpiCleaning48hSub">départs à nettoyer sous 48h</span>
 </div>
 </article>
-<!-- KPI 4 : Top risques du mois -->
+<!-- KPI 4 : Notes actives -->
 <article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
 <div class="kpi-header">
-<span class="kpi-label">Risques à venir</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(220,38,38,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-shield-alt" style="font-size:14px;color:#DC2626;line-height:1;display:inline-block;"></i></div>
+<span class="kpi-label">Notes</span>
+<div style="width:32px;height:32px;border-radius:9px;background:rgba(239,68,68,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-sticky-note" style="font-size:14px;color:#EF4444;line-height:1;display:inline-block;"></i></div>
 </div>
 <div class="kpi-main">
 <span class="kpi-value" id="kpiTopRisksValue">0</span>
-<span class="kpi-sub" id="kpiTopRisksSub">0 rouge • 0 orange</span>
+<span class="kpi-sub" id="kpiTopRisksSub">réservations avec note</span>
 </div>
 </article>
 <!-- KPI 5 : Taux d'occupation -->
@@ -5482,6 +5482,43 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
       movesCard.onclick = handler;
     }
 
+    const risksCard = document.getElementById('kpiTopRisksCard');
+    if (risksCard && !risksCard.dataset.bound2) {
+      risksCard.dataset.bound2 = '1';
+      const notesHandler = function() {
+        const notes = window.__bhKpiNotes || [];
+        ensureGenericModal('kpiNotesModal', '📝 Notes actives');
+        const modalContent = document.getElementById('kpiNotesModalContent');
+        if (!modalContent) return;
+        if (notes.length === 0) {
+          modalContent.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:14px;">Aucune note active</div>';
+        } else {
+          const sorted = [...notes].sort((a, b) => {
+            const da = new Date(a.endDate || a.end || 0);
+            const db = new Date(b.endDate || b.end || 0);
+            return da - db;
+          });
+          modalContent.innerHTML = sorted.map(r => {
+            const propName = (r.property && r.property.internalName) || (r.property && r.property.name) || r.propertyId || '';
+            const guest = r.guestName || r.guest_display_name || 'Voyageur';
+            const endStr = r.endDate ? new Date(r.endDate).toLocaleDateString('fr-FR') : '';
+            return \`<div style="background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #EF4444;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-size:13px;font-weight:700;color:#1A7A5E;">\${propName}</span>
+                <span style="font-size:11px;color:#9CA3AF;">jusqu'au \${endStr}</span>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:#0D1117;margin-bottom:4px;">\${guest}</div>
+              <div style="font-size:13px;color:#EF4444;line-height:1.4;">\${r.notes}</div>
+            </div>\`;
+          }).join('');
+        }
+        const modal = document.getElementById('kpiNotesModal');
+        if (modal) { modal.style.display = 'flex'; window.hideFab(); }
+      };
+      risksCard.addEventListener('click', notesHandler);
+      risksCard.addEventListener('touchstart', notesHandler, { passive: true });
+    }
+
     const cleaningCard = document.getElementById('kpiCleaning48hCard');
     if (cleaningCard && !cleaningCard.dataset.bound2) {
       cleaningCard.dataset.bound2 = '1';
@@ -5524,42 +5561,36 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
 
     console.log('📅 Réservations du mois (à partir d\'aujourd\'hui):', monthRes.length);
 
-    const scored = monthRes.filter(r => typeof r.riskScore === 'number');
-    console.log('💯 Réservations avec score:', scored.length, scored);
-    
-    scored.sort((a, b) => (b.riskScore - a.riskScore));
-    const top5 = scored.slice(0, 5);
-    
-    console.log('🔝 Top 5:', top5);
+    // ── KPI Notes : réservations avec note, valides jusqu'à end_date + 1 jour ──
+    const nowNotes = new Date();
+    const withNotes = (window.calendarState && window.calendarState.bookings
+      ? window.calendarState.bookings
+      : (window.LCC_RESERVATIONS || [])
+    ).filter(r => {
+      if (!r.notes || !r.notes.trim()) return false;
+      // Expiration : end_date + 1 jour à 23h59
+      const endRaw = r.endDate || r.end || r.end_date || '';
+      if (!endRaw) return true;
+      const endD = new Date(endRaw);
+      endD.setDate(endD.getDate() + 1);
+      endD.setHours(23, 59, 59, 999);
+      return nowNotes <= endD;
+    });
 
-    const criticalCount = scored.filter(r => r.riskLevel === 'critical').length;
-    const redCount = scored.filter(r => r.riskLevel === 'red').length;
-    const orangeCount = scored.filter(r => r.riskLevel === 'orange').length;
+    window.__bhKpiNotes = withNotes; // stocker pour le modal
 
     const valEl = document.getElementById('kpiTopRisksValue');
     const subEl = document.getElementById('kpiTopRisksSub');
     if (valEl) {
-      valEl.textContent = top5.length;
-      
-      // Appliquer la couleur en fonction du nombre de risques
-      let color = '#10B981'; // Vert par défaut (0 risque = tout va bien)
-      if (top5.length >= 3) color = '#EF4444'; // Rouge pour 3+ risques
-      else if (top5.length >= 1) color = '#F59E0B'; // Orange pour 1-2 risques
-      
-      valEl.style.color = color;
+      valEl.textContent = withNotes.length;
+      valEl.style.color = withNotes.length > 0 ? '#EF4444' : '#10B981';
       valEl.style.fontWeight = '700';
     }
-    
-    let subText = '';
-    if (criticalCount > 0) subText += `${criticalCount} critique${criticalCount > 1 ? 's' : ''} • `;
-    if (redCount > 0) subText += `${redCount} rouge${redCount > 1 ? 's' : ''} • `;
-    if (orangeCount > 0) subText += `${orangeCount} orange${orangeCount > 1 ? 's' : ''}`;
-    if (!subText) subText = 'Aucun risque détecté';
-    else subText = subText.replace(/ • $/, '');
-    
-    if (subEl) subEl.textContent = subText;
-
-    // ✅ onclick géré dans loadDataAndUpdateKpis avec __bhCalendarState
+    if (subEl) {
+      subEl.textContent = withNotes.length === 0
+        ? 'Aucune note active'
+        : `${withNotes.length} réservation${withNotes.length > 1 ? 's' : ''} avec note`;
+    }
   }
 
   // ---------- Data loading + binding ----------
