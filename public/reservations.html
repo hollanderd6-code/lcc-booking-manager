@@ -605,16 +605,37 @@ body {
   .table-wrap { display: none; }
   .mobile-view { display: block; }
   .pagination { display: none; }
-  /* Cacher le sidebar sur mobile — géré par bh-layout.js */
   #bhSidebar { display: none !important; }
   .app-container { display: block !important; }
-  .main-content { margin-left: 0 !important; }
-  /* Safe area bottom pour la bottom nav */
   .mobile-view { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
 
 @media (max-width: 1024px) {
   .stats-bar { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+<!-- Override bh-theme-v3.css sur mobile -->
+<style id="resa-mobile-override">
+@media (max-width: 768px) {
+  html[data-theme-v3="1"] .main-content,
+  html[data-theme-v3="1"] .app-container > .main-content {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    padding-top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    display: block !important;
+  }
+  html[data-theme-v3="1"] .app-container {
+    display: block !important;
+    flex-direction: unset !important;
+  }
+  html[data-theme-v3="1"] #bhSidebar,
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] aside.sidebar {
+    display: none !important;
+  }
 }
 </style>
 </head>
@@ -745,6 +766,40 @@ body {
 <script src="/js/auth-fetch.js"></script>
 <script>
 // ─── CONFIG ───────────────────────────────
+// ── Override mobile : écraser bh-theme-v3.css ──
+(function() {
+  function applyMobileOverride() {
+    if (window.innerWidth > 768) return;
+    var el = document.getElementById('resa-mobile-js-override');
+    if (!el) {
+      el = document.createElement('style');
+      el.id = 'resa-mobile-js-override';
+      document.head.appendChild(el);
+    }
+    el.textContent = [
+      'html[data-theme-v3="1"] .main-content,',
+      'html[data-theme-v3="1"] .app-container > .main-content {',
+      '  margin-left: 0 !important;',
+      '  padding-left: 0 !important;',
+      '  padding-top: 0 !important;',
+      '  width: 100% !important;',
+      '  max-width: 100% !important;',
+      '  flex: none !important;',
+      '  display: block !important;',
+      '}',
+      'html[data-theme-v3="1"] .app-container {',
+      '  display: block !important;',
+      '}',
+      'html[data-theme-v3="1"] #bhSidebar,',
+      'html[data-theme-v3="1"] aside.sidebar,',
+      'html[data-theme-v3="1"] .sidebar { display: none !important; }'
+    ].join('\n');
+  }
+  applyMobileOverride();
+  document.addEventListener('DOMContentLoaded', applyMobileOverride);
+  window.addEventListener('resize', applyMobileOverride);
+})();
+
 const API_URL = (function() {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
