@@ -679,6 +679,36 @@ html[data-theme-v3="1"] .mobile-header {
   }
 }
 </style>
+<script>
+(function() {
+  var p = document.createElement('div');
+  p.id = 'bh-debug';
+  p.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(0,0,0,0.88);color:#0f0;font-family:monospace;font-size:10px;padding:6px 8px;max-height:45vh;overflow-y:auto;pointer-events:none;';
+  document.addEventListener('DOMContentLoaded', function() { document.body.appendChild(p); });
+  
+  function log(msg, color) {
+    var line = document.createElement('div');
+    line.style.color = color || '#0f0';
+    line.textContent = new Date().toISOString().substr(11,8) + ' ' + msg;
+    p.appendChild(line);
+  }
+  
+  log('START w=' + window.innerWidth);
+  log('token=' + (localStorage.getItem('lcc_token') ? 'OK' : 'MISSING'));
+  
+  window.addEventListener('load', function() {
+    log('WINDOW_LOAD');
+    setTimeout(function() {
+      var mh = document.querySelector('.main-header');
+      log('main-header: ' + (mh ? 'h=' + mh.offsetHeight + ' display=' + getComputedStyle(mh).display : 'ABSENT'));
+      var mv = document.querySelector('.mobile-view');
+      log('mobile-view: ' + (mv ? 'h=' + mv.offsetHeight + ' display=' + getComputedStyle(mv).display + ' top=' + mv.getBoundingClientRect().top : 'ABSENT'));
+      var mc = document.getElementById('mobileCards');
+      log('mobileCards len=' + (mc ? mc.innerHTML.length : 'N/A'));
+    }, 200);
+  });
+})();
+</script>
 </head>
 <body data-page="reservations" data-title="Réservations" data-kicker="Réservations" data-subtitle="Gérez toutes vos réservations" data-back-href="/app.html" data-back-label="Retour au dashboard" data-theme-v3="1" data-theme="light">
 
@@ -941,9 +971,40 @@ async function loadData() {
     applyFilters();
     document.getElementById('pageLoader').style.opacity = '0';
     setTimeout(() => document.getElementById('pageLoader').style.display = 'none', 300);
+    
+    // DEBUG
+    setTimeout(() => {
+      var mc = document.getElementById('mobileCards');
+      var mv = document.querySelector('.mobile-view');
+      var dbg = document.getElementById('bh-debug');
+      if (dbg) {
+        var line = document.createElement('div');
+        line.style.color = '#ff0';
+        line.textContent = 'AFTER_FETCH: allResa=' + allReservations.length + ' filtered=' + filtered.length + ' cards_len=' + (mc ? mc.innerHTML.length : 'N/A') + ' mv_h=' + (mv ? mv.offsetHeight : 'N/A') + ' mv_display=' + (mv ? getComputedStyle(mv).display : 'N/A');
+        dbg.appendChild(line);
+        
+        // Vérifier le padding-top du main-content
+        var mainc = document.querySelector('.main-content');
+        if (mainc) {
+          var cs = getComputedStyle(mainc);
+          var line2 = document.createElement('div');
+          line2.style.color = '#f80';
+          line2.textContent = 'main-content: pt=' + cs.paddingTop + ' mt=' + cs.marginTop + ' h=' + mainc.offsetHeight + ' top=' + mainc.getBoundingClientRect().top;
+          dbg.appendChild(line2);
+        }
+      }
+    }, 1000);
+    
   } catch(e) {
     console.error(e);
     document.getElementById('pageLoader').style.display = 'none';
+    var dbg = document.getElementById('bh-debug');
+    if (dbg) {
+      var line = document.createElement('div');
+      line.style.color = '#f00';
+      line.textContent = 'FETCH_ERROR: ' + e.message;
+      dbg.appendChild(line);
+    }
   }
 }
 
@@ -1384,54 +1445,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </div><!-- /app-container -->
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
-
-<script>
-// ─── DEBUG PANEL MOBILE ─────────────────────────────────────
-(function() {
-  function createPanel() {
-    var p = document.createElement('div');
-    p.id = 'bh-debug';
-    p.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font-family:monospace;font-size:10px;padding:6px 8px;max-height:40vh;overflow-y:auto;';
-    document.body.appendChild(p);
-    return p;
-  }
-  var panel = createPanel();
-  
-  function log(msg) {
-    var line = document.createElement('div');
-    line.textContent = new Date().toISOString().substr(11,8) + ' ' + msg;
-    panel.appendChild(line);
-    panel.scrollTop = panel.scrollHeight;
-    console.log('[DEBUG]', msg);
-  }
-  
-  log('START w=' + window.innerWidth + ' h=' + window.innerHeight);
-  log('token=' + (localStorage.getItem('lcc_token') ? 'OK' : 'MISSING'));
-  
-  window.addEventListener('load', function() {
-    log('LOAD done');
-    var mh = document.querySelector('.main-header');
-    log('main-header: ' + (mh ? 'EXISTS h=' + mh.offsetHeight + ' display=' + getComputedStyle(mh).display : 'ABSENT'));
-    var mv = document.querySelector('.mobile-view');
-    log('mobile-view: ' + (mv ? 'EXISTS h=' + mv.offsetHeight + ' display=' + getComputedStyle(mv).display : 'ABSENT'));
-    var mc = document.getElementById('mobileCards');
-    log('mobileCards: ' + (mc ? 'EXISTS innerHTML.len=' + mc.innerHTML.length : 'ABSENT'));
-    var tabs = document.querySelector('.mobile-tabs');
-    log('mobile-tabs: ' + (tabs ? 'EXISTS display=' + getComputedStyle(tabs).display : 'ABSENT'));
-    var body = document.body;
-    log('body h=' + body.offsetHeight + ' scrollH=' + document.documentElement.scrollHeight);
-    log('main-content h=' + (document.querySelector('.main-content') ? document.querySelector('.main-content').offsetHeight : 'N/A'));
-  });
-  
-  // Intercepter les redirections
-  var origHref = Object.getOwnPropertyDescriptor(window.location, 'href');
-  var origAssign = window.location.assign;
-  window.location.assign = function(url) { log('REDIRECT assign: ' + url); };
-  
-  // Détecter si la page devient invisible
-  document.addEventListener('visibilitychange', function() {
-    log('visibility: ' + document.visibilityState);
-  });
-})();
-</script>
 </body>
