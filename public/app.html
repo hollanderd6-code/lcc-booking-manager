@@ -5972,11 +5972,7 @@ try {
 
     // Repositionner les blocs avec vraies mesures DOM (fix alignement PC)
 
-    // Scroll into view on mobile
-    setTimeout(function() {
-      var w2 = getWrap();
-      if (w2) w2.scrollIntoView({ behavior:'smooth', block:'start' });
-    }, 60);
+    // scrollIntoView supprimé — ne plus forcer le scroll vers le calendrier
 
     // Apply pricing after month render
     if (state.view === 'month') {
