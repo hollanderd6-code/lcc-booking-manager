@@ -614,27 +614,50 @@ body {
   .stats-bar { grid-template-columns: repeat(2,1fr); }
 }
 </style>
-<!-- Override bh-theme-v3.css sur mobile -->
+<!-- Override mobile — inspiré de factures.html -->
 <style id="resa-mobile-override">
-@media (max-width: 768px) {
-  html[data-theme-v3="1"] .main-content,
-  html[data-theme-v3="1"] .app-container > .main-content {
-    margin-left: 0 !important;
-    padding-left: 0 !important;
-    padding-top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    flex: none !important;
-    display: block !important;
-  }
-  html[data-theme-v3="1"] .app-container {
-    display: block !important;
-    flex-direction: unset !important;
-  }
-  html[data-theme-v3="1"] #bhSidebar,
+@media (max-width: 1366px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
   html[data-theme-v3="1"] .sidebar,
-  html[data-theme-v3="1"] aside.sidebar {
-    display: none !important;
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; display: block !important; }
+  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; display: block !important; width: 100% !important; }
+
+  /* 2. MOBILE HEADER */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  .mobile-menu-btn, #mobileMenuBtn, #bhHeader { display: none !important; }
+
+  /* 3. PAGE CONTENT */
+  .main-content {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* 4. STATS BAR */
+  .stats-bar { display: none !important; }
+  .filters-bar { display: none !important; }
+  .table-wrap { display: none !important; }
+  .pagination { display: none !important; }
+
+  /* 5. VUE MOBILE */
+  .mobile-view { 
+    display: block !important;
+    padding-top: 8px !important;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 </style>
@@ -766,40 +789,6 @@ body {
 <script src="/js/auth-fetch.js"></script>
 <script>
 // ─── CONFIG ───────────────────────────────
-// ── Override mobile : écraser bh-theme-v3.css ──
-(function() {
-  function applyMobileOverride() {
-    if (window.innerWidth > 768) return;
-    var el = document.getElementById('resa-mobile-js-override');
-    if (!el) {
-      el = document.createElement('style');
-      el.id = 'resa-mobile-js-override';
-      document.head.appendChild(el);
-    }
-    el.textContent = [
-      'html[data-theme-v3="1"] .main-content,',
-      'html[data-theme-v3="1"] .app-container > .main-content {',
-      '  margin-left: 0 !important;',
-      '  padding-left: 0 !important;',
-      '  padding-top: 0 !important;',
-      '  width: 100% !important;',
-      '  max-width: 100% !important;',
-      '  flex: none !important;',
-      '  display: block !important;',
-      '}',
-      'html[data-theme-v3="1"] .app-container {',
-      '  display: block !important;',
-      '}',
-      'html[data-theme-v3="1"] #bhSidebar,',
-      'html[data-theme-v3="1"] aside.sidebar,',
-      'html[data-theme-v3="1"] .sidebar { display: none !important; }'
-    ].join('\n');
-  }
-  applyMobileOverride();
-  document.addEventListener('DOMContentLoaded', applyMobileOverride);
-  window.addEventListener('resize', applyMobileOverride);
-})();
-
 const API_URL = (function() {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
