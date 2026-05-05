@@ -313,6 +313,11 @@ html[data-theme-v3="1"] header.main-header {
   html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; }
 }
 html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
+/* Onglet Réservations actif en vert */
+body[data-page="reservations"] .tab-btn[data-tab="calendar"] {
+  color: #1A7A5E !important;
+  opacity: 1 !important;
+}
 </style>
 
 <style id="resa-mobile-master">
@@ -378,23 +383,17 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 
 </style>
 </head>
-<body data-page="calendar" data-title="Réservations" data-kicker="Planning" data-back-href="/app.html" data-back-label="Tableau de bord">
+<body data-page="reservations" data-title="Réservations" data-kicker="Planning" data-back-href="/app.html" data-back-label="Tableau de bord">
 
-<div id="bhMobileHeader"></div>
+<div id="bhMobileHeader" class="mobile-header"></div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
 <div id="bhSidebar"></div>
 <main class="main-content"><div id="bhHeader"></div>
 
-
 <button class="resa-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
-
-<div id="bhMobileHeader"></div>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-<div class="app-container">
-<div id="bhSidebar">
 
 <!-- FILTERS (desktop) -->
 <div class="filters-bar">
@@ -457,23 +456,29 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <div class="mobile-view" id="mobileView">
   <div class="mobile-search">
     <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()" style="padding-left:36px !important;"/>
+    <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()"/>
   </div>
   <div style="display:flex;gap:8px;padding:0 0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
-    <select class="filter-select" id="mobileStatusFilter" onchange="applyFilters()" style="flex-shrink:0;height:34px;font-size:12px;border-radius:8px;border:1px solid #E5E7EB;padding:0 8px;background:white;min-width:120px;">
+    <select id="mobileStatusFilter" onchange="applyFilters()" style="flex-shrink:0;height:44px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 24px 4px 12px;background:white;min-width:130px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
       <option value="">Tous statuts</option>
       <option value="confirmed">Confirmé</option>
-      <option value="pending">En attente</option>
+      <option value="modified">Modifié</option>
       <option value="cancelled">Annulé</option>
       <option value="completed">Terminé</option>
     </select>
-    <select class="filter-select" id="mobilePlatformFilter" onchange="applyFilters()" style="flex-shrink:0;height:34px;font-size:12px;border-radius:8px;border:1px solid #E5E7EB;padding:0 8px;background:white;min-width:130px;">
+    <select id="mobilePlatformFilter" onchange="applyFilters()" style="flex-shrink:0;height:44px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 24px 4px 12px;background:white;min-width:150px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
       <option value="">Toutes plateformes</option>
       <option value="airbnb">Airbnb</option>
       <option value="booking">Booking.com</option>
       <option value="direct">Direct</option>
       <option value="abritel">Abritel</option>
       <option value="guest">Boostinghost Guest</option>
+    </select>
+    <select id="mobilePeriodFilter" onchange="applyFilters()" style="flex-shrink:0;height:44px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 24px 4px 12px;background:white;min-width:130px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
+      <option value="">Toute période</option>
+      <option value="current">En cours</option>
+      <option value="upcoming">À venir</option>
+      <option value="past">Passées</option>
     </select>
   </div>
   <div id="mobileCards"></div>
@@ -489,10 +494,6 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   </div>
   <div class="bh-resa-body" id="detailBody"></div>
 </div>
-
-</main>
-</div><!-- /app-container -->
-
 
 </main>
 </div><!-- /app-container -->
@@ -595,11 +596,12 @@ async function loadData() {
 function applyFilters() {
   const mobileStatus = document.getElementById('mobileStatusFilter')?.value || '';
   const mobilePlatform = document.getElementById('mobilePlatformFilter')?.value || '';
+  const mobilePeriod = document.getElementById('mobilePeriodFilter')?.value || '';
   const q      = (document.getElementById('searchInput')?.value || document.getElementById('mobileSearch')?.value || '').toLowerCase().trim();
   const status = document.getElementById('statusFilter')?.value || mobileStatus || '';
   const prop   = document.getElementById('propFilter')?.value   || '';
   const plat   = document.getElementById('platFilter')?.value   || mobilePlatform || '';
-  const period = document.getElementById('periodFilter')?.value || '';
+  const period = document.getElementById('periodFilter')?.value || mobilePeriod || '';
   const now    = new Date();
 
   filtered = allReservations.filter(r => {
