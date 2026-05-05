@@ -7184,6 +7184,32 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
   }
 });
 
+// ── PATCH /api/reservations/:uid/note — Sauvegarder uniquement la note d'une réservation OTA ──
+app.patch('/api/reservations/:uid/note', authenticateToken, async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { notes } = req.body;
+    const userId = req.user.id;
+
+    const result = await pool.query(
+      `UPDATE reservations SET notes = $1, updated_at = NOW()
+       WHERE (uid = $2 OR channex_booking_id = $2) AND user_id = $3
+       RETURNING uid, notes`,
+      [notes || '', uid, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Réservation non trouvée' });
+    }
+
+    console.log('✅ Note mise à jour pour réservation', uid);
+    res.json({ success: true, uid: result.rows[0].uid, notes: result.rows[0].notes });
+  } catch (e) {
+    console.error('❌ Erreur PATCH /api/reservations/:uid/note:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 // ============================================
 // 🧪 ROUTE DE TEST - FORMAT IDENTIQUE AU CHAT
