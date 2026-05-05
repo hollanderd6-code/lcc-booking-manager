@@ -1957,6 +1957,9 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     document.getElementById('msgsChatHeader').style.display = 'flex';
     document.getElementById('chatMessages').style.display = 'flex';
     document.getElementById('chatInputArea').style.display = 'flex';
+    // Sur mobile : ajouter chat-open sur le split pour déclencher le slide
+    var split = document.querySelector('.msgs-split');
+    if (split) split.classList.add('chat-open');
 
     // Avatar: lettre + couleur selon la plateforme réelle
     var avatarEl = document.getElementById('msgsChatAvatar');
