@@ -21,7 +21,32 @@
 <link rel="stylesheet" href="/css/messages-badge-desktop.css">
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 <style>
-/* ─── VARIABLES ─── */
+/* Hide bh-layout back button on desktop */
+.resa-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 12px;
+  background: #1A7A5E;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+  position: fixed;
+  top: calc(40px + 13px);
+  right: 24px;
+  z-index: 200;
+}
+.resa-back-btn:hover { background: #15624B; }
+.resa-back-btn i { font-size: 13px; }
+@media (max-width: 1366px) { .resa-back-btn { display: none !important; } }
+
 :root {
   --green: #1A7A5E;
   --green-light: rgba(26,122,94,.08);
@@ -102,7 +127,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   padding: 0 12px; outline: none; width: 100%; box-sizing: border-box;
 }
 .filter-select:focus { outline: none !important; border-color: var(--border) !important; box-shadow: none !important; }
-.filter-select { cursor: pointer; flex: 1; min-width: 0; }
+.filter-select { cursor: pointer; flex: 1; min-width: 130px; }
 
 /* ─── TABLE ─── */
 .table-wrap { padding: 0 28px 28px; overflow-x: auto; }
@@ -330,6 +355,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <main class="main-content"><div id="bhHeader"></div>
 
 
+<button class="resa-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
+
 <div id="pageLoader"><div class="loader-spinner"></div></div>
 
 <div id="bhMobileHeader"></div>
@@ -338,6 +365,25 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <div id="bhSidebar">
 
 <!-- STATS -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-calendar-check"></i></div>
+    <div><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total réservations</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
+    <div><div class="stat-value" id="statUpcoming">—</div><div class="stat-label">À venir</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon amber"><i class="fas fa-hourglass-half"></i></div>
+    <div><div class="stat-value" id="statPending">—</div><div class="stat-label">En attente</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-euro-sign"></i></div>
+    <div><div class="stat-value" id="statRevenue">—</div><div class="stat-label">Revenus totaux</div></div>
+  </div>
+</div>
+
 <!-- FILTERS (desktop) -->
 <div class="filters-bar">
   <div class="search-wrap">
