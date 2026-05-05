@@ -14,7 +14,7 @@
 
   const ROUTES = {
     dashboard: '/app.html',
-    calendar: '/app.html#calendar',
+    calendar: '/reservations.html',
     messages: '/messages.html',
     'smart-locks': '/smart-locks.html',
     properties: '/settings.html',
