@@ -22280,6 +22280,33 @@ app.get('/api/auth/verify', authenticateAny, async (req, res) => {
     });
   }
 });
+
+// ============================================
+// 🌍 ENDPOINT TRADUCTION DEEPL (pour le chat owner)
+// ============================================
+app.post('/api/translate', authenticateAny, async (req, res) => {
+  try {
+    const { text, target_lang } = req.body;
+    if (!text || !target_lang) return res.status(400).json({ error: 'text et target_lang requis' });
+
+    const apiKey = process.env.DEEPL_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: 'DeepL non configuré' });
+
+    const axios = require('axios');
+    const response = await axios.post(
+      'https://api-free.deepl.com/v2/translate',
+      { text: [text], target_lang, preserve_formatting: true },
+      { headers: { 'Authorization': `DeepL-Auth-Key ${apiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
+    );
+    const translated = response.data?.translations?.[0]?.text;
+    if (!translated) return res.status(500).json({ error: 'Pas de traduction retournée' });
+    res.json({ translated });
+  } catch (err) {
+    console.error('❌ [/api/translate]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================
 // 🤖 ENDPOINT ENVOI MESSAGE AVEC TRAITEMENT AUTO
 // ============================================
