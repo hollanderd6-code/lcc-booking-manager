@@ -1,21 +1,22 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme-v3="1">
+<html data-theme="light" lang="fr" data-theme-v3="1">
 <head>
 <meta charset="utf-8"/>
-<meta content="no-store, no-cache, must-revalidate, max-age=0" http-equiv="Cache-Control"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Réservations</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Boostinghost – Réservations</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=3" rel="stylesheet"/>
+<link href="/css/style.css" rel="stylesheet"/>
 <link href="/css/bh-theme-v3.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/><link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/><link href="/css/menu-plus-fixes.css" rel="stylesheet"/><link href="/css/menu-active-button.css" rel="stylesheet"/>
 <link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/messages-badge-red.css">
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
 <style>
+/* ─── VARIABLES ─── */
 :root {
   --green: #1A7A5E;
   --green-light: rgba(26,122,94,.08);
-  --green-mid: rgba(26,122,94,.15);
   --cream: #F5F2EC;
   --cream-dark: #EDE9E1;
   --text: #1A1F2E;
@@ -24,728 +25,236 @@
   --border: rgba(0,0,0,.07);
   --white: #fff;
   --shadow-sm: 0 1px 4px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.10);
   --radius: 14px;
   --radius-sm: 8px;
-  --airbnb: #FF5A5F;
-  --booking: #003580;
-  --direct: #1A7A5E;
-  --abritel: #0096D6;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-serif; }
 
-body {
-  font-family: 'Inter', 'DM Sans', sans-serif;
-  background: var(--cream);
-  color: var(--text);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Adapter au layout bh avec sidebar */
-.app-container {
-  min-height: 100vh;
-}
-.main-content {
-  min-height: 100vh;
-  min-width: 0;
-}
-@media (min-width: 1024px) {
-  .app-container {
-    display: flex;
-  }
-  .main-content {
-    flex: 1;
-    margin-left: 260px;
-  }
-}
-
-/* ─── LOADING ─── */
+/* ─── LOADER ─── */
 #pageLoader {
   position: fixed; inset: 0; background: var(--cream);
   display: flex; align-items: center; justify-content: center;
   z-index: 9999; transition: opacity .3s;
 }
 .loader-spinner {
-  width: 40px; height: 40px;
-  border: 3px solid var(--green-mid);
+  width: 36px; height: 36px;
+  border: 3px solid rgba(26,122,94,.2);
   border-top-color: var(--green);
   border-radius: 50%;
   animation: spin .8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* header injected by bh-layout.js */
-
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 9px 16px; border-radius: var(--radius-sm);
-  font-size: 13px; font-weight: 600;
-  border: none; cursor: pointer;
-  font-family: inherit; transition: all .15s;
-  white-space: nowrap;
+/* ─── DESKTOP LAYOUT ─── */
+.app-container { display: block; }
+@media (min-width: 1025px) {
+  .app-container { display: flex; }
+  .main-content { flex: 1; margin-left: 260px; }
 }
-.btn-primary { background: var(--green); color: white; }
-.btn-primary:hover { background: #155f48; }
-.btn-secondary { background: var(--cream); color: var(--text); border: 1px solid var(--border); }
-.btn-secondary:hover { background: var(--cream-dark); }
+
+.main-content { min-height: 100vh; }
+
+/* ─── PAGE CONTENT (desktop) ─── */
+.page-content {
+  padding: 24px 28px 40px;
+  max-width: 1400px;
+}
 
 /* ─── STATS BAR ─── */
 .stats-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  padding: 20px 24px;
+  padding: 20px 28px 0;
 }
-
+@media (max-width: 1024px) { .stats-bar { grid-template-columns: repeat(2,1fr); } }
 .stat-card {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 16px;
+  background: var(--white); border-radius: var(--radius);
+  padding: 16px; display: flex; align-items: center; gap: 12px;
   box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
-
-.stat-icon {
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  font-size: 16px;
-}
-
-.stat-icon.green { background: rgba(26,122,94,.1); color: var(--green); }
-.stat-icon.blue  { background: rgba(59,130,246,.1); color: #3b82f6; }
-.stat-icon.amber { background: rgba(245,158,11,.1);  color: #f59e0b; }
-.stat-icon.red   { background: rgba(239,68,68,.1);   color: #ef4444; }
-
-.stat-info { min-width: 0; }
-.stat-value { font-size: 22px; font-weight: 800; line-height: 1; }
+.stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.stat-icon.green { background: var(--green-light); color: var(--green); }
+.stat-icon.blue  { background: rgba(59,130,246,.08); color: #3B82F6; }
+.stat-icon.amber { background: rgba(245,158,11,.08); color: #F59E0B; }
+.stat-value { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
 .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; font-weight: 500; }
 
-/* ─── FILTERS ─── */
+/* ─── FILTERS BAR ─── */
 .filters-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 24px 16px;
-  flex-wrap: wrap;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 16px 28px;
 }
-
-.search-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 200px;
-  max-width: 340px;
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap input, .filter-select {
+  height: 36px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--white); font-size: 13px; font-family: inherit; color: var(--text);
+  padding: 0 12px; outline: none;
 }
+.search-wrap input { width: 100%; box-sizing: border-box; }
+.filter-select { cursor: pointer; }
+.results-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 
-.search-wrap i {
-  position: absolute; left: 12px; top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-light); font-size: 13px;
-}
-
-.search-wrap input {
-  width: 100%;
-  padding: 9px 12px 9px 38px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 13px; font-family: inherit;
-  background: var(--white);
-  color: var(--text);
-  transition: border-color .15s;
-}
-
-.search-wrap input:focus {
-  outline: none;
-  border-color: var(--green);
-}
-
-.filter-select {
-  padding: 9px 32px 9px 12px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 13px; font-family: inherit;
-  background: var(--white);
-  color: var(--text);
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  transition: border-color .15s;
-}
-
-.filter-select:focus { outline: none; border-color: var(--green); }
-
-.results-count {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-/* ─── TABLE (Desktop) ─── */
-.table-wrap {
-  padding: 0 24px 24px;
-}
-
-.reservations-table {
-  width: 100%;
-  background: var(--white);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
-}
-
+/* ─── TABLE ─── */
+.table-wrap { padding: 0 28px 28px; overflow-x: auto; }
+.reservations-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .reservations-table thead th {
-  padding: 12px 16px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  background: var(--cream);
-  border-bottom: 1.5px solid var(--cream-dark);
-  white-space: nowrap;
-  cursor: pointer;
+  text-align: left; padding: 10px 12px; font-weight: 600; font-size: 11px;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--border); cursor: pointer; white-space: nowrap;
   user-select: none;
 }
-
-.reservations-table thead th:hover { color: var(--green); }
 .reservations-table thead th.sorted { color: var(--green); }
-.reservations-table thead th .sort-icon { margin-left: 4px; opacity: .5; font-size: 10px; }
-.reservations-table thead th.sorted .sort-icon { opacity: 1; }
+.reservations-table tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; cursor: pointer; }
+.reservations-table tbody tr:hover { background: rgba(26,122,94,.03); }
+.reservations-table tbody td { padding: 12px; vertical-align: middle; }
+.sort-icon { margin-left: 4px; opacity: .5; font-size: 10px; }
 
-.reservations-table tbody tr {
-  border-bottom: 1px solid var(--cream);
-  transition: background .12s;
-  cursor: pointer;
-}
-
-.reservations-table tbody tr:last-child { border-bottom: none; }
-.reservations-table tbody tr:hover { background: var(--cream); }
-
-.reservations-table tbody td {
-  padding: 14px 16px;
-  font-size: 13px;
-  vertical-align: middle;
-}
-
-.prop-name {
-  font-weight: 600;
-  color: var(--text);
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.guest-name {
-  font-weight: 600;
-  max-width: 160px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.date-cell {
-  color: var(--text-muted);
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.nights-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 8px;
-  background: var(--cream);
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.pers-cell {
-  display: flex; align-items: center; gap: 4px;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-/* Platform badges */
+/* ─── BADGES ─── */
 .plt-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
 }
-.plt-airbnb  { background: rgba(255,90,95,.1);  color: var(--airbnb); }
-.plt-booking { background: rgba(0,53,128,.1);   color: var(--booking); }
-.plt-direct  { background: rgba(26,122,94,.1);  color: var(--green); }
-.plt-abritel { background: rgba(0,150,214,.1);  color: var(--abritel); }
-.plt-other   { background: var(--cream);        color: var(--text-muted); }
+.plt-airbnb  { background: #fff0f0; color: #E00B41; }
+.plt-booking { background: #f0f4ff; color: #003580; }
+.plt-direct  { background: #f0fdf4; color: #16a34a; }
+.plt-abritel { background: #fff7ed; color: #C2410C; }
+.plt-guest   { background: rgba(26,122,94,.1); color: var(--green); }
+.plt-other   { background: #f3f4f6; color: #374151; }
 
-/* Status badges */
 .status-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 10px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
 }
-.status-confirmed    { background: rgba(16,185,129,.12); color: #059669; }
-.status-cancelled    { background: rgba(239,68,68,.1);   color: #dc2626; }
-.status-request      { background: rgba(245,158,11,.12); color: #d97706; }
-.status-no_show      { background: rgba(107,114,128,.1); color: #6b7280; }
-.status-modified     { background: rgba(99,102,241,.1);  color: #6366f1; }
-.status-non_confirmed{ background: rgba(245,158,11,.12); color: #d97706; }
+.status-confirmed    { background: #f0fdf4; color: #16a34a; }
+.status-cancelled    { background: #fef2f2; color: #dc2626; }
+.status-modified     { background: #fffbeb; color: #d97706; }
+.status-no_show      { background: #faf5ff; color: #7c3aed; }
+.status-request      { background: #eff6ff; color: #2563eb; }
+.status-non_confirmed{ background: #eff6ff; color: #2563eb; }
+.status-completed    { background: #f3f4f6; color: #374151; }
 
-/* Note indicator */
-.note-dot {
-  display: inline-block;
-  width: 7px; height: 7px;
-  background: #EF4444;
-  border-radius: 50%;
-  margin-left: 6px;
-  flex-shrink: 0;
-  vertical-align: middle;
+/* ─── PAGINATION ─── */
+.pagination { display: flex; align-items: center; gap: 6px; padding: 16px 0; justify-content: center; }
+.page-btn {
+  min-width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--white); font-size: 13px; font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0 8px;
+  font-family: inherit; transition: all .12s;
 }
+.page-btn:hover { background: var(--cream-dark); }
+.page-btn.active { background: var(--green); color: white; border-color: var(--green); }
+.page-btn:disabled { opacity: .4; cursor: default; }
 
 /* ─── EMPTY STATE ─── */
-.empty-state {
-  text-align: center;
-  padding: 60px 24px;
-  color: var(--text-muted);
-}
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
 .empty-state i { font-size: 40px; opacity: .25; margin-bottom: 12px; display: block; }
 .empty-state p { font-size: 14px; }
 
 /* ─── MOBILE CARDS ─── */
-.mobile-view { display: none; padding: 0 14px 80px; }
+.mobile-view { display: none; }
 
-.mobile-tabs {
-  display: flex;
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 64px;
-  z-index: 90;
-}
-
-.mobile-tab {
-  flex: 1;
-  padding: 14px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  border-bottom: 2.5px solid transparent;
-  cursor: pointer;
-  background: none;
-  border: none;
-  border-bottom: 2.5px solid transparent;
-  font-family: inherit;
-  transition: all .15s;
-}
-
-.mobile-tab.active {
-  color: var(--green);
-  border-bottom-color: var(--green);
-}
-
-.mobile-search {
-  padding: 12px 14px 8px;
-  background: var(--white);
-  position: sticky;
-  top: 113px;
-  z-index: 89;
-}
-
+.mobile-search { padding: 12px 0 8px; position: relative; }
 .mobile-search input {
-  width: 100%;
-  padding: 10px 12px 10px 36px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 14px; font-family: inherit;
-  background: var(--cream);
-  color: var(--text);
+  width: 100%; box-sizing: border-box; height: 40px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--white); font-size: 15px; font-family: inherit;
+  padding: 0 12px 0 36px; outline: none; color: var(--text);
 }
-
-.mobile-search-wrap { position: relative; }
-.mobile-search-wrap i {
-  position: absolute; left: 11px; top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-light); font-size: 14px;
+.mobile-search i {
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  color: var(--text-light); font-size: 13px; pointer-events: none;
 }
 
 .resa-card {
   background: var(--white);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 14px;
   margin-bottom: 10px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: box-shadow .15s;
-  animation: fadeUp .2s ease forwards;
+  /* PAS d'animation — évite le bug opacity:0 sur Safari iOS */
 }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.resa-card:active { box-shadow: var(--shadow-md); }
-
-.resa-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.resa-card-left { min-width: 0; }
-
-.resa-guest {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.resa-prop {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 3px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.resa-resa-date {
-  font-size: 11px;
-  color: var(--text-light);
-  margin-top: 4px;
-  display: flex; align-items: center; gap: 4px;
-}
-
-.resa-card-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.resa-card-bottom {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
+.resa-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.resa-guest { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.resa-prop  { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+.resa-resa-date { font-size: 11px; color: var(--text-light); }
+.note-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-left: 5px; vertical-align: middle; }
+.resa-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.resa-meta { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+.resa-card-bottom { display: flex; gap: 8px; }
 .resa-date-block {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--cream);
-  font-size: 13px;
+  flex: 1; background: var(--cream); border-radius: 10px; padding: 8px 10px;
+  display: flex; align-items: center; gap: 6px;
 }
+.dir-icon { color: var(--green); opacity: .7; flex-shrink: 0; }
+.date-text { font-size: 12px; color: var(--text); font-weight: 500; }
 
-.resa-date-block .dir-icon {
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  border: 2px solid;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-
-.resa-date-block.checkin .dir-icon { border-color: var(--green); color: var(--green); }
-.resa-date-block.checkout .dir-icon { border-color: #ef4444; color: #ef4444; }
-
-.resa-date-block .date-text { font-size: 12px; font-weight: 600; color: var(--text); }
-
-.resa-meta {
-  display: flex; align-items: center; gap: 8px;
-  color: var(--text-muted); font-size: 12px;
-}
-
-/* ─── PAGINATION ─── */
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  border-top: 1px solid var(--cream-dark);
-}
-
-.pagination-info { font-size: 12px; color: var(--text-muted); }
-
-.pagination-btns { display: flex; gap: 4px; }
-
-.page-btn {
-  width: 32px; height: 32px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--white);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  transition: all .15s;
-}
-.page-btn:hover { border-color: var(--green); color: var(--green); }
-.page-btn.active { background: var(--green); color: white; border-color: var(--green); }
-.page-btn:disabled { opacity: .35; cursor: not-allowed; }
-
-/* ─── DETAIL BOTTOM SHEET ─── */
+/* ─── DETAIL SHEET ─── */
 .bh-resa-overlay {
-  position: fixed; inset: 0;
-  background: rgba(13,17,23,.55);
-  backdrop-filter: blur(3px);
-  z-index: 500;
-  display: none;
-  opacity: 0;
-  transition: opacity .25s;
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.4); z-index: 1000; opacity: 0; transition: opacity .25s;
 }
 .bh-resa-overlay.open { display: block; opacity: 1; }
-
 .bh-resa-sheet {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  width: 100%;
-  max-width: 640px;
-  margin: 0 auto;
-  max-height: 90vh;
-  background: #F5F0E8;
-  border-radius: 24px 24px 0 0;
-  z-index: 501;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 -8px 40px rgba(0,0,0,.18);
-  transform: translateY(100%);
-  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001;
+  background: var(--white); border-radius: 20px 20px 0 0;
+  max-height: 85vh; display: flex; flex-direction: column;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
 }
 .bh-resa-sheet.open { transform: translateY(0); }
-
-.bh-resa-drag {
-  display: flex; justify-content: center;
-  padding: 10px 0 4px; flex-shrink: 0;
-}
-.bh-resa-drag-bar {
-  width: 36px; height: 4px;
-  border-radius: 99px;
-  background: rgba(0,0,0,.15);
-}
-
-.bh-resa-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 20px 14px; flex-shrink: 0;
-}
-.bh-resa-header-title {
-  font-size: 15px; font-weight: 600;
-  color: #6B7280; letter-spacing: .02em;
-}
-.bh-resa-close {
-  background: rgba(0,0,0,.07); border: none;
-  border-radius: 50%; width: 30px; height: 30px;
-  font-size: 18px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: #6B7280;
-}
-
-.bh-resa-body { overflow-y: auto; flex: 1; padding: 0 16px 32px; }
-
-/* Sections internes */
+.bh-resa-drag { padding: 10px; display: flex; justify-content: center; cursor: grab; flex-shrink: 0; }
+.bh-resa-drag-bar { width: 36px; height: 4px; border-radius: 2px; background: #D1D5DB; }
+.bh-resa-header { padding: 0 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+.bh-resa-header-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.bh-resa-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); padding: 0; line-height: 1; }
+.bh-resa-body { overflow-y: auto; flex: 1; padding: 0 16px 32px; -webkit-overflow-scrolling: touch; }
 .bh-modal-section { margin-bottom: 18px; }
-.bh-modal-label {
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .07em;
-  color: #9CA3AF; margin-bottom: 8px;
-}
-.bh-modal-card {
-  background: white; border-radius: 14px;
-  overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06);
-}
-.bh-modal-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 11px 14px; font-size: 13px;
-  border-bottom: 1px solid #F5F2EC;
-}
+.bh-modal-label { font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+.bh-modal-card { background: var(--cream); border-radius: 12px; overflow: hidden; }
+.bh-modal-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid rgba(0,0,0,.05); font-size: 13px; }
 .bh-modal-row:last-child { border-bottom: none; }
-.bh-modal-row-label { color: #6B7280; }
+.bh-modal-row-label { color: var(--text-muted); }
 .bh-modal-row-val { font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
-.bh-modal-amount-total {
-  font-size: 24px; font-weight: 800; color: #1A7A5E;
-}
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 768px) {
-  .page-header { padding: 14px 16px; }
-  .page-title { font-size: 18px; }
-  .stats-bar { display: none; }
-  .filters-bar { display: none; }
-  .table-wrap { display: none; }
-  .mobile-view { display: block; }
-  .pagination { display: none; }
-  #bhSidebar { display: none !important; }
-  .app-container { display: block !important; }
-  .mobile-view { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
-}
-
-@media (max-width: 1024px) {
-  .stats-bar { grid-template-columns: repeat(2,1fr); }
-}
-
-/* ── Masquer mobile-header en v3 desktop ── */
-html[data-theme-v3="1"] .mobile-header {
-  display: none !important;
-}
-</style>
-<script src="/js/auth-fetch.js"></script>
-<!-- Override mobile — pattern identique aux pages de référence (deposits, help) -->
-<style id="resa-mobile-override">
-@media (max-width: 1366px) {
-
-  /* 1. LAYOUT */
-  html, body { overflow-x: hidden !important; }
-  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
-  html[data-theme-v3="1"] body { padding-top: 0 !important; }
-  html[data-theme-v3="1"] .sidebar,
-  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
-  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
-  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
-
-  /* 2. MOBILE HEADER — override le display:none!important inline */
-  .mobile-header {
-    display: flex !important;
-    position: fixed !important;
-    top: 0 !important; left: 0 !important; right: 0 !important;
-    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    z-index: 1100 !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(12px) !important;
-    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
-  }
-  .mobile-menu-btn, #mobileMenuBtn,
-  .help-back-btn, #bhHeader, .main-header { display: none !important; }
-
-  /* 3. PAGE CONTENT — laisser le body gérer le scroll */
-  html[data-theme-v3="1"] .main-content {
-    padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
-    height: auto !important;
-    min-height: 100vh !important;
-    overflow-y: visible !important;
-  }
-
-  /* 4. CACHER ÉLÉMENTS DESKTOP */
-  .stats-bar, #statsBar { display: none !important; height: 0 !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
-  .filters-bar { display: none !important; }
-  .table-wrap { display: none !important; }
-  .pagination { display: none !important; }
-  .page-header { display: none !important; }
-
-  /* 5. VUE MOBILE */
-  .mobile-view {
-    display: block !important;
-    padding: 12px 14px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  /* Safari iOS : désactiver animation pour éviter opacity:0 bloqué */
-  .resa-card {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  /* 6. BOTTOM TABS */
-  .mobile-tabs {
-    position: fixed !important;
-    bottom: 0 !important; left: 0 !important; right: 0 !important;
-    z-index: 1000 !important;
-    background: rgba(245, 242, 236, 0.97) !important;
-    backdrop-filter: blur(16px) !important;
-    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  }
-}
+.bh-modal-amount-total { font-size: 20px; font-weight: 800; color: var(--green); padding: 14px; }
 </style>
 </head>
-<body data-page="reservations" data-title="Réservations" data-kicker="Réservations" data-subtitle="Gérez toutes vos réservations" data-back-href="/app.html" data-back-label="Retour au dashboard" data-theme-v3="1" data-theme="light">
+<body data-page="reservations" data-title="Réservations" data-kicker="Réservations" data-subtitle="Gérez toutes vos réservations" data-back-href="/app.html" data-back-label="Retour au dashboard">
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
 
-<!-- MOBILE HEADER — display:none desktop, affiché via @media override -->
-<div class="mobile-header" style="display:none!important;">
-<a class="mobile-logo" href="/app.html">
-<i class="fas fa-calendar-check"></i>
-<span class="mobile-logo-text">Boostinghost</span>
-</a>
-<button class="mobile-menu-btn" id="mobileMenuBtn">
-<i class="fas fa-bars"></i>
-</button>
-</div>
+<div id="bhMobileHeader"></div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<!-- Structure requise par bh-layout.js -->
 <div class="app-container">
 <div id="bhSidebar"></div>
-
-<!-- MAIN CONTENT (bh-layout.js injecte la sidebar autour) -->
-<div class="main-content" id="mainContent" style="padding:0;">
-<div id="bhHeader"></div>
+<main class="main-content"><div id="bhHeader"></div>
 
 <!-- STATS -->
 <div class="stats-bar" id="statsBar">
   <div class="stat-card">
     <div class="stat-icon green"><i class="fas fa-calendar-check"></i></div>
-    <div class="stat-info">
-      <div class="stat-value" id="statTotal">—</div>
-      <div class="stat-label">Total réservations</div>
-    </div>
+    <div class="stat-info"><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total réservations</div></div>
   </div>
   <div class="stat-card">
     <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
-    <div class="stat-info">
-      <div class="stat-value" id="statUpcoming">—</div>
-      <div class="stat-label">À venir</div>
-    </div>
+    <div class="stat-info"><div class="stat-value" id="statUpcoming">—</div><div class="stat-label">À venir</div></div>
   </div>
   <div class="stat-card">
     <div class="stat-icon amber"><i class="fas fa-exclamation-circle"></i></div>
-    <div class="stat-info">
-      <div class="stat-value" id="statPending">—</div>
-      <div class="stat-label">Non confirmées</div>
-    </div>
+    <div class="stat-info"><div class="stat-value" id="statPending">—</div><div class="stat-label">Non confirmées</div></div>
   </div>
   <div class="stat-card">
     <div class="stat-icon green"><i class="fas fa-euro-sign"></i></div>
-    <div class="stat-info">
-      <div class="stat-value" id="statRevenue">—</div>
-      <div class="stat-label">CA total</div>
-    </div>
+    <div class="stat-info"><div class="stat-value" id="statRevenue">—</div><div class="stat-label">CA total</div></div>
   </div>
 </div>
 
-<!-- DESKTOP FILTERS -->
+<!-- FILTERS (desktop) -->
 <div class="filters-bar">
   <div class="search-wrap">
-    <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-light,#9CA3AF);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="searchInput" placeholder="Rechercher un voyageur, logement…" oninput="applyFilters()" style="padding-left:38px !important;"/>
   </div>
   <select class="filter-select" id="statusFilter" onchange="applyFilters()">
@@ -754,9 +263,7 @@ html[data-theme-v3="1"] .mobile-header {
     <option value="no_show">Non présentation</option>
     <option value="cancelled">Annulé</option>
   </select>
-  <select class="filter-select" id="propFilter" onchange="applyFilters()">
-    <option value="">Tous les logements</option>
-  </select>
+  <select class="filter-select" id="propFilter" onchange="applyFilters()"><option value="">Tous les logements</option></select>
   <select class="filter-select" id="platFilter" onchange="applyFilters()">
     <option value="">Toutes les plateformes</option>
     <option value="airbnb">Airbnb</option>
@@ -774,7 +281,7 @@ html[data-theme-v3="1"] .mobile-header {
   <span class="results-count" id="resultsCount"></span>
 </div>
 
-<!-- DESKTOP TABLE -->
+<!-- TABLE (desktop) -->
 <div class="table-wrap">
   <table class="reservations-table" id="resaTable">
     <thead>
@@ -799,18 +306,15 @@ html[data-theme-v3="1"] .mobile-header {
 </div>
 
 <!-- MOBILE VIEW -->
-<div class="mobile-view">
-  <div class="mobile-tabs" style="display:none;"></div>
+<div class="mobile-view" id="mobileView">
   <div class="mobile-search">
-    <div class="mobile-search-wrap">
-      <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()" style="padding-left:38px !important;"/>
-    </div>
+    <i class="fas fa-search"></i>
+    <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()"/>
   </div>
   <div id="mobileCards"></div>
 </div>
 
-<!-- DETAIL BOTTOM SHEET -->
+<!-- DETAIL SHEET -->
 <div class="bh-resa-overlay" id="detailOverlay" onclick="closeDetail()"></div>
 <div class="bh-resa-sheet" id="detailSheet">
   <div class="bh-resa-drag"><div class="bh-resa-drag-bar"></div></div>
@@ -821,26 +325,19 @@ html[data-theme-v3="1"] .mobile-header {
   <div class="bh-resa-body" id="detailBody"></div>
 </div>
 
-</div><!-- /main-content -->
+</main>
+</div><!-- /app-container -->
 
 <script src="/js/auth-fetch.js"></script>
 <script>
-// ─── CONFIG ───────────────────────────────
 const API_URL = (function() {
   const h = window.location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
   return 'https://www.boostinghost.fr';
 })();
 
-// ─── STATE ────────────────────────────────
-let allReservations = [];
-let allProperties   = [];
-let filtered        = [];
-let sortCol         = 'start';
-let sortDir         = 'asc';
-let currentPage     = 1;
-let pageSize        = 25;
-let mobileTab       = 'all';
+let allReservations = [], allProperties = [], filtered = [];
+let sortCol = 'start', sortDir = 'asc', currentPage = 1, pageSize = 25;
 
 // ─── UTILS ────────────────────────────────
 function fmtDate(d) {
@@ -848,18 +345,15 @@ function fmtDate(d) {
   const dt = new Date(d.split('T')[0] + 'T12:00:00');
   return dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' });
 }
-
 function fmtDateShort(d) {
   if (!d) return '—';
   const dt = new Date(d.split('T')[0] + 'T12:00:00');
-  return dt.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  return dt.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
 }
-
 function nightsCount(s, e) {
   if (!s || !e) return 0;
   return Math.round((new Date(e.split('T')[0]) - new Date(s.split('T')[0])) / 86400000);
 }
-
 function normPlatform(r) {
   const p = ((r.platform || r.source || r.ota_name || '').toLowerCase());
   if (p.includes('airbnb')) return 'airbnb';
@@ -869,47 +363,27 @@ function normPlatform(r) {
   if (p === 'direct' || p === 'manuel' || p === 'manual' || !p) return 'direct';
   return 'other';
 }
-
 function pltLabel(r) {
-  const plt = normPlatform(r);
-  return { airbnb:'Airbnb', booking:'Booking.com', direct:'Direct', abritel:'Abritel', guest:'Boostinghost Guest', other: r.platform||r.source||'Autre' }[plt];
+  return { airbnb:'Airbnb', booking:'Booking.com', direct:'Direct', abritel:'Abritel', guest:'BH Guest', other: r.platform||'Autre' }[normPlatform(r)];
 }
-
 function statusLabel(s) {
-  return {
-    confirmed:'Confirmé', cancelled:'Annulé',
-    request:'Confirmé', no_show:'Non présentation',
-    modified:'Modifié', non_confirmed:'Confirmé',
-    completed:'Terminé'
-  }[s] || s || 'Confirmé';
+  return { confirmed:'Confirmé', cancelled:'Annulé', request:'Confirmé', no_show:'Non présentation', modified:'Modifié', non_confirmed:'Confirmé', completed:'Terminé' }[s] || s || 'Confirmé';
 }
-
-function statusClass(s) {
-  return 'status-' + (s || 'confirmed');
-}
-
-function guestInitial(r) {
-  const n = r.guestName || r.guest_name || r.guestFirstName || '?';
-  return n.charAt(0).toUpperCase();
-}
-
+function statusClass(s) { return 'status-' + (s || 'confirmed'); }
 function guestFullName(r) {
   if (r.guestName) return r.guestName;
   const f = r.guestFirstName || r.guest_first_name || '';
   const l = r.guestLastName  || r.guest_last_name  || '';
   return (f + ' ' + l).trim() || 'Voyageur';
 }
-
 function hasRealNote(r) {
   const note = (r.notes || '').trim();
   if (!note) return false;
   if (/^\d+(\.\d+)?$/.test(note)) return false;
-  const auto = ['blocage manuel','manual block','block','bloqué','indisponible'];
-  if (auto.includes(note.toLowerCase())) return false;
+  if (['blocage manuel','manual block','block','bloqué','indisponible'].includes(note.toLowerCase())) return false;
   if (r.type === 'block') return false;
   return true;
 }
-
 function fmtAmount(r) {
   const a = r.amount_total || r.amountTotal || r.price || r.totalPrice || null;
   if (!a) return '—';
@@ -920,7 +394,6 @@ function fmtAmount(r) {
 async function loadData() {
   const token = localStorage.getItem('lcc_token');
   if (!token) { window.location.href = '/login.html'; return; }
-
   try {
     const res = await fetch(API_URL + '/api/reservations', {
       headers: { Authorization: 'Bearer ' + token }
@@ -931,10 +404,7 @@ async function loadData() {
     allReservations = (data.reservations || []).filter(r => r.type !== 'block');
     allProperties   = data.properties || [];
 
-    // Populate property filter
     const propSel = document.getElementById('propFilter');
-    const propNames = {};
-    allProperties.forEach(p => { propNames[p.id] = p.name || p.internalName; });
     const uniqueProps = [...new Map(allReservations.map(r => [r.propertyId||r.property_id, r.propertyName])).entries()];
     uniqueProps.forEach(([id, name]) => {
       if (!name) return;
@@ -956,22 +426,11 @@ async function loadData() {
 // ─── STATS ────────────────────────────────
 function updateStats() {
   const now = new Date();
-  const total    = allReservations.length;
-  const upcoming = allReservations.filter(r => new Date((r.start||r.startDate||'').split('T')[0]) > now).length;
-  const pending  = allReservations.filter(r => {
-    const s = (r.status||'').toLowerCase();
-    return s === 'request' || s === 'non_confirmed' || s === 'modified' || !s;
-  }).length;
-
-  const revenue = allReservations.reduce((sum, r) => {
-    return sum + (r.amount_total || r.amountTotal || r.price || 0);
-  }, 0);
-
-  document.getElementById('statTotal').textContent    = total;
-  document.getElementById('statUpcoming').textContent = upcoming;
-  document.getElementById('statPending').textContent  = pending;
-  document.getElementById('statRevenue').textContent  =
-    new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 }).format(revenue);
+  document.getElementById('statTotal').textContent    = allReservations.length;
+  document.getElementById('statUpcoming').textContent = allReservations.filter(r => new Date((r.start||r.startDate||'').split('T')[0]) > now).length;
+  document.getElementById('statPending').textContent  = allReservations.filter(r => { const s=(r.status||'').toLowerCase(); return s==='request'||s==='non_confirmed'||s==='modified'||!s; }).length;
+  const revenue = allReservations.reduce((sum, r) => sum + (r.amount_total||r.amountTotal||r.price||0), 0);
+  document.getElementById('statRevenue').textContent  = new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 }).format(revenue);
 }
 
 // ─── FILTERS ──────────────────────────────
@@ -984,34 +443,13 @@ function applyFilters() {
   const now    = new Date();
 
   filtered = allReservations.filter(r => {
-    // Mobile tab
-    if (mobileTab === 'pending') {
-      const s = (r.status||'').toLowerCase();
-      if (!['request','non_confirmed','modified'].includes(s) && s !== '') return false;
-    }
-
-    // Search
     if (q) {
-      const haystack = [guestFullName(r), r.propertyName||'', r.guestEmail||'', r.guestPhone||''].join(' ').toLowerCase();
-      if (!haystack.includes(q)) return false;
+      const hay = [guestFullName(r), r.propertyName||'', r.guestEmail||''].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
     }
-
-    // Status
-    if (status) {
-      const rs = (r.status || 'confirmed').toLowerCase();
-      if (rs !== status) return false;
-    }
-
-    // Property
-    if (prop) {
-      const pid = String(r.propertyId || r.property_id || '');
-      if (pid !== String(prop)) return false;
-    }
-
-    // Platform
+    if (status && (r.status||'confirmed').toLowerCase() !== status) return false;
+    if (prop && String(r.propertyId||r.property_id||'') !== String(prop)) return false;
     if (plat && normPlatform(r) !== plat) return false;
-
-    // Period
     if (period) {
       const start = new Date((r.start||r.startDate||'').split('T')[0]);
       const end   = new Date((r.end||r.endDate||'').split('T')[0]);
@@ -1019,173 +457,127 @@ function applyFilters() {
       if (period === 'upcoming' && start <= now) return false;
       if (period === 'past'     && end   >= now) return false;
     }
-
     return true;
   });
 
-  // Sort
   filtered.sort((a, b) => {
     let va, vb;
     switch(sortCol) {
-      case 'propertyName': va = a.propertyName||''; vb = b.propertyName||''; break;
-      case 'guestName':    va = guestFullName(a);   vb = guestFullName(b);   break;
-      case 'start':        va = a.start||a.startDate||''; vb = b.start||b.startDate||''; break;
-      case 'end':          va = a.end||a.endDate||'';     vb = b.end||b.endDate||'';     break;
-      case 'nights':       va = nightsCount(a.start||a.startDate,a.end||a.endDate); vb = nightsCount(b.start||b.startDate,b.end||b.endDate); break;
-      case 'guests':       va = a.occupancyAdults||a.occupancy_adults||1; vb = b.occupancyAdults||b.occupancy_adults||1; break;
-      case 'amount':       va = a.amount_total||a.price||0; vb = b.amount_total||b.price||0; break;
-      case 'createdAt':    va = a.createdAt||a.created_at||''; vb = b.createdAt||b.created_at||''; break;
-      default: va = a.start||''; vb = b.start||'';
+      case 'propertyName': va=a.propertyName||''; vb=b.propertyName||''; break;
+      case 'guestName':    va=guestFullName(a);   vb=guestFullName(b);   break;
+      case 'start':        va=a.start||a.startDate||''; vb=b.start||b.startDate||''; break;
+      case 'end':          va=a.end||a.endDate||'';     vb=b.end||b.endDate||'';     break;
+      case 'nights':       va=nightsCount(a.start,a.end); vb=nightsCount(b.start,b.end); break;
+      case 'amount':       va=a.amount_total||a.price||0; vb=b.amount_total||b.price||0; break;
+      case 'createdAt':    va=a.createdAt||''; vb=b.createdAt||''; break;
+      default: va=a.start||''; vb=b.start||'';
     }
-    if (typeof va === 'string') return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-    return sortDir === 'asc' ? va - vb : vb - va;
+    if (typeof va === 'string') return sortDir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortDir==='asc' ? va-vb : vb-va;
   });
 
   currentPage = 1;
-  document.getElementById('resultsCount').textContent = filtered.length + ' résultat' + (filtered.length!==1?'s':'');
+  const el = document.getElementById('resultsCount');
+  if (el) el.textContent = filtered.length + ' résultat' + (filtered.length!==1?'s':'');
   renderTable();
   renderMobile();
 }
 
 // ─── SORT ─────────────────────────────────
 function sortBy(col) {
-  if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-  else { sortCol = col; sortDir = 'asc'; }
-
+  if (sortCol===col) sortDir = sortDir==='asc'?'desc':'asc';
+  else { sortCol=col; sortDir='asc'; }
   document.querySelectorAll('.reservations-table th').forEach(th => {
-    th.classList.toggle('sorted', th.dataset.col === col);
-    if (th.dataset.col === col) {
-      th.querySelector('.sort-icon').textContent = sortDir === 'asc' ? '↑' : '↓';
-    } else {
-      const si = th.querySelector('.sort-icon');
-      if (si) si.textContent = '↕';
-    }
+    th.classList.toggle('sorted', th.dataset.col===col);
+    if (th.dataset.col===col) th.querySelector('.sort-icon').textContent = sortDir==='asc'?'↑':'↓';
+    else { const si=th.querySelector('.sort-icon'); if(si) si.textContent='↕'; }
   });
-
   applyFilters();
 }
 
-// ─── RENDER TABLE ─────────────────────────
+// ─── TABLE ────────────────────────────────
 function renderTable() {
+  const start = (currentPage-1)*pageSize;
+  const page  = filtered.slice(start, start+pageSize);
   const tbody = document.getElementById('tableBody');
-  const start = (currentPage - 1) * pageSize;
-  const page  = filtered.slice(start, start + pageSize);
-
-  if (filtered.length === 0) {
+  if (!tbody) return;
+  if (!page.length) {
     tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-calendar-times"></i><p>Aucune réservation trouvée</p></div></td></tr>';
-    renderPagination();
+    document.getElementById('pagination').innerHTML = '';
     return;
   }
-
   tbody.innerHTML = page.map(r => {
-    const plt     = normPlatform(r);
-    const s       = r.start || r.startDate || '';
-    const e       = r.end   || r.endDate   || '';
-    const nights  = nightsCount(s, e);
-    const guests  = r.occupancyAdults || r.occupancy_adults || r.numberOfGuests || 1;
-    const status  = (r.status || 'confirmed').toLowerCase();
-    const note    = hasRealNote(r) ? '<span class="note-dot" title="' + (r.notes||'').replace(/"/g,'&quot;') + '"></span>' : '';
-
+    const plt = normPlatform(r);
+    const s = r.start||r.startDate||'', e = r.end||r.endDate||'';
     return `<tr onclick="openDetail(${JSON.stringify(r).replace(/'/g,'&#39;')})">
-      <td><div class="prop-name">${r.propertyName || '—'}</div></td>
-      <td><div class="guest-name">${guestFullName(r)}${note}</div></td>
-      <td><div class="date-cell">${r.createdAt ? fmtDate(r.createdAt.split('T')[0]) : '—'}</div></td>
-      <td><div class="date-cell">${fmtDate(s.split('T')[0])}</div></td>
-      <td><div class="date-cell">${fmtDate(e.split('T')[0])}</div></td>
-      <td><span class="nights-badge"><i class="fas fa-moon" style="font-size:9px;"></i>${nights}</span></td>
-      <td><div class="pers-cell"><i class="fas fa-user" style="font-size:11px;"></i>${guests}</div></td>
+      <td style="font-weight:600;">${r.propertyName||'—'}</td>
+      <td>${guestFullName(r)}${hasRealNote(r)?'<span class="note-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:5px;vertical-align:middle;"></span>':''}</td>
+      <td>${fmtDate(r.createdAt?.split('T')[0])}</td>
+      <td>${fmtDate(s.split('T')[0])}</td>
+      <td>${fmtDate(e.split('T')[0])}</td>
+      <td>${nightsCount(s,e)}</td>
+      <td>${r.occupancyAdults||r.occupancy_adults||1}</td>
       <td><span class="plt-badge plt-${plt}">${pltLabel(r)}</span></td>
-      <td style="font-weight:600;color:var(--green);">${fmtAmount(r)}</td>
-      <td><span class="status-badge ${statusClass(status)}">${statusLabel(status)}</span></td>
+      <td style="font-weight:600;">${fmtAmount(r)}</td>
+      <td><span class="status-badge ${statusClass((r.status||'confirmed').toLowerCase())}">${statusLabel((r.status||'confirmed').toLowerCase())}</span></td>
     </tr>`;
   }).join('');
-
   renderPagination();
 }
 
-// ─── PAGINATION ───────────────────────────
 function renderPagination() {
-  const total  = filtered.length;
-  const pages  = Math.ceil(total / pageSize);
-  const pag    = document.getElementById('pagination');
-
-  if (pages <= 1) { pag.innerHTML = ''; return; }
-
-  const start = (currentPage - 1) * pageSize + 1;
-  const end   = Math.min(currentPage * pageSize, total);
-
-  let btns = '';
-  for (let i = 1; i <= pages; i++) {
-    if (i === 1 || i === pages || Math.abs(i - currentPage) <= 2) {
-      btns += `<button class="page-btn${i===currentPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
-    } else if (btns.slice(-10) !== '…</button>') {
-      btns += `<button class="page-btn" disabled>…</button>`;
-    }
+  const total = Math.ceil(filtered.length/pageSize);
+  const el = document.getElementById('pagination');
+  if (!el || total<=1) { if(el) el.innerHTML=''; return; }
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  for (let i=1; i<=total; i++) {
+    if (i===1||i===total||Math.abs(i-currentPage)<=1) html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    else if (Math.abs(i-currentPage)===2) html += '<span style="padding:0 4px;color:var(--text-light);">…</span>';
   }
-
-  pag.innerHTML = `
-    <div class="pagination-info">Affichage ${start}–${end} sur ${total}</div>
-    <div class="pagination-btns">
-      <button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}><i class="fas fa-chevron-left" style="font-size:10px;"></i></button>
-      ${btns}
-      <button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}><i class="fas fa-chevron-right" style="font-size:10px;"></i></button>
-    </div>`;
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===total?'disabled':''}>›</button>`;
+  el.innerHTML = html;
 }
 
 function goPage(p) {
-  const pages = Math.ceil(filtered.length / pageSize);
-  if (p < 1 || p > pages) return;
-  currentPage = p;
-  renderTable();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const total = Math.ceil(filtered.length/pageSize);
+  if (p<1||p>total) return;
+  currentPage=p; renderTable();
+  document.querySelector('.table-wrap')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ─── MOBILE ───────────────────────────────
-function setMobileTab(tab, btn) {
-  mobileTab = tab;
-  document.querySelectorAll('.mobile-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  applyFilters();
-}
-
+// ─── MOBILE CARDS ─────────────────────────
 function renderMobile() {
   const container = document.getElementById('mobileCards');
-  if (filtered.length === 0) {
+  if (!container) return;
+  if (!filtered.length) {
     container.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>Aucune réservation trouvée</p></div>';
     return;
   }
-
-  container.innerHTML = filtered.map((r, i) => {
-    const plt    = normPlatform(r);
-    const s      = r.start || r.startDate || '';
-    const e      = r.end   || r.endDate   || '';
-    const nights = nightsCount(s, e);
-    const guests = r.occupancyAdults || r.occupancy_adults || 1;
-    const status = (r.status || 'confirmed').toLowerCase();
-    const rData  = JSON.stringify(r).replace(/'/g,'&#39;');
-
-    return `<div class="resa-card" style="animation-delay:${i*20}ms" onclick="openDetail(${rData})">
+  container.innerHTML = filtered.map(r => {
+    const plt = normPlatform(r);
+    const s = r.start||r.startDate||'', e = r.end||r.endDate||'';
+    const nights = nightsCount(s,e);
+    const guests = r.occupancyAdults||r.occupancy_adults||1;
+    const status = (r.status||'confirmed').toLowerCase();
+    return `<div class="resa-card" onclick='openDetail(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
       <div class="resa-card-top">
         <div class="resa-card-left">
           <div class="resa-guest">${guestFullName(r)}${hasRealNote(r)?'<span class="note-dot"></span>':''}</div>
-          <div class="resa-prop">${r.propertyName || '—'}</div>
-          <div class="resa-resa-date"><i class="fas fa-calendar-plus" style="font-size:9px;"></i>${r.createdAt ? fmtDate(r.createdAt.split('T')[0]) : '—'}</div>
+          <div class="resa-prop">${r.propertyName||'—'}</div>
+          <div class="resa-resa-date"><i class="fas fa-calendar-plus" style="font-size:9px;"></i> ${r.createdAt?fmtDate(r.createdAt.split('T')[0]):'—'}</div>
         </div>
         <div class="resa-card-right">
           <span class="plt-badge plt-${plt}">${pltLabel(r)}</span>
           <span class="status-badge ${statusClass(status)}">${statusLabel(status)}</span>
-          <div class="resa-meta">
-            <i class="fas fa-user" style="font-size:10px;"></i>${guests}
-            &nbsp;<i class="fas fa-moon" style="font-size:10px;"></i>${nights}
-          </div>
+          <div class="resa-meta"><i class="fas fa-user" style="font-size:10px;"></i>${guests}&nbsp;<i class="fas fa-moon" style="font-size:10px;"></i>${nights}</div>
         </div>
       </div>
       <div class="resa-card-bottom">
-        <div class="resa-date-block checkin">
+        <div class="resa-date-block">
           <div class="dir-icon"><i class="fas fa-arrow-right" style="font-size:10px;"></i></div>
           <div class="date-text">${fmtDateShort(s.split('T')[0])}</div>
         </div>
-        <div class="resa-date-block checkout">
+        <div class="resa-date-block">
           <div class="dir-icon"><i class="fas fa-arrow-left" style="font-size:10px;"></i></div>
           <div class="date-text">${fmtDateShort(e.split('T')[0])}</div>
         </div>
@@ -1194,200 +586,131 @@ function renderMobile() {
   }).join('');
 }
 
-// ─── DETAIL BOTTOM SHEET (style app.html) ────────────────────
-function fmtEur(val) {
-  if (val == null || val === '' || isNaN(Number(val))) return null;
-  return Number(val).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-}
-
+// ─── DETAIL SHEET ─────────────────────────
 function openDetail(r) {
-  if (typeof r === 'string') r = JSON.parse(r);
-
-  const plt    = normPlatform(r);
-  const s      = (r.start || r.startDate || '').split('T')[0];
-  const e      = (r.end   || r.endDate   || '').split('T')[0];
-  const nights = nightsCount(s, e);
-  const guests = r.occupancyAdults || r.occupancy_adults || r.occupancy || 1;
-  const children = r.occupancyChildren || r.occupancy_children || 0;
-  const status = (r.status || 'confirmed').toLowerCase();
-  const note   = (r.notes || '').trim();
-  const isNote = hasRealNote(r);
-
-  const PLT_CFG = {
-    airbnb:  { label:'Airbnb',       bg:'linear-gradient(135deg,#FF5A5F,#E84C50)', color:'#fff' },
-    booking: { label:'Booking.com',  bg:'linear-gradient(135deg,#003580,#00224F)', color:'#fff' },
-    abritel: { label:'Abritel',      bg:'linear-gradient(135deg,#0096D6,#0077B3)', color:'#fff' },
-    direct:  { label:'Direct',       bg:'linear-gradient(135deg,#1A7A5E,#0f5c46)', color:'#fff' },
-    guest:   { label:'Boostinghost Guest', bg:'linear-gradient(135deg,#6366F1,#4F46E5)', color:'#fff' },
-    other:   { label:pltLabel(r),    bg:'linear-gradient(135deg,#6B7280,#4B5563)', color:'#fff' },
-  };
-  const pc = PLT_CFG[plt] || PLT_CFG.other;
-
-  const countryNames = {
-    FR:'🇫🇷 France', GB:'🇬🇧 Royaume-Uni', DE:'🇩🇪 Allemagne', ES:'🇪🇸 Espagne',
-    IT:'🇮🇹 Italie', US:'🇺🇸 États-Unis', NL:'🇳🇱 Pays-Bas', BE:'🇧🇪 Belgique',
-    CH:'🇨🇭 Suisse', PT:'🇵🇹 Portugal', CA:'🇨🇦 Canada', MA:'🇲🇦 Maroc',
-    DZ:'🇩🇿 Algérie', TN:'🇹🇳 Tunisie', SN:'🇸🇳 Sénégal', CI:'🇨🇮 Côte d\'Ivoire',
-    LU:'🇱🇺 Luxembourg', AE:'🇦🇪 Émirats', AU:'🇦🇺 Australie', RU:'🇷🇺 Russie',
-    BR:'🇧🇷 Brésil', JP:'🇯🇵 Japon', CN:'🇨🇳 Chine', PL:'🇵🇱 Pologne',
-    TR:'🇹🇷 Turquie', RE:'🇷🇪 La Réunion', GP:'🇬🇵 Guadeloupe', MQ:'🇲🇶 Martinique',
-  };
-  const countryDisplay = r.guestCountry || r.guest_country
-    ? (countryNames[r.guestCountry || r.guest_country] || (r.guestCountry || r.guest_country))
-    : null;
-
-  // Montants
-  const amountTotal    = r.amount_total || r.amountTotal || r.price || r.totalPrice || null;
-  const amountRooms    = r.amount_rooms    || r.amountRooms    || null;
-  const amountTaxes    = r.amount_taxes    || r.amountTaxes    || null;
-  const amountCleaning = r.amount_cleaning || r.amountCleaning || null;
-  const otaCommission  = r.ota_commission  || r.otaCommission  || null;
-  const hostPayout     = r.host_payout     || r.hostPayout     || null;
-  const daysBreakdown  = r.days_breakdown  || r.daysBreakdown  || null;
-
-  // Prix par nuit
-  let breakdownHTML = '';
-  if (daysBreakdown && typeof daysBreakdown === 'object') {
-    const entries = Object.entries(daysBreakdown).sort(([a],[b]) => a.localeCompare(b));
-    if (entries.length > 0) {
-      breakdownHTML = '<div class="bh-modal-label" style="margin-top:12px;">Prix par nuit</div>'
-        + entries.map(([date, price]) => {
-          const d = new Date(date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
-          return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;padding:3px 0;">'
-            + '<span>' + d + '</span><span>' + fmtEur(price) + '</span></div>';
-        }).join('');
-    }
-  }
-
-  // Générer email/phone
-  const guestEmail = r.guestEmail || r.guest_email || null;
-  const guestPhone = r.guestPhone || r.guest_phone || null;
-
   const body = document.getElementById('detailBody');
-  body.innerHTML =
-    // ── GUEST HERO ──
-    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">'
-    + '<div style="width:52px;height:52px;border-radius:50%;background:var(--green);color:white;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + guestInitial(r) + '</div>'
-    + '<div style="min-width:0;">'
-    + '<div style="font-size:18px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + guestFullName(r) + '</div>'
-    + '<div style="margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + pc.bg + ';color:' + pc.color + ';">' + pc.label + '</span>'
-    + '<span class="status-badge ' + statusClass(status) + '">' + statusLabel(status) + '</span>'
-    + '</div>'
-    + '</div>'
-    + '</div>'
-
-    // ── SÉJOUR ──
-    + '<div class="bh-modal-section">'
-    + '<div class="bh-modal-label">Séjour</div>'
-    + '<div class="bh-modal-card">'
-    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Logement</span><span class="bh-modal-row-val">' + (r.propertyName || '—') + '</span></div>'
-    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Réservé le</span><span class="bh-modal-row-val">' + (r.createdAt ? fmtDate(r.createdAt.split('T')[0]) : '—') + '</span></div>'
-    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Checkin</span><span class="bh-modal-row-val">' + fmtDateShort(s) + '</span></div>'
-    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Checkout</span><span class="bh-modal-row-val">' + fmtDateShort(e) + '</span></div>'
-    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Nuits</span><span class="bh-modal-row-val">' + nights + '</span></div>'
-    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Adultes</span><span class="bh-modal-row-val">' + guests + (children ? ' + ' + children + ' enfant(s)' : '') + '</span></div>'
-    + (countryDisplay ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Pays</span><span class="bh-modal-row-val">' + countryDisplay + '</span></div>' : '')
-    + '</div>'
-    + '</div>'
-
-    // ── CONTACT ──
-    + (guestEmail || guestPhone ? (
-      '<div class="bh-modal-section">'
-      + '<div class="bh-modal-label">Contact</div>'
-      + '<div class="bh-modal-card">'
-      + (guestEmail ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Email</span><span class="bh-modal-row-val"><a href="mailto:' + guestEmail + '" style="color:var(--green);">' + guestEmail + '</a></span></div>' : '')
-      + (guestPhone ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Téléphone</span><span class="bh-modal-row-val"><a href="tel:' + guestPhone + '" style="color:var(--green);">' + guestPhone + '</a></span></div>' : '')
-      + '</div></div>'
-    ) : '')
-
-    // ── FINANCES ──
-    + '<div class="bh-modal-section">'
-    + '<div class="bh-modal-label">Finances</div>'
-    + '<div class="bh-modal-card">'
-    + (amountTotal != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Total</span><span class="bh-modal-row-val bh-modal-amount-total">' + fmtEur(amountTotal) + '</span></div>' : '')
-    + (amountRooms != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Hébergement</span><span class="bh-modal-row-val">' + fmtEur(amountRooms) + '</span></div>' : '')
-    + (amountCleaning != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Ménage</span><span class="bh-modal-row-val">' + fmtEur(amountCleaning) + '</span></div>' : '')
-    + (amountTaxes != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Taxes</span><span class="bh-modal-row-val">' + fmtEur(amountTaxes) + '</span></div>' : '')
-    + (otaCommission != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Commission OTA</span><span class="bh-modal-row-val" style="color:#ef4444;">−' + fmtEur(otaCommission) + '</span></div>' : '')
-    + (hostPayout != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Reversement hôte</span><span class="bh-modal-row-val" style="color:var(--green);font-weight:700;">' + fmtEur(hostPayout) + '</span></div>' : '')
-    + breakdownHTML
-    + '</div>'
-    + '</div>'
-
-    // ── NOTE ──
-    + (isNote ? (
-      '<div class="bh-modal-section">'
-      + '<div class="bh-modal-label">Note interne</div>'
-      + '<div style="background:rgba(239,68,68,.07);border-left:3px solid #ef4444;padding:13px 14px;border-radius:0 12px 12px 0;font-size:13px;color:var(--text);line-height:1.6;">' + note + '</div>'
-      + '</div>'
-    ) : '')
-
-    // ── ACTION ──
-    + '<div style="display:flex;gap:8px;margin-top:4px;">'
-    + '<button class="btn btn-primary" style="flex:1;" onclick="window.location.href=\'/messages.html\'">'
-    + '<i class="fas fa-comment"></i> Messages'
-    + '</button>'
-    + '</div>';
-
+  const plt  = normPlatform(r);
+  const s = r.start||r.startDate||'', e = r.end||r.endDate||'';
+  body.innerHTML = `
+    <div style="padding:16px 0 8px;display:flex;align-items:center;gap:12px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--green);color:white;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${(guestFullName(r)||'?').charAt(0).toUpperCase()}</div>
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--text);">${guestFullName(r)}</div>
+        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+          <span class="plt-badge plt-${plt}">${pltLabel(r)}</span>
+          <span class="status-badge ${statusClass((r.status||'confirmed').toLowerCase())}">${statusLabel((r.status||'confirmed').toLowerCase())}</span>
+        </div>
+      </div>
+    </div>
+    <div class="bh-modal-section">
+      <div class="bh-modal-label">Séjour</div>
+      <div class="bh-modal-card">
+        <div class="bh-modal-row"><span class="bh-modal-row-label">Logement</span><span class="bh-modal-row-val">${r.propertyName||'—'}</span></div>
+        <div class="bh-modal-row"><span class="bh-modal-row-label">Checkin</span><span class="bh-modal-row-val">${fmtDate(s.split('T')[0])}</span></div>
+        <div class="bh-modal-row"><span class="bh-modal-row-label">Checkout</span><span class="bh-modal-row-val">${fmtDate(e.split('T')[0])}</span></div>
+        <div class="bh-modal-row"><span class="bh-modal-row-label">Nuits</span><span class="bh-modal-row-val">${nightsCount(s,e)}</span></div>
+        <div class="bh-modal-row"><span class="bh-modal-row-label">Voyageurs</span><span class="bh-modal-row-val">${r.occupancyAdults||r.occupancy_adults||1}</span></div>
+      </div>
+    </div>
+    ${fmtAmount(r) !== '—' ? `<div class="bh-modal-section"><div class="bh-modal-label">Montant</div><div class="bh-modal-card"><div class="bh-modal-amount-total">${fmtAmount(r)}</div></div></div>` : ''}
+    ${r.guestEmail||r.guestPhone ? `<div class="bh-modal-section"><div class="bh-modal-label">Contact</div><div class="bh-modal-card">
+      ${r.guestEmail ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Email</span><span class="bh-modal-row-val">${r.guestEmail}</span></div>` : ''}
+      ${r.guestPhone ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Téléphone</span><span class="bh-modal-row-val">${r.guestPhone}</span></div>` : ''}
+    </div></div>` : ''}
+    ${hasRealNote(r) ? `<div class="bh-modal-section"><div class="bh-modal-label">Note</div><div class="bh-modal-card"><div style="padding:12px 14px;font-size:13px;color:var(--text);">${r.notes}</div></div></div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="window.location.href='/messages.html'"><i class="fas fa-comment"></i> Messages</button>
+    </div>`;
   document.getElementById('detailOverlay').classList.add('open');
   document.getElementById('detailSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
-
 function closeDetail() {
   document.getElementById('detailOverlay').classList.remove('open');
   document.getElementById('detailSheet').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
-// ─── EXPORT CSV ───────────────────────────
-function exportCSV() {
-  const headers = ['Logement','Voyageur','Réservé le','Checkin','Checkout','Nuits','Personnes','Plateforme','Montant','Statut'];
-  const rows = filtered.map(r => {
-    const s = r.start||r.startDate||'';
-    const e = r.end||r.endDate||'';
-    return [
-      r.propertyName||'',
-      guestFullName(r),
-      r.createdAt ? r.createdAt.split('T')[0] : '',
-      s.split('T')[0], e.split('T')[0],
-      nightsCount(s,e),
-      r.occupancyAdults||r.occupancy_adults||1,
-      pltLabel(r),
-      r.amount_total||r.price||'',
-      statusLabel(r.status||'confirmed')
-    ].map(v => '"' + String(v).replace(/"/g,'""') + '"');
-  });
-
-  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'reservations_boostinghost_' + new Date().toISOString().split('T')[0] + '.csv';
-  a.click();
-}
-
-// ─── INIT ─────────────────────────────────
 loadData();
 </script>
+
 <script src="/js/messages-badge-desktop-mobile.js"></script>
-<script src="/js/bh-layout.js?v=2"></script>
-<script>
-// Ajouter bouton Exporter dans le header après chargement bh-layout
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() {
-    var headerActions = document.querySelector('.header-actions');
-    if (headerActions) {
-      var exportBtn = document.createElement('button');
-      exportBtn.className = 'btn btn-sm btn-secondary';
-      exportBtn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:7px 13px;font-size:12px;font-weight:600;border-radius:8px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;';
-      exportBtn.innerHTML = '<i class="fas fa-download"></i> Exporter';
-      exportBtn.onclick = exportCSV;
-      headerActions.insertBefore(exportBtn, headerActions.firstChild);
-    }
-  }, 300);
-});
-</script>
-</div><!-- /app-container -->
+<script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js"></script>
+
+<style id="resa-mobile-master">
+@media (max-width: 1366px) {
+
+  /* 1. LAYOUT */
+  html, body { overflow-x: hidden !important; height: auto !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
+  html[data-theme-v3="1"] .main-content { margin-left: 0 !important; padding: 0 !important; }
+
+  /* 2. MOBILE HEADER */
+  #bhMobileHeader {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  #bhHeader, .main-header { display: none !important; }
+
+  /* 3. PAGE CONTENT */
+  html[data-theme-v3="1"] .main-content {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: visible !important;
+  }
+
+  /* 4. CACHER DESKTOP */
+  .stats-bar, #statsBar { display: none !important; }
+  .filters-bar          { display: none !important; }
+  .table-wrap           { display: none !important; }
+  .pagination           { display: none !important; }
+
+  /* 5. MOBILE VIEW */
+  .mobile-view {
+    display: block !important;
+    padding: 8px 14px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* 6. BOTTOM TABS */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
+<script>
+/* Injecter le logo dans bhMobileHeader sur mobile — même pattern que deposits */
+(function() {
+  if (window.innerWidth > 1366) return;
+  var mh = document.getElementById('bhMobileHeader');
+  if (mh && !mh.querySelector('a')) {
+    mh.innerHTML = '<a href="/app.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;"><img src="/images/logo-bh.png" onerror="this.style.display=\'none\'" style="height:32px;"><span style="font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;color:#0D1117;">Boostinghost</span></a>';
+  }
+})();
+</script>
+
+<script src="/js/bh-onboarding-pages.js"></script>
 </body>
+</html>
