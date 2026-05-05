@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta content="no-store, no-cache, must-revalidate, max-age=0" http-equiv="Cache-Control"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Réservations — Boostinghost</title>
+<title>Réservations</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <link href="/css/style.css?v=3" rel="stylesheet"/>
@@ -646,23 +646,42 @@ body {
   .main-content {
     padding-top: calc(60px + env(safe-area-inset-top, 0px)) !important;
   }
+  /* Cacher le page-header desktop sur mobile */
+  .page-header { display: none !important; }
 
-  /* 4. STATS BAR */
-  .stats-bar { display: none !important; }
+  /* 4. CACHER ÉLÉMENTS DESKTOP */
+  .stats-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
   .filters-bar { display: none !important; }
   .table-wrap { display: none !important; }
   .pagination { display: none !important; }
+  .page-header { display: none !important; }
 
   /* 5. VUE MOBILE */
   .mobile-view { 
     display: block !important;
-    padding-top: 8px !important;
+    padding-top: 12px !important;
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* Supprimer tout espace avant la vue mobile */
+  .main-content > *:not(.mobile-view) { display: none !important; }
+  .main-content > .mobile-view { display: block !important; }
+
+  /* 6. BOTTOM NAV — forcer l'affichage */
+  .mobile-tabs, #mobileTabsNav, nav.mobile-tabs {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245,242,236,0.97) !important;
+    border-top: 1px solid rgba(200,184,154,0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
 }
 </style>
 </head>
-<body data-page="reservations" data-theme-v3="1" data-theme="light">
+<body data-page="reservations" data-title="Réservations" data-theme-v3="1" data-theme="light">
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
 
