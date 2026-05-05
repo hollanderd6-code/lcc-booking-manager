@@ -6316,18 +6316,15 @@ try {
           outer.querySelectorAll('.bh-day-cell').forEach(function(c){
             if(c.dataset.colIdx!==String(idx5)) c.style.opacity='0.25';
           });
-          // Pour chaque bloc: visible si il COUVRE la colonne cliquée
+          // Pour chaque bloc: visible si il COUVRE la colonne cliquée (checkout exclu)
           outer.querySelectorAll('.booking-block-bh').forEach(function(b){
-            var anchorCell = b.parentElement;
-            if(!anchorCell) { b.style.opacity='0.25'; return; }
-            var startCol = parseInt(anchorCell.dataset.colIdx||'0');
-            // Nb de colonnes couvertes = largeur du bloc / colW (48px)
-            var nCols = Math.max(1, Math.round(b.offsetWidth / 48));
-            var endCol = startCol + nCols;
-            // Le bloc est visible si la colonne active est dans [startCol, endCol[
-            b.style.opacity = (idx5 >= startCol && idx5 < endCol) ? '1' : '0.2';
-            // Forcer opacity:1 sur les dcells parentes des blocs visibles
-            if(idx5 >= startCol && idx5 < endCol) anchorCell.style.opacity='1';
+            var startCol = parseInt(b.dataset.colStart || b.parentElement?.dataset?.colIdx || '0');
+            var endCol   = parseInt(b.dataset.colEnd   || (startCol + Math.max(1, Math.round(b.offsetWidth / 48))));
+            // Visible si la date cliquée est dans [startCol, endCol-1[
+            // endCol-1 = jour de checkout → on ne filtre PAS cette réservation
+            var visible = (idx5 >= startCol && idx5 < endCol - 1);
+            b.style.opacity = visible ? '1' : '0.2';
+            if (visible && b.parentElement) b.parentElement.style.opacity = '1';
           });
         }
       };})(di, hcell);
@@ -6410,7 +6407,9 @@ try {
         // Le bloc est position:absolute dans anchorCell, width = nb cols * colW
         var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:3;');
         blk.className = 'booking-block-bh';
-        blk.dataset.propId = String(prop.id);
+        blk.dataset.propId   = String(prop.id);
+        blk.dataset.colStart = String(clippedStart);
+        blk.dataset.colEnd   = String(clippedEnd);   // jour de checkout exclusif
         // left = 25% du colStart (déjà dans anchorCell donc left=25% de sa width)
         blk.style.left  = (colW * 0.25) + 'px';
         blk.style.width = ((clippedEnd - clippedStart) * colW) + 'px';
