@@ -8967,36 +8967,57 @@ if (editBookingForm) {
         alert('Blocage mis à jour !');
 
       } else {
-        // ── CAS RÉSERVATION MANUELLE : PUT atomique (libère anciennes dates + bloque nouvelles) ──
         const uid = currentBookingData.uid || currentBookingData.id;
-        console.log('✏️ Modification réservation manuelle uid:', uid);
+        const platform = (currentBookingData.source || currentBookingData.platform || '').toLowerCase();
+        const isOTA = platform && !['direct','manual',''].includes(platform) && platform !== 'block';
+        const isManualRes = currentBookingData.isManual || currentBookingData.type === 'manual' ||
+          platform === 'direct' || platform === 'manual' || !platform;
 
-        const updateRes = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual/' + encodeURIComponent(uid), {
-          method: 'PUT', headers,
-          body: JSON.stringify({
-            propertyId,
-            start,
-            end,
-            guestName:        guestName || currentBookingData.guestName || '',
-            phone:            document.getElementById('editGuestPhone')?.value || '',
-            email:            document.getElementById('editGuestEmail')?.value || '',
-            platform:         document.getElementById('editPlatform')?.value || 'direct',
-            price:            document.getElementById('editPrice')?.value ? parseFloat(document.getElementById('editPrice').value) : null,
-            notes:            notes || currentBookingData.notes || '',
-            guest_country:    document.getElementById('editGuestCountry')?.value || null,
-            occupancy_adults: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
-            amount_rooms:     document.getElementById('editPriceRooms')?.value ? parseFloat(document.getElementById('editPriceRooms').value) : null,
-            amount_cleaning:  document.getElementById('editPriceCleaning')?.value ? parseFloat(document.getElementById('editPriceCleaning').value) : null,
-            amount_taxes:     document.getElementById('editPriceTaxes')?.value ? parseFloat(document.getElementById('editPriceTaxes').value) : null,
-            ota_commission:   document.getElementById('editCommission')?.value ? parseFloat(document.getElementById('editCommission').value) : null,
-          })
-        });
-        let updateBody = {};
-        try { updateBody = await updateRes.json(); } catch (e) {}
-        if (!updateRes.ok) {
-          throw new Error(updateBody.error || 'Erreur mise à jour (' + updateRes.status + ')');
+        if (isOTA && !isManualRes) {
+          // ── CAS RÉSERVATION OTA (Airbnb, Booking, etc.) ──
+          // On ne modifie PAS les dates/propriété (géré par Channex)
+          // On sauvegarde uniquement la note localement
+          console.log('✏️ Modification note réservation OTA uid:', uid);
+          const noteRes = await fetch('/api/reservations/' + encodeURIComponent(uid) + '/note', {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ notes })
+          });
+          let noteBody = {};
+          try { noteBody = await noteRes.json(); } catch (e) {}
+          if (!noteRes.ok) {
+            throw new Error(noteBody.error || 'Erreur mise à jour note (' + noteRes.status + ')');
+          }
+          alert('Note sauvegardée !');
+        } else {
+          // ── CAS RÉSERVATION MANUELLE ──
+          console.log('✏️ Modification réservation manuelle uid:', uid);
+          const updateRes = await fetch('https://lcc-booking-manager.onrender.com/api/reservations/manual/' + encodeURIComponent(uid), {
+            method: 'PUT', headers,
+            body: JSON.stringify({
+              propertyId,
+              start,
+              end,
+              guestName:        guestName || currentBookingData.guestName || '',
+              phone:            document.getElementById('editGuestPhone')?.value || '',
+              email:            document.getElementById('editGuestEmail')?.value || '',
+              platform:         document.getElementById('editPlatform')?.value || 'direct',
+              price:            document.getElementById('editPrice')?.value ? parseFloat(document.getElementById('editPrice').value) : null,
+              notes:            notes || currentBookingData.notes || '',
+              guest_country:    document.getElementById('editGuestCountry')?.value || null,
+              occupancy_adults: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
+              amount_rooms:     document.getElementById('editPriceRooms')?.value ? parseFloat(document.getElementById('editPriceRooms').value) : null,
+              amount_cleaning:  document.getElementById('editPriceCleaning')?.value ? parseFloat(document.getElementById('editPriceCleaning').value) : null,
+              amount_taxes:     document.getElementById('editPriceTaxes')?.value ? parseFloat(document.getElementById('editPriceTaxes').value) : null,
+              ota_commission:   document.getElementById('editCommission')?.value ? parseFloat(document.getElementById('editCommission').value) : null,
+            })
+          });
+          let updateBody = {};
+          try { updateBody = await updateRes.json(); } catch (e) {}
+          if (!updateRes.ok) {
+            throw new Error(updateBody.error || 'Erreur mise à jour (' + updateRes.status + ')');
+          }
+          alert('Réservation mise à jour !');
         }
-        alert('Réservation mise à jour !');
       }
 
       const editModal = document.getElementById('editBookingModal');
