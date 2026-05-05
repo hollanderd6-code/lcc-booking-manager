@@ -523,112 +523,85 @@ body {
 .page-btn.active { background: var(--green); color: white; border-color: var(--green); }
 .page-btn:disabled { opacity: .35; cursor: not-allowed; }
 
-/* ─── DETAIL SHEET ─── */
-.detail-overlay {
+/* ─── DETAIL BOTTOM SHEET ─── */
+.bh-resa-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,.4);
-  z-index: 200;
+  background: rgba(13,17,23,.55);
+  backdrop-filter: blur(3px);
+  z-index: 500;
   display: none;
-  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity .25s;
 }
-.detail-overlay.open { display: block; }
+.bh-resa-overlay.open { display: block; opacity: 1; }
 
-.detail-sheet {
+.bh-resa-sheet {
   position: fixed;
-  right: 0; top: 0; bottom: 0;
-  width: 380px;
-  max-width: 95vw;
-  background: var(--white);
-  z-index: 201;
-  transform: translateX(100%);
-  transition: transform .25s cubic-bezier(.4,0,.2,1);
+  left: 0; right: 0; bottom: 0;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  max-height: 90vh;
+  background: #F5F0E8;
+  border-radius: 24px 24px 0 0;
+  z-index: 501;
   display: flex;
   flex-direction: column;
-  box-shadow: -8px 0 32px rgba(0,0,0,.12);
+  box-shadow: 0 -8px 40px rgba(0,0,0,.18);
+  transform: translateY(100%);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
 }
-.detail-sheet.open { transform: translateX(0); }
+.bh-resa-sheet.open { transform: translateY(0); }
 
-.detail-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.bh-resa-drag {
+  display: flex; justify-content: center;
+  padding: 10px 0 4px; flex-shrink: 0;
+}
+.bh-resa-drag-bar {
+  width: 36px; height: 4px;
+  border-radius: 99px;
+  background: rgba(0,0,0,.15);
 }
 
-.detail-close {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--cream);
-  cursor: pointer;
+.bh-resa-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 20px 14px; flex-shrink: 0;
+}
+.bh-resa-header-title {
+  font-size: 15px; font-weight: 600;
+  color: #6B7280; letter-spacing: .02em;
+}
+.bh-resa-close {
+  background: rgba(0,0,0,.07); border: none;
+  border-radius: 50%; width: 30px; height: 30px;
+  font-size: 18px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px;
-  color: var(--text-muted);
-  transition: background .15s;
-}
-.detail-close:hover { background: var(--cream-dark); }
-
-.detail-body { flex: 1; overflow-y: auto; padding: 20px; }
-
-.detail-section {
-  margin-bottom: 20px;
+  color: #6B7280;
 }
 
-.detail-section-title {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--text-light);
-  margin-bottom: 10px;
-}
+.bh-resa-body { overflow-y: auto; flex: 1; padding: 0 16px 32px; }
 
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--cream);
-  font-size: 13px;
+/* Sections internes */
+.bh-modal-section { margin-bottom: 18px; }
+.bh-modal-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: #9CA3AF; margin-bottom: 8px;
 }
-.detail-row:last-child { border-bottom: none; }
-.detail-row .dr-label { color: var(--text-muted); }
-.detail-row .dr-val { font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
-
-.detail-guest-avatar {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: var(--green);
-  color: white;
-  font-size: 20px;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 12px;
+.bh-modal-card {
+  background: white; border-radius: 14px;
+  overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06);
 }
-
-.detail-guest-name {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 4px;
+.bh-modal-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 14px; font-size: 13px;
+  border-bottom: 1px solid #F5F2EC;
 }
-
-.amount-big {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--green);
-}
-
-/* Mobile bottom sheet */
-@media (max-width: 768px) {
-  .detail-sheet {
-    right: 0; left: 0; top: auto; bottom: 0;
-    width: 100%;
-    height: 85vh;
-    transform: translateY(100%);
-    border-radius: 20px 20px 0 0;
-  }
-  .detail-sheet.open { transform: translateY(0); }
+.bh-modal-row:last-child { border-bottom: none; }
+.bh-modal-row-label { color: #6B7280; }
+.bh-modal-row-val { font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
+.bh-modal-amount-total {
+  font-size: 24px; font-weight: 800; color: #1A7A5E;
 }
 
 /* ─── RESPONSIVE ─── */
@@ -709,11 +682,8 @@ body {
   </div>
   <select class="filter-select" id="statusFilter" onchange="applyFilters()">
     <option value="">Tous les statuts</option>
-    <option value="confirmed">Confirmé</option>
-    <option value="non_confirmed">Non confirmé</option>
-    <option value="request">Request</option>
     <option value="modified">Modifié</option>
-    <option value="no_show">No Show</option>
+    <option value="no_show">Non présentation</option>
     <option value="cancelled">Annulé</option>
   </select>
   <select class="filter-select" id="propFilter" onchange="applyFilters()">
@@ -761,14 +731,7 @@ body {
 
 <!-- MOBILE VIEW -->
 <div class="mobile-view">
-  <div class="mobile-tabs">
-    <button class="mobile-tab active" onclick="setMobileTab('all', this)">
-      <i class="fas fa-list" style="margin-right:5px"></i>Toutes les réservations
-    </button>
-    <button class="mobile-tab" onclick="setMobileTab('pending', this)">
-      <i class="fas fa-exclamation-circle" style="margin-right:5px"></i>Non confirmées
-    </button>
-  </div>
+  <div class="mobile-tabs" style="display:none;"></div>
   <div class="mobile-search">
     <div class="mobile-search-wrap">
       <i class="fas fa-search"></i>
@@ -778,14 +741,15 @@ body {
   <div id="mobileCards"></div>
 </div>
 
-<!-- DETAIL SHEET -->
-<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
-<div class="detail-sheet" id="detailSheet">
-  <div class="detail-header">
-    <div style="font-size:15px;font-weight:700;">Détail de la réservation</div>
-    <button class="detail-close" onclick="closeDetail()">✕</button>
+<!-- DETAIL BOTTOM SHEET -->
+<div class="bh-resa-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+<div class="bh-resa-sheet" id="detailSheet">
+  <div class="bh-resa-drag"><div class="bh-resa-drag-bar"></div></div>
+  <div class="bh-resa-header">
+    <div class="bh-resa-header-title">Détail de la réservation</div>
+    <button class="bh-resa-close" onclick="closeDetail()">×</button>
   </div>
-  <div class="detail-body" id="detailBody"></div>
+  <div class="bh-resa-body" id="detailBody"></div>
 </div>
 
 <script>
@@ -841,8 +805,8 @@ function pltLabel(r) {
 function statusLabel(s) {
   return {
     confirmed:'Confirmé', cancelled:'Annulé',
-    request:'Request', no_show:'No Show',
-    modified:'Modifié', non_confirmed:'Non confirmé',
+    request:'Confirmé', no_show:'Non présentation',
+    modified:'Modifié', non_confirmed:'Confirmé',
     completed:'Terminé'
   }[s] || s || 'Confirmé';
 }
@@ -1157,66 +1121,140 @@ function renderMobile() {
   }).join('');
 }
 
-// ─── DETAIL ───────────────────────────────
+// ─── DETAIL BOTTOM SHEET (style app.html) ────────────────────
+function fmtEur(val) {
+  if (val == null || val === '' || isNaN(Number(val))) return null;
+  return Number(val).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
 function openDetail(r) {
   if (typeof r === 'string') r = JSON.parse(r);
+
   const plt    = normPlatform(r);
-  const s      = r.start || r.startDate || '';
-  const e      = r.end   || r.endDate   || '';
+  const s      = (r.start || r.startDate || '').split('T')[0];
+  const e      = (r.end   || r.endDate   || '').split('T')[0];
   const nights = nightsCount(s, e);
-  const guests = r.occupancyAdults || r.occupancy_adults || 1;
+  const guests = r.occupancyAdults || r.occupancy_adults || r.occupancy || 1;
+  const children = r.occupancyChildren || r.occupancy_children || 0;
   const status = (r.status || 'confirmed').toLowerCase();
   const note   = (r.notes || '').trim();
+  const isNote = hasRealNote(r);
+
+  const PLT_CFG = {
+    airbnb:  { label:'Airbnb',       bg:'linear-gradient(135deg,#FF5A5F,#E84C50)', color:'#fff' },
+    booking: { label:'Booking.com',  bg:'linear-gradient(135deg,#003580,#00224F)', color:'#fff' },
+    abritel: { label:'Abritel',      bg:'linear-gradient(135deg,#0096D6,#0077B3)', color:'#fff' },
+    direct:  { label:'Direct',       bg:'linear-gradient(135deg,#1A7A5E,#0f5c46)', color:'#fff' },
+    other:   { label:pltLabel(r),    bg:'linear-gradient(135deg,#6B7280,#4B5563)', color:'#fff' },
+  };
+  const pc = PLT_CFG[plt] || PLT_CFG.other;
+
+  const countryNames = {
+    FR:'🇫🇷 France', GB:'🇬🇧 Royaume-Uni', DE:'🇩🇪 Allemagne', ES:'🇪🇸 Espagne',
+    IT:'🇮🇹 Italie', US:'🇺🇸 États-Unis', NL:'🇳🇱 Pays-Bas', BE:'🇧🇪 Belgique',
+    CH:'🇨🇭 Suisse', PT:'🇵🇹 Portugal', CA:'🇨🇦 Canada', MA:'🇲🇦 Maroc',
+    DZ:'🇩🇿 Algérie', TN:'🇹🇳 Tunisie', SN:'🇸🇳 Sénégal', CI:'🇨🇮 Côte d\'Ivoire',
+    LU:'🇱🇺 Luxembourg', AE:'🇦🇪 Émirats', AU:'🇦🇺 Australie', RU:'🇷🇺 Russie',
+    BR:'🇧🇷 Brésil', JP:'🇯🇵 Japon', CN:'🇨🇳 Chine', PL:'🇵🇱 Pologne',
+    TR:'🇹🇷 Turquie', RE:'🇷🇪 La Réunion', GP:'🇬🇵 Guadeloupe', MQ:'🇲🇶 Martinique',
+  };
+  const countryDisplay = r.guestCountry || r.guest_country
+    ? (countryNames[r.guestCountry || r.guest_country] || (r.guestCountry || r.guest_country))
+    : null;
+
+  // Montants
+  const amountTotal    = r.amount_total || r.amountTotal || r.price || r.totalPrice || null;
+  const amountRooms    = r.amount_rooms    || r.amountRooms    || null;
+  const amountTaxes    = r.amount_taxes    || r.amountTaxes    || null;
+  const amountCleaning = r.amount_cleaning || r.amountCleaning || null;
+  const otaCommission  = r.ota_commission  || r.otaCommission  || null;
+  const hostPayout     = r.host_payout     || r.hostPayout     || null;
+  const daysBreakdown  = r.days_breakdown  || r.daysBreakdown  || null;
+
+  // Prix par nuit
+  let breakdownHTML = '';
+  if (daysBreakdown && typeof daysBreakdown === 'object') {
+    const entries = Object.entries(daysBreakdown).sort(([a],[b]) => a.localeCompare(b));
+    if (entries.length > 0) {
+      breakdownHTML = '<div class="bh-modal-label" style="margin-top:12px;">Prix par nuit</div>'
+        + entries.map(([date, price]) => {
+          const d = new Date(date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
+          return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;padding:3px 0;">'
+            + '<span>' + d + '</span><span>' + fmtEur(price) + '</span></div>';
+        }).join('');
+    }
+  }
+
+  // Générer email/phone
+  const guestEmail = r.guestEmail || r.guest_email || null;
+  const guestPhone = r.guestPhone || r.guest_phone || null;
 
   const body = document.getElementById('detailBody');
-  body.innerHTML = `
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
-      <div class="detail-guest-avatar">${guestInitial(r)}</div>
-      <div>
-        <div class="detail-guest-name">${guestFullName(r)}</div>
-        <span class="status-badge ${statusClass(status)}">${statusLabel(status)}</span>
-      </div>
-    </div>
+  body.innerHTML =
+    // ── GUEST HERO ──
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">'
+    + '<div style="width:52px;height:52px;border-radius:50%;background:var(--green);color:white;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + guestInitial(r) + '</div>'
+    + '<div style="min-width:0;">'
+    + '<div style="font-size:18px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + guestFullName(r) + '</div>'
+    + '<div style="margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:' + pc.bg + ';color:' + pc.color + ';">' + pc.label + '</span>'
+    + '<span class="status-badge ' + statusClass(status) + '">' + statusLabel(status) + '</span>'
+    + '</div>'
+    + '</div>'
+    + '</div>'
 
-    <div class="detail-section">
-      <div class="detail-section-title">Réservation</div>
-      <div class="detail-row"><span class="dr-label">Logement</span><span class="dr-val">${r.propertyName||'—'}</span></div>
-      <div class="detail-row"><span class="dr-label">Plateforme</span><span class="dr-val"><span class="plt-badge plt-${plt}">${pltLabel(r)}</span></span></div>
-      <div class="detail-row"><span class="dr-label">Réservé le</span><span class="dr-val">${r.createdAt ? fmtDate(r.createdAt.split('T')[0]) : '—'}</span></div>
-      <div class="detail-row"><span class="dr-label">Checkin</span><span class="dr-val">${fmtDateShort(s.split('T')[0])}</span></div>
-      <div class="detail-row"><span class="dr-label">Checkout</span><span class="dr-val">${fmtDateShort(e.split('T')[0])}</span></div>
-      <div class="detail-row"><span class="dr-label">Nuits</span><span class="dr-val">${nights}</span></div>
-      <div class="detail-row"><span class="dr-label">Voyageurs</span><span class="dr-val">${guests}</span></div>
-    </div>
+    // ── SÉJOUR ──
+    + '<div class="bh-modal-section">'
+    + '<div class="bh-modal-label">Séjour</div>'
+    + '<div class="bh-modal-card">'
+    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Logement</span><span class="bh-modal-row-val">' + (r.propertyName || '—') + '</span></div>'
+    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Réservé le</span><span class="bh-modal-row-val">' + (r.createdAt ? fmtDate(r.createdAt.split('T')[0]) : '—') + '</span></div>'
+    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Checkin</span><span class="bh-modal-row-val">' + fmtDateShort(s) + '</span></div>'
+    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Checkout</span><span class="bh-modal-row-val">' + fmtDateShort(e) + '</span></div>'
+    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Nuits</span><span class="bh-modal-row-val">' + nights + '</span></div>'
+    + '<div class="bh-modal-row"><span class="bh-modal-row-label">Adultes</span><span class="bh-modal-row-val">' + guests + (children ? ' + ' + children + ' enfant(s)' : '') + '</span></div>'
+    + (countryDisplay ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Pays</span><span class="bh-modal-row-val">' + countryDisplay + '</span></div>' : '')
+    + '</div>'
+    + '</div>'
 
-    ${r.guestEmail || r.guestPhone || r.guestCountry ? `
-    <div class="detail-section">
-      <div class="detail-section-title">Voyageur</div>
-      ${r.guestEmail ? `<div class="detail-row"><span class="dr-label">Email</span><span class="dr-val"><a href="mailto:${r.guestEmail}" style="color:var(--green)">${r.guestEmail}</a></span></div>` : ''}
-      ${r.guestPhone ? `<div class="detail-row"><span class="dr-label">Téléphone</span><span class="dr-val"><a href="tel:${r.guestPhone}" style="color:var(--green)">${r.guestPhone}</a></span></div>` : ''}
-      ${r.guestCountry ? `<div class="detail-row"><span class="dr-label">Pays</span><span class="dr-val">${r.guestCountry}</span></div>` : ''}
-    </div>` : ''}
+    // ── CONTACT ──
+    + (guestEmail || guestPhone ? (
+      '<div class="bh-modal-section">'
+      + '<div class="bh-modal-label">Contact</div>'
+      + '<div class="bh-modal-card">'
+      + (guestEmail ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Email</span><span class="bh-modal-row-val"><a href="mailto:' + guestEmail + '" style="color:var(--green);">' + guestEmail + '</a></span></div>' : '')
+      + (guestPhone ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Téléphone</span><span class="bh-modal-row-val"><a href="tel:' + guestPhone + '" style="color:var(--green);">' + guestPhone + '</a></span></div>' : '')
+      + '</div></div>'
+    ) : '')
 
-    <div class="detail-section">
-      <div class="detail-section-title">Finances</div>
-      <div class="detail-row"><span class="dr-label">Montant total</span><span class="dr-val amount-big">${fmtAmount(r)}</span></div>
-      ${r.amount_rooms ? `<div class="detail-row"><span class="dr-label">Hébergement</span><span class="dr-val">${fmtAmount({amount_total:r.amount_rooms})}</span></div>` : ''}
-      ${r.amount_cleaning ? `<div class="detail-row"><span class="dr-label">Ménage</span><span class="dr-val">${fmtAmount({amount_total:r.amount_cleaning})}</span></div>` : ''}
-      ${r.ota_commission ? `<div class="detail-row"><span class="dr-label">Commission OTA</span><span class="dr-val" style="color:#ef4444">-${fmtAmount({amount_total:r.ota_commission})}</span></div>` : ''}
-      ${r.host_payout ? `<div class="detail-row"><span class="dr-label">Reversement hôte</span><span class="dr-val" style="color:var(--green)">${fmtAmount({amount_total:r.host_payout})}</span></div>` : ''}
-    </div>
+    // ── FINANCES ──
+    + '<div class="bh-modal-section">'
+    + '<div class="bh-modal-label">Finances</div>'
+    + '<div class="bh-modal-card">'
+    + (amountTotal != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Total</span><span class="bh-modal-row-val bh-modal-amount-total">' + fmtEur(amountTotal) + '</span></div>' : '')
+    + (amountRooms != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Hébergement</span><span class="bh-modal-row-val">' + fmtEur(amountRooms) + '</span></div>' : '')
+    + (amountCleaning != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Ménage</span><span class="bh-modal-row-val">' + fmtEur(amountCleaning) + '</span></div>' : '')
+    + (amountTaxes != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Taxes</span><span class="bh-modal-row-val">' + fmtEur(amountTaxes) + '</span></div>' : '')
+    + (otaCommission != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Commission OTA</span><span class="bh-modal-row-val" style="color:#ef4444;">−' + fmtEur(otaCommission) + '</span></div>' : '')
+    + (hostPayout != null ? '<div class="bh-modal-row"><span class="bh-modal-row-label">Reversement hôte</span><span class="bh-modal-row-val" style="color:var(--green);font-weight:700;">' + fmtEur(hostPayout) + '</span></div>' : '')
+    + breakdownHTML
+    + '</div>'
+    + '</div>'
 
-    ${note && hasRealNote(r) ? `
-    <div class="detail-section">
-      <div class="detail-section-title">Note interne</div>
-      <div style="background:rgba(239,68,68,.06);border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:13px;color:var(--text);line-height:1.5;">${note}</div>
-    </div>` : ''}
+    // ── NOTE ──
+    + (isNote ? (
+      '<div class="bh-modal-section">'
+      + '<div class="bh-modal-label">Note interne</div>'
+      + '<div style="background:rgba(239,68,68,.07);border-left:3px solid #ef4444;padding:13px 14px;border-radius:0 12px 12px 0;font-size:13px;color:var(--text);line-height:1.6;">' + note + '</div>'
+      + '</div>'
+    ) : '')
 
-    <div style="display:flex;gap:8px;margin-top:8px;">
-      <button class="btn btn-primary" style="flex:1" onclick="window.location.href='/messages.html'">
-        <i class="fas fa-comment"></i> Messages
-      </button>
-    </div>`;
+    // ── ACTION ──
+    + '<div style="display:flex;gap:8px;margin-top:4px;">'
+    + '<button class="btn btn-primary" style="flex:1;" onclick="window.location.href=\'/messages.html\'">'
+    + '<i class="fas fa-comment"></i> Messages'
+    + '</button>'
+    + '</div>';
 
   document.getElementById('detailOverlay').classList.add('open');
   document.getElementById('detailSheet').classList.add('open');
