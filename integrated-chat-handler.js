@@ -202,7 +202,11 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       const urgentMessages = {
         fr: `🚨 Votre message urgent a été transmis au responsable qui vous contactera immédiatement.\n\nMerci de patienter ! 🙏`,
         en: `🚨 Your urgent message has been forwarded to the owner who will contact you immediately.\n\nThank you for your patience! 🙏`,
-        es: `🚨 Su mensaje urgente ha sido transmitido al propietario.\n\n¡Gracias por su paciencia! 🙏`
+        es: `🚨 Su mensaje urgente ha sido transmitido al propietario.\n\n¡Gracias por su paciencia! 🙏`,
+        pt: `🚨 A sua mensagem urgente foi transmitida ao responsável que o contactará imediatamente.\n\nObrigado pela sua paciência! 🙏`,
+        de: `🚨 Ihre dringende Nachricht wurde an den Verantwortlichen weitergeleitet, der Sie sofort kontaktieren wird.\n\nVielen Dank für Ihre Geduld! 🙏`,
+        it: `🚨 Il suo messaggio urgente è stato trasmesso al responsabile che la contatterà immediatamente.\n\nGrazie per la pazienza! 🙏`,
+        nl: `🚨 Uw dringende bericht is doorgestuurd naar de verantwoordelijke die u onmiddellijk zal contacteren.\n\nBedankt voor uw geduld! 🙏`,
       };
       await sendBotMessage(conversation.id, urgentMessages[lang] || urgentMessages.fr, pool, io, channexId);
       await pool.query(
@@ -227,20 +231,23 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       return false;
     }
 
-    // Détecter la langue depuis le message plutôt que conversation.language
-    // car conversation.language peut être null ou mal renseigné
+    // Détecter la langue depuis le message, puis fallback sur la langue de la conversation/réservation
     const _msgLower = message.message.toLowerCase();
     let language = 'auto'; // défaut : Groq détecte automatiquement
-    if (conversation.language && ['fr','en','es','de','it'].includes(conversation.language)) {
-      // Langue explicite connue depuis la plateforme → on l'utilise directement
+
+    if (conversation.language && ['fr','en','es','de','it','pt','nl','ru','zh','ja','ko'].includes(conversation.language)) {
+      // Langue explicite connue depuis la plateforme → priorité absolue
       language = conversation.language;
+      console.log('🌍 [HANDLER] Langue depuis conversation.language:', language);
     } else {
-      // Détection locale rapide pour les 5 langues principales
+      // Détection locale rapide pour les 7 langues principales
       const enP = /\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|can|could|would|i need|i want|wifi|password|check.in|check.out|address|arrival|departure)\b/gi;
       const esP = /\b(hola|gracias|por favor|dónde|cuándo|puedo|quiero|necesito|contraseña|llegada|salida)\b/gi;
       const deP = /\b(hallo|danke|bitte|wo|wann|wie|was|ich|können|möchte|passwort|ankunft|abreise)\b/gi;
       const itP = /\b(ciao|grazie|dove|quando|posso|vorrei|ho bisogno|indirizzo|arrivo|partenza)\b/gi;
       const frP = /\b(bonjour|bonsoir|merci|où|quand|comment|puis-je|voudrais|besoin|arrivée|départ|avez-vous|est-ce|nous|vous|je)\b/gi;
+      const ptP = /\b(olá|ola|obrigado|obrigada|por favor|onde|quando|posso|quero|preciso|senha|chegada|saída|entrada|como|bom dia|boa tarde)\b/gi;
+      const nlP = /\b(hallo|hoi|bedankt|dank|alsjeblieft|waar|wanneer|kan|wil|nodig|wachtwoord|aankomst|vertrek)\b/gi;
 
       const scores = {
         en: (message.message.match(enP) || []).length,
@@ -248,16 +255,27 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         de: (message.message.match(deP) || []).length,
         it: (message.message.match(itP) || []).length,
         fr: (message.message.match(frP) || []).length,
+        pt: (message.message.match(ptP) || []).length,
+        nl: (message.message.match(nlP) || []).length,
       };
 
       const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
       if (best[1] >= 2) {
-        // Score suffisant → langue identifiée localement
         language = best[0];
+        console.log('🌍 [HANDLER] Langue détectée localement:', language, '(scores:', scores, ')');
+      } else {
+        // Pas assez de mots → utiliser la langue de la réservation si disponible
+        const convLang = conversation.guest_language || conversation.language || null;
+        if (convLang) {
+          const l = convLang.toLowerCase().split('-')[0];
+          if (['en','es','de','it','pt','nl','ru','zh','ja','ko'].includes(l)) {
+            language = l;
+            console.log('🌍 [HANDLER] Langue depuis réservation/conv:', language);
+          }
+        }
+        // Sinon language reste 'auto' → Groq détecte
+        if (language === 'auto') console.log('🌍 [HANDLER] Langue: auto (Groq détecte)');
       }
-      // Sinon language reste 'auto' → Groq détecte (japonais, arabe, russe, néerlandais, etc.)
-
-      console.log('🌍 [HANDLER] Langue:', language, '(scores:', scores, ')');
     }
 
     // ========================================
@@ -659,7 +677,11 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
     const msgs = {
       fr: `👋 Je vous mets en relation avec le responsable qui pourra mieux vous aider.\n\nVotre message lui a été transmis, il vous répondra dès que possible. Merci de votre patience ! 🙏`,
       en: `👋 I'm connecting you with the owner who can better assist you.\n\nYour message has been forwarded, they'll reply as soon as possible. Thank you! 🙏`,
-      es: `👋 Le pongo en contacto con el propietario.\n\nSu mensaje ha sido transmitido. ¡Gracias por su paciencia! 🙏`
+      es: `👋 Le pongo en contacto con el propietario.\n\nSu mensaje ha sido transmitido. ¡Gracias por su paciencia! 🙏`,
+      pt: `👋 Estou a colocá-lo em contacto com o responsável que poderá ajudá-lo melhor.\n\nA sua mensagem foi transmitida, ele responderá o mais brevemente possível. Obrigado pela sua paciência! 🙏`,
+      de: `👋 Ich verbinde Sie mit dem Verantwortlichen, der Ihnen besser helfen kann.\n\nIhre Nachricht wurde weitergeleitet. Vielen Dank für Ihre Geduld! 🙏`,
+      it: `👋 La metto in contatto con il responsabile che potrà aiutarla meglio.\n\nIl suo messaggio è stato trasmesso. Grazie per la pazienza! 🙏`,
+      nl: `👋 Ik verbind u door met de verantwoordelijke die u beter kan helpen.\n\nUw bericht is doorgestuurd. Bedankt voor uw geduld! 🙏`,
     };
     await sendBotMessage(conversation.id, msgs[lang] || msgs.fr, pool, io, channexId);
     await pool.query(
