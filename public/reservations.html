@@ -228,6 +228,37 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .bh-modal-row-val { font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
 .bh-modal-amount-total { font-size: 20px; font-weight: 800; color: var(--green); padding: 14px; }
 </style>
+<style>
+/* Layout desktop — calqué sur deposits.html */
+html[data-theme-v3="1"] .app-container {
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
+}
+html[data-theme-v3="1"] main.main-content {
+  overflow-y: auto !important;
+  height: 100% !important;
+  background: #F5F2EC !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] main.main-content {
+    padding-top: 70px !important;
+  }
+}
+html[data-theme-v3="1"] header.main-header {
+  position: fixed !important;
+  top: 40px !important;
+  left: 0 !important; right: 0 !important;
+  z-index: 50 !important;
+  margin-left: 260px !important;
+}
+@media(max-width:1366px){
+  html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; }
+}
+html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
+</style>
+
 <style id="resa-mobile-master">
 
 @media (max-width: 1366px) {
@@ -255,9 +286,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
     border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
     padding-top: env(safe-area-inset-top, 0px) !important;
   }
-  #bhHeader, .main-header { display: none !important; }
-  /* Espace dû au bhHeader desktop — supprimer */
-  html[data-theme-v3="1"] #bhHeader { display: none !important; height: 0 !important; }
+  /* bhHeader visible sur desktop, caché sur mobile géré par bh-layout */
 
   /* 3. PAGE CONTENT */
   html[data-theme-v3="1"] .main-content {
@@ -307,8 +336,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 <div id="bhMobileHeader"></div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-container">
-<div id="bhSidebar"></div>
-<main class="main-content"><div id="bhHeader" style="display:none;height:0;overflow:hidden;"></div>
+<div id="bhSidebar">
 
 <!-- STATS -->
 <div class="stats-bar" id="statsBar">
