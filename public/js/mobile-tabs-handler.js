@@ -83,6 +83,15 @@
     const hr = `<hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
     let buttons = '';
 
+    // Bouton Accueil toujours visible pour les sous-comptes
+    if (isSubAccount) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/app.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-th-large"></i> Accueil
+        </button>`;
+      buttons += hr;
+    }
+
     if (canSeePage('welcome')) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
