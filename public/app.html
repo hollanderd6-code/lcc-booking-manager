@@ -2709,9 +2709,11 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     try {
       var subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
       role = subData.role || 'custom';
-      if (subData.permissions && subData.permissions.visible_kpis) {
-        visibleKpis = subData.permissions.visible_kpis;
-      }
+      // Permissions : d'abord lcc_permissions, sinon lcc_sub_account.permissions
+      var _subPerms = {};
+      try { _subPerms = JSON.parse(localStorage.getItem('lcc_permissions') || '{}'); } catch(e) {}
+      if (Object.keys(_subPerms).length === 0) _subPerms = subData.permissions || {};
+      if (_subPerms.visible_kpis) visibleKpis = _subPerms.visible_kpis;
     } catch(e) {}
 
     var style = document.createElement('style');
@@ -11685,18 +11687,13 @@ document.addEventListener('DOMContentLoaded', function() {
   let _userRole = '';
   let _perms = {};
   try {
-    const _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    _userRole = _u.role || '';
-    
-    // 🔍 DEBUG TEMPORAIRE — à supprimer après fix
-    console.log('🔍 [KPI DEBUG] lcc_account_type:', _accountType);
-    console.log('🔍 [KPI DEBUG] lcc_user:', JSON.stringify(_u));
-    console.log('🔍 [KPI DEBUG] _userRole:', _userRole);
-    console.log('🔍 [KPI DEBUG] lcc_sub_account:', localStorage.getItem('lcc_sub_account'));
-    console.log('🔍 [KPI DEBUG] lcc_permissions:', localStorage.getItem('lcc_permissions'));
-    // Les permissions sont stockées dans lcc_permissions (séparé de lcc_user)
+    // Le rôle est dans lcc_sub_account (lcc_user est null pour les sous-comptes)
+    const _subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+    _userRole = _subData.role || '';
+    // Les permissions sont dans lcc_sub_account.permissions
+    // (lcc_permissions peut être absent ou vide pour les sous-comptes)
     const _lccp = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
-    _perms = Object.keys(_lccp).length > 0 ? _lccp : (_u.permissions || {});
+    _perms = Object.keys(_lccp).length > 0 ? _lccp : (_subData.permissions || {});
   } catch(e) {}
 
   // Mapping KPI id → clé visible_kpis
