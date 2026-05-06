@@ -11722,11 +11722,18 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
-      // Autres KPI : visible UNIQUEMENT si visible_kpis[key] === true explicitement
-      // Par défaut (undefined ou false) = masqué pour les sous-comptes
-      var shouldHide = (visibleKpis[key] !== true) ||
-        (_userRole === 'cleaner' && ['kpiOccupancyCard','kpiDepositsCard'].includes(cardId));
+      // Cleaner : 4 KPI forcés visibles quelle que soit la config en DB
+      const CLEANER_VISIBLE = ['kpiPropertiesCard','kpiTodayMovesCard','kpiCleaning48hCard','kpiTopRisksCard'];
+      if (_userRole === 'cleaner') {
+        if (!CLEANER_VISIBLE.includes(cardId)) {
+          el.style.setProperty('display', 'none', 'important');
+        }
+        return; // ne pas appliquer la logique visibleKpis pour le cleaner
+      }
 
+      // Autres rôles : visible UNIQUEMENT si visible_kpis[key] === true explicitement
+      // Par défaut (undefined ou false) = masqué pour les sous-comptes
+      var shouldHide = (visibleKpis[key] !== true);
       if (shouldHide) {
         el.style.setProperty('display', 'none', 'important');
       }
