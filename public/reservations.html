@@ -686,10 +686,11 @@ function renderTable() {
     document.getElementById('pagination').innerHTML = '';
     return;
   }
-  tbody.innerHTML = page.map(r => {
+  tbody.innerHTML = page.map((r, i) => {
+    const globalIdx = (currentPage - 1) * pageSize + i;
     const plt = normPlatform(r);
     const s = r.start||r.startDate||'', e = r.end||r.endDate||'';
-    return `<tr onclick="openDetail(${JSON.stringify(r).replace(/'/g,'&#39;')})">
+    return `<tr onclick="openDetailByIndex(${globalIdx})" style="cursor:pointer;">
       <td style="font-weight:600;">${r.propertyName||'—'}</td>
       <td>${guestFullName(r)}${hasRealNote(r)?'<span class="note-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:5px;vertical-align:middle;"></span>':''}</td>
       <td>${fmtDate(r.createdAt?.split('T')[0])}</td>
@@ -766,6 +767,11 @@ function renderMobile() {
 }
 
 // ─── DETAIL SHEET ─────────────────────────
+function openDetailByIndex(idx) {
+  const r = filtered[idx];
+  if (r) openDetail(r);
+}
+
 function openDetail(r) {
   const body = document.getElementById('detailBody');
   const plt  = normPlatform(r);
