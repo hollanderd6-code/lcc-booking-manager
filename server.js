@@ -25774,14 +25774,25 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
 
     // Filtrage robuste : property_id dans attributes OU relationships.properties.data[] (tableau)
     const filtered = raw.filter(c => {
-      const fromAttr  = c.attributes?.property_id;
-      const fromRel   = c.relationships?.property?.data?.id;  // singulier (ancien format)
-      const fromRelArr = (c.relationships?.properties?.data || [])
-                          .map(p => p.id);                     // ✅ tableau (format actuel Channex)
-      const match = fromAttr === prop.channex_property_id
-                 || fromRel  === prop.channex_property_id
-                 || fromRelArr.includes(prop.channex_property_id);
-      if (!match) console.log(`  ↳ skip channel ${c.id} (properties: ${fromRelArr.join(',') || fromAttr || fromRel || 'undefined'})`);
+      const fromAttr   = c.attributes?.property_id;
+      const fromRel    = c.relationships?.property?.data?.id;
+      // Tableau de properties (format actuel Channex)
+      const fromRelArr = (c.relationships?.properties?.data || []).map(p => String(p.id).trim());
+      // Aussi vérifier dans rate_plans
+      const fromRatePlans = (c.attributes?.rate_plans || [])
+                              .flatMap(rp => rp.property_id ? [String(rp.property_id).trim()] : []);
+      const targetId = String(prop.channex_property_id).trim();
+      const allIds = [...new Set([
+        fromAttr ? String(fromAttr).trim() : null,
+        fromRel  ? String(fromRel).trim()  : null,
+        ...fromRelArr,
+        ...fromRatePlans
+      ].filter(Boolean))];
+      const match = allIds.includes(targetId);
+      if (!match) {
+        const ch = (c.attributes?.channel || '').toLowerCase();
+        console.log(`  ↳ skip ${ch || c.id} (properties: ${allIds.join(',')})`);
+      }
       return match;
     });
 
