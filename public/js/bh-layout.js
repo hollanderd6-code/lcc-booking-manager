@@ -104,9 +104,10 @@ function getSidebarHTML() {
       </a>
       ` : ''}
       ${canSeePage('calendar') ? `
+      ${canSeePage('reservations') && role !== 'cleaner' ? `
       <a class="nav-item" data-page="reservations" href="/reservations.html" id="navCalendarLink">
         <i class="fas fa-calendar-check"></i><span>Réservations</span>
-      </a>
+      </a>` : ''}
       ` : ''}
       ${canSeePage('messages') ? `
       <a class="nav-item" data-page="messages" href="/messages.html">
@@ -299,7 +300,10 @@ function getSidebarHTML() {
       const avatarEl = document.getElementById('sidebarUserAvatar');
       if (nameEl) nameEl.textContent = displayUser.firstName + ' ' + (displayUser.lastName || '');
       if (avatarEl) {
-        const logoUrl = user.logoUrl || (localStorage.getItem('lcc_account_type') === 'sub' ? localStorage.getItem('lcc_parent_logo') : null);
+        // Pour les sous-comptes : toujours afficher l'initiale, jamais le logo du parent
+        const isSubAcc = localStorage.getItem('lcc_account_type') === 'sub'
+                      || localStorage.getItem('lcc_is_sub_account') === 'true';
+        const logoUrl = isSubAcc ? null : (user.logoUrl || null);
         if (logoUrl) {
           const logoSrc = logoUrl.includes('cloudinary.com')
             ? logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
@@ -312,7 +316,10 @@ function getSidebarHTML() {
           avatarEl.style.backgroundRepeat = 'no-repeat';
           avatarEl.style.backgroundPosition = 'center';
         } else {
-          avatarEl.textContent = user.firstName.charAt(0).toUpperCase();
+          // Initiale du sous-compte (ou du user principal)
+          const initial = (displayUser.firstName || user.firstName || '?').charAt(0).toUpperCase();
+          avatarEl.textContent = initial;
+          avatarEl.style.cssText = 'width:34px;height:34px;min-width:34px;border-radius:8px;background:#1A7A5E;color:white;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;';
         }
       }
     }
@@ -385,6 +392,19 @@ function getSidebarHTML() {
 
     // Injecter le texte si absent ou incorrect
     if (mobileLogoText) {
+      // Pour les sous-comptes : afficher le prénom du cleaner au lieu de "Boostinghost"
+      const isSubAcc = localStorage.getItem('lcc_account_type') === 'sub'
+                    || localStorage.getItem('lcc_is_sub_account') === 'true';
+      if (isSubAcc) {
+        try {
+          const subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+          const subName = subData.firstName ? (subData.firstName + (subData.lastName ? ' ' + subData.lastName : '')) : null;
+          if (subName) {
+            mobileLogoText.innerHTML = `<span class="mobile-logo-title" style="font-size:16px;font-weight:700;color:#0D1117;">${subName}</span><span style="font-size:10px;color:#7A8695;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-top:1px;">Espace collaborateur</span>`;
+            return;
+          }
+        } catch(e) {}
+      }
       const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
       if (!hasCorrectBranding) {
         mobileLogoText.innerHTML = BRAND_TEXT_HTML;
