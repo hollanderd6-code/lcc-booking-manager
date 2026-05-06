@@ -1869,6 +1869,12 @@ ON invoice_download_tokens(token);
       await pool.query(`
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated BOOLEAN DEFAULT FALSE;
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pending_escalation BOOLEAN DEFAULT FALSE;
+        CREATE TABLE IF NOT EXISTS escalade_reminders (
+          id SERIAL PRIMARY KEY,
+          conversation_id INTEGER NOT NULL,
+          sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_escalade_reminders_conv ON escalade_reminders(conversation_id, sent_at DESC);
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMPTZ;
       `);
       console.log('✅ Colonnes escalated ajoutées à conversations');
@@ -1881,6 +1887,12 @@ ON invoice_download_tokens(token);
       await pool.query(`
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated BOOLEAN DEFAULT FALSE;
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pending_escalation BOOLEAN DEFAULT FALSE;
+        CREATE TABLE IF NOT EXISTS escalade_reminders (
+          id SERIAL PRIMARY KEY,
+          conversation_id INTEGER NOT NULL,
+          sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_escalade_reminders_conv ON escalade_reminders(conversation_id, sent_at DESC);
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMPTZ;
       `);
       console.log('✅ Colonnes escalated ajoutées à conversations');
@@ -21983,6 +21995,95 @@ console.log("ℹ️ Cron arrival-messages désactivé (remplacé par templates)"
 // - on_arrival      : le jour J à 7h (Europe/Paris)
 // - after_departure : le jour du départ à 15h (Europe/Paris)
 
+// ============================================
+// 💰 RAPPEL CAUTION J-2 (cron 9h00)
+// Envoie un rappel aux voyageurs qui n'ont pas payé
+// leur caution et dont l'arrivée est dans 2 jours
+// ============================================
+async function sendDepositReminderJ2Cron(pool, io) {
+  const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+  const j2 = new Date(nowParis);
+  j2.setDate(j2.getDate() + 2);
+  const j2Str = j2.toISOString().split('T')[0];
+
+  console.log(`💰 [CAUTION J-2] Recherche cautions non payées pour arrivée le ${j2Str}`);
+
+  const convs = await pool.query(
+    `SELECT c.*, p.deposit_amount, p.name as property_name,
+            r.uid as reservation_uid
+     FROM conversations c
+     LEFT JOIN properties p ON p.id = c.property_id
+     LEFT JOIN reservations r ON (
+       (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
+       OR (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date))
+     )
+     WHERE DATE(c.reservation_start_date AT TIME ZONE 'Europe/Paris') = $1
+     AND c.status != 'cancelled'
+     AND p.deposit_amount IS NOT NULL AND p.deposit_amount > 0
+     AND NOT EXISTS (
+       SELECT 1 FROM deposits d
+       WHERE d.reservation_uid = r.uid
+       AND d.status IN ('authorized', 'captured', 'paid')
+     )`,
+    [j2Str]
+  );
+
+  if (convs.rows.length === 0) {
+    console.log('✅ [CAUTION J-2] Aucune caution en attente');
+    return { sent: 0, skipped: 0 };
+  }
+
+  console.log(`⚠️ [CAUTION J-2] ${convs.rows.length} caution(s) non payée(s)`);
+  let sent = 0;
+
+  for (const conv of convs.rows) {
+    try {
+      // Trouver un template before_arrival avec {caution_url} pour cet user/logement
+      const tplResult = await pool.query(
+        `SELECT * FROM message_templates
+         WHERE user_id = $1 AND trigger_type = 'before_arrival' AND active = TRUE
+         AND message ILIKE '%caution_url%'
+         AND (property_id IS NULL OR property_id::text = $2::text
+              OR (property_ids IS NOT NULL AND property_ids @> to_jsonb($2::text)))
+         ORDER BY property_id NULLS LAST LIMIT 1`,
+        [conv.user_id, conv.property_id]
+      );
+
+      if (tplResult.rows.length === 0) {
+        console.log(`⏭️ [CAUTION J-2] Pas de template caution pour conv ${conv.id}`);
+        continue;
+      }
+
+      // Vérifier anti-doublon — pas de rappel dans les 20h
+      const alreadySent = await pool.query(
+        `SELECT 1 FROM message_template_logs
+         WHERE conversation_id = $1 AND template_id = $2
+         AND sent_at > NOW() - INTERVAL '20 hours' AND status = 'sent' LIMIT 1`,
+        [conv.id, tplResult.rows[0].id]
+      );
+      if (alreadySent.rows.length > 0) {
+        console.log(`⏭️ [CAUTION J-2] Rappel déjà envoyé récemment pour conv ${conv.id}`);
+        continue;
+      }
+
+      const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
+      await sendTemplateMessage(pool, io, {
+        template: tplResult.rows[0],
+        conv,
+        property: propRow.rows[0] || {}
+      });
+      console.log(`✅ [CAUTION J-2] Rappel envoyé — ${conv.property_name} — ${conv.guest_name}`);
+      sent++;
+      await new Promise(r => setTimeout(r, 500));
+    } catch(e) {
+      console.error(`❌ [CAUTION J-2] Erreur conv ${conv.id}:`, e.message);
+    }
+  }
+
+  console.log(`📊 [CAUTION J-2] ${sent} rappel(s) envoyé(s)`);
+  return { sent, skipped: convs.rows.length - sent };
+}
+
 async function runTemplatesCron(triggerTypes) {
   try {
     const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
@@ -22191,9 +22292,156 @@ cron.schedule('0 7 * * *', () => {
   runTemplatesCron(['before_arrival', 'on_arrival', 'before_departure']);
 }, { timezone: 'Europe/Paris' });
 
+// Toutes les 30 min — vérifier les escalades sans réponse depuis 2h
+cron.schedule('*/30 * * * *', async () => {
+  try {
+    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const hourParis = nowParis.getHours();
+    // Ne pas envoyer entre 23h et 8h (sauf urgences déjà gérées par requiresHumanIntervention)
+    if (hourParis < 8 || hourParis >= 23) return;
+
+    const escalated = await pool.query(
+      `SELECT c.id, c.guest_name, c.user_id, c.property_id,
+              p.name as property_name, c.escalated_at
+       FROM conversations c
+       LEFT JOIN properties p ON p.id = c.property_id
+       WHERE c.escalated = TRUE
+       AND c.escalated_at < NOW() - INTERVAL '2 hours'
+       AND c.escalated_at > NOW() - INTERVAL '24 hours'
+       AND NOT EXISTS (
+         SELECT 1 FROM messages m
+         WHERE m.conversation_id = c.id
+         AND m.sender_type IN ('owner', 'property')
+         AND m.created_at > c.escalated_at
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM escalade_reminders er
+         WHERE er.conversation_id = c.id
+         AND er.sent_at > NOW() - INTERVAL '3 hours'
+       )`
+    ).catch(() => ({ rows: [] }));
+
+    for (const conv of escalated.rows) {
+      try {
+        const tokens = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+          [conv.user_id]
+        );
+        const { sendNotification } = require('./firebase');
+        for (const tok of tokens.rows) {
+          await sendNotification(
+            tok.fcm_token,
+            `⏰ Rappel — ${conv.guest_name} attend une réponse`,
+            `${conv.property_name} — Pas de réponse depuis 2h sur cette escalade.`,
+            { type: 'escalade_reminder', conversationId: String(conv.id), screen: 'messages' }
+          );
+        }
+        // Log pour éviter les doublons (table simple)
+        await pool.query(
+          `INSERT INTO escalade_reminders (conversation_id, sent_at)
+           VALUES ($1, NOW())
+           ON CONFLICT DO NOTHING`,
+          [conv.id]
+        ).catch(() => {}); // ignore si table n'existe pas encore
+        console.log(`⏰ [ESCALADE REMINDER] Rappel envoyé pour conv ${conv.id} — ${conv.guest_name}`);
+      } catch(e) {
+        console.warn('⚠️ [ESCALADE REMINDER]', e.message);
+      }
+    }
+  } catch(e) {
+    console.error('❌ [ESCALADE REMINDER] Cron erreur:', e.message);
+  }
+}, { timezone: 'Europe/Paris' });
+
+// 9h00 — rappel caution J-2 pour cautions non payées
+cron.schedule('0 9 * * *', async () => {
+  console.log('\n⏰ CRON 9h00 — Rappel caution J-2');
+  try {
+    await sendDepositReminderJ2Cron(pool, io);
+  } catch(e) {
+    console.error('❌ Erreur cron rappel caution J-2:', e.message);
+  }
+}, { timezone: 'Europe/Paris' });
+
 // 10h00 — after_arrival (J+1 après arrivée — heure plus naturelle pour "vous êtes bien installés ?")
 cron.schedule('0 10 * * *', () => {
   runTemplatesCron(['after_arrival']);
+}, { timezone: 'Europe/Paris' });
+
+// 9h00 le 1er du mois — résumé mensuel push
+cron.schedule('0 9 1 * *', async () => {
+  console.log('\n📊 CRON 1er du mois — Résumé mensuel');
+  try {
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const monthLabel = lastMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const firstDay = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+    const lastDay  = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 59);
+
+    const users = await pool.query(
+      `SELECT DISTINCT u.id, u.email FROM users u
+       JOIN user_fcm_tokens t ON t.user_id = u.id
+       WHERE t.fcm_token IS NOT NULL`
+    );
+
+    for (const user of users.rows) {
+      try {
+        // Stats du mois
+        const [sejours, messages, escalades, groqMessages] = await Promise.all([
+          pool.query(
+            `SELECT COUNT(*) FROM conversations
+             WHERE user_id = $1 AND created_at BETWEEN $2 AND $3 AND status != 'cancelled'`,
+            [user.id, firstDay, lastDay]
+          ),
+          pool.query(
+            `SELECT COUNT(*) FROM messages m
+             JOIN conversations c ON c.id = m.conversation_id
+             WHERE c.user_id = $1 AND m.created_at BETWEEN $2 AND $3`,
+            [user.id, firstDay, lastDay]
+          ),
+          pool.query(
+            `SELECT COUNT(*) FROM conversations
+             WHERE user_id = $1 AND escalated = TRUE
+             AND escalated_at BETWEEN $2 AND $3`,
+            [user.id, firstDay, lastDay]
+          ),
+          pool.query(
+            `SELECT COUNT(*) FROM messages m
+             JOIN conversations c ON c.id = m.conversation_id
+             WHERE c.user_id = $1 AND m.sender_type = 'bot'
+             AND m.created_at BETWEEN $2 AND $3`,
+            [user.id, firstDay, lastDay]
+          ),
+        ]);
+
+        const nSejours   = parseInt(sejours.rows[0].count)   || 0;
+        const nMessages  = parseInt(messages.rows[0].count)  || 0;
+        const nEscalades = parseInt(escalades.rows[0].count) || 0;
+        const nGroq      = parseInt(groqMessages.rows[0].count) || 0;
+        const pctAuto    = nMessages > 0 ? Math.round((nGroq / nMessages) * 100) : 0;
+
+        if (nSejours === 0) continue; // rien à résumer
+
+        const tokens = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+          [user.id]
+        );
+        const { sendNotification } = require('./firebase');
+        const title = `📊 Résumé ${monthLabel}`;
+        const body  = `${nSejours} séjour${nSejours>1?'s':''} · ${nMessages} messages · ${pctAuto}% traités automatiquement · ${nEscalades} escalade${nEscalades>1?'s':''}`;
+        for (const tok of tokens.rows) {
+          await sendNotification(tok.fcm_token, title, body,
+            { type: 'monthly_summary', month: monthLabel, screen: 'dashboard' }
+          );
+        }
+        console.log(`📊 [RÉSUMÉ] ${user.email} — ${body}`);
+      } catch(e) {
+        console.warn('⚠️ [RÉSUMÉ MENSUEL]', e.message);
+      }
+    }
+  } catch(e) {
+    console.error('❌ [RÉSUMÉ MENSUEL]', e.message);
+  }
 }, { timezone: 'Europe/Paris' });
 
 // 15h00 — après départ (heure du checkout, séjour terminé)
@@ -26185,6 +26433,23 @@ app.post('/api/channex/webhook', async (req, res) => {
             }
           }
 
+          // FIX 7 — Synchroniser guest_language/country depuis reservations vers conversations
+          // Fait dès la création ET à chaque webhook pour garder la langue à jour
+          try {
+            await pool.query(
+              `UPDATE conversations c
+               SET guest_language = COALESCE(r.guest_language, c.guest_language),
+                   guest_country  = COALESCE(r.guest_country,  c.guest_country)
+               FROM reservations r
+               WHERE c.id = $1
+               AND r.channex_booking_id = $2
+               AND (r.guest_language IS NOT NULL OR r.guest_country IS NOT NULL)`,
+              [convId, result.channex_booking_id || '']
+            );
+          } catch(e) {
+            console.warn('⚠️ [CHANNEX] Sync guest_language:', e.message);
+          }
+
           // Message de confirmation désactivé — géré par les templates on_booking
           console.log(`✅ [CHANNEX] Conversation créée (conv ${convId}) — templates on_booking prendront le relais`);
 
@@ -26406,6 +26671,27 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       console.warn(`⚠️ [CHANNEX MSG] Payload skipped — booking_id=${channex_booking_id} | sender="${sender}" | msgLen=${messageText.length}`);
       console.warn('⚠️ [CHANNEX MSG] Full payload:', JSON.stringify(payload));
       return res.status(200).json({ received: true, skipped: true });
+    }
+
+    // FIX 5 — Filtrer les messages OTA système AVANT tout traitement
+    const OTA_SYSTEM_PATTERNS = [
+      'THIS RESERVATION HAS BEEN PRE-PAID',
+      'BOOKING NOTE :',
+      'BOOKING NOTE:',
+      'OTA Commission:',
+      'Payment Collect:',
+      'Meal Plan:',
+      'Smoking Preference:',
+      'Payment charge is',
+      'CHANNEL MANAGER:',
+      '[SYSTEM]',
+      'Automatic message',
+      'Message automatique',
+    ];
+    const isOtaSystemMessage = OTA_SYSTEM_PATTERNS.some(p => messageText.includes(p));
+    if (isOtaSystemMessage) {
+      console.log(`⏭️ [CHANNEX MSG] Message système OTA filtré — booking ${channex_booking_id}`);
+      return res.status(200).json({ received: true, skipped: 'ota_system_message' });
     }
 
     // Récupérer la réservation Channex et sa conversation associée
