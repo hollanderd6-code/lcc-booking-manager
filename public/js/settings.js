@@ -1963,6 +1963,7 @@ const OTA_LOGOS = {
   booking: { icon: '<i class="fas fa-building" style="color:#003580;font-size:13px;"></i>', label: 'Booking.com' },
   expedia: { icon: '<i class="fas fa-plane" style="color:#1B5E96;font-size:13px;"></i>', label: 'Expedia' },
   vrbo:    { icon: '<i class="fas fa-home" style="color:#1C61A5;font-size:13px;"></i>', label: 'Abritel/VRBO' },
+  guest:   { icon: '<i class="fas fa-leaf" style="color:#1A7A5E;font-size:13px;"></i>', label: 'BH Guest' },
 };
 
 // ✅ Mapping codes Channex → clés OTA_LOGOS
@@ -1971,12 +1972,18 @@ const CHANNEX_CODE_MAP = {
   'airbnb': 'airbnb',
   'bdc': 'booking',
   'booking': 'booking',
+  'bookingcom': 'booking',
   'exp': 'expedia',
   'expedia': 'expedia',
   'vrb': 'vrbo',
   'vrbo': 'vrbo',
   'homeaway': 'vrbo',
   'abritel': 'vrbo',
+  'guest': 'guest',
+  'direct': 'guest',
+  'manuel': 'guest',
+  'manual': 'guest',
+  'boostinghost': 'guest',
 };
 
 async function syncChannexBookings(propertyId, btn) {
