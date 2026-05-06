@@ -25805,8 +25805,11 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
       }))
       // Exclure les statuts explicitement inactifs
       .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status))
-      // Filtrer par room_type_id (précis) ou rate_plan_id (fallback)
+      // Filtrer par room_type_id ou rate_plan_id SEULEMENT si ces IDs sont connus en DB
+      // Si aucun ID disponible → afficher tous les channels actifs de la propriété
       .filter(c => {
+        // Si aucun ID connu côté Boostinghost → pas de filtre possible, tout afficher
+        if (!roomTypeId && !ratePlanId) return true;
         if (c._rate_plan_ids.length === 0 && c._room_type_ids.length === 0) return true;
         // Priorité : room_type_id (plus précis pour propriétés multi-logements)
         if (roomTypeId && c._room_type_ids.length > 0) {
