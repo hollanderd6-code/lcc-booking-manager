@@ -2012,7 +2012,8 @@ async function loadConnectedChannels(propertyId, containerId) {
   if (!el) return;
   try {
     const token = localStorage.getItem('lcc_token');
-    const r = await fetch(`${API_URL}/api/channex/connected-channels/${propertyId}`, {
+    // Passer le bhPropertyId en query param pour filtrer par room_type côté serveur
+    const r = await fetch(`${API_URL}/api/channex/connected-channels/${propertyId}?bh_property_id=${propertyId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const d = await r.json();
