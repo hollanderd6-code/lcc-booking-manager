@@ -247,28 +247,28 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 /* ─── DETAIL SHEET ─── */
 .bh-resa-overlay {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.4); z-index: 1000; opacity: 0; transition: opacity .25s;
+  background: rgba(0,0,0,.5); z-index: 1000; opacity: 0; transition: opacity .25s;
+  align-items: center; justify-content: center;
 }
-.bh-resa-overlay.open { display: block; opacity: 1; }
+.bh-resa-overlay.open { display: flex; opacity: 1; }
 .bh-resa-sheet {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001;
-  background: var(--white); border-radius: 20px 20px 0 0;
-  max-height: 85vh; display: flex; flex-direction: column;
-  transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
+  position: relative; z-index: 1001;
+  background: var(--white); border-radius: 20px;
+  width: 90%; max-width: 560px;
+  max-height: 88vh; display: flex; flex-direction: column;
+  transform: scale(.95); opacity: 0;
+  transition: transform .25s cubic-bezier(.32,.72,0,1), opacity .25s;
+  box-shadow: 0 24px 60px rgba(0,0,0,.18);
 }
-@media (min-width: 1025px) {
+.bh-resa-sheet.open { transform: scale(1); opacity: 1; }
+@media (max-width: 1024px) {
+  .bh-resa-overlay { align-items: flex-end; }
   .bh-resa-sheet {
-    left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    right: auto;
-    width: 560px;
-    border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 100%; border-radius: 20px 20px 0 0;
+    transform: translateY(20px); opacity: 0;
   }
-  .bh-resa-sheet.open {
-    transform: translateX(-50%) translateY(0);
-  }
+  .bh-resa-sheet.open { transform: translateY(0); opacity: 1; }
 }
-.bh-resa-sheet.open { transform: translateY(0); }
 .bh-resa-drag { padding: 10px; display: flex; justify-content: center; cursor: grab; flex-shrink: 0; }
 .bh-resa-drag-bar { width: 36px; height: 4px; border-radius: 2px; background: #D1D5DB; }
 .bh-resa-header { padding: 0 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; border-bottom: 1px solid var(--border); }
@@ -772,7 +772,45 @@ function openDetailByIndex(idx) {
   if (r) openDetail(r);
 }
 
+// Stocke la réservation courante pour le bouton Message
+let currentDetailReservation = null;
+
+async function openMessageForReservation(r) {
+  if (!r) { window.location.href = '/messages.html'; return; }
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(API_URL + '/api/chat/conversations', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const d = await res.json();
+    const convs = d.conversations || [];
+    const guestN  = guestFullName(r);
+    const propId  = String(r.propertyId || r.property_id || r.property?.id || '');
+    const startD  = (r.start || r.startDate || '').toString().split('T')[0];
+    const channex = r.channexBookingId || r.channex_booking_id || null;
+
+    const conv = convs.find(c =>
+      channex && c.channex_booking_id && String(c.channex_booking_id) === String(channex)
+    ) || convs.find(c =>
+      startD && propId && c.property_id === propId &&
+      c.reservation_start_date && c.reservation_start_date.toString().split('T')[0] === startD
+    ) || convs.find(c =>
+      guestN && c.guest_name &&
+      c.guest_name.trim().toLowerCase() === guestN.trim().toLowerCase() &&
+      propId && c.property_id === propId
+    ) || convs.find(c =>
+      guestN && c.guest_name &&
+      c.guest_name.trim().toLowerCase() === guestN.trim().toLowerCase()
+    );
+
+    window.location.href = conv ? '/messages.html?conv=' + conv.id : '/messages.html';
+  } catch(e) {
+    window.location.href = '/messages.html';
+  }
+}
+
 function openDetail(r) {
+  currentDetailReservation = r;
   const body = document.getElementById('detailBody');
   const plt  = normPlatform(r);
   const s = r.start||r.startDate||'', e = r.end||r.endDate||'';
@@ -804,7 +842,7 @@ function openDetail(r) {
     </div></div>` : ''}
     ${hasRealNote(r) ? `<div class="bh-modal-section"><div class="bh-modal-label">Note</div><div class="bh-modal-card"><div style="padding:12px 14px;font-size:13px;color:var(--text);">${r.notes}</div></div></div>` : ''}
     <div style="display:flex;gap:8px;margin-top:8px;">
-      <button class="btn btn-primary" style="flex:1;" onclick="window.location.href='/messages.html'"><i class="fas fa-comment"></i> Messages</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="openMessageForReservation(currentDetailReservation)"><i class="fas fa-comment"></i> Messages</button>
     </div>`;
   document.getElementById('detailOverlay').classList.add('open');
   document.getElementById('detailSheet').classList.add('open');
