@@ -11687,6 +11687,13 @@ document.addEventListener('DOMContentLoaded', function() {
   try {
     const _u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
     _userRole = _u.role || '';
+    
+    // 🔍 DEBUG TEMPORAIRE — à supprimer après fix
+    console.log('🔍 [KPI DEBUG] lcc_account_type:', _accountType);
+    console.log('🔍 [KPI DEBUG] lcc_user:', JSON.stringify(_u));
+    console.log('🔍 [KPI DEBUG] _userRole:', _userRole);
+    console.log('🔍 [KPI DEBUG] lcc_sub_account:', localStorage.getItem('lcc_sub_account'));
+    console.log('🔍 [KPI DEBUG] lcc_permissions:', localStorage.getItem('lcc_permissions'));
     // Les permissions sont stockées dans lcc_permissions (séparé de lcc_user)
     const _lccp = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
     _perms = Object.keys(_lccp).length > 0 ? _lccp : (_u.permissions || {});
