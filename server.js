@@ -25746,94 +25746,57 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
   const { property_id } = req.params;
   const user_id = req.user.id;
   try {
+    // ✅ Approche simple et fiable : regarder les plateformes dans les réservations existantes
+    // + vérifier si channex_enabled pour afficher "Synchronisation OTA active"
     const propResult = await pool.query(
       'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
       [property_id, user_id]
     );
     const prop = propResult.rows[0];
-    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
-      return res.json({ channels: [] });
-    }
+    if (!prop) return res.json({ channels: [] });
 
-    const { channexAPI } = require('./channex');
-
-    // ✅ Récupère TOUS les channels avec pagination complète
-    let raw = [];
-    let page = 1;
-    while (true) {
-      const response = await channexAPI.get('/channels', {
-        params: { 'pagination[page_size]': 100, 'pagination[page]': page }
-      });
-      const pageData = response.data?.data || [];
-      raw = raw.concat(pageData);
-      const meta = response.data?.meta?.pagination || {};
-      const totalPages = meta.total_pages || meta.totalPages || 1;
-      if (page >= totalPages || pageData.length === 0) break;
-      page++;
-    }
-
-    // 🔍 Log complet pour debug
-    console.log(`🔍 [CHANNEX channels] Total reçus: ${raw.length} | property_id cible: ${prop.channex_property_id}`);
-    if (raw.length > 0) {
-      console.log('🔍 [CHANNEX channels] Exemple item[0]:', JSON.stringify(raw[0], null, 2));
-    } else {
-      console.log('⚠️ [CHANNEX channels] Aucun channel retourné — vérifier la clé API / env');
-    }
-
-    // Filtrage robuste : property_id dans attributes OU relationships.properties.data[] (tableau)
-    const filtered = raw.filter(c => {
-      const fromAttr   = c.attributes?.property_id;
-      const fromRel    = c.relationships?.property?.data?.id;
-      // Tableau de properties (format actuel Channex)
-      const fromRelArr = (c.relationships?.properties?.data || []).map(p => String(p.id).trim());
-      // Aussi vérifier dans rate_plans
-      const fromRatePlans = (c.attributes?.rate_plans || [])
-                              .flatMap(rp => rp.property_id ? [String(rp.property_id).trim()] : []);
-      const targetId = String(prop.channex_property_id).trim();
-      const allIds = [...new Set([
-        fromAttr ? String(fromAttr).trim() : null,
-        fromRel  ? String(fromRel).trim()  : null,
-        ...fromRelArr,
-        ...fromRatePlans
-      ].filter(Boolean))];
-      const match = allIds.includes(targetId);
-      if (!match) {
-        const ch = (c.attributes?.channel || '').toLowerCase();
-        console.log(`  ↳ skip ${ch || c.id} (properties: ${allIds.join(',')})`);
-      }
-      return match;
-    });
-
-    console.log(`🔍 [CHANNEX channels] Après filtre property: ${filtered.length} channels`);
-    // Récupérer le channex_rate_plan_id ET channex_room_type_id du logement
-    const propRatePlan = await pool.query(
-      'SELECT channex_rate_plan_id, channex_room_type_id FROM properties WHERE id = $1',
+    // Récupérer les plateformes distinctes depuis les réservations des 12 derniers mois
+    const platformsResult = await pool.query(
+      `SELECT DISTINCT LOWER(COALESCE(ota_name, platform, source, '')) as platform
+       FROM reservations
+       WHERE property_id = $1
+       AND status != 'cancelled'
+       AND start_date > NOW() - INTERVAL '12 months'
+       AND LOWER(COALESCE(ota_name, platform, source, '')) != ''
+       AND LOWER(COALESCE(ota_name, platform, source, '')) != 'block'
+       ORDER BY 1`,
       [property_id]
     );
-    const ratePlanId = propRatePlan.rows[0]?.channex_rate_plan_id;
-    const roomTypeId = propRatePlan.rows[0]?.channex_room_type_id;
 
-    const channels = filtered
-      .map(c => ({
-        id: c.id,
-        title: c.attributes?.title || c.attributes?.name || '',
-        status: c.attributes?.status || '',
-        channel: (c.attributes?.channel || c.attributes?.channel_id || '').toLowerCase(),
-        _rate_plan_ids: (c.attributes?.rate_plans || []).map(rp => rp.rate_plan_id),
-        _room_type_ids: (c.attributes?.rate_plans || []).map(rp => rp.room_type_id).filter(Boolean),
-      }))
-      // Exclure les statuts explicitement inactifs
-      .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status))
-      // Pas de filtre par rate_plan/room_type — Channex filtre déjà par property_id
-      // Afficher tous les channels actifs de la propriété
-      .map(({ _rate_plan_ids, _room_type_ids, ...c }) => c);
+    const PLATFORM_MAP = {
+      'airbnb': { channel: 'airbnb', title: 'Airbnb' },
+      'abb':    { channel: 'airbnb', title: 'Airbnb' },
+      'bookingcom': { channel: 'bookingcom', title: 'Booking.com' },
+      'booking': { channel: 'bookingcom', title: 'Booking.com' },
+      'booking.com': { channel: 'bookingcom', title: 'Booking.com' },
+      'expedia': { channel: 'expedia', title: 'Expedia' },
+      'vrbo':   { channel: 'vrbo', title: 'VRBO' },
+      'abritel': { channel: 'vrbo', title: 'Abritel' },
+      'direct': { channel: 'direct', title: 'Direct' },
+      'manuel': { channel: 'direct', title: 'Direct' },
+    };
 
-    console.log(`✅ [CHANNEX channels] Résultat final pour ${prop.channex_property_id}:`, channels);
+    const seen = new Set();
+    const channels = platformsResult.rows
+      .map(r => {
+        const key = r.platform.toLowerCase().replace(/[^a-z]/g, '');
+        const mapped = PLATFORM_MAP[r.platform] || PLATFORM_MAP[key] || null;
+        if (!mapped || seen.has(mapped.channel)) return null;
+        seen.add(mapped.channel);
+        return { id: r.platform, channel: mapped.channel, title: mapped.title, status: '' };
+      })
+      .filter(Boolean);
 
-    res.json({ channels });
-  } catch (e) {
-    console.error('❌ [CHANNEX connected-channels]', e.message);
-    res.json({ channels: [] });
+    console.log(`✅ [channels via reservations] ${property_id}: ${channels.map(c=>c.channel).join(', ') || 'aucun'}`);
+    return res.json({ channels });
+
+  } catch(e) {
+    console.error('❌ [connected-channels]', e.message);res.json({ channels: [] });
   }
 });
 
