@@ -1022,8 +1022,6 @@ async function chatTranslate(text, targetLang) {
     throw new Error('Translation failed');
   }
 }
-  return _txCache[key];
-}
 
 // Langue du proprio (sauvegardée dans localStorage)
 function setOwnerLang(lang) {
