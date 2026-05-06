@@ -254,13 +254,17 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .bh-resa-sheet {
   position: relative; z-index: 1001;
   background: var(--white); border-radius: 20px;
-  width: 90%; max-width: 560px;
-  max-height: 88vh; display: flex; flex-direction: column;
-  transform: scale(.95); opacity: 0;
-  transition: transform .25s cubic-bezier(.32,.72,0,1), opacity .25s;
-  box-shadow: 0 24px 60px rgba(0,0,0,.18);
+  width: 92%; max-width: 640px;
+  /* Pas de max-height fixe — le modal s'adapte au contenu */
+  display: flex; flex-direction: column;
+  transform: scale(.96) translateY(8px); opacity: 0;
+  transition: transform .22s cubic-bezier(.32,.72,0,1), opacity .22s;
+  box-shadow: 0 24px 60px rgba(0,0,0,.22);
+  overflow: hidden;
 }
-.bh-resa-sheet.open { transform: scale(1); opacity: 1; }
+.bh-resa-sheet.open { transform: scale(1) translateY(0); opacity: 1; }
+/* Body scrollable seulement si nécessaire */
+.bh-resa-body { overflow-y: auto; flex: 1; padding: 0 20px 20px; -webkit-overflow-scrolling: touch; max-height: 70vh; }
 @media (max-width: 1024px) {
   .bh-resa-overlay { align-items: flex-end; }
   .bh-resa-sheet {
@@ -268,6 +272,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
     transform: translateY(20px); opacity: 0;
   }
   .bh-resa-sheet.open { transform: translateY(0); opacity: 1; }
+  .bh-resa-body { max-height: 75vh; }
 }
 .bh-resa-drag { padding: 10px; display: flex; justify-content: center; cursor: grab; flex-shrink: 0; }
 .bh-resa-drag-bar { width: 36px; height: 4px; border-radius: 2px; background: #D1D5DB; }
@@ -275,14 +280,14 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .bh-resa-header-title { font-size: 16px; font-weight: 700; color: var(--text); }
 .bh-resa-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); padding: 0; line-height: 1; }
 .bh-resa-body { overflow-y: auto; flex: 1; padding: 0 16px 32px; -webkit-overflow-scrolling: touch; }
-.bh-modal-section { margin-bottom: 18px; }
-.bh-modal-label { font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
-.bh-modal-card { background: var(--cream); border-radius: 12px; overflow: hidden; }
-.bh-modal-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid rgba(0,0,0,.05); font-size: 13px; }
+.bh-modal-section { margin-bottom: 12px; }
+.bh-modal-label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.bh-modal-card { background: var(--cream); border-radius: 10px; overflow: hidden; }
+.bh-modal-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid rgba(0,0,0,.05); font-size: 13px; }
 .bh-modal-row:last-child { border-bottom: none; }
 .bh-modal-row-label { color: var(--text-muted); }
 .bh-modal-row-val { font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
-.bh-modal-amount-total { font-size: 20px; font-weight: 800; color: var(--green); padding: 14px; }
+.bh-modal-amount-total { font-size: 18px; font-weight: 800; color: var(--green); padding: 10px 12px; }
 </style>
 <style>
 /* Layout desktop — calqué sur deposits.html */
@@ -291,7 +296,7 @@ html[data-theme-v3="1"] .app-container {
   overflow: hidden !important;
 }
 html[data-theme-v3="1"] main.main-content {
-  overflow-y: auto !important;
+  overflow-y: visible !important;
   height: 100% !important;
   background: #F5F2EC !important;
   padding-left: 0 !important;
@@ -815,11 +820,11 @@ function openDetail(r) {
   const plt  = normPlatform(r);
   const s = r.start||r.startDate||'', e = r.end||r.endDate||'';
   body.innerHTML = `
-    <div style="padding:16px 0 8px;display:flex;align-items:center;gap:12px;">
-      <div style="width:52px;height:52px;border-radius:50%;background:var(--green);color:white;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${(guestFullName(r)||'?').charAt(0).toUpperCase()}</div>
+    <div style="padding:12px 0 8px;display:flex;align-items:center;gap:10px;">
+      <div style="width:42px;height:42px;border-radius:50%;background:var(--green);color:white;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${(guestFullName(r)||'?').charAt(0).toUpperCase()}</div>
       <div>
-        <div style="font-size:18px;font-weight:700;color:var(--text);">${guestFullName(r)}</div>
-        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+        <div style="font-size:16px;font-weight:700;color:var(--text);">${guestFullName(r)}</div>
+        <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;">
           <span class="plt-badge plt-${plt}">${pltLabel(r)}</span>
           <span class="status-badge ${statusClass((r.status||'confirmed').toLowerCase())}">${statusLabel((r.status||'confirmed').toLowerCase())}</span>
         </div>
@@ -841,7 +846,7 @@ function openDetail(r) {
       ${r.guestPhone ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Téléphone</span><span class="bh-modal-row-val">${r.guestPhone}</span></div>` : ''}
     </div></div>` : ''}
     ${hasRealNote(r) ? `<div class="bh-modal-section"><div class="bh-modal-label">Note</div><div class="bh-modal-card"><div style="padding:12px 14px;font-size:13px;color:var(--text);">${r.notes}</div></div></div>` : ''}
-    <div style="display:flex;gap:8px;margin-top:8px;">
+    <div style="display:flex;gap:8px;margin-top:10px;">
       <button class="btn btn-primary" style="flex:1;" onclick="openMessageForReservation(currentDetailReservation)"><i class="fas fa-comment"></i> Messages</button>
     </div>`;
   document.getElementById('detailOverlay').classList.add('open');
