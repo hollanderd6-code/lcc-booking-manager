@@ -2500,6 +2500,51 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
  <!-- Protection sous-comptes -->
 <script src="/js/sub-account-guard.js?v=2"></script>
 
+<style id="ios-calendar-scroll-fix">
+/* ✅ FIX iOS Capacitor : scroll vertical liste logements */
+@media (max-width: 1366px) {
+  /* La page entière doit pouvoir scroller sur iOS */
+  html, body {
+    -webkit-overflow-scrolling: touch !important;
+    overflow-y: auto !important;
+  }
+
+  /* Le calendar-wrapper ne doit PAS bloquer le scroll vertical de la page */
+  .calendar-wrapper {
+    touch-action: pan-x pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* La colonne des logements suit le scroll vertical de la page */
+  .property-list-column {
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+    overflow-y: visible !important;
+  }
+
+  .property-list-items {
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+    overflow-y: visible !important;
+  }
+
+  /* Le grid-wrapper scroll horizontalement, laisse le vertical à la page */
+  .calendar-container .calendar-grid-wrapper {
+    touch-action: pan-x !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Les cellules et booking-blocks ne capturent pas les gestes verticaux */
+  .calendar-cell,
+  .booking-block,
+  .calendar-row {
+    touch-action: pan-x pan-y !important;
+  }
+}
+</style>
+
 <style id="bh-mobile-master">
 /* ================================================================
    MOBILE MASTER — source unique, injectée directement dans le HTML
@@ -2955,7 +3000,7 @@ window.closeChecklistsKpiModal = function() {
 </div>
 <div class="kpi-main">
 <span class="kpi-value" id="kpiPropertiesValue">0</span>
-<span class="kpi-sub kpi-sub--green">connectés à au moins un OTA</span>
+<span class="kpi-sub kpi-sub--green">configurés sur Boostinghost</span>
 </div>
 </article>
 <!-- KPI 2 : Check-in / Check-out du jour -->
@@ -9216,7 +9261,7 @@ if (editBookingForm) {
           modal.innerHTML = `
             <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
               <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
-                <div style="font-size:16px;font-weight:700;color:#0D1117;">Logements actifs</div>
+                <div style="font-size:16px;font-weight:700;color:#0D1117;">Logements</div>
                 <button id="closeActivePropertiesModal" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
               </div>
               <div id="activePropertiesContent" style="overflow-y:auto;padding:16px 20px 40px;"></div>
