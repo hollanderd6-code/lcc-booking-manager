@@ -608,6 +608,20 @@ async function loadData() {
     allReservations = (data.reservations || []).filter(r => r.type !== 'block');
     allProperties   = data.properties || [];
 
+    // Enrichir propertyName depuis allProperties pour les réservations Direct/BH Guest
+    // qui n'ont pas toujours le champ propertyName rempli
+    const propMap = {};
+    allProperties.forEach(p => {
+      const id = p.id || p.propertyId || p.property_id;
+      if (id) propMap[String(id)] = p.name || p.propertyName || p.title || '';
+    });
+    allReservations.forEach(r => {
+      if (!r.propertyName) {
+        const id = String(r.propertyId || r.property_id || '');
+        if (id && propMap[id]) r.propertyName = propMap[id];
+      }
+    });
+
     const propSel = document.getElementById('propFilter');
     const mobilePropSel = document.getElementById('mobilePropFilter');
     const uniqueProps = [...new Map(allReservations.map(r => [r.propertyId||r.property_id, r.propertyName])).entries()];
