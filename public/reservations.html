@@ -517,8 +517,35 @@ const API_URL = (function() {
   return 'https://www.boostinghost.fr';
 })();
 
-let allReservations = [], allProperties = [], filtered = [];
+// ─── MOBILE DETECTION (Capacitor + touch + width) ─────────────────────────
+const IS_MOBILE = (function() {
+  if (window.Capacitor !== undefined) return true;
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
+  if (window.innerWidth <= 1366) return true;
+  return false;
+})();
+
+function applyViewMode() {
+  const mobileView  = document.getElementById('mobileView');
+  const tableWrap   = document.querySelector('.table-wrap');
+  const filtersBar  = document.querySelector('.filters-bar');
+  const pagination  = document.getElementById('pagination');
+  if (IS_MOBILE) {
+    if (mobileView)  { mobileView.style.setProperty('display','block','important'); }
+    if (tableWrap)   { tableWrap.style.setProperty('display','none','important'); }
+    if (filtersBar)  { filtersBar.style.setProperty('display','none','important'); }
+    if (pagination)  { pagination.style.setProperty('display','none','important'); }
+  } else {
+    if (mobileView)  { mobileView.style.setProperty('display','none','important'); }
+    if (tableWrap)   { tableWrap.style.removeProperty('display'); }
+    if (filtersBar)  { filtersBar.style.removeProperty('display'); }
+    if (pagination)  { pagination.style.removeProperty('display'); }
+  }
+}
+
 let sortCol = 'start', sortDir = 'asc', currentPage = 1, pageSize = 25;
+
+document.addEventListener('DOMContentLoaded', applyViewMode);
 
 // ─── UTILS ────────────────────────────────
 function fmtDate(d) {
@@ -597,6 +624,7 @@ async function loadData() {
     });
 
     applyFilters();
+    applyViewMode();
     document.getElementById('pageLoader').style.opacity = '0';
     setTimeout(() => document.getElementById('pageLoader').style.display = 'none', 300);
   } catch(e) {
