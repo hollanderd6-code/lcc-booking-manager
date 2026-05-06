@@ -25805,26 +25805,8 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
       }))
       // Exclure les statuts explicitement inactifs
       .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status))
-      // Filtrer par room_type_id ou rate_plan_id SEULEMENT si ces IDs sont connus en DB
-      // Si aucun ID disponible → afficher tous les channels actifs de la propriété
-      .filter(c => {
-        // Si aucun ID connu côté Boostinghost → pas de filtre possible, tout afficher
-        if (!roomTypeId && !ratePlanId) return true;
-        if (c._rate_plan_ids.length === 0 && c._room_type_ids.length === 0) return true;
-        // Priorité : room_type_id (plus précis pour propriétés multi-logements)
-        if (roomTypeId && c._room_type_ids.length > 0) {
-          const ok = c._room_type_ids.includes(roomTypeId);
-          if (!ok) console.log(`  ↳ skip ${c.channel} — room_type ${roomTypeId} absent`);
-          return ok;
-        }
-        // Fallback : rate_plan_id
-        if (ratePlanId && c._rate_plan_ids.length > 0) {
-          const ok = c._rate_plan_ids.includes(ratePlanId);
-          if (!ok) console.log(`  ↳ skip ${c.channel} — rate_plan ${ratePlanId} absent`);
-          return ok;
-        }
-        return true;
-      })
+      // Pas de filtre par rate_plan/room_type — Channex filtre déjà par property_id
+      // Afficher tous les channels actifs de la propriété
       .map(({ _rate_plan_ids, _room_type_ids, ...c }) => c);
 
     console.log(`✅ [CHANNEX channels] Résultat final pour ${prop.channex_property_id}:`, channels);
