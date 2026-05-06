@@ -95,16 +95,24 @@ async function _flushDebounce(convId, pool, io) {
     return;
   }
 
-  // Plusieurs messages → fusionner
+  // Plusieurs messages → passer comme contexte multi-lignes
+  // On garde les métadonnées du dernier message mais on enrichit le contenu
+  // avec tous les messages pour que Groq comprenne le contexte complet
   console.log(`⏳ [DEBOUNCE] Conv ${convId} — ${messages.length} messages fusionnés → 1 appel Groq`);
-  const combinedText = messages.map(m => m.message).join('\n');
 
-  // Créer un message synthétique avec le texte fusionné
-  // On garde les métadonnées du dernier message (le plus récent)
   const lastMsg = messages[messages.length - 1];
+
+  // Format : chaque message sur une ligne préfixée par un numéro
+  // Groq comprendra qu'il s'agit de plusieurs messages successifs
+  const combinedText = messages.length > 1
+    ? messages.map((m, i) => `[Message ${i + 1}] ${m.message}`).join('\n')
+    : messages[0].message;
+
   const combinedMessage = {
     ...lastMsg,
     message: combinedText,
+    _debounced: true,
+    _messageCount: messages.length,
   };
 
   await handleIncomingMessage(combinedMessage, conversation, pool, io);
@@ -740,7 +748,34 @@ Rules:
       language
     } : { language };
 
-    const aiResponse = await getGroqResponse(message.message, context);
+    // ── Récupérer l'historique des derniers messages pour le contexte Groq ──
+    let messageHistory = [];
+    try {
+      const histResult = await pool.query(
+        `SELECT sender_type, message FROM messages
+         WHERE conversation_id = $1
+         AND created_at > NOW() - INTERVAL '24 hours'
+         AND message NOT ILIKE '%THIS RESERVATION HAS BEEN PRE-PAID%'
+         AND message NOT ILIKE '%BOOKING NOTE%'
+         AND message NOT ILIKE '%OTA Commission%'
+         ORDER BY created_at ASC
+         LIMIT 10`,
+        [conversation.id]
+      );
+      messageHistory = histResult.rows.map(m => ({
+        role: (m.sender_type === 'guest') ? 'user' : 'assistant',
+        content: m.message
+      }));
+      // Retirer le dernier message s'il est identique au message courant (évite doublon)
+      if (messageHistory.length > 0 &&
+          messageHistory[messageHistory.length - 1].content === message.message) {
+        messageHistory.pop();
+      }
+    } catch(e) {
+      console.warn('⚠️ [HANDLER] Erreur récupération historique:', e.message);
+    }
+
+    const aiResponse = await getGroqResponse(message.message, context, messageHistory);
 
     if (aiResponse) {
       if (aiResponse.trim() === '[ESCALADE]' || aiResponse.includes('[ESCALADE]')) {
