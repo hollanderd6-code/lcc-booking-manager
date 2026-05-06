@@ -25759,7 +25759,7 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
     const platformsResult = await pool.query(
       `SELECT DISTINCT LOWER(COALESCE(platform, source, ota_name, '')) as platform
        FROM (
-         SELECT platform, source, ota_name FROM reservations WHERE property_id = $1 AND type != 'block'
+         SELECT platform, source, ota_name FROM reservations WHERE property_id = $1
          UNION ALL
          SELECT platform, platform as source, platform as ota_name FROM conversations WHERE property_id = $1
        ) combined
