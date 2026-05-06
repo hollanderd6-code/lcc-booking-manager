@@ -511,11 +511,7 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
 
 <script src="/js/auth-fetch.js"></script>
 <script>
-const API_URL = (function() {
-  const h = window.location.hostname;
-  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-  return 'https://www.boostinghost.fr';
-})();
+// API_URL géré par auth-fetch.js (résout vers lcc-booking-manager sur iOS, relatif sur web)
 
 // ─── MOBILE DETECTION (Capacitor + touch + width) ─────────────────────────
 const IS_MOBILE = (function() {
@@ -603,7 +599,7 @@ async function loadData() {
   const token = localStorage.getItem('lcc_token');
   if (!token) { window.location.href = '/login.html'; return; }
   try {
-    const res = await fetch(API_URL + '/api/reservations', {
+    const res = await fetch('/api/reservations', {
       headers: { Authorization: 'Bearer ' + token }
     });
     if (res.status === 401 || res.status === 403) { window.location.href = '/login.html'; return; }
@@ -803,7 +799,7 @@ async function openMessageForReservation(r) {
   if (!r) { window.location.href = '/messages.html'; return; }
   try {
     const token = localStorage.getItem('lcc_token');
-    const res = await fetch(API_URL + '/api/chat/conversations', {
+    const res = await fetch('/api/chat/conversations', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const d = await res.json();
