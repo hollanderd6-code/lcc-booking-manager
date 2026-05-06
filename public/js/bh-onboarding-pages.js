@@ -93,6 +93,75 @@
       ],
     },
 
+    /* ── RÉSERVATIONS ────────────────────────────────────── */
+    'reservations.html': {
+      storageKey: 'bh_ob_reservations_v1',
+      onStart: null,
+      onFinish: null,
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '📋 Vos réservations',
+          text: 'Toutes vos réservations en un coup d\'œil. Petit tour rapide des fonctionnalités.',
+          position: 'center',
+        },
+        {
+          id: 'filters',
+          target: () => document.querySelector('.filters-bar'),
+          mobile_target: () => document.getElementById('mobileSearch'),
+          title: '🔍 Filtres et recherche',
+          text: 'Recherchez par nom de voyageur, filtrez par logement, plateforme, statut ou période. Les résultats se mettent à jour en temps réel.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'table',
+          target: () => document.getElementById('resaTable'),
+          mobile_target: () => document.getElementById('mobileCards'),
+          title: '📊 Liste des réservations',
+          text: 'Cliquez sur une colonne pour trier. Un point vert à côté du nom indique qu\'une note est associée à ce voyageur.',
+          position: 'top',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'note-dot',
+          target: () => document.querySelector('.note-dot') || document.getElementById('resaTable'),
+          mobile_target: () => document.querySelector('.note-dot') || document.getElementById('mobileCards'),
+          title: '📝 Notes voyageurs',
+          text: 'Ce point vert signale qu\'une note est attachée à cette réservation. Les notes sont visibles dans le détail de la réservation — très utile pour garder un historique, transmettre des infos à votre équipe ménage ou noter les préférences du voyageur.',
+          position: 'right',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'detail-sheet',
+          target: () => document.getElementById('resaTable'),
+          mobile_target: () => document.getElementById('mobileCards'),
+          title: '👆 Détail d\'une réservation',
+          text: 'Cliquez sur n\'importe quelle réservation pour voir ses détails : dates, montant, coordonnées du voyageur, notes et accès direct à la messagerie.',
+          position: 'top',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'platforms',
+          target: () => document.getElementById('platFilter'),
+          mobile_target: () => document.getElementById('mobilePlatformFilter'),
+          title: '🌐 Multi-plateformes',
+          text: 'Vos réservations Airbnb, Booking.com, Abritel et directes sont toutes ici. Filtrez par plateforme pour comparer vos canaux de distribution.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 C\'est tout !',
+          text: 'Astuce : les templates automatiques vous évitent de répondre manuellement. Configurez-les dans la section Messages.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     // ── Les autres pages viendront ici (contrat, cleaning, deposits, factures, clients, reporting, welcome)
 
     /* ── HELP (Aide, FAQ, Roadmap, Support) ───────────────── */
