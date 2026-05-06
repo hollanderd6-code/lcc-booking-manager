@@ -2249,7 +2249,18 @@ function formatDateFr(dateStr) {
         }
 
         cleanerList.innerHTML = '';
-        cleaners.forEach((c) => {
+        // Pour les sous-comptes cleaner : n'afficher que son propre profil
+        const _isSubAcc = localStorage.getItem('lcc_account_type') === 'sub'
+                       || localStorage.getItem('lcc_is_sub_account') === 'true';
+        let _subEmail = null;
+        if (_isSubAcc) {
+          try { _subEmail = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}').email || null; } catch(e) {}
+        }
+        const _visibleCleaners = (_isSubAcc && _subEmail)
+          ? cleaners.filter(c => c.email && c.email.toLowerCase() === _subEmail.toLowerCase())
+          : cleaners;
+
+        _visibleCleaners.forEach((c) => {
           const div = document.createElement('div');
           div.className = 'cleaner-item';
           
