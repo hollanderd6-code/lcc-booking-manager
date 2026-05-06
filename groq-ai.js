@@ -56,8 +56,11 @@ function formatRooms(rooms) {
 
 /**
  * Appeler Groq AI pour générer une réponse intelligente
+ * @param {string} userMessage - Message(s) du voyageur
+ * @param {object} conversationContext - Contexte du logement + séjour
+ * @param {Array} messageHistory - Derniers messages de la conv [{role, content}]
  */
-async function getGroqResponse(userMessage, conversationContext = {}) {
+async function getGroqResponse(userMessage, conversationContext = {}, messageHistory = []) {
   if (!GROQ_API_KEY) {
     console.warn('⚠️ GROQ_API_KEY non configurée');
     return null;
@@ -177,6 +180,7 @@ R1. Tu réponds UNIQUEMENT avec les infos ci-dessus. Zéro invention, zéro supp
 R2. Si l'info demandée n'est pas ci-dessus → [ESCALADE] sans explication, sans excuse.
 R3. Si tu as l'info → donne-la COMPLÈTE et EXACTE. Ne jamais donner une réponse partielle quand tu as plus de détails disponibles.
 R4. Message ambigu → interprète-le de la façon la plus utile, réponds. Si vraiment incompréhensible → [ESCALADE].
+R4b. Si le message contient plusieurs [Message 1], [Message 2]... → c'est le même voyageur qui a envoyé plusieurs messages d'affilée. Traite-les ensemble et donne UNE seule réponse cohérente qui répond à tout.
 
 ── TON & STYLE ———————————————————
 R5. ${conversationContext.alreadyGreetedToday ? "Ne commence PAS par une salutation (Bonjour, Bonsoir, Hello, etc.) \u2014 tu as d\u00e9j\u00e0 r\u00e9pondu aujourd'hui. Va droit au but." : "Tu peux ouvrir avec une salutation courte si c'est naturel."}
@@ -214,6 +218,14 @@ FORMAT DE RÉPONSE
 • Termine avec une phrase d'ouverture adaptée à la phase du séjour.
 • Si escalade : réponds UNIQUEMENT [ESCALADE], rien d'autre.`;
 
+    // Construire l'historique : system + historique + message(s) actuels
+    const groqMessages = [
+      { role: 'system', content: systemPrompt },
+      // Injecter les derniers messages de la conversation comme contexte
+      ...messageHistory.slice(-6), // max 6 messages d'historique (3 échanges)
+      { role: 'user', content: userMessage }
+    ];
+
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
       headers: {
@@ -222,12 +234,9 @@ FORMAT DE RÉPONSE
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage }
-        ],
-        temperature: 0.5,
-        max_tokens: 350,
+        messages: groqMessages,
+        temperature: 0.3,
+        max_tokens: 500,
         top_p: 1,
         stream: false
       })
@@ -253,12 +262,46 @@ FORMAT DE RÉPONSE
 
 /**
  * Détecter si un message nécessite une intervention humaine urgente
+ * Couvre FR, EN, ES, PT, DE, IT, NL
  */
 function requiresHumanIntervention(message) {
   const urgentKeywords = [
-    'urgent', 'urgence', 'immédiat', 'tout de suite',
-    'problème grave', 'danger', 'fuite', 'incendie',
-    'cambriolage', 'police', 'secours',
+    // 🇫🇷 Français
+    'urgent', 'urgence', 'immédiat', 'tout de suite', 'maintenant',
+    'problème grave', 'danger', 'fuite', 'incendie', 'feu',
+    'cambriolage', 'police', 'secours', 'ambulance', 'samu',
+    'inondation', 'inondé', 'cassé', 'panne', 'bloqué',
+    'je suis bloqué', 'porte bloquée', 'ça ne fonctionne pas',
+    'parler à quelqu\'un', 'parler à un humain', 'propriétaire',
+    // 🇬🇧 Anglais
+    'urgent', 'emergency', 'immediately', 'right now', 'asap',
+    'fire', 'flood', 'flooded', 'leak', 'leaking', 'broken',
+    'not working', 'doesn\'t work', 'locked out', 'can\'t get in',
+    'can\'t enter', 'stuck', 'burglar', 'police', 'ambulance',
+    'speak to someone', 'speak to a human', 'talk to owner',
+    'call me', 'call us',
+    // 🇵🇹 Portugais
+    'urgente', 'emergência', 'socorro', 'imediatamente', 'agora',
+    'incêndio', 'fogo', 'inundação', 'vazamento', 'quebrado',
+    'não funciona', 'preso', 'bloqueado', 'polícia', 'ambulância',
+    'falar com alguém', 'falar com humano',
+    // 🇪🇸 Espagnol
+    'urgente', 'emergencia', 'socorro', 'inmediatamente', 'ahora',
+    'incendio', 'fuego', 'inundación', 'fuga', 'roto',
+    'no funciona', 'atascado', 'bloqueado', 'policía', 'ambulancia',
+    'hablar con alguien',
+    // 🇩🇪 Allemand
+    'dringend', 'notfall', 'sofort', 'hilfe', 'feuer',
+    'überschwemmung', 'leck', 'kaputt', 'funktioniert nicht',
+    'eingesperrt', 'polizei', 'krankenwagen',
+    // 🇮🇹 Italien
+    'urgente', 'emergenza', 'aiuto', 'subito', 'incendio',
+    'allagamento', 'perdita', 'rotto', 'non funziona',
+    'bloccato', 'polizia', 'ambulanza',
+    // 🇳🇱 Néerlandais
+    'dringend', 'noodgeval', 'meteen', 'hulp', 'brand',
+    'overstroming', 'lek', 'kapot', 'werkt niet', 'opgesloten',
+    'politie', 'ambulance',
   ];
 
   const lowerMessage = message.toLowerCase();
