@@ -2718,7 +2718,9 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     style.id = 'role-restrictions-css';
 
     if (role === 'cleaner') {
-      style.textContent = '#kpiTopRisksCard, #kpiOccupancyCard, #kpiDepositsCard, #kpiChecklistsCard, #kpiCaCard, #newReservationBtn, #fabAddResa { display: none !important; }';
+      // Cleaner : masquer CA, cautions, taux d'occupation, checklists, bouton nouvelle resa
+      // Garder : logements actifs, check-in/out, ménages, notes
+      style.textContent = '#kpiOccupancyCard, #kpiDepositsCard, #kpiChecklistsCard, #kpiCaCard, #newReservationBtn, #fabAddResa { display: none !important; }';
     } else if (role === 'comptable') {
       style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
     } else if (role === 'proprietaire') {
@@ -2728,7 +2730,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       if (!visibleKpis.kpi_properties)  hide.push('#kpiPropertiesCard');
       if (!visibleKpis.kpi_checkins)    hide.push('#kpiTodayMovesCard');
       if (!visibleKpis.kpi_cleaning)    hide.push('#kpiCleaning48hCard');
-      if (!visibleKpis.kpi_risks)       hide.push('#kpiTopRisksCard');
+      if (!visibleKpis.kpi_notes)       hide.push('#kpiTopRisksCard');
       if (!visibleKpis.kpi_occupancy)   hide.push('#kpiOccupancyCard');
       if (!visibleKpis.kpi_deposits)    hide.push('#kpiDepositsCard');
       if (!visibleKpis.kpi_checklists)  hide.push('#kpiChecklistsCard');
@@ -2737,6 +2739,22 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     if (style.textContent) document.head.appendChild(style);
+
+    // ── Cleaner : masquer les prix du calendrier ──
+    // Forcer showPrices=false dans bhCalPrefs dès le chargement
+    if (role === 'cleaner') {
+      try {
+        var _calPrefs = {};
+        try { _calPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+        _calPrefs.showPrices = false;
+        localStorage.setItem('bhCalPrefs', JSON.stringify(_calPrefs));
+        // Injecter le style immédiatement sans attendre applyPrefs()
+        var _priceStyle = document.createElement('style');
+        _priceStyle.id = 'cleaner-no-price';
+        _priceStyle.textContent = '.cell-price { display: none !important; }';
+        document.head.appendChild(_priceStyle);
+      } catch(e) {}
+    }
 
     // Forcer via JS après rendu (override inline styles + subtitle)
     document.addEventListener('DOMContentLoaded', function() {
@@ -6584,7 +6602,13 @@ try {
 
     var bdy2 = div('flex:1;overflow-y:auto;padding:16px 18px;');
 
-    // Show prices toggle
+    // Show prices toggle — masqué pour les cleaners
+    var _isCleanerRole = (function() {
+      try {
+        var _sd = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+        return _sd.role === 'cleaner';
+      } catch(e) { return false; }
+    })();
     var sec1 = div('margin-bottom:20px;');
     sec1.innerHTML='<div style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Affichage</div>';
     var row1 = div('display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#F9FAFB;border-radius:10px;cursor:pointer;');
@@ -6604,7 +6628,7 @@ try {
       knob.style.left=p2.showPrices?'20px':'3px';
       applyPrefs();
     };
-    sec1.appendChild(row1);
+    if (!_isCleanerRole) sec1.appendChild(row1); // cleaner ne peut pas modifier les prix
     bdy2.appendChild(sec1);
 
     var foot = div('padding:14px 18px;border-top:1px solid #F1F5F9;');
@@ -7942,6 +7966,17 @@ console.log('👤 DEBUG GUEST:', {
       return Number(val).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     }
 
+    // ── Vérifier si le sous-compte peut voir les finances ──
+    const _canViewFinances = (() => {
+      try {
+        const isSubAcc = localStorage.getItem('lcc_is_sub_account') === 'true'
+                      || localStorage.getItem('lcc_account_type') === 'sub';
+        if (!isSubAcc) return true; // compte principal → tout voir
+        const perms = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
+        return perms.can_view_finances === true;
+      } catch(e) { return true; }
+    })();
+
     const amountTotalFmt    = fmtAmount(amountTotal);
     const amountRoomsFmt    = fmtAmount(amountRooms);
     const amountTaxesFmt    = fmtAmount(amountTaxes);
@@ -7992,7 +8027,7 @@ console.log('👤 DEBUG GUEST:', {
           <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:${pc.bg};color:${pc.color};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">
             <i class="${pc.icon}" style="font-size:11px;"></i> ${pc.label}
           </div>
-          ${priceFormatted ? `<div style="font-size:19px;font-weight:800;color:#1A7A5E;line-height:1;">${priceFormatted}</div>` : ''}
+          ${(priceFormatted && _canViewFinances) ? `<div style="font-size:19px;font-weight:800;color:#1A7A5E;line-height:1;">${priceFormatted}</div>` : ''}
           ${nights ? `<div style="font-size:11px;color:#9CA3AF;margin-top:1px;">${nights} nuit${nights>1?'s':''}</div>` : ''}
         </div>
       </div>
@@ -8025,8 +8060,8 @@ console.log('👤 DEBUG GUEST:', {
         </div>
       ` : ''}
 
-      <!-- ── PRIX DÉTAILLÉ ── -->
-      ${amountTotalFmt ? `
+      <!-- ── PRIX DÉTAILLÉ — masqué pour sous-comptes sans can_view_finances ── -->
+      ${(amountTotalFmt && _canViewFinances) ? `
         <div style="background:rgba(255,255,255,.55);border-radius:16px;padding:14px 16px;margin-bottom:18px;">
           <div style="font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Prix détaillé</div>
 
@@ -11662,7 +11697,7 @@ document.addEventListener('DOMContentLoaded', function() {
     kpiPropertiesCard:  'kpi_properties',
     kpiTodayMovesCard:  'kpi_checkins',
     kpiCleaning48hCard: 'kpi_cleaning',
-    kpiTopRisksCard:    'kpi_risks',
+    kpiTopRisksCard:    'kpi_notes',
     kpiOccupancyCard:   'kpi_occupancy',
     kpiDepositsCard:    'kpi_deposits',
     kpiChecklistsCard:  'kpi_checklists',
@@ -11690,7 +11725,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Autres KPI : visible UNIQUEMENT si visible_kpis[key] === true explicitement
       // Par défaut (undefined ou false) = masqué pour les sous-comptes
       var shouldHide = (visibleKpis[key] !== true) ||
-        (_userRole === 'cleaner' && ['kpiPropertiesCard','kpiTopRisksCard','kpiOccupancyCard','kpiDepositsCard'].includes(cardId));
+        (_userRole === 'cleaner' && ['kpiOccupancyCard','kpiDepositsCard'].includes(cardId));
 
       if (shouldHide) {
         el.style.setProperty('display', 'none', 'important');
