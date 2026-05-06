@@ -25755,28 +25755,16 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
     const prop = propResult.rows[0];
     if (!prop) return res.json({ channels: [] });
 
-    // Récupérer les plateformes depuis les réservations + conversations (source plus complète)
+    // Récupérer les plateformes depuis réservations ET conversations
     const platformsResult = await pool.query(
-      `SELECT DISTINCT plat FROM (
-        SELECT LOWER(COALESCE(ota_name, platform, source, '')) as plat
-        FROM reservations
-        WHERE property_id = $1
-        AND type != 'block'
-        AND LOWER(COALESCE(ota_name, platform, source, '')) NOT IN ('','block','ical','unknown','manuel','manual','direct')
-        UNION
-        SELECT LOWER(COALESCE(platform, '')) as plat
-        FROM conversations
-        WHERE property_id = $1
-        AND LOWER(COALESCE(platform, '')) NOT IN ('','block','ical','unknown','manuel','manual','direct')
-        UNION
-        SELECT LOWER(COALESCE(ota_name, platform, source, '')) as plat
-        FROM reservations
-        WHERE property_id = $1
-        AND type != 'block'
-        AND LOWER(COALESCE(ota_name, platform, source, '')) IN ('manuel','manual','direct','guest','boostinghost')
-      ) t
-      WHERE plat != ''
-      ORDER BY 1`,
+      `SELECT DISTINCT LOWER(COALESCE(platform, source, ota_name, '')) as platform
+       FROM (
+         SELECT platform, source, ota_name FROM reservations WHERE property_id = $1 AND type != 'block'
+         UNION ALL
+         SELECT platform, platform as source, platform as ota_name FROM conversations WHERE property_id = $1
+       ) combined
+       WHERE LOWER(COALESCE(platform, source, ota_name, '')) NOT IN ('', 'block', 'ical', 'unknown', 'BLOCK')
+       ORDER BY 1`,
       [property_id]
     );
 
