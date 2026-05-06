@@ -142,6 +142,24 @@ async function getGroqResponse(userMessage, conversationContext = {}, messageHis
       sections.push(`QUESTIONS FRÉQUENTES CONFIGURÉES PAR L'HÔTE :\n${conversationContext.customQRSummary}`);
     }
 
+    // Caution / Dépôt de garantie
+    const depositInfo = [];
+    if (conversationContext.depositAmount && parseFloat(conversationContext.depositAmount) > 0) {
+      const amt = parseFloat(conversationContext.depositAmount);
+      const statusLabels = {
+        authorized: `validée (empreinte bancaire de ${amt}€ — non débitée)`,
+        captured:   `prélevée (${amt}€ débités)`,
+        pending:    `en attente de paiement (${amt}€)`,
+        expired:    `expirée — le voyageur doit la repayer`,
+      };
+      const statusLabel = statusLabels[conversationContext.depositStatus] || `demandée (${amt}€, statut inconnu)`;
+      depositInfo.push(`- Montant : ${amt}€`);
+      depositInfo.push(`- Statut actuel : ${statusLabel}`);
+      depositInfo.push(`- Restitution : 7 jours après le départ du locataire`);
+      depositInfo.push(`- Débit : non débitée pour les banques classiques françaises. Peut être débitée temporairement pour les banques en ligne (Revolut, N26, Wise…) et banques internationales`);
+    }
+    if (depositInfo.length > 0) sections.push(`CAUTION / DÉPÔT DE GARANTIE :\n${depositInfo.join('\n')}`);
+
     // Phase du séjour
     const phaseLabels = {
       before: `AVANT ARRIVÉE${conversationContext.checkinDate ? ' (arrivée prévue le ' + conversationContext.checkinDate + ')' : ''}`,
@@ -205,7 +223,13 @@ R14. ACCÈS / CODE / CLÉ : Donne le code exact + instructions complètes d'acc�
 R15. ADRESSE : Donne-la COMPLÈTE (rue, code postal, ville). Ne jamais donner une adresse partielle.
 R16. RESTAURANTS / ACTIVITÉS / COMMERCES : Utilise les infos du livret si disponibles. Si pas d'info → [ESCALADE].
 R17. FACTURE / REÇU : La facture sera envoyée en fin de séjour. Pas besoin d'escalader.
-R18. CAUTION / PAIEMENT / ANNULATION / REMBOURSEMENT → [ESCALADE] immédiatement. Système dédié en charge.
+R18. CAUTION — règles précises (NE PAS escalader pour ces questions) :
+   • "Je ne savais pas qu'il y avait une caution" → Expliquer gentiment que la caution est obligatoire, mentionnée dans l'annonce, et nécessaire pour recevoir les informations d'accès.
+   • "Je n'ai pas l'argent pour la caution" → Même réponse : la caution est malheureusement obligatoire pour obtenir les informations. Sans paiement, les infos ne peuvent pas être communiquées.
+   • "Est-ce que la caution est débitée ?" → Expliquer que non pour les banques classiques françaises (CB Visa/Mastercard), mais qu'elle peut être débitée temporairement pour les banques en ligne (Revolut, N26, Wise…) et banques internationales. Elle est restituée dans tous les cas.
+   • "Quand est-ce que la caution est rendue ?" → 7 jours après le départ du locataire, automatiquement.
+   • "J'ai payé la caution, quand est-ce que je reçois les infos ?" → Si depositStatus = 'authorized' ou 'captured' : confirmer que c'est bon et que les infos arrivent. Si 'pending' : expliquer qu'on attend la validation du paiement.
+   • ANNULATION / REMBOURSEMENT DE RÉSERVATION → [ESCALADE] immédiatement.
 R19. PROBLÈME (ménage insuffisant, équipement cassé, nuisances, mauvaise température…) → [ESCALADE] immédiatement + ton empathique.
 R20. URGENCE (fuite, incendie, danger, panne totale) → [ESCALADE] immédiatement.
 R21. Le voyageur insiste pour parler à un humain → [ESCALADE] immédiatement.
