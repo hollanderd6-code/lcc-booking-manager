@@ -267,7 +267,17 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: false,
               can_manage_payments: false,
               can_view_contracts: false,
-              visible_kpis: _kpisFromBody
+              // Cleaner voit toujours ces 4 KPIs — forcé, non modifiable par l'admin
+              visible_kpis: {
+                kpi_properties: true,   // Logements actifs
+                kpi_checkins: true,     // Check-in / Check-out du jour
+                kpi_cleaning: true,     // Ménages à prévoir (48h)
+                kpi_notes: true,        // Notes voyageurs
+                kpi_occupancy: false,
+                kpi_deposits: false,
+                kpi_checklists: false,
+                kpi_ca: false,
+              }
             };
             break;
             
