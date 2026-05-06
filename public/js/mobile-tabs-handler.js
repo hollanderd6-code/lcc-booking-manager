@@ -87,7 +87,7 @@
     if (isSubAccount) {
       buttons += `
         <button class="btn btn-secondary" onclick="window.location.href='/app.html'" style="width: 100%; justify-content: flex-start;">
-          <i class="fas fa-th-large"></i> Accueil
+          <i class="fas fa-th-large"></i> Dashboard
         </button>`;
       buttons += hr;
     }
