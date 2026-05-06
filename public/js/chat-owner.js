@@ -919,61 +919,88 @@ function appendMessage(message) {
   contentDiv.appendChild(bubble);
   contentDiv.appendChild(meta);
   
-  // Bouton traduction — uniquement sur les messages du voyageur avec du texte
+  // ── Bouton traduction ───────────────────────────────────────────────────
+  // Affiché sur : messages voyageur + messages bot/propriétaire (pour voir la traduction en FR)
   const msgTextOnly = (message.message || '').replace(/\[IMAGE:[^\]]+\]/g, '').trim();
-  if (!isOwner && msgTextOnly) {
+  const isBotOrOwner = message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
+  const showTxBtn = msgTextOnly && (!isOwner || isBotOrOwner);
+
+  if (showTxBtn) {
+    // Détecter la langue source du message pour afficher le bon drapeau
+    const FLAGS = {
+      fr: '🇫🇷', en: '🇬🇧', pt: '🇵🇹', es: '🇪🇸',
+      de: '🇩🇪', it: '🇮🇹', nl: '🇳🇱', ru: '🇷🇺',
+      zh: '🇨🇳', ja: '🇯🇵', ko: '🇰🇷', ar: '🇸🇦',
+    };
+
+    function detectMsgLang(text) {
+      const t = text.toLowerCase();
+      const scores = {
+        pt: (t.match(/\b(olá|ola|obrigado|obrigada|por favor|onde|quando|posso|quero|preciso|senha|bom dia|boa tarde|boa noite|como|entrada|saída)\b/g) || []).length,
+        en: (t.match(/\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|can|could|would|wifi|password|check|arrival|departure|need|want)\b/g) || []).length,
+        es: (t.match(/\b(hola|gracias|por favor|dónde|cuándo|puedo|quiero|necesito|contraseña|llegada|salida|buenos días)\b/g) || []).length,
+        de: (t.match(/\b(hallo|hei|danke|bitte|wo|wann|wie|was|kann|möchte|passwort|ankunft|abreise|guten)\b/g) || []).length,
+        it: (t.match(/\b(ciao|grazie|dove|quando|posso|vorrei|ho bisogno|indirizzo|arrivo|partenza|buongiorno)\b/g) || []).length,
+        nl: (t.match(/\b(hallo|hoi|bedankt|dank|alsjeblieft|waar|wanneer|kan|wil|wachtwoord|aankomst|vertrek)\b/g) || []).length,
+        fr: (t.match(/\b(bonjour|bonsoir|merci|où|quand|comment|puis-je|voudrais|besoin|arrivée|départ|nous|vous|je|salut)\b/g) || []).length,
+      };
+      const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+      return best[1] >= 1 ? best[0] : 'en';
+    }
+
+    const srcLang = isBotOrOwner ? 'bot' : detectMsgLang(msgTextOnly);
+    const srcFlag = FLAGS[srcLang] || '🌐';
+    const dstFlag = '🇫🇷';
+
     const txBar = document.createElement('div');
     txBar.className = 'tx-bar';
-    
+
     const txBtn = document.createElement('button');
     txBtn.className = 'tx-chip';
-    txBtn.innerHTML = '<span class="tx-flags">🇫🇷→🇬🇧</span><span class="tx-label">Traduire</span>';
+    txBtn.innerHTML = `<span class="tx-flags">${srcFlag}→${dstFlag}</span><span class="tx-label">Traduire</span>`;
     txBtn.setAttribute('data-original', message.message);
     txBtn.setAttribute('data-translated', '');
-    txBtn.setAttribute('data-state', 'original'); // original | loading | translated
-    
+    txBtn.setAttribute('data-state', 'original');
+
     txBtn.addEventListener('click', async function() {
       const state = txBtn.getAttribute('data-state');
       const original = txBtn.getAttribute('data-original');
-      
+
       if (state === 'translated') {
-        // Revenir à l'original
         bubble.textContent = original;
-        txBtn.innerHTML = '🌐 Traduire';
+        txBtn.innerHTML = `<span class="tx-flags">${srcFlag}→${dstFlag}</span><span class="tx-label">Traduire</span>`;
         txBtn.setAttribute('data-state', 'original');
+        txBtn.classList.remove('translated');
         return;
       }
-      
-      // Déjà traduit en cache
+
       const cached = txBtn.getAttribute('data-translated');
       if (cached) {
         bubble.textContent = cached;
-        txBtn.innerHTML = '<span class="tx-flags">🇬🇧→🇫🇷</span><span class="tx-label">Original</span>';
+        txBtn.innerHTML = `<span class="tx-flags">${dstFlag}→${srcFlag}</span><span class="tx-label">Original</span>`;
         txBtn.setAttribute('data-state', 'translated');
         txBtn.classList.add('translated');
         return;
       }
-      
-      // Traduire via MyMemory
+
       txBtn.innerHTML = '<span class="tx-flags">⏳</span><span class="tx-label">...</span>';
       txBtn.setAttribute('data-state', 'loading');
       txBtn.disabled = true;
-      
+
       try {
-        const ownerLang = localStorage.getItem('owner_lang') || 'fr';
-        const translated = await chatTranslate(original, ownerLang);
+        const translated = await chatTranslate(original, 'fr');
         txBtn.setAttribute('data-translated', translated);
         bubble.textContent = translated;
-        txBtn.innerHTML = '<span class="tx-flags">🇬🇧→🇫🇷</span><span class="tx-label">Original</span>';
+        txBtn.innerHTML = `<span class="tx-flags">${dstFlag}→${srcFlag}</span><span class="tx-label">Original</span>`;
         txBtn.setAttribute('data-state', 'translated');
         txBtn.classList.add('translated');
       } catch(e) {
-        txBtn.innerHTML = '<span class="tx-flags">🇫🇷→🇬🇧</span><span class="tx-label">Traduire</span>';
+        txBtn.innerHTML = `<span class="tx-flags">${srcFlag}→${dstFlag}</span><span class="tx-label">Traduire</span>`;
         txBtn.setAttribute('data-state', 'original');
       }
       txBtn.disabled = false;
     });
-    
+
     txBar.appendChild(txBtn);
     contentDiv.appendChild(txBar);
   }
