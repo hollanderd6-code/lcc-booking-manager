@@ -22,7 +22,7 @@ const { Pool } = require('pg');
 // ============================================
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
 // ============================================
-const { handleIncomingMessageDebounced } = require('./integrated-chat-handler');
+const { handleIncomingMessage } = require('./integrated-chat-handler');
 // onboarding-system supprimé — données voyageur via Channex
 const crypto = require('crypto');
 const axios = require('axios');
@@ -5540,32 +5540,20 @@ async function handleDepositPaid(depositId, io) {
       // Jour J après 7h → déclencher template on_arrival immédiatement (caution validée)
       console.log(`📨 Caution validée + Jour J → déclenchement template on_arrival pour conv ${conv.id}`);
       try {
-        // Anti-doublon : vérifier que on_arrival n'a pas déjà été envoyé dans les 23h
-        const alreadySent = await pool.query(
-          `SELECT 1 FROM message_template_logs
-           WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
-           AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-          [conv.id]
+        const templates = await pool.query(
+          `SELECT mt.* FROM message_templates mt
+           WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
+           AND (
+             mt.property_id IS NULL
+             OR mt.property_id::text = $2::text
+             OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
+                 AND mt.property_ids @> to_jsonb($2::text))
+           )`,
+          [conv.user_id, conv.property_id]
         );
-        if (alreadySent.rows.length > 0) {
-          console.log(`⏭️ [Stripe webhook] on_arrival déjà envoyé pour conv ${conv.id} — skip`);
-        } else {
-          const templates = await pool.query(
-            `SELECT mt.* FROM message_templates mt
-             WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
-             AND (
-               mt.property_id IS NULL
-               OR mt.property_id::text = $2::text
-               OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
-                   AND mt.property_ids @> to_jsonb($2::text))
-             )`,
-            [conv.user_id, conv.property_id]
-          );
-          for (const tmpl of templates.rows) {
-            const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
-            await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
-            await new Promise(r => setTimeout(r, 400));
-          }
+        for (const tmpl of templates.rows) {
+          const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
+          await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
         }
       } catch (tplErr) {
         console.error('⚠️ Erreur template on_arrival immédiat:', tplErr.message);
@@ -21543,31 +21531,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
   }
 
   // 🌍 Traduction automatique via DeepL selon la nationalité du voyageur
-  // Si guest_country/language absents du conv (timing webhook), on les relit depuis reservations
-  let guestCountry  = conv.guest_country  || null;
-  let guestLanguage = conv.guest_language || null;
-  if (!guestCountry && !guestLanguage && conv.id) {
-    try {
-      const langRow = await pool.query(
-        `SELECT r.guest_country, r.guest_language
-         FROM reservations r
-         WHERE (r.channex_booking_id = $1 AND $1 IS NOT NULL)
-            OR (r.property_id = $2 AND DATE(r.start_date) = DATE($3) AND r.status != 'cancelled')
-         ORDER BY (r.channex_booking_id = $1) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
-        [conv.channex_booking_id || null, conv.property_id, conv.reservation_start_date]
-      );
-      if (langRow.rows[0]) {
-        guestCountry  = langRow.rows[0].guest_country  || null;
-        guestLanguage = langRow.rows[0].guest_language || null;
-        if (guestCountry || guestLanguage) {
-          console.log(`🌍 [TPL] guest_country=${guestCountry} guest_language=${guestLanguage} (récupérés depuis reservations)`);
-        }
-      }
-    } catch(e) {
-      console.warn('⚠️ [TPL] Erreur récupération langue voyageur:', e.message);
-    }
-  }
-  const deepLTarget = getDeepLTarget(guestCountry, guestLanguage);
+  const deepLTarget = getDeepLTarget(conv.guest_country, conv.guest_language);
   if (deepLTarget) {
     msg = await translateWithDeepL(msg, deepLTarget);
   }
@@ -22222,17 +22186,22 @@ async function runTemplatesCron(triggerTypes) {
   }
 }
 
-// Veille + Jour J à 7h00
+// 7h00 — avant arrivée + jour J arrivée + avant départ
 cron.schedule('0 7 * * *', () => {
-  runTemplatesCron(['before_arrival', 'on_arrival', 'after_arrival', 'before_departure', 'on_departure', 'after_departure']);
+  runTemplatesCron(['before_arrival', 'on_arrival', 'before_departure']);
 }, { timezone: 'Europe/Paris' });
 
-// Après départ à 15h00
+// 10h00 — after_arrival (J+1 après arrivée — heure plus naturelle pour "vous êtes bien installés ?")
+cron.schedule('0 10 * * *', () => {
+  runTemplatesCron(['after_arrival']);
+}, { timezone: 'Europe/Paris' });
+
+// 15h00 — après départ (heure du checkout, séjour terminé)
 cron.schedule('0 15 * * *', () => {
-  runTemplatesCron(['after_departure']);
+  runTemplatesCron(['after_departure', 'on_departure']);
 }, { timezone: 'Europe/Paris' });
 
-console.log('✅ Cron message_templates initialisé (7h avant/arrivée, 15h après départ — Europe/Paris)');
+console.log('✅ Cron message_templates initialisé (7h avant/arrivée+before_dep, 10h after_arrival, 15h after_departure — Europe/Paris)');
 
 // ============================================
 // 💰 INITIALISATION DU CRON JOB DES RAPPELS CAUTION
@@ -22304,33 +22273,6 @@ app.get('/api/auth/verify', authenticateAny, async (req, res) => {
     });
   }
 });
-
-// ============================================
-// 🌍 ENDPOINT TRADUCTION DEEPL (pour le chat owner)
-// ============================================
-app.post('/api/translate', authenticateAny, async (req, res) => {
-  try {
-    const { text, target_lang } = req.body;
-    if (!text || !target_lang) return res.status(400).json({ error: 'text et target_lang requis' });
-
-    const apiKey = process.env.DEEPL_API_KEY;
-    if (!apiKey) return res.status(503).json({ error: 'DeepL non configuré' });
-
-    const axios = require('axios');
-    const response = await axios.post(
-      'https://api-free.deepl.com/v2/translate',
-      { text: [text], target_lang, preserve_formatting: true },
-      { headers: { 'Authorization': `DeepL-Auth-Key ${apiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
-    );
-    const translated = response.data?.translations?.[0]?.text;
-    if (!translated) return res.status(500).json({ error: 'Pas de traduction retournée' });
-    res.json({ translated });
-  } catch (err) {
-    console.error('❌ [/api/translate]', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ============================================
 // 🤖 ENDPOINT ENVOI MESSAGE AVEC TRAITEMENT AUTO
 // ============================================
@@ -22371,7 +22313,7 @@ app.post('/api/chat/send', async (req, res) => {
         
         // Traiter le message (onboarding + réponses auto)
         const msgNotifAllowed = await shouldSendNotification(conversation.user_id, 'notif_new_message');
-        const botHandled = await handleIncomingMessageDebounced(savedMessage, conversation, pool, io);
+        const botHandled = await handleIncomingMessage(savedMessage, conversation, pool, io);
 
         // 🔔 Notifs seulement si le bot n'a PAS répondu (escalade ou non géré)
         if (!botHandled) {
@@ -25473,7 +25415,7 @@ async function processIncomingGuestMessage(savedMessage, conversationId) {
     const conversation = convResult.rows[0];
 
     // Traiter le message (onboarding + réponses auto)
-    await handleIncomingMessageDebounced(savedMessage, conversation, pool, io);
+    await handleIncomingMessage(savedMessage, conversation, pool, io);
 
   } catch (error) {
     console.error('❌ Erreur processIncomingGuestMessage:', error);
@@ -26278,8 +26220,8 @@ app.post('/api/channex/webhook', async (req, res) => {
                 // Récupérer la conversation complète pour handleIncomingMessage
                 const convForGroq = await pool.query('SELECT * FROM conversations WHERE id = $1', [convId]);
                 if (convForGroq.rows[0]) {
-                  const { handleIncomingMessageDebounced } = require('./integrated-chat-handler');
-                  await handleIncomingMessageDebounced(savedGuestMsg.rows[0], convForGroq.rows[0], pool, io);
+                  const { handleIncomingMessage } = require('./integrated-chat-handler');
+                  await handleIncomingMessage(savedGuestMsg.rows[0], convForGroq.rows[0], pool, io);
                   console.log(`🤖 [CHANNEX] Demande spéciale transmise à Groq pour conv ${convId}`);
                 }
               }
@@ -26393,43 +26335,8 @@ app.post('/api/channex/webhook', async (req, res) => {
                 } else {
                   console.log(`⏭️ [TPL caution last-minute] Déjà envoyée — conv ${conv.id}`);
                 }
-                // ⚠️ on_arrival sera déclenché par le webhook Stripe après paiement caution
               } else {
-                // Pas de template caution → vérifier si le logement a une caution configurée
-                const depositAmount = parseFloat(property.deposit_amount || 0);
-                if (depositAmount <= 0) {
-                  // Pas de caution → envoyer on_arrival directement
-                  console.log(`⚠️ [TPL last-minute] Pas de caution sur ce logement → on_arrival immédiat`);
-                  const alreadySentArrival = await pool.query(
-                    `SELECT 1 FROM message_template_logs
-                     WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
-                     AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-                    [conv.id]
-                  );
-                  if (alreadySentArrival.rows.length === 0) {
-                    const arrivalTpls = await pool.query(
-                      `SELECT * FROM message_templates
-                       WHERE user_id = $1 AND trigger_type = 'on_arrival' AND active = TRUE
-                       AND (
-                         property_id IS NULL
-                         OR property_id::text = $2::text
-                         OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
-                             AND property_ids @> to_jsonb($2::text))
-                       )`,
-                      [result.user_id, result.property_id]
-                    );
-                    for (const tmpl of arrivalTpls.rows) {
-                      await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
-                      console.log(`✅ [TPL on_arrival last-minute sans caution] Envoyé — conv ${conv.id}`);
-                      await new Promise(r => setTimeout(r, 400));
-                    }
-                  } else {
-                    console.log(`⏭️ [TPL on_arrival] Déjà envoyé — conv ${conv.id}`);
-                  }
-                } else {
-                  // Caution configurée mais pas de template → on_arrival bloqué jusqu'au paiement Stripe
-                  console.log(`⚠️ [TPL last-minute] Caution configurée (${depositAmount}€) mais pas de template caution → on_arrival bloqué jusqu'au paiement`);
-                }
+                console.log(`⚠️ [TPL caution last-minute] Aucun template caution trouvé pour property ${result.property_id}`);
               }
             } else {
               // Airbnb + arrivée aujourd'hui → envoyer on_arrival directement (pas de caution)
@@ -26582,7 +26489,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
 
     // ── Réponses automatiques (après res.json pour ne pas bloquer) ──
     try {
-      const { handleIncomingMessageDebounced } = require('./integrated-chat-handler');
+      const { handleIncomingMessage } = require('./integrated-chat-handler');
 
       // Récupérer la conversation complète pour le handler
       const convResult = await pool.query(
@@ -26605,7 +26512,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
             conversation.escalated = false;
             console.log(`🔄 [CHANNEX MSG] Escalade réinitialisée pour conv ${conversation_id}`);
           }
-          const handled = await handleIncomingMessageDebounced(savedMsg, conversation, pool, io);
+          const handled = await handleIncomingMessage(savedMsg, conversation, pool, io);
           console.log(`🤖 [CHANNEX MSG] handleIncomingMessage retourné: ${handled}`);
 
           // Notif push seulement si PAS de réponse auto (escalade ou aucune réponse)
