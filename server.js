@@ -25755,30 +25755,32 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
     const prop = propResult.rows[0];
     if (!prop) return res.json({ channels: [] });
 
-    // Récupérer les plateformes distinctes depuis les réservations des 12 derniers mois
+    // Récupérer les plateformes distinctes depuis TOUTES les réservations (pas de limite temporelle)
     const platformsResult = await pool.query(
       `SELECT DISTINCT LOWER(COALESCE(ota_name, platform, source, '')) as platform
        FROM reservations
        WHERE property_id = $1
        AND status != 'cancelled'
-       AND start_date > NOW() - INTERVAL '12 months'
        AND LOWER(COALESCE(ota_name, platform, source, '')) != ''
-       AND LOWER(COALESCE(ota_name, platform, source, '')) != 'block'
+       AND LOWER(COALESCE(ota_name, platform, source, '')) NOT IN ('block','','ical','unknown')
        ORDER BY 1`,
       [property_id]
     );
 
     const PLATFORM_MAP = {
-      'airbnb': { channel: 'airbnb', title: 'Airbnb' },
-      'abb':    { channel: 'airbnb', title: 'Airbnb' },
+      'airbnb':     { channel: 'airbnb',     title: 'Airbnb' },
+      'abb':        { channel: 'airbnb',     title: 'Airbnb' },
       'bookingcom': { channel: 'bookingcom', title: 'Booking.com' },
-      'booking': { channel: 'bookingcom', title: 'Booking.com' },
-      'booking.com': { channel: 'bookingcom', title: 'Booking.com' },
-      'expedia': { channel: 'expedia', title: 'Expedia' },
-      'vrbo':   { channel: 'vrbo', title: 'VRBO' },
-      'abritel': { channel: 'vrbo', title: 'Abritel' },
-      'direct': { channel: 'direct', title: 'Direct' },
-      'manuel': { channel: 'direct', title: 'Direct' },
+      'booking':    { channel: 'bookingcom', title: 'Booking.com' },
+      'booking.com':{ channel: 'bookingcom', title: 'Booking.com' },
+      'expedia':    { channel: 'expedia',    title: 'Expedia' },
+      'vrbo':       { channel: 'vrbo',       title: 'Abritel' },
+      'abritel':    { channel: 'vrbo',       title: 'Abritel' },
+      'direct':     { channel: 'guest',      title: 'BH Guest' },
+      'manuel':     { channel: 'guest',      title: 'BH Guest' },
+      'manual':     { channel: 'guest',      title: 'BH Guest' },
+      'guest':      { channel: 'guest',      title: 'BH Guest' },
+      'boostinghost':{ channel: 'guest',     title: 'BH Guest' },
     };
 
     const seen = new Set();
