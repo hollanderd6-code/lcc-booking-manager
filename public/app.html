@@ -7992,16 +7992,6 @@ console.log('👤 DEBUG GUEST:', {
       } catch(e) { return true; }
     })();
 
-    // ── Vérifier si le sous-compte peut voir les finances ──
-    const _canViewFinances = (() => {
-      try {
-        const isSubAcc = localStorage.getItem('lcc_is_sub_account') === 'true'
-                      || localStorage.getItem('lcc_account_type') === 'sub';
-        if (!isSubAcc) return true; // compte principal → tout voir
-        const perms = JSON.parse(localStorage.getItem('lcc_permissions') || '{}');
-        return perms.can_view_finances === true;
-      } catch(e) { return true; }
-    })();
 
     const amountTotalFmt    = fmtAmount(amountTotal);
     const amountRoomsFmt    = fmtAmount(amountRooms);
