@@ -608,16 +608,18 @@ async function loadData() {
     allReservations = (data.reservations || []).filter(r => r.type !== 'block');
     allProperties   = data.properties || [];
 
-    // Enrichir propertyName depuis allProperties pour les réservations Direct/BH Guest
-    // qui n'ont pas toujours le champ propertyName rempli
+    // Enrichir propertyName : fallback sur r.property.name (résas iCal store) puis propMap
     const propMap = {};
     allProperties.forEach(p => {
-      const id = p.id || p.propertyId || p.property_id;
-      if (id) propMap[String(id)] = p.name || p.propertyName || p.title || '';
+      const id = String(p.id || '');
+      if (id) propMap[id] = p.name || p.internalName || '';
     });
     allReservations.forEach(r => {
       if (!r.propertyName) {
-        const id = String(r.propertyId || r.property_id || '');
+        // 1. Objet property imbriqué (résas Direct/BH Guest du store iCal)
+        if (r.property?.name) { r.propertyName = r.property.name; return; }
+        // 2. propMap depuis allProperties
+        const id = String(r.propertyId || r.property_id || r.property?.id || '');
         if (id && propMap[id]) r.propertyName = propMap[id];
       }
     });
