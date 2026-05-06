@@ -61,6 +61,7 @@
 
   const canSeePage = (page) => {
     if (!isSubAccount) return true;
+    if (page === 'dashboard') return true;
     if (allowedPages) return allowedPages.includes(page);
     const permMap = {
       dashboard: 'can_view_reservations', calendar: 'can_view_reservations',
