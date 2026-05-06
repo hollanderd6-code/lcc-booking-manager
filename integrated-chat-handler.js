@@ -677,6 +677,33 @@ Rules:
       }
     }
 
+    // ── Statut de la caution ────────────────────────────────────
+    let depositStatus = null;
+    let depositAmount = null;
+    try {
+      const depResult = await pool.query(
+        `SELECT d.status, d.amount_cents, p.deposit_amount
+         FROM conversations c
+         LEFT JOIN properties p ON p.id = c.property_id
+         LEFT JOIN reservations r ON (
+           (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
+           OR (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date))
+         )
+         LEFT JOIN deposits d ON d.reservation_uid = r.uid
+         WHERE c.id = $1
+         ORDER BY d.created_at DESC LIMIT 1`,
+        [conversation.id]
+      );
+      if (depResult.rows[0]) {
+        depositStatus = depResult.rows[0].status || null; // authorized | captured | pending | expired | null
+        depositAmount = depResult.rows[0].deposit_amount || depResult.rows[0].amount_cents
+          ? (depResult.rows[0].amount_cents ? depResult.rows[0].amount_cents / 100 : depResult.rows[0].deposit_amount)
+          : null;
+      }
+    } catch(e) {
+      console.warn('⚠️ [HANDLER] Erreur récupération caution:', e.message);
+    }
+
     // ── Phase du séjour ──────────────────────────────────────────
     const nowForPhase = new Date();
     const checkinDt  = conversation.reservation_start_date ? new Date(conversation.reservation_start_date) : null;
@@ -745,8 +772,64 @@ Rules:
       extraNotesLogement: welcomeBookData?.extraNotesLogement,
       practicalInfo: property.practical_info,
       customQRSummary,
-      language
+      language,
+      // Caution
+      depositAmount: depositAmount || null,
+      depositStatus: depositStatus || null, // authorized | captured | pending | expired | null
     } : { language };
+
+    // ── Détection sentiment négatif → notifier propriétaire même sans escalade ──
+    function detectNegativeSentiment(text) {
+      const t = text.toLowerCase();
+      const negativePatterns = [
+        // FR
+        'pas content', 'pas satisfait', 'déçu', 'décevant', 'inacceptable',
+        'honteux', 'scandaleux', 'nul', 'catastrophe', 'horrible', 'terrible',
+        'mauvais', 'sale', 'dégoût', 'dégueulasse', 'arnaque', 'escroquerie',
+        'remboursement', 'plainte', 'signaler', 'mauvais avis', 'mauvaise note',
+        'pas propre', 'pas clean',
+        // EN
+        'not happy', 'disappointed', 'unacceptable', 'terrible', 'awful',
+        'disgusting', 'dirty', 'scam', 'refund', 'complaint', 'report',
+        'bad review', 'negative review', 'not clean', 'not satisfied',
+        // PT
+        'não estou satisfeito', 'decepcionado', 'inaceitável', 'terrível',
+        'horrível', 'sujo', 'reembolso', 'reclamação', 'avaliação negativa',
+        // ES
+        'no estoy contento', 'decepcionado', 'inaceptable', 'terrible',
+        'horrible', 'sucio', 'reembolso', 'queja', 'mala reseña',
+        // DE
+        'nicht zufrieden', 'enttäuscht', 'inakzeptabel', 'schrecklich',
+        'schmutzig', 'erstattung', 'beschwerde', 'schlechte bewertung',
+        // IT
+        'non sono soddisfatto', 'deluso', 'inaccettabile', 'terribile',
+        'sporco', 'rimborso', 'reclamo', 'recensione negativa',
+      ];
+      return negativePatterns.some(p => t.includes(p));
+    }
+
+    const isNegative = detectNegativeSentiment(message.message);
+    if (isNegative) {
+      console.log(`😠 [HANDLER] Sentiment négatif détecté — conv ${conversation.id} → push propriétaire`);
+      try {
+        const tokensRes = await pool.query(
+          `SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL`,
+          [conversation.user_id]
+        );
+        const { sendNotification } = require('./firebase');
+        const guestName = conversation.guest_name || 'Un voyageur';
+        for (const tok of tokensRes.rows) {
+          await sendNotification(
+            tok.fcm_token,
+            `😠 Message négatif — ${guestName}`,
+            `Un voyageur semble insatisfait. Vérifiez la conversation.`,
+            { type: 'negative_sentiment', conversationId: String(conversation.id), screen: 'messages' }
+          );
+        }
+      } catch(e) {
+        console.warn('⚠️ [HANDLER] Erreur push sentiment négatif:', e.message);
+      }
+    }
 
     // ── Récupérer l'historique des derniers messages pour le contexte Groq ──
     let messageHistory = [];
@@ -754,12 +837,16 @@ Rules:
       const histResult = await pool.query(
         `SELECT sender_type, message FROM messages
          WHERE conversation_id = $1
-         AND created_at > NOW() - INTERVAL '24 hours'
+         AND created_at > NOW() - INTERVAL '7 days'
          AND message NOT ILIKE '%THIS RESERVATION HAS BEEN PRE-PAID%'
          AND message NOT ILIKE '%BOOKING NOTE%'
          AND message NOT ILIKE '%OTA Commission%'
+         AND message NOT ILIKE '%Payment Collect%'
+         AND message NOT ILIKE '%Meal Plan%'
+         AND message NOT ILIKE '%Smoking Preference%'
+         AND LENGTH(message) > 3
          ORDER BY created_at ASC
-         LIMIT 10`,
+         LIMIT 20`,
         [conversation.id]
       );
       messageHistory = histResult.rows.map(m => ({
