@@ -1619,7 +1619,21 @@ html[data-theme-v3="1"] .invoice-paper {
 
 <!-- MODALE APERÇU FACTURE -->
 <div id="invoicePreviewModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(13,17,23,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:20px;">
-  <div style="max-width:860px;margin:0 auto;position:relative;">
+  <style>
+    @media (max-width: 860px) {
+      #invoicePreviewModal { padding: 8px !important; }
+      #invoicePreviewModalInner { max-width: 100% !important; }
+      #invoicePreviewContent {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      #invoicePreviewContent > div {
+        transform-origin: top left;
+        width: 210mm !important;
+      }
+    }
+  </style>
+  <div id="invoicePreviewModalInner" style="max-width:860px;margin:0 auto;position:relative;">
     <!-- Barre d'actions sticky -->
     <div style="position:sticky;top:0;z-index:10001;display:flex;justify-content:space-between;align-items:center;background:rgba(13,17,23,.85);backdrop-filter:blur(8px);padding:12px 16px;border-radius:12px;margin-bottom:16px;">
       <span style="color:white;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;" id="invoicePreviewModalTitle">Aperçu facture</span>
@@ -2929,10 +2943,32 @@ window.deleteOwnerInvoice = function (id) {
       buildInvoiceHTML(inv, items, client, tempDiv);
       const paper = tempDiv.querySelector('#tempInvoicePaper');
       if (paper) {
-        paper.style.width = '100%';
+        paper.style.width = '210mm';
         paper.style.minHeight = 'auto';
         paper.style.boxSizing = 'border-box';
         content.innerHTML = paper.outerHTML;
+
+        // ── Scale mobile : faire tenir la facture A4 dans l'écran ──
+        const applyScale = () => {
+          const paperEl = content.firstElementChild;
+          if (!paperEl) return;
+          const containerW = content.parentElement?.offsetWidth || window.innerWidth;
+          const paperW = paperEl.scrollWidth || 794; // 210mm ≈ 794px
+          if (containerW < paperW) {
+            const scale = Math.max(0.35, (containerW - 16) / paperW);
+            paperEl.style.transform = `scale(${scale})`;
+            paperEl.style.transformOrigin = 'top left';
+            paperEl.style.marginBottom = `-${Math.round(paperEl.scrollHeight * (1 - scale))}px`;
+            content.style.height = `${Math.round(paperEl.scrollHeight * scale)}px`;
+            content.style.overflow = 'visible';
+          } else {
+            paperEl.style.transform = '';
+            content.style.height = '';
+            content.style.overflow = 'hidden';
+          }
+        };
+        setTimeout(applyScale, 50);
+        window.addEventListener('resize', applyScale, { once: false });
       }
       document.body.removeChild(tempDiv);
       modal.style.display = 'block';
