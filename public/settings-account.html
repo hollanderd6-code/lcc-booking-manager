@@ -2787,7 +2787,7 @@ document.addEventListener('DOMContentLoaded', function() {
       kpi_properties: document.getElementById('perm_kpiProperties')?.checked || false,
       kpi_checkins: document.getElementById('perm_kpiCheckins')?.checked || false,
       kpi_cleaning: document.getElementById('perm_kpiCleaning')?.checked || false,
-      kpi_risks: document.getElementById('perm_kpiRisks')?.checked || false,
+      kpi_notes: document.getElementById('perm_kpiNotes')?.checked || false,
       kpi_occupancy: document.getElementById('perm_kpiOccupancy')?.checked || false,
       kpi_deposits: document.getElementById('perm_kpiDeposits')?.checked || false,
       kpi_checklists: document.getElementById('perm_kpiChecklists')?.checked || false,
@@ -2928,7 +2928,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('perm_kpiProperties')) document.getElementById('perm_kpiProperties').checked = _kpis.kpi_properties === true;
         if (document.getElementById('perm_kpiCheckins'))   document.getElementById('perm_kpiCheckins').checked   = _kpis.kpi_checkins === true;
         if (document.getElementById('perm_kpiCleaning'))   document.getElementById('perm_kpiCleaning').checked   = _kpis.kpi_cleaning === true;
-        if (document.getElementById('perm_kpiRisks'))      document.getElementById('perm_kpiRisks').checked      = _kpis.kpi_risks === true;
+        if (document.getElementById('perm_kpiNotes'))      document.getElementById('perm_kpiNotes').checked      = _kpis.kpi_notes === true;
         if (document.getElementById('perm_kpiOccupancy'))  document.getElementById('perm_kpiOccupancy').checked  = _kpis.kpi_occupancy === true;
         if (document.getElementById('perm_kpiDeposits'))   document.getElementById('perm_kpiDeposits').checked   = _kpis.kpi_deposits === true;
         if (document.getElementById('perm_kpiChecklists')) document.getElementById('perm_kpiChecklists').checked = _kpis.kpi_checklists === true;
@@ -3593,9 +3593,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
                 <tr>
                   <td style="width:32px; padding:4px 0; vertical-align:middle;">
-                    <input type="checkbox" id="perm_kpiRisks" style="width:18px;height:18px;cursor:pointer;" />
+                    <input type="checkbox" id="perm_kpiNotes" style="width:18px;height:18px;cursor:pointer;" />
                   </td>
-                  <td style="padding:4px 0; vertical-align:middle;">🛡️ Risques à venir</td>
+                  <td style="padding:4px 0; vertical-align:middle;">📝 Notes voyageurs</td>
                 </tr>
                 <tr>
                   <td style="width:32px; padding:4px 0; vertical-align:middle;">
