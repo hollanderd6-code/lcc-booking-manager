@@ -5,7 +5,7 @@
    ============================================================ */
 
 (function () {
-  const STORAGE_KEY = 'bh_onboarding_done_v1';
+  const STORAGE_KEY = 'bh_onboarding_done_v2'; // v2 : ajout étape Notes
   const IS_MOBILE   = () => window.innerWidth <= 1366;
 
   const STEPS = [
@@ -39,9 +39,18 @@
       target: () => document.getElementById('calendarSection'),
       mobile_target: () => document.querySelector('.tab-btn[data-tab="calendar"]'),
       title: '📅 Calendrier',
-      text: 'Visualisez toutes vos réservations par logement. Cliquez sur une réservation pour accéder aux détails, messages et caution.',
+      text: 'Visualisez toutes vos réservations par logement. Cliquez sur une réservation pour voir les détails, envoyer un message ou gérer la caution.',
       position: 'center',
       mobile_position: 'top',
+    },
+    {
+      id: 'notes',
+      target: () => document.getElementById('kpiTopRisksCard'),
+      mobile_target: () => document.getElementById('kpiTopRisksCard'),
+      title: '📝 Notes voyageurs',
+      text: 'Ce compteur affiche les réservations avec une note. Les notes vous permettent de mémoriser des infos sur un voyageur (préférences, incident, recommandation…), d\'informer votre équipe ménage, ou de garder un historique utile pour les prochains séjours. Un point vert sur une réservation indique qu\'une note est présente.',
+      position: 'bottom',
+      mobile_position: 'bottom',
     },
     {
       id: 'nav-messages',
@@ -128,7 +137,7 @@
       id: 'done',
       target: null,
       title: '🎉 Vous êtes prêt !',
-      text: 'Commencez par ajouter votre premier logement. Vous pouvez revoir ce tour depuis vos Paramètres.',
+      text: 'Commencez par configurer votre premier logement. Pensez à créer vos templates de messages automatiques pour accueillir vos voyageurs sans effort. Vous pouvez revoir ce tour depuis vos Paramètres.',
       position: 'center',
       isLast: true,
     },
