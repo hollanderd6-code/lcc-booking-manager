@@ -254,8 +254,8 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .bh-resa-sheet {
   position: relative; z-index: 1001;
   background: #F5F0E8; border-radius: 20px;
-  width: 92%; max-width: 640px;
-  /* Pas de max-height fixe — le modal s'adapte au contenu */
+  width: 94%; max-width: 660px;
+  max-height: 92vh;
   display: flex; flex-direction: column;
   transform: scale(.96) translateY(8px); opacity: 0;
   transition: transform .22s cubic-bezier(.32,.72,0,1), opacity .22s;
@@ -263,17 +263,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   overflow: hidden;
 }
 .bh-resa-sheet.open { transform: scale(1) translateY(0); opacity: 1; }
-/* Body scrollable seulement si nécessaire */
-.bh-resa-body { overflow-y: auto; flex: 1; padding: 0 20px 20px; -webkit-overflow-scrolling: touch; max-height: 70vh; }
-@media (max-width: 1024px) {
-  .bh-resa-overlay { align-items: flex-end; }
-  .bh-resa-sheet {
-    width: 100%; max-width: 100%; border-radius: 20px 20px 0 0;
-    transform: translateY(20px); opacity: 0;
-  }
-  .bh-resa-sheet.open { transform: translateY(0); opacity: 1; }
-  .bh-resa-body { max-height: 75vh; }
-}
+.bh-resa-body { overflow-y: auto; flex: 1; padding: 0 20px 20px; -webkit-overflow-scrolling: touch; }
 .bh-resa-drag { padding: 10px; display: flex; justify-content: center; cursor: grab; flex-shrink: 0; }
 .bh-resa-drag-bar { width: 36px; height: 4px; border-radius: 2px; background: #D1D5DB; }
 .bh-resa-header { padding: 0 20px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; border-bottom: 1px solid rgba(200,184,154,.4); }
