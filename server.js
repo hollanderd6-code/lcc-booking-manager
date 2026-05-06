@@ -7060,7 +7060,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
             await sendNotificationToMultiple(
               fcmTokens,
               '📅 Nouvelle réservation',
-              `${displayName(property)} - ${checkInDate} au ${checkOutDate}`,
+              `${guestName ? guestName + ' · ' : ''}${displayName(property)} · ${checkInDate} → ${checkOutDate}`,
               {
                 type: 'new_reservation',
                 reservation_id: uid,
@@ -7074,7 +7074,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
               await sendNotificationToSubAccountsOf(
                 user.id, 'can_view_calendar',
                 '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + displayName(property),
-                displayName(property) + ' \u00B7 ' + checkInDate + ' au ' + checkOutDate,
+                (guestName ? guestName + ' \u00B7 ' : '') + displayName(property) + ' \u00B7 ' + checkInDate + ' \u2192 ' + checkOutDate,
                 { type: 'new_reservation', reservation_id: uid },
                 'notif_sub_new_reservation'
               );
