@@ -2095,6 +2095,16 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         return String(c.id) === String(conversationId);
       });
 
+      // ── Mettre à jour le titre du header avec le nom du voyageur ──
+      var titleEl = document.getElementById('chatModalTitle');
+      if (titleEl && conv) {
+        var guestName = conv.guest_display_name
+          || (conv.guest_first_name ? (conv.guest_first_name + (conv.guest_last_name ? ' ' + conv.guest_last_name : '')) : null)
+          || conv.guest_name
+          || 'Conversation';
+        titleEl.textContent = guestName;
+      }
+
       // 1. Afficher le panel inline (rend #chatMessages visible)
       showInlineChat(conv || { id: conversationId });
 
