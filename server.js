@@ -25757,12 +25757,20 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
 
     const { channexAPI } = require('./channex');
 
-    // ✅ Récupère tous les channels sans filtre (Channex ignore filter[property_id])
-    const response = await channexAPI.get('/channels', {
-      params: { 'pagination[page_size]': 100, 'pagination[page]': 1 }
-    });
-
-    const raw = response.data?.data || [];
+    // ✅ Récupère TOUS les channels avec pagination complète
+    let raw = [];
+    let page = 1;
+    while (true) {
+      const response = await channexAPI.get('/channels', {
+        params: { 'pagination[page_size]': 100, 'pagination[page]': page }
+      });
+      const pageData = response.data?.data || [];
+      raw = raw.concat(pageData);
+      const meta = response.data?.meta?.pagination || {};
+      const totalPages = meta.total_pages || meta.totalPages || 1;
+      if (page >= totalPages || pageData.length === 0) break;
+      page++;
+    }
 
     // 🔍 Log complet pour debug
     console.log(`🔍 [CHANNEX channels] Total reçus: ${raw.length} | property_id cible: ${prop.channex_property_id}`);
