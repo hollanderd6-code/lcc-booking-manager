@@ -5549,9 +5549,18 @@ async function handleDepositPaid(depositId, io) {
     const isAfter7am = currentHour >= 7;
 
     if (isArrivalToday && isAfter7am) {
-      // Jour J après 7h → déclencher template on_arrival immédiatement (caution validée)
       console.log(`📨 Caution validée + Jour J → déclenchement template on_arrival pour conv ${conv.id}`);
       try {
+        // Anti-doublon : vérifier que on_arrival n'a pas déjà été envoyé dans les 23h
+        const alreadySent = await pool.query(
+          `SELECT 1 FROM message_template_logs
+           WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
+           AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
+          [conv.id]
+        );
+        if (alreadySent.rows.length > 0) {
+          console.log(`⏭️ [Stripe webhook] on_arrival déjà envoyé pour conv ${conv.id} — skip`);
+        } else {
         const templates = await pool.query(
           `SELECT mt.* FROM message_templates mt
            WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
@@ -5566,7 +5575,9 @@ async function handleDepositPaid(depositId, io) {
         for (const tmpl of templates.rows) {
           const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
           await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
-        }
+            await new Promise(r => setTimeout(r, 400));
+          }
+        } // fin else anti-doublon
       } catch (tplErr) {
         console.error('⚠️ Erreur template on_arrival immédiat:', tplErr.message);
       }
@@ -21543,7 +21554,31 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
   }
 
   // 🌍 Traduction automatique via DeepL selon la nationalité du voyageur
-  const deepLTarget = getDeepLTarget(conv.guest_country, conv.guest_language);
+  // Si guest_country/language absents du conv (timing webhook), on les relit depuis reservations
+  let guestCountry  = conv.guest_country  || null;
+  let guestLanguage = conv.guest_language || null;
+  if (!guestCountry && !guestLanguage && conv.id) {
+    try {
+      const langRow = await pool.query(
+        `SELECT r.guest_country, r.guest_language
+         FROM reservations r
+         WHERE (r.channex_booking_id = $1 AND $1 IS NOT NULL)
+            OR (r.property_id = $2 AND DATE(r.start_date) = DATE($3) AND r.status != 'cancelled')
+         ORDER BY (r.channex_booking_id = $1) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+        [conv.channex_booking_id || null, conv.property_id, conv.reservation_start_date]
+      );
+      if (langRow.rows[0]) {
+        guestCountry  = langRow.rows[0].guest_country  || null;
+        guestLanguage = langRow.rows[0].guest_language || null;
+        if (guestCountry || guestLanguage) {
+          console.log(`🌍 [TPL] guest_country=${guestCountry} guest_language=${guestLanguage} (récupérés depuis reservations)`);
+        }
+      }
+    } catch(e) {
+      console.warn('⚠️ [TPL] Erreur récupération langue voyageur:', e.message);
+    }
+  }
+  const deepLTarget = getDeepLTarget(guestCountry, guestLanguage);
   if (deepLTarget) {
     msg = await translateWithDeepL(msg, deepLTarget);
   }
@@ -22521,6 +22556,33 @@ app.get('/api/auth/verify', authenticateAny, async (req, res) => {
     });
   }
 });
+
+// ============================================
+// 🌍 ENDPOINT TRADUCTION DEEPL (pour le chat owner)
+// ============================================
+app.post('/api/translate', authenticateAny, async (req, res) => {
+  try {
+    const { text, target_lang } = req.body;
+    if (!text || !target_lang) return res.status(400).json({ error: 'text et target_lang requis' });
+
+    const apiKey = process.env.DEEPL_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: 'DeepL non configuré' });
+
+    const axios = require('axios');
+    const response = await axios.post(
+      'https://api-free.deepl.com/v2/translate',
+      { text: [text], target_lang, preserve_formatting: true },
+      { headers: { 'Authorization': `DeepL-Auth-Key ${apiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
+    );
+    const translated = response.data?.translations?.[0]?.text;
+    if (!translated) return res.status(500).json({ error: 'Pas de traduction retournée' });
+    res.json({ translated });
+  } catch (err) {
+    console.error('❌ [/api/translate]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================
 // 🤖 ENDPOINT ENVOI MESSAGE AVEC TRAITEMENT AUTO
 // ============================================
@@ -25724,12 +25786,13 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
     });
 
     console.log(`🔍 [CHANNEX channels] Après filtre property: ${filtered.length} channels`);
-    // Récupérer le channex_rate_plan_id du logement pour filtrer le mapping
+    // Récupérer le channex_rate_plan_id ET channex_room_type_id du logement
     const propRatePlan = await pool.query(
-      'SELECT channex_rate_plan_id FROM properties WHERE id = $1',
+      'SELECT channex_rate_plan_id, channex_room_type_id FROM properties WHERE id = $1',
       [property_id]
     );
     const ratePlanId = propRatePlan.rows[0]?.channex_rate_plan_id;
+    const roomTypeId = propRatePlan.rows[0]?.channex_room_type_id;
 
     const channels = filtered
       .map(c => ({
@@ -25737,18 +25800,29 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
         title: c.attributes?.title || c.attributes?.name || '',
         status: c.attributes?.status || '',
         channel: (c.attributes?.channel || c.attributes?.channel_id || '').toLowerCase(),
-        _rate_plan_ids: (c.attributes?.rate_plans || []).map(rp => rp.rate_plan_id)
+        _rate_plan_ids: (c.attributes?.rate_plans || []).map(rp => rp.rate_plan_id),
+        _room_type_ids: (c.attributes?.rate_plans || []).map(rp => rp.room_type_id).filter(Boolean),
       }))
       // Exclure les statuts explicitement inactifs
       .filter(c => !['disabled', 'deleted', 'inactive', 'paused'].includes(c.status))
-      // ✅ Garder seulement les channels qui ont le rate_plan_id de CE logement
+      // Filtrer par room_type_id (précis) ou rate_plan_id (fallback)
       .filter(c => {
-        if (!ratePlanId || c._rate_plan_ids.length === 0) return true;
-        const mapped = c._rate_plan_ids.includes(ratePlanId);
-        if (!mapped) console.log(`  ↳ skip ${c.channel} — rate_plan ${ratePlanId} absent (a: ${c._rate_plan_ids.join(',')})`);
-        return mapped;
+        if (c._rate_plan_ids.length === 0 && c._room_type_ids.length === 0) return true;
+        // Priorité : room_type_id (plus précis pour propriétés multi-logements)
+        if (roomTypeId && c._room_type_ids.length > 0) {
+          const ok = c._room_type_ids.includes(roomTypeId);
+          if (!ok) console.log(`  ↳ skip ${c.channel} — room_type ${roomTypeId} absent`);
+          return ok;
+        }
+        // Fallback : rate_plan_id
+        if (ratePlanId && c._rate_plan_ids.length > 0) {
+          const ok = c._rate_plan_ids.includes(ratePlanId);
+          if (!ok) console.log(`  ↳ skip ${c.channel} — rate_plan ${ratePlanId} absent`);
+          return ok;
+        }
+        return true;
       })
-      .map(({ _rate_plan_ids, ...c }) => c);
+      .map(({ _rate_plan_ids, _room_type_ids, ...c }) => c);
 
     console.log(`✅ [CHANNEX channels] Résultat final pour ${prop.channex_property_id}:`, channels);
 
@@ -26587,7 +26661,6 @@ app.post('/api/channex/webhook', async (req, res) => {
               );
 
               if (depositTpls.rows.length > 0) {
-                // Vérifier que la caution n'a pas déjà été envoyée dans les 23h
                 const cautionAlreadySent = await pool.query(
                   `SELECT 1 FROM message_template_logs
                    WHERE conversation_id = $1 AND template_id = $2
@@ -26600,8 +26673,42 @@ app.post('/api/channex/webhook', async (req, res) => {
                 } else {
                   console.log(`⏭️ [TPL caution last-minute] Déjà envoyée — conv ${conv.id}`);
                 }
+                // ⚠️ on_arrival sera déclenché par le webhook Stripe après paiement caution
               } else {
-                console.log(`⚠️ [TPL caution last-minute] Aucun template caution trouvé pour property ${result.property_id}`);
+                // Pas de template caution → vérifier si le logement a une caution configurée
+                const depositAmount = parseFloat(property.deposit_amount || 0);
+                if (depositAmount <= 0) {
+                  // Pas de caution → envoyer on_arrival directement
+                  console.log(`⚠️ [TPL last-minute] Pas de caution sur ce logement → on_arrival immédiat`);
+                  const alreadySentArrival = await pool.query(
+                    `SELECT 1 FROM message_template_logs
+                     WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
+                     AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
+                    [conv.id]
+                  );
+                  if (alreadySentArrival.rows.length === 0) {
+                    const arrivalTpls = await pool.query(
+                      `SELECT * FROM message_templates
+                       WHERE user_id = $1 AND trigger_type = 'on_arrival' AND active = TRUE
+                       AND (
+                         property_id IS NULL
+                         OR property_id::text = $2::text
+                         OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                             AND property_ids @> to_jsonb($2::text))
+                       )`,
+                      [result.user_id, result.property_id]
+                    );
+                    for (const tmpl of arrivalTpls.rows) {
+                      await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
+                      console.log(`✅ [TPL on_arrival last-minute sans caution] Envoyé — conv ${conv.id}`);
+                      await new Promise(r => setTimeout(r, 400));
+                    }
+                  } else {
+                    console.log(`⏭️ [TPL on_arrival] Déjà envoyé — conv ${conv.id}`);
+                  }
+                } else {
+                  console.log(`⚠️ [TPL last-minute] Caution configurée (${depositAmount}€) mais pas de template caution → on_arrival bloqué jusqu'au paiement`);
+                }
               }
             } else {
               // Airbnb + arrivée aujourd'hui → envoyer on_arrival directement (pas de caution)
