@@ -851,12 +851,17 @@ function openDetail(r) {
       <button class="btn btn-primary" style="flex:1;" onclick="openMessageForReservation(currentDetailReservation)"><i class="fas fa-comment"></i> Messages</button>
     </div>`;
   const overlay = document.getElementById('detailOverlay');
+  const sheet   = document.getElementById('detailSheet');
   overlay.classList.add('open');
+  if (sheet) sheet.classList.add('open');
   overlay.onclick = function(e) { if (e.target === overlay) closeDetail(); };
   document.body.style.overflow = 'hidden';
 }
 function closeDetail() {
-  document.getElementById('detailOverlay').classList.remove('open');
+  const overlay = document.getElementById('detailOverlay');
+  const sheet   = document.getElementById('detailSheet');
+  overlay.classList.remove('open');
+  if (sheet) sheet.classList.remove('open');
   document.body.style.overflow = '';
 }
 
