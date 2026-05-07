@@ -10730,22 +10730,29 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     );
     
     if (cleanerResult.rows.length === 0) {
+      console.log(`❌ [TASKS] PIN invalide: ${pinCode}`);
       return res.status(404).json({ error: 'Code PIN invalide' });
     }
     
     const cleaner = cleanerResult.rows[0];
+    console.log(`✅ [TASKS] Cleaner trouvé: ${cleaner.name} (${cleaner.id}) user_id=${cleaner.user_id}`);
     
     // Récupérer les assignations PAR RÉSERVATION de ce cleaner
     const assignmentsResult = await pool.query(
       'SELECT reservation_key, property_id FROM cleaning_assignments WHERE cleaner_id = $1',
       [cleaner.id]
     );
+    console.log(`📋 [TASKS] Assignations explicites: ${assignmentsResult.rows.length}`);
+    assignmentsResult.rows.forEach(r => console.log(`  → ${r.reservation_key}`));
     
     // Récupérer aussi les logements où ce cleaner est le cleaner par défaut
     const defaultPropertiesResult = await pool.query(
       'SELECT property_id FROM property_default_cleaners WHERE cleaner_id = $1 AND user_id = $2',
       [cleaner.id, cleaner.user_id]
     );
+    console.log(`🏠 [TASKS] Logements par défaut: ${defaultPropertiesResult.rows.length}`, defaultPropertiesResult.rows.map(r => r.property_id));
+    console.log(`🏠 [TASKS] Logements par défaut: ${defaultPropertiesResult.rows.length}`);
+    defaultPropertiesResult.rows.forEach(r => console.log(`  → ${r.property_id}`));
 
     const now = new Date();
     const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
@@ -10769,6 +10776,7 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
            AND DATE(end_date) <= $3`,
           [propId, todayStr, endOfNextMonth]
         );
+        console.log(`📅 [TASKS] Réservations DB pour ${propId}: ${resaRows.rows.length} (entre ${todayStr} et ${endOfNextMonth})`);
         for (const r of resaRows.rows) {
           const rStart = String(r.start).slice(0, 10);
           const rEnd   = String(r.end).slice(0, 10);
@@ -10791,8 +10799,11 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     }
 
     const allAssignments = [...assignmentsResult.rows, ...defaultAssignments];
+    console.log(`📊 [TASKS] Total assignments: ${allAssignments.length} (${assignmentsResult.rows.length} explicites + ${defaultAssignments.length} défaut)`);
 
+    console.log(`📊 [TASKS] Total: ${allAssignments.length} assignations (${assignmentsResult.rows.length} explicites + ${defaultAssignments.length} par défaut)`);
     if (allAssignments.length === 0) {
+      console.log(`⚠️ [TASKS] Aucune assignation pour ${cleaner.name} — vérifier property_default_cleaners et cleaning_assignments`);
       return res.json({ tasks: [], cleaner: { id: cleaner.id, name: cleaner.name } });
     }
 
