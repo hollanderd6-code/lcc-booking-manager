@@ -9079,6 +9079,12 @@ if (editBookingForm) {
           } catch(e2) {}
 
           alert('Note sauvegardée !');
+          // Fermer le modal sans recharger — la note est déjà à jour en mémoire
+          const _editModal = document.getElementById('editBookingModal');
+          if (_editModal) { _editModal.classList.remove('active'); _editModal.style.display = 'none'; }
+          // Re-render calendrier depuis le state déjà mis à jour (sans appel API)
+          if (typeof window.__bhCalendarRender === 'function') window.__bhCalendarRender();
+          return;
         } else {
           // ── CAS RÉSERVATION MANUELLE ──
           console.log('✏️ Modification réservation manuelle uid:', uid);
@@ -9461,6 +9467,7 @@ if (editBookingForm) {
                   <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                     <i class="fas fa-shield-halved"></i> 
                     <strong>${r.propertyName || 'Logement'}</strong>
+                    ${r.guestName ? `<span style="font-weight:400;color:#6B7280;">· ${r.guestName}</span>` : ''}
                   </label>
                   <div class="detail-value" style="padding-left: 24px;">
                     <div style="margin-bottom: 4px;">
