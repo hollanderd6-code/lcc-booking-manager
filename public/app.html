@@ -2747,7 +2747,18 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   try {
     var isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true' 
                     || localStorage.getItem('lcc_account_type') === 'sub';
-    if (!isSubAccount) return;
+    // Compte principal : s'assurer que showPrices est true par défaut
+    if (!isSubAccount) {
+      try {
+        var _mainPrefs = {};
+        try { _mainPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+        if (_mainPrefs.showPrices === undefined || _mainPrefs.showPrices === null) {
+          _mainPrefs.showPrices = true;
+          localStorage.setItem('bhCalPrefs', JSON.stringify(_mainPrefs));
+        }
+      } catch(e) {}
+      return;
+    }
 
     var role = 'custom';
     var visibleKpis = null;
@@ -11550,26 +11561,42 @@ function closeReorderModal() {
 
 // Touch drag for mobile reorder
 function addTouchDrag(row) {
-  var startY = 0, startIdx = 0, dragging = false, clone = null, list = null;
-  var grip = row.querySelector('.fa-grip-vertical') ? row.querySelector('.fa-grip-vertical').parentElement : row;
-  
+  var startY = 0, startX = 0, startIdx = 0, dragging = false, dragActivated = false, list = null;
+  var DRAG_THRESHOLD = 8; // pixels avant d'activer le drag (évite de bloquer le scroll)
+
   row.addEventListener('touchstart', function(e) {
     if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
     e.stopPropagation();
     startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
     list = row.parentElement;
     var items = Array.from(list.children);
     startIdx = items.indexOf(row);
     dragging = true;
-    row.style.opacity = '0.5';
-    row.style.boxShadow = '0 4px 12px rgba(0,0,0,.2)';
+    dragActivated = false;
   }, { passive: true });
 
   row.addEventListener('touchmove', function(e) {
     if (!dragging) return;
-    e.preventDefault();
     var y = e.touches[0].clientY;
+    var x = e.touches[0].clientX;
     var dy = y - startY;
+    var dx = x - startX;
+
+    // Activer le drag seulement si mouvement vertical > seuil ET plus vertical qu'horizontal
+    if (!dragActivated) {
+      if (Math.abs(dy) > DRAG_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+        dragActivated = true;
+        row.style.opacity = '0.5';
+        row.style.boxShadow = '0 4px 12px rgba(0,0,0,.2)';
+      } else {
+        // Pas encore de drag : laisser le scroll natif fonctionner
+        return;
+      }
+    }
+
+    // Drag activé : bloquer le scroll et déplacer l'item
+    e.preventDefault();
     var items = Array.from(list.children);
     var rowH = row.offsetHeight + 6;
     var moveSteps = Math.round(dy / rowH);
@@ -11584,6 +11611,7 @@ function addTouchDrag(row) {
   row.addEventListener('touchend', function(e) {
     if (!dragging) return;
     dragging = false;
+    dragActivated = false;
     row.style.opacity = '1';
     row.style.boxShadow = '';
   }, { passive: true });
