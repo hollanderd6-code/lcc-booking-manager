@@ -7500,6 +7500,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           r.start_date,
           r.end_date,
           r.ota_name,
+          r.notes,
           c.onboarding_completed,
           c.id as conversation_id
          FROM reservations r
