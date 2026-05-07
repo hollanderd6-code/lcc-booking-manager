@@ -10822,7 +10822,10 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
 
         // Filtrer : mois en cours + mois suivant seulement
         const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
-        if (endDate < todayStr || endDate > endOfNextMonth) continue;
+        if (endDate < todayStr || endDate > endOfNextMonth) {
+          console.log(`🚫 [TASKS] Filtrée: ${reservation_key} endDate=${endDate} todayStr=${todayStr}`);
+          continue;
+        }
 
         // ✅ Lire depuis la DB (fiable même après redémarrage serveur)
         let guestName = '';
