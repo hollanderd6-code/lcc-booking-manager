@@ -5659,18 +5659,24 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
 
     // ── KPI Notes : réservations avec note, valides jusqu'à end_date + 1 jour ──
     const nowNotes = new Date();
-    const withNotes = (window.__bhCalendarState && window.__bhCalendarState.bookings
-      ? window.__bhCalendarState.bookings
-      : (window.LCC_RESERVATIONS || [])
-    ).filter(r => {
+    // Priorité : bookings passés en param (données fraîches) → __bhCalendarState → LCC_RESERVATIONS
+    const _noteSrc = (Array.isArray(bookings) && bookings.length > 0)
+      ? bookings
+      : (window.__bhCalendarState && Array.isArray(window.__bhCalendarState.bookings) && window.__bhCalendarState.bookings.length > 0
+          ? window.__bhCalendarState.bookings
+          : (window.LCC_RESERVATIONS || []));
+    const withNotes = _noteSrc.filter(r => {
       if (!r.notes || !r.notes.trim()) return false;
       const note = r.notes.trim();
       // Exclure les blocages (type block ou source BLOCK)
       if (r.type === 'block' || (r.source || r.platform || '').toUpperCase() === 'BLOCK') return false;
       // Exclure les notes purement numériques (prix, etc.)
       if (/^\d+(\.\d+)?$/.test(note)) return false;
-      // Exclure les notes qui ressemblent à des raisons de blocage automatique
-      const autoNotes = ['blocage manuel', 'manual block', 'block', 'bloqué', 'indisponible'];
+      // Exclure les notes automatiques OTA courantes
+      const autoNotes = [
+        'blocage manuel', 'manual block', 'block', 'bloqué', 'indisponible',
+        'n/a', 'none', '-', 'ok', 'no remarks', 'aucune note',
+      ];
       if (autoNotes.some(s => note.toLowerCase() === s)) return false;
       // Expiration : end_date + 1 jour à 23h59
       const endRaw = r.endDate || r.end || r.end_date || '';
@@ -5772,7 +5778,10 @@ try {
         cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
 }
 
-      // ✅ KPI Notes handler géré par patchOpenChat (voir ci-dessus)
+      // ✅ KPI Notes : toujours recalculer depuis les données fraîches après chargement
+      if (typeof window.updateTopRisksKpi === 'function') {
+        try { window.updateTopRisksKpi(reservations); } catch(e) { console.warn('updateTopRisksKpi error', e); }
+      }
       // Charger les cautions pour la KPI
       loadAndUpdateDepositsKPI();
     } catch (e) {
@@ -9034,6 +9043,25 @@ if (editBookingForm) {
           if (!noteRes.ok) {
             throw new Error(noteBody.error || 'Erreur mise à jour note (' + noteRes.status + ')');
           }
+          // ✅ Mettre à jour le store en mémoire immédiatement (avant rechargement async)
+          const _savedNote = notes.trim() || null;
+          const _patchStore = function(arr) {
+            if (!Array.isArray(arr)) return;
+            const idx = arr.findIndex(function(r) { return r && (r.uid === uid || r.id === uid); });
+            if (idx !== -1) arr[idx] = Object.assign({}, arr[idx], { notes: _savedNote });
+          };
+          _patchStore(window.LCC_RESERVATIONS);
+          if (window.__bhCalendarState && Array.isArray(window.__bhCalendarState.bookings)) {
+            _patchStore(window.__bhCalendarState.bookings);
+          }
+          if (typeof window.updateTopRisksKpi === 'function') {
+            try {
+              const _src = (window.__bhCalendarState && window.__bhCalendarState.bookings)
+                ? window.__bhCalendarState.bookings
+                : (window.LCC_RESERVATIONS || []);
+              window.updateTopRisksKpi(_src);
+            } catch(e) {}
+          }
           alert('Note sauvegardée !');
         } else {
           // ── CAS RÉSERVATION MANUELLE ──
@@ -9062,6 +9090,25 @@ if (editBookingForm) {
           try { updateBody = await updateRes.json(); } catch (e) {}
           if (!updateRes.ok) {
             throw new Error(updateBody.error || 'Erreur mise à jour (' + updateRes.status + ')');
+          }
+          // ✅ Mettre à jour la note dans le store en mémoire immédiatement
+          const _savedNoteM = notes.trim() || null;
+          const _patchStoreM = function(arr) {
+            if (!Array.isArray(arr)) return;
+            const idx = arr.findIndex(function(r) { return r && (r.uid === uid || r.id === uid); });
+            if (idx !== -1) arr[idx] = Object.assign({}, arr[idx], { notes: _savedNoteM });
+          };
+          _patchStoreM(window.LCC_RESERVATIONS);
+          if (window.__bhCalendarState && Array.isArray(window.__bhCalendarState.bookings)) {
+            _patchStoreM(window.__bhCalendarState.bookings);
+          }
+          if (typeof window.updateTopRisksKpi === 'function') {
+            try {
+              const _srcM = (window.__bhCalendarState && window.__bhCalendarState.bookings)
+                ? window.__bhCalendarState.bookings
+                : (window.LCC_RESERVATIONS || []);
+              window.updateTopRisksKpi(_srcM);
+            } catch(e) {}
           }
           alert('Réservation mise à jour !');
         }
