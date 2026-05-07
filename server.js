@@ -7409,6 +7409,40 @@ console.log('✅ Route de comparaison disponible : GET /test-push-compare?user_i
 // ============================================
 
 // GET - Toutes les réservations du user
+
+// ── Filtrer les notes automatiques OTA (Booking.com, Channex, etc.) ──
+function isRealNote(note) {
+  if (!note || !note.trim()) return false;
+  const n = note.trim().toLowerCase();
+  const autoPatterns = [
+    'imported booking',
+    'pre-paid',
+    'prepaid',
+    'this reservation has been',
+    'booking note',
+    'channex',
+    'virtual credit card',
+    'carte de crédit virtuelle',
+    'no remarks',
+    'no comment',
+    'aucune remarque',
+    'aucun commentaire',
+    'n/a',
+    'none',
+    'aucune note',
+    '-',
+    'remarks: none',
+    'remarks:none',
+    'guest will',
+    'automatic',
+    'automatique',
+  ];
+  if (autoPatterns.some(p => n.includes(p))) return false;
+  // Ignorer les notes qui ne sont que des chiffres ou caractères spéciaux
+  if (/^[\d\s\-\.\*\#\/]+$/.test(n)) return false;
+  return true;
+}
+
 app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res) => {
   try {
     let userId;
@@ -7599,7 +7633,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           guest_initial: dbData.guest_first_name
             ? dbData.guest_first_name.charAt(0).toUpperCase()
             : null,
-          notes: dbData.notes || null
+          notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null
         };
 
         allReservations.push(enrichedReservation);
@@ -7666,7 +7700,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
               : (dbData.guest_name || null),
             guest_initial: dbData.guest_first_name
               ? dbData.guest_first_name.charAt(0).toUpperCase() : null,
-            notes: dbData.notes || null
+            notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null
           });
           storeUids.add(dbData.uid);
         }
