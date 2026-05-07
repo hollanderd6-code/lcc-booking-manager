@@ -1007,6 +1007,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .booking-block.direct  { background: linear-gradient(135deg, #F97316, #EA6A00) !important; }
 .booking-block.abritel { background: linear-gradient(135deg, #0096D6, #0077B3) !important; }
 .booking-block.gites   { background: linear-gradient(135deg, #2E7D32, #1B5E20) !important; }
+.booking-block.bhguest { background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important; }
 html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-blocked {
   background: repeating-linear-gradient(
     45deg,
@@ -5790,20 +5791,24 @@ try {
   var MS = 86400000;
 
   var PLT = {
-    airbnb:  { bg:'#FF5A5F', label:'Airbnb',       cls:'airbnb'  },
-    booking: { bg:'#003580', label:'Booking.com',   cls:'booking' },
-    bdc:     { bg:'#003580', label:'Booking.com',   cls:'booking' },
-    direct:  { bg:'#1A7A5E', label:'Direct',        cls:'direct'  },
-    manuel:  { bg:'#1A7A5E', label:'Direct',        cls:'direct'  },
-    abritel: { bg:'#0096D6', label:'Abritel',       cls:'abritel' },
-    expedia: { bg:'#FFC72C', label:'Expedia',       cls:'expedia' },
-    vrbo:    { bg:'#1569C7', label:'Vrbo',          cls:'vrbo'    },
-    gites:   { bg:'#2E7D32', label:'Gîtes',         cls:'gites'   },
+    airbnb:   { bg:'#FF5A5F', label:'Airbnb',            cls:'airbnb'   },
+    booking:  { bg:'#003580', label:'Booking.com',        cls:'booking'  },
+    bdc:      { bg:'#003580', label:'Booking.com',        cls:'booking'  },
+    direct:   { bg:'#1A7A5E', label:'Direct',             cls:'direct'   },
+    manuel:   { bg:'#1A7A5E', label:'Direct',             cls:'direct'   },
+    abritel:  { bg:'#0096D6', label:'Abritel',            cls:'abritel'  },
+    expedia:  { bg:'#FFC72C', label:'Expedia',            cls:'expedia'  },
+    vrbo:     { bg:'#1569C7', label:'Vrbo',               cls:'vrbo'     },
+    gites:    { bg:'#2E7D32', label:'Gîtes',              cls:'gites'    },
+    bhguest:  { bg:'#7C3AED', label:'Boostinghost Guest', cls:'bhguest'  },
+    guest_app:{ bg:'#7C3AED', label:'Boostinghost Guest', cls:'bhguest'  },
   };
 
   function pltInfo(r) {
-    var k = ((r.platform||r.source||'direct').toLowerCase().replace(/\.com$/,'').replace(/booking\.com/,'booking'));
-    return PLT[k] || { bg:'#6B7280', label:(k||'Direct'), cls:'direct' };
+    var raw = (r.platform||r.source||'direct').toLowerCase().replace(/\.com$/, '').replace(/booking\.com/, 'booking');
+    // Détecter Boostinghost Guest
+    if (raw.includes('boostinghost') || raw === 'guest_app' || raw.includes('bhguest')) raw = 'bhguest';
+    return PLT[raw] || { bg:'#6B7280', label:(raw||'Direct'), cls:'direct' };
   }
 
   function ds(d) {
@@ -9032,6 +9037,12 @@ if (editBookingForm) {
           try { noteBody = await noteRes.json(); } catch (e) {}
           if (!noteRes.ok) {
             throw new Error(noteBody.error || 'Erreur mise à jour note (' + noteRes.status + ')');
+          }
+          // Mettre à jour state.bookings en mémoire pour que le point rouge apparaisse sans reload
+          if (window.__bhCalendarState && window.__bhCalendarState.bookings) {
+            const bk = window.__bhCalendarState.bookings.find(b => String(b.uid||b.id) === String(uid));
+            if (bk) bk.notes = notes;
+            if (typeof window.__bhCalendarRender === 'function') window.__bhCalendarRender();
           }
           alert('Note sauvegardée !');
         } else {
