@@ -10780,52 +10780,53 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
 
     for (const assignment of allAssignments) {
       const { reservation_key, property_id } = assignment;
-      console.log('🔍 Assignment:', { reservation_key, property_id });
-  console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
-      
-      // Vérifier si c'est une assignation par réservation (nouveau système)
-if (reservation_key && reservation_key !== null) {
-  const parts = reservation_key.split('_');
-  if (parts.length < 3) continue;
-  
-  // Le dernier élément est endDate, l'avant-dernier est startDate
-  // Tout ce qui est avant est le propertyId
-  const endDate = parts[parts.length - 1];
-  const startDate = parts[parts.length - 2];
-  const keyPropertyId = parts.slice(0, parts.length - 2).join('_');
-  
-  console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
-  
-  // Ne garder que les réservations du mois en cours et du mois suivant
-  const now = new Date();
-  const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
-  if (endDate < todayStr || endDate > endOfNextMonth) continue;
-  
-  // Trouver la réservation complète dans reservationsStore
-  // r.start/r.end peuvent être des objets Date PostgreSQL ou des strings ISO complètes
-  // On normalise en YYYY-MM-DD pour la comparaison
-  const propertyReservations = reservationsStore.properties[property_id] || [];
-  const reservation = propertyReservations.find(r => {
-    const rStart = String(r.start || '').slice(0, 10);
-    const rEnd   = String(r.end   || '').slice(0, 10);
-    const rKey = `${property_id}_${rStart}_${rEnd}`;
-    return rKey === reservation_key;
-  });
-  
-  // Récupérer le nom du logement depuis PROPERTIES
-const property = PROPERTIES.find(p => p.id === property_id);
-const propertyName = displayName(property) || property_id;
-  const guestName = reservation?.guestName || reservation?.name || '';
-  
-  tasks.push({
-    reservationKey: reservation_key,
-    propertyId: property_id,
-    propertyName,
-    guestName,
-    checkoutDate: endDate,
-    completed: false
-  });
-}
+
+      if (reservation_key && reservation_key !== null) {
+        const parts = reservation_key.split('_');
+        if (parts.length < 3) continue;
+
+        const endDate   = parts[parts.length - 1];
+        const startDate = parts[parts.length - 2];
+
+        // Filtrer : mois en cours + mois suivant seulement
+        const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
+        if (endDate < todayStr || endDate > endOfNextMonth) continue;
+
+        // ✅ Lire depuis la DB (fiable même après redémarrage serveur)
+        let guestName = '';
+        try {
+          const resaRow = await pool.query(
+            `SELECT guest_name FROM reservations
+             WHERE property_id = $1
+             AND DATE(start_date) = $2 AND DATE(end_date) = $3
+             AND status != 'cancelled'
+             LIMIT 1`,
+            [property_id, startDate, endDate]
+          );
+          guestName = resaRow.rows[0]?.guest_name || '';
+        } catch(e) {
+          // fallback cache mémoire
+          const r = (reservationsStore.properties[property_id] || []).find(r => {
+            const rStart = String(r.start || '').slice(0, 10);
+            const rEnd   = String(r.end   || '').slice(0, 10);
+            return `${property_id}_${rStart}_${rEnd}` === reservation_key;
+          });
+          guestName = r?.guestName || r?.name || '';
+        }
+
+        const property = PROPERTIES.find(p => p.id === property_id);
+        const propertyName = displayName(property) || property_id;
+
+        tasks.push({
+          reservationKey: reservation_key,
+          propertyId: property_id,
+          propertyName,
+          guestName,
+          checkoutDate: endDate,
+          checkinDate: startDate,
+          completed: false
+        });
+      }
       // Sinon, c'est une ancienne assignation par logement
       else if (property_id) {
         // Récupérer toutes les réservations de ce logement
