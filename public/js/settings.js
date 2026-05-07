@@ -1963,7 +1963,7 @@ const OTA_LOGOS = {
   booking: { icon: '<i class="fas fa-building" style="color:#003580;font-size:13px;"></i>', label: 'Booking.com' },
   expedia: { icon: '<i class="fas fa-plane" style="color:#1B5E96;font-size:13px;"></i>', label: 'Expedia' },
   vrbo:    { icon: '<i class="fas fa-home" style="color:#1C61A5;font-size:13px;"></i>', label: 'Abritel/VRBO' },
-  guest:   { icon: '<i class="fas fa-leaf" style="color:#1A7A5E;font-size:13px;"></i>', label: 'BH Guest' },
+  guest:   { icon: '<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:#7C3AED;font-size:10px;font-weight:900;color:white;font-family:Arial,sans-serif;line-height:1;">B</span>', label: 'BH Guest' },
 };
 
 // ✅ Mapping codes Channex → clés OTA_LOGOS
