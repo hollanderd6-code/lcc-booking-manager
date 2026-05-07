@@ -28768,7 +28768,7 @@ app.post('/api/guest/book', async (req, res) => {
       uid, property_id, prop.owner_user_id,
       checkin, checkout,
       guest_name, guest_email, guest_phone || null,
-      totalBase, 'Boostinghost Guest', 'guest_app', 'confirmed',
+      totalTTC, 'Boostinghost Guest', 'guest_app', 'confirmed',
       guests || 1, 'EUR'
     ]);
 
