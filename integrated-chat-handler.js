@@ -44,6 +44,10 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
     msgText.includes('THIS RESERVATION HAS BEEN PRE-PAID') ||
     msgText.includes('BOOKING NOTE :') ||
     msgText.includes('BOOKING NOTE:') ||
+    msgText.includes('Imported Booking') ||
+    msgText.toLowerCase().startsWith('imported booking') ||
+    msgText.includes('Demande(s) du voyageur') ||
+    msgText.includes('Request(s) from guest') ||
     msgText.includes('OTA Commission:') ||
     msgText.includes('Payment Collect:')
   );
@@ -283,6 +287,10 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       msgText.includes('THIS RESERVATION HAS BEEN PRE-PAID') ||
       msgText.includes('BOOKING NOTE :') ||
       msgText.includes('BOOKING NOTE:') ||
+      msgText.includes('Imported Booking') ||
+      msgText.toLowerCase().startsWith('imported booking') ||
+      msgText.includes('Demande(s) du voyageur') ||
+      msgText.includes('Request(s) from guest') ||
       msgText.includes('OTA Commission:') ||
       msgText.includes('Payment Collect:') ||
       msgText.includes('Meal Plan:') ||
