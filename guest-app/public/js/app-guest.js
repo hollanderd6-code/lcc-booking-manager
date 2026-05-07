@@ -169,35 +169,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadProperties();
 
-  // ── Deep link : ?property=ID&checkin=DATE&checkout=DATE&promo=CODE&guests=N ──
+  // ── Deep link : ?property=ID&checkin=DATE&checkout=DATE&promo=CODE&guests=N&fixed_price=N ──
   await handleDeepLink();
 });
 
 async function handleDeepLink() {
-  const params = new URLSearchParams(window.location.search);
+  const params    = new URLSearchParams(window.location.search);
   const propertyId = params.get('property');
   const checkin    = params.get('checkin');
   const checkout   = params.get('checkout');
   const promoCode  = params.get('promo');
   const guests     = params.get('guests');
+  const fixedPrice = parseFloat(params.get('fixed_price')) || null;
 
   if (!propertyId) return;
 
-  // Pré-remplir les dates dans le state
-  if (checkin)  state.search.checkin  = checkin;
-  if (checkout) state.search.checkout = checkout;
-  if (guests)   state.search.guests   = parseInt(guests) || 2;
+  if (checkin)     state.search.checkin  = checkin;
+  if (checkout)    state.search.checkout = checkout;
+  if (guests)      state.search.guests   = parseInt(guests) || 2;
+  if (fixedPrice)  state._pendingFixedPrice = fixedPrice;
 
-  // Nettoyer l'URL sans recharger
   window.history.replaceState({}, '', window.location.pathname);
 
-  // Ouvrir le logement directement
   await openProperty(propertyId);
 
-  // Si un code promo est fourni, l'appliquer automatiquement après ouverture du checkout
-  if (promoCode) {
-    state._pendingPromoCode = promoCode.toUpperCase();
-  }
+  if (promoCode) state._pendingPromoCode = promoCode.toUpperCase();
 }
 
 async function handleStripeReturn(params) {
@@ -633,24 +629,32 @@ function goToCheckout() {
     const dow = d.getDay();
     total += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
   }
-  const commission = Math.round(total * 0.03 * 100) / 100;
+  // Prix fixe depuis deep link (override tout le calcul de base)
+  const fixedPriceOverride = state._pendingFixedPrice || null;
+  const displayBase = fixedPriceOverride !== null ? fixedPriceOverride : total;
+  const commission = Math.round(displayBase * 0.03 * 100) / 100;
   const cleaningFee = p.cleaningFee || 0;
   const guestCount = parseInt(document.getElementById('guestCount')?.value) || 2;
   const touristTax = p.touristTaxPerNight
     ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
     : 0;
-  const ttc = Math.round((total + cleaningFee + touristTax + commission) * 100) / 100;
+  const ttc = Math.round((displayBase + cleaningFee + touristTax + commission) * 100) / 100;
   const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
-  // Reset promo state
+  // Reset promo state (pas de promo si prix fixe)
   state.appliedPromo = null;
+  if (fixedPriceOverride !== null) state._fixedPriceActive = fixedPriceOverride;
 
   document.getElementById('checkoutBody').innerHTML = `
     <div class="checkout-summary" id="priceSummary">
       <div style="font-size:15px;font-weight:700;margin-bottom:12px;">${p.name}</div>
       <div class="checkout-row"><span>Dates</span><span>${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}</span></div>
-      <div class="checkout-row" id="baseRow"><span>${p.basePrice}€ × ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>
-      <div class="checkout-row" id="promoRow" style="display:none;color:#10b981;"><span>Code promo</span><span id="promoAmount">-0€</span></div>
+      ${fixedPriceOverride !== null
+        ? `<div class="checkout-row" id="baseRow"><span>Prix négocié</span><span>${displayBase}€</span></div>
+           <div class="checkout-row" style="font-size:11px;color:#9CA3AF;"><span><em>Prix spécial convenu avec l'hôte</em></span></div>`
+        : `<div class="checkout-row" id="baseRow"><span>${p.basePrice}€ × ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>`
+      }
+      <div class="checkout-row" id="promoRow" style="display:${fixedPriceOverride !== null ? 'none' : 'none'};color:#10b981;"><span>Code promo</span><span id="promoAmount">-0€</span></div>
       ${cleaningFee > 0 ? `<div class="checkout-row" id="cleaningRow"><span>Frais de ménage</span><span>${cleaningFee}€</span></div>` : ''}
       ${touristTax > 0 ? `<div class="checkout-row" id="touristTaxRow"><span>Taxe de séjour</span><span id="touristTaxAmount">${touristTax}€</span></div>` : ''}
       <div class="checkout-row" id="commissionRow"><span>Frais de service (3%)</span><span id="commissionAmount">${commission}€</span></div>
@@ -690,24 +694,6 @@ function goToCheckout() {
 
   document.getElementById('btnPay').textContent = `Payer ${ttc}€`;
   showScreen('checkout');
-
-  // Auto-appliquer le code promo venant du deep link
-  if (state._pendingPromoCode) {
-    const input = document.getElementById('promoInput');
-    if (input) {
-      input.value = state._pendingPromoCode;
-      // Afficher un badge "Prix spécial" avant la validation
-      const msg = document.getElementById('promoMsg');
-      if (msg) {
-        msg.style.display = 'block';
-        msg.style.color = '#059669';
-        msg.innerHTML = '🏷️ Code promo pré-rempli — cliquez sur "Appliquer" pour valider votre remise';
-      }
-      // Déclencher automatiquement la validation
-      setTimeout(() => applyPromo(), 400);
-    }
-    state._pendingPromoCode = null;
-  }
 }
 
 // Recalcule la taxe de séjour quand le nb de voyageurs change
@@ -820,6 +806,7 @@ async function submitBooking() {
   const guestPhone = document.getElementById('guestPhone')?.value.trim();
   const guestCount = document.getElementById('guestCount')?.value;
   const promoCode = state.appliedPromo?.code || document.getElementById('promoInput')?.value?.trim() || null;
+  const fixedPriceOverride = state._fixedPriceActive || null;
 
   if (!guestName || !guestEmail) {
     showToast('Veuillez remplir votre nom et email');
@@ -843,7 +830,8 @@ async function submitBooking() {
         guest_name: guestName,
         guest_email: guestEmail,
         guest_phone: guestPhone,
-        promo_code: promoCode
+        promo_code: promoCode,
+        fixed_price_override: fixedPriceOverride
       })
     });
     const data = await res.json();
