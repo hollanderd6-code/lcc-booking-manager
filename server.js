@@ -7410,35 +7410,18 @@ console.log('✅ Route de comparaison disponible : GET /test-push-compare?user_i
 
 // GET - Toutes les réservations du user
 
-// ── Filtrer les notes automatiques OTA (Booking.com, Channex, etc.) ──
+// ── Filtrer les notes automatiques OTA ──
 function isRealNote(note) {
   if (!note || !note.trim()) return false;
   const n = note.trim().toLowerCase();
   const autoPatterns = [
-    'imported booking',
-    'pre-paid',
-    'prepaid',
-    'this reservation has been',
-    'booking note',
-    'channex',
-    'virtual credit card',
-    'carte de crédit virtuelle',
-    'no remarks',
-    'no comment',
-    'aucune remarque',
-    'aucun commentaire',
-    'n/a',
-    'none',
-    'aucune note',
-    '-',
-    'remarks: none',
-    'remarks:none',
-    'guest will',
-    'automatic',
-    'automatique',
+    'imported booking','pre-paid','prepaid','this reservation has been',
+    'booking note','channex','virtual credit card','carte de crédit virtuelle',
+    'no remarks','no comment','aucune remarque','aucun commentaire',
+    'n/a','none','aucune note','-','remarks: none','remarks:none',
+    'automatic','automatique',
   ];
   if (autoPatterns.some(p => n.includes(p))) return false;
-  // Ignorer les notes qui ne sont que des chiffres ou caractères spéciaux
   if (/^[\d\s\-\.\*\#\/]+$/.test(n)) return false;
   return true;
 }
@@ -7645,7 +7628,55 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     for (const dbData of reservationsDbRows) {
       // Itérer sur les rows directement — pas de doublon
       {
-        if (dbData.source === 'channex') {
+        if (dbData.source !== 'channex') {
+          // Résas manuelles/directes — toujours depuis la DB (pas dans reservationsStore)
+          if (!storeUids.has(dbData.uid)) {
+            const prop = filteredProps.find(p => p.id === dbData.property_id);
+            if (prop) {
+              allReservations.push({
+                id: dbData.uid,
+                uid: dbData.uid,
+                propertyId: dbData.property_id,
+                propertyName: displayName(prop),
+                startDate: dbData.start_date,
+                endDate: dbData.end_date || null,
+                start: dbData.start_date,
+                end: dbData.end_date || null,
+                guestName: dbData.guest_name || 'Réservation manuelle',
+                platform: dbData.platform || dbData.source || 'direct',
+                source: dbData.source || 'direct',
+                type: 'manual',
+                price: dbData.amount_total ? parseFloat(dbData.amount_total) : null,
+                property: { id: prop.id, name: prop.name, color: prop.color, internalName: prop.internal_name || null, internal_name: prop.internal_name || null },
+                guest_first_name:   dbData.guest_first_name  || null,
+                guest_last_name:    dbData.guest_last_name   || null,
+                guest_phone:        dbData.guest_phone       || null,
+                guest_email:        dbData.guest_email       || null,
+                guest_country:      dbData.guest_country     || null,
+                occupancy_adults:   dbData.occupancy_adults  || null,
+                occupancy_children: dbData.occupancy_children|| 0,
+                amount_total:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
+                amount_rooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+                amount_taxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
+                amount_cleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
+                ota_commission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
+                currency:        dbData.currency        || 'EUR',
+                notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
+                onboarding_completed: dbData.onboarding_completed || false,
+                guest_display_name: dbData.guest_first_name
+                  ? `${dbData.guest_first_name} ${dbData.guest_last_name || ''}`.trim()
+                  : (dbData.guest_name || null),
+              });
+              storeUids.add(dbData.uid);
+            }
+          } else {
+            // Mettre à jour la note sur la résa déjà dans allReservations
+            const existingIdx = allReservations.findIndex(r => r.uid === dbData.uid);
+            if (existingIdx !== -1 && dbData.notes !== undefined) {
+              allReservations[existingIdx].notes = isRealNote(dbData.notes) ? dbData.notes.trim() : null;
+            }
+          }
+        } else if (dbData.source === 'channex') {
           // Toujours utiliser la version DB pour les résas Channex (plateforme normalisée, données enrichies)
           // Retirer la version store si elle existe
           const existingIdx = allReservations.findIndex(r => r.uid === dbData.uid);
