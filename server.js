@@ -7207,26 +7207,34 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
   }
 });
 
-// ── PATCH /api/reservations/:uid/note — Sauvegarder uniquement la note d'une réservation OTA ──
+// ─────────────────────────────────────────────────────────────
+// PATCH /api/reservations/:uid/note
+// Sauvegarde la note interne d'une réservation (toutes sources).
+// Si notes est vide/null → stocke NULL en base (suppression).
+// ─────────────────────────────────────────────────────────────
 app.patch('/api/reservations/:uid/note', authenticateToken, async (req, res) => {
   try {
     const { uid } = req.params;
-    const { notes } = req.body;
     const userId = req.user.id;
+    const rawNote = (req.body.notes || '').trim();
+    // Stocker NULL si la note est vide (suppression propre)
+    const noteToStore = rawNote.length > 0 ? rawNote : null;
 
     const result = await pool.query(
-      `UPDATE reservations SET notes = $1, updated_at = NOW()
+      `UPDATE reservations
+       SET notes = $1, updated_at = NOW()
        WHERE (uid = $2 OR channex_booking_id = $2) AND user_id = $3
        RETURNING uid, notes`,
-      [notes || '', uid, userId]
+      [noteToStore, uid, userId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Réservation non trouvée' });
     }
 
-    console.log('✅ Note mise à jour pour réservation', uid);
-    res.json({ success: true, uid: result.rows[0].uid, notes: result.rows[0].notes });
+    const saved = result.rows[0].notes;
+    console.log(`✅ Note ${saved ? 'sauvegardée' : 'supprimée'} pour réservation ${uid}`);
+    res.json({ success: true, uid: result.rows[0].uid, notes: saved });
   } catch (e) {
     console.error('❌ Erreur PATCH /api/reservations/:uid/note:', e.message);
     res.status(500).json({ error: e.message });
@@ -7410,32 +7418,47 @@ console.log('✅ Route de comparaison disponible : GET /test-push-compare?user_i
 
 // GET - Toutes les réservations du user
 
-// ── Filtrer les notes automatiques OTA ──
+// ─────────────────────────────────────────────────────────────
+// isRealNote — détermine si une note est saisie manuellement
+// et mérite d'apparaître dans le KPI / modal.
+// Règle : une note est "réelle" sauf si elle est vide, trop courte,
+// purement numérique, ou correspond à un pattern OTA automatique.
+// ─────────────────────────────────────────────────────────────
 function isRealNote(note) {
   if (!note || !note.trim()) return false;
-  const n = note.trim().toLowerCase();
-  // Patterns exacts à ignorer (note = exactement ce texte)
-  const exactPatterns = [
-    'n/a', 'none', '-', 'no remarks', 'remarks:none', 'remarks: none',
+  const n = note.trim();
+  const nl = n.toLowerCase();
+
+  // Trop court pour être significatif (1-2 caractères)
+  if (n.length <= 2) return false;
+
+  // Purement numérique ou symboles (ex: prix collés dans le champ notes)
+  if (/^[\d\s\-\.\*\#\/,;:]+$/.test(n)) return false;
+
+  // Valeurs nulles explicites (comparaison exacte, insensible à la casse)
+  const NULL_EXACT = [
+    'n/a', 'none', '-', 'ok', 'no remarks', 'remarks:none', 'remarks: none',
     'aucune note', 'aucune remarque', 'aucun commentaire', 'no comment',
-    'automatic', 'automatique', 'ok',
+    'automatic', 'automatique', 'nothing', 'nil', 'null',
   ];
-  if (exactPatterns.includes(n)) return false;
-  // Patterns à ignorer si la note CONTIENT ce texte (notes automatiques OTA)
-  const containsPatterns = [
-    'imported booking', 'pre-paid', 'prepaid', 'this reservation has been',
-    'booking note', 'channex', 'virtual credit card', 'carte de crédit virtuelle',
+  if (NULL_EXACT.includes(nl)) return false;
+
+  // Phrases automatiques OTA (la note CONTIENT l'une de ces chaînes)
+  const OTA_CONTAINS = [
+    'imported booking', 'pre-paid', 'prepaid',
+    'this reservation has been', 'please note that this booking',
+    'veuillez noter que cette réservation',
+    'booking note', 'channex',
+    'virtual credit card', 'carte de crédit virtuelle',
     'no special requirements', 'pas de demande particulière',
-    'guest will arrive', 'the guest will', 'arrival time', 'heure d\'arrivée',
+    'guest will arrive', 'the guest will',
     'credit card ending', 'carte se terminant',
     'total payout', 'host payout', 'paiement hôte',
-    'please note that this booking', 'veuillez noter que cette réservation',
+    'payment method', 'mode de paiement',
+    'rate plan', 'tariff', 'non-refundable',
   ];
-  if (containsPatterns.some(p => n.includes(p))) return false;
-  // Ignorer les chaînes purement numériques / symboles
-  if (/^[\d\s\-\.\*\#\/,;:]+$/.test(n)) return false;
-  // Ignorer les notes très courtes qui ne sont pas significatives (1-2 chars)
-  if (n.length <= 2) return false;
+  if (OTA_CONTAINS.some(p => nl.includes(p))) return false;
+
   return true;
 }
 
