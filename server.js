@@ -7629,52 +7629,44 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       // Itérer sur les rows directement — pas de doublon
       {
         if (dbData.source !== 'channex') {
-          // Résas manuelles/directes — toujours depuis la DB (pas dans reservationsStore)
-          if (!storeUids.has(dbData.uid)) {
-            const prop = filteredProps.find(p => p.id === dbData.property_id);
-            if (prop) {
-              allReservations.push({
-                id: dbData.uid,
-                uid: dbData.uid,
-                propertyId: dbData.property_id,
-                propertyName: displayName(prop),
-                startDate: dbData.start_date,
-                endDate: dbData.end_date || null,
-                start: dbData.start_date,
-                end: dbData.end_date || null,
-                guestName: dbData.guest_name || 'Réservation manuelle',
-                platform: dbData.platform || dbData.source || 'direct',
-                source: dbData.source || 'direct',
-                type: 'manual',
-                price: dbData.amount_total ? parseFloat(dbData.amount_total) : null,
-                property: { id: prop.id, name: prop.name, color: prop.color, internalName: prop.internal_name || null, internal_name: prop.internal_name || null },
-                guest_first_name:   dbData.guest_first_name  || null,
-                guest_last_name:    dbData.guest_last_name   || null,
-                guest_phone:        dbData.guest_phone       || null,
-                guest_email:        dbData.guest_email       || null,
-                guest_country:      dbData.guest_country     || null,
-                occupancy_adults:   dbData.occupancy_adults  || null,
-                occupancy_children: dbData.occupancy_children|| 0,
-                amount_total:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
-                amount_rooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
-                amount_taxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
-                amount_cleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
-                ota_commission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
-                currency:        dbData.currency        || 'EUR',
-                notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
-                onboarding_completed: dbData.onboarding_completed || false,
-                guest_display_name: dbData.guest_first_name
-                  ? `${dbData.guest_first_name} ${dbData.guest_last_name || ''}`.trim()
-                  : (dbData.guest_name || null),
-              });
-              storeUids.add(dbData.uid);
-            }
-          } else {
-            // Mettre à jour la note sur la résa déjà dans allReservations
+          // Résas manuelles/directes — toujours depuis la DB avec property bien peuplé
+          const prop = filteredProps.find(p => p.id === dbData.property_id);
+          if (prop) {
             const existingIdx = allReservations.findIndex(r => r.uid === dbData.uid);
-            if (existingIdx !== -1 && dbData.notes !== undefined) {
-              allReservations[existingIdx].notes = isRealNote(dbData.notes) ? dbData.notes.trim() : null;
-            }
+            const manualObj = {
+              id: dbData.uid, uid: dbData.uid,
+              propertyId: dbData.property_id,
+              propertyName: displayName(prop),
+              startDate: dbData.start_date, endDate: dbData.end_date || null,
+              start: dbData.start_date, end: dbData.end_date || null,
+              guestName: dbData.guest_name || 'Réservation manuelle',
+              platform: dbData.platform || dbData.source || 'direct',
+              source: dbData.source || 'direct', type: 'manual',
+              isManual: true,
+              price: dbData.amount_total ? parseFloat(dbData.amount_total) : null,
+              property: { id: prop.id, name: prop.name, color: prop.color, internalName: prop.internal_name || null, internal_name: prop.internal_name || null },
+              guest_first_name: dbData.guest_first_name || null,
+              guest_last_name:  dbData.guest_last_name  || null,
+              guest_phone:      dbData.guest_phone       || null,
+              guest_email:      dbData.guest_email       || null,
+              guest_country:    dbData.guest_country     || null,
+              occupancy_adults: dbData.occupancy_adults  || null,
+              occupancy_children: dbData.occupancy_children || 0,
+              amount_total:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
+              amount_rooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+              amount_taxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
+              amount_cleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
+              ota_commission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
+              currency:        dbData.currency        || 'EUR',
+              notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
+              onboarding_completed: dbData.onboarding_completed || false,
+              guest_display_name: dbData.guest_first_name
+                ? `${dbData.guest_first_name} ${dbData.guest_last_name || ''}`.trim()
+                : (dbData.guest_name || null),
+            };
+            if (existingIdx !== -1) allReservations[existingIdx] = manualObj;
+            else allReservations.push(manualObj);
+            storeUids.add(dbData.uid);
           }
         } else if (dbData.source === 'channex') {
           // Toujours utiliser la version DB pour les résas Channex (plateforme normalisée, données enrichies)
