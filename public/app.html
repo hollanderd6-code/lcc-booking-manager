@@ -5925,7 +5925,7 @@ try {
     // Right: actions
     var right = div('display:flex;align-items:center;gap:6px;padding:12px 0;');
     right.innerHTML = '<button id="bhCalSearchBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Rechercher"><i class="fas fa-search" style="font-size:13px;"></i></button>'
-      + '<button id="bhCalPromoBtn" onclick="openPromoPanel && openPromoPanel()" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Offres &amp; Codes promo"><i class="fas fa-tag" style="font-size:13px;"></i></button>'
+      + '<button id="bhCalPromoBtn" onclick="openPromoPanel && openPromoPanel()" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Offres &amp; Codes promo"><span style="font-size:16px;font-weight:900;color:#A855F7;font-family:Georgia,serif;line-height:1;">B</span></button>'
       + '<button id="bhCalSettingsBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Paramètres"><i class="fas fa-sliders-h" style="font-size:13px;"></i></button>'
       + '<button onclick="openBatchEditModal && openBatchEditModal()" style="display:flex;align-items:center;gap:5px;padding:0 12px;height:34px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:9px;color:white;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-layer-group" style="font-size:12px;"></i><span class="bh-desktop-only">Édition groupée</span></button>';
 
@@ -12955,6 +12955,19 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
               onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
+
+          <div style="border-top:1.5px dashed #E5E7EB;padding-top:12px;margin-top:2px;">
+            <label style="font-size:11px;font-weight:600;color:#1A7A5E;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">
+              💶 Prix fixe total (optionnel)
+            </label>
+            <div style="position:relative;">
+              <input type="number" id="bhLinkFixedPrice" placeholder="Ex: 350" min="1" onchange="bhUpdateLink()" oninput="bhUpdateLink()"
+                style="width:100%;padding:9px 12px 9px 36px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:14px;font-weight:600;box-sizing:border-box;font-family:inherit;outline:none;"
+                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#9CA3AF;font-weight:600;">€</span>
+            </div>
+            <div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Prix total du séjour affiché au voyageur. Les 3% de frais BHGuest s'appliqueront en plus.</div>
+          </div>
         </div>
       </div>
 
@@ -12980,11 +12993,12 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   }
 
   window.bhUpdateLink = function() {
-    var propId  = document.getElementById('bhLinkProp')?.value;
-    var checkin = document.getElementById('bhLinkCheckin')?.value;
-    var checkout = document.getElementById('bhLinkCheckout')?.value;
-    var promo   = (document.getElementById('bhLinkPromo')?.value || '').trim();
-    var guests  = document.getElementById('bhLinkGuests')?.value || 2;
+    var propId     = document.getElementById('bhLinkProp')?.value;
+    var checkin    = document.getElementById('bhLinkCheckin')?.value;
+    var checkout   = document.getElementById('bhLinkCheckout')?.value;
+    var promo      = (document.getElementById('bhLinkPromo')?.value || '').trim();
+    var guests     = document.getElementById('bhLinkGuests')?.value || 2;
+    var fixedPrice = parseFloat(document.getElementById('bhLinkFixedPrice')?.value) || null;
 
     var preview = document.getElementById('bhLinkPreview');
     if (!propId) { if(preview) preview.style.display='none'; return; }
@@ -12992,10 +13006,11 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     var GUEST_BASE = 'https://www.boostinghost.fr/guest-app/public/index.html';
     var params = new URLSearchParams();
     params.set('property', propId);
-    if (checkin)  params.set('checkin', checkin);
-    if (checkout) params.set('checkout', checkout);
-    if (promo)    params.set('promo', promo);
+    if (checkin)     params.set('checkin', checkin);
+    if (checkout)    params.set('checkout', checkout);
+    if (promo)       params.set('promo', promo);
     if (guests && guests != 2) params.set('guests', guests);
+    if (fixedPrice)  params.set('fixed_price', fixedPrice);
 
     var url = GUEST_BASE + '?' + params.toString();
     window._bhGeneratedLink = url;
@@ -13012,6 +13027,10 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       lines.push('📅 ' + new Date(checkin + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'short'})
         + ' → ' + new Date(checkout + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'short'})
         + ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')');
+    }
+    if (fixedPrice) {
+      var commission = Math.round(fixedPrice * 0.03 * 100) / 100;
+      lines.push('💶 Prix fixe : ' + fixedPrice + '€ + ' + commission + '€ frais BHGuest = ' + (fixedPrice + commission) + '€ TTC');
     }
     if (promo) lines.push('🏷️ Code promo : ' + promo);
     document.getElementById('bhLinkSummary').innerHTML = lines.join('<br>');
