@@ -10758,14 +10758,36 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     const defaultAssignments = [];
     for (const row of defaultPropertiesResult.rows) {
       const propId = row.property_id;
-      const propReservations = reservationsStore.properties[propId] || [];
-      for (const r of propReservations) {
-        const rEnd = String(r.end || '').slice(0, 10);
-        const rStart = String(r.start || '').slice(0, 10);
-        if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
-        const rKey = propId + '_' + rStart + '_' + rEnd;
-        if (explicitKeys.has(rKey)) continue; // déjà dans les assignations explicites
-        defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
+      try {
+        const resaRows = await pool.query(
+          `SELECT TO_CHAR(start_date, 'YYYY-MM-DD') as start,
+                  TO_CHAR(end_date, 'YYYY-MM-DD') as end
+           FROM reservations
+           WHERE property_id = $1
+           AND status != 'cancelled'
+           AND DATE(end_date) >= $2
+           AND DATE(end_date) <= $3`,
+          [propId, todayStr, endOfNextMonth]
+        );
+        console.log(`📅 [TASKS] Réservations DB pour ${propId}: ${resaRows.rows.length} (entre ${todayStr} et ${endOfNextMonth})`);
+        for (const r of resaRows.rows) {
+          const rStart = r.start;
+          const rEnd   = r.end;
+          const rKey = propId + '_' + rStart + '_' + rEnd;
+          if (explicitKeys.has(rKey)) continue;
+          defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
+        }
+      } catch(e) {
+        // fallback cache mémoire
+        const propReservations = reservationsStore.properties[propId] || [];
+        for (const r of propReservations) {
+          const rEnd   = String(r.end   || '').slice(0, 10);
+          const rStart = String(r.start || '').slice(0, 10);
+          if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
+          const rKey = propId + '_' + rStart + '_' + rEnd;
+          if (explicitKeys.has(rKey)) continue;
+          defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
+        }
       }
     }
 
@@ -10799,23 +10821,35 @@ if (reservation_key && reservation_key !== null) {
   // Ne garder que les réservations du mois en cours et du mois suivant
   const now = new Date();
   const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
-  if (endDate < todayStr || endDate > endOfNextMonth) continue;
-  
-  // Trouver la réservation complète dans reservationsStore
-  // r.start/r.end peuvent être des objets Date PostgreSQL ou des strings ISO complètes
-  // On normalise en YYYY-MM-DD pour la comparaison
-  const propertyReservations = reservationsStore.properties[property_id] || [];
-  const reservation = propertyReservations.find(r => {
-    const rStart = String(r.start || '').slice(0, 10);
-    const rEnd   = String(r.end   || '').slice(0, 10);
-    const rKey = `${property_id}_${rStart}_${rEnd}`;
-    return rKey === reservation_key;
-  });
-  
-  // Récupérer le nom du logement depuis PROPERTIES
-const property = PROPERTIES.find(p => p.id === property_id);
-const propertyName = displayName(property) || property_id;
-  const guestName = reservation?.guestName || reservation?.name || '';
+  if (endDate < todayStr || endDate > endOfNextMonth) {
+    console.log(`🚫 [TASKS] Filtrée: ${reservation_key} endDate=${endDate} todayStr=${todayStr}`);
+    continue;
+  }
+
+  // ✅ Lire depuis la DB avec TO_CHAR pour avoir des strings ISO
+  let guestName = '';
+  try {
+    const resaRow = await pool.query(
+      `SELECT guest_name FROM reservations
+       WHERE property_id = $1
+       AND TO_CHAR(start_date, 'YYYY-MM-DD') = $2
+       AND TO_CHAR(end_date, 'YYYY-MM-DD') = $3
+       AND status != 'cancelled'
+       LIMIT 1`,
+      [property_id, startDate, endDate]
+    );
+    guestName = resaRow.rows[0]?.guest_name || '';
+  } catch(e) {
+    const r = (reservationsStore.properties[property_id] || []).find(r => {
+      const rStart = String(r.start || '').slice(0, 10);
+      const rEnd   = String(r.end   || '').slice(0, 10);
+      return `${property_id}_${rStart}_${rEnd}` === reservation_key;
+    });
+    guestName = r?.guestName || r?.name || '';
+  }
+
+  const property = PROPERTIES.find(p => p.id === property_id);
+  const propertyName = displayName(property) || property_id;
   
   tasks.push({
     reservationKey: reservation_key,
@@ -25746,16 +25780,59 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
   const { property_id } = req.params;
   const user_id = req.user.id;
   try {
-    // ✅ Approche simple et fiable : regarder les plateformes dans les réservations existantes
-    // + vérifier si channex_enabled pour afficher "Synchronisation OTA active"
     const propResult = await pool.query(
       'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
       [property_id, user_id]
     );
     const prop = propResult.rows[0];
-    if (!prop) return res.json({ channels: [] });
+    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
+      return res.json({ channels: [] });
+    }
 
-    // Récupérer les plateformes depuis réservations ET conversations
+    const { channexAPI } = require('./channex');
+
+    // ✅ Filtrer directement par property_id côté Channex → seulement les channels de ce logement
+    // Channex supporte filter[property_id] sur /channels
+    let channexChannels = [];
+    try {
+      const r = await channexAPI.get('/channels', {
+        params: {
+          'filter[property_id]': prop.channex_property_id,
+          'pagination[page_size]': 100
+        }
+      });
+      channexChannels = r.data?.data || [];
+      console.log(`🔍 [channels] ${property_id}: ${channexChannels.length} channels Channex`);
+    } catch(e) {
+      console.warn(`⚠️ [channels] Channex API échouée pour ${property_id}: ${e.message}`);
+    }
+
+    // Si l'API Channex retourne des résultats → les utiliser
+    if (channexChannels.length > 0) {
+      const CHANNEL_MAP = {
+        'airbnb': 'airbnb', 'abb': 'airbnb',
+        'bookingcom': 'bookingcom', 'booking': 'bookingcom', 'bdc': 'bookingcom',
+        'expedia': 'expedia', 'exp': 'expedia',
+        'vrbo': 'vrbo', 'homeaway': 'vrbo', 'abritel': 'vrbo',
+      };
+      const seen = new Set();
+      const channels = channexChannels
+        .filter(c => !['disabled','deleted','inactive','paused'].includes(c.attributes?.status || ''))
+        .map(c => {
+          const chRaw = (c.attributes?.channel || '').toLowerCase().replace(/[^a-z]/g, '');
+          const ch = CHANNEL_MAP[chRaw] || null;
+          if (!ch || seen.has(ch)) return null;
+          seen.add(ch);
+          const titles = { airbnb:'Airbnb', bookingcom:'Booking.com', expedia:'Expedia', vrbo:'Abritel' };
+          return { id: c.id, channel: ch, title: titles[ch] || ch, status: '' };
+        })
+        .filter(Boolean);
+
+      console.log(`✅ [channels Channex] ${property_id}: ${channels.map(c=>c.channel).join(', ') || 'aucun'}`);
+      return res.json({ channels });
+    }
+
+    // Fallback : lire depuis les réservations en DB si Channex ne répond pas
     const platformsResult = await pool.query(
       `SELECT DISTINCT LOWER(COALESCE(platform, source, ota_name, '')) as platform
        FROM (
@@ -25767,39 +25844,29 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
        ORDER BY 1`,
       [property_id]
     );
-
     const PLATFORM_MAP = {
-      'airbnb':     { channel: 'airbnb',     title: 'Airbnb' },
-      'abb':        { channel: 'airbnb',     title: 'Airbnb' },
-      'bookingcom': { channel: 'bookingcom', title: 'Booking.com' },
-      'booking':    { channel: 'bookingcom', title: 'Booking.com' },
-      'booking.com':{ channel: 'bookingcom', title: 'Booking.com' },
-      'expedia':    { channel: 'expedia',    title: 'Expedia' },
-      'vrbo':       { channel: 'vrbo',       title: 'Abritel' },
-      'abritel':    { channel: 'vrbo',       title: 'Abritel' },
-      'direct':     { channel: 'guest',      title: 'BH Guest' },
-      'manuel':     { channel: 'guest',      title: 'BH Guest' },
-      'manual':     { channel: 'guest',      title: 'BH Guest' },
-      'guest':      { channel: 'guest',      title: 'BH Guest' },
-      'boostinghost':{ channel: 'guest',     title: 'BH Guest' },
+      'airbnb':'airbnb','abb':'airbnb',
+      'bookingcom':'bookingcom','booking':'bookingcom','booking.com':'bookingcom',
+      'expedia':'expedia','vrbo':'vrbo','abritel':'vrbo',
     };
-
-    const seen = new Set();
-    const channels = platformsResult.rows
+    const seen2 = new Set();
+    const channels2 = platformsResult.rows
       .map(r => {
-        const key = r.platform.toLowerCase().replace(/[^a-z]/g, '');
-        const mapped = PLATFORM_MAP[r.platform] || PLATFORM_MAP[key] || null;
-        if (!mapped || seen.has(mapped.channel)) return null;
-        seen.add(mapped.channel);
-        return { id: r.platform, channel: mapped.channel, title: mapped.title, status: '' };
+        const key = r.platform.replace(/[^a-z]/g,'');
+        const ch = PLATFORM_MAP[r.platform] || PLATFORM_MAP[key] || null;
+        if (!ch || seen2.has(ch)) return null;
+        seen2.add(ch);
+        const titles = { airbnb:'Airbnb', bookingcom:'Booking.com', expedia:'Expedia', vrbo:'Abritel' };
+        return { id: r.platform, channel: ch, title: titles[ch] || ch, status: '' };
       })
       .filter(Boolean);
 
-    console.log(`✅ [channels via reservations] ${property_id}: ${channels.map(c=>c.channel).join(', ') || 'aucun'}`);
-    return res.json({ channels });
+    console.log(`✅ [channels DB fallback] ${property_id}: ${channels2.map(c=>c.channel).join(', ') || 'aucun'}`);
+    return res.json({ channels: channels2 });
 
   } catch(e) {
-    console.error('❌ [connected-channels]', e.message);res.json({ channels: [] });
+    console.error('❌ [connected-channels]', e.message);
+    res.json({ channels: [] });
   }
 });
 
