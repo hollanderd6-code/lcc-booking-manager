@@ -297,9 +297,40 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     // ========================================
     // ÉTAPE 1 : INTERVENTION URGENTE
     // ========================================
-    if (conversation.escalated) {
-      console.log('ℹ️ [HANDLER] Conversation déjà escaladée → notification proprio');
-      return false;
+    // Recharger l'état escalade depuis la DB (l'objet mémoire peut être périmé)
+    try {
+      const freshConv = await pool.query(
+        'SELECT escalated FROM conversations WHERE id = $1',
+        [conversation.id]
+      );
+      if (freshConv.rows[0]?.escalated) {
+        console.log('ℹ️ [HANDLER] Conversation escaladée (DB) → bot silencieux');
+        // Notifier le proprio que le voyageur a envoyé un nouveau message
+        try {
+          const tokens = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+            [conversation.user_id]
+          );
+          if (tokens.rows.length > 0) {
+            const { sendNotification } = require('./firebase');
+            for (const tok of tokens.rows) {
+              await sendNotification(
+                tok.fcm_token,
+                `💬 ${conversation.guest_name || 'Voyageur'} a répondu`,
+                `Nouvelle réponse dans une conversation en attente de votre réponse.`,
+                { type: 'escalated_reply', conversationId: String(conversation.id), screen: 'messages' }
+              );
+            }
+          }
+        } catch(e) { /* non bloquant */ }
+        return false;
+      }
+    } catch(e) {
+      // Si DB échoue, fallback sur l'objet mémoire
+      if (conversation.escalated) {
+        console.log('ℹ️ [HANDLER] Conversation déjà escaladée (mémoire) → bot silencieux');
+        return false;
+      }
     }
 
     if (requiresHumanIntervention(message.message)) {
