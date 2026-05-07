@@ -26782,6 +26782,51 @@ app.post('/api/channex/webhook', async (req, res) => {
               );
 
               if (depositTpls.rows.length > 0) {
+                // ── Créer le deposit automatiquement si pas encore existant ──
+                try {
+                  const depositAmount = parseFloat(property.deposit_amount || 0);
+                  if (depositAmount > 0) {
+                    const existingDep = await pool.query(
+                      `SELECT id FROM deposits WHERE reservation_uid = $1 AND status IN ('pending','authorized','paid') LIMIT 1`,
+                      [result.uid]
+                    ).catch(() => ({ rows: [] }));
+
+                    if (existingDep.rows.length === 0) {
+                      console.log(`🔗 [TPL last-minute] Création automatique deposit ${depositAmount}€ pour ${conv.guest_name}`);
+                      const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+                      const amountCents = Math.round(depositAmount * 100);
+                      const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+                      const sessionParams = {
+                        payment_method_types: ['card'],
+                        mode: 'payment',
+                        line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${property.name || ''}`, description: `Réservation du ${result.start_date}` } }, quantity: 1 }],
+                        payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: result.uid } },
+                        metadata: { deposit_id: depositId, reservation_uid: result.uid },
+                        success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
+                        cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
+                        expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60)
+                      };
+                      const stripeTarget = await getStripeForProperty(pool, result.property_id, result.user_id);
+                      const sessionOptions = stripeTarget.stripeAccountId ? { stripeAccount: stripeTarget.stripeAccountId } : {};
+                      if (stripeTarget.applyFee) {
+                        const feeRate = stripeTarget.stripeAccountId ? 0.03 : 0.05;
+                        sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * feeRate);
+                      }
+                      const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+                      await pool.query(
+                        `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
+                         VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, NOW(), NOW())`,
+                        [depositId, result.user_id, result.uid, result.property_id, amountCents, session.id, session.url]
+                      );
+                      console.log(`✅ [TPL last-minute] Deposit créé automatiquement : ${depositId}`);
+                    } else {
+                      console.log(`⏭️ [TPL last-minute] Deposit déjà existant pour ${result.uid}`);
+                    }
+                  }
+                } catch(depErr) {
+                  console.warn(`⚠️ [TPL last-minute] Erreur création deposit:`, depErr.message);
+                }
+
                 const cautionAlreadySent = await pool.query(
                   `SELECT 1 FROM message_template_logs
                    WHERE conversation_id = $1 AND template_id = $2
