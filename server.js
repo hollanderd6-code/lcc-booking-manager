@@ -7414,15 +7414,28 @@ console.log('✅ Route de comparaison disponible : GET /test-push-compare?user_i
 function isRealNote(note) {
   if (!note || !note.trim()) return false;
   const n = note.trim().toLowerCase();
-  const autoPatterns = [
-    'imported booking','pre-paid','prepaid','this reservation has been',
-    'booking note','channex','virtual credit card','carte de crédit virtuelle',
-    'no remarks','no comment','aucune remarque','aucun commentaire',
-    'n/a','none','aucune note','-','remarks: none','remarks:none',
-    'automatic','automatique',
+  // Patterns exacts à ignorer (note = exactement ce texte)
+  const exactPatterns = [
+    'n/a', 'none', '-', 'no remarks', 'remarks:none', 'remarks: none',
+    'aucune note', 'aucune remarque', 'aucun commentaire', 'no comment',
+    'automatic', 'automatique', 'ok',
   ];
-  if (autoPatterns.some(p => n.includes(p))) return false;
-  if (/^[\d\s\-\.\*\#\/]+$/.test(n)) return false;
+  if (exactPatterns.includes(n)) return false;
+  // Patterns à ignorer si la note CONTIENT ce texte (notes automatiques OTA)
+  const containsPatterns = [
+    'imported booking', 'pre-paid', 'prepaid', 'this reservation has been',
+    'booking note', 'channex', 'virtual credit card', 'carte de crédit virtuelle',
+    'no special requirements', 'pas de demande particulière',
+    'guest will arrive', 'the guest will', 'arrival time', 'heure d\'arrivée',
+    'credit card ending', 'carte se terminant',
+    'total payout', 'host payout', 'paiement hôte',
+    'please note that this booking', 'veuillez noter que cette réservation',
+  ];
+  if (containsPatterns.some(p => n.includes(p))) return false;
+  // Ignorer les chaînes purement numériques / symboles
+  if (/^[\d\s\-\.\*\#\/,;:]+$/.test(n)) return false;
+  // Ignorer les notes très courtes qui ne sont pas significatives (1-2 chars)
+  if (n.length <= 2) return false;
   return true;
 }
 
