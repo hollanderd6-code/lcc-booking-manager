@@ -5582,29 +5582,26 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
     if (risksCard && !risksCard.dataset.bound2) {
       risksCard.dataset.bound2 = '1';
       const notesHandler = function() {
-        const notes = window.__bhKpiNotes || [];
+        // Recalculer au clic pour être sûr d'avoir les données les plus fraîches
+        const notes = window.bhNotesRefresh() || window.BH_NOTES || [];
         ensureGenericModal('kpiNotesModal', '📝 Notes actives');
         const modalContent = document.getElementById('kpiNotesModalContent');
         if (!modalContent) return;
         if (notes.length === 0) {
           modalContent.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:14px;">Aucune note active</div>';
         } else {
-          const sorted = [...notes].sort((a, b) => {
-            const da = new Date(a.endDate || a.end || 0);
-            const db = new Date(b.endDate || b.end || 0);
-            return da - db;
-          });
-          modalContent.innerHTML = sorted.map(r => {
-            const propName = (r.property && r.property.internalName) || (r.property && r.property.name) || r.propertyId || '';
-            const guest = r.guestName || r.guest_display_name || 'Voyageur';
-            const endStr = r.endDate ? new Date(r.endDate).toLocaleDateString('fr-FR') : '';
+          modalContent.innerHTML = notes.map(function(r) {
+            var propName = (r.property && (r.property.internalName || r.property.internal_name || r.property.name)) || r.propertyName || r.propertyId || '';
+            var guest = r.guestName || r.guest_display_name || 'Voyageur';
+            var endRaw = r.endDate || r.end || '';
+            var endStr = endRaw ? new Date(endRaw).toLocaleDateString('fr-FR') : '';
             return '<div style="background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #EF4444;">'
               + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
               + '<span style="font-size:13px;font-weight:700;color:#1A7A5E;">' + propName + '</span>'
-              + '<span style="font-size:11px;color:#9CA3AF;">jusqu\'au ' + endStr + '</span>'
+              + (endStr ? '<span style="font-size:11px;color:#9CA3AF;">jusqu'au ' + endStr + '</span>' : '')
               + '</div>'
               + '<div style="font-size:13px;font-weight:600;color:#0D1117;margin-bottom:4px;">' + guest + '</div>'
-              + '<div style="font-size:13px;color:#EF4444;line-height:1.4;">' + r.notes + '</div>'
+              + '<div style="font-size:13px;color:#EF4444;line-height:1.4;">' + (r.notes || '') + '</div>'
               + '</div>';
           }).join('');
         }
@@ -5632,65 +5629,88 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
 
   document.addEventListener('DOMContentLoaded', bindKpiModalClicksOnce);
 
-  // ============================================
-  // KPI TOP RISQUES - Définie globalement
-  // ============================================
-  window.updateTopRisksKpi = function(bookings) {
-    console.log('🎯 updateTopRisksKpi appelé avec', bookings ? bookings.length : 0, 'bookings');
-    console.log('📊 Bookings reçus:', bookings);
-    
-    const now = new Date();
-    now.setHours(0, 0, 0, 0); // Début de la journée actuelle
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  // ═══════════════════════════════════════════════════════════
+  // SYSTÈME DE NOTES — VERSION UNIFIÉE
+  //
+  // Architecture :
+  //   • window.BH_NOTES = tableau des résas avec note (source de vérité)
+  //   • bhNotesIsReal(note) → filtre côté client (cohérent avec serveur)
+  //   • bhNotesRefresh(bookings) → recalcule BH_NOTES + met à jour le KPI
+  //   • bhNotesPatchStore(uid, note) → met à jour BH_NOTES + stores en mémoire
+  //
+  // Déclencheurs de rafraîchissement :
+  //   1. loadDataAndUpdateKpis() → données fraîches API
+  //   2. renderModernCalendar() → rendu calendrier
+  //   3. Après PATCH note OTA (mise à jour immédiate sans attendre reload)
+  //   4. Après PUT réservation manuelle (idem)
+  // ═══════════════════════════════════════════════════════════
 
-    // Filtrer uniquement les réservations à partir d\'aujourd\'hui jusqu\'à la fin du mois
-    const monthRes = (bookings || []).filter(r => {
-      const rawS = r.startDate || r.start;
-      const rawE = r.endDate || r.end;
-      if (!rawS || !rawE) return false;
-      const s = parseDateSafe(rawS);
-      const e = parseDateSafe(rawE);
-      if (!s || !e) return false;
-      // La réservation se termine après aujourd\'hui ET commence avant la fin du mois
-      return e >= now && s < monthEnd;
-    });
+  // ── Filtre client (aligné avec isRealNote serveur) ──────────
+  window.bhNotesIsReal = function(note) {
+    if (!note || !note.trim()) return false;
+    var n = note.trim();
+    var nl = n.toLowerCase();
+    if (n.length <= 2) return false;
+    if (/^[\d\s\-\.\*\#\/,;:]+$/.test(n)) return false;
+    var nullExact = ['n/a','none','-','ok','no remarks','remarks:none','remarks: none',
+      'aucune note','aucune remarque','aucun commentaire','no comment',
+      'automatic','automatique','nothing','nil','null','bloqué','indisponible',
+      'blocage manuel','manual block','block'];
+    if (nullExact.indexOf(nl) !== -1) return false;
+    var otaContains = ['imported booking','pre-paid','prepaid',
+      'this reservation has been','please note that this booking',
+      'veuillez noter que cette réservation',
+      'booking note','channex','virtual credit card','carte de crédit virtuelle',
+      'no special requirements','pas de demande particulière',
+      'guest will arrive','the guest will',
+      'credit card ending','carte se terminant',
+      'total payout','host payout','paiement hôte',
+      'payment method','mode de paiement','rate plan','tariff','non-refundable'];
+    if (otaContains.some(function(p){ return nl.indexOf(p) !== -1; })) return false;
+    return true;
+  };
 
-    console.log('📅 Réservations du mois (à partir d\'aujourd\'hui):', monthRes.length);
+  // ── Calcule BH_NOTES + met à jour le KPI ────────────────────
+  window.bhNotesRefresh = function(bookings) {
+    var src = [];
+    // Priorité : bookings passés → __bhCalendarState → LCC_RESERVATIONS
+    if (Array.isArray(bookings) && bookings.length > 0) {
+      src = bookings;
+    } else if (window.__bhCalendarState && Array.isArray(window.__bhCalendarState.bookings) && window.__bhCalendarState.bookings.length > 0) {
+      src = window.__bhCalendarState.bookings;
+    } else if (Array.isArray(window.LCC_RESERVATIONS)) {
+      src = window.LCC_RESERVATIONS;
+    }
 
-    // ── KPI Notes : réservations avec note, valides jusqu'à end_date + 1 jour ──
-    const nowNotes = new Date();
-    // Priorité : bookings passés en param (données fraîches) → __bhCalendarState → LCC_RESERVATIONS
-    const _noteSrc = (Array.isArray(bookings) && bookings.length > 0)
-      ? bookings
-      : (window.__bhCalendarState && Array.isArray(window.__bhCalendarState.bookings) && window.__bhCalendarState.bookings.length > 0
-          ? window.__bhCalendarState.bookings
-          : (window.LCC_RESERVATIONS || []));
-    const withNotes = _noteSrc.filter(r => {
-      if (!r.notes || !r.notes.trim()) return false;
-      const note = r.notes.trim();
-      // Exclure les blocages (type block ou source BLOCK)
-      if (r.type === 'block' || (r.source || r.platform || '').toUpperCase() === 'BLOCK') return false;
-      // Exclure les notes purement numériques (prix, etc.)
-      if (/^\d+(\.\d+)?$/.test(note)) return false;
-      // Exclure les notes automatiques OTA courantes
-      const autoNotes = [
-        'blocage manuel', 'manual block', 'block', 'bloqué', 'indisponible',
-        'n/a', 'none', '-', 'ok', 'no remarks', 'aucune note',
-      ];
-      if (autoNotes.some(s => note.toLowerCase() === s)) return false;
+    var now = new Date();
+    var withNotes = src.filter(function(r) {
+      if (!r) return false;
+      // Exclure les blocages
+      if (r.type === 'block') return false;
+      var plat = (r.source || r.platform || '').toUpperCase();
+      if (plat === 'BLOCK') return false;
+      // Vérifier la note
+      if (!window.bhNotesIsReal(r.notes)) return false;
       // Expiration : end_date + 1 jour à 23h59
-      const endRaw = r.endDate || r.end || r.end_date || '';
+      var endRaw = r.endDate || r.end || r.end_date || '';
       if (!endRaw) return true;
-      const endD = new Date(endRaw);
+      var endD = new Date(endRaw);
       endD.setDate(endD.getDate() + 1);
       endD.setHours(23, 59, 59, 999);
-      return nowNotes <= endD;
+      return now <= endD;
     });
 
-    window.__bhKpiNotes = withNotes; // stocker pour le modal
+    // Trier par date de fin croissante
+    withNotes.sort(function(a, b) {
+      return new Date(a.endDate || a.end || 0) - new Date(b.endDate || b.end || 0);
+    });
 
-    const valEl = document.getElementById('kpiTopRisksValue');
-    const subEl = document.getElementById('kpiTopRisksSub');
+    // Stocker comme source de vérité
+    window.BH_NOTES = withNotes;
+
+    // Mettre à jour le KPI
+    var valEl = document.getElementById('kpiTopRisksValue');
+    var subEl = document.getElementById('kpiTopRisksSub');
     if (valEl) {
       valEl.textContent = withNotes.length;
       valEl.style.color = withNotes.length > 0 ? '#EF4444' : '#10B981';
@@ -5699,9 +5719,35 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     if (subEl) {
       subEl.textContent = withNotes.length === 0
         ? 'Aucune note active'
-        : `${withNotes.length} réservation${withNotes.length > 1 ? 's' : ''} avec note`;
+        : withNotes.length + ' réservation' + (withNotes.length > 1 ? 's' : '') + ' avec note';
     }
-  }
+    return withNotes;
+  };
+
+  // Alias legacy pour ne pas casser renderModernCalendar qui appelle updateTopRisksKpi
+  window.updateTopRisksKpi = window.bhNotesRefresh;
+
+  // ── Patch immédiat d'une note dans tous les stores ───────────
+  window.bhNotesPatchStore = function(uid, note) {
+    var cleanNote = note && note.trim() ? note.trim() : null;
+    function patchArr(arr) {
+      if (!Array.isArray(arr)) return;
+      for (var i = 0; i < arr.length; i++) {
+        if (arr[i] && (arr[i].uid === uid || arr[i].id === uid)) {
+          arr[i] = Object.assign({}, arr[i], { notes: cleanNote });
+          break;
+        }
+      }
+    }
+    patchArr(window.LCC_RESERVATIONS);
+    if (window.__bhCalendarState) patchArr(window.__bhCalendarState.bookings);
+    if (window.BH_NOTES) patchArr(window.BH_NOTES);
+    // Recalculer le KPI avec la source mise à jour
+    var src = (window.__bhCalendarState && window.__bhCalendarState.bookings)
+      ? window.__bhCalendarState.bookings
+      : (window.LCC_RESERVATIONS || []);
+    window.bhNotesRefresh(src);
+  };
 
   // ---------- Data loading + binding ----------
   async function loadDataAndUpdateKpis() {
@@ -5766,7 +5812,11 @@ try {
       computeKpis(reservations, properties);
       // Mettre à jour les statuts de connexion dans la top bar
       if (window.updateTopBarStatus) window.updateTopBarStatus();
-      // updateTopRisksKpi est maintenant appelé dans renderModernCalendar avec state.bookings
+      // updateTopRisksKpi / bhNotesRefresh est appelé dans renderModernCalendar.
+      // On le rappelle ici aussi pour le cas où renderModernCalendar est absent.
+      if (typeof window.bhNotesRefresh === 'function') {
+        try { window.bhNotesRefresh(reservations); } catch(e) {}
+      }
       const movesCard = document.getElementById('kpiTodayMovesCard');
       if (movesCard && !movesCard.dataset.bound) {
         movesCard.dataset.bound = '1';
@@ -5778,10 +5828,6 @@ try {
         cleaningCard.onclick = () => window.openCleaning48hModal(getLatestReservationsForKpi(reservations));
 }
 
-      // ✅ KPI Notes : toujours recalculer depuis les données fraîches après chargement
-      if (typeof window.updateTopRisksKpi === 'function') {
-        try { window.updateTopRisksKpi(reservations); } catch(e) { console.warn('updateTopRisksKpi error', e); }
-      }
       // Charger les cautions pour la KPI
       loadAndUpdateDepositsKPI();
     } catch (e) {
@@ -6309,9 +6355,9 @@ try {
           var blk = div('position:absolute;inset:4px 2px;border-radius:8px;padding:4px 7px;display:flex;align-items:center;gap:4px;cursor:pointer;overflow:hidden;background:'+p.bg+';color:white;');
           // Note : le point rouge est affiché à la fin du bloc (côté checkout)
       var noteRaw = r.notes ? r.notes.trim() : '';
-      var isRealNote = noteRaw && !/^\d+(\.\d+)?$/.test(noteRaw)
-        && !['blocage manuel','manual block','block','bloqué','indisponible'].includes(noteRaw.toLowerCase())
-        && r.type !== 'block' && (r.source||r.platform||'').toUpperCase() !== 'BLOCK';
+      var isRealNote = r.type !== 'block'
+        && (r.source||r.platform||'').toUpperCase() !== 'BLOCK'
+        && (window.bhNotesIsReal ? window.bhNotesIsReal(noteRaw) : (noteRaw.length > 2));
           blk.style.position='relative';
           blk.innerHTML=pltBadge(r,14)+'<span style="font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
           blk.onclick=function(){ openBooking(r); };
@@ -6542,10 +6588,8 @@ try {
           blk.dataset.bookingId = String(r.id||'');
           // Point rouge sur la cellule de CHECKOUT (fin du séjour)
           var noteRawM = (r.notes||'').trim();
-          var isRealNoteM = noteRawM
-            && !/^\d+(\.\d+)?$/.test(noteRawM)
-            && !['blocage manuel','manual block','block','bloqué','indisponible'].includes(noteRawM.toLowerCase())
-            && r.type !== 'block';
+          var isRealNoteM = r.type !== 'block'
+            && (window.bhNotesIsReal ? window.bhNotesIsReal(noteRawM) : (noteRawM.length > 2));
           if (isRealNoteM) {
             // Trouver la cellule du jour de checkout (clippedEnd - 1)
             var checkoutColIdx = clippedEnd - 1;
@@ -9031,9 +9075,8 @@ if (editBookingForm) {
 
         if (isOTA && !isManualRes) {
           // ── CAS RÉSERVATION OTA (Airbnb, Booking, etc.) ──
-          // On ne modifie PAS les dates/propriété (géré par Channex)
-          // On sauvegarde uniquement la note localement
-          console.log('✏️ Modification note réservation OTA uid:', uid);
+          // Réservation OTA : on ne modifie que la note (dates/propriété gérées par Channex)
+          console.log('✏️ PATCH note OTA uid:', uid);
           const noteRes = await fetch('/api/reservations/' + encodeURIComponent(uid) + '/note', {
             method: 'PATCH', headers,
             body: JSON.stringify({ notes })
@@ -9041,27 +9084,10 @@ if (editBookingForm) {
           let noteBody = {};
           try { noteBody = await noteRes.json(); } catch (e) {}
           if (!noteRes.ok) {
-            throw new Error(noteBody.error || 'Erreur mise à jour note (' + noteRes.status + ')');
+            throw new Error(noteBody.error || 'Erreur sauvegarde note (' + noteRes.status + ')');
           }
-          // ✅ Mettre à jour le store en mémoire immédiatement (avant rechargement async)
-          const _savedNote = notes.trim() || null;
-          const _patchStore = function(arr) {
-            if (!Array.isArray(arr)) return;
-            const idx = arr.findIndex(function(r) { return r && (r.uid === uid || r.id === uid); });
-            if (idx !== -1) arr[idx] = Object.assign({}, arr[idx], { notes: _savedNote });
-          };
-          _patchStore(window.LCC_RESERVATIONS);
-          if (window.__bhCalendarState && Array.isArray(window.__bhCalendarState.bookings)) {
-            _patchStore(window.__bhCalendarState.bookings);
-          }
-          if (typeof window.updateTopRisksKpi === 'function') {
-            try {
-              const _src = (window.__bhCalendarState && window.__bhCalendarState.bookings)
-                ? window.__bhCalendarState.bookings
-                : (window.LCC_RESERVATIONS || []);
-              window.updateTopRisksKpi(_src);
-            } catch(e) {}
-          }
+          // Patch immédiat des stores + recalcul KPI (pas besoin d'attendre le reload)
+          window.bhNotesPatchStore(uid, notes);
           alert('Note sauvegardée !');
         } else {
           // ── CAS RÉSERVATION MANUELLE ──
@@ -9091,25 +9117,8 @@ if (editBookingForm) {
           if (!updateRes.ok) {
             throw new Error(updateBody.error || 'Erreur mise à jour (' + updateRes.status + ')');
           }
-          // ✅ Mettre à jour la note dans le store en mémoire immédiatement
-          const _savedNoteM = notes.trim() || null;
-          const _patchStoreM = function(arr) {
-            if (!Array.isArray(arr)) return;
-            const idx = arr.findIndex(function(r) { return r && (r.uid === uid || r.id === uid); });
-            if (idx !== -1) arr[idx] = Object.assign({}, arr[idx], { notes: _savedNoteM });
-          };
-          _patchStoreM(window.LCC_RESERVATIONS);
-          if (window.__bhCalendarState && Array.isArray(window.__bhCalendarState.bookings)) {
-            _patchStoreM(window.__bhCalendarState.bookings);
-          }
-          if (typeof window.updateTopRisksKpi === 'function') {
-            try {
-              const _srcM = (window.__bhCalendarState && window.__bhCalendarState.bookings)
-                ? window.__bhCalendarState.bookings
-                : (window.LCC_RESERVATIONS || []);
-              window.updateTopRisksKpi(_srcM);
-            } catch(e) {}
-          }
+          // Patch immédiat des stores + recalcul KPI
+          window.bhNotesPatchStore(uid, notes);
           alert('Réservation mise à jour !');
         }
       }
