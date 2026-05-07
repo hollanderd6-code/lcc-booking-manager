@@ -10730,29 +10730,22 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     );
     
     if (cleanerResult.rows.length === 0) {
-      console.log(`❌ [TASKS] PIN invalide: ${pinCode}`);
       return res.status(404).json({ error: 'Code PIN invalide' });
     }
     
     const cleaner = cleanerResult.rows[0];
-    console.log(`✅ [TASKS] Cleaner trouvé: ${cleaner.name} (${cleaner.id}) user_id=${cleaner.user_id}`);
     
     // Récupérer les assignations PAR RÉSERVATION de ce cleaner
     const assignmentsResult = await pool.query(
       'SELECT reservation_key, property_id FROM cleaning_assignments WHERE cleaner_id = $1',
       [cleaner.id]
     );
-    console.log(`📋 [TASKS] Assignations explicites: ${assignmentsResult.rows.length}`);
-    assignmentsResult.rows.forEach(r => console.log(`  → ${r.reservation_key}`));
     
     // Récupérer aussi les logements où ce cleaner est le cleaner par défaut
     const defaultPropertiesResult = await pool.query(
       'SELECT property_id FROM property_default_cleaners WHERE cleaner_id = $1 AND user_id = $2',
       [cleaner.id, cleaner.user_id]
     );
-    console.log(`🏠 [TASKS] Logements par défaut: ${defaultPropertiesResult.rows.length}`, defaultPropertiesResult.rows.map(r => r.property_id));
-    console.log(`🏠 [TASKS] Logements par défaut: ${defaultPropertiesResult.rows.length}`);
-    defaultPropertiesResult.rows.forEach(r => console.log(`  → ${r.property_id}`));
 
     const now = new Date();
     const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
@@ -10765,46 +10758,20 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     const defaultAssignments = [];
     for (const row of defaultPropertiesResult.rows) {
       const propId = row.property_id;
-      // ✅ Lire depuis la DB au lieu du cache mémoire
-      try {
-        const resaRows = await pool.query(
-          `SELECT TO_CHAR(start_date, 'YYYY-MM-DD') as start, 
-                  TO_CHAR(end_date, 'YYYY-MM-DD') as end
-           FROM reservations
-           WHERE property_id = $1
-           AND status != 'cancelled'
-           AND DATE(end_date) >= $2
-           AND DATE(end_date) <= $3`,
-          [propId, todayStr, endOfNextMonth]
-        );
-        console.log(`📅 [TASKS] Réservations DB pour ${propId}: ${resaRows.rows.length} (entre ${todayStr} et ${endOfNextMonth})`);
-        for (const r of resaRows.rows) {
-          const rStart = String(r.start).slice(0, 10);
-          const rEnd   = String(r.end).slice(0, 10);
-          const rKey = propId + '_' + rStart + '_' + rEnd;
-          if (explicitKeys.has(rKey)) continue;
-          defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
-        }
-      } catch(e) {
-        // fallback cache mémoire si DB échoue
-        const propReservations = reservationsStore.properties[propId] || [];
-        for (const r of propReservations) {
-          const rEnd   = String(r.end   || '').slice(0, 10);
-          const rStart = String(r.start || '').slice(0, 10);
-          if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
-          const rKey = propId + '_' + rStart + '_' + rEnd;
-          if (explicitKeys.has(rKey)) continue;
-          defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
-        }
+      const propReservations = reservationsStore.properties[propId] || [];
+      for (const r of propReservations) {
+        const rEnd = String(r.end || '').slice(0, 10);
+        const rStart = String(r.start || '').slice(0, 10);
+        if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
+        const rKey = propId + '_' + rStart + '_' + rEnd;
+        if (explicitKeys.has(rKey)) continue; // déjà dans les assignations explicites
+        defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
       }
     }
 
     const allAssignments = [...assignmentsResult.rows, ...defaultAssignments];
-    console.log(`📊 [TASKS] Total assignments: ${allAssignments.length} (${assignmentsResult.rows.length} explicites + ${defaultAssignments.length} défaut)`);
 
-    console.log(`📊 [TASKS] Total: ${allAssignments.length} assignations (${assignmentsResult.rows.length} explicites + ${defaultAssignments.length} par défaut)`);
     if (allAssignments.length === 0) {
-      console.log(`⚠️ [TASKS] Aucune assignation pour ${cleaner.name} — vérifier property_default_cleaners et cleaning_assignments`);
       return res.json({ tasks: [], cleaner: { id: cleaner.id, name: cleaner.name } });
     }
 
@@ -10813,57 +10780,52 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
 
     for (const assignment of allAssignments) {
       const { reservation_key, property_id } = assignment;
-
-      if (reservation_key && reservation_key !== null) {
-        const parts = reservation_key.split('_');
-        if (parts.length < 3) continue;
-
-        const endDate   = parts[parts.length - 1];
-        const startDate = parts[parts.length - 2];
-
-        // Filtrer : mois en cours + mois suivant seulement
-        const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
-        if (endDate < todayStr || endDate > endOfNextMonth) {
-          console.log(`🚫 [TASKS] Filtrée: ${reservation_key} endDate=${endDate} todayStr=${todayStr}`);
-          continue;
-        }
-
-        // ✅ Lire depuis la DB (fiable même après redémarrage serveur)
-        let guestName = '';
-        try {
-          const resaRow = await pool.query(
-            `SELECT guest_name FROM reservations
-             WHERE property_id = $1
-             AND TO_CHAR(start_date, 'YYYY-MM-DD') = $2 
-             AND TO_CHAR(end_date, 'YYYY-MM-DD') = $3
-             AND status != 'cancelled'
-             LIMIT 1`,
-            [property_id, startDate, endDate]
-          );
-          guestName = resaRow.rows[0]?.guest_name || '';
-        } catch(e) {
-          // fallback cache mémoire
-          const r = (reservationsStore.properties[property_id] || []).find(r => {
-            const rStart = String(r.start || '').slice(0, 10);
-            const rEnd   = String(r.end   || '').slice(0, 10);
-            return `${property_id}_${rStart}_${rEnd}` === reservation_key;
-          });
-          guestName = r?.guestName || r?.name || '';
-        }
-
-        const property = PROPERTIES.find(p => p.id === property_id);
-        const propertyName = displayName(property) || property_id;
-
-        tasks.push({
-          reservationKey: reservation_key,
-          propertyId: property_id,
-          propertyName,
-          guestName,
-          checkoutDate: endDate,
-          checkinDate: startDate,
-          completed: false
-        });
-      }
+      console.log('🔍 Assignment:', { reservation_key, property_id });
+  console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
+      
+      // Vérifier si c'est une assignation par réservation (nouveau système)
+if (reservation_key && reservation_key !== null) {
+  const parts = reservation_key.split('_');
+  if (parts.length < 3) continue;
+  
+  // Le dernier élément est endDate, l'avant-dernier est startDate
+  // Tout ce qui est avant est le propertyId
+  const endDate = parts[parts.length - 1];
+  const startDate = parts[parts.length - 2];
+  const keyPropertyId = parts.slice(0, parts.length - 2).join('_');
+  
+  console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
+  
+  // Ne garder que les réservations du mois en cours et du mois suivant
+  const now = new Date();
+  const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
+  if (endDate < todayStr || endDate > endOfNextMonth) continue;
+  
+  // Trouver la réservation complète dans reservationsStore
+  // r.start/r.end peuvent être des objets Date PostgreSQL ou des strings ISO complètes
+  // On normalise en YYYY-MM-DD pour la comparaison
+  const propertyReservations = reservationsStore.properties[property_id] || [];
+  const reservation = propertyReservations.find(r => {
+    const rStart = String(r.start || '').slice(0, 10);
+    const rEnd   = String(r.end   || '').slice(0, 10);
+    const rKey = `${property_id}_${rStart}_${rEnd}`;
+    return rKey === reservation_key;
+  });
+  
+  // Récupérer le nom du logement depuis PROPERTIES
+const property = PROPERTIES.find(p => p.id === property_id);
+const propertyName = displayName(property) || property_id;
+  const guestName = reservation?.guestName || reservation?.name || '';
+  
+  tasks.push({
+    reservationKey: reservation_key,
+    propertyId: property_id,
+    propertyName,
+    guestName,
+    checkoutDate: endDate,
+    completed: false
+  });
+}
       // Sinon, c'est une ancienne assignation par logement
       else if (property_id) {
         // Récupérer toutes les réservations de ce logement
@@ -10908,8 +10870,6 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     
     // Trier par date de départ
     tasks.sort((a, b) => a.checkoutDate.localeCompare(b.checkoutDate));
-    
-    console.log(`📤 [TASKS] Envoi ${tasks.length} tâches au client. Exemples:`, tasks.slice(0,3).map(t => t.checkoutDate));
     
     res.json({
       cleaner: { id: cleaner.id, name: cleaner.name },
@@ -11314,7 +11274,7 @@ app.get('/api/cleaning/checklists',
 // ============================================
 app.get('/api/cleaning/assignments', 
   authenticateAny,
-  requirePermission(pool, 'can_view_cleaning'),
+  requirePermission(pool, 'can_view_calendar'),
   loadSubAccountData(pool),
   async (req, res) => {
   try {
@@ -26019,6 +25979,34 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
           await channexAPI.post('/webhooks', { webhook: payload });
           console.log(`✅ [CHANNEX] Webhook ${wh.event_mask} enregistré pour ${result.channex_property_id}`);
         }
+
+        // ✅ Auto-installer l'application "Channex Messages & Reviews"
+        try {
+          // 1. Lister les applications disponibles pour trouver l'ID de Messages & Reviews
+          const appsRes = await channexAPI.get('/applications');
+          const apps = appsRes.data?.data || [];
+          const msgApp = apps.find(a => {
+            const title = (a.attributes?.title || a.title || '').toLowerCase();
+            return title.includes('message') || title.includes('review');
+          });
+
+          if (msgApp) {
+            const appId = msgApp.id;
+            console.log(`📦 [CHANNEX] App Messages trouvée: ${msgApp.attributes?.title} (${appId})`);
+            // 2. Installer sur la nouvelle propriété
+            await channexAPI.post('/property_applications', {
+              property_application: {
+                property_id: result.channex_property_id,
+                application_id: appId
+              }
+            });
+            console.log(`✅ [CHANNEX] App Messages & Reviews installée sur ${result.channex_property_id}`);
+          } else {
+            console.warn('⚠️ [CHANNEX] App Messages & Reviews non trouvée dans la liste des applications');
+          }
+        } catch(appErr) {
+          console.warn('⚠️ [CHANNEX] Erreur installation app Messages (non bloquant):', appErr.message);
+        }
       } catch (whErr) {
         console.warn('⚠️ [CHANNEX] Erreur enregistrement webhooks (non bloquant):', whErr.message);
       }
@@ -26033,6 +26021,62 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
   } catch (e) {
     console.error('❌ [CHANNEX CONNECT]', e.message);
     res.status(500).json({ error: 'Erreur lors de la connexion Channex: ' + e.message });
+  }
+});
+
+// ── Installer l'app Messages & Reviews sur toutes les properties d'un user ──
+app.post('/api/channex/install-messages-app', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
+  try {
+    const { channexAPI } = require('./channex');
+
+    // Lister les apps disponibles
+    const appsRes = await channexAPI.get('/applications');
+    const apps = appsRes.data?.data || [];
+    const msgApp = apps.find(a => {
+      const title = (a.attributes?.title || a.title || '').toLowerCase();
+      return title.includes('message') || title.includes('review');
+    });
+
+    if (!msgApp) {
+      return res.status(404).json({ error: 'App Messages & Reviews non trouvée dans Channex' });
+    }
+
+    const appId = msgApp.id;
+    console.log(`📦 [CHANNEX] App Messages: ${msgApp.attributes?.title} (${appId})`);
+
+    // Récupérer toutes les properties Channex de l'utilisateur
+    const propsResult = await pool.query(
+      'SELECT DISTINCT channex_property_id FROM properties WHERE user_id = $1 AND channex_enabled = TRUE AND channex_property_id IS NOT NULL',
+      [user_id]
+    );
+
+    let installed = 0, skipped = 0, errors = 0;
+    for (const row of propsResult.rows) {
+      try {
+        await channexAPI.post('/property_applications', {
+          property_application: {
+            property_id: row.channex_property_id,
+            application_id: appId
+          }
+        });
+        installed++;
+        console.log(`✅ App Messages installée sur ${row.channex_property_id}`);
+      } catch(e) {
+        if (e.response?.status === 422) {
+          skipped++; // déjà installée
+        } else {
+          errors++;
+          console.warn(`⚠️ Erreur ${row.channex_property_id}:`, e.message);
+        }
+      }
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    res.json({ success: true, installed, skipped, errors, total: propsResult.rows.length });
+  } catch(e) {
+    console.error('❌ [install-messages-app]', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
