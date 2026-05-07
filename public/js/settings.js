@@ -2025,6 +2025,13 @@ async function loadConnectedChannels(propertyId, containerId) {
     });
     const d = await r.json();
     const channels = d.channels || [];
+
+    // ✅ Toujours ajouter BH Guest — disponible sur tous les logements par défaut
+    const hasBhGuest = channels.some(c => c.channel === 'guest');
+    if (!hasBhGuest) {
+      channels.push({ id: 'bh-guest', channel: 'guest', title: 'BH Guest', status: '' });
+    }
+
     if (channels.length === 0) {
       el.innerHTML = '<span style="font-size:10px;color:#94a3b8;">Aucune plateforme connectée</span>';
       return;
@@ -2037,6 +2044,7 @@ async function loadConnectedChannels(propertyId, containerId) {
         booking: { bg: '#f0f4ff', border: '#c7d7f9', color: '#003580' },
         expedia: { bg: '#f0f6ff', border: '#c5daf7', color: '#1B5E96' },
         vrbo:    { bg: '#f0f5ff', border: '#c9dcf7', color: '#1C61A5' },
+        guest:   { bg: '#f5f0ff', border: '#d8b4fe', color: '#7C3AED' },
       };
       const c_style = (key && colors[key]) ? colors[key] : { bg: '#f8fafc', border: '#e2e8f0', color: '#64748b' };
       return `<span title="${c.title}" style="
