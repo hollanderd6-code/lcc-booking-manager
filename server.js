@@ -10758,14 +10758,35 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     const defaultAssignments = [];
     for (const row of defaultPropertiesResult.rows) {
       const propId = row.property_id;
-      const propReservations = reservationsStore.properties[propId] || [];
-      for (const r of propReservations) {
-        const rEnd = String(r.end || '').slice(0, 10);
-        const rStart = String(r.start || '').slice(0, 10);
-        if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
-        const rKey = propId + '_' + rStart + '_' + rEnd;
-        if (explicitKeys.has(rKey)) continue; // déjà dans les assignations explicites
-        defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
+      // ✅ Lire depuis la DB au lieu du cache mémoire
+      try {
+        const resaRows = await pool.query(
+          `SELECT DATE(start_date) as start, DATE(end_date) as end
+           FROM reservations
+           WHERE property_id = $1
+           AND status != 'cancelled'
+           AND DATE(end_date) >= $2
+           AND DATE(end_date) <= $3`,
+          [propId, todayStr, endOfNextMonth]
+        );
+        for (const r of resaRows.rows) {
+          const rStart = String(r.start).slice(0, 10);
+          const rEnd   = String(r.end).slice(0, 10);
+          const rKey = propId + '_' + rStart + '_' + rEnd;
+          if (explicitKeys.has(rKey)) continue;
+          defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
+        }
+      } catch(e) {
+        // fallback cache mémoire si DB échoue
+        const propReservations = reservationsStore.properties[propId] || [];
+        for (const r of propReservations) {
+          const rEnd   = String(r.end   || '').slice(0, 10);
+          const rStart = String(r.start || '').slice(0, 10);
+          if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
+          const rKey = propId + '_' + rStart + '_' + rEnd;
+          if (explicitKeys.has(rKey)) continue;
+          defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
+        }
       }
     }
 
