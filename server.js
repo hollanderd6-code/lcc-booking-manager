@@ -22,7 +22,7 @@ const { Pool } = require('pg');
 // ============================================
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
 // ============================================
-const { handleIncomingMessage } = require('./integrated-chat-handler');
+const { handleIncomingMessage, handleIncomingMessageDebounced } = require('./integrated-chat-handler');
 // onboarding-system supprimé — données voyageur via Channex
 const crypto = require('crypto');
 const axios = require('axios');
@@ -26613,7 +26613,7 @@ app.post('/api/channex/webhook', async (req, res) => {
                 // Récupérer la conversation complète pour handleIncomingMessage
                 const convForGroq = await pool.query('SELECT * FROM conversations WHERE id = $1', [convId]);
                 if (convForGroq.rows[0]) {
-                  const { handleIncomingMessage } = require('./integrated-chat-handler');
+                  const { handleIncomingMessage, handleIncomingMessageDebounced } = require('./integrated-chat-handler');
                   await handleIncomingMessage(savedGuestMsg.rows[0], convForGroq.rows[0], pool, io);
                   console.log(`🤖 [CHANNEX] Demande spéciale transmise à Groq pour conv ${convId}`);
                 }
@@ -26825,14 +26825,31 @@ app.post('/api/channex/webhook-message', async (req, res) => {
     const messageText = attrs.message || '';
     const sender = (attrs.sender || 'guest').toLowerCase();
 
-    // Accepter guest, traveler, customer — rejeter seulement host/system/auto
-    const isGuestMessage = !['host', 'system', 'auto', 'property', 'manager'].includes(sender);
+    // Accepter guest, traveler, customer — rejeter host/system/auto/bot
+    const isGuestMessage = !['host', 'system', 'auto', 'property', 'manager', 'bot', 'owner'].includes(sender);
 
     if (!channex_booking_id || !messageText || !isGuestMessage) {
       console.warn(`⚠️ [CHANNEX MSG] Payload skipped — booking_id=${channex_booking_id} | sender="${sender}" | msgLen=${messageText.length}`);
-      console.warn('⚠️ [CHANNEX MSG] Full payload:', JSON.stringify(payload));
       return res.status(200).json({ received: true, skipped: true });
     }
+
+    // Anti-doublon : message envoyé par nous via Channex qui revient en écho
+    try {
+      const recentBotMsg = await pool.query(
+        `SELECT 1 FROM messages m
+         JOIN conversations c ON c.id = m.conversation_id
+         WHERE c.channex_booking_id = $1
+         AND m.sender_type IN ('system', 'bot', 'property')
+         AND m.message = $2
+         AND m.created_at > NOW() - INTERVAL '5 minutes'
+         LIMIT 1`,
+        [channex_booking_id, messageText]
+      );
+      if (recentBotMsg.rows.length > 0) {
+        console.log(`⏭️ [CHANNEX MSG] Message bot en écho ignoré — booking ${channex_booking_id}`);
+        return res.status(200).json({ received: true, skipped: 'bot_echo' });
+      }
+    } catch(e) { /* non bloquant */ }
 
     // FIX 5 — Filtrer les messages OTA système AVANT tout traitement
     const OTA_SYSTEM_PATTERNS = [
@@ -26936,7 +26953,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
 
     // ── Réponses automatiques (après res.json pour ne pas bloquer) ──
     try {
-      const { handleIncomingMessage } = require('./integrated-chat-handler');
+      const { handleIncomingMessage, handleIncomingMessageDebounced } = require('./integrated-chat-handler');
 
       // Récupérer la conversation complète pour le handler
       const convResult = await pool.query(
@@ -26959,7 +26976,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
             conversation.escalated = false;
             console.log(`🔄 [CHANNEX MSG] Escalade réinitialisée pour conv ${conversation_id}`);
           }
-          const handled = await handleIncomingMessage(savedMsg, conversation, pool, io);
+          const handled = await handleIncomingMessageDebounced(savedMsg, conversation, pool, io);
           console.log(`🤖 [CHANNEX MSG] handleIncomingMessage retourné: ${handled}`);
 
           // Notif push seulement si PAS de réponse auto (escalade ou aucune réponse)
