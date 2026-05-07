@@ -10904,6 +10904,8 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     // Trier par date de départ
     tasks.sort((a, b) => a.checkoutDate.localeCompare(b.checkoutDate));
     
+    console.log(`📤 [TASKS] Envoi ${tasks.length} tâches au client. Exemples:`, tasks.slice(0,3).map(t => t.checkoutDate));
+    
     res.json({
       cleaner: { id: cleaner.id, name: cleaner.name },
       tasks
