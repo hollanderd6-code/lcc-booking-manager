@@ -5291,8 +5291,12 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (!res.ok) throw new Error('Erreur API');
       
       const data = await res.json();
-      const paidDeposits = data.filter(r => r.deposit && r.deposit.status === 'paid');
-      const count = paidDeposits.length;
+      // Cautions actives = pending (lien envoyé), authorized (pré-autorisé), paid (capturé)
+      const activeDeposits  = data.filter(r => r.deposit && ['pending','authorized','paid'].includes(r.deposit.status));
+      const paidDeposits    = data.filter(r => r.deposit && r.deposit.status === 'paid');
+      const pendingDeposits = data.filter(r => r.deposit && r.deposit.status === 'pending');
+      const authDeposits    = data.filter(r => r.deposit && r.deposit.status === 'authorized');
+      const count = activeDeposits.length;
 
       depositsVal.textContent = count;
       
@@ -5302,9 +5306,15 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       depositsVal.style.fontWeight = '700';
       
       if (depositsSub) {
-        depositsSub.textContent = count === 0 ? 'aucune caution active' 
-          : count === 1 ? '1 caution payée en cours'
-          : `${count} cautions payées en cours`;
+        if (count === 0) {
+          depositsSub.textContent = 'aucune caution active';
+        } else {
+          const parts = [];
+          if (authDeposits.length)    parts.push(authDeposits.length + ' autorisée' + (authDeposits.length > 1 ? 's' : ''));
+          if (paidDeposits.length)    parts.push(paidDeposits.length + ' capturée' + (paidDeposits.length > 1 ? 's' : ''));
+          if (pendingDeposits.length) parts.push(pendingDeposits.length + ' en attente');
+          depositsSub.textContent = parts.join(' · ') || count + ' caution' + (count > 1 ? 's' : '') + ' active' + (count > 1 ? 's' : '');
+        }
       }
     } catch (error) {
       console.error('Erreur chargement cautions KPI:', error);
