@@ -10768,7 +10768,8 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
       // ✅ Lire depuis la DB au lieu du cache mémoire
       try {
         const resaRows = await pool.query(
-          `SELECT DATE(start_date) as start, DATE(end_date) as end
+          `SELECT TO_CHAR(start_date, 'YYYY-MM-DD') as start, 
+                  TO_CHAR(end_date, 'YYYY-MM-DD') as end
            FROM reservations
            WHERE property_id = $1
            AND status != 'cancelled'
@@ -10833,7 +10834,8 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
           const resaRow = await pool.query(
             `SELECT guest_name FROM reservations
              WHERE property_id = $1
-             AND DATE(start_date) = $2 AND DATE(end_date) = $3
+             AND TO_CHAR(start_date, 'YYYY-MM-DD') = $2 
+             AND TO_CHAR(end_date, 'YYYY-MM-DD') = $3
              AND status != 'cancelled'
              LIMIT 1`,
             [property_id, startDate, endDate]
