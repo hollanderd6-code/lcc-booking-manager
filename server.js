@@ -26865,6 +26865,10 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       '[SYSTEM]',
       'Automatic message',
       'Message automatique',
+      'Imported Booking',
+      'imported booking',
+      'Demande(s) du voyageur',
+      'Request(s) from guest',
     ];
     const isOtaSystemMessage = OTA_SYSTEM_PATTERNS.some(p => messageText.includes(p));
     if (isOtaSystemMessage) {
