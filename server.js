@@ -29436,7 +29436,8 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       }],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
+      // Stripe max = 24h pour les sessions de paiement standard
+      expires_at: Math.floor(Date.now() / 1000) + (23 * 60 * 60),
       metadata: {
         property_id, checkin, checkout,
         guest_name: guest_name || '',
