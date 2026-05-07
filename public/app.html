@@ -5659,8 +5659,8 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
 
     // ── KPI Notes : réservations avec note, valides jusqu'à end_date + 1 jour ──
     const nowNotes = new Date();
-    const withNotes = (window.calendarState && window.calendarState.bookings
-      ? window.calendarState.bookings
+    const withNotes = (window.__bhCalendarState && window.__bhCalendarState.bookings
+      ? window.__bhCalendarState.bookings
       : (window.LCC_RESERVATIONS || [])
     ).filter(r => {
       if (!r.notes || !r.notes.trim()) return false;
