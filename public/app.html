@@ -5291,29 +5291,25 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (!res.ok) throw new Error('Erreur API');
       
       const data = await res.json();
-      // Cautions actives = pending (lien envoyé), authorized (pré-autorisé), paid (capturé)
-      const activeDeposits  = data.filter(r => r.deposit && ['pending','authorized','paid'].includes(r.deposit.status));
-      const paidDeposits    = data.filter(r => r.deposit && r.deposit.status === 'paid');
-      const pendingDeposits = data.filter(r => r.deposit && r.deposit.status === 'pending');
-      const authDeposits    = data.filter(r => r.deposit && r.deposit.status === 'authorized');
-      const count = activeDeposits.length;
+      // Cautions prises = autorisées ou capturées (pas pending = lien pas encore payé)
+      const authDeposits = data.filter(r => r.deposit && r.deposit.status === 'authorized');
+      const paidDeposits = data.filter(r => r.deposit && r.deposit.status === 'paid');
+      const count = authDeposits.length + paidDeposits.length;
 
       depositsVal.textContent = count;
       
-      // Appliquer la couleur
       const color = count >= 1 ? '#10B981' : '#000000';
       depositsVal.style.color = color;
       depositsVal.style.fontWeight = '700';
       
       if (depositsSub) {
         if (count === 0) {
-          depositsSub.textContent = 'aucune caution active';
+          depositsSub.textContent = 'aucune caution prise';
         } else {
           const parts = [];
-          if (authDeposits.length)    parts.push(authDeposits.length + ' autorisée' + (authDeposits.length > 1 ? 's' : ''));
-          if (paidDeposits.length)    parts.push(paidDeposits.length + ' capturée' + (paidDeposits.length > 1 ? 's' : ''));
-          if (pendingDeposits.length) parts.push(pendingDeposits.length + ' en attente');
-          depositsSub.textContent = parts.join(' · ') || count + ' caution' + (count > 1 ? 's' : '') + ' active' + (count > 1 ? 's' : '');
+          if (authDeposits.length) parts.push(authDeposits.length + ' autorisée' + (authDeposits.length > 1 ? 's' : ''));
+          if (paidDeposits.length) parts.push(paidDeposits.length + ' capturée' + (paidDeposits.length > 1 ? 's' : ''));
+          depositsSub.textContent = parts.join(' · ');
         }
       }
     } catch (error) {
@@ -9050,15 +9046,20 @@ if (editBookingForm) {
           if (window.currentBooking)     window.currentBooking.notes = notes;
 
           // Mettre à jour l'affichage de la note dans le modal ouvert directement
-          const noteDisplayEls = document.querySelectorAll('.detail-group');
-          noteDisplayEls.forEach(function(el) {
-            const lbl = el.querySelector('label');
-            if (lbl && lbl.textContent.trim().toUpperCase() === 'NOTES') {
-              el.querySelector('div[style]').outerHTML = notes
-                ? '<div style="background:rgba(255,255,255,.55);border-radius:12px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.5;">' + notes.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
-                : '<div style="background:rgba(255,255,255,.35);border-radius:12px;padding:10px 14px;font-size:13px;color:#9CA3AF;font-style:italic;">Aucune note</div>';
-            }
-          });
+          try {
+            const noteDisplayEls = document.querySelectorAll('.detail-group');
+            noteDisplayEls.forEach(function(el) {
+              const lbl = el.querySelector('label');
+              if (lbl && lbl.textContent.trim().toUpperCase() === 'NOTES') {
+                const existingDiv = el.querySelector('div');
+                if (existingDiv) {
+                  existingDiv.outerHTML = notes
+                    ? '<div style="background:rgba(255,255,255,.55);border-radius:12px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.5;">' + notes.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
+                    : '<div style="background:rgba(255,255,255,.35);border-radius:12px;padding:10px 14px;font-size:13px;color:#9CA3AF;font-style:italic;">Aucune note</div>';
+                }
+              }
+            });
+          } catch(eNote) { console.warn('Note display update error:', eNote.message); }
 
           // 2. state.bookings du calendrier
           if (window.__bhCalendarState && window.__bhCalendarState.bookings) {
@@ -9298,9 +9299,9 @@ if (editBookingForm) {
           modal.style.display = 'none'; window.showFab();
         }
 
-        kpiCard.addEventListener('click', openModal);
-        modal.addEventListener('click', (e) => { if(e.target===modal) closeModal(); });
-        closeBtn.addEventListener('click', closeModal);
+        kpiCard.onclick = openModal;
+        modal.onclick = (e) => { if(e.target===modal) closeModal(); };
+        closeBtn.onclick = closeModal;
       })();
 
       // =========================
@@ -9412,16 +9413,17 @@ if (editBookingForm) {
             if (!res.ok) throw new Error('Erreur API');
             
             const data = await res.json();
-            const paidDeposits = data.filter(r => r.deposit && r.deposit.status === 'paid');
+            // Cautions actives = autorisées (pre-auth) ou capturées (paid) — pas les pending (lien pas encore payé)
+            const activeDeposits = data.filter(r => r.deposit && ['authorized','paid'].includes(r.deposit.status));
 
-            if (!paidDeposits.length) {
+            if (!activeDeposits.length) {
               contentEl.innerHTML = `
-                <p class="detail-value">Aucune caution payée pour le moment.</p>
+                <p class="detail-value">Aucune caution autorisée ou capturée pour le moment.</p>
               `;
             } else {
               contentEl.innerHTML = '';
               
-              paidDeposits.forEach((r, idx) => {
+              activeDeposits.forEach((r, idx) => {
                 const deposit = r.deposit;
                 const amount = (deposit.amountCents / 100).toFixed(2);
                 
