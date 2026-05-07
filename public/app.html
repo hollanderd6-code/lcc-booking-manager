@@ -12960,11 +12960,11 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             <label style="font-size:11px;font-weight:600;color:#1A7A5E;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">
               💶 Prix fixe total (optionnel)
             </label>
-            <div style="position:relative;">
-              <input type="number" id="bhLinkFixedPrice" placeholder="Ex: 350" min="1" onchange="bhUpdateLink()" oninput="bhUpdateLink()"
-                style="width:100%;padding:9px 12px 9px 36px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:14px;font-weight:600;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
-              <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#9CA3AF;font-weight:600;">€</span>
+            <div style="display:flex;align-items:center;border:1.5px solid #E5E7EB;border-radius:9px;overflow:hidden;background:white;" id="bhFixedPriceWrap"
+              onfocusin="this.style.borderColor='#1A7A5E'" onfocusout="this.style.borderColor='#E5E7EB'">
+              <span style="padding:0 10px;font-size:14px;color:#9CA3AF;font-weight:600;flex-shrink:0;border-right:1.5px solid #E5E7EB;height:100%;display:flex;align-items:center;background:#F9FAFB;">€</span>
+              <input type="number" id="bhLinkFixedPrice" placeholder="350" min="1" onchange="bhUpdateLink()" oninput="bhUpdateLink()"
+                style="flex:1;padding:9px 12px;border:none;font-size:14px;font-weight:600;box-sizing:border-box;font-family:inherit;outline:none;background:transparent;">
             </div>
             <div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Prix total du séjour affiché au voyageur. Les 3% de frais BHGuest s'appliqueront en plus.</div>
           </div>
