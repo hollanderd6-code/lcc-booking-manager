@@ -9039,52 +9039,7 @@ if (editBookingForm) {
           if (!noteRes.ok) {
             throw new Error(noteBody.error || 'Erreur mise à jour note (' + noteRes.status + ')');
           }
-
-          // ── Mettre à jour toutes les sources en mémoire ──
-          // 1. currentBookingData (modal)
-          if (window.currentBookingData) window.currentBookingData.notes = notes;
-          if (window.currentBooking)     window.currentBooking.notes = notes;
-
-          // Mettre à jour l'affichage de la note dans le modal ouvert directement
-          try {
-            const noteDisplayEls = document.querySelectorAll('.detail-group');
-            noteDisplayEls.forEach(function(el) {
-              const lbl = el.querySelector('label');
-              if (lbl && lbl.textContent.trim().toUpperCase() === 'NOTES') {
-                const existingDiv = el.querySelector('div');
-                if (existingDiv) {
-                  existingDiv.outerHTML = notes
-                    ? '<div style="background:rgba(255,255,255,.55);border-radius:12px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.5;">' + notes.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
-                    : '<div style="background:rgba(255,255,255,.35);border-radius:12px;padding:10px 14px;font-size:13px;color:#9CA3AF;font-style:italic;">Aucune note</div>';
-                }
-              }
-            });
-          } catch(eNote) { console.warn('Note display update error:', eNote.message); }
-
-          // 2. state.bookings du calendrier
-          if (window.__bhCalendarState && window.__bhCalendarState.bookings) {
-            const bk = window.__bhCalendarState.bookings.find(b => String(b.uid||b.id) === String(uid));
-            if (bk) bk.notes = notes;
-          }
-
-          // 3. LCC_RESERVATIONS (source principale du reload)
-          try {
-            const lccRes = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
-            const lccBk = lccRes.find(b => String(b.uid||b.id) === String(uid));
-            if (lccBk) { lccBk.notes = notes; localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(lccRes)); }
-            if (window.LCC_RESERVATIONS) {
-              const wBk = window.LCC_RESERVATIONS.find(b => String(b.uid||b.id) === String(uid));
-              if (wBk) wBk.notes = notes;
-            }
-          } catch(e2) {}
-
           alert('Note sauvegardée !');
-          // Fermer le modal sans recharger — la note est déjà à jour en mémoire
-          const _editModal = document.getElementById('editBookingModal');
-          if (_editModal) { _editModal.classList.remove('active'); _editModal.style.display = 'none'; }
-          // Re-render calendrier depuis le state déjà mis à jour (sans appel API)
-          if (typeof window.__bhCalendarRender === 'function') window.__bhCalendarRender();
-          return;
         } else {
           // ── CAS RÉSERVATION MANUELLE ──
           console.log('✏️ Modification réservation manuelle uid:', uid);
