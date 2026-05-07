@@ -7598,7 +7598,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             : (dbData.guest_name || null),
           guest_initial: dbData.guest_first_name
             ? dbData.guest_first_name.charAt(0).toUpperCase()
-            : null
+            : null,
+          notes: dbData.notes || null
         };
 
         allReservations.push(enrichedReservation);
@@ -7664,7 +7665,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
               ? `${dbData.guest_first_name} ${dbData.guest_last_name || ''}`.trim()
               : (dbData.guest_name || null),
             guest_initial: dbData.guest_first_name
-              ? dbData.guest_first_name.charAt(0).toUpperCase() : null
+              ? dbData.guest_first_name.charAt(0).toUpperCase() : null,
+            notes: dbData.notes || null
           });
           storeUids.add(dbData.uid);
         }
