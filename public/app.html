@@ -7760,9 +7760,9 @@ window.loadPricingOverrides = async function(properties) {
   }
   
   document.addEventListener('DOMContentLoaded', function() {
-  // Intercepter les clics sur les booking-blocks
+  // Intercepter les clics sur les booking-blocks (tous types)
   document.addEventListener('click', function(e) {
-    const bookingBlock = e.target.closest('.booking-block');
+    const bookingBlock = e.target.closest('.booking-block, .booking-block-bh');
     if (!bookingBlock) return;
 
     const found = findReservationForBlock(bookingBlock);
@@ -7770,10 +7770,11 @@ window.loadPricingOverrides = async function(properties) {
     if (found) {
       currentBookingData = found;
       window.currentBookingData = found;
-      console.log('📦 currentBookingData défini au clic (DOM loaded) :', currentBookingData);
+      console.log('📦 currentBookingData défini au clic :', found.uid, '| notes:', found.notes);
       if (typeof updateInvoiceBtn === 'function') updateInvoiceBtn(found);
     } else {
       currentBookingData = null;
+      window.currentBookingData = null;
     }
 
     // On laisse un peu de temps au modal pour se remplir, puis on le corrige
@@ -7787,11 +7788,11 @@ function findReservationForBlock(bookingBlock) {
   const bookingIdAttr = bookingBlock.getAttribute('data-booking-id');
   if (!bookingIdAttr) return null;
 
-  // Priorité 1: Chercher dans window.calendarState.bookings (avec les scores de risque calculés)
+  // Priorité 1: Chercher dans window.__bhCalendarState.bookings (source de vérité à jour)
   let bookings = [];
-  if (window.calendarState && Array.isArray(window.calendarState.bookings) && window.calendarState.bookings.length) {
-    bookings = window.calendarState.bookings;
-    console.log('🎯 Utilisation de window.calendarState.bookings avec', bookings.length, 'réservations');
+  if (window.__bhCalendarState && Array.isArray(window.__bhCalendarState.bookings) && window.__bhCalendarState.bookings.length) {
+    bookings = window.__bhCalendarState.bookings;
+    console.log('🎯 Utilisation de window.__bhCalendarState.bookings avec', bookings.length, 'réservations');
   }
   // Fallback: réservations brutes si calendarState n\'est pas disponible
   else if (Array.isArray(window.LCC_RESERVATIONS) && window.LCC_RESERVATIONS.length) {
@@ -7819,13 +7820,7 @@ function findReservationForBlock(bookingBlock) {
       return idStr === rid || idStr === uid || idStr === rkey;
     });
 
-    // 2) Fallback : data-booking-id est juste l\'INDEX dans le tableau
-    if (!found) {
-      const idx = parseInt(idStr, 10);
-      if (!Number.isNaN(idx) && bookings[idx]) {
-        found = bookings[idx];
-      }
-    }
+    /// Pas de fallback par index — évite de mélanger les résas
   }
 
   if (!found) {
