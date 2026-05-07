@@ -633,11 +633,12 @@ function goToCheckout() {
   const fixedPriceOverride = state._pendingFixedPrice || null;
   const displayBase = fixedPriceOverride !== null ? fixedPriceOverride : total;
   const commission = Math.round(displayBase * 0.03 * 100) / 100;
-  const cleaningFee = p.cleaningFee || 0;
+  // Prix fixe = tout inclus : ménage et taxe de séjour non ajoutés
+  const cleaningFee = fixedPriceOverride !== null ? 0 : (p.cleaningFee || 0);
   const guestCount = parseInt(document.getElementById('guestCount')?.value) || 2;
-  const touristTax = p.touristTaxPerNight
+  const touristTax = fixedPriceOverride !== null ? 0 : (p.touristTaxPerNight
     ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
-    : 0;
+    : 0);
   const ttc = Math.round((displayBase + cleaningFee + touristTax + commission) * 100) / 100;
   const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
