@@ -29345,9 +29345,11 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       }
       discountedBase = Math.max(0, totalBase - discount);
     }
-    const cleaningFee = prop.cleaning_fee != null ? parseFloat(prop.cleaning_fee) : 0;
+    // Prix fixe = tout inclus (ménage + taxes compris) — on n'ajoute que les 3% BHGuest
+    const isFixedPrice = fixed_price_override && parseFloat(fixed_price_override) > 0;
+    const cleaningFee = (!isFixedPrice && prop.cleaning_fee != null) ? parseFloat(prop.cleaning_fee) : 0;
     const nbGuests = parseInt(guests) || 1;
-    const touristTax = prop.tourist_tax_per_night != null
+    const touristTax = (!isFixedPrice && prop.tourist_tax_per_night != null)
       ? Math.round(parseFloat(prop.tourist_tax_per_night) * nights * nbGuests * 100) / 100
       : 0;
     const commission = Math.round(discountedBase * 0.03 * 100) / 100;
