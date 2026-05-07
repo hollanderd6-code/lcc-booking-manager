@@ -1007,7 +1007,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .booking-block.direct  { background: linear-gradient(135deg, #F97316, #EA6A00) !important; }
 .booking-block.abritel { background: linear-gradient(135deg, #0096D6, #0077B3) !important; }
 .booking-block.gites   { background: linear-gradient(135deg, #2E7D32, #1B5E20) !important; }
-.booking-block.bhguest { background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important; }
 html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-blocked {
   background: repeating-linear-gradient(
     45deg,
@@ -5791,24 +5790,20 @@ try {
   var MS = 86400000;
 
   var PLT = {
-    airbnb:   { bg:'#FF5A5F', label:'Airbnb',            cls:'airbnb'   },
-    booking:  { bg:'#003580', label:'Booking.com',        cls:'booking'  },
-    bdc:      { bg:'#003580', label:'Booking.com',        cls:'booking'  },
-    direct:   { bg:'#1A7A5E', label:'Direct',             cls:'direct'   },
-    manuel:   { bg:'#1A7A5E', label:'Direct',             cls:'direct'   },
-    abritel:  { bg:'#0096D6', label:'Abritel',            cls:'abritel'  },
-    expedia:  { bg:'#FFC72C', label:'Expedia',            cls:'expedia'  },
-    vrbo:     { bg:'#1569C7', label:'Vrbo',               cls:'vrbo'     },
-    gites:    { bg:'#2E7D32', label:'Gîtes',              cls:'gites'    },
-    bhguest:  { bg:'#7C3AED', label:'Boostinghost Guest', cls:'bhguest'  },
-    guest_app:{ bg:'#7C3AED', label:'Boostinghost Guest', cls:'bhguest'  },
+    airbnb:  { bg:'#FF5A5F', label:'Airbnb',       cls:'airbnb'  },
+    booking: { bg:'#003580', label:'Booking.com',   cls:'booking' },
+    bdc:     { bg:'#003580', label:'Booking.com',   cls:'booking' },
+    direct:  { bg:'#1A7A5E', label:'Direct',        cls:'direct'  },
+    manuel:  { bg:'#1A7A5E', label:'Direct',        cls:'direct'  },
+    abritel: { bg:'#0096D6', label:'Abritel',       cls:'abritel' },
+    expedia: { bg:'#FFC72C', label:'Expedia',       cls:'expedia' },
+    vrbo:    { bg:'#1569C7', label:'Vrbo',          cls:'vrbo'    },
+    gites:   { bg:'#2E7D32', label:'Gîtes',         cls:'gites'   },
   };
 
   function pltInfo(r) {
-    var raw = (r.platform||r.source||'direct').toLowerCase().replace(/\.com$/, '').replace(/booking\.com/, 'booking');
-    // Détecter Boostinghost Guest
-    if (raw.includes('boostinghost') || raw === 'guest_app' || raw.includes('bhguest')) raw = 'bhguest';
-    return PLT[raw] || { bg:'#6B7280', label:(raw||'Direct'), cls:'direct' };
+    var k = ((r.platform||r.source||'direct').toLowerCase().replace(/\.com$/,'').replace(/booking\.com/,'booking'));
+    return PLT[k] || { bg:'#6B7280', label:(k||'Direct'), cls:'direct' };
   }
 
   function ds(d) {
@@ -9038,12 +9033,40 @@ if (editBookingForm) {
           if (!noteRes.ok) {
             throw new Error(noteBody.error || 'Erreur mise à jour note (' + noteRes.status + ')');
           }
-          // Mettre à jour state.bookings en mémoire pour que le point rouge apparaisse sans reload
+
+          // ── Mettre à jour toutes les sources en mémoire ──
+          // 1. currentBookingData (modal)
+          if (window.currentBookingData) window.currentBookingData.notes = notes;
+          if (window.currentBooking)     window.currentBooking.notes = notes;
+
+          // Mettre à jour l'affichage de la note dans le modal ouvert directement
+          const noteDisplayEls = document.querySelectorAll('.detail-group');
+          noteDisplayEls.forEach(function(el) {
+            const lbl = el.querySelector('label');
+            if (lbl && lbl.textContent.trim().toUpperCase() === 'NOTES') {
+              el.querySelector('div[style]').outerHTML = notes
+                ? '<div style="background:rgba(255,255,255,.55);border-radius:12px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.5;">' + notes.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
+                : '<div style="background:rgba(255,255,255,.35);border-radius:12px;padding:10px 14px;font-size:13px;color:#9CA3AF;font-style:italic;">Aucune note</div>';
+            }
+          });
+
+          // 2. state.bookings du calendrier
           if (window.__bhCalendarState && window.__bhCalendarState.bookings) {
             const bk = window.__bhCalendarState.bookings.find(b => String(b.uid||b.id) === String(uid));
             if (bk) bk.notes = notes;
-            if (typeof window.__bhCalendarRender === 'function') window.__bhCalendarRender();
           }
+
+          // 3. LCC_RESERVATIONS (source principale du reload)
+          try {
+            const lccRes = JSON.parse(localStorage.getItem('LCC_RESERVATIONS') || '[]');
+            const lccBk = lccRes.find(b => String(b.uid||b.id) === String(uid));
+            if (lccBk) { lccBk.notes = notes; localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(lccRes)); }
+            if (window.LCC_RESERVATIONS) {
+              const wBk = window.LCC_RESERVATIONS.find(b => String(b.uid||b.id) === String(uid));
+              if (wBk) wBk.notes = notes;
+            }
+          } catch(e2) {}
+
           alert('Note sauvegardée !');
         } else {
           // ── CAS RÉSERVATION MANUELLE ──
