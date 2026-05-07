@@ -1338,6 +1338,8 @@ async function handleLogin() {
     cleanerData = data.cleaner;
     tasks = data.tasks || [];
     
+    console.log('📊 [CLIENT] Tâches reçues:', tasks.length, tasks.slice(0,3));
+    
     sessionStorage.setItem('cleaning_pin', pin);
     
     // Switch to app
