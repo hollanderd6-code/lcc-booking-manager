@@ -168,7 +168,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await loadProperties();
+
+  // ── Deep link : ?property=ID&checkin=DATE&checkout=DATE&promo=CODE&guests=N ──
+  await handleDeepLink();
 });
+
+async function handleDeepLink() {
+  const params = new URLSearchParams(window.location.search);
+  const propertyId = params.get('property');
+  const checkin    = params.get('checkin');
+  const checkout   = params.get('checkout');
+  const promoCode  = params.get('promo');
+  const guests     = params.get('guests');
+
+  if (!propertyId) return;
+
+  // Pré-remplir les dates dans le state
+  if (checkin)  state.search.checkin  = checkin;
+  if (checkout) state.search.checkout = checkout;
+  if (guests)   state.search.guests   = parseInt(guests) || 2;
+
+  // Nettoyer l'URL sans recharger
+  window.history.replaceState({}, '', window.location.pathname);
+
+  // Ouvrir le logement directement
+  await openProperty(propertyId);
+
+  // Si un code promo est fourni, l'appliquer automatiquement après ouverture du checkout
+  if (promoCode) {
+    state._pendingPromoCode = promoCode.toUpperCase();
+  }
+}
 
 async function handleStripeReturn(params) {
   // Nettoyer l'URL
@@ -660,6 +690,24 @@ function goToCheckout() {
 
   document.getElementById('btnPay').textContent = `Payer ${ttc}€`;
   showScreen('checkout');
+
+  // Auto-appliquer le code promo venant du deep link
+  if (state._pendingPromoCode) {
+    const input = document.getElementById('promoInput');
+    if (input) {
+      input.value = state._pendingPromoCode;
+      // Afficher un badge "Prix spécial" avant la validation
+      const msg = document.getElementById('promoMsg');
+      if (msg) {
+        msg.style.display = 'block';
+        msg.style.color = '#059669';
+        msg.innerHTML = '🏷️ Code promo pré-rempli — cliquez sur "Appliquer" pour valider votre remise';
+      }
+      // Déclencher automatiquement la validation
+      setTimeout(() => applyPromo(), 400);
+    }
+    state._pendingPromoCode = null;
+  }
 }
 
 // Recalcule la taxe de séjour quand le nb de voyageurs change
