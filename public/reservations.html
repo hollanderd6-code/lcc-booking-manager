@@ -292,16 +292,18 @@ html[data-theme-v3="1"] main.main-content {
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
-/* Mobile : override overflow:hidden du app-container qui clippe le mobileView */
+/* Mobile : fix scroll sur page reservations uniquement */
 @media (max-width: 1366px) {
-  html[data-theme-v3="1"] .app-container {
+  body[data-page="reservations"] .app-container {
     overflow: visible !important;
     height: auto !important;
   }
-  html[data-theme-v3="1"] main.main-content {
+  body[data-page="reservations"] .main-content {
+    display: block !important;
     overflow-y: auto !important;
     height: auto !important;
     min-height: 100vh !important;
+    margin-left: 0 !important;
   }
 }
 @media (min-width: 1367px) {
