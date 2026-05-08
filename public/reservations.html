@@ -210,10 +210,10 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 
 .mobile-search { padding: 12px 0 8px; position: relative; }
 .mobile-search input {
-  width: 100%; box-sizing: border-box; height: 40px;
+  width: 100%; box-sizing: border-box; height: 44px;
   border: 1px solid var(--border); border-radius: 12px;
   background: var(--white); font-size: 15px; font-family: inherit;
-  padding: 0 12px 0 36px; outline: none; color: var(--text);
+  padding: 0 12px 0 38px; outline: none; color: var(--text);
 }
 .mobile-search i {
   position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
@@ -385,7 +385,8 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(12px) !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.3) !important;
-    padding: 8px 14px 10px !important;
+    padding: 8px 14px 0 !important;
+    overflow: visible !important;
   }
 
   /* Cartes avec padding horizontal */
@@ -482,7 +483,7 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()"/>
   </div>
-  <div style="display:flex;gap:8px;padding:0 0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+  <div style="display:flex;gap:8px;padding:6px 0 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;">
     <select id="mobilePropFilter" onchange="applyFilters()" style="flex-shrink:0;height:44px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 24px 4px 12px;background:white;min-width:150px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
       <option value="">Tous logements</option>
     </select>
