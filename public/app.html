@@ -4897,17 +4897,15 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   function parseDateSafe(v) {
     if (!v) return null;
     const s = String(v);
-    // Format YYYY-MM-DD → date locale sans problème de timezone
+    // YYYY-MM-DD → date locale (pas de décalage UTC)
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
       const [y,m,dd] = s.split('-').map(Number);
       return new Date(y, m-1, dd, 0, 0, 0, 0);
     }
-    // Format ISO avec timestamp (ex: 2026-05-09T00:00:00.000Z venant du serveur)
-    // → extraire seulement la partie date pour éviter le décalage UTC→locale
-    const isoDateMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
-    if (isoDateMatch) {
-      return new Date(Number(isoDateMatch[1]), Number(isoDateMatch[2])-1, Number(isoDateMatch[3]), 0, 0, 0, 0);
-    }
+    // ISO avec timestamp (ex: 2026-05-09T00:00:00.000Z du serveur PG)
+    // → extraire la partie date pour éviter le décalage UTC→locale
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (iso) return new Date(Number(iso[1]), Number(iso[2])-1, Number(iso[3]), 0, 0, 0, 0);
     const d = new Date(v);
     return isNaN(d.getTime()) ? null : d;
   }
@@ -5299,28 +5297,27 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (!res.ok) throw new Error('Erreur API');
       
       const data = await res.json();
-      // Cautions prises = autorisées ou capturées (pas pending = lien pas encore payé)
-      // Filtrer : seulement les résas dont la fin est >= hier (toujours actives ou très récentes)
+      // Filtrer : résas dont la fin est >= hier (actives ou très récentes)
       const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday.setHours(0,0,0,0);
       const activeData = data.filter(r => {
-        if (!r.endDate && !r.startDate) return true; // pas de date = on garde
         const endRaw = r.endDate || r.startDate;
-        const endD = parseDateSafe ? parseDateSafe(endRaw) : new Date(endRaw);
+        if (!endRaw) return true;
+        const endD = parseDateSafe(endRaw);
         return endD && endD >= yesterday;
       });
-      // Statuts valides : authorized (caution bloquée) + captured (capturée/encaissée)
-      // Note : 'paid' n'existe pas dans ce système — c'est 'captured'
+
+      // Statuts valides : authorized (bloquée) + captured (encaissée)
+      // 'paid' n'existe pas dans ce système — c'est 'captured'
       const authDeposits     = activeData.filter(r => r.deposit && r.deposit.status === 'authorized');
       const capturedDeposits = activeData.filter(r => r.deposit && r.deposit.status === 'captured');
       const count = authDeposits.length + capturedDeposits.length;
-      console.log('🛡️ KPI Cautions =', count, '| total résas API =', data.length, '| actives =', activeData.length, '| authorized =', authDeposits.length, '| captured =', capturedDeposits.length);
+
+      console.log('🛡️ KPI Cautions =', count, '| total API =', data.length, '| actives =', activeData.length, '| authorized =', authDeposits.length, '| captured =', capturedDeposits.length);
 
       depositsVal.textContent = count;
-      
-      const color = count >= 1 ? '#10B981' : '#000000';
-      depositsVal.style.color = color;
+      depositsVal.style.color = count >= 1 ? '#10B981' : '#000000';
       depositsVal.style.fontWeight = '700';
-      
+
       if (depositsSub) {
         if (count === 0) {
           depositsSub.textContent = 'aucune caution prise';
@@ -5849,8 +5846,6 @@ try {
 
       // Charger les cautions pour la KPI
       loadAndUpdateDepositsKPI();
-      // Log diagnostic KPI ménage
-      console.log('🧹 KPI Ménage 48h =', cleaning48h, '| résas analysées =', (reservations||[]).length);
     } catch (e) {
       console.warn('Erreur KPI dashboard', e);
     }
@@ -9483,7 +9478,7 @@ if (editBookingForm) {
             
             const data = await res.json();
             // Cautions actives = autorisées (pre-auth) ou capturées (paid) — pas les pending (lien pas encore payé)
-            const activeDeposits = data.filter(r => r.deposit && ['authorized','paid'].includes(r.deposit.status));
+            const activeDeposits = data.filter(r => r.deposit && ['authorized','captured'].includes(r.deposit.status));
 
             if (!activeDeposits.length) {
               contentEl.innerHTML = `
