@@ -8944,6 +8944,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
       }
     });
 
+    console.log('[deposits-kpi] userId=' + userId + ' | deposits trouvés en DB=' + depositsResult.rows.length + ' | statuts=' + JSON.stringify(depositsResult.rows.map(d => ({uid: d.reservation_uid, status: d.status}))));
+
     // ── 2. Toutes les réservations depuis la DB (TOUTES sources) ──────────
     // On lit directement depuis reservations — pas depuis reservationsStore
     // qui ne contient que les résas iCal/Channex.
