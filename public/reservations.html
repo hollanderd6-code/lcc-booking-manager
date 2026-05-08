@@ -292,6 +292,18 @@ html[data-theme-v3="1"] main.main-content {
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
+/* Mobile : override overflow:hidden du app-container qui clippe le mobileView */
+@media (max-width: 1366px) {
+  html[data-theme-v3="1"] .app-container {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  html[data-theme-v3="1"] main.main-content {
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh !important;
+  }
+}
 @media (min-width: 1367px) {
   html[data-theme-v3="1"] main.main-content {
     padding-top: 70px !important;
@@ -505,7 +517,7 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
   </div>
   </div>
   <!-- Selects : scroll horizontal libre, PAS sticky pour eviter le clipping iOS -->
-  <div id="mobileFiltersRow" style="display:flex !important;flex-wrap:nowrap !important;flex-direction:row !important;gap:8px;padding:8px 14px;overflow-x:scroll;-webkit-overflow-scrolling:touch;background:#e8f5e9;border-bottom:2px solid #1A7A5E;min-height:56px;width:100%;box-sizing:border-box;">
+  <div class="mobile-filters-scroll">
     <select id="mobilePropFilter" onchange="applyFilters()" style="flex-shrink:0;height:40px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 20px 0 14px;background:white;min-width:155px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
       <option value="">Tous logements</option>
     </select>
@@ -530,7 +542,7 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
       <option value="cancelled">Annulé</option>
       <option value="completed">Terminé</option>
     </select>
-  </div>
+  </div><!-- /mobile-filters-scroll -->
   <div class="mobile-cards-list">
   <div id="mobileCards"></div>
   </div>
