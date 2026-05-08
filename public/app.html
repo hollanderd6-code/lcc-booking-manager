@@ -10130,7 +10130,7 @@ async function loadCleaningChecklists() {
       const pending = cleaningChecklists.filter(cl => {
         const isCompleted = cl.is_validated || cl.owner_status === 'validated';
         const isRejected = cl.owner_status === 'rejected';
-        return !isCompleted && !isRejected;
+        return !isCompleted && !isRejected && cl.completed_at;
       });
       const val = document.getElementById('kpiChecklistsValue');
       const sub = document.getElementById('kpiChecklistsSub');
