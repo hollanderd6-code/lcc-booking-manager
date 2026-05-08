@@ -4896,11 +4896,17 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   }
   function parseDateSafe(v) {
     if (!v) return null;
-    // if "YYYY-MM-DD", create local date (avoids timezone surprises)
     const s = String(v);
+    // Format YYYY-MM-DD → date locale sans problème de timezone
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
       const [y,m,dd] = s.split('-').map(Number);
       return new Date(y, m-1, dd, 0, 0, 0, 0);
+    }
+    // Format ISO avec timestamp (ex: 2026-05-09T00:00:00.000Z venant du serveur)
+    // → extraire seulement la partie date pour éviter le décalage UTC→locale
+    const isoDateMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+    if (isoDateMatch) {
+      return new Date(Number(isoDateMatch[1]), Number(isoDateMatch[2])-1, Number(isoDateMatch[3]), 0, 0, 0, 0);
     }
     const d = new Date(v);
     return isNaN(d.getTime()) ? null : d;
@@ -5294,9 +5300,20 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       
       const data = await res.json();
       // Cautions prises = autorisées ou capturées (pas pending = lien pas encore payé)
-      const authDeposits = data.filter(r => r.deposit && r.deposit.status === 'authorized');
-      const paidDeposits = data.filter(r => r.deposit && r.deposit.status === 'paid');
-      const count = authDeposits.length + paidDeposits.length;
+      // Filtrer : seulement les résas dont la fin est >= hier (toujours actives ou très récentes)
+      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday.setHours(0,0,0,0);
+      const activeData = data.filter(r => {
+        if (!r.endDate && !r.startDate) return true; // pas de date = on garde
+        const endRaw = r.endDate || r.startDate;
+        const endD = parseDateSafe ? parseDateSafe(endRaw) : new Date(endRaw);
+        return endD && endD >= yesterday;
+      });
+      // Statuts valides : authorized (caution bloquée) + captured (capturée/encaissée)
+      // Note : 'paid' n'existe pas dans ce système — c'est 'captured'
+      const authDeposits     = activeData.filter(r => r.deposit && r.deposit.status === 'authorized');
+      const capturedDeposits = activeData.filter(r => r.deposit && r.deposit.status === 'captured');
+      const count = authDeposits.length + capturedDeposits.length;
+      console.log('🛡️ KPI Cautions =', count, '| total résas API =', data.length, '| actives =', activeData.length, '| authorized =', authDeposits.length, '| captured =', capturedDeposits.length);
 
       depositsVal.textContent = count;
       
@@ -5309,8 +5326,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           depositsSub.textContent = 'aucune caution prise';
         } else {
           const parts = [];
-          if (authDeposits.length) parts.push(authDeposits.length + ' autorisée' + (authDeposits.length > 1 ? 's' : ''));
-          if (paidDeposits.length) parts.push(paidDeposits.length + ' capturée' + (paidDeposits.length > 1 ? 's' : ''));
+          if (authDeposits.length)     parts.push(authDeposits.length     + ' autorisée'  + (authDeposits.length     > 1 ? 's' : ''));
+          if (capturedDeposits.length) parts.push(capturedDeposits.length + ' capturée'   + (capturedDeposits.length > 1 ? 's' : ''));
           depositsSub.textContent = parts.join(' · ');
         }
       }
@@ -5832,6 +5849,8 @@ try {
 
       // Charger les cautions pour la KPI
       loadAndUpdateDepositsKPI();
+      // Log diagnostic KPI ménage
+      console.log('🧹 KPI Ménage 48h =', cleaning48h, '| résas analysées =', (reservations||[]).length);
     } catch (e) {
       console.warn('Erreur KPI dashboard', e);
     }
