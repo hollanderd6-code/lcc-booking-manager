@@ -504,8 +504,8 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()" style="padding-left:38px;"/>
   </div>
   </div>
-  <!-- Selects filtres -->
-  <div id="mobileFiltersRow" style="display:flex !important;flex-direction:row !important;gap:8px !important;padding:6px 14px 10px !important;overflow-x:auto !important;-webkit-overflow-scrolling:touch !important;scrollbar-width:none !important;background:rgb(245,242,236) !important;border-bottom:1px solid rgba(200,184,154,0.3) !important;box-sizing:border-box !important;width:100% !important;">
+  <!-- Selects : scroll horizontal libre, PAS sticky pour eviter le clipping iOS -->
+  <div id="mobileFiltersRow" style="display:flex !important;flex-wrap:nowrap !important;flex-direction:row !important;gap:8px;padding:8px 14px;overflow-x:scroll;-webkit-overflow-scrolling:touch;background:#e8f5e9;border-bottom:2px solid #1A7A5E;min-height:56px;width:100%;box-sizing:border-box;">
     <select id="mobilePropFilter" onchange="applyFilters()" style="flex-shrink:0;height:40px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 20px 0 14px;background:white;min-width:155px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
       <option value="">Tous logements</option>
     </select>
@@ -530,7 +530,7 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
       <option value="cancelled">Annulé</option>
       <option value="completed">Terminé</option>
     </select>
-  </div><!-- /mobileFiltersRow -->
+  </div>
   <div class="mobile-cards-list">
   <div id="mobileCards"></div>
   </div>
