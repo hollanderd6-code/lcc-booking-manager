@@ -5315,14 +5315,13 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       // Log de debug : voir les résas qui ont un deposit dans la réponse
       const withDeposit = activeData.filter(r => r.deposit !== null && r.deposit !== undefined);
       console.log('🛡️ KPI Cautions =', count, '| total API =', data.length, '| actives =', activeData.length, '| avec deposit =', withDeposit.length, '| authorized =', authDeposits.length, '| captured =', capturedDeposits.length);
-      if (withDeposit.length > 0) {
-        console.log('🛡️ Deposits présents:', withDeposit.map(r => ({ uid: r.reservationUid, status: r.deposit?.status, end: r.endDate })));
-      } else {
-        // Vérifier si des résas ont un deposit dans data complet
-        const allWithDeposit = data.filter(r => r.deposit !== null && r.deposit !== undefined);
-        console.log('🛡️ Dans data complet (sans filtre date):', allWithDeposit.length, 'avec deposit');
-        if (allWithDeposit.length > 0) console.log('🛡️ Exemple:', allWithDeposit[0]);
-      }
+      // Chercher spécifiquement la résa M13 / Șaran Cristina
+      const m13 = data.find(r => r.propertyId === 'u_mmj5c6hq-m13' || (r.reservationUid && r.reservationUid.includes('b5d6b052')));
+      console.log('🛡️ Résa M13 dans data:', m13 ? { uid: m13.reservationUid, deposit: m13.deposit, end: m13.endDate } : 'NON TROUVÉE');
+      // Statuts de tous les deposits présents
+      const allWithDeposit = data.filter(r => r.deposit !== null && r.deposit !== undefined);
+      const statusCounts = allWithDeposit.reduce((acc, r) => { acc[r.deposit.status] = (acc[r.deposit.status]||0)+1; return acc; }, {});
+      console.log('🛡️ Deposits présents par statut:', statusCounts, '| total avec deposit:', allWithDeposit.length);
 
       depositsVal.textContent = count;
       depositsVal.style.color = count >= 1 ? '#10B981' : '#000000';
