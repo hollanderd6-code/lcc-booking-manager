@@ -2648,7 +2648,7 @@ async function shouldSendNotification(userId, prefKey) {
 // requiredPermission : colonne permission (ex: 'can_view_calendar')
 // notifColumn (optionnel) : colonne notif_sub_* à vérifier en plus
 // ============================================================
-async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn, propertyId) {
+async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission, title, body, data, notifColumn, propertyId, excludeTokens) {
   data = data || {};
   // Extraire propertyId depuis data si pas passé directement
   if (!propertyId && data.propertyId) propertyId = data.propertyId;
@@ -2692,8 +2692,10 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
       return;
     }
 
-    const tokens = result.rows.map(function(r) { return r.fcm_token; });
+    const tokens = result.rows.map(function(r) { return r.fcm_token; })
+      .filter(function(t) { return !excludeTokens || !excludeTokens.has(t); });
     console.log('📨 Notif sous-comptes [' + requiredPermission + ']: ' + tokens.length + ' destinataire(s)');
+    if (!tokens.length) return;
     await sendNotificationToMultiple(tokens, title, body, data);
     console.log('✅ Notif sous-comptes envoyée à ' + tokens.length + ' appareil(s)');
   } catch (err) {
@@ -11785,9 +11787,13 @@ app.put('/api/cleaning/checklists/:id/validate',
         const propertyName = displayName(property) || cl.property_id;
         const checkoutFmt = cl.checkout_date ? new Date(cl.checkout_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
 
+        // Collecter tous les tokens déjà notifiés pour éviter les doublons
+        const alreadyNotifiedTokens = new Set();
+
         // Token FCM du cleaner (via user_fcm_tokens lié au cleaner)
         const cleanerRow = await pool.query('SELECT c.user_id, c.name, uft.fcm_token FROM cleaners c LEFT JOIN user_fcm_tokens uft ON uft.user_id = c.user_id WHERE c.id = $1 LIMIT 1', [cl.cleaner_id]);
         if (cleanerRow.rows.length > 0 && cleanerRow.rows[0].fcm_token) {
+          alreadyNotifiedTokens.add(cleanerRow.rows[0].fcm_token);
           await sendNotification(
             cleanerRow.rows[0].fcm_token,
             '✅ Ménage validé — ' + propertyName,
@@ -11800,22 +11806,27 @@ app.put('/api/cleaning/checklists/:id/validate',
         // Si cleaner est un sous-compte → notif sur son token de sous-compte
         const cleanerSubRow = await pool.query('SELECT uft.fcm_token FROM cleaners c JOIN sub_accounts sa ON sa.id = c.sub_account_id JOIN user_fcm_tokens uft ON uft.sub_account_id = sa.id WHERE c.id = $1 AND uft.fcm_token IS NOT NULL', [cl.cleaner_id]);
         for (const row of cleanerSubRow.rows) {
-          await sendNotification(
-            row.fcm_token,
-            '✅ Ménage validé — ' + propertyName,
-            'Super travail ! Le ménage du ' + checkoutFmt + ' a été validé.',
-            { type: 'cleaning_validated', checklistId: String(id), propertyId: cl.property_id }
-          );
+          if (!alreadyNotifiedTokens.has(row.fcm_token)) {
+            alreadyNotifiedTokens.add(row.fcm_token);
+            await sendNotification(
+              row.fcm_token,
+              '✅ Ménage validé — ' + propertyName,
+              'Super travail ! Le ménage du ' + checkoutFmt + ' a été validé.',
+              { type: 'cleaning_validated', checklistId: String(id), propertyId: cl.property_id }
+            );
+          }
         }
         if (cleanerSubRow.rows.length > 0) console.log(`📱 Notif validation envoyée au sous-compte cleaner`);
 
-        // 🔔 Notif sous-comptes manager (can_view_cleaning) — checklist validée
+        // 🔔 Notif sous-comptes manager (can_view_cleaning) — checklist validée (en excluant tokens déjà notifiés)
         await sendNotificationToSubAccountsOf(
           userId, 'can_view_cleaning',
           '✅ Ménage validé — ' + propertyName,
           'Le ménage du ' + checkoutFmt + ' a été validé.',
           { type: 'cleaning_validated', checklistId: String(id), propertyId: cl.property_id },
-          'notif_sub_cleaning_completed'
+          'notif_sub_cleaning_completed',
+          null,
+          alreadyNotifiedTokens
         );
         console.log(`📨 Notif validation envoyée aux sous-comptes managers`);
       } catch(notifErr) {
