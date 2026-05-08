@@ -9027,7 +9027,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
       ' LEFT JOIN properties p ON p.id = r.property_id' +
       ' WHERE r.user_id = $1' +
       ' AND r.property_id IN (' + placeholders + ')' +
-      ' AND (r.status != 'cancelled' OR ' + cancelledWithDepCondition + ')' +
+' AND (r.status != \'cancelled\' OR ' + cancelledWithDepCondition + ')' +
       ' ORDER BY r.start_date DESC',
       [userId, ...propIds, ...extraParams]
     );
