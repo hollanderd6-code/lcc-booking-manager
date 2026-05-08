@@ -413,8 +413,9 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
   /* Selects : juste en dessous, scroll horizontal libre */
   .mobile-filters-scroll {
     display: flex !important;
+    flex-wrap: nowrap !important;
     gap: 8px !important;
-    padding: 0 14px 10px !important;
+    padding: 8px 14px 10px !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
@@ -423,10 +424,16 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     border-bottom: 1px solid rgba(200, 184, 154, 0.3) !important;
   }
   .mobile-filters-scroll::-webkit-scrollbar { display: none !important; }
+  .mobile-filters-scroll select {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
 
   /* Cartes avec padding horizontal */
   .mobile-cards-list {
-    padding: 8px 14px 0 !important;
+    padding: 12px 14px 0 !important;
   }
 
   /* 6. BOTTOM TABS */
