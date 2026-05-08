@@ -507,6 +507,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       --booking-color-hotels: #D32F2F;
       --booking-color-abritel: #0096D6;
       --booking-color-gites: #2E7D32;
+      --booking-color-bhguest: #7C3AED;
       
       --cell-hover-bg: rgba(16, 185, 129, 0.08);
     }
@@ -1007,6 +1008,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .booking-block.direct  { background: linear-gradient(135deg, #F97316, #EA6A00) !important; }
 .booking-block.abritel { background: linear-gradient(135deg, #0096D6, #0077B3) !important; }
 .booking-block.gites   { background: linear-gradient(135deg, #2E7D32, #1B5E20) !important; }
+.booking-block.bhguest { background: linear-gradient(135deg, #7C3AED, #5B21B6) !important; }
 html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-blocked {
   background: repeating-linear-gradient(
     45deg,
@@ -5851,20 +5853,32 @@ try {
   var MS = 86400000;
 
   var PLT = {
-    airbnb:  { bg:'#FF5A5F', label:'Airbnb',       cls:'airbnb'  },
-    booking: { bg:'#003580', label:'Booking.com',   cls:'booking' },
-    bdc:     { bg:'#003580', label:'Booking.com',   cls:'booking' },
-    direct:  { bg:'#1A7A5E', label:'Direct',        cls:'direct'  },
-    manuel:  { bg:'#1A7A5E', label:'Direct',        cls:'direct'  },
-    abritel: { bg:'#0096D6', label:'Abritel',       cls:'abritel' },
-    expedia: { bg:'#FFC72C', label:'Expedia',       cls:'expedia' },
-    vrbo:    { bg:'#1569C7', label:'Vrbo',          cls:'vrbo'    },
-    gites:   { bg:'#2E7D32', label:'Gîtes',         cls:'gites'   },
+    airbnb:            { bg:'#FF5A5F', label:'Airbnb',       cls:'airbnb'   },
+    booking:           { bg:'#003580', label:'Booking.com',   cls:'booking'  },
+    bdc:               { bg:'#003580', label:'Booking.com',   cls:'booking'  },
+    direct:            { bg:'#1A7A5E', label:'Direct',        cls:'direct'   },
+    manuel:            { bg:'#1A7A5E', label:'Direct',        cls:'direct'   },
+    abritel:           { bg:'#0096D6', label:'Abritel',       cls:'abritel'  },
+    expedia:           { bg:'#FFC72C', label:'Expedia',       cls:'expedia'  },
+    vrbo:              { bg:'#1569C7', label:'Vrbo',          cls:'vrbo'     },
+    gites:             { bg:'#2E7D32', label:'Gîtes',         cls:'gites'    },
+    // BHguest — réservations via l'app Boostinghost Guest
+    guest_app:         { bg:'#7C3AED', label:'BHGuest',       cls:'bhguest'  },
+    bhguest:           { bg:'#7C3AED', label:'BHGuest',       cls:'bhguest'  },
+    'boostinghost guest': { bg:'#7C3AED', label:'BHGuest',    cls:'bhguest'  },
+    boostinghost_guest:{ bg:'#7C3AED', label:'BHGuest',       cls:'bhguest'  },
   };
 
   function pltInfo(r) {
-    var k = ((r.platform||r.source||'direct').toLowerCase().replace(/\.com$/,'').replace(/booking\.com/,'booking'));
-    return PLT[k] || { bg:'#6B7280', label:(k||'Direct'), cls:'direct' };
+    var raw = (r.platform || r.source || 'direct').toLowerCase().trim();
+    // Normaliser booking.com
+    raw = raw.replace(/\.com$/, '').replace(/booking\.com/, 'booking');
+    // Correspondance exacte d'abord
+    if (PLT[raw]) return PLT[raw];
+    // Correspondances partielles pour BHguest
+    if (raw.includes('guest_app') || raw.includes('bhguest') || raw.includes('boostinghost')) return PLT['guest_app'];
+    // Fallback
+    return { bg:'#6B7280', label:(raw||'Direct'), cls:'unknown' };
   }
 
   function ds(d) {
@@ -9091,8 +9105,10 @@ if (editBookingForm) {
       } else {
         const uid = currentBookingData.uid || currentBookingData.id;
         const platform = (currentBookingData.source || currentBookingData.platform || '').toLowerCase();
-        const isOTA = platform && !['direct','manual',''].includes(platform) && platform !== 'block';
-        const isManualRes = currentBookingData.isManual || currentBookingData.type === 'manual' ||
+        const BHGUEST_PLATFORMS = ['guest_app', 'bhguest', 'boostinghost_guest', 'boostinghost guest'];
+        const isBHGuest = BHGUEST_PLATFORMS.includes(platform) || BHGUEST_PLATFORMS.includes(currentBookingData.source);
+        const isOTA = !isBHGuest && platform && !['direct','manual',''].includes(platform) && platform !== 'block';
+        const isManualRes = isBHGuest || currentBookingData.isManual || currentBookingData.type === 'manual' ||
           platform === 'direct' || platform === 'manual' || !platform;
 
         if (isOTA && !isManualRes) {
