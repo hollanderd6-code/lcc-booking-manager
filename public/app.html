@@ -4242,7 +4242,43 @@ window.closeChecklistsKpiModal = function() {
     window.cleanGuestName = cleanGuestName;
     window.getGuestInitial = getGuestInitial;
     window.getGuestPhone = getGuestPhone;
-    
+
+    // ── Helpers plateforme (KPI checkin / ménage) ──
+    window.getPlatformLabel = function(src, otaName) {
+      if (otaName) {
+        const o = String(otaName).toUpperCase().trim();
+        if (o === 'ABB' || o.includes('AIRBNB'))  return 'Airbnb';
+        if (o === 'BDC' || o.includes('BOOKING')) return 'Booking.com';
+        if (o === 'EXP' || o.includes('EXPEDIA')) return 'Expedia';
+        if (o === 'VRBO' || o === 'HOMEAWAY' || o.includes('VRBO')) return 'Vrbo';
+        if (o.includes('ABRITEL')) return 'Abritel';
+      }
+      if (src) {
+        const v = String(src).toLowerCase().trim();
+        if (v === 'channex') return 'Direct'; // channex sans ota_name = direct
+        if (v.includes('airbnb'))  return 'Airbnb';
+        if (v.includes('booking')) return 'Booking.com';
+        if (v.includes('expedia')) return 'Expedia';
+        if (v.includes('vrbo') || v.includes('homeaway')) return 'Vrbo';
+        if (v.includes('abritel')) return 'Abritel';
+        if (v === 'direct') return 'Direct';
+        return src;
+      }
+      return 'Direct';
+    };
+
+    window.getPlatformDotColor = function(src, otaName) {
+      const label = window.getPlatformLabel(src, otaName);
+      const colors = {
+        'Airbnb': '#FF5A5F',
+        'Booking.com': '#003580',
+        'Expedia': '#FFC72C',
+        'Vrbo': '#1569C7',
+        'Abritel': '#0096D6',
+      };
+      return colors[label] || '#F97316';
+    };
+
     console.log('✅ Fonctions helpers voyageur chargées');
     
     document.addEventListener('DOMContentLoaded', function () {
