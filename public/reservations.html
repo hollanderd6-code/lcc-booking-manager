@@ -397,12 +397,14 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     top: calc(60px + env(safe-area-inset-top, 0px)) !important;
     z-index: 900 !important;
     background: rgb(245, 242, 236) !important;
-    padding: 8px 14px 6px !important;
+    padding: 8px 0 0 !important;
+    overflow: visible !important;
   }
 
   /* Loupe SVG */
   .mobile-search {
     position: relative !important;
+    padding: 0 14px !important;
   }
   .mobile-search input {
     padding-left: 38px !important;
@@ -511,14 +513,13 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
 
 <!-- MOBILE VIEW -->
 <div class="mobile-view" id="mobileView">
-  <!-- Barre recherche sticky -->
+  <!-- Barre recherche + filtres sticky -->
   <div class="mobile-sticky-search">
   <div class="mobile-search">
     <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9CA3AF;pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="mobileSearch" placeholder="Rechercher…" oninput="applyFilters()" style="padding-left:38px;"/>
   </div>
-  </div>
-  <!-- Selects : scroll horizontal libre, PAS sticky pour eviter le clipping iOS -->
+  <!-- Selects : scroll horizontal libre, dans le bloc sticky -->
   <div class="mobile-filters-scroll">
     <select id="mobilePropFilter" onchange="applyFilters()" style="flex-shrink:0;height:40px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:1px solid rgba(0,0,0,.07);padding:0 20px 0 14px;background:white;min-width:155px;-webkit-appearance:none;appearance:none;color:#1A1F2E;">
       <option value="">Tous logements</option>
@@ -545,6 +546,7 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
       <option value="completed">Terminé</option>
     </select>
   </div><!-- /mobile-filters-scroll -->
+  </div><!-- /mobile-sticky-search -->
   <div class="mobile-cards-list">
   <div id="mobileCards"></div>
   </div>
