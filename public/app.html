@@ -5297,9 +5297,11 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (!res.ok) throw new Error('Erreur API');
       
       const data = await res.json();
-      // Filtrer : résas dont la fin est >= hier (actives ou très récentes)
+      // Filtrer : résas actives OU résas annulées/passées avec deposit encore actif
       const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday.setHours(0,0,0,0);
       const activeData = data.filter(r => {
+        // Toujours garder si deposit authorized ou captured (même résa annulée)
+        if (r.deposit && ['authorized','captured'].includes(r.deposit.status)) return true;
         const endRaw = r.endDate || r.startDate;
         if (!endRaw) return true;
         const endD = parseDateSafe(endRaw);
