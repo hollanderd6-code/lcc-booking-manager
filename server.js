@@ -26339,6 +26339,9 @@ app.get('/api/channex/property-status/:property_id', authenticateToken, async (r
 });
 
 // ── Webhook Channex — réception des réservations ─────────────
+// ── Dédup webhook Channex (évite double traitement si 2 webhooks enregistrés) ──
+const _processedChannexRevisions = new Set();
+
 app.post('/api/channex/webhook', async (req, res) => {
   try {
     const payload = req.body;
@@ -26347,6 +26350,17 @@ app.post('/api/channex/webhook', async (req, res) => {
     // ✅ Channex envoie payload.booking_id + payload.revision_id directement
     const bookingId  = payload.booking_id  || payload.payload?.booking_id;
     const revisionId = payload.revision_id || payload.payload?.revision_id;
+
+    // ── Dédup : ignorer si déjà traité dans les 60 dernières secondes ──
+    const dedupKey = revisionId || bookingId;
+    if (dedupKey) {
+      if (_processedChannexRevisions.has(dedupKey)) {
+        console.log(`⏭️ [CHANNEX WEBHOOK] Déjà traité: ${dedupKey} — skip`);
+        return res.json({ success: true });
+      }
+      _processedChannexRevisions.add(dedupKey);
+      setTimeout(() => _processedChannexRevisions.delete(dedupKey), 60_000);
+    }
 
     if (!bookingId) {
       console.warn('⚠️ [CHANNEX WEBHOOK] Pas de booking_id dans le payload');
@@ -27243,6 +27257,7 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
         // les messages de la conversation (comparaison normalisée)
         const dbTexts = new Set(
           dbMessages.rows
+            .filter(m => m.sender_type === 'guest')
             .map(m => (m.message || '').trim().toLowerCase())
         );
 
