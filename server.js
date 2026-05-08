@@ -8954,6 +8954,16 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     console.log('[deposits-kpi] propIds=' + propIds.length + ': ' + propIds.join(', '));
     if (!propIds.length) return res.json([]);
 
+    // DEBUG : vérifier la résa M13 de Saran directement
+    const m13Debug = await pool.query(
+      `SELECT uid, channex_booking_id, guest_name, start_date, end_date
+       FROM reservations WHERE property_id = 'u_mmj5c6hq-m13' AND user_id = $1
+       ORDER BY start_date DESC LIMIT 5`,
+      [userId]
+    );
+    console.log('[deposits-kpi] Résas M13:', JSON.stringify(m13Debug.rows.map(r => ({uid: r.uid, chx: r.channex_booking_id, guest: r.guest_name}))));
+    console.log('[deposits-kpi] depositsMap keys (authorized):', [...depositsMap.entries()].filter(([k,v]) => v.status === 'authorized').map(([k]) => k));
+
     // ── 1. Tous les deposits de l'utilisateur ──────────────────────────────
     const depositsResult = await pool.query(
       `SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at
