@@ -9004,6 +9004,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     // On lit directement depuis reservations — pas depuis reservationsStore
     // qui ne contient que les résas iCal/Channex.
     const placeholders = propIds.map((_, i) => '$' + (i + 2)).join(',');
+    const userIdSubParam = '$' + (propIds.length + 2); // paramètre séparé pour la subquery
     const resaResult = await pool.query(
       `SELECT
          r.uid, r.channex_booking_id, r.property_id, r.start_date, r.end_date,
@@ -9022,12 +9023,12 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
            r.status != 'cancelled'
            OR r.uid IN (
              SELECT reservation_uid FROM deposits
-             WHERE user_id = $1
+             WHERE user_id = ${userIdSubParam}
                AND status IN ('authorized','captured')
            )
          )
        ORDER BY r.start_date DESC`,
-      [userId, ...propIds]
+      [userId, ...propIds, userId]
     );
 
     // DEBUG : vérifier la résa M13 dans resaResult
