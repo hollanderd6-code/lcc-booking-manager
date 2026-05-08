@@ -9018,10 +9018,26 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
        LEFT JOIN properties p ON p.id = r.property_id
        WHERE r.user_id = $1
          AND r.property_id IN (${placeholders})
-         AND r.status != 'cancelled'
+         AND (
+           r.status != 'cancelled'
+           OR r.uid IN (
+             SELECT reservation_uid FROM deposits
+             WHERE user_id = $1
+               AND status IN ('authorized','captured')
+           )
+         )
        ORDER BY r.start_date DESC`,
       [userId, ...propIds]
     );
+
+    // DEBUG : vérifier la résa M13 dans resaResult
+    const m13Row = resaResult.rows.find(r => r.property_id === 'u_mmj5c6hq-m13');
+    if (m13Row) {
+      const depTest = depositsMap.get(m13Row.uid) || depositsMap.get('CHX_' + m13Row.channex_booking_id) || depositsMap.get(m13Row.channex_booking_id);
+      console.log('[deposits-kpi] M13 row:', JSON.stringify({ uid: m13Row.uid, chx: m13Row.channex_booking_id, deposit: depTest?.status || 'NON TROUVÉ' }));
+    } else {
+      console.log('[deposits-kpi] M13 ABSENTE de resaResult (total rows=' + resaResult.rows.length + ')');
+    }
 
     // ── 3. Construire le résultat ──────────────────────────────────────────
     const result = resaResult.rows.map(r => {
