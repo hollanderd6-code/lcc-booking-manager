@@ -9125,7 +9125,7 @@ if (editBookingForm) {
               email:            document.getElementById('editGuestEmail')?.value || '',
               platform:         document.getElementById('editPlatform')?.value || 'direct',
               price:            document.getElementById('editPrice')?.value ? parseFloat(document.getElementById('editPrice').value) : null,
-              notes:            notes.trim() !== '' ? notes.trim() : (currentBookingData.notes || ''),
+              notes:            notes.trim(),
               guest_country:    document.getElementById('editGuestCountry')?.value || null,
               occupancy_adults: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
               amount_rooms:     document.getElementById('editPriceRooms')?.value ? parseFloat(document.getElementById('editPriceRooms').value) : null,
