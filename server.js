@@ -27257,7 +27257,6 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
         // les messages de la conversation (comparaison normalisée)
         const dbTexts = new Set(
           dbMessages.rows
-            .filter(m => m.sender_type === 'guest')
             .map(m => (m.message || '').trim().toLowerCase())
         );
 
