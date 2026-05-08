@@ -686,7 +686,7 @@ async function processChannexBooking(pool, bookingData) {
     });
 
     console.log(`✅ [CHANNEX] Réservation créée: ${uid} | ${guest_name} | ${guest_country} | ${amount_total}${currency}`);
-    return result.rows[0];
+    return { ...result.rows[0], _isNew: true };
 
   } catch (e) {
     console.error('❌ [CHANNEX] Erreur traitement réservation:', e.message);
