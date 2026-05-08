@@ -8954,15 +8954,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     console.log('[deposits-kpi] propIds=' + propIds.length + ': ' + propIds.join(', '));
     if (!propIds.length) return res.json([]);
 
-    // DEBUG : vérifier la résa M13 de Saran directement
-    const m13Debug = await pool.query(
-      `SELECT uid, channex_booking_id, guest_name, start_date, end_date
-       FROM reservations WHERE property_id = 'u_mmj5c6hq-m13' AND user_id = $1
-       ORDER BY start_date DESC LIMIT 5`,
-      [userId]
-    );
-    console.log('[deposits-kpi] Résas M13:', JSON.stringify(m13Debug.rows.map(r => ({uid: r.uid, chx: r.channex_booking_id, guest: r.guest_name}))));
-    console.log('[deposits-kpi] depositsMap keys (authorized):', [...depositsMap.entries()].filter(([k,v]) => v.status === 'authorized').map(([k]) => k));
+
 
     // ── 1. Tous les deposits de l'utilisateur ──────────────────────────────
     const depositsResult = await pool.query(
@@ -9004,41 +8996,42 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     // On lit directement depuis reservations — pas depuis reservationsStore
     // qui ne contient que les résas iCal/Channex.
     const placeholders = propIds.map((_, i) => '$' + (i + 2)).join(',');
-    const userIdSubParam = '$' + (propIds.length + 2); // paramètre séparé pour la subquery
+
+    // Récupérer d'abord les uids de deposits actifs pour cet user (pour inclure résas annulées)
+    const activeDepUids = await pool.query(
+      `SELECT reservation_uid FROM deposits WHERE user_id = $1 AND status IN ('authorized','captured')`,
+      [userId]
+    );
+    const activeDepUidList = activeDepUids.rows.map(r => r.reservation_uid).filter(Boolean);
+
+    // Construire la condition pour les résas annulées avec deposit actif
+    let cancelledWithDepCondition = 'FALSE';
+    let extraParams = [];
+    if (activeDepUidList.length > 0) {
+      const depPlaceholders = activeDepUidList.map((_, i) => '$' + (propIds.length + 2 + i)).join(',');
+      cancelledWithDepCondition = 'r.uid IN (' + depPlaceholders + ')';
+      extraParams = activeDepUidList;
+    }
+
     const resaResult = await pool.query(
-      `SELECT
-         r.uid, r.channex_booking_id, r.property_id, r.start_date, r.end_date,
-         r.guest_name, r.guest_first_name, r.guest_last_name,
-         r.guest_email, r.guest_phone, r.guest_country,
-         r.occupancy_adults, r.occupancy_children,
-         r.amount_total, r.amount_rooms, r.amount_taxes,
-         r.amount_cleaning, r.ota_commission, r.host_payout,
-         r.currency, r.source, r.platform, r.ota_name,
-         p.name as prop_name, p.internal_name as prop_internal_name
-       FROM reservations r
-       LEFT JOIN properties p ON p.id = r.property_id
-       WHERE r.user_id = $1
-         AND r.property_id IN (${placeholders})
-         AND (
-           r.status != 'cancelled'
-           OR r.uid IN (
-             SELECT reservation_uid FROM deposits
-             WHERE user_id = ${userIdSubParam}
-               AND status IN ('authorized','captured')
-           )
-         )
-       ORDER BY r.start_date DESC`,
-      [userId, ...propIds, userId]
+      'SELECT' +
+      ' r.uid, r.channex_booking_id, r.property_id, r.start_date, r.end_date,' +
+      ' r.guest_name, r.guest_first_name, r.guest_last_name,' +
+      ' r.guest_email, r.guest_phone, r.guest_country,' +
+      ' r.occupancy_adults, r.occupancy_children,' +
+      ' r.amount_total, r.amount_rooms, r.amount_taxes,' +
+      ' r.amount_cleaning, r.ota_commission, r.host_payout,' +
+      ' r.currency, r.source, r.platform, r.ota_name,' +
+      ' p.name as prop_name, p.internal_name as prop_internal_name' +
+      ' FROM reservations r' +
+      ' LEFT JOIN properties p ON p.id = r.property_id' +
+      ' WHERE r.user_id = $1' +
+      ' AND r.property_id IN (' + placeholders + ')' +
+      ' AND (r.status != 'cancelled' OR ' + cancelledWithDepCondition + ')' +
+      ' ORDER BY r.start_date DESC',
+      [userId, ...propIds, ...extraParams]
     );
 
-    // DEBUG : vérifier la résa M13 dans resaResult
-    const m13Row = resaResult.rows.find(r => r.property_id === 'u_mmj5c6hq-m13');
-    if (m13Row) {
-      const depTest = depositsMap.get(m13Row.uid) || depositsMap.get('CHX_' + m13Row.channex_booking_id) || depositsMap.get(m13Row.channex_booking_id);
-      console.log('[deposits-kpi] M13 row:', JSON.stringify({ uid: m13Row.uid, chx: m13Row.channex_booking_id, deposit: depTest?.status || 'NON TROUVÉ' }));
-    } else {
-      console.log('[deposits-kpi] M13 ABSENTE de resaResult (total rows=' + resaResult.rows.length + ')');
-    }
 
     // ── 3. Construire le résultat ──────────────────────────────────────────
     const result = resaResult.rows.map(r => {
