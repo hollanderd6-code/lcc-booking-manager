@@ -8940,12 +8940,18 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     }
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
-    // Propriétés accessibles (filtre sous-compte)
-    let userProps = getUserProperties(userId);
+    // Propriétés accessibles — lire depuis la DB pour être sûr d'avoir toutes les props
+    // (PROPERTIES en mémoire peut être désynchronisé si props créées après démarrage)
+    const propsResult = await pool.query(
+      `SELECT id, name, internal_name FROM properties WHERE user_id = $1`,
+      [userId]
+    );
+    let userProps = propsResult.rows;
     if (req.user.isSubAccount && req.subAccountData?.accessible_property_ids?.length > 0) {
       userProps = userProps.filter(p => req.subAccountData.accessible_property_ids.includes(p.id));
     }
     const propIds = userProps.map(p => p.id);
+    console.log('[deposits-kpi] propIds=' + propIds.length + ': ' + propIds.join(', '));
     if (!propIds.length) return res.json([]);
 
     // ── 1. Tous les deposits de l'utilisateur ──────────────────────────────
