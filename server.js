@@ -11373,8 +11373,8 @@ app.get('/api/cleaning/checklists',
          AND conv.user_id = cc.user_id
        WHERE cc.user_id = $1
        ORDER BY
-         CASE WHEN cc.is_validated = false AND cc.owner_status != 'validated' AND cc.owner_status != 'rejected' THEN 0 ELSE 1 END ASC,
-         cc.checkout_date DESC
+         CASE WHEN (cc.owner_status = 'pending' OR cc.owner_status IS NULL) AND cc.completed_at IS NOT NULL THEN 0 ELSE 1 END ASC,
+         cc.checkout_date DESC NULLS LAST
        LIMIT 100`,
       [userId]
     );
