@@ -7152,7 +7152,7 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
        WHERE uid = $18 AND user_id = $19`,
       [
         propertyId, start, end,
-        guestName || 'Réservation manuelle', notes || null, platform || 'MANUEL',
+        guestName || 'Réservation manuelle', (notes !== undefined ? (notes.trim() || null) : null), platform || 'MANUEL',
         price || 0, phone || null, email || null,
         guest_country || null, guest_address || null, guest_zip || null, occupancy_adults || null,
         amount_rooms || null, amount_cleaning || null, amount_taxes || null, ota_commission || null,
