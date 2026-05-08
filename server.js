@@ -5287,23 +5287,49 @@ async function sendDepositRequestMessages(io) {
       console.log(`💰 Caution ${conv.deposit_amount}€ requise pour ${conv.guest_name} - ${conv.property_name}`);
 
       // Vérifier si un lien de caution existe déjà
+      // Chercher par reservation_uid OU par property+date pour éviter les doublons
+      // même si le reservation_uid n'est pas encore renseigné dans la conversation
       const depositResult = await pool.query(
-        'SELECT * FROM deposits WHERE reservation_uid = $1 AND user_id = $2',
-        [conv.reservation_uid || '', conv.user_id]
+        `SELECT d.* FROM deposits d
+         WHERE d.user_id = $1
+           AND d.status NOT IN ('cancelled','expired','released')
+           AND (
+             (d.reservation_uid = $2 AND $2 != '')
+             OR d.property_id = $3
+           )
+           AND d.created_at > NOW() - INTERVAL '60 days'
+         ORDER BY d.created_at DESC LIMIT 1`,
+        [conv.user_id, conv.reservation_uid || '', conv.property_id]
       );
+
+      // Vérification plus stricte : chercher aussi par property+date dans reservations
+      let existingForThisGuest = null;
+      if (conv.reservation_uid) {
+        existingForThisGuest = depositResult.rows.find(d => d.reservation_uid === conv.reservation_uid);
+      }
+      if (!existingForThisGuest && depositResult.rows.length > 0) {
+        // Vérifier que c'est bien pour la même réservation via la date de début
+        const depRow = depositResult.rows[0];
+        const resaCheck = await pool.query(
+          `SELECT uid FROM reservations WHERE uid = $1 AND DATE(start_date) = $2`,
+          [depRow.reservation_uid, conv.reservation_start_date?.split('T')[0] || '']
+        );
+        if (resaCheck.rows.length > 0) existingForThisGuest = depRow;
+      }
 
       let depositUrl = null;
 
-      if (depositResult.rows.length > 0) {
-        const deposit = depositResult.rows[0];
+      if (existingForThisGuest) {
+        const deposit = existingForThisGuest;
         
-        // Si déjà payé, skip
-        if (deposit.status === 'paid') {
-          console.log(`✅ Caution déjà payée pour ${conv.guest_name}`);
+        // Si déjà autorisé/capturé/payé, skip
+        if (['authorized','captured','paid'].includes(deposit.status)) {
+          console.log(`✅ Caution déjà prise pour ${conv.guest_name} (status: ${deposit.status})`);
           continue;
         }
 
         depositUrl = deposit.checkout_url;
+        console.log(`🔁 Caution déjà créée (${deposit.status}) pour ${conv.guest_name}, réutilisation du lien`);
       } else {
         // Créer automatiquement le lien de caution
         console.log(`🔗 Création automatique lien caution pour ${conv.guest_name}`);
@@ -8930,17 +8956,29 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     );
     const depositsMap = new Map();
     depositsResult.rows.forEach(d => {
-      // Garder le deposit le plus récent par uid (au cas où doublon)
-      if (!depositsMap.has(d.reservation_uid) ||
-          depositsMap.get(d.reservation_uid).created_at < d.created_at) {
-        depositsMap.set(d.reservation_uid, {
-          id: d.id,
-          amountCents: d.amount_cents,
-          status: d.status,
-          checkoutUrl: d.checkout_url,
-          stripeSessionId: d.stripe_session_id,
-          createdAt: d.created_at
-        });
+      const obj = {
+        id: d.id,
+        amountCents: d.amount_cents,
+        status: d.status,
+        checkoutUrl: d.checkout_url,
+        stripeSessionId: d.stripe_session_id,
+        createdAt: d.created_at
+      };
+      // Garder le deposit le plus récent par clé (au cas où doublons)
+      const setIfNewer = (key) => {
+        if (!key) return;
+        if (!depositsMap.has(key) || depositsMap.get(key).createdAt < obj.createdAt) {
+          depositsMap.set(key, obj);
+        }
+      };
+
+      // Indexer par reservation_uid tel quel (ex: 'CHX_xxx' ou 'manual_xxx')
+      setIfNewer(d.reservation_uid);
+
+      // Si le uid commence par 'CHX_', indexer aussi sans le préfixe
+      // → pour matcher r.channex_booking_id directement
+      if (d.reservation_uid && d.reservation_uid.startsWith('CHX_')) {
+        setIfNewer(d.reservation_uid.slice(4)); // sans 'CHX_'
       }
     });
 
@@ -8952,7 +8990,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     const placeholders = propIds.map((_, i) => '$' + (i + 2)).join(',');
     const resaResult = await pool.query(
       `SELECT
-         r.uid, r.property_id, r.start_date, r.end_date,
+         r.uid, r.channex_booking_id, r.property_id, r.start_date, r.end_date,
          r.guest_name, r.guest_first_name, r.guest_last_name,
          r.guest_email, r.guest_phone, r.guest_country,
          r.occupancy_adults, r.occupancy_children,
@@ -8971,7 +9009,12 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
 
     // ── 3. Construire le résultat ──────────────────────────────────────────
     const result = resaResult.rows.map(r => {
-      const deposit = depositsMap.get(r.uid) || null;
+      // Chercher le deposit : d'abord par uid exact, puis par channex_booking_id
+      // (les deposits Channex ont reservation_uid = 'CHX_' + channex_booking_id)
+      const deposit = depositsMap.get(r.uid)
+        || (r.channex_booking_id ? depositsMap.get('CHX_' + r.channex_booking_id) : null)
+        || (r.channex_booking_id ? depositsMap.get(r.channex_booking_id) : null)
+        || null;
       const propMeta = userProps.find(p => p.id === r.property_id);
       const propName = r.prop_internal_name || r.prop_name
         || (propMeta ? (propMeta.internal_name || propMeta.name) : null)
