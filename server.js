@@ -26605,7 +26605,7 @@ app.post('/api/channex/webhook', async (req, res) => {
       }
 
       // ── Notification push si nouvelle réservation créée ──────
-      if (result && result.uid && result.uid.startsWith('CHX_') && result.status !== 'cancelled') {
+      if (result && result.uid && result.uid.startsWith('CHX_') && result.status !== 'cancelled' && result._isNew) {
         try {
           const attrs        = booking.attributes || booking;
           const otaName      = attrs.ota_name || 'Channex';
