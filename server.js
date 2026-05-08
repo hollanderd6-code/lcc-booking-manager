@@ -6840,6 +6840,35 @@ app.get('/api/test-whatsapp-user', async (req, res) => {
 // TEST CONNEXION BASE DE DONNÉES
 // ============================================
 
+// ── DIAGNOSTIC DEPOSITS — vérifier le contenu réel de la table ──
+app.get('/api/debug-deposits', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // Tous les deposits de l'user sans filtre
+    const all = await pool.query(
+      `SELECT d.id, d.reservation_uid, d.property_id, d.amount_cents, d.status,
+              d.stripe_session_id, d.created_at, d.updated_at,
+              r.guest_name, r.start_date, r.end_date, r.source
+       FROM deposits d
+       LEFT JOIN reservations r ON r.uid = d.reservation_uid
+       WHERE d.user_id = $1
+       ORDER BY d.created_at DESC`,
+      [userId]
+    );
+    res.json({
+      count: all.rows.length,
+      deposits: all.rows,
+      // Résumé par statut
+      byStatus: all.rows.reduce((acc, d) => {
+        acc[d.status] = (acc[d.status] || 0) + 1;
+        return acc;
+      }, {})
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/test-db', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW() AS now');
