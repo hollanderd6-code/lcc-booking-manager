@@ -8874,203 +8874,119 @@ app.get('/api/availability/:propertyId', async (req, res) => {
 
 app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(pool), async (req, res) => {
   try {
-    // Gérer compte principal ET sous-compte
+    // Résoudre userId (compte principal ou sous-compte)
     let userId;
-    
     if (req.user.isSubAccount) {
-      // C'est un sous-compte - récupérer le parent_user_id
-      const subAccountResult = await pool.query(
-        'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
-        [req.user.subAccountId]
-      );
-      
-      if (subAccountResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Sous-compte introuvable' });
-      }
-      
-      userId = subAccountResult.rows[0].parent_user_id;
-      console.log('🔐 Sous-compte - userId parent:', userId);
+      const sub = await pool.query('SELECT parent_user_id FROM sub_accounts WHERE id = $1', [req.user.subAccountId]);
+      if (!sub.rows.length) return res.status(404).json({ error: 'Sous-compte introuvable' });
+      userId = sub.rows[0].parent_user_id;
     } else {
-      // Compte principal
       userId = req.user.id;
-      console.log('👤 Compte principal - userId:', userId);
     }
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
-    // Vérifier que userId existe
-    if (!userId) {
-      return res.status(401).json({ error: 'Non autorisé' });
+    // Propriétés accessibles (filtre sous-compte)
+    let userProps = getUserProperties(userId);
+    if (req.user.isSubAccount && req.subAccountData?.accessible_property_ids?.length > 0) {
+      userProps = userProps.filter(p => req.subAccountData.accessible_property_ids.includes(p.id));
     }
+    const propIds = userProps.map(p => p.id);
+    if (!propIds.length) return res.json([]);
 
-    // ✅ Récupérer tous les deposits de l'utilisateur depuis PostgreSQL
-    const depositsResult = await pool.query(`
-      SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at
-      FROM deposits
-      WHERE user_id = $1
-    `, [userId]);
-    
-    // Créer un Map pour un accès rapide par reservationUid
+    // ── 1. Tous les deposits de l'utilisateur ──────────────────────────────
+    const depositsResult = await pool.query(
+      `SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at
+       FROM deposits WHERE user_id = $1`,
+      [userId]
+    );
     const depositsMap = new Map();
     depositsResult.rows.forEach(d => {
-      depositsMap.set(d.reservation_uid, {
-        id: d.id,
-        amountCents: d.amount_cents,
-        status: d.status,
-        checkoutUrl: d.checkout_url,
-        stripeSessionId: d.stripe_session_id,
-        createdAt: d.created_at
-      });
-    });
-
-    // Récupérer toutes les réservations enrichies depuis la DB (Channex + directes)
-    const dbResResult = await pool.query(`
-      SELECT
-        r.uid, r.property_id, r.start_date, r.end_date,
-        r.guest_name, r.guest_first_name, r.guest_last_name,
-        r.guest_email, r.guest_phone, r.guest_country,
-        r.occupancy_adults, r.occupancy_children,
-        r.amount_total, r.amount_rooms, r.amount_taxes,
-        r.amount_cleaning, r.ota_commission, r.host_payout,
-        r.days_breakdown, r.currency, r.source,
-        r.channex_booking_id, r.ota_name,
-        p.name as prop_name
-      FROM reservations r
-      LEFT JOIN properties p ON p.id = r.property_id
-      WHERE r.user_id = $1
-    `, [userId]);
-    
-    // Index par uid et par property+date pour matching
-    const dbResMap = new Map();
-    dbResResult.rows.forEach(r => {
-      dbResMap.set(r.uid, r);
-      if (r.channex_booking_id) dbResMap.set('CHX_' + r.channex_booking_id, r);
-      if (r.start_date) {
-        const d = r.start_date.toISOString ? r.start_date.toISOString().split('T')[0] : String(r.start_date).split('T')[0];
-        dbResMap.set(r.property_id + '_' + d, r);
-      }
-    });
-
-    const result = [];
-    let userProps = getUserProperties(userId);
-
-    // ✅ Filtrer par propriétés accessibles si sous-compte
-    if (req.user.isSubAccount && req.subAccountData?.accessible_property_ids?.length > 0) {
-      userProps = userProps.filter(p => 
-        req.subAccountData.accessible_property_ids.includes(p.id)
-      );
-      console.log('🔐 Sous-compte - propriétés filtrées:', userProps.map(p => p.id));
-    }
-
-    userProps.forEach(property => {
-      const reservations = reservationsStore.properties[property.id] || [];
-
-      reservations.forEach(r => {
-        // ✅ Chercher le deposit dans la Map
-        const deposit = depositsMap.get(r.uid) || null;
-        
-        // Chercher les données enrichies dans la DB
-        const startDate = r.start ? new Date(r.start).toISOString().split('T')[0] : '';
-        const dbData = dbResMap.get(r.uid)
-          || dbResMap.get(property.id + '_' + startDate)
-          || null;
-
-        // Nom complet du voyageur
-        const guestFirstName = (dbData?.guest_first_name) || '';
-        const guestLastName  = (dbData?.guest_last_name)  || '';
-        const guestPhone     = (dbData?.guest_phone)      || '';
-        const guestEmail     = (dbData?.guest_email)      || '';
-        let guestDisplayName = guestFirstName
-          ? (guestLastName ? guestFirstName + ' ' + guestLastName : guestFirstName)
-          : (dbData?.guest_name || r.guestName || '');
-
-        result.push({
-          reservationUid: r.uid,
-          propertyId: property.id,
-          propertyName: displayName(property),
-          startDate: r.start,
-          endDate: r.end,
-          guestName: guestDisplayName || r.guestName || '',
-          guestFirstName,
-          guestLastName,
-          guestDisplayName,
-          guestPhone,
-          guestEmail,
-          guestCountry:      dbData?.guest_country      || null,
-          guestAddress:      dbData?.guest_address      || null,
-          guestZip:          dbData?.guest_zip          || null,
-          occupancyAdults:   dbData?.occupancy_adults   || null,
-          occupancyChildren: dbData?.occupancy_children || 0,
-          amountTotal:    dbData?.amount_total    ? parseFloat(dbData.amount_total)    : null,
-          amountRooms:    dbData?.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
-          amountTaxes:    dbData?.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
-          amountCleaning: dbData?.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
-          otaCommission:  dbData?.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
-          hostPayout:     dbData?.host_payout     ? parseFloat(dbData.host_payout)     : null,
-          currency: dbData?.currency || 'EUR',
-          source: r.source || dbData?.source || '',
-          deposit: deposit
-            ? {
-                id: deposit.id,
-                amountCents: deposit.amountCents,
-                status: deposit.status,
-                checkoutUrl: deposit.checkoutUrl,
-                createdAt: deposit.createdAt
-              }
-            : null
+      // Garder le deposit le plus récent par uid (au cas où doublon)
+      if (!depositsMap.has(d.reservation_uid) ||
+          depositsMap.get(d.reservation_uid).created_at < d.created_at) {
+        depositsMap.set(d.reservation_uid, {
+          id: d.id,
+          amountCents: d.amount_cents,
+          status: d.status,
+          checkoutUrl: d.checkout_url,
+          stripeSessionId: d.stripe_session_id,
+          createdAt: d.created_at
         });
-      });
+      }
     });
 
-    // Ajouter les résas Channex absentes du store iCal
-    const storeUids = new Set(result.map(r => r.reservationUid).filter(Boolean));
-    for (const [key, dbData] of dbResMap.entries()) {
-      if (!key.startsWith('CHX_') && !key.includes('_20')) {
-        if (dbData.source === 'channex' && !storeUids.has(dbData.uid)) {
-          const prop = userProps.find(p => p.id === dbData.property_id);
-          if (!prop) continue;
-          const deposit = depositsMap.get(dbData.uid) || null;
-          const startD = dbData.start_date ? (dbData.start_date.toISOString ? dbData.start_date.toISOString() : String(dbData.start_date)) : null;
-          const endD   = dbData.end_date   ? (dbData.end_date.toISOString   ? dbData.end_date.toISOString()   : String(dbData.end_date))   : null;
-          const gFirst = dbData.guest_first_name || '';
-          const gLast  = dbData.guest_last_name  || '';
-          const gDisplay = gFirst ? (gLast ? gFirst + ' ' + gLast : gFirst) : (dbData.guest_name || '');
-          result.push({
-            reservationUid: dbData.uid,
-            propertyId: prop.id,
-            propertyName: displayName(prop),
-            startDate: startD,
-            endDate:   endD,
-            guestName: gDisplay || dbData.guest_name || '',
-            guestFirstName:  gFirst,
-            guestLastName:   gLast,
-            guestDisplayName: gDisplay,
-            guestPhone:      dbData.guest_phone  || '',
-            guestEmail:      dbData.guest_email  || '',
-            guestCountry:    dbData.guest_country || null,
-            guestAddress:    dbData.guest_address || null,
-            guestZip:        dbData.guest_zip     || null,
-            occupancyAdults:   dbData.occupancy_adults   || null,
-            occupancyChildren: dbData.occupancy_children || 0,
-            amountTotal:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
-            amountRooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
-            amountTaxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
-            amountCleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
-            otaCommission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
-            currency: dbData.currency || 'EUR',
-            source: dbData.ota_name || dbData.source || 'channex',
-            deposit: deposit ? {
-              id: deposit.id, amountCents: deposit.amountCents,
-              status: deposit.status, checkoutUrl: deposit.checkoutUrl,
-              createdAt: deposit.createdAt
-            } : null
-          });
-          storeUids.add(dbData.uid);
-        }
-      }
-    }
+    // ── 2. Toutes les réservations depuis la DB (TOUTES sources) ──────────
+    // On lit directement depuis reservations — pas depuis reservationsStore
+    // qui ne contient que les résas iCal/Channex.
+    const placeholders = propIds.map((_, i) => '$' + (i + 2)).join(',');
+    const resaResult = await pool.query(
+      `SELECT
+         r.uid, r.property_id, r.start_date, r.end_date,
+         r.guest_name, r.guest_first_name, r.guest_last_name,
+         r.guest_email, r.guest_phone, r.guest_country,
+         r.occupancy_adults, r.occupancy_children,
+         r.amount_total, r.amount_rooms, r.amount_taxes,
+         r.amount_cleaning, r.ota_commission, r.host_payout,
+         r.currency, r.source, r.platform, r.ota_name,
+         p.name as prop_name, p.internal_name as prop_internal_name
+       FROM reservations r
+       LEFT JOIN properties p ON p.id = r.property_id
+       WHERE r.user_id = $1
+         AND r.property_id IN (${placeholders})
+         AND r.status != 'cancelled'
+       ORDER BY r.start_date DESC`,
+      [userId, ...propIds]
+    );
 
-    console.log('✅ Deposits chargés:', result.length, 'réservations');
+    // ── 3. Construire le résultat ──────────────────────────────────────────
+    const result = resaResult.rows.map(r => {
+      const deposit = depositsMap.get(r.uid) || null;
+      const propMeta = userProps.find(p => p.id === r.property_id);
+      const propName = r.prop_internal_name || r.prop_name
+        || (propMeta ? (propMeta.internal_name || propMeta.name) : null)
+        || r.property_id;
+
+      const gFirst   = r.guest_first_name || '';
+      const gLast    = r.guest_last_name  || '';
+      const gDisplay = gFirst ? (gLast ? gFirst + ' ' + gLast : gFirst) : (r.guest_name || '');
+
+      const toISO = d => d ? (d.toISOString ? d.toISOString() : String(d)) : null;
+
+      return {
+        reservationUid:    r.uid,
+        propertyId:        r.property_id,
+        propertyName:      propName,
+        startDate:         toISO(r.start_date),
+        endDate:           toISO(r.end_date),
+        guestName:         gDisplay || r.guest_name || '',
+        guestFirstName:    gFirst,
+        guestLastName:     gLast,
+        guestDisplayName:  gDisplay,
+        guestPhone:        r.guest_phone  || '',
+        guestEmail:        r.guest_email  || '',
+        guestCountry:      r.guest_country || null,
+        occupancyAdults:   r.occupancy_adults   || null,
+        occupancyChildren: r.occupancy_children || 0,
+        amountTotal:       r.amount_total    ? parseFloat(r.amount_total)    : null,
+        amountRooms:       r.amount_rooms    ? parseFloat(r.amount_rooms)    : null,
+        amountTaxes:       r.amount_taxes    ? parseFloat(r.amount_taxes)    : null,
+        amountCleaning:    r.amount_cleaning ? parseFloat(r.amount_cleaning) : null,
+        otaCommission:     r.ota_commission  ? parseFloat(r.ota_commission)  : null,
+        currency:          r.currency || 'EUR',
+        source:            r.ota_name || r.platform || r.source || 'direct',
+        deposit:           deposit ? {
+          id:           deposit.id,
+          amountCents:  deposit.amountCents,
+          status:       deposit.status,
+          checkoutUrl:  deposit.checkoutUrl,
+          createdAt:    deposit.createdAt
+        } : null
+      };
+    });
+
+    console.log('✅ /api/reservations-with-deposits: ' + result.length + ' résas, ' + depositsMap.size + ' deposits');
     res.json(result);
-    
+
   } catch (error) {
     console.error('❌ Erreur /api/reservations-with-deposits:', error);
     res.status(500).json({ error: 'Erreur serveur' });
