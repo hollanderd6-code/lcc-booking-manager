@@ -11372,8 +11372,10 @@ app.get('/api/cleaning/checklists',
          AND conv.reservation_start_date::date = r.start_date::date
          AND conv.user_id = cc.user_id
        WHERE cc.user_id = $1
-       ORDER BY cc.completed_at DESC
-       LIMIT 50`,
+       ORDER BY
+         CASE WHEN cc.is_validated = false AND cc.owner_status != 'validated' AND cc.owner_status != 'rejected' THEN 0 ELSE 1 END ASC,
+         cc.checkout_date DESC
+       LIMIT 100`,
       [userId]
     );
 
