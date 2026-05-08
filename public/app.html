@@ -10106,7 +10106,7 @@ let cleaningChecklists = [];
 
 async function loadCleaningChecklists() {
   const container = document.getElementById('checklistsContainer');
-  if (!container) return;
+  // Guard supprime : on fetch meme sans container pour mettre a jour le KPI
   
   try {
     const token = localStorage.getItem('lcc_token');
@@ -10173,7 +10173,7 @@ async function loadCleaningChecklists() {
     renderCleaningChecklists();
   } catch (err) {
     console.error('Erreur chargement checklists:', err);
-    container.innerHTML = `
+    if (container) container.innerHTML = `
       <div class="empty-state">
         <i class="fas fa-exclamation-circle"></i>
         <p>Erreur lors du chargement</p>
