@@ -5749,10 +5749,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     var now = new Date();
     var withNotes = src.filter(function(r) {
       if (!r) return false;
-      // Exclure les blocages
-      if (r.type === 'block') return false;
       var plat = (r.source || r.platform || '').toUpperCase();
-      if (plat === 'BLOCK') return false;
       // Vérifier la note
       if (!window.bhNotesIsReal(r.notes)) return false;
       // Expiration : end_date + 1 jour à 23h59
