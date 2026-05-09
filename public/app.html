@@ -5761,24 +5761,21 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
       return now <= endD;
     });
 
-    // Dedup par uid (les blocages multi-jours ont plusieurs entrees)
+    // Dedup : uid + note+date pour les blocages multi-logements
     var _seenUids = new Set();
+    var _seenNoteDate = new Set();
     withNotes = withNotes.filter(function(r) {
-      var key = r.uid || r.id || (r.startDate + r.propertyId);
-      if (_seenUids.has(key)) return false;
-      _seenUids.add(key);
+      var uidKey = r.uid || r.id;
+      if (uidKey && _seenUids.has(uidKey)) return false;
+      if (uidKey) _seenUids.add(uidKey);
+      var isBlock = r.type === 'block' || r.type === 'manual' || (r.source||r.platform||'').toUpperCase() === 'BLOCK';
+      if (isBlock && r.notes) {
+        var noteKey = (r.notes||'').trim().substring(0,50) + '|' + (r.startDate||r.start||'') + '|' + (r.endDate||r.end||'');
+        if (_seenNoteDate.has(noteKey)) return false;
+        _seenNoteDate.add(noteKey);
+      }
       return true;
     });
-
-    // Dedup par uid (blocages multi-jours = plusieurs entrees meme uid)
-    var _seenUids = new Set();
-    withNotes = withNotes.filter(function(r) {
-      var key = r.uid || r.id || (r.startDate + '|' + r.propertyId);
-      if (_seenUids.has(key)) return false;
-      _seenUids.add(key);
-      return true;
-    });
-    console.log('[NOTES KPI] apres dedup:', withNotes.length, 'entrees. UIDs:', withNotes.map(function(r){return (r.uid||r.id||'?').substring(0,20)+'|type:'+r.type+'|notes:'+String(r.notes).substring(0,20);}));
 
     // Trier par date de fin croissante
     withNotes.sort(function(a, b) {
