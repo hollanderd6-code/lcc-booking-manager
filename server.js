@@ -25878,6 +25878,70 @@ console.log('✅ Service de notifications initialisé');
   });
   console.log('');
   
+  // ✅ Réactivation automatique des webhooks Channex au démarrage
+  // (Channex les désactive si le serveur est indisponible lors d'un ping)
+  setTimeout(async () => {
+    try {
+      const { channexAPI } = require('./channex');
+      const appUrl = (process.env.APP_URL || 'https://www.boostinghost.fr').replace(/\/$/, '');
+      const propsRes = await pool.query(
+        `SELECT id, channex_property_id, name FROM properties WHERE channex_enabled = true AND channex_property_id IS NOT NULL`
+      );
+      console.log(`🔔 [WEBHOOK AUTO] Vérification webhooks pour ${propsRes.rows.length} logement(s) Channex...`);
+
+      let billing_account_id = null;
+      try {
+        const baRes = await channexAPI.get('/billing_accounts');
+        const accounts = baRes.data?.data || [];
+        if (accounts.length > 0) billing_account_id = accounts[0].id || accounts[0].attributes?.id;
+      } catch(e) { /* non bloquant */ }
+
+      for (const prop of propsRes.rows) {
+        try {
+          // Vérifier si les webhooks existent et sont actifs
+          const existingRes = await channexAPI.get(`/webhooks?property_id=${prop.channex_property_id}`);
+          const existing = existingRes.data?.data || [];
+          const hasActiveBooking = existing.some(w => {
+            const a = w.attributes || w;
+            return a.event_mask === 'booking' && a.is_active !== false;
+          });
+          const hasActiveMessage = existing.some(w => {
+            const a = w.attributes || w;
+            return a.event_mask === 'message' && a.is_active !== false;
+          });
+
+          // Réactiver les inactifs
+          for (const wh of existing) {
+            const a = wh.attributes || wh;
+            if (a.is_active === false) {
+              try {
+                await channexAPI.put(`/webhooks/${wh.id}`, { webhook: { is_active: true } });
+                console.log(`✅ [WEBHOOK AUTO] Réactivé: ${prop.name} (${a.event_mask})`);
+              } catch(e) { /* non bloquant */ }
+            }
+          }
+
+          // Créer si manquants
+          const toCreate = [];
+          if (!hasActiveBooking) toCreate.push({ event_mask: 'booking', callback_url: `${appUrl}/api/channex/webhook`, label: 'BH Bookings' });
+          if (!hasActiveMessage) toCreate.push({ event_mask: 'message', callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' });
+
+          for (const wh of toCreate) {
+            const payload = { property_id: prop.channex_property_id, callback_url: wh.callback_url, event_mask: wh.event_mask, is_active: true, send_data: true, label: wh.label };
+            if (billing_account_id) payload.billing_account_id = billing_account_id;
+            await channexAPI.post('/webhooks', { webhook: payload });
+            console.log(`✅ [WEBHOOK AUTO] Créé: ${prop.name} (${wh.event_mask})`);
+          }
+        } catch(e) {
+          console.warn(`⚠️ [WEBHOOK AUTO] ${prop.name}:`, e.message);
+        }
+      }
+      console.log(`✅ [WEBHOOK AUTO] Vérification terminée`);
+    } catch(e) {
+      console.warn('⚠️ [WEBHOOK AUTO] Erreur générale:', e.message);
+    }
+  }, 15000); // Attendre 15s que le serveur soit bien up avant de contacter Channex
+
   // ✅ Synchronisation initiale (APRÈS le chargement des manuelles)
   console.log('🔄 Synchronisation initiale...');
   await syncAllCalendars();
