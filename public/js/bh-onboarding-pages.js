@@ -14,6 +14,66 @@
   const PAGE_TOURS = {
 
     /* ── MESSAGES ─────────────────────────────────────────── */
+        /* ── APP (Calendrier) ───────────────────── */
+    'app.html': {
+      storageKey: 'bh_ob_app_v1',
+      onStart: null,
+      onFinish: null,
+      steps: [
+        {
+          id: 'welcome',
+          target: null,
+          title: '📅 Votre calendrier',
+          text: 'Bienvenue sur le calendrier Boostinghost ! Visualisez toutes vos réservations, gérez vos disponibilités et agissez directement depuis cette vue. Petit tour rapide.',
+          position: 'center',
+        },
+        {
+          id: 'toolbar-search',
+          target: () => document.getElementById('calendarSearchBtn'),
+          mobile_target: () => document.getElementById('calendarSearchBtn'),
+          title: '🔍 Recherche rapide',
+          text: 'Retrouvez instantanément un voyageur, une réservation ou un logement parmi tous vos séjours.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'toolbar-bhguest',
+          target: () => document.getElementById('bhCalPromoBtn') || document.getElementById('calendarPromoBtn'),
+          mobile_target: () => document.getElementById('bhCalPromoBtn') || document.getElementById('calendarPromoBtn'),
+          title: '🅱 BHGuest — Réservation directe',
+          text: 'Le ��B�� violet, c’est votre portail BHGuest : créez des codes promo et générez des liens de réservation directe personnalisés à partager à vos voyageurs. Zéro commission plateforme.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'toolbar-settings',
+          target: () => document.getElementById('calendarSettingsBtn'),
+          mobile_target: () => document.getElementById('calendarSettingsBtn'),
+          title: '⚙️ Filtres & paramètres',
+          text: 'Filtrez le calendrier par logement, plateforme ou statut. Personnalisez la vue selon vos besoins du moment.',
+          position: 'bottom',
+          mobile_position: 'bottom',
+        },
+        {
+          id: 'toolbar-batch',
+          target: () => document.getElementById('batchEditBtn'),
+          mobile_target: () => document.getElementById('batchEditBtn'),
+          title: '📚 Édition groupée',
+          text: 'Modifiez prix, disponibilités ou restrictions sur plusieurs logements et plusieurs dates en une seule action.',
+          position: 'bottom',
+          mobile_position: 'left',
+        },
+        {
+          id: 'done',
+          target: null,
+          title: '🎉 Calendrier maîtrisé !',
+          text: 'Cliquez sur n’importe quel jour pour bloquer ou débloquer des disponibilités, sur une réservation pour voir le détail voyageur, ou sur ��Édition groupée�� pour agir en masse.',
+          position: 'center',
+          isLast: true,
+        },
+      ],
+    },
+
     'messages.html': {
       storageKey: 'bh_ob_messages_v1',
       onStart: null,
