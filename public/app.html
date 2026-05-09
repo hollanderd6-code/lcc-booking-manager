@@ -5761,6 +5761,15 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
       return now <= endD;
     });
 
+    // Dedup par uid (les blocages multi-jours ont plusieurs entrees)
+    var _seenUids = new Set();
+    withNotes = withNotes.filter(function(r) {
+      var key = r.uid || r.id || (r.startDate + r.propertyId);
+      if (_seenUids.has(key)) return false;
+      _seenUids.add(key);
+      return true;
+    });
+
     // Trier par date de fin croissante
     withNotes.sort(function(a, b) {
       return new Date(a.endDate || a.end || 0) - new Date(b.endDate || b.end || 0);
