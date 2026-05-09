@@ -27180,12 +27180,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
 
         if (autoEnabled) {
           console.log(`🤖 [CHANNEX MSG] Conv ${conversation_id} | escalated=${conversation.escalated} | autoEnabled=${autoEnabled} | msg="${savedMsg.message.substring(0,40)}"`);
-          // Reset escalade pour les convs de test
-          if (conversation.escalated) {
-            await pool.query('UPDATE conversations SET escalated = FALSE WHERE id = $1', [conversation_id]);
-            conversation.escalated = false;
-            console.log(`🔄 [CHANNEX MSG] Escalade réinitialisée pour conv ${conversation_id}`);
-          }
+          // Reset escalade supprime : handleIncomingMessage gere lui-meme l'etat escalated depuis la DB
           const handled = await handleIncomingMessageDebounced(savedMsg, conversation, pool, io);
           console.log(`🤖 [CHANNEX MSG] handleIncomingMessage retourné: ${handled}`);
 
