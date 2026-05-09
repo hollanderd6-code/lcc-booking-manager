@@ -120,8 +120,8 @@ const COUNTRY_TO_DEEPL_LANG = {
   'GR': 'EL',
   // Turc
   'TR': 'TR',
-  // Ukrainien
-  'UA': 'UK',
+  // Ukrainien (DeepL ne supporte pas UK en cible, fallback EN-GB)
+  'UA': 'EN-GB',
   // Bulgare
   'BG': 'BG',
   // Slovaque
@@ -1900,6 +1900,13 @@ ON invoice_download_tokens(token);
       // Colonnes déjà existantes ou table pas encore créée
       console.log('ℹ️ Colonnes escalated: ', e.message);
     }
+
+    // Migration : colonnes guest_language + language sur conversations
+    try {
+      await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS guest_language TEXT`);
+      await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT`);
+      console.log('✅ Colonnes guest_language + language OK');
+    } catch(e) { console.log('ℹ️ guest_language:', e.message); }
 
     // ✅ Migration : quick_replies sur properties
     try {
