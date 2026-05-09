@@ -29450,11 +29450,12 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     }
 
     const propResult = await pool.query(
-      'SELECT base_price, weekend_price, name, address, cleaning_fee, tourist_tax_per_night FROM properties WHERE id = $1',
+      'SELECT base_price, weekend_price, name, address, cleaning_fee, tourist_tax_per_night, user_id FROM properties WHERE id = $1',
       [property_id]
     );
     if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
     const prop = propResult.rows[0];
+    const propUserId = prop.user_id;
 
     // Calcul prix
     const start = new Date(checkin);
@@ -29508,7 +29509,11 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&session_id={CHECKOUT_SESSION_ID}&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}`;
     const cancelUrl = `${appUrl}/guest-app/public/index.html?payment=cancel`;
 
-    const session = await stripe.checkout.sessions.create({
+    // Recuperer le compte Stripe Connect du proprietaire du logement
+    const { stripeAccountId, applyFee } = await getStripeForProperty(pool, property_id, propUserId);
+    const feeAmount = applyFee ? Math.round(discountedBase * 0.03 * 100) : 0; // 3% sur le montant base HT
+
+    const sessionParams = {
       payment_method_types: ['card'],
       mode: 'payment',
       customer_email: guest_email,
@@ -29535,7 +29540,20 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
         guests: String(guests || 1),
         source: 'boostinghost_guest'
       }
-    });
+    };
+
+    // Si le proprietaire a un compte Connect -> paiement direct sur son compte avec frais BH
+    if (stripeAccountId) {
+      sessionParams.payment_intent_data = {
+        application_fee_amount: feeAmount,
+        transfer_data: { destination: stripeAccountId }
+      };
+      console.log(`💳 [GUEST] Paiement Connect -> ${stripeAccountId} | fee: ${feeAmount / 100}€`);
+    } else {
+      console.log(`💳 [GUEST] Paiement sur compte BH principal (pas de compte Connect)`);
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     res.json({
       checkoutUrl: session.url,
