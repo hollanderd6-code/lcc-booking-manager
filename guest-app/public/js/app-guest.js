@@ -879,6 +879,7 @@ async function submitBooking() {
       guest_email: guestEmail,
       guest_phone: guestPhone,
       promo_code: promoCode,
+      fixed_price_override: fixedPriceOverride,
       session_id: data.sessionId
     }));
     localStorage.setItem('guest_session_email', guestEmail);
