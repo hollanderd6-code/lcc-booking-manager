@@ -92,6 +92,15 @@ async function _flushDebounce(convId, pool, io) {
 
   const { messages, conversation } = state;
 
+  // Verifier si la conv a ete escaladee entre-temps
+  try {
+    const freshConv = await pool.query('SELECT escalated FROM conversations WHERE id = $1', [convId]);
+    if (freshConv.rows[0]?.escalated) {
+      console.log(`⏭️ [DEBOUNCE] Conv ${convId} deja escaladee — skip flush`);
+      return;
+    }
+  } catch(e) { /* non bloquant */ }
+
   if (messages.length === 1) {
     // Un seul message → comportement normal
     console.log(`⏳ [DEBOUNCE] Conv ${convId} — 1 message → traitement normal`);
@@ -386,7 +395,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       console.log('🌍 [HANDLER] Langue depuis conversation.language:', language);
     } else {
       // Détection locale rapide pour les 7 langues principales
-      const enP = /\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|can|could|would|i need|i want|wifi|password|check.in|check.out|address|arrival|departure)\b/gi;
+      const enP = /\b(hello|hi|hey|thanks|thank you|thank|please|what|where|when|how|can|could|would|i need|i want|wifi|password|check.in|check.out|address|arrival|departure|ok|okay|yes|no|sure|great|perfect|good|nice|fine|got it|sounds good|understood|of course|no problem|is that|exact|location)\b/gi;
       const esP = /\b(hola|gracias|por favor|dónde|cuándo|puedo|quiero|necesito|contraseña|llegada|salida)\b/gi;
       const deP = /\b(hallo|danke|bitte|wo|wann|wie|was|ich|können|möchte|passwort|ankunft|abreise)\b/gi;
       const itP = /\b(ciao|grazie|dove|quando|posso|vorrei|ho bisogno|indirizzo|arrivo|partenza)\b/gi;
@@ -405,9 +414,13 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       };
 
       const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
-      if (best[1] >= 2) {
+      if (best[1] >= 1) {
         language = best[0];
         console.log('🌍 [HANDLER] Langue détectée localement:', language, '(scores:', scores, ')');
+        // Memoriser en DB pour les prochains messages de cette conv
+        if (language !== 'fr') {
+          pool.query('UPDATE conversations SET language = $1 WHERE id = $2 AND (language IS NULL OR language = $3)', [language, conversation.id, 'auto']).catch(() => {});
+        }
       } else {
         // Pas assez de mots → utiliser la langue de la réservation si disponible
         const convLang = conversation.guest_language || conversation.language || null;
