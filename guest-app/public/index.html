@@ -134,7 +134,7 @@
       padding-bottom: 80px;
     }
     .screen-content.active { display: block; }
-    #screen-detail { padding-bottom: 0; }
+    #screen-detail { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 
     /* ── Property cards ── */
     .properties-grid { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
@@ -207,15 +207,16 @@
 
     /* ── Booking bar ── */
     .booking-bar {
-      position: sticky;
+      position: fixed;
       bottom: 0;
       left: 0; right: 0;
       background: white;
       border-top: 1px solid var(--border);
       padding: 12px 16px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
       display: flex; align-items: center; justify-content: space-between;
-      z-index: 99;
+      z-index: 999;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
     }
     .booking-bar-price { font-size: 20px; font-weight: 700; color: var(--primary); }
     .booking-bar-price span { font-size: 13px; font-weight: 400; color: var(--text-light); }
