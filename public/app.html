@@ -3366,6 +3366,7 @@ window.closeChecklistsKpiModal = function() {
           <label class="bh-sheet-label" for="nrPlatform">Plateforme</label>
           <select id="nrPlatform" name="platform" class="bh-sheet-input bh-sheet-select">
             <option value="direct">Direct</option>
+              <option value="guest_app">BHGuest</option>
             <option value="booking">Booking.com</option>
             <option value="airbnb">Airbnb</option>
             <option value="abritel">Abritel / VRBO</option>
@@ -8763,7 +8764,7 @@ function handleEditBooking() {
     return;
   }
   // Log pour debug
-  console.log('✏️ handleEditBooking — notes:', currentBookingData.notes, '| uid:', currentBookingData.uid);
+  console.log('✏️ handleEditBooking — notes:', currentBookingData.notes, '| uid:', currentBookingData.uid, '| source:', currentBookingData.source, '| platform:', currentBookingData.platform);
 
   // Fermer le modal de détails
   const detailsModal = document.getElementById('reservationDetailsModal');
@@ -9019,8 +9020,9 @@ document.addEventListener('click', function(e) {
   console.log('📤 Envoi suppression :', payload);
 
   // BHGuest : utiliser la route dediee
-  const _rawSrc = (booking.source || booking.platform || '').toLowerCase();
-  const _isBHGuest = ['guest_app','bhguest','boostinghost_guest','boostinghost guest'].includes(_rawSrc);
+  const _rawSrc = (booking.source || booking.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+  const _isBHGuest = ['guestapp','bhguest','boostinghostguest','boostinghost'].includes(_rawSrc)
+    || (booking.uid && String(booking.uid).startsWith('GUEST_'));
   if (_isBHGuest && uid) {
     fetch('/api/guest/cancel-reservation', {
       method: 'POST',
@@ -9185,8 +9187,11 @@ if (editBookingForm) {
       } else {
         const uid = currentBookingData.uid || currentBookingData.id;
         const platform = (currentBookingData.source || currentBookingData.platform || '').toLowerCase();
-        const BHGUEST_PLATFORMS = ['guest_app', 'bhguest', 'boostinghost_guest', 'boostinghost guest'];
-        const isBHGuest = BHGUEST_PLATFORMS.includes(platform) || BHGUEST_PLATFORMS.includes(currentBookingData.source);
+        const BHGUEST_PLATFORMS = ['guest_app', 'bhguest', 'boostinghost_guest', 'boostinghost guest', 'boostinghost'];
+        const _srcRaw = (currentBookingData.source || currentBookingData.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+        const isBHGuest = BHGUEST_PLATFORMS.includes(platform) || BHGUEST_PLATFORMS.includes(currentBookingData.source)
+          || _srcRaw === 'guestapp' || _srcRaw === 'bhguest' || _srcRaw === 'boostinghostguest'
+          || (currentBookingData.uid && String(currentBookingData.uid).startsWith('GUEST_'));
         const isOTA = !isBHGuest && platform && !['direct','manual',''].includes(platform) && platform !== 'block';
         const isManualRes = isBHGuest || currentBookingData.isManual || currentBookingData.type === 'manual' ||
           platform === 'direct' || platform === 'manual' || !platform;
