@@ -7767,6 +7767,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
               currency:        dbData.currency        || 'EUR',
               notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
               onboarding_completed: dbData.onboarding_completed || false,
+              createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null,
               guest_display_name: dbData.guest_first_name
                 ? `${dbData.guest_first_name} ${dbData.guest_last_name || ''}`.trim()
                 : (dbData.guest_name || null),
@@ -7830,7 +7831,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
               : (dbData.guest_name || null),
             guest_initial: dbData.guest_first_name
               ? dbData.guest_first_name.charAt(0).toUpperCase() : null,
-            notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null
+            notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
+            createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null
           });
           storeUids.add(dbData.uid);
         }
