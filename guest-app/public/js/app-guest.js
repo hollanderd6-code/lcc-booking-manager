@@ -171,10 +171,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Deep link : ?property=ID&checkin=DATE&checkout=DATE&promo=CODE&guests=N&fixed_price=N ──
   await handleDeepLink();
+
+  // Cas ou l'app est deja ouverte en background et recoit un nouveau lien
+  if (IS_NATIVE) {
+    try {
+      const { App } = window.Capacitor.Plugins;
+      App.addListener('appUrlOpen', async (data) => {
+        if (data && data.url) {
+          state._pendingFixedPrice = null;
+          state.search = { checkin: null, checkout: null, guests: null };
+          await handleDeepLink(data.url);
+        }
+      });
+    } catch(e) { /* non bloquant */ }
+  }
 });
 
-async function handleDeepLink() {
-  const params    = new URLSearchParams(window.location.search);
+async function handleDeepLink(overrideUrl) {
+  // Sur Capacitor natif, window.location.search est vide -- on lit l'URL via getLaunchUrl()
+  let search = window.location.search;
+  if (IS_NATIVE && !search && !overrideUrl) {
+    try {
+      const { App } = window.Capacitor.Plugins;
+      const launched = await App.getLaunchUrl();
+      if (launched && launched.url) {
+        const idx = launched.url.indexOf('?');
+        if (idx !== -1) search = launched.url.substring(idx);
+      }
+    } catch(e) { /* non bloquant */ }
+  }
+  if (overrideUrl) {
+    const idx = overrideUrl.indexOf('?');
+    search = idx !== -1 ? overrideUrl.substring(idx) : '';
+  }
+
+  const params    = new URLSearchParams(search);
   const propertyId = params.get('property');
   const checkin    = params.get('checkin');
   const checkout   = params.get('checkout');
@@ -189,7 +220,7 @@ async function handleDeepLink() {
   if (guests)      state.search.guests   = parseInt(guests) || 2;
   if (fixedPrice)  state._pendingFixedPrice = fixedPrice;
 
-  window.history.replaceState({}, '', window.location.pathname);
+  if (!IS_NATIVE) window.history.replaceState({}, '', window.location.pathname);
 
   await openProperty(propertyId);
 
