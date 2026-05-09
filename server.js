@@ -2459,9 +2459,14 @@ async function sendEmailViaBrevo({ to, subject, text, html }) {
 
   const sender = getBrevoSender();
 
+  // `to` peut etre une string ou un tableau de strings
+  const toArray = Array.isArray(to)
+    ? to.map(e => ({ email: e }))
+    : [{ email: to }];
+
   const payload = {
     sender,
-    to: [{ email: to }],
+    to: toArray,
     subject
   };
 
