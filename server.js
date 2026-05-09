@@ -28917,7 +28917,7 @@ app.post('/api/guest/book', async (req, res) => {
       uid, property_id, prop.owner_user_id,
       checkin, checkout,
       guest_name, guest_email, guest_phone || null,
-      totalTTC, 'Boostinghost Guest', 'guest_app', 'confirmed',
+      (stripeAmountPaid || totalTTC), 'Boostinghost Guest', 'guest_app', 'confirmed',
       guests || 1, 'EUR'
     ]);
 
@@ -29573,14 +29573,18 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
 app.post('/api/guest/confirm-after-payment', async (req, res) => {
   try {
     const { session_id, property_id, checkin, checkout,
-            guest_name, guest_email, guest_phone, guests, promo_code } = req.body;
+            guest_name, guest_email, guest_phone, guests, promo_code,
+            fixed_price_override } = req.body;
 
     // Vérifier que le paiement est bien passé via Stripe
+    // Et récupérer le montant réel payé (source de vérité)
+    let stripeAmountPaid = null;
     if (session_id) {
       const session = await stripe.checkout.sessions.retrieve(session_id);
       if (session.payment_status !== 'paid') {
         return res.status(402).json({ error: 'Paiement non confirmé' });
       }
+      stripeAmountPaid = session.amount_total ? session.amount_total / 100 : null;
     }
 
     // Vérifier dispo
