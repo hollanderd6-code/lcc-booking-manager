@@ -21705,20 +21705,54 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
         [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
       ).catch(() => ({ rows: [] }));
       let cautionUrl = '';
-      if (resRow.rows[0]) {
+      const resUid = resRow.rows[0]?.uid || null;
+      if (resUid) {
         const dep = await pool.query(
           `SELECT checkout_url FROM deposits
            WHERE reservation_uid = $1 AND status IN ('pending','authorized')
            ORDER BY created_at DESC LIMIT 1`,
-          [resRow.rows[0].uid]
+          [resUid]
         ).catch(() => ({ rows: [] }));
         const rawDepUrl = dep.rows[0]?.checkout_url || '';
         cautionUrl = rawDepUrl ? await makeShortLink(pool, rawDepUrl, conv.user_id) : '';
+
+        // Deposit absent → le créer à la volée
+        if (!cautionUrl) {
+          try {
+            const propD = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
+            const depositAmount = parseFloat(propD.rows[0]?.deposit_amount || 0);
+            if (depositAmount > 0) {
+              const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+              const amountCents = Math.round(depositAmount * 100);
+              const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+              const stripeTarget = await getStripeForProperty(pool, conv.property_id, conv.user_id);
+              const sessionOptions = stripeTarget.stripeAccountId ? { stripeAccount: stripeTarget.stripeAccountId } : {};
+              const sessionParams = {
+                payment_method_types: ['card'],
+                mode: 'payment',
+                line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${propD.rows[0]?.name || conv.property_id}`, description: `Réservation du ${conv.reservation_start_date} au ${conv.reservation_end_date}` } }, quantity: 1 }],
+                payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUid }, application_fee_amount: Math.round(amountCents * (stripeTarget.stripeAccountId ? 0.03 : 0.05)) },
+                metadata: { deposit_id: depositId, reservation_uid: resUid },
+                success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
+                cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
+                expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+              };
+              const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+              await pool.query(
+                `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
+                 VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())`,
+                [depositId, conv.user_id, resUid, conv.property_id, amountCents, session.id, session.url]
+              );
+              cautionUrl = await makeShortLink(pool, session.url, conv.user_id);
+              console.log(`✅ [TPL] Deposit créé à la volée pour conv ${conv.id}: ${depositId}`);
+            }
+          } catch(depErr) {
+            console.warn(`⚠️ [TPL] Erreur création deposit à la volée:`, depErr.message);
+          }
+        }
       }
       if (!cautionUrl) {
-        console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — aucun deposit trouvé`);
-        // Laisser {caution_url} visible dans le message plutôt que de le supprimer silencieusement
-        // Le message ne sera pas envoyé via Channex dans ce cas
+        console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — deposit absent ou montant=0`);
       } else {
         msg = msg.replace(/{caution_url}/gi, cautionUrl);
       }
