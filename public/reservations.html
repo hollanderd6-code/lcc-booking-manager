@@ -513,9 +513,9 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     </colgroup>
     <thead>
       <tr>
-        <th onclick="sortBy('propertyName')" class="sorted" data-col="propertyName">Logement <span class="sort-icon">↕</span></th>
+        <th onclick="sortBy('propertyName')" data-col="propertyName">Logement <span class="sort-icon">↕</span></th>
         <th onclick="sortBy('guestName')" data-col="guestName">Voyageur <span class="sort-icon">↕</span></th>
-        <th onclick="sortBy('createdAt')" data-col="createdAt">Réservé le <span class="sort-icon">↕</span></th>
+        <th onclick="sortBy('createdAt')" class="sorted" data-col="createdAt">Réservé le <span class="sort-icon">↓</span></th>
         <th onclick="sortBy('start')" data-col="start">Checkin <span class="sort-icon">↕</span></th>
         <th onclick="sortBy('end')" data-col="end">Checkout <span class="sort-icon">↕</span></th>
         <th onclick="sortBy('nights')" data-col="nights">Nuits <span class="sort-icon">↕</span></th>
@@ -617,7 +617,7 @@ function applyViewMode() {
   }
 }
 
-let sortCol = 'start', sortDir = 'asc', currentPage = 1, pageSize = 25;
+let sortCol = 'createdAt', sortDir = 'desc', currentPage = 1, pageSize = 25;
 
 document.addEventListener('DOMContentLoaded', applyViewMode);
 
