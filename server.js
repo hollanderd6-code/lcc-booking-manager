@@ -29832,7 +29832,7 @@ app.post('/api/guest/cancel-reservation', authenticateAny, async (req, res) => {
 // ── Modification réservation BHGuest ─────────────────────
 app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
   try {
-    const { uid, checkin, checkout, guests } = req.body;
+    const { uid, checkin, checkout, guests, notes } = req.body;
     if (!uid) return res.status(400).json({ error: 'uid requis' });
 
     const resaRes = await pool.query(
@@ -29857,6 +29857,7 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
     if (checkin)  { updates.push(`start_date = $${idx++}`); values.push(checkin); }
     if (checkout) { updates.push(`end_date = $${idx++}`); values.push(checkout); }
     if (guests)   { updates.push(`occupancy_adults = $${idx++}`); values.push(parseInt(guests)); }
+    if (notes != null) { updates.push(`notes = $${idx++}`); values.push(notes); }
     if (!updates.length) return res.status(400).json({ error: 'Rien à modifier' });
     values.push(uid);
     await pool.query(`UPDATE reservations SET ${updates.join(', ')} WHERE uid = $${idx}`, values);
