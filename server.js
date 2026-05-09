@@ -21586,6 +21586,17 @@ const io = new Server(server, {
 // ============================================
 // 🔌 SOCKET.IO — Gestion des connexions
 // ============================================
+// Notif depuis _flushDebounce quand l'IA n'a pas repondu apres le delai
+io.on('_debounce_notif_needed', async ({ conversation_id, user_id, message, guest_name }) => {
+  try {
+    const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [user_id]);
+    for (const tok of tokensRes.rows) {
+      await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
+    }
+    console.log(`📱 [DEBOUNCE NOTIF] Notif envoyée conv ${conversation_id} après éscalade post-debounce`);
+  } catch(e) { console.error('[DEBOUNCE NOTIF] Erreur:', e.message); }
+});
+
 io.on('connection', (socket) => {
   console.log('🔌 Socket connecté:', socket.id);
 
