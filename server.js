@@ -29703,18 +29703,22 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       console.error('⚠️ [GUEST] Email voyageur:', emailErr.message);
     }
 
-    // Notif push hôte
+    // Notif push hote + sous-comptes (meme systeme que les autres plateformes)
     try {
-      const tokensRes = await pool.query(
-        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-        [prop.owner_user_id]
+      const propName = displayName(prop);
+      const cleanName = cleanGuestName(guest_name, 'guest_app');
+      // Compte principal
+      await sendNewReservationNotification(prop.owner_user_id, cleanName, propName, checkin, checkout);
+      // Sous-comptes can_view_calendar
+      await sendNotificationToSubAccountsOf(
+        prop.owner_user_id, 'can_view_calendar',
+        '🏠 Nouvelle réservation BHGuest — ' + propName,
+        cleanName + ' · ' + checkin + ' → ' + checkout,
+        { type: 'new_reservation', propertyId: String(property_id), uid },
+        'notif_sub_new_reservation',
+        property_id
       );
-      for (const tok of tokensRes.rows) {
-        await sendNotification(tok.fcm_token, '🏠 Nouvelle réservation directe',
-          `${guest_name} · ${displayName(prop)} · ${checkin} → ${checkout}`,
-          { type: 'new_booking_guest', uid, propertyId: property_id, screen: 'calendar' }
-        );
-      }
+      console.log('📱 [GUEST] Notifs nouvelle résa envoyées');
     } catch (notifErr) {
       console.error('⚠️ [GUEST] Notif hôte:', notifErr.message);
     }
@@ -29731,6 +29735,124 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
   }
 });
 
+
+// ── Annulation réservation BHGuest ─────────────────────
+app.post('/api/guest/cancel-reservation', authenticateAny, async (req, res) => {
+  try {
+    const { uid } = req.body;
+    if (!uid) return res.status(400).json({ error: 'uid requis' });
+
+    const resaRes = await pool.query(
+      'SELECT r.*, p.name as prop_name, p.user_id as owner_user_id FROM reservations r LEFT JOIN properties p ON p.id = r.property_id WHERE r.uid = $1',
+      [uid]
+    );
+    if (!resaRes.rows[0]) return res.status(404).json({ error: 'Réservation introuvable' });
+    const resa = resaRes.rows[0];
+
+    await pool.query("UPDATE reservations SET status = 'cancelled' WHERE uid = $1", [uid]);
+
+    // Notif push proprio + sous-comptes
+    try {
+      const propName = resa.prop_name || resa.property_id;
+      const cleanName = cleanGuestName(resa.guest_name, 'guest_app');
+      await sendCancelledReservationNotification(resa.owner_user_id, cleanName, propName, resa.start_date, resa.end_date);
+      await sendNotificationToSubAccountsOf(
+        resa.owner_user_id, 'can_view_calendar',
+        '❌ Réservation annulée — ' + propName,
+        cleanName + ' · ' + String(resa.start_date).slice(0,10) + ' → ' + String(resa.end_date).slice(0,10),
+        { type: 'reservation_cancelled', propertyId: String(resa.property_id), uid },
+        'notif_sub_reservation_cancelled',
+        resa.property_id
+      );
+    } catch(e) { console.error('⚠️ [GUEST] Notif annulation:', e.message); }
+
+    // Débloquer les dispo Channex si activé
+    try {
+      const prop = (await pool.query('SELECT * FROM properties WHERE id = $1', [resa.property_id])).rows[0];
+      if (prop?.channex_enabled && prop?.channex_property_id) {
+        const { pushAvailability } = require('./channex');
+        const allResas = await pool.query(
+          `SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+          [resa.property_id]
+        );
+        const allBlocked = [];
+        allResas.rows.forEach(r => {
+          const s = new Date(r.start_date), e = new Date(r.end_date);
+          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) allBlocked.push(d.toISOString().split('T')[0]);
+        });
+        await pushAvailability(pool, { property_id: resa.property_id, channex_property_id: prop.channex_property_id, channex_room_type_id: prop.channex_room_type_id, dates_blocked: allBlocked });
+      }
+    } catch(e) { console.error('⚠️ [GUEST] Channex annulation:', e.message); }
+
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [GUEST] cancel-reservation:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Modification réservation BHGuest ─────────────────────
+app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
+  try {
+    const { uid, checkin, checkout, guests } = req.body;
+    if (!uid) return res.status(400).json({ error: 'uid requis' });
+
+    const resaRes = await pool.query(
+      'SELECT r.*, p.name as prop_name, p.user_id as owner_user_id FROM reservations r LEFT JOIN properties p ON p.id = r.property_id WHERE r.uid = $1',
+      [uid]
+    );
+    if (!resaRes.rows[0]) return res.status(404).json({ error: 'Réservation introuvable' });
+    const resa = resaRes.rows[0];
+
+    // Vérifier dispo si dates changées
+    if (checkin && checkout) {
+      const conflict = await pool.query(
+        `SELECT id FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled') AND uid != $2 AND start_date < $4 AND end_date > $3`,
+        [resa.property_id, uid, checkin, checkout]
+      );
+      if (conflict.rows.length > 0) return res.status(409).json({ error: 'Ces dates ne sont plus disponibles' });
+    }
+
+    const updates = [];
+    const values = [];
+    let idx = 1;
+    if (checkin)  { updates.push(`start_date = $${idx++}`); values.push(checkin); }
+    if (checkout) { updates.push(`end_date = $${idx++}`); values.push(checkout); }
+    if (guests)   { updates.push(`occupancy_adults = $${idx++}`); values.push(parseInt(guests)); }
+    if (!updates.length) return res.status(400).json({ error: 'Rien à modifier' });
+    values.push(uid);
+    await pool.query(`UPDATE reservations SET ${updates.join(', ')} WHERE uid = $${idx}`, values);
+
+    // Notif push proprio + sous-comptes
+    try {
+      const propName = resa.prop_name || resa.property_id;
+      const cleanName = cleanGuestName(resa.guest_name, 'guest_app');
+      const newCheckin = checkin || String(resa.start_date).slice(0,10);
+      const newCheckout = checkout || String(resa.end_date).slice(0,10);
+      await sendNotificationToSubAccountsOf(
+        resa.owner_user_id, 'can_view_calendar',
+        '✏️ Réservation modifiée — ' + propName,
+        cleanName + ' · ' + newCheckin + ' → ' + newCheckout,
+        { type: 'reservation_modified', propertyId: String(resa.property_id), uid },
+        'notif_sub_new_reservation',
+        resa.property_id
+      );
+      // Compte principal
+      const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [resa.owner_user_id]);
+      for (const tok of tokensRes.rows) {
+        await sendNotification(tok.fcm_token, '✏️ Résa modifiée — ' + propName,
+          cleanName + ' · ' + newCheckin + ' → ' + newCheckout,
+          { type: 'reservation_modified', uid, propertyId: String(resa.property_id) }
+        );
+      }
+    } catch(e) { console.error('⚠️ [GUEST] Notif modification:', e.message); }
+
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [GUEST] modify-reservation:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ── Admin : gérer les codes promo ────────────────────────────
 app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
