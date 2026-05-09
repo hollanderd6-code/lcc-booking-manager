@@ -346,12 +346,15 @@ async function handleIncomingMessage(message, conversation, pool, io) {
               await sendNotification(
                 tok.fcm_token,
                 `💬 ${conversation.guest_name || 'Voyageur'} a répondu`,
-                `Nouvelle réponse dans une conversation en attente de votre réponse.`,
-                { type: 'escalated_reply', conversationId: String(conversation.id), screen: 'messages' }
+                `Nouveau message dans une conversation en attente de votre réponse.`,
+                { type: 'new_guest_message', conversation_id: String(conversation.id) }
               );
+              console.log(`📱 [HANDLER] Notif escalade envoyée: ${tok.fcm_token.substring(0,20)}`);
             }
+          } else {
+            console.warn('⚠️ [HANDLER] Aucun token FCM pour conv escaladée id=', conversation.id);
           }
-        } catch(e) { /* non bloquant */ }
+        } catch(e) { console.error('❌ [HANDLER] Erreur notif escalade:', e.message); }
         // Retourner true : la notif a ete envoyee ici, le server ne doit pas en envoyer une 2e
         return true;
       }
