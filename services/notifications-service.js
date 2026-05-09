@@ -100,6 +100,7 @@ async function sendNotification(fcmToken, title, body, data = {}) {
     }, {}),
     android: {
       priority: 'high',
+      ttl: 86400000, // 24h en ms
       notification: {
         sound: 'default',
         channelId: 'default',
@@ -107,10 +108,15 @@ async function sendNotification(fcmToken, title, body, data = {}) {
       }
     },
     apns: {
+      headers: {
+        'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
+        'apns-priority': '10'
+      },
       payload: {
         aps: {
           sound: 'default',
-          badge: 1
+          badge: 1,
+          'content-available': 1
         }
       }
     }
