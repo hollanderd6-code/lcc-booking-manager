@@ -79,6 +79,9 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
       conversation,
     });
   }
+  // Retourner true = 'pris en charge par le debounce' pour bloquer la notif immédiate
+  // La notif sera envoyée par _flushDebounce si l'IA ne répond pas (escalade)
+  return true;
 }
 
 /**
@@ -104,7 +107,9 @@ async function _flushDebounce(convId, pool, io) {
   if (messages.length === 1) {
     // Un seul message → comportement normal
     console.log(`⏳ [DEBOUNCE] Conv ${convId} — 1 message → traitement normal`);
-    await handleIncomingMessage(messages[0], conversation, pool, io);
+    const r1 = await handleIncomingMessage(messages[0], conversation, pool, io);
+    // Si l'IA n'a pas répondu (escalade), émettre un event pour que le server envoie la notif
+    if (!r1 && io) io.emit('_debounce_notif_needed', { conversation_id: convId, user_id: conversation.user_id, message: messages[0].message, guest_name: messages[0].sender_name || conversation.guest_name });
     return;
   }
 
@@ -128,7 +133,8 @@ async function _flushDebounce(convId, pool, io) {
     _messageCount: messages.length,
   };
 
-  await handleIncomingMessage(combinedMessage, conversation, pool, io);
+  const r2 = await handleIncomingMessage(combinedMessage, conversation, pool, io);
+  if (!r2 && io) io.emit('_debounce_notif_needed', { conversation_id: convId, user_id: conversation.user_id, message: lastMsg.message, guest_name: lastMsg.sender_name || conversation.guest_name });
 }
 
 // ============================================
