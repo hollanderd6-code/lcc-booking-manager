@@ -9018,6 +9018,25 @@ document.addEventListener('click', function(e) {
 
   console.log('📤 Envoi suppression :', payload);
 
+  // BHGuest : utiliser la route dediee
+  const _rawSrc = (booking.source || booking.platform || '').toLowerCase();
+  const _isBHGuest = ['guest_app','bhguest','boostinghost_guest','boostinghost guest'].includes(_rawSrc);
+  if (_isBHGuest && uid) {
+    fetch('/api/guest/cancel-reservation', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid })
+    })
+    .then(r => r.json())
+    .then(() => {
+      if (detailsModal) { detailsModal.style.display = 'none'; window.showFab && window.showFab(); }
+      window.deletingInProgress = false;
+      setTimeout(() => { if (typeof window.loadCalendarData === 'function') window.loadCalendarData(); else location.reload(); }, 400);
+    })
+    .catch(err => { window.deletingInProgress = false; alert('Erreur annulation BHGuest: ' + err.message); });
+    return;
+  }
+
   fetch('https://lcc-booking-manager.onrender.com/api/manual-reservations/delete', {
     method: 'POST',
     headers: {
@@ -9188,6 +9207,23 @@ if (editBookingForm) {
           // Patch immédiat des stores + recalcul KPI (pas besoin d'attendre le reload)
           window.bhNotesPatchStore(uid, notes);
           alert('Note sauvegardée !');
+        } else if (isBHGuest) {
+          // ── CAS RÉSERVATION BHGUEST ──
+          console.log('✏️ Modification réservation BHGuest uid:', uid);
+          const updateRes = await fetch('/api/guest/modify-reservation', {
+            method: 'POST', headers,
+            body: JSON.stringify({
+              uid,
+              checkin: start,
+              checkout: end,
+              guests: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null
+            })
+          });
+          let updateBody = {};
+          try { updateBody = await updateRes.json(); } catch (e) {}
+          if (!updateRes.ok) throw new Error(updateBody.error || 'Erreur mise à jour BHGuest (' + updateRes.status + ')');
+          window.bhNotesPatchStore && window.bhNotesPatchStore(uid, notes);
+          alert('Réservation BHGuest mise à jour !');
         } else {
           // ── CAS RÉSERVATION MANUELLE ──
           console.log('✏️ Modification réservation manuelle uid:', uid);
