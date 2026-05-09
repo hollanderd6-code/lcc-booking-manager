@@ -60,6 +60,12 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
     return handleIncomingMessage(message, conversation, pool, io);
   }
 
+  // Conv escaladée → pas de debounce, traitement immédiat pour envoyer la notif
+  if (conversation.escalated) {
+    console.log(`🔔 [DEBOUNCE] Conv ${convId} escaladée → traitement immédiat (notif propriétaire)`);
+    return handleIncomingMessage(message, conversation, pool, io);
+  }
+
   // ── Debounce normal ─────────────────────────────────────────────────────
   if (_debounceMap.has(convId)) {
     // Timer existant → on ajoute le message et on repart à zéro
@@ -346,13 +352,14 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             }
           }
         } catch(e) { /* non bloquant */ }
-        return false;
+        // Retourner true : la notif a ete envoyee ici, le server ne doit pas en envoyer une 2e
+        return true;
       }
     } catch(e) {
-      // Si DB échoue, fallback sur l'objet mémoire
+      // Si DB echoue, fallback sur l'objet memoire
       if (conversation.escalated) {
-        console.log('ℹ️ [HANDLER] Conversation déjà escaladée (mémoire) → bot silencieux');
-        return false;
+        console.log('ℹ️ [HANDLER] Conversation deja escaladee (memoire) → bot silencieux');
+        return true; // notif deja envoyee ou non disponible
       }
     }
 
