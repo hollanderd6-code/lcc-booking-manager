@@ -5778,6 +5778,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
       _seenUids.add(key);
       return true;
     });
+    console.log('[NOTES KPI] apres dedup:', withNotes.length, 'entrees. UIDs:', withNotes.map(function(r){return (r.uid||r.id||'?').substring(0,20)+'|type:'+r.type+'|notes:'+String(r.notes).substring(0,20);}));
 
     // Trier par date de fin croissante
     withNotes.sort(function(a, b) {
