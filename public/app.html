@@ -9221,7 +9221,8 @@ if (editBookingForm) {
               uid,
               checkin: start,
               checkout: end,
-              guests: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null
+              guests: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
+              notes: notes || null
             })
           });
           let updateBody = {};
