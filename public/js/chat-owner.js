@@ -906,11 +906,13 @@ function appendMessage(message) {
   
   const time = document.createElement('span');
   time.className = 'chat-time';
-  time.textContent = formatTime(message.created_at);
+  const _ts = message.created_at || message.timestamp || message.sent_at || null;
+  time.textContent = _ts ? formatTime(_ts) : '';
   
   const status = document.createElement('span');
   status.className = 'chat-status';
-  status.textContent = (message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system') ? 'Envoyé' : '';
+  const _isOwnerMsg = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
+  status.textContent = _isOwnerMsg ? 'Envoyé' : '';
   
   meta.appendChild(time);
   meta.appendChild(status);
