@@ -7623,6 +7623,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           r.end_date,
           r.ota_name,
           r.notes,
+          r.created_at,
           c.onboarding_completed,
           c.id as conversation_id
          FROM reservations r
@@ -7721,7 +7722,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           guest_initial: dbData.guest_first_name
             ? dbData.guest_first_name.charAt(0).toUpperCase()
             : null,
-          notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null
+          notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
+          createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null
         };
 
         allReservations.push(enrichedReservation);
