@@ -408,8 +408,8 @@ const { setupSupportRoutes, initSupportTables } = require('./support-chat-routes
 // ✅ NOUVEAU : NOTIFICATIONS PUSH FIREBASE
 // ============================================
 const { 
-  sendNotification as _sendNotificationRaw,
-  sendNotificationToMultiple as _sendNotifMultipleRaw,
+  sendNotification,
+  sendNotificationToMultiple,
   sendNewMessageNotification,
   sendNewCleaningNotification,
   sendCleaningReminderNotification,
@@ -421,14 +421,16 @@ const {
 } = require('./services/notifications-service');
 
 // Wrappers auto-log vers notification_history
-async function sendNotification(token, title, body, data) {
-  const result = await _sendNotificationRaw(token, title, body, data);
+const _origSendNotification = sendNotification;
+const _origSendNotificationToMultiple = sendNotificationToMultiple;
+async function sendNotificationLogged(token, title, body, data) {
+  const result = await _origSendNotification(token, title, body, data);
   const userId = data && (data.userId || data.user_id || data.ownerId || data.owner_id);
   if (userId) saveNotificationToHistory(userId, title, body, (data && data.type) || 'push', data);
   return result;
 }
-async function sendNotificationToMultiple(tokens, title, body, data) {
-  const result = await _sendNotifMultipleRaw(tokens, title, body, data);
+async function sendNotificationToMultipleLogged(tokens, title, body, data) {
+  const result = await _origSendNotificationToMultiple(tokens, title, body, data);
   const userId = data && (data.userId || data.user_id || data.ownerId || data.owner_id);
   if (userId) saveNotificationToHistory(userId, title, body, (data && data.type) || 'push', data);
   return result;
