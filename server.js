@@ -683,7 +683,7 @@ async function processArrivalsForToday(pool, io, transporter) {
 
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY) 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-03-31.basil' }) 
   : null;
 
 // ============================================
@@ -5442,6 +5442,7 @@ async function sendDepositRequestMessages(io) {
           },
           success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
           cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
         };
 
         // ✅ LOGIQUE PRIORITÉ STRIPE : proprio → user → BH (3%)
@@ -7083,16 +7084,18 @@ app.post('/api/reservations/manual', async (req, res) => {
           uid, property_id, user_id,
           start_date, end_date,
           guest_name, source, platform, reservation_type,
-          price, currency, status,
+          price, amount_total, currency, status,
           notes, guest_phone, guest_email,
           guest_country, occupancy_adults,
           amount_rooms, amount_cleaning, amount_taxes, ota_commission,
           synced_at, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW(), NOW())
         ON CONFLICT (uid) DO UPDATE SET
           notes = EXCLUDED.notes,
           guest_phone = EXCLUDED.guest_phone,
-          guest_email = EXCLUDED.guest_email
+          guest_email = EXCLUDED.guest_email,
+          price = EXCLUDED.price,
+          amount_total = EXCLUDED.amount_total
       `, [
         uid, propertyId, user.id,
         start, end,
@@ -7274,7 +7277,7 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
       `UPDATE reservations SET
         property_id = $1, start_date = $2, end_date = $3,
         guest_name = $4, notes = $5, platform = $6, source = $6,
-        price = $7, guest_phone = $8, guest_email = $9,
+        price = $7, amount_total = $7, guest_phone = $8, guest_email = $9,
         guest_country = $10, guest_address = $11, guest_zip = $12, occupancy_adults = $13,
         amount_rooms = $14, amount_cleaning = $15, amount_taxes = $16, ota_commission = $17,
         updated_at = NOW()
@@ -7282,7 +7285,7 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
       [
         propertyId, start, end,
         guestName || 'Réservation manuelle', (notes !== undefined ? (notes.trim() || null) : null), platform || 'MANUEL',
-        price || 0, phone || null, email || null,
+        price || null, phone || null, email || null,
         guest_country || null, guest_address || null, guest_zip || null, occupancy_adults || null,
         amount_rooms || null, amount_cleaning || null, amount_taxes || null, ota_commission || null,
         uid, user.id
@@ -15709,6 +15712,7 @@ app.post('/api/deposits',
       },
       success_url: `${appUrl}/caution-success.html?depositId=${deposit.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${deposit.id}`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
     };
 
     let session;
@@ -15805,6 +15809,7 @@ app.put('/api/deposits/:depositId',
       metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid, user_id: String(userId) },
       success_url: `${appUrl}/caution-success.html?depositId=${existing.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${existing.id}`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
     });
 
     await pool.query('UPDATE deposits SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
@@ -15906,6 +15911,7 @@ app.put('/api/payments/:paymentId',
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
     });
 
     await pool.query('UPDATE payments SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
@@ -16068,6 +16074,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 jours
     });
 
     payment.stripeSessionId = session.id;
@@ -21802,6 +21809,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
                 metadata: { deposit_id: depositId, reservation_uid: resUid },
                 success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
                 cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
+                expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
               };
               const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
               await pool.query(
