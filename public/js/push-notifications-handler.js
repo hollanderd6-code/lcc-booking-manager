@@ -5,6 +5,21 @@
 
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
 
+  // Sauvegarder la notif dans l'historique
+  async function logNotificationToHistory(title, body, type, data) {
+    try {
+      const jwt = localStorage.getItem('lcc_token');
+      if (!jwt) return;
+      await fetch(API_BASE + '/api/notifications/history/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+        body: JSON.stringify({ title: title || '', body: body || '', type: type || 'push', data: data || {} })
+      });
+    } catch(e) {
+      console.warn('⚠️ logNotificationToHistory:', e.message);
+    }
+  }
+
   function getDeviceType() {
     const cap = window.Capacitor;
     const ua = (navigator.userAgent || '').toLowerCase();
@@ -184,6 +199,13 @@
 
     FirebaseMessaging.addListener('notificationReceived', function(notification) {
       console.log('📩 [DEBUG] Notification reçue:', notification);
+      var n = notification.notification || notification;
+      var title = n.title || (notification.data && notification.data.title) || '';
+      var body  = n.body  || (notification.data && notification.data.body)  || '';
+      var type  = (notification.data && notification.data.type) || 'push';
+      logNotificationToHistory(title, body, type, notification.data || {});
+      // Mettre à jour le badge si la page est ouverte
+      if (typeof window.initNotifBadge === 'function') setTimeout(window.initNotifBadge, 500);
     });
 
     FirebaseMessaging.addListener('notificationActionPerformed', function(action) {
