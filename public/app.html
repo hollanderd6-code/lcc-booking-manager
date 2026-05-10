@@ -8203,7 +8203,7 @@ console.log('👤 DEBUG GUEST:', {
     const createdAtFmt = createdAt ? new Date(createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
 
     // Prix
-    const price  = booking.price || booking.amount || booking.totalPrice || booking.total_price || null;
+    const price  = booking.amount_total || booking.price || booking.amount || booking.totalPrice || booking.total_price || null;
     const priceFormatted = price != null
       ? Number(price).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
       : null;
@@ -8758,63 +8758,115 @@ try {
 
         // ── Bouton Caution ───────────────────────────────────────
         if (isDirectOrManual) {
-          document.getElementById('btnQuickDeposit')?.addEventListener('click', async () => {
-            const amount = prompt('Montant de la caution (€) ?', '300');
-            if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return;
-            const token = localStorage.getItem('lcc_token');
-            const btn = document.getElementById('btnQuickDeposit');
-            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...'; }
-            try {
-              const r = await fetch(`${API_URL}/api/deposits`, {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reservationUid: reservationUidLocal, amount: parseFloat(amount) })
-              });
-              const d = await r.json();
-              const url = d.checkoutUrl || d.checkout_url;
-              if (url) {
-                await navigator.clipboard.writeText(url).catch(() => {});
-                if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
-                showToast('✅ Lien de caution copié dans le presse-papier', 'success');
-                setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;font-size:16px;width:20px;text-align:center;"></i> Envoyer un lien de caution'; } }, 3000);
-              } else {
-                showToast('❌ ' + (d.error || 'Erreur création caution'), 'error');
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;"></i> Envoyer un lien de caution'; }
+
+          // Helper : mini-modal inline pour saisie de montant
+          function showAmountModal({ title, icon, iconColor, defaultAmount, onConfirm }) {
+            // Supprimer un éventuel modal précédent
+            document.getElementById('_quickAmountModal')?.remove();
+            const overlay = document.createElement('div');
+            overlay.id = '_quickAmountModal';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            overlay.innerHTML = `
+              <div style="background:var(--bg-primary,#F5F0E8);border-radius:18px;padding:22px 20px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+                <div style="font-size:16px;font-weight:700;color:var(--text-primary,#111);margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+                  <i class="${icon}" style="color:${iconColor};"></i> ${title}
+                </div>
+                <label style="display:block;font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Montant (€)</label>
+                <input id="_quickAmountInput" type="number" min="1" step="0.01" value="${defaultAmount || ''}" placeholder="Ex: 300"
+                  style="width:100%;padding:11px 13px;border:1.5px solid var(--border-color,#d1d5db);border-radius:10px;font-size:15px;font-weight:600;background:var(--bg-primary,#fff);color:var(--text-primary,#111);box-sizing:border-box;margin-bottom:14px;"/>
+                <div style="display:flex;gap:8px;">
+                  <button id="_quickAmountCancel" style="flex:1;padding:10px;border:1.5px solid var(--border-color,#d1d5db);border-radius:10px;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-primary,#111);">Annuler</button>
+                  <button id="_quickAmountConfirm" style="flex:2;padding:10px;border:none;border-radius:10px;background:#1A7A5E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Générer le lien</button>
+                </div>
+              </div>`;
+            document.body.appendChild(overlay);
+            const input = document.getElementById('_quickAmountInput');
+            input.focus(); input.select();
+            document.getElementById('_quickAmountCancel').onclick = () => overlay.remove();
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+            document.getElementById('_quickAmountConfirm').onclick = () => {
+              const val = parseFloat(input.value);
+              if (!val || val <= 0) { input.style.borderColor = '#ef4444'; return; }
+              overlay.remove();
+              onConfirm(val);
+            };
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') document.getElementById('_quickAmountConfirm')?.click();
+              if (e.key === 'Escape') overlay.remove();
+            });
+          }
+
+          document.getElementById('btnQuickDeposit')?.addEventListener('click', () => {
+            const defaultAmt = booking.amount_total || booking.price || booking.amount || '';
+            showAmountModal({
+              title: 'Lien de caution',
+              icon: 'fas fa-shield-alt',
+              iconColor: '#F59E0B',
+              defaultAmount: defaultAmt,
+              onConfirm: async (amount) => {
+                const token = localStorage.getItem('lcc_token');
+                const btn = document.getElementById('btnQuickDeposit');
+                if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...'; }
+                try {
+                  const r = await fetch(`${API_URL}/api/deposits`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reservationUid: reservationUidLocal, amount })
+                  });
+                  const d = await r.json();
+                  const url = d.checkoutUrl || d.checkout_url;
+                  if (url) {
+                    await navigator.clipboard.writeText(url).catch(() => {});
+                    if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
+                    showToast('✅ Lien de caution copié dans le presse-papier', 'success');
+                    setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;font-size:16px;width:20px;text-align:center;"></i> Envoyer un lien de caution'; } }, 3000);
+                  } else {
+                    showToast('❌ ' + (d.error || 'Erreur création caution'), 'error');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;"></i> Envoyer un lien de caution'; }
+                  }
+                } catch(e) {
+                  showToast('❌ Erreur réseau', 'error');
+                  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;"></i> Envoyer un lien de caution'; }
+                }
               }
-            } catch(e) {
-              showToast('❌ Erreur réseau', 'error');
-              if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shield-alt" style="color:#F59E0B;"></i> Envoyer un lien de caution'; }
-            }
+            });
           });
 
           // ── Bouton Paiement ──────────────────────────────────────
-          document.getElementById('btnQuickPayment')?.addEventListener('click', async () => {
-            const amount = prompt('Montant du paiement (€) ?', '100');
-            if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return;
-            const token = localStorage.getItem('lcc_token');
-            const btn = document.getElementById('btnQuickPayment');
-            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...'; }
-            try {
-              const r = await fetch(`${API_URL}/api/payments`, {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reservationUid: reservationUidLocal, amount: parseFloat(amount) })
-              });
-              const d = await r.json();
-              const url = d.checkoutUrl || d.checkout_url;
-              if (url) {
-                await navigator.clipboard.writeText(url).catch(() => {});
-                if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
-                showToast('✅ Lien de paiement copié dans le presse-papier', 'success');
-                setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;font-size:16px;width:20px;text-align:center;"></i> Envoyer un lien de paiement'; } }, 3000);
-              } else {
-                showToast('❌ ' + (d.error || 'Erreur création paiement'), 'error');
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;"></i> Envoyer un lien de paiement'; }
+          document.getElementById('btnQuickPayment')?.addEventListener('click', () => {
+            const defaultAmt = booking.amount_total || booking.price || booking.amount || '';
+            showAmountModal({
+              title: 'Lien de paiement',
+              icon: 'fas fa-credit-card',
+              iconColor: '#6366F1',
+              defaultAmount: defaultAmt,
+              onConfirm: async (amount) => {
+                const token = localStorage.getItem('lcc_token');
+                const btn = document.getElementById('btnQuickPayment');
+                if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...'; }
+                try {
+                  const r = await fetch(`${API_URL}/api/payments`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reservationUid: reservationUidLocal, amount })
+                  });
+                  const d = await r.json();
+                  const url = d.checkoutUrl || d.checkout_url;
+                  if (url) {
+                    await navigator.clipboard.writeText(url).catch(() => {});
+                    if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lien copié !';
+                    showToast('✅ Lien de paiement copié dans le presse-papier', 'success');
+                    setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;font-size:16px;width:20px;text-align:center;"></i> Envoyer un lien de paiement'; } }, 3000);
+                  } else {
+                    showToast('❌ ' + (d.error || 'Erreur création paiement'), 'error');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;"></i> Envoyer un lien de paiement'; }
+                  }
+                } catch(e) {
+                  showToast('❌ Erreur réseau', 'error');
+                  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;"></i> Envoyer un lien de paiement'; }
+                }
               }
-            } catch(e) {
-              showToast('❌ Erreur réseau', 'error');
-              if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card" style="color:#6366F1;"></i> Envoyer un lien de paiement'; }
-            }
+            });
           });
         }
       }
@@ -8941,7 +8993,7 @@ function handleEditBooking() {
   document.getElementById('editGuestName').value = currentBookingData.guestName || '';
   document.getElementById('editGuestPhone').value = currentBookingData.guestPhone || currentBookingData.guest_phone || '';
   document.getElementById('editGuestEmail').value = currentBookingData.guestEmail || currentBookingData.guest_email || '';
-  document.getElementById('editPrice').value = currentBookingData.amount_total || currentBookingData.amount || '';
+  document.getElementById('editPrice').value = currentBookingData.amount_total || currentBookingData.price || currentBookingData.amount || currentBookingData.totalPrice || currentBookingData.total_price || '';
   var editNotesEl = document.getElementById('editNotes');
   var editNotesLabel = document.getElementById('editNotesLabel');
   if (editNotesEl) {
