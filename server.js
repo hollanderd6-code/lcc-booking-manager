@@ -25898,6 +25898,23 @@ async function saveNotificationToHistory(userId, title, body, type, data) {
   }
 }
 
+// POST /api/notifications/history/push — appelé par push-notifications-handler.js côté client
+app.post('/api/notifications/history/push', authenticateToken, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const { title, body, type, data } = req.body;
+    await pool.query(
+      `INSERT INTO notification_history (user_id, title, body, type, data)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, title || '', body || '', type || 'push', data ? JSON.stringify(data) : null]
+    );
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ POST /api/notifications/history/push:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/notifications/history
 app.get('/api/notifications/history', authenticateToken, async (req, res) => {
   try {
