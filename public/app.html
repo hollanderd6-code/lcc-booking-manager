@@ -2892,7 +2892,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       <i class="fas fa-info-circle"></i>
       <span id="bh-mobile-ann-badge" style="display:none;position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#EF4444;"></span>
     </button>
-    <button id="bh-mobile-notif-btn" title="Notifications" onclick="var p=document.getElementById('notificationsPanel');if(p){var _wasOpen=p.classList.contains('open');if(_wasOpen){p.classList.remove('open');document.body.classList.remove('notif-panel-open');if(typeof unlockScroll==='function')unlockScroll();return;}p.classList.add('open');document.body.classList.add('notif-panel-open');if(typeof lockScroll==='function')lockScroll();if(true){var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#888';tA.style.borderBottomColor='transparent';tA.style.fontWeight='500';}if(tP){tP.style.color='#1A7A5E';tP.style.borderBottomColor='#1A7A5E';tP.style.fontWeight='600';}if(pA)pA.style.display='none';if(pPush)pPush.style.display='';if(typeof loadPushNotifHistory==='function')loadPushNotifHistory();}}" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
+    <button id="bh-mobile-notif-btn" title="Notifications" onclick="var p=document.getElementById('notificationsPanel');if(p){var _wasOpen=p.classList.contains('open');if(_wasOpen){p.classList.remove('open');document.body.classList.remove('notif-panel-open');return;}p.classList.add('open');document.body.classList.add('notif-panel-open');if(true){var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#888';tA.style.borderBottomColor='transparent';tA.style.fontWeight='500';}if(tP){tP.style.color='#1A7A5E';tP.style.borderBottomColor='#1A7A5E';tP.style.fontWeight='600';}if(pA)pA.style.display='none';if(pPush)pPush.style.display='';if(typeof loadPushNotifHistory==='function')loadPushNotifHistory();}}" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
       <i class="fas fa-bell"></i>
       <span id="bh-mobile-notif-badge" style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 2px;pointer-events:none;"></span>
     </button>
@@ -3219,7 +3219,7 @@ window.closeChecklistsKpiModal = function() {
   <h2 style="margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
     <i class="fas fa-bell"></i> Notifications
   </h2>
-  <button class="btn-icon" id="notificationsCloseBtn" onclick="document.getElementById('notificationsPanel').classList.remove('open');document.body.classList.remove('notif-panel-open');if(typeof unlockScroll==='function')unlockScroll();"><i class="fas fa-times"></i></button>
+  <button class="btn-icon" id="notificationsCloseBtn" onclick="document.getElementById('notificationsPanel').classList.remove('open');document.body.classList.remove('notif-panel-open');"><i class="fas fa-times"></i></button>
 </div>
 <!-- Onglets -->
 <div style="display:flex;border-bottom:1px solid rgba(0,0,0,.08);padding:0 8px;margin-top:8px;">
@@ -12215,6 +12215,35 @@ document.addEventListener('DOMContentLoaded', function() {
 // ═══════════════════════════════════════════
 // HISTORIQUE NOTIFICATIONS PUSH
 // ═══════════════════════════════════════════
+
+// Bloquer scroll iOS natif derrière le panel
+function _notifPreventScroll(e) {
+  var panel = document.getElementById('notificationsPanel');
+  if (!panel || !panel.classList.contains('open')) return;
+  // Laisser scroller si on est dans un élément scrollable du panel
+  var el = e.target;
+  while (el && el !== document.body) {
+    if (el === panel) break;
+    el = el.parentElement;
+  }
+  if (el !== panel) {
+    // Touch en dehors du panel — bloquer
+    e.preventDefault();
+    return;
+  }
+  // Touch dans le panel — vérifier si l'élément peut scroller
+  el = e.target;
+  while (el && el !== document.body) {
+    var style = window.getComputedStyle(el);
+    if (el.scrollHeight > el.clientHeight &&
+        (style.overflowY === 'auto' || style.overflowY === 'scroll')) {
+      return; // laisser scroller
+    }
+    el = el.parentElement;
+  }
+  e.preventDefault();
+}
+document.addEventListener('touchmove', _notifPreventScroll, { passive: false });
 
 function switchNotifTab(tab) {
   var isActivity = tab === 'activity';
