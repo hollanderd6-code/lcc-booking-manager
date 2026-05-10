@@ -503,6 +503,52 @@ Si desea cancelar su reserva, puede hacerlo directamente desde la plataforma. Te
         return true;
       }
 
+      // ── CAS B-bis : Retard au départ (checkout) ───────────────────
+      // "on aura 20 minutes de retard", "we'll be 30 minutes late", "slight delay"
+      // Si retard <= 60 min → confirmer. Si > 60 min ou non précisé → escalader.
+      {
+        const nowCo = new Date();
+        const checkoutDtCo = conversation.reservation_end_date ? new Date(conversation.reservation_end_date) : null;
+        const checkinDtCo  = conversation.reservation_start_date ? new Date(conversation.reservation_start_date) : null;
+        // On n'active ce cas que si on est en cours de séjour ET que c'est le jour du checkout
+        const isDuringCo = checkinDtCo && checkoutDtCo && nowCo >= checkinDtCo && nowCo <= checkoutDtCo;
+        const isCheckoutDay = checkoutDtCo &&
+          nowCo.getFullYear() === checkoutDtCo.getFullYear() &&
+          nowCo.getMonth()    === checkoutDtCo.getMonth()    &&
+          nowCo.getDate()     === checkoutDtCo.getDate();
+
+        const checkoutDelayPattern = /(?:retard|en retard|late|delay(?:ed)?|we.?ll be late|aura.*retard|aurons.*retard|on sera en retard|désolé.*retard|retard.*départ|retard.*checkout|retard.*sortie|minutes? de retard|minutes? late|slight delay|un peu de retard|petit retard)/i;
+
+        if ((isDuringCo || isCheckoutDay) && checkoutDelayPattern.test(msgLow)) {
+          // Extraire le nombre de minutes si présent (ex: "20 minutes", "30 min", "une heure")
+          const minMatch = msgLow.match(/(\d+)\s*(?:minute|min|mn)/i);
+          const hrMatch  = msgLow.match(/(\d+)\s*(?:heure|hour|h\b)/i);
+          let delayMinutes = null;
+          if (minMatch)      delayMinutes = parseInt(minMatch[1]);
+          else if (hrMatch)  delayMinutes = parseInt(hrMatch[1]) * 60;
+
+          const departureTime = property?.departure_time || null; // ex: "11:00"
+
+          if (delayMinutes !== null && delayMinutes <= 60) {
+            // Retard raisonnable → confirmer
+            const checkoutDelayOkReplies = {
+              fr: `Pas de problème, nous comprenons que les retards peuvent arriver. ${departureTime ? `Vous devriez partir vers ${departureTime.replace(':','h')} + ${delayMinutes} min — ` : ''}Prenez votre temps et bon retour ! 😊`,
+              en: `No problem at all, we understand delays happen. ${departureTime ? `You should be checking out around ${delayMinutes} minutes after ${departureTime} — ` : ''}Take your time and safe travels! 😊`,
+              es: `¡No hay problema, entendemos que los retrasos ocurren! ${departureTime ? `Debería salir unos ${delayMinutes} minutos después de las ${departureTime} — ` : ''}¡Tómese su tiempo y buen viaje! 😊`,
+            };
+            const reply = checkoutDelayOkReplies[language] || checkoutDelayOkReplies.fr;
+            console.log(`🚪 [HANDLER] Retard checkout ${delayMinutes} min (<=60) → confirmation auto`);
+            await sendBotMessage(conversation.id, reply, pool, io, channexId);
+            return true;
+          } else {
+            // Retard > 60 min, ou pas de durée précisée → escalader
+            console.log(`🚪 [HANDLER] Retard checkout ${delayMinutes !== null ? delayMinutes + ' min' : 'non précisé'} (>60 ou indéfini) → escalade`);
+            await escalateToOwner(conversation, pool, io, language, channexId);
+            return false;
+          }
+        }
+      }
+
       // ── CAS B : Heure d'arrivée — le voyageur INFORME de son heure ───
       // "j'arrive à 19h", "je serai là vers 18h", "on arrive vers 20h"
       // Distinguer "informer" (→ confirmer) de "demander" (→ Groq/escalade)
