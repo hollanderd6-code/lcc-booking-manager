@@ -151,17 +151,22 @@ const COUNTRY_TO_DEEPL_LANG = {
  */
 async function translateWithDeepL(text, target) {
   const apiKey = process.env.DEEPL_API_KEY;
-  if (!apiKey || !target || !text) return text;
+  if (!apiKey || !target) return text;
+
+  // Vérifications robustes du texte
+  const textStr = typeof text === 'string' ? text : String(text || '');
+  if (!textStr.trim()) return text;
 
   try {
     const response = await axios.post(
       'https://api-free.deepl.com/v2/translate',
-      { text, target_lang: target, source_lang: 'FR', preserve_formatting: true },
+      // DeepL v2 attend text comme un array de strings
+      { text: [textStr], target_lang: target, source_lang: 'FR', preserve_formatting: true },
       { headers: { 'Authorization': `DeepL-Auth-Key ${apiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
     );
     const translated = response.data?.translations?.[0]?.text;
     if (translated) {
-      console.log(`🌍 [DEEPL] Traduit vers ${target} (${text.length} chars → ${translated.length} chars)`);
+      console.log(`🌍 [DEEPL] Traduit vers ${target} (${textStr.length} chars → ${translated.length} chars)`);
       return translated;
     }
     return text;
