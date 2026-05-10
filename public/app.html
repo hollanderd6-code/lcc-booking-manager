@@ -3223,7 +3223,7 @@ window.closeChecklistsKpiModal = function() {
 </div>
 <!-- Onglets -->
 <div style="display:flex;border-bottom:1px solid rgba(0,0,0,.08);padding:0 8px;margin-top:8px;">
-  <button id="notifTabActivity" onclick="var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#1A7A5E';tA.style.borderBottomColor='#1A7A5E';tA.style.fontWeight='600';}if(tP){tP.style.color='#888';tP.style.borderBottomColor='transparent';tP.style.fontWeight='500';}if(pA)pA.style.display='';if(pPush)pPush.style.display='none';if(typeof loadActivityData==='function')loadActivityData();" style="flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#1A7A5E;border-bottom:2px solid #1A7A5E;margin-bottom:-1px;display:flex;align-items:center;justify-content:center;gap:6px;">
+  <button id="notifTabActivity" onclick="var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#1A7A5E';tA.style.borderBottomColor='#1A7A5E';tA.style.fontWeight='600';}if(tP){tP.style.color='#888';tP.style.borderBottomColor='transparent';tP.style.fontWeight='500';}if(pA)pA.style.display='';if(pPush)pPush.style.display='none';if(typeof window.loadActivityData==='function')window.loadActivityData();" style="flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#1A7A5E;border-bottom:2px solid #1A7A5E;margin-bottom:-1px;display:flex;align-items:center;justify-content:center;gap:6px;">
     <i class="fas fa-info-circle"></i> Activité
   </button>
   <button id="notifTabPush" onclick="var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#888';tA.style.borderBottomColor='transparent';tA.style.fontWeight='500';}if(tP){tP.style.color='#1A7A5E';tP.style.borderBottomColor='#1A7A5E';tP.style.fontWeight='600';}if(pA)pA.style.display='none';if(pPush)pPush.style.display='';if(typeof loadPushNotifHistory==='function')loadPushNotifHistory();" style="flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;justify-content:center;gap:6px;position:relative;">
@@ -4810,6 +4810,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           console.error('Erreur chargement activité:', err);
         }
       }
+      // Exposer globalement pour l'onglet Activité du panel
+      window.loadActivityData = loadActivityData;
 
       /* Scroll vers calendrier depuis le menu */
       const navCalendarLink = document.getElementById('navCalendarLink');
