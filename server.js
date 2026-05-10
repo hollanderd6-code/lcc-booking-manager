@@ -1857,6 +1857,23 @@ ON invoice_download_tokens(token);
       `);
       console.log('✅ Table short_links OK');
 
+    // ✅ Migration : colonnes pour régénération automatique des liens Stripe
+    try {
+      await pool.query(`
+        ALTER TABLE deposits ADD COLUMN IF NOT EXISTS stripe_session_expires_at TIMESTAMPTZ;
+        ALTER TABLE deposits ADD COLUMN IF NOT EXISTS stripe_session_params JSONB;
+      `);
+      await pool.query(`
+        ALTER TABLE payments ADD COLUMN IF NOT EXISTS stripe_session_expires_at TIMESTAMPTZ;
+      `);
+      await pool.query(`
+        ALTER TABLE short_links ADD COLUMN IF NOT EXISTS deposit_id TEXT;
+        ALTER TABLE short_links ADD COLUMN IF NOT EXISTS payment_id TEXT;
+        ALTER TABLE short_links ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+      `);
+      console.log('✅ Colonnes régénération liens Stripe OK');
+    } catch(e) { console.log('ℹ️ Colonnes régénération déjà existantes:', e.message); }
+
     // ✅ Migration : table message_template_logs
     try {
       await pool.query(`
@@ -15757,7 +15774,9 @@ await pool.query(`
   WHERE id = $3
 `, [session.id, session.url, deposit.id]);
 
-    const shortCheckoutUrl = await makeShortLink(pool, session.url, req.user?.id || null);
+    const shortCheckoutUrl = await makeShortLink(pool, session.url, req.user?.id || null, { depositId: deposit.id });
+    // Stocker expires_at
+    await pool.query('UPDATE deposits SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), deposit.id]).catch(() => {});
     return res.json({
       deposit,
       checkoutUrl: shortCheckoutUrl
@@ -15823,7 +15842,8 @@ app.put('/api/deposits/:depositId',
 
     await pool.query('UPDATE deposits SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
     console.log(`✅ Caution ${existing.id} modifiée : ${existing.amount_cents} → ${amountCents} cents`);
-    const shortUrl2 = await makeShortLink(pool, session.url, req.user?.id || null);
+    const shortUrl2 = await makeShortLink(pool, session.url, req.user?.id || null, { depositId: existing.id });
+    await pool.query('UPDATE deposits SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), existing.id]).catch(() => {});
     return res.json({ deposit: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: shortUrl2 }, checkoutUrl: shortUrl2 });
   } catch (err) {
     console.error('Erreur modification caution:', err);
@@ -15924,7 +15944,8 @@ app.put('/api/payments/:paymentId',
 
     await pool.query('UPDATE payments SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
     console.log(`✅ Paiement ${existing.id} modifié : ${existing.amount_cents} → ${amountCents} cents`);
-    const shortPayUrl2 = await makeShortLink(pool, session.url, req.user?.id || null);
+    const shortPayUrl2 = await makeShortLink(pool, session.url, req.user?.id || null, { paymentId: existing.id });
+    await pool.query('UPDATE payments SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), existing.id]).catch(() => {});
     return res.json({ payment: { ...existing, amountCents, stripeSessionId: session.id, checkoutUrl: shortPayUrl2 }, checkoutUrl: shortPayUrl2 });
   } catch (err) {
     console.error('Erreur modification paiement:', err);
@@ -16096,7 +16117,8 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
 
     console.log(`✅ Paiement créé: ${payment.id} - Montant: ${amount}€ - Commission: ${(platformFeeActive/100).toFixed(2)}€ (en pause) - Propriétaire reçoit: ${(ownerReceives/100).toFixed(2)}€`);
 
-    const shortPayUrl = await makeShortLink(pool, session.url, req.user?.id || null);
+    const shortPayUrl = await makeShortLink(pool, session.url, req.user?.id || null, { paymentId: payment.id });
+    await pool.query('UPDATE payments SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), payment.id]).catch(() => {});
     return res.json({
       payment,
       checkoutUrl: shortPayUrl,
@@ -21721,13 +21743,39 @@ console.log('✅ Routes du chat initialisées');
 // ============================================================
 
 // ── Helper : créer ou réutiliser un lien court boostinghost.fr/c/XXXX ─────
-async function makeShortLink(pool, longUrl, userId) {
+async function makeShortLink(pool, longUrl, userId, { depositId = null, paymentId = null } = {}) {
   if (!longUrl || !longUrl.startsWith('http')) return longUrl || '';
   try {
+    // Si on a un depositId/paymentId, chercher le short_link existant pour cet ID
+    if (depositId) {
+      const ex = await pool.query('SELECT code FROM short_links WHERE deposit_id = $1 LIMIT 1', [depositId]).catch(() => ({ rows: [] }));
+      if (ex.rows[0]) {
+        // Mettre à jour l'URL (nouvelle session Stripe)
+        await pool.query('UPDATE short_links SET url = $1, updated_at = NOW() WHERE deposit_id = $2', [longUrl, depositId]).catch(() => {});
+        const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+        return `${appUrl}/c/${ex.rows[0].code}`;
+      }
+    }
+    if (paymentId) {
+      const ex = await pool.query('SELECT code FROM short_links WHERE payment_id = $1 LIMIT 1', [paymentId]).catch(() => ({ rows: [] }));
+      if (ex.rows[0]) {
+        await pool.query('UPDATE short_links SET url = $1, updated_at = NOW() WHERE payment_id = $2', [longUrl, paymentId]).catch(() => {});
+        const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+        return `${appUrl}/c/${ex.rows[0].code}`;
+      }
+    }
+    // Sinon chercher par URL exacte
     const existing = await pool.query(
       'SELECT code FROM short_links WHERE url = $1 LIMIT 1', [longUrl]
     ).catch(() => ({ rows: [] }));
     if (existing.rows[0]) {
+      // Mettre à jour deposit_id/payment_id si manquants
+      if (depositId || paymentId) {
+        await pool.query(
+          'UPDATE short_links SET deposit_id = COALESCE(deposit_id, $1), payment_id = COALESCE(payment_id, $2) WHERE code = $3',
+          [depositId, paymentId, existing.rows[0].code]
+        ).catch(() => {});
+      }
       const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
       return `${appUrl}/c/${existing.rows[0].code}`;
     }
@@ -21740,14 +21788,155 @@ async function makeShortLink(pool, longUrl, userId) {
       tries++;
     } while (tries < 10);
     await pool.query(
-      'INSERT INTO short_links (code, url, user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
-      [code, longUrl, userId || null]
+      'INSERT INTO short_links (code, url, user_id, deposit_id, payment_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
+      [code, longUrl, userId || null, depositId || null, paymentId || null]
     ).catch(() => {});
     const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
     return `${appUrl}/c/${code}`;
   } catch(e) {
     return longUrl; // fallback URL brute
   }
+}
+
+// ── Régénération d'une Checkout Session Stripe expirée ──────────────────────
+async function regenStripeSession(record, type, pool) {
+  const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+  const amountCents = record.amount_cents;
+  const propertyId = record.property_id;
+  const userId = record.user_id;
+
+  // Récupérer le logement pour le nom
+  const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [propertyId]).catch(() => ({ rows: [] }));
+  const prop = propRow.rows[0] || {};
+
+  const stripeTarget = await getStripeForProperty(pool, propertyId, userId);
+  const sessionOptions = stripeTarget.stripeAccountId ? { stripeAccount: stripeTarget.stripeAccountId } : {};
+  const feeRate = stripeTarget.stripeAccountId ? 0.03 : 0.05;
+
+  let sessionParams;
+
+  if (type === 'deposit') {
+    sessionParams = {
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${prop.name || propertyId}` } }, quantity: 1 }],
+      payment_intent_data: {
+        capture_method: 'manual',
+        metadata: { deposit_id: record.id, reservation_uid: record.reservation_uid || '' },
+        application_fee_amount: Math.round(amountCents * feeRate),
+      },
+      metadata: { deposit_id: record.id, reservation_uid: record.reservation_uid || '' },
+      success_url: `${appUrl}/caution-success.html?depositId=${record.id}`,
+      cancel_url: `${appUrl}/caution-cancel.html?depositId=${record.id}`,
+    };
+    if (stripeTarget.stripeAccountId) {
+      sessionParams.payment_intent_data.transfer_data = { destination: stripeTarget.stripeAccountId };
+    }
+    const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+    const expiresAt = new Date(session.expires_at * 1000).toISOString();
+    await pool.query(
+      `UPDATE deposits SET stripe_session_id = $1, checkout_url = $2, stripe_session_expires_at = $3, updated_at = NOW() WHERE id = $4`,
+      [session.id, session.url, expiresAt, record.id]
+    );
+    console.log(`✅ [REGEN] Nouvelle session caution ${record.id} — expire ${expiresAt}`);
+    return session.url;
+
+  } else if (type === 'payment') {
+    // Récupérer les params depuis metadata si disponibles
+    const meta = record.metadata || {};
+    sessionParams = {
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: meta.description || `Paiement - ${prop.name || propertyId}` } }, quantity: 1 }],
+      payment_intent_data: {
+        metadata: { payment_id: record.id, reservation_uid: record.reservation_uid || '', payment_type: 'location' },
+        application_fee_amount: Math.round(amountCents * feeRate),
+      },
+      metadata: { payment_id: record.id, reservation_uid: record.reservation_uid || '', user_id: userId, payment_type: 'location' },
+      success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
+    };
+    if (stripeTarget.stripeAccountId) {
+      sessionParams.payment_intent_data.transfer_data = { destination: stripeTarget.stripeAccountId };
+      sessionParams.payment_intent_data.on_behalf_of = stripeTarget.stripeAccountId;
+    }
+    const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+    const expiresAt = new Date(session.expires_at * 1000).toISOString();
+    await pool.query(
+      `UPDATE payments SET stripe_session_id = $1, checkout_url = $2, stripe_session_expires_at = $3, updated_at = NOW() WHERE id = $4`,
+      [session.id, session.url, expiresAt, record.id]
+    );
+    console.log(`✅ [REGEN] Nouvelle session paiement ${record.id} — expire ${expiresAt}`);
+    return session.url;
+  }
+  return null;
+}
+
+// ── Cron régénération liens Stripe toutes les 23h30 ──────────────────────────
+async function regenExpiredStripeLinks(pool) {
+  console.log('🔄 [REGEN CRON] Vérification liens Stripe à régénérer...');
+  const now = new Date();
+  const threshold = new Date(now.getTime() + 30 * 60 * 1000); // expire dans < 30 min
+
+  // Cautions à régénérer
+  try {
+    const deps = await pool.query(
+      `SELECT d.*, sl.code as short_code
+       FROM deposits d
+       LEFT JOIN short_links sl ON sl.deposit_id = d.id
+       WHERE d.status IN ('pending', 'failed')
+       AND (
+         d.stripe_session_expires_at IS NULL
+         OR d.stripe_session_expires_at < $1
+       )`,
+      [threshold.toISOString()]
+    );
+    console.log(`🔄 [REGEN CRON] ${deps.rows.length} caution(s) à régénérer`);
+    for (const dep of deps.rows) {
+      try {
+        const newUrl = await regenStripeSession(dep, 'deposit', pool);
+        if (newUrl && dep.short_code) {
+          await pool.query(
+            `UPDATE short_links SET url = $1, updated_at = NOW() WHERE deposit_id = $2`,
+            [newUrl, dep.id]
+          );
+          console.log(`✅ [REGEN CRON] Caution ${dep.id} — short_link mis à jour`);
+        }
+      } catch(e) {
+        console.error(`❌ [REGEN CRON] Caution ${dep.id}:`, e.message);
+      }
+    }
+  } catch(e) { console.error('❌ [REGEN CRON] Erreur cautions:', e.message); }
+
+  // Paiements à régénérer
+  try {
+    const pays = await pool.query(
+      `SELECT p.*, sl.code as short_code
+       FROM payments p
+       LEFT JOIN short_links sl ON sl.payment_id = p.id
+       WHERE p.status IN ('pending', 'failed', 'created')
+       AND (
+         p.stripe_session_expires_at IS NULL
+         OR p.stripe_session_expires_at < $1
+       )`,
+      [threshold.toISOString()]
+    );
+    console.log(`🔄 [REGEN CRON] ${pays.rows.length} paiement(s) à régénérer`);
+    for (const pay of pays.rows) {
+      try {
+        const newUrl = await regenStripeSession(pay, 'payment', pool);
+        if (newUrl && pay.short_code) {
+          await pool.query(
+            `UPDATE short_links SET url = $1, updated_at = NOW() WHERE payment_id = $2`,
+            [newUrl, pay.id]
+          );
+          console.log(`✅ [REGEN CRON] Paiement ${pay.id} — short_link mis à jour`);
+        }
+      } catch(e) {
+        console.error(`❌ [REGEN CRON] Paiement ${pay.id}:`, e.message);
+      }
+    }
+  } catch(e) { console.error('❌ [REGEN CRON] Erreur paiements:', e.message); }
 }
 
 async function sendTemplateMessage(pool, io, { template, conv, property }) {
@@ -21823,7 +22012,8 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
                  VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())`,
                 [depositId, conv.user_id, resUid, conv.property_id, amountCents, session.id, session.url]
               );
-              cautionUrl = await makeShortLink(pool, session.url, conv.user_id);
+              cautionUrl = await makeShortLink(pool, session.url, conv.user_id, { depositId: depositId });
+              await pool.query('UPDATE deposits SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), depositId]).catch(() => {});
               console.log(`✅ [TPL] Deposit créé à la volée pour conv ${conv.id}: ${depositId}`);
             }
           } catch(depErr) {
@@ -22131,7 +22321,8 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
                    VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())\`,
                   [depositId, c.user_id, resUidCron, c.property_id, amountCents, session.id, session.url]
                 );
-                cautionUrl = await makeShortLink(pool, session.url, c.user_id);
+                cautionUrl = await makeShortLink(pool, session.url, c.user_id, { depositId: depositId });
+                await pool.query('UPDATE deposits SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), depositId]).catch(() => {});
                 console.log(\`✅ [CRON TPL] Deposit créé à la volée pour conv \${conversation_id}: \${depositId}\`);
               }
             } catch(depErr) {
@@ -22857,6 +23048,21 @@ console.log('✅ Cron message_templates initialisé (7h avant/arrivée+before_de
 // 💰 INITIALISATION DU CRON JOB DES RAPPELS CAUTION
 // ============================================
 initDepositRemindersCron(pool, io);
+
+// ── CRON : Régénération liens Stripe expirés (toutes les 23h30) ──────────────
+cron.schedule('0 */23 * * *', async () => {
+  try {
+    await regenExpiredStripeLinks(pool);
+  } catch(e) {
+    console.error('❌ [REGEN CRON] Erreur globale:', e.message);
+  }
+});
+// Aussi toutes les 30 min pour couvrir les liens cliqués à la dernière minute
+cron.schedule('*/30 * * * *', async () => {
+  try {
+    await regenExpiredStripeLinks(pool);
+  } catch(e) { /* silencieux */ }
+});
 console.log('✅ Cron job rappels caution initialisé');
 
 // ============================================
@@ -27748,16 +27954,78 @@ app.post('/api/short-link', authenticateAny, async (req, res) => {
   }
 });
 
-// GET /c/:code → redirige vers l'URL originale
+// GET /c/:code → redirige vers l'URL Stripe (régénère si expirée)
 app.get('/c/:code', async (req, res) => {
   try {
     const { code } = req.params;
-    const result = await pool.query(
-      `UPDATE short_links SET hits = hits + 1 WHERE code = $1 RETURNING url`, [code]
+    const linkResult = await pool.query(
+      `SELECT sl.*, sl.deposit_id, sl.payment_id
+       FROM short_links sl WHERE sl.code = $1`, [code]
     );
-    if (!result.rows[0]) return res.status(404).send('Lien introuvable');
-    res.redirect(301, result.rows[0].url);
+    if (!linkResult.rows[0]) return res.status(404).send('Lien introuvable');
+    const link = linkResult.rows[0];
+
+    // Incrémenter les hits
+    await pool.query(`UPDATE short_links SET hits = hits + 1 WHERE code = $1`, [code]);
+
+    // ── Vérifier si c'est un lien de caution ou paiement à régénérer ──
+    let finalUrl = link.url;
+
+    if (link.deposit_id) {
+      // Caution
+      const dep = await pool.query(
+        `SELECT * FROM deposits WHERE id = $1`, [link.deposit_id]
+      );
+      const deposit = dep.rows[0];
+      if (deposit && ['pending','failed'].includes(deposit.status)) {
+        // Vérifier si la session Stripe est expirée ou expire dans < 30 min
+        const expiresAt = deposit.stripe_session_expires_at
+          ? new Date(deposit.stripe_session_expires_at)
+          : null;
+        const needsRegen = !expiresAt || (expiresAt - Date.now()) < 30 * 60 * 1000;
+        if (needsRegen) {
+          console.log(`🔄 [REGEN] Régénération caution ${deposit.id} (lien expiré/proche expiration)`);
+          try {
+            const newUrl = await regenStripeSession(deposit, 'deposit', pool);
+            if (newUrl) {
+              await pool.query(`UPDATE short_links SET url = $1, updated_at = NOW() WHERE code = $2`, [newUrl, code]);
+              finalUrl = newUrl;
+            }
+          } catch(regenErr) {
+            console.error('❌ [REGEN] Erreur régénération caution:', regenErr.message);
+            // On redirige quand même vers l'ancienne URL
+          }
+        }
+      }
+    } else if (link.payment_id) {
+      // Paiement
+      const pay = await pool.query(
+        `SELECT * FROM payments WHERE id = $1`, [link.payment_id]
+      );
+      const payment = pay.rows[0];
+      if (payment && ['pending','failed'].includes(payment.status)) {
+        const expiresAt = payment.stripe_session_expires_at
+          ? new Date(payment.stripe_session_expires_at)
+          : null;
+        const needsRegen = !expiresAt || (expiresAt - Date.now()) < 30 * 60 * 1000;
+        if (needsRegen) {
+          console.log(`🔄 [REGEN] Régénération paiement ${payment.id} (lien expiré/proche expiration)`);
+          try {
+            const newUrl = await regenStripeSession(payment, 'payment', pool);
+            if (newUrl) {
+              await pool.query(`UPDATE short_links SET url = $1, updated_at = NOW() WHERE code = $2`, [newUrl, code]);
+              finalUrl = newUrl;
+            }
+          } catch(regenErr) {
+            console.error('❌ [REGEN] Erreur régénération paiement:', regenErr.message);
+          }
+        }
+      }
+    }
+
+    res.redirect(302, finalUrl);
   } catch(e) {
+    console.error('❌ [/c/:code]', e.message);
     res.status(500).send('Erreur serveur');
   }
 });
