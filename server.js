@@ -22149,6 +22149,14 @@ app.get('/api/message-template-scheduled', authenticateToken, async (req, res) =
         );
 
         for (const conv of convs.rows) {
+          // Skip Airbnb si template contient {caution_url}
+          if (tmpl.message && tmpl.message.includes('{caution_url}')) {
+            const _plt = (conv.platform || '').toLowerCase();
+            if (_plt.includes('airbnb') || _plt === 'abb') {
+              console.log(`  ⏭️ Skip conv ${conv.id} : caution non applicable sur Airbnb`);
+              continue;
+            }
+          }
           // Vérifier si déjà envoyé (anti-doublon 23h)
           const sent = await pool.query(
             `SELECT id FROM message_template_logs WHERE template_id = $1 AND conversation_id = $2 AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent'`,
