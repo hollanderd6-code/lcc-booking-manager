@@ -8184,6 +8184,7 @@ console.log('👤 DEBUG GUEST:', {
       if (v.includes('expedia')) return 'expedia';
       if (v.includes('vrbo') || v.includes('homeaway')) return 'vrbo';
       if (v.includes('abritel')) return 'abritel';
+      if (v === 'guest_app' || v.includes('bhguest') || v.includes('boostinghost_guest') || v.includes('boostinghost guest')) return 'bhguest';
       return 'direct';
     })(platformRaw, otaName);
 
@@ -8193,7 +8194,8 @@ console.log('👤 DEBUG GUEST:', {
       expedia: { label: 'Expedia',       bg: 'linear-gradient(135deg,#FFC72C,#FFB000)', color: '#1a1a1a', icon: 'fas fa-plane' },
       vrbo:    { label: 'Vrbo',          bg: 'linear-gradient(135deg,#1569C7,#0E4C99)', color: '#fff', icon: 'fas fa-home' },
       abritel: { label: 'Abritel',       bg: 'linear-gradient(135deg,#0096D6,#0077B3)', color: '#fff', icon: 'fas fa-house' },
-      direct:  { label: 'Direct',        bg: 'linear-gradient(135deg,#1A7A5E,#0f5c46)', color: '#fff', icon: 'fas fa-user' },
+      direct:   { label: 'Direct',        bg: 'linear-gradient(135deg,#1A7A5E,#0f5c46)', color: '#fff', icon: 'fas fa-user' },
+      bhguest:  { label: 'BHGuest',       bg: 'linear-gradient(135deg,#7C3AED,#5B21B6)', color: '#fff', icon: 'fas fa-globe' },
     };
     const pc = PLATFORM_CONFIG[platformKey] || PLATFORM_CONFIG.direct;
 
@@ -8406,20 +8408,14 @@ console.log('👤 DEBUG GUEST:', {
           </div>
 
           ${(() => {
-            // Statut paiement
             const payments = booking.payments || [];
             const hasPaid = payments.some(p => p.status === 'paid');
             const hasPending = payments.some(p => p.status === 'pending' || p.status === 'created');
-            // BHGuest : source de vérité = booking.payment_status
-            const directPaid = booking.payment_status === 'paid' || booking.source === 'guest_app' && hasPaid;
-            if (hasPaid || directPaid) {
-              return `<div style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;font-size:12px;font-weight:600;color:#059669;">
-                <i class="fas fa-check-circle"></i> Paiement reçu
-              </div>`;
+            const isBHGuestPaid = (booking.source === 'guest_app' || (booking.platform || '').toLowerCase().includes('boostinghost')) && hasPaid;
+            if (hasPaid || isBHGuestPaid) {
+              return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;font-size:12px;font-weight:600;color:#059669;"><i class=\"fas fa-check-circle\"></i> Paiement reçu</div>';
             } else if (hasPending) {
-              return `<div style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;font-size:12px;font-weight:600;color:#D97706;">
-                <i class="fas fa-clock"></i> Paiement en attente
-              </div>`;
+              return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;font-size:12px;font-weight:600;color:#D97706;"><i class=\"fas fa-clock\"></i> Paiement en attente</div>';
             }
             return '';
           })()}
