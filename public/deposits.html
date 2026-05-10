@@ -1410,52 +1410,172 @@ Actualiser
 </div>
 
 <!-- MODAL: Caution libre (sans réservation) -->
+<style>
+/* ── Stripe target radio cards ── */
+.stripe-target-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.stripe-target-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border-color, #d1d5db);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #111);
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+  background: var(--bg-primary, #fff);
+}
+.stripe-target-card:hover {
+  border-color: #1A7A5E;
+  background: #f0faf6;
+}
+.stripe-target-card input[type="radio"] {
+  display: none;
+}
+.stripe-target-card .radio-dot {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color, #d1d5db);
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s;
+}
+.stripe-target-card .radio-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1A7A5E;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.stripe-target-card.selected {
+  border-color: #1A7A5E;
+  background: #f0faf6;
+}
+.stripe-target-card.selected .radio-dot {
+  border-color: #1A7A5E;
+}
+.stripe-target-card.selected .radio-dot::after {
+  opacity: 1;
+}
+.stripe-target-card .card-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.stripe-target-card .card-icon.green { background: #d1fae5; color: #1A7A5E; }
+.stripe-target-card .card-icon.purple { background: #ede9fe; color: #6772E5; }
+.stripe-target-card .card-label { flex: 1; }
+.stripe-target-card .card-label span { display: block; font-size: 11px; color: var(--text-secondary, #888); font-weight: 400; margin-top: 1px; }
+/* selects dans le modal free deposit */
+#freeDepositPropertyId,
+#freeDepositOwnerId {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border-color, #d1d5db);
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #111);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+#freeDepositName,
+#freeDepositAmount {
+  padding: 10px 12px;
+  border: 1.5px solid var(--border-color, #d1d5db);
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #111);
+  width: 100%;
+  box-sizing: border-box;
+}
+#freeDepositName:focus,
+#freeDepositAmount:focus,
+#freeDepositPropertyId:focus,
+#freeDepositOwnerId:focus {
+  outline: none;
+  border-color: #1A7A5E;
+  box-shadow: 0 0 0 3px rgba(26,122,94,0.1);
+}
+</style>
+
 <div class="modal" id="freeDepositModal">
 <div class="modal-content">
 <div class="modal-header">
-<h2>Caution libre</h2>
-<button class="modal-close" id="freeDepositModalClose"><i class="fas fa-times"></i></button>
+  <h2 style="font-size:17px;font-weight:700;">Caution libre</h2>
+  <button class="modal-close" id="freeDepositModalClose" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--bg-secondary,#f3f4f6);"><i class="fas fa-times" style="font-size:13px;"></i></button>
 </div>
-<div class="modal-body">
-<div class="form-row">
-  <label for="freeDepositName">Nom du client</label>
-  <input id="freeDepositName" type="text" placeholder="Ex: Jean Dupont"/>
-</div>
-<div class="form-row">
-  <label for="freeDepositAmount">Montant de la caution (€)</label>
-  <input id="freeDepositAmount" min="1" step="1" type="number" placeholder="Ex: 200"/>
-  <div class="small-hint">Le montant sera autorisé via Stripe (empreinte bancaire). Vous pourrez le débiter ou le libérer ensuite.</div>
+<div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding:18px;">
+
+  <!-- Nom du client -->
+  <div>
+    <label for="freeDepositName" style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary,#666);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Nom du client</label>
+    <input id="freeDepositName" type="text" placeholder="Ex: Jean Dupont" autocomplete="off"/>
+  </div>
+
+  <!-- Montant -->
+  <div>
+    <label for="freeDepositAmount" style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary,#666);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Montant de la caution (€)</label>
+    <input id="freeDepositAmount" min="1" step="1" type="number" placeholder="Ex: 200"/>
+    <p style="font-size:11px;color:var(--text-secondary,#888);margin:5px 0 0;">Montant autorisé via Stripe (empreinte bancaire) — débitez ou libérez ensuite.</p>
+  </div>
+
+  <!-- Compte Stripe -->
+  <div>
+    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary,#666);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Compte Stripe à utiliser</label>
+    <div class="stripe-target-grid">
+      <label class="stripe-target-card selected" id="labelByProperty" onclick="selectStripeTarget(this,'property')">
+        <input type="radio" name="freeDepositStripeTarget" value="property" checked onchange="toggleFreeDepositTarget()">
+        <span class="radio-dot"></span>
+        <span class="card-icon green"><i class="fas fa-home"></i></span>
+        <span class="card-label">Par logement<span>Stripe lié au propriétaire du logement</span></span>
+      </label>
+      <label class="stripe-target-card" id="labelByOwner" onclick="selectStripeTarget(this,'owner')">
+        <input type="radio" name="freeDepositStripeTarget" value="owner" onchange="toggleFreeDepositTarget()">
+        <span class="radio-dot"></span>
+        <span class="card-icon purple"><i class="fas fa-user"></i></span>
+        <span class="card-label">Par propriétaire<span>Stripe connecté directement au propriétaire</span></span>
+      </label>
+    </div>
+
+    <div id="freeDepositPropertySelect">
+      <select id="freeDepositPropertyId">
+        <option value="">— Sélectionner un logement —</option>
+      </select>
+    </div>
+    <div id="freeDepositOwnerSelect" style="display:none;">
+      <select id="freeDepositOwnerId">
+        <option value="">— Sélectionner un propriétaire —</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="freeDepositError" style="font-size:12px;color:#b91c1c;min-height:16px;"></div>
 </div>
 
-<!-- Sélection du compte Stripe -->
-<div class="form-row" style="margin-top:12px;">
-  <label style="margin-bottom:8px;display:block;font-weight:600;">Compte Stripe à utiliser</label>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-    <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.15s;" id="labelByProperty">
-      <input type="radio" name="freeDepositStripeTarget" value="property" checked onchange="toggleFreeDepositTarget()">
-      <i class="fas fa-home" style="color:#1A7A5E;font-size:13px;"></i> Par logement
-    </label>
-    <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.15s;" id="labelByOwner">
-      <input type="radio" name="freeDepositStripeTarget" value="owner" onchange="toggleFreeDepositTarget()">
-      <i class="fas fa-user" style="color:#6772E5;font-size:13px;"></i> Par propriétaire
-    </label>
-  </div>
-  <div id="freeDepositPropertySelect">
-    <select id="freeDepositPropertyId" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:white;">
-      <option value="">— Sélectionner un logement —</option>
-    </select>
-    <div class="small-hint" style="margin-top:4px;">Le Stripe lié au propriétaire de ce logement sera utilisé.</div>
-  </div>
-  <div id="freeDepositOwnerSelect" style="display:none;">
-    <select id="freeDepositOwnerId" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:white;">
-      <option value="">— Sélectionner un propriétaire —</option>
-    </select>
-    <div class="small-hint" style="margin-top:4px;">Le Stripe connecté à ce propriétaire sera utilisé.</div>
-  </div>
-</div>
-
-<div class="small-hint" id="freeDepositError" style="color:#b91c1c;"></div>
-</div>
 <div class="modal-actions">
   <button class="btn btn-ghost" id="freeDepositCancelBtn">Annuler</button>
   <button class="btn btn-primary" id="freeDepositCreateBtn">Générer le lien</button>
@@ -3266,14 +3386,25 @@ async function createFreePayment() {
   }
 }
 
+function selectStripeTarget(clickedLabel, value) {
+  // Cocher le radio correspondant
+  const radio = clickedLabel.querySelector('input[type="radio"]');
+  if (radio) radio.checked = true;
+  // Mettre à jour les classes selected
+  document.querySelectorAll('.stripe-target-card').forEach(el => el.classList.remove('selected'));
+  clickedLabel.classList.add('selected');
+  toggleFreeDepositTarget();
+}
+
 function toggleFreeDepositTarget() {
   const val = document.querySelector('input[name="freeDepositStripeTarget"]:checked')?.value;
   document.getElementById('freeDepositPropertySelect').style.display = val === 'property' ? 'block' : 'none';
   document.getElementById('freeDepositOwnerSelect').style.display = val === 'owner' ? 'block' : 'none';
+  // Sync classes selected (utile si appelée sans passer par selectStripeTarget)
   const lProp = document.getElementById('labelByProperty');
   const lOwn = document.getElementById('labelByOwner');
-  if (lProp) lProp.style.borderColor = val === 'property' ? '#1A7A5E' : '#d1d5db';
-  if (lOwn) lOwn.style.borderColor = val === 'owner' ? '#6772E5' : '#d1d5db';
+  if (lProp) lProp.classList.toggle('selected', val === 'property');
+  if (lOwn) lOwn.classList.toggle('selected', val === 'owner');
 }
 
 async function createFreeDeposit() {
