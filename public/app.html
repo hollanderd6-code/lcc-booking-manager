@@ -2888,9 +2888,13 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     <button class="btn-icon" id="syncBtnMobile" title="Synchroniser" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1A7A5E;font-size:16px;">
       <i class="fas fa-sync-alt"></i>
     </button>
-    <button id="bh-mobile-ann-btn" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
-      <i class="fas fa-bell"></i>
+    <button id="bh-mobile-ann-btn" title="Activité" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
+      <i class="fas fa-info-circle"></i>
       <span id="bh-mobile-ann-badge" style="display:none;position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#EF4444;"></span>
+    </button>
+    <button id="bh-mobile-notif-btn" title="Notifications" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
+      <i class="fas fa-bell"></i>
+      <span id="bh-mobile-notif-badge" style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 2px;pointer-events:none;"></span>
     </button>
     <button id="bh-mobile-svc" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:0 4px;background:transparent;border:none;" title="Statut des services">
       <div style="display:flex;align-items:center;gap:3px;">
@@ -2927,6 +2931,10 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <div class="header-actions">
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
+</button>
+<button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" style="position:relative;">
+  <i class="fas fa-bell"></i>
+  <span id="notifHistoryBadge" style="display:none;position:absolute;top:5px;right:5px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px;pointer-events:none;"></span>
 </button>
 <button id="newReservationBtn" onclick="if(typeof openNewReservationModal==='function'){openNewReservationModal();}else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
   <i class="fas fa-plus"></i> Nouvelle réservation
@@ -3207,12 +3215,24 @@ window.closeChecklistsKpiModal = function() {
 </div>
 <!-- Notifications Panel -->
 <aside class="notifications-panel" id="notificationsPanel">
-<div class="notifications-header">
-<h2><i class="fas fa-bell"></i> Activité</h2>
-<button class="btn-icon" id="notificationsCloseBtn">
-<i class="fas fa-times"></i>
-</button>
+<div class="notifications-header" style="padding-bottom:0;">
+  <h2 style="margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
+    <i class="fas fa-bell"></i> Notifications
+  </h2>
+  <button class="btn-icon" id="notificationsCloseBtn"><i class="fas fa-times"></i></button>
 </div>
+<!-- Onglets -->
+<div style="display:flex;border-bottom:1px solid rgba(0,0,0,.08);padding:0 8px;margin-top:8px;">
+  <button id="notifTabActivity" onclick="switchNotifTab('activity')" style="flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#1A7A5E;border-bottom:2px solid #1A7A5E;margin-bottom:-1px;display:flex;align-items:center;justify-content:center;gap:6px;">
+    <i class="fas fa-info-circle"></i> Activité
+  </button>
+  <button id="notifTabPush" onclick="switchNotifTab('push')" style="flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;justify-content:center;gap:6px;position:relative;">
+    <i class="fas fa-bell"></i> Push
+    <span id="notifTabBadge" style="display:none;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;"></span>
+  </button>
+</div>
+<!-- Contenu onglet Activité -->
+<div id="notifPanelActivity">
 <div class="notifications-body" id="notificationsList">
 <!-- Section : Aujourd'hui -->
 <div class="activity-section">
@@ -3250,7 +3270,20 @@ window.closeChecklistsKpiModal = function() {
         </div>
 </div>
 </div>
+</div><!-- /notifications-body -->
+</div><!-- /notifPanelActivity -->
+
+<!-- Contenu onglet Push -->
+<div id="notifPanelPush" style="display:none;overflow-y:auto;flex:1;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px 4px;">
+    <span style="font-size:12px;color:#888;">Notifications push reçues</span>
+    <button onclick="clearNotifHistory()" style="background:none;border:none;color:#EF4444;font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;"><i class="fas fa-trash-alt"></i> Vider</button>
+  </div>
+  <div id="pushNotifList" style="padding:0 8px 16px;">
+    <div style="text-align:center;padding:40px 16px;color:#aaa;"><i class="fas fa-bell-slash" style="font-size:28px;margin-bottom:8px;display:block;"></i>Chargement…</div>
+  </div>
 </div>
+
 </aside>
 </main>
 </div>
@@ -12165,7 +12198,141 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- ============================================================
-     MODAL FACTURE — insérer avant </body>
+     MODAL FACTURE — insérer avant 
+<script>
+// ═══════════════════════════════════════════
+// HISTORIQUE NOTIFICATIONS PUSH
+// ═══════════════════════════════════════════
+
+function switchNotifTab(tab) {
+  var isActivity = tab === 'activity';
+  // Onglets styles
+  var tA = document.getElementById('notifTabActivity');
+  var tP = document.getElementById('notifTabPush');
+  if (tA) { tA.style.color = isActivity ? '#1A7A5E' : '#888'; tA.style.borderBottomColor = isActivity ? '#1A7A5E' : 'transparent'; tA.style.fontWeight = isActivity ? '600' : '500'; }
+  if (tP) { tP.style.color = !isActivity ? '#1A7A5E' : '#888'; tP.style.borderBottomColor = !isActivity ? '#1A7A5E' : 'transparent'; tP.style.fontWeight = !isActivity ? '600' : '500'; }
+  // Panels
+  var pA = document.getElementById('notifPanelActivity');
+  var pP = document.getElementById('notifPanelPush');
+  if (pA) pA.style.display = isActivity ? '' : 'none';
+  if (pP) pP.style.display = !isActivity ? '' : 'none';
+  // Charger données
+  if (!isActivity) loadPushNotifHistory();
+  else if (typeof loadActivityData === 'function') loadActivityData();
+}
+
+async function loadPushNotifHistory() {
+  var list = document.getElementById('pushNotifList');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;"><i class="fas fa-spinner fa-spin" style="font-size:20px;"></i></div>';
+  try {
+    var res = await fetch('/api/notifications/history?limit=50', { credentials: 'include' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var notifs = data.notifications || [];
+    if (!notifs.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px 16px;color:#aaa;"><i class="fas fa-bell-slash" style="font-size:28px;margin-bottom:8px;display:block;"></i>Aucune notification reçue</div>';
+      return;
+    }
+    var groups = {};
+    notifs.forEach(function(n) {
+      var d = new Date(n.created_at);
+      var today = new Date(); today.setHours(0,0,0,0);
+      var yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
+      var nd = new Date(d); nd.setHours(0,0,0,0);
+      var key = nd >= today ? "Aujourd'hui" : nd >= yesterday ? 'Hier' : d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(n);
+    });
+    var html = '';
+    Object.keys(groups).forEach(function(day) {
+      html += '<div class="push-notif-day-label">' + day + '</div>';
+      groups[day].forEach(function(n) {
+        var t = new Date(n.created_at).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        var icon = n.type === 'message' ? 'fa-comment' : n.type === 'booking' ? 'fa-calendar-check' : 'fa-bell';
+        html += '<div class="push-notif-item' + (n.is_read ? '' : ' unread') + '">'
+          + '<div class="push-notif-icon"><i class="fas ' + icon + '"></i></div>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div class="push-notif-title">' + (n.title || '') + '</div>'
+          + (n.body ? '<div class="push-notif-body">' + n.body + '</div>' : '')
+          + '<div class="push-notif-time">' + t + '</div>'
+          + '</div></div>';
+      });
+    });
+    list.innerHTML = html;
+    updateNotifBadge(0);
+    fetch('/api/notifications/history/read', { method: 'PATCH', credentials: 'include' });
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;">Erreur de chargement</div>';
+    console.error('loadPushNotifHistory:', e);
+  }
+}
+
+async function clearNotifHistory() {
+  if (!confirm("Vider tout l'historique des notifications ?")) return;
+  await fetch('/api/notifications/history', { method: 'DELETE', credentials: 'include' });
+  loadPushNotifHistory();
+}
+
+function updateNotifBadge(count) {
+  ['notifHistoryBadge', 'bh-mobile-notif-badge', 'notifTabBadge'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (count > 0) {
+      el.textContent = count > 99 ? '99+' : String(count);
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+async function initNotifBadge() {
+  try {
+    var res = await fetch('/api/notifications/history?limit=1', { credentials: 'include' });
+    if (!res.ok) return;
+    var data = await res.json();
+    updateNotifBadge(data.unreadCount || 0);
+  } catch(e) {}
+}
+
+// Ouvrir panel sur onglet Push
+function openNotifPanel() {
+  var panel = document.getElementById('notificationsPanel');
+  if (!panel) return;
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+  } else {
+    panel.classList.add('open');
+    switchNotifTab('push');
+  }
+}
+
+// Bind boutons
+(function() {
+  function bindNotifBtns() {
+    // Desktop
+    var btnD = document.getElementById('notifHistoryBtn');
+    if (btnD && !btnD._notifBound) {
+      btnD._notifBound = true;
+      btnD.addEventListener('click', openNotifPanel);
+    }
+    // Mobile
+    var btnM = document.getElementById('bh-mobile-notif-btn');
+    if (btnM && !btnM._notifBound) {
+      btnM._notifBound = true;
+      btnM.addEventListener('click', openNotifPanel);
+      btnM.addEventListener('touchend', function(e) { e.preventDefault(); openNotifPanel(); }, { passive: false });
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(bindNotifBtns, 500);
+    setTimeout(initNotifBadge, 800);
+  });
+})();
+</script>
+
+</body>
      ============================================================ -->
 <style>
 #invoiceModal {
@@ -12266,6 +12433,32 @@ document.addEventListener('DOMContentLoaded', function() {
   #invoiceModal .inv-body { grid-template-columns: 1fr; }
   #invoiceModal .inv-preview-panel { display: none; }
 }
+
+/* ── Push notif items ── */
+.push-notif-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: #fff;
+  border-left: 3px solid transparent;
+  transition: background .15s;
+}
+.push-notif-item.unread {
+  background: #f0faf5;
+  border-left-color: #1A7A5E;
+}
+.push-notif-icon {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(26,122,94,.12);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: #1A7A5E; font-size: 14px;
+}
+.push-notif-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
+.push-notif-body  { font-size: 12px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.push-notif-time  { font-size: 11px; color: #aaa; margin-top: 3px; }
+.push-notif-day-label { font-size: 11px; font-weight: 600; color: #aaa; padding: 10px 4px 4px; text-transform: uppercase; letter-spacing: .5px; }
 </style>
 
 <div id="invoiceModal">
