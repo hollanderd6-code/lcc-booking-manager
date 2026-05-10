@@ -22091,17 +22091,56 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
           [c.property_id, c.reservation_start_date]
         ).catch(() => ({ rows: [] }));
         let cautionUrl = '';
-        if (resRow2.rows[0]) {
+        const resUidCron = resRow2.rows[0]?.uid || null;
+        if (resUidCron) {
+          // Chercher par reservation_uid OU par channex_booking_id
           const dep2 = await pool.query(
             `SELECT checkout_url FROM deposits
-             WHERE reservation_uid = $1 AND status IN ('pending','authorized')
+             WHERE (reservation_uid = $1 OR reservation_uid = $2)
+             AND status IN ('pending','authorized')
              ORDER BY created_at DESC LIMIT 1`,
-            [resRow2.rows[0].uid]
+            [resUidCron, c.channex_booking_id ? 'CHX_' + c.channex_booking_id : '__none__']
           ).catch(() => ({ rows: [] }));
-          cautionUrl = await makeShortLink(pool, dep2.rows[0]?.checkout_url || '', c.user_id);
+          cautionUrl = dep2.rows[0]?.checkout_url
+            ? await makeShortLink(pool, dep2.rows[0].checkout_url, c.user_id)
+            : '';
+
+          // ✅ Créer le deposit à la volée si absent (comme sendTemplateMessage)
+          if (!cautionUrl) {
+            try {
+              const propD = await pool.query('SELECT * FROM properties WHERE id = $1', [c.property_id]);
+              const depositAmount = parseFloat(propD.rows[0]?.deposit_amount || 0);
+              if (depositAmount > 0) {
+                const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+                const amountCents = Math.round(depositAmount * 100);
+                const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+                const stripeTarget = await getStripeForProperty(pool, c.property_id, c.user_id);
+                const sessionOptions = stripeTarget.stripeAccountId ? { stripeAccount: stripeTarget.stripeAccountId } : {};
+                const sessionParams = {
+                  payment_method_types: ['card'],
+                  mode: 'payment',
+                  line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: \`Caution - \${propD.rows[0]?.name || c.property_id}\`, description: \`Réservation du \${c.reservation_start_date} au \${c.reservation_end_date}\` } }, quantity: 1 }],
+                  payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUidCron }, application_fee_amount: Math.round(amountCents * (stripeTarget.stripeAccountId ? 0.03 : 0.05)) },
+                  metadata: { deposit_id: depositId, reservation_uid: resUidCron },
+                  success_url: \`\${appUrl}/caution-success.html?depositId=\${depositId}\`,
+                  cancel_url: \`\${appUrl}/caution-cancel.html?depositId=\${depositId}\`,
+                };
+                const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+                await pool.query(
+                  \`INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
+                   VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())\`,
+                  [depositId, c.user_id, resUidCron, c.property_id, amountCents, session.id, session.url]
+                );
+                cautionUrl = await makeShortLink(pool, session.url, c.user_id);
+                console.log(\`✅ [CRON TPL] Deposit créé à la volée pour conv \${conversation_id}: \${depositId}\`);
+              }
+            } catch(depErr) {
+              console.warn(\`⚠️ [CRON TPL] Erreur création deposit à la volée:\`, depErr.message);
+            }
+          }
         }
         if (!cautionUrl) {
-          console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id} — message non envoyé`);
+          console.warn(\`⚠️ [CRON TPL] {caution_url} non résolu pour conv \${conversation_id} — message non envoyé\`);
           skipSend = true;
         } else {
           finalMsg = finalMsg.replace(/{caution_url}/gi, cautionUrl);
@@ -27245,10 +27284,11 @@ app.post('/api/channex/webhook', async (req, res) => {
               const depositTpls = await pool.query(
                 `SELECT * FROM message_templates
                  WHERE user_id = $1 AND active = TRUE
-                 AND trigger_type = 'before_arrival'
+                 AND trigger_type IN ('before_arrival', 'on_booking')
                  AND (
                    message ILIKE '%caution%' OR message ILIKE '%dépôt%'
-                   OR message ILIKE '%garantie%' OR message ILIKE '%caution_url%'
+                   OR message ILIKE '%garantie%' OR message ILIKE '%{caution_url}%'
+                   OR message ILIKE '%caution_url%'
                    OR title ILIKE '%caution%' OR title ILIKE '%dépôt%'
                  )
                  AND (
@@ -27257,6 +27297,7 @@ app.post('/api/channex/webhook', async (req, res) => {
                    OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
                        AND property_ids @> to_jsonb($2::text))
                  )
+                 ORDER BY trigger_type = 'before_arrival' DESC
                  LIMIT 1`,
                 [result.user_id, result.property_id]
               );
