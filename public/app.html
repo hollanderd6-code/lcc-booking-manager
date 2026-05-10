@@ -4811,6 +4811,14 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         }
       }
       // Exposer globalement pour l'onglet Activité du panel
+      window.getCountryFlag = window.getCountryFlag || function(countryCode) {
+        if (!countryCode) return '';
+        try {
+          return countryCode.toUpperCase().replace(/./g, function(c) {
+            return String.fromCodePoint(c.charCodeAt(0) + 127397);
+          });
+        } catch(e) { return ''; }
+      };
       window.loadActivityData = loadActivityData;
 
       /* Scroll vers calendrier depuis le menu */
