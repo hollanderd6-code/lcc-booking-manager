@@ -1996,6 +1996,27 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Index sub_account déjà existant:', e.message);
     }
 
+    // ✅ Migration : colonne device_id dans user_fcm_tokens (un UUID par appareil physique)
+    try {
+      await pool.query(`
+        ALTER TABLE user_fcm_tokens ADD COLUMN IF NOT EXISTS device_id TEXT;
+      `);
+      console.log('✅ Colonne device_id ajoutée à user_fcm_tokens');
+    } catch (e) {
+      console.log('ℹ️ device_id déjà existante:', e.message);
+    }
+    // Index unique (user_id, device_id) pour le ON CONFLICT sans doublon par appareil
+    try {
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_user_fcm_tokens_user_device_id
+        ON user_fcm_tokens(user_id, device_id)
+        WHERE user_id IS NOT NULL AND device_id IS NOT NULL;
+      `);
+      console.log('✅ Index unique user_id+device_id créé');
+    } catch (e) {
+      console.log('ℹ️ Index user_id+device_id déjà existant:', e.message);
+    }
+
     // ✅ Migration : colonne sub_account_id dans cleaners
     try {
       await pool.query(`
@@ -23269,29 +23290,38 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
         return res.status(400).json({ error: 'User ID manquant' });
       }
 
-      console.log(`📱 [user ${userId}] Enregistrement token FCM (${deviceType})`);
+      const { device_id: deviceId } = req.body;
+      console.log(`📱 [user ${userId}] Enregistrement token FCM (${deviceType}, device_id: ${deviceId || 'non fourni'})`);
 
-      // Upsert : couvre le conflit sur fcm_token ET sur (user_id, device_type)
-      await pool.query(
-        `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         ON CONFLICT (fcm_token)
-         DO UPDATE SET user_id = EXCLUDED.user_id, device_type = EXCLUDED.device_type, updated_at = NOW()`,
-        [userId, token, deviceType]
-      ).catch(async (err) => {
-        if (err.constraint === 'user_fcm_tokens_unique') {
-          // Conflit sur (user_id, device_type) — met à jour le token existant
-          await pool.query(
-            `UPDATE user_fcm_tokens SET fcm_token = $1, updated_at = NOW()
-             WHERE user_id = $2 AND device_type = $3`,
-            [token, userId, deviceType]
-          );
-        } else {
-          throw err;
-        }
-      });
+      if (deviceId) {
+        // ✅ Stratégie avec device_id : 1 ligne par appareil physique, sans doublon
+        // Étape 1 : si ce token FCM appartient déjà à un autre device_id du même user → on met à jour ce device_id
+        await pool.query(
+          `UPDATE user_fcm_tokens SET device_id = $1, device_type = $2, updated_at = NOW()
+           WHERE fcm_token = $3 AND user_id = $4 AND (device_id IS NULL OR device_id != $1)`,
+          [deviceId, deviceType, token, userId]
+        ).catch(() => {});
 
-      console.log(`✅ Token FCM enregistré pour user ${userId}`);
+        // Étape 2 : upsert sur (user_id, device_id) → un seul enregistrement par appareil
+        await pool.query(
+          `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, device_id, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, NOW(), NOW())
+           ON CONFLICT (user_id, device_id) WHERE user_id IS NOT NULL AND device_id IS NOT NULL
+           DO UPDATE SET fcm_token = EXCLUDED.fcm_token, device_type = EXCLUDED.device_type, updated_at = NOW()`,
+          [userId, token, deviceType, deviceId]
+        );
+      } else {
+        // Fallback sans device_id (anciens clients) : ON CONFLICT sur fcm_token uniquement
+        await pool.query(
+          `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, created_at, updated_at)
+           VALUES ($1, $2, $3, NOW(), NOW())
+           ON CONFLICT (fcm_token)
+           DO UPDATE SET user_id = EXCLUDED.user_id, device_type = EXCLUDED.device_type, updated_at = NOW()`,
+          [userId, token, deviceType]
+        );
+      }
+
+      console.log(`✅ Token FCM enregistré pour user ${userId} (device_id: ${deviceId || 'N/A'})`);
       return res.json({ success: true, message: 'Token sauvegardé' });
     }
 
