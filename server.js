@@ -408,8 +408,8 @@ const { setupSupportRoutes, initSupportTables } = require('./support-chat-routes
 // ✅ NOUVEAU : NOTIFICATIONS PUSH FIREBASE
 // ============================================
 const { 
-  sendNotification, 
-  sendNotificationToMultiple,
+  sendNotification as _sendNotificationRaw,
+  sendNotificationToMultiple as _sendNotifMultipleRaw,
   sendNewMessageNotification,
   sendNewCleaningNotification,
   sendCleaningReminderNotification,
@@ -419,6 +419,20 @@ const {
   setPool,             
   initializeFirebase    
 } = require('./services/notifications-service');
+
+// Wrappers auto-log vers notification_history
+async function sendNotification(token, title, body, data) {
+  const result = await _sendNotificationRaw(token, title, body, data);
+  const userId = data && (data.userId || data.user_id || data.ownerId || data.owner_id);
+  if (userId) saveNotificationToHistory(userId, title, body, (data && data.type) || 'push', data);
+  return result;
+}
+async function sendNotificationToMultiple(tokens, title, body, data) {
+  const result = await _sendNotifMultipleRaw(tokens, title, body, data);
+  const userId = data && (data.userId || data.user_id || data.ownerId || data.owner_id);
+  if (userId) saveNotificationToHistory(userId, title, body, (data && data.type) || 'push', data);
+  return result;
+}
 /**
  * Nettoie le nom du voyageur extrait d'iCal
  */
@@ -2348,6 +2362,25 @@ ON invoice_download_tokens(token);
     } catch (e) {
       console.log('ℹ️ Colonnes commissions plateformes:', e.message);
     }
+
+
+    // ✅ Migration : table notification_history
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS notification_history (
+          id          SERIAL PRIMARY KEY,
+          user_id     TEXT NOT NULL,
+          title       TEXT NOT NULL DEFAULT '',
+          body        TEXT,
+          type        TEXT DEFAULT 'push',
+          data        JSONB,
+          is_read     BOOLEAN DEFAULT FALSE,
+          created_at  TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_notif_history_user_created ON notification_history(user_id, created_at DESC);
+      `);
+      console.log('✅ Table notification_history OK');
+    } catch(e) { console.error('❌ notification_history:', e.message); }
 
     // ✅ Migration : table airbnb_accounts
     try {
@@ -25845,6 +25878,68 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
+
+// ════════════════════════════════════════════════
+// HISTORIQUE NOTIFICATIONS PUSH
+// ════════════════════════════════════════════════
+
+async function saveNotificationToHistory(userId, title, body, type, data) {
+  if (!userId) return;
+  try {
+    await pool.query(
+      `INSERT INTO notification_history (user_id, title, body, type, data)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [String(userId), title || '', body || '', type || 'push', data ? JSON.stringify(data) : null]
+    );
+  } catch(e) {
+    console.error('❌ saveNotificationToHistory:', e.message);
+  }
+}
+
+// GET /api/notifications/history
+app.get('/api/notifications/history', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const result = await pool.query(
+      `SELECT id, title, body, type, data, is_read, created_at
+       FROM notification_history
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [userId, limit]
+    );
+    const unreadCount = result.rows.filter(r => !r.is_read).length;
+    res.json({ notifications: result.rows, unreadCount });
+  } catch(e) {
+    console.error('❌ GET /api/notifications/history:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PATCH /api/notifications/history/read — tout marquer comme lu
+app.patch('/api/notifications/history/read', requireAuth, async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE notification_history SET is_read = TRUE WHERE user_id = $1`,
+      [String(req.user.id)]
+    );
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /api/notifications/history — vider l'historique
+app.delete('/api/notifications/history', requireAuth, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM notification_history WHERE user_id = $1`, [String(req.user.id)]);
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 server.listen(PORT, async () => {
   console.log('');
