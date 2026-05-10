@@ -10169,6 +10169,8 @@ html[data-theme-v3="1"] .sidebar .nav-section {
         const platformInput = document.getElementById('nrPlatform');
         const priceInput    = document.getElementById('nrPrice');
 
+        const isBHGuest = false; // La nouvelle réservation manuelle n'est jamais BHGuest
+
         const payload = {
           propertyId:   propertySelect.value,
           start:        startInput.value,
