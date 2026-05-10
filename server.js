@@ -683,7 +683,7 @@ async function processArrivalsForToday(pool, io, transporter) {
 
 // Stripe Connect pour les cautions des utilisateurs
 const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28' }) 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-03-31.basil' }) 
   : null;
 
 // ============================================
