@@ -22309,29 +22309,29 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
                 const sessionParams = {
                   payment_method_types: ['card'],
                   mode: 'payment',
-                  line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: \`Caution - \${propD.rows[0]?.name || c.property_id}\`, description: \`Réservation du \${c.reservation_start_date} au \${c.reservation_end_date}\` } }, quantity: 1 }],
+                  line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${propD.rows[0]?.name || c.property_id}`, description: `Réservation du ${c.reservation_start_date} au ${c.reservation_end_date}` } }, quantity: 1 }],
                   payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUidCron }, application_fee_amount: Math.round(amountCents * (stripeTarget.stripeAccountId ? 0.03 : 0.05)) },
                   metadata: { deposit_id: depositId, reservation_uid: resUidCron },
-                  success_url: \`\${appUrl}/caution-success.html?depositId=\${depositId}\`,
-                  cancel_url: \`\${appUrl}/caution-cancel.html?depositId=\${depositId}\`,
+                  success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
+                  cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
                 };
                 const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
                 await pool.query(
-                  \`INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
-                   VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())\`,
+                  `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
+                   VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())`,
                   [depositId, c.user_id, resUidCron, c.property_id, amountCents, session.id, session.url]
                 );
                 cautionUrl = await makeShortLink(pool, session.url, c.user_id, { depositId: depositId });
                 await pool.query('UPDATE deposits SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), depositId]).catch(() => {});
-                console.log(\`✅ [CRON TPL] Deposit créé à la volée pour conv \${conversation_id}: \${depositId}\`);
+                console.log(`✅ [CRON TPL] Deposit créé à la volée pour conv ${conversation_id}: ${depositId}`);
               }
             } catch(depErr) {
-              console.warn(\`⚠️ [CRON TPL] Erreur création deposit à la volée:\`, depErr.message);
+              console.warn(`⚠️ [CRON TPL] Erreur création deposit à la volée:`, depErr.message);
             }
           }
         }
         if (!cautionUrl) {
-          console.warn(\`⚠️ [CRON TPL] {caution_url} non résolu pour conv \${conversation_id} — message non envoyé\`);
+          console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id} — message non envoyé`);
           skipSend = true;
         } else {
           finalMsg = finalMsg.replace(/{caution_url}/gi, cautionUrl);
