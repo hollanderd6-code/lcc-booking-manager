@@ -22279,7 +22279,10 @@ async function sendDepositReminderJ2Cron(pool, io) {
        SELECT 1 FROM deposits d
        WHERE d.reservation_uid = r.uid
        AND d.status IN ('authorized', 'captured', 'paid')
-     )`,
+     )
+     -- Exclure Airbnb : caution geree par la plateforme
+     AND COALESCE(r.ota_name, r.source, '') NOT ILIKE '%airbnb%'
+     AND COALESCE(r.ota_name, r.source, '') NOT ILIKE '%ABB%'`,
     [j2Str]
   );
 
@@ -22396,6 +22399,18 @@ async function runTemplatesCron(triggerTypes) {
         console.log(`  Template "${tmpl.title}" → ${convs.rows.length} conversation(s) ciblée(s) pour ${targetDate}`);
 
         for (const conv of convs.rows) {
+          // Skip Airbnb si template contient {caution_url} (Airbnb gere la caution)
+          if (tmpl.message && tmpl.message.includes('{caution_url}')) {
+            const convPlatform = (conv.platform || conv.channex_platform || '').toLowerCase();
+            const isAirbnb = convPlatform.includes('airbnb') || convPlatform === 'abb'
+              || (conv.ota_name || '').toUpperCase().includes('ABB')
+              || (conv.ota_name || '').toLowerCase().includes('airbnb');
+            if (isAirbnb) {
+              console.log(`  ⏭️ Skip conv ${conv.id} : caution non applicable sur Airbnb`);
+              continue;
+            }
+          }
+
           // Vérifier send_condition
           const sendCond = tmpl.send_condition || 'always';
           if (sendCond !== 'always') {
