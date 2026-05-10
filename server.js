@@ -22547,26 +22547,36 @@ async function runTemplatesCron(triggerTypes) {
             const isAirbnb = platform.includes('airbnb') || platform === 'abb';
             if (!isAirbnb) {
               try {
-                // Récupérer l'uid de la réservation via channex_booking_id (priorité) ou property+date
-                const resRow = await pool.query(
-                  `SELECT uid FROM reservations
-                   WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
-                      OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
-                   ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
-                  [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
+                // Vérifier d'abord si le logement a une caution configurée
+                const propDepositRow = await pool.query(
+                  `SELECT deposit_amount FROM properties WHERE id = $1`,
+                  [conv.property_id]
                 );
-                if (resRow.rows[0]) {
-                  // Vérifier que la caution est bien CAPTURÉE (prélevée)
-                  const dep = await pool.query(
-                    `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
-                    [resRow.rows[0].uid]
-                  ).catch(() => ({ rows: [] }));
-                  const depStatus = dep.rows[0]?.status;
-                  // ✅ Accepter 'authorized' (empreinte bancaire) ET 'captured' (prélevée)
-                  if (depStatus !== 'captured' && depStatus !== 'authorized') {
-                    console.log(`  ↳ ⏭️ Caution non validée (status=${depStatus || 'aucune'}) pour conv ${conv.id} → on_arrival bloqué`);
-                    continue;
+                const hasDepositConfig = propDepositRow.rows[0]?.deposit_amount > 0;
+
+                // Si le logement n'a pas de caution configurée → pas de blocage
+                if (hasDepositConfig) {
+                  // Récupérer l'uid de la réservation via channex_booking_id (priorité) ou property+date
+                  const resRow = await pool.query(
+                    `SELECT uid FROM reservations
+                     WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
+                        OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
+                     ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
+                    [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
+                  );
+                  if (resRow.rows[0]) {
+                    const dep = await pool.query(
+                      `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
+                      [resRow.rows[0].uid]
+                    ).catch(() => ({ rows: [] }));
+                    const depStatus = dep.rows[0]?.status;
+                    if (depStatus !== 'captured' && depStatus !== 'authorized') {
+                      console.log(`  ↳ ⏭️ Caution non validée (status=${depStatus || 'aucune'}) pour conv ${conv.id} → on_arrival bloqué`);
+                      continue;
+                    }
                   }
+                } else {
+                  console.log(`  ↳ ℹ️ Logement ${conv.property_id} sans caution configurée → on_arrival autorisé`);
                 }
               } catch(depErr) {
                 console.warn(`  ↳ ⚠️ Erreur vérif caution conv ${conv.id}:`, depErr.message);
@@ -25954,6 +25964,26 @@ app.delete('/api/notifications/history', authenticateToken, async (req, res) => 
   try {
     await pool.query(`DELETE FROM notification_history WHERE user_id = $1`, [String(req.user.id)]);
     res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// POST /api/messages/trigger-templates — déclencher manuellement les crons templates
+app.post('/api/messages/trigger-templates', authenticateToken, async (req, res) => {
+  try {
+    const { triggerTypes } = req.body;
+    if (!triggerTypes || !Array.isArray(triggerTypes)) {
+      return res.status(400).json({ error: 'triggerTypes (array) requis' });
+    }
+    const allowed = ['before_arrival','on_arrival','after_departure','before_departure','after_arrival','on_booking'];
+    const types = triggerTypes.filter(t => allowed.includes(t));
+    if (types.length === 0) return res.status(400).json({ error: 'Aucun triggerType valide' });
+    console.log(`🔧 [MANUAL TRIGGER] Types: ${types.join(', ')} — user ${req.user.id}`);
+    // Lancer en async pour ne pas bloquer la réponse
+    runTemplatesCron(types).catch(e => console.error('❌ Manual trigger error:', e.message));
+    res.json({ success: true, message: `Cron déclenché pour : ${types.join(', ')}`, types });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
