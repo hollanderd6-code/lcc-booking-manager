@@ -22977,6 +22977,32 @@ app.post('/api/chat/send', async (req, res) => {
       io.to(`conversation_${conversation_id}`).emit('new_message', savedMessage);
     }
 
+    // ✅ Désescalade automatique 1h après une réponse manuelle du proprio
+    if (sender_type === 'owner' || sender_type === 'property') {
+      try {
+        const escResult = await pool.query(
+          'SELECT escalated FROM conversations WHERE id = $1',
+          [conversation_id]
+        );
+        if (escResult.rows[0]?.escalated) {
+          console.log(`⏳ [DESESCALADE] Conv ${conversation_id} — bot réactivé dans 1h`);
+          setTimeout(async () => {
+            try {
+              await pool.query(
+                `UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1`,
+                [conversation_id]
+              );
+              console.log(`✅ [DESESCALADE] Conv ${conversation_id} — bot réactivé`);
+            } catch(e) {
+              console.error('❌ [DESESCALADE] Erreur reset:', e.message);
+            }
+          }, 60 * 60 * 1000); // 1 heure
+        }
+      } catch(e) {
+        console.error('❌ [DESESCALADE] Erreur vérif:', e.message);
+      }
+    }
+
     // 🤖 TRAITER AUTOMATIQUEMENT (Onboarding + Réponses auto)
     if (sender_type === 'guest') {
       // Récupérer la conversation complète
