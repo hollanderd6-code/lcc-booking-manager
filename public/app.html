@@ -2892,7 +2892,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       <i class="fas fa-info-circle"></i>
       <span id="bh-mobile-ann-badge" style="display:none;position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#EF4444;"></span>
     </button>
-    <button id="bh-mobile-notif-btn" title="Notifications" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
+    <button id="bh-mobile-notif-btn" title="Notifications" onclick="var p=document.getElementById('notificationsPanel');if(p){p.classList.toggle('open');if(p.classList.contains('open'))switchNotifTab('push');}" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
       <i class="fas fa-bell"></i>
       <span id="bh-mobile-notif-badge" style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 2px;pointer-events:none;"></span>
     </button>
@@ -2932,7 +2932,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
 </button>
-<button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" style="position:relative;">
+<button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" onclick="var p=document.getElementById('notificationsPanel');if(p){p.classList.toggle('open');if(p.classList.contains('open'))switchNotifTab('push');}" style="position:relative;">
   <i class="fas fa-bell"></i>
   <span id="notifHistoryBadge" style="display:none;position:absolute;top:5px;right:5px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px;pointer-events:none;"></span>
 </button>
@@ -12308,33 +12308,27 @@ function openNotifPanel() {
   }
 }
 
-// Bind boutons — retry toutes les 200ms, fonctionne même après DOMContentLoaded
+// Bind boutons
 (function() {
   function bindNotifBtns() {
+    // Desktop
     var btnD = document.getElementById('notifHistoryBtn');
     if (btnD && !btnD._notifBound) {
       btnD._notifBound = true;
-      btnD.addEventListener('click', function(e) { e.stopPropagation(); openNotifPanel(); });
+      btnD.addEventListener('click', openNotifPanel);
     }
+    // Mobile
     var btnM = document.getElementById('bh-mobile-notif-btn');
     if (btnM && !btnM._notifBound) {
       btnM._notifBound = true;
-      btnM.addEventListener('click', function(e) { e.stopPropagation(); openNotifPanel(); });
-      btnM.addEventListener('touchend', function(e) { e.preventDefault(); e.stopPropagation(); openNotifPanel(); }, { passive: false });
+      btnM.addEventListener('click', openNotifPanel);
+      btnM.addEventListener('touchend', function(e) { e.preventDefault(); openNotifPanel(); }, { passive: false });
     }
   }
-  // Bind immédiat (script après </body>, DOMContentLoaded déjà passé)
-  bindNotifBtns();
-  // Retries pour les cas où les boutons sont injectés dynamiquement
-  var _retries = 0;
-  var _iv = setInterval(function() {
-    bindNotifBtns();
-    if (++_retries >= 20) clearInterval(_iv);
-  }, 300);
-  // Badge
-  setTimeout(initNotifBadge, 500);
-  // Aussi sur sidebarReady
-  document.addEventListener('sidebarReady', function() { setTimeout(bindNotifBtns, 100); });
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(bindNotifBtns, 500);
+    setTimeout(initNotifBadge, 800);
+  });
 })();
 </script>
 
