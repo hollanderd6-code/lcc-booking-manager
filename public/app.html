@@ -12308,27 +12308,33 @@ function openNotifPanel() {
   }
 }
 
-// Bind boutons
+// Bind boutons — retry toutes les 200ms, fonctionne même après DOMContentLoaded
 (function() {
   function bindNotifBtns() {
-    // Desktop
     var btnD = document.getElementById('notifHistoryBtn');
     if (btnD && !btnD._notifBound) {
       btnD._notifBound = true;
-      btnD.addEventListener('click', openNotifPanel);
+      btnD.addEventListener('click', function(e) { e.stopPropagation(); openNotifPanel(); });
     }
-    // Mobile
     var btnM = document.getElementById('bh-mobile-notif-btn');
     if (btnM && !btnM._notifBound) {
       btnM._notifBound = true;
-      btnM.addEventListener('click', openNotifPanel);
-      btnM.addEventListener('touchend', function(e) { e.preventDefault(); openNotifPanel(); }, { passive: false });
+      btnM.addEventListener('click', function(e) { e.stopPropagation(); openNotifPanel(); });
+      btnM.addEventListener('touchend', function(e) { e.preventDefault(); e.stopPropagation(); openNotifPanel(); }, { passive: false });
     }
   }
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(bindNotifBtns, 500);
-    setTimeout(initNotifBadge, 800);
-  });
+  // Bind immédiat (script après </body>, DOMContentLoaded déjà passé)
+  bindNotifBtns();
+  // Retries pour les cas où les boutons sont injectés dynamiquement
+  var _retries = 0;
+  var _iv = setInterval(function() {
+    bindNotifBtns();
+    if (++_retries >= 20) clearInterval(_iv);
+  }, 300);
+  // Badge
+  setTimeout(initNotifBadge, 500);
+  // Aussi sur sidebarReady
+  document.addEventListener('sidebarReady', function() { setTimeout(bindNotifBtns, 100); });
 })();
 </script>
 
