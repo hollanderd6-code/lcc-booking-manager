@@ -341,7 +341,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             [conversation.user_id]
           );
           if (tokens.rows.length > 0) {
-            const { sendNotification } = require('./firebase');
+            const { sendNotification } = require('./services/notifications-service');
             for (const tok of tokens.rows) {
               await sendNotification(
                 tok.fcm_token,
@@ -1027,6 +1027,25 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
         conversationId: conversation.id,
         guestName: conversation.guest_name || 'Voyageur'
       });
+    }
+    // ✅ Notif push au propriétaire
+    try {
+      const { sendNotification } = require('./services/notifications-service');
+      const tokens = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+        [conversation.user_id]
+      );
+      for (const tok of tokens.rows) {
+        await sendNotification(
+          tok.fcm_token,
+          `🤝 ${conversation.guest_name || 'Voyageur'} — Prise en charge requise`,
+          `L'IA a passé la main. Répondez dès que possible.`,
+          { type: 'escalation', conversation_id: String(conversation.id), screen: 'messages' }
+        );
+      }
+      console.log(`📱 [HANDLER] Notif escalade envoyée au proprio pour conv ${conversation.id}`);
+    } catch(nErr) {
+      console.error('❌ [HANDLER] Erreur notif escalade proprio:', nErr.message);
     }
   } catch (error) {
     console.error('❌ [HANDLER] Erreur escalateToOwner:', error);
