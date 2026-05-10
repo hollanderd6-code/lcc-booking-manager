@@ -815,6 +815,32 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         [conversation_id]
       );
 
+      // ✅ Désescalade automatique 1h après une réponse manuelle du proprio
+      if (sender_type === 'owner' || sender_type === 'property') {
+        try {
+          const escResult = await pool.query(
+            'SELECT escalated FROM conversations WHERE id = $1',
+            [conversation_id]
+          );
+          if (escResult.rows[0]?.escalated) {
+            console.log(`⏳ [DESESCALADE] Conv ${conversation_id} escaladée — reset bot dans 1h`);
+            setTimeout(async () => {
+              try {
+                await pool.query(
+                  `UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1`,
+                  [conversation_id]
+                );
+                console.log(`✅ [DESESCALADE] Conv ${conversation_id} — bot réactivé après 1h`);
+              } catch(e) {
+                console.error('❌ [DESESCALADE] Erreur reset escalade:', e.message);
+              }
+            }, 60 * 60 * 1000); // 1 heure
+          }
+        } catch(e) {
+          console.error('❌ [DESESCALADE] Erreur vérif escalade:', e.message);
+        }
+      }
+
       // Émettre via Socket.io
       if (io) {
         io.to(`conversation_${conversation_id}`).emit('new_message', newMessage);
