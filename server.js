@@ -7687,7 +7687,17 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           r.notes,
           r.created_at,
           c.onboarding_completed,
-          c.id as conversation_id
+          c.id as conversation_id,
+          (
+            SELECT json_agg(json_build_object(
+              'id', p.id,
+              'status', p.status,
+              'amount_cents', p.amount_cents,
+              'created_at', p.created_at
+            ) ORDER BY p.created_at DESC)
+            FROM payments p
+            WHERE p.reservation_uid = r.uid
+          ) as payments
          FROM reservations r
          LEFT JOIN conversations c
            ON c.property_id = r.property_id
@@ -7785,7 +7795,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             ? dbData.guest_first_name.charAt(0).toUpperCase()
             : null,
           notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
-          createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null
+          createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null,
+          payments: dbData.payments || []
         };
 
         allReservations.push(enrichedReservation);
@@ -7833,6 +7844,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
               guest_display_name: dbData.guest_first_name
                 ? `${dbData.guest_first_name} ${dbData.guest_last_name || ''}`.trim()
                 : (dbData.guest_name || null),
+              payments: dbData.payments || []
             };
             if (existingIdx !== -1) allReservations[existingIdx] = manualObj;
             else allReservations.push(manualObj);
@@ -29866,7 +29878,9 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       console.log(`💳 [GUEST] Paiement sur compte BH principal (pas de compte Connect)`);
     }
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    // ✅ Fix : passer le compte Connect en options pour que la session soit créée dessus
+    const sessionOptions = stripeAccountId ? { stripeAccount: stripeAccountId } : {};
+    const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
 
     res.json({
       checkoutUrl: session.url,
@@ -29946,13 +29960,18 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       }
     }
     const discountedBase = Math.max(0, totalBase - discount);
-    const cleaningFee = prop.cleaning_fee != null ? parseFloat(prop.cleaning_fee) : 0;
+    // ✅ Fix : si prix fixe override, ménage et taxes sont inclus — ne pas les rajouter
+    const isFixedPrice = fixed_price_override && parseFloat(fixed_price_override) > 0;
+    const cleaningFee = (!isFixedPrice && prop.cleaning_fee != null) ? parseFloat(prop.cleaning_fee) : 0;
     const nbGuests = parseInt(guests) || 1;
-    const touristTax = prop.tourist_tax_per_night != null
+    const touristTax = (!isFixedPrice && prop.tourist_tax_per_night != null)
       ? Math.round(parseFloat(prop.tourist_tax_per_night) * nights * nbGuests * 100) / 100
       : 0;
     const commission = Math.round(discountedBase * 0.03 * 100) / 100;
-    const totalTTC = Math.round((discountedBase + cleaningFee + touristTax + commission) * 100) / 100;
+    // ✅ Utiliser le montant réellement encaissé par Stripe comme source de vérité
+    const totalTTC = stripeAmountPaid !== null
+      ? stripeAmountPaid
+      : Math.round((discountedBase + cleaningFee + touristTax + commission) * 100) / 100;
 
     // Créer la réservation
     const uid = `GUEST_${Date.now()}`;
@@ -30020,6 +30039,30 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       console.error('⚠️ [GUEST] Email voyageur:', emailErr.message);
     }
 
+    // ✅ Fix 3 : Enregistrer le paiement dans la table payments (statut paid)
+    let savedPaymentId = null;
+    try {
+      const amtCents = Math.round(totalTTC * 100);
+      const stripeSessionObj = session_id ? await stripe.checkout.sessions.retrieve(session_id).catch(() => null) : null;
+      const paymentIntentId = stripeSessionObj?.payment_intent || null;
+      const payInsert = await pool.query(`
+        INSERT INTO payments
+          (user_id, property_id, reservation_uid, amount_cents, status,
+           stripe_session_id, stripe_payment_intent_id, description, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, 'paid', $5, $6, $7, NOW(), NOW())
+        ON CONFLICT DO NOTHING
+        RETURNING id
+      `, [
+        prop.owner_user_id, property_id, uid,
+        amtCents, session_id, paymentIntentId,
+        `BHGuest — ${guest_name || 'Voyageur'} — ${checkin} → ${checkout}`
+      ]);
+      savedPaymentId = payInsert.rows[0]?.id || null;
+      console.log(`💳 [GUEST] Paiement enregistré: ${savedPaymentId} (${totalTTC}€)`);
+    } catch (payErr) {
+      console.error('⚠️ [GUEST] Enregistrement paiement:', payErr.message);
+    }
+
     // Notif push hote + sous-comptes (meme systeme que les autres plateformes)
     try {
       const propName = displayName(prop);
@@ -30036,6 +30079,35 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
         property_id
       );
       console.log('📱 [GUEST] Notifs nouvelle résa envoyées');
+
+      // ✅ Fix 4 : notif paiement reçu (séparée de la notif réservation)
+      try {
+        const propLabel = propName ? ` — ${propName}` : '';
+        const amtLabel = totalTTC ? ` ${totalTTC}€` : '';
+        const tokensRes = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
+          [prop.owner_user_id]
+        );
+        for (const tok of tokensRes.rows) {
+          await sendNotification(
+            tok.fcm_token,
+            `💳 Paiement reçu${propLabel}`,
+            `${cleanName} a payé${amtLabel} via BHGuest`,
+            { type: 'payment_received', paymentId: String(savedPaymentId || ''), uid }
+          );
+        }
+        // Sous-comptes avec permission paiements
+        await sendNotificationToSubAccountsOf(
+          prop.owner_user_id, 'can_view_payments',
+          `💳 Paiement reçu${propLabel}`,
+          `${cleanName} a payé${amtLabel} via BHGuest`,
+          { type: 'payment_received' },
+          'notif_sub_payment_received'
+        );
+        console.log('📱 [GUEST] Notif paiement reçu envoyée');
+      } catch (pNotifErr) {
+        console.error('⚠️ [GUEST] Notif paiement:', pNotifErr.message);
+      }
     } catch (notifErr) {
       console.error('⚠️ [GUEST] Notif hôte:', notifErr.message);
     }
