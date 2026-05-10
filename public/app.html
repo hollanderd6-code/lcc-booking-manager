@@ -3275,7 +3275,7 @@ window.closeChecklistsKpiModal = function() {
 </div><!-- /notifPanelActivity -->
 
 <!-- Contenu onglet Push -->
-<div id="notifPanelPush" style="display:none;overflow-y:auto;flex:1;">
+<div id="notifPanelPush" style="display:none;overflow-y:auto;overflow-x:hidden;flex:1;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
   <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px 4px;">
     <span style="font-size:12px;color:#888;">Notifications push reçues</span>
     <button onclick="clearNotifHistory()" style="background:none;border:none;color:#EF4444;font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;"><i class="fas fa-trash-alt"></i> Vider</button>
@@ -3904,7 +3904,10 @@ window.closeChecklistsKpiModal = function() {
     .notifications-body {
       padding: 16px 20px;
       overflow-y: auto;
+      overflow-x: hidden;
       flex: 1;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
     }
 
     .empty-state {
@@ -12237,33 +12240,53 @@ document.addEventListener('DOMContentLoaded', function() {
 // ═══════════════════════════════════════════
 
 // Bloquer scroll iOS natif derrière le panel
-function _notifPreventScroll(e) {
-  var panel = document.getElementById('notificationsPanel');
-  if (!panel || !panel.classList.contains('open')) return;
-  // Laisser scroller si on est dans un élément scrollable du panel
-  var el = e.target;
-  while (el && el !== document.body) {
-    if (el === panel) break;
-    el = el.parentElement;
-  }
-  if (el !== panel) {
-    // Touch en dehors du panel — bloquer
-    e.preventDefault();
-    return;
-  }
-  // Touch dans le panel — vérifier si l'élément peut scroller
-  el = e.target;
-  while (el && el !== document.body) {
-    var style = window.getComputedStyle(el);
-    if (el.scrollHeight > el.clientHeight &&
-        (style.overflowY === 'auto' || style.overflowY === 'scroll')) {
-      return; // laisser scroller
+// Scroll iOS natif pour le panel notifications
+(function() {
+  var _touchStartY = 0;
+  var _touchStartedInPanel = false;
+
+  document.addEventListener('touchstart', function(e) {
+    var panel = document.getElementById('notificationsPanel');
+    _touchStartedInPanel = panel && panel.classList.contains('open') && panel.contains(e.target);
+    _touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    var panel = document.getElementById('notificationsPanel');
+    if (!panel || !panel.classList.contains('open')) return;
+
+    // Si le touch a commencé EN DEHORS du panel → bloquer scroll page
+    if (!_touchStartedInPanel) {
+      e.preventDefault();
+      return;
     }
-    el = el.parentElement;
-  }
-  e.preventDefault();
-}
-document.addEventListener('touchmove', _notifPreventScroll, { passive: false });
+
+    // Si dans le panel : trouver le conteneur scrollable
+    var el = e.target;
+    var scrollable = null;
+    while (el && el !== document.body) {
+      if (el.scrollHeight > el.clientHeight + 1) {
+        scrollable = el;
+        break;
+      }
+      el = el.parentElement;
+    }
+
+    if (!scrollable) {
+      // Rien à scroller dans le panel → bloquer
+      e.preventDefault();
+      return;
+    }
+
+    // Empêcher le over-scroll iOS (bounce) qui entraîne la page
+    var dy = e.touches[0].clientY - _touchStartY;
+    var atTop = scrollable.scrollTop <= 0;
+    var atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
+    if ((atTop && dy > 0) || (atBottom && dy < 0)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
 
 function switchNotifTab(tab) {
   var isActivity = tab === 'activity';
