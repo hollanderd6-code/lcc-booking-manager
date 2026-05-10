@@ -101,10 +101,33 @@
     return null;
   }
 
+  function getOrCreateDeviceId() {
+    try {
+      let deviceId = localStorage.getItem('bh_device_id');
+      if (!deviceId) {
+        deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+        localStorage.setItem('bh_device_id', deviceId);
+        console.log('🆔 [DEBUG] Nouveau device_id généré:', deviceId);
+      } else {
+        console.log('🆔 [DEBUG] device_id existant:', deviceId);
+      }
+      return deviceId;
+    } catch(e) {
+      console.warn('⚠️ [DEBUG] Erreur device_id:', e);
+      return null;
+    }
+  }
+
   async function saveTokenToServer(fcmToken, deviceType) {
     console.log('💾 [DEBUG] saveTokenToServer appelée');
     console.log('   Token FCM:', String(fcmToken).slice(0, 30) + '...');
     console.log('   Device:', deviceType);
+
+    const deviceId = getOrCreateDeviceId();
+    console.log('   Device ID:', deviceId);
 
     try {
       const jwt = await getSupabaseJwt();
@@ -130,6 +153,7 @@
         body: JSON.stringify({
           token: fcmToken,
           device_type: deviceType,
+          device_id: deviceId,
         }),
       });
 
