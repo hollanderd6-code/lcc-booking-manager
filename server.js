@@ -25899,7 +25899,7 @@ async function saveNotificationToHistory(userId, title, body, type, data) {
 }
 
 // GET /api/notifications/history
-app.get('/api/notifications/history', requireAuth, async (req, res) => {
+app.get('/api/notifications/history', authenticateToken, async (req, res) => {
   try {
     const userId = String(req.user.id);
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);
@@ -25920,7 +25920,7 @@ app.get('/api/notifications/history', requireAuth, async (req, res) => {
 });
 
 // PATCH /api/notifications/history/read — tout marquer comme lu
-app.patch('/api/notifications/history/read', requireAuth, async (req, res) => {
+app.patch('/api/notifications/history/read', authenticateToken, async (req, res) => {
   try {
     await pool.query(
       `UPDATE notification_history SET is_read = TRUE WHERE user_id = $1`,
@@ -25933,7 +25933,7 @@ app.patch('/api/notifications/history/read', requireAuth, async (req, res) => {
 });
 
 // DELETE /api/notifications/history — vider l'historique
-app.delete('/api/notifications/history', requireAuth, async (req, res) => {
+app.delete('/api/notifications/history', authenticateToken, async (req, res) => {
   try {
     await pool.query(`DELETE FROM notification_history WHERE user_id = $1`, [String(req.user.id)]);
     res.json({ success: true });
