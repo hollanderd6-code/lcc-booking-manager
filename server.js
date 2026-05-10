@@ -22920,7 +22920,7 @@ cron.schedule('*/30 * * * *', async () => {
           'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
           [conv.user_id]
         );
-        const { sendNotification } = require('./firebase');
+        const { sendNotification } = require('./services/notifications-service');
         for (const tok of tokens.rows) {
           await sendNotification(
             tok.fcm_token,
@@ -23019,7 +23019,7 @@ cron.schedule('0 9 1 * *', async () => {
           'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
           [user.id]
         );
-        const { sendNotification } = require('./firebase');
+        const { sendNotification } = require('./services/notifications-service');
         const title = `📊 Résumé ${monthLabel}`;
         const body  = `${nSejours} séjour${nSejours>1?'s':''} · ${nMessages} messages · ${pctAuto}% traités automatiquement · ${nEscalades} escalade${nEscalades>1?'s':''}`;
         for (const tok of tokens.rows) {
