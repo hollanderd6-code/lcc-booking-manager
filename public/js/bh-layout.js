@@ -591,7 +591,7 @@ function getSidebarHTML() {
       var annBtn = document.createElement('button');
       annBtn.id = 'bh-mobile-ann-btn';
       annBtn.style.cssText = 'position:absolute;right:80px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
-      annBtn.innerHTML = '<i class="fas fa-bell"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
+      annBtn.innerHTML = '<i class="fas fa-info-circle"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
       var openAnn = function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -647,7 +647,7 @@ function getSidebarHTML() {
       '  </div>',
       '</div>',
       '<div class="bh-demo-right">',
-      '  <button id="bhAnnouncementsBtn" onclick="window.bhToggleAnnouncements && window.bhToggleAnnouncements()" style="position:relative;background:none;border:none;cursor:pointer;padding:4px 8px;display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.7);font-size:11px;font-weight:500;border-radius:6px;transition:background .15s;" onmouseover="this.style.background=\'rgba(255,255,255,.08)\'" onmouseout="this.style.background=\'none\'"><i class="fas fa-bell" style="font-size:12px;"></i><span>Informations</span><span id="bhAnnBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span></button>',
+      '  <button id="bhAnnouncementsBtn" onclick="window.bhToggleAnnouncements && window.bhToggleAnnouncements()" style="position:relative;background:none;border:none;cursor:pointer;padding:4px 8px;display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.7);font-size:11px;font-weight:500;border-radius:6px;transition:background .15s;" onmouseover="this.style.background=\'rgba(255,255,255,.08)\'" onmouseout="this.style.background=\'none\'"><i class="fas fa-info-circle" style="font-size:12px;"></i><span>Informations</span><span id="bhAnnBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span></button>',
       '  <div style="width:1px;height:14px;background:rgba(255,255,255,.15);margin:0 4px;"></div>',
       '  <span class="bh-demo-mode-label">Mode</span>',
       '  <button class="bh-theme-toggle" id="bhThemeToggleDark" onclick="document.documentElement.getAttribute(\'data-theme\')==\'dark\'?document.documentElement.setAttribute(\'data-theme\',\'light\'):document.documentElement.setAttribute(\'data-theme\',\'dark\')"></button>',
@@ -792,7 +792,7 @@ function getSidebarHTML() {
     hdr.style.cssText = 'padding:16px 18px 12px;border-bottom:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
     var ttl = document.createElement('div');
     ttl.style.cssText = 'font-size:15px;font-weight:700;color:#0D1117;';
-    ttl.textContent = '\uD83D\uDD14 Informations';
+    ttl.textContent = '\u2139\uFE0F Informations';
     var cls = document.createElement('button');
     cls.style.cssText = 'background:none;border:none;cursor:pointer;font-size:20px;color:#9CA3AF;line-height:1;padding:0 4px;';
     cls.textContent = '×';
