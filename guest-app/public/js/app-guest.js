@@ -256,6 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await loadProperties();
+  loadFeaturedProperties();
 
   // ── Deep link : ?property=ID&checkin=DATE&checkout=DATE&promo=CODE&guests=N&fixed_price=N ──
   await handleDeepLink();
@@ -714,6 +715,33 @@ async function applySearch() {
 }
 
 // ── Chargement logements ─────────────────────────────────────
+// ── Logements en vedette (accueil) ──────────────────────────
+async function loadFeaturedProperties() {
+  const el = document.getElementById('homeFeatured');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API_URL}/api/guest/properties`);
+    if (!res.ok) throw new Error();
+    const props = await res.json();
+    if (!props.length) { el.innerHTML = '<div style="padding:20px;color:#9ca3af;font-size:13px;">Aucun logement disponible</div>'; return; }
+    el.innerHTML = props.slice(0,4).map(p => `
+      <div class="home-card" onclick="openProperty('${p.id}')">
+        <div class="home-card-img" style="${p.photoUrl ? 'padding:0;background:none;' : ''}">
+          ${p.photoUrl ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;">` : '🏠'}
+        </div>
+        <div class="home-card-body">
+          <div class="home-card-stars">★★★★★</div>
+          <div class="home-card-name">${p.name}</div>
+          <div class="home-card-loc"><i class="fas fa-location-dot"></i>${p.city || 'France'}</div>
+          <div class="home-card-price">${p.basePrice || '—'}€ <span>/ nuit</span></div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;color:#9ca3af;font-size:13px;">Chargement impossible</div>';
+  }
+}
+
 async function loadProperties() {
   const grid = document.getElementById('propertiesList');
   grid.innerHTML = '<div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>';
@@ -744,26 +772,31 @@ async function loadProperties() {
     }
 
     grid.innerHTML = state.properties.map(p => `
-      <div class="prop-card" onclick="openProperty('${p.id}')">
-        <div class="prop-photo">
+      <div class="prop-card" data-name="${(p.name||'').toLowerCase()}" data-type="${(p.description||'').toLowerCase()}" onclick="openProperty('${p.id}')">
+        <div class="prop-card-img" style="${p.photoUrl ? 'padding:0;background:none;' : ''}">
           ${p.photoUrl
-            ? `<img src="${p.photoUrl}" alt="${p.name}" loading="lazy">`
+            ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
             : '<i class="fas fa-home"></i>'}
+          ${p.basePrice ? `<div class="prop-card-badge">${p.basePrice}€ / nuit</div>` : ''}
         </div>
-        <div class="prop-info">
-          <div class="prop-name">${p.name}</div>
-          <div class="prop-location">
-            <i class="fas fa-location-dot"></i>
-            ${p.city || p.address || 'France'}
+        <div class="prop-card-body">
+          <div class="prop-card-stars">
+            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-stroke"></i>
+            <span>4.8</span>
           </div>
-          <div class="prop-features">
-            ${p.bedrooms ? `<div class="prop-feat"><i class="fas fa-bed"></i> ${p.bedrooms} ch.</div>` : ''}
-            ${p.maxGuests ? `<div class="prop-feat"><i class="fas fa-user"></i> ${p.maxGuests} pers.</div>` : ''}
-            ${p.bathrooms ? `<div class="prop-feat"><i class="fas fa-bath"></i> ${p.bathrooms} sdb</div>` : ''}
+          <div class="prop-card-name">${p.name}</div>
+          <div class="prop-card-loc"><i class="fas fa-location-dot"></i>${p.city || p.address || 'France'}</div>
+          <div class="prop-card-features">
+            ${p.bedrooms ? `<div class="prop-card-feat"><i class="fas fa-bed"></i>${p.bedrooms} ch.</div>` : ''}
+            ${p.maxGuests ? `<div class="prop-card-feat"><i class="fas fa-user"></i>${p.maxGuests} pers.</div>` : ''}
+            ${p.bathrooms ? `<div class="prop-card-feat"><i class="fas fa-bath"></i>${p.bathrooms} sdb</div>` : ''}
           </div>
-          <div class="prop-price-row">
-            <div class="prop-price">${p.basePrice}€ <span>/ nuit</span></div>
-            <button class="btn-voir">Voir</button>
+          <div class="prop-card-footer">
+            <div>
+              <div class="prop-card-price-main">${p.basePrice || '—'}€</div>
+              <div class="prop-card-price-night">/ nuit</div>
+            </div>
+            <button class="prop-card-btn">Réserver</button>
           </div>
         </div>
       </div>
@@ -777,7 +810,7 @@ async function loadProperties() {
 // ── Ouvrir un logement ───────────────────────────────────────
 async function openProperty(id) {
   showScreen('detail');
-  document.getElementById('detailBody').innerHTML = '<div class="loading-center" style="padding:60px"><i class="fas fa-spinner fa-spin"></i></div>';
+  document.getElementById('detailContent').innerHTML = '<div class="loading-center" style="padding:60px"><i class="fas fa-spinner fa-spin"></i></div>';
 
   try {
     const res = await fetch(`${API_URL}/api/guest/properties/${id}`);
@@ -794,13 +827,13 @@ async function openProperty(id) {
     updateBookingBar();
 
   } catch (e) {
-    document.getElementById('detailBody').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`;
+    document.getElementById('detailContent').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`;
   }
 }
 
 function renderDetail() {
   const p = state.currentProperty;
-  document.getElementById('detailBody').innerHTML = `
+  document.getElementById('detailContent').innerHTML = `
     <div class="detail-photos">
       ${p.photoUrl
         ? `<img src="${p.photoUrl}" alt="${p.name}">`
