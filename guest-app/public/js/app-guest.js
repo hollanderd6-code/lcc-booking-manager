@@ -554,8 +554,7 @@ function appendGuestMessage(msg) {
   div.style.cssText = `display:flex;flex-direction:column;align-items:${isGuest?'flex-end':'flex-start'};max-width:80%;${isGuest?'align-self:flex-end':'align-self:flex-start'}`;
   div.innerHTML = `
     <div style="background:${isGuest?'var(--primary)':'white'};color:${isGuest?'white':'#1e293b'};padding:10px 14px;border-radius:${isGuest?'16px 16px 4px 16px':'16px 16px 16px 4px'};font-size:14px;line-height:1.5;box-shadow:0 1px 3px rgba(0,0,0,0.08);word-wrap:break-word;">
-      ${msg.message.replace(/
-/g,'<br>')}
+      ${msg.message.replace(/\n/g,'<br>')}
     </div>
     <div style="font-size:11px;color:#94a3b8;margin-top:3px;${isGuest?'text-align:right':''}">${time}</div>`;
   container.appendChild(div);
