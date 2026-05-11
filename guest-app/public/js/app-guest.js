@@ -535,7 +535,7 @@ async function openGuestChat(convId, propName, checkin, checkout) {
     const container = document.getElementById('guestChatMessages');
     container.innerHTML = '';
     if (!msgs.length) {
-      container.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:14px;">Aucun message pour l'instant.</div>';
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:14px;">Aucun message pour l\'instant.</div>';
     } else {
       msgs.forEach(m => appendGuestMessage(m));
     }
