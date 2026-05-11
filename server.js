@@ -29985,148 +29985,6 @@ app.get('/api/guest/my-bookings', async (req, res) => {
 // 🔐 BOOSTINGHOST GUEST — Authentification par lien magique
 // ============================================================
 
-// ── Table guest_users (email + mot de passe) ─────────────────
-pool.query(`
-  CREATE TABLE IF NOT EXISTS guest_users (
-    id SERIAL PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT,
-    name TEXT,
-    phone TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-  )
-`).catch(e => console.error('❌ guest_users table:', e.message));
-
-// ── Route : inscription email + mot de passe ─────────────────
-app.post('/api/guest/auth/register', async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email invalide' });
-    if (!password || password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères minimum)' });
-
-    const normalizedEmail = email.toLowerCase().trim();
-    const bcrypt = require('bcryptjs');
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Upsert : si l'email existe déjà sans mot de passe (magic link), on complète
-    const existing = await pool.query('SELECT id, password_hash FROM guest_users WHERE email = $1', [normalizedEmail]);
-    if (existing.rows.length > 0) {
-      if (existing.rows[0].password_hash) {
-        return res.status(409).json({ error: 'Un compte existe déjà avec cet email. Connectez-vous.' });
-      }
-      // Compte créé via magic link — on ajoute le mot de passe
-      await pool.query(
-        'UPDATE guest_users SET password_hash = $1, name = COALESCE(name, $2), updated_at = NOW() WHERE email = $3',
-        [passwordHash, name || null, normalizedEmail]
-      );
-    } else {
-      await pool.query(
-        'INSERT INTO guest_users (email, password_hash, name) VALUES ($1, $2, $3)',
-        [normalizedEmail, passwordHash, name || null]
-      );
-    }
-
-    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-    const sessionToken = jwt.sign({ email: normalizedEmail, type: 'guest_session' }, secret, { expiresIn: '30d' });
-
-    console.log(`✅ [GUEST AUTH] Inscription: ${normalizedEmail}`);
-    res.json({ success: true, session_token: sessionToken, email: normalizedEmail, name: name || null });
-  } catch(e) {
-    console.error('❌ [GUEST AUTH] register:', e.message);
-    res.status(500).json({ error: 'Erreur lors de l\'inscription' });
-  }
-});
-
-// ── Route : connexion email + mot de passe ───────────────────
-app.post('/api/guest/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis' });
-
-    const normalizedEmail = email.toLowerCase().trim();
-    const bcrypt = require('bcryptjs');
-
-    const result = await pool.query('SELECT * FROM guest_users WHERE email = $1', [normalizedEmail]);
-    if (!result.rows[0]) {
-      return res.status(401).json({ error: 'Aucun compte trouvé avec cet email' });
-    }
-    const user = result.rows[0];
-    if (!user.password_hash) {
-      return res.status(401).json({ error: 'Ce compte utilise la connexion par lien magique. Utilisez l\'option Magic Link.' });
-    }
-
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Mot de passe incorrect' });
-
-    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-    const sessionToken = jwt.sign({ email: normalizedEmail, type: 'guest_session' }, secret, { expiresIn: '30d' });
-
-    console.log(`✅ [GUEST AUTH] Connexion: ${normalizedEmail}`);
-    res.json({ success: true, session_token: sessionToken, email: normalizedEmail, name: user.name });
-  } catch(e) {
-    console.error('❌ [GUEST AUTH] login:', e.message);
-    res.status(500).json({ error: 'Erreur de connexion' });
-  }
-});
-
-// ── Route : mot de passe oublié (renvoie un magic link) ──────
-app.post('/api/guest/auth/forgot-password', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email requis' });
-    const normalizedEmail = email.toLowerCase().trim();
-    const token = require('crypto').randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-    await pool.query('DELETE FROM guest_magic_tokens WHERE email = $1', [normalizedEmail]);
-    await pool.query('INSERT INTO guest_magic_tokens (email, token, expires_at) VALUES ($1, $2, $3)', [normalizedEmail, token, expiresAt]);
-    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
-    const resetLink = `${appUrl}/guest-app/public/index.html?magic_token=${token}&reset=1`;
-    await sendEmailViaBrevo({
-      to: normalizedEmail,
-      subject: '🔑 Réinitialisation de votre mot de passe — Boostinghost Guest',
-      html: bhEmailTemplate({
-        icon: '🔑', title: 'Réinitialiser votre mot de passe', subtitle: 'Boostinghost Guest',
-        bodyHtml: `<p>Cliquez sur le lien ci-dessous pour vous reconnecter et définir un nouveau mot de passe. Ce lien est valable <strong>15 minutes</strong>.</p>
-          <div class="cta-block"><a href="${resetLink}" class="btn">Réinitialiser mon mot de passe</a></div>
-          <p style="font-size:13px;color:#888;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>`
-      })
-    });
-    res.json({ success: true });
-  } catch(e) {
-    console.error('❌ [GUEST AUTH] forgot-password:', e.message);
-    res.status(500).json({ error: 'Erreur' });
-  }
-});
-
-// ── Route : mettre à jour le profil guest ────────────────────
-app.put('/api/guest/profile', async (req, res) => {
-  const email = verifyGuestSession(req);
-  if (!email) return res.status(401).json({ error: 'Non connecté' });
-  try {
-    const { name, phone, password } = req.body;
-    const bcrypt = require('bcryptjs');
-    let passwordHash = undefined;
-    if (password && password.length >= 6) {
-      passwordHash = await bcrypt.hash(password, 10);
-    }
-    // Upsert guest_users
-    await pool.query(`
-      INSERT INTO guest_users (email, name, phone${passwordHash ? ', password_hash' : ''})
-      VALUES ($1, $2, $3${passwordHash ? ', $4' : ''})
-      ON CONFLICT (email) DO UPDATE SET
-        name = COALESCE($2, guest_users.name),
-        phone = COALESCE($3, guest_users.phone)
-        ${passwordHash ? ', password_hash = $4' : ''},
-        updated_at = NOW()
-    `, passwordHash ? [email, name || null, phone || null, passwordHash] : [email, name || null, phone || null]);
-    res.json({ success: true });
-  } catch(e) {
-    console.error('❌ [GUEST] PUT /profile:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // Créer la table au démarrage (si pas existante)
 pool.query(`
   CREATE TABLE IF NOT EXISTS guest_magic_tokens (
@@ -30300,6 +30158,118 @@ function verifyGuestSession(req) {
 }
 
 // ── Route protégée : mes réservations avec session ───────────
+// ── Route : conversations du voyageur (pour BHGuest messagerie) ─
+app.get('/api/guest/conversations', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const result = await pool.query(`
+      SELECT c.id, c.guest_name, c.guest_email, c.platform, c.source,
+             c.last_message_at, c.status, c.escalated,
+             c.reservation_start_date, c.reservation_end_date,
+             p.name as property_name, p.photo_url as property_photo,
+             p.internal_name as property_internal_name,
+             (SELECT m.message FROM messages m WHERE m.conversation_id = c.id
+              ORDER BY m.created_at DESC LIMIT 1) as last_message,
+             (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id
+              AND m.sender_type = 'property' AND m.is_read = FALSE) as unread_count
+      FROM conversations c
+      LEFT JOIN properties p ON p.id = c.property_id
+      WHERE LOWER(c.guest_email) = $1
+      ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
+      LIMIT 20
+    `, [email.toLowerCase()]);
+    res.json({ conversations: result.rows });
+  } catch(e) {
+    console.error('❌ [GUEST] GET /conversations:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Route : messages d'une conversation (accès voyageur par email) ─
+app.get('/api/guest/conversations/:id/messages', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const convId = parseInt(req.params.id);
+    // Vérifier que le voyageur a bien accès à cette conversation
+    const convCheck = await pool.query(
+      'SELECT id FROM conversations WHERE id = $1 AND LOWER(guest_email) = $2',
+      [convId, email.toLowerCase()]
+    );
+    if (!convCheck.rows[0]) return res.status(403).json({ error: 'Accès refusé' });
+
+    const messages = await pool.query(`
+      SELECT id, sender_type, sender_name, message, photo_url,
+             is_bot_response, is_auto_response, created_at
+      FROM messages
+      WHERE conversation_id = $1
+      ORDER BY created_at ASC
+      LIMIT 100
+    `, [convId]);
+
+    // Marquer les messages property comme lus
+    await pool.query(
+      `UPDATE messages SET is_read = TRUE WHERE conversation_id = $1 AND sender_type = 'property' AND is_read = FALSE`,
+      [convId]
+    ).catch(() => {});
+
+    res.json({ messages: messages.rows });
+  } catch(e) {
+    console.error('❌ [GUEST] GET /conversations/:id/messages:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Route : envoyer un message (voyageur → BH) ───────────────
+app.post('/api/guest/conversations/:id/send', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const convId = parseInt(req.params.id);
+    const { message } = req.body;
+    if (!message?.trim()) return res.status(400).json({ error: 'Message vide' });
+
+    // Vérifier accès
+    const convCheck = await pool.query(
+      'SELECT c.*, p.name as property_name FROM conversations c LEFT JOIN properties p ON p.id = c.property_id WHERE c.id = $1 AND LOWER(c.guest_email) = $2',
+      [convId, email.toLowerCase()]
+    );
+    if (!convCheck.rows[0]) return res.status(403).json({ error: 'Accès refusé' });
+    const conv = convCheck.rows[0];
+
+    // Insérer le message
+    const msgResult = await pool.query(`
+      INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+      VALUES ($1, 'guest', $2, $3, FALSE, NOW())
+      RETURNING id, sender_type, sender_name, message, created_at
+    `, [convId, conv.guest_name || email, message.trim()]);
+    const newMsg = msgResult.rows[0];
+
+    // Mettre à jour last_message_at
+    await pool.query(
+      'UPDATE conversations SET last_message_at = NOW(), updated_at = NOW() WHERE id = $1',
+      [convId]
+    );
+
+    // Émettre via Socket.IO (le handler IA va prendre le relais)
+    io.to(`conversation_${convId}`).emit('new_message', newMsg);
+
+    // Déclencher le handler IA
+    const { handleIncomingMessageDebounced } = require('./integrated-chat-handler');
+    handleIncomingMessageDebounced(
+      { ...conv, id: convId },
+      { message: message.trim(), sender_type: 'guest', sender_name: conv.guest_name || email },
+      pool, io
+    ).catch(e => console.error('❌ [GUEST SEND] handler error:', e.message));
+
+    res.json({ success: true, message: newMsg });
+  } catch(e) {
+    console.error('❌ [GUEST] POST /conversations/:id/send:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/guest/me', async (req, res) => {
   const email = verifyGuestSession(req);
   if (!email) return res.status(401).json({ error: 'Non connecté' });
