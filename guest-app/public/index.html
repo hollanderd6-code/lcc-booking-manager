@@ -595,6 +595,74 @@ body {
 @supports (-webkit-touch-callout: none) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* ─── CALENDRIER ─── */
+.calendar-nav {
+  display: flex !important; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.calendar-nav button {
+  background: var(--bg2, #f1f0f8); border: none; border-radius: 8px;
+  width: 36px; height: 36px; cursor: pointer; font-size: 16px;
+  color: var(--text); display: flex; align-items: center; justify-content: center;
+}
+.cal-month { font-size: 15px; font-weight: 700; color: var(--text); }
+.calendar-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 4px !important;
+}
+.cal-day-header {
+  text-align: center !important; font-size: 11px; font-weight: 600;
+  color: var(--text2, #6b7280); padding: 6px 0;
+  display: block !important;
+}
+.cal-day {
+  display: flex !important; align-items: center !important;
+  justify-content: center !important;
+  aspect-ratio: 1; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all .15s; color: var(--text);
+  min-height: 36px; min-width: 0;
+}
+.cal-day.empty { cursor: default; pointer-events: none; }
+.cal-day.disabled { color: #d1d5db !important; cursor: not-allowed; text-decoration: line-through; }
+.cal-day:not(.disabled):not(.empty):hover { background: var(--primary-light, #ede9fe); color: var(--primary); }
+.cal-day.today { font-weight: 700; color: var(--primary); }
+.cal-day.selected, .cal-day.range-start, .cal-day.range-end { background: var(--primary) !important; color: white !important; }
+.cal-day.range-start { border-radius: 8px 0 0 8px; }
+.cal-day.range-end { border-radius: 0 8px 8px 0; }
+.cal-day.in-range { background: var(--primary-light, #ede9fe) !important; color: var(--primary) !important; border-radius: 0; }
+
+/* ─── DETAIL LOGEMENT ─── */
+.detail-photos { width: 100%; height: 260px; overflow: hidden; }
+.detail-photos img { width: 100%; height: 260px; object-fit: cover; }
+.no-photo {
+  width: 100%; height: 260px;
+  background: linear-gradient(135deg, #c4b5fd, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 64px;
+}
+.detail-feats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.detail-feat {
+  background: var(--bg2, #f1f0f8); border-radius: 999px;
+  padding: 6px 12px; font-size: 12px; color: var(--text2);
+  display: flex; align-items: center; gap: 5px;
+}
+.detail-feat i { color: var(--primary); }
+.detail-location { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 5px; margin-bottom: 12px; }
+.section-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 20px 0 12px; }
+
+/* ─── CHECKOUT ─── */
+.checkout-summary { background: var(--bg2, #f1f0f8); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
+.checkout-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--border); }
+.checkout-row:last-child { border-bottom: none; }
+.checkout-row.total { font-weight: 700; font-size: 16px; }
+.form-section { margin-bottom: 16px; }
+.form-section label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.form-section input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; outline: none; }
+.form-section input:focus { border-color: var(--primary); }
+
 </style>
 </head>
 <body>
