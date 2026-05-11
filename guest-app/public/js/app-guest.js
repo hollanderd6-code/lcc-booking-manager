@@ -1369,20 +1369,84 @@ function loadAccountFields() {
   if (phone) phone.value = a.phone || '';
 }
 
-function saveAccount() {
+async function saveAccount() {
+  const name = document.getElementById('accountName')?.value.trim();
+  const phone = document.getElementById('accountPhone')?.value.trim();
+
   state.account = {
-    name: document.getElementById('accountName')?.value.trim(),
-    email: document.getElementById('accountEmail')?.value.trim(),
-    phone: document.getElementById('accountPhone')?.value.trim()
+    ...state.account,
+    name,
+    phone,
+    email: document.getElementById('accountEmail')?.value.trim()
   };
   localStorage.setItem('guest_account', JSON.stringify(state.account));
+
+  // Sync avec le serveur si connecté
+  const session = getSession();
+  if (session?.token) {
+    try {
+      await fetch(`${API_URL}/api/guest/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token },
+        body: JSON.stringify({ name, phone })
+      });
+    } catch(e) { /* silencieux */ }
+  }
+
   showToast('Compte sauvegardé ✓');
+}
+
+async function changePassword() {
+  const pwd = document.getElementById('newPassword')?.value;
+  const confirm = document.getElementById('newPasswordConfirm')?.value;
+  const errBox = document.getElementById('pwdChangeError');
+  const btn = document.getElementById('btnChangePwd');
+  errBox.style.display = 'none';
+
+  if (!pwd || pwd.length < 6) {
+    errBox.textContent = 'Mot de passe trop court (6 caractères minimum)';
+    errBox.style.display = 'block'; return;
+  }
+  if (pwd !== confirm) {
+    errBox.textContent = 'Les mots de passe ne correspondent pas';
+    errBox.style.display = 'block'; return;
+  }
+
+  const session = getSession();
+  if (!session?.token) {
+    errBox.textContent = 'Vous devez être connecté pour changer votre mot de passe';
+    errBox.style.display = 'block'; return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mise à jour...';
+  try {
+    const res = await fetch(`${API_URL}/api/guest/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token },
+      body: JSON.stringify({ password: pwd })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newPasswordConfirm').value = '';
+    showToast('Mot de passe mis à jour ✓');
+  } catch(e) {
+    errBox.textContent = e.message || 'Erreur lors de la mise à jour';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-key"></i> Mettre à jour le mot de passe';
+  }
 }
 
 function renderLogoutSection() {
   const section = document.getElementById('logoutSection');
   if (!section) return;
   const session = getSession();
+  // Afficher/masquer la section mot de passe selon si connecté
+  const pwdSection = document.getElementById('pwdSection');
+  if (pwdSection) pwdSection.style.display = session ? 'block' : 'none';
   if (session) {
     section.innerHTML = `
       <div style="background:white;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
