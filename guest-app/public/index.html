@@ -476,29 +476,106 @@
     <!-- ─── ÉCRAN LOGIN ─── -->
     <div id="screen-login" class="screen-content screen-with-header">
       <div class="page-header"><h2>Connexion</h2></div>
-      <div style="padding:32px 20px; padding-top: calc(62px + 32px);">
-        <p style="font-size:15px;color:var(--text-light);margin-bottom:28px;line-height:1.6;">
-          Entrez votre email pour recevoir un lien de connexion instantané. Aucun mot de passe.
-        </p>
-        <div id="loginForm">
-          <div class="form-section">
-            <label>Votre email</label>
-            <input type="email" id="loginEmail" placeholder="votre@email.com" style="margin-bottom:12px;">
-          </div>
-          <button onclick="requestMagicLink()" id="btnMagicLink" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
-            <i class="fas fa-paper-plane"></i> Recevoir mon lien
+      <div style="padding:20px; padding-top: calc(62px + 20px);">
+
+        <!-- Toggle Magic Link / Mot de passe -->
+        <div style="display:flex;gap:8px;margin-bottom:24px;background:#f1f5f9;border-radius:14px;padding:4px;">
+          <button id="toggleMagic" onclick="switchAuthMode('magic')"
+            style="flex:1;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:white;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,0.08);transition:all 0.2s;">
+            <i class="fas fa-magic"></i> Lien magique
+          </button>
+          <button id="togglePassword" onclick="switchAuthMode('password')"
+            style="flex:1;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-light);transition:all 0.2s;">
+            <i class="fas fa-lock"></i> Mot de passe
           </button>
         </div>
-        <div id="loginSent" style="display:none;text-align:center;padding:20px 0;">
-          <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <i class="fas fa-envelope" style="font-size:28px;color:var(--primary);"></i>
+
+        <!-- MODE MAGIC LINK -->
+        <div id="authModeMagic">
+          <p style="font-size:14px;color:var(--text-light);margin-bottom:20px;line-height:1.5;">
+            Entrez votre email pour recevoir un lien de connexion instantané.
+          </p>
+          <div id="loginForm">
+            <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Votre email</label>
+            <input type="email" id="loginEmail" placeholder="votre@email.com"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:14px;box-sizing:border-box;">
+            <button onclick="requestMagicLink()" id="btnMagicLink"
+              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
+              <i class="fas fa-paper-plane"></i> Recevoir mon lien
+            </button>
           </div>
-          <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">Email envoyé !</div>
-          <div style="font-size:14px;color:var(--text-light);line-height:1.6;">Vérifiez votre boîte mail et cliquez sur le lien.<br>Valable 15 minutes.</div>
-          <button onclick="document.getElementById('loginSent').style.display='none';document.getElementById('loginForm').style.display='block';" style="margin-top:20px;background:none;border:none;color:var(--primary);font-size:14px;cursor:pointer;text-decoration:underline;">
-            Renvoyer un lien
-          </button>
+          <div id="loginSent" style="display:none;text-align:center;padding:20px 0;">
+            <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+              <i class="fas fa-envelope" style="font-size:28px;color:var(--primary);"></i>
+            </div>
+            <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">Email envoyé !</div>
+            <div style="font-size:14px;color:var(--text-light);line-height:1.6;">Vérifiez votre boîte mail et cliquez sur le lien.<br>Valable 15 minutes.</div>
+            <button onclick="document.getElementById('loginSent').style.display='none';document.getElementById('loginForm').style.display='block';"
+              style="margin-top:20px;background:none;border:none;color:var(--primary);font-size:14px;cursor:pointer;text-decoration:underline;">
+              Renvoyer un lien
+            </button>
+          </div>
         </div>
+
+        <!-- MODE MOT DE PASSE -->
+        <div id="authModePassword" style="display:none;">
+
+          <!-- Sous-toggle Login / Inscription -->
+          <div style="display:flex;gap:8px;margin-bottom:20px;">
+            <button id="subToggleLogin" onclick="switchSubMode('login')"
+              style="flex:1;padding:9px;border:2px solid var(--primary);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;background:var(--primary);color:white;transition:all 0.2s;">
+              Se connecter
+            </button>
+            <button id="subToggleRegister" onclick="switchSubMode('register')"
+              style="flex:1;padding:9px;border:2px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:white;color:var(--text-light);transition:all 0.2s;">
+              Créer un compte
+            </button>
+          </div>
+
+          <!-- Formulaire Login -->
+          <div id="pwdLoginForm">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Email</label>
+            <input type="email" id="pwdEmail" placeholder="votre@email.com"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Mot de passe</label>
+            <input type="password" id="pwdPassword" placeholder="••••••••"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:6px;box-sizing:border-box;"
+              onkeydown="if(event.key==='Enter')loginWithPassword()">
+            <button onclick="forgotPassword()"
+              style="background:none;border:none;color:var(--primary);font-size:13px;cursor:pointer;text-decoration:underline;margin-bottom:16px;padding:0;">
+              Mot de passe oublié ?
+            </button>
+            <div id="pwdLoginError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:13px;color:#ef4444;margin-bottom:12px;"></div>
+            <button onclick="loginWithPassword()" id="btnPwdLogin"
+              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
+              <i class="fas fa-sign-in-alt"></i> Se connecter
+            </button>
+          </div>
+
+          <!-- Formulaire Inscription -->
+          <div id="pwdRegisterForm" style="display:none;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Prénom et nom</label>
+            <input type="text" id="regName" placeholder="Jean Dupont"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Email</label>
+            <input type="email" id="regEmail" placeholder="votre@email.com"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Mot de passe</label>
+            <input type="password" id="regPassword" placeholder="6 caractères minimum"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Confirmer le mot de passe</label>
+            <input type="password" id="regPasswordConfirm" placeholder="••••••••"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:6px;box-sizing:border-box;"
+              onkeydown="if(event.key==='Enter')registerWithPassword()">
+            <div id="pwdRegisterError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:13px;color:#ef4444;margin-bottom:12px;"></div>
+            <button onclick="registerWithPassword()" id="btnPwdRegister"
+              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
+              <i class="fas fa-user-plus"></i> Créer mon compte
+            </button>
+          </div>
+
+        </div>
+
       </div>
     </div>
 
@@ -536,6 +613,39 @@
       </div>
     </div>
 
+    <!-- ─── ÉCRAN 7 : Messages ─── -->
+    <div id="screen-messages" class="screen-content screen-with-header">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <h2>Messages</h2>
+      </div>
+      <div id="guestConvList" style="padding:12px 16px 80px;">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+
+    <!-- ─── ÉCRAN 8 : Chat individuel ─── -->
+    <div id="screen-chat" class="screen-content" style="display:none;flex-direction:column;height:100dvh;">
+      <div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;padding:max(env(safe-area-inset-top),16px) 16px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <button onclick="navTo('messages')" style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.2);border:none;color:white;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <div style="flex:1;min-width:0;">
+          <div id="chatGuestPropName" style="font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Logement</div>
+          <div id="chatGuestDates" style="font-size:12px;opacity:0.85;margin-top:1px;"></div>
+        </div>
+      </div>
+      <div id="guestChatMessages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;display:flex;flex-direction:column;gap:10px;background:#f8f9fb;"></div>
+      <div style="padding:10px 12px max(env(safe-area-inset-bottom),10px);background:white;border-top:1px solid #e2e8f0;display:flex;gap:8px;align-items:flex-end;flex-shrink:0;">
+        <textarea id="guestChatInput" placeholder="Votre message..." rows="1"
+          style="flex:1;border:2px solid #e2e8f0;border-radius:16px;padding:10px 14px;font-size:15px;font-family:inherit;resize:none;max-height:100px;min-height:42px;box-sizing:border-box;"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGuestMessage();}"></textarea>
+        <button onclick="sendGuestMessage()" style="width:44px;height:44px;border-radius:12px;background:#10b981;border:none;color:white;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+
   </div><!-- /mainScroll -->
 
   <!-- Bottom nav (masquée sur detail/checkout/confirm) -->
@@ -547,6 +657,11 @@
     <button class="nav-item" id="nav-bookings" onclick="navTo('bookings')">
       <i class="fas fa-calendar-check"></i>
       <span>Réservations</span>
+    </button>
+    <button class="nav-item" id="nav-messages" onclick="navTo('messages')">
+      <i class="fas fa-comment-dots"></i>
+      <span>Messages</span>
+      <span id="navMsgsBadge" style="display:none;position:absolute;top:6px;background:#ef4444;color:white;border-radius:999px;font-size:9px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center;"></span>
     </button>
     <button class="nav-item" id="nav-account" onclick="navTo('account')">
       <i class="fas fa-user"></i>
@@ -595,6 +710,7 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="js/app-guest.js"></script>
 </body>
 </html>
