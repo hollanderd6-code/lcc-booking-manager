@@ -1,1397 +1,677 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light" data-theme-v3="1">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <link rel="icon" type="image/png" href="/images/logo.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Boostinghost Guest</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    /* ── Variables Guest ── */
+    :root {
+      --primary: #7c3aed;
+      --primary-dark: #6d28d9;
+      --primary-light: #ede9fe;
+      --green: #10b981;
+      --green-light: #d1fae5;
+      --bg: #f8f9fb;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --error: #ef4444;
+    }
 
-  <script>
-    (function() {
-      var isNative = !!(
-        window.Capacitor?.isNativePlatform?.() ||
-        window.location.protocol === 'capacitor:' ||
-        window.location.protocol === 'ionic:'
-      );
-      if (isNative) { window.location.replace('login.html'); }
-    })();
-  </script>
+    /* ── Bottom nav ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 8px 0 env(safe-area-inset-bottom);
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 6px 0;
+      cursor: pointer;
+      color: var(--text-light);
+      font-size: 10px;
+      border: none;
+      background: none;
+      font-family: inherit;
+    }
+    .nav-item i { font-size: 20px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-item.active i { color: var(--primary); }
 
-  <title>Boostinghost – Logiciel gestion location courte durée | Channel Manager Airbnb Booking</title>
-  <meta name="description" content="Boostinghost est le logiciel tout-en-un pour gérer vos locations courte durée. Synchronisez Airbnb, Booking.com, Abritel, Expedia et toute plateforme via iCal. Gérez votre calendrier, encaissez les paiements, pilotez les ménages et automatisez vos messages grâce à l'IA. Idéal pour conciergeries et propriétaires multi-logements.">
-  <meta name="keywords" content="logiciel gestion location courte durée, channel manager airbnb booking abritel expedia, PMS location saisonnière, synchronisation calendrier airbnb, conciergerie logiciel, gestion multi-logements, IA Airbnb">
-  <meta name="robots" content="index, follow">
-  <meta name="author" content="Boostinghost">
-  <link rel="canonical" href="https://www.boostinghost.fr/">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://www.boostinghost.fr/">
-  <meta property="og:title" content="Boostinghost – Logiciel gestion location courte durée">
-  <meta property="og:description" content="Synchronisez Airbnb, Booking.com, Abritel, Expedia et toute plateforme via iCal. Calendrier, paiements, ménages, messagerie IA, facturation : tout en un.">
-  <meta property="og:site_name" content="Boostinghost">
-  <meta property="og:locale" content="fr_FR">
+    /* ── App header ── */
+    .app-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: env(safe-area-inset-top, 16px) 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .app-header .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .app-header .logo-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800;
+    }
+    .app-header .logo-label { font-size: 18px; font-weight: 700; }
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Boostinghost",
-    "url": "https://www.boostinghost.fr",
-    "description": "Logiciel tout-en-un de gestion de locations courte durée.",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web, iOS, Android",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "description": "Essai gratuit 14 jours" },
-    "provider": { "@type": "Organization", "name": "Boostinghost", "url": "https://www.boostinghost.fr" }
-  }
-  </script>
+    /* ── Search bar ── */
+    .search-bar {
+      background: rgba(255,255,255,0.15);
+      border: 1.5px solid rgba(255,255,255,0.3);
+      border-radius: 14px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .search-bar i { font-size: 15px; opacity: 0.9; }
+    .search-bar span { font-size: 14px; opacity: 0.85; }
 
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+    /* ── Search modal ── */
+    .search-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+    }
+    .search-modal.open { display: flex; }
+    .search-sheet {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px env(safe-area-inset-bottom);
+      width: 100%;
+    }
+    .search-sheet h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+    .search-row { margin-bottom: 16px; }
+    .search-row label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: block; }
+    .search-row input, .search-row select {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px; font-size: 15px;
+      font-family: inherit; background: white;
+      box-sizing: border-box; color: var(--text);
+    }
+    .search-row input:focus, .search-row select:focus {
+      outline: none; border-color: var(--primary);
+    }
+    .dates-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-search-apply {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 600; cursor: pointer;
+      margin-top: 8px;
+    }
 
-<style>
-/* ─── RESET & BASE ─── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --primary: #1A7A5E;
-  --primary-dark: #15624B;
-  --primary-soft: rgba(26,122,94,.1);
-  --primary-glow: rgba(26,122,94,.2);
-  --cream: #F5F0E8;
-  --ink: #0D1117;
-  --muted: #7A8695;
-  --text: #374151;
-  --border: rgba(200,184,154,.4);
-  --white: #FAFAF8;
-  --radius: 20px;
-}
-html { scroll-behavior: smooth; }
-body {
-  font-family: 'DM Sans', sans-serif;
-  color: var(--ink);
-  background: var(--white);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-h1, h2 { font-family: 'Instrument Serif', serif; font-weight: 400; letter-spacing: -.01em; }
-h3 { font-family: 'DM Sans', sans-serif; font-weight: 700; }
-p { color: var(--muted); }
-a { color: var(--primary); text-decoration: none; }
-.container { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+    /* ── Screen content ── */
+    .screen-content {
+      display: none;
+      flex: 1;
+      padding-bottom: 80px;
+    }
+    .screen-content.active { display: block; }
+    #screen-detail { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 
-/* ─── BUTTONS ─── */
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 12px 22px; border-radius: 14px;
-  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-  cursor: pointer; border: none; text-decoration: none; transition: all .2s;
-}
-.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 16px rgba(26,122,94,.3); }
-.btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,122,94,.35); color: white; }
-.btn-ghost { background: rgba(255,255,255,.8); color: var(--text); border: 1.5px solid rgba(13,17,23,.12); backdrop-filter: blur(8px); }
-.btn-ghost:hover { background: white; border-color: rgba(13,17,23,.2); color: var(--text); }
-/* Ghost sur fond sombre (hero, CTA) */
-.hero .btn-ghost:hover,
-.cta-box .btn-ghost:hover { background: rgba(255,255,255,.22); color: white; border-color: rgba(255,255,255,.6); }
-.btn-lg { padding: 15px 28px; font-size: 15px; border-radius: 16px; }
-.btn-white { background: white; color: var(--primary); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
-.btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.18); }
+    /* ── Property cards ── */
+    .properties-grid { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+    .prop-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      cursor: pointer;
+    }
+    .prop-photo {
+      width: 100%; height: 200px;
+      object-fit: cover;
+      background: #e2e8f0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-light); font-size: 40px;
+    }
+    .prop-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .prop-info { padding: 14px 16px; }
+    .prop-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .prop-location { font-size: 13px; color: var(--text-light); margin-bottom: 10px; display: flex; align-items: center; gap: 4px; }
+    .prop-features { display: flex; gap: 12px; margin-bottom: 12px; }
+    .prop-feat { font-size: 12px; color: var(--text-light); display: flex; align-items: center; gap: 4px; }
+    .prop-price-row { display: flex; align-items: center; justify-content: space-between; }
+    .prop-price { font-size: 18px; font-weight: 700; color: var(--primary); }
+    .prop-price span { font-size: 13px; font-weight: 400; color: var(--text-light); }
+    .btn-voir { background: var(--primary-light); color: var(--primary); border: none; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
 
-/* ─── TOP BANNER ─── */
-.top-banner {
-  background: var(--ink);
-  color: white; text-align: center;
-  padding: 11px 16px; font-size: 13px; font-weight: 500;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  position: relative; overflow: hidden;
-}
-.top-banner::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(26,122,94,.18) 50%, transparent 100%);
-  animation: bannerShimmer 3s ease-in-out infinite;
-}
-@keyframes bannerShimmer {
-  0%, 100% { opacity: 0; transform: translateX(-100%); }
-  50% { opacity: 1; transform: translateX(100%); }
-}
-.top-banner-pill {
-  background: var(--primary); color: white;
-  font-size: 11px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; padding: 3px 10px; border-radius: 999px;
-  flex-shrink: 0;
-}
-.top-banner-text { color: rgba(255,255,255,.8); }
-.top-banner-link {
-  color: white; font-weight: 700;
-  display: inline-flex; align-items: center; gap: 5px;
-  border-bottom: 1px solid rgba(255,255,255,.35); padding-bottom: 1px;
-  transition: border-color .15s, color .15s;
-  flex-shrink: 0;
-}
-.top-banner:hover .top-banner-link { border-color: white; color: #6ee7b7; }
+    /* ── Detail screen ── */
+    .detail-header {
+      position: sticky; top: 0; z-index: 50;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: env(safe-area-inset-top, 16px) 16px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .btn-back-detail {
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.2); border: none;
+      border-radius: 10px; color: white; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .detail-photos { width: 100%; height: 240px; background: #e2e8f0; overflow: hidden; }
+    .detail-photos img { width: 100%; height: 100%; object-fit: cover; }
+    .detail-photos .no-photo { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 60px; color: var(--text-light); }
+    .detail-body { padding: 20px 16px; }
+    .detail-name { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .detail-location { font-size: 14px; color: var(--text-light); margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+    .detail-feats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .detail-feat { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--bg); border-radius: 12px; padding: 10px 16px; }
+    .detail-feat i { font-size: 18px; color: var(--primary); }
+    .detail-feat span { font-size: 12px; color: var(--text-light); }
+    .detail-feat strong { font-size: 14px; color: var(--text); }
+    .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin: 20px 0 12px; }
 
-/* ─── HEADER ─── */
-.site-header {
-  position: sticky; top: 0; z-index: 200;
-  background: rgba(250,250,248,.92);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(200,184,154,.2);
-}
-.header-inner {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 28px; max-width: 1200px; margin: 0 auto;
-}
-.logo-link {
-  display: flex; align-items: center; gap: 10px;
-  text-decoration: none; color: var(--ink);
-  font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px;
-}
-.logo-icon { width: 34px; height: 34px; border-radius: 9px; overflow: hidden; flex-shrink: 0; }
-.logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.brand-host { color: var(--primary); }
-.nav-main { display: flex; gap: 6px; }
-.nav-main a {
-  color: var(--text); font-size: 14px; font-weight: 500;
-  padding: 7px 14px; border-radius: 10px; transition: all .15s;
-}
-.nav-main a:hover { color: var(--primary); background: var(--primary-soft); }
-.header-actions { display: flex; gap: 8px; align-items: center; }
-.menu-toggle { display: none; background: none; border: none; font-size: 22px; color: var(--ink); cursor: pointer; }
+    /* ── Calendrier ── */
+    .calendar-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .calendar-nav button { background: var(--bg); border: none; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 16px; }
+    .calendar-nav h4 { font-size: 15px; font-weight: 600; color: var(--text); text-transform: capitalize; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; text-align: center; }
+    .cal-day-header { font-size: 11px; color: var(--text-light); font-weight: 600; padding: 4px 0; }
+    .cal-day { height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; color: var(--text); }
+    .cal-day.empty { cursor: default; }
+    .cal-day.booked { background: #fef2f2; color: #fca5a5; text-decoration: line-through; cursor: not-allowed; }
+    .cal-day.selected-start, .cal-day.selected-end { background: var(--primary); color: white; font-weight: 700; }
+    .cal-day.in-range { background: var(--primary-light); color: var(--primary); }
+    .cal-day.today { border: 2px solid var(--primary); }
+    .cal-day.past { color: #cbd5e1; cursor: not-allowed; }
 
-/* ─── HERO ─── */
-.hero {
-  min-height: 100svh;
-  position: relative;
-  display: flex; align-items: center;
-  overflow: hidden;
-}
-.hero-bg {
-  position: absolute; inset: 0;
-  background: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80') center/cover;
-}
-.hero-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(105deg, rgba(13,17,23,.88) 0%, rgba(13,17,23,.72) 45%, rgba(13,17,23,.35) 100%);
-}
-.hero-content {
-  position: relative; z-index: 2;
-  max-width: 1200px; margin: 0 auto; padding: 0 28px;
-  width: 100%;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
-  padding-top: 80px; padding-bottom: 80px;
-}
-.hero-left { animation: heroFadeIn .9s .1s both; }
-@keyframes heroFadeIn {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: none; }
-}
-.hero-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(26,122,94,.25); color: #6ee7b7;
-  border: 1px solid rgba(110,231,183,.3);
-  padding: 6px 14px; border-radius: 999px;
-  font-size: 12px; font-weight: 600; letter-spacing: .05em;
-  text-transform: uppercase; margin-bottom: 24px;
-}
-.hero h1 {
-  font-size: clamp(42px, 5.5vw, 68px);
-  line-height: 1.05; color: white; margin-bottom: 22px;
-  font-style: normal;
-}
-.hero h1 em { color: #6ee7b7; }
-.hero-sub {
-  font-size: 17px; color: rgba(255,255,255,.7);
-  line-height: 1.7; margin-bottom: 36px; max-width: 500px;
-}
-.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
-.hero-trust {
-  display: flex; gap: 20px; flex-wrap: wrap;
-}
-.hero-trust-item {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 13px; color: rgba(255,255,255,.55);
-}
-.hero-trust-item i { color: #6ee7b7; font-size: 12px; }
+    /* ── Booking bar ── */
+    .booking-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 999;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    }
+    .booking-bar-price { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .booking-bar-price span { font-size: 13px; font-weight: 400; color: var(--text-light); }
+    .btn-book {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 14px;
+      padding: 14px 28px; font-size: 16px; font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-book:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Hero right — floating cards */
-.hero-right { animation: heroFadeIn .9s .35s both; }
-.hero-cards { position: relative; }
-.hero-card-main {
-  background: rgba(255,255,255,.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,.15);
-  border-radius: 20px; overflow: hidden;
-}
-.hero-card-header {
-  background: rgba(255,255,255,.08);
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 13px; font-weight: 600; color: white;
-}
-.hero-cal-row {
-  display: grid; grid-template-columns: 90px repeat(7,1fr);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  font-size: 11px;
-}
-.hero-cal-row:last-child { border-bottom: none; }
-.hero-cal-cell {
-  padding: 9px 4px; text-align: center;
-  color: rgba(255,255,255,.45);
-  border-right: 1px solid rgba(255,255,255,.06);
-  position: relative;
-}
-.hero-cal-cell:last-child { border-right: none; }
-.hero-cal-label {
-  font-weight: 600; color: rgba(255,255,255,.7);
-  text-align: left; padding-left: 12px;
-  display: flex; align-items: center; font-size: 11px;
-}
-.hero-cal-head .hero-cal-cell {
-  font-weight: 600; font-size: 10px;
-  background: rgba(255,255,255,.04); padding: 6px 4px;
-}
-.hero-booking {
-  position: absolute; top: 50%; left: 2px; right: 2px;
-  transform: translateY(-50%);
-  height: 20px; border-radius: 5px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 8px; font-weight: 700; color: white; white-space: nowrap;
-}
-.bk-air { background: #FF5A5F; }
-.bk-bk { background: #003580; }
-.bk-dir { background: var(--primary); }
-.bk-air.s3 { right: -200%; }
-.bk-bk.s2 { right: -100%; }
-.bk-dir.s4 { right: -300%; }
-.bk-bk.s3 { right: -200%; }
-.hero-rev-strip {
-  display: grid; grid-template-columns: 1fr 1fr;
-  border-top: 1px solid rgba(255,255,255,.08);
-}
-.hero-rev-item {
-  padding: 14px 18px;
-  border-right: 1px solid rgba(255,255,255,.08);
-}
-.hero-rev-item:last-child { border-right: none; }
-.hero-rev-label { font-size: 10px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
-.hero-rev-val { font-family: 'Instrument Serif', serif; font-size: 26px; color: white; line-height: 1; }
-.hero-rev-sub { font-size: 10px; color: rgba(255,255,255,.35); margin-top: 3px; }
+    /* ── Checkout screen ── */
+    .checkout-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: env(safe-area-inset-top, 16px) 16px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .checkout-body { padding: 20px 16px; padding-bottom: 120px; }
+    .checkout-summary {
+      background: var(--bg);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .checkout-row {
+      display: flex; justify-content: space-between;
+      font-size: 14px; color: var(--text-light);
+      margin-bottom: 8px;
+    }
+    .checkout-row.total {
+      border-top: 1px solid var(--border);
+      padding-top: 10px; margin-top: 4px;
+      font-size: 16px; font-weight: 700; color: var(--text);
+    }
+    .form-section { margin-bottom: 20px; }
+    .form-section label { font-size: 13px; font-weight: 600; color: var(--text); display: block; margin-bottom: 6px; }
+    .form-section input {
+      width: 100%; padding: 13px 14px;
+      border: 2px solid var(--border); border-radius: 12px;
+      font-size: 15px; font-family: inherit;
+      box-sizing: border-box; background: white; color: var(--text);
+    }
+    .form-section input:focus { outline: none; border-color: var(--primary); }
+    .checkout-cta {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 14px 16px env(safe-area-inset-bottom);
+      background: white;
+      border-top: 1px solid var(--border);
+    }
+    .btn-pay {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 14px;
+      font-size: 17px; font-weight: 700; cursor: pointer;
+    }
+    .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Floating notif */
-.hero-notif {
-  position: absolute; bottom: -16px; right: -12px;
-  background: var(--ink); color: white;
-  padding: 11px 16px; border-radius: 14px;
-  font-size: 12px; font-weight: 500;
-  box-shadow: 0 12px 32px rgba(0,0,0,.4);
-  display: flex; align-items: center; gap: 9px;
-  opacity: 0; animation: floatUp .6s 2s forwards;
-  border: 1px solid rgba(255,255,255,.06);
-}
-.hero-notif .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex-shrink: 0; animation: pulse 2s 2s infinite; }
-@keyframes floatUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+    /* ── Confirmation ── */
+    .confirm-screen { padding: 40px 24px; text-align: center; }
+    .confirm-icon {
+      width: 80px; height: 80px;
+      background: var(--green-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .confirm-icon i { font-size: 36px; color: var(--green); }
+    .confirm-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .confirm-sub { font-size: 15px; color: var(--text-light); margin-bottom: 28px; }
+    .confirm-card {
+      background: white; border-radius: 20px;
+      padding: 20px; text-align: left;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      margin-bottom: 24px;
+    }
+    .confirm-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; }
+    .confirm-row span:first-child { color: var(--text-light); }
+    .confirm-row span:last-child { font-weight: 600; color: var(--text); }
+    .btn-confirm-home {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 14px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+    }
 
-/* Scroll indicator */
-.hero-scroll {
-  position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
-  z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  animation: heroFadeIn .8s 1.5s both;
-}
-@media (max-width: 768px) {
-  .hero-scroll { bottom: 20px; }
-}
-.hero-scroll-line {
-  width: 1px; height: 50px;
-  background: linear-gradient(to bottom, rgba(255,255,255,.5), transparent);
-  animation: scrollLine 2s 2s infinite;
-}
-@keyframes scrollLine { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.5); } }
-.hero-scroll span { font-size: 10px; color: rgba(255,255,255,.35); letter-spacing: .12em; text-transform: uppercase; }
+    /* ── Mes réservations ── */
+    .my-bookings-list { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .booking-card {
+      background: white; border-radius: 18px;
+      padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .booking-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .booking-card-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .booking-badge {
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .badge-confirmed { background: var(--green-light); color: var(--green); }
+    .badge-cancelled { background: #fef2f2; color: var(--error); }
+    .booking-dates { font-size: 13px; color: var(--text-light); margin-bottom: 6px; }
+    .booking-total { font-size: 14px; font-weight: 600; color: var(--primary); }
 
-/* ─── LOGOS BAND ─── */
-.logos-band {
-  background: white;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 24px 0; overflow: hidden;
-}
-.logos-label {
-  text-align: center;
-  font-size: 11px; color: var(--muted); letter-spacing: .12em;
-  text-transform: uppercase; font-weight: 600; margin-bottom: 20px;
-}
-.logos-track { display: flex; align-items: center; gap: 0; }
-.logos-inner {
-  display: flex; align-items: center; gap: 0;
-  animation: logoScroll 22s linear infinite;
-  white-space: nowrap;
-}
-@keyframes logoScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.logo-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 24px; border-right: 1px solid var(--border);
-  font-size: 15px; font-weight: 700; white-space: nowrap;
-}
+    /* ── Compte ── */
+    .account-section { padding: 24px 16px; }
+    .account-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .account-field { margin-bottom: 16px; }
+    .account-field label { font-size: 13px; color: var(--text-light); display: block; margin-bottom: 4px; }
+    .account-field input {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid var(--border); border-radius: 10px;
+      font-size: 15px; font-family: inherit;
+      box-sizing: border-box; color: var(--text);
+    }
+    .btn-save-account {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+    }
 
-/* ─── STATS ─── */
-.stats-section { padding: 80px 0 60px; }
-.stats-grid {
-  display: grid; grid-template-columns: repeat(4,1fr);
-  gap: 2px;
-  background: var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.stat-box {
-  background: white;
-  padding: 36px 28px; text-align: center;
-}
-.stat-num {
-  font-family: 'Instrument Serif', serif;
-  font-size: 52px; color: var(--primary); line-height: 1;
-  margin-bottom: 8px;
-}
-.stat-desc { font-size: 14px; color: var(--text); line-height: 1.4; }
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 60px 24px;
+      color: var(--text-light);
+    }
+    .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+    .empty-state p { font-size: 15px; }
 
-/* ─── SECTION BASE ─── */
-.section { padding: 100px 0; }
-.section-kicker {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: var(--primary-soft); color: var(--primary);
-  border: 1px solid rgba(26,122,94,.15);
-  padding: 5px 14px; border-radius: 999px;
-  font-size: 12px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; margin-bottom: 16px;
-}
-.section-title {
-  font-size: clamp(30px, 4vw, 46px);
-  color: var(--ink); margin-bottom: 14px;
-}
-.section-sub {
-  font-size: 17px; color: var(--muted); line-height: 1.7;
-  max-width: 580px; margin-bottom: 40px;
-}
+    /* ── Loading ── */
+    .loading-center {
+      text-align: center; padding: 60px;
+      color: var(--text-light);
+    }
+    .loading-center i { font-size: 28px; }
 
-/* ─── FEATURE SHOWCASE — full photo left ─── */
-.showcase {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 64px; align-items: center; margin-bottom: 120px;
-}
-.showcase:last-child { margin-bottom: 0; }
-.showcase.flip { direction: rtl; }
-.showcase.flip > * { direction: ltr; }
-.showcase-photo {
-  border-radius: 24px; overflow: hidden;
-  box-shadow: 0 24px 64px rgba(13,17,23,.12);
-  aspect-ratio: 4/3; position: relative;
-}
-.showcase-photo img {
-  width: 100%; height: 100%; object-fit: cover;
-  transition: transform .6s cubic-bezier(.25,0,0,1);
-}
-.showcase-photo:hover img { transform: scale(1.04); }
-.showcase-photo-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(13,17,23,.6) 0%, transparent 50%);
-  pointer-events: none;
-}
-.showcase-photo-tag {
-  position: absolute; bottom: 18px; left: 18px;
-  background: rgba(255,255,255,.15); backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,.2);
-  color: white; font-size: 12px; font-weight: 600;
-  padding: 7px 14px; border-radius: 10px;
-  display: flex; align-items: center; gap: 7px;
-}
-.showcase-photo-tag i { color: #6ee7b7; }
-
-.showcase-text { padding: 0 8px; }
-.feature-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
-.feature-list li {
-  display: flex; align-items: flex-start; gap: 12px;
-  font-size: 15px; color: var(--text); line-height: 1.6;
-}
-.feature-list li .check {
-  width: 22px; height: 22px; border-radius: 7px;
-  background: var(--primary-soft); color: var(--primary);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; flex-shrink: 0; margin-top: 1px;
-}
-
-/* ─── HORIZONTAL SCROLL FEATURES ─── */
-.hscroll-section { padding: 100px 0; background: var(--ink); overflow: hidden; }
-.hscroll-header { text-align: center; margin-bottom: 52px; padding: 0 28px; }
-.hscroll-header .section-kicker { background: rgba(26,122,94,.2); color: #6ee7b7; border-color: rgba(110,231,183,.2); }
-.hscroll-header .section-title { color: white; }
-.hscroll-header .section-sub { color: rgba(255,255,255,.55); margin-left: auto; margin-right: auto; }
-
-.hscroll-track {
-  display: flex; gap: 20px;
-  padding: 8px 28px 20px;
-  overflow-x: auto; scroll-snap-type: x mandatory;
-  scrollbar-width: none; cursor: grab;
-}
-.hscroll-track::-webkit-scrollbar { display: none; }
-.hscroll-track:active { cursor: grabbing; }
-
-.feature-tile {
-  flex: 0 0 320px; scroll-snap-align: start;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 20px; padding: 28px;
-  transition: background .2s, border-color .2s, transform .2s;
-}
-.feature-tile:hover {
-  background: rgba(255,255,255,.07);
-  border-color: rgba(26,122,94,.35);
-  transform: translateY(-4px);
-}
-.tile-icon {
-  width: 52px; height: 52px; border-radius: 14px;
-  background: rgba(26,122,94,.2); color: #6ee7b7;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; margin-bottom: 20px;
-  border: 1px solid rgba(26,122,94,.25);
-}
-.tile-title { font-size: 17px; font-weight: 700; color: white; margin-bottom: 10px; }
-.tile-desc { font-size: 14px; color: rgba(255,255,255,.5); line-height: 1.65; }
-.tile-link {
-  display: inline-flex; align-items: center; gap: 6px;
-  margin-top: 16px; font-size: 13px; font-weight: 600; color: #6ee7b7;
-}
-.tile-link i { font-size: 10px; transition: transform .15s; }
-.tile-link:hover i { transform: translateX(3px); }
-
-.hscroll-dots {
-  display: flex; justify-content: center; gap: 6px;
-  margin-top: 24px; padding: 0 28px;
-}
-.hscroll-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: rgba(255,255,255,.2); cursor: pointer; transition: all .2s;
-}
-.hscroll-dot.active { background: var(--primary); width: 20px; border-radius: 3px; }
-
-/* ─── PHOTO GRID SECTION ─── */
-.photo-grid-section { padding: 100px 0; }
-.photo-grid-header { text-align: center; margin-bottom: 60px; }
-.photo-masonry {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: auto;
-  gap: 16px;
-}
-.photo-item {
-  border-radius: 18px; overflow: hidden;
-  position: relative;
-  box-shadow: 0 8px 32px rgba(13,17,23,.08);
-}
-.photo-item img {
-  width: 100%; height: 100%; object-fit: cover;
-  display: block; transition: transform .5s cubic-bezier(.25,0,0,1);
-}
-.photo-item:hover img { transform: scale(1.05); }
-.photo-item:nth-child(1) { grid-row: span 2; aspect-ratio: 3/4; }
-.photo-item:nth-child(2) { aspect-ratio: 4/3; }
-.photo-item:nth-child(3) { aspect-ratio: 4/3; }
-.photo-item:nth-child(4) { aspect-ratio: 4/3; }
-.photo-item:nth-child(5) { aspect-ratio: 4/3; }
-.photo-caption {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  background: linear-gradient(to top, rgba(13,17,23,.7), transparent);
-  padding: 20px 16px 14px;
-  font-size: 12px; font-weight: 600; color: white;
-  opacity: 0; transition: opacity .25s;
-}
-.photo-item:hover .photo-caption { opacity: 1; }
-
-/* ─── HOW IT WORKS ─── */
-.how-section { padding: 100px 0; background: var(--cream); }
-.steps-track {
-  display: grid; grid-template-columns: repeat(3,1fr);
-  gap: 0; position: relative;
-  margin-top: 60px;
-}
-.steps-track::before {
-  content: '';
-  position: absolute; top: 32px; left: calc(16.66% + 16px); right: calc(16.66% + 16px);
-  height: 2px;
-  background: linear-gradient(90deg, var(--primary), #2AAE86);
-}
-.step-card {
-  text-align: center; padding: 0 32px;
-  position: relative; z-index: 1;
-}
-.step-num {
-  width: 64px; height: 64px;
-  background: var(--primary); color: white;
-  border-radius: 18px;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-family: 'Instrument Serif', serif; font-size: 26px;
-  margin-bottom: 24px;
-  box-shadow: 0 8px 24px rgba(26,122,94,.3);
-}
-.step-card h3 { font-size: 18px; margin-bottom: 12px; color: var(--ink); }
-.step-card p { font-size: 14px; line-height: 1.7; }
-
-/* ─── TESTIMONIALS CAROUSEL ─── */
-.testimonials-section { padding: 100px 0; overflow: hidden; }
-.testimonials-header { text-align: center; margin-bottom: 56px; }
-.testimonials-track {
-  display: flex; gap: 24px;
-  padding: 0 28px 8px;
-  overflow-x: auto; scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-.testimonials-track::-webkit-scrollbar { display: none; }
-.testimonial-card {
-  flex: 0 0 360px; scroll-snap-align: start;
-  background: white; border: 1px solid var(--border);
-  border-radius: 20px; padding: 32px 28px;
-  box-shadow: 0 4px 20px rgba(13,17,23,.04);
-  transition: box-shadow .2s, transform .2s;
-}
-.testimonial-card:hover { box-shadow: 0 12px 40px rgba(13,17,23,.1); transform: translateY(-4px); }
-.testimonial-stars { display: flex; gap: 3px; margin-bottom: 16px; }
-.testimonial-stars i { color: #f59e0b; font-size: 13px; }
-.testimonial-text {
-  font-family: 'Instrument Serif', serif;
-  font-size: 18px; line-height: 1.6; color: var(--ink);
-  margin-bottom: 24px;
-}
-.testimonial-author { display: flex; align-items: center; gap: 12px; }
-.testimonial-avatar {
-  width: 42px; height: 42px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
-}
-.testimonial-name { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
-.testimonial-role { font-size: 12px; color: var(--muted); }
-
-/* ─── INTEGRATIONS ─── */
-.integrations-section { padding: 80px 0; background: var(--white); }
-.integrations-header { text-align: center; margin-bottom: 48px; }
-.integrations-grid {
-  display: grid; grid-template-columns: repeat(4,1fr);
-  gap: 16px; max-width: 900px; margin: 0 auto 28px;
-}
-.integration-badge {
-  background: white; border: 1px solid var(--border);
-  border-radius: 16px; padding: 20px 16px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  font-size: 12px; font-weight: 700; color: var(--text);
-  transition: all .2s;
-}
-.integration-badge:hover { border-color: var(--primary); box-shadow: 0 4px 16px rgba(26,122,94,.12); transform: translateY(-2px); }
-.integration-badge i { font-size: 28px; }
-.integration-ical {
-  text-align: center; font-size: 14px; color: var(--muted);
-  margin-top: 4px;
-}
-.integration-ical strong { color: var(--text); }
-
-/* ─── AUDIENCE ─── */
-.audience-section { padding: 100px 0; }
-.audience-grid {
-  display: grid; grid-template-columns: repeat(3,1fr);
-  gap: 24px; margin-top: 56px;
-}
-.audience-card {
-  border-radius: 24px; overflow: hidden;
-  position: relative; aspect-ratio: 3/4;
-  cursor: default;
-}
-.audience-card img {
-  width: 100%; height: 100%; object-fit: cover;
-  transition: transform .5s cubic-bezier(.25,0,0,1);
-}
-.audience-card:hover img { transform: scale(1.06); }
-.audience-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(13,17,23,.85) 0%, rgba(13,17,23,.1) 60%, transparent 100%);
-}
-.audience-content {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  padding: 28px 24px;
-}
-.audience-icon {
-  width: 44px; height: 44px;
-  background: rgba(26,122,94,.25); color: #6ee7b7;
-  border: 1px solid rgba(110,231,183,.2);
-  border-radius: 12px; display: flex; align-items: center; justify-content: center;
-  font-size: 18px; margin-bottom: 14px;
-}
-.audience-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 8px; }
-.audience-desc { font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.6; }
-
-/* ─── CTA ─── */
-.cta-section { padding: 80px 0 100px; }
-.cta-box {
-  position: relative; overflow: hidden;
-  border-radius: 28px;
-  background: url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1400&q=80') center/cover;
-  padding: 80px 60px; text-align: center;
-}
-.cta-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(13,17,23,.92) 0%, rgba(26,122,94,.7) 100%);
-}
-.cta-content { position: relative; z-index: 1; }
-.cta-box h2 { font-size: clamp(28px,4vw,44px); color: white; margin-bottom: 14px; }
-.cta-box p { font-size: 17px; color: rgba(255,255,255,.7); margin-bottom: 36px; }
-.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.cta-trust {
-  display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
-  margin-top: 28px;
-}
-.cta-trust span { font-size: 13px; color: rgba(255,255,255,.45); display: flex; align-items: center; gap: 7px; }
-.cta-trust span i { color: #6ee7b7; }
-
-/* ─── FOOTER ─── */
-.site-footer {
-  background: var(--ink);
-  color: rgba(255,255,255,.5);
-  padding: 60px 0 40px;
-}
-.footer-inner {
-  max-width: 1200px; margin: 0 auto; padding: 0 28px;
-  display: grid; grid-template-columns: 1fr auto;
-  gap: 40px; align-items: start;
-}
-.footer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.footer-brand span { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 17px; color: white; }
-.footer-brand .brand-host { color: #6ee7b7; }
-.footer-copy { font-size: 13px; margin-bottom: 8px; }
-.footer-copy a { color: rgba(255,255,255,.6); }
-.footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
-.footer-links a { font-size: 12px; color: rgba(255,255,255,.35); transition: color .15s; }
-.footer-links a:hover { color: rgba(255,255,255,.7); }
-.footer-badges { display: flex; gap: 12px; align-items: center; }
-.footer-badge {
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px; padding: 10px 16px;
-  font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6);
-  display: flex; align-items: center; gap: 7px;
-}
-.footer-badge i { color: #6ee7b7; }
-.footer-badge-store { text-decoration: none; transition: background .2s, transform .15s; cursor: pointer; }
-.footer-badge-store:hover { background: rgba(110,231,183,.15); border-color: rgba(110,231,183,.4); transform: translateY(-1px); }
-
-/* ─── SCROLL REVEAL ─── */
-.reveal {
-  opacity: 0; transform: translateY(32px);
-  transition: opacity .7s cubic-bezier(.25,0,0,1), transform .7s cubic-bezier(.25,0,0,1);
-}
-.reveal.visible { opacity: 1; transform: none; }
-.reveal-delay-1 { transition-delay: .1s; }
-.reveal-delay-2 { transition-delay: .2s; }
-.reveal-delay-3 { transition-delay: .3s; }
-.reveal-delay-4 { transition-delay: .4s; }
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 1024px) {
-  .hero { align-items: flex-start; padding-bottom: 100px; }
-  .hero-content { grid-template-columns: 1fr; padding-top: 60px; padding-bottom: 0; }
-  .hero-right { display: none; }
-  .showcase { grid-template-columns: 1fr; gap: 40px; }
-  .showcase.flip { direction: ltr; }
-  .integrations-grid { grid-template-columns: repeat(3,1fr); }
-  .steps-track::before { display: none; }
-  .steps-track { grid-template-columns: 1fr; gap: 32px; }
-  .step-card { text-align: left; padding: 0 0 0 80px; position: relative; }
-  .step-num { position: absolute; left: 0; top: 0; }
-  .footer-inner { grid-template-columns: 1fr; }
-}
-@media (max-width: 768px) {
-  .stats-grid { grid-template-columns: repeat(2,1fr); }
-  .audience-grid { grid-template-columns: 1fr 1fr; }
-  .audience-grid .audience-card:last-child { grid-column: span 2; aspect-ratio: 16/7; }
-  .photo-masonry { grid-template-columns: 1fr 1fr; }
-  .photo-item:nth-child(1) { grid-row: auto; aspect-ratio: 4/3; }
-  .nav-main { display: none; }
-  .menu-toggle { display: block; }
-  .nav-main.open {
-    display: flex; flex-direction: column;
-    position: fixed; left: 0; right: 0;
-    height: auto;
-    background: white;
-    border-bottom: 1px solid rgba(200,184,154,.3);
-    padding: 12px 20px 20px;
-    gap: 2px;
-    z-index: 9999;
-    box-shadow: 0 8px 24px rgba(0,0,0,.10);
-  }
-  .nav-main.open a { padding: 12px 16px; font-size: 15px; border-radius: 10px; color: var(--ink); font-weight: 500; }
-  .header-actions .btn-ghost { display: none; }
-  .cta-box { padding: 56px 28px; }
-  .integrations-grid { grid-template-columns: repeat(3,1fr); }
-  .footer-badges { flex-direction: column; align-items: flex-start; }
-}
-@media (max-width: 520px) {
-  .hero h1 { font-size: 34px; }
-  .hero-actions { flex-direction: column; }
-  .hero-actions .btn { width: 100%; justify-content: center; }
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-  .audience-grid { grid-template-columns: 1fr; }
-  .audience-grid .audience-card:last-child { grid-column: auto; aspect-ratio: 3/4; }
-  .testimonial-card { flex: 0 0 290px; }
-  .feature-tile { flex: 0 0 270px; }
-  .integrations-grid { grid-template-columns: repeat(2,1fr); }
-}
-/* ── Fix scroll horizontal mobile ── */
-html, body { overflow-x: hidden !important; max-width: 100vw !important; }
-* { box-sizing: border-box; }
-</style>
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: white;
+      padding: 12px 20px; border-radius: 12px;
+      font-size: 14px; z-index: 999;
+      opacity: 0; transition: opacity 0.3s;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    /* Guest buttons filtres */
+    .guest-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 2px solid var(--border);
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-light);
+      font-family: inherit;
+    }
+    .guest-btn.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    /* Safe area fix - header */
+    .app-header {
+      padding-top: max(env(safe-area-inset-top), 16px) !important;
+    }
+    /* Header universel pour toutes les pages */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: max(env(safe-area-inset-top), 16px) 20px 16px;
+      position: fixed;
+      top: 0;
+      left: 0; right: 0;
+      z-index: 50;
+    }
+    .page-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin: 0;
+    }
+    /* Pousse le contenu sous le header fixe — valeur safe pour iPhone avec notch */
+    .screen-with-header { padding-top: 80px; }
+  </style>
 </head>
-<body>
+<body style="background: var(--bg); height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
 
-<!-- TOP BANNER -->
-<a href="/ia.html" class="top-banner">
-  <span class="top-banner-pill"><i class="fas fa-sparkles" style="margin-right:4px;"></i>Nouveau</span>
-  <span class="top-banner-text">L'IA répond à vos voyageurs 24h/24 en 26 langues</span>
-  <span class="top-banner-link">Tester la démo <i class="fas fa-arrow-right" style="font-size:10px;"></i></span>
-</a>
+<!-- ═══════════════════════════════════════════════
+     APP SHELL
+═══════════════════════════════════════════════ -->
+<div id="appShell" style="display:flex; flex-direction:column; height:100vh; overflow:hidden;">
 
-<!-- HEADER -->
-<header class="site-header">
-  <div class="header-inner">
-    <a href="/" class="logo-link">
-      <span class="logo-icon"><img src="/images/logo.png" alt="Boostinghost"></span>
-      <span>Boosting<span class="brand-host">host</span></span>
-    </a>
-    <nav class="nav-main" id="navMain">
-      <a href="#features">Fonctionnalités</a>
-      <a href="/ia.html"><i class="fas fa-sparkles" style="font-size:11px;margin-right:3px;color:var(--primary);"></i>IA</a>
-      <a href="#comment">Comment ça marche</a>
-      <a href="#pour-qui">Pour qui ?</a>
-      <a href="/pricing.html">Tarifs</a>
-      <a href="/blog.html">Blog</a>
-    </nav>
-    <div class="header-actions">
-      <a href="/login.html" class="btn btn-ghost" style="padding:9px 16px;font-size:13px;">Se connecter</a>
-      <a href="/register.html" class="btn btn-primary" style="padding:9px 16px;font-size:13px;">Démarrer gratuitement</a>
-      <button class="menu-toggle" id="menuToggle" onclick="toggleNav()" aria-label="Menu">
-        <i class="fas fa-bars" id="menuIcon"></i>
-      </button>
+  <!-- Header dynamique -->
+  <div id="appHeader" class="app-header">
+    <div class="logo-row">
+      <div class="logo-icon">B</div>
+      <div class="logo-label">Boostinghost Guest</div>
+    </div>
+    <div class="search-bar" onclick="openSearch()">
+      <i class="fas fa-search"></i>
+      <span id="searchLabel">Dates, voyageurs...</span>
     </div>
   </div>
-</header>
 
-<!-- ═══ HERO ═══ -->
-<section class="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-overlay"></div>
+  <!-- Conteneur screens -->
+  <div style="flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;" id="mainScroll">
 
-  <div class="hero-content">
-    <div class="hero-left">
-      <div class="hero-badge">
-        <i class="fas fa-bolt"></i> Channel Manager tout-en-un boosté à l'IA
-      </div>
-      <h1>Gérez vos locations courte durée sans y passer vos journées</h1>
-      <p class="hero-sub">
-        Airbnb, Booking, Expedia et plus : tout est là. Calendrier, paiements, ménages et messagerie IA réunis dans un outil unique. Arrêtez de jongler, commencez à piloter.
-      </p>
-      <div class="hero-actions">
-        <a href="/register.html" class="btn btn-white btn-lg">
-          <i class="fas fa-rocket"></i> Créer mon espace gratuit
-        </a>
-        <a href="/login.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.4);color:white;background:rgba(255,255,255,.1);">
-          J'ai déjà un compte
-        </a>
-      </div>
-      <div class="hero-trust">
-        <div class="hero-trust-item"><i class="fas fa-shield-alt"></i> Données hébergées en UE</div>
-        <div class="hero-trust-item"><i class="fas fa-mobile-screen"></i> Web, iOS & Android</div>
-        <div class="hero-trust-item"><i class="fas fa-circle-check"></i> 14 jours offerts</div>
+    <!-- ─── ÉCRAN 1 : Accueil ─── -->
+    <div id="screen-home" class="screen-content active">
+      <div class="properties-grid" id="propertiesGrid">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
       </div>
     </div>
 
-    <div class="hero-right">
-      <div class="hero-cards">
-        <div class="hero-card-main">
-          <div class="hero-card-header">
-            <span><i class="fas fa-calendar" style="color:#6ee7b7;margin-right:7px;"></i> Calendrier · Avril 2026</span>
-            <span style="font-size:11px;color:rgba(255,255,255,.4);">3 logements</span>
+    <!-- ─── ÉCRAN 2 : Détail logement ─── -->
+    <div id="screen-detail" class="screen-content">
+      <div class="detail-header" id="detailHeader">
+        <button class="btn-back-detail" onclick="showScreen('home')">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <div style="font-size:16px; font-weight:600;" id="detailHeaderName">Logement</div>
+      </div>
+      <div id="detailBody"></div>
+      <div class="booking-bar" id="bookingBar" style="display:none;">
+        <div>
+          <div class="booking-bar-price" id="barPrice">--€ <span>/ nuit</span></div>
+          <div style="font-size:12px; color:var(--text-light);" id="barDates">Sélectionnez des dates</div>
+        </div>
+        <button class="btn-book" id="btnBook" disabled onclick="goToCheckout()">Réserver</button>
+      </div>
+    </div>
+
+    <!-- ─── ÉCRAN 3 : Checkout ─── -->
+    <div id="screen-checkout" class="screen-content">
+      <div class="checkout-header">
+        <button class="btn-back-detail" onclick="showScreen('detail')">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <div style="font-size:16px; font-weight:600;">Finaliser la réservation</div>
+      </div>
+      <div class="checkout-body" id="checkoutBody"></div>
+      <div class="checkout-cta">
+        <button class="btn-pay" id="btnPay" onclick="submitBooking()">
+          <i class="fas fa-lock"></i> Payer
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── ÉCRAN 4 : Confirmation ─── -->
+    <div id="screen-confirm" class="screen-content">
+      <div class="confirm-screen" id="confirmBody"></div>
+    </div>
+
+    <!-- ─── ÉCRAN LOGIN ─── -->
+    <div id="screen-login" class="screen-content screen-with-header">
+      <div class="page-header"><h2>Connexion</h2></div>
+      <div style="padding:20px; padding-top: calc(62px + 20px);">
+
+        <!-- Toggle Magic Link / Mot de passe -->
+        <div style="display:flex;gap:8px;margin-bottom:24px;background:#f1f5f9;border-radius:14px;padding:4px;">
+          <button id="toggleMagic" onclick="switchAuthMode('magic')"
+            style="flex:1;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:white;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,0.08);transition:all 0.2s;">
+            <i class="fas fa-magic"></i> Lien magique
+          </button>
+          <button id="togglePassword" onclick="switchAuthMode('password')"
+            style="flex:1;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-light);transition:all 0.2s;">
+            <i class="fas fa-lock"></i> Mot de passe
+          </button>
+        </div>
+
+        <!-- MODE MAGIC LINK -->
+        <div id="authModeMagic">
+          <p style="font-size:14px;color:var(--text-light);margin-bottom:20px;line-height:1.5;">
+            Entrez votre email pour recevoir un lien de connexion instantané.
+          </p>
+          <div id="loginForm">
+            <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Votre email</label>
+            <input type="email" id="loginEmail" placeholder="votre@email.com"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:14px;box-sizing:border-box;">
+            <button onclick="requestMagicLink()" id="btnMagicLink"
+              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
+              <i class="fas fa-paper-plane"></i> Recevoir mon lien
+            </button>
           </div>
-          <div class="hero-cal-row hero-cal-head">
-            <div class="hero-cal-cell" style="font-size:9px;color:rgba(255,255,255,.4);">LOGEMENT</div>
-            <div class="hero-cal-cell">LU 21</div>
-            <div class="hero-cal-cell">MA 22</div>
-            <div class="hero-cal-cell">ME 23</div>
-            <div class="hero-cal-cell">JE 24</div>
-            <div class="hero-cal-cell">VE 25</div>
-            <div class="hero-cal-cell">SA 26</div>
-            <div class="hero-cal-cell">DI 27</div>
-          </div>
-          <div class="hero-cal-row">
-            <div class="hero-cal-cell hero-cal-label">Studio N°2</div>
-            <div class="hero-cal-cell" style="position:relative;"><div class="hero-booking bk-bk s3">B. Aurélie F.</div></div>
-            <div class="hero-cal-cell"></div>
-            <div class="hero-cal-cell"></div>
-            <div class="hero-cal-cell" style="color:rgba(255,255,255,.35);">75€</div>
-            <div class="hero-cal-cell" style="position:relative;"><div class="hero-booking bk-air s2">A. Nicolas</div></div>
-            <div class="hero-cal-cell"></div>
-            <div class="hero-cal-cell" style="color:rgba(255,255,255,.35);">90€</div>
-          </div>
-          <div class="hero-cal-row">
-            <div class="hero-cal-cell hero-cal-label">Appart N°3</div>
-            <div class="hero-cal-cell" style="position:relative;"><div class="hero-booking bk-dir s4"><i class="fas fa-bolt" style="font-size:7px;margin-right:3px;"></i>Direct</div></div>
-            <div class="hero-cal-cell"></div>
-            <div class="hero-cal-cell"></div>
-            <div class="hero-cal-cell"></div>
-            <div class="hero-cal-cell" style="color:rgba(255,255,255,.35);">95€</div>
-            <div class="hero-cal-cell" style="position:relative;"><div class="hero-booking bk-bk s2">B. Valeria</div></div>
-            <div class="hero-cal-cell"></div>
-          </div>
-          <div class="hero-rev-strip">
-            <div class="hero-rev-item">
-              <div class="hero-rev-label">CA brut · ce mois</div>
-              <div class="hero-rev-val">4 469 €</div>
-              <div class="hero-rev-sub">+12% vs mois dernier</div>
+          <div id="loginSent" style="display:none;text-align:center;padding:20px 0;">
+            <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+              <i class="fas fa-envelope" style="font-size:28px;color:var(--primary);"></i>
             </div>
-            <div class="hero-rev-item">
-              <div class="hero-rev-label">Revenu propriétaire</div>
-              <div class="hero-rev-val">3 583 €</div>
-              <div class="hero-rev-sub">après commissions</div>
-            </div>
+            <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">Email envoyé !</div>
+            <div style="font-size:14px;color:var(--text-light);line-height:1.6;">Vérifiez votre boîte mail et cliquez sur le lien.<br>Valable 15 minutes.</div>
+            <button onclick="document.getElementById('loginSent').style.display='none';document.getElementById('loginForm').style.display='block';"
+              style="margin-top:20px;background:none;border:none;color:var(--primary);font-size:14px;cursor:pointer;text-decoration:underline;">
+              Renvoyer un lien
+            </button>
           </div>
         </div>
-        <div class="hero-notif">
-          <div class="dot"></div>
-          IA a répondu à Marco en 2s · 🇮🇹 Italiano
+
+        <!-- MODE MOT DE PASSE -->
+        <div id="authModePassword" style="display:none;">
+
+          <!-- Sous-toggle Login / Inscription -->
+          <div style="display:flex;gap:8px;margin-bottom:20px;">
+            <button id="subToggleLogin" onclick="switchSubMode('login')"
+              style="flex:1;padding:9px;border:2px solid var(--primary);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;background:var(--primary);color:white;transition:all 0.2s;">
+              Se connecter
+            </button>
+            <button id="subToggleRegister" onclick="switchSubMode('register')"
+              style="flex:1;padding:9px;border:2px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:white;color:var(--text-light);transition:all 0.2s;">
+              Créer un compte
+            </button>
+          </div>
+
+          <!-- Formulaire Login -->
+          <div id="pwdLoginForm">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Email</label>
+            <input type="email" id="pwdEmail" placeholder="votre@email.com"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Mot de passe</label>
+            <input type="password" id="pwdPassword" placeholder="••••••••"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:6px;box-sizing:border-box;"
+              onkeydown="if(event.key==='Enter')loginWithPassword()">
+            <button onclick="forgotPassword()"
+              style="background:none;border:none;color:var(--primary);font-size:13px;cursor:pointer;text-decoration:underline;margin-bottom:16px;padding:0;">
+              Mot de passe oublié ?
+            </button>
+            <div id="pwdLoginError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:13px;color:#ef4444;margin-bottom:12px;"></div>
+            <button onclick="loginWithPassword()" id="btnPwdLogin"
+              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
+              <i class="fas fa-sign-in-alt"></i> Se connecter
+            </button>
+          </div>
+
+          <!-- Formulaire Inscription -->
+          <div id="pwdRegisterForm" style="display:none;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Prénom et nom</label>
+            <input type="text" id="regName" placeholder="Jean Dupont"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Email</label>
+            <input type="email" id="regEmail" placeholder="votre@email.com"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Mot de passe</label>
+            <input type="password" id="regPassword" placeholder="6 caractères minimum"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Confirmer le mot de passe</label>
+            <input type="password" id="regPasswordConfirm" placeholder="••••••••"
+              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:6px;box-sizing:border-box;"
+              onkeydown="if(event.key==='Enter')registerWithPassword()">
+            <div id="pwdRegisterError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:13px;color:#ef4444;margin-bottom:12px;"></div>
+            <button onclick="registerWithPassword()" id="btnPwdRegister"
+              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
+              <i class="fas fa-user-plus"></i> Créer mon compte
+            </button>
+          </div>
+
         </div>
+
       </div>
     </div>
-  </div>
 
-  <div class="hero-scroll">
-    <span>Découvrir</span>
-    <div class="hero-scroll-line"></div>
-  </div>
-</section>
-
-<!-- ═══ LOGOS BAND ═══ -->
-<div class="logos-band">
-  <div class="logos-label">Compatible avec toutes vos plateformes</div>
-  <div class="logos-track">
-    <div class="logos-inner" id="logosInner">
-      <div class="logo-pill"><i class="fab fa-airbnb" style="color:#FF5A5F;font-size:20px;"></i> Airbnb</div>
-      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="18" height="18" rx="3" fill="#003580"/><text x="9" y="13.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="13" fill="white">B</text></svg> Booking.com</div>
-      <div class="logo-pill"><img src="https://www.abritel.fr/favicon.ico" width="20" height="20" alt="Abritel" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Abritel</div>
-      <div class="logo-pill"><img src="https://www.expedia.fr/favicon.ico" width="20" height="20" alt="Expedia" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Expedia</div>
-      <div class="logo-pill"><i class="fab fa-stripe" style="color:#635BFF;font-size:20px;"></i> Stripe</div>
-      <div class="logo-pill"><img src="https://www.leboncoin.fr/favicon.ico" width="20" height="20" alt="Leboncoin Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Leboncoin Vacances</div>
-      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="20" height="20" rx="4" fill="#4CAF50"/><text x="10" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="11" fill="white">GF</text></svg> Gîtes de France</div>
-      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="20" height="20" rx="4" fill="#E30613"/><text x="10" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="10" fill="white">PAP</text></svg> PAP Vacances</div>
-      <!-- Duplicate for loop -->
-      <div class="logo-pill"><i class="fab fa-airbnb" style="color:#FF5A5F;font-size:20px;"></i> Airbnb</div>
-      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="18" height="18" rx="3" fill="#003580"/><text x="9" y="13.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="13" fill="white">B</text></svg> Booking.com</div>
-      <div class="logo-pill"><img src="https://www.abritel.fr/favicon.ico" width="20" height="20" alt="Abritel" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Abritel</div>
-      <div class="logo-pill"><img src="https://www.expedia.fr/favicon.ico" width="20" height="20" alt="Expedia" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Expedia</div>
-      <div class="logo-pill"><i class="fab fa-stripe" style="color:#635BFF;font-size:20px;"></i> Stripe</div>
-      <div class="logo-pill"><img src="https://www.leboncoin.fr/favicon.ico" width="20" height="20" alt="Leboncoin Vacances" style="border-radius:4px;flex-shrink:0;vertical-align:middle;" /> Leboncoin Vacances</div>
-      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="20" height="20" rx="4" fill="#4CAF50"/><text x="10" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="11" fill="white">GF</text></svg> Gîtes de France</div>
-      <div class="logo-pill"><svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="20" height="20" rx="4" fill="#E30613"/><text x="10" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="10" fill="white">PAP</text></svg> PAP Vacances</div>
+    <!-- ─── ÉCRAN 5 : Mes réservations ─── -->
+    <div id="screen-bookings" class="screen-content screen-with-header">
+      <div class="page-header">
+        <h2>Mes réservations</h2>
+      </div>
+      <div class="my-bookings-list" id="myBookingsList">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
     </div>
+
+    <!-- ─── ÉCRAN 6 : Compte ─── -->
+    <div id="screen-account" class="screen-content screen-with-header">
+      <div class="page-header">
+        <h2>Mon compte</h2>
+      </div>
+      <div class="account-section">
+        <div class="account-card">
+          <div class="account-field">
+            <label>Prénom et nom</label>
+            <input type="text" id="accountName" placeholder="Votre nom complet">
+          </div>
+          <div class="account-field">
+            <label>Email</label>
+            <input type="email" id="accountEmail" placeholder="votre@email.com">
+          </div>
+          <div class="account-field" style="margin-bottom:0;">
+            <label>Téléphone</label>
+            <input type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
+          </div>
+        </div>
+        <button class="btn-save-account" onclick="saveAccount()">Sauvegarder</button>
+      </div>
+    </div>
+
+  </div><!-- /mainScroll -->
+
+  <!-- Bottom nav (masquée sur detail/checkout/confirm) -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-item active" id="nav-home" onclick="navTo('home')">
+      <i class="fas fa-home"></i>
+      <span>Accueil</span>
+    </button>
+    <button class="nav-item" id="nav-bookings" onclick="navTo('bookings')">
+      <i class="fas fa-calendar-check"></i>
+      <span>Réservations</span>
+    </button>
+    <button class="nav-item" id="nav-account" onclick="navTo('account')">
+      <i class="fas fa-user"></i>
+      <span id="navAccountLabel">Compte</span>
+    </button>
+  </nav>
+
+</div><!-- /appShell -->
+
+<!-- ─── Modal recherche ─── -->
+<div class="search-modal" id="searchModal" onclick="closeSearchOnBg(event)">
+  <div class="search-sheet">
+    <h3>Rechercher un logement</h3>
+    <div class="search-row dates-row">
+      <div>
+        <label>Arrivée</label>
+        <input type="date" id="searchCheckin" onchange="updateSearchLabel()">
+      </div>
+      <div>
+        <label>Départ</label>
+        <input type="date" id="searchCheckout" onchange="updateSearchLabel()">
+      </div>
+    </div>
+    <div class="search-row">
+      <label>Ville</label>
+      <input type="text" id="searchCity" placeholder="Paris, Lyon, Bordeaux..." oninput="updateSearchLabel()">
+    </div>
+    <div class="search-row">
+      <label>Voyageurs</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="guestBtns">
+        <button type="button" class="guest-btn active" data-val="" onclick="selectGuests(this,'')">Tous</button>
+        <button type="button" class="guest-btn" data-val="1" onclick="selectGuests(this,'1')">1</button>
+        <button type="button" class="guest-btn" data-val="2" onclick="selectGuests(this,'2')">2</button>
+        <button type="button" class="guest-btn" data-val="3" onclick="selectGuests(this,'3')">3</button>
+        <button type="button" class="guest-btn" data-val="4" onclick="selectGuests(this,'4')">4</button>
+        <button type="button" class="guest-btn" data-val="6" onclick="selectGuests(this,'6')">6+</button>
+        <button type="button" class="guest-btn" data-val="8" onclick="selectGuests(this,'8')">8+</button>
+      </div>
+    </div>
+    <button class="btn-search-apply" onclick="applySearch()">
+      <i class="fas fa-search"></i> Rechercher
+    </button>
   </div>
 </div>
 
-<!-- ═══ STATS ═══ -->
-<section class="stats-section">
-  <div class="container">
-    <div class="stats-grid reveal">
-      <div class="stat-box"><div class="stat-num">500+</div><div class="stat-desc">jours synchronisés<br>par logement</div></div>
-      <div class="stat-box"><div class="stat-num">26</div><div class="stat-desc">langues gérées<br>par l'IA</div></div>
-      <div class="stat-box"><div class="stat-num">3s</div><div class="stat-desc">temps de réponse<br>moyen IA</div></div>
-      <div class="stat-box"><div class="stat-num">0€</div><div class="stat-desc">pour démarrer<br>14 jours offerts</div></div>
-    </div>
-  </div>
-</section>
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
-<!-- ═══ SHOWCASE FEATURES ═══ -->
-<section class="section" id="features">
-  <div class="container">
-
-    <!-- 1 — Calendrier -->
-    <div class="showcase reveal">
-      <div class="showcase-photo">
-        <img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80" alt="Gestion calendrier locations" loading="lazy">
-        <div class="showcase-photo-overlay"></div>
-        <div class="showcase-photo-tag"><i class="fas fa-arrows-rotate"></i> Synchro temps réel</div>
-      </div>
-      <div class="showcase-text">
-        <div class="section-kicker"><i class="fas fa-calendar-days"></i> Calendrier & réservations</div>
-        <h2 class="section-title" style="font-size:clamp(36px,4.5vw,52px);">Toutes vos réservations, une seule vue</h2>
-        <p class="section-sub">Airbnb, Booking, Abritel, Expedia et toutes vos plateformes iCal se synchronisent automatiquement. Plus jamais de doublon.</p>
-        <ul class="feature-list">
-          <li><span class="check"><i class="fas fa-check"></i></span>Vue multi-logements avec prix par nuit, statut et disponibilités</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Synchronisation bidirectionnelle en temps réel</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Import universel (Leboncoin Vacances, Gîtes de France, PAP Vacances…)</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Règles tarifaires avancées : saison, séjour minimum, weekends</li>
-        </ul>
-        <a href="/register.html" class="btn btn-primary">Essayer gratuitement <i class="fas fa-arrow-right"></i></a>
-      </div>
-    </div>
-
-    <!-- 2 — IA Messagerie -->
-    <div class="showcase flip reveal">
-      <div class="showcase-photo">
-        <img src="https://images.unsplash.com/photo-1556761175-4b46a572b786?w=900&q=80" alt="Messagerie IA voyageurs" loading="lazy">
-        <div class="showcase-photo-overlay"></div>
-        <div class="showcase-photo-tag"><i class="fas fa-sparkles"></i> IA active 24/7</div>
-      </div>
-      <div class="showcase-text">
-        <div class="section-kicker"><i class="fas fa-comments"></i> Messagerie + IA</div>
-        <h2 class="section-title">L'IA qui connaît vos logements</h2>
-        <p class="section-sub">Ne laissez plus aucun message sans réponse. Notre IA gère vos conversations en 26 langues, détecte les priorités et vous alerte instantanément en cas d'urgence.</p>
-        <ul class="feature-list">
-          <li><span class="check"><i class="fas fa-check"></i></span>Réponse automatique en 3s dans 26 langues</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Connaissance complète de chaque logement</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Vos propres réponses automatiques enregistrées</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Alerte intelligente si doute ou urgence</li>
-        </ul>
-        <a href="/ia.html" class="btn btn-primary"><i class="fas fa-sparkles"></i> Tester l'IA en démo</a>
-      </div>
-    </div>
-
-    <!-- 3 — Revenus -->
-    <div class="showcase reveal">
-      <div class="showcase-photo">
-        <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=900&q=80" alt="Reporting financier location" loading="lazy">
-        <div class="showcase-photo-overlay"></div>
-        <div class="showcase-photo-tag"><i class="fas fa-chart-line"></i> Reporting automatique</div>
-      </div>
-      <div class="showcase-text">
-        <div class="section-kicker"><i class="fas fa-euro-sign"></i> Revenus & reporting</div>
-        <h2 class="section-title" style="font-size:clamp(36px,4.5vw,52px);">Vos revenus, sans aucun calcul manuel</h2>
-        <p class="section-sub">Du chiffre d'affaires au bénéfice net, Boostinghost calcule tout pour vous : frais de ménage, taxes de séjour et commissions des plateformes.</p>
-        <ul class="feature-list">
-          <li><span class="check"><i class="fas fa-check"></i></span>Tableaux de bord automatiques : suivez vos performances en un coup d'œil.</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Partage des revenus : la répartition propriétaire / conciergerie se fait toute seule.</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Compta en 1 clic : factures, attestations fiscales et frais avancés générés instantanément.</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Paiements sécurisés : encaissez vos voyageurs par carte bancaire avec Stripe.</li>
-        </ul>
-        <a href="/register.html" class="btn btn-primary">Voir le reporting <i class="fas fa-arrow-right"></i></a>
-      </div>
-    </div>
-
-    <!-- 4 — Ménage -->
-    <div class="showcase flip reveal">
-      <div class="showcase-photo">
-        <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=900&q=80" alt="Gestion ménage locations" loading="lazy">
-        <div class="showcase-photo-overlay"></div>
-        <div class="showcase-photo-tag"><i class="fas fa-broom"></i> Missions en temps réel</div>
-      </div>
-      <div class="showcase-text">
-        <div class="section-kicker"><i class="fas fa-broom"></i> Ménage & équipe</div>
-        <h2 class="section-title">Le ménage, simple et suivi</h2>
-        <p class="section-sub">Créez votre équipe, définissez des checklists, assignez les missions et suivez l'avancement. Notifications push instantanées.</p>
-        <ul class="feature-list">
-          <li><span class="check"><i class="fas fa-check"></i></span>Checklists personnalisées par logement</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Notification push à chaque nouvelle mission</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Stats : validés, en attente, taux de validation</li>
-          <li><span class="check"><i class="fas fa-check"></i></span>Vue par agent ou par logement</li>
-        </ul>
-        <a href="/register.html" class="btn btn-primary">Démarrer gratuitement <i class="fas fa-arrow-right"></i></a>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ═══ HORIZONTAL FEATURES ═══ -->
-<section class="hscroll-section">
-  <div class="hscroll-header">
-    <div class="section-kicker"><i class="fas fa-grid-2"></i> Tout l'écosystème</div>
-    <h2 class="section-title" style="color:white;">Tout ce qu'il faut, au même endroit</h2>
-    <p class="section-sub" style="margin:0 auto;">Plus d'aller-retours entre 5 outils. Tout est intégré, tout se parle.</p>
-  </div>
-
-  <div class="hscroll-track" id="featuresTrack">
-    <div class="feature-tile">
-      <div class="tile-icon"><i class="fas fa-arrows-rotate"></i></div>
-      <div class="tile-title">Synchronisation OTA</div>
-      <div class="tile-desc">Airbnb, Booking.com, Abritel, Expedia via API directe + toute plateforme iCal (Leboncoin, Gîtes de France…).</div>
-    </div>
-    <div class="feature-tile">
-      <div class="tile-icon"><i class="fas fa-calendar-days"></i></div>
-      <div class="tile-title">Calendrier multi-logements</div>
-      <div class="tile-desc">Vue complète avec prix par nuit, arrivées/départs, blocages manuels. Le calendrier que vous méritez.</div>
-    </div>
-    <div class="feature-tile">
-      <div class="tile-icon"><i class="fas fa-credit-card"></i></div>
-      <div class="tile-title">Paiements & réservations directes</div>
-      <div class="tile-desc">Votre app voyageur branded. Stripe Checkout, codes promo, emails automatiques Brevo. Zéro commission OTA.</div>
-    </div>
-    <div class="feature-tile">
-      <div class="tile-icon"><i class="fas fa-lock"></i></div>
-      <div class="tile-title">Cautions</div>
-      <div class="tile-desc">Demandez et suivez les cautions. Statut, historique, relance — tracé, centralisé.</div>
-    </div>
-    <div class="feature-tile">
-      <div class="tile-icon"><i class="fas fa-book-open"></i></div>
-      <div class="tile-title">Livret d'accueil</div>
-      <div class="tile-desc">Créez de beaux livrets personnalisés pour vos voyageurs. Partagé par lien, sans app à installer.</div>
-    </div>
-    <div class="feature-tile">
-      <div class="tile-icon"><i class="fas fa-users-gear"></i></div>
-      <div class="tile-title">Sous-comptes & équipe</div>
-      <div class="tile-desc">Droits par rôle, accès logement par logement. Idéal pour les assistants de conciergerie.</div>
-    </div>
-    <div class="feature-tile">
-      <div class="tile-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-      <div class="tile-title">Facturation propriétaires</div>
-      <div class="tile-desc">Fiches clients, factures numérotées, attestations fiscales, débours. Le module complet pour conciergeries.</div>
-    </div>
-    <div class="feature-tile">
-      <div class="tile-icon"><i class="fas fa-mobile-screen"></i></div>
-      <div class="tile-title">App iOS & Android</div>
-      <div class="tile-desc">Gérez tout depuis votre téléphone. Notifications push, calendrier, messages — tout y est.</div>
-    </div>
-  </div>
-  <div class="hscroll-dots" id="featuresDots"></div>
-</section>
-
-<!-- ═══ PHOTO GRID ═══ -->
-<section class="photo-grid-section">
-  <div class="container">
-    <div class="photo-grid-header reveal">
-      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-images"></i> Des logements comme les vôtres</div>
-      <h2 class="section-title" style="text-align:center;">Conçu pour la location courte durée</h2>
-    </div>
-    <div class="photo-masonry reveal">
-      <div class="photo-item">
-        <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=700&q=80" alt="Appartement moderne" loading="lazy">
-        <div class="photo-caption"><i class="fas fa-home" style="margin-right:6px;"></i>Studio Gare N°2 · Airbnb + Booking</div>
-      </div>
-      <div class="photo-item">
-        <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=700&q=80" alt="Chambre" loading="lazy">
-        <div class="photo-caption"><i class="fas fa-moon" style="margin-right:6px;"></i>Chambre connectée</div>
-      </div>
-      <div class="photo-item">
-        <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=700&q=80" alt="Cuisine" loading="lazy">
-        <div class="photo-caption"><i class="fas fa-utensils" style="margin-right:6px;"></i>Cuisine équipée</div>
-      </div>
-      <div class="photo-item">
-        <img src="https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=700&q=80" alt="Salon" loading="lazy">
-        <div class="photo-caption"><i class="fas fa-couch" style="margin-right:6px;"></i>Salon lumineux</div>
-      </div>
-      <div class="photo-item">
-        <img src="https://images.unsplash.com/photo-1540518614846-7eded433c457?w=700&q=80" alt="Salle de bain" loading="lazy">
-        <div class="photo-caption"><i class="fas fa-shower" style="margin-right:6px;"></i>Salle de bain moderne</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ HOW IT WORKS ═══ -->
-<section class="how-section" id="comment">
-  <div class="container">
-    <div style="text-align:center;" class="reveal">
-      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-rocket"></i> Mise en route</div>
-      <h2 class="section-title" style="text-align:center;font-size:clamp(36px,4.5vw,52px);">Opérationnel en 3 étapes</h2>
-      <p class="section-sub" style="margin:0 auto 0;">Pas de formation, pas de migration complexe. Vous êtes prêt en 15 minutes.</p>
-    </div>
-    <div class="steps-track">
-      <div class="step-card reveal reveal-delay-1">
-        <div class="step-num">1</div>
-        <h3>Connectez vos plateformes</h3>
-        <p>Ajoutez vos logements et liez Airbnb, Booking.com, Abritel, Expedia — ou importez via iCal. Vos réservations se synchronisent automatiquement.</p>
-      </div>
-      <div class="step-card reveal reveal-delay-2">
-        <div class="step-num">2</div>
-        <h3>Centralisez la gestion</h3>
-        <p>Calendrier, paiements, cautions, équipe, ménages : tout au même endroit. Une seule interface pour tout piloter.</p>
-      </div>
-      <div class="step-card reveal reveal-delay-3">
-        <div class="step-num">3</div>
-        <h3>Laissez l'IA vous épauler</h3>
-        <p>Messages, rappels, traductions, escalade intelligente. Vous gagnez des heures chaque semaine — et vos nuits aussi.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ TESTIMONIALS ═══ -->
-<section class="testimonials-section">
-  <div class="container">
-    <div class="testimonials-header reveal">
-      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-star"></i> Témoignages</div>
-      <h2 class="section-title" style="text-align:center;">Ce que disent nos utilisateurs</h2>
-    </div>
-  </div>
-  <div class="testimonials-track">
-    <div class="testimonial-card">
-      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-      <div class="testimonial-text">"Avant Boostinghost, je jonglais entre 4 outils différents. Maintenant tout est au même endroit : calendrier, paiements, ménages, et l'IA gère 80% des messages voyageurs. J'ai récupéré mes soirées."</div>
-      <div class="testimonial-author">
-        <div class="testimonial-avatar" style="background:var(--primary);">S</div>
-        <div>
-          <div class="testimonial-name">Simon L.</div>
-          <div class="testimonial-role">Conciergerie Val d'Oise · 13 logements</div>
-        </div>
-      </div>
-    </div>
-    <div class="testimonial-card">
-      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-      <div class="testimonial-text">"La synchronisation avec Booking et Airbnb fonctionne parfaitement. Plus aucun doublon depuis 6 mois. Le calendrier est vraiment clair et l'app mobile est super pratique."</div>
-      <div class="testimonial-author">
-        <div class="testimonial-avatar" style="background:#635BFF;">M</div>
-        <div>
-          <div class="testimonial-name">Marie D.</div>
-          <div class="testimonial-role">Propriétaire · 4 appartements · Île-de-France</div>
-        </div>
-      </div>
-    </div>
-    <div class="testimonial-card">
-      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-      <div class="testimonial-text">"La partie facturation propriétaires est exactement ce dont j'avais besoin. Mes clients reçoivent leurs factures automatiquement et je n'ai plus à faire de saisie manuelle."</div>
-      <div class="testimonial-author">
-        <div class="testimonial-avatar" style="background:#f59e0b;">A</div>
-        <div>
-          <div class="testimonial-name">Antoine R.</div>
-          <div class="testimonial-role">Conciergerie Normandie · 8 biens</div>
-        </div>
-      </div>
-    </div>
-    <div class="testimonial-card">
-      <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-      <div class="testimonial-text">"L'IA répond aux voyageurs en italien et en anglais pendant que je dors. Mes avis ont augmenté parce que les réponses sont plus rapides. Vraiment bluffant."</div>
-      <div class="testimonial-author">
-        <div class="testimonial-avatar" style="background:#ef4444;">C</div>
-        <div>
-          <div class="testimonial-name">Claire M.</div>
-          <div class="testimonial-role">Hôte Airbnb · 2 studios · Paris</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ INTEGRATIONS ═══ -->
-<section class="integrations-section">
-  <div class="container">
-    <div class="integrations-header reveal">
-      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-puzzle-piece"></i> Intégrations</div>
-      <h2 class="section-title" style="text-align:center;">Compatible avec tout votre écosystème</h2>
-      <p class="section-sub" style="margin:0 auto;">Connexion API directe ou import iCal — aucune plateforme n'est laissée de côté.</p>
-    </div>
-    <div class="integrations-grid reveal">
-      <div class="integration-badge">
-        <i class="fab fa-airbnb" style="color:#FF5A5F;"></i>
-        Airbnb
-      </div>
-      <div class="integration-badge">
-        <svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle;"><rect width="18" height="18" rx="3" fill="#003580"/><text x="9" y="13.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="13" fill="white">B</text></svg>
-        Booking.com
-      </div>
-      <div class="integration-badge">
-        <img src="https://www.abritel.fr/favicon.ico" width="28" height="28" alt="Abritel" style="border-radius:6px;flex-shrink:0;" />
-        Abritel
-      </div>
-      <div class="integration-badge">
-        <img src="https://www.expedia.fr/favicon.ico" width="28" height="28" alt="Expedia" style="border-radius:6px;flex-shrink:0;" />
-        Expedia
-      </div>
-      <div class="integration-badge">
-        <i class="fab fa-stripe" style="color:#635BFF;"></i>
-        Stripe
-      </div>
-      <div class="integration-badge">
-        <img src="https://www.leboncoin.fr/favicon.ico" width="28" height="28" alt="Leboncoin Vacances" style="border-radius:6px;flex-shrink:0;" />
-        Leboncoin Vacances
-      </div>
-      <div class="integration-badge">
-        <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="28" height="28" rx="6" fill="#4CAF50"/><text x="14" y="19" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="12" fill="white">GF</text></svg>
-        Gîtes de France
-      </div>
-      <div class="integration-badge">
-        <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><rect width="28" height="28" rx="6" fill="#E30613"/><text x="14" y="19" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="11" fill="white">PAP</text></svg>
-        PAP Vacances
-      </div>
-    </div>
-    <p class="integration-ical reveal">
-      <i class="fas fa-link" style="color:var(--primary);margin-right:7px;"></i>
-      <strong>+ toute plateforme compatible iCal</strong> — Amivac, Abritel et plus encore.
-    </p>
-  </div>
-</section>
-
-<!-- ═══ POUR QUI ═══ -->
-<section class="audience-section" id="pour-qui">
-  <div class="container">
-    <div style="text-align:center;" class="reveal">
-      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-users"></i> Pour qui ?</div>
-      <h2 class="section-title" style="text-align:center;">Fait pour vous, quelle que soit votre échelle</h2>
-    </div>
-    <div class="audience-grid">
-      <div class="audience-card reveal reveal-delay-1">
-        <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=700&q=80" alt="Hôte indépendant" loading="lazy">
-        <div class="audience-overlay"></div>
-        <div class="audience-content">
-          <div class="audience-icon"><i class="fas fa-key"></i></div>
-          <div class="audience-title">Hôtes indépendants</div>
-          <div class="audience-desc">Même avec 1 logement, un calendrier propre et une IA qui répond à 2h du matin changent tout pour vos avis.</div>
-        </div>
-      </div>
-      <div class="audience-card reveal reveal-delay-2">
-        <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=700&q=80" alt="Propriétaire multi-biens" loading="lazy">
-        <div class="audience-overlay"></div>
-        <div class="audience-content">
-          <div class="audience-icon"><i class="fas fa-house-chimney"></i></div>
-          <div class="audience-title">Propriétaires multi-biens</div>
-          <div class="audience-desc">Évitez les doublons, visualisez tout en un coup d'œil, encaissez en direct. Zéro commission sur vos réservations directes.</div>
-        </div>
-      </div>
-      <div class="audience-card reveal reveal-delay-3">
-        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&q=80" alt="Conciergerie" loading="lazy">
-        <div class="audience-overlay"></div>
-        <div class="audience-content">
-          <div class="audience-icon"><i class="fas fa-building"></i></div>
-          <div class="audience-title">Conciergeries</div>
-          <div class="audience-desc">Calendrier, ménages, facturation propriétaires, sous-comptes. Tout ce qu'il faut pour gérer les biens de vos clients.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ CTA ═══ -->
-<section class="cta-section">
-  <div class="container">
-    <div class="cta-box reveal">
-      <div class="cta-overlay"></div>
-      <div class="cta-content">
-        <h2>Testez gratuitement pendant 14 jours</h2>
-        <p>Aucune carte demandée. Accès complet à toutes les fonctionnalités, IA comprise.</p>
-        <div class="cta-actions">
-          <a href="/register.html" class="btn btn-white btn-lg">
-            <i class="fas fa-rocket"></i> Créer mon compte gratuit
-          </a>
-          <a href="/pricing.html" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.4);color:white;background:rgba(255,255,255,.1);">
-            Voir les tarifs
-          </a>
-        </div>
-        <div class="cta-trust">
-          <span><i class="fas fa-shield-alt"></i> Données hébergées en UE</span>
-          <span><i class="fas fa-mobile-screen"></i> Web, iOS & Android</span>
-          <span><i class="fas fa-circle-check"></i> Sans engagement</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ FOOTER ═══ -->
-<footer class="site-footer">
-  <div class="footer-inner">
-    <div>
-      <div class="footer-brand">
-        <span>Boosting<span class="brand-host">host</span></span>
-      </div>
-      <p class="footer-copy">© 2026 Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
-      <div class="footer-links">
-        <a href="/mentions-legales.html">Mentions légales</a>
-        <a href="/politique-confidentialite.html">Confidentialité</a>
-        <a href="/cgu.html">CGU</a>
-        <a href="/cgv.html">CGV</a>
-        <a href="/blog.html">Blog</a>
-        <a href="/pricing.html">Tarifs</a>
-      </div>
-    </div>
-    <div class="footer-badges">
-      <div class="footer-badge"><i class="fas fa-shield-alt"></i> RGPD · Données en UE</div>
-      <a href="https://apps.apple.com/fr/app/boostinghost/id6758049858" target="_blank" rel="noopener" class="footer-badge footer-badge-store">
-        <i class="fab fa-apple"></i> App Store
-      </a>
-      <a href="https://play.google.com/store/apps/details?id=com.boostinghost.app" target="_blank" rel="noopener" class="footer-badge footer-badge-store">
-        <i class="fab fa-google-play"></i> Google Play
-      </a>
-    </div>
-  </div>
-</footer>
-
-<script>
-// ─── Scroll reveal ───
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-      observer.unobserve(entry.target);
-    }
-  });
-}, { threshold: 0.12 });
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-// ─── Horizontal scroll drag ───
-function initDrag(trackId) {
-  const track = document.getElementById(trackId);
-  if (!track) return;
-  let isDown = false, startX, scrollLeft;
-  track.addEventListener('mousedown', e => {
-    isDown = true; track.style.cursor = 'grabbing';
-    startX = e.pageX - track.offsetLeft;
-    scrollLeft = track.scrollLeft;
-  });
-  track.addEventListener('mouseleave', () => { isDown = false; track.style.cursor = 'grab'; });
-  track.addEventListener('mouseup', () => { isDown = false; track.style.cursor = 'grab'; });
-  track.addEventListener('mousemove', e => {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - track.offsetLeft;
-    track.scrollLeft = scrollLeft - (x - startX) * 1.5;
-  });
-}
-initDrag('featuresTrack');
-
-// ─── Features dots ───
-(function() {
-  const track = document.getElementById('featuresTrack');
-  const dotsEl = document.getElementById('featuresDots');
-  if (!track || !dotsEl) return;
-  const tiles = track.querySelectorAll('.feature-tile');
-  const count = tiles.length;
-  for (let i = 0; i < count; i++) {
-    const d = document.createElement('div');
-    d.className = 'hscroll-dot' + (i === 0 ? ' active' : '');
-    d.onclick = () => { tiles[i].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }); };
-    dotsEl.appendChild(d);
-  }
-  track.addEventListener('scroll', () => {
-    const dots = dotsEl.querySelectorAll('.hscroll-dot');
-    const idx = Math.round(track.scrollLeft / 340);
-    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-  });
-})();
-
-// ─── Mobile menu close on link click ───
-document.querySelectorAll('#navMain a').forEach(a => {
-  a.addEventListener('click', () => {
-    document.getElementById('navMain').classList.remove('open');
-    document.getElementById('menuIcon').className = 'fas fa-bars';
-    document.body.style.overflow = '';
-  });
-});
-
-function toggleNav() {
-  const nav    = document.getElementById('navMain');
-  const icon   = document.getElementById('menuIcon');
-  const header = document.querySelector('.site-header');
-  nav.style.top = (header ? header.offsetHeight : 62) + 'px';
-  const open = nav.classList.toggle('open');
-  icon.className = open ? 'fas fa-times' : 'fas fa-bars';
-}
-document.addEventListener('click', (e) => {
-  const nav = document.getElementById('navMain');
-  const btn = document.getElementById('menuToggle');
-  if (nav && nav.classList.contains('open') && !nav.contains(e.target) && btn && !btn.contains(e.target)) {
-    nav.classList.remove('open');
-    document.getElementById('menuIcon').className = 'fas fa-bars';
-  }
-});
-</script>
-<script src="/js/cookies-banner.js"></script>
+<script src="js/app-guest.js"></script>
 </body>
 </html>
