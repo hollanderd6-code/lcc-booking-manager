@@ -30748,8 +30748,77 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       console.error('⚠️ [GUEST] Notif hôte:', notifErr.message);
     }
 
+    // ✅ Créer automatiquement la conversation BH liée à cette réservation
+    let conversationId = null;
+    try {
+      // Vérifier si une conversation existe déjà pour ce voyageur + logement
+      const existingConv = await pool.query(
+        `SELECT id FROM conversations
+         WHERE LOWER(guest_email) = LOWER($1) AND property_id = $2
+         AND reservation_start_date = $3
+         ORDER BY created_at DESC LIMIT 1`,
+        [guest_email, property_id, checkin]
+      );
+
+      if (existingConv.rows[0]) {
+        conversationId = existingConv.rows[0].id;
+        console.log(`✅ [GUEST] Conversation existante réutilisée: ${conversationId}`);
+      } else {
+        // Générer tokens uniques
+        const crypto = require('crypto');
+        const uniqueToken = crypto.randomBytes(16).toString('hex');
+        const photosToken = crypto.randomBytes(12).toString('hex');
+        const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+        const convResult = await pool.query(
+          `INSERT INTO conversations
+            (user_id, property_id, reservation_start_date, reservation_end_date,
+             platform, source, guest_name, guest_email, guest_phone,
+             pin_code, unique_token, photos_token,
+             reservation_uid, status, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',NOW(),NOW())
+           RETURNING id`,
+          [
+            prop.owner_user_id, property_id, checkin, checkout,
+            'Boostinghost Guest', 'guest_app',
+            guest_name, guest_email, guest_phone || null,
+            pinCode, uniqueToken, photosToken, uid
+          ]
+        );
+        conversationId = convResult.rows[0].id;
+        console.log(`✅ [GUEST] Conversation créée: ${conversationId} pour résa ${uid}`);
+
+        // Message de bienvenue automatique
+        try {
+          const welcomeMsg = `Bonjour ${(guest_name || 'cher voyageur').split(' ')[0]} ! 👋
+
+Votre réservation à **${prop.name || prop.internal_name}** est confirmée du ${new Date(checkin + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'long'})} au ${new Date(checkout + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'long'})}.
+
+N'hésitez pas à nous contacter via cette messagerie pour toute question. Bon séjour ! 🏠`;
+          await pool.query(
+            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_bot_response, is_read, created_at)
+             VALUES ($1, 'property', $2, $3, TRUE, FALSE, NOW())`,
+            [conversationId, prop.name || 'Boostinghost', welcomeMsg]
+          );
+          // Notifier via Socket.IO si disponible
+          if (io) {
+            io.to(`conversation_${conversationId}`).emit('new_message', {
+              conversation_id: conversationId,
+              sender_type: 'property',
+              message: welcomeMsg
+            });
+          }
+        } catch(msgErr) {
+          console.warn('⚠️ [GUEST] Message de bienvenue:', msgErr.message);
+        }
+      }
+    } catch (convErr) {
+      console.error('⚠️ [GUEST] Création conversation:', convErr.message);
+    }
+
     res.json({
       success: true, reservation_uid: uid,
+      conversation_id: conversationId,
       total: discountedBase, cleaningFee, touristTax, commission,
       total_ttc: totalTTC, nights
     });
