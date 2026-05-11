@@ -462,6 +462,7 @@ html[data-theme-v3="1"] .page-back-btn {
 .chat-platform-badge.booking { background: #00358020; color: #003580; }
 .chat-platform-badge.direct  { background: #1A7A5E20; color: #1A7A5E; }
 .chat-platform-badge.channex { background: #6366f120; color: #6366f1; }
+.chat-platform-badge.bhguest { background: #7c3aed20; color: #7c3aed; }
 
 .msgs-chat-actions {
   display: flex; align-items: center; gap: 7px;
@@ -1985,8 +1986,10 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         : platLower === 'bdc' ? 'Booking.com'
         : platLower === 'exp' ? 'Expedia'
         : platLower === 'vrbo' || platLower === 'homeaway' ? 'Vrbo'
-        : plat || 'Direct'; // sinon afficher tel quel (ex: "Airbnb", "Booking.com", "Expedia")
-      var platColor = (window.getPlatformColor && window.getPlatformColor(conv.platform)) || '#1A7A5E';
+        : platLower === 'guest_app' || platLower === 'bhguest' || platLower.includes('boostinghost') ? 'BHGuest'
+        : plat || 'Direct'; // sinon afficher tel quel (ex: "Airbnb", "Booking.com", "BHGuest")
+      var platColor = (platLower === 'guest_app' || platLower === 'bhguest') ? '#7c3aed'
+        : (window.getPlatformColor && window.getPlatformColor(conv.platform)) || '#1A7A5E';
       platBadge.textContent = platLabel;
       platBadge.style.cssText = 'display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:999px;line-height:1.4;background:' + platColor + '22;color:' + platColor + ';';
     }
@@ -4124,8 +4127,8 @@ async function loadScheduled() {
       return;
     }
 
-    const platformColors = { airbnb:'#FF5A5F', booking:'#003580', direct:'#1A7A5E', bdc:'#003580' };
-    const platformIcons = { airbnb:'fa-home', booking:'fa-bed', direct:'fa-user', bdc:'fa-bed' };
+    const platformColors = { airbnb:'#FF5A5F', booking:'#003580', direct:'#1A7A5E', bdc:'#003580', bhguest:'#7c3aed', guest_app:'#7c3aed' };
+    const platformIcons = { airbnb:'fa-home', booking:'fa-bed', direct:'fa-user', bdc:'fa-bed', bhguest:'fa-globe', guest_app:'fa-globe' };
 
     // Grouper par date
     const byDate = {};
