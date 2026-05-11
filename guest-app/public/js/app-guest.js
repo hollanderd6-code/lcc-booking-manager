@@ -50,7 +50,7 @@ let state = {
   calendar: { year: new Date().getFullYear(), month: new Date().getMonth() },
   selectedCheckin: null,
   selectedCheckout: null,
-  selectingEnd: false,
+  selectingEnd: null,
   account: JSON.parse(localStorage.getItem('guest_account') || '{}'),
   session: null, // { email, token, name }
   appliedPromo: null // { code, discount_type, discount_value, discount_amount }
@@ -820,7 +820,7 @@ async function openProperty(id) {
     // Reset sélection dates
     state.selectedCheckin = state.search.checkin || null;
     state.selectedCheckout = state.search.checkout || null;
-    state.selectingEnd = !!state.selectedCheckin;
+    state.selectingEnd = state.selectedCheckin ? true : null;
 
     document.getElementById('detailHeaderName').textContent = state.currentProperty.name;
     renderDetail();
@@ -922,11 +922,20 @@ function renderCalendar() {
     if (isToday) cls += ' today';
 
     const clickable = !isPast && !isBooked;
-    html += `<div class="${cls}" ${clickable ? `onclick="selectDate('${dateStr}')"` : ''}>${day}</div>`;
+    html += `<div class="${cls}" ${clickable ? `data-date="${dateStr}"` : ''}>${day}</div>`;
   }
 
   html += `</div></div>`;
   document.getElementById('calendarContainer').innerHTML = html;
+
+  // Délégation d'événements — plus fiable qu'onclick inline sur iOS
+  const calEl = document.getElementById('calendarContainer');
+  if (calEl) {
+    calEl.onclick = function(e) {
+      const dayEl = e.target.closest('[data-date]');
+      if (dayEl && dayEl.dataset.date) selectDate(dayEl.dataset.date);
+    };
+  }
 }
 
 function calNav(dir) {
@@ -937,7 +946,7 @@ function calNav(dir) {
 }
 
 function selectDate(dateStr) {
-  if (!state.selectedCheckin || state.selectingEnd === false) {
+  if (!state.selectedCheckin || state.selectingEnd === null || state.selectingEnd === false) {
     // Premier clic → arrivée
     state.selectedCheckin = dateStr;
     state.selectedCheckout = null;
