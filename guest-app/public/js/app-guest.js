@@ -164,9 +164,11 @@ async function registerWithPassword() {
   const email = document.getElementById('regEmail')?.value?.trim();
   const password = document.getElementById('regPassword')?.value;
   const confirm = document.getElementById('regPasswordConfirm')?.value;
+  const phone = document.getElementById('regPhone')?.value?.trim();
   const errBox = document.getElementById('pwdRegisterError');
   errBox.style.display = 'none';
   if (!email || !password) { errBox.textContent = 'Email et mot de passe requis'; errBox.style.display = 'block'; return; }
+  if (!phone) { errBox.textContent = 'Numéro de téléphone requis'; errBox.style.display = 'block'; return; }
   if (password.length < 8) { errBox.textContent = 'Mot de passe trop court (8 caractères minimum)'; errBox.style.display = 'block'; return; }
   if (!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]/.test(password)) { errBox.textContent = 'Le mot de passe doit contenir au moins 1 caractère spécial (!@#$%...)'; errBox.style.display = 'block'; return; }
   if (password !== confirm) { errBox.textContent = 'Les mots de passe ne correspondent pas'; errBox.style.display = 'block'; return; }
@@ -176,7 +178,7 @@ async function registerWithPassword() {
     const res = await fetch(`${API_URL}/api/guest/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name })
+      body: JSON.stringify({ email, password, name, phone })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
@@ -371,6 +373,8 @@ function navTo(name) {
   const noNavScreens = ['chat']; // Nav visible partout sauf chat plein écran
   const bottomNav = document.getElementById('bottomNav');
   if (bottomNav) bottomNav.style.display = noNavScreens.includes(name) ? 'none' : 'flex';
+  // Sur detail, bookingBar prend le bas — on masque le bottomNav via classe CSS
+  document.body.classList.toggle('screen-detail', name === 'detail');
 
   // Booking bar uniquement sur detail
   const bookingBar = document.getElementById('bookingBar');
