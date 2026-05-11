@@ -1458,8 +1458,10 @@ function logout() {
 
 // ── Toast ────────────────────────────────────────────────────
 function showToast(msg) {
-  const t = document.getElementById('toast');
+  const t = document.getElementById('toastMsg') || document.getElementById('toast');
+  if (!t) return;
   t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  t.style.display = 'block';
+  t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.style.display = 'none', 300); }, 3000);
 }
