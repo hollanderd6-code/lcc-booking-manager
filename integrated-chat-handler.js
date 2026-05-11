@@ -513,8 +513,7 @@ Si desea cancelar su reserva, puede hacerlo directamente desde la plataforma. Te
           const siretMatch = message.message.match(/(\d{14})/);
           const siret = siretMatch ? siretMatch[1] : null;
 
-          const companyMatch = message.message.match(/(?:société|company|entreprise|sas|sarl|eurl|sasu|auto.?entrepreneur|nom\s+de\s+(?:la\s+)?(?:société|société))[:\s]+([^
-,\.]{2,50})/i);
+          const companyMatch = message.message.match(/(?:soci[ée]t[ée]|company|entreprise|sas|sarl|eurl|sasu|auto.?entrepreneur|nom\s+de\s+la\s+soci[ée]t[ée])[:\s]+([^,.\r\n]{2,50})/i);
           const company = companyMatch ? companyMatch[1].trim() : null;
 
           const nameMatch = message.message.match(/(?:au\s+nom\s+de|facturer\s+(?:à|a)|nom\s+(?:du\s+client|client)?)\s*:?\s*([A-ZÀ-Ý][a-zà-ÿ]+(?:\s+[A-ZÀ-Ý][a-zà-ÿA-ZÀ-Ý]+)*)/);
