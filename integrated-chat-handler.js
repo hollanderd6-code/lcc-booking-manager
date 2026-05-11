@@ -962,8 +962,25 @@ Rules:
         ].filter(Boolean);
         return parts.length > 0 ? parts.join(', ') : null;
       })(),
-      accessCode: property.access_code || welcomeBookData?.keyboxCode,
-      accessInstructions: property.access_instructions || welcomeBookData?.accessInstructions,
+      // ✅ Masquer les codes d'accès si la caution est requise et non payée
+      accessCode: (() => {
+        const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
+        const depositPaid = depositStatus && ['authorized', 'captured'].includes(depositStatus);
+        if (depositRequired && !depositPaid) return null; // Cacher les codes
+        return property.access_code || welcomeBookData?.keyboxCode;
+      })(),
+      accessInstructions: (() => {
+        const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
+        const depositPaid = depositStatus && ['authorized', 'captured'].includes(depositStatus);
+        if (depositRequired && !depositPaid) return null; // Cacher les instructions
+        return property.access_instructions || welcomeBookData?.accessInstructions;
+      })(),
+      // Indiquer à Groq si la caution bloque l'accès aux infos
+      depositBlocksAccess: (() => {
+        const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
+        const depositPaid = depositStatus && ['authorized', 'captured'].includes(depositStatus);
+        return depositRequired && !depositPaid;
+      })(),
       parkingInfo: welcomeBookData?.parkingInfo,
       extraNotesAccess: welcomeBookData?.extraNotesAccess,
       checkoutInstructions: welcomeBookData?.checkoutInstructions,
