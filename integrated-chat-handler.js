@@ -503,6 +503,102 @@ Si desea cancelar su reserva, puede hacerlo directamente desde la plataforma. Te
         return true;
       }
 
+      // ── CAS A-bis : Demande de facture ──────────────────────────────────
+      {
+        const invoicePattern = /factur|invoice|receipt|quittance|justificatif|note de frais|reçu fiscal|billing/i;
+        if (invoicePattern.test(msgLow)) {
+          console.log(`🧾 [HANDLER] Demande de facture détectée — conv ${conversation.id}`);
+
+          // Extraire infos optionnelles : SIRET, société, nom différent
+          const siretMatch = message.message.match(/(\d{14})/);
+          const siret = siretMatch ? siretMatch[1] : null;
+
+          const companyMatch = message.message.match(/(?:société|company|entreprise|sas|sarl|eurl|sasu|auto.?entrepreneur|nom\s+de\s+(?:la\s+)?(?:société|société))[:\s]+([^
+,\.]{2,50})/i);
+          const company = companyMatch ? companyMatch[1].trim() : null;
+
+          const nameMatch = message.message.match(/(?:au\s+nom\s+de|facturer\s+(?:à|a)|nom\s+(?:du\s+client|client)?)\s*:?\s*([A-ZÀ-Ý][a-zà-ÿ]+(?:\s+[A-ZÀ-Ý][a-zà-ÿA-ZÀ-Ý]+)*)/);
+          const altName = nameMatch ? nameMatch[1].trim() : null;
+
+          // Stocker la demande en base
+          try {
+            const resRow = await pool.query(
+              `SELECT uid, guest_email, guest_name, amount_total, amount_rooms, amount_cleaning, amount_taxes,
+                      start_date, end_date, property_id
+               FROM reservations WHERE uid = $1 OR uid = $2 LIMIT 1`,
+              [conversation.reservation_uid || '', `CHX_${conversation.channex_booking_id || ''}` ]
+            );
+            const res = resRow.rows[0] || {};
+
+            await pool.query(
+              `INSERT INTO invoice_requests
+                (conversation_id, reservation_uid, user_id, property_id,
+                 client_name, client_email, client_siret, client_company,
+                 rent_amount, cleaning_fee, status, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', NOW(), NOW())
+               ON CONFLICT DO NOTHING`,
+              [
+                conversation.id,
+                res.uid || conversation.reservation_uid || null,
+                conversation.user_id,
+                res.property_id || conversation.property_id || null,
+                altName || res.guest_name || conversation.guest_name || null,
+                res.guest_email || conversation.guest_email || null,
+                siret,
+                company,
+                res.amount_rooms || res.amount_total || null,
+                res.amount_cleaning || null
+              ]
+            );
+            console.log(`✅ [HANDLER] Demande facture enregistrée — conv ${conversation.id} | SIRET: ${siret || 'non'} | Société: ${company || 'non'}`);
+          } catch(dbErr) {
+            console.error('❌ [HANDLER] Erreur enregistrement demande facture:', dbErr.message);
+          }
+
+          // Réponse automatique au voyageur
+          const invoiceReplies = {
+            fr: `Bien noté ! Nous vous enverrons votre facture par email le jour de votre départ.${siret ? `
+
+Votre numéro SIRET (${siret}) a bien été enregistré.` : ''}${company ? `
+Facture au nom de : ${company}.` : ''}${altName ? `
+Facture établie au nom de : ${altName}.` : ''}
+
+N'hésitez pas à nous préciser si vous souhaitez y ajouter d'autres informations. 🧾`,
+            en: `Noted! We will send your invoice by email on your departure day.${siret ? `
+
+Your SIRET number (${siret}) has been recorded.` : ''}${company ? `
+Invoice in the name of: ${company}.` : ''}
+
+Feel free to let us know if you'd like to add any other details. 🧾`,
+            es: `¡Anotado! Le enviaremos su factura por correo electrónico el día de su salida.${siret ? `
+
+Su número SIRET (${siret}) ha sido registrado.` : ''}${company ? `
+Factura a nombre de: ${company}.` : ''}
+
+No dude en indicarnos si desea añadir otros datos. 🧾`,
+            de: `Notiert! Wir senden Ihnen die Rechnung am Abreisetag per E-Mail.${siret ? `
+
+Ihre SIRET-Nummer (${siret}) wurde gespeichert.` : ''}
+
+Teilen Sie uns gerne mit, ob Sie weitere Angaben hinzufügen möchten. 🧾`,
+            it: `Annotato! Le invieremo la fattura via email il giorno della partenza.${siret ? `
+
+Il suo numero SIRET (${siret}) è stato registrato.` : ''}
+
+Ci faccia sapere se desidera aggiungere altre informazioni. 🧾`,
+            nl: `Genoteerd! We sturen u de factuur per e-mail op de dag van uw vertrek.${siret ? `
+
+Uw SIRET-nummer (${siret}) is geregistreerd.` : ''}
+
+Laat het ons weten als u andere gegevens wilt toevoegen. 🧾`,
+          };
+
+          const reply = invoiceReplies[language] || invoiceReplies.fr;
+          await sendBotMessage(conversation.id, reply, pool, io, channexId);
+          return true;
+        }
+      }
+
       // ── CAS B-bis : Retard au départ (checkout) ───────────────────
       // "on aura 20 minutes de retard", "we'll be 30 minutes late", "slight delay"
       // Si retard <= 60 min → confirmer. Si > 60 min ou non précisé → escalader.
