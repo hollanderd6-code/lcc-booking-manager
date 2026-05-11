@@ -160,6 +160,11 @@ async function getGroqResponse(userMessage, conversationContext = {}, messageHis
     }
     if (depositInfo.length > 0) sections.push(`CAUTION / DÉPÔT DE GARANTIE :\n${depositInfo.join('\n')}`);
 
+    // ✅ Indicateur critique : la caution bloque l'accès aux infos
+    if (conversationContext.depositBlocksAccess) {
+      sections.push(`⚠️ ALERTE CAUTION : depositBlocksAccess = true. La caution n'est PAS encore payée (statut: ${conversationContext.depositStatus || 'aucun'}). NE PAS donner les codes d'accès, le wifi ni les instructions d'entrée sous AUCUN prétexte. Rediriger vers le paiement de la caution.`);
+    }
+
     // Phase du séjour
     const phaseLabels = {
       before: `AVANT ARRIVÉE${conversationContext.checkinDate ? ' (arrivée prévue le ' + conversationContext.checkinDate + ')' : ''}`,
@@ -226,7 +231,8 @@ R11b. RETARD AU DÉPART (checkout) — RÈGLE CRITIQUE :
 R12. CHECK-OUT / DÉPART : Donne l'heure exacte + instructions de départ si disponibles (clés, linge, etc.).
 R13. WIFI : Donne le nom du réseau ET le mot de passe ensemble, dans la même réponse.
 R14. ACCÈS / CODE / CLÉ :
-   • EN COURS DE SÉJOUR ou JOUR J d'arrivée : Donne le code exact + instructions complètes d'accès. Si non disponible → [ESCALADE].
+   • ⚠️ RÈGLE ABSOLUE : Si depositBlocksAccess = true (caution requise mais non payée) → NE JAMAIS donner les codes d'accès, le wifi, l'adresse précise ni aucune instruction d'entrée. Répondre uniquement : "Les informations d'accès vous seront communiquées dès que votre caution aura été validée. Voici le lien : [lien caution si disponible]". NE PAS escalader, NE PAS inventer d'excuse différente.
+   • EN COURS DE SÉJOUR ou JOUR J d'arrivée (ET depositBlocksAccess = false) : Donne le code exact + instructions complètes d'accès. Si non disponible → [ESCALADE].
    • AVANT ARRIVÉE (plus d'1 jour avant le check-in) : NE PAS donner les codes. Répondre : "Toutes les instructions d'accès (codes, étapes d'entrée) vous seront envoyées automatiquement le matin de votre arrivée. À très bientôt !"
    • APRÈS DÉPART : Ne pas donner les codes, le séjour est terminé.
 R15. ADRESSE : Donne-la COMPLÈTE (rue, code postal, ville). Ne jamais donner une adresse partielle.
