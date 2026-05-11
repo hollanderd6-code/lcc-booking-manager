@@ -368,7 +368,7 @@ function showScreen(name) {
 
 function navTo(name) {
   // Écrans spéciaux sans bottom nav
-  const noNavScreens = ['detail','checkout','confirm','chat','home-list'];
+  const noNavScreens = ['chat']; // Nav visible partout sauf chat plein écran
   const bottomNav = document.getElementById('bottomNav');
   if (bottomNav) bottomNav.style.display = noNavScreens.includes(name) ? 'none' : 'flex';
 
@@ -823,6 +823,12 @@ async function openProperty(id) {
     state.selectingEnd = state.selectedCheckin ? true : null;
 
     document.getElementById('detailHeaderName').textContent = state.currentProperty.name;
+  // Bouton retour dans le header
+  const detailHeader = document.getElementById('detailHeader');
+  if (detailHeader) {
+    const backBtn = detailHeader.querySelector('.btn-back');
+    if (backBtn) backBtn.onclick = () => navTo('home-list');
+  }
     renderDetail();
     updateBookingBar();
 
@@ -1016,6 +1022,10 @@ function goToCheckout() {
   // Reset promo state (pas de promo si prix fixe)
   state.appliedPromo = null;
   if (fixedPriceOverride !== null) state._fixedPriceActive = fixedPriceOverride;
+
+  // Bouton retour checkout
+  const checkoutHeader = document.querySelector('#screen-checkout .page-header .btn-back');
+  if (checkoutHeader) checkoutHeader.onclick = () => navTo('detail');
 
   document.getElementById('checkoutContent').innerHTML = `
     <div class="checkout-summary" id="priceSummary">
