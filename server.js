@@ -30142,6 +30142,117 @@ app.post('/api/guest/auth/verify', async (req, res) => {
   }
 });
 
+// ── Table guest_users ───────────────────────────────────────
+pool.query(`
+  CREATE TABLE IF NOT EXISTS guest_users (
+    id SERIAL PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT,
+    name TEXT,
+    phone TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(e => console.error('guest_users table:', e.message));
+
+// ── Route : inscription email + mot de passe ─────────────────
+app.post('/api/guest/auth/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email invalide' });
+    if (!password || password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères minimum)' });
+    const normalizedEmail = email.toLowerCase().trim();
+    const passwordHash = await bcrypt.hash(password, 10);
+    const existing = await pool.query('SELECT id, password_hash FROM guest_users WHERE email = $1', [normalizedEmail]);
+    if (existing.rows.length > 0) {
+      if (existing.rows[0].password_hash) return res.status(409).json({ error: 'Un compte existe déjà avec cet email. Connectez-vous.' });
+      await pool.query('UPDATE guest_users SET password_hash = $1, name = COALESCE(name, $2), updated_at = NOW() WHERE email = $3', [passwordHash, name || null, normalizedEmail]);
+    } else {
+      await pool.query('INSERT INTO guest_users (email, password_hash, name) VALUES ($1, $2, $3)', [normalizedEmail, passwordHash, name || null]);
+    }
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const sessionToken = jwt.sign({ email: normalizedEmail, type: 'guest_session' }, secret, { expiresIn: '30d' });
+    console.log(`✅ [GUEST AUTH] Inscription: ${normalizedEmail}`);
+    res.json({ success: true, session_token: sessionToken, email: normalizedEmail, name: name || null });
+  } catch(e) {
+    console.error('❌ [GUEST AUTH] register:', e.message);
+    res.status(500).json({ error: 'Erreur lors de l'inscription' });
+  }
+});
+
+// ── Route : connexion email + mot de passe ───────────────────
+app.post('/api/guest/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis' });
+    const normalizedEmail = email.toLowerCase().trim();
+    const result = await pool.query('SELECT * FROM guest_users WHERE email = $1', [normalizedEmail]);
+    if (!result.rows[0]) return res.status(401).json({ error: 'Aucun compte trouvé avec cet email' });
+    const user = result.rows[0];
+    if (!user.password_hash) return res.status(401).json({ error: 'Ce compte utilise la connexion par lien magique.' });
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return res.status(401).json({ error: 'Mot de passe incorrect' });
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const sessionToken = jwt.sign({ email: normalizedEmail, type: 'guest_session' }, secret, { expiresIn: '30d' });
+    console.log(`✅ [GUEST AUTH] Connexion: ${normalizedEmail}`);
+    res.json({ success: true, session_token: sessionToken, email: normalizedEmail, name: user.name });
+  } catch(e) {
+    console.error('❌ [GUEST AUTH] login:', e.message);
+    res.status(500).json({ error: 'Erreur de connexion' });
+  }
+});
+
+// ── Route : mot de passe oublié ──────────────────────────────
+app.post('/api/guest/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email requis' });
+    const normalizedEmail = email.toLowerCase().trim();
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await pool.query('DELETE FROM guest_magic_tokens WHERE email = $1', [normalizedEmail]);
+    await pool.query('INSERT INTO guest_magic_tokens (email, token, expires_at) VALUES ($1, $2, $3)', [normalizedEmail, token, expiresAt]);
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+    const resetLink = `${appUrl}/guest-app/public/index.html?magic_token=${token}&reset=1`;
+    await sendEmailViaBrevo({
+      to: normalizedEmail,
+      subject: 'Réinitialisation de votre mot de passe — Boostinghost Guest',
+      html: bhEmailTemplate({ icon: '🔑', title: 'Réinitialiser votre mot de passe', subtitle: 'Boostinghost Guest',
+        bodyHtml: `<p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe. Valable <strong>15 minutes</strong>.</p>
+          <div style="text-align:center;margin:24px 0;"><a href="${resetLink}" style="display:inline-block;padding:14px 32px;background:#7c3aed;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Réinitialiser mon mot de passe</a></div>`
+      })
+    });
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [GUEST AUTH] forgot-password:', e.message);
+    res.status(500).json({ error: 'Erreur' });
+  }
+});
+
+// ── Route : mettre à jour le profil guest ────────────────────
+app.put('/api/guest/profile', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const { name, phone, password } = req.body;
+    let passwordHash = null;
+    if (password && password.length >= 6) passwordHash = await bcrypt.hash(password, 10);
+    await pool.query(`
+      INSERT INTO guest_users (email, name, phone${passwordHash ? ', password_hash' : ''})
+      VALUES ($1, $2, $3${passwordHash ? ', $4' : ''})
+      ON CONFLICT (email) DO UPDATE SET
+        name = COALESCE($2, guest_users.name),
+        phone = COALESCE($3, guest_users.phone)
+        ${passwordHash ? ', password_hash = $4' : ''},
+        updated_at = NOW()
+    `, passwordHash ? [email, name || null, phone || null, passwordHash] : [email, name || null, phone || null]);
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [GUEST] PUT /profile:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── 3. Vérifier une session active (middleware léger) ────────
 function verifyGuestSession(req) {
   try {
