@@ -610,30 +610,6 @@
           </div>
         </div>
         <button class="btn-save-account" onclick="saveAccount()">Sauvegarder</button>
-
-        <!-- Section mot de passe -->
-        <div id="pwdSection" style="margin-top:16px;">
-          <div class="account-card" style="margin-bottom:12px;">
-            <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-              <i class="fas fa-lock" style="color:var(--primary);"></i> Changer le mot de passe
-            </div>
-            <div class="account-field">
-              <label>Nouveau mot de passe</label>
-              <input type="password" id="newPassword" placeholder="6 caractères minimum">
-            </div>
-            <div class="account-field" style="margin-bottom:0;">
-              <label>Confirmer le mot de passe</label>
-              <input type="password" id="newPasswordConfirm" placeholder="••••••••">
-            </div>
-          </div>
-          <div id="pwdChangeError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:13px;color:#ef4444;margin-bottom:10px;"></div>
-          <button onclick="changePassword()" id="btnChangePwd"
-            style="width:100%;padding:13px;background:var(--primary-light,#ede9fe);color:var(--primary);border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">
-            <i class="fas fa-key"></i> Mettre à jour le mot de passe
-          </button>
-        </div>
-
-        <div id="logoutSection" style="margin-top:16px;"></div>
       </div>
     </div>
 
@@ -735,6 +711,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="js/push-notifications-guest.js"></script>
 <script src="js/app-guest.js"></script>
 </body>
 </html>
