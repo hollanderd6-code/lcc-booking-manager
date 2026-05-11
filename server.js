@@ -21860,9 +21860,7 @@ async function regenStripeSession(record, type, pool) {
       success_url: `${appUrl}/caution-success.html?depositId=${record.id}`,
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${record.id}`,
     };
-    if (stripeTarget.stripeAccountId) {
-      sessionParams.payment_intent_data.transfer_data = { destination: stripeTarget.stripeAccountId };
-    }
+    // ✅ Pas de transfer_data : sessionOptions contient déjà { stripeAccount } — Stripe refuse le transfer vers soi-même
     const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
     const expiresAt = new Date(session.expires_at * 1000).toISOString();
     await pool.query(
@@ -21887,10 +21885,7 @@ async function regenStripeSession(record, type, pool) {
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
     };
-    if (stripeTarget.stripeAccountId) {
-      sessionParams.payment_intent_data.transfer_data = { destination: stripeTarget.stripeAccountId };
-      sessionParams.payment_intent_data.on_behalf_of = stripeTarget.stripeAccountId;
-    }
+    // ✅ Pas de transfer_data ni on_behalf_of : sessionOptions contient déjà { stripeAccount }
     const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
     const expiresAt = new Date(session.expires_at * 1000).toISOString();
     await pool.query(
