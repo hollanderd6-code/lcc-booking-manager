@@ -809,7 +809,7 @@ async function loadProperties() {
 
 // ── Ouvrir un logement ───────────────────────────────────────
 async function openProperty(id) {
-  showScreen('detail');
+  navTo('detail');
   document.getElementById('detailContent').innerHTML = '<div class="loading-center" style="padding:60px"><i class="fas fa-spinner fa-spin"></i></div>';
 
   try {
@@ -1067,7 +1067,7 @@ function goToCheckout() {
     </button>
   `;
 
-  showScreen('checkout');
+  navTo('checkout');
 }
 
 // Recalcule la taxe de séjour quand le nb de voyageurs change
