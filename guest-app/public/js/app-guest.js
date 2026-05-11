@@ -392,11 +392,198 @@ function showScreen(name) {
 }
 
 function navTo(name) {
+  // Écrans spéciaux sans bottom nav
+  const noNavScreens = ['detail','checkout','confirm','chat'];
+  const bottomNav = document.getElementById('bottomNav');
+  if (bottomNav) bottomNav.style.display = noNavScreens.includes(name) ? 'none' : 'flex';
+
   showScreen(name);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  // Login → active l'onglet Compte visuellement
-  const navId = name === 'login' ? 'account' : name;
+  const navId = name === 'login' ? 'account' : name === 'chat' ? 'messages' : name;
   document.getElementById('nav-' + navId)?.classList.add('active');
+
+  // Charger les conversations quand on arrive sur l'onglet messages
+  if (name === 'messages') loadGuestConversations();
+}
+
+// ══════════════════════════════════════════════════
+// MESSAGERIE GUEST — Socket.IO + conversations
+// ══════════════════════════════════════════════════
+
+let guestSocket = null;
+let currentGuestConvId = null;
+
+function initGuestSocket() {
+  if (guestSocket) return;
+  try {
+    guestSocket = io(API_URL, { transports: ['websocket','polling'] });
+    guestSocket.on('connect', () => console.log('✅ [GUEST SOCKET] Connecté'));
+    guestSocket.on('new_message', (msg) => {
+      if (msg.conversation_id && String(msg.conversation_id) === String(currentGuestConvId)) {
+        appendGuestMessage(msg);
+        scrollGuestChat();
+      }
+      // Mettre à jour le badge non-lu si on n'est pas dans ce chat
+      if (!currentGuestConvId || String(msg.conversation_id) !== String(currentGuestConvId)) {
+        updateGuestMsgBadge(1);
+      }
+    });
+    guestSocket.on('disconnect', () => console.log('❌ [GUEST SOCKET] Déconnecté'));
+  } catch(e) {
+    console.warn('⚠️ Socket.IO non disponible:', e.message);
+  }
+}
+
+async function loadGuestConversations() {
+  const session = getSession();
+  if (!session) {
+    document.getElementById('guestConvList').innerHTML = `
+      <div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:40px;margin-bottom:12px;">💬</div>
+        <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:8px;">Connectez-vous</div>
+        <div style="font-size:14px;color:#64748b;margin-bottom:20px;">Pour accéder à vos messages</div>
+        <button onclick="navTo('login')" style="padding:12px 24px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">Se connecter</button>
+      </div>`;
+    return;
+  }
+
+  initGuestSocket();
+
+  const list = document.getElementById('guestConvList');
+  list.innerHTML = '<div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>';
+
+  try {
+    const res = await fetch(`${API_URL}/api/guest/conversations`, {
+      headers: { 'Authorization': 'Bearer ' + session.token }
+    });
+    const data = await res.json();
+    const convs = data.conversations || [];
+
+    if (!convs.length) {
+      list.innerHTML = `<div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:40px;margin-bottom:12px;">💬</div>
+        <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:8px;">Aucun message</div>
+        <div style="font-size:14px;color:#64748b;">Vos échanges avec les hôtes apparaîtront ici.</div>
+      </div>`;
+      return;
+    }
+
+    let totalUnread = 0;
+    list.innerHTML = convs.map(c => {
+      const unread = parseInt(c.unread_count || 0);
+      totalUnread += unread;
+      const propName = c.property_name || c.property_internal_name || 'Logement';
+      const lastMsg = c.last_message ? c.last_message.substring(0, 60) + (c.last_message.length > 60 ? '…' : '') : 'Aucun message';
+      const dateStr = c.last_message_at ? new Date(c.last_message_at).toLocaleDateString('fr-FR', {day:'numeric',month:'short'}) : '';
+      const checkin = c.reservation_start_date ? new Date(c.reservation_start_date).toLocaleDateString('fr-FR', {day:'numeric',month:'short'}) : '';
+      const checkout = c.reservation_end_date ? new Date(c.reservation_end_date).toLocaleDateString('fr-FR', {day:'numeric',month:'short'}) : '';
+      return `<div onclick="openGuestChat(${c.id},'${propName.replace(/'/g,"\'")}','${checkin}','${checkout}')"
+        style="background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-left:3px solid ${unread ? 'var(--primary)' : 'transparent'};display:flex;align-items:center;gap:12px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">
+          ${propName.charAt(0).toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+            <span style="font-size:15px;font-weight:${unread?'700':'600'};color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${propName}</span>
+            <span style="font-size:11px;color:#94a3b8;flex-shrink:0;">${dateStr}</span>
+          </div>
+          ${checkin ? `<div style="font-size:11px;color:var(--primary);font-weight:600;margin-bottom:3px;">${checkin} → ${checkout}</div>` : ''}
+          <div style="font-size:13px;color:${unread?'#1e293b':'#64748b'};font-weight:${unread?'600':'400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${lastMsg}</div>
+        </div>
+        ${unread ? `<span style="background:var(--primary);color:white;border-radius:999px;font-size:11px;font-weight:700;padding:2px 7px;min-width:20px;text-align:center;flex-shrink:0;">${unread}</span>` : ''}
+      </div>`;
+    }).join('');
+
+    updateGuestMsgBadge(totalUnread);
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;">Erreur de chargement</div>';
+  }
+}
+
+function updateGuestMsgBadge(count) {
+  const badge = document.getElementById('navMsgsBadge');
+  if (!badge) return;
+  if (count > 0) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = 'block'; }
+  else { badge.style.display = 'none'; }
+}
+
+async function openGuestChat(convId, propName, checkin, checkout) {
+  currentGuestConvId = convId;
+  document.getElementById('chatGuestPropName').textContent = propName;
+  document.getElementById('chatGuestDates').textContent = checkin && checkout ? checkin + ' → ' + checkout : '';
+  document.getElementById('guestChatMessages').innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>';
+
+  // Rejoindre la room Socket.IO
+  if (guestSocket) guestSocket.emit('join_conversation', convId);
+
+  // Masquer bottom nav + afficher écran chat
+  navTo('chat');
+
+  // Charger les messages
+  const session = getSession();
+  try {
+    const res = await fetch(`${API_URL}/api/guest/conversations/${convId}/messages`, {
+      headers: { 'Authorization': 'Bearer ' + session.token }
+    });
+    const data = await res.json();
+    const msgs = data.messages || [];
+    const container = document.getElementById('guestChatMessages');
+    container.innerHTML = '';
+    if (!msgs.length) {
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:14px;">Aucun message pour l'instant.</div>';
+    } else {
+      msgs.forEach(m => appendGuestMessage(m));
+    }
+    scrollGuestChat();
+  } catch(e) {
+    document.getElementById('guestChatMessages').innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px;">Erreur</div>';
+  }
+}
+
+function appendGuestMessage(msg) {
+  const container = document.getElementById('guestChatMessages');
+  if (!container) return;
+  const isGuest = msg.sender_type === 'guest';
+  const time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) : '';
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;flex-direction:column;align-items:${isGuest?'flex-end':'flex-start'};max-width:80%;${isGuest?'align-self:flex-end':'align-self:flex-start'}`;
+  div.innerHTML = `
+    <div style="background:${isGuest?'var(--primary)':'white'};color:${isGuest?'white':'#1e293b'};padding:10px 14px;border-radius:${isGuest?'16px 16px 4px 16px':'16px 16px 16px 4px'};font-size:14px;line-height:1.5;box-shadow:0 1px 3px rgba(0,0,0,0.08);word-wrap:break-word;">
+      ${msg.message.replace(/
+/g,'<br>')}
+    </div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:3px;${isGuest?'text-align:right':''}">${time}</div>`;
+  container.appendChild(div);
+}
+
+function scrollGuestChat() {
+  const c = document.getElementById('guestChatMessages');
+  if (c) c.scrollTop = c.scrollHeight;
+}
+
+async function sendGuestMessage() {
+  const input = document.getElementById('guestChatInput');
+  const msg = input?.value?.trim();
+  if (!msg || !currentGuestConvId) return;
+  const session = getSession();
+  if (!session) { showToast('Connectez-vous d\'abord'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Afficher immédiatement (optimistic)
+  appendGuestMessage({ sender_type: 'guest', message: msg, created_at: new Date().toISOString() });
+  scrollGuestChat();
+
+  try {
+    await fetch(`${API_URL}/api/guest/conversations/${currentGuestConvId}/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token },
+      body: JSON.stringify({ message: msg })
+    });
+  } catch(e) {
+    showToast('Erreur d\'envoi');
+  }
 }
 
 // ── Recherche ────────────────────────────────────────────────
