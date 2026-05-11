@@ -15965,15 +15965,16 @@ app.put('/api/payments/:paymentId',
     const platformFee = Math.round(amountCents * feeRatePayment); // ✅ Commission Boostinghost
     const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
 
+    const putPaySessionOptions = user.stripeAccountId ? { stripeAccount: user.stripeAccountId } : {};
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [{ price_data: { currency: 'eur', product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
-      payment_intent_data: { application_fee_amount: platformFee, on_behalf_of: user.stripeAccountId, transfer_data: { destination: user.stripeAccountId }, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
+      payment_intent_data: { application_fee_amount: platformFee, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
-    });
+    }, putPaySessionOptions);
 
     await pool.query('UPDATE payments SET amount_cents = $1, stripe_session_id = $2, checkout_url = $3, updated_at = NOW() WHERE id = $4', [amountCents, session.id, session.url, existing.id]);
     console.log(`✅ Paiement ${existing.id} modifié : ${existing.amount_cents} → ${amountCents} cents`);
@@ -16097,6 +16098,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
     const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
 
     // 🎯 Créer une session de paiement sur le compte Stripe Connect du propriétaire
+    const paySessionOptions = user.stripeAccountId ? { stripeAccount: user.stripeAccountId } : {};
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -16114,11 +16116,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       payment_intent_data: {
         // 💰 Commission de la plateforme (8%)
         application_fee_amount: platformFeeActive, // ⏸️ PAUSE — remplacer par platformFee pour réactiver
-        // 🎯 Affiche le nom du compte connecté sur le relevé du client
-        on_behalf_of: user.stripeAccountId,
-        transfer_data: {
-          destination: user.stripeAccountId // 🎯 Le compte du propriétaire
-        },
+        // ✅ Pas de transfer_data ni on_behalf_of : la session est créée directement sur le compte Connect via paySessionOptions
         metadata: {
           payment_id: payment.id,
           reservation_uid: reservationUid,
@@ -16136,7 +16134,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
-    });
+    }, paySessionOptions);
 
     payment.stripeSessionId = session.id;
     payment.checkoutUrl = session.url;
@@ -30626,12 +30624,9 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     }
 
     // ✅ Fix : passer le compte Connect en options pour que la session soit créée dessus
-    let session;
-if (stripeAccountId) {
-  session = await stripe.checkout.sessions.create(sessionParams, { stripeAccount: stripeAccountId });
-} else {
-  session = await stripe.checkout.sessions.create(sessionParams);
-}
+    const sessionOptions = stripeAccountId ? { stripeAccount: stripeAccountId } : {};
+    const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+
     res.json({
       checkoutUrl: session.url,
       sessionId: session.id,
