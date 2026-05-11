@@ -1262,23 +1262,96 @@ async function loadMyBookings() {
     }
 
     const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    const now = new Date();
 
-    list.innerHTML = bookings.map(b => `
-      <div class="booking-card">
-        <div class="booking-card-header">
-          <div class="booking-card-name">${b.property.name}</div>
-          <span class="booking-badge ${b.status === 'confirmed' ? 'badge-confirmed' : 'badge-cancelled'}">
-            ${b.status === 'confirmed' ? 'Confirmé' : 'Annulé'}
-          </span>
+    list.innerHTML = bookings.map(b => {
+      const checkinDate = new Date(String(b.checkin).substring(0,10) + 'T12:00:00');
+      const checkoutDate = new Date(String(b.checkout).substring(0,10) + 'T12:00:00');
+      const isPast = checkoutDate < now;
+      const isCurrent = checkinDate <= now && checkoutDate >= now;
+      const isFuture = checkinDate > now;
+
+      // Badge statut réservation
+      const statusLabel = b.status === 'confirmed' ? (isCurrent ? '🏠 En cours' : isFuture ? '✅ Confirmé' : '✓ Passé') : '❌ Annulé';
+      const statusColor = b.status === 'confirmed' ? (isCurrent ? '#7c3aed' : isFuture ? '#10b981' : '#94a3b8') : '#ef4444';
+      const statusBg = b.status === 'confirmed' ? (isCurrent ? '#f5f3ff' : isFuture ? '#d1fae5' : '#f1f5f9') : '#fef2f2';
+
+      // Badge caution
+      let depositBadge = '';
+      if (b.deposit) {
+        const ds = b.deposit.status;
+        const dLabel = ds === 'authorized' ? '🔒 Caution autorisée'
+          : ds === 'captured' ? '💳 Caution débitée'
+          : ds === 'released' ? '✅ Caution libérée'
+          : ds === 'pending' ? '⏳ Caution en attente'
+          : ds === 'failed' ? '❌ Caution échouée' : '';
+        const dColor = ds === 'authorized' ? '#7c3aed' : ds === 'captured' ? '#dc2626' : ds === 'released' ? '#10b981' : ds === 'pending' ? '#f59e0b' : '#ef4444';
+        const dBg = ds === 'authorized' ? '#f5f3ff' : ds === 'captured' ? '#fef2f2' : ds === 'released' ? '#d1fae5' : ds === 'pending' ? '#fffbeb' : '#fef2f2';
+        if (dLabel) depositBadge = `<span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:${dBg};color:${dColor};">${dLabel}</span>`;
+      }
+
+      // Badge paiement
+      let paymentBadge = '';
+      if (b.payment) {
+        const ps = b.payment.status;
+        const pLabel = ps === 'paid' ? '💳 Payé' : ps === 'pending' ? '⏳ Paiement en attente' : ps === 'failed' ? '❌ Paiement échoué' : '';
+        const pColor = ps === 'paid' ? '#10b981' : ps === 'pending' ? '#f59e0b' : '#ef4444';
+        const pBg = ps === 'paid' ? '#d1fae5' : ps === 'pending' ? '#fffbeb' : '#fef2f2';
+        if (pLabel) paymentBadge = `<span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:${pBg};color:${pColor};">${pLabel}</span>`;
+      }
+
+      // Boutons d'action
+      const btnContact = b.conversationId
+        ? `<button onclick="openGuestChat(${b.conversationId},'${(b.property.name||'').replace(/'/g,"\'")}','${fmtDate(b.checkin)}','${fmtDate(b.checkout)}')"
+            style="flex:1;padding:10px;background:var(--primary);color:white;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <i class="fas fa-comment-dots"></i> Contacter
+          </button>` : '';
+
+      const btnLivret = b.property.welcomeBookUrl
+        ? `<button onclick="window.open('${b.property.welcomeBookUrl}','_blank')"
+            style="flex:1;padding:10px;background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <i class="fas fa-book-open"></i> Livret
+          </button>` : '';
+
+      const hasButtons = btnContact || btnLivret;
+
+      return `<div style="background:white;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-left:3px solid ${statusColor};">
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div style="font-size:16px;font-weight:700;color:#1e293b;flex:1;margin-right:8px;">${b.property.name || 'Logement'}</div>
+          <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:${statusBg};color:${statusColor};white-space:nowrap;">${statusLabel}</span>
         </div>
-        <div class="booking-dates">
-          <i class="fas fa-calendar" style="color:var(--primary);margin-right:4px;"></i>
-          ${fmtDate(b.checkin)} → ${fmtDate(b.checkout)}
+
+        <!-- Dates -->
+        <div style="font-size:13px;color:#64748b;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+          <i class="fas fa-calendar" style="color:var(--primary);font-size:12px;"></i>
+          <span>${fmtDate(b.checkin)} → ${fmtDate(b.checkout)}</span>
+          ${b.property.city ? `<span style="color:#cbd5e1;">·</span><span>${b.property.city}</span>` : ''}
         </div>
-        ${b.property.city ? `<div style="font-size:12px;color:var(--text-light);margin-bottom:6px;"><i class="fas fa-location-dot"></i> ${b.property.city}</div>` : ''}
-        <div class="booking-total">${parseFloat(b.total).toFixed(0)}€</div>
-      </div>
-    `).join('');
+
+        <!-- Horaires arrivée/départ -->
+        ${(b.property.arrivalTime || b.property.departureTime) ? `
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;display:flex;gap:12px;">
+          ${b.property.arrivalTime ? `<span><i class="fas fa-sign-in-alt" style="color:#10b981;margin-right:3px;"></i>Arrivée dès ${b.property.arrivalTime}</span>` : ''}
+          ${b.property.departureTime ? `<span><i class="fas fa-sign-out-alt" style="color:#f59e0b;margin-right:3px;"></i>Départ avant ${b.property.departureTime}</span>` : ''}
+        </div>` : ''}
+
+        <!-- Montant -->
+        <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:10px;">${parseFloat(b.total).toFixed(0)}€</div>
+
+        <!-- Badges statuts -->
+        ${depositBadge || paymentBadge ? `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+          ${depositBadge}${paymentBadge}
+        </div>` : ''}
+
+        <!-- Boutons d'action -->
+        ${hasButtons ? `
+        <div style="display:flex;gap:8px;">
+          ${btnContact}${btnLivret}
+        </div>` : ''}
+      </div>`;
+    }).join('');
 
   } catch (e) {
     list.innerHTML = `<div class="empty-state"><i class="fas fa-wifi"></i><p>Erreur de chargement</p></div>`;
