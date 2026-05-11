@@ -715,7 +715,7 @@ async function applySearch() {
 
 // ── Chargement logements ─────────────────────────────────────
 async function loadProperties() {
-  const grid = document.getElementById('propertiesGrid');
+  const grid = document.getElementById('propertiesList');
   grid.innerHTML = '<div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>';
 
   try {
