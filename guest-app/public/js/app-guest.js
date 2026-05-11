@@ -363,6 +363,11 @@ async function handleStripeReturn(params) {
     localStorage.setItem('guest_account', JSON.stringify(state.account));
     updateNavAccount();
 
+    // ✅ Enregistrer le token FCM pour la conversation créée automatiquement
+    if (data.conversation_id && typeof window.registerGuestFCMForConv === 'function') {
+      window.registerGuestFCMForConv(data.conversation_id).catch(() => {});
+    }
+
     showConfirmation(data, pending.guest_name, pending.guest_email);
   } catch (e) {
     showToast('Réservation confirmée mais erreur: ' + e.message);
@@ -515,11 +520,6 @@ async function openGuestChat(convId, propName, checkin, checkout) {
 
   // Rejoindre la room Socket.IO
   if (guestSocket) guestSocket.emit('join_conversation', convId);
-
-  // Enregistrer le token FCM pour cette conversation (notifs push)
-  if (typeof window.registerGuestFCMForConv === 'function') {
-    window.registerGuestFCMForConv(convId).catch(() => {});
-  }
 
   // Masquer bottom nav + afficher écran chat
   navTo('chat');
