@@ -3,653 +3,844 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Boostinghost Guest</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <title>Boostinghost Guest — Réservez et séjournez</title>
+  <meta name="description" content="Réservez des logements de qualité. Gérez vos séjours, communiquez avec vos hôtes, accédez à toutes les infos en un clic.">
+  <link rel="icon" type="image/png" href="/images/logo.png">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="css/app.css">
-  <style>
-    /* ── Variables Guest ── */
-    :root {
-      --primary: #7c3aed;
-      --primary-dark: #6d28d9;
-      --primary-light: #ede9fe;
-      --green: #10b981;
-      --green-light: #d1fae5;
-      --bg: #f8f9fb;
-      --card-bg: #ffffff;
-      --text: #1e293b;
-      --text-light: #64748b;
-      --border: #e2e8f0;
-      --error: #ef4444;
-    }
 
-    /* ── Bottom nav ── */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0; right: 0;
-      background: white;
-      border-top: 1px solid var(--border);
-      display: flex;
-      padding: 8px 0 env(safe-area-inset-bottom);
-      z-index: 100;
-    }
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      padding: 6px 0;
-      cursor: pointer;
-      color: var(--text-light);
-      font-size: 10px;
-      border: none;
-      background: none;
-      font-family: inherit;
-    }
-    .nav-item i { font-size: 20px; }
-    .nav-item.active { color: var(--primary); }
-    .nav-item.active i { color: var(--primary); }
+<style>
+/* ─── RESET & TOKENS ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #7c3aed;
+  --primary-dark: #6d28d9;
+  --primary-light: #ede9fe;
+  --bg: #f8f7ff;
+  --bg2: #f1f0f8;
+  --white: #ffffff;
+  --text: #1e1b4b;
+  --text2: #6b7280;
+  --border: #e5e7eb;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 12px rgba(124,58,237,.10);
+  --shadow-lg: 0 8px 32px rgba(124,58,237,.14);
+}
 
-    /* ── App header ── */
-    .app-header {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      padding: env(safe-area-inset-top, 16px) 20px 16px;
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-    .app-header .logo-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .app-header .logo-icon {
-      width: 36px; height: 36px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 800;
-    }
-    .app-header .logo-label { font-size: 18px; font-weight: 700; }
+html { height: 100%; overflow: hidden; }
+body {
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
 
-    /* ── Search bar ── */
-    .search-bar {
-      background: rgba(255,255,255,0.15);
-      border: 1.5px solid rgba(255,255,255,0.3);
-      border-radius: 14px;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-    }
-    .search-bar i { font-size: 15px; opacity: 0.9; }
-    .search-bar span { font-size: 14px; opacity: 0.85; }
+/* ─── APP SHELL ─── */
+#appShell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh;
+  overflow: hidden;
+}
 
-    /* ── Search modal ── */
-    .search-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 200;
-      display: none;
-      align-items: flex-end;
-    }
-    .search-modal.open { display: flex; }
-    .search-sheet {
-      background: white;
-      border-radius: 24px 24px 0 0;
-      padding: 24px 20px env(safe-area-inset-bottom);
-      width: 100%;
-    }
-    .search-sheet h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
-    .search-row { margin-bottom: 16px; }
-    .search-row label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: block; }
-    .search-row input, .search-row select {
-      width: 100%; padding: 12px 14px;
-      border: 2px solid var(--border);
-      border-radius: 12px; font-size: 15px;
-      font-family: inherit; background: white;
-      box-sizing: border-box; color: var(--text);
-    }
-    .search-row input:focus, .search-row select:focus {
-      outline: none; border-color: var(--primary);
-    }
-    .dates-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .btn-search-apply {
-      width: 100%; padding: 14px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white; border: none; border-radius: 12px;
-      font-size: 16px; font-weight: 600; cursor: pointer;
-      margin-top: 8px;
-    }
+/* ─── SCROLL CONTAINER ─── */
+#mainScroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
 
-    /* ── Screen content ── */
-    .screen-content {
-      display: none;
-      flex: 1;
-      padding-bottom: 80px;
-    }
-    .screen-content.active { display: block; }
-    #screen-detail { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+/* ─── SCREENS ─── */
+.screen-content { display: none; min-height: 100%; }
+.screen-content.active { display: block; }
 
-    /* ── Property cards ── */
-    .properties-grid { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
-    .prop-card {
-      background: white;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-      cursor: pointer;
-    }
-    .prop-photo {
-      width: 100%; height: 200px;
-      object-fit: cover;
-      background: #e2e8f0;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--text-light); font-size: 40px;
-    }
-    .prop-photo img { width: 100%; height: 100%; object-fit: cover; }
-    .prop-info { padding: 14px 16px; }
-    .prop-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .prop-location { font-size: 13px; color: var(--text-light); margin-bottom: 10px; display: flex; align-items: center; gap: 4px; }
-    .prop-features { display: flex; gap: 12px; margin-bottom: 12px; }
-    .prop-feat { font-size: 12px; color: var(--text-light); display: flex; align-items: center; gap: 4px; }
-    .prop-price-row { display: flex; align-items: center; justify-content: space-between; }
-    .prop-price { font-size: 18px; font-weight: 700; color: var(--primary); }
-    .prop-price span { font-size: 13px; font-weight: 400; color: var(--text-light); }
-    .btn-voir { background: var(--primary-light); color: var(--primary); border: none; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+/* ─── BOTTOM NAV ─── */
+#bottomNav {
+  display: flex;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  padding: 6px 0 max(env(safe-area-inset-bottom), 6px);
+  flex-shrink: 0;
+  z-index: 100;
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: color .2s;
+  position: relative;
+}
+.nav-item i { font-size: 20px; }
+.nav-item.active { color: var(--primary); }
+.nav-item.active i { color: var(--primary); }
+.nav-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 18px);
+  background: #ef4444;
+  color: white;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  min-width: 14px;
+  text-align: center;
+  display: none;
+}
 
-    /* ── Detail screen ── */
-    .detail-header {
-      position: sticky; top: 0; z-index: 50;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white;
-      padding: env(safe-area-inset-top, 16px) 16px 14px;
-      display: flex; align-items: center; gap: 12px;
-    }
-    .btn-back-detail {
-      width: 38px; height: 38px;
-      background: rgba(255,255,255,0.2); border: none;
-      border-radius: 10px; color: white; font-size: 16px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-    }
-    .detail-photos { width: 100%; height: 240px; background: #e2e8f0; overflow: hidden; }
-    .detail-photos img { width: 100%; height: 100%; object-fit: cover; }
-    .detail-photos .no-photo { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 60px; color: var(--text-light); }
-    .detail-body { padding: 20px 16px; }
-    .detail-name { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .detail-location { font-size: 14px; color: var(--text-light); margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
-    .detail-feats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-    .detail-feat { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--bg); border-radius: 12px; padding: 10px 16px; }
-    .detail-feat i { font-size: 18px; color: var(--primary); }
-    .detail-feat span { font-size: 12px; color: var(--text-light); }
-    .detail-feat strong { font-size: 14px; color: var(--text); }
-    .section-title { font-size: 16px; font-weight: 700; color: var(--text); margin: 20px 0 12px; }
+/* ─── PAGE HEADER ─── */
+.page-header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  padding: max(env(safe-area-inset-top),16px) 16px 14px;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.page-header .btn-back {
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,.2);
+  border: none; border-radius: 10px;
+  color: white; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
 
-    /* ── Calendrier ── */
-    .calendar-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .calendar-nav button { background: var(--bg); border: none; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 16px; }
-    .calendar-nav h4 { font-size: 15px; font-weight: 600; color: var(--text); text-transform: capitalize; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; text-align: center; }
-    .cal-day-header { font-size: 11px; color: var(--text-light); font-weight: 600; padding: 4px 0; }
-    .cal-day { height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; color: var(--text); }
-    .cal-day.empty { cursor: default; }
-    .cal-day.booked { background: #fef2f2; color: #fca5a5; text-decoration: line-through; cursor: not-allowed; }
-    .cal-day.selected-start, .cal-day.selected-end { background: var(--primary); color: white; font-weight: 700; }
-    .cal-day.in-range { background: var(--primary-light); color: var(--primary); }
-    .cal-day.today { border: 2px solid var(--primary); }
-    .cal-day.past { color: #cbd5e1; cursor: not-allowed; }
+/* ─── TOAST ─── */
+#toastMsg {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: #1e1b4b; color: white;
+  padding: 10px 20px; border-radius: 999px;
+  font-size: 14px; font-weight: 500;
+  z-index: 9999; display: none;
+  white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.2);
+}
 
-    /* ── Booking bar ── */
-    .booking-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0; right: 0;
-      background: white;
-      border-top: 1px solid var(--border);
-      padding: 12px 16px;
-      padding-bottom: max(16px, env(safe-area-inset-bottom));
-      display: flex; align-items: center; justify-content: space-between;
-      z-index: 999;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
-    }
-    .booking-bar-price { font-size: 20px; font-weight: 700; color: var(--primary); }
-    .booking-bar-price span { font-size: 13px; font-weight: 400; color: var(--text-light); }
-    .btn-book {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white; border: none; border-radius: 14px;
-      padding: 14px 28px; font-size: 16px; font-weight: 600;
-      cursor: pointer;
-    }
-    .btn-book:disabled { opacity: 0.4; cursor: not-allowed; }
+/* ═══════════════════════════════════════
+   ÉCRAN HOME — LANDING
+   ═══════════════════════════════════════ */
+#screen-home { background: var(--bg); }
 
-    /* ── Checkout screen ── */
-    .checkout-header {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white;
-      padding: env(safe-area-inset-top, 16px) 16px 14px;
-      display: flex; align-items: center; gap: 12px;
-    }
-    .checkout-body { padding: 20px 16px; padding-bottom: 120px; }
-    .checkout-summary {
-      background: var(--bg);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-    .checkout-row {
-      display: flex; justify-content: space-between;
-      font-size: 14px; color: var(--text-light);
-      margin-bottom: 8px;
-    }
-    .checkout-row.total {
-      border-top: 1px solid var(--border);
-      padding-top: 10px; margin-top: 4px;
-      font-size: 16px; font-weight: 700; color: var(--text);
-    }
-    .form-section { margin-bottom: 20px; }
-    .form-section label { font-size: 13px; font-weight: 600; color: var(--text); display: block; margin-bottom: 6px; }
-    .form-section input {
-      width: 100%; padding: 13px 14px;
-      border: 2px solid var(--border); border-radius: 12px;
-      font-size: 15px; font-family: inherit;
-      box-sizing: border-box; background: white; color: var(--text);
-    }
-    .form-section input:focus { outline: none; border-color: var(--primary); }
-    .checkout-cta {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      padding: 14px 16px env(safe-area-inset-bottom);
-      background: white;
-      border-top: 1px solid var(--border);
-    }
-    .btn-pay {
-      width: 100%; padding: 16px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white; border: none; border-radius: 14px;
-      font-size: 17px; font-weight: 700; cursor: pointer;
-    }
-    .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; }
+.home-hero {
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a855f7 100%);
+  padding: max(env(safe-area-inset-top),24px) 20px 32px;
+  position: relative;
+  overflow: hidden;
+}
+.home-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.home-hero-logo {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
+}
+.home-hero-logo-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(255,255,255,.2); display: flex; align-items: center;
+  justify-content: center; color: white; font-size: 18px; font-weight: 800;
+  font-family: 'Instrument Serif', serif;
+}
+.home-hero-logo-text {
+  font-size: 17px; font-weight: 700; color: white;
+  font-family: 'Instrument Serif', serif;
+}
+.home-hero h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px; font-weight: 400;
+  color: white; line-height: 1.25;
+  margin-bottom: 10px;
+}
+.home-hero h1 em { font-style: italic; color: #e9d5ff; }
+.home-hero p { color: rgba(255,255,255,.8); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
 
-    /* ── Confirmation ── */
-    .confirm-screen { padding: 40px 24px; text-align: center; }
-    .confirm-icon {
-      width: 80px; height: 80px;
-      background: var(--green-light);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 20px;
-    }
-    .confirm-icon i { font-size: 36px; color: var(--green); }
-    .confirm-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-    .confirm-sub { font-size: 15px; color: var(--text-light); margin-bottom: 28px; }
-    .confirm-card {
-      background: white; border-radius: 20px;
-      padding: 20px; text-align: left;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-      margin-bottom: 24px;
-    }
-    .confirm-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; }
-    .confirm-row span:first-child { color: var(--text-light); }
-    .confirm-row span:last-child { font-weight: 600; color: var(--text); }
-    .btn-confirm-home {
-      width: 100%; padding: 15px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white; border: none; border-radius: 14px;
-      font-size: 16px; font-weight: 700; cursor: pointer;
-    }
+/* Search bar */
+.home-search {
+  background: white; border-radius: var(--radius);
+  padding: 4px; display: flex; align-items: center;
+  gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,.15);
+}
+.home-search input {
+  flex: 1; border: none; outline: none;
+  font-size: 14px; color: var(--text);
+  padding: 12px 8px; background: transparent;
+  font-family: inherit;
+}
+.home-search input::placeholder { color: var(--text2); }
+.home-search-btn {
+  background: var(--primary); color: white;
+  border: none; border-radius: 12px;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; flex-shrink: 0;
+}
 
-    /* ── Mes réservations ── */
-    .my-bookings-list { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-    .booking-card {
-      background: white; border-radius: 18px;
-      padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    .booking-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .booking-card-name { font-size: 15px; font-weight: 700; color: var(--text); }
-    .booking-badge {
-      font-size: 11px; font-weight: 600;
-      padding: 3px 10px; border-radius: 20px;
-    }
-    .badge-confirmed { background: var(--green-light); color: var(--green); }
-    .badge-cancelled { background: #fef2f2; color: var(--error); }
-    .booking-dates { font-size: 13px; color: var(--text-light); margin-bottom: 6px; }
-    .booking-total { font-size: 14px; font-weight: 600; color: var(--primary); }
+/* Trust badges */
+.home-trust {
+  display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;
+}
+.home-trust-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: rgba(255,255,255,.85); font-weight: 500;
+}
+.home-trust-badge i { font-size: 12px; color: #a78bfa; }
 
-    /* ── Compte ── */
-    .account-section { padding: 24px 16px; }
-    .account-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 16px; }
-    .account-field { margin-bottom: 16px; }
-    .account-field label { font-size: 13px; color: var(--text-light); display: block; margin-bottom: 4px; }
-    .account-field input {
-      width: 100%; padding: 12px 14px;
-      border: 2px solid var(--border); border-radius: 10px;
-      font-size: 15px; font-family: inherit;
-      box-sizing: border-box; color: var(--text);
-    }
-    .btn-save-account {
-      width: 100%; padding: 14px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white; border: none; border-radius: 12px;
-      font-size: 15px; font-weight: 600; cursor: pointer;
-    }
+/* Sections */
+.home-section { padding: 20px 16px 0; }
+.home-section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px; font-weight: 400;
+  color: var(--text); margin-bottom: 4px;
+}
+.home-section-sub { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
 
-    /* ── Empty state ── */
-    .empty-state {
-      text-align: center; padding: 60px 24px;
-      color: var(--text-light);
-    }
-    .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
-    .empty-state p { font-size: 15px; }
+/* Featured cards horizontal scroll */
+.home-cards-row {
+  display: flex; gap: 12px;
+  overflow-x: auto; padding: 0 16px 16px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.home-cards-row::-webkit-scrollbar { display: none; }
 
-    /* ── Loading ── */
-    .loading-center {
-      text-align: center; padding: 60px;
-      color: var(--text-light);
-    }
-    .loading-center i { font-size: 28px; }
+.home-card {
+  flex: 0 0 240px; border-radius: var(--radius);
+  background: var(--white); overflow: hidden;
+  box-shadow: var(--shadow); scroll-snap-align: start;
+  cursor: pointer; transition: transform .2s;
+}
+.home-card:active { transform: scale(.97); }
+.home-card-img {
+  width: 100%; height: 140px; object-fit: cover;
+  background: linear-gradient(135deg, #c4b5fd, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 36px;
+}
+.home-card-body { padding: 12px; }
+.home-card-name { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 3px; }
+.home-card-loc { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.home-card-price { font-weight: 700; font-size: 15px; color: var(--primary); }
+.home-card-price span { font-weight: 400; font-size: 12px; color: var(--text2); }
+.home-card-stars { font-size: 11px; color: #f59e0b; margin-bottom: 2px; }
 
-    /* ── Toast ── */
-    .toast {
-      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-      background: #1e293b; color: white;
-      padding: 12px 20px; border-radius: 12px;
-      font-size: 14px; z-index: 999;
-      opacity: 0; transition: opacity 0.3s;
-      white-space: nowrap;
-    }
-    .toast.show { opacity: 1; }
-    /* Guest buttons filtres */
-    .guest-btn {
-      padding: 8px 16px;
-      border-radius: 20px;
-      border: 2px solid var(--border);
-      background: white;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      color: var(--text-light);
-      font-family: inherit;
-    }
-    .guest-btn.active {
-      border-color: var(--primary);
-      background: var(--primary-light);
-      color: var(--primary);
-    }
-    /* Safe area fix - header */
-    .app-header {
-      padding-top: max(env(safe-area-inset-top), 16px) !important;
-    }
-    /* Header universel pour toutes les pages */
-    .page-header {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      padding: max(env(safe-area-inset-top), 16px) 20px 16px;
-      position: fixed;
-      top: 0;
-      left: 0; right: 0;
-      z-index: 50;
-    }
-    .page-header h2 {
-      font-size: 20px;
-      font-weight: 700;
-      color: white;
-      margin: 0;
-    }
-    /* Pousse le contenu sous le header fixe — valeur safe pour iPhone avec notch */
-    .screen-with-header { padding-top: 80px; }
-  </style>
+/* Catégories */
+.home-cats { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 8px; scrollbar-width: none; }
+.home-cats::-webkit-scrollbar { display: none; }
+.home-cat {
+  flex: 0 0 auto; padding: 8px 16px;
+  border-radius: 999px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid var(--border);
+  background: white; color: var(--text2);
+  transition: all .2s; white-space: nowrap;
+}
+.home-cat.active, .home-cat:active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* Avantages */
+.home-features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 20px; }
+.home-feature {
+  background: white; border-radius: var(--radius-sm);
+  padding: 14px; display: flex; flex-direction: column; gap: 6px;
+  box-shadow: var(--shadow);
+}
+.home-feature-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--primary-light); display: flex;
+  align-items: center; justify-content: center;
+  color: var(--primary); font-size: 16px;
+}
+.home-feature-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.home-feature-desc { font-size: 11px; color: var(--text2); line-height: 1.4; }
+
+/* CTA inscription */
+.home-cta {
+  margin: 0 16px 24px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-radius: var(--radius); padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.home-cta h3 { font-family: 'Instrument Serif', serif; font-size: 18px; color: white; font-weight: 400; }
+.home-cta p { font-size: 13px; color: rgba(255,255,255,.8); }
+.home-cta-btn {
+  background: white; color: var(--primary);
+  border: none; border-radius: 10px;
+  padding: 12px 20px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  align-self: flex-start;
+}
+
+/* ═══════════════════════════════════════
+   ÉCRAN LOGEMENTS (style Booking)
+   ═══════════════════════════════════════ */
+#screen-home-list { background: var(--bg); }
+
+.listings-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  padding: max(env(safe-area-inset-top),16px) 16px 16px;
+}
+.listings-search {
+  background: white; border-radius: var(--radius-sm);
+  display: flex; align-items: center; gap: 8px; padding: 4px 12px;
+}
+.listings-search i { color: var(--text2); font-size: 16px; }
+.listings-search input {
+  flex: 1; border: none; outline: none;
+  font-size: 14px; padding: 10px 0;
+  background: transparent; font-family: inherit;
+}
+
+.listings-filters {
+  display: flex; gap: 8px; padding: 12px 16px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.listings-filters::-webkit-scrollbar { display: none; }
+.filter-chip {
+  flex: 0 0 auto; padding: 6px 14px;
+  border-radius: 999px; font-size: 12px; font-weight: 600;
+  border: 1.5px solid var(--border); background: white;
+  color: var(--text2); cursor: pointer; white-space: nowrap;
+}
+.filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+#propertiesList { padding: 0 16px 80px; }
+
+/* Property card — style Booking */
+.prop-card {
+  background: white; border-radius: var(--radius);
+  margin-bottom: 16px; overflow: hidden;
+  box-shadow: var(--shadow); cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
+  border: 1px solid var(--border);
+}
+.prop-card:active { transform: scale(.99); box-shadow: var(--shadow-lg); }
+.prop-card-img {
+  width: 100%; height: 200px; object-fit: cover;
+  background: linear-gradient(135deg, #c4b5fd 0%, #7c3aed 100%);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 48px; position: relative;
+}
+.prop-card-badge {
+  position: absolute; top: 10px; left: 10px;
+  background: var(--primary); color: white;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px;
+}
+.prop-card-wishlist {
+  position: absolute; top: 10px; right: 10px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.9); border: none;
+  color: #9ca3af; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.prop-card-body { padding: 14px; }
+.prop-card-stars { color: #f59e0b; font-size: 12px; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
+.prop-card-stars span { color: var(--text2); font-size: 11px; }
+.prop-card-name { font-weight: 700; font-size: 16px; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
+.prop-card-loc { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+.prop-card-features { display: flex; gap: 12px; margin-bottom: 12px; }
+.prop-card-feat { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+.prop-card-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 10px; }
+.prop-card-price-main { font-size: 20px; font-weight: 800; color: var(--primary); }
+.prop-card-price-night { font-size: 12px; color: var(--text2); }
+.prop-card-btn {
+  background: var(--primary); color: white;
+  border: none; border-radius: var(--radius-sm);
+  padding: 10px 18px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+
+/* ═══════════════════════════════════════
+   ÉCRAN AUTH (Login / Register)
+   ═══════════════════════════════════════ */
+#screen-login { background: var(--bg); }
+
+.auth-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  padding: max(env(safe-area-inset-top),40px) 24px 40px;
+  text-align: center;
+}
+.auth-header-logo {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Instrument Serif', serif;
+  font-size: 24px; font-weight: 400; color: white;
+  margin: 0 auto 12px;
+}
+.auth-header h2 { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: white; }
+.auth-header p { font-size: 13px; color: rgba(255,255,255,.8); margin-top: 4px; }
+
+.auth-card {
+  background: white; border-radius: 24px 24px 0 0;
+  padding: 24px 20px 32px; margin-top: -20px;
+  min-height: calc(100dvh - 180px);
+}
+
+.auth-tabs {
+  display: flex; gap: 4px; background: var(--bg2);
+  border-radius: 12px; padding: 4px; margin-bottom: 24px;
+}
+.auth-tab {
+  flex: 1; padding: 10px; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all .2s;
+  background: transparent; color: var(--text2);
+}
+.auth-tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+.auth-field { margin-bottom: 16px; }
+.auth-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.auth-field input {
+  width: 100%; padding: 13px 14px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  font-size: 16px; font-family: inherit; outline: none;
+  background: white; color: var(--text);
+  transition: border-color .2s;
+}
+.auth-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+
+.auth-hint { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+.auth-err {
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 10px; padding: 10px 14px;
+  font-size: 13px; color: #ef4444;
+  margin-bottom: 14px; display: none;
+}
+
+.auth-btn {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: none; border-radius: 14px;
+  font-size: 16px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: opacity .2s;
+}
+.auth-btn:disabled { opacity: .6; }
+
+.auth-forgot {
+  background: none; border: none; color: var(--primary);
+  font-size: 13px; cursor: pointer; font-family: inherit;
+  text-decoration: underline; display: block;
+  margin: 8px 0 16px; padding: 0;
+}
+
+.auth-security {
+  text-align: center; font-size: 12px; color: var(--text2);
+  margin-top: 20px; display: flex; align-items: center;
+  justify-content: center; gap: 5px;
+}
+.auth-security i { color: #10b981; }
+
+/* ═══════════════════════════════════════
+   AUTRES ÉCRANS (Réservations, Messages, Compte, Chat, Détail)
+   ═══════════════════════════════════════ */
+
+/* Réservations */
+#screen-bookings { background: var(--bg); }
+#myBookingsList { padding: 12px 16px 80px; }
+
+.loading-center {
+  text-align: center; padding: 60px 20px;
+  color: var(--text2); font-size: 14px;
+}
+.loading-center i { font-size: 28px; display: block; margin-bottom: 8px; }
+
+/* Messages */
+#screen-messages { background: var(--bg); }
+#guestConvList { padding: 12px 16px 80px; }
+
+/* Chat */
+#screen-chat {
+  display: none; flex-direction: column;
+  height: 100dvh; background: var(--bg);
+}
+#screen-chat.active { display: flex; }
+#guestChatMessages {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 12px 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.chat-input-wrap {
+  padding: 10px 12px max(env(safe-area-inset-bottom),10px);
+  background: white; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: flex-end;
+}
+.chat-input-wrap textarea {
+  flex: 1; border: 1.5px solid var(--border); border-radius: 16px;
+  padding: 10px 14px; font-size: 15px; font-family: inherit;
+  resize: none; max-height: 100px; min-height: 42px;
+  outline: none; background: white;
+}
+.chat-input-wrap textarea:focus { border-color: var(--primary); }
+.chat-send-btn {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: #10b981; border: none; color: white;
+  font-size: 18px; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; flex-shrink: 0;
+}
+
+/* Compte */
+#screen-account { background: var(--bg); }
+.account-wrap { padding: 16px 16px 80px; }
+.account-card {
+  background: white; border-radius: var(--radius);
+  padding: 16px; margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+.account-card-title {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.account-card-title i { color: var(--primary); }
+.account-field { margin-bottom: 14px; }
+.account-field label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+.account-field input {
+  width: 100%; padding: 11px 13px;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 15px; font-family: inherit; outline: none;
+}
+.account-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+.btn-save-account {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+
+/* Détail logement */
+#screen-detail { background: var(--bg); }
+.detail-wrap { padding-bottom: 100px; }
+.detail-img {
+  width: 100%; height: 260px; object-fit: cover;
+  background: linear-gradient(135deg, #c4b5fd, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 64px;
+}
+.detail-body { padding: 20px 16px; }
+.detail-name { font-family: 'Instrument Serif', serif; font-size: 24px; color: var(--text); margin-bottom: 4px; }
+.detail-loc { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 5px; margin-bottom: 12px; }
+.detail-stars { color: #f59e0b; margin-bottom: 16px; font-size: 13px; display: flex; align-items: center; gap: 5px; }
+.detail-features { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.detail-feat { background: var(--bg2); border-radius: 999px; padding: 6px 12px; font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 5px; }
+.detail-desc { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 20px; }
+.detail-section-title { font-weight: 700; font-size: 15px; color: var(--text); margin-bottom: 10px; }
+.detail-amenities { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.detail-amenity { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+.detail-amenity i { color: var(--primary); font-size: 14px; }
+
+/* Booking bar */
+#bookingBar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: white; border-top: 1px solid var(--border);
+  padding: 12px 16px max(env(safe-area-inset-bottom),12px);
+  display: none; align-items: center; gap: 12px;
+  z-index: 200;
+}
+.booking-bar-price { font-size: 20px; font-weight: 800; color: var(--primary); }
+.booking-bar-night { font-size: 12px; color: var(--text2); }
+.booking-bar-btn {
+  flex: 1; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: none; border-radius: 12px;
+  font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+
+/* ─── Checkout / Confirm ─── */
+#screen-checkout, #screen-confirm { background: var(--bg); }
+.checkout-wrap, .confirm-wrap { padding: 16px 16px 80px; }
+
+/* ─── Responsive ─── */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea { font-size: 16px !important; }
+}
+</style>
 </head>
-<body style="background: var(--bg); height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
+<body>
 
-<!-- ═══════════════════════════════════════════════
-     APP SHELL
-═══════════════════════════════════════════════ -->
-<div id="appShell" style="display:flex; flex-direction:column; height:100vh; overflow:hidden;">
+<div id="appShell">
+  <!-- SCROLL ZONE -->
+  <div id="mainScroll">
 
-  <!-- Header dynamique -->
-  <div id="appHeader" class="app-header">
-    <div class="logo-row">
-      <div class="logo-icon">B</div>
-      <div class="logo-label">Boostinghost Guest</div>
-    </div>
-    <div class="search-bar" onclick="openSearch()">
-      <i class="fas fa-search"></i>
-      <span id="searchLabel">Dates, voyageurs...</span>
-    </div>
-  </div>
-
-  <!-- Conteneur screens -->
-  <div style="flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;" id="mainScroll">
-
-    <!-- ─── ÉCRAN 1 : Accueil ─── -->
+    <!-- ═══ ÉCRAN ACCUEIL (landing) ═══ -->
     <div id="screen-home" class="screen-content active">
-      <div class="properties-grid" id="propertiesGrid">
-        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
+      <div class="home-hero">
+        <div class="home-hero-logo">
+          <div class="home-hero-logo-icon">B</div>
+          <span class="home-hero-logo-text">Boostinghost Guest</span>
+        </div>
+        <h1>Séjournez <em>différemment</em>,<br>sans tracas</h1>
+        <p>Réservez, payez, communiquez avec votre hôte — tout depuis une seule app.</p>
+        <div class="home-search">
+          <i class="fas fa-search" style="color:#9ca3af;margin-left:8px;"></i>
+          <input type="text" id="homeSearchInput" placeholder="Destination, dates..." readonly onclick="navTo('home-list')">
+          <button class="home-search-btn" onclick="navTo('home-list')"><i class="fas fa-arrow-right"></i></button>
+        </div>
+        <div class="home-trust">
+          <div class="home-trust-badge"><i class="fas fa-shield-check"></i> Paiement sécurisé</div>
+          <div class="home-trust-badge"><i class="fas fa-headset"></i> Support 24/7</div>
+          <div class="home-trust-badge"><i class="fas fa-star"></i> Logements vérifiés</div>
+        </div>
+      </div>
+
+      <!-- Catégories -->
+      <div style="padding:16px 0 0;">
+        <div class="home-cats" id="homeCats">
+          <div class="home-cat active" onclick="filterCat(this,'')">Tous</div>
+          <div class="home-cat" onclick="filterCat(this,'appartement')">🏠 Appartements</div>
+          <div class="home-cat" onclick="filterCat(this,'studio')">🛏️ Studios</div>
+          <div class="home-cat" onclick="filterCat(this,'maison')">🏡 Maisons</div>
+        </div>
+      </div>
+
+      <!-- Logements en vedette -->
+      <div class="home-section">
+        <div class="home-section-title">À la une</div>
+        <div class="home-section-sub">Logements disponibles près de vous</div>
+      </div>
+      <div class="home-cards-row" id="homeFeatured">
+        <div class="home-card" style="display:flex;align-items:center;justify-content:center;height:200px;color:#9ca3af;font-size:13px;">
+          <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
+        </div>
+      </div>
+
+      <!-- Avantages -->
+      <div class="home-section">
+        <div class="home-section-title">Pourquoi BHGuest ?</div>
+        <div class="home-section-sub">Une expérience pensée pour les voyageurs</div>
+      </div>
+      <div class="home-features">
+        <div class="home-feature">
+          <div class="home-feature-icon"><i class="fas fa-bolt"></i></div>
+          <div class="home-feature-title">Réservation express</div>
+          <div class="home-feature-desc">Confirmez en quelques secondes, sans attente.</div>
+        </div>
+        <div class="home-feature">
+          <div class="home-feature-icon"><i class="fas fa-comment-dots"></i></div>
+          <div class="home-feature-title">Chat en direct</div>
+          <div class="home-feature-desc">Communiquez avec votre hôte à tout moment.</div>
+        </div>
+        <div class="home-feature">
+          <div class="home-feature-icon"><i class="fas fa-book-open"></i></div>
+          <div class="home-feature-title">Livret d'accueil</div>
+          <div class="home-feature-desc">Codes, WiFi, adresse — tout en un clic.</div>
+        </div>
+        <div class="home-feature">
+          <div class="home-feature-icon"><i class="fas fa-shield-check"></i></div>
+          <div class="home-feature-title">Paiement sécurisé</div>
+          <div class="home-feature-desc">Stripe, caution digitale, aucun stress.</div>
+        </div>
+      </div>
+
+      <!-- CTA inscription -->
+      <div class="home-cta" id="homeCta">
+        <h3>Créez votre compte gratuitement</h3>
+        <p>Gérez tous vos séjours depuis un seul endroit.</p>
+        <button class="home-cta-btn" onclick="navTo('login')">
+          <i class="fas fa-user-plus" style="margin-right:6px;"></i>S'inscrire
+        </button>
       </div>
     </div>
 
-    <!-- ─── ÉCRAN 2 : Détail logement ─── -->
+    <!-- ═══ ÉCRAN LISTE LOGEMENTS ═══ -->
+    <div id="screen-home-list" class="screen-content">
+      <div class="listings-header">
+        <div class="listings-search">
+          <i class="fas fa-search"></i>
+          <input type="text" id="listSearchInput" placeholder="Dates, logement..." oninput="filterProperties()">
+        </div>
+      </div>
+      <div class="listings-filters">
+        <div class="filter-chip active" onclick="setFilter(this,'')">Tous</div>
+        <div class="filter-chip" onclick="setFilter(this,'appartement')">Appartements</div>
+        <div class="filter-chip" onclick="setFilter(this,'studio')">Studios</div>
+        <div class="filter-chip" onclick="setFilter(this,'maison')">Maisons</div>
+        <div class="filter-chip" onclick="setFilter(this,'prix-asc')">Prix ↑</div>
+        <div class="filter-chip" onclick="setFilter(this,'prix-desc')">Prix ↓</div>
+      </div>
+      <div id="propertiesList">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN DÉTAIL LOGEMENT ═══ -->
     <div id="screen-detail" class="screen-content">
-      <div class="detail-header" id="detailHeader">
-        <button class="btn-back-detail" onclick="showScreen('home')">
-          <i class="fas fa-arrow-left"></i>
-        </button>
-        <div style="font-size:16px; font-weight:600;" id="detailHeaderName">Logement</div>
+      <div class="page-header" id="detailHeader">
+        <button class="btn-back" onclick="navTo('home-list')"><i class="fas fa-arrow-left"></i></button>
+        <span id="detailHeaderName">Logement</span>
       </div>
-      <div id="detailBody"></div>
-      <div class="booking-bar" id="bookingBar" style="display:none;">
-        <div>
-          <div class="booking-bar-price" id="barPrice">--€ <span>/ nuit</span></div>
-          <div style="font-size:12px; color:var(--text-light);" id="barDates">Sélectionnez des dates</div>
-        </div>
-        <button class="btn-book" id="btnBook" disabled onclick="goToCheckout()">Réserver</button>
-      </div>
+      <div class="detail-wrap" id="detailContent"></div>
     </div>
 
-    <!-- ─── ÉCRAN 3 : Checkout ─── -->
+    <!-- ═══ ÉCRAN CHECKOUT ═══ -->
     <div id="screen-checkout" class="screen-content">
-      <div class="checkout-header">
-        <button class="btn-back-detail" onclick="showScreen('detail')">
-          <i class="fas fa-arrow-left"></i>
-        </button>
-        <div style="font-size:16px; font-weight:600;">Finaliser la réservation</div>
+      <div class="page-header">
+        <button class="btn-back" onclick="navTo('detail')"><i class="fas fa-arrow-left"></i></button>
+        <span>Réserver</span>
       </div>
-      <div class="checkout-body" id="checkoutBody"></div>
-      <div class="checkout-cta">
-        <button class="btn-pay" id="btnPay" onclick="submitBooking()">
-          <i class="fas fa-lock"></i> Payer
-        </button>
-      </div>
+      <div class="checkout-wrap" id="checkoutContent"></div>
     </div>
 
-    <!-- ─── ÉCRAN 4 : Confirmation ─── -->
+    <!-- ═══ ÉCRAN CONFIRMATION ═══ -->
     <div id="screen-confirm" class="screen-content">
-      <div class="confirm-screen" id="confirmBody"></div>
+      <div class="confirm-wrap" id="confirmContent"></div>
     </div>
 
-    <!-- ─── ÉCRAN LOGIN ─── -->
-    <div id="screen-login" class="screen-content screen-with-header">
-      <div class="page-header"><h2>Connexion</h2></div>
-      <div style="padding:20px; padding-top: calc(62px + 20px);">
-
-        <!-- Toggle Magic Link / Mot de passe -->
-        <div style="display:flex;gap:8px;margin-bottom:24px;background:#f1f5f9;border-radius:14px;padding:4px;">
-          <button id="toggleMagic" onclick="switchAuthMode('magic')"
-            style="flex:1;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:white;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,0.08);transition:all 0.2s;">
-            <i class="fas fa-magic"></i> Lien magique
-          </button>
-          <button id="togglePassword" onclick="switchAuthMode('password')"
-            style="flex:1;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-light);transition:all 0.2s;">
-            <i class="fas fa-lock"></i> Mot de passe
-          </button>
+    <!-- ═══ ÉCRAN AUTH ═══ -->
+    <div id="screen-login" class="screen-content">
+      <div class="auth-header">
+        <div class="auth-header-logo">B</div>
+        <h2>Bienvenue</h2>
+        <p>Connectez-vous ou créez votre compte</p>
+      </div>
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="subToggleLogin" onclick="switchSubMode('login')">Se connecter</button>
+          <button class="auth-tab" id="subToggleRegister" onclick="switchSubMode('register')">Créer un compte</button>
         </div>
 
-        <!-- MODE MAGIC LINK -->
-        <div id="authModeMagic">
-          <p style="font-size:14px;color:var(--text-light);margin-bottom:20px;line-height:1.5;">
-            Entrez votre email pour recevoir un lien de connexion instantané.
-          </p>
-          <div id="loginForm">
-            <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Votre email</label>
-            <input type="email" id="loginEmail" placeholder="votre@email.com"
-              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:14px;box-sizing:border-box;">
-            <button onclick="requestMagicLink()" id="btnMagicLink"
-              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
-              <i class="fas fa-paper-plane"></i> Recevoir mon lien
-            </button>
-          </div>
-          <div id="loginSent" style="display:none;text-align:center;padding:20px 0;">
-            <div style="width:64px;height:64px;background:var(--primary-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-              <i class="fas fa-envelope" style="font-size:28px;color:var(--primary);"></i>
-            </div>
-            <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">Email envoyé !</div>
-            <div style="font-size:14px;color:var(--text-light);line-height:1.6;">Vérifiez votre boîte mail et cliquez sur le lien.<br>Valable 15 minutes.</div>
-            <button onclick="document.getElementById('loginSent').style.display='none';document.getElementById('loginForm').style.display='block';"
-              style="margin-top:20px;background:none;border:none;color:var(--primary);font-size:14px;cursor:pointer;text-decoration:underline;">
-              Renvoyer un lien
-            </button>
-          </div>
-        </div>
-
-        <!-- MODE MOT DE PASSE -->
-        <div id="authModePassword" style="display:none;">
-
-          <!-- Sous-toggle Login / Inscription -->
-          <div style="display:flex;gap:8px;margin-bottom:20px;">
-            <button id="subToggleLogin" onclick="switchSubMode('login')"
-              style="flex:1;padding:9px;border:2px solid var(--primary);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;background:var(--primary);color:white;transition:all 0.2s;">
-              Se connecter
-            </button>
-            <button id="subToggleRegister" onclick="switchSubMode('register')"
-              style="flex:1;padding:9px;border:2px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:white;color:var(--text-light);transition:all 0.2s;">
-              Créer un compte
-            </button>
-          </div>
-
-          <!-- Formulaire Login -->
-          <div id="pwdLoginForm">
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Email</label>
-            <input type="email" id="pwdEmail" placeholder="votre@email.com"
-              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Mot de passe</label>
-            <input type="password" id="pwdPassword" placeholder="••••••••"
-              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:6px;box-sizing:border-box;"
-              onkeydown="if(event.key==='Enter')loginWithPassword()">
-            <button onclick="forgotPassword()"
-              style="background:none;border:none;color:var(--primary);font-size:13px;cursor:pointer;text-decoration:underline;margin-bottom:16px;padding:0;">
-              Mot de passe oublié ?
-            </button>
-            <div id="pwdLoginError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:13px;color:#ef4444;margin-bottom:12px;"></div>
-            <button onclick="loginWithPassword()" id="btnPwdLogin"
-              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
-              <i class="fas fa-sign-in-alt"></i> Se connecter
-            </button>
-          </div>
-
-          <!-- Formulaire Inscription -->
-          <div id="pwdRegisterForm" style="display:none;">
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Prénom et nom</label>
-            <input type="text" id="regName" placeholder="Jean Dupont"
-              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Email</label>
-            <input type="email" id="regEmail" placeholder="votre@email.com"
-              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Mot de passe</label>
-            <input type="password" id="regPassword" placeholder="6 caractères minimum"
-              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Confirmer le mot de passe</label>
-            <input type="password" id="regPasswordConfirm" placeholder="••••••••"
-              style="width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:12px;font-size:16px;margin-bottom:6px;box-sizing:border-box;"
-              onkeydown="if(event.key==='Enter')registerWithPassword()">
-            <div id="pwdRegisterError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:13px;color:#ef4444;margin-bottom:12px;"></div>
-            <button onclick="registerWithPassword()" id="btnPwdRegister"
-              style="width:100%;padding:15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">
-              <i class="fas fa-user-plus"></i> Créer mon compte
-            </button>
-          </div>
-
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ─── ÉCRAN 5 : Mes réservations ─── -->
-    <div id="screen-bookings" class="screen-content screen-with-header">
-      <div class="page-header">
-        <h2>Mes réservations</h2>
-      </div>
-      <div class="my-bookings-list" id="myBookingsList">
-        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
-      </div>
-    </div>
-
-    <!-- ─── ÉCRAN 6 : Compte ─── -->
-    <div id="screen-account" class="screen-content screen-with-header">
-      <div class="page-header">
-        <h2>Mon compte</h2>
-      </div>
-      <div class="account-section">
-        <div class="account-card">
-          <div class="account-field">
-            <label>Prénom et nom</label>
-            <input type="text" id="accountName" placeholder="Votre nom complet">
-          </div>
-          <div class="account-field">
+        <!-- Login -->
+        <div id="pwdLoginForm">
+          <div class="auth-field">
             <label>Email</label>
-            <input type="email" id="accountEmail" placeholder="votre@email.com">
+            <input type="email" id="pwdEmail" placeholder="votre@email.com">
           </div>
-          <div class="account-field" style="margin-bottom:0;">
-            <label>Téléphone</label>
-            <input type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00">
+          <div class="auth-field">
+            <label>Mot de passe</label>
+            <input type="password" id="pwdPassword" placeholder="••••••••"
+              onkeydown="if(event.key==='Enter')loginWithPassword()">
           </div>
+          <button class="auth-forgot" onclick="forgotPassword()">Mot de passe oublié ?</button>
+          <div class="auth-err" id="pwdLoginError"></div>
+          <button class="auth-btn" id="btnPwdLogin" onclick="loginWithPassword()">
+            <i class="fas fa-sign-in-alt" style="margin-right:6px;"></i>Se connecter
+          </button>
         </div>
-        <button class="btn-save-account" onclick="saveAccount()">Sauvegarder</button>
+
+        <!-- Register -->
+        <div id="pwdRegisterForm" style="display:none;">
+          <div class="auth-field">
+            <label>Prénom et nom</label>
+            <input type="text" id="regName" placeholder="Jean Dupont">
+          </div>
+          <div class="auth-field">
+            <label>Email</label>
+            <input type="email" id="regEmail" placeholder="votre@email.com">
+          </div>
+          <div class="auth-field">
+            <label>Mot de passe</label>
+            <input type="password" id="regPassword" placeholder="8 caractères min. + 1 spécial">
+            <div class="auth-hint">Ex : MonPass@2024 — min. 8 caractères, 1 caractère spécial (!@#$...)</div>
+          </div>
+          <div class="auth-field">
+            <label>Confirmer le mot de passe</label>
+            <input type="password" id="regPasswordConfirm" placeholder="••••••••"
+              onkeydown="if(event.key==='Enter')registerWithPassword()">
+          </div>
+          <div class="auth-err" id="pwdRegisterError"></div>
+          <button class="auth-btn" id="btnPwdRegister" onclick="registerWithPassword()">
+            <i class="fas fa-user-plus" style="margin-right:6px;"></i>Créer mon compte
+          </button>
+        </div>
+
+        <div class="auth-security">
+          <i class="fas fa-lock"></i>
+          Connexion chiffrée — vos données sont protégées
+        </div>
       </div>
     </div>
 
-    <!-- ─── ÉCRAN 7 : Messages ─── -->
-    <div id="screen-messages" class="screen-content screen-with-header">
-      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
-        <h2>Messages</h2>
+    <!-- ═══ ÉCRAN RÉSERVATIONS ═══ -->
+    <div id="screen-bookings" class="screen-content">
+      <div class="page-header" style="position:sticky;top:0;z-index:10;">
+        <i class="fas fa-calendar-check" style="font-size:18px;opacity:.8;"></i>
+        Mes réservations
       </div>
-      <div id="guestConvList" style="padding:12px 16px 80px;">
-        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>
+      <div id="myBookingsList">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>
       </div>
     </div>
 
-    <!-- ─── ÉCRAN 8 : Chat individuel ─── -->
-    <div id="screen-chat" class="screen-content" style="display:none;flex-direction:column;height:100dvh;">
-      <div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;padding:max(env(safe-area-inset-top),16px) 16px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
-        <button onclick="navTo('messages')" style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.2);border:none;color:white;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-          <i class="fas fa-arrow-left"></i>
-        </button>
+    <!-- ═══ ÉCRAN MESSAGES ═══ -->
+    <div id="screen-messages" class="screen-content">
+      <div class="page-header" style="position:sticky;top:0;z-index:10;">
+        <i class="fas fa-comment-dots" style="font-size:18px;opacity:.8;"></i>
+        Messages
+      </div>
+      <div id="guestConvList">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN CHAT ═══ -->
+    <div id="screen-chat" class="screen-content">
+      <div class="page-header">
+        <button class="btn-back" onclick="navTo('messages')"><i class="fas fa-arrow-left"></i></button>
         <div style="flex:1;min-width:0;">
-          <div id="chatGuestPropName" style="font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Logement</div>
-          <div id="chatGuestDates" style="font-size:12px;opacity:0.85;margin-top:1px;"></div>
+          <div id="chatGuestPropName" style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Logement</div>
+          <div id="chatGuestDates" style="font-size:11px;opacity:.85;"></div>
         </div>
       </div>
-      <div id="guestChatMessages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;display:flex;flex-direction:column;gap:10px;background:#f8f9fb;"></div>
-      <div style="padding:10px 12px max(env(safe-area-inset-bottom),10px);background:white;border-top:1px solid #e2e8f0;display:flex;gap:8px;align-items:flex-end;flex-shrink:0;">
+      <div id="guestChatMessages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;background:var(--bg);"></div>
+      <div class="chat-input-wrap">
         <textarea id="guestChatInput" placeholder="Votre message..." rows="1"
-          style="flex:1;border:2px solid #e2e8f0;border-radius:16px;padding:10px 14px;font-size:15px;font-family:inherit;resize:none;max-height:100px;min-height:42px;box-sizing:border-box;"
           oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGuestMessage();}"></textarea>
-        <button onclick="sendGuestMessage()" style="width:44px;height:44px;border-radius:12px;background:#10b981;border:none;color:white;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-          <i class="fas fa-paper-plane"></i>
-        </button>
+        <button class="chat-send-btn" onclick="sendGuestMessage()"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN COMPTE ═══ -->
+    <div id="screen-account" class="screen-content">
+      <div class="page-header" style="position:sticky;top:0;z-index:10;">
+        <i class="fas fa-user" style="font-size:18px;opacity:.8;"></i>
+        Mon compte
+      </div>
+      <div class="account-wrap">
+        <div class="account-card">
+          <div class="account-card-title"><i class="fas fa-user-circle"></i> Profil</div>
+          <div class="account-field"><label>Nom complet</label><input type="text" id="accountName" placeholder="Votre nom"></div>
+          <div class="account-field"><label>Email</label><input type="email" id="accountEmail" placeholder="votre@email.com" readonly style="opacity:.6;"></div>
+          <div class="account-field"><label>Téléphone</label><input type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00"></div>
+          <button class="btn-save-account" onclick="saveAccount()">Sauvegarder</button>
+        </div>
+
+        <div class="account-card" id="pwdSection" style="display:none;">
+          <div class="account-card-title"><i class="fas fa-lock"></i> Changer le mot de passe</div>
+          <div class="account-field"><label>Nouveau mot de passe</label><input type="password" id="newPassword" placeholder="8 car. min. + 1 spécial"></div>
+          <div class="account-field"><label>Confirmer</label><input type="password" id="newPasswordConfirm" placeholder="••••••••"></div>
+          <div id="pwdChangeError" class="auth-err"></div>
+          <button onclick="changePassword()" id="btnChangePwd"
+            style="width:100%;padding:12px;background:var(--primary-light);color:var(--primary);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+            <i class="fas fa-key" style="margin-right:6px;"></i>Mettre à jour
+          </button>
+        </div>
+
+        <div id="logoutSection"></div>
       </div>
     </div>
 
   </div><!-- /mainScroll -->
 
-  <!-- Bottom nav (masquée sur detail/checkout/confirm) -->
-  <nav class="bottom-nav" id="bottomNav">
+  <!-- BOTTOM NAV -->
+  <nav id="bottomNav">
     <button class="nav-item active" id="nav-home" onclick="navTo('home')">
       <i class="fas fa-home"></i>
       <span>Accueil</span>
@@ -658,57 +849,29 @@
       <i class="fas fa-calendar-check"></i>
       <span>Réservations</span>
     </button>
-    <button class="nav-item" id="nav-messages" onclick="navTo('messages')">
+    <button class="nav-item" id="nav-messages" onclick="navTo('messages')" style="position:relative;">
       <i class="fas fa-comment-dots"></i>
       <span>Messages</span>
-      <span id="navMsgsBadge" style="display:none;position:absolute;top:6px;background:#ef4444;color:white;border-radius:999px;font-size:9px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center;"></span>
+      <span class="nav-badge" id="navMsgsBadge"></span>
     </button>
     <button class="nav-item" id="nav-account" onclick="navTo('account')">
       <i class="fas fa-user"></i>
-      <span id="navAccountLabel">Compte</span>
+      <span>Compte</span>
     </button>
   </nav>
-
-</div><!-- /appShell -->
-
-<!-- ─── Modal recherche ─── -->
-<div class="search-modal" id="searchModal" onclick="closeSearchOnBg(event)">
-  <div class="search-sheet">
-    <h3>Rechercher un logement</h3>
-    <div class="search-row dates-row">
-      <div>
-        <label>Arrivée</label>
-        <input type="date" id="searchCheckin" onchange="updateSearchLabel()">
-      </div>
-      <div>
-        <label>Départ</label>
-        <input type="date" id="searchCheckout" onchange="updateSearchLabel()">
-      </div>
-    </div>
-    <div class="search-row">
-      <label>Ville</label>
-      <input type="text" id="searchCity" placeholder="Paris, Lyon, Bordeaux..." oninput="updateSearchLabel()">
-    </div>
-    <div class="search-row">
-      <label>Voyageurs</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="guestBtns">
-        <button type="button" class="guest-btn active" data-val="" onclick="selectGuests(this,'')">Tous</button>
-        <button type="button" class="guest-btn" data-val="1" onclick="selectGuests(this,'1')">1</button>
-        <button type="button" class="guest-btn" data-val="2" onclick="selectGuests(this,'2')">2</button>
-        <button type="button" class="guest-btn" data-val="3" onclick="selectGuests(this,'3')">3</button>
-        <button type="button" class="guest-btn" data-val="4" onclick="selectGuests(this,'4')">4</button>
-        <button type="button" class="guest-btn" data-val="6" onclick="selectGuests(this,'6')">6+</button>
-        <button type="button" class="guest-btn" data-val="8" onclick="selectGuests(this,'8')">8+</button>
-      </div>
-    </div>
-    <button class="btn-search-apply" onclick="applySearch()">
-      <i class="fas fa-search"></i> Rechercher
-    </button>
-  </div>
 </div>
 
-<!-- Toast -->
-<div class="toast" id="toast"></div>
+<!-- BOOKING BAR (detail) -->
+<div id="bookingBar">
+  <div>
+    <div class="booking-bar-price" id="bookingBarPrice">—</div>
+    <div class="booking-bar-night">/ nuit</div>
+  </div>
+  <button class="booking-bar-btn" onclick="goToCheckout()">Réserver</button>
+</div>
+
+<!-- TOAST -->
+<div id="toastMsg"></div>
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="js/push-notifications-guest.js"></script>
