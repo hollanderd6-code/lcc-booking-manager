@@ -113,22 +113,7 @@ async function requestMagicLink() {
   }
 }
 
-// ── Auth Mode Switchers ──────────────────────────────────────
-function switchAuthMode(mode) {
-  const magic = document.getElementById('authModeMagic');
-  const pwd = document.getElementById('authModePassword');
-  const btnMagic = document.getElementById('toggleMagic');
-  const btnPwd = document.getElementById('togglePassword');
-  if (mode === 'magic') {
-    magic.style.display = ''; pwd.style.display = 'none';
-    btnMagic.style.background = 'white'; btnMagic.style.color = 'var(--primary)'; btnMagic.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)';
-    btnPwd.style.background = 'transparent'; btnPwd.style.color = 'var(--text-light)'; btnPwd.style.boxShadow = 'none';
-  } else {
-    magic.style.display = 'none'; pwd.style.display = '';
-    btnPwd.style.background = 'white'; btnPwd.style.color = 'var(--primary)'; btnPwd.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)';
-    btnMagic.style.background = 'transparent'; btnMagic.style.color = 'var(--text-light)'; btnMagic.style.boxShadow = 'none';
-  }
-}
+// Magic link supprimé — auth par mot de passe uniquement
 
 function switchSubMode(mode) {
   const loginForm = document.getElementById('pwdLoginForm');
@@ -137,12 +122,10 @@ function switchSubMode(mode) {
   const btnRegister = document.getElementById('subToggleRegister');
   if (mode === 'login') {
     loginForm.style.display = ''; registerForm.style.display = 'none';
-    btnLogin.style.background = 'var(--primary)'; btnLogin.style.color = 'white'; btnLogin.style.borderColor = 'var(--primary)';
-    btnRegister.style.background = 'white'; btnRegister.style.color = 'var(--text-light)'; btnRegister.style.borderColor = 'var(--border)';
+    btnLogin.classList.add('active'); btnRegister.classList.remove('active');
   } else {
     loginForm.style.display = 'none'; registerForm.style.display = '';
-    btnRegister.style.background = 'var(--primary)'; btnRegister.style.color = 'white'; btnRegister.style.borderColor = 'var(--primary)';
-    btnLogin.style.background = 'white'; btnLogin.style.color = 'var(--text-light)'; btnLogin.style.borderColor = 'var(--border)';
+    btnRegister.classList.add('active'); btnLogin.classList.remove('active');
   }
 }
 
@@ -184,7 +167,8 @@ async function registerWithPassword() {
   const errBox = document.getElementById('pwdRegisterError');
   errBox.style.display = 'none';
   if (!email || !password) { errBox.textContent = 'Email et mot de passe requis'; errBox.style.display = 'block'; return; }
-  if (password.length < 6) { errBox.textContent = 'Mot de passe trop court (6 caractères minimum)'; errBox.style.display = 'block'; return; }
+  if (password.length < 8) { errBox.textContent = 'Mot de passe trop court (8 caractères minimum)'; errBox.style.display = 'block'; return; }
+  if (!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]/.test(password)) { errBox.textContent = 'Le mot de passe doit contenir au moins 1 caractère spécial (!@#$%...)'; errBox.style.display = 'block'; return; }
   if (password !== confirm) { errBox.textContent = 'Les mots de passe ne correspondent pas'; errBox.style.display = 'block'; return; }
   const btn = document.getElementById('btnPwdRegister');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
@@ -252,12 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   state.session = getSession();
   updateNavAccount();
 
-  // Vérifier si un magic_token est dans l'URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const magicToken = urlParams.get('magic_token');
-  if (magicToken) {
-    await verifyMagicToken(magicToken);
-  }
+  // Magic link supprimé — auth par mot de passe uniquement
 
   // Charger les champs compte
   if (state.session) {
@@ -378,19 +357,9 @@ async function handleStripeReturn(params) {
 function showScreen(name) {
   document.querySelectorAll('.screen-content').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + name)?.classList.add('active');
-
-  // Header et nav selon l'écran
-  const headerScreens = ['home'];
-  const navScreens = ['home', 'bookings', 'account', 'login'];
-  document.getElementById('appHeader').style.display = headerScreens.includes(name) ? 'block' : 'none';
-  document.getElementById('bottomNav').style.display = navScreens.includes(name) ? 'flex' : 'none';
-
-  // Booking bar uniquement sur l'écran détail
-  const bookingBar = document.getElementById('bookingBar');
-  if (bookingBar) bookingBar.style.display = name === 'detail' ? 'flex' : 'none';
-
   // Scroll en haut
-  document.getElementById('mainScroll').scrollTop = 0;
+  const ms = document.getElementById('mainScroll');
+  if (ms) ms.scrollTop = 0;
 
   if (name === 'bookings') loadMyBookings();
   if (name === 'account') { loadAccountFields(); renderLogoutSection(); }
@@ -398,13 +367,17 @@ function showScreen(name) {
 
 function navTo(name) {
   // Écrans spéciaux sans bottom nav
-  const noNavScreens = ['detail','checkout','confirm','chat'];
+  const noNavScreens = ['detail','checkout','confirm','chat','home-list'];
   const bottomNav = document.getElementById('bottomNav');
   if (bottomNav) bottomNav.style.display = noNavScreens.includes(name) ? 'none' : 'flex';
 
+  // Booking bar uniquement sur detail
+  const bookingBar = document.getElementById('bookingBar');
+  if (bookingBar) bookingBar.style.display = name === 'detail' ? 'flex' : 'none';
+
   showScreen(name);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const navId = name === 'login' ? 'account' : name === 'chat' ? 'messages' : name;
+  const navId = name === 'login' ? 'account' : name === 'chat' ? 'messages' : name === 'home-list' ? 'home' : name;
   document.getElementById('nav-' + navId)?.classList.add('active');
 
   // Charger les conversations quand on arrive sur l'onglet messages
@@ -669,6 +642,35 @@ function updateResetBtn() {
   const hasFilter = ci || co || hasCity || hasGuests;
   const btn = document.getElementById('btnResetFilters');
   if (btn) btn.classList.toggle('visible', !!hasFilter);
+}
+
+// ── Filtres logements ────────────────────────────────────────
+let _activeFilter = '';
+
+function filterCat(el, cat) {
+  document.querySelectorAll('.home-cat').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  _activeFilter = cat;
+  navTo('home-list');
+}
+
+function setFilter(el, filter) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  _activeFilter = filter;
+  filterProperties();
+}
+
+function filterProperties() {
+  const search = (document.getElementById('listSearchInput')?.value || '').toLowerCase();
+  const cards = document.querySelectorAll('.prop-card');
+  cards.forEach(card => {
+    const name = (card.dataset.name || '').toLowerCase();
+    const type = (card.dataset.type || '').toLowerCase();
+    const matchSearch = !search || name.includes(search);
+    const matchFilter = !_activeFilter || _activeFilter.startsWith('prix') || type.includes(_activeFilter);
+    card.style.display = matchSearch && matchFilter ? 'block' : 'none';
+  });
 }
 
 function resetFilters() {
