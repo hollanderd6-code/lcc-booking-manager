@@ -30626,9 +30626,12 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     }
 
     // ✅ Fix : passer le compte Connect en options pour que la session soit créée dessus
-    const sessionOptions = stripeAccountId ? { stripeAccount: stripeAccountId } : {};
-    const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
-
+    let session;
+if (stripeAccountId) {
+  session = await stripe.checkout.sessions.create(sessionParams, { stripeAccount: stripeAccountId });
+} else {
+  session = await stripe.checkout.sessions.create(sessionParams);
+}
     res.json({
       checkoutUrl: session.url,
       sessionId: session.id,
