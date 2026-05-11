@@ -22925,7 +22925,7 @@ cron.schedule('*/30 * * * *', async () => {
           await sendNotification(
             tok.fcm_token,
             `⏰ Rappel — ${conv.guest_name} attend une réponse`,
-            `${conv.property_name} — Pas de réponse depuis 2h sur cette escalade.`,
+            `${conv.property_name} — Pas de réponse depuis 2h sur cette conversation.`,
             { type: 'escalade_reminder', conversationId: String(conv.id), screen: 'messages' }
           );
         }
