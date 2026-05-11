@@ -924,9 +924,9 @@ if (sender_type === 'owner' || sender_type === 'property') {
   try {
     // Récupérer le(s) token(s) FCM du guest pour cette conversation
     const guestTokensResult = await pool.query(
-      `SELECT fcm_token FROM guest_fcm_tokens 
-       WHERE conversation_id = $1 AND fcm_token IS NOT NULL
-       ORDER BY last_used_at DESC`,
+      `SELECT DISTINCT gft.fcm_token FROM guest_fcm_tokens gft
+       WHERE gft.conversation_id = $1 AND gft.fcm_token IS NOT NULL
+       ORDER BY gft.fcm_token`,
       [conversation_id]
     );
     
