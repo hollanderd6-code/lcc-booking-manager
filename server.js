@@ -1857,6 +1857,39 @@ ON invoice_download_tokens(token);
       `);
       console.log('✅ Table short_links OK');
 
+    // ✅ Migration : table invoice_requests (demandes de facture automatiques)
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS invoice_requests (
+          id SERIAL PRIMARY KEY,
+          conversation_id INTEGER NOT NULL,
+          reservation_uid TEXT,
+          user_id TEXT NOT NULL,
+          property_id TEXT,
+          client_name TEXT,
+          client_email TEXT,
+          client_address TEXT,
+          client_postal_code TEXT,
+          client_city TEXT,
+          client_siret TEXT,
+          client_company TEXT,
+          nights INTEGER,
+          rent_amount NUMERIC(10,2),
+          tourist_tax NUMERIC(10,2),
+          cleaning_fee NUMERIC(10,2),
+          status TEXT DEFAULT 'pending',
+          invoice_number TEXT,
+          sent_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_invoice_requests_conv ON invoice_requests(conversation_id);
+        CREATE INDEX IF NOT EXISTS idx_invoice_requests_status ON invoice_requests(status);
+        CREATE INDEX IF NOT EXISTS idx_invoice_requests_uid ON invoice_requests(reservation_uid);
+      `);
+      console.log('✅ Table invoice_requests OK');
+    } catch(e) { console.log('ℹ️ invoice_requests déjà existante:', e.message); }
+
     // ✅ Migration : colonnes pour régénération automatique des liens Stripe
     try {
       await pool.query(`
@@ -22925,7 +22958,7 @@ cron.schedule('*/30 * * * *', async () => {
           await sendNotification(
             tok.fcm_token,
             `⏰ Rappel — ${conv.guest_name} attend une réponse`,
-            `${conv.property_name} — Pas de réponse depuis 2h sur cette conversation.`,
+            `${conv.property_name} — Pas de réponse depuis 2h sur cette escalade.`,
             { type: 'escalade_reminder', conversationId: String(conv.id), screen: 'messages' }
           );
         }
@@ -23048,6 +23081,139 @@ console.log('✅ Cron message_templates initialisé (7h avant/arrivée+before_de
 // 💰 INITIALISATION DU CRON JOB DES RAPPELS CAUTION
 // ============================================
 initDepositRemindersCron(pool, io);
+
+// ── CRON : Envoi automatique des factures le jour du départ (10h00) ──────────
+cron.schedule('0 10 * * *', async () => {
+  console.log('🧾 [INVOICE CRON] Vérification des demandes de facture à envoyer...');
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Trouver les demandes pending dont la réservation se termine aujourd'hui
+    const requests = await pool.query(
+      `SELECT ir.*, r.guest_name, r.guest_email, r.start_date, r.end_date,
+              r.amount_total, r.amount_rooms, r.amount_cleaning, r.amount_taxes,
+              p.name as property_name, p.address as property_address,
+              p.cleaning_fee as prop_cleaning_fee, p.tourist_tax_per_night,
+              u.email as user_email, u.company as user_company
+       FROM invoice_requests ir
+       LEFT JOIN reservations r ON r.uid = ir.reservation_uid
+       LEFT JOIN properties p ON p.id = ir.property_id
+       LEFT JOIN users u ON u.id = ir.user_id
+       WHERE ir.status = 'pending'
+       AND DATE(r.end_date) = $1`,
+      [today]
+    );
+
+    console.log(`🧾 [INVOICE CRON] ${requests.rows.length} facture(s) à envoyer`);
+
+    for (const req of requests.rows) {
+      try {
+        const userId = req.user_id;
+        const clientName = req.client_name || req.guest_name || 'Client';
+        const clientEmail = req.client_email || req.guest_email;
+
+        if (!clientEmail) {
+          console.warn(`⚠️ [INVOICE CRON] Pas d'email pour demande ${req.id}`);
+          continue;
+        }
+
+        // Calculer les nuits
+        const checkin = new Date(req.start_date);
+        const checkout = new Date(req.end_date);
+        const nights = Math.round((checkout - checkin) / (1000 * 60 * 60 * 24));
+
+        // Montants
+        const rentAmount = req.rent_amount || req.amount_rooms || req.amount_total || 0;
+        const cleaningFee = req.cleaning_fee || req.prop_cleaning_fee || 0;
+        const touristTax = req.tourist_tax || (req.tourist_tax_per_night ? req.tourist_tax_per_night * nights : 0);
+
+        // Générer le numéro de facture
+        const yearStr = new Date().getFullYear();
+        const maxResult = await pool.query(
+          `SELECT MAX(CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER)) as max_seq
+           FROM owner_invoices WHERE user_id = $1 AND invoice_number LIKE $2
+           AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
+          [userId, `FACT-${yearStr}-%`]
+        ).catch(() => ({ rows: [{ max_seq: 0 }] }));
+        const nextSeq = (parseInt(maxResult.rows[0]?.max_seq || 0) + 1);
+        const invoiceNumber = `FACT-${yearStr}-${String(nextSeq).padStart(4, '0')}`;
+
+        // Appeler la route interne /api/invoice/create
+        const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+        const user = profileResult.rows[0];
+        if (!user) continue;
+
+        // Générer et envoyer la facture via le système existant
+        const invoicePayload = {
+          clientName,
+          clientEmail,
+          clientAddress: req.client_address || '',
+          clientPostalCode: req.client_postal_code || '',
+          clientCity: req.client_city || '',
+          clientSiret: req.client_siret || '',
+          propertyName: req.property_name || '',
+          propertyAddress: req.property_address || '',
+          checkinDate: req.start_date,
+          checkoutDate: req.end_date,
+          nights,
+          rentAmount: parseFloat(rentAmount),
+          touristTaxAmount: parseFloat(touristTax),
+          cleaningFee: parseFloat(cleaningFee),
+          vatRate: 0,
+          sendEmail: true,
+          invoiceNumber
+        };
+
+        // Insérer dans owner_invoices pour le tracking
+        await pool.query(
+          `INSERT INTO owner_invoices (user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, 'sent', NOW()) ON CONFLICT DO NOTHING`,
+          [userId, invoiceNumber, clientName, clientEmail,
+           parseFloat(rentAmount) + parseFloat(cleaningFee) + parseFloat(touristTax)]
+        ).catch(() => {});
+
+        // Envoyer l'email avec le lien de téléchargement
+        const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+        const downloadUrl = `${appUrl}/api/invoice/download-by-number/${invoiceNumber}`;
+
+        const emailHtml = bhEmailTemplate({
+          icon: '📄',
+          title: `Facture ${invoiceNumber}`,
+          subtitle: req.property_name || '',
+          bodyHtml: `
+            <p>Bonjour <strong>${clientName}</strong>,</p>
+            <p>Comme convenu, veuillez trouver ci-joint votre facture pour votre séjour à <strong>${req.property_name || ''}</strong> du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}.</p>
+            <div style="text-align:center;margin:24px 0;">
+              <a href="${downloadUrl}" style="display:inline-block;padding:14px 32px;background:#1A7A5E;color:white;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+                📥 Télécharger ma facture
+              </a>
+            </div>
+            <p style="font-size:12px;color:#9ca3af;text-align:center;">Lien valable 1 an</p>
+            <p style="font-size:14px;color:#666;">Cordialement, <strong>${user.company || 'Boostinghost'}</strong></p>
+          `
+        });
+
+        await sendEmailViaBrevo({
+          to: clientEmail,
+          subject: `Votre facture ${invoiceNumber} – ${req.property_name || ''}`,
+          html: emailHtml
+        });
+
+        // Marquer comme envoyée
+        await pool.query(
+          `UPDATE invoice_requests SET status = 'sent', invoice_number = $1, sent_at = NOW(), updated_at = NOW() WHERE id = $2`,
+          [invoiceNumber, req.id]
+        );
+
+        console.log(`✅ [INVOICE CRON] Facture ${invoiceNumber} envoyée à ${clientEmail}`);
+      } catch(e) {
+        console.error(`❌ [INVOICE CRON] Erreur facture req ${req.id}:`, e.message);
+      }
+    }
+  } catch(e) {
+    console.error('❌ [INVOICE CRON] Erreur globale:', e.message);
+  }
+});
 
 // ── CRON : Régénération liens Stripe expirés (toutes les 23h30) ──────────────
 cron.schedule('0 */23 * * *', async () => {
