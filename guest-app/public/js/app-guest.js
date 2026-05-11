@@ -1062,7 +1062,7 @@ function goToCheckout() {
       <i class="fas fa-lock" style="color:var(--primary);margin-right:6px;"></i>
       Paiement sécurisé. Votre réservation sera confirmée immédiatement.
     </div>
-    <button id="btnPay" onclick="payNow()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
+    <button id="btnPay" onclick="submitBooking()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
       Payer ${ttc}€
     </button>
   `;
