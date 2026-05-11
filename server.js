@@ -18633,10 +18633,10 @@ app.put('/api/owner-invoices/:id',
       const item = items[i];
       await client.query(`
         INSERT INTO owner_invoice_items (
-          invoice_id, item_type, description,
+          id, invoice_id, item_type, description,
           rental_amount, commission_rate, quantity, unit_price, total,
           order_index, is_debours, debours_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       `, [
         req.params.id, item.itemType, item.description,
         item.rentalAmount, item.commissionRate, item.quantity, item.unitPrice, item.total,
