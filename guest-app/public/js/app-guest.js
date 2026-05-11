@@ -875,12 +875,15 @@ function renderCalendar() {
   // Construire un Set des dates bloquées
   const bookedSet = new Set();
   (p.bookedDates || []).forEach(({ start, end }) => {
-    // Forcer midi pour éviter le décalage UTC/local
     const s = new Date(String(start).substring(0,10) + 'T12:00:00');
     const e = new Date(String(end).substring(0,10) + 'T12:00:00');
     for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-  bookedSet.add(d.toISOString().split('T')[0]);
-}
+      // Utiliser la date locale (pas UTC) pour éviter le décalage
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      bookedSet.add(`${y}-${m}-${day}`);
+    }
   });
 
   const firstDay = new Date(year, month, 1);
@@ -915,11 +918,11 @@ function renderCalendar() {
       && dateStr > state.selectedCheckin && dateStr < state.selectedCheckout;
 
     let cls = 'cal-day';
-    if (isPast) cls += ' past';
-    else if (isBooked) cls += ' booked';
-    else if (isStart || isEnd) cls += isStart ? ' selected-start' : ' selected-end';
+    if (isPast || isBooked) cls += ' disabled';
+    if (isStart) cls += ' selected range-start';
+    else if (isEnd) cls += ' selected range-end';
     else if (isInRange) cls += ' in-range';
-    if (isToday) cls += ' today';
+    if (isToday && !isStart && !isEnd) cls += ' today';
 
     const clickable = !isPast && !isBooked;
     html += `<div class="${cls}" ${clickable ? `data-date="${dateStr}"` : ''}>${day}</div>`;
