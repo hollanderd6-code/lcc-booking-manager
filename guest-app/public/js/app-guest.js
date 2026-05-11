@@ -113,6 +113,115 @@ async function requestMagicLink() {
   }
 }
 
+// ── Auth Mode Switchers ──────────────────────────────────────
+function switchAuthMode(mode) {
+  const magic = document.getElementById('authModeMagic');
+  const pwd = document.getElementById('authModePassword');
+  const btnMagic = document.getElementById('toggleMagic');
+  const btnPwd = document.getElementById('togglePassword');
+  if (mode === 'magic') {
+    magic.style.display = ''; pwd.style.display = 'none';
+    btnMagic.style.background = 'white'; btnMagic.style.color = 'var(--primary)'; btnMagic.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)';
+    btnPwd.style.background = 'transparent'; btnPwd.style.color = 'var(--text-light)'; btnPwd.style.boxShadow = 'none';
+  } else {
+    magic.style.display = 'none'; pwd.style.display = '';
+    btnPwd.style.background = 'white'; btnPwd.style.color = 'var(--primary)'; btnPwd.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)';
+    btnMagic.style.background = 'transparent'; btnMagic.style.color = 'var(--text-light)'; btnMagic.style.boxShadow = 'none';
+  }
+}
+
+function switchSubMode(mode) {
+  const loginForm = document.getElementById('pwdLoginForm');
+  const registerForm = document.getElementById('pwdRegisterForm');
+  const btnLogin = document.getElementById('subToggleLogin');
+  const btnRegister = document.getElementById('subToggleRegister');
+  if (mode === 'login') {
+    loginForm.style.display = ''; registerForm.style.display = 'none';
+    btnLogin.style.background = 'var(--primary)'; btnLogin.style.color = 'white'; btnLogin.style.borderColor = 'var(--primary)';
+    btnRegister.style.background = 'white'; btnRegister.style.color = 'var(--text-light)'; btnRegister.style.borderColor = 'var(--border)';
+  } else {
+    loginForm.style.display = 'none'; registerForm.style.display = '';
+    btnRegister.style.background = 'var(--primary)'; btnRegister.style.color = 'white'; btnRegister.style.borderColor = 'var(--primary)';
+    btnLogin.style.background = 'white'; btnLogin.style.color = 'var(--text-light)'; btnLogin.style.borderColor = 'var(--border)';
+  }
+}
+
+// ── Connexion mot de passe ────────────────────────────────────
+async function loginWithPassword() {
+  const email = document.getElementById('pwdEmail')?.value?.trim();
+  const password = document.getElementById('pwdPassword')?.value;
+  const errBox = document.getElementById('pwdLoginError');
+  errBox.style.display = 'none';
+  if (!email || !password) { errBox.textContent = 'Email et mot de passe requis'; errBox.style.display = 'block'; return; }
+  const btn = document.getElementById('btnPwdLogin');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+  try {
+    const res = await fetch(`${API_URL}/api/guest/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    saveSession({ token: data.session_token, email: data.email, name: data.name });
+    updateNavAccount();
+    showToast('Connexion réussie !');
+    setTimeout(() => { window.location.replace(window.location.pathname); }, 800);
+  } catch(e) {
+    errBox.textContent = e.message || 'Erreur de connexion';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Se connecter';
+  }
+}
+
+// ── Inscription mot de passe ─────────────────────────────────
+async function registerWithPassword() {
+  const name = document.getElementById('regName')?.value?.trim();
+  const email = document.getElementById('regEmail')?.value?.trim();
+  const password = document.getElementById('regPassword')?.value;
+  const confirm = document.getElementById('regPasswordConfirm')?.value;
+  const errBox = document.getElementById('pwdRegisterError');
+  errBox.style.display = 'none';
+  if (!email || !password) { errBox.textContent = 'Email et mot de passe requis'; errBox.style.display = 'block'; return; }
+  if (password.length < 6) { errBox.textContent = 'Mot de passe trop court (6 caractères minimum)'; errBox.style.display = 'block'; return; }
+  if (password !== confirm) { errBox.textContent = 'Les mots de passe ne correspondent pas'; errBox.style.display = 'block'; return; }
+  const btn = document.getElementById('btnPwdRegister');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+  try {
+    const res = await fetch(`${API_URL}/api/guest/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    saveSession({ token: data.session_token, email: data.email, name: data.name || name });
+    updateNavAccount();
+    showToast('Compte créé avec succès !');
+    setTimeout(() => { window.location.replace(window.location.pathname); }, 800);
+  } catch(e) {
+    errBox.textContent = e.message || 'Erreur lors de la création du compte';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Créer mon compte';
+  }
+}
+
+// ── Mot de passe oublié ──────────────────────────────────────
+async function forgotPassword() {
+  const email = document.getElementById('pwdEmail')?.value?.trim();
+  if (!email || !email.includes('@')) { showToast('Entrez votre email d\'abord'); return; }
+  try {
+    await fetch(`${API_URL}/api/guest/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    showToast('Un lien de réinitialisation vous a été envoyé');
+  } catch(e) { showToast('Erreur d\'envoi'); }
+}
+
 async function verifyMagicToken(token) {
   try {
     const res = await fetch(`${API_URL}/api/guest/auth/verify`, {
