@@ -30277,14 +30277,27 @@ app.get('/api/guest/me', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT r.uid, r.start_date, r.end_date, r.amount_total,
-             r.status, r.guest_name, r.created_at,
+             r.status, r.guest_name, r.created_at, r.property_id,
              p.name as property_name, p.photo_url, p.address, p.city,
-             p.arrival_time, p.departure_time
+             p.arrival_time, p.departure_time, p.welcome_book_url,
+             -- Caution
+             (SELECT d.status FROM deposits d WHERE d.reservation_uid = r.uid
+              ORDER BY d.created_at DESC LIMIT 1) as deposit_status,
+             (SELECT d.amount_cents FROM deposits d WHERE d.reservation_uid = r.uid
+              ORDER BY d.created_at DESC LIMIT 1) as deposit_amount_cents,
+             -- Paiement
+             (SELECT pay.status FROM payments pay WHERE pay.reservation_uid = r.uid
+              ORDER BY pay.created_at DESC LIMIT 1) as payment_status,
+             -- Conversation liée
+             (SELECT c.id FROM conversations c
+              WHERE LOWER(c.guest_email) = LOWER(r.guest_email)
+              AND c.property_id = r.property_id
+              ORDER BY c.created_at DESC LIMIT 1) as conversation_id
       FROM reservations r
       JOIN properties p ON p.id = r.property_id
-      WHERE r.guest_email = $1 AND r.source = 'guest_app'
+      WHERE LOWER(r.guest_email) = $1 AND r.source = 'guest_app'
       ORDER BY r.start_date DESC
-    `, [email]);
+    `, [email.toLowerCase()]);
 
     res.json({
       email,
@@ -30292,21 +30305,31 @@ app.get('/api/guest/me', async (req, res) => {
         uid: r.uid,
         checkin: r.start_date,
         checkout: r.end_date,
-        total: parseFloat(r.amount_total),
+        total: parseFloat(r.amount_total) || 0,
         status: r.status,
         guestName: r.guest_name,
         createdAt: r.created_at,
+        conversationId: r.conversation_id || null,
+        deposit: r.deposit_status ? {
+          status: r.deposit_status,
+          amountCents: r.deposit_amount_cents
+        } : null,
+        payment: r.payment_status ? {
+          status: r.payment_status
+        } : null,
         property: {
           name: r.property_name,
           photoUrl: r.photo_url,
           address: r.address,
           city: r.city,
           arrivalTime: r.arrival_time,
-          departureTime: r.departure_time
+          departureTime: r.departure_time,
+          welcomeBookUrl: r.welcome_book_url || null
         }
       }))
     });
   } catch (e) {
+    console.error('❌ [GUEST] GET /me:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
