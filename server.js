@@ -7240,8 +7240,8 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
             
             await sendNotificationToMultiple(
               fcmTokens,
-              '📅 Nouvelle réservation',
-              `${guestName ? guestName + ' · ' : ''}${displayName(property)} · ${checkInDate} → ${checkOutDate}`,
+              '📅 Nouvelle réservation directe',
+              `${(reservation.guestName || guestName || 'Voyageur')} · ${displayName(property)} · ${checkInDate} → ${checkOutDate}`,
               {
                 type: 'new_reservation',
                 reservation_id: uid,
@@ -7255,7 +7255,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
               await sendNotificationToSubAccountsOf(
                 user.id, 'can_view_calendar',
                 '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + displayName(property),
-                (guestName ? guestName + ' \u00B7 ' : '') + displayName(property) + ' \u00B7 ' + checkInDate + ' \u2192 ' + checkOutDate,
+                (reservation.guestName || guestName || 'Voyageur') + ' \u00B7 ' + displayName(property) + ' \u00B7 ' + checkInDate + ' \u2192 ' + checkOutDate,
                 { type: 'new_reservation', reservation_id: uid },
                 'notif_sub_new_reservation'
               );
@@ -20984,7 +20984,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
               await sendNotification(
                 tokenRow.fcm_token,
                 '❌ Réservation annulée',
-                `${displayName(property)} - ${cancelDate}`,
+                `${cleanGuestName(deletedReservation.guest_name, deletedReservation.source)} · ${displayName(property)} · ${cancelDate}`,
                 {
                   type: 'reservation_cancelled',
                   reservation_id: uid,
@@ -21002,7 +21002,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
             await sendNotificationToSubAccountsOf(
               user.id, 'can_view_calendar',
               '❌ Réservation annulée — ' + displayName(property),
-              displayName(property) + ' - ' + cancelDate,
+              cleanGuestName(deletedReservation.guest_name, deletedReservation.source) + ' · ' + displayName(property) + ' · ' + cancelDate,
               { type: 'reservation_cancelled', reservation_id: uid },
               'notif_sub_reservation_cancelled'
             );
