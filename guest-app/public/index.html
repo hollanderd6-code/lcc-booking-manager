@@ -579,6 +579,8 @@ body {
   display: none; align-items: center; gap: 12px;
   z-index: 200;
 }
+/* Sur detail, bookingBar remplace le bottomNav */
+body.screen-detail #bottomNav { display: none !important; }
 .booking-bar-price { font-size: 20px; font-weight: 800; color: var(--primary); }
 .booking-bar-night { font-size: 12px; color: var(--text2); }
 .booking-bar-btn {
@@ -848,7 +850,11 @@ body {
           </div>
           <div class="auth-field">
             <label>Confirmer le mot de passe</label>
-            <input type="password" id="regPasswordConfirm" placeholder="••••••••"
+            <input type="password" id="regPasswordConfirm" placeholder="••••••••">
+          </div>
+          <div class="auth-field">
+            <label>Téléphone <span style="color:var(--primary)">*</span></label>
+            <input type="tel" id="regPhone" placeholder="+33 6 00 00 00 00"
               onkeydown="if(event.key==='Enter')registerWithPassword()">
           </div>
           <div class="auth-err" id="pwdRegisterError"></div>
