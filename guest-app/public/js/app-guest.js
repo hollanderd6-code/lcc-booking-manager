@@ -83,7 +83,7 @@ function isLoggedIn() {
 }
 
 function updateNavAccount() {
-  const label = document.getElementById('navAccountLabel');
+  const label = document.getElementById('navAccountLabel'); if (!label) return;
   if (!label) return;
   const session = getSession();
   label.textContent = session ? (session.name?.split(' ')[0] || 'Moi') : 'Compte';
@@ -566,15 +566,15 @@ async function sendGuestMessage() {
 
 // ── Recherche ────────────────────────────────────────────────
 function openSearch() {
-  document.getElementById('searchModal').classList.add('open');
+  document.getElementById('searchModal')?.classList.add('open');
   loadCityChips();
   updateDateBoxes();
   updateResetBtn();
 }
 
 function closeSearchOnBg(e) {
-  if (e.target === document.getElementById('searchModal')) {
-    document.getElementById('searchModal').classList.remove('open');
+  if (document.getElementById('searchModal') && e.target === document.getElementById('searchModal')) {
+    document.getElementById('searchModal')?.classList.remove('open');
   }
 }
 
@@ -695,7 +695,7 @@ function updateSearchLabel() {
   if (ci && co) parts.push(`${fmtDate(ci)} → ${fmtDate(co)}`);
   else if (ci) parts.push(`Arrivée ${fmtDate(ci)}`);
   if (state.search.guests) parts.push(state.search.guests + ' voy.');
-  document.getElementById('searchLabel').textContent = parts.join(' · ') || 'Dates, voyageurs...';
+  if (document.getElementById('searchLabel')) document.getElementById('searchLabel').textContent = parts.join(' · ') || 'Dates, voyageurs...';
 }
 
 function selectGuests(btn, val) {
@@ -710,7 +710,7 @@ async function applySearch() {
   state.search.checkin = document.getElementById('searchCheckin').value || null;
   state.search.checkout = document.getElementById('searchCheckout').value || null;
   // city est déjà dans state.search.city via selectCity()
-  document.getElementById('searchModal').classList.remove('open');
+  document.getElementById('searchModal')?.classList.remove('open');
   await loadProperties();
 }
 
@@ -959,9 +959,7 @@ function selectDate(dateStr) {
 function updateBookingBar() {
   const p = state.currentProperty;
   if (!p) return;
-  const bar = document.getElementById('barPrice');
-  const datesLabel = document.getElementById('barDates');
-  const btn = document.getElementById('btnBook');
+  const bar = document.getElementById('bookingBarPrice');
 
   if (state.selectedCheckin && state.selectedCheckout) {
     const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
@@ -972,14 +970,9 @@ function updateBookingBar() {
       const dow = d.getDay();
       total += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
     }
-    const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    bar.innerHTML = `${total}€ <span>· ${nights} nuit${nights > 1 ? 's' : ''}</span>`;
-    datesLabel.textContent = `${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}`;
-    btn.disabled = false;
+    if (bar) bar.innerHTML = `${total}€ <span style="font-size:12px;font-weight:400;color:var(--text2);">· ${nights} nuit${nights > 1 ? 's' : ''}</span>`;
   } else {
-    bar.innerHTML = `${p.basePrice}€ <span>/ nuit</span>`;
-    datesLabel.textContent = state.selectedCheckin ? 'Sélectionnez la date de départ' : 'Sélectionnez vos dates';
-    btn.disabled = !state.selectedCheckin || !state.selectedCheckout;
+    if (bar) bar.innerHTML = `${p.basePrice}€`;
   }
 }
 
@@ -1012,7 +1005,7 @@ function goToCheckout() {
   state.appliedPromo = null;
   if (fixedPriceOverride !== null) state._fixedPriceActive = fixedPriceOverride;
 
-  document.getElementById('checkoutBody').innerHTML = `
+  document.getElementById('checkoutContent').innerHTML = `
     <div class="checkout-summary" id="priceSummary">
       <div style="font-size:15px;font-weight:700;margin-bottom:12px;">${p.name}</div>
       <div class="checkout-row"><span>Dates</span><span>${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}</span></div>
@@ -1053,13 +1046,15 @@ function goToCheckout() {
       </div>
       <div id="promoMsg" style="font-size:12px;margin-top:6px;display:none;"></div>
     </div>
-    <div style="background:var(--bg);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-light);margin-top:8px;">
+    <div style="background:var(--bg);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-light);margin-top:8px;margin-bottom:16px;">
       <i class="fas fa-lock" style="color:var(--primary);margin-right:6px;"></i>
       Paiement sécurisé. Votre réservation sera confirmée immédiatement.
     </div>
+    <button id="btnPay" onclick="payNow()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
+      Payer ${ttc}€
+    </button>
   `;
 
-  document.getElementById('btnPay').textContent = `Payer ${ttc}€`;
   showScreen('checkout');
 }
 
@@ -1234,7 +1229,7 @@ function showConfirmation(data, guestName, guestEmail) {
   const p = state.currentProperty;
   const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  document.getElementById('confirmBody').innerHTML = `
+  document.getElementById('confirmContent').innerHTML = `
     <div class="confirm-icon"><i class="fas fa-check"></i></div>
     <div class="confirm-title">Réservation confirmée !</div>
     <div class="confirm-sub">Un email de confirmation a été envoyé à ${guestEmail}</div>
