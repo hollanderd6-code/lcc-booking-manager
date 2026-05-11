@@ -30176,7 +30176,7 @@ app.post('/api/guest/auth/register', async (req, res) => {
     res.json({ success: true, session_token: sessionToken, email: normalizedEmail, name: name || null });
   } catch(e) {
     console.error('❌ [GUEST AUTH] register:', e.message);
-    res.status(500).json({ error: 'Erreur lors de l'inscription' });
+    res.status(500).json({ error: 'Erreur lors de l\'inscription' });
   }
 });
 
