@@ -620,16 +620,16 @@ body {
 .cal-day {
   display: flex !important; align-items: center !important;
   justify-content: center !important;
-  aspect-ratio: 1; border-radius: 8px;
+  border-radius: 8px; height: 40px;
   font-size: 13px; font-weight: 500; cursor: pointer;
   transition: all .15s; color: var(--text);
-  min-height: 36px; min-width: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(124,58,237,.2);
   user-select: none;
-  position: relative;
-  z-index: 1;
+  position: relative; z-index: 1;
 }
+/* Limiter la largeur max du calendrier */
+#calendarContainer { max-width: 420px; margin: 0 auto; }
 .cal-day.empty { cursor: default; pointer-events: none; }
 .cal-day.disabled { color: #d1d5db !important; cursor: not-allowed; text-decoration: line-through; }
 .cal-day:not(.disabled):not(.empty):hover { background: var(--primary-light, #ede9fe); color: var(--primary); }
