@@ -30151,17 +30151,18 @@ pool.query(`
 // ── Route : inscription email + mot de passe ─────────────────
 app.post('/api/guest/auth/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, phone } = req.body;
     if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email invalide' });
     if (!password || password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères minimum)' });
+    if (!phone) return res.status(400).json({ error: 'Numéro de téléphone requis' });
     const normalizedEmail = email.toLowerCase().trim();
     const passwordHash = await bcrypt.hash(password, 10);
     const existing = await pool.query('SELECT id, password_hash FROM guest_users WHERE email = $1', [normalizedEmail]);
     if (existing.rows.length > 0) {
       if (existing.rows[0].password_hash) return res.status(409).json({ error: 'Un compte existe déjà avec cet email. Connectez-vous.' });
-      await pool.query('UPDATE guest_users SET password_hash = $1, name = COALESCE(name, $2), updated_at = NOW() WHERE email = $3', [passwordHash, name || null, normalizedEmail]);
+      await pool.query('UPDATE guest_users SET password_hash = $1, name = COALESCE(name, $2), phone = COALESCE(phone, $3), updated_at = NOW() WHERE email = $4', [passwordHash, name || null, phone, normalizedEmail]);
     } else {
-      await pool.query('INSERT INTO guest_users (email, password_hash, name) VALUES ($1, $2, $3)', [normalizedEmail, passwordHash, name || null]);
+      await pool.query('INSERT INTO guest_users (email, password_hash, name, phone) VALUES ($1, $2, $3, $4)', [normalizedEmail, passwordHash, name || null, phone]);
     }
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
     const sessionToken = jwt.sign({ email: normalizedEmail, type: 'guest_session' }, secret, { expiresIn: '30d' });
@@ -30608,17 +30609,16 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     };
 
     // Si le proprietaire a un compte Connect -> paiement direct sur son compte avec frais BH
+    // ✅ Pas de transfer_data : sessionOptions suffit — Stripe refuse transfer vers soi-même
     if (stripeAccountId) {
       sessionParams.payment_intent_data = {
-        application_fee_amount: feeAmount,
-        transfer_data: { destination: stripeAccountId }
+        application_fee_amount: feeAmount
       };
       console.log(`💳 [GUEST] Paiement Connect -> ${stripeAccountId} | fee: ${feeAmount / 100}€`);
     } else {
       console.log(`💳 [GUEST] Paiement sur compte BH principal (pas de compte Connect)`);
     }
 
-    // ✅ Fix : passer le compte Connect en options pour que la session soit créée dessus
     const sessionOptions = stripeAccountId ? { stripeAccount: stripeAccountId } : {};
     const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
 
