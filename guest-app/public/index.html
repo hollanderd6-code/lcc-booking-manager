@@ -624,6 +624,11 @@ body {
   font-size: 13px; font-weight: 500; cursor: pointer;
   transition: all .15s; color: var(--text);
   min-height: 36px; min-width: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(124,58,237,.2);
+  user-select: none;
+  position: relative;
+  z-index: 1;
 }
 .cal-day.empty { cursor: default; pointer-events: none; }
 .cal-day.disabled { color: #d1d5db !important; cursor: not-allowed; text-decoration: line-through; }
