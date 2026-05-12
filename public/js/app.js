@@ -732,9 +732,12 @@ function showReservationModal(reservation) {
 
   const guestName =
     reservation.guestName ||
+    reservation.guest_display_name ||
     reservation.customerName ||
     'Voyageur';
 
+  const guestPhone = reservation.guest_phone || reservation.guestPhone || null;
+  const guestEmail = reservation.guest_email || reservation.guestEmail || reservation.email || null;
   const notes = reservation.notes || '';
 
   const start = reservation.start || reservation.checkIn || reservation.startDate;
@@ -765,6 +768,19 @@ function showReservationModal(reservation) {
   html +=   '<p style="margin:0 0 12px 0;font-size:15px;font-weight:600;">';
   html +=     'Voyageur : ' + guestName;
   html +=   '</p>';
+
+  if (guestPhone) {
+    html += '<p style="margin:0 0 6px 0;font-size:13px;">';
+    html +=   '<i class="fas fa-phone" style="color:#1A7A5E;margin-right:6px;"></i>';
+    html +=   '<a href="tel:' + guestPhone + '" style="color:#1A7A5E;text-decoration:none;">' + guestPhone + '</a>';
+    html += '</p>';
+  }
+  if (guestEmail) {
+    html += '<p style="margin:0 0 12px 0;font-size:13px;">';
+    html +=   '<i class="fas fa-envelope" style="color:#1A7A5E;margin-right:6px;"></i>';
+    html +=   '<a href="mailto:' + guestEmail + '" style="color:#1A7A5E;text-decoration:none;">' + guestEmail + '</a>';
+    html += '</p>';
+  }
 
   html +=   '<p style="margin:0 0 4px 0;">Arrivée : ' +
               (startDate ? startDate.toLocaleDateString('fr-FR') : '') +
