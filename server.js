@@ -3864,7 +3864,14 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
               const isGuestAppSession = sMeta.source === 'boostinghost_guest';
               const isFreeLinkWithDates = pmt?.reservation_uid?.startsWith('free_') && startDate && endDate;
 
-              if ((isFreeLinkWithDates || isGuestAppSession) && startDate && endDate && propId && pmt?.user_id) {
+              // Si pas de pmt (session Guest App directe), récupérer user_id via la propriété
+              let ownerId = pmt?.user_id || null;
+              if (!ownerId && propId) {
+                const propOwner = await pool.query('SELECT user_id FROM properties WHERE id = $1', [propId]).catch(() => ({ rows: [] }));
+                ownerId = propOwner.rows[0]?.user_id || null;
+              }
+
+              if ((isFreeLinkWithDates || isGuestAppSession) && startDate && endDate && propId && ownerId) {
                 // Vérifier qu'une résa n'existe pas déjà pour ce paiement
                 const existingResa = await pool.query(
                   `SELECT uid FROM reservations WHERE uid = $1`,
@@ -3882,7 +3889,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                     ON CONFLICT (uid) DO NOTHING
                   `, [
                     `BHGUEST_${paymentId || session.id}`,
-                    pmt.user_id,
+                    ownerId,
                     propId,
                     'guest_app',
                     guestName || 'Voyageur',
@@ -3901,7 +3908,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
 
                   // 🔔 Notif nouvelle réservation BHGuest
                   try {
-                    const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1', [pmt.user_id]);
+                    const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1', [ownerId]);
                     for (const tok of tokensRes.rows) {
                       await sendNotification(
                         tok.fcm_token,
