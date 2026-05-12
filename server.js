@@ -3906,6 +3906,45 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                   );
                   console.log(`✅ [BHGUEST] Réservation créée: BHGUEST_${paymentId || session.id} | ${guestName} | ${startDate} → ${endDate}`);
 
+                  // 💬 Créer la conversation BHGuest
+                  try {
+                    const existingConv = await pool.query(
+                      `SELECT id FROM conversations
+                       WHERE user_id = $1 AND property_id = $2
+                       AND DATE(reservation_start_date) = $3 AND status != 'cancelled' LIMIT 1`,
+                      [ownerId, propId, startDate]
+                    );
+                    if (existingConv.rows.length === 0) {
+                      const convResult = await pool.query(
+                        `INSERT INTO conversations
+                          (user_id, property_id, reservation_start_date, reservation_end_date,
+                           platform, guest_name, guest_email, guest_phone,
+                           pin_code, unique_token, photos_token,
+                           is_verified, status)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, FALSE, 'pending')
+                         RETURNING id`,
+                        [
+                          ownerId,
+                          propId,
+                          startDate,
+                          endDate,
+                          'Boostinghost Guest',
+                          guestName || 'Voyageur',
+                          guestEmail || null,
+                          guestPhone || null,
+                          Math.floor(1000 + Math.random() * 9000).toString(),
+                          require('crypto').randomBytes(32).toString('hex'),
+                          require('crypto').randomBytes(32).toString('hex'),
+                        ]
+                      );
+                      console.log(`💬 [BHGUEST] Conversation créée: ${convResult.rows[0].id}`);
+                    } else {
+                      console.log(`💬 [BHGUEST] Conversation existante: ${existingConv.rows[0].id}`);
+                    }
+                  } catch(convErr) {
+                    console.error('❌ [BHGUEST] Erreur création conversation:', convErr.message);
+                  }
+
                   // 🔔 Notif nouvelle réservation BHGuest
                   try {
                     const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1', [ownerId]);
@@ -22904,28 +22943,36 @@ async function runTemplatesCron(triggerTypes) {
               console.log(`  ↳ Skip conv ${conv.id} : condition platform_direct non remplie`);
               continue;
             }
-            if (sendCond === 'deposit_captured') {
+            if (sendCond === 'deposit_captured' || sendCond === 'deposit_active') {
               // N'envoyer que si la caution est validée — statut 'authorized' (empreinte) ou 'captured' (prélevée)
-              const resRow = await pool.query(
-                `SELECT uid FROM reservations
-                 WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
-                    OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
-                 ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
-                [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
-              ).catch(() => ({ rows: [] }));
-              if (resRow.rows[0]) {
-                const dep = await pool.query(
-                  `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
-                  [resRow.rows[0].uid]
+              // BHGuest : pas de caution séparée → paiement = caution → toujours autoriser
+              const convPlatformLow = (conv.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+              const isBHGuestConv = convPlatformLow.includes('boostinghost') || convPlatformLow === 'bhguest';
+              if (isBHGuestConv) {
+                // BHGuest : le paiement Stripe = confirmation, pas de deposit séparé → on envoie
+                console.log(`  ↳ BHGuest conv ${conv.id} : deposit_active ignoré (paiement déjà effectué)`);
+              } else {
+                const resRow = await pool.query(
+                  `SELECT uid FROM reservations
+                   WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
+                      OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
+                   ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
+                  [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
                 ).catch(() => ({ rows: [] }));
-                const depStatus = dep.rows[0]?.status;
-                if (depStatus !== 'captured' && depStatus !== 'authorized') {
-                  console.log(`  ↳ Skip conv ${conv.id} : caution non validée (status=${depStatus || 'aucune'})`);
+                if (resRow.rows[0]) {
+                  const dep = await pool.query(
+                    `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
+                    [resRow.rows[0].uid]
+                  ).catch(() => ({ rows: [] }));
+                  const depStatus = dep.rows[0]?.status;
+                  if (depStatus !== 'captured' && depStatus !== 'authorized') {
+                    console.log(`  ↳ Skip conv ${conv.id} : caution non validée (status=${depStatus || 'aucune'})`);
+                    continue;
+                  }
+                } else {
+                  console.log(`  ↳ Skip conv ${conv.id} : aucune réservation trouvée pour vérif caution`);
                   continue;
                 }
-              } else {
-                console.log(`  ↳ Skip conv ${conv.id} : aucune réservation trouvée pour vérif caution`);
-                continue;
               }
             }
           }
@@ -30679,7 +30726,7 @@ app.get('/api/guest/conversations', async (req, res) => {
   if (!email) return res.status(401).json({ error: 'Non connecté' });
   try {
     const result = await pool.query(`
-      SELECT c.id, c.guest_name, c.guest_email, c.platform,
+      SELECT c.id, c.guest_name, c.guest_email, c.platform, c.source,
              c.last_message_at, c.status, c.escalated,
              c.reservation_start_date, c.reservation_end_date,
              p.name as property_name, p.photo_url as property_photo,
