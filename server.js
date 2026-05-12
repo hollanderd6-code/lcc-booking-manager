@@ -3871,15 +3871,14 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                   [`BHGUEST_${paymentId || session.id}`]
                 );
                 if (existingResa.rows.length === 0) {
-                  const nights = Math.round((new Date(endDate) - new Date(startDate)) / 86400000);
                   const amountTotal = session.amount_total ? session.amount_total / 100 : null;
                   await pool.query(`
                     INSERT INTO reservations (
                       uid, user_id, property_id, source,
                       guest_name, guest_email, guest_phone,
-                      start_date, end_date, nights,
+                      start_date, end_date,
                       amount_total, status, created_at, updated_at
-                    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'confirmed',NOW(),NOW())
+                    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'confirmed',NOW(),NOW())
                     ON CONFLICT (uid) DO NOTHING
                   `, [
                     `BHGUEST_${paymentId || session.id}`,
@@ -3891,7 +3890,6 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                     guestPhone,
                     startDate,
                     endDate,
-                    nights,
                     amountTotal
                   ]);
                   // Lier le paiement à la nouvelle résa
@@ -15805,7 +15803,13 @@ app.post('/api/deposits',
       stripeSessionId: null,
       checkoutUrl: null,
       createdAt: new Date().toISOString(),
-      metadata: clientName ? { clientName } : null
+      metadata: {
+        ...(clientName ? { clientName } : {}),
+        ...(clientEmail ? { clientEmail } : {}),
+        ...(clientPhone ? { clientPhone } : {}),
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {}),
+      }
     };
     // Sauvegarder en PostgreSQL
   const saved = await saveDepositToDB(deposit, userId, property ? property.id : null);
