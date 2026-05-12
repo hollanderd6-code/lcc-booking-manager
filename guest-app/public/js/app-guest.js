@@ -161,7 +161,7 @@ async function loginWithPassword() {
 // ── Inscription mot de passe ─────────────────────────────────
 function showVerificationPending(email) {
   // Masquer le form auth, afficher un message de vérification
-  const authForm = document.querySelector('#screen-login .auth-form');
+  const authForm = document.querySelector('#screen-login .auth-card') || document.querySelector('#screen-login');
   if (authForm) {
     authForm.innerHTML = `
       <div style="text-align:center;padding:24px 0;">
