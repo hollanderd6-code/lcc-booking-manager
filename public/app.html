@@ -5301,23 +5301,59 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     }
     if (cleanSub) cleanSub.textContent = `départs à nettoyer sous 48h`;
 
-    // ── CA mensuel ──
+    // ── CA mensuel — basé sur la date de paiement effective selon la plateforme ──
+    // Airbnb     : payé J+1 après arrivée  → paymentDate = start + 1 jour
+    // Booking    : payé J+1 après départ   → paymentDate = end + 1 jour
+    // Direct/BHG : payé immédiatement      → paymentDate = start
     const caByProperty = {};
     let caTotal = 0;
-    (reservations || []).forEach((r) => {
+
+    function getPaymentDate(r) {
       const rawStart = r.start || r.startDate;
       const rawEnd   = r.end   || r.endDate;
-      if (!rawStart) return;
-      const start = parseDateSafe(rawStart);
-      const end   = rawEnd ? parseDateSafe(rawEnd) : null;
-      if (!start) return;
+      const start = rawStart ? parseDateSafe(rawStart) : null;
+      const end   = rawEnd   ? parseDateSafe(rawEnd)   : null;
+      if (!start) return null;
+
+      const platform = (
+        r.otaName || r.ota_name || r.OtaName ||
+        r.platform || r.source || ''
+      ).toLowerCase().replace(/[_\-\s]/g, '');
+
+      const isAirbnb  = platform.includes('airbnb') || platform === 'abb';
+      const isBooking = platform.includes('booking') || platform === 'bdc' || platform === 'bookingcom';
+
+      if (isAirbnb) {
+        // J+1 après arrivée
+        if (!start) return null;
+        const d = new Date(start);
+        d.setDate(d.getDate() + 1);
+        return d;
+      } else if (isBooking) {
+        // J+1 après départ
+        if (!end) return null;
+        const d = new Date(end);
+        d.setDate(d.getDate() + 1);
+        return d;
+      } else {
+        // Direct, BHGuest, Manuel → payé au moment de la réservation = date d'arrivée
+        return start;
+      }
+    }
+
+    (reservations || []).forEach((r) => {
       if (r.type === 'block' || r.source === 'BLOCK') return;
-      const startsInMonth = start >= monthStart && start <= monthEnd;
-      const endsInMonth   = end && end >= monthStart && end <= monthEnd;
-      const spansMonth    = start <= monthStart && end && end >= monthEnd;
-      if (!startsInMonth && !endsInMonth && !spansMonth) return;
-      const amount = parseFloat(r.amount_total || r.amountTotal || r.amount_rooms || r.amountRooms || 0);
+      if (r.status === 'cancelled') return;
+
+      const paymentDate = getPaymentDate(r);
+      if (!paymentDate) return;
+
+      // La résa est comptée dans le mois si la date de paiement tombe dans ce mois
+      if (paymentDate < monthStart || paymentDate > monthEnd) return;
+
+      const amount = parseFloat(r.amount_total || r.amountTotal || r.host_payout || r.hostPayout || r.amount_rooms || r.amountRooms || 0);
       if (!amount) return;
+
       caTotal += amount;
       const pid = String(r.propertyId || r.property_id || (r.property && typeof r.property === 'object' ? r.property.id : r.property) || 'unknown');
       const propName = (properties.find(p => String(p.id) === pid) || {}).name || 'Logement';
