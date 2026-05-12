@@ -7757,14 +7757,36 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
     // Charger les propriétés de l'utilisateur
     const allReservations = [];
-    const userProps = getUserProperties(userId);
+    let userProps = getUserProperties(userId);
 
     // Filtrer selon propriétés accessibles (si sous-compte)
-    const filteredProps = req.user.isSubAccount
-      ? userProps.filter(p => accessibleProperties.includes(p.id))
-      : userProps;
+    // Si accessibleProperties est vide → accès à TOUS les logements du parent
+    let filteredProps;
+    if (req.user.isSubAccount) {
+      if (accessibleProperties.length === 0) {
+        // Aucun logement spécifié = accès à tout
+        filteredProps = userProps;
+      } else {
+        filteredProps = userProps.filter(p => accessibleProperties.includes(p.id));
+        // Fallback DB si cache PROPERTIES vide
+        if (filteredProps.length === 0 && accessibleProperties.length > 0) {
+          console.log(`⚠️ [SubAccount] Cache PROPERTIES vide — fallback DB pour ${accessibleProperties.length} logement(s)`);
+          const dbProps = await pool.query(
+            `SELECT id, name, internal_name, color, user_id as "userId", arrival_time, departure_time,
+                    access_code, access_instructions, wifi_name, wifi_password, address,
+                    deposit_amount, base_price, practical_info, photo_url
+             FROM properties WHERE id = ANY($1) AND user_id = $2`,
+            [accessibleProperties, userId]
+          ).catch(() => ({ rows: [] }));
+          filteredProps = dbProps.rows;
+          console.log(`✅ [SubAccount] Fallback DB: ${filteredProps.length} logement(s)`);
+        }
+      }
+    } else {
+      filteredProps = userProps;
+    }
 
-    console.log(`🔍 DEBUG: userProps.length=${userProps.length}, filteredProps.length=${filteredProps.length}`);
+    console.log(`🔍 DEBUG: userProps=${userProps.length}, filteredProps=${filteredProps.length}, accessible=${accessibleProperties.length}`);
 
     // ⭐ Fonction pour normaliser les plateformes
     function normalizePlatform(platform) {
