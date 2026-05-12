@@ -27725,12 +27725,15 @@ app.post('/api/channex/webhook', async (req, res) => {
             arrivalStr = result.start_date.slice(0, 10);
           }
           const isArrivalToday = arrivalStr === todayStr;
+          // J-1 : arrivée demain → envoyer caution immédiatement si pas encore fait
+          const tomorrowStr = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+          const isArrivalTomorrow = arrivalStr === tomorrowStr;
 
           // ⚠️ on_arrival JAMAIS déclenché ici — géré par runTemplatesCron avec vérif caution
           // Seul on_booking est déclenché immédiatement
           const triggerTypes = ['on_booking'];
 
-          console.log(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivée aujourd\'hui)' : ''}`);
+          console.log(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivée aujourd\'hui)' : isArrivalTomorrow ? ' (arrivée demain J-1)' : ''}`);
 
           // Requête avec support property_ids (multi-logements)
           const templates = await pool.query(
@@ -27773,8 +27776,8 @@ app.post('/api/channex/webhook', async (req, res) => {
             console.warn(`⚠️ [TPL on_booking] Conversation non trouvée pour booking ${result.uid}`);
           }
 
-          // ── Gestion last-minute : arrivée aujourd'hui ──
-          if (isArrivalToday && conv) {
+          // ── Gestion last-minute : arrivée aujourd'hui OU demain (J-1) ──
+          if ((isArrivalToday || isArrivalTomorrow) && conv) {
             const platform = (conv.platform || result.platform || '').toLowerCase();
             const isAirbnb = platform.includes('airbnb') || platform === 'abb';
 
