@@ -27868,7 +27868,10 @@ app.post('/api/channex/webhook', async (req, res) => {
               }
               } // fin if (isLastMinute || isArrivalToday)
             } else {
-              // Airbnb + arrivée aujourd'hui → envoyer on_arrival directement (pas de caution)
+              // Airbnb + arrivée AUJOURD'HUI seulement → envoyer on_arrival directement (pas de caution)
+              if (!isArrivalToday) {
+                console.log(`⏭️ [TPL on_arrival Airbnb] Arrivée le ${arrivalStr}, pas aujourd'hui (${todayStr}) → cron s'en chargera`);
+              } else {
               const alreadySentArrival = await pool.query(
                 `SELECT 1 FROM message_template_logs
                  WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
@@ -27895,6 +27898,7 @@ app.post('/api/channex/webhook', async (req, res) => {
               } else {
                 console.log(`⏭️ [TPL on_arrival] Déjà envoyé — conv ${conv.id}`);
               }
+              } // fin if isArrivalToday Airbnb
             }
           }
         } catch(tplErr) {
