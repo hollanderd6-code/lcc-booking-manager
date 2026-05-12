@@ -27778,127 +27778,108 @@ app.post('/api/channex/webhook', async (req, res) => {
             console.warn(`⚠️ [TPL on_booking] Conversation non trouvée pour booking ${result.uid}`);
           }
 
-          // ── Gestion last-minute : envoyer caution immédiatement si la date prévue d'envoi est dépassée ──
-          // Ex: template à J-3 et résa créée J-2 → envoyer immédiatement
+          // ── Gestion last-minute : envoyer immédiatement si la date prévue d'envoi est dépassée ──
+          // Logique : pour chaque template configuré, calculer si la résa est arrivée trop tard
+          // Ex: template caution à J-3, résa créée J-1 → envoyer maintenant
+          // Ex: template on_arrival à J-0, résa créée J-0 → envoyer maintenant
+          // Ex: template before_arrival à J-2, résa créée J-5 → laisser le cron gérer
           if (conv) {
             const platform = (conv.platform || result.platform || '').toLowerCase();
             const isAirbnb = platform.includes('airbnb') || platform === 'abb';
 
             if (!isAirbnb) {
-              // Chercher le template caution et vérifier si son offset est dépassé
-              const depositTpls = await pool.query(
+              // ── NON-AIRBNB : chercher tous les templates actifs pour ce logement/user ──
+              const allTpls = await pool.query(
                 `SELECT * FROM message_templates
                  WHERE user_id = $1 AND active = TRUE
-                 AND trigger_type IN ('before_arrival', 'on_booking')
-                 AND (
-                   message ILIKE '%caution%' OR message ILIKE '%dépôt%'
-                   OR message ILIKE '%garantie%' OR message ILIKE '%{caution_url}%'
-                   OR message ILIKE '%caution_url%'
-                   OR title ILIKE '%caution%' OR title ILIKE '%dépôt%'
-                 )
+                 AND trigger_type IN ('before_arrival', 'on_booking', 'on_arrival')
                  AND (
                    property_id IS NULL
                    OR property_id::text = $2::text
                    OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
                        AND property_ids @> to_jsonb($2::text))
                  )
-                 ORDER BY trigger_type = 'before_arrival' DESC
-                 LIMIT 1`,
+                 ORDER BY trigger_type = 'on_booking' DESC, trigger_offset_days DESC`,
                 [result.user_id, result.property_id]
               );
 
-              // Vérifier si l'offset du template est dépassé (résa créée trop tard)
-              const cautionTpl = depositTpls.rows[0];
-              const tplOffsetDays = cautionTpl ? (cautionTpl.trigger_offset_days || 0) : 0;
-              const isLastMinute = daysUntilArrival <= tplOffsetDays;
-              if (!isLastMinute && !isArrivalToday) {
-                // La date d'envoi prévue n'est pas encore passée → le cron s'en chargera
-                console.log(`⏭️ [TPL caution] Résa créée avec ${daysUntilArrival}j d'avance (offset=${tplOffsetDays}j) → cron s'en chargera`);
-              } else if (isLastMinute || isArrivalToday) {
+              for (const tpl of allTpls.rows) {
+                const tplOffsetDays = tpl.trigger_offset_days || 0;
+                const isOnBooking = tpl.trigger_type === 'on_booking';
+                const isOnArrival = tpl.trigger_type === 'on_arrival';
+                const isBeforeArrival = tpl.trigger_type === 'before_arrival';
 
-              if (cautionTpl) {
-                const cautionAlreadySent = await pool.query(
+                // on_booking → déjà géré plus haut, skip
+                if (isOnBooking) continue;
+
+                // Calculer si l'envoi aurait dû déjà avoir lieu
+                // on_arrival : J-0 → doit s'envoyer si arrivée aujourd'hui
+                // before_arrival J-X : doit s'envoyer si daysUntilArrival <= X
+                const shouldSendNow = isOnArrival
+                  ? isArrivalToday
+                  : (isBeforeArrival && daysUntilArrival <= tplOffsetDays);
+
+                if (!shouldSendNow) {
+                  console.log(`⏭️ [TPL last-minute] "${tpl.title}" (${tpl.trigger_type} J-${tplOffsetDays}) — arrivée dans ${daysUntilArrival}j → cron s'en chargera`);
+                  continue;
+                }
+
+                // Vérifier si c'est un template caution et si Airbnb (déjà filtré mais sécurité)
+                const isCautionTpl = tpl.message && (
+                  tpl.message.includes('{caution_url}') ||
+                  tpl.message.toLowerCase().includes('caution') ||
+                  tpl.title.toLowerCase().includes('caution')
+                );
+
+                // Vérifier que le template n'a pas déjà été envoyé dans les 23h
+                const alreadySent = await pool.query(
                   `SELECT 1 FROM message_template_logs
                    WHERE conversation_id = $1 AND template_id = $2
                    AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-                  [conv.id, cautionTpl.id]
+                  [conv.id, tpl.id]
                 );
-                if (cautionAlreadySent.rows.length === 0) {
-                  await sendTemplateMessage(pool, io, { template: cautionTpl, conv, property });
-                  console.log(`✅ [TPL caution last-minute] Envoyé (J-${daysUntilArrival}, offset=${tplOffsetDays}j) — conv ${conv.id}`);
-                } else {
-                  console.log(`⏭️ [TPL caution last-minute] Déjà envoyée — conv ${conv.id}`);
+                if (alreadySent.rows.length > 0) {
+                  console.log(`⏭️ [TPL last-minute] "${tpl.title}" déjà envoyé récemment — conv ${conv.id}`);
+                  continue;
                 }
-                // ⚠️ on_arrival sera déclenché par le webhook Stripe après paiement caution
-              } else {
-                // Pas de template caution → vérifier si le logement a une caution configurée
-                const depositAmount = parseFloat(property.deposit_amount || 0);
-                if (depositAmount <= 0) {
-                  // Pas de caution → envoyer on_arrival directement
-                  console.log(`⚠️ [TPL last-minute] Pas de caution sur ce logement → on_arrival immédiat`);
-                  const alreadySentArrival = await pool.query(
-                    `SELECT 1 FROM message_template_logs
-                     WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
-                     AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-                    [conv.id]
-                  );
-                  if (alreadySentArrival.rows.length === 0) {
-                    const arrivalTpls = await pool.query(
-                      `SELECT * FROM message_templates
-                       WHERE user_id = $1 AND trigger_type = 'on_arrival' AND active = TRUE
-                       AND (
-                         property_id IS NULL
-                         OR property_id::text = $2::text
-                         OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
-                             AND property_ids @> to_jsonb($2::text))
-                       )`,
-                      [result.user_id, result.property_id]
-                    );
-                    for (const tmpl of arrivalTpls.rows) {
-                      await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
-                      console.log(`✅ [TPL on_arrival last-minute sans caution] Envoyé — conv ${conv.id}`);
-                      await new Promise(r => setTimeout(r, 400));
-                    }
-                  } else {
-                    console.log(`⏭️ [TPL on_arrival] Déjà envoyé — conv ${conv.id}`);
-                  }
-                } else {
-                  console.log(`⚠️ [TPL last-minute] Caution configurée (${depositAmount}€) mais pas de template caution → on_arrival bloqué jusqu'au paiement`);
-                }
+
+                await sendTemplateMessage(pool, io, { template: tpl, conv, property });
+                console.log(`✅ [TPL last-minute] "${tpl.title}" envoyé (J-${daysUntilArrival}, offset=${tplOffsetDays}j) — conv ${conv.id}`);
+                await new Promise(r => setTimeout(r, 400));
               }
-              } // fin if (isLastMinute || isArrivalToday)
+
             } else {
-              // Airbnb + arrivée AUJOURD'HUI seulement → envoyer on_arrival directement (pas de caution)
+              // ── AIRBNB : on_arrival uniquement le jour J (pas de caution BH) ──
               if (!isArrivalToday) {
                 console.log(`⏭️ [TPL on_arrival Airbnb] Arrivée le ${arrivalStr}, pas aujourd'hui (${todayStr}) → cron s'en chargera`);
               } else {
-              const alreadySentArrival = await pool.query(
-                `SELECT 1 FROM message_template_logs
-                 WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
-                 AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-                [conv.id]
-              );
-              if (alreadySentArrival.rows.length === 0) {
-                const arrivalTpls = await pool.query(
-                  `SELECT * FROM message_templates
-                   WHERE user_id = $1 AND trigger_type = 'on_arrival' AND active = TRUE
-                   AND (
-                     property_id IS NULL
-                     OR property_id::text = $2::text
-                     OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
-                         AND property_ids @> to_jsonb($2::text))
-                   )`,
-                  [result.user_id, result.property_id]
+                const alreadySentArrival = await pool.query(
+                  `SELECT 1 FROM message_template_logs
+                   WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
+                   AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
+                  [conv.id]
                 );
-                for (const tmpl of arrivalTpls.rows) {
-                  await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
-                  console.log(`✅ [TPL on_arrival Airbnb last-minute] Envoyé — conv ${conv.id}`);
-                  await new Promise(r => setTimeout(r, 400));
+                if (alreadySentArrival.rows.length === 0) {
+                  const arrivalTpls = await pool.query(
+                    `SELECT * FROM message_templates
+                     WHERE user_id = $1 AND trigger_type = 'on_arrival' AND active = TRUE
+                     AND (
+                       property_id IS NULL
+                       OR property_id::text = $2::text
+                       OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                           AND property_ids @> to_jsonb($2::text))
+                     )`,
+                    [result.user_id, result.property_id]
+                  );
+                  for (const tmpl of arrivalTpls.rows) {
+                    await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
+                    console.log(`✅ [TPL on_arrival Airbnb last-minute] Envoyé — conv ${conv.id}`);
+                    await new Promise(r => setTimeout(r, 400));
+                  }
+                } else {
+                  console.log(`⏭️ [TPL on_arrival Airbnb] Déjà envoyé — conv ${conv.id}`);
                 }
-              } else {
-                console.log(`⏭️ [TPL on_arrival] Déjà envoyé — conv ${conv.id}`);
               }
-              } // fin if isArrivalToday Airbnb
             }
           }
         } catch(tplErr) {
