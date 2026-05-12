@@ -207,6 +207,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: true,
               can_manage_payments: true,
               can_view_contracts: true,
+              can_view_pricing: true,
+              can_manage_pricing: false,
+              can_view_reporting: true,
+              can_view_debours: true,
+              can_manage_debours: false,
+              can_view_welcome_book: true,
+              can_view_templates: false,
+              can_manage_templates: false,
               visible_kpis: _kpisFromBody
             };
             break;
@@ -237,6 +245,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_view_payments: true,
               can_manage_payments: true,
               can_view_contracts: true,
+              can_view_pricing: false,
+              can_manage_pricing: false,
+              can_view_reporting: false,
+              can_view_debours: false,
+              can_manage_debours: false,
+              can_view_welcome_book: true,
+              can_view_templates: true,
+              can_manage_templates: false,
               visible_kpis: _kpisFromBody
             };
             break;
@@ -304,9 +320,17 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
               can_manage_smart_locks: false,
               can_view_invoices: true,
               can_manage_invoices: false,
-              can_view_payments: false,
+              can_view_payments: true,
               can_manage_payments: false,
               can_view_contracts: false,
+              can_view_pricing: false,
+              can_manage_pricing: false,
+              can_view_reporting: true,
+              can_view_debours: true,
+              can_manage_debours: false,
+              can_view_welcome_book: false,
+              can_view_templates: false,
+              can_manage_templates: false,
               visible_kpis: _kpisFromBody
             };
             break;
@@ -339,6 +363,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_view_payments = $23,
           can_manage_payments = $24,
           can_view_contracts = $25,
+          can_view_pricing = $35,
+          can_manage_pricing = $36,
+          can_view_reporting = $37,
+          can_view_debours = $38,
+          can_manage_debours = $39,
+          can_view_welcome_book = $40,
+          can_view_templates = $41,
+          can_manage_templates = $42,
           notif_sub_new_reservation = $26,
           notif_sub_reservation_cancelled = $27,
           notif_sub_cleaning_assigned = $28,
@@ -383,7 +415,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
         notifications.notif_sub_payment_received || false,
         notifications.notif_sub_new_message || false,
         notifications.notif_sub_daily_summary || false,
-        JSON.stringify(finalPermissions.visible_kpis || {})
+        JSON.stringify(finalPermissions.visible_kpis || {}),
+        finalPermissions.can_view_pricing || false,
+        finalPermissions.can_manage_pricing || false,
+        finalPermissions.can_view_reporting || false,
+        finalPermissions.can_view_debours || false,
+        finalPermissions.can_manage_debours || false,
+        finalPermissions.can_view_welcome_book || false,
+        finalPermissions.can_view_templates || false,
+        finalPermissions.can_manage_templates || false
       ]);
 
       if (propertyIds && propertyIds.length > 0) {
@@ -648,6 +688,14 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
              can_view_payments = $23,
              can_manage_payments = $24,
              can_view_contracts = $25,
+             can_view_pricing = $35,
+             can_manage_pricing = $36,
+             can_view_reporting = $37,
+             can_view_debours = $38,
+             can_manage_debours = $39,
+             can_view_welcome_book = $40,
+             can_view_templates = $41,
+             can_manage_templates = $42,
              notif_sub_new_reservation = $26,
              notif_sub_reservation_cancelled = $27,
              notif_sub_cleaning_assigned = $28,
@@ -692,7 +740,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           notifications.notif_sub_payment_received || false,
           notifications.notif_sub_new_message || false,
           notifications.notif_sub_daily_summary || false,
-          JSON.stringify(finalPermissions.visible_kpis || {})
+          JSON.stringify(finalPermissions.visible_kpis || {}),
+          finalPermissions.can_view_pricing || false,
+          finalPermissions.can_manage_pricing || false,
+          finalPermissions.can_view_reporting || false,
+          finalPermissions.can_view_debours || false,
+          finalPermissions.can_manage_debours || false,
+          finalPermissions.can_view_welcome_book || false,
+          finalPermissions.can_view_templates || false,
+          finalPermissions.can_manage_templates || false
         ]
       );
       
