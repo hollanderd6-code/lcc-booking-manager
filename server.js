@@ -29927,63 +29927,113 @@ app.post('/api/guest/book', async (req, res) => {
       const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
       const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
 
+      // Récupérer infos hôte
+      const ownerInfoRes = await pool.query('SELECT email, company_name, first_name, last_name FROM users WHERE id = $1', [prop.owner_user_id || prop.user_id]).catch(() => ({ rows: [] }));
+      const ownerInfo = ownerInfoRes.rows[0] || {};
+      const hostName = ownerInfo.company_name || `${ownerInfo.first_name || ''} ${ownerInfo.last_name || ''}`.trim() || 'Votre hôte';
+
       await sendEmailViaBrevo({
         to: guest_email,
-        subject: `✅ Réservation confirmée — ${prop.name}`,
+        subject: `🎉 Réservation confirmée — ${prop.name}`,
         text: `Votre réservation est confirmée pour ${prop.name} du ${fmtDate(checkin)} au ${fmtDate(checkout)}.`,
-        html: bhEmailTemplate({
-          icon: '🏠',
-          title: 'Réservation confirmée !',
-          tag: prop.name,
+        html: bhGuestEmailTemplate({
+          title: '🎉 Réservation confirmée !',
+          preheader: `${prop.name} — du ${fmtDate(checkin)} au ${fmtDate(checkout)}`,
           bodyHtml: `
-            <div class="success-card">
-              <strong>Votre réservation est confirmée</strong><br>
-              Référence : <strong>${uid}</strong>
-            </div>
-
-            <div class="feat-row">
-              <div class="feat-icon">📍</div>
-              <div class="feat-text"><strong>Logement</strong><br>${prop.name}${prop.address ? '<br>' + prop.address : ''}</div>
-            </div>
-            <div class="feat-row">
-              <div class="feat-icon">📅</div>
-              <div class="feat-text"><strong>Arrivée</strong><br>${fmtDate(checkin)}${prop.arrival_time ? ' à partir de ' + prop.arrival_time : ''}</div>
-            </div>
-            <div class="feat-row">
-              <div class="feat-icon">📅</div>
-              <div class="feat-text"><strong>Départ</strong><br>${fmtDate(checkout)}${prop.departure_time ? ' avant ' + prop.departure_time : ''}</div>
-            </div>
-            <div class="feat-row">
-              <div class="feat-icon">👥</div>
-              <div class="feat-text"><strong>Voyageurs</strong><br>${guests || 1} personne${(guests || 1) > 1 ? 's' : ''}</div>
-            </div>
-
-            <hr class="divider">
-
-            <div style="background:#F5F2EC;border-radius:10px;padding:20px;margin:20px 0;">
-              <p style="margin:0 0 8px;font-size:13px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Récapitulatif du paiement</p>
-              <div style="display:flex;justify-content:space-between;font-size:14px;color:#444;margin-bottom:6px;">
-                <span>${prop.base_price}€ × ${nights} nuit${nights > 1 ? 's' : ''}</span>
-                <span>${totalBase}€</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:14px;color:#444;margin-bottom:10px;">
-                <span>Frais de service (3%)</span>
-                <span>${commission}€</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#1A7A5E;border-top:1px solid #DDD8CE;padding-top:10px;">
-                <span>Total payé</span>
-                <span>${totalTTC / 100}€</span>
+            <!-- Badge confirmation -->
+            <div style="text-align:center;margin-bottom:28px;">
+              <div style="display:inline-block;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:50px;padding:10px 24px;">
+                <span style="font-size:14px;font-weight:700;color:#16A34A;font-family:Arial,sans-serif;">✅ Paiement reçu · Réservation confirmée</span>
               </div>
             </div>
 
-            <div class="cta-block">
-              <p>Retrouvez toutes vos réservations dans l'app Boostinghost Guest</p>
-              <a href="${appUrl}/guest-app/public/index.html" class="btn">Voir mes réservations</a>
+            <!-- Référence -->
+            <p style="text-align:center;font-size:13px;color:#9CA3AF;margin:0 0 28px;font-family:Arial,sans-serif;">
+              Référence : <strong style="color:#7c3aed;">${uid}</strong>
+            </p>
+
+            <!-- Logement -->
+            <div style="background:#F9F7FF;border:1.5px solid #EDE9FF;border-radius:16px;padding:24px;margin-bottom:20px;">
+              <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,sans-serif;">LOGEMENT</p>
+              <p style="margin:0 0 4px;font-size:20px;font-weight:800;color:#1F1346;font-family:Arial,sans-serif;">${prop.name}</p>
+              ${prop.address ? `<p style="margin:0;font-size:13px;color:#6B7280;font-family:Arial,sans-serif;">📍 ${prop.address}</p>` : ''}
             </div>
 
-            <p class="signoff">À très bientôt,<br>L'équipe Boostinghost</p>
-          `,
-          footerNote: 'Boostinghost Guest — Réservation directe'
+            <!-- Dates grid -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+              <tr>
+                <td width="48%" style="background:#F9F7FF;border:1.5px solid #EDE9FF;border-radius:12px;padding:16px 18px;vertical-align:top;">
+                  <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,sans-serif;">ARRIVÉE</p>
+                  <p style="margin:0;font-size:16px;font-weight:700;color:#1F1346;font-family:Arial,sans-serif;">${fmtDate(checkin)}</p>
+                  ${prop.arrival_time ? `<p style="margin:4px 0 0;font-size:12px;color:#7c3aed;font-family:Arial,sans-serif;">À partir de ${prop.arrival_time}</p>` : ''}
+                </td>
+                <td width="4%"></td>
+                <td width="48%" style="background:#F9F7FF;border:1.5px solid #EDE9FF;border-radius:12px;padding:16px 18px;vertical-align:top;">
+                  <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,sans-serif;">DÉPART</p>
+                  <p style="margin:0;font-size:16px;font-weight:700;color:#1F1346;font-family:Arial,sans-serif;">${fmtDate(checkout)}</p>
+                  ${prop.departure_time ? `<p style="margin:4px 0 0;font-size:12px;color:#7c3aed;font-family:Arial,sans-serif;">Avant ${prop.departure_time}</p>` : ''}
+                </td>
+              </tr>
+            </table>
+
+            <!-- Voyageurs + nuits -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+              <tr>
+                <td width="48%" style="background:#F9F7FF;border:1.5px solid #EDE9FF;border-radius:12px;padding:14px 18px;">
+                  <p style="margin:0 0 2px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,sans-serif;">VOYAGEURS</p>
+                  <p style="margin:0;font-size:15px;font-weight:700;color:#1F1346;font-family:Arial,sans-serif;">👥 ${guests || 1} personne${(guests || 1) > 1 ? 's' : ''}</p>
+                </td>
+                <td width="4%"></td>
+                <td width="48%" style="background:#F9F7FF;border:1.5px solid #EDE9FF;border-radius:12px;padding:14px 18px;">
+                  <p style="margin:0 0 2px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,sans-serif;">DURÉE</p>
+                  <p style="margin:0;font-size:15px;font-weight:700;color:#1F1346;font-family:Arial,sans-serif;">🌙 ${nights} nuit${nights > 1 ? 's' : ''}</p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Récapitulatif paiement -->
+            <div style="background:#F9F7FF;border:1.5px solid #EDE9FF;border-radius:14px;padding:20px;margin-bottom:24px;">
+              <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,sans-serif;">RÉCAPITULATIF DU PAIEMENT</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-size:14px;color:#6B7280;font-family:Arial,sans-serif;padding-bottom:8px;">${prop.base_price}€ × ${nights} nuit${nights > 1 ? 's' : ''}</td>
+                  <td align="right" style="font-size:14px;color:#374151;font-weight:600;font-family:Arial,sans-serif;padding-bottom:8px;">${totalBase}€</td>
+                </tr>
+                <tr>
+                  <td style="font-size:14px;color:#6B7280;font-family:Arial,sans-serif;padding-bottom:14px;">Frais de service (3%)</td>
+                  <td align="right" style="font-size:14px;color:#374151;font-weight:600;font-family:Arial,sans-serif;padding-bottom:14px;">${commission}€</td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="border-top:1.5px solid #EDE9FF;padding-top:14px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:16px;font-weight:800;color:#1F1346;font-family:Arial,sans-serif;">Total payé</td>
+                        <td align="right" style="font-size:20px;font-weight:900;color:#7c3aed;font-family:Arial,sans-serif;">${totalTTC / 100}€</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Hôte -->
+            <div style="background:#F9F7FF;border:1.5px solid #EDE9FF;border-radius:14px;padding:18px 20px;margin-bottom:28px;">
+              <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,sans-serif;">VOTRE HÔTE</p>
+              <p style="margin:0 0 2px;font-size:15px;font-weight:700;color:#1F1346;font-family:Arial,sans-serif;">🏠 ${hostName}</p>
+              ${ownerInfo.email ? `<p style="margin:4px 0 0;font-size:13px;color:#7c3aed;font-family:Arial,sans-serif;"><a href="mailto:${ownerInfo.email}" style="color:#7c3aed;text-decoration:none;">${ownerInfo.email}</a></p>` : ''}
+            </div>
+
+            <!-- CTA -->
+            <div style="text-align:center;margin-bottom:24px;">
+              <a href="${appUrl}/guest-app/public/index.html" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:12px;font-size:16px;font-weight:700;font-family:Arial,sans-serif;letter-spacing:-0.3px;">
+                📱 Voir ma réservation
+              </a>
+            </div>
+
+            <p style="text-align:center;font-size:13px;color:#9CA3AF;font-family:Arial,sans-serif;margin:0;">
+              À très bientôt,<br><strong style="color:#7c3aed;">L'équipe Boostinghost Guest</strong>
+            </p>
+          `
         })
       });
       console.log(`✅ [GUEST] Email confirmation envoyé à ${guest_email}`);
@@ -30288,10 +30338,21 @@ pool.query(`
     password_hash TEXT,
     name TEXT,
     phone TEXT,
+    email_verified BOOLEAN DEFAULT FALSE,
+    verification_token TEXT,
+    verification_token_expires TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )
 `).catch(e => console.error('guest_users table:', e.message));
+
+// Migration : ajouter colonnes si absentes
+pool.query(`
+  ALTER TABLE guest_users
+    ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS verification_token TEXT,
+    ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMPTZ
+`).catch(() => {});
 
 // ── Route : inscription email + mot de passe ─────────────────
 app.post('/api/guest/auth/register', async (req, res) => {
@@ -30302,20 +30363,191 @@ app.post('/api/guest/auth/register', async (req, res) => {
     if (!phone) return res.status(400).json({ error: 'Numéro de téléphone requis' });
     const normalizedEmail = email.toLowerCase().trim();
     const passwordHash = await bcrypt.hash(password, 10);
-    const existing = await pool.query('SELECT id, password_hash FROM guest_users WHERE email = $1', [normalizedEmail]);
+    const existing = await pool.query('SELECT id, password_hash, email_verified FROM guest_users WHERE email = $1', [normalizedEmail]);
+
+    // Générer token de vérification email
+    const verifToken = require('crypto').randomBytes(32).toString('hex');
+    const verifExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
     if (existing.rows.length > 0) {
       if (existing.rows[0].password_hash) return res.status(409).json({ error: 'Un compte existe déjà avec cet email. Connectez-vous.' });
-      await pool.query('UPDATE guest_users SET password_hash = $1, name = COALESCE(name, $2), phone = COALESCE(phone, $3), updated_at = NOW() WHERE email = $4', [passwordHash, name || null, phone, normalizedEmail]);
+      await pool.query(
+        'UPDATE guest_users SET password_hash = $1, name = COALESCE(name, $2), phone = COALESCE(phone, $3), verification_token = $4, verification_token_expires = $5, email_verified = FALSE, updated_at = NOW() WHERE email = $6',
+        [passwordHash, name || null, phone, verifToken, verifExpires, normalizedEmail]
+      );
     } else {
-      await pool.query('INSERT INTO guest_users (email, password_hash, name, phone) VALUES ($1, $2, $3, $4)', [normalizedEmail, passwordHash, name || null, phone]);
+      await pool.query(
+        'INSERT INTO guest_users (email, password_hash, name, phone, email_verified, verification_token, verification_token_expires) VALUES ($1, $2, $3, $4, FALSE, $5, $6)',
+        [normalizedEmail, passwordHash, name || null, phone, verifToken, verifExpires]
+      );
     }
+
+    // Envoyer email de vérification
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+    const verifyLink = `${appUrl}/guest-app/public/index.html?verify_token=${verifToken}`;
+    try {
+      await sendEmailViaBrevo({
+        to: normalizedEmail,
+        subject: '✉️ Confirmez votre adresse email — Boostinghost Guest',
+        html: bhGuestEmailTemplate({
+          title: 'Confirmez votre email',
+          preheader: 'Un clic suffit pour activer votre compte Boostinghost Guest',
+          bodyHtml: `
+            <p style="font-size:16px;color:#374151;margin:0 0 8px;">Bonjour <strong>${name || 'cher voyageur'}</strong> 👋</p>
+            <p style="color:#6B7280;margin:0 0 24px;">Merci de vous être inscrit sur Boostinghost Guest. Pour activer votre compte, cliquez sur le bouton ci-dessous.</p>
+            <div style="text-align:center;margin:32px 0;">
+              <a href="${verifyLink}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:12px;font-size:16px;font-weight:700;font-family:Arial,sans-serif;letter-spacing:-0.3px;">
+                ✅ Confirmer mon email
+              </a>
+            </div>
+            <p style="text-align:center;color:#9CA3AF;font-size:13px;margin:0 0 8px;">Ce lien expire dans <strong>24 heures</strong>.</p>
+            <p style="text-align:center;color:#9CA3AF;font-size:12px;">Si vous n'avez pas créé de compte, ignorez cet email.</p>
+            <div style="background:#F5F2EC;border-radius:10px;padding:14px 18px;margin:24px 0 0;font-size:12px;color:#9CA3AF;word-break:break-all;">
+              Lien alternatif : <a href="${verifyLink}" style="color:#7c3aed;">${verifyLink}</a>
+            </div>
+          `
+        })
+      });
+      console.log(`📧 [GUEST AUTH] Email vérification envoyé à ${normalizedEmail}`);
+    } catch(emailErr) {
+      console.error('⚠️ [GUEST AUTH] Erreur email vérification:', emailErr.message);
+    }
+
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-    const sessionToken = jwt.sign({ email: normalizedEmail, type: 'guest_session' }, secret, { expiresIn: '30d' });
+    const sessionToken = jwt.sign({ email: normalizedEmail, type: 'guest_session', email_verified: false }, secret, { expiresIn: '30d' });
     console.log(`✅ [GUEST AUTH] Inscription: ${normalizedEmail}`);
-    res.json({ success: true, session_token: sessionToken, email: normalizedEmail, name: name || null });
+    res.json({ success: true, session_token: sessionToken, email: normalizedEmail, name: name || null, email_verified: false, needs_verification: true });
   } catch(e) {
     console.error('❌ [GUEST AUTH] register:', e.message);
     res.status(500).json({ error: 'Erreur lors de l\'inscription' });
+  }
+});
+
+// ── Template email BHGuest (violet) ─────────────────────────
+function bhGuestEmailTemplate({ title, preheader, bodyHtml }) {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{margin:0;padding:0;background:#F3F0FF;font-family:Arial,Helvetica,sans-serif;}
+    table{border-collapse:collapse;}
+    img{border:0;height:auto;}
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#F3F0FF;">
+<div style="display:none;font-size:1px;color:#F3F0FF;max-height:0;overflow:hidden;">${preheader || title}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F0FF;">
+  <tr>
+    <td align="center" style="padding:28px 16px;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #E8E0FF;">
+        <!-- HEADER violet -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#7c3aed 0%,#6d28d9 100%);padding:36px 36px 28px;text-align:center;">
+            <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:16px;">
+              <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;">
+                <span style="font-size:20px;font-weight:900;color:#fff;font-family:Arial,sans-serif;">B</span>
+              </div>
+              <span style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.8);font-family:Arial,sans-serif;">Boostinghost Guest</span>
+            </div>
+            <h1 style="margin:0;font-size:24px;font-weight:800;color:#ffffff;font-family:Arial,sans-serif;letter-spacing:-0.5px;">${title}</h1>
+          </td>
+        </tr>
+        <!-- BODY -->
+        <tr>
+          <td style="padding:36px 36px 28px;">
+            ${bodyHtml}
+          </td>
+        </tr>
+        <!-- FOOTER -->
+        <tr>
+          <td style="background:#F9F7FF;border-top:1px solid #EDE9FF;padding:20px 36px;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;">
+              Boostinghost Guest — Réservez et séjournez<br>
+              <a href="https://www.boostinghost.fr" style="color:#7c3aed;text-decoration:none;">www.boostinghost.fr</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+}
+
+// ── Route : vérification email ────────────────────────────────
+app.get('/api/guest/auth/verify', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: 'Token manquant' });
+
+    const result = await pool.query(
+      'SELECT id, email, name FROM guest_users WHERE verification_token = $1 AND verification_token_expires > NOW() AND email_verified = FALSE',
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Lien invalide ou expiré. Veuillez vous réinscrire.' });
+    }
+
+    const user = result.rows[0];
+    await pool.query(
+      'UPDATE guest_users SET email_verified = TRUE, verification_token = NULL, verification_token_expires = NULL, updated_at = NOW() WHERE id = $1',
+      [user.id]
+    );
+
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const sessionToken = jwt.sign({ email: user.email, type: 'guest_session', email_verified: true }, secret, { expiresIn: '30d' });
+
+    console.log(`✅ [GUEST AUTH] Email vérifié: ${user.email}`);
+    res.json({ success: true, session_token: sessionToken, email: user.email, name: user.name, email_verified: true });
+  } catch(e) {
+    console.error('❌ [GUEST AUTH] verify:', e.message);
+    res.status(500).json({ error: 'Erreur de vérification' });
+  }
+});
+
+// ── Route : renvoyer email de vérification ────────────────────
+app.post('/api/guest/auth/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email requis' });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const result = await pool.query('SELECT id, name, email_verified FROM guest_users WHERE email = $1', [normalizedEmail]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Compte introuvable' });
+    if (result.rows[0].email_verified) return res.json({ success: true, message: 'Email déjà vérifié' });
+
+    const verifToken = require('crypto').randomBytes(32).toString('hex');
+    const verifExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await pool.query(
+      'UPDATE guest_users SET verification_token = $1, verification_token_expires = $2, updated_at = NOW() WHERE email = $3',
+      [verifToken, verifExpires, normalizedEmail]
+    );
+
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+    const verifyLink = `${appUrl}/guest-app/public/index.html?verify_token=${verifToken}`;
+    await sendEmailViaBrevo({
+      to: normalizedEmail,
+      subject: '✉️ Confirmez votre adresse email — Boostinghost Guest',
+      html: bhGuestEmailTemplate({
+        title: 'Confirmez votre email',
+        preheader: 'Un clic suffit pour activer votre compte',
+        bodyHtml: `
+          <p style="color:#6B7280;margin:0 0 24px;">Voici votre nouveau lien de vérification, valable <strong>24 heures</strong>.</p>
+          <div style="text-align:center;margin:32px 0;">
+            <a href="${verifyLink}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:12px;font-size:16px;font-weight:700;font-family:Arial,sans-serif;">
+              ✅ Confirmer mon email
+            </a>
+          </div>
+        `
+      })
+    });
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: 'Erreur' });
   }
 });
 
