@@ -626,9 +626,13 @@ async function loadCityChips() {
     if (!_citiesCache) {
       const res = await fetch(`${API_URL}/api/guest/properties`);
       const props = await res.json();
+      // Extraire le nom de ville sans code postal (ex: "78350 Jouy-en-Josas" → "Jouy-en-Josas")
+      const extractCity = str => str ? str.replace(/^\d{4,6}\s+/,'').trim() : null;
       _citiesCache = [...new Set(
-        props.map(p => p.city || (p.address ? p.address.split(',').pop().trim() : null))
-            .filter(Boolean)
+        props.map(p => {
+          const raw = p.city || (p.address ? p.address.split(',').slice(-2,-1)[0]?.trim() : null);
+          return extractCity(raw);
+        }).filter(Boolean)
       )].sort();
     }
     const cities = _citiesCache;
@@ -704,13 +708,16 @@ function setFilter(el, filter) {
 
 function filterProperties() {
   const search = (document.getElementById('listSearchInput')?.value || '').toLowerCase();
+  const cityFilter = (state.search.city || '').toLowerCase();
   const cards = document.querySelectorAll('.prop-card');
   cards.forEach(card => {
     const name = (card.dataset.name || '').toLowerCase();
     const type = (card.dataset.type || '').toLowerCase();
+    const cardCity = (card.dataset.city || '').toLowerCase();
     const matchSearch = !search || name.includes(search);
     const matchFilter = !_activeFilter || _activeFilter.startsWith('prix') || type.includes(_activeFilter);
-    card.style.display = matchSearch && matchFilter ? 'block' : 'none';
+    const matchCity = !cityFilter || cardCity.includes(cityFilter);
+    card.style.display = matchSearch && matchFilter && matchCity ? 'block' : 'none';
   });
 }
 
@@ -819,7 +826,7 @@ async function loadProperties() {
     }
 
     grid.innerHTML = state.properties.map(p => `
-      <div class="prop-card" data-name="${(p.name||'').toLowerCase()}" data-type="${(p.description||'').toLowerCase()}" onclick="openProperty('${p.id}')">
+      <div class="prop-card" data-name="${(p.name||'').toLowerCase()}" data-type="${(p.description||'').toLowerCase()}" data-city="${(p.city||p.address||'').toLowerCase()}" onclick="openProperty('${p.id}')">
         <div class="prop-card-img" style="${p.photoUrl ? 'padding:0;background:none;' : ''}">
           ${p.photoUrl
             ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
