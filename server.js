@@ -7843,6 +7843,11 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         if (dateKey) {
           reservationsDbMap.set(`${r.property_id}_${dateKey}`, r);
         }
+        // Index plus précis property_id + start_date + end_date (évite collisions)
+        const endKey = r.end_date ? r.end_date.toISOString().split('T')[0] : null;
+        if (dateKey && endKey) {
+          reservationsDbMap.set(`${r.property_id}_${dateKey}_${endKey}`, r);
+        }
       });
       console.log(`📊 ${dbResResult.rows.length} réservations DB chargées pour enrichissement`);
     } catch (error) {
@@ -7872,11 +7877,15 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       });
 
       propertyReservations.forEach((reservation) => {
-        // Chercher les données DB — par uid, puis par channex key, puis par date
+        // Chercher les données DB — par uid, puis channex key, puis start+end, puis start seul
         const startDate = new Date(reservation.start || reservation.checkIn).toISOString().split('T')[0];
+        const endDateStr = reservation.end || reservation.checkOut
+          ? new Date(reservation.end || reservation.checkOut).toISOString().split('T')[0] : null;
         const dateKey = `${property.id}_${startDate}`;
+        const dateEndKey = endDateStr ? `${property.id}_${startDate}_${endDateStr}` : null;
         const dbData = reservationsDbMap.get(reservation.uid)
           || reservationsDbMap.get(reservation.reservationKey)
+          || (dateEndKey ? reservationsDbMap.get(dateEndKey) : null)
           || reservationsDbMap.get(dateKey)
           || {};
 
