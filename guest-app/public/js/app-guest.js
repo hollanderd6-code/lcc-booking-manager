@@ -159,6 +159,39 @@ async function loginWithPassword() {
 }
 
 // ── Inscription mot de passe ─────────────────────────────────
+function showVerificationPending(email) {
+  // Masquer le form auth, afficher un message de vérification
+  const authForm = document.querySelector('#screen-login .auth-form');
+  if (authForm) {
+    authForm.innerHTML = `
+      <div style="text-align:center;padding:24px 0;">
+        <div style="font-size:48px;margin-bottom:16px;">✉️</div>
+        <h2 style="font-size:20px;font-weight:700;color:#1F1346;margin:0 0 8px;">Vérifiez votre email</h2>
+        <p style="color:#6B7280;font-size:14px;margin:0 0 20px;">Un lien de confirmation a été envoyé à <strong>${email}</strong>. Cliquez dessus pour activer votre compte.</p>
+        <p style="color:#9CA3AF;font-size:13px;margin:0 0 20px;">Vérifiez vos spams si vous ne voyez pas l'email.</p>
+        <button onclick="resendVerification('${email}')" style="background:none;border:1.5px solid #7c3aed;color:#7c3aed;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
+          Renvoyer l'email
+        </button>
+      </div>
+    `;
+  }
+}
+
+async function resendVerification(email) {
+  try {
+    const res = await fetch(`${API_URL}/api/guest/auth/resend-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (res.ok) showToast('Email renvoyé !');
+    else showToast(data.error || 'Erreur');
+  } catch(e) {
+    showToast('Erreur réseau');
+  }
+}
+
 async function registerWithPassword() {
   const name = document.getElementById('regName')?.value?.trim();
   const email = document.getElementById('regEmail')?.value?.trim();
@@ -182,10 +215,14 @@ async function registerWithPassword() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    saveSession({ token: data.session_token, email: data.email, name: data.name || name });
-    updateNavAccount();
-    showToast('Compte créé avec succès !');
-    setTimeout(() => { window.location.replace(window.location.pathname); }, 800);
+    if (data.needs_verification) {
+      showVerificationPending(email);
+    } else {
+      saveSession({ token: data.session_token, email: data.email, name: data.name || name });
+      updateNavAccount();
+      showToast('Compte créé avec succès !');
+      setTimeout(() => { window.location.replace(window.location.pathname); }, 800);
+    }
   } catch(e) {
     errBox.textContent = e.message || 'Erreur lors de la création du compte';
     errBox.style.display = 'block';
@@ -238,7 +275,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   state.session = getSession();
   updateNavAccount();
 
-  // Magic link supprimé — auth par mot de passe uniquement
+  // Vérification email via lien (verify_token dans URL)
+  const urlParamsInit = new URLSearchParams(window.location.search);
+  const verifyToken = urlParamsInit.get('verify_token');
+  if (verifyToken) {
+    try {
+      const res = await fetch(`${API_URL}/api/guest/auth/verify?token=${verifyToken}`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        saveSession({ token: data.session_token, email: data.email, name: data.name });
+        state.session = getSession();
+        updateNavAccount();
+        showToast('✅ Email vérifié ! Bienvenue sur Boostinghost Guest.');
+        window.history.replaceState({}, '', window.location.pathname);
+      } else {
+        showToast(data.error || 'Lien de vérification invalide ou expiré.');
+      }
+    } catch(e) {
+      showToast('Erreur lors de la vérification.');
+    }
+  }
 
   // Charger les champs compte
   if (state.session) {
