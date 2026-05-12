@@ -12008,8 +12008,14 @@ app.put('/api/cleaning/checklists/:id/validate',
         // Collecter tous les tokens déjà notifiés pour éviter les doublons
         const alreadyNotifiedTokens = new Set();
 
-        // Token FCM du cleaner (via user_fcm_tokens lié au cleaner)
-        const cleanerRow = await pool.query('SELECT c.user_id, c.name, uft.fcm_token FROM cleaners c LEFT JOIN user_fcm_tokens uft ON uft.user_id = c.user_id WHERE c.id = $1 LIMIT 1', [cl.cleaner_id]);
+        // Token FCM du cleaner — via sub_account_id en priorité, sinon user_id
+        const cleanerRow = await pool.query(`
+          SELECT c.user_id, c.name,
+            COALESCE(uft_sub.fcm_token, uft_user.fcm_token) as fcm_token
+          FROM cleaners c
+          LEFT JOIN user_fcm_tokens uft_sub ON uft_sub.sub_account_id = c.sub_account_id AND c.sub_account_id IS NOT NULL
+          LEFT JOIN user_fcm_tokens uft_user ON uft_user.user_id = c.user_id AND c.user_id IS NOT NULL AND c.sub_account_id IS NULL
+          WHERE c.id = $1 LIMIT 1`, [cl.cleaner_id]);
         if (cleanerRow.rows.length > 0 && cleanerRow.rows[0].fcm_token) {
           alreadyNotifiedTokens.add(cleanerRow.rows[0].fcm_token);
           await sendNotification(
