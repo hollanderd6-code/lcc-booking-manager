@@ -144,7 +144,8 @@ async function getGroqResponse(userMessage, conversationContext = {}, messageHis
 
     // Caution / Dépôt de garantie
     const depositInfo = [];
-    if (conversationContext.depositAmount && parseFloat(conversationContext.depositAmount) > 0) {
+    // Airbnb gère sa propre caution — ne jamais mentionner de caution BH pour Airbnb
+    if (!conversationContext.isAirbnb && conversationContext.depositAmount && parseFloat(conversationContext.depositAmount) > 0) {
       const amt = parseFloat(conversationContext.depositAmount);
       const statusLabels = {
         authorized: `validée (empreinte bancaire de ${amt}€ — non débitée)`,
@@ -231,6 +232,7 @@ R11b. RETARD AU DÉPART (checkout) — RÈGLE CRITIQUE :
 R12. CHECK-OUT / DÉPART : Donne l'heure exacte + instructions de départ si disponibles (clés, linge, etc.).
 R13. WIFI : Donne le nom du réseau ET le mot de passe ensemble, dans la même réponse.
 R14. ACCÈS / CODE / CLÉ :
+   • ⚠️ RÈGLE ABSOLUE AIRBNB : Si isAirbnb = true → NE JAMAIS mentionner de caution, dépôt de garantie, lien de caution ou paiement de garantie. Airbnb gère entièrement la caution de son côté. Donner directement les codes d'accès et informations pratiques sans condition.
    • ⚠️ RÈGLE ABSOLUE : Si depositBlocksAccess = true (caution requise mais non payée) → NE JAMAIS donner les codes d'accès, le wifi, l'adresse précise ni aucune instruction d'entrée. Répondre uniquement : "Les informations d'accès vous seront communiquées dès que votre caution aura été validée. Voici le lien : [lien caution si disponible]". NE PAS escalader, NE PAS inventer d'excuse différente.
    • EN COURS DE SÉJOUR ou JOUR J d'arrivée (ET depositBlocksAccess = false) : Donne le code exact + instructions complètes d'accès. Si non disponible → [ESCALADE].
    • AVANT ARRIVÉE (plus d'1 jour avant le check-in) : NE PAS donner les codes. Répondre : "Toutes les instructions d'accès (codes, étapes d'entrée) vous seront envoyées automatiquement le matin de votre arrivée. À très bientôt !"
