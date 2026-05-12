@@ -2740,6 +2740,25 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     max-width: 100px !important;
   }
 }
+<style>
+@keyframes kpi-shimmer {
+  0%   { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+.kpi-skeleton {
+  display: inline-block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%);
+  background-size: 400px 100%;
+  animation: kpi-shimmer 1.2s infinite linear;
+}
+.kpi-skeleton-value {
+  width: 48px; height: 26px;
+}
+.kpi-skeleton-sub {
+  width: 90px; height: 12px; margin-top: 4px;
+}
+</style>
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -3022,7 +3041,7 @@ window.closeChecklistsKpiModal = function() {
 <div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiPropertiesValue">0</span>
+<span class="kpi-value" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
 <span class="kpi-sub kpi-sub--green">configurés sur Boostinghost</span>
 </div>
 </article>
@@ -3033,8 +3052,8 @@ window.closeChecklistsKpiModal = function() {
 <div style="width:32px;height:32px;border-radius:9px;background:rgba(59,130,246,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-right-left" style="font-size:14px;color:#2563EB;line-height:1;display:inline-block;"></i></div>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiTodayMovesValue">0</span>
-<span class="kpi-sub" id="kpiTodayMovesSub">0 arrivées • 0 départs</span>
+<span class="kpi-value" id="kpiTodayMovesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+<span class="kpi-sub" id="kpiTodayMovesSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
 </div>
 </article>
 <!-- KPI 3 : Ménages à prévoir dans les 48h -->
@@ -3044,7 +3063,7 @@ window.closeChecklistsKpiModal = function() {
 <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,158,11,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-broom" style="font-size:14px;color:#D97706;line-height:1;display:inline-block;"></i></div>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiCleaning48hValue">0</span>
+<span class="kpi-value" id="kpiCleaning48hValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
 <span class="kpi-sub" id="kpiCleaning48hSub">départs à nettoyer sous 48h</span>
 </div>
 </article>
@@ -3066,7 +3085,7 @@ window.closeChecklistsKpiModal = function() {
 <div style="width:32px;height:32px;border-radius:9px;background:rgba(139,92,246,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-calendar" style="font-size:14px;color:#7C3AED;line-height:1;display:inline-block;"></i></div>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiOccupancyValue">0%</span>
+<span class="kpi-value" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
 <span class="kpi-sub">sur le mois en cours</span>
 </div>
 </article>
@@ -3077,8 +3096,8 @@ window.closeChecklistsKpiModal = function() {
 <div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-shield-halved" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiDepositsValue">0</span>
-<span class="kpi-sub" id="kpiDepositsSub">cautions payées en cours</span>
+<span class="kpi-value" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+<span class="kpi-sub" id="kpiDepositsSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
 </div>
 </article>
 <!-- KPI 7 : Checklists en attente -->
@@ -3088,8 +3107,8 @@ window.closeChecklistsKpiModal = function() {
 <div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-clipboard-check" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiChecklistsValue">0</span>
-<span class="kpi-sub" id="kpiChecklistsSub">en attente de validation</span>
+<span class="kpi-value" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+<span class="kpi-sub" id="kpiChecklistsSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
 </div>
 </article>
 
@@ -3100,8 +3119,8 @@ window.closeChecklistsKpiModal = function() {
 <div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-chart-line" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
 </div>
 <div class="kpi-main">
-<span class="kpi-value" id="kpiCaValue">—</span>
-<span class="kpi-sub" id="kpiCaSub">mois en cours</span>
+<span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+<span class="kpi-sub" id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
 </div>
 </article>
 </section>
@@ -5982,7 +6001,16 @@ try {
     }
   }
   window.loadCalendarData = loadDataAndUpdateKpis;
-  document.addEventListener('DOMContentLoaded', loadDataAndUpdateKpis);
+
+  // 🚀 Lancer calendrier + checklists en parallèle au DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', () => {
+    Promise.allSettled([
+      loadDataAndUpdateKpis(),
+      // loadCleaningChecklists est déjà appelé via son propre DOMContentLoaded
+      // mais on s'assure que les KPI cautions et checklists partent en même temps
+      typeof loadAndUpdateDepositsKPI === 'function' ? loadAndUpdateDepositsKPI() : Promise.resolve(),
+    ]).catch(() => {});
+  });
 })();
 </script>
 <script>
