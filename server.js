@@ -21918,9 +21918,30 @@ async function regenStripeSession(record, type, pool) {
   const propertyId = record.property_id;
   const userId = record.user_id;
 
+  // 🛡️ Guards : skip si données manquantes
+  if (!propertyId) {
+    console.warn(`⚠️ [REGEN] ${record.id} ignoré — property_id manquant`);
+    return null;
+  }
+  if (!amountCents || amountCents <= 0) {
+    console.warn(`⚠️ [REGEN] ${record.id} ignoré — montant invalide`);
+    return null;
+  }
+  if (!userId) {
+    console.warn(`⚠️ [REGEN] ${record.id} ignoré — user_id manquant`);
+    return null;
+  }
+
   // Récupérer le logement pour le nom
   const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [propertyId]).catch(() => ({ rows: [] }));
   const prop = propRow.rows[0] || {};
+
+  // Si le logement n'existe pas en DB, on annule la caution et on skip
+  if (!prop.id) {
+    console.warn(`⚠️ [REGEN] ${record.id} ignoré — logement ${propertyId} introuvable, caution annulée`);
+    await pool.query('UPDATE deposits SET status = $1, updated_at = NOW() WHERE id = $2', ['cancelled', record.id]).catch(() => {});
+    return null;
+  }
 
   const stripeTarget = await getStripeForProperty(pool, propertyId, userId);
   const sessionOptions = stripeTarget.stripeAccountId ? { stripeAccount: stripeTarget.stripeAccountId } : {};
