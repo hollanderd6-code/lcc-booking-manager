@@ -27725,15 +27725,17 @@ app.post('/api/channex/webhook', async (req, res) => {
             arrivalStr = result.start_date.slice(0, 10);
           }
           const isArrivalToday = arrivalStr === todayStr;
-          // J-1 : arrivée demain → envoyer caution immédiatement si pas encore fait
-          const tomorrowStr = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-          const isArrivalTomorrow = arrivalStr === tomorrowStr;
+
+          // Calcul des jours avant arrivée pour détecter les résas last-minute
+          const arrivalDateObj = new Date(arrivalStr + 'T12:00:00Z');
+          const todayDateObj = new Date(todayStr + 'T12:00:00Z');
+          const daysUntilArrival = Math.round((arrivalDateObj - todayDateObj) / 86400000);
 
           // ⚠️ on_arrival JAMAIS déclenché ici — géré par runTemplatesCron avec vérif caution
           // Seul on_booking est déclenché immédiatement
           const triggerTypes = ['on_booking'];
 
-          console.log(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivée aujourd\'hui)' : isArrivalTomorrow ? ' (arrivée demain J-1)' : ''}`);
+          console.log(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivée aujourd\'hui)' : daysUntilArrival <= 0 ? ` (J${daysUntilArrival})` : ` (J-${daysUntilArrival})`}`);
 
           // Requête avec support property_ids (multi-logements)
           const templates = await pool.query(
@@ -27776,14 +27778,14 @@ app.post('/api/channex/webhook', async (req, res) => {
             console.warn(`⚠️ [TPL on_booking] Conversation non trouvée pour booking ${result.uid}`);
           }
 
-          // ── Gestion last-minute : arrivée aujourd'hui OU demain (J-1) ──
-          if ((isArrivalToday || isArrivalTomorrow) && conv) {
+          // ── Gestion last-minute : envoyer caution immédiatement si la date prévue d'envoi est dépassée ──
+          // Ex: template à J-3 et résa créée J-2 → envoyer immédiatement
+          if (conv) {
             const platform = (conv.platform || result.platform || '').toLowerCase();
             const isAirbnb = platform.includes('airbnb') || platform === 'abb';
 
             if (!isAirbnb) {
-              // Non-Airbnb + arrivée aujourd'hui → envoyer la caution immédiatement
-              // Le template on_arrival sera déclenché par le webhook Stripe après paiement
+              // Chercher le template caution et vérifier si son offset est dépassé
               const depositTpls = await pool.query(
                 `SELECT * FROM message_templates
                  WHERE user_id = $1 AND active = TRUE
@@ -27805,16 +27807,25 @@ app.post('/api/channex/webhook', async (req, res) => {
                 [result.user_id, result.property_id]
               );
 
-              if (depositTpls.rows.length > 0) {
+              // Vérifier si l'offset du template est dépassé (résa créée trop tard)
+              const cautionTpl = depositTpls.rows[0];
+              const tplOffsetDays = cautionTpl ? (cautionTpl.trigger_offset_days || 0) : 0;
+              const isLastMinute = daysUntilArrival <= tplOffsetDays;
+              if (!isLastMinute && !isArrivalToday) {
+                // La date d'envoi prévue n'est pas encore passée → le cron s'en chargera
+                console.log(`⏭️ [TPL caution] Résa créée avec ${daysUntilArrival}j d'avance (offset=${tplOffsetDays}j) → cron s'en chargera`);
+              } else if (isLastMinute || isArrivalToday) {
+
+              if (cautionTpl) {
                 const cautionAlreadySent = await pool.query(
                   `SELECT 1 FROM message_template_logs
                    WHERE conversation_id = $1 AND template_id = $2
                    AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-                  [conv.id, depositTpls.rows[0].id]
+                  [conv.id, cautionTpl.id]
                 );
                 if (cautionAlreadySent.rows.length === 0) {
-                  await sendTemplateMessage(pool, io, { template: depositTpls.rows[0], conv, property });
-                  console.log(`✅ [TPL caution last-minute] Envoyé — conv ${conv.id}`);
+                  await sendTemplateMessage(pool, io, { template: cautionTpl, conv, property });
+                  console.log(`✅ [TPL caution last-minute] Envoyé (J-${daysUntilArrival}, offset=${tplOffsetDays}j) — conv ${conv.id}`);
                 } else {
                   console.log(`⏭️ [TPL caution last-minute] Déjà envoyée — conv ${conv.id}`);
                 }
@@ -27855,6 +27866,7 @@ app.post('/api/channex/webhook', async (req, res) => {
                   console.log(`⚠️ [TPL last-minute] Caution configurée (${depositAmount}€) mais pas de template caution → on_arrival bloqué jusqu'au paiement`);
                 }
               }
+              } // fin if (isLastMinute || isArrivalToday)
             } else {
               // Airbnb + arrivée aujourd'hui → envoyer on_arrival directement (pas de caution)
               const alreadySentArrival = await pool.query(
