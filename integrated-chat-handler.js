@@ -887,6 +887,10 @@ Rules:
     }
 
     // ── Statut de la caution ────────────────────────────────────
+    // Airbnb gère la caution de son côté — jamais de caution BH pour Airbnb
+    const platformRaw = (conversation.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+    const isAirbnbPlatform = ['airbnb','abb','airbnbofficial'].includes(platformRaw) || platformRaw.includes('airbnb');
+
     let depositStatus = null;
     let depositAmount = null;
     try {
@@ -903,7 +907,8 @@ Rules:
          ORDER BY d.created_at DESC LIMIT 1`,
         [conversation.id]
       );
-      if (depResult.rows[0]) {
+      if (depResult.rows[0] && !isAirbnbPlatform) {
+        // Ne pas appliquer la logique caution BH pour Airbnb
         depositStatus = depResult.rows[0].status || null; // authorized | captured | pending | expired | null
         depositAmount = depResult.rows[0].deposit_amount || depResult.rows[0].amount_cents
           ? (depResult.rows[0].amount_cents ? depResult.rows[0].amount_cents / 100 : depResult.rows[0].deposit_amount)
@@ -964,19 +969,23 @@ Rules:
       })(),
       // ✅ Masquer les codes d'accès si la caution est requise et non payée
       accessCode: (() => {
+        if (isAirbnbPlatform) return property.access_code || welcomeBookData?.keyboxCode; // Airbnb : toujours donner le code
         const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
         const depositPaid = depositStatus && ['authorized', 'captured'].includes(depositStatus);
-        if (depositRequired && !depositPaid) return null; // Cacher les codes
+        if (depositRequired && !depositPaid) return null; // Cacher les codes si caution non payée
         return property.access_code || welcomeBookData?.keyboxCode;
       })(),
       accessInstructions: (() => {
+        if (isAirbnbPlatform) return property.access_instructions || welcomeBookData?.accessInstructions; // Airbnb : toujours donner les instructions
         const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
         const depositPaid = depositStatus && ['authorized', 'captured'].includes(depositStatus);
-        if (depositRequired && !depositPaid) return null; // Cacher les instructions
+        if (depositRequired && !depositPaid) return null; // Cacher les instructions si caution non payée
         return property.access_instructions || welcomeBookData?.accessInstructions;
       })(),
       // Indiquer à Groq si la caution bloque l'accès aux infos
+      // Airbnb gère sa propre caution → jamais bloquer l'accès pour Airbnb
       depositBlocksAccess: (() => {
+        if (isAirbnbPlatform) return false;
         const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
         const depositPaid = depositStatus && ['authorized', 'captured'].includes(depositStatus);
         return depositRequired && !depositPaid;
@@ -999,9 +1008,10 @@ Rules:
       practicalInfo: property.practical_info,
       customQRSummary,
       language,
-      // Caution
-      depositAmount: depositAmount || null,
-      depositStatus: depositStatus || null, // authorized | captured | pending | expired | null
+      // Caution — null pour Airbnb (ils gèrent leur propre caution)
+      depositAmount: isAirbnbPlatform ? null : (depositAmount || null),
+      depositStatus: isAirbnbPlatform ? 'not_applicable' : (depositStatus || null),
+      isAirbnb: isAirbnbPlatform,
     } : { language };
 
     // ── Détection sentiment négatif → notifier propriétaire même sans escalade ──
