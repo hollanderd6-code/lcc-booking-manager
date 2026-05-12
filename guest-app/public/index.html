@@ -314,6 +314,24 @@ body {
   overflow-x: auto; scrollbar-width: none;
 }
 .listings-filters::-webkit-scrollbar { display: none; }
+.city-chip {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: white;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.city-chip.active, .city-chip:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
 .filter-chip {
   flex: 0 0 auto; padding: 6px 14px;
   border-radius: 999px; font-size: 12px; font-weight: 600;
@@ -707,6 +725,9 @@ body.screen-detail #bottomNav { display: none !important; }
           <div class="home-cat" onclick="filterCat(this,'studio')">🛏️ Studios</div>
           <div class="home-cat" onclick="filterCat(this,'maison')">🏡 Maisons</div>
         </div>
+        <div class="home-city-row" id="homeCityChips" style="display:flex;gap:8px;overflow-x:auto;padding:8px 16px 0;scrollbar-width:none;">
+          <!-- Chips de villes chargées dynamiquement -->
+        </div>
       </div>
 
       <!-- Logements en vedette -->
@@ -773,6 +794,9 @@ body.screen-detail #bottomNav { display: none !important; }
         <div class="filter-chip" onclick="setFilter(this,'maison')">Maisons</div>
         <div class="filter-chip" onclick="setFilter(this,'prix-asc')">Prix ↑</div>
         <div class="filter-chip" onclick="setFilter(this,'prix-desc')">Prix ↓</div>
+      </div>
+      <div id="listCityChips" style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none;">
+        <!-- Chips de villes chargées dynamiquement -->
       </div>
       <div id="propertiesList">
         <div class="loading-center"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>
