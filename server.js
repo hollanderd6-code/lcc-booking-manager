@@ -3843,6 +3843,82 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
             
             console.log(`Paiement confirme: ${paymentId || session.id}`);
 
+            // 🏠 CRÉER UNE RÉSERVATION BHGUEST si lien libre avec dates OU session Guest App
+            try {
+              const pmtInfo = await pool.query(
+                `SELECT p.user_id, p.property_id, p.reservation_uid, p.metadata
+                 FROM payments p WHERE p.id = $1 OR p.stripe_session_id = $2 LIMIT 1`,
+                [paymentId, session.id]
+              );
+              const pmt = pmtInfo.rows[0];
+              const meta = pmt?.metadata || {};
+
+              // Infos depuis metadata du paiement (lien libre) ou metadata Stripe (Guest App)
+              const sMeta = session.metadata || {};
+              const startDate = meta.startDate || sMeta.checkin || null;
+              const endDate   = meta.endDate   || sMeta.checkout || null;
+              const guestName = meta.clientName || sMeta.guest_name || session.customer_details?.name || null;
+              const guestEmail = meta.clientEmail || sMeta.guest_email || session.customer_details?.email || null;
+              const guestPhone = meta.clientPhone || sMeta.guest_phone || session.customer_details?.phone || null;
+              const propId = pmt?.property_id || sMeta.property_id || null;
+              const isGuestAppSession = sMeta.source === 'boostinghost_guest';
+              const isFreeLinkWithDates = pmt?.reservation_uid?.startsWith('free_') && startDate && endDate;
+
+              if ((isFreeLinkWithDates || isGuestAppSession) && startDate && endDate && propId && pmt?.user_id) {
+                // Vérifier qu'une résa n'existe pas déjà pour ce paiement
+                const existingResa = await pool.query(
+                  `SELECT uid FROM reservations WHERE uid = $1`,
+                  [`BHGUEST_${paymentId || session.id}`]
+                );
+                if (existingResa.rows.length === 0) {
+                  const nights = Math.round((new Date(endDate) - new Date(startDate)) / 86400000);
+                  const amountTotal = session.amount_total ? session.amount_total / 100 : null;
+                  await pool.query(`
+                    INSERT INTO reservations (
+                      uid, user_id, property_id, source,
+                      guest_name, guest_email, guest_phone,
+                      start_date, end_date, nights,
+                      amount_total, status, created_at, updated_at
+                    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'confirmed',NOW(),NOW())
+                    ON CONFLICT (uid) DO NOTHING
+                  `, [
+                    `BHGUEST_${paymentId || session.id}`,
+                    pmt.user_id,
+                    propId,
+                    'guest_app',
+                    guestName || 'Voyageur',
+                    guestEmail,
+                    guestPhone,
+                    startDate,
+                    endDate,
+                    nights,
+                    amountTotal
+                  ]);
+                  // Lier le paiement à la nouvelle résa
+                  await pool.query(
+                    `UPDATE payments SET reservation_uid = $1 WHERE id = $2 OR stripe_session_id = $3`,
+                    [`BHGUEST_${paymentId || session.id}`, paymentId, session.id]
+                  );
+                  console.log(`✅ [BHGUEST] Réservation créée: BHGUEST_${paymentId || session.id} | ${guestName} | ${startDate} → ${endDate}`);
+
+                  // 🔔 Notif nouvelle réservation BHGuest
+                  try {
+                    const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1', [pmt.user_id]);
+                    for (const tok of tokensRes.rows) {
+                      await sendNotification(
+                        tok.fcm_token,
+                        `🎉 Nouvelle réservation BHGuest`,
+                        `${guestName || 'Voyageur'} · ${startDate} → ${endDate}`,
+                        { type: 'new_booking', reservationUid: `BHGUEST_${paymentId || session.id}` }
+                      );
+                    }
+                  } catch(nErr) { console.error('❌ Notif BHGUEST:', nErr.message); }
+                }
+              }
+            } catch(resaErr) {
+              console.error('❌ [BHGUEST] Erreur création réservation:', resaErr.message);
+            }
+
             // 🔔 Notif sous-comptes : paiement reçu
             try {
               const pmtRow = await pool.query(
@@ -16047,7 +16123,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
     }
 
-    const { reservationUid, amount, description, freeMode, clientName } = req.body;
+    const { reservationUid, amount, description, freeMode, clientName, clientEmail, clientPhone, startDate, endDate, propertyId: bodyPropertyId } = req.body;
 
     if (!reservationUid || !amount || amount <= 0) {
       return res.status(400).json({ error: 'reservationUid et montant (>0) sont requis' });
@@ -16085,11 +16161,18 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       stripeSessionId: null,
       checkoutUrl: null,
       createdAt: new Date().toISOString(),
-      metadata: clientName ? { clientName } : null
+      metadata: {
+        ...(clientName ? { clientName } : {}),
+        ...(clientEmail ? { clientEmail } : {}),
+        ...(clientPhone ? { clientPhone } : {}),
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {}),
+      }
     };
     
     // Sauvegarder en PostgreSQL
-    const saved = await savePaymentToDB(payment, user.id, property ? property.id : null);
+    const resolvedPropertyId = property ? property.id : (bodyPropertyId || null);
+    const saved = await savePaymentToDB(payment, user.id, resolvedPropertyId);
     
     if (!saved) {
       return res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
