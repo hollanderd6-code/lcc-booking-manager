@@ -601,7 +601,7 @@ async function fetchPropertyRating(propertyId) {
 
 // Génère le HTML des étoiles depuis une note /10 (Channex)
 function renderStars(rating) {
-  if (!rating) return '<span style="color:#9ca3af;font-size:12px;">Pas encore d'avis</span>';
+  if (!rating) return '<span style="color:#9ca3af;font-size:12px;">Pas encore d\'avis</span>';
   const on5 = Math.round((rating / 2) * 2) / 2; // note /10 → /5, demi-étoiles
   const full = Math.floor(on5);
   const half = on5 % 1 >= 0.5 ? 1 : 0;
