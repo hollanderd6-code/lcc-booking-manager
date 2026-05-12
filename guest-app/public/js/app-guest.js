@@ -721,8 +721,8 @@ function resetFilters() {
 }
 
 function updateSearchLabel() {
-  const ci = document.getElementById('searchCheckin').value;
-  const co = document.getElementById('searchCheckout').value;
+  const ci = document.getElementById('searchCheckin')?.value;
+  const co = document.getElementById('searchCheckout')?.value;
   const fmtDate = iso => iso ? new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : null;
   let parts = [];
   if (state.search.city) parts.push(state.search.city);
