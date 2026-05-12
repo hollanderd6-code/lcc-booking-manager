@@ -9181,7 +9181,7 @@ document.addEventListener('click', function(e) {
   // BHGuest : utiliser la route dediee
   const _rawSrc = (booking.source || booking.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
   const _isBHGuest = ['guestapp','bhguest','boostinghostguest','boostinghost'].includes(_rawSrc)
-    || (booking.uid && String(booking.uid).startsWith('GUEST_'));
+    || (booking.uid && (String(booking.uid).startsWith('GUEST_') || String(booking.uid).startsWith('BHGUEST_')));
   if (_isBHGuest && uid) {
     fetch('/api/guest/cancel-reservation', {
       method: 'POST',
@@ -9350,7 +9350,7 @@ if (editBookingForm) {
         const _srcRaw = (currentBookingData.source || currentBookingData.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
         const isBHGuest = BHGUEST_PLATFORMS.includes(platform) || BHGUEST_PLATFORMS.includes(currentBookingData.source)
           || _srcRaw === 'guestapp' || _srcRaw === 'bhguest' || _srcRaw === 'boostinghostguest'
-          || (currentBookingData.uid && String(currentBookingData.uid).startsWith('GUEST_'));
+          || (currentBookingData.uid && (String(currentBookingData.uid).startsWith('GUEST_') || String(currentBookingData.uid).startsWith('BHGUEST_')));
         const isOTA = !isBHGuest && platform && !['direct','manual',''].includes(platform) && platform !== 'block';
         const isManualRes = isBHGuest || currentBookingData.isManual || currentBookingData.type === 'manual' ||
           platform === 'direct' || platform === 'manual' || !platform;
