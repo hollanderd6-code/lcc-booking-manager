@@ -30679,7 +30679,7 @@ app.get('/api/guest/conversations', async (req, res) => {
   if (!email) return res.status(401).json({ error: 'Non connecté' });
   try {
     const result = await pool.query(`
-      SELECT c.id, c.guest_name, c.guest_email, c.platform, c.source,
+      SELECT c.id, c.guest_name, c.guest_email, c.platform,
              c.last_message_at, c.status, c.escalated,
              c.reservation_start_date, c.reservation_end_date,
              p.name as property_name, p.photo_url as property_photo,
