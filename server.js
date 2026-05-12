@@ -29645,6 +29645,42 @@ app.get('/api/guest/properties/:id', async (req, res) => {
   }
 });
 
+// ── Note moyenne publique d'un logement (depuis Channex) ─────
+app.get('/api/guest/properties/:id/rating', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const propResult = await pool.query(
+      `SELECT channex_property_id, channex_enabled FROM properties
+       JOIN users u ON u.id = properties.user_id
+       JOIN subscriptions s ON s.user_id = u.id
+       WHERE properties.id = $1 AND s.status IN ('active', 'trial')`,
+      [id]
+    );
+    const prop = propResult.rows[0];
+    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
+      return res.json({ avg: null, count: 0 });
+    }
+    try {
+      const { channexAPI } = require('./channex');
+      const scoresRes = await channexAPI.get('/reviews/scores', {
+        params: { 'filter[property_id]': prop.channex_property_id }
+      });
+      const scores = scoresRes.data?.data || [];
+      if (!scores.length) return res.json({ avg: null, count: 0 });
+      const total = scores.reduce((sum, s) => sum + (s.attributes?.overall_score ?? s.attributes?.score ?? 0), 0);
+      const count = scores.length;
+      const avg = Math.round((total / count) * 10) / 10;
+      console.log(`⭐ [GUEST RATING] property ${id}: ${avg}/10 (${count} avis)`);
+      res.json({ avg, count });
+    } catch (channexErr) {
+      res.json({ avg: null, count: 0 });
+    }
+  } catch (e) {
+    console.error('❌ [GUEST RATING]', e.message);
+    res.json({ avg: null, count: 0 });
+  }
+});
+
 // ── Créer une réservation Guest + paiement Stripe ───────────
 app.post('/api/guest/book', async (req, res) => {
   try {
