@@ -648,8 +648,7 @@ async function loadCityChips() {
 
 function selectCity(btn, city) {
   const chips = document.querySelectorAll('.city-chip');
-  // Toggle : si déjà actif, désélectionner
-  if (btn.classList.contains('active')) {
+  if (city !== null && btn.classList.contains('active')) {
     btn.classList.remove('active');
     state.search.city = null;
   } else {
@@ -659,6 +658,13 @@ function selectCity(btn, city) {
   }
   updateSearchLabel();
   updateResetBtn();
+  // Si on est sur home, naviguer vers la liste filtrée ; sinon filtrer sur place
+  const currentScreen = document.querySelector('.screen-content.active')?.id;
+  if (currentScreen === 'screen-home') {
+    navTo('home-list');
+  } else {
+    filterProperties();
+  }
 }
 
 function updateDateBoxes() {
