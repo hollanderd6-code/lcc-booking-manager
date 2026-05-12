@@ -387,6 +387,8 @@ function navTo(name) {
 
   // Charger les conversations quand on arrive sur l'onglet messages
   if (name === 'messages') loadGuestConversations();
+  // Charger les city chips sur home et home-list
+  if (name === 'home' || name === 'home-list') loadCityChips();
 }
 
 // ══════════════════════════════════════════════════
@@ -582,37 +584,65 @@ function closeSearchOnBg(e) {
   }
 }
 
-// Charge les villes disponibles depuis les logements
+// Cache des ratings Channex { propertyId: { avg, count } }
+const _ratingsCache = {};
+
+// Récupère la note moyenne d'un logement (route publique)
+async function fetchPropertyRating(propertyId) {
+  if (_ratingsCache[propertyId] !== undefined) return _ratingsCache[propertyId];
+  try {
+    const res = await fetch(`${API_URL}/api/guest/properties/${propertyId}/rating`);
+    if (!res.ok) { _ratingsCache[propertyId] = null; return null; }
+    const data = await res.json();
+    _ratingsCache[propertyId] = data;
+    return data;
+  } catch { _ratingsCache[propertyId] = null; return null; }
+}
+
+// Génère le HTML des étoiles depuis une note /10 (Channex)
+function renderStars(rating) {
+  if (!rating) return '<span style="color:#9ca3af;font-size:12px;">Pas encore d'avis</span>';
+  const on5 = Math.round((rating / 2) * 2) / 2; // note /10 → /5, demi-étoiles
+  const full = Math.floor(on5);
+  const half = on5 % 1 >= 0.5 ? 1 : 0;
+  const empty = 5 - full - half;
+  const stars = '<i class="fas fa-star" style="color:#f59e0b"></i>'.repeat(full)
+    + (half ? '<i class="fas fa-star-half-stroke" style="color:#f59e0b"></i>' : '')
+    + '<i class="far fa-star" style="color:#d1d5db"></i>'.repeat(empty);
+  return `${stars} <span style="font-weight:600;font-size:12px;color:#374151">${(rating/2).toFixed(1)}</span>`;
+}
+
+let _citiesCache = null;
+
+// Charge les villes disponibles — alimente homeCityChips + listCityChips
 async function loadCityChips() {
-  const container = document.getElementById('cityChips');
-  if (!container) return;
-  // Si déjà chargé, ne pas recharger
-  if (container.dataset.loaded === '1') return;
+  const containers = [
+    document.getElementById('homeCityChips'),
+    document.getElementById('listCityChips')
+  ].filter(Boolean);
+  if (!containers.length) return;
 
   try {
-    const res = await fetch(`${API_URL}/api/guest/properties`);
-    const props = await res.json();
-    // Extraire les villes uniques non vides
-    const cities = [...new Set(
-      props.map(p => p.city || (p.address ? p.address.split(',').pop().trim() : null))
-          .filter(Boolean)
-    )].sort();
-
-    if (!cities.length) {
-      container.innerHTML = '<span class="city-chips-loading">Aucune ville disponible</span>';
-      return;
+    if (!_citiesCache) {
+      const res = await fetch(`${API_URL}/api/guest/properties`);
+      const props = await res.json();
+      _citiesCache = [...new Set(
+        props.map(p => p.city || (p.address ? p.address.split(',').pop().trim() : null))
+            .filter(Boolean)
+      )].sort();
     }
+    const cities = _citiesCache;
+    if (!cities.length) return;
 
     const currentCity = state.search.city;
-    container.innerHTML = cities.map(city => `
-      <button type="button" class="city-chip ${currentCity === city ? 'active' : ''}"
-        onclick="selectCity(this, '${city.replace(/'/g, "\\'")}')">
-        ${city}
-      </button>
-    `).join('');
-    container.dataset.loaded = '1';
+    const html = [
+      `<button type="button" class="city-chip${!currentCity ? ' active' : ''}" onclick="selectCity(this, null)">Toutes</button>`,
+      ...cities.map(city => `<button type="button" class="city-chip${currentCity === city ? ' active' : ''}" onclick="selectCity(this, '${city.replace(/'/g, "\\'")}')">${city}</button>`)
+    ].join('');
+
+    containers.forEach(c => { c.innerHTML = html; });
   } catch(e) {
-    container.innerHTML = '<span class="city-chips-loading">Erreur de chargement</span>';
+    containers.forEach(c => { c.innerHTML = ''; });
   }
 }
 
@@ -728,19 +758,26 @@ async function loadFeaturedProperties() {
     if (!res.ok) throw new Error();
     const props = await res.json();
     if (!props.length) { el.innerHTML = '<div style="padding:20px;color:#9ca3af;font-size:13px;">Aucun logement disponible</div>'; return; }
-    el.innerHTML = props.slice(0,4).map(p => `
+    const featuredProps = props.slice(0,4);
+    el.innerHTML = featuredProps.map(p => `
       <div class="home-card" onclick="openProperty('${p.id}')">
         <div class="home-card-img" style="${p.photoUrl ? 'padding:0;background:none;' : ''}">
           ${p.photoUrl ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;">` : '🏠'}
         </div>
         <div class="home-card-body">
-          <div class="home-card-stars">★★★★★</div>
+          <div class="home-card-stars" id="stars-home-${p.id}" style="color:#d1d5db;font-size:12px;">…</div>
           <div class="home-card-name">${p.name}</div>
           <div class="home-card-loc"><i class="fas fa-location-dot"></i>${p.city || 'France'}</div>
           <div class="home-card-price">${p.basePrice || '—'}€ <span>/ nuit</span></div>
         </div>
       </div>
     `).join('');
+    // Charger les vraies notes Channex en arrière-plan
+    featuredProps.forEach(async p => {
+      const r = await fetchPropertyRating(p.id);
+      const el2 = document.getElementById(`stars-home-${p.id}`);
+      if (el2) el2.innerHTML = renderStars(r?.avg || null);
+    });
   } catch(e) {
     el.innerHTML = '<div style="padding:20px;color:#9ca3af;font-size:13px;">Chargement impossible</div>';
   }
@@ -784,10 +821,7 @@ async function loadProperties() {
           ${p.basePrice ? `<div class="prop-card-badge">${p.basePrice}€ / nuit</div>` : ''}
         </div>
         <div class="prop-card-body">
-          <div class="prop-card-stars">
-            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-stroke"></i>
-            <span>4.8</span>
-          </div>
+          <div class="prop-card-stars" id="stars-list-${p.id}" style="color:#d1d5db;font-size:12px;">…</div>
           <div class="prop-card-name">${p.name}</div>
           <div class="prop-card-loc"><i class="fas fa-location-dot"></i>${p.city || p.address || 'France'}</div>
           <div class="prop-card-features">
@@ -805,6 +839,12 @@ async function loadProperties() {
         </div>
       </div>
     `).join('');
+    // Charger les vraies notes Channex en arrière-plan
+    state.properties.forEach(async p => {
+      const r = await fetchPropertyRating(p.id);
+      const el = document.getElementById(`stars-list-${p.id}`);
+      if (el) el.innerHTML = renderStars(r?.avg || null);
+    });
 
   } catch (e) {
     grid.innerHTML = `<div class="empty-state"><i class="fas fa-wifi"></i><p>Impossible de charger les logements</p></div>`;
