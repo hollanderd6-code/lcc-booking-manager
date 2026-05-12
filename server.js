@@ -15756,7 +15756,7 @@ app.post('/api/deposits',
       return res.status(500).json({ error: 'Stripe non configuré (clé secrète manquante)' });
     }
 
-    const { reservationUid, amount, freeMode, clientName, propertyId: freePropertyId, ownerId: freeOwnerId } = req.body;
+    const { reservationUid, amount, freeMode, clientName, clientEmail, clientPhone, startDate, endDate, propertyId: freePropertyId, ownerId: freeOwnerId } = req.body;
 
     if (!reservationUid || !amount || amount <= 0) {
       return res.status(400).json({ error: 'reservationUid et montant (>0) sont requis' });
