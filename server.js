@@ -5574,13 +5574,8 @@ async function sendDepositRequestMessages(io) {
           ? { stripeAccount: stripeTarget.stripeAccountId }
           : {};
 
-        if (stripeTarget.applyFee) {
-          const feeRate = stripeTarget.stripeAccountId ? 0.03 : 0.05; // 3% compte connecté, 5% compte BH
-          sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * feeRate);
-          console.log(`✅ Caution automatique BH (frais ${feeRate*100}%)`);;
-        } else {
-          console.log(`✅ Caution automatique Booking sur Stripe proprio/user : ${stripeTarget.stripeAccountId}`);
-        }
+        // ⏸️ Commission BH en pause sur cautions automatiques
+        console.log(`✅ Caution automatique — pas de commission BH`);
 
         const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
         console.log('✅ Caution automatique Booking créée sur compte plateforme (pas Connect)');
@@ -15873,14 +15868,8 @@ app.post('/api/deposits',
       ? { stripeAccount: stripeTarget.stripeAccountId }
       : {};
 
-    if (stripeTarget.applyFee) {
-      // Stripe : 3% compte connecté, 5% compte BH plateforme
-      const feeRate2 = stripeTarget.stripeAccountId ? 0.03 : 0.05;
-      sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * feeRate2);
-      console.log(`✅ Création caution BH (frais ${feeRate2*100}% : ${sessionParams.payment_intent_data.application_fee_amount} cts)`);
-    } else {
-      console.log(`✅ Création caution sur Stripe proprio/user : ${stripeTarget.stripeAccountId}`);
-    }
+    // ⏸️ Commission BH en pause sur cautions
+    console.log(`✅ Création caution — pas de commission BH`);
 
     session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
 
@@ -16059,7 +16048,7 @@ app.put('/api/payments/:paymentId',
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: [{ price_data: { currency: 'eur', product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
-      payment_intent_data: { application_fee_amount: platformFee, metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } },
+      payment_intent_data: { metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } }, // ⏸️ Commission BH en pause
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
@@ -20718,10 +20707,7 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
         const stripeTarget = await getStripeForProperty(pool, row.property_id, userId);
         const sessionOptions = stripeTarget.stripeAccountId
           ? { stripeAccount: stripeTarget.stripeAccountId } : {};
-        if (stripeTarget.applyFee) {
-          const feeRate = stripeTarget.stripeAccountId ? 0.03 : 0.05;
-          sessionParams.payment_intent_data.application_fee_amount = Math.round(amountCents * feeRate);
-        }
+        // ⏸️ Commission BH en pause sur cautions
 
         const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
 
@@ -21938,7 +21924,8 @@ async function regenStripeSession(record, type, pool) {
 
   const stripeTarget = await getStripeForProperty(pool, propertyId, userId);
   const sessionOptions = stripeTarget.stripeAccountId ? { stripeAccount: stripeTarget.stripeAccountId } : {};
-  const feeRate = stripeTarget.stripeAccountId ? 0.03 : 0.05;
+  // ⏸️ Commission BH en pause sur cautions et paiements (hors Guest App)
+  const feeRate = 0;
 
   let sessionParams;
 
@@ -21950,7 +21937,6 @@ async function regenStripeSession(record, type, pool) {
       payment_intent_data: {
         capture_method: 'manual',
         metadata: { deposit_id: record.id, reservation_uid: record.reservation_uid || '' },
-        application_fee_amount: Math.round(amountCents * feeRate),
       },
       metadata: { deposit_id: record.id, reservation_uid: record.reservation_uid || '' },
       success_url: `${appUrl}/caution-success.html?depositId=${record.id}`,
@@ -21975,7 +21961,7 @@ async function regenStripeSession(record, type, pool) {
       line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: meta.description || `Paiement - ${prop.name || propertyId}` } }, quantity: 1 }],
       payment_intent_data: {
         metadata: { payment_id: record.id, reservation_uid: record.reservation_uid || '', payment_type: 'location' },
-        application_fee_amount: Math.round(amountCents * feeRate),
+        // ⏸️ Commission BH en pause
       },
       metadata: { payment_id: record.id, reservation_uid: record.reservation_uid || '', user_id: userId, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
@@ -22123,7 +22109,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
                 payment_method_types: ['card'],
                 mode: 'payment',
                 line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${propD.rows[0]?.name || conv.property_id}`, description: `Réservation du ${conv.reservation_start_date} au ${conv.reservation_end_date}` } }, quantity: 1 }],
-                payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUid }, application_fee_amount: Math.round(amountCents * (stripeTarget.stripeAccountId ? 0.03 : 0.05)) },
+                payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUid } }, // ⏸️ Commission BH en pause
                 metadata: { deposit_id: depositId, reservation_uid: resUid },
                 success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
                 cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
@@ -22432,7 +22418,7 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
                   payment_method_types: ['card'],
                   mode: 'payment',
                   line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${propD.rows[0]?.name || c.property_id}`, description: `Réservation du ${c.reservation_start_date} au ${c.reservation_end_date}` } }, quantity: 1 }],
-                  payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUidCron }, application_fee_amount: Math.round(amountCents * (stripeTarget.stripeAccountId ? 0.03 : 0.05)) },
+                  payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUidCron } }, // ⏸️ Commission BH en pause
                   metadata: { deposit_id: depositId, reservation_uid: resUidCron },
                   success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
                   cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
