@@ -30445,12 +30445,16 @@ function bhGuestEmailTemplate({ title, preheader, bodyHtml }) {
         <!-- HEADER violet -->
         <tr>
           <td style="background:linear-gradient(135deg,#7c3aed 0%,#6d28d9 100%);padding:36px 36px 28px;text-align:center;">
-            <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:16px;">
-              <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;">
-                <span style="font-size:20px;font-weight:900;color:#fff;font-family:Arial,sans-serif;">B</span>
-              </div>
-              <span style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.8);font-family:Arial,sans-serif;">Boostinghost Guest</span>
-            </div>
+            <table style="margin:0 auto 16px;" cellpadding="0" cellspacing="0" role="presentation">
+              <tr>
+                <td width="36" height="36" style="background:rgba(255,255,255,0.2);border-radius:10px;text-align:center;vertical-align:middle;">
+                  <span style="font-size:20px;font-weight:900;color:#fff;font-family:Arial,sans-serif;line-height:36px;">B</span>
+                </td>
+                <td style="padding-left:10px;vertical-align:middle;">
+                  <span style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.8);font-family:Arial,sans-serif;">Boostinghost Guest</span>
+                </td>
+              </tr>
+            </table>
             <h1 style="margin:0;font-size:24px;font-weight:800;color:#ffffff;font-family:Arial,sans-serif;letter-spacing:-0.5px;">${title}</h1>
           </td>
         </tr>
