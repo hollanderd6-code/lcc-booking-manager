@@ -503,6 +503,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
 <!-- Contenu -->
 <div id="reportContent" style="display:none;">
+  <div id="paymentBreakdownSection"></div>
 
   <!-- ── KPI HERO (2 grandes cartes) ── -->
   <p class="rp-section-title">Vue d'ensemble</p>
@@ -751,6 +752,9 @@ function render(d) {
   renderPieChart(d.platforms);
   renderPropTable(d.byProperty);
   renderMonthlyTable(d.monthly, d.byProperty);
+  // Section virements par plateforme
+  const payBreakdownEl = document.getElementById('paymentBreakdownSection');
+  if (payBreakdownEl) payBreakdownEl.innerHTML = renderPaymentBreakdown(d.monthly);
   populateComparatorSelects(d.byProperty);
   renderRentabilite(d);
 
@@ -949,6 +953,65 @@ function renderPropTable(props) {
   }).join('')}</tbody>`;
 
   document.getElementById('propTable').innerHTML = colgroup + thead + tbody;
+}
+
+function renderPaymentBreakdown(monthly) {
+  // Section virements par plateforme et par mois
+  const months = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const activeMonths = monthly.filter(m => m.bookings > 0 && m.byPlatform);
+  if (!activeMonths.length) return '';
+
+  let html = `
+    <section style="margin-top:32px;">
+      <h3 style="font-size:15px;font-weight:700;color:#1F2937;margin:0 0 16px;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-university" style="color:#1A7A5E;"></i> Virements reçus par plateforme
+        <span style="font-size:11px;font-weight:500;color:#9CA3AF;margin-left:4px;">basé sur la date de paiement effective</span>
+      </h3>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#F9FAFB;">
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:#6B7280;border-bottom:2px solid #E5E7EB;">Mois</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:#6B7280;border-bottom:2px solid #E5E7EB;">Plateforme</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:600;color:#6B7280;border-bottom:2px solid #E5E7EB;">Rés.</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:600;color:#6B7280;border-bottom:2px solid #E5E7EB;">Brut</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:600;color:#E53E3E;border-bottom:2px solid #E5E7EB;">Commission OTA</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:600;color:#1A7A5E;border-bottom:2px solid #E5E7EB;">Net reçu</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:#6B7280;border-bottom:2px solid #E5E7EB;">Date(s) virement</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+  activeMonths.forEach((m, idx) => {
+    const platforms = Object.values(m.byPlatform || {}).sort((a,b) => b.grossRevenue - a.grossRevenue);
+    const monthTotal = platforms.reduce((s, p) => s + p.hostPayout, 0);
+    platforms.forEach((p, pidx) => {
+      const isFirst = pidx === 0;
+      const isLast  = pidx === platforms.length - 1;
+      const platformColor = p.platform === 'Airbnb' ? '#FF5A5F'
+        : p.platform === 'Booking.com' ? '#003580'
+        : p.platform === 'Boostinghost Guest' ? '#7c3aed'
+        : '#6B7280';
+      html += `
+            <tr style="border-bottom:1px solid ${isLast ? '#E5E7EB' : '#F3F4F6'};${isFirst ? 'border-top:2px solid #E5E7EB;' : ''}">
+              ${isFirst ? `<td rowspan="${platforms.length}" style="padding:10px 12px;font-weight:700;color:#1F2937;vertical-align:middle;white-space:nowrap;">${months[m.month-1]}<br><span style="font-size:11px;font-weight:500;color:#9CA3AF;">Total: ${fmt(monthTotal)}</span></td>` : ''}
+              <td style="padding:8px 12px;">
+                <span style="display:inline-flex;align-items:center;gap:6px;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:${platformColor};flex-shrink:0;"></span>
+                  <strong style="color:${platformColor};">${p.platform}</strong>
+                </span>
+              </td>
+              <td style="padding:8px 12px;text-align:right;color:#6B7280;">${p.bookings}</td>
+              <td style="padding:8px 12px;text-align:right;color:#374151;">${fmt(p.grossRevenue)}</td>
+              <td style="padding:8px 12px;text-align:right;color:#E53E3E;">- ${fmt(p.otaCommissionAmount)}</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:700;color:#1A7A5E;">${fmt(p.hostPayout)}</td>
+              <td style="padding:8px 12px;color:#9CA3AF;font-size:12px;">${(p.paymentDates || []).sort().join(', ')}</td>
+            </tr>`;
+    });
+  });
+
+  html += `</tbody></table></div></section>`;
+  return html;
 }
 
 function renderMonthlyTable(monthly, byProp) {
