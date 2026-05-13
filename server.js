@@ -14021,7 +14021,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
 
     // ── Répartition par plateforme (global) ────────────────────
     const platformStats = {};
-    enrichedResas.forEach(r => {
+    filteredResas.forEach(r => {
       if (!platformStats[r.platform]) {
         platformStats[r.platform] = { bookings: 0, nights: 0, revenue: 0 };
       }
@@ -14029,7 +14029,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       platformStats[r.platform].nights    += r.nights;
       platformStats[r.platform].revenue   += r.grossRevenue;
     });
-    const totalBookings = enrichedResas.length;
+    const totalBookings = filteredResas.length;
     const platformArray = Object.entries(platformStats).map(([name, stats]) => ({
       name,
       bookings: stats.bookings,
@@ -14041,16 +14041,16 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     // ── Résumé global ───────────────────────────────────────────
     const summary = {
       totalBookings,
-      totalNights:            enrichedResas.reduce((s, r) => s + r.nights, 0),
-      totalGrossRevenue:      Math.round(enrichedResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
-      totalNetRevenue:        Math.round(enrichedResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100,
-      totalTouristTax:        Math.round(enrichedResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100,
-      totalCleaningFee:       Math.round(enrichedResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100,
-      totalConcierge:         Math.round(enrichedResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100,
-      totalOwnerRevenue:      Math.round(enrichedResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100,
-      totalOtaCommission:     Math.round(enrichedResas.reduce((s, r) => s + r.otaCommissionAmount, 0) * 100) / 100,
+      totalNights:            filteredResas.reduce((s, r) => s + r.nights, 0),
+      totalGrossRevenue:      Math.round(filteredResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
+      totalNetRevenue:        Math.round(filteredResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100,
+      totalTouristTax:        Math.round(filteredResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100,
+      totalCleaningFee:       Math.round(filteredResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100,
+      totalConcierge:         Math.round(filteredResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100,
+      totalOwnerRevenue:      Math.round(filteredResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100,
+      totalOtaCommission:     Math.round(filteredResas.reduce((s, r) => s + r.otaCommissionAmount, 0) * 100) / 100,
       avgNightsPerBooking: totalBookings > 0
-        ? Math.round(enrichedResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
+        ? Math.round(filteredResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
         : 0
     };
 
@@ -14061,7 +14061,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       monthly: monthlyData,
       byProperty: Object.values(byProperty),
       platforms: platformArray,
-      reservations: enrichedResas
+      reservations: filteredResas
     });
 
   } catch (err) {
