@@ -5351,7 +5351,13 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       // La résa est comptée dans le mois si la date de paiement tombe dans ce mois
       if (paymentDate < monthStart || paymentDate > monthEnd) return;
 
-      const amount = parseFloat(r.amount_total || r.amountTotal || r.host_payout || r.hostPayout || r.amount_rooms || r.amountRooms || 0);
+      // Montant brut : priorité amount_total > price > amount_rooms
+      // Pour Direct/BHGuest : souvent dans price ou amount_total
+      const amount = parseFloat(
+        r.amount_total || r.amountTotal ||
+        r.price || r.totalPrice || r.total_price ||
+        r.amount_rooms || r.amountRooms || 0
+      );
       if (!amount) return;
 
       caTotal += amount;
