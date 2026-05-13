@@ -96,6 +96,8 @@ async function resolveShortcuts(text, conv) {
     '{{wifi_password}}':     prop.wifiPassword || prop.wifi_password || '', '{wifi_password}': prop.wifiPassword || prop.wifi_password || '',
     '{{wifi_ssid}}':         prop.wifiName || prop.wifi_name || '', '{wifi_ssid}':     prop.wifiName || prop.wifi_name || '',
     '{{mot_de_passe_wifi}}': prop.wifiPassword || prop.wifi_password || '', '{mot_de_passe_wifi}': prop.wifiPassword || prop.wifi_password || '',
+    '{{wifi_nom}}':          prop.wifiName || prop.wifi_name || '', '{wifi_nom}':      prop.wifiName || prop.wifi_name || '',
+    '{{wifi_mdp}}':          prop.wifiPassword || prop.wifi_password || '', '{wifi_mdp}':      prop.wifiPassword || prop.wifi_password || '',
     // Livret — la route /api/properties/:id retourne welcomeBookUrl (camelCase)
     '{{welcome_book_url}}':  prop.welcomeBookUrl || prop.welcome_book_url || '', '{welcome_book_url}': prop.welcomeBookUrl || prop.welcome_book_url || '',
     '{{livret}}':            prop.welcomeBookUrl || prop.welcome_book_url || '', '{livret}':           prop.welcomeBookUrl || prop.welcome_book_url || '',
