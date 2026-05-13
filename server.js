@@ -30556,9 +30556,9 @@ app.post('/api/agency/invite', authenticateAny, async (req, res) => {
     );
 
     // Récupérer infos du délégateur pour l'email
-    const delegator = await pool.query('SELECT first_name, last_name, company_name, email FROM users WHERE id = $1', [userId]);
+    const delegator = await pool.query('SELECT first_name, last_name, company, email FROM users WHERE id = $1', [userId]);
     const d = delegator.rows[0] || {};
-    const delegatorName = d.company_name || `${d.first_name || ''} ${d.last_name || ''}`.trim() || 'Un utilisateur Boostinghost';
+    const delegatorName = d.company || `${d.first_name || ''} ${d.last_name || ''}`.trim() || 'Un utilisateur Boostinghost';
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
 
     if (!delegateUserId) {
@@ -30588,6 +30588,41 @@ app.post('/api/agency/invite', authenticateAny, async (req, res) => {
       } catch(emailErr) {
         console.error('⚠️ Email invitation agence:', emailErr.message);
       }
+    }
+
+    // Email de confirmation à l'inviteur
+    try {
+      const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+      await sendEmailViaBrevo({
+        to: d.email,
+        subject: `Invitation envoyée à ${email} — Boostinghost`,
+        html: bhEmailTemplate({
+          icon: '🏢',
+          title: 'Invitation gestionnaire envoyée',
+          tag: 'Compte Agence',
+          bodyHtml: `
+            <div class="feat-row">
+              <div class="feat-icon">✅</div>
+              <div class="feat-text">
+                <strong>Votre invitation a bien été envoyée à ${email}</strong><br>
+                ${delegateUserId
+                  ? 'Ce gestionnaire a un compte Boostinghost — il peut déjà accéder à votre espace.'
+                  : 'Un email d'invitation lui a été envoyé. Il devra créer un compte Boostinghost pour accepter.'}
+              </div>
+            </div>
+            <div class="feat-row">
+              <div class="feat-icon">🔐</div>
+              <div class="feat-text">Vous pouvez révoquer cet accès à tout moment depuis vos paramètres → Compte Agence.</div>
+            </div>
+            <div class="cta-block">
+              <a href="${appUrl}/settings-account.html" class="btn">Gérer mes accès</a>
+            </div>
+          `,
+          footerNote: 'Boostinghost — Gestion locative intelligente'
+        })
+      });
+    } catch(emailConfirmErr) {
+      console.error('⚠️ Email confirmation inviteur:', emailConfirmErr.message);
     }
 
     console.log(`✅ [AGENCY] Invitation envoyée: ${userId} → ${email} (status: ${delegateUserId ? 'accepted' : 'pending'})`);
@@ -30660,7 +30695,7 @@ app.get('/api/agency/delegations', authenticateAny, async (req, res) => {
     // Comptes que je gère (je suis le delegate)
     const iManage = await pool.query(
       `SELECT ad.id, ad.delegator_user_id, ad.status, ad.permissions, ad.accepted_at,
-              u.first_name, u.last_name, u.company_name, u.email as delegator_email,
+              u.first_name, u.last_name, u.company, u.email as delegator_email,
               (SELECT COUNT(*) FROM properties WHERE user_id = ad.delegator_user_id) as property_count
        FROM account_delegations ad
        JOIN users u ON u.id = ad.delegator_user_id
@@ -30672,7 +30707,7 @@ app.get('/api/agency/delegations', authenticateAny, async (req, res) => {
     // Gestionnaires qui ont accès à mon compte (je suis le delegator)
     const myDelegates = await pool.query(
       `SELECT ad.id, ad.delegate_email, ad.delegate_user_id, ad.status, ad.permissions, ad.invited_at, ad.accepted_at,
-              u.first_name, u.last_name, u.company_name
+              u.first_name, u.last_name, u.company
        FROM account_delegations ad
        LEFT JOIN users u ON u.id = ad.delegate_user_id
        WHERE ad.delegator_user_id = $1 AND ad.status != 'revoked'
@@ -30684,7 +30719,7 @@ app.get('/api/agency/delegations', authenticateAny, async (req, res) => {
       iManage: iManage.rows.map(r => ({
         id: r.id,
         userId: r.delegator_user_id,
-        name: r.company_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+        name: r.company || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
         email: r.delegator_email,
         propertyCount: parseInt(r.property_count),
         permissions: r.permissions,
@@ -30693,7 +30728,7 @@ app.get('/api/agency/delegations', authenticateAny, async (req, res) => {
       myDelegates: myDelegates.rows.map(r => ({
         id: r.id,
         email: r.delegate_email,
-        name: r.company_name || `${r.first_name || ''} ${r.last_name || ''}`.trim() || null,
+        name: r.company || `${r.first_name || ''} ${r.last_name || ''}`.trim() || null,
         status: r.status,
         permissions: r.permissions,
         invitedAt: r.invited_at,
@@ -30732,7 +30767,7 @@ app.post('/api/agency/switch', authenticateAny, async (req, res) => {
     }, secret, { expiresIn: '8h' });
 
     // Récupérer infos du compte cible
-    const target = await pool.query('SELECT id, first_name, last_name, company_name, email FROM users WHERE id = $1', [targetUserId]);
+    const target = await pool.query('SELECT id, first_name, last_name, company, email FROM users WHERE id = $1', [targetUserId]);
     const t = target.rows[0];
 
     console.log(`🔄 [AGENCY] Switch: ${userId} → ${targetUserId}`);
@@ -30741,7 +30776,7 @@ app.post('/api/agency/switch', authenticateAny, async (req, res) => {
       token: agencyToken,
       managedUser: {
         id: t.id,
-        name: t.company_name || `${t.first_name || ''} ${t.last_name || ''}`.trim(),
+        name: t.company || `${t.first_name || ''} ${t.last_name || ''}`.trim(),
         email: t.email
       }
     });
