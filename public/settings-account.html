@@ -2739,20 +2739,51 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch(e) { alert('Erreur réseau'); }
   }
 
-  window.revokeAgencyAccess = async function(delegationId) {
-    if (!confirm('Révoquer cet accès ?')) return;
-    const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/agency/revoke', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ delegationId })
-    });
-    if (res.ok) {
-      alert('✅ Accès révoqué avec succès.');
-    } else {
-      alert('❌ Erreur lors de la révocation.');
-    }
-    loadAgencyDelegations();
+  window.revokeAgencyAccess = function(delegationId) {
+    // Afficher modal de confirmation custom
+    const modal = document.createElement('div');
+    modal.id = 'revokeConfirmModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:white;border-radius:16px;padding:32px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center;">
+        <div style="width:52px;height:52px;background:#FEF2F2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px;">⚠️</div>
+        <h3 style="margin:0 0 8px;font-size:17px;font-weight:700;color:#1F2937;">Révoquer cet accès ?</h3>
+        <p style="color:#6B7280;font-size:14px;margin:0 0 24px;">Cette personne ne pourra plus accéder à votre compte Boostinghost.</p>
+        <div style="display:flex;gap:12px;">
+          <button onclick="document.getElementById('revokeConfirmModal').remove()"
+            style="flex:1;padding:12px;border:1.5px solid #E5E7EB;border-radius:10px;background:white;color:#374151;font-weight:600;cursor:pointer;font-family:inherit;">
+            Annuler
+          </button>
+          <button id="revokeConfirmBtn"
+            style="flex:1;padding:12px;border:none;border-radius:10px;background:#DC2626;color:white;font-weight:600;cursor:pointer;font-family:inherit;">
+            Révoquer
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('revokeConfirmBtn').onclick = async function() {
+      modal.remove();
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/agency/revoke', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delegationId })
+      });
+      if (res.ok) {
+        // Recharger la liste
+        await loadAgencyDelegations();
+        // Toast de confirmation
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1A7A5E;color:white;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.15);';
+        toast.textContent = '✅ Accès révoqué avec succès';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      } else {
+        alert('❌ Erreur lors de la révocation.');
+      }
+    };
   }
 
   window.switchToAccount = async function(targetUserId, name) {
