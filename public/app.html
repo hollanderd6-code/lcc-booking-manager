@@ -2874,46 +2874,81 @@ window.exitAgencyMode = function() {
 // ── Switcher compte agence ────────────────────────────────────
 window._agencyAccounts = null;
 
+// ── Sprint 3 : Vue Agence Globale ────────────────────────────
+window._agencyViewActive = false;
+window._agencyAccounts = null;
+window._agencyAllReservations = [];
+window._agencyAllProperties = [];
+
 async function loadAgencyAccountsForSwitcher() {
   const token = localStorage.getItem('lcc_token');
   if (!token) return;
+  // Ne pas charger si on est déjà en mode agence (token switché)
+  if (localStorage.getItem('lcc_managed_user')) return;
   try {
     const res = await fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return;
     const data = await res.json();
     if (!data.iManage || !data.iManage.length) return;
     window._agencyAccounts = data.iManage;
-    renderAgencySwitcher(data.iManage);
+    // Afficher le toggle automatiquement
+    renderAgencyToggle(data.iManage);
   } catch(e) {}
 }
 
-function renderAgencySwitcher(accounts) {
+function renderAgencyToggle(accounts) {
   if (!accounts || !accounts.length) return;
-  const existing = document.getElementById('agencySwitcherBar');
+  const existing = document.getElementById('agencyToggleBar');
   if (existing) existing.remove();
 
   const bar = document.createElement('div');
-  bar.id = 'agencySwitcherBar';
-  bar.style.cssText = 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid #374151;';
+  bar.id = 'agencyToggleBar';
+  bar.style.cssText = 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #374151;flex-wrap:wrap;gap:8px;';
   bar.innerHTML = `
-    <span style="font-size:11px;color:#9CA3AF;font-weight:600;white-space:nowrap;flex-shrink:0;">GÉRER :</span>
-    ${accounts.map(a => `
-      <button onclick="switchAgencyAccount('${a.userId}', '${(a.name||a.email).replace(/'/g,"\'")}', '${a.color||'#6B7280'}')"
-        style="flex-shrink:0;padding:4px 12px;border-radius:20px;border:1.5px solid #374151;background:#374151;color:white;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;"
-        onmouseover="this.style.background='#7c3aed';this.style.borderColor='#7c3aed';"
-        onmouseout="this.style.background='#374151';this.style.borderColor='#374151';">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${a.color||'#6B7280'};margin-right:5px;"></span>
-        ${a.name || a.email}
-      </button>
-    `).join('')}
+    <div style="display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-building" style="color:#9CA3AF;font-size:12px;"></i>
+      <span style="font-size:11px;color:#9CA3AF;font-weight:600;">VUE AGENCE</span>
+      <div style="display:flex;background:#374151;border-radius:20px;padding:2px;gap:2px;">
+        <button id="agencyToggleMine" onclick="setAgencyView('mine')"
+          style="padding:4px 14px;border-radius:18px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:#1A7A5E;color:white;">
+          Mon compte
+        </button>
+        <button id="agencyToggleAll" onclick="setAgencyView('all')"
+          style="padding:4px 14px;border-radius:18px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:transparent;color:#9CA3AF;">
+          Tous les comptes
+        </button>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none;">
+      ${accounts.map(a => `
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#9CA3AF;white-space:nowrap;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${a.color||'#6B7280'};display:inline-block;"></span>
+          ${a.name || a.email}
+        </span>
+      `).join('<span style="color:#4B5563;">·</span>')}
+    </div>
   `;
-  // Insérer après la bannière agence ou tout en haut
   const agencyBanner = document.getElementById('agencyBanner');
-  if (agencyBanner) {
-    agencyBanner.insertAdjacentElement('afterend', bar);
-  } else {
-    document.body.prepend(bar);
+  if (agencyBanner) agencyBanner.insertAdjacentElement('afterend', bar);
+  else document.body.prepend(bar);
+}
+
+async function setAgencyView(mode) {
+  window._agencyViewActive = (mode === 'all');
+  // Mettre à jour les boutons toggle
+  const btnMine = document.getElementById('agencyToggleMine');
+  const btnAll  = document.getElementById('agencyToggleAll');
+  if (btnMine && btnAll) {
+    if (mode === 'all') {
+      btnAll.style.background  = '#7c3aed'; btnAll.style.color  = 'white';
+      btnMine.style.background = 'transparent'; btnMine.style.color = '#9CA3AF';
+    } else {
+      btnMine.style.background = '#1A7A5E'; btnMine.style.color = 'white';
+      btnAll.style.background  = 'transparent'; btnAll.style.color = '#9CA3AF';
+    }
   }
+  // Recharger les données
+  await loadDataAndUpdateKpis();
 }
 
 window.switchAgencyAccount = async function(targetUserId, name, color) {
@@ -2939,52 +2974,7 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
   } catch(e) { alert('Erreur réseau'); }
 };
 
-// ── Chargement résas agrégées (vue unifiée) ───────────────────
-window._agencyUnifiedMode = false;
-
-async function loadAgencyUnifiedReservations() {
-  const token = localStorage.getItem('lcc_agency_token') || localStorage.getItem('lcc_token');
-  if (!token) return;
-  try {
-    const res = await fetch('/api/agency/unified/reservations', { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.reservations || !data.reservations.length) return;
-
-    // Injecter les résas des autres comptes dans le calendrier
-    if (window.__bhCalendarState && window.__bhCalendarState.bookings) {
-      // Marquer les résas actuelles comme "mon compte"
-      const myUserId = JSON.parse(atob(token.split('.')[1])).id;
-      data.reservations.forEach(r => {
-        const acc = r._agencyAccount;
-        if (!acc) return;
-        // Ajouter si pas déjà présent
-        const exists = window.__bhCalendarState.bookings.find(b => b.uid === r.uid);
-        if (!exists) {
-          window.__bhCalendarState.bookings.push({
-            ...r,
-            uid: r.uid,
-            startDate: r.start_date,
-            endDate: r.end_date,
-            guestName: r.guest_name,
-            propertyId: r.property_id,
-            propertyName: r.property_name,
-            // Badge compte
-            _agencyAccount: acc,
-            _agencyBadge: acc.name,
-            color: acc.color || r.property_color
-          });
-        }
-      });
-      // Déclencher un re-render du calendrier si possible
-      if (window.renderCalendar) window.renderCalendar();
-      else if (window.loadCalendarData) window.loadCalendarData();
-    }
-    console.log(`🏢 [AGENCY] ${data.reservations.length} résas agrégées chargées`);
-  } catch(e) {
-    console.error('❌ [AGENCY] unified reservations:', e.message);
-  }
-}
+// (loadAgencyUnifiedReservations remplacé par setAgencyView dans Sprint 3)
 // Gérer invitation agence dans URL
 (function() {
   const p = new URLSearchParams(window.location.search);
@@ -2995,10 +2985,8 @@ async function loadAgencyUnifiedReservations() {
       .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
   }
   initAgencyBanner();
-  // Charger le switcher et les résas unifiées si on a des comptes délégués
+  // Charger le toggle agence automatiquement si comptes délégués
   loadAgencyAccountsForSwitcher();
-  // Charger les résas unifiées après le calendrier
-  setTimeout(loadAgencyUnifiedReservations, 2000);
 })();
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -6159,11 +6147,70 @@ try {
         properties = pRaw ? JSON.parse(pRaw) : [];
       }
       // store latest for click handlers
+      // ── Vue Agence : fusionner données de tous les comptes ──
+      if (window._agencyViewActive && window._agencyAccounts && window._agencyAccounts.length) {
+        try {
+          const agToken = localStorage.getItem('lcc_token');
+          const agRes = await fetch('/api/agency/unified/reservations', {
+            headers: { 'Authorization': 'Bearer ' + agToken }
+          });
+          if (agRes.ok) {
+            const agData = await agRes.json();
+            if (agData.reservations && agData.reservations.length) {
+              // Ajouter badge compte sur chaque résa externe
+              const agResas = agData.reservations.map(r => ({
+                ...r,
+                startDate: r.start_date || r.startDate,
+                endDate: r.end_date || r.endDate,
+                guestName: r.guest_name || r.guestName,
+                propertyName: r.property_name || r.propertyName,
+                _agencyBadge: r._agencyAccount?.name,
+                _agencyColor: r._agencyAccount?.color,
+                // Forcer la couleur du bloc calendrier par compte
+                color: r._agencyAccount?.color || r.property_color
+              }));
+              // Fusionner sans doublons
+              const myUids = new Set(reservations.map(r => r.uid));
+              const merged = [...reservations, ...agResas.filter(r => !myUids.has(r.uid))];
+              const agProps = agData.reservations
+                .map(r => ({ id: r.property_id, name: r.property_name, color: r._agencyAccount?.color }))
+                .filter((p, i, arr) => p.id && arr.findIndex(x => x.id === p.id) === i);
+              reservations = merged;
+              properties = [...properties, ...agProps.filter(p => !properties.find(x => x.id === p.id))];
+              console.log(`🏢 [AGENCY] Vue globale: ${merged.length} résas (${agResas.length} externes)`);
+            }
+          }
+        } catch(agErr) {
+          console.error('❌ [AGENCY] Chargement vue globale:', agErr.message);
+        }
+      }
+
       window.__LCC_KPI_STATE = { reservations, properties };
       if (window.renderModernCalendar) {
         window.renderModernCalendar(reservations, properties);
       }
       computeKpis(reservations, properties);
+
+      // ── Badge visuel sur les blocs agence dans le calendrier ──
+      if (window._agencyViewActive) {
+        setTimeout(() => {
+          document.querySelectorAll('.resa-block, .calendar-block, [data-uid]').forEach(block => {
+            if (block.dataset.agencyBadged) return;
+            const uid = block.dataset.uid || block.getAttribute('data-uid');
+            if (!uid) return;
+            const resa = reservations.find(r => r.uid === uid);
+            if (resa && resa._agencyBadge) {
+              block.dataset.agencyBadged = '1';
+              const badge = document.createElement('span');
+              badge.style.cssText = `position:absolute;top:2px;right:2px;font-size:8px;background:${resa._agencyColor||'#6B7280'};color:white;padding:1px 4px;border-radius:4px;font-weight:700;line-height:1.4;z-index:10;`;
+              badge.textContent = (resa._agencyBadge || '').split(' ')[0];
+              block.style.position = 'relative';
+              block.appendChild(badge);
+            }
+          });
+        }, 500);
+      }
+
       // Mettre à jour les statuts de connexion dans la top bar
       if (window.updateTopBarStatus) window.updateTopBarStatus();
       // updateTopRisksKpi / bhNotesRefresh est appelé dans renderModernCalendar.
