@@ -30839,6 +30839,211 @@ app.post('/api/agency/switch', authenticateAny, async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// 🏢 ROUTES AGRÉGÉES COMPTE AGENCE — SPRINT 2
+// ══════════════════════════════════════════════════════════════
+
+// Helper : récupérer les comptes délégués actifs pour un agent
+async function getAgencyAccounts(pool, agentUserId) {
+  const result = await pool.query(
+    `SELECT ad.delegator_user_id as user_id, ad.permissions,
+            u.first_name, u.last_name, u.company, u.email,
+            (SELECT color FROM properties WHERE user_id = ad.delegator_user_id LIMIT 1) as account_color
+     FROM account_delegations ad
+     JOIN users u ON u.id = ad.delegator_user_id
+     WHERE ad.delegate_user_id = $1 AND ad.status = 'accepted'`,
+    [agentUserId]
+  );
+  return result.rows.map(r => ({
+    userId: r.user_id,
+    name: r.company || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+    email: r.email,
+    permissions: r.permissions || {},
+    color: r.account_color || '#6B7280'
+  }));
+}
+
+// ── GET /api/agency/unified/reservations ─────────────────────
+// Agrège les réservations de tous les comptes délégués
+app.get('/api/agency/unified/reservations', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : (req.user.agentId || req.user.id);
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const accounts = await getAgencyAccounts(pool, userId);
+    if (!accounts.length) return res.json({ reservations: [], accounts: [] });
+
+    // Requête parallèle sur tous les comptes
+    const allReservations = await Promise.all(accounts.map(async account => {
+      try {
+        const result = await pool.query(
+          `SELECT r.*, p.name as property_name, p.color as property_color, p.internal_name
+           FROM reservations r
+           LEFT JOIN properties p ON p.id = r.property_id
+           WHERE r.user_id = $1 AND r.status != 'cancelled'
+           ORDER BY r.start_date DESC`,
+          [account.userId]
+        );
+        return result.rows.map(r => ({
+          ...r,
+          _agencyAccount: { userId: account.userId, name: account.name, color: account.color }
+        }));
+      } catch(e) {
+        console.error(`❌ [AGENCY] Résas compte ${account.userId}:`, e.message);
+        return [];
+      }
+    }));
+
+    res.json({
+      reservations: allReservations.flat(),
+      accounts: accounts.map(a => ({ userId: a.userId, name: a.name, color: a.color }))
+    });
+  } catch(e) {
+    console.error('❌ [AGENCY] unified/reservations:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── GET /api/agency/unified/conversations ────────────────────
+app.get('/api/agency/unified/conversations', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : (req.user.agentId || req.user.id);
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const accounts = await getAgencyAccounts(pool, userId);
+    if (!accounts.length) return res.json({ conversations: [], accounts: [] });
+
+    const allConvs = await Promise.all(accounts.map(async account => {
+      if (!account.permissions.can_view_messages) return [];
+      try {
+        const result = await pool.query(
+          `SELECT c.id, c.guest_name, c.platform, c.property_id, c.status,
+                  c.reservation_start_date, c.reservation_end_date,
+                  p.name as property_name, p.internal_name,
+                  (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.is_read = false AND m.sender = 'guest') as unread_count,
+                  (SELECT content FROM messages m2 WHERE m2.conversation_id = c.id ORDER BY m2.created_at DESC LIMIT 1) as last_message,
+                  (SELECT created_at FROM messages m3 WHERE m3.conversation_id = c.id ORDER BY m3.created_at DESC LIMIT 1) as last_message_at
+           FROM conversations c
+           LEFT JOIN properties p ON p.id = c.property_id
+           WHERE c.user_id = $1 AND c.status != 'closed'
+           ORDER BY last_message_at DESC NULLS LAST
+           LIMIT 50`,
+          [account.userId]
+        );
+        return result.rows.map(r => ({
+          ...r,
+          _agencyAccount: { userId: account.userId, name: account.name, color: account.color }
+        }));
+      } catch(e) { return []; }
+    }));
+
+    // Trier par dernière activité
+    const sorted = allConvs.flat().sort((a, b) =>
+      new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)
+    );
+
+    res.json({ conversations: sorted, accounts: accounts.map(a => ({ userId: a.userId, name: a.name, color: a.color })) });
+  } catch(e) {
+    console.error('❌ [AGENCY] unified/conversations:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── GET /api/agency/unified/cleaning ────────────────────────
+app.get('/api/agency/unified/cleaning', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : (req.user.agentId || req.user.id);
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const accounts = await getAgencyAccounts(pool, userId);
+    if (!accounts.length) return res.json({ checklists: [], assignments: [], accounts: [] });
+
+    const [allChecklists, allAssignments] = await Promise.all([
+      Promise.all(accounts.map(async account => {
+        if (!account.permissions.can_view_cleaning) return [];
+        try {
+          const result = await pool.query(
+            `SELECT cl.*, p.name as property_name, p.internal_name
+             FROM cleaning_checklists cl
+             LEFT JOIN properties p ON p.id = cl.property_id
+             WHERE cl.user_id = $1 AND cl.status NOT IN ('validated','rejected')
+             ORDER BY cl.checkout_date ASC`,
+            [account.userId]
+          );
+          return result.rows.map(r => ({
+            ...r,
+            _agencyAccount: { userId: account.userId, name: account.name, color: account.color }
+          }));
+        } catch(e) { return []; }
+      })),
+      Promise.all(accounts.map(async account => {
+        if (!account.permissions.can_view_cleaning) return [];
+        try {
+          const result = await pool.query(
+            `SELECT ca.*, p.name as property_name, r.guest_name, r.start_date, r.end_date
+             FROM cleaning_assignments ca
+             LEFT JOIN properties p ON p.id = ca.property_id
+             LEFT JOIN reservations r ON r.uid = ca.reservation_uid
+             WHERE ca.user_id = $1
+             ORDER BY ca.created_at DESC LIMIT 20`,
+            [account.userId]
+          );
+          return result.rows.map(r => ({
+            ...r,
+            _agencyAccount: { userId: account.userId, name: account.name, color: account.color }
+          }));
+        } catch(e) { return []; }
+      }))
+    ]);
+
+    res.json({
+      checklists: allChecklists.flat(),
+      assignments: allAssignments.flat(),
+      accounts: accounts.map(a => ({ userId: a.userId, name: a.name, color: a.color }))
+    });
+  } catch(e) {
+    console.error('❌ [AGENCY] unified/cleaning:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── GET /api/agency/unified/kpis ─────────────────────────────
+app.get('/api/agency/unified/kpis', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : (req.user.agentId || req.user.id);
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const accounts = await getAgencyAccounts(pool, userId);
+    if (!accounts.length) return res.json({ kpis: {}, accounts: [] });
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+    const kpis = await Promise.all(accounts.map(async account => {
+      try {
+        const [resaCount, depositCount, checklistCount] = await Promise.all([
+          pool.query(`SELECT COUNT(*) FROM reservations WHERE user_id = $1 AND start_date >= $2 AND start_date <= $3 AND status = 'confirmed'`, [account.userId, monthStart, monthEnd]),
+          pool.query(`SELECT COUNT(*) FROM deposits WHERE user_id = $1 AND status = 'authorized'`, [account.userId]),
+          pool.query(`SELECT COUNT(*) FROM cleaning_checklists WHERE user_id = $1 AND status = 'pending'`, [account.userId]),
+        ]);
+        return {
+          accountId: account.userId,
+          accountName: account.name,
+          color: account.color,
+          reservations: parseInt(resaCount.rows[0].count),
+          activeDeposits: parseInt(depositCount.rows[0].count),
+          pendingChecklists: parseInt(checklistCount.rows[0].count),
+        };
+      } catch(e) { return { accountId: account.userId, accountName: account.name, color: account.color }; }
+    }));
+
+    res.json({ kpis, accounts: accounts.map(a => ({ userId: a.userId, name: a.name, color: a.color })) });
+  } catch(e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ── Route : inscription email + mot de passe ─────────────────
 app.post('/api/guest/auth/register', async (req, res) => {
   try {
