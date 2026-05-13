@@ -2892,8 +2892,6 @@ window.exitAgencyMode = function() {
   }
 };
 
-})();
-
 // ── Switcher compte agence ────────────────────────────────────
 window._agencyAccounts = null;
 
@@ -3002,6 +3000,7 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
       .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
   }
   initAgencyBanner();
+})();
 
 document.addEventListener('DOMContentLoaded', function() {
   loadAgencyAccountsForSwitcher();
