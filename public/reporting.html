@@ -955,6 +955,12 @@ function renderPropTable(props) {
   document.getElementById('propTable').innerHTML = colgroup + thead + tbody;
 }
 
+function fmtPayDate(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}
+
 function renderPaymentBreakdown(monthly) {
   // Section virements par plateforme et par mois
   const months = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
@@ -1014,8 +1020,9 @@ function renderPaymentBreakdown(monthly) {
               <td style="padding:8px 12px;color:#9CA3AF;font-size:12px;">${(() => {
                 const dates = (p.paymentDates || []).sort();
                 if (dates.length === 0) return '—';
-                if (dates.length <= 3) return dates.join(', ');
-                return dates[0] + ' → ' + dates[dates.length-1] + ' <span style=\'color:#7c3aed;font-weight:600;\'>' + dates.length + ' virements</span>';
+                const fmt = d => { const [y,m,dd] = d.split('-'); return dd+'/'+m+'/'+y.slice(2); };
+                if (dates.length <= 3) return dates.map(fmt).join(', ');
+                return fmt(dates[0]) + ' → ' + fmt(dates[dates.length-1]) + ' <span style=\'color:#7c3aed;font-weight:600;\'>' + dates.length + ' virements</span>';
               })()}</td>
             </tr>`;
     });
