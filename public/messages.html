@@ -4042,20 +4042,11 @@ async function editTemplate(id) {
   } catch(e) {}
 }
 
-async function copyTemplate(id) {
+function copyTemplate(id) {
   const templates = window._lastTemplates || [];
   const t = templates.find(t => String(t.id) === String(id));
   if (!t) return;
-
-  // Utiliser resolveShortcuts (chat-owner.js) qui gère toutes les variables
-  // + cache logement + {wifi_nom}, {wifi_mdp}, {code_acces}, etc.
-  const conv = window.currentChatConv || {};
-  let msg = t.message;
-  if (typeof resolveShortcuts === 'function') {
-    msg = await resolveShortcuts(msg, conv);
-  }
-
-  navigator.clipboard.writeText(msg).then(() => {
+  navigator.clipboard.writeText(t.message).then(() => {
     showBHToast('✅ Message copié dans le presse-papier', 'success');
   }).catch(() => {
     showBHToast('Erreur lors de la copie', 'error');
