@@ -1498,6 +1498,92 @@ html[data-theme-v3="1"] .subscription-card {
     </div>
   </section>
 
+  <!-- ═══ Section Compte Agence ═══ -->
+  <section class="card" style="border:2px solid #7c3aed20;">
+    <div class="card-header" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
+      <div class="card-title" style="color:#7c3aed;">
+        <i class="fas fa-building" style="color:#7c3aed;"></i>
+        Compte Agence <span style="font-size:11px;background:#7c3aed;color:white;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:8px;">NOUVEAU</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <p style="color:#6b7280;margin-bottom:20px;">
+        Donnez accès à votre espace à un autre compte Boostinghost (votre agence de gestion), 
+        ou gérez plusieurs comptes depuis votre propre interface.
+      </p>
+
+      <!-- Comptes que je gère -->
+      <div id="agencyIManageSection" style="margin-bottom:24px;display:none;">
+        <h4 style="font-size:14px;font-weight:700;color:#374151;margin:0 0 12px;display:flex;align-items:center;gap:8px;">
+          <i class="fas fa-briefcase" style="color:#7c3aed;"></i> Comptes que je gère
+        </h4>
+        <div id="agencyIManageList"></div>
+      </div>
+
+      <!-- Gestionnaires qui ont accès à mon compte -->
+      <div style="margin-bottom:20px;">
+        <h4 style="font-size:14px;font-weight:700;color:#374151;margin:0 0 12px;display:flex;align-items:center;gap:8px;">
+          <i class="fas fa-user-tie" style="color:#7c3aed;"></i> Gestionnaires ayant accès à mon compte
+        </h4>
+        <div id="agencyDelegatesList" style="margin-bottom:16px;">
+          <p style="color:#9ca3af;font-size:13px;">Aucun gestionnaire pour le moment</p>
+        </div>
+        <button class="btn btn-primary" type="button" onclick="openInviteAgencyModal()" 
+                style="background:#7c3aed;border-color:#7c3aed;">
+          <i class="fas fa-plus"></i> Inviter un gestionnaire
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal invitation agence -->
+  <div id="inviteAgencyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:16px;padding:32px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <h3 style="margin:0 0 8px;font-size:18px;font-weight:700;">Inviter un gestionnaire</h3>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Le gestionnaire aura accès à votre calendrier, messages et données selon les permissions que vous définissez.</p>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Email du gestionnaire</label>
+        <input type="email" id="agencyInviteEmail" placeholder="agence@exemple.com"
+          style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:24px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:10px;">Permissions accordées</label>
+        <div style="display:grid;gap:10px;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="agencyPermCalendar" checked style="width:16px;height:16px;accent-color:#7c3aed;">
+            <span>📅 Calendrier & Réservations</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="agencyPermMessages" checked style="width:16px;height:16px;accent-color:#7c3aed;">
+            <span>💬 Messages</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="agencyPermCleaning" checked style="width:16px;height:16px;accent-color:#7c3aed;">
+            <span>🧹 Ménage</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="agencyPermReporting" style="width:16px;height:16px;accent-color:#7c3aed;">
+            <span>📊 Reporting & Revenus</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="agencyPermFinances" style="width:16px;height:16px;accent-color:#7c3aed;">
+            <span>💰 Finances & Paiements</span>
+          </label>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button type="button" onclick="closeInviteAgencyModal()"
+          style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:10px;background:white;color:#374151;font-weight:600;cursor:pointer;">
+          Annuler
+        </button>
+        <button type="button" onclick="sendAgencyInvite()"
+          style="flex:1;padding:12px;border:none;border-radius:10px;background:#7c3aed;color:white;font-weight:600;cursor:pointer;">
+          <i class="fas fa-paper-plane"></i> Envoyer l'invitation
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Section informations -->
   <section class="card">
     <div class="card-header">
@@ -2562,6 +2648,135 @@ if (logoInput && logoPreview) {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🟢 Script équipe - Version propre');
+
+  // ── Compte Agence ────────────────────────────────────────────
+  async function loadAgencyDelegations() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Comptes que je gère
+      const iManageSection = document.getElementById('agencyIManageSection');
+      const iManageList = document.getElementById('agencyIManageList');
+      if (data.iManage && data.iManage.length > 0) {
+        iManageSection.style.display = 'block';
+        iManageList.innerHTML = data.iManage.map(d => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f9f7ff;border:1.5px solid #ede9fe;border-radius:12px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:36px;height:36px;background:#7c3aed;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;">
+                ${(d.name || d.email)[0].toUpperCase()}
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:14px;">${d.name || d.email}</div>
+                <div style="font-size:12px;color:#9ca3af;">${d.propertyCount} logement(s) · Accès depuis ${new Date(d.acceptedAt).toLocaleDateString('fr-FR')}</div>
+              </div>
+            </div>
+            <button onclick="switchToAccount('${d.userId}', '${d.name || d.email}')"
+              style="padding:8px 16px;background:#7c3aed;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              <i class="fas fa-exchange-alt"></i> Gérer
+            </button>
+          </div>
+        `).join('');
+      }
+
+      // Gestionnaires qui ont accès à mon compte
+      const delegatesList = document.getElementById('agencyDelegatesList');
+      if (data.myDelegates && data.myDelegates.length > 0) {
+        delegatesList.innerHTML = data.myDelegates.map(d => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:12px;margin-bottom:8px;">
+            <div>
+              <div style="font-weight:600;font-size:14px;">${d.name || d.email}</div>
+              <div style="font-size:12px;color:${d.status === 'accepted' ? '#10b981' : '#f59e0b'};">
+                ${d.status === 'accepted' ? '✅ Accès actif' : '⏳ Invitation en attente'}
+              </div>
+            </div>
+            <button onclick="revokeAgencyAccess(${d.id})"
+              style="padding:6px 12px;background:white;color:#ef4444;border:1.5px solid #ef4444;border-radius:8px;font-size:12px;cursor:pointer;">
+              Révoquer
+            </button>
+          </div>
+        `).join('');
+      }
+    } catch(e) {
+      console.error('Erreur chargement délégations:', e);
+    }
+  }
+
+  function openInviteAgencyModal() {
+    document.getElementById('inviteAgencyModal').style.display = 'flex';
+  }
+  function closeInviteAgencyModal() {
+    document.getElementById('inviteAgencyModal').style.display = 'none';
+  }
+
+  async function sendAgencyInvite() {
+    const email = document.getElementById('agencyInviteEmail').value.trim();
+    if (!email) return alert('Email requis');
+    const permissions = {
+      can_view_calendar:   document.getElementById('agencyPermCalendar').checked,
+      can_view_messages:   document.getElementById('agencyPermMessages').checked,
+      can_view_cleaning:   document.getElementById('agencyPermCleaning').checked,
+      can_view_reporting:  document.getElementById('agencyPermReporting').checked,
+      can_view_finances:   document.getElementById('agencyPermFinances').checked,
+    };
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/agency/invite', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, permissions })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        closeInviteAgencyModal();
+        alert(data.status === 'accepted' ? '✅ Accès accordé ! Le gestionnaire peut déjà accéder à votre compte.' : '✅ Invitation envoyée par email !');
+        loadAgencyDelegations();
+      } else {
+        alert(data.error || 'Erreur');
+      }
+    } catch(e) { alert('Erreur réseau'); }
+  }
+
+  async function revokeAgencyAccess(delegationId) {
+    if (!confirm('Révoquer cet accès ?')) return;
+    const token = localStorage.getItem('lcc_token');
+    await fetch('/api/agency/revoke', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delegationId })
+    });
+    loadAgencyDelegations();
+  }
+
+  async function switchToAccount(targetUserId, name) {
+    if (!confirm(`Basculer vers le compte de ${name} ?`)) return;
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/agency/switch', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Sauvegarder le token agence + infos
+        localStorage.setItem('lcc_agency_token', localStorage.getItem('lcc_token')); // token original
+        localStorage.setItem('lcc_token', data.token); // token agence
+        localStorage.setItem('lcc_managed_user', JSON.stringify(data.managedUser));
+        localStorage.removeItem('lcc_settings_profile');
+        localStorage.removeItem('lcc_properties_cache');
+        window.location.href = '/app.html';
+      } else {
+        alert(data.error || 'Erreur');
+      }
+    } catch(e) { alert('Erreur réseau'); }
+  }
+
+  // Charger au démarrage
+  loadAgencyDelegations();
+
   
   const ROLE_DESCRIPTIONS = {
     owner: 'Accès complet à toutes les fonctionnalités (sauf gestion d\'équipe).',
