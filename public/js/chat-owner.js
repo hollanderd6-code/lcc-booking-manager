@@ -1611,8 +1611,11 @@ async function loadQuickReplies(conversationId) {
       chips.push(btn);
     });
 
-    // Bouton lien caution
-    if (data.depositUrl) {
+    // Bouton lien caution — masqué pour Airbnb (caution gérée par la plateforme)
+    const _convForDeposit = window.currentChatConv || {};
+    const _platDeposit = (_convForDeposit.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+    const _isAirbnbConv = _platDeposit.includes('airbnb') || _platDeposit === 'abb';
+    if (data.depositUrl && !_isAirbnbConv) {
       const btn = document.createElement('button');
       btn.className = 'qr-chip deposit';
       btn.innerHTML = '🔒 Envoyer lien caution';
