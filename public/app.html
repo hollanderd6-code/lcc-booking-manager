@@ -2856,6 +2856,7 @@ function initAgencyBanner() {
   try {
     const user = JSON.parse(managedUser);
     const banner = document.createElement('div');
+    banner.id = 'agencyBanner';
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:white;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);';
     banner.innerHTML = `<span><i class="fas fa-building" style="margin-right:8px;"></i>Mode Agence — Compte de <strong>${user.name || user.email}</strong></span><button onclick="exitAgencyMode()" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:white;padding:4px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600;">← Mon compte</button>`;
     document.body.prepend(banner);
@@ -2929,8 +2930,17 @@ function renderAgencyToggle(accounts) {
     </div>
   `;
   const agencyBanner = document.getElementById('agencyBanner');
-  if (agencyBanner) agencyBanner.insertAdjacentElement('afterend', bar);
-  else document.body.prepend(bar);
+  if (agencyBanner) {
+    agencyBanner.insertAdjacentElement('afterend', bar);
+  } else {
+    // Pas en mode agence — insérer après le header principal si existant, sinon prepend body
+    const header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header') || document.body.firstElementChild;
+    if (header && header !== document.body) {
+      header.insertAdjacentElement('afterend', bar);
+    } else {
+      document.body.prepend(bar);
+    }
+  }
 }
 
 async function setAgencyView(mode) {
@@ -2985,9 +2995,12 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
       .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
   }
   initAgencyBanner();
-  // Charger le toggle agence automatiquement si comptes délégués
-  loadAgencyAccountsForSwitcher();
 })();
+
+// Charger le toggle agence après que le DOM soit prêt
+document.addEventListener('DOMContentLoaded', function() {
+  loadAgencyAccountsForSwitcher();
+});
 
     document.addEventListener('DOMContentLoaded', function() {
       var btn = document.getElementById('newReservationBtn');
