@@ -2870,6 +2870,121 @@ window.exitAgencyMode = function() {
     window.location.reload();
   }
 };
+
+// ── Switcher compte agence ────────────────────────────────────
+window._agencyAccounts = null;
+
+async function loadAgencyAccountsForSwitcher() {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.iManage || !data.iManage.length) return;
+    window._agencyAccounts = data.iManage;
+    renderAgencySwitcher(data.iManage);
+  } catch(e) {}
+}
+
+function renderAgencySwitcher(accounts) {
+  if (!accounts || !accounts.length) return;
+  const existing = document.getElementById('agencySwitcherBar');
+  if (existing) existing.remove();
+
+  const bar = document.createElement('div');
+  bar.id = 'agencySwitcherBar';
+  bar.style.cssText = 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid #374151;';
+  bar.innerHTML = `
+    <span style="font-size:11px;color:#9CA3AF;font-weight:600;white-space:nowrap;flex-shrink:0;">GÉRER :</span>
+    ${accounts.map(a => `
+      <button onclick="switchAgencyAccount('${a.userId}', '${(a.name||a.email).replace(/'/g,"\'")}', '${a.color||'#6B7280'}')"
+        style="flex-shrink:0;padding:4px 12px;border-radius:20px;border:1.5px solid #374151;background:#374151;color:white;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;"
+        onmouseover="this.style.background='#7c3aed';this.style.borderColor='#7c3aed';"
+        onmouseout="this.style.background='#374151';this.style.borderColor='#374151';">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${a.color||'#6B7280'};margin-right:5px;"></span>
+        ${a.name || a.email}
+      </button>
+    `).join('')}
+  `;
+  // Insérer après la bannière agence ou tout en haut
+  const agencyBanner = document.getElementById('agencyBanner');
+  if (agencyBanner) {
+    agencyBanner.insertAdjacentElement('afterend', bar);
+  } else {
+    document.body.prepend(bar);
+  }
+}
+
+window.switchAgencyAccount = async function(targetUserId, name, color) {
+  const token = localStorage.getItem('lcc_token');
+  const myToken = localStorage.getItem('lcc_agency_token') || token;
+  try {
+    const res = await fetch('/api/agency/switch', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + myToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetUserId })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      localStorage.setItem('lcc_agency_token', myToken);
+      localStorage.setItem('lcc_token', data.token);
+      localStorage.setItem('lcc_managed_user', JSON.stringify(data.managedUser));
+      localStorage.removeItem('lcc_settings_profile');
+      localStorage.removeItem('lcc_properties_cache');
+      window.location.reload();
+    } else {
+      alert(data.error || 'Erreur switch');
+    }
+  } catch(e) { alert('Erreur réseau'); }
+};
+
+// ── Chargement résas agrégées (vue unifiée) ───────────────────
+window._agencyUnifiedMode = false;
+
+async function loadAgencyUnifiedReservations() {
+  const token = localStorage.getItem('lcc_agency_token') || localStorage.getItem('lcc_token');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/agency/unified/reservations', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.reservations || !data.reservations.length) return;
+
+    // Injecter les résas des autres comptes dans le calendrier
+    if (window.__bhCalendarState && window.__bhCalendarState.bookings) {
+      // Marquer les résas actuelles comme "mon compte"
+      const myUserId = JSON.parse(atob(token.split('.')[1])).id;
+      data.reservations.forEach(r => {
+        const acc = r._agencyAccount;
+        if (!acc) return;
+        // Ajouter si pas déjà présent
+        const exists = window.__bhCalendarState.bookings.find(b => b.uid === r.uid);
+        if (!exists) {
+          window.__bhCalendarState.bookings.push({
+            ...r,
+            uid: r.uid,
+            startDate: r.start_date,
+            endDate: r.end_date,
+            guestName: r.guest_name,
+            propertyId: r.property_id,
+            propertyName: r.property_name,
+            // Badge compte
+            _agencyAccount: acc,
+            _agencyBadge: acc.name,
+            color: acc.color || r.property_color
+          });
+        }
+      });
+      // Déclencher un re-render du calendrier si possible
+      if (window.renderCalendar) window.renderCalendar();
+      else if (window.loadCalendarData) window.loadCalendarData();
+    }
+    console.log(`🏢 [AGENCY] ${data.reservations.length} résas agrégées chargées`);
+  } catch(e) {
+    console.error('❌ [AGENCY] unified reservations:', e.message);
+  }
+}
 // Gérer invitation agence dans URL
 (function() {
   const p = new URLSearchParams(window.location.search);
@@ -2880,6 +2995,10 @@ window.exitAgencyMode = function() {
       .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
   }
   initAgencyBanner();
+  // Charger le switcher et les résas unifiées si on a des comptes délégués
+  loadAgencyAccountsForSwitcher();
+  // Charger les résas unifiées après le calendrier
+  setTimeout(loadAgencyUnifiedReservations, 2000);
 })();
 
     document.addEventListener('DOMContentLoaded', function() {
