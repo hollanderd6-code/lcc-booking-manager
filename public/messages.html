@@ -4073,15 +4073,15 @@ async function copyTemplate(id) {
         const prop = await res.json();
         msg = msg
           .replace(/\{adresse\}/gi,       prop.address           || '')
-          .replace(/\{heure_arrivee\}/gi,  prop.arrival_time      || '')
-          .replace(/\{heure_depart\}/gi,   prop.departure_time    || '')
-          .replace(/\{departureTime\}/gi,  prop.departure_time    || '')
-          .replace(/\{arrivalTime\}/gi,    prop.arrival_time      || '')
-          .replace(/\{code_acces\}/gi,     prop.access_code       || '')
-          .replace(/\{wifi_nom\}/gi,       prop.wifi_name         || '')
-          .replace(/\{wifi_mdp\}/gi,       prop.wifi_password     || '')
-          .replace(/\{instructions\}/gi,   prop.practical_info    || '')
-          .replace(/\{livret\}/gi,         prop.welcome_book_url  || '');
+          .replace(/\{heure_arrivee\}/gi,  prop.arrivalTime       || prop.arrival_time      || '')
+          .replace(/\{heure_depart\}/gi,   prop.departureTime     || prop.departure_time    || '')
+          .replace(/\{departureTime\}/gi,  prop.departureTime     || prop.departure_time    || '')
+          .replace(/\{arrivalTime\}/gi,    prop.arrivalTime       || prop.arrival_time      || '')
+          .replace(/\{code_acces\}/gi,     prop.accessCode        || prop.access_code       || '')
+          .replace(/\{wifi_nom\}/gi,       prop.wifiName          || prop.wifi_name         || '')
+          .replace(/\{wifi_mdp\}/gi,       prop.wifiPassword      || prop.wifi_password     || '')
+          .replace(/\{instructions\}/gi,   prop.practicalInfo     || prop.practical_info    || '')
+          .replace(/\{livret\}/gi,         prop.welcomeBookUrl    || prop.welcome_book_url  || '');
       }
     } catch(e) {
       console.warn('[copyTemplate] Erreur fetch logement:', e);
