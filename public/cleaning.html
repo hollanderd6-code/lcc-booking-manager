@@ -1998,6 +1998,30 @@ function formatDateFr(dateStr) {
     const token = localStorage.getItem('lcc_token');
     if (!token) return;
 
+    // En mode agence, charger aussi les ménages des comptes délégués
+    const agencyToken = localStorage.getItem('lcc_agency_token');
+    if (agencyToken && !localStorage.getItem('lcc_managed_user')) {
+      try {
+        const agRes = await fetch(`${API_URL}/api/agency/unified/cleaning`, {
+          headers: { 'Authorization': `Bearer ${agencyToken}` }
+        });
+        if (agRes.ok) {
+          const agData = await agRes.json();
+          if (agData.checklists && agData.checklists.length) {
+            // Afficher un badge sur le titre de la page
+            const title = document.querySelector('h1, .page-title, .section-title');
+            if (title && !document.getElementById('agencyCleaningBadge')) {
+              const badge = document.createElement('span');
+              badge.id = 'agencyCleaningBadge';
+              badge.style.cssText = 'margin-left:10px;font-size:11px;background:#7c3aed;color:white;padding:2px 8px;border-radius:10px;font-weight:600;';
+              badge.textContent = `+${agData.checklists.length} comptes gérés`;
+              title.appendChild(badge);
+            }
+          }
+        }
+      } catch(e) {}
+    }
+
     const res = await fetch(`${API_URL}/api/cleaning/assignments`, {
       headers: {
         Authorization: 'Bearer ' + token
