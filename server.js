@@ -13874,7 +13874,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         if (raw.includes('bdc') || raw.includes('booking')) return 'Booking.com';
         if (raw.includes('exp') || raw.includes('expedia')) return 'Expedia';
         if (raw.includes('vrbo') || raw.includes('homeaway')) return 'Vrbo';
-        if (raw === 'direct' || raw === '') return 'Direct';
+        if (raw === 'direct' || raw === '' || raw === 'manuel' || raw === 'manual') return 'Direct';
         return raw.charAt(0).toUpperCase() + raw.slice(1);
       })();
 
@@ -13909,6 +13909,11 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       };
     });
 
+    // Filtrer par mois de paiement si un mois est sélectionné
+    const filteredResas = selectedMonth
+      ? enrichedResas.filter(r => r.paymentYear === selectedYear && r.paymentMonth === selectedMonth)
+      : enrichedResas;
+
     // ── Agrégats par mois ───────────────────────────────────────
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
@@ -13920,7 +13925,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       otaCommissionAmount: 0, netMargin: 0
     }));
 
-    enrichedResas.forEach(r => {
+    filteredResas.forEach(r => {
       // Exclure les blocs (pas des réservations réelles)
       if ((r.platform || '').toLowerCase().includes('block') ||
           (r.platform || '').toLowerCase() === 'bloc') return;
@@ -13982,7 +13987,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       };
     });
 
-    enrichedResas.forEach(r => {
+    filteredResas.forEach(r => {
       const p = byProperty[r.propertyId];
       if (!p) return;
       if (r.paymentYear !== selectedYear) return; // Exclure si paiement hors année sélectionnée
@@ -14137,8 +14142,7 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
       if (raw.includes('exp') || raw.includes('expedia')) return 'Expedia';
       if (raw.includes('vrbo') || raw.includes('homeaway')) return 'Vrbo';
       if (raw.includes('guest') || raw.includes('boostinghost')) return 'Boostinghost Guest';
-      if (raw === 'manuel' || raw === 'manual') return 'Manuel';
-      if (!raw || raw === 'direct') return 'Direct';
+      if (!raw || raw === 'direct' || raw === 'manuel' || raw === 'manual') return 'Direct';
       return raw.charAt(0).toUpperCase() + raw.slice(1);
     };
 
