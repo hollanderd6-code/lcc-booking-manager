@@ -2704,14 +2704,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function openInviteAgencyModal() {
+  window.openInviteAgencyModal = function() {
     document.getElementById('inviteAgencyModal').style.display = 'flex';
-  }
-  function closeInviteAgencyModal() {
+  };
+  window.closeInviteAgencyModal = function() {
     document.getElementById('inviteAgencyModal').style.display = 'none';
-  }
+  };
 
-  async function sendAgencyInvite() {
+  window.sendAgencyInvite = async function() {
     const email = document.getElementById('agencyInviteEmail').value.trim();
     if (!email) return alert('Email requis');
     const permissions = {
@@ -2739,7 +2739,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch(e) { alert('Erreur réseau'); }
   }
 
-  async function revokeAgencyAccess(delegationId) {
+  window.revokeAgencyAccess = async function(delegationId) {
     if (!confirm('Révoquer cet accès ?')) return;
     const token = localStorage.getItem('lcc_token');
     await fetch('/api/agency/revoke', {
@@ -2750,7 +2750,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAgencyDelegations();
   }
 
-  async function switchToAccount(targetUserId, name) {
+  window.switchToAccount = async function(targetUserId, name) {
     if (!confirm(`Basculer vers le compte de ${name} ?`)) return;
     try {
       const token = localStorage.getItem('lcc_token');
