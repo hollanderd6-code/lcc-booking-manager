@@ -30605,9 +30605,7 @@ app.post('/api/agency/invite', authenticateAny, async (req, res) => {
               <div class="feat-icon">✅</div>
               <div class="feat-text">
                 <strong>Votre invitation a bien été envoyée à ${email}</strong><br>
-                ${delegateUserId
-                  ? 'Ce gestionnaire a un compte Boostinghost — il peut déjà accéder à votre espace.'
-                  : 'Un email d'invitation lui a été envoyé. Il devra créer un compte Boostinghost pour accepter.'}
+                ${delegateUserId ? 'Ce gestionnaire a un compte Boostinghost — il peut déjà accéder à votre espace.' : "Un email d'invitation lui a été envoyé. Il devra créer un compte Boostinghost pour accepter."}
               </div>
             </div>
             <div class="feat-row">
