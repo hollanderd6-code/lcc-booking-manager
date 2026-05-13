@@ -13921,6 +13921,9 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     }));
 
     enrichedResas.forEach(r => {
+      // Exclure les blocs (pas des réservations réelles)
+      if ((r.platform || '').toLowerCase().includes('block') ||
+          (r.platform || '').toLowerCase() === 'bloc') return;
       // Grouper par mois de PAIEMENT effectif
       const payMonthIdx = r.paymentYear === selectedYear ? r.paymentMonth - 1 : -1;
       const m = payMonthIdx >= 0 ? monthlyData[payMonthIdx] : null;
