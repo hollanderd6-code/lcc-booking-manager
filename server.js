@@ -30561,33 +30561,32 @@ app.post('/api/agency/invite', authenticateAny, async (req, res) => {
     const delegatorName = d.company || `${d.first_name || ''} ${d.last_name || ''}`.trim() || 'Un utilisateur Boostinghost';
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
 
-    if (!delegateUserId) {
-      // Envoyer email d'invitation
-      try {
-        await sendEmailViaBrevo({
-          to: email,
-          subject: `${delegatorName} vous invite à gérer ses logements sur Boostinghost`,
-          html: bhEmailTemplate({
-            icon: '🏢',
-            title: 'Invitation gestionnaire',
-            subtitle: `${delegatorName} vous donne accès à son espace Boostinghost`,
-            tag: 'Compte Agence',
-            bodyHtml: `
-              <div class="feat-row">
-                <div class="feat-icon">🏠</div>
-                <div class="feat-text"><strong>${delegatorName}</strong> vous invite à gérer ses logements sur Boostinghost en tant que gestionnaire.</div>
-              </div>
-              <div class="cta-block">
-                <p>Acceptez l'invitation en vous connectant à votre compte Boostinghost</p>
-                <a href="${appUrl}/app.html?agency_token=${invitationToken}" class="btn">Accepter l'invitation</a>
-              </div>
-            `,
-            footerNote: "Si vous n'avez pas de compte Boostinghost, créez-en un d'abord puis revenez sur ce lien." 
-          })
-        });
-      } catch(emailErr) {
-        console.error('⚠️ Email invitation agence:', emailErr.message);
-      }
+    // Envoyer email à l'invité (qu'il ait un compte ou non)
+    try {
+      await sendEmailViaBrevo({
+        to: email,
+        subject: `${delegatorName} vous invite à gérer ses logements sur Boostinghost`,
+        html: bhEmailTemplate({
+          icon: '🏢',
+          title: 'Invitation gestionnaire',
+          subtitle: `${delegatorName} vous donne accès à son espace Boostinghost`,
+          tag: 'Compte Agence',
+          bodyHtml: `
+            <div class="feat-row">
+              <div class="feat-icon">🏠</div>
+              <div class="feat-text"><strong>${delegatorName}</strong> vous invite à gérer ses logements sur Boostinghost en tant que gestionnaire.</div>
+            </div>
+            <div class="cta-block">
+              <p>${delegateUserId ? 'Connectez-vous à votre compte Boostinghost pour accéder à cet espace.' : "Créez un compte Boostinghost ou connectez-vous, puis cliquez sur le lien ci-dessous."}</p>
+              <a href="${appUrl}/app.html?agency_token=${invitationToken}" class="btn">Accéder à l'espace</a>
+            </div>
+          `,
+          footerNote: "Si vous n'avez pas de compte Boostinghost, créez-en un d'abord puis revenez sur ce lien."
+        })
+      });
+      console.log(`📧 [AGENCY] Email invitation envoyé à ${email}`);
+    } catch(emailErr) {
+      console.error('⚠️ Email invitation agence:', emailErr.message);
     }
 
     // Email de confirmation à l'inviteur
