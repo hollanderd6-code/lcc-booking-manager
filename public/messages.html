@@ -4042,11 +4042,56 @@ async function editTemplate(id) {
   } catch(e) {}
 }
 
-function copyTemplate(id) {
+async function copyTemplate(id) {
   const templates = window._lastTemplates || [];
   const t = templates.find(t => String(t.id) === String(id));
   if (!t) return;
-  navigator.clipboard.writeText(t.message).then(() => {
+
+  // Substituer les variables avec les données de la conversation et du logement courant
+  const conv = window.currentChatConv || {};
+  const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
+  const guestName  = conv.guest_name || '';
+  const propName   = conv.property_name || '';
+  const arrDate    = conv.reservation_start_date ? new Date(conv.reservation_start_date).toLocaleDateString('fr-FR') : '';
+  const depDate    = conv.reservation_end_date   ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR')   : '';
+
+  let msg = t.message
+    .replace(/\{prenom\}/gi,       guestFirst)
+    .replace(/\{nom\}/gi,          guestName)
+    .replace(/\{logement\}/gi,     propName)
+    .replace(/\{arrivee\}/gi,      arrDate)
+    .replace(/\{depart\}/gi,       depDate);
+
+  // Récupérer les infos du logement (adresse, codes, wifi…)
+  if (conv.property_id) {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/properties/' + conv.property_id, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const prop = await res.json();
+        msg = msg
+          .replace(/\{adresse\}/gi,       prop.address           || '')
+          .replace(/\{heure_arrivee\}/gi,  prop.arrival_time      || '')
+          .replace(/\{heure_depart\}/gi,   prop.departure_time    || '')
+          .replace(/\{departureTime\}/gi,  prop.departure_time    || '')
+          .replace(/\{arrivalTime\}/gi,    prop.arrival_time      || '')
+          .replace(/\{code_acces\}/gi,     prop.access_code       || '')
+          .replace(/\{wifi_nom\}/gi,       prop.wifi_name         || '')
+          .replace(/\{wifi_mdp\}/gi,       prop.wifi_password     || '')
+          .replace(/\{instructions\}/gi,   prop.practical_info    || '')
+          .replace(/\{livret\}/gi,         prop.welcome_book_url  || '');
+      }
+    } catch(e) {
+      console.warn('[copyTemplate] Erreur fetch logement:', e);
+    }
+  }
+
+  // Supprimer les variables non résolues restantes (ex: {caution_url} sur Airbnb)
+  msg = msg.replace(/\{[a-z_]+\}/gi, '');
+
+  navigator.clipboard.writeText(msg).then(() => {
     showBHToast('✅ Message copié dans le presse-papier', 'success');
   }).catch(() => {
     showBHToast('Erreur lors de la copie', 'error');
