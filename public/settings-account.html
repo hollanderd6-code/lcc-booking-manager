@@ -2698,6 +2698,9 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
           </div>
         `).join('');
+      } else {
+        // Aucun gestionnaire — remettre le message par défaut
+        delegatesList.innerHTML = '<p style="color:#9ca3af;font-size:13px;">Aucun gestionnaire pour le moment</p>';
       }
     } catch(e) {
       console.error('Erreur chargement délégations:', e);
