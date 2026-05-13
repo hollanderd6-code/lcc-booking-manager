@@ -2742,11 +2742,16 @@ document.addEventListener('DOMContentLoaded', function() {
   window.revokeAgencyAccess = async function(delegationId) {
     if (!confirm('Révoquer cet accès ?')) return;
     const token = localStorage.getItem('lcc_token');
-    await fetch('/api/agency/revoke', {
+    const res = await fetch('/api/agency/revoke', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ delegationId })
     });
+    if (res.ok) {
+      alert('✅ Accès révoqué avec succès.');
+    } else {
+      alert('❌ Erreur lors de la révocation.');
+    }
     loadAgencyDelegations();
   }
 
