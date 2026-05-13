@@ -22212,6 +22212,81 @@ async function regenExpiredStripeLinks(pool) {
   } catch(e) { console.error('❌ [REGEN CRON] Erreur paiements:', e.message); }
 }
 
+// ============================================================
+// 🔒 HELPER CENTRALISÉ — Vérification send_condition
+// Retourne { skip: true, reason: '...' } si le template doit
+// être ignoré, ou { skip: false } si l'envoi est autorisé.
+//
+// Règles universelles :
+//  - Airbnb → TOUJOURS envoyer (pas de caution BH), quelle que
+//    soit la send_condition configurée
+//  - BHGuest → TOUJOURS envoyer (paiement Stripe = caution)
+//  - platform_booking / platform_airbnb / platform_direct →
+//    filtrer par plateforme
+//  - deposit_active / deposit_captured → vérifier deposit en DB
+//    uniquement pour les plateformes non-exemptées
+// ============================================================
+async function shouldSkipForDepositCondition(pool, conv, sendCond) {
+  if (!sendCond || sendCond === 'always') return { skip: false };
+
+  const platformRaw = (conv.platform || conv.channex_platform || conv.ota_name || '').toLowerCase().replace(/[_\-\s]/g, '');
+  const isAirbnb   = platformRaw.includes('airbnb') || platformRaw === 'abb';
+  const isBHGuest  = platformRaw.includes('boostinghost') || platformRaw === 'bhguest';
+  const isBooking  = platformRaw.includes('booking') || platformRaw === 'bdc';
+  const isDirect   = platformRaw === 'direct' || platformRaw === '';
+
+  // Filtres par plateforme
+  if (sendCond === 'platform_booking') {
+    if (!isBooking) return { skip: true, reason: `condition platform_booking non remplie (platform=${conv.platform})` };
+    return { skip: false };
+  }
+  if (sendCond === 'platform_airbnb') {
+    if (!isAirbnb) return { skip: true, reason: `condition platform_airbnb non remplie (platform=${conv.platform})` };
+    return { skip: false };
+  }
+  if (sendCond === 'platform_direct') {
+    if (!isDirect) return { skip: true, reason: `condition platform_direct non remplie (platform=${conv.platform})` };
+    return { skip: false };
+  }
+
+  // Vérification caution
+  if (sendCond === 'deposit_captured' || sendCond === 'deposit_active') {
+    // Airbnb : gère sa propre garantie → toujours autoriser
+    if (isAirbnb) return { skip: false, reason: 'Airbnb — deposit_condition ignorée' };
+    // BHGuest : paiement Stripe = confirmation → toujours autoriser
+    if (isBHGuest) return { skip: false, reason: 'BHGuest — deposit_condition ignorée' };
+
+    // Autres plateformes : vérifier le deposit en DB
+    try {
+      const resRow = await pool.query(
+        `SELECT uid FROM reservations
+         WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
+            OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
+         ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
+        [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
+      ).catch(() => ({ rows: [] }));
+
+      if (!resRow.rows[0]) {
+        return { skip: true, reason: 'aucune réservation trouvée pour vérif caution' };
+      }
+      const dep = await pool.query(
+        `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
+        [resRow.rows[0].uid]
+      ).catch(() => ({ rows: [] }));
+      const depStatus = dep.rows[0]?.status;
+      if (depStatus !== 'captured' && depStatus !== 'authorized') {
+        return { skip: true, reason: `caution non validée (status=${depStatus || 'aucune'})` };
+      }
+    } catch(e) {
+      console.warn('⚠️ [shouldSkipForDepositCondition] Erreur vérif caution:', e.message);
+      // En cas d'erreur DB : ne pas bloquer l'envoi
+    }
+    return { skip: false };
+  }
+
+  return { skip: false };
+}
+
 async function sendTemplateMessage(pool, io, { template, conv, property }) {
   const { sendBookingMessage } = require('./channex');
   const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
@@ -22604,8 +22679,16 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
           }
         }
         if (!cautionUrl) {
-          console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id} — message non envoyé`);
-          skipSend = true;
+          // Si Airbnb : ne pas bloquer l'envoi, juste supprimer la variable
+          const manualPlatform = (c.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+          const isAirbnbManual = manualPlatform.includes('airbnb') || manualPlatform === 'abb';
+          if (isAirbnbManual) {
+            console.log(`ℹ️ [CRON TPL] Airbnb — {caution_url} supprimé (pas de caution BH)`);
+            finalMsg = finalMsg.replace(/{caution_url}/gi, '');
+          } else {
+            console.warn(`⚠️ [CRON TPL] {caution_url} non résolu pour conv ${conversation_id} — message non envoyé`);
+            skipSend = true;
+          }
         } else {
           finalMsg = finalMsg.replace(/{caution_url}/gi, cautionUrl);
         }
@@ -22997,54 +23080,16 @@ async function runTemplatesCron(triggerTypes) {
             }
           }
 
-          // Vérifier send_condition
+          // Vérifier send_condition via le helper centralisé
+          // ✅ Airbnb et BHGuest sont toujours exemptés de la vérification caution
           const sendCond = tmpl.send_condition || 'always';
-          if (sendCond !== 'always') {
-            const platform = (conv.platform || '').toLowerCase();
-            if (sendCond === 'platform_booking' && !platform.includes('booking') && platform !== 'bdc') {
-              console.log(`  ↳ Skip conv ${conv.id} : condition platform_booking non remplie (platform=${platform})`);
-              continue;
-            }
-            if (sendCond === 'platform_airbnb' && !platform.includes('airbnb') && platform !== 'abb') {
-              console.log(`  ↳ Skip conv ${conv.id} : condition platform_airbnb non remplie`);
-              continue;
-            }
-            if (sendCond === 'platform_direct' && platform !== 'direct' && platform !== '') {
-              console.log(`  ↳ Skip conv ${conv.id} : condition platform_direct non remplie`);
-              continue;
-            }
-            if (sendCond === 'deposit_captured' || sendCond === 'deposit_active') {
-              // N'envoyer que si la caution est validée — statut 'authorized' (empreinte) ou 'captured' (prélevée)
-              // BHGuest : pas de caution séparée → paiement = caution → toujours autoriser
-              const convPlatformLow = (conv.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
-              const isBHGuestConv = convPlatformLow.includes('boostinghost') || convPlatformLow === 'bhguest';
-              if (isBHGuestConv) {
-                // BHGuest : le paiement Stripe = confirmation, pas de deposit séparé → on envoie
-                console.log(`  ↳ BHGuest conv ${conv.id} : deposit_active ignoré (paiement déjà effectué)`);
-              } else {
-                const resRow = await pool.query(
-                  `SELECT uid FROM reservations
-                   WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
-                      OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
-                   ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
-                  [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
-                ).catch(() => ({ rows: [] }));
-                if (resRow.rows[0]) {
-                  const dep = await pool.query(
-                    `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
-                    [resRow.rows[0].uid]
-                  ).catch(() => ({ rows: [] }));
-                  const depStatus = dep.rows[0]?.status;
-                  if (depStatus !== 'captured' && depStatus !== 'authorized') {
-                    console.log(`  ↳ Skip conv ${conv.id} : caution non validée (status=${depStatus || 'aucune'})`);
-                    continue;
-                  }
-                } else {
-                  console.log(`  ↳ Skip conv ${conv.id} : aucune réservation trouvée pour vérif caution`);
-                  continue;
-                }
-              }
-            }
+          const condCheck = await shouldSkipForDepositCondition(pool, conv, sendCond);
+          if (condCheck.skip) {
+            console.log(`  ↳ Skip conv ${conv.id} : ${condCheck.reason}`);
+            continue;
+          }
+          if (condCheck.reason) {
+            console.log(`  ↳ ℹ️ Conv ${conv.id} : ${condCheck.reason} → envoi autorisé`);
           }
 
           // Check blocage : l'hôte a-t-il bloqué cet envoi pour cette conversation ?
@@ -27987,6 +28032,17 @@ app.post('/api/channex/webhook', async (req, res) => {
                 if (alreadySent.rows.length > 0) {
                   console.log(`⏭️ [TPL last-minute] "${tpl.title}" déjà envoyé récemment — conv ${conv.id}`);
                   continue;
+                }
+
+                // ✅ Vérifier send_condition (ex: deposit_active → attendre caution)
+                // Pour before_arrival contenant {caution_url} : toujours envoyer (c'est le template qui ENVOIE la caution)
+                const isDepositTpl = tpl.message && tpl.message.includes('{caution_url}');
+                if (!isDepositTpl) {
+                  const lmCondCheck = await shouldSkipForDepositCondition(pool, conv, tpl.send_condition || 'always');
+                  if (lmCondCheck.skip) {
+                    console.log(`⏭️ [TPL last-minute] "${tpl.title}" skip — ${lmCondCheck.reason}`);
+                    continue;
+                  }
                 }
 
                 await sendTemplateMessage(pool, io, { template: tpl, conv, property });
