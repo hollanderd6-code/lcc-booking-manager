@@ -1453,18 +1453,28 @@ function authenticateToken(req, res, next) {
     
     // ✅ Détecter le type de compte
     if (decoded.type === 'sub_account') {
-      // C'est un sous-compte
       req.user = { 
         id: null,
         subAccountId: decoded.subAccountId,
         type: 'sub',
         isSubAccount: true
       };
+    } else if (decoded.type === 'agency_access') {
+      // Token agence : l'agent gère un autre compte
+      req.user = {
+        id: decoded.id,          // compte géré (comme si on était ce user)
+        agentId: decoded.agentId, // vrai identité de l'agent
+        delegationId: decoded.delegationId,
+        agencyPermissions: decoded.permissions,
+        type: 'agency',
+        isSubAccount: false,
+        isAgencyAccess: true
+      };
     } else {
-      // C'est un compte principal
       req.user = decoded;
       req.user.type = 'main';
       req.user.isSubAccount = false;
+      req.user.isAgencyAccess = false;
     }
     
     next();
@@ -30489,6 +30499,257 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS verification_token TEXT,
     ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMPTZ
 `).catch(() => {});
+
+// ══════════════════════════════════════════════════════════════
+// 🏢 SYSTÈME DE DÉLÉGATION INTER-COMPTES (COMPTE AGENCE)
+// ══════════════════════════════════════════════════════════════
+
+// Créer la table si elle n'existe pas
+pool.query(`
+  CREATE TABLE IF NOT EXISTS account_delegations (
+    id SERIAL PRIMARY KEY,
+    delegator_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    delegate_user_id  TEXT REFERENCES users(id) ON DELETE CASCADE,
+    delegate_email    TEXT NOT NULL,
+    status            TEXT NOT NULL DEFAULT 'pending', -- pending | accepted | revoked
+    permissions       JSONB DEFAULT '{"can_view_calendar":true,"can_view_messages":true,"can_view_cleaning":true,"can_view_reporting":false,"can_view_finances":false}'::jsonb,
+    invitation_token  TEXT UNIQUE,
+    invited_at        TIMESTAMPTZ DEFAULT NOW(),
+    accepted_at       TIMESTAMPTZ,
+    revoked_at        TIMESTAMPTZ,
+    created_at        TIMESTAMPTZ DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(e => console.error('account_delegations table:', e.message));
+
+// ── Route : inviter un gestionnaire (agence) ──────────────────
+app.post('/api/agency/invite', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : req.user.id;
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const { email, permissions } = req.body;
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email invalide' });
+
+    // Vérifier que l'email n'est pas déjà invité
+    const existing = await pool.query(
+      `SELECT id, status FROM account_delegations WHERE delegator_user_id = $1 AND delegate_email = $2 AND status != 'revoked'`,
+      [userId, email.toLowerCase().trim()]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'Cet email a déjà été invité', status: existing.rows[0].status });
+    }
+
+    // Générer token d'invitation
+    const invitationToken = require('crypto').randomBytes(32).toString('hex');
+
+    // Chercher si le delegate a déjà un compte BH
+    const delegateUser = await pool.query('SELECT id, first_name, last_name, email FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    const delegateUserId = delegateUser.rows[0]?.id || null;
+
+    await pool.query(
+      `INSERT INTO account_delegations (delegator_user_id, delegate_user_id, delegate_email, status, permissions, invitation_token)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [userId, delegateUserId, email.toLowerCase().trim(), delegateUserId ? 'accepted' : 'pending',
+       JSON.stringify(permissions || { can_view_calendar: true, can_view_messages: true, can_view_cleaning: true }),
+       invitationToken]
+    );
+
+    // Récupérer infos du délégateur pour l'email
+    const delegator = await pool.query('SELECT first_name, last_name, company_name, email FROM users WHERE id = $1', [userId]);
+    const d = delegator.rows[0] || {};
+    const delegatorName = d.company_name || `${d.first_name || ''} ${d.last_name || ''}`.trim() || 'Un utilisateur Boostinghost';
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+
+    if (!delegateUserId) {
+      // Envoyer email d'invitation
+      try {
+        await sendEmailViaBrevo({
+          to: email,
+          subject: `${delegatorName} vous invite à gérer ses logements sur Boostinghost`,
+          html: bhEmailTemplate({
+            icon: '🏢',
+            title: 'Invitation gestionnaire',
+            subtitle: `${delegatorName} vous donne accès à son espace Boostinghost`,
+            tag: 'Compte Agence',
+            bodyHtml: `
+              <div class="feat-row">
+                <div class="feat-icon">🏠</div>
+                <div class="feat-text"><strong>${delegatorName}</strong> vous invite à gérer ses logements sur Boostinghost en tant que gestionnaire.</div>
+              </div>
+              <div class="cta-block">
+                <p>Acceptez l'invitation en vous connectant à votre compte Boostinghost</p>
+                <a href="${appUrl}/app.html?agency_token=${invitationToken}" class="btn">Accepter l'invitation</a>
+              </div>
+            `,
+            footerNote: 'Si vous n'avez pas de compte Boostinghost, créez-en un d'abord puis revenez sur ce lien.'
+          })
+        });
+      } catch(emailErr) {
+        console.error('⚠️ Email invitation agence:', emailErr.message);
+      }
+    }
+
+    console.log(`✅ [AGENCY] Invitation envoyée: ${userId} → ${email} (status: ${delegateUserId ? 'accepted' : 'pending'})`);
+    res.json({ success: true, status: delegateUserId ? 'accepted' : 'pending', token: invitationToken });
+  } catch(e) {
+    console.error('❌ [AGENCY] invite:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── Route : accepter une invitation (via token URL) ───────────
+app.post('/api/agency/accept', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : req.user.id;
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token manquant' });
+
+    const inv = await pool.query(
+      `SELECT * FROM account_delegations WHERE invitation_token = $1 AND status = 'pending'`,
+      [token]
+    );
+    if (!inv.rows[0]) return res.status(404).json({ error: 'Invitation invalide ou déjà acceptée' });
+
+    const delegation = inv.rows[0];
+    // Vérifier que l'email correspond
+    const user = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
+    if (user.rows[0]?.email !== delegation.delegate_email) {
+      return res.status(403).json({ error: 'Cette invitation ne vous est pas destinée' });
+    }
+
+    await pool.query(
+      `UPDATE account_delegations SET status = 'accepted', delegate_user_id = $1, accepted_at = NOW(), updated_at = NOW() WHERE id = $2`,
+      [userId, delegation.id]
+    );
+
+    console.log(`✅ [AGENCY] Invitation acceptée: ${userId} gère ${delegation.delegator_user_id}`);
+    res.json({ success: true, delegatorUserId: delegation.delegator_user_id });
+  } catch(e) {
+    console.error('❌ [AGENCY] accept:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── Route : révoquer un accès ────────────────────────────────
+app.post('/api/agency/revoke', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : req.user.id;
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const { delegationId } = req.body;
+    await pool.query(
+      `UPDATE account_delegations SET status = 'revoked', revoked_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND (delegator_user_id = $2 OR delegate_user_id = $2)`,
+      [delegationId, userId]
+    );
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── Route : lister les délégations (pour l'UI settings) ──────
+app.get('/api/agency/delegations', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : req.user.id;
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    // Comptes que je gère (je suis le delegate)
+    const iManage = await pool.query(
+      `SELECT ad.id, ad.delegator_user_id, ad.status, ad.permissions, ad.accepted_at,
+              u.first_name, u.last_name, u.company_name, u.email as delegator_email,
+              (SELECT COUNT(*) FROM properties WHERE user_id = ad.delegator_user_id) as property_count
+       FROM account_delegations ad
+       JOIN users u ON u.id = ad.delegator_user_id
+       WHERE ad.delegate_user_id = $1 AND ad.status = 'accepted'
+       ORDER BY ad.accepted_at DESC`,
+      [userId]
+    );
+
+    // Gestionnaires qui ont accès à mon compte (je suis le delegator)
+    const myDelegates = await pool.query(
+      `SELECT ad.id, ad.delegate_email, ad.delegate_user_id, ad.status, ad.permissions, ad.invited_at, ad.accepted_at,
+              u.first_name, u.last_name, u.company_name
+       FROM account_delegations ad
+       LEFT JOIN users u ON u.id = ad.delegate_user_id
+       WHERE ad.delegator_user_id = $1 AND ad.status != 'revoked'
+       ORDER BY ad.invited_at DESC`,
+      [userId]
+    );
+
+    res.json({
+      iManage: iManage.rows.map(r => ({
+        id: r.id,
+        userId: r.delegator_user_id,
+        name: r.company_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+        email: r.delegator_email,
+        propertyCount: parseInt(r.property_count),
+        permissions: r.permissions,
+        acceptedAt: r.accepted_at
+      })),
+      myDelegates: myDelegates.rows.map(r => ({
+        id: r.id,
+        email: r.delegate_email,
+        name: r.company_name || `${r.first_name || ''} ${r.last_name || ''}`.trim() || null,
+        status: r.status,
+        permissions: r.permissions,
+        invitedAt: r.invited_at,
+        acceptedAt: r.accepted_at
+      }))
+    });
+  } catch(e) {
+    console.error('❌ [AGENCY] delegations:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── Route : switcher vers un compte géré ─────────────────────
+app.post('/api/agency/switch', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : req.user.id;
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const { targetUserId } = req.body;
+
+    // Vérifier que la délégation existe et est acceptée
+    const delegation = await pool.query(
+      `SELECT * FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+      [userId, targetUserId]
+    );
+    if (!delegation.rows[0]) return res.status(403).json({ error: 'Accès non autorisé' });
+
+    // Générer un token temporaire "agency_access" (valide 8h)
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const agencyToken = jwt.sign({
+      id: targetUserId,
+      type: 'agency_access',
+      agentId: userId,        // qui gère
+      delegationId: delegation.rows[0].id,
+      permissions: delegation.rows[0].permissions
+    }, secret, { expiresIn: '8h' });
+
+    // Récupérer infos du compte cible
+    const target = await pool.query('SELECT id, first_name, last_name, company_name, email FROM users WHERE id = $1', [targetUserId]);
+    const t = target.rows[0];
+
+    console.log(`🔄 [AGENCY] Switch: ${userId} → ${targetUserId}`);
+    res.json({
+      success: true,
+      token: agencyToken,
+      managedUser: {
+        id: t.id,
+        name: t.company_name || `${t.first_name || ''} ${t.last_name || ''}`.trim(),
+        email: t.email
+      }
+    });
+  } catch(e) {
+    console.error('❌ [AGENCY] switch:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ── Route : inscription email + mot de passe ─────────────────
 app.post('/api/guest/auth/register', async (req, res) => {
