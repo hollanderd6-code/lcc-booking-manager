@@ -2924,7 +2924,7 @@ window.renderAgencyToggle = function renderAgencyToggle(accounts) {
 
   const bar = document.createElement('div');
   bar.id = 'agencyToggleBar';
-  bar.style.cssText = 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #374151;flex-wrap:wrap;gap:8px;';
+  bar.style.cssText = 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #374151;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:49;width:100%;box-sizing:border-box;';
   var accountDots = accounts.map(function(a) {
     return '<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#9CA3AF;white-space:nowrap;">'
       + '<span style="width:8px;height:8px;border-radius:50%;background:' + (a.color||'#6B7280') + ';display:inline-block;"></span>'
@@ -6098,7 +6098,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
   };
 
   // ---------- Data loading + binding ----------
-  async function loadDataAndUpdateKpis() {
+  window.loadDataAndUpdateKpis = async function loadDataAndUpdateKpis() {
     try {
       const token = localStorage.getItem('lcc_token');
       let reservations = [];
