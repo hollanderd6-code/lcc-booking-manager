@@ -30582,7 +30582,7 @@ app.post('/api/agency/invite', authenticateAny, async (req, res) => {
                 <a href="${appUrl}/app.html?agency_token=${invitationToken}" class="btn">Accepter l'invitation</a>
               </div>
             `,
-            footerNote: 'Si vous n'avez pas de compte Boostinghost, créez-en un d'abord puis revenez sur ce lien.'
+            footerNote: "Si vous n'avez pas de compte Boostinghost, créez-en un d'abord puis revenez sur ce lien." 
           })
         });
       } catch(emailErr) {
