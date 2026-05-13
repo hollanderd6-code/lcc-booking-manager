@@ -13745,15 +13745,20 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         r.uid, r.property_id, r.start_date, r.end_date,
         r.price, r.platform, r.ota_name, r.status,
         r.guest_name, r.nb_guests,
+        r.amount_total, r.ota_commission, r.host_payout,
+        r.amount_rooms, r.amount_cleaning, r.amount_taxes,
         EXTRACT(YEAR FROM r.start_date) as year,
         EXTRACT(MONTH FROM r.start_date) as month,
         (r.end_date::date - r.start_date::date) as nights
       FROM reservations r
       WHERE r.user_id = $1
         AND r.status = 'confirmed'
-        AND EXTRACT(YEAR FROM r.start_date) = $2
         AND r.property_id = ANY($3)
-        ${selectedMonth ? `AND EXTRACT(MONTH FROM r.start_date) = ${selectedMonth}` : ''}
+        AND (
+          EXTRACT(YEAR FROM r.start_date) = $2
+          OR EXTRACT(YEAR FROM r.end_date) = $2
+          OR (EXTRACT(YEAR FROM r.start_date) = $2 - 1 AND (r.ota_name ILIKE '%booking%' OR r.platform ILIKE '%booking%'))
+        )
       ORDER BY r.start_date ASC
     `, [user.id, selectedYear, propIds]);
     const reservations = resaResult.rows;
@@ -13780,8 +13785,29 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       const nights = parseInt(r.nights) || 1;
       const nbGuests = parseInt(r.nb_guests) || 1;
 
-      // Prix brut — ordre de priorité : r.price > overrides > calcul
-      let rawPrice = parseFloat(r.price) || 0;
+      // ── Date de paiement effective selon la plateforme ──────────
+      const platformRawStr = (r.ota_name || r.platform || '').toLowerCase();
+      const isAirbnbResa  = platformRawStr.includes('abb') || platformRawStr.includes('airbnb');
+      const isBookingResa = platformRawStr.includes('bdc') || platformRawStr.includes('booking');
+
+      const startDt = new Date(r.start_date);
+      const endDt   = r.end_date ? new Date(r.end_date) : startDt;
+
+      let paymentDate;
+      if (isAirbnbResa) {
+        paymentDate = new Date(startDt);
+        paymentDate.setDate(paymentDate.getDate() + 1);
+      } else if (isBookingResa) {
+        paymentDate = new Date(endDt);
+        paymentDate.setDate(paymentDate.getDate() + 1);
+      } else {
+        paymentDate = new Date(startDt);
+      }
+      const paymentMonth = paymentDate.getMonth() + 1;
+      const paymentYear  = paymentDate.getFullYear();
+
+      // Prix brut — ordre de priorité : amount_total > r.price > overrides > calcul
+      let rawPrice = parseFloat(r.amount_total || r.amount_rooms || r.price) || 0;
       if (!rawPrice) {
         // Calculer depuis les overrides ou le prix de base
         let total = 0;
@@ -13822,14 +13848,20 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       // Revenu propriétaire = prix - commission conciergerie
       const ownerRevenue = Math.round((rawPrice - conciergeAmount) * 100) / 100;
 
-      // Commission OTA (Airbnb, Booking selon la plateforme)
-      const airbnbCommPct = prop.airbnb_commission_pct != null ? parseFloat(prop.airbnb_commission_pct) : 3;
+      // Commission OTA — priorité : valeur réelle Channex > pourcentage configuré
+      const airbnbCommPct  = prop.airbnb_commission_pct  != null ? parseFloat(prop.airbnb_commission_pct)  : 3;
       const bookingCommPct = prop.booking_commission_pct != null ? parseFloat(prop.booking_commission_pct) : 15;
-      let otaCommissionPct = 0;
-      const platformRaw = (r.ota_name || r.platform || '').toLowerCase();
-      if (platformRaw.includes('abb') || platformRaw.includes('airbnb')) otaCommissionPct = airbnbCommPct;
-      else if (platformRaw.includes('bdc') || platformRaw.includes('booking')) otaCommissionPct = bookingCommPct;
-      const otaCommissionAmount = Math.round(rawPrice * otaCommissionPct / 100 * 100) / 100;
+      let otaCommissionAmount = 0;
+      let otaCommissionPct    = 0;
+      if (r.ota_commission && parseFloat(r.ota_commission) > 0) {
+        otaCommissionAmount = parseFloat(r.ota_commission);
+        otaCommissionPct    = rawPrice > 0 ? Math.round(otaCommissionAmount / rawPrice * 100 * 10) / 10 : 0;
+      } else {
+        if (isAirbnbResa)        otaCommissionPct = airbnbCommPct;
+        else if (isBookingResa)  otaCommissionPct = bookingCommPct;
+        otaCommissionAmount = Math.round(rawPrice * otaCommissionPct / 100 * 100) / 100;
+      }
+      const realHostPayout = r.host_payout ? parseFloat(r.host_payout) : null;
 
       // Marge nette = prix brut - commission OTA - frais ménage - commission conciergerie
       const netMargin = Math.round((rawPrice - otaCommissionAmount - cleaningFee - conciergeAmount) * 100) / 100;
@@ -13855,6 +13887,9 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         startDate: r.start_date,
         endDate: r.end_date,
         month: parseInt(r.month),
+        paymentMonth,
+        paymentYear,
+        paymentDate: paymentDate.toISOString().split('T')[0],
         nights,
         nbGuests,
         platform,
@@ -13865,6 +13900,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         netRevenue: Math.round(netRevenue * 100) / 100,
         conciergeAmount: Math.round(conciergeAmount * 100) / 100,
         ownerRevenue: Math.round(ownerRevenue * 100) / 100,
+        hostPayout: realHostPayout != null ? Math.round(realHostPayout * 100) / 100 : null,
         conciergePct,
         otaCommissionPct,
         otaCommissionAmount: Math.round(otaCommissionAmount * 100) / 100,
@@ -13885,7 +13921,9 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     }));
 
     enrichedResas.forEach(r => {
-      const m = monthlyData[r.month - 1];
+      // Grouper par mois de PAIEMENT effectif
+      const payMonthIdx = r.paymentYear === selectedYear ? r.paymentMonth - 1 : -1;
+      const m = payMonthIdx >= 0 ? monthlyData[payMonthIdx] : null;
       if (!m) return;
       m.bookings++;
       m.nights += r.nights;
@@ -13897,6 +13935,20 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       m.ownerRevenue        += r.ownerRevenue;
       m.otaCommissionAmount += r.otaCommissionAmount;
       m.netMargin           += r.netMargin;
+      if (r.hostPayout != null) m.hostPayout = (m.hostPayout || 0) + r.hostPayout;
+      // Détail par plateforme
+      if (!m.byPlatform) m.byPlatform = {};
+      if (!m.byPlatform[r.platform]) m.byPlatform[r.platform] = {
+        platform: r.platform, bookings: 0, grossRevenue: 0,
+        otaCommissionAmount: 0, hostPayout: 0, netMargin: 0, paymentDates: []
+      };
+      const mp = m.byPlatform[r.platform];
+      mp.bookings++;
+      mp.grossRevenue        += r.grossRevenue;
+      mp.otaCommissionAmount += r.otaCommissionAmount;
+      mp.hostPayout          += r.hostPayout != null ? r.hostPayout : (r.grossRevenue - r.otaCommissionAmount);
+      mp.netMargin           += r.netMargin;
+      if (!mp.paymentDates.includes(r.paymentDate)) mp.paymentDates.push(r.paymentDate);
     });
     monthlyData.forEach(m => {
       m.grossRevenue        = Math.round(m.grossRevenue * 100) / 100;
@@ -13930,6 +13982,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     enrichedResas.forEach(r => {
       const p = byProperty[r.propertyId];
       if (!p) return;
+      if (r.paymentYear !== selectedYear) return; // Exclure si paiement hors année sélectionnée
       p.bookings++;
       p.nights += r.nights;
       p.grossRevenue    += r.grossRevenue;
