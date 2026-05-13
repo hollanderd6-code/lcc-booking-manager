@@ -983,7 +983,13 @@ function renderPaymentBreakdown(monthly) {
           <tbody>`;
 
   activeMonths.forEach((m, idx) => {
-    const platforms = Object.values(m.byPlatform || {}).sort((a,b) => b.grossRevenue - a.grossRevenue);
+    const platforms = Object.values(m.byPlatform || {})
+      .filter(p => {
+        const pn = (p.platform || '').toLowerCase();
+        return !['block','bloc','bloqué','blocked','unavailable'].includes(pn)
+          && !pn.includes('block') && p.grossRevenue > 0;
+      })
+      .sort((a,b) => b.grossRevenue - a.grossRevenue);
     const monthTotal = platforms.reduce((s, p) => s + p.hostPayout, 0);
     platforms.forEach((p, pidx) => {
       const isFirst = pidx === 0;
@@ -1005,7 +1011,12 @@ function renderPaymentBreakdown(monthly) {
               <td style="padding:8px 12px;text-align:right;color:#374151;">${fmt(p.grossRevenue)}</td>
               <td style="padding:8px 12px;text-align:right;color:#E53E3E;">- ${fmt(p.otaCommissionAmount)}</td>
               <td style="padding:8px 12px;text-align:right;font-weight:700;color:#1A7A5E;">${fmt(p.hostPayout)}</td>
-              <td style="padding:8px 12px;color:#9CA3AF;font-size:12px;">${(p.paymentDates || []).sort().join(', ')}</td>
+              <td style="padding:8px 12px;color:#9CA3AF;font-size:12px;">${(() => {
+                const dates = (p.paymentDates || []).sort();
+                if (dates.length === 0) return '—';
+                if (dates.length <= 3) return dates.join(', ');
+                return dates[0] + ' → ' + dates[dates.length-1] + ' <span style=\'color:#7c3aed;font-weight:600;\'>' + dates.length + ' virements</span>';
+              })()}</td>
             </tr>`;
     });
   });
