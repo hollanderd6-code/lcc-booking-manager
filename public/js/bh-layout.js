@@ -509,8 +509,9 @@ function getSidebarHTML() {
     const titleEl = document.createElement('span');
     titleEl.id = 'bh-mobile-page-title';
     titleEl.textContent = title;
-    // padding-right dynamique selon la taille d'écran pour éviter chevauchement avec boutons droite
-    var _pr = window.innerWidth <= 390 ? '105px' : '115px';
+    // padding-right = espace pour les boutons à droite (svcRow ~55px + annBtn si présent ~35px)
+    var isAppPage = window.location.pathname === '/app.html' || window.location.pathname.endsWith('/app.html');
+    var _pr = isAppPage ? '95px' : '65px';
     titleEl.style.cssText = 'font-family:"DM Sans",system-ui,sans-serif;font-size:14px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;letter-spacing:-0.01em;padding-right:' + _pr + ';';
 
     // Wrapper colonne pour logo+titre à gauche, pastilles en dessous
