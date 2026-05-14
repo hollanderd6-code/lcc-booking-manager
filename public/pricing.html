@@ -258,6 +258,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   .nav-main.open a { padding: 12px 16px; font-size: 15px; border-radius: 10px; color: var(--ink); font-weight: 500; }
   .header-actions .btn-outline { display: none; }
   .header-actions .btn-primary .btn-label { display: none; }
+  .agency-highlight-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
   .header-actions .btn-primary .btn-label-short { display: inline; }
   .slider-section { padding: 24px 20px; }
   .cta-box { padding: 52px 24px; }
@@ -432,7 +433,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         <div class="plan-header">
           <div class="plan-badge pro"><i class="fas fa-building"></i> Conciergeries</div>
           <div class="plan-name">Pro</div>
-          <div class="plan-desc">Pour les conciergeries et gestionnaires multi-biens.</div>
+          <div class="plan-desc">Pour les conciergeries et gestionnaires locatifs professionnels. Gérez plusieurs portefeuilles depuis un seul compte.</div>
           <div class="plan-price">
             <div class="price-old" id="pro-old"></div>
             <div class="price-row">
@@ -451,7 +452,10 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         <div class="plan-features">
           <div class="features-title">Tout Standard, plus :</div>
           <ul>
-            <li><i class="fas fa-check"></i> <strong>Sous-comptes équipe</strong> <span class="feat-tag">Nouveau</span></li>
+            <li><i class="fas fa-check"></i> <strong>Mode Agence</strong> <span class="feat-tag" style="background:#7c3aed;color:white;border-color:#7c3aed;">Exclusif Pro</span></li>
+            <li><i class="fas fa-check"></i> Gérez les comptes de vos clients propriétaires</li>
+            <li><i class="fas fa-check"></i> <strong>SMS automatiques voyageurs</strong> <span class="feat-tag">Bientôt</span></li>
+            <li><i class="fas fa-check"></i> <strong>Sous-comptes équipe</strong></li>
             <li><i class="fas fa-check"></i> Droits par rôle (admin, ménage, messagerie)</li>
             <li><i class="fas fa-check"></i> Rapports financiers avancés</li>
             <li><i class="fas fa-check"></i> Règles tarifaires avancées</li>
@@ -461,6 +465,50 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         </div>
       </div>
 
+    </div>
+  </div>
+</section>
+
+
+<!-- MODE AGENCE HIGHLIGHT -->
+<section style="padding:60px 0;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);">
+  <div class="container">
+    <div class="agency-highlight-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;max-width:900px;margin:0 auto;">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.2);color:#c4b5fd;border:1px solid rgba(124,58,237,.3);border-radius:999px;padding:5px 14px;font-size:12px;font-weight:600;margin-bottom:20px;"><i class="fas fa-building"></i> Exclusif Pro</div>
+        <h2 style="font-family:'Instrument Serif',serif;font-size:clamp(26px,3vw,38px);color:white;font-weight:400;margin-bottom:16px;">Le Mode Agence, pour les pros du locatif</h2>
+        <p style="color:rgba(255,255,255,.6);font-size:15px;line-height:1.7;margin-bottom:28px;">Accédez aux réservations, messages et finances de vos clients propriétaires depuis un seul compte. Recevez leurs notifications, basculez d'un portefeuille à l'autre, et facturez-les directement.</p>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:32px;">
+          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#6ee7b7;font-size:11px;"></i> Calendrier, messages et ménage de chaque client</li>
+          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#6ee7b7;font-size:11px;"></i> Notifications en temps réel pour toutes les résas</li>
+          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#6ee7b7;font-size:11px;"></i> Facturation clients depuis votre espace</li>
+          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#6ee7b7;font-size:11px;"></i> Basculez d'un compte à l'autre en un clic</li>
+        </ul>
+        <a href="/register.html" style="display:inline-flex;align-items:center;gap:8px;background:#7c3aed;color:white;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Démarrer en Pro <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.08);">
+          <div style="width:40px;height:40px;background:#7c3aed;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-building" style="color:white;font-size:16px;"></i></div>
+          <div><div style="font-size:13px;font-weight:700;color:white;">Mode Agence actif</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Compte de Stéphanie Induni</div></div>
+          <div style="margin-left:auto;background:rgba(110,231,183,.15);color:#6ee7b7;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;">Connecté</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:rgba(255,255,255,.5);">Logements gérés</span>
+          <span style="font-size:15px;font-weight:700;color:white;">8</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:rgba(255,255,255,.5);">CA mensuel client</span>
+          <span style="font-size:15px;font-weight:700;color:#6ee7b7;">12 450 €</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:rgba(255,255,255,.5);">Nouvelles résas</span>
+          <span style="font-size:15px;font-weight:700;color:white;">3 ce mois</span>
+        </div>
+        <div style="margin-top:8px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;">
+          <button style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:white;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;">Voir calendrier</button>
+          <button style="flex:1;background:#7c3aed;border:none;color:white;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Créer facture</button>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -513,6 +561,12 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
           <tr><td>Factures voyageurs automatiques</td><td><i class="fas fa-check check-yes"></i></td><td class="td-featured"><i class="fas fa-check check-yes"></i></td><td><i class="fas fa-check check-yes"></i></td></tr>
           <tr><td>Facturation propriétaires (conciergerie)</td><td><i class="fas fa-times check-no"></i></td><td class="td-featured"><i class="fas fa-check check-yes"></i></td><td><i class="fas fa-check check-yes"></i></td></tr>
           <tr><td>Débours & attestations clients</td><td><i class="fas fa-times check-no"></i></td><td class="td-featured"><i class="fas fa-check check-yes"></i></td><td><i class="fas fa-check check-yes"></i></td></tr>
+
+          <tr class="cat-row"><td colspan="4">Mode Agence <span style="background:#7c3aed;color:white;font-size:9px;padding:2px 7px;border-radius:999px;margin-left:6px;text-transform:none;letter-spacing:0;font-weight:700;">Exclusif Pro</span></td></tr>
+          <tr><td>Accès aux comptes clients propriétaires</td><td><i class="fas fa-times check-no"></i></td><td class="td-featured"><i class="fas fa-times check-no"></i></td><td><i class="fas fa-check check-yes"></i></td></tr>
+          <tr><td>Notifications résas & messages clients</td><td><i class="fas fa-times check-no"></i></td><td class="td-featured"><i class="fas fa-times check-no"></i></td><td><i class="fas fa-check check-yes"></i></td></tr>
+          <tr><td>Facturation clients depuis votre compte</td><td><i class="fas fa-times check-no"></i></td><td class="td-featured"><i class="fas fa-times check-no"></i></td><td><i class="fas fa-check check-yes"></i></td></tr>
+          <tr><td>SMS automatiques voyageurs</td><td><i class="fas fa-times check-no"></i></td><td class="td-featured"><i class="fas fa-times check-no"></i></td><td style="color:#7c3aed;font-size:12px;font-weight:600;">Bientôt</td></tr>
 
           <tr class="cat-row"><td colspan="4">Rapports & mobile</td></tr>
           <tr><td>Rapports & statistiques</td><td>Basiques</td><td class="td-featured">Détaillés</td><td>Avancés</td></tr>
