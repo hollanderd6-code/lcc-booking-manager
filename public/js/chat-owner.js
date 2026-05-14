@@ -201,7 +201,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Haptic si dispo
         try { window.Capacitor?.Plugins?.Haptics?.impact({ style: 'LIGHT' }); } catch {}
         await loadConversations();
-        // Masquer l'indicateur
+        // Mettre à jour le badge de la bottom bar
+        try {
+          const totalUnread = (window.allConversations || []).reduce((s, c) => s + (parseInt(c.unread_count) || 0), 0);
+          // IDs possibles du badge selon les pages/composants
+          ['msgBadgeMobile','msgBadgeDesktop','messageBadge','unreadCount','tabGuestsBadge'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.textContent = totalUnread || '0'; el.style.display = totalUnread > 0 ? '' : 'none'; }
+          });
+          // Badge dans la bottom bar mobile (géré par bh-layout.js / messages-badge-desktop-mobile.js)
+          document.querySelectorAll('[id*="badge"][id*="essage"], [id*="Badge"][id*="essage"], .tab-badge, .nav-badge').forEach(el => {
+            if (el.closest && el.closest('[href*="messages"], [onclick*="messages"]')) {
+              el.textContent = totalUnread || '0';
+            }
+          });
+          if (typeof window._refreshBadge === 'function') window._refreshBadge();
+          if (typeof window.refreshMessagesBadge === 'function') window.refreshMessagesBadge();
+        } catch(e) {}
+        // Cacher l'indicateur
         indicator.style.height = '0';
         setTimeout(() => { indicator?.remove(); indicator = null; }, 300);
       } else {
