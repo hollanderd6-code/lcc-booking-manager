@@ -2924,18 +2924,10 @@ window.renderAgencyToggle = function renderAgencyToggle(accounts) {
 
   const bar = document.createElement('div');
   bar.id = 'agencyToggleBar';
-  var _mobileHdr = document.querySelector('.mobile-header');
-  var _sidebar = document.querySelector('.sidebar');
-  var _mainHdr = document.getElementById('bhMainHeader');
-  var _topOff = 112; // fallback desktop
-  if (_mobileHdr && _sidebar && window.innerWidth > 768) {
-    _topOff = Math.round(_mobileHdr.getBoundingClientRect().height) + Math.round(_mainHdr ? _mainHdr.getBoundingClientRect().height : 72);
-  }
-  var _leftOff = (_sidebar && window.innerWidth > 768) ? Math.round(_sidebar.getBoundingClientRect().width) : 0;
   var _isMobile = window.innerWidth <= 768;
   bar.style.cssText = _isMobile
     ? 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;height:36px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;width:100%;box-sizing:border-box;'
-    : 'background:#1F2937;padding:0px 16px;display:flex;align-items:center;height:18px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;position:fixed;top:' + _topOff + 'px;left:' + _leftOff + 'px;right:0;z-index:200;';
+    : 'background:#1F2937;padding:0px 16px;display:flex;align-items:center;height:18px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;position:fixed;top:112px;left:248px;right:0;z-index:200;';
   var accountDots = accounts.map(function(a) {
     return '<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#9CA3AF;white-space:nowrap;">'
       + '<span style="width:8px;height:8px;border-radius:50%;background:' + (a.color||'#6B7280') + ';display:inline-block;"></span>'
