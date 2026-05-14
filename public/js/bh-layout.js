@@ -586,8 +586,9 @@ function getSidebarHTML() {
       mobileHeader.appendChild(svcRow);
     }
 
-    // Bouton 🔔 Nouveautés dans le header mobile
-    if (!document.getElementById('bh-mobile-ann-btn')) {
+    // Bouton 🔔 Nouveautés dans le header mobile — uniquement sur app.html
+    var isAppPage = window.location.pathname === '/app.html' || window.location.pathname === '/app' || window.location.pathname.endsWith('/app.html');
+    if (!document.getElementById('bh-mobile-ann-btn') && isAppPage) {
       var annBtn = document.createElement('button');
       annBtn.id = 'bh-mobile-ann-btn';
       annBtn.style.cssText = 'position:absolute;right:80px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
