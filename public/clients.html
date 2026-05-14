@@ -1674,6 +1674,56 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 </div>
 </div>
+<!-- ══ MODAL AGENCE CLIENT ══ -->
+<div class="modal-overlay" id="agencyClientModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;align-items:center;justify-content:center;">
+  <div class="modal-content" style="background:white;border-radius:16px;width:90%;max-width:540px;padding:0;overflow:hidden;">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h3 style="margin:0;font-size:16px;">Infos de facturation</h3>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;" id="agencyClientSubtitle">Compte Agence</p>
+      </div>
+      <button onclick="document.getElementById('agencyClientModal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;">×</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;max-height:65vh;overflow-y:auto;">
+      <input type="hidden" id="agencyClientDelegatorId">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Nom / Entreprise</label>
+        <input id="agencyClientCompany" type="text" placeholder="Nom d'entreprise ou nom complet" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">SIRET</label>
+        <input id="agencyClientSiret" type="text" placeholder="12345678900012" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Téléphone</label>
+        <input id="agencyClientPhone" type="text" placeholder="+33 6 00 00 00 00" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Adresse</label>
+        <input id="agencyClientAddress" type="text" placeholder="12 rue de la Paix" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Code postal</label>
+          <input id="agencyClientPostal" type="text" placeholder="75001" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Ville</label>
+          <input id="agencyClientCity" type="text" placeholder="Paris" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Logements associés <span style="font-weight:400;color:#9ca3af;">(pour facturation)</span></label>
+        <div id="agencyClientPropertiesList" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;"></div>
+      </div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid #f3f4f6;display:flex;justify-content:flex-end;gap:8px;">
+      <button onclick="document.getElementById('agencyClientModal').style.display='none'" style="padding:8px 16px;background:#f3f4f6;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Annuler</button>
+      <button onclick="saveAgencyClientOverride()" style="padding:8px 20px;background:#1A7A5E;border:none;border-radius:8px;font-size:13px;font-weight:600;color:white;cursor:pointer;">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="clientModal">
 <div class="modal-content" style="display:flex;flex-direction:column;padding:0;max-height:85vh;">
   <!-- Header sticky -->
@@ -1929,8 +1979,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         container.innerHTML = clients.map(c => {
           const name = c.company_name || (`${c.first_name || ''} ${c.last_name || ''}`).trim() || 'Sans nom';
           const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
-          const isAgency = c.is_agency_client === true || c.client_type === 'agency';
-          const type = isAgency ? 'Compte Agence' : (c.client_type === 'business' ? 'Entreprise' : 'Particulier');
+          const isAgency = c.is_agency_client === true || c.from_agency === true;
+          const type = isAgency
+            ? ('Via ' + (c.delegator_name || 'Agence'))
+            : (c.client_type === 'business' ? 'Entreprise' : 'Particulier');
           const typeColor = isAgency ? '#6d28d9' : (c.client_type === 'business' ? '#1e40af' : '#166534');
           const typeBg = isAgency ? '#ede9fe' : (c.client_type === 'business' ? '#dbeafe' : '#dcfce7');
 
@@ -1954,18 +2006,13 @@ document.addEventListener('DOMContentLoaded', async () => {
               : '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement associé</span>';
           }
 
-          // Stats factures / CA agence
-          const stats = invStatsByClient[c.id] || { total: 0, last: null, count: 0 };
-          let totalFormatted, lastInvHtml;
-          if (isAgency) {
-            totalFormatted = (c.ca_year || 0).toFixed(2).replace('.', ',') + ' €';
-            lastInvHtml = '<span style="font-size:12px;color:#6b7280;">CA total : <strong>' + (c.ca_total||0).toFixed(2).replace('.',',') + ' €</strong></span>';
-          } else {
-            totalFormatted = stats.total.toFixed(2).replace('.', ',') + ' €';
-            lastInvHtml = stats.last
-              ? '<span style="font-size:12px;color:#6b7280;">Dernière : <strong>' + formatDate(stats.last.issue_date) + '</strong> — ' + (parseFloat(stats.last.total_amount)||0).toFixed(2).replace('.',',') + ' €</span>'
-              : '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucune facture</span>';
-          }
+          // Stats factures (utiliser original_id pour les clients agence)
+          const statsKey = c.original_id || c.id;
+          const stats = invStatsByClient[statsKey] || invStatsByClient[c.id] || { total: 0, last: null, count: 0 };
+          const totalFormatted = stats.total.toFixed(2).replace('.', ',') + ' €';
+          const lastInvHtml = stats.last
+            ? '<span style="font-size:12px;color:#6b7280;">Dernière : <strong>' + formatDate(stats.last.issue_date) + '</strong> — ' + (parseFloat(stats.last.total_amount)||0).toFixed(2).replace('.',',') + ' €</span>'
+            : '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucune facture</span>';
 
                     // Coordonnées
           const emailHtml = c.email ? `<span style="font-size:12px;color:#6b7280;"><i class="fas fa-envelope" style="width:14px;margin-right:4px;color:#9ca3af;"></i>${c.email}</span>` : '';
@@ -1983,8 +2030,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:${typeBg};color:${typeColor};">${type}</span>
               </div>
               ${isAgency
-                ? '<button onclick="createInvoiceForAgencyClient(\''+c.id+'\',\''+encodeURIComponent(name)+'\',\''+c.delegator_user_id+'\')" style="flex-shrink:0;padding:7px 10px;background:#7c3aed;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:white;" title="Créer une facture"><i class=\"fas fa-file-invoice\"></i></button>'
-                : '<button onclick="editClient(\''+c.id+'\')" style="flex-shrink:0;padding:7px 10px;background:var(--bg-secondary,#f3f4f6);border:1px solid var(--border-color,#e5e7eb);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-secondary,#374151);" title="Modifier"><i class=\"fas fa-edit\"></i></button>'
+                ? '<div style=\"display:flex;gap:6px;\">'
+                  + '<button onclick=\"editClient(\'' + c.id + '\')\" style=\"flex-shrink:0;padding:7px 10px;background:var(--bg-secondary,#f3f4f6);border:1px solid var(--border-color,#e5e7eb);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-secondary,#374151);\" title=\"Modifier\"><i class=\"fas fa-edit\"></i></button>'
+                  + '<button onclick=\"createInvoiceForAgencyClient(\'' + c.id + '\',\'' + encodeURIComponent(name) + '\',\'' + c.delegator_user_id + '\')\" style=\"flex-shrink:0;padding:7px 10px;background:#7c3aed;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:white;\" title=\"Créer une facture\"><i class=\"fas fa-file-invoice\"></i></button>'
+                  + '</div>'
+                : '<button onclick=\"editClient(\'' + c.id + '\')\" style=\"flex-shrink:0;padding:7px 10px;background:var(--bg-secondary,#f3f4f6);border:1px solid var(--border-color,#e5e7eb);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-secondary,#374151);\" title=\"Modifier\"><i class=\"fas fa-edit\"></i></button>'
               }
             </div>
 
@@ -4053,6 +4103,64 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   }
 
   // ── Créer une facture pour un client agence ──────────────────
+  // ── Modal agence client ────────────────────────────────────────
+  window.openAgencyClientModal = function(client) {
+    document.getElementById('agencyClientDelegatorId').value = client.delegator_user_id || '';
+    document.getElementById('agencyClientSubtitle').textContent = client.email || 'Compte Agence';
+    document.getElementById('agencyClientCompany').value = client.company_name || '';
+    document.getElementById('agencyClientSiret').value = client.siret || '';
+    document.getElementById('agencyClientPhone').value = client.phone || '';
+    document.getElementById('agencyClientAddress').value = client.address || '';
+    document.getElementById('agencyClientPostal').value = client.postal_code || '';
+    document.getElementById('agencyClientCity').value = client.city || '';
+
+    // Charger les logements du compte délégué
+    const list = document.getElementById('agencyClientPropertiesList');
+    list.innerHTML = '<p style="font-size:12px;color:#9ca3af;margin:4px;">Chargement...</p>';
+    const selected = client.selected_property_ids || [];
+
+    fetch(API_BASE + '/api/agency/properties/' + client.delegator_user_id, { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.json())
+      .then(data => {
+        const props = data.properties || [];
+        if (!props.length) { list.innerHTML = '<p style="font-size:12px;color:#9ca3af;margin:4px;">Aucun logement trouvé</p>'; return; }
+        list.innerHTML = props.map(p => `
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 0;">
+            <input type="checkbox" value="${p.id}" ${selected.includes(p.id) ? 'checked' : ''} style="width:14px;height:14px;accent-color:#1A7A5E;">
+            <span>${p.name}</span>
+          </label>`).join('');
+      })
+      .catch(() => { list.innerHTML = '<p style="font-size:12px;color:#ef4444;">Erreur chargement</p>'; });
+
+    document.getElementById('agencyClientModal').style.display = 'flex';
+  };
+
+  window.saveAgencyClientOverride = async function() {
+    const delegatorId = document.getElementById('agencyClientDelegatorId').value;
+    const selected = [...document.querySelectorAll('#agencyClientPropertiesList input[type=checkbox]:checked')].map(cb => cb.value);
+    const body = {
+      company_name: document.getElementById('agencyClientCompany').value.trim(),
+      siret: document.getElementById('agencyClientSiret').value.trim(),
+      phone: document.getElementById('agencyClientPhone').value.trim(),
+      address: document.getElementById('agencyClientAddress').value.trim(),
+      postal_code: document.getElementById('agencyClientPostal').value.trim(),
+      city: document.getElementById('agencyClientCity').value.trim(),
+      selected_property_ids: selected
+    };
+    try {
+      const r = await fetch(API_BASE + '/api/agency/billing-override/' + delegatorId, {
+        method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const d = await r.json();
+      if (d.success) {
+        document.getElementById('agencyClientModal').style.display = 'none';
+        await loadClients();
+        showToast('✅ Infos de facturation enregistrées');
+      } else { alert(d.error || 'Erreur'); }
+    } catch(e) { alert('Erreur réseau'); }
+  };
+
   window.createInvoiceForAgencyClient = function(clientId, clientNameEncoded, delegatorUserId) {
     const clientName = decodeURIComponent(clientNameEncoded);
 
@@ -4122,6 +4230,16 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
   window.editClient = function(clientId) {
   console.log('[DEBUG] editClient appelé avec ID:', clientId);
+
+  const client = clients.find(c => String(c.id) === String(clientId));
+  if (!client) { alert('Client introuvable'); return; }
+
+  // Client agence → modal dédiée
+  if (client.is_agency_client) {
+    openAgencyClientModal(client);
+    return;
+  }
+
   const delSection = document.getElementById('deleteClientSection');
   if (delSection) delSection.style.display = 'block';
   console.log('[DATA] Liste des clients:', clients);
