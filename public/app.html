@@ -2924,13 +2924,11 @@ window.renderAgencyToggle = function renderAgencyToggle(accounts) {
 
   const bar = document.createElement('div');
   bar.id = 'agencyToggleBar';
-  var topOffset = 0;
-  var mainHdr = document.getElementById('bhMainHeader');
-  var topBar = document.querySelector('div[style*="position:fixed"][style*="z-index:9"], .status-top-bar');
-  if (topBar) topOffset += topBar.getBoundingClientRect().height;
-  if (mainHdr) topOffset += mainHdr.getBoundingClientRect().height;
-  if (topOffset < 60) topOffset = 121;
-  bar.style.cssText = 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #374151;flex-wrap:wrap;gap:8px;position:fixed;top:' + topOffset + 'px;left:0;right:0;z-index:48;';
+  var _mobileHdr = document.querySelector('.mobile-header');
+  var _sidebar = document.querySelector('.sidebar');
+  var _topOff = _mobileHdr ? Math.round(_mobileHdr.getBoundingClientRect().height) : 60;
+  var _leftOff = (_sidebar && window.innerWidth > 768) ? Math.round(_sidebar.getBoundingClientRect().width) : 0;
+  bar.style.cssText = 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #374151;flex-wrap:wrap;gap:8px;position:fixed;top:' + _topOff + 'px;left:' + _leftOff + 'px;right:0;z-index:48;';
   var accountDots = accounts.map(function(a) {
     return '<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#9CA3AF;white-space:nowrap;">'
       + '<span style="width:8px;height:8px;border-radius:50%;background:' + (a.color||'#6B7280') + ';display:inline-block;"></span>'
