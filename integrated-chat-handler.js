@@ -1024,6 +1024,22 @@ Rules:
           return r.rows.length > 0;
         } catch(e) { return false; }
       })(),
+      // URL du lien de caution pour que Groq puisse le renvoyer si demandé
+      depositUrl: await (async () => {
+        try {
+          const r = await pool.query(
+            `SELECT message FROM messages
+             WHERE conversation_id = $1
+             AND sender_type IN ('property','system','bot')
+             AND message ILIKE '%boostinghost.fr/c/%'
+             ORDER BY created_at ASC LIMIT 1`,
+            [conversation.id]
+          );
+          if (!r.rows.length) return null;
+          const match = r.rows[0].message.match(/https:\/\/boostinghost\.fr\/c\/[a-zA-Z0-9]+/);
+          return match ? match[0] : null;
+        } catch(e) { return null; }
+      })(),
       parkingInfo: welcomeBookData?.parkingInfo,
       extraNotesAccess: welcomeBookData?.extraNotesAccess,
       checkoutInstructions: welcomeBookData?.checkoutInstructions,
