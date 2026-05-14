@@ -21590,6 +21590,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
       + '<div class="sect-rule"></div>'
       + '<div class="access-grid">' + accessCards + '</div>'
       + iif(d.extraNotesAccess, '<div class="extra-note">' + safe(d.extraNotesAccess) + '</div>')
+      + galleryHtml(d.photos && d.photos.extraPhotosAccess)
       + mapEmbed
       + '</section>'
     ) : '';
