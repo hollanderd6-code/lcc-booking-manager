@@ -1958,6 +1958,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const [stripeStatuses] = await Promise.all([
           Promise.all(clients.map(async (c) => {
             try {
+              if (c.from_agency || c.is_agency_client) return { id: c.id, stripe: { connected: false } };
               const r = await fetch(API_BASE + '/api/owner-clients/' + c.id + '/stripe/status', { headers: { Authorization: 'Bearer ' + token } });
               return { id: c.id, stripe: await r.json() };
             } catch(e) { return { id: c.id, stripe: { connected: false } }; }
