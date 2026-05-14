@@ -29,6 +29,63 @@
     };
 
     // ============================================
+    // 💾 STOCKAGE PERSISTANT (Capacitor Preferences sur iOS, localStorage en web)
+    // ============================================
+
+    const TOKEN_KEY = 'lcc_token';
+
+    const nativeSet = async (key, value) => {
+      try {
+        if (isNative() && window.Capacitor?.Plugins?.Preferences) {
+          await window.Capacitor.Plugins.Preferences.set({ key, value });
+        }
+        localStorage.setItem(key, value);
+      } catch { try { localStorage.setItem(key, value); } catch {} }
+    };
+
+    const nativeGet = async (key) => {
+      try {
+        if (isNative() && window.Capacitor?.Plugins?.Preferences) {
+          const result = await window.Capacitor.Plugins.Preferences.get({ key });
+          if (result?.value) {
+            // Resynchroniser localStorage depuis Preferences
+            try { localStorage.setItem(key, result.value); } catch {}
+            return result.value;
+          }
+        }
+        return localStorage.getItem(key);
+      } catch { return localStorage.getItem(key); }
+    };
+
+    const nativeRemove = async (key) => {
+      try {
+        if (isNative() && window.Capacitor?.Plugins?.Preferences) {
+          await window.Capacitor.Plugins.Preferences.remove({ key });
+        }
+        localStorage.removeItem(key);
+      } catch { try { localStorage.removeItem(key); } catch {} }
+    };
+
+    // Au démarrage sur iOS : restaurer le token depuis Preferences si localStorage vide
+    (async () => {
+      try {
+        if (isNative() && window.Capacitor?.Plugins?.Preferences) {
+          const lsToken = localStorage.getItem(TOKEN_KEY);
+          if (!lsToken) {
+            const result = await window.Capacitor.Plugins.Preferences.get({ key: TOKEN_KEY });
+            if (result?.value) {
+              localStorage.setItem(TOKEN_KEY, result.value);
+              console.log('💾 [AUTH-FETCH] Token restauré depuis Capacitor Preferences');
+            }
+          } else {
+            // localStorage OK → sauvegarder dans Preferences aussi
+            await window.Capacitor.Plugins.Preferences.set({ key: TOKEN_KEY, value: lsToken });
+          }
+        }
+      } catch(e) { console.warn('⚠️ [AUTH-FETCH] Preferences init:', e?.message); }
+    })();
+
+    // ============================================
     // 🔑 GESTION TOKEN
     // ============================================
 
@@ -221,6 +278,10 @@
           localStorage.removeItem('lcc_user');
           localStorage.removeItem('lcc_account_type');
           localStorage.removeItem('lcc_permissions');
+          // Effacer aussi Capacitor Preferences
+          if (isNative() && window.Capacitor?.Plugins?.Preferences) {
+            window.Capacitor.Plugins.Preferences.remove({ key: 'lcc_token' }).catch(() => {});
+          }
         } catch {}
 
         const redirectUrl = isNative() ? 'login.html' : '/login.html';
@@ -230,6 +291,17 @@
 
       return res;
     };
+
+    // Intercepter localStorage.setItem pour sauvegarder lcc_token dans Preferences
+    try {
+      const _origSetItem = localStorage.setItem.bind(localStorage);
+      localStorage.setItem = function(key, value) {
+        _origSetItem(key, value);
+        if (key === 'lcc_token' && isNative() && window.Capacitor?.Plugins?.Preferences) {
+          window.Capacitor.Plugins.Preferences.set({ key, value }).catch(() => {});
+        }
+      };
+    } catch {}
 
     console.log('✅ [AUTH-FETCH] Système initialisé avec succès');
     console.log('📱 [AUTH-FETCH] Mode:', isNative() ? 'NATIF' : 'WEB');
