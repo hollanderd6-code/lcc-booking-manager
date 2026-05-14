@@ -24112,6 +24112,21 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
       }
 
       console.log(`✅ Token FCM enregistré pour user ${userId} (device_id: ${deviceId || 'N/A'})`);
+
+      // Nettoyage automatique : garder max 3 tokens par user (les plus récents)
+      await pool.query(
+        `DELETE FROM user_fcm_tokens
+         WHERE user_id = $1
+         AND sub_account_id IS NULL
+         AND id NOT IN (
+           SELECT id FROM user_fcm_tokens
+           WHERE user_id = $1 AND sub_account_id IS NULL
+           ORDER BY updated_at DESC
+           LIMIT 3
+         )`,
+        [userId]
+      ).catch(e => console.warn('⚠️ Nettoyage tokens FCM:', e.message));
+
       return res.json({ success: true, message: 'Token sauvegardé' });
     }
 
