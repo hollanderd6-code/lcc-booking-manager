@@ -6649,7 +6649,7 @@ try {
     }
     var checkins=0, checkouts=0, totalG=0, seen={}, list=[];
     state.bookings.forEach(function(r) {
-      if (r.type==='block') return;
+      if (r.type==='block' || r.type==='manual' || (r.source||r.platform||'').toUpperCase()==='BLOCK') return;
       var s=(r.startDate||r.start||'').split('T')[0];
       var e=(r.endDate||r.end||'').split('T')[0];
       if (!s||!e) return;
