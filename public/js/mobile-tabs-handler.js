@@ -155,11 +155,12 @@
     buttons += hr;
 
     if (!isSubAccount) {
+      const agencyExit = `if(localStorage.getItem('lcc_managed_user')){var o=localStorage.getItem('lcc_agency_token');if(o){localStorage.setItem('lcc_token',o);['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(function(k){localStorage.removeItem(k)});window.location.href='`;
       buttons += `
-        <button class="btn btn-secondary" onclick="window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
+        <button class="btn btn-secondary" onclick="${agencyExit}/settings-account.html';}return;}window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-user-cog"></i> Paramètres du compte
         </button>
-        <button class="btn btn-secondary" onclick="window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
+        <button class="btn btn-secondary" onclick="${agencyExit}/help.html';}return;}window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
           <i class="fas fa-headset"></i> Support
         </button>`;
     }
