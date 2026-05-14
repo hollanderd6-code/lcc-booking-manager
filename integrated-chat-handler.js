@@ -366,6 +366,26 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       }
     }
 
+    // ── Pause 2h après réponse manuelle de l'owner ──────────────
+    // Si l'owner a répondu manuellement (sender_type='owner') dans les 2 dernières heures,
+    // Groq se tait pour ne pas écraser la gestion humaine.
+    try {
+      const ownerRecentReply = await pool.query(
+        `SELECT 1 FROM messages
+         WHERE conversation_id = $1
+         AND sender_type = 'owner'
+         AND created_at > NOW() - INTERVAL '2 hours'
+         LIMIT 1`,
+        [conversation.id]
+      );
+      if (ownerRecentReply.rows.length > 0) {
+        console.log(`🤫 [HANDLER] Owner a répondu manuellement dans les 2h → bot silencieux (conv ${conversation.id})`);
+        return false;
+      }
+    } catch(e) {
+      console.warn('⚠️ [HANDLER] Erreur vérif pause owner:', e.message);
+    }
+
     if (requiresHumanIntervention(message.message)) {
       console.log('🚨 [HANDLER] Urgence → escalade directe');
       const lang = conversation.language || 'fr';
@@ -989,6 +1009,20 @@ Rules:
         const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
         const depositPaid = depositStatus && ['authorized', 'captured'].includes(depositStatus);
         return depositRequired && !depositPaid;
+      })(),
+      // Indiquer si le lien caution a déjà été envoyé dans cette conv (pour éviter répétitions)
+      depositLinkAlreadySent: await (async () => {
+        try {
+          const r = await pool.query(
+            `SELECT 1 FROM messages
+             WHERE conversation_id = $1
+             AND sender_type IN ('property','system','bot')
+             AND message ILIKE '%boostinghost.fr/c/%'
+             LIMIT 1`,
+            [conversation.id]
+          );
+          return r.rows.length > 0;
+        } catch(e) { return false; }
       })(),
       parkingInfo: welcomeBookData?.parkingInfo,
       extraNotesAccess: welcomeBookData?.extraNotesAccess,
