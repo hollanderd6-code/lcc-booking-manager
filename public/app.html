@@ -2950,10 +2950,13 @@ window.renderAgencyToggle = function renderAgencyToggle(accounts) {
     ? 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;height:36px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;width:100%;box-sizing:border-box;'
     : 'background:#1F2937;padding:0px 16px;display:flex;align-items:center;height:18px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;position:fixed;top:112px;left:248px;right:0;z-index:200;';
   var accountDots = accounts.map(function(a) {
-    return '<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#9CA3AF;white-space:nowrap;">'
-      + '<span style="width:8px;height:8px;border-radius:50%;background:' + (a.color||'#6B7280') + ';display:inline-block;"></span>'
-      + (a.name || a.email) + '</span>';
-  }).join('<span style="color:#4B5563;">·</span>');
+    var uid = a.userId || '';
+    var nm = (a.name || a.email || '').replace(/'/g, "\\'");
+    var clr = a.color || '#6B7280';
+    return '<button onclick="switchAgencyAccount(\'' + uid + '\',\'' + nm + '\',\'' + clr + '\')" style="display:flex;align-items:center;gap:4px;font-size:10px;color:#D1D5DB;white-space:nowrap;background:transparent;border:none;cursor:pointer;padding:1px 6px;border-radius:10px;" onmouseover="this.style.background=\'rgba(255,255,255,.1)\'" onmouseout="this.style.background=\'transparent\'">'
+      + '<span style="width:7px;height:7px;border-radius:50%;background:' + clr + ';display:inline-block;"></span>'
+      + (a.name || a.email) + '</button>';
+  }).join('');
   bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;">'
     + '<i class="fas fa-building" style="color:#9CA3AF;font-size:12px;"></i>'
     + '<span style="font-size:11px;color:#9CA3AF;font-weight:600;">VUE AGENCE</span>'
@@ -6193,10 +6196,10 @@ try {
                 startDate: r.start_date || r.startDate,
                 endDate: r.end_date || r.endDate,
                 guestName: r.guest_name || r.guestName,
+                propertyId: r.property_id || r.propertyId,
                 propertyName: r.property_name || r.propertyName,
                 _agencyBadge: r._agencyAccount?.name,
                 _agencyColor: r._agencyAccount?.color,
-                // Forcer la couleur du bloc calendrier par compte
                 color: r._agencyAccount?.color || r.property_color
               }));
               // Fusionner sans doublons
