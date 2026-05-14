@@ -23246,31 +23246,6 @@ async function runTemplatesCron(triggerTypes) {
             console.log(`  ↳ Conv ${conv.id} déjà traitée (log), skip`);
             continue;
           }
-          // Double-check dans messages pour éviter doublons cross-systèmes (webhook + cron)
-          if (tmpl.trigger_type === 'on_arrival' || tmpl.trigger_type === 'before_arrival') {
-            const alreadySentMsg = await pool.query(
-              `SELECT id FROM messages
-               WHERE conversation_id = $1
-               AND sender_type IN ('property','system','bot')
-               AND created_at > NOW() - INTERVAL '23 hours'
-               AND (
-                 message ILIKE '%instructions pour votre arrivée%'
-                 OR message ILIKE '%Bienvenue à%'
-                 OR message ILIKE '%Welcome to your%'
-                 OR message ILIKE '%Welcome to the apartment%'
-                 OR message ILIKE '%Welcome to the property%'
-                 OR message ILIKE '%boîte à clés%'
-                 OR message ILIKE '%Il ne vous reste plus qu%'
-                 OR message ILIKE '%boite à clés%'
-               )`,
-              [conv.id]
-            );
-            if (alreadySentMsg.rows.length > 0) {
-              console.log(`  ↳ Conv ${conv.id} message arrivée déjà envoyé (cross-check messages), skip`);
-              continue;
-            }
-          }
-
           // ✅ Vérification caution pour on_arrival UNIQUEMENT
           // before_arrival = envoi de la caution elle-même → pas de vérif caution
           if (tmpl.trigger_type === 'on_arrival') {
