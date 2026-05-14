@@ -23138,8 +23138,10 @@ async function sendDepositReminderJ2Cron(pool, io) {
 
 async function runTemplatesCron(triggerTypes) {
   try {
+    // Calcul fiable de la date Paris — éviter le bug toLocaleString + toISOString
     const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-    const todayStr = nowParis.toISOString().split('T')[0]; // YYYY-MM-DD heure Paris
+    const pad = n => String(n).padStart(2, '0');
+    const todayStr = `${nowParis.getFullYear()}-${pad(nowParis.getMonth()+1)}-${pad(nowParis.getDate())}`;
 
     const templates = await pool.query(
       `SELECT * FROM message_templates WHERE active = TRUE AND trigger_type = ANY($1)`,
@@ -23254,7 +23256,9 @@ async function runTemplatesCron(triggerTypes) {
                AND (
                  message ILIKE '%instructions pour votre arrivée%'
                  OR message ILIKE '%Bienvenue à%'
-                 OR message ILIKE '%Welcome to%'
+                 OR message ILIKE '%Welcome to your%'
+                 OR message ILIKE '%Welcome to the apartment%'
+                 OR message ILIKE '%Welcome to the property%'
                  OR message ILIKE '%boîte à clés%'
                  OR message ILIKE '%Il ne vous reste plus qu%'
                  OR message ILIKE '%boite à clés%'
