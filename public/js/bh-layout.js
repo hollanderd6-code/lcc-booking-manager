@@ -446,10 +446,13 @@ function getSidebarHTML() {
 
     // Mapping des titres courts par page — priorité absolue
     const PAGE_TITLES = {
-      'app': 'Home',
+      'app': '',
       'cleaning': 'Ménage',
       'deposits': 'Finances',
-      'clients': 'Mes Clients'
+      'clients': 'Mes Clients',
+      'settings': 'Logements',
+      'welcome': 'Livrets',
+      'factures': 'Séjours'
     };
 
     // 1. Mapping par data-page (prioritaire)
@@ -465,8 +468,12 @@ function getSidebarHTML() {
     const h1Mappings = {
       'Gestion du ménage': 'Ménage',
       'Cautions et paiements': 'Finances',
-      'Factures Propriétaires': 'F. Propriétaire',
-      'Dashboard': 'Home'
+      'Factures Propriétaires': 'Séjours',
+      'Factures séjours': 'Séjours',
+      'Dashboard': '',
+      'Home': '',
+      'Mes logements': 'Logements',
+      'Livrets d\'accueil': 'Livrets'
     };
     if (title && h1Mappings[title]) title = h1Mappings[title];
 
