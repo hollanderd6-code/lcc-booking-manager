@@ -2924,11 +2924,10 @@ window.renderAgencyToggle = function renderAgencyToggle(accounts) {
 
   const bar = document.createElement('div');
   bar.id = 'agencyToggleBar';
-  var _mobileHdr = document.querySelector('.mobile-header');
-  var _sidebar = document.querySelector('.sidebar');
-  var _topOff = _mobileHdr ? Math.round(_mobileHdr.getBoundingClientRect().height) : 60;
-  var _leftOff = (_sidebar && window.innerWidth > 768) ? Math.round(_sidebar.getBoundingClientRect().width) : 0;
-  bar.style.cssText = 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #374151;flex-wrap:wrap;gap:8px;position:fixed;top:' + _topOff + 'px;left:' + _leftOff + 'px;right:0;z-index:48;';
+  var _isMobile = window.innerWidth <= 768;
+  bar.style.cssText = _isMobile
+    ? 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;height:36px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;width:100%;box-sizing:border-box;'
+    : 'background:#1F2937;padding:0px 16px;display:flex;align-items:center;height:18px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;position:fixed;top:112px;left:248px;right:0;z-index:200;';
   var accountDots = accounts.map(function(a) {
     return '<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#9CA3AF;white-space:nowrap;">'
       + '<span style="width:8px;height:8px;border-radius:50%;background:' + (a.color||'#6B7280') + ';display:inline-block;"></span>'
@@ -2938,8 +2937,8 @@ window.renderAgencyToggle = function renderAgencyToggle(accounts) {
     + '<i class="fas fa-building" style="color:#9CA3AF;font-size:12px;"></i>'
     + '<span style="font-size:11px;color:#9CA3AF;font-weight:600;">VUE AGENCE</span>'
     + '<div style="display:flex;background:#374151;border-radius:20px;padding:2px;gap:2px;">'
-    + '<button id="agencyToggleMine" onclick="setAgencyView(&quot;mine&quot;)" style="padding:4px 14px;border-radius:18px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:#1A7A5E;color:white;">Mon compte</button>'
-    + '<button id="agencyToggleAll" onclick="setAgencyView(&quot;all&quot;)" style="padding:4px 14px;border-radius:18px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:transparent;color:#9CA3AF;">Tous les comptes</button>'
+    + '<button id="agencyToggleMine" onclick="setAgencyView(&quot;mine&quot;)" style="padding:1px 8px;border-radius:18px;border:none;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;background:#1A7A5E;color:white;">Mon compte</button>'
+    + '<button id="agencyToggleAll" onclick="setAgencyView(&quot;all&quot;)" style="padding:1px 8px;border-radius:18px;border:none;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;background:transparent;color:#9CA3AF;">Tous les comptes</button>'
     + '</div></div>'
     + '<div style="display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none;">' + accountDots + '</div>';
   const agencyBanner = document.getElementById('agencyBanner');
