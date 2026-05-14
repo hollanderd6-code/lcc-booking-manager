@@ -16910,15 +16910,53 @@ app.get('/api/owner-clients', async (req, res) => {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
+    // 1. Clients manuels existants
     const result = await pool.query(
-      `SELECT * FROM owner_clients 
-       WHERE user_id = $1 
-       ORDER BY 
-         CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
+      `SELECT * FROM owner_clients WHERE user_id = $1
+       ORDER BY CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
       [user.id]
     );
+    const manualClients = result.rows;
 
-    res.json({ clients: result.rows });
+    // 2. Comptes délégués (agence) — clients synthétiques avec stats réelles
+    let agencyClients = [];
+    try {
+      const delegations = await pool.query(
+        `SELECT ad.delegator_user_id,
+                u.first_name, u.last_name, u.company, u.email,
+                (SELECT COUNT(*) FROM properties WHERE user_id = ad.delegator_user_id) as property_count,
+                (SELECT COALESCE(SUM(price),0) FROM reservations
+                 WHERE user_id = ad.delegator_user_id AND status != 'cancelled'
+                 AND DATE_PART('year', start_date) = DATE_PART('year', NOW())) as ca_year,
+                (SELECT COALESCE(SUM(price),0) FROM reservations
+                 WHERE user_id = ad.delegator_user_id AND status != 'cancelled') as ca_total
+         FROM account_delegations ad
+         JOIN users u ON u.id = ad.delegator_user_id
+         WHERE ad.delegate_user_id = $1 AND ad.status = 'accepted'`,
+        [user.id]
+      );
+      agencyClients = delegations.rows.map(d => ({
+        id: 'agency_' + d.delegator_user_id,
+        user_id: user.id,
+        delegator_user_id: d.delegator_user_id,
+        client_type: 'agency',
+        is_agency_client: true,
+        first_name: d.first_name || '',
+        last_name: d.last_name || '',
+        company_name: d.company || null,
+        email: d.email,
+        property_count: parseInt(d.property_count) || 0,
+        ca_year: parseFloat(d.ca_year) || 0,
+        ca_total: parseFloat(d.ca_total) || 0,
+        phone: null, city: null, postal_code: null, siret: null,
+        stripe_account_id: null, use_bh_stripe: true,
+        created_at: new Date().toISOString()
+      }));
+    } catch(e) {
+      console.warn('⚠️ [owner-clients] Erreur comptes agence:', e.message);
+    }
+
+    res.json({ clients: [...manualClients, ...agencyClients] });
   } catch (err) {
     console.error('Erreur liste clients:', err);
     res.status(500).json({ error: 'Erreur serveur' });
