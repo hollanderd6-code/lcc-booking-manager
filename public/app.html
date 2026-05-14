@@ -6172,10 +6172,10 @@ try {
                 startDate: r.start_date || r.startDate,
                 endDate: r.end_date || r.endDate,
                 guestName: r.guest_name || r.guestName,
+                propertyId: r.property_id || r.propertyId,
                 propertyName: r.property_name || r.propertyName,
                 _agencyBadge: r._agencyAccount?.name,
                 _agencyColor: r._agencyAccount?.color,
-                // Forcer la couleur du bloc calendrier par compte
                 color: r._agencyAccount?.color || r.property_color
               }));
               // Fusionner sans doublons
