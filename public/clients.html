@@ -1929,9 +1929,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         container.innerHTML = clients.map(c => {
           const name = c.company_name || (`${c.first_name || ''} ${c.last_name || ''}`).trim() || 'Sans nom';
           const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
-          const type = c.client_type === 'business' ? 'Entreprise' : 'Particulier';
-          const typeColor = c.client_type === 'business' ? '#1e40af' : '#166534';
-          const typeBg = c.client_type === 'business' ? '#dbeafe' : '#dcfce7';
+          const isAgency = c.is_agency_client === true || c.client_type === 'agency';
+          const type = isAgency ? 'Compte Agence' : (c.client_type === 'business' ? 'Entreprise' : 'Particulier');
+          const typeColor = isAgency ? '#6d28d9' : (c.client_type === 'business' ? '#1e40af' : '#166534');
+          const typeBg = isAgency ? '#ede9fe' : (c.client_type === 'business' ? '#dbeafe' : '#dcfce7');
 
           // Stripe
           const stripeInfo = stripeMap[c.id] || {};
@@ -1941,19 +1942,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             : `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#9ca3af;"><i class="fas fa-plug" style="margin-right:3px;"></i>Stripe non connecté</span>`;
 
           // Logements
-          const props = (window.allProperties || []).filter(p => String(p.owner_id || p.ownerId || '') === String(c.id));
-          const propsHtml = props.length > 0
-            ? props.map(p => `<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class="fas fa-home" style="font-size:10px;"></i>${p.name}</span>`).join('')
-            : `<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement associé</span>`;
+          // Logements
+          let propsHtml;
+          if (isAgency) {
+            const nb = c.property_count || 0;
+            propsHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class="fas fa-building" style="font-size:10px;"></i>' + nb + ' logement' + (nb > 1 ? 's gérés' : ' géré') + '</span>';
+          } else {
+            const props = (window.allProperties || []).filter(p => String(p.owner_id || p.ownerId || '') === String(c.id));
+            propsHtml = props.length > 0
+              ? props.map(p => '<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class=\"fas fa-home\" style=\"font-size:10px;\"></i>' + p.name + '</span>').join('')
+              : '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement associé</span>';
+          }
 
-          // Stats factures
+          // Stats factures / CA agence
           const stats = invStatsByClient[c.id] || { total: 0, last: null, count: 0 };
-          const totalFormatted = stats.total.toFixed(2).replace('.', ',') + ' €';
-          const lastInvHtml = stats.last
-            ? `<span style="font-size:12px;color:#6b7280;">Dernière : <strong>${formatDate(stats.last.issue_date)}</strong> — ${(parseFloat(stats.last.total_amount)||0).toFixed(2).replace('.',',') + ' €'}</span>`
-            : `<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucune facture</span>`;
+          let totalFormatted, lastInvHtml;
+          if (isAgency) {
+            totalFormatted = (c.ca_year || 0).toFixed(2).replace('.', ',') + ' €';
+            lastInvHtml = '<span style="font-size:12px;color:#6b7280;">CA total : <strong>' + (c.ca_total||0).toFixed(2).replace('.',',') + ' €</strong></span>';
+          } else {
+            totalFormatted = stats.total.toFixed(2).replace('.', ',') + ' €';
+            lastInvHtml = stats.last
+              ? '<span style="font-size:12px;color:#6b7280;">Dernière : <strong>' + formatDate(stats.last.issue_date) + '</strong> — ' + (parseFloat(stats.last.total_amount)||0).toFixed(2).replace('.',',') + ' €</span>'
+              : '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucune facture</span>';
+          }
 
-          // Coordonnées
+                    // Coordonnées
           const emailHtml = c.email ? `<span style="font-size:12px;color:#6b7280;"><i class="fas fa-envelope" style="width:14px;margin-right:4px;color:#9ca3af;"></i>${c.email}</span>` : '';
           const phoneHtml = c.phone ? `<span style="font-size:12px;color:#6b7280;"><i class="fas fa-phone" style="width:14px;margin-right:4px;color:#9ca3af;"></i>${c.phone}</span>` : '';
           const cityHtml = c.city ? `<span style="font-size:12px;color:#6b7280;"><i class="fas fa-map-marker-alt" style="width:14px;margin-right:4px;color:#9ca3af;"></i>${c.postal_code ? c.postal_code + ' ' : ''}${c.city}</span>` : '';
@@ -1968,7 +1982,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="font-weight:700;font-size:15px;color:var(--text-primary,#111827);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
                 <span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:${typeBg};color:${typeColor};">${type}</span>
               </div>
-              <button onclick="editClient('${c.id}')" style="flex-shrink:0;padding:7px 10px;background:var(--bg-secondary,#f3f4f6);border:1px solid var(--border-color,#e5e7eb);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-secondary,#374151);" title="Modifier"><i class="fas fa-edit"></i></button>
+              ${isAgency
+                ? '<button onclick="createInvoiceForAgencyClient(\''+c.id+'\',\''+encodeURIComponent(name)+'\',\''+c.delegator_user_id+'\')" style="flex-shrink:0;padding:7px 10px;background:#7c3aed;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:white;" title="Créer une facture"><i class=\"fas fa-file-invoice\"></i></button>'
+                : '<button onclick="editClient(\''+c.id+'\')" style="flex-shrink:0;padding:7px 10px;background:var(--bg-secondary,#f3f4f6);border:1px solid var(--border-color,#e5e7eb);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-secondary,#374151);" title="Modifier"><i class=\"fas fa-edit\"></i></button>'
+              }
             </div>
 
             <!-- Corps carte -->
@@ -4034,6 +4051,31 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
         </label>`;
     }).join('');
   }
+
+  // ── Créer une facture pour un client agence ──────────────────
+  window.createInvoiceForAgencyClient = function(clientId, clientNameEncoded, delegatorUserId) {
+    const clientName = decodeURIComponent(clientNameEncoded);
+
+    // S'assurer que le client agence est dans le SELECT
+    const sel = document.getElementById('invoiceClientId');
+    if (sel && !sel.querySelector(`option[value="${clientId}"]`)) {
+      const opt = document.createElement('option');
+      opt.value = clientId;
+      opt.textContent = clientName + ' (Agence)';
+      opt.dataset.agencyClient = '1';
+      opt.dataset.delegatorUserId = delegatorUserId;
+      sel.appendChild(opt);
+    }
+
+    // Naviguer vers l'onglet éditeur et pré-sélectionner le client
+    switchTab('create');
+    setTimeout(() => {
+      if (sel) {
+        sel.value = clientId;
+        sel.dispatchEvent(new Event('change'));
+      }
+    }, 150);
+  };
 
   window.openClientModal = function() {
   const delSection = document.getElementById('deleteClientSection');
