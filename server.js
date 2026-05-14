@@ -23211,66 +23211,8 @@ cron.schedule('0 7 * * *', () => {
   runTemplatesCron(['before_arrival', 'on_arrival', 'before_departure']);
 }, { timezone: 'Europe/Paris' });
 
-// Toutes les 30 min — vérifier les escalades sans réponse depuis 2h
-cron.schedule('*/30 * * * *', async () => {
-  try {
-    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-    const hourParis = nowParis.getHours();
-    // Ne pas envoyer entre 23h et 8h (sauf urgences déjà gérées par requiresHumanIntervention)
-    if (hourParis < 8 || hourParis >= 23) return;
-
-    const escalated = await pool.query(
-      `SELECT c.id, c.guest_name, c.user_id, c.property_id,
-              p.name as property_name, c.escalated_at
-       FROM conversations c
-       LEFT JOIN properties p ON p.id = c.property_id
-       WHERE c.escalated = TRUE
-       AND c.escalated_at < NOW() - INTERVAL '2 hours'
-       AND c.escalated_at > NOW() - INTERVAL '24 hours'
-       AND NOT EXISTS (
-         SELECT 1 FROM messages m
-         WHERE m.conversation_id = c.id
-         AND m.sender_type IN ('owner', 'property')
-         AND m.created_at > c.escalated_at
-       )
-       AND NOT EXISTS (
-         SELECT 1 FROM escalade_reminders er
-         WHERE er.conversation_id = c.id
-         AND er.sent_at > NOW() - INTERVAL '3 hours'
-       )`
-    ).catch(() => ({ rows: [] }));
-
-    for (const conv of escalated.rows) {
-      try {
-        const tokens = await pool.query(
-          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-          [conv.user_id]
-        );
-        const { sendNotification } = require('./services/notifications-service');
-        for (const tok of tokens.rows) {
-          await sendNotification(
-            tok.fcm_token,
-            `⏰ Rappel — ${conv.guest_name} attend une réponse`,
-            `${conv.property_name} — Pas de réponse depuis 2h sur cette conversation.`,
-            { type: 'escalade_reminder', conversationId: String(conv.id), screen: 'messages' }
-          );
-        }
-        // Log pour éviter les doublons (table simple)
-        await pool.query(
-          `INSERT INTO escalade_reminders (conversation_id, sent_at)
-           VALUES ($1, NOW())
-           ON CONFLICT DO NOTHING`,
-          [conv.id]
-        ).catch(() => {}); // ignore si table n'existe pas encore
-        console.log(`⏰ [ESCALADE REMINDER] Rappel envoyé pour conv ${conv.id} — ${conv.guest_name}`);
-      } catch(e) {
-        console.warn('⚠️ [ESCALADE REMINDER]', e.message);
-      }
-    }
-  } catch(e) {
-    console.error('❌ [ESCALADE REMINDER] Cron erreur:', e.message);
-  }
-}, { timezone: 'Europe/Paris' });
+// ⚠️ CRON DÉSACTIVÉ — rappel "pas de réponse 2h" supprimé (peu pertinent)
+// La notif d'escalade initiale (quand l'IA passe la main) suffit.
 
 // 9h00 — rappel caution J-2 pour cautions non payées
 cron.schedule('0 9 * * *', async () => {
