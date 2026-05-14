@@ -194,10 +194,10 @@ function getSidebarHTML() {
     ${!isSubAccount ? `
     <div class="nav-section">
       <div class="nav-section-title">Paramètres</div>
-      <a class="nav-item" data-page="settings-account" href="/settings-account.html">
+      <a class="nav-item" data-page="settings-account" href="/settings-account.html" onclick="if(localStorage.getItem('lcc_managed_user')){event.preventDefault();var o=localStorage.getItem('lcc_agency_token');if(o){localStorage.setItem('lcc_token',o);['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(function(k){localStorage.removeItem(k)});window.location.href='/settings-account.html';}return false;}">
         <i class="fas fa-cog"></i><span>Paramètres</span>
       </a>
-      <a class="nav-item" data-page="help" href="/help.html">
+      <a class="nav-item" data-page="help" href="/help.html" onclick="if(localStorage.getItem('lcc_managed_user')){event.preventDefault();var o=localStorage.getItem('lcc_agency_token');if(o){localStorage.setItem('lcc_token',o);['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(function(k){localStorage.removeItem(k)});window.location.href='/help.html';}return false;}">
         <i class="fas fa-headset"></i><span>Support</span>
       </a>
     </div>
@@ -205,7 +205,7 @@ function getSidebarHTML() {
   </nav>
 
   <div style="flex-shrink:0;border-top:1px solid #E8E0D0;padding:12px;background:#F5F0E8;">
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;${isSubAccount ? '' : 'cursor:pointer;'}" ${isSubAccount ? '' : "onclick=\"window.location.href='/settings-account.html'\""} title="${isSubAccount ? '' : 'Paramètres du compte'}">
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;${isSubAccount ? '' : 'cursor:pointer;'}" ${isSubAccount ? '' : "onclick=\"if(localStorage.getItem('lcc_managed_user')){var o=localStorage.getItem('lcc_agency_token');if(o){localStorage.setItem('lcc_token',o);['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(function(k){localStorage.removeItem(k)});window.location.href='/settings-account.html';}return;}window.location.href='/settings-account.html'\""} title="${isSubAccount ? '' : 'Paramètres du compte'}">
       <div id="sidebarUserAvatar" style="width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;flex-shrink:0;"></div>
       <div style="flex:1;min-width:0;">
         <div id="sidebarUserName" style="font-size:13px;font-weight:600;color:#0D1117 !important;font-family:DM Sans,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">Utilisateur</div>

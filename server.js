@@ -911,6 +911,12 @@ async function syncSingleIcalUrl(pool, property, entry) {
             `${displayName(property)} - ${checkin} au ${checkout}`,
             { type: 'new_reservation', reservation_id: uid, property_name: displayName(property) }
           );
+          await sendNotificationToDelegatesOf(
+            property.user_id,
+            `📅 Nouvelle réservation ${platformName}`,
+            `${displayName(property)} - ${checkin} au ${checkout}`,
+            { type: 'new_reservation', reservation_id: uid, property_name: displayName(property) }
+          );
           await sendNotificationToSubAccountsOf(
             property.user_id, 'can_view_calendar',
             `🏠 Nouvelle réservation — ${displayName(property)}`,
@@ -2831,12 +2837,39 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
     if (!tokens.length) return;
     await sendNotificationToMultiple(tokens, title, body, data);
     console.log('✅ Notif sous-comptes envoyée à ' + tokens.length + ' appareil(s)');
+
+    // ── Envoyer aussi aux agents agence qui gèrent ce compte ──
+    await sendNotificationToDelegatesOf(parentUserId, title, body, data);
   } catch (err) {
     console.error('❌ sendNotificationToSubAccountsOf [' + requiredPermission + ']:', err.message);
   }
 }
 
-// Récupère les assignations de ménage pour un utilisateur sous forme de map { propertyId -> cleaner }
+// ── Envoyer une notif aux agents agence qui gèrent ce compte ──────
+// Appelé quand un événement se produit sur le compte d'un propriétaire géré
+async function sendNotificationToDelegatesOf(ownerUserId, title, body, data) {
+  try {
+    // Trouver tous les délégués actifs de ce propriétaire
+    const delegates = await pool.query(
+      `SELECT ad.delegate_user_id, uft.fcm_token
+       FROM account_delegations ad
+       JOIN user_fcm_tokens uft ON uft.user_id = ad.delegate_user_id
+       WHERE ad.delegator_user_id = $1
+         AND ad.status = 'accepted'
+         AND uft.fcm_token IS NOT NULL
+         AND uft.sub_account_id IS NULL`,  // tokens principaux uniquement
+      [ownerUserId]
+    );
+    if (!delegates.rows.length) return;
+    const tokens = delegates.rows.map(r => r.fcm_token);
+    console.log(`📨 [AgenceNotif] Envoi à ${tokens.length} agent(s) pour compte ${ownerUserId}`);
+    await sendNotificationToMultiple(tokens, title, body, data || {});
+    console.log(`✅ [AgenceNotif] Notif envoyée à ${tokens.length} agent(s)`);
+  } catch(err) {
+    console.error('❌ sendNotificationToDelegatesOf:', err.message);
+  }
+}
+
 // Prend en compte : 1) assignation par reservation_key spécifique 2) cleaner par défaut du logement
 async function getCleanerAssignmentsMapForUser(userId) {
   if (!userId) return {};
@@ -5383,6 +5416,12 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
           _gN + ' \u00B7 ' + (reservation.start || '').slice(0,10) + ' \u2192 ' + (reservation.end || '').slice(0,10),
           { type: 'new_reservation', propertyId: String(propertyId) },
           'notif_sub_new_reservation'
+        );
+        await sendNotificationToDelegatesOf(
+          realUserId,
+          '\uD83C\uDFE0 Nouvelle r\u00E9servation \u2014 ' + _pN,
+          _gN + ' \u00B7 ' + (reservation.start || '').slice(0,10) + ' \u2192 ' + (reservation.end || '').slice(0,10),
+          { type: 'new_reservation', propertyId: String(propertyId) }
         );
       } catch(_e) { console.error('Notif sous-comptes r\u00E9sa iCal:', _e.message); }
     }
@@ -16910,17 +16949,105 @@ app.get('/api/owner-clients', async (req, res) => {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
+    // 1. Clients manuels existants
     const result = await pool.query(
-      `SELECT * FROM owner_clients 
-       WHERE user_id = $1 
-       ORDER BY 
-         CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
+      `SELECT * FROM owner_clients WHERE user_id = $1
+       ORDER BY CASE WHEN client_type = 'business' THEN company_name ELSE last_name END`,
       [user.id]
     );
+    const manualClients = result.rows;
 
-    res.json({ clients: result.rows });
+    // 2. Clients des comptes délégués (agence) — récupérer les vrais owner_clients de Stéphanie & co
+    let agencyClients = [];
+    try {
+      const delegations = await pool.query(
+        `SELECT ad.delegator_user_id, u.first_name as owner_first, u.last_name as owner_last, u.email as owner_email
+         FROM account_delegations ad
+         JOIN users u ON u.id = ad.delegator_user_id
+         WHERE ad.delegate_user_id = $1 AND ad.status = 'accepted'`,
+        [user.id]
+      );
+
+      for (const d of delegations.rows) {
+        // Récupérer les owner_clients du compte délégué
+        const clientsResult = await pool.query(
+          `SELECT *, $2 as delegator_user_id, $3 as delegator_name
+           FROM owner_clients WHERE user_id = $1`,
+          [d.delegator_user_id, d.delegator_user_id,
+           ((d.owner_first || '') + ' ' + (d.owner_last || '')).trim() || d.owner_email]
+        );
+        clientsResult.rows.forEach(c => {
+          agencyClients.push({
+            ...c,
+            id: 'agency_client_' + c.id, // préfixe pour éviter collisions
+            original_id: c.id,
+            user_id: user.id,
+            delegator_user_id: d.delegator_user_id,
+            delegator_name: ((d.owner_first || '') + ' ' + (d.owner_last || '')).trim() || d.owner_email,
+            is_agency_client: true,
+            from_agency: true
+          });
+        });
+      }
+    } catch(e) {
+      console.warn('⚠️ [owner-clients] Erreur clients agence:', e.message);
+    }
+
+    res.json({ clients: [...manualClients, ...agencyClients] });
   } catch (err) {
     console.error('Erreur liste clients:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── GET /api/agency/properties/:delegatorUserId ─────────────────
+// Retourner les logements d'un compte délégué (pour la modal de facturation)
+app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { delegatorUserId } = req.params;
+
+    // Vérifier que la délégation existe
+    const check = await pool.query(
+      `SELECT 1 FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+      [user.id, delegatorUserId]
+    );
+    if (!check.rows.length) return res.status(403).json({ error: 'Accès non autorisé' });
+
+    const props = await pool.query(
+      `SELECT id, name FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
+      [delegatorUserId]
+    );
+    res.json({ properties: props.rows });
+  } catch(e) {
+    console.error('❌ [AGENCY] properties:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── PATCH /api/agency/billing-override/:delegatorUserId ────────
+// Sauvegarder les données de facturation personnalisées pour un compte délégué
+app.patch('/api/agency/billing-override/:delegatorUserId', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { delegatorUserId } = req.params;
+    const { company_name, siret, phone, address, city, postal_code, selected_property_ids } = req.body;
+
+    const override = { company_name, siret, phone, address, city, postal_code, selected_property_ids: selected_property_ids || [] };
+
+    const result = await pool.query(
+      `UPDATE account_delegations
+       SET billing_override = $1, updated_at = NOW()
+       WHERE delegator_user_id = $2 AND delegate_user_id = $3 AND status = 'accepted'
+       RETURNING id`,
+      [JSON.stringify(override), delegatorUserId, user.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Délégation non trouvée' });
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [AGENCY] billing-override:', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -21953,6 +22080,8 @@ io.on('_debounce_notif_needed', async ({ conversation_id, user_id, message, gues
     for (const tok of tokensRes.rows) {
       await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
     }
+    // Envoyer aussi aux agents agence
+    await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
     console.log(`📱 [DEBOUNCE NOTIF] Notif envoyée conv ${conversation_id} après éscalade post-debounce`);
   } catch(e) { console.error('[DEBOUNCE NOTIF] Erreur:', e.message); }
 });
@@ -23211,66 +23340,8 @@ cron.schedule('0 7 * * *', () => {
   runTemplatesCron(['before_arrival', 'on_arrival', 'before_departure']);
 }, { timezone: 'Europe/Paris' });
 
-// Toutes les 30 min — vérifier les escalades sans réponse depuis 2h
-cron.schedule('*/30 * * * *', async () => {
-  try {
-    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-    const hourParis = nowParis.getHours();
-    // Ne pas envoyer entre 23h et 8h (sauf urgences déjà gérées par requiresHumanIntervention)
-    if (hourParis < 8 || hourParis >= 23) return;
-
-    const escalated = await pool.query(
-      `SELECT c.id, c.guest_name, c.user_id, c.property_id,
-              p.name as property_name, c.escalated_at
-       FROM conversations c
-       LEFT JOIN properties p ON p.id = c.property_id
-       WHERE c.escalated = TRUE
-       AND c.escalated_at < NOW() - INTERVAL '2 hours'
-       AND c.escalated_at > NOW() - INTERVAL '24 hours'
-       AND NOT EXISTS (
-         SELECT 1 FROM messages m
-         WHERE m.conversation_id = c.id
-         AND m.sender_type IN ('owner', 'property')
-         AND m.created_at > c.escalated_at
-       )
-       AND NOT EXISTS (
-         SELECT 1 FROM escalade_reminders er
-         WHERE er.conversation_id = c.id
-         AND er.sent_at > NOW() - INTERVAL '3 hours'
-       )`
-    ).catch(() => ({ rows: [] }));
-
-    for (const conv of escalated.rows) {
-      try {
-        const tokens = await pool.query(
-          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-          [conv.user_id]
-        );
-        const { sendNotification } = require('./services/notifications-service');
-        for (const tok of tokens.rows) {
-          await sendNotification(
-            tok.fcm_token,
-            `⏰ Rappel — ${conv.guest_name} attend une réponse`,
-            `${conv.property_name} — Pas de réponse depuis 2h sur cette conversation.`,
-            { type: 'escalade_reminder', conversationId: String(conv.id), screen: 'messages' }
-          );
-        }
-        // Log pour éviter les doublons (table simple)
-        await pool.query(
-          `INSERT INTO escalade_reminders (conversation_id, sent_at)
-           VALUES ($1, NOW())
-           ON CONFLICT DO NOTHING`,
-          [conv.id]
-        ).catch(() => {}); // ignore si table n'existe pas encore
-        console.log(`⏰ [ESCALADE REMINDER] Rappel envoyé pour conv ${conv.id} — ${conv.guest_name}`);
-      } catch(e) {
-        console.warn('⚠️ [ESCALADE REMINDER]', e.message);
-      }
-    }
-  } catch(e) {
-    console.error('❌ [ESCALADE REMINDER] Cron erreur:', e.message);
-  }
-}, { timezone: 'Europe/Paris' });
+// ⚠️ CRON DÉSACTIVÉ — rappel "pas de réponse 2h" supprimé (peu pertinent)
+// La notif d'escalade initiale (quand l'IA passe la main) suffit.
 
 // 9h00 — rappel caution J-2 pour cautions non payées
 cron.schedule('0 9 * * *', async () => {
@@ -28281,6 +28352,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
                 conversation_id: String(conversation_id)
               });
             }
+            await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
           } else {
             console.log(`✅ [CHANNEX MSG] Réponse auto envoyée → pas de notif push`);
           }
@@ -28296,6 +28368,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
               conversation_id: String(conversation_id)
             });
           }
+          await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
         }
       }
     } catch (autoErr) {
@@ -30577,6 +30650,10 @@ pool.query(`
     updated_at        TIMESTAMPTZ DEFAULT NOW()
   )
 `).catch(e => console.error('account_delegations table:', e.message));
+
+// Ajouter colonne billing_override si elle n'existe pas
+pool.query(`ALTER TABLE account_delegations ADD COLUMN IF NOT EXISTS billing_override JSONB DEFAULT '{}'::jsonb`)
+  .catch(e => console.log('ℹ️ billing_override:', e.message));
 
 // ── Route : inviter un gestionnaire (agence) ──────────────────
 app.post('/api/agency/invite', authenticateAny, async (req, res) => {
