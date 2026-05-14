@@ -1496,13 +1496,13 @@ async function saveWelcomeBook(e) {
   if (e) e.preventDefault();
 
   try {
-    showDraftToast('⏳ Préparation des images...');
+    showDraftToast('⏳ Préparation des images...', false, true);
     const formData = await collectFormData();
     // Marquer comme publié (pas un brouillon)
     formData.append('isDraft', 'false');
     formData.append('lastSection', '4');
 
-    showDraftToast('⏳ Envoi en cours...');
+    showDraftToast('⏳ Envoi en cours...', false, true);
     const response = await fetch(`${API_BASE}/api/welcome-books/create`, {
       method: 'POST',
       body: formData
@@ -1583,17 +1583,25 @@ async function saveDraft(btn) {
   }
 }
 
-function showDraftToast(msg, isError = false) {
+function showDraftToast(msg, isError = false, persistent = false) {
   const toast = document.getElementById('draftToast');
   const msgEl = document.getElementById('draftToastMsg');
   if (!toast || !msgEl) return;
   msgEl.textContent = msg;
   toast.style.background = isError ? '#DC2626' : '#0D1117';
   const icon = toast.querySelector('i');
+  if (icon) icon.className = isError ? 'fas fa-times-circle' : (persistent ? 'fas fa-spinner fa-spin' : 'fas fa-check-circle');
   if (icon) icon.style.color = isError ? '#FCA5A5' : '#1A7A5E';
   toast.classList.add('show');
   clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
+  if (!persistent) {
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+}
+
+function hideDraftToast() {
+  const toast = document.getElementById('draftToast');
+  if (toast) toast.classList.remove('show');
 }
 
 function createAnother() {
@@ -1762,30 +1770,68 @@ async function copyWelcomeBookLink(buttonEl) {
 }
 async function duplicateLivret(uniqueId, originalName) {
   const btn = event?.target?.closest('button');
-  try {
-    const newName = prompt(`Nom du nouveau livret :`, `${originalName} (copie)`);
-    if (!newName) return;
 
+  // Modal custom pour le nom du livret
+  const newName = await new Promise((resolve) => {
+    const existing = document.getElementById('_duplicateModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = '_duplicateModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:white;border-radius:16px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;background:#f0fdf4;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-copy" style="color:#1A7A5E;font-size:16px;"></i>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#111827;">Dupliquer le livret</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:2px;">Donnez un nom au nouveau livret</div>
+          </div>
+        </div>
+        <input id="_duplicateInput" type="text" value="${originalName} (copie)"
+          style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;box-sizing:border-box;outline:none;transition:border .15s;"
+          onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#e5e7eb'">
+        <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+          <button id="_duplicateCancel" style="padding:9px 18px;background:#f3f4f6;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">Annuler</button>
+          <button id="_duplicateConfirm" style="padding:9px 20px;background:#1A7A5E;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:white;">Dupliquer</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(modal);
+    const input = document.getElementById('_duplicateInput');
+    input.focus();
+    input.select();
+
+    const cleanup = (val) => { modal.remove(); resolve(val); };
+    document.getElementById('_duplicateCancel').onclick = () => cleanup(null);
+    document.getElementById('_duplicateConfirm').onclick = () => cleanup(input.value.trim() || null);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') cleanup(input.value.trim() || null); if (e.key === 'Escape') cleanup(null); });
+    modal.addEventListener('click', (e) => { if (e.target === modal) cleanup(null); });
+  });
+
+  if (!newName) return;
+
+  try {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    showDraftToast('⏳ Duplication en cours...', false, true);
 
     const token = localStorage.getItem('lcc_token');
     const res = await fetch(`${API_BASE}/api/welcome-books/duplicate/${uniqueId}`, {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ newName })
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Erreur duplication');
 
-    showDraftToast(`Livret "${newName}" créé avec succès — photos incluses !`);
+    showDraftToast(`✅ Livret "${newName}" créé avec succès !`);
     await loadLivretsList();
 
   } catch (err) {
     console.error('Erreur duplication livret:', err);
-    showDraftToast('Erreur lors de la duplication : ' + err.message, true);
+    showDraftToast('❌ Erreur : ' + err.message, true);
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-copy"></i>'; }
   }
