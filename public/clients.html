@@ -4243,14 +4243,6 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   const delSection = document.getElementById('deleteClientSection');
   if (delSection) delSection.style.display = 'block';
   console.log('[DATA] Liste des clients:', clients);
-  
-  const client = clients.find(c => c.id == clientId);
-  if (!client) {
-    console.error('[ERROR] Client introuvable pour ID:', clientId);
-    alert('Client introuvable');
-    return;
-  }
-  
   console.log('[OK] Client trouvé:', client);
   editingClientId = clientId;
   
