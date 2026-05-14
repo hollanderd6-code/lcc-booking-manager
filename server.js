@@ -16922,7 +16922,7 @@ app.get('/api/owner-clients', async (req, res) => {
     let agencyClients = [];
     try {
       const delegations = await pool.query(
-        `SELECT ad.delegator_user_id,
+        `SELECT ad.delegator_user_id, ad.id as delegation_id, ad.billing_override,
                 u.first_name, u.last_name, u.company, u.email,
                 (SELECT COUNT(*) FROM properties WHERE user_id = ad.delegator_user_id) as property_count,
                 (SELECT COALESCE(SUM(price),0) FROM reservations
@@ -16935,23 +16935,32 @@ app.get('/api/owner-clients', async (req, res) => {
          WHERE ad.delegate_user_id = $1 AND ad.status = 'accepted'`,
         [user.id]
       );
-      agencyClients = delegations.rows.map(d => ({
-        id: 'agency_' + d.delegator_user_id,
-        user_id: user.id,
-        delegator_user_id: d.delegator_user_id,
-        client_type: 'agency',
-        is_agency_client: true,
-        first_name: d.first_name || '',
-        last_name: d.last_name || '',
-        company_name: d.company || null,
-        email: d.email,
-        property_count: parseInt(d.property_count) || 0,
-        ca_year: parseFloat(d.ca_year) || 0,
-        ca_total: parseFloat(d.ca_total) || 0,
-        phone: null, city: null, postal_code: null, siret: null,
-        stripe_account_id: null, use_bh_stripe: true,
-        created_at: new Date().toISOString()
-      }));
+      agencyClients = delegations.rows.map(d => {
+        const bo = d.billing_override || {};
+        return {
+          id: 'agency_' + d.delegator_user_id,
+          delegation_id: d.delegation_id,
+          user_id: user.id,
+          delegator_user_id: d.delegator_user_id,
+          client_type: 'agency',
+          is_agency_client: true,
+          first_name: d.first_name || '',
+          last_name: d.last_name || '',
+          company_name: bo.company_name || d.company || null,
+          email: d.email,
+          phone: bo.phone || null,
+          siret: bo.siret || null,
+          address: bo.address || null,
+          city: bo.city || null,
+          postal_code: bo.postal_code || null,
+          selected_property_ids: bo.selected_property_ids || [],
+          property_count: parseInt(d.property_count) || 0,
+          ca_year: parseFloat(d.ca_year) || 0,
+          ca_total: parseFloat(d.ca_total) || 0,
+          stripe_account_id: null, use_bh_stripe: true,
+          created_at: new Date().toISOString()
+        };
+      });
     } catch(e) {
       console.warn('⚠️ [owner-clients] Erreur comptes agence:', e.message);
     }
@@ -16959,6 +16968,58 @@ app.get('/api/owner-clients', async (req, res) => {
     res.json({ clients: [...manualClients, ...agencyClients] });
   } catch (err) {
     console.error('Erreur liste clients:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── GET /api/agency/properties/:delegatorUserId ─────────────────
+// Retourner les logements d'un compte délégué (pour la modal de facturation)
+app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { delegatorUserId } = req.params;
+
+    // Vérifier que la délégation existe
+    const check = await pool.query(
+      `SELECT 1 FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+      [user.id, delegatorUserId]
+    );
+    if (!check.rows.length) return res.status(403).json({ error: 'Accès non autorisé' });
+
+    const props = await pool.query(
+      `SELECT id, name FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
+      [delegatorUserId]
+    );
+    res.json({ properties: props.rows });
+  } catch(e) {
+    console.error('❌ [AGENCY] properties:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── PATCH /api/agency/billing-override/:delegatorUserId ────────
+// Sauvegarder les données de facturation personnalisées pour un compte délégué
+app.patch('/api/agency/billing-override/:delegatorUserId', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { delegatorUserId } = req.params;
+    const { company_name, siret, phone, address, city, postal_code, selected_property_ids } = req.body;
+
+    const override = { company_name, siret, phone, address, city, postal_code, selected_property_ids: selected_property_ids || [] };
+
+    const result = await pool.query(
+      `UPDATE account_delegations
+       SET billing_override = $1, updated_at = NOW()
+       WHERE delegator_user_id = $2 AND delegate_user_id = $3 AND status = 'accepted'
+       RETURNING id`,
+      [JSON.stringify(override), delegatorUserId, user.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Délégation non trouvée' });
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [AGENCY] billing-override:', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -30557,6 +30618,10 @@ pool.query(`
     updated_at        TIMESTAMPTZ DEFAULT NOW()
   )
 `).catch(e => console.error('account_delegations table:', e.message));
+
+// Ajouter colonne billing_override si elle n'existe pas
+pool.query(`ALTER TABLE account_delegations ADD COLUMN IF NOT EXISTS billing_override JSONB DEFAULT '{}'::jsonb`)
+  .catch(e => console.log('ℹ️ billing_override:', e.message));
 
 // ── Route : inviter un gestionnaire (agence) ──────────────────
 app.post('/api/agency/invite', authenticateAny, async (req, res) => {
