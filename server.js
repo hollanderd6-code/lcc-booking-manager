@@ -911,6 +911,12 @@ async function syncSingleIcalUrl(pool, property, entry) {
             `${displayName(property)} - ${checkin} au ${checkout}`,
             { type: 'new_reservation', reservation_id: uid, property_name: displayName(property) }
           );
+          await sendNotificationToDelegatesOf(
+            property.user_id,
+            `📅 Nouvelle réservation ${platformName}`,
+            `${displayName(property)} - ${checkin} au ${checkout}`,
+            { type: 'new_reservation', reservation_id: uid, property_name: displayName(property) }
+          );
           await sendNotificationToSubAccountsOf(
             property.user_id, 'can_view_calendar',
             `🏠 Nouvelle réservation — ${displayName(property)}`,
@@ -2831,12 +2837,39 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
     if (!tokens.length) return;
     await sendNotificationToMultiple(tokens, title, body, data);
     console.log('✅ Notif sous-comptes envoyée à ' + tokens.length + ' appareil(s)');
+
+    // ── Envoyer aussi aux agents agence qui gèrent ce compte ──
+    await sendNotificationToDelegatesOf(parentUserId, title, body, data);
   } catch (err) {
     console.error('❌ sendNotificationToSubAccountsOf [' + requiredPermission + ']:', err.message);
   }
 }
 
-// Récupère les assignations de ménage pour un utilisateur sous forme de map { propertyId -> cleaner }
+// ── Envoyer une notif aux agents agence qui gèrent ce compte ──────
+// Appelé quand un événement se produit sur le compte d'un propriétaire géré
+async function sendNotificationToDelegatesOf(ownerUserId, title, body, data) {
+  try {
+    // Trouver tous les délégués actifs de ce propriétaire
+    const delegates = await pool.query(
+      `SELECT ad.delegate_user_id, uft.fcm_token
+       FROM account_delegations ad
+       JOIN user_fcm_tokens uft ON uft.user_id = ad.delegate_user_id
+       WHERE ad.delegator_user_id = $1
+         AND ad.status = 'accepted'
+         AND uft.fcm_token IS NOT NULL
+         AND uft.sub_account_id IS NULL`,  // tokens principaux uniquement
+      [ownerUserId]
+    );
+    if (!delegates.rows.length) return;
+    const tokens = delegates.rows.map(r => r.fcm_token);
+    console.log(`📨 [AgenceNotif] Envoi à ${tokens.length} agent(s) pour compte ${ownerUserId}`);
+    await sendNotificationToMultiple(tokens, title, body, data || {});
+    console.log(`✅ [AgenceNotif] Notif envoyée à ${tokens.length} agent(s)`);
+  } catch(err) {
+    console.error('❌ sendNotificationToDelegatesOf:', err.message);
+  }
+}
+
 // Prend en compte : 1) assignation par reservation_key spécifique 2) cleaner par défaut du logement
 async function getCleanerAssignmentsMapForUser(userId) {
   if (!userId) return {};
@@ -5383,6 +5416,12 @@ if (isNewReservation && reservation.source !== 'MANUEL' && reservation.type !== 
           _gN + ' \u00B7 ' + (reservation.start || '').slice(0,10) + ' \u2192 ' + (reservation.end || '').slice(0,10),
           { type: 'new_reservation', propertyId: String(propertyId) },
           'notif_sub_new_reservation'
+        );
+        await sendNotificationToDelegatesOf(
+          realUserId,
+          '\uD83C\uDFE0 Nouvelle r\u00E9servation \u2014 ' + _pN,
+          _gN + ' \u00B7 ' + (reservation.start || '').slice(0,10) + ' \u2192 ' + (reservation.end || '').slice(0,10),
+          { type: 'new_reservation', propertyId: String(propertyId) }
         );
       } catch(_e) { console.error('Notif sous-comptes r\u00E9sa iCal:', _e.message); }
     }
@@ -22041,6 +22080,8 @@ io.on('_debounce_notif_needed', async ({ conversation_id, user_id, message, gues
     for (const tok of tokensRes.rows) {
       await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
     }
+    // Envoyer aussi aux agents agence
+    await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
     console.log(`📱 [DEBOUNCE NOTIF] Notif envoyée conv ${conversation_id} après éscalade post-debounce`);
   } catch(e) { console.error('[DEBOUNCE NOTIF] Erreur:', e.message); }
 });
@@ -28311,6 +28352,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
                 conversation_id: String(conversation_id)
               });
             }
+            await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
           } else {
             console.log(`✅ [CHANNEX MSG] Réponse auto envoyée → pas de notif push`);
           }
@@ -28326,6 +28368,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
               conversation_id: String(conversation_id)
             });
           }
+          await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
         }
       }
     } catch (autoErr) {
