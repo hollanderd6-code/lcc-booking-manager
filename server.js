@@ -27542,6 +27542,10 @@ app.post('/api/channex/webhook', async (req, res) => {
         `UPDATE reservations SET status = 'cancelled', updated_at = NOW() WHERE channex_booking_id = $1`,
         [bookingId]
       );
+      await pool.query(
+        `UPDATE conversations SET status = 'cancelled', updated_at = NOW() WHERE channex_booking_id = $1`,
+        [bookingId]
+      ).catch(() => {});
       console.log(`✅ [CHANNEX WEBHOOK] Réservation ${bookingId} refusée`);
     }
 
@@ -27693,6 +27697,15 @@ app.post('/api/channex/webhook', async (req, res) => {
 
       // ── Notification push annulation ────────────────────────
       if (result && result.uid && result.status === 'cancelled' && !result._not_in_db) {
+        // Mettre à jour le statut de la conversation
+        try {
+          await pool.query(
+            `UPDATE conversations SET status = 'cancelled', updated_at = NOW()
+             WHERE channex_booking_id = $1`,
+            [bookingId]
+          );
+          console.log(`✅ [CHANNEX] Conversation annulée pour booking ${bookingId}`);
+        } catch(e) { console.warn('⚠️ [CHANNEX] Erreur update conv cancelled:', e.message); }
         try {
           const attrs     = booking.attributes || booking;
           const otaName   = attrs.ota_name || 'Channex';
