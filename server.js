@@ -16918,51 +16918,40 @@ app.get('/api/owner-clients', async (req, res) => {
     );
     const manualClients = result.rows;
 
-    // 2. Comptes délégués (agence) — clients synthétiques avec stats réelles
+    // 2. Clients des comptes délégués (agence) — récupérer les vrais owner_clients de Stéphanie & co
     let agencyClients = [];
     try {
       const delegations = await pool.query(
-        `SELECT ad.delegator_user_id, ad.id as delegation_id, ad.billing_override,
-                u.first_name, u.last_name, u.company, u.email,
-                (SELECT COUNT(*) FROM properties WHERE user_id = ad.delegator_user_id) as property_count,
-                (SELECT COALESCE(SUM(price),0) FROM reservations
-                 WHERE user_id = ad.delegator_user_id AND status != 'cancelled'
-                 AND DATE_PART('year', start_date) = DATE_PART('year', NOW())) as ca_year,
-                (SELECT COALESCE(SUM(price),0) FROM reservations
-                 WHERE user_id = ad.delegator_user_id AND status != 'cancelled') as ca_total
+        `SELECT ad.delegator_user_id, u.first_name as owner_first, u.last_name as owner_last, u.email as owner_email
          FROM account_delegations ad
          JOIN users u ON u.id = ad.delegator_user_id
          WHERE ad.delegate_user_id = $1 AND ad.status = 'accepted'`,
         [user.id]
       );
-      agencyClients = delegations.rows.map(d => {
-        const bo = d.billing_override || {};
-        return {
-          id: 'agency_' + d.delegator_user_id,
-          delegation_id: d.delegation_id,
-          user_id: user.id,
-          delegator_user_id: d.delegator_user_id,
-          client_type: 'agency',
-          is_agency_client: true,
-          first_name: d.first_name || '',
-          last_name: d.last_name || '',
-          company_name: bo.company_name || d.company || null,
-          email: d.email,
-          phone: bo.phone || null,
-          siret: bo.siret || null,
-          address: bo.address || null,
-          city: bo.city || null,
-          postal_code: bo.postal_code || null,
-          selected_property_ids: bo.selected_property_ids || [],
-          property_count: parseInt(d.property_count) || 0,
-          ca_year: parseFloat(d.ca_year) || 0,
-          ca_total: parseFloat(d.ca_total) || 0,
-          stripe_account_id: null, use_bh_stripe: true,
-          created_at: new Date().toISOString()
-        };
-      });
+
+      for (const d of delegations.rows) {
+        // Récupérer les owner_clients du compte délégué
+        const clientsResult = await pool.query(
+          `SELECT *, $2 as delegator_user_id, $3 as delegator_name
+           FROM owner_clients WHERE user_id = $1`,
+          [d.delegator_user_id, d.delegator_user_id,
+           ((d.owner_first || '') + ' ' + (d.owner_last || '')).trim() || d.owner_email]
+        );
+        clientsResult.rows.forEach(c => {
+          agencyClients.push({
+            ...c,
+            id: 'agency_client_' + c.id, // préfixe pour éviter collisions
+            original_id: c.id,
+            user_id: user.id,
+            delegator_user_id: d.delegator_user_id,
+            delegator_name: ((d.owner_first || '') + ' ' + (d.owner_last || '')).trim() || d.owner_email,
+            is_agency_client: true,
+            from_agency: true
+          });
+        });
+      }
     } catch(e) {
-      console.warn('⚠️ [owner-clients] Erreur comptes agence:', e.message);
+      console.warn('⚠️ [owner-clients] Erreur clients agence:', e.message);
     }
 
     res.json({ clients: [...manualClients, ...agencyClients] });
