@@ -146,6 +146,71 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Charger les conversations
   await loadConversations();
 
+  // ── Pull to refresh sur la liste des conversations ──────────
+  (function initPullToRefresh() {
+    const listContainer = document.querySelector('.msgs-left') || document.getElementById('conversationsList');
+    if (!listContainer) return;
+
+    let startY = 0, pulling = false, indicator = null;
+
+    const createIndicator = () => {
+      const el = document.createElement('div');
+      el.id = 'ptr-indicator';
+      el.style.cssText = 'position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height .2s;z-index:100;background:#F5F2EC;';
+      el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#1A7A5E;"><i class="fas fa-sync-alt" id="ptr-icon"></i><span id="ptr-text">Tirer pour actualiser</span></div>';
+      listContainer.style.position = 'relative';
+      listContainer.insertBefore(el, listContainer.firstChild);
+      return el;
+    };
+
+    listContainer.addEventListener('touchstart', (e) => {
+      if (listContainer.scrollTop > 0) return;
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }, { passive: true });
+
+    listContainer.addEventListener('touchmove', (e) => {
+      if (!pulling) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy < 10) return;
+      if (!indicator) indicator = createIndicator();
+      const h = Math.min(dy * 0.4, 52);
+      indicator.style.height = h + 'px';
+      const icon = document.getElementById('ptr-icon');
+      const text = document.getElementById('ptr-text');
+      if (h > 40) {
+        if (icon) { icon.style.transform = 'rotate(180deg)'; icon.style.transition = 'transform .2s'; }
+        if (text) text.textContent = 'Relâcher pour actualiser';
+      } else {
+        if (icon) { icon.style.transform = 'rotate(0deg)'; }
+        if (text) text.textContent = 'Tirer pour actualiser';
+      }
+    }, { passive: true });
+
+    listContainer.addEventListener('touchend', async (e) => {
+      if (!pulling || !indicator) { pulling = false; return; }
+      const dy = e.changedTouches[0].clientY - startY;
+      pulling = false;
+      if (dy > 50) {
+        // Déclencher le refresh
+        const icon = document.getElementById('ptr-icon');
+        const text = document.getElementById('ptr-text');
+        if (icon) { icon.classList.add('fa-spin'); icon.style.transform = 'none'; }
+        if (text) text.textContent = 'Actualisation…';
+        indicator.style.height = '44px';
+        // Haptic si dispo
+        try { window.Capacitor?.Plugins?.Haptics?.impact({ style: 'LIGHT' }); } catch {}
+        await loadConversations();
+        // Masquer l'indicateur
+        indicator.style.height = '0';
+        setTimeout(() => { indicator?.remove(); indicator = null; }, 300);
+      } else {
+        indicator.style.height = '0';
+        setTimeout(() => { indicator?.remove(); indicator = null; }, 300);
+      }
+    }, { passive: true });
+  })();
+
   // ── Auto-ouvrir une conversation depuis ?conv=ID dans l'URL ──
   try {
     const urlParams = new URLSearchParams(window.location.search);
