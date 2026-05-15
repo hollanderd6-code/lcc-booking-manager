@@ -382,6 +382,28 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       );
       if (ownerRecentReply.rows.length > 0) {
         console.log(`🤫 [HANDLER] Owner a répondu manuellement dans les 2h → bot silencieux (conv ${conversation.id})`);
+        // Envoyer quand même une notif push à l'owner
+        try {
+          const userId = conversation.user_id;
+          const guestName = conversation.guest_name || 'Voyageur';
+          const msgPreview = (message.message || '').substring(0, 80);
+          const tokensRes = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
+            [userId]
+          );
+          const { sendNotification } = require('./services/notifications-service');
+          for (const tok of tokensRes.rows) {
+            await sendNotification(
+              tok.fcm_token,
+              `💬 ${guestName}`,
+              msgPreview,
+              { type: 'new_guest_message', conversation_id: String(conversation.id) }
+            );
+          }
+          console.log(`📱 [HANDLER] Notif push envoyée (pause 2h) pour conv ${conversation.id}`);
+        } catch(e) {
+          console.warn('⚠️ [HANDLER] Erreur notif pause owner:', e.message);
+        }
         return false;
       }
     } catch(e) {
