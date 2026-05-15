@@ -207,6 +207,14 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
           }
         }
       }
+      // Si lcc_token toujours absent mais lcc_faceid_token présent → utiliser comme fallback
+      if (!localStorage.getItem('lcc_token')) {
+        const faceToken = localStorage.getItem(FACE_ID_TOKEN_KEY);
+        if (faceToken) {
+          localStorage.setItem('lcc_token', faceToken);
+          console.log('💾 [FaceID] lcc_token restauré depuis faceid_token (fallback)');
+        }
+      }
     } catch(e) { console.warn('⚠️ [FaceID] Preferences restore:', e?.message); }
   }
 
@@ -252,6 +260,11 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
         const ok = await authenticateWithFaceID();
         if (ok) {
           localStorage.setItem('lcc_token', savedToken);
+          // Resauvegarder dans Preferences pour résister au prochain kill
+          if (window.Capacitor?.Plugins?.Preferences) {
+            window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: savedToken }).catch(() => {});
+            window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: savedToken }).catch(() => {});
+          }
           if (window._syncTokenToNative) window._syncTokenToNative(savedToken);
           window.location.href = 'app.html';
         }
@@ -265,6 +278,11 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
         const ok = await authenticateWithFaceID();
         if (ok) {
           localStorage.setItem('lcc_token', savedToken);
+          // Resauvegarder dans Preferences pour résister au prochain kill
+          if (window.Capacitor?.Plugins?.Preferences) {
+            window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: savedToken }).catch(() => {});
+            window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: savedToken }).catch(() => {});
+          }
           if (window._syncTokenToNative) window._syncTokenToNative(savedToken);
           window.location.href = 'app.html';
         }
