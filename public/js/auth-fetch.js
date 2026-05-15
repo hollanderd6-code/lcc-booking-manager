@@ -273,6 +273,13 @@
         
         // Pour les autres cas : déconnexion
         console.warn('🚨 [AUTH-FETCH] Déconnexion...');
+
+        // Ne pas rediriger si déjà sur login.html (FaceID en cours)
+        const currentPath = window.location.pathname + window.location.href;
+        if (currentPath.includes('login')) {
+          console.log('⚠️ [AUTH-FETCH] Déjà sur login, pas de redirection');
+          return res;
+        }
         try {
           localStorage.removeItem('lcc_token');
           localStorage.removeItem('lcc_user');

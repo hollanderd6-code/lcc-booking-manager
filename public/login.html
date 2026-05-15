@@ -187,6 +187,23 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   const FACE_ID_KEY = 'lcc_faceid_enabled';
   const FACE_ID_TOKEN_KEY = 'lcc_faceid_token';
 
+  // Restaurer depuis Capacitor Preferences si localStorage vide (iOS purge)
+  async function restoreFromPreferences() {
+    try {
+      if (!IS_NATIVE || !window.Capacitor?.Plugins?.Preferences) return;
+      const keysToRestore = ['lcc_token', FACE_ID_TOKEN_KEY, FACE_ID_KEY, 'lcc_user'];
+      for (const key of keysToRestore) {
+        if (!localStorage.getItem(key)) {
+          const result = await window.Capacitor.Plugins.Preferences.get({ key });
+          if (result?.value) {
+            localStorage.setItem(key, result.value);
+            console.log('💾 [FaceID] Restauré depuis Preferences:', key);
+          }
+        }
+      }
+    } catch(e) { console.warn('⚠️ [FaceID] Preferences restore:', e?.message); }
+  }
+
   function isBiometricAvailable() {
     return new Promise(resolve => {
       if (!IS_NATIVE || !window._checkBiometryAvailable) {
@@ -260,11 +277,20 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     if (confirm) {
       localStorage.setItem(FACE_ID_KEY, 'true');
       localStorage.setItem(FACE_ID_TOKEN_KEY, token);
+      // Sauvegarder aussi dans Preferences pour résister à la purge iOS
+      if (IS_NATIVE && window.Capacitor?.Plugins?.Preferences) {
+        window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_KEY, value: 'true' }).catch(() => {});
+        window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: token }).catch(() => {});
+        window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: token }).catch(() => {});
+      }
       console.log('✅ Face ID activé');
     }
   };
 
-  document.addEventListener('DOMContentLoaded', initFaceID);
+  document.addEventListener('DOMContentLoaded', async () => {
+    await restoreFromPreferences();
+    initFaceID();
+  });
 
   // Sauvegarder le token biométrique après une connexion réussie par mot de passe
 
