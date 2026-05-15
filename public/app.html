@@ -3084,8 +3084,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <i class="fas fa-info-circle"></i>
       <span id="bh-mobile-ann-badge" style="display:none;position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#EF4444;"></span>
     </button>
-    <!-- CLOCHE MASQUÉE TEMPORAIREMENT - À réactiver -->
-    <button id="bh-mobile-notif-btn" title="Notifications" onclick="var p=document.getElementById('notificationsPanel');if(p){var _wasOpen=p.classList.contains('open');if(_wasOpen){p.classList.remove('open');document.body.classList.remove('notif-panel-open');var _ov=document.getElementById('notifPanelOverlay');if(_ov)_ov.classList.remove('active');return;}p.classList.add('open');document.body.classList.add('notif-panel-open');var _ov=document.getElementById('notifPanelOverlay');if(_ov)_ov.classList.add('active');if(true){var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#888';tA.style.borderBottomColor='transparent';tA.style.fontWeight='500';}if(tP){tP.style.color='#1A7A5E';tP.style.borderBottomColor='#1A7A5E';tP.style.fontWeight='600';}if(pA)pA.style.display='none';if(pPush)pPush.style.display='';if(typeof loadPushNotifHistory==='function')loadPushNotifHistory();}}" style="background:transparent;border:none;width:34px;height:34px;display:none;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
+    <button id="bh-mobile-notif-btn" title="Notifications" onclick="var p=document.getElementById('notificationsPanel');if(p){var _wasOpen=p.classList.contains('open');if(_wasOpen){p.classList.remove('open');document.body.classList.remove('notif-panel-open');var _ov=document.getElementById('notifPanelOverlay');if(_ov)_ov.classList.remove('active');return;}p.classList.add('open');document.body.classList.add('notif-panel-open');var _ov=document.getElementById('notifPanelOverlay');if(_ov)_ov.classList.add('active');if(true){var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#888';tA.style.borderBottomColor='transparent';tA.style.fontWeight='500';}if(tP){tP.style.color='#1A7A5E';tP.style.borderBottomColor='#1A7A5E';tP.style.fontWeight='600';}if(pA)pA.style.display='none';if(pPush)pPush.style.display='';if(typeof loadPushNotifHistory==='function')loadPushNotifHistory();}}" style="background:transparent;border:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;">
       <i class="fas fa-bell"></i>
       <span id="bh-mobile-notif-badge" style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 2px;pointer-events:none;"></span>
     </button>
@@ -3125,8 +3124,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
 </button>
-<!-- CLOCHE MASQUÉE TEMPORAIREMENT - À réactiver -->
-<button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" onclick="var p=document.getElementById('notificationsPanel');if(p){p.classList.toggle('open');if(p.classList.contains('open')){var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#888';tA.style.borderBottomColor='transparent';tA.style.fontWeight='500';}if(tP){tP.style.color='#1A7A5E';tP.style.borderBottomColor='#1A7A5E';tP.style.fontWeight='600';}if(pA)pA.style.display='none';if(pPush)pPush.style.display='';if(typeof loadPushNotifHistory==='function')loadPushNotifHistory();}}" style="position:relative;display:none!important;">
+<button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" onclick="var p=document.getElementById('notificationsPanel');if(p){p.classList.toggle('open');if(p.classList.contains('open')){var tA=document.getElementById('notifTabActivity'),tP=document.getElementById('notifTabPush'),pA=document.getElementById('notifPanelActivity'),pPush=document.getElementById('notifPanelPush');if(tA){tA.style.color='#888';tA.style.borderBottomColor='transparent';tA.style.fontWeight='500';}if(tP){tP.style.color='#1A7A5E';tP.style.borderBottomColor='#1A7A5E';tP.style.fontWeight='600';}if(pA)pA.style.display='none';if(pPush)pPush.style.display='';if(typeof loadPushNotifHistory==='function')loadPushNotifHistory();}}" style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
   <i class="fas fa-bell"></i>
   <span id="notifHistoryBadge" style="display:none;position:absolute;top:5px;right:5px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px;pointer-events:none;"></span>
 </button>
@@ -3408,8 +3406,8 @@ window.closeChecklistsKpiModal = function() {
 </section>
 </div>
 <!-- Notifications Panel – MASQUÉ TEMPORAIREMENT - À réactiver -->
-<div class="notif-panel-overlay" id="notifPanelOverlay" onclick="var p=document.getElementById('notificationsPanel');p.classList.remove('open');this.classList.remove('active');document.body.classList.remove('notif-panel-open');" style="display:none!important;"></div>
-<aside class="notifications-panel" id="notificationsPanel" style="display:none!important;">
+<div class="notif-panel-overlay" id="notifPanelOverlay" onclick="var p=document.getElementById('notificationsPanel');p.classList.remove('open');this.classList.remove('active');document.body.classList.remove('notif-panel-open');"></div>
+<aside class="notifications-panel" id="notificationsPanel">
 <div class="notifications-header" style="padding-bottom:0;">
   <h2 style="margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
     <i class="fas fa-bell"></i> Notifications
@@ -4058,6 +4056,7 @@ window.closeChecklistsKpiModal = function() {
       transition: right 0.25s ease;
       overscroll-behavior: contain;
     }
+
     .notifications-panel.open {
       right: 0;
     }
