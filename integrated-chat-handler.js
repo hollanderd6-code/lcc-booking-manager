@@ -52,7 +52,8 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
     msgText.includes('Payment Collect:')
   );
   if (isOtaSystem) {
-    return handleIncomingMessage(message, conversation, pool, io);
+    console.log(`ℹ️ [DEBOUNCE] Message OTA système ignoré (conv ${convId}) — pas de réponse Groq`);
+    return false;
   }
   if (requiresHumanIntervention(msgText)) {
     // Urgence → pas de délai
@@ -367,13 +368,14 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     }
 
     // ── Pause 2h après réponse manuelle de l'owner ──────────────
-    // Si l'owner a répondu manuellement (sender_type='owner') dans les 2 dernières heures,
+    // Si l'owner a répondu manuellement (sender_type='owner' ou 'property' non-bot) dans les 2 dernières heures,
     // Groq se tait pour ne pas écraser la gestion humaine.
     try {
       const ownerRecentReply = await pool.query(
         `SELECT 1 FROM messages
          WHERE conversation_id = $1
-         AND sender_type = 'owner'
+         AND sender_type IN ('owner', 'property')
+         AND sender_name NOT IN ('bot', 'system', 'auto', 'IA', 'Boostinghost')
          AND created_at > NOW() - INTERVAL '2 hours'
          LIMIT 1`,
         [conversation.id]
@@ -1009,6 +1011,20 @@ Rules:
         const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
         const depositPaid = depositStatus && ['authorized', 'captured'].includes(depositStatus);
         return depositRequired && !depositPaid;
+      })(),
+      // Jours avant l'arrivée où le lien caution sera envoyé (via template before_arrival)
+      depositSendDaysBeforeArrival: (() => {
+        try {
+          if (isAirbnbPlatform) return null;
+          const depositRequired = property.deposit_amount && parseFloat(property.deposit_amount) > 0;
+          if (!depositRequired) return null;
+          // Calculer les jours restants avant l'arrivée
+          const checkin = conversation.reservation_start_date ? new Date(conversation.reservation_start_date) : null;
+          if (!checkin) return 2; // défaut J-2
+          const today = new Date();
+          const daysUntilArrival = Math.ceil((checkin - today) / (1000 * 60 * 60 * 24));
+          return { daysUntilArrival, sendDate: daysUntilArrival > 2 ? 'J-2 avant votre arrivée' : 'très prochainement' };
+        } catch { return null; }
       })(),
       // Indiquer si le lien caution a déjà été envoyé dans cette conv (pour éviter répétitions)
       depositLinkAlreadySent: await (async () => {

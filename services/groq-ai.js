@@ -164,13 +164,20 @@ async function getGroqResponse(userMessage, conversationContext = {}, messageHis
     // ✅ Indicateur critique : la caution bloque l'accès aux infos
     if (conversationContext.depositBlocksAccess) {
       const alreadySent = conversationContext.depositLinkAlreadySent;
+      const schedInfo = conversationContext.depositSendDaysBeforeArrival;
+      const daysUntil = schedInfo?.daysUntilArrival;
+      const sendDate = schedInfo?.sendDate || 'J-2 avant votre arrivée';
+
       if (alreadySent) {
         sections.push(`⚠️ ALERTE CAUTION : depositBlocksAccess = true. La caution n'est PAS encore payée MAIS le lien a déjà été envoyé une fois. RÈGLES :
 1. Si le guest demande EXPLICITEMENT comment payer, où est le lien, ou exprime de la confusion sur le paiement → renvoyer le lien de caution : ${conversationContext.depositUrl || '[lien caution]'}. Le reformuler clairement dans la langue du guest.
 2. Si le guest pose une autre question → répondre simplement que les infos arrivent dès que la caution est validée, SANS renvoyer le lien.
 IMPORTANT : Répondre dans la langue du guest (${conversationContext.language || 'auto'}), JAMAIS en français si le guest n'écrit pas en français.`);
+      } else if (daysUntil && daysUntil > 2) {
+        // Le lien n'a pas encore été envoyé ET l'arrivée est dans plus de 2 jours → rassurer
+        sections.push(`⚠️ ALERTE CAUTION : depositBlocksAccess = true. La caution est requise MAIS le lien n'a pas encore été envoyé car l'arrivée est dans ${daysUntil} jours. Le lien sera envoyé automatiquement ${sendDate}. Si le guest demande où est le lien → expliquer gentiment que le lien de caution lui sera envoyé automatiquement ${sendDate}, et qu'il n'y a rien à faire pour l'instant. NE PAS envoyer le lien maintenant, NE PAS donner les codes d'accès. Répondre dans la langue du guest.`);
       } else {
-        sections.push(`⚠️ ALERTE CAUTION : depositBlocksAccess = true. La caution n'est PAS encore payée (statut: ${conversationContext.depositStatus || 'aucun'}). NE PAS donner les codes d'accès, le wifi ni les instructions d'entrée sous AUCUN prétexte. Rediriger vers le paiement de la caution.`);
+        sections.push(`⚠️ ALERTE CAUTION : depositBlocksAccess = true. La caution n'est PAS encore payée (statut: ${conversationContext.depositStatus || 'aucun'}). NE PAS donner les codes d'accès, le wifi ni les instructions d'entrée sous AUCUN prétexte. Rediriger vers le paiement de la caution. Répondre dans la langue du guest.`);
       }
     }
 
@@ -241,7 +248,7 @@ R12. CHECK-OUT / DÉPART : Donne l'heure exacte + instructions de départ si dis
 R13. WIFI : Donne le nom du réseau ET le mot de passe ensemble, dans la même réponse.
 R14. ACCÈS / CODE / CLÉ :
    • ⚠️ RÈGLE ABSOLUE AIRBNB : Si isAirbnb = true → NE JAMAIS mentionner de caution, dépôt de garantie, lien de caution ou paiement de garantie. Airbnb gère entièrement la caution de son côté. Donner directement les codes d'accès et informations pratiques sans condition.
-   • ⚠️ RÈGLE ABSOLUE : Si depositBlocksAccess = true (caution requise mais non payée) → NE JAMAIS donner les codes d'accès, le wifi, l'adresse précise ni aucune instruction d'entrée. Expliquer au guest que ses infos d'accès seront envoyées automatiquement dès que la caution sera validée, et lui donner le lien de caution si disponible. Formuler ce message DANS LA LANGUE DU GUEST (language = ${language}). NE PAS escalader.
+   • ⚠️ RÈGLE ABSOLUE : Si depositBlocksAccess = true (caution requise mais non payée) → NE JAMAIS donner les codes d'accès, le wifi, l'adresse précise ni aucune instruction d'entrée. Répondre uniquement : "Les informations d'accès vous seront communiquées dès que votre caution aura été validée. Voici le lien : [lien caution si disponible]". NE PAS escalader, NE PAS inventer d'excuse différente.
    • EN COURS DE SÉJOUR ou JOUR J d'arrivée (ET depositBlocksAccess = false) : Donne le code exact + instructions complètes d'accès. Si non disponible → [ESCALADE].
    • AVANT ARRIVÉE (plus d'1 jour avant le check-in) : NE PAS donner les codes. Répondre : "Toutes les instructions d'accès (codes, étapes d'entrée) vous seront envoyées automatiquement le matin de votre arrivée. À très bientôt !"
    • APRÈS DÉPART : Ne pas donner les codes, le séjour est terminé.
@@ -254,7 +261,7 @@ R18. CAUTION — règles précises (NE PAS escalader pour ces questions) :
    • "Est-ce que la caution est débitée ?" → Expliquer que non pour les banques classiques françaises (CB Visa/Mastercard), mais qu'elle peut être débitée temporairement pour les banques en ligne (Revolut, N26, Wise…) et banques internationales. Elle est restituée dans tous les cas.
    • "Quand est-ce que la caution est rendue ?" → 7 jours après le départ du locataire, automatiquement.
    • "J'ai payé la caution, quand est-ce que je reçois les infos ?" → Si depositStatus = 'authorized' ou 'captured' : confirmer que c'est bon et que les infos arrivent. Si 'pending' : expliquer qu'on attend la validation du paiement.
-   • ⚠️ RÈGLE CRITIQUE POST-SÉJOUR : Si stayPhase = 'after' (séjour TERMINÉ) ET le guest mentionne remboursement/restitution/retour de caution → expliquer que la caution sera restituée automatiquement 7 jours après le départ. Formuler ce message DANS LA LANGUE DU GUEST. NE JAMAIS demander de payer ni mentionner depositBlocksAccess dans ce contexte.
+   • ⚠️ RÈGLE CRITIQUE POST-SÉJOUR : Si stayPhase = 'after' (séjour TERMINÉ) ET le guest mentionne remboursement/restitution/retour de caution → répondre UNIQUEMENT "Votre caution vous sera restituée automatiquement 7 jours après votre départ." NE JAMAIS demander de payer ni mentionner depositBlocksAccess dans ce contexte.
    • ⚠️ RÈGLE CRITIQUE : Si depositStatus = 'authorized' ou 'captured' (caution déjà payée) → NE JAMAIS redemander de payer la caution ni envoyer le lien de paiement. La caution est déjà validée.
    • ANNULATION / REMBOURSEMENT DE RÉSERVATION → [ESCALADE] immédiatement.
 R19. PROBLÈME (ménage insuffisant, équipement cassé, nuisances, mauvaise température…) → [ESCALADE] immédiatement + ton empathique.
