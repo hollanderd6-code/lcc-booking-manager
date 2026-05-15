@@ -905,7 +905,7 @@ async function syncSingleIcalUrl(pool, property, entry) {
           const fcmTokens = tokensRes.rows.map(r => r.fcm_token);
           const checkin = new Date(startStr).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
           const checkout = new Date(endStr).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
-          await sendNotificationToMultiple(
+          await sendNotificationToMultipleLogged(
             fcmTokens,
             `📅 Nouvelle réservation ${platformName}`,
             `${displayName(property)} - ${checkin} au ${checkout}`,
@@ -1098,7 +1098,7 @@ cron.schedule('0 10 * * *', async () => {
         // Envoyer a TOUS les appareils
         if (await shouldSendNotification(user.id, 'notif_deposit_release')) {
           for (const token of tokensResult.rows) {
-            await sendNotification(
+            await sendNotificationLogged(
               token.fcm_token,
               `Rappel : ${depositsResult.rows.length} caution(s) a liberer demain`,
               depositsList,
@@ -2835,7 +2835,7 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
       .filter(function(t) { return !excludeTokens || !excludeTokens.has(t); });
     console.log('📨 Notif sous-comptes [' + requiredPermission + ']: ' + tokens.length + ' destinataire(s)');
     if (!tokens.length) return;
-    await sendNotificationToMultiple(tokens, title, body, data);
+    await sendNotificationToMultipleLogged(tokens, title, body, data);
     console.log('✅ Notif sous-comptes envoyée à ' + tokens.length + ' appareil(s)');
 
     // ── Envoyer aussi aux agents agence qui gèrent ce compte ──
@@ -2863,7 +2863,7 @@ async function sendNotificationToDelegatesOf(ownerUserId, title, body, data) {
     if (!delegates.rows.length) return;
     const tokens = delegates.rows.map(r => r.fcm_token);
     console.log(`📨 [AgenceNotif] Envoi à ${tokens.length} agent(s) pour compte ${ownerUserId}`);
-    await sendNotificationToMultiple(tokens, title, body, data || {});
+    await sendNotificationToMultipleLogged(tokens, title, body, data || {});
     console.log(`✅ [AgenceNotif] Notif envoyée à ${tokens.length} agent(s)`);
   } catch(err) {
     console.error('❌ sendNotificationToDelegatesOf:', err.message);
@@ -3138,7 +3138,7 @@ async function notifyCleanersAboutNewBookings(newReservations) {
         [assignment.sub_account_id]
       );
       if (tokenRes.rows.length > 0) {
-        await sendNotificationToMultiple(
+        await sendNotificationToMultipleLogged(
           tokenRes.rows.map(r => r.fcm_token),
           '🧹 Nouveau ménage assigné',
           `${propertyName} — Vous avez un ménage à effectuer`,
@@ -3992,7 +3992,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                   try {
                     const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1', [ownerId]);
                     for (const tok of tokensRes.rows) {
-                      await sendNotification(
+                      await sendNotificationLogged(
                         tok.fcm_token,
                         `🎉 Nouvelle réservation BHGuest`,
                         `${guestName || 'Voyageur'} · ${startDate} → ${endDate}`,
@@ -4048,7 +4048,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                   [user_id]
                 );
                 for (const tok of tokensRes.rows) {
-                  await sendNotification(
+                  await sendNotificationLogged(
                     tok.fcm_token,
                     `💳 Paiement reçu${propLabel}`,
                     `${guestLabel} a payé${amt ? ' ' + amt : ''}`,
@@ -4135,7 +4135,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                   [user_id]
                 );
                 for (const tok of tokensRes.rows) {
-                  await sendNotification(
+                  await sendNotificationLogged(
                     tok.fcm_token,
                     `🛡️ Caution autorisée${propLabel}`,
                     `${guestLabel} a validé sa caution${amt ? ' de ' + amt : ''}`,
@@ -7402,7 +7402,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
             // ✅ GROUPER TOUS LES TOKENS ET ENVOYER UNE SEULE NOTIFICATION
             const fcmTokens = tokenResult.rows.map(row => row.fcm_token);
             
-            await sendNotificationToMultiple(
+            await sendNotificationToMultipleLogged(
               fcmTokens,
               '📅 Nouvelle réservation directe',
               `${(reservation.guestName || guestName || 'Voyageur')} · ${displayName(property)} · ${checkInDate} → ${checkOutDate}`,
@@ -7648,7 +7648,7 @@ app.get('/test-push-like-chat', async (req, res) => {
       console.log(`📤 [TEST CHAT FORMAT] Envoi au ${row.device_type}...`);
       
       // ✅ FORMAT IDENTIQUE À sendNewMessageNotification
-      const result = await sendNotification(
+      const result = await sendNotificationLogged(
         row.fcm_token,
         `📩 Message de ${propertyName}`,  // Même format de titre
         'Ceci est un test de notification (format chat)',  // Message preview
@@ -7709,7 +7709,7 @@ app.get('/test-push-compare', async (req, res) => {
     
     // Test 1 : Format CHAT (qui marche)
     console.log('📤 Test 1 : Format CHAT...');
-    const test1 = await sendNotification(
+    const test1 = await sendNotificationLogged(
       token,
       '📩 Message de Test',
       'Notification format CHAT',
@@ -7721,7 +7721,7 @@ app.get('/test-push-compare', async (req, res) => {
     
     // Test 2 : Format RÉSERVATION
     console.log('📤 Test 2 : Format RÉSERVATION...');
-    const test2 = await sendNotification(
+    const test2 = await sendNotificationLogged(
       token,
       '📅 Nouvelle réservation',
       'Notification format RÉSERVATION',
@@ -7733,7 +7733,7 @@ app.get('/test-push-compare', async (req, res) => {
     
     // Test 3 : Format SIMPLE
     console.log('📤 Test 3 : Format SIMPLE...');
-    const test3 = await sendNotification(
+    const test3 = await sendNotificationLogged(
       token,
       '🧪 Test Simple',
       'Notification format SIMPLE',
@@ -8443,7 +8443,7 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
         );
         if (tokensResult.rows.length > 0) {
           const fcmTokens = tokensResult.rows.map(row => row.fcm_token);
-          await sendNotificationToMultiple(
+          await sendNotificationToMultipleLogged(
             fcmTokens,
             '❌ Réservation annulée',
             `${propertyName} - ${cancelDate}`,
@@ -9732,7 +9732,7 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
         property_name: propertyName
       };
       for (const tok of tokensResult.rows) {
-        await sendNotification(
+        await sendNotificationLogged(
           tok.fcm_token,
           '✅ Ménage terminé',
           `${propertyName} - Checklist complétée`,
@@ -11048,7 +11048,7 @@ try {
     );
     if (tokenRes.rows.length > 0) {
       const tokens = tokenRes.rows.map(r => r.fcm_token);
-      await sendNotificationToMultiple(tokens, title, body, data);
+      await sendNotificationToMultipleLogged(tokens, title, body, data);
       console.log(`✅ Notif ménage envoyée au sous-compte ${cleaner.sub_account_id}`);
     } else {
       console.log(`ℹ️ Sous-compte ${cleaner.sub_account_id} sans token FCM`);
@@ -11546,7 +11546,7 @@ app.post('/api/cleaning/checklist', async (req, res) => {
           const fcmTokens = tokensResult.rows.map(row => row.fcm_token);
           
           try {
-            await sendNotificationToMultiple(fcmTokens, title, body, pushData);
+            await sendNotificationToMultipleLogged(fcmTokens, title, body, pushData);
             console.log(`📱 Push ménage groupé envoyé à ${fcmTokens.length} appareil(s) de ${cleaner.user_id}`);
           } catch (pushErr) {
             console.error(`❌ Push ménage échoué:`, pushErr.message);
@@ -12135,7 +12135,7 @@ app.put('/api/cleaning/checklists/:id/validate',
           WHERE c.id = $1 LIMIT 1`, [cl.cleaner_id]);
         if (cleanerRow.rows.length > 0 && cleanerRow.rows[0].fcm_token) {
           alreadyNotifiedTokens.add(cleanerRow.rows[0].fcm_token);
-          await sendNotification(
+          await sendNotificationLogged(
             cleanerRow.rows[0].fcm_token,
             '✅ Ménage validé — ' + propertyName,
             'Super travail ! Le ménage du ' + checkoutFmt + ' a été validé.',
@@ -12149,7 +12149,7 @@ app.put('/api/cleaning/checklists/:id/validate',
         for (const row of cleanerSubRow.rows) {
           if (!alreadyNotifiedTokens.has(row.fcm_token)) {
             alreadyNotifiedTokens.add(row.fcm_token);
-            await sendNotification(
+            await sendNotificationLogged(
               row.fcm_token,
               '✅ Ménage validé — ' + propertyName,
               'Super travail ! Le ménage du ' + checkoutFmt + ' a été validé.',
@@ -18816,7 +18816,7 @@ app.post('/api/invoice/create',
           );
           if (tokensRes.rows.length > 0) {
             const tokens = tokensRes.rows.map(r => r.fcm_token);
-            await sendNotificationToMultiple(
+            await sendNotificationToMultipleLogged(
               tokens,
               `📄 Facture ${invoiceNumber} envoyée`,
               `Facture envoyée à ${clientName} pour ${propertyName}`,
@@ -19787,7 +19787,7 @@ app.get('/chat/:photosToken/checkout-form', (req, res) => {
 // Route de test (à ajouter temporairement)
 app.post('/api/test-notif', async (req, res) => {
   try {
-    const result = await sendNotification(
+    const result = await sendNotificationLogged(
       'c0FiPJpgR8W2uamYdAM5VE:APA91bGmWYKtrCmoicgRmTGCJWF5NHpauBqgt_p1F6uJ8_D43Og2wftJCUMope773X118jM88IaTkFLCtGCCdJg8GAOLhWMw7gHhK8U5Ntk2SHqb8xzKZYY',
       '🧪 Test depuis serveur',
       'Ça marche !',
@@ -19820,7 +19820,7 @@ async function sendPushForDynamicPricing(userId, { title, body, data }) {
     );
     if (tokensRes.rows.length === 0) return;
     const tokens = tokensRes.rows.map(r => r.fcm_token);
-    await sendNotificationToMultiple(tokens, title, body, data || {});
+    await sendNotificationToMultipleLogged(tokens, title, body, data || {});
   } catch (err) {
     console.error('❌ [DP-CRON] Push error:', err.message);
   }
@@ -21332,7 +21332,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
             });
             
             for (const tokenRow of tokensResult.rows) {
-              await sendNotification(
+              await sendNotificationLogged(
                 tokenRow.fcm_token,
                 '❌ Réservation annulée',
                 `${cleanGuestName(deletedReservation.guest_name, deletedReservation.source)} · ${displayName(property)} · ${cancelDate}`,
@@ -22080,7 +22080,7 @@ io.on('_debounce_notif_needed', async ({ conversation_id, user_id, message, gues
   try {
     const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [user_id]);
     for (const tok of tokensRes.rows) {
-      await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
+      await sendNotificationLogged(tok.fcm_token, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
     }
     // Envoyer aussi aux agents agence
     await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
@@ -23401,7 +23401,7 @@ cron.schedule('0 9 1 * *', async () => {
         const title = `📊 Résumé ${monthLabel}`;
         const body  = `${nSejours} séjour${nSejours>1?'s':''} · ${nMessages} messages · ${pctAuto}% traités automatiquement · ${nEscalades} escalade${nEscalades>1?'s':''}`;
         for (const tok of tokens.rows) {
-          await sendNotification(tok.fcm_token, title, body,
+          await sendNotificationLogged(tok.fcm_token, title, body,
             { type: 'monthly_summary', month: monthLabel, screen: 'dashboard' }
           );
         }
@@ -24145,7 +24145,7 @@ app.post('/api/notifications/send', authenticateAny, async (req, res) => {
       return res.status(400).json({ error: 'Paramètres manquants' });
     }
     
-    const result = await sendNotification(token, title, body);
+    const result = await sendNotificationLogged(token, title, body);
     
     res.json(result);
   } catch (error) {
@@ -24225,7 +24225,7 @@ app.post('/api/notifications/today-arrivals', authenticateAny, async (req, res) 
       `${a.property_name} - ${a.guest_name || 'Voyageur'}`
     ).join('\n');
     
-    const result = await sendNotificationToMultiple(fcmTokens, title, body, {
+    const result = await sendNotificationToMultipleLogged(fcmTokens, title, body, {
       type: 'arrivals',
       count: arrivals.length.toString()
     });
@@ -24310,7 +24310,7 @@ const uniqueCount = uniqueProperties.length;
 
 const title = `🚪 ${uniqueCount} départ(s) aujourd'hui`;
 const body = `Ménages à prévoir : ${uniqueProperties.join(', ')}`;
-    const result = await sendNotificationToMultiple(fcmTokens, title, body, {
+    const result = await sendNotificationToMultipleLogged(fcmTokens, title, body, {
       type: 'departures',
       count: departures.length.toString()
     });
@@ -24430,7 +24430,7 @@ cron.schedule('0 8 * * *', async () => {
 
         for (const token of tokens) {
           try {
-            await sendNotification(token.fcm_token, title, body,
+            await sendNotificationLogged(token.fcm_token, title, body,
               { type: 'daily_summary', arrivals: arrivalsCount.toString(), departures: departuresCount.toString() });
           } catch (e) { console.error('Erreur notif résumé quotidien:', e.message); }
         }
@@ -24578,7 +24578,7 @@ cron.schedule('0 18 * * *', async () => {
         // Envoyer a TOUS les appareils en un seul appel groupé
         if (await shouldSendNotification(user.id, 'notif_reminder_j1')) {
           const allTokens = tokensResult.rows.map(r => r.fcm_token);
-          await sendNotificationToMultiple(
+          await sendNotificationToMultipleLogged(
             allTokens,
             `Rappel : ${count} arrivee(s) demain`,
             propertiesList,
@@ -24675,7 +24675,7 @@ cron.schedule('*/15 * * * *', async () => {
       const title = `⚠️ Ménage non validé — ${propName}`;
       const body = `${guestName} arrive dans moins d'1h et le ménage n'est pas encore validé.`;
 
-      await sendNotificationToMultiple(tokens, title, body, {
+      await sendNotificationToMultipleLogged(tokens, title, body, {
         type: 'cleaning_alert',
         reservation_uid: row.reservation_uid,
         property_id: row.property_id
@@ -25493,7 +25493,7 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
         ? `Mandat – ${data.propAddress || data.companyName || ''}`
         : `Contrat – ${data.propertyName || ''}`;
       for (const tok of tokensRes.rows) {
-        await sendNotification(
+        await sendNotificationLogged(
           tok.fcm_token,
           `✍️ ${isMandat ? 'Mandat' : 'Contrat'} signé`,
           `${signerName} a signé · ${docLabel}`,
@@ -27753,7 +27753,7 @@ app.post('/api/channex/webhook', async (req, res) => {
               [result.user_id]
             );
             for (const tok of tokensRes.rows) {
-              await sendNotification(tok.fcm_token, notifTitle, notifBody, notifData);
+              await sendNotificationLogged(tok.fcm_token, notifTitle, notifBody, notifData);
             }
             console.log(`📱 [CHANNEX] Notif annulation envoyée pour ${result.uid} (${tokensRes.rows.length} tokens)`);
           }
@@ -27827,7 +27827,7 @@ app.post('/api/channex/webhook', async (req, res) => {
             [result.user_id]
           );
           for (const tok of tokensRes.rows) {
-            await sendNotification(tok.fcm_token, notifTitle, notifBody, notifData);
+            await sendNotificationLogged(tok.fcm_token, notifTitle, notifBody, notifData);
           }
 
           // Notifier les sous-comptes ayant accès à ce logement
@@ -28356,7 +28356,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
               [user_id]
             );
             for (const tok of tokensRes.rows) {
-              await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), {
+              await sendNotificationLogged(tok.fcm_token, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), {
                 type: 'new_guest_message',
                 conversation_id: String(conversation_id)
               });
@@ -28372,7 +28372,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
             [user_id]
           );
           for (const tok of tokensRes.rows) {
-            await sendNotification(tok.fcm_token, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), {
+            await sendNotificationLogged(tok.fcm_token, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), {
               type: 'new_guest_message',
               conversation_id: String(conversation_id)
             });
@@ -30381,7 +30381,7 @@ app.post('/api/guest/book', async (req, res) => {
         [prop.owner_user_id]
       );
       for (const tok of tokensRes.rows) {
-        await sendNotification(tok.fcm_token,
+        await sendNotificationLogged(tok.fcm_token,
           '🏠 Nouvelle réservation directe',
           `${guest_name} · ${displayName(prop)} · ${checkin} → ${checkout}`,
           { type: 'new_booking_guest', uid, propertyId: property_id, screen: 'calendar' }
@@ -31986,7 +31986,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
           [prop.owner_user_id]
         );
         for (const tok of tokensRes.rows) {
-          await sendNotification(
+          await sendNotificationLogged(
             tok.fcm_token,
             `💳 Paiement reçu${propLabel}`,
             `${cleanName} a payé${amtLabel} via BHGuest`,
@@ -32196,7 +32196,7 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
       // Compte principal
       const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [resa.owner_user_id]);
       for (const tok of tokensRes.rows) {
-        await sendNotification(tok.fcm_token, '✏️ Résa modifiée — ' + propName,
+        await sendNotificationLogged(tok.fcm_token, '✏️ Résa modifiée — ' + propName,
           cleanName + ' · ' + newCheckin + ' → ' + newCheckout,
           { type: 'reservation_modified', uid, propertyId: String(resa.property_id) }
         );
