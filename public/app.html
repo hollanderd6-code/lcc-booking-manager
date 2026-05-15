@@ -4818,12 +4818,14 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           today.setHours(0, 0, 0, 0);
           
           const todayCheckins = reservations.filter(r => {
+            if (r.type === 'block' || r.source === 'BLOCK') return false;
             const checkin = new Date(r.startDate);
             checkin.setHours(0, 0, 0, 0);
             return checkin.getTime() === today.getTime();
           });
       
           const todayCheckouts = reservations.filter(r => {
+            if (r.type === 'block' || r.source === 'BLOCK') return false;
             const checkout = new Date(r.endDate);
             checkout.setHours(0, 0, 0, 0);
             return checkout.getTime() === today.getTime();
@@ -4918,6 +4920,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           sevenDaysAgo.setDate(today.getDate() - 7);
       
           const newReservations = reservations.filter(r => {
+            if (r.type === 'block' || r.source === 'BLOCK') return false;
             const created = r.createdAt ? new Date(r.createdAt) : null;
             return created && created >= sevenDaysAgo;
           }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
