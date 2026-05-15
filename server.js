@@ -428,15 +428,25 @@ const {
 // Wrappers auto-log vers notification_history
 const _origSendNotification = sendNotification;
 const _origSendNotificationToMultiple = sendNotificationToMultiple;
+
+async function getUserIdFromToken(token) {
+  try {
+    const r = await pool.query('SELECT user_id FROM fcm_tokens WHERE token = $1 LIMIT 1', [token]);
+    return r.rows[0]?.user_id || null;
+  } catch { return null; }
+}
+
 async function sendNotificationLogged(token, title, body, data) {
   const result = await _origSendNotification(token, title, body, data);
-  const userId = data && (data.userId || data.user_id || data.ownerId || data.owner_id);
+  let userId = data && (data.userId || data.user_id || data.ownerId || data.owner_id);
+  if (!userId && token) userId = await getUserIdFromToken(token);
   if (userId) saveNotificationToHistory(userId, title, body, (data && data.type) || 'push', data);
   return result;
 }
 async function sendNotificationToMultipleLogged(tokens, title, body, data) {
   const result = await _origSendNotificationToMultiple(tokens, title, body, data);
-  const userId = data && (data.userId || data.user_id || data.ownerId || data.owner_id);
+  let userId = data && (data.userId || data.user_id || data.ownerId || data.owner_id);
+  if (!userId && tokens && tokens.length > 0) userId = await getUserIdFromToken(tokens[0]);
   if (userId) saveNotificationToHistory(userId, title, body, (data && data.type) || 'push', data);
   return result;
 }
