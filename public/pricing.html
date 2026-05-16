@@ -741,6 +741,9 @@ function updateSlider(val) {
     // Supprimer le tag "Pour vous" existant
     const existingTag = card.querySelector('.plan-recommended-tag');
     if (existingTag) existingTag.remove();
+    // Masquer le badge statique "RECOMMANDÉ" sur les cartes non recommandées
+    const staticBadge = card.querySelector('.plan-badge.featured');
+    if (staticBadge) staticBadge.style.display = p === recommendedPlan ? '' : 'none';
   });
 
   const recCard = document.getElementById('card-' + recommendedPlan);
