@@ -338,6 +338,11 @@ function getSidebarHTML() {
     const host = document.getElementById("bhHeader");
     if (!host) return;
 
+    // Sur desktop (> 1366px sans écran tactile), ne pas injecter le main-header —
+    // chaque page gère son propre header statique. Le header injecté n'est utile qu'en mobile.
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    if (window.innerWidth > 1366 && !isTouch) return;
+
     const kicker = document.body.getAttribute("data-kicker") || "Gestion";
     const title = document.body.getAttribute("data-title") || document.title || "Page";
     const subtitle = document.body.getAttribute("data-subtitle") || "";
