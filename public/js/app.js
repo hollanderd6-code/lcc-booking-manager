@@ -1416,7 +1416,22 @@ window.loadPushNotifHistory = async function() {
 };
 
 window.clearNotifHistory = async function() {
-  if (!confirm("Vider tout l'historique des notifications ?")) return;
+  var confirmed = typeof bhConfirm === 'function'
+    ? await bhConfirm("Vider tout l'historique des notifications ?")
+    : await new Promise(function(resolve) {
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:90%;text-align:center;font-family:DM Sans,sans-serif;">' +
+          '<p style="margin:0 0 20px;font-size:15px;color:#111;">Vider tout l\'historique des notifications ?</p>' +
+          '<div style="display:flex;gap:10px;">' +
+          '<button id="bhCancelNotif" style="flex:1;padding:10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;cursor:pointer;">Annuler</button>' +
+          '<button id="bhConfirmNotif" style="flex:1;padding:10px;border:none;border-radius:10px;background:#EF4444;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Vider</button>' +
+          '</div></div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('#bhConfirmNotif').onclick = function() { overlay.remove(); resolve(true); };
+        overlay.querySelector('#bhCancelNotif').onclick = function() { overlay.remove(); resolve(false); };
+      });
+  if (!confirmed) return;
   var token = localStorage.getItem('lcc_token');
   var headers = {};
   if (token) headers['Authorization'] = 'Bearer ' + token;
