@@ -9968,8 +9968,17 @@ if (editBookingForm) {
             if (!res.ok) throw new Error('Erreur API');
             
             const data = await res.json();
-            // Cautions actives = autorisées (pre-auth) ou capturées (paid) — pas les pending (lien pas encore payé)
-            const activeDeposits = data.filter(r => r.deposit && ['authorized','captured'].includes(r.deposit.status));
+            const today = new Date(); today.setHours(0,0,0,0);
+            const activeDeposits = data.filter(r => {
+              if (!r.deposit || !['authorized','captured'].includes(r.deposit.status)) return false;
+              if (r.deposit.createdAt) {
+                const expiration = new Date(r.deposit.createdAt);
+                expiration.setDate(expiration.getDate() + 7);
+                expiration.setHours(0,0,0,0);
+                return expiration >= today;
+              }
+              return true;
+            });
 
             if (!activeDeposits.length) {
               contentEl.innerHTML = `
