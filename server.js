@@ -4010,12 +4010,6 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       );
                     }
                   } catch(nErr) { console.error('❌ Notif BHGUEST:', nErr.message); }
-
-                  // 📅 Bloquer les dates sur Channex
-                  try {
-                    await triggerChannexAvailabilitySync(propId);
-                    console.log(`✅ [BHGUEST] Channex sync déclenché pour ${propId}`);
-                  } catch(chErr) { console.error('❌ [BHGUEST] Erreur sync Channex:', chErr.message); }
                 }
               }
             } catch(resaErr) {
@@ -13329,14 +13323,6 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
     }
     console.log(`✅ Blocage supprimé: id=${row.id} uid=${row.uid}`);
     res.json({ success: true, deleted: row.id });
-
-    // ✅ Sync Channex pour libérer les dates
-    setImmediate(async () => {
-      await triggerChannexAvailabilitySync(pid);
-      if (io) {
-        io.to('user_' + user.id).emit('reservations:updated', { propertyId: pid });
-      }
-    });
   } catch (err) {
     console.error('❌ DELETE /api/blocks/:id:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -26398,6 +26384,34 @@ app.post('/api/roadmap/:id/vote', authenticateAny, async (req, res) => {
 // ══════════════════════════════════════════════════════
 
 // GET /api/admin/clients — liste tous les comptes + abonnement
+app.post('/api/admin/sync-all-channex', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // Récupérer tous les logements Channex actifs de cet utilisateur
+    const propsResult = await pool.query(
+      `SELECT id FROM properties WHERE user_id = $1 AND channex_enabled = TRUE AND channex_property_id IS NOT NULL`,
+      [userId]
+    );
+    const properties = propsResult.rows;
+    res.json({ message: `Sync démarré pour ${properties.length} logements`, properties: properties.map(p => p.id) });
+    // Sync en arrière-plan avec délai entre chaque pour ne pas flood Channex
+    (async () => {
+      for (const prop of properties) {
+        try {
+          await triggerChannexAvailabilitySync(prop.id);
+          console.log(`✅ [SYNC-ALL] ${prop.id} OK`);
+        } catch(e) {
+          console.error(`❌ [SYNC-ALL] ${prop.id}:`, e.message);
+        }
+        await new Promise(r => setTimeout(r, 1000)); // 1s entre chaque
+      }
+      console.log(`✅ [SYNC-ALL] Terminé — ${properties.length} logements synchronisés`);
+    })();
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/admin/clients', authenticateToken, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
