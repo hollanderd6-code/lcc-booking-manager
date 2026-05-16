@@ -431,7 +431,7 @@ const _origSendNotificationToMultiple = sendNotificationToMultiple;
 
 async function getUserIdFromToken(token) {
   try {
-    const r = await pool.query('SELECT user_id FROM fcm_tokens WHERE token = $1 LIMIT 1', [token]);
+    const r = await pool.query('SELECT user_id FROM user_fcm_tokens WHERE fcm_token = $1 LIMIT 1', [token]);
     return r.rows[0]?.user_id || null;
   } catch { return null; }
 }
