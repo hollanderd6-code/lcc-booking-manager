@@ -440,6 +440,11 @@ function getSidebarHTML() {
     if (window.innerWidth > 1400 && !isTouch) return;
     if (document.getElementById('bh-mobile-page-title')) return;
 
+    // Si la page a déjà un .mobile-header natif dans son HTML (non créé par ce script),
+    // on ne crée pas de doublon — on le laisse gérer son propre affichage.
+    const existingHeader = document.querySelector('.mobile-header');
+    if (existingHeader && !existingHeader.id.includes('bhMobileHeader')) return;
+
     // Lire le titre depuis data-title ou page
     const page = document.body.getAttribute('data-page');
     let title = document.body.getAttribute('data-title');
