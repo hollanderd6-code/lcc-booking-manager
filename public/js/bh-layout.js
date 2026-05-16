@@ -349,9 +349,9 @@ function getSidebarHTML() {
 
     host.innerHTML = `
       <header class="main-header">
-        <div class="header-left" style="flex:1;min-width:0;overflow:hidden;">
+        <div class="header-left">
           <div class="page-kicker">${escapeHtml(kicker)}</div>
-          <h1 class="page-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(title)}</h1>
+          <h1 class="page-title">${escapeHtml(title)}</h1>
           ${subtitle ? `<p class="page-subtitle">${escapeHtml(subtitle)}</p>` : ""}
         </div>
 
@@ -614,18 +614,7 @@ function getSidebarHTML() {
   // DESKTOP LAYOUT — réservé pour futurs ajustements globaux
   // ============================================================
   function applyDesktopLayout() {
-    if (document.getElementById('bh-layout-fixes')) return;
-    const style = document.createElement('style');
-    style.id = 'bh-layout-fixes';
-    style.textContent = `
-      @media (min-width: 1367px) {
-        .mobile-header { display: none !important; }
-        .main-header { display: flex; align-items: center; justify-content: space-between; }
-        .main-header .header-left { flex: 1; min-width: 0; overflow: hidden; }
-        .main-header .header-left .page-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-      }
-    `;
-    document.head.appendChild(style);
+    // Intentionnellement vide — le layout est géré par bh-theme-v3.css
   }
 
 
