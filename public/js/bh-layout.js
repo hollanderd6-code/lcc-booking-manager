@@ -194,10 +194,10 @@ function getSidebarHTML() {
     ${!isSubAccount ? `
     <div class="nav-section">
       <div class="nav-section-title">Paramètres</div>
-      <a class="nav-item" data-page="settings-account" href="/settings-account.html" onclick="if(localStorage.getItem('lcc_managed_user')){event.preventDefault();var o=localStorage.getItem('lcc_agency_token');if(o){localStorage.setItem('lcc_token',o);['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(function(k){localStorage.removeItem(k)});window.location.href='/settings-account.html';}return false;}">
+      <a class="nav-item" data-page="settings-account" href="/settings-account.html">
         <i class="fas fa-cog"></i><span>Paramètres</span>
       </a>
-      <a class="nav-item" data-page="help" href="/help.html" onclick="if(localStorage.getItem('lcc_managed_user')){event.preventDefault();var o=localStorage.getItem('lcc_agency_token');if(o){localStorage.setItem('lcc_token',o);['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(function(k){localStorage.removeItem(k)});window.location.href='/help.html';}return false;}">
+      <a class="nav-item" data-page="help" href="/help.html">
         <i class="fas fa-headset"></i><span>Support</span>
       </a>
     </div>
@@ -205,7 +205,7 @@ function getSidebarHTML() {
   </nav>
 
   <div style="flex-shrink:0;border-top:1px solid #E8E0D0;padding:12px;background:#F5F0E8;">
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;${isSubAccount ? '' : 'cursor:pointer;'}" ${isSubAccount ? '' : "onclick=\"if(localStorage.getItem('lcc_managed_user')){var o=localStorage.getItem('lcc_agency_token');if(o){localStorage.setItem('lcc_token',o);['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(function(k){localStorage.removeItem(k)});window.location.href='/settings-account.html';}return;}window.location.href='/settings-account.html'\""} title="${isSubAccount ? '' : 'Paramètres du compte'}">
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;${isSubAccount ? '' : 'cursor:pointer;'}" ${isSubAccount ? '' : "onclick=\"window.location.href='/settings-account.html'\""} title="${isSubAccount ? '' : 'Paramètres du compte'}">
       <div id="sidebarUserAvatar" style="width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;flex-shrink:0;"></div>
       <div style="flex:1;min-width:0;">
         <div id="sidebarUserName" style="font-size:13px;font-weight:600;color:#0D1117 !important;font-family:DM Sans,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">Utilisateur</div>
@@ -255,7 +255,7 @@ function getSidebarHTML() {
       }
     }
 
-    const sidebar = document.getElementById("sidebar") || ph.querySelector("aside.sidebar") || document.querySelector("aside.sidebar");
+    const sidebar = document.getElementById("sidebar") || document.querySelector("aside.sidebar");
     const overlay = document.getElementById("sidebarOverlay");
     const btn = document.getElementById("mobileMenuBtn");
 
@@ -446,13 +446,10 @@ function getSidebarHTML() {
 
     // Mapping des titres courts par page — priorité absolue
     const PAGE_TITLES = {
-      'app': '',
+      'app': 'Home',
       'cleaning': 'Ménage',
       'deposits': 'Finances',
-      'clients': 'Mes Clients',
-      'settings': 'Logements',
-      'welcome': 'Livrets',
-      'factures': 'Séjours'
+      'clients': 'Mes Clients'
     };
 
     // 1. Mapping par data-page (prioritaire)
@@ -468,12 +465,8 @@ function getSidebarHTML() {
     const h1Mappings = {
       'Gestion du ménage': 'Ménage',
       'Cautions et paiements': 'Finances',
-      'Factures Propriétaires': 'Séjours',
-      'Factures séjours': 'Séjours',
-      'Dashboard': '',
-      'Home': '',
-      'Mes logements': 'Logements',
-      'Livrets d\'accueil': 'Livrets'
+      'Factures Propriétaires': 'F. Propriétaire',
+      'Dashboard': 'Home'
     };
     if (title && h1Mappings[title]) title = h1Mappings[title];
 
@@ -516,10 +509,7 @@ function getSidebarHTML() {
     const titleEl = document.createElement('span');
     titleEl.id = 'bh-mobile-page-title';
     titleEl.textContent = title;
-    // padding-right = espace pour les boutons à droite (svcRow ~55px + annBtn si présent ~35px)
-    var isAppPage = window.location.pathname === '/app.html' || window.location.pathname.endsWith('/app.html');
-    var _pr = isAppPage ? '95px' : '65px';
-    titleEl.style.cssText = 'font-family:"DM Sans",system-ui,sans-serif;font-size:14px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;letter-spacing:-0.01em;padding-right:' + _pr + ';';
+    titleEl.style.cssText = 'font-family:"DM Sans",system-ui,sans-serif;font-size:14px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;letter-spacing:-0.01em;';
 
     // Wrapper colonne pour logo+titre à gauche, pastilles en dessous
     const logo = mobileHeader.querySelector('.mobile-logo');
@@ -533,7 +523,7 @@ function getSidebarHTML() {
     if (!document.getElementById('bh-mobile-svc')) {
       const svcRow = document.createElement('div');
       svcRow.id = 'bh-mobile-svc';
-      svcRow.style.cssText = 'display:flex;align-items:center;gap:6px;position:absolute;right:8px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);cursor:pointer;padding:0 2px;';
+      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:8px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);cursor:pointer;padding:0 4px;';
       svcRow.title = 'Statut des services';
       svcRow.innerHTML = [
         '<div style="display:flex;align-items:center;gap:4px;">',
@@ -596,12 +586,11 @@ function getSidebarHTML() {
       mobileHeader.appendChild(svcRow);
     }
 
-    // Bouton 🔔 Nouveautés dans le header mobile — uniquement sur app.html
-    var isAppPage = window.location.pathname === '/app.html' || window.location.pathname === '/app' || window.location.pathname.endsWith('/app.html');
-    if (!document.getElementById('bh-mobile-ann-btn') && isAppPage) {
+    // Bouton 🔔 Nouveautés dans le header mobile
+    if (!document.getElementById('bh-mobile-ann-btn')) {
       var annBtn = document.createElement('button');
       annBtn.id = 'bh-mobile-ann-btn';
-      annBtn.style.cssText = 'position:absolute;right:72px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 6px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
+      annBtn.style.cssText = 'position:absolute;right:80px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
       annBtn.innerHTML = '<i class="fas fa-info-circle"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
       var openAnn = function(e) {
         e.preventDefault();
@@ -625,18 +614,12 @@ function getSidebarHTML() {
   // DESKTOP LAYOUT — réservé pour futurs ajustements globaux
   // ============================================================
   function applyDesktopLayout() {
-    // Injecter les corrections CSS globales si pas déjà fait
     if (document.getElementById('bh-layout-fixes')) return;
     const style = document.createElement('style');
     style.id = 'bh-layout-fixes';
     style.textContent = `
-      /* Desktop (> 1366px) : cacher mobile-header, afficher sidebar */
       @media (min-width: 1367px) {
         .mobile-header { display: none !important; }
-        .bh-demo-nav ~ .mobile-header { display: none !important; }
-      }
-      /* Fix titre desktop tronqué */
-      @media (min-width: 1367px) {
         .main-header { display: flex; align-items: center; justify-content: space-between; }
         .main-header .header-left { flex: 1; min-width: 0; overflow: hidden; }
         .main-header .header-left .page-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
