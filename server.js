@@ -26754,6 +26754,14 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
 async function saveNotificationToHistory(userId, title, body, type, data) {
   if (!userId) return;
   try {
+    const existing = await pool.query(
+      `SELECT id FROM notification_history
+       WHERE user_id = $1 AND title = $2 AND body = $3
+       AND created_at > NOW() - INTERVAL '10 seconds'
+       LIMIT 1`,
+      [String(userId), title || '', body || '']
+    );
+    if (existing.rows.length > 0) return;
     await pool.query(
       `INSERT INTO notification_history (user_id, title, body, type, data)
        VALUES ($1, $2, $3, $4, $5)`,
