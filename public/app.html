@@ -3071,10 +3071,10 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- DARK TOP BAR (barre noire fixe en haut) -->
 
 <!-- MOBILE HEADER -->
-<div class="mobile-header" style="display:flex;align-items:center;justify-content:space-between;position:relative;">
+<div class="mobile-header" style="display:flex;align-items:center;padding:0 8px;">
 
-  <!-- GAUCHE : statuts + info -->
-  <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+  <!-- GAUCHE : statuts + info (flex:1, aligné à gauche) -->
+  <div style="flex:1;display:flex;align-items:center;gap:2px;justify-content:flex-start;">
     <button id="bh-mobile-svc" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:4px 6px;background:transparent;border:none;-webkit-tap-highlight-color:transparent;" title="Statut des services">
       <div style="display:flex;align-items:center;gap:3px;">
         <i class="fas fa-server" style="font-size:9px;color:#9CA3AF;"></i>
@@ -3092,13 +3092,13 @@ document.addEventListener('DOMContentLoaded', function() {
     </button>
   </div>
 
-  <!-- CENTRE : logo -->
-  <a class="mobile-logo" href="/app.html" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;">
+  <!-- CENTRE : logo (flex-shrink:0, ne s'étire pas) -->
+  <a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;">
     <span class="mobile-logo-text"></span>
   </a>
 
-  <!-- DROITE : sync + notif -->
-  <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+  <!-- DROITE : sync + notif (flex:1, aligné à droite) -->
+  <div style="flex:1;display:flex;align-items:center;gap:2px;justify-content:flex-end;">
     <button class="btn-icon" id="syncBtnMobile" title="Synchroniser" style="background:transparent;border:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1A7A5E;font-size:15px;-webkit-tap-highlight-color:transparent;">
       <i class="fas fa-sync-alt"></i>
     </button>
