@@ -445,14 +445,17 @@ function getSidebarHTML() {
     if (window.innerWidth > 1400 && !isTouch) return;
     if (document.getElementById('bh-mobile-page-title')) return;
 
-    // Si la page a déjà un .mobile-header natif avec du contenu (ex: messages.html, cleaning.html),
+    // Si la page a déjà un .mobile-header natif actif (avec contenu et non caché),
     // on ne crée pas de doublon — on le laisse gérer son propre affichage.
+    // On ignore les .mobile-header avec display:none inline (anciens headers désactivés).
     const existingNative = document.querySelector('.mobile-header');
-    if (existingNative && existingNative.innerHTML.trim().length > 0) return;
+    if (existingNative && existingNative.innerHTML.trim().length > 0 && existingNative.style.display !== 'none') return;
 
     // Trouver ou créer la mobile-header.
     // Chercher d'abord le placeholder #bhMobileHeader (div vide sans classe .mobile-header)
-    let mobileHeader = document.querySelector('.mobile-header') || document.getElementById('bhMobileHeader');
+    // Ignorer les .mobile-header avec display:none inline (anciens headers désactivés)
+    const existingVisible = document.querySelector('.mobile-header:not([style*="display:none"])') || document.getElementById('bhMobileHeader');
+    let mobileHeader = existingVisible;
     if (!mobileHeader) {
       // Créer une mobile-header avec logo si elle n'existe pas
       mobileHeader = document.createElement('div');
