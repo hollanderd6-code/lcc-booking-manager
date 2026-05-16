@@ -859,6 +859,9 @@ html[data-theme-v3="1"] .page-content {
     z-index: auto !important;
   }
 
+  /* Headers statiques propres à certaines pages — ne pas forcer display:flex */
+  html[data-theme-v3="1"] header.main-header.contrat-static-header { display: none !important; }
+
   html[data-theme-v3="1"] header.main-header .page-kicker,
   html[data-theme-v3="1"] header.main-header .page-subtitle {
     display: none !important;
