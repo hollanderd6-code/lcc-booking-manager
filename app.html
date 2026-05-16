@@ -12655,7 +12655,7 @@ async function loadPushNotifHistory() {
     updateNotifBadge(0);
     fetch('/api/notifications/history/read', { method: 'PATCH', credentials: 'include' });
   } catch(e) {
-    if (list) list.innerHTML = '<div style="text-align:center;padding:30px;color:#e53e3e;font-size:12px;">Erreur: ' + (e.message || e) + '</div>';
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:#e53e3e;font-size:12px;">Erreur: ' + (e.message || e) + '</div>';
     console.error('loadPushNotifHistory:', e);
   }
 }
@@ -12663,9 +12663,13 @@ window.loadPushNotifHistory = loadPushNotifHistory;
 
 async function clearNotifHistory() {
   if (!confirm("Vider tout l'historique des notifications ?")) return;
-  await fetch('/api/notifications/history', { method: 'DELETE', credentials: 'include' });
+  var token = localStorage.getItem('lcc_token');
+  var headers = {};
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  await fetch('/api/notifications/history', { method: 'DELETE', headers: headers });
   loadPushNotifHistory();
 }
+window.clearNotifHistory = clearNotifHistory;
 
 function updateNotifBadge(count) {
   ['notifHistoryBadge', 'bh-mobile-notif-badge', 'notifTabBadge'].forEach(function(id) {
