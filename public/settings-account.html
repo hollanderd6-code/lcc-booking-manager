@@ -1529,6 +1529,7 @@ html[data-theme-v3="1"] .subscription-card {
           <p style="color:#9ca3af;font-size:13px;">Aucun gestionnaire pour le moment</p>
         </div>
         <button class="btn btn-primary" type="button" onclick="openInviteAgencyModal()" 
+                id="inviteAgencyBtn"
                 style="background:#7c3aed;border-color:#7c3aed;">
           <i class="fas fa-plus"></i> Inviter un gestionnaire
         </button>
@@ -2654,6 +2655,27 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const token = localStorage.getItem('lcc_token');
       const res = await fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } });
+
+      // Plan insuffisant → afficher le bloc "Pro requis"
+      if (res.status === 403) {
+        const agencySection = document.querySelector('#agencyIManageSection')?.closest('.card-body');
+        if (agencySection) {
+          agencySection.innerHTML = `
+            <div style="text-align:center;padding:32px 16px;">
+              <div style="font-size:36px;margin-bottom:12px;">🏢</div>
+              <h4 style="font-size:16px;font-weight:700;color:#111;margin:0 0 8px;">Mode Agence — Plan Pro requis</h4>
+              <p style="color:#6b7280;font-size:14px;margin:0 0 20px;max-width:360px;margin-left:auto;margin-right:auto;">
+                Le mode agence vous permet de gérer plusieurs comptes Boostinghost depuis une seule interface.<br>
+                Disponible à partir du plan <strong>Pro</strong>.
+              </p>
+              <a href="/pricing.html" style="display:inline-block;background:#7c3aed;color:white;font-weight:600;font-size:14px;padding:10px 24px;border-radius:10px;text-decoration:none;">
+                <i class="fas fa-arrow-up" style="margin-right:6px;"></i> Passer au plan Pro
+              </a>
+            </div>`;
+        }
+        return;
+      }
+
       if (!res.ok) return;
       const data = await res.json();
 
