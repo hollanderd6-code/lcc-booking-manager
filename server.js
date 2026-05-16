@@ -21137,6 +21137,55 @@ cron.schedule('0 * * * *', async () => {
         }
 
         // ============================================
+        // EXPIRATION TRIAL : marquer expired + désactiver logements Channex
+        // ============================================
+        if (user.status === 'trial' && user.trial_end_date) {
+          const trialEnd = new Date(user.trial_end_date);
+          if (now > trialEnd) {
+            // 1. Mettre à jour le statut en base
+            await pool.query(
+              `UPDATE subscriptions SET status = 'expired', updated_at = NOW() WHERE user_id = $1 AND status = 'trial'`,
+              [user.user_id]
+            );
+            console.log(`⏰ [TRIAL-EXPIRY] User ${user.user_id} → statut mis à 'expired'`);
+
+            // 2. Supprimer les logements Channex (une seule fois)
+            const channexCleanupDone = await hasEmailBeenSent(user.user_id, 'channex_cleanup_on_expiry');
+            if (!channexCleanupDone) {
+              try {
+                const { channexAPI } = require('./channex');
+                const propsResult = await pool.query(
+                  `SELECT id, name, channex_property_id FROM properties
+                   WHERE user_id = $1 AND channex_enabled = TRUE AND channex_property_id IS NOT NULL`,
+                  [user.user_id]
+                );
+                for (const prop of propsResult.rows) {
+                  try {
+                    await channexAPI('DELETE', `/api/v1/properties/${prop.channex_property_id}`);
+                    console.log(`✅ [TRIAL-EXPIRY] ${prop.name} supprimé de Channex`);
+                  } catch (channexErr) {
+                    console.warn(`⚠️ [TRIAL-EXPIRY] Erreur Channex ${prop.name}:`, channexErr.message);
+                  }
+                  await pool.query(
+                    `UPDATE properties SET channex_enabled = FALSE, channex_property_id = NULL,
+                     channex_room_type_id = NULL, channex_rate_plan_id = NULL, updated_at = NOW()
+                     WHERE id = $1`,
+                    [prop.id]
+                  );
+                }
+                await logEmailSent(user.user_id, 'channex_cleanup_on_expiry', {
+                  cleanedAt: now.toISOString(),
+                  propertiesCount: propsResult.rows.length
+                });
+                console.log(`✅ [TRIAL-EXPIRY] ${propsResult.rows.length} logements nettoyés pour ${user.user_id}`);
+              } catch (cleanupErr) {
+                console.error(`❌ [TRIAL-EXPIRY] Erreur nettoyage Channex ${user.user_id}:`, cleanupErr.message);
+              }
+            }
+          }
+        }
+
+        // ============================================
         // EMAIL DE RAPPEL AVANT RENOUVELLEMENT
         // ============================================
         if (user.status === 'active' && user.current_period_end) {
