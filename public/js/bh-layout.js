@@ -440,10 +440,10 @@ function getSidebarHTML() {
     if (window.innerWidth > 1400 && !isTouch) return;
     if (document.getElementById('bh-mobile-page-title')) return;
 
-    // Si la page a déjà un .mobile-header natif dans son HTML (non créé par ce script),
+    // Si la page a déjà un .mobile-header natif avec du contenu (ex: messages.html, cleaning.html),
     // on ne crée pas de doublon — on le laisse gérer son propre affichage.
-    const existingHeader = document.querySelector('.mobile-header');
-    if (existingHeader && !existingHeader.id.includes('bhMobileHeader')) return;
+    const existingNative = document.querySelector('.mobile-header');
+    if (existingNative && existingNative.innerHTML.trim().length > 0) return;
 
     // Lire le titre depuis data-title ou page
     const page = document.body.getAttribute('data-page');
@@ -478,21 +478,24 @@ function getSidebarHTML() {
     // 4. Dernier fallback sur document.title (toujours créer le header pour avoir le logo)
     if (!title) title = document.title || '';
 
-    // Trouver ou créer la mobile-header
-    let mobileHeader = document.querySelector('.mobile-header');
+    // Trouver ou créer la mobile-header.
+    // Chercher d'abord le placeholder #bhMobileHeader (div vide sans classe .mobile-header)
+    let mobileHeader = document.querySelector('.mobile-header') || document.getElementById('bhMobileHeader');
     if (!mobileHeader) {
       // Créer une mobile-header avec logo si elle n'existe pas
       mobileHeader = document.createElement('div');
-      mobileHeader.className = 'mobile-header';
-      mobileHeader.id = 'bhMobileHeader';
-      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;"><span class="mobile-logo-text"></span></a>';
       const appContainer = document.querySelector('.app-container') || document.querySelector('.main-content') || document.body;
       appContainer.parentNode.insertBefore(mobileHeader, appContainer);
-      // Injecter le logo SVG immédiatement, puis re-vérifier après rendu
-      normalizeBranding();
-      setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); }, 100);
-      setTimeout(function(){ normalizeBranding(); }, 400);
     }
+    // S'assurer que le div a bien la classe, l'id et le logo corrects
+    if (!mobileHeader.classList.contains('mobile-header')) mobileHeader.classList.add('mobile-header');
+    if (!mobileHeader.id) mobileHeader.id = 'bhMobileHeader';
+    if (!mobileHeader.querySelector('.mobile-logo')) {
+      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;"><span class="mobile-logo-text"></span></a>';
+    }
+    normalizeBranding();
+    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); }, 100);
+    setTimeout(function(){ normalizeBranding(); }, 400);
 
     // Forcer l'affichage (certaines pages ont display:none inline)
     mobileHeader.style.setProperty('display', 'flex', 'important');
