@@ -11,8 +11,14 @@
 (function() {
   'use strict';
   
-  // Fonction pour forcer l'affichage du logo
   function forceLogoDisplay() {
+    // Sur desktop (> 1366px), cacher mobile-header et ne rien forcer
+    if (window.innerWidth > 1366) {
+      const mobileHeader = document.querySelector('.mobile-header');
+      if (mobileHeader) mobileHeader.style.display = 'none';
+      return;
+    }
+
     const mobileHeader = document.querySelector('.mobile-header');
     const mobileLogo = document.querySelector('.mobile-logo');
     const logoImg = document.querySelector('.mobile-logo img');
