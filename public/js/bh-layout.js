@@ -450,39 +450,6 @@ function getSidebarHTML() {
     const existingNative = document.querySelector('.mobile-header');
     if (existingNative && existingNative.innerHTML.trim().length > 0) return;
 
-    // Lire le titre depuis data-title ou page
-    const page = document.body.getAttribute('data-page');
-    let title = document.body.getAttribute('data-title');
-
-    // Mapping des titres courts par page — priorité absolue
-    const PAGE_TITLES = {
-      'app': 'Home',
-      'cleaning': 'Ménage',
-      'deposits': 'Finances',
-      'clients': 'Mes Clients'
-    };
-
-    // 1. Mapping par data-page (prioritaire)
-    if (PAGE_TITLES[page]) {
-      title = PAGE_TITLES[page];
-    }
-    // 2. Fallback sur h1 si pas de mapping
-    if (!title) {
-      const h1 = document.querySelector('h1.page-title');
-      if (h1) title = h1.textContent.trim();
-    }
-    // 3. Appliquer le mapping aussi sur les titres trouvés via h1
-    const h1Mappings = {
-      'Gestion du ménage': 'Ménage',
-      'Cautions et paiements': 'Finances',
-      'Factures Propriétaires': 'F. Propriétaire',
-      'Dashboard': 'Home'
-    };
-    if (title && h1Mappings[title]) title = h1Mappings[title];
-
-    // 4. Dernier fallback sur document.title (toujours créer le header pour avoir le logo)
-    if (!title) title = document.title || '';
-
     // Trouver ou créer la mobile-header.
     // Chercher d'abord le placeholder #bhMobileHeader (div vide sans classe .mobile-header)
     let mobileHeader = document.querySelector('.mobile-header') || document.getElementById('bhMobileHeader');
@@ -498,11 +465,8 @@ function getSidebarHTML() {
     if (!mobileHeader.querySelector('.mobile-logo')) {
       mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;"><span class="mobile-logo-text"></span></a>';
     }
-    normalizeBranding();
-    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); }, 100);
-    setTimeout(function(){ normalizeBranding(); }, 400);
 
-    // Forcer l'affichage (certaines pages ont display:none inline)
+    // Style : logo centré, rien d'autre (comme messages.html)
     mobileHeader.style.setProperty('display', 'flex', 'important');
     mobileHeader.style.setProperty('position', 'fixed', 'important');
     mobileHeader.style.setProperty('top', '0', 'important');
@@ -511,114 +475,22 @@ function getSidebarHTML() {
     mobileHeader.style.setProperty('height', 'calc(60px + env(safe-area-inset-top,0px))', 'important');
     mobileHeader.style.setProperty('z-index', '1100', 'important');
     mobileHeader.style.setProperty('align-items', 'center', 'important');
-    mobileHeader.style.setProperty('justify-content', 'flex-start', 'important');
+    mobileHeader.style.setProperty('justify-content', 'center', 'important');
     mobileHeader.style.setProperty('padding', 'env(safe-area-inset-top,0px) 16px 0', 'important');
-    mobileHeader.style.setProperty('gap', '12px', 'important');
     mobileHeader.style.setProperty('background', 'rgba(245,242,236,0.97)', 'important');
     mobileHeader.style.setProperty('backdrop-filter', 'blur(12px)', 'important');
     mobileHeader.style.setProperty('border-bottom', '1px solid rgba(200,184,154,0.4)', 'important');
+    mobileHeader.style.setProperty('box-shadow', '0 1px 8px rgba(13,17,23,0.06)', 'important');
 
-    // Injecter le titre après le logo
-    const titleEl = document.createElement('span');
-    titleEl.id = 'bh-mobile-page-title';
-    titleEl.textContent = title;
-    titleEl.style.cssText = 'font-family:"DM Sans",system-ui,sans-serif;font-size:14px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;letter-spacing:-0.01em;';
+    // Marquer comme traité
+    const sentinel = document.createElement('span');
+    sentinel.id = 'bh-mobile-page-title';
+    sentinel.style.display = 'none';
+    mobileHeader.appendChild(sentinel);
 
-    // Wrapper colonne pour logo+titre à gauche, pastilles en dessous
-    const logo = mobileHeader.querySelector('.mobile-logo');
-    if (logo) {
-      logo.after(titleEl);
-    } else {
-      mobileHeader.appendChild(titleEl);
-    }
-
-    // Pastilles statut sous le titre (si pas déjà présentes)
-    if (!document.getElementById('bh-mobile-svc')) {
-      const svcRow = document.createElement('div');
-      svcRow.id = 'bh-mobile-svc';
-      svcRow.style.cssText = 'display:flex;align-items:center;gap:10px;position:absolute;right:8px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);cursor:pointer;padding:0 4px;';
-      svcRow.title = 'Statut des services';
-      svcRow.innerHTML = [
-        '<div style="display:flex;align-items:center;gap:4px;">',
-        '  <i class="fas fa-server" style="font-size:9px;color:#9CA3AF;"></i>',
-        '  <span id="msvc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
-        '</div>',
-        '<div style="width:1px;height:8px;background:rgba(0,0,0,.15);"></div>',
-        '<div style="display:flex;align-items:center;gap:4px;">',
-        '  <i class="fas fa-plug" style="font-size:9px;color:#9CA3AF;"></i>',
-        '  <span id="msvc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
-        '</div>'
-      ].join('');
-
-      // Popup au clic
-      svcRow.addEventListener('click', function() {
-        var existing = document.getElementById('bh-svc-popup');
-        if (existing) { existing.remove(); return; }
-
-        var rdot = document.getElementById('msvc-dot-render');
-        var cdot = document.getElementById('msvc-dot-channex');
-        var rlbl = document.getElementById('svc-label-render');
-        var clbl = document.getElementById('svc-label-channex');
-        var rago = document.getElementById('svc-ago-render');
-        var cago = document.getElementById('svc-ago-channex');
-
-        var popup = document.createElement('div');
-        popup.id = 'bh-svc-popup';
-        popup.style.cssText = 'position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 8px);right:12px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:14px;padding:14px 16px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:200px;';
-        popup.innerHTML = [
-          '<div style="font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">Statut des services</div>',
-          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">',
-          '  <span style="width:8px;height:8px;border-radius:50%;background:' + (rdot ? rdot.style.background : '#6B7280') + ';display:inline-block;flex-shrink:0;"></span>',
-          '  <div>',
-          '    <div style="font-size:13px;font-weight:500;color:#0D1117;">Fonctionnement du site</div>',
-          '    <div style="font-size:11px;color:#6B7280;">' + (rlbl ? rlbl.textContent : '...') + (rago && rago.textContent ? ' · ' + rago.textContent : '') + '</div>',
-          '  </div>',
-          '</div>',
-          '<div style="display:flex;align-items:center;gap:10px;">',
-          '  <span style="width:8px;height:8px;border-radius:50%;background:' + (cdot ? cdot.style.background : '#6B7280') + ';display:inline-block;flex-shrink:0;"></span>',
-          '  <div>',
-          '    <div style="font-size:13px;font-weight:500;color:#0D1117;">Connexion API</div>',
-          '    <div style="font-size:11px;color:#6B7280;">' + (clbl ? clbl.textContent : '...') + (cago && cago.textContent ? ' · ' + cago.textContent : '') + '</div>',
-          '  </div>',
-          '</div>'
-        ].join('');
-
-        document.body.appendChild(popup);
-
-        // Fermer en cliquant ailleurs
-        setTimeout(function() {
-          document.addEventListener('click', function closePopup(e) {
-            if (!popup.contains(e.target) && e.target !== svcRow) {
-              popup.remove();
-              document.removeEventListener('click', closePopup);
-            }
-          });
-        }, 50);
-      });
-
-      mobileHeader.appendChild(svcRow);
-    }
-
-    // Bouton 🔔 Nouveautés dans le header mobile
-    if (!document.getElementById('bh-mobile-ann-btn')) {
-      var annBtn = document.createElement('button');
-      annBtn.id = 'bh-mobile-ann-btn';
-      annBtn.style.cssText = 'position:absolute;right:80px;top:calc(50% + var(--sat,0px)/2);transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;justify-content:center;color:#6B7280;font-size:15px;z-index:1200;-webkit-tap-highlight-color:transparent;';
-      annBtn.innerHTML = '<i class="fas fa-info-circle"></i><span id="bhAnnBadgeMobile" style="display:none;position:absolute;top:0;right:0;background:#EF4444;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;line-height:1.4;"></span>';
-      var openAnn = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.bhToggleAnnouncements) {
-          window.bhToggleAnnouncements();
-        } else {
-          // Fallback : créer popup directement
-          alert('Chargement des annonces...');
-        }
-      };
-      annBtn.addEventListener('click', openAnn);
-      annBtn.addEventListener('touchend', openAnn, { passive: false });
-      mobileHeader.appendChild(annBtn);
-    }
+    normalizeBranding();
+    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); }, 100);
+    setTimeout(function(){ normalizeBranding(); }, 400);
 
   }
 
