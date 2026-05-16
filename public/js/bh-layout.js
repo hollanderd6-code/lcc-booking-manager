@@ -628,7 +628,7 @@ function getSidebarHTML() {
     style.textContent = `
       @media (min-width: 1367px) {
         html[data-theme-v3="1"] .mobile-header { display: none !important; }
-        html[data-theme-v3="1"] #bhHeader { display: block !important; }
+        html[data-theme-v3="1"] #bhHeader { display: none !important; }
         html[data-theme-v3="1"] .main-header { display: flex; align-items: center; justify-content: space-between; }
         html[data-theme-v3="1"] .main-header .header-left { flex: 1; min-width: 0; overflow: hidden; }
         html[data-theme-v3="1"] .main-header .header-left .page-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
