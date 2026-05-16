@@ -12612,8 +12612,14 @@ async function loadPushNotifHistory() {
   if (!list) return;
   list.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;"><i class="fas fa-spinner fa-spin" style="font-size:20px;"></i></div>';
   try {
-    var res = await fetch('/api/notifications/history?limit=50', { credentials: 'include' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var token = localStorage.getItem('lcc_token');
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var res = await fetch('/api/notifications/history?limit=50', { headers: headers });
+    if (!res.ok) {
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:#e53e3e;font-size:13px;">Erreur HTTP ' + res.status + '</div>';
+      return;
+    }
     var data = await res.json();
     var notifs = data.notifications || [];
     if (!notifs.length) {
@@ -12649,7 +12655,7 @@ async function loadPushNotifHistory() {
     updateNotifBadge(0);
     fetch('/api/notifications/history/read', { method: 'PATCH', credentials: 'include' });
   } catch(e) {
-    list.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;">Erreur de chargement</div>';
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:#e53e3e;font-size:12px;">Erreur: ' + (e.message || e) + '</div>';
     console.error('loadPushNotifHistory:', e);
   }
 }
@@ -12682,9 +12688,37 @@ async function initNotifBadge() {
   } catch(e) {}
 }
 
+// Ouvrir panel sur onglet Push
+function openNotifPanel() {
+  var panel = document.getElementById('notificationsPanel');
+  if (!panel) return;
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+  } else {
+    panel.classList.add('open');
+    switchNotifTab('push');
+  }
+}
+
 // Bind boutons
 (function() {
+  function bindNotifBtns() {
+    // Desktop
+    var btnD = document.getElementById('notifHistoryBtn');
+    if (btnD && !btnD._notifBound) {
+      btnD._notifBound = true;
+      btnD.addEventListener('click', openNotifPanel);
+    }
+    // Mobile
+    var btnM = document.getElementById('bh-mobile-notif-btn');
+    if (btnM && !btnM._notifBound) {
+      btnM._notifBound = true;
+      btnM.addEventListener('click', openNotifPanel);
+      btnM.addEventListener('touchend', function(e) { e.preventDefault(); openNotifPanel(); }, { passive: false });
+    }
+  }
   document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(bindNotifBtns, 500);
     setTimeout(initNotifBadge, 800);
   });
 })();
