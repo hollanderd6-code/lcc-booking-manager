@@ -744,6 +744,12 @@ function updateSlider(val) {
     // Masquer le badge statique "RECOMMANDÉ" sur les cartes non recommandées
     const staticBadge = card.querySelector('.plan-badge.featured');
     if (staticBadge) staticBadge.style.display = p === recommendedPlan ? '' : 'none';
+    // Retirer/ajouter la class featured de la carte elle-même
+    if (p === recommendedPlan) {
+      card.classList.add('featured');
+    } else {
+      card.classList.remove('featured');
+    }
   });
 
   const recCard = document.getElementById('card-' + recommendedPlan);
