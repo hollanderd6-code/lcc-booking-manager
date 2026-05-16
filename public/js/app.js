@@ -1379,3 +1379,47 @@ function bhUpdateStatusCards(detection, data) {
     console.warn('bhUpdateStatusCards Messages error', e);
   }
 }
+
+// ── Notifications Push History ──────────────────────────────────────────────
+window.loadPushNotifHistory = async function() {
+  var list = document.getElementById('pushNotifList');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;"><i class="fas fa-spinner fa-spin" style="font-size:20px;"></i></div>';
+  try {
+    var token = localStorage.getItem('lcc_token');
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var res = await fetch('/api/notifications/history?limit=50', { headers: headers });
+    if (!res.ok) {
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:#e53e3e;font-size:13px;">Erreur HTTP ' + res.status + '</div>';
+      return;
+    }
+    var data = await res.json();
+    var notifs = data.notifications || data || [];
+    if (!notifs.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px 16px;color:#aaa;"><i class="fas fa-bell-slash" style="font-size:28px;margin-bottom:8px;display:block;"></i>Aucune notification reçue</div>';
+      return;
+    }
+    list.innerHTML = notifs.map(function(n) {
+      var date = new Date(n.created_at);
+      var dateStr = date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      return '<div style="background:' + (n.is_read ? '#fff' : '#f0fdf4') + ';border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:3px solid ' + (n.is_read ? '#e5e7eb' : '#1A7A5E') + ';">' +
+        '<div style="font-size:13px;font-weight:600;color:#111;margin-bottom:3px;">' + (n.title || '') + '</div>' +
+        '<div style="font-size:12px;color:#555;margin-bottom:4px;">' + (n.body || '') + '</div>' +
+        '<div style="font-size:11px;color:#aaa;">' + dateStr + '</div>' +
+        '</div>';
+    }).join('');
+    fetch('/api/notifications/history/read', { method: 'PATCH', headers: headers });
+  } catch(e) {
+    if (list) list.innerHTML = '<div style="text-align:center;padding:30px;color:#e53e3e;font-size:12px;">Erreur: ' + (e.message || e) + '</div>';
+  }
+};
+
+window.clearNotifHistory = async function() {
+  if (!confirm("Vider tout l'historique des notifications ?")) return;
+  var token = localStorage.getItem('lcc_token');
+  var headers = {};
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  await fetch('/api/notifications/history', { method: 'DELETE', headers: headers });
+  window.loadPushNotifHistory();
+};
