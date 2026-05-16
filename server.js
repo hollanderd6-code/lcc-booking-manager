@@ -4010,6 +4010,12 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       );
                     }
                   } catch(nErr) { console.error('❌ Notif BHGUEST:', nErr.message); }
+
+                  // 📅 Bloquer les dates sur Channex
+                  try {
+                    await triggerChannexAvailabilitySync(propId);
+                    console.log(`✅ [BHGUEST] Channex sync déclenché pour ${propId}`);
+                  } catch(chErr) { console.error('❌ [BHGUEST] Erreur sync Channex:', chErr.message); }
                 }
               }
             } catch(resaErr) {
@@ -13323,6 +13329,14 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
     }
     console.log(`✅ Blocage supprimé: id=${row.id} uid=${row.uid}`);
     res.json({ success: true, deleted: row.id });
+
+    // ✅ Sync Channex pour libérer les dates
+    setImmediate(async () => {
+      await triggerChannexAvailabilitySync(pid);
+      if (io) {
+        io.to('user_' + user.id).emit('reservations:updated', { propertyId: pid });
+      }
+    });
   } catch (err) {
     console.error('❌ DELETE /api/blocks/:id:', err);
     res.status(500).json({ error: 'Erreur serveur' });
