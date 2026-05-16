@@ -1829,6 +1829,6 @@ html[data-theme-v3="1"] .year-grid {
     display: none !important;
   }
   html[data-theme-v3="1"] #bhHeader {
-    display: block !important;
+    display: none !important;
   }
 }
