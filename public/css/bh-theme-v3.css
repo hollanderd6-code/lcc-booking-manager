@@ -1819,3 +1819,16 @@ html[data-theme-v3="1"] .period-nav-btn {
 html[data-theme-v3="1"] .year-grid {
   background: #F5F2EC !important;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   DESKTOP — cacher mobile-header, afficher #bhHeader
+   S'applique à toutes les pages (surcharge les CSS locaux)
+───────────────────────────────────────────────────────────── */
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] .mobile-header {
+    display: none !important;
+  }
+  html[data-theme-v3="1"] #bhHeader {
+    display: block !important;
+  }
+}
