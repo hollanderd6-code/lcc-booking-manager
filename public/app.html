@@ -12682,37 +12682,9 @@ async function initNotifBadge() {
   } catch(e) {}
 }
 
-// Ouvrir panel sur onglet Push
-function openNotifPanel() {
-  var panel = document.getElementById('notificationsPanel');
-  if (!panel) return;
-  if (panel.classList.contains('open')) {
-    panel.classList.remove('open');
-  } else {
-    panel.classList.add('open');
-    switchNotifTab('push');
-  }
-}
-
 // Bind boutons
 (function() {
-  function bindNotifBtns() {
-    // Desktop
-    var btnD = document.getElementById('notifHistoryBtn');
-    if (btnD && !btnD._notifBound) {
-      btnD._notifBound = true;
-      btnD.addEventListener('click', openNotifPanel);
-    }
-    // Mobile
-    var btnM = document.getElementById('bh-mobile-notif-btn');
-    if (btnM && !btnM._notifBound) {
-      btnM._notifBound = true;
-      btnM.addEventListener('click', openNotifPanel);
-      btnM.addEventListener('touchend', function(e) { e.preventDefault(); openNotifPanel(); }, { passive: false });
-    }
-  }
   document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(bindNotifBtns, 500);
     setTimeout(initNotifBadge, 800);
   });
 })();
