@@ -28728,14 +28728,15 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
           ).catch(() => ({ rows: [] }));
           if (resRow.rows[0]) {
             const dep = await pool.query(
-              `SELECT checkout_url FROM deposits
+              `SELECT id, checkout_url FROM deposits
                WHERE reservation_uid = $1 AND status IN ('pending','authorized')
                ORDER BY created_at DESC LIMIT 1`,
               [resRow.rows[0].uid]
             ).catch(() => ({ rows: [] }));
             const rawUrl = dep.rows[0]?.checkout_url || '';
+            const rawDepId = dep.rows[0]?.id || null;
             if (rawUrl) {
-              const shortUrl = await makeShortLink(pool, rawUrl, cv.user_id);
+              const shortUrl = await makeShortLink(pool, rawUrl, cv.user_id, { depositId: rawDepId });
               finalMessage = finalMessage.replace(/{caution_url}/gi, shortUrl);
             } else {
               console.warn(`⚠️ [send-platform] {caution_url} : pas de deposit trouvé pour conv ${conversationId}`);
