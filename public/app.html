@@ -3104,7 +3104,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </button>
     <button id="bh-mobile-notif-btn" title="Notifications" onclick="openNotifPanel()" style="background:transparent;border:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;-webkit-tap-highlight-color:transparent;">
       <i class="fas fa-bell"></i>
-      <span id="bh-mobile-notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;background:#EF4444;color:#fff;border-radius:9px;font-size:11px;font-weight:700;line-height:18px;text-align:center;padding:0 4px;pointer-events:none;box-shadow:0 0 0 2px #F5F2EC;"></span>
+      <span id="bh-mobile-notif-badge" style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 2px;pointer-events:none;"></span>
     </button>
   </div>
 
@@ -3134,7 +3134,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </button>
 <button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" onclick="openNotifPanel()" style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
   <i class="fas fa-bell"></i>
-  <span id="notifHistoryBadge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;background:#EF4444;color:#fff;border-radius:9px;font-size:11px;font-weight:700;line-height:18px;text-align:center;padding:0 4px;pointer-events:none;box-shadow:0 0 0 2px #F5F2EC;"></span>
+  <span id="notifHistoryBadge" style="display:none;position:absolute;top:5px;right:5px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px;pointer-events:none;"></span>
 </button>
 <button id="newReservationBtn" onclick="if(typeof openNewReservationModal==='function'){openNewReservationModal();}else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
   <i class="fas fa-plus"></i> Nouvelle réservation
@@ -13936,10 +13936,9 @@ function openNotifPanel() {
   }
   // Overlay
   var ov = document.createElement('div');
-  ov.id = 'notifPanelOverlay';
+  ov.id = 'notifPanelOverlayDynamic';
   ov.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.4);';
   ov.onclick = closeNotifPanel;
-  document.body.appendChild(ov);
 
   // Panel
   var panel = document.createElement('div');
@@ -13957,12 +13956,12 @@ function openNotifPanel() {
       </div>
       <!-- Onglets -->
       <div style="display:flex;gap:0;">
-        <button id="notifTabPush" onclick="notifSwitchTab('push')" style="flex:1;padding:10px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:white;border-bottom:2px solid white;transition:all .15s;position:relative;">
+        <button id="notifTabActivity" onclick="notifSwitchTab('activity')" style="flex:1;padding:10px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:white;border-bottom:2px solid white;transition:all .15s;">
+          <i class="fas fa-info-circle" style="margin-right:5px;"></i>Activité
+        </button>
+        <button id="notifTabPush" onclick="notifSwitchTab('push')" style="flex:1;padding:10px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:rgba(255,255,255,.5);border-bottom:2px solid transparent;transition:all .15s;position:relative;">
           <i class="fas fa-bell" style="margin-right:5px;"></i>Push
           <span id="notifTabBadge" style="display:none;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;"></span>
-        </button>
-        <button id="notifTabActivity" onclick="notifSwitchTab('activity')" style="flex:1;padding:10px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:rgba(255,255,255,.5);border-bottom:2px solid transparent;transition:all .15s;">
-          <i class="fas fa-info-circle" style="margin-right:5px;"></i>Activité
         </button>
       </div>
     </div>
@@ -13999,16 +13998,16 @@ function openNotifPanel() {
 
   document.body.appendChild(panel);
 
-  // Ouvrir sur Push par défaut
-  notifSwitchTab('push');
-  if (typeof loadPushNotifHistory === 'function') loadPushNotifHistory();
+  // Charger l'onglet activité par défaut
+  notifSwitchTab('activity');
+  if (typeof window.loadActivityData === 'function') window.loadActivityData();
 }
 
 function closeNotifPanel() {
   var p = document.getElementById('notificationsPanel');
-  var o = document.getElementById('notifPanelOverlay');
   if (p) p.remove();
-  if (o) o.remove();
+  // Supprimer tous les overlays (statique + dynamique)
+  document.querySelectorAll('#notifPanelOverlay, #notifPanelOverlayDynamic').forEach(function(o) { o.remove(); });
 }
 
 function notifSwitchTab(tab) {
