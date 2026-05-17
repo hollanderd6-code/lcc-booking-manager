@@ -22516,13 +22516,14 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
       const resUid = resRow.rows[0]?.uid || null;
       if (resUid) {
         const dep = await pool.query(
-          `SELECT checkout_url FROM deposits
+          `SELECT id, checkout_url FROM deposits
            WHERE reservation_uid = $1 AND status IN ('pending','authorized')
            ORDER BY created_at DESC LIMIT 1`,
           [resUid]
         ).catch(() => ({ rows: [] }));
         const rawDepUrl = dep.rows[0]?.checkout_url || '';
-        cautionUrl = rawDepUrl ? await makeShortLink(pool, rawDepUrl, conv.user_id) : '';
+        const rawDepId = dep.rows[0]?.id || null;
+        cautionUrl = rawDepUrl ? await makeShortLink(pool, rawDepUrl, conv.user_id, { depositId: rawDepId }) : '';
 
         // Deposit absent → le créer à la volée
         if (!cautionUrl) {
@@ -22823,14 +22824,15 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
         if (resUidCron) {
           // Chercher par reservation_uid OU par channex_booking_id
           const dep2 = await pool.query(
-            `SELECT checkout_url FROM deposits
+            `SELECT id, checkout_url FROM deposits
              WHERE (reservation_uid = $1 OR reservation_uid = $2)
              AND status IN ('pending','authorized')
              ORDER BY created_at DESC LIMIT 1`,
             [resUidCron, c.channex_booking_id ? 'CHX_' + c.channex_booking_id : '__none__']
           ).catch(() => ({ rows: [] }));
-          cautionUrl = dep2.rows[0]?.checkout_url
-            ? await makeShortLink(pool, dep2.rows[0].checkout_url, c.user_id)
+          const dep2Row = dep2.rows[0];
+          cautionUrl = dep2Row?.checkout_url
+            ? await makeShortLink(pool, dep2Row.checkout_url, c.user_id, { depositId: dep2Row.id || null })
             : '';
 
           // ✅ Créer le deposit à la volée si absent (comme sendTemplateMessage)
