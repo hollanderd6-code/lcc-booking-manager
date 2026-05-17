@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express')
-const compression = require('compression');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
@@ -4599,20 +4598,10 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
 
 // Middleware
 app.use(cors());
-app.use(compression()); // ✅ Compression gzip — réduit la taille des réponses de 60-80%
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
-// ✅ Cache HTTP 1h sur JS/CSS, pas de cache sur HTML (pour les mises à jour)
-app.use(express.static('public', {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache');
-    } else if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$/)) {
-      res.setHeader('Cache-Control', 'public, max-age=3600'); // 1h
-    }
-  }
-}));
+app.use(express.static('public'));
 
 // ============================================
 // 📱 ROUTES GUEST APP - DEEP LINKS iOS/Android
