@@ -13956,12 +13956,12 @@ function openNotifPanel() {
       </div>
       <!-- Onglets -->
       <div style="display:flex;gap:0;">
-        <button id="notifTabActivity" onclick="notifSwitchTab('activity')" style="flex:1;padding:10px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:white;border-bottom:2px solid white;transition:all .15s;">
-          <i class="fas fa-info-circle" style="margin-right:5px;"></i>Activité
-        </button>
-        <button id="notifTabPush" onclick="notifSwitchTab('push')" style="flex:1;padding:10px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:rgba(255,255,255,.5);border-bottom:2px solid transparent;transition:all .15s;position:relative;">
+        <button id="notifTabPush" onclick="notifSwitchTab('push')" style="flex:1;padding:10px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:white;border-bottom:2px solid white;transition:all .15s;position:relative;">
           <i class="fas fa-bell" style="margin-right:5px;"></i>Push
           <span id="notifTabBadge" style="display:none;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;"></span>
+        </button>
+        <button id="notifTabActivity" onclick="notifSwitchTab('activity')" style="flex:1;padding:10px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:rgba(255,255,255,.5);border-bottom:2px solid transparent;transition:all .15s;">
+          <i class="fas fa-info-circle" style="margin-right:5px;"></i>Activité
         </button>
       </div>
     </div>
@@ -13999,8 +13999,8 @@ function openNotifPanel() {
   document.body.appendChild(panel);
 
   // Charger l'onglet activité par défaut
-  notifSwitchTab('activity');
-  if (typeof window.loadActivityData === 'function') window.loadActivityData();
+  notifSwitchTab('push');
+  if (typeof loadPushNotifHistory === 'function') loadPushNotifHistory();
 }
 
 function closeNotifPanel() {
