@@ -3377,8 +3377,8 @@ window.closeChecklistsKpiModal = function() {
 <i class="fas fa-chevron-left"></i>
 </button>
 <div class="period-display">
-<span class="month-name" id="currentMonth">Novembre</span>
-<span class="year" id="currentYear">2025</span>
+<span class="month-name" id="currentMonth"><script>document.write(new Date().toLocaleDateString('fr-FR',{month:'long'}).replace(/^\w/,c=>c.toUpperCase()))</script></span>
+<span class="year" id="currentYear"><script>document.write(new Date().getFullYear())</script></span>
 </div>
 <button class="period-nav-btn" id="nextPeriod">
 <i class="fas fa-chevron-right"></i>
