@@ -22615,29 +22615,18 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
 
     // Envoyer via Channex si booking_id disponible (non bloquant)
     if (conv.channex_booking_id) {
-      // Booking.com bloque les URLs dans les messages via API
-      // Si le message contient un lien ET que la plateforme est Booking → skip Channex
-      const hasUrl = /https?:\/\/\S+/i.test(msg);
-      const platform = (conv.platform || '').toLowerCase();
-      const isBooking = platform.includes('booking') || platform === 'bdc';
-      const skipChannex = hasUrl && isBooking;
-
-      if (skipChannex) {
-        console.log(`ℹ️ [TPL SEND] Skip Channex (Booking.com bloque les URLs) — message sauvé en DB uniquement`);
-      } else {
-        try {
-          await sendBookingMessage(conv.channex_booking_id, msg);
-          console.log(`✅ [TPL SEND] Message envoyé via Channex (booking ${conv.channex_booking_id})`);
-        } catch(channexErr) {
-          const isThreadMissing = JSON.stringify(channexErr.response?.data || '').includes('thread_id');
-          const isForbidden = channexErr.response?.status === 403;
-          if (isThreadMissing) {
-            console.log(`ℹ️ [TPL SEND] Pas de thread Channex pour ce booking`);
-          } else if (isForbidden) {
-            console.log(`ℹ️ [TPL SEND] 403 Channex — probablement URL bloquée par l'OTA, message sauvé en DB`);
-          } else {
-            console.warn(`⚠️ [TPL SEND] Channex error:`, channexErr.message);
-          }
+      try {
+        await sendBookingMessage(conv.channex_booking_id, msg);
+        console.log(`✅ [TPL SEND] Message envoyé via Channex (booking ${conv.channex_booking_id})`);
+      } catch(channexErr) {
+        const isThreadMissing = JSON.stringify(channexErr.response?.data || '').includes('thread_id');
+        const isForbidden = channexErr.response?.status === 403;
+        if (isThreadMissing) {
+          console.log(`ℹ️ [TPL SEND] Pas de thread Channex pour ce booking`);
+        } else if (isForbidden) {
+          console.log(`ℹ️ [TPL SEND] 403 Channex — URL bloquée par l'OTA, message sauvé en DB`);
+        } else {
+          console.warn(`⚠️ [TPL SEND] Channex error:`, channexErr.message);
         }
       }
     }
@@ -28748,15 +28737,11 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
       }
     }
 
-    // Booking.com bloque les URLs dans les messages via API
-    const hasUrl = /https?:\/\/\S+/i.test(finalMessage);
-    const convPlatform = (resaResult.rows[0].platform || '').toLowerCase();
-    const isBookingPlatform = convPlatform.includes('booking') || convPlatform === 'bdc';
-
-    if (hasUrl && isBookingPlatform) {
-      console.log(`ℹ️ [send-platform] Skip Channex — Booking.com bloque les URLs, message sauvé en DB`);
-    } else {
+    // Toujours essayer d'envoyer via Channex
+    try {
       await sendBookingMessage(channex_booking_id, finalMessage);
+    } catch(channexErr) {
+      console.warn(`⚠️ [send-platform] Channex error:`, channexErr.message);
     }
 
     // Sauvegarder en DB
