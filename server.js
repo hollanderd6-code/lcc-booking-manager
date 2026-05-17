@@ -22881,7 +22881,12 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
     if (!skipSend) {
 
     if (c.channex_booking_id) {
-      await sendBookingMessage(c.channex_booking_id, finalMsg);
+      try {
+        await sendBookingMessage(c.channex_booking_id, finalMsg);
+        console.log(`✅ [CRON TPL] Message envoyé via Channex (booking ${c.channex_booking_id})`);
+      } catch(channexErr) {
+        console.warn(`⚠️ [CRON TPL] Erreur Channex (non bloquant):`, channexErr.message);
+      }
     }
 
     // Sauvegarder en DB
