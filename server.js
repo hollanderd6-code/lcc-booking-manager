@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express')
-const compression = require('compression');
+
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
@@ -4602,7 +4602,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
 
 // Middleware
 app.use(cors());
-app.use(compression()); // ✅ Compression gzip
+
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
