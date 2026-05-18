@@ -1,1219 +1,1352 @@
 // ============================================
-// ROUTES SYSTÈME DE CHAT SÉCURISÉ
+// CONFIGURATION & STATE
 // ============================================
+// Détection du mode natif (Capacitor)
+const IS_NATIVE = window.Capacitor?.isNativePlatform() || false;
+const API_URL = IS_NATIVE 
+  ? 'https://lcc-booking-manager.onrender.com'
+  : window.location.origin;
 
-const crypto = require('crypto');
+console.log('🔌 [SOCKET] API_URL:', API_URL, '(Native:', IS_NATIVE + ')');
 
-// ============================================
-// 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
-// ============================================
-const { handleIncomingMessage } = require('../integrated-chat-handler');
-const { startOnboarding } = require('../onboarding-system');
+let socket = null;
+let currentChannexBookingId = null; // null si pas de lien Channex
+window._chatSocket = null; // exposé pour messages.html
+let allConversations = [];
+let searchQuery = '';
+let currentConversationId = null;
+let userId = null;
 
-// ============================================
-// 🤖 SERVICE DE RÉPONSES AUTOMATIQUES
-// ============================================
+// ── Cache propriétés pour la résolution des raccourcis ────────
+const _propertiesCache = {};
 
-const QUESTION_PATTERNS = {
-  checkin: {
-    keywords: ['arriver', 'arrivée', 'check-in', 'checkin', 'heure arrivée', 'quelle heure arriver', 'arrive'],
-    priority: 1
-  },
-  checkout: {
-    keywords: ['partir', 'départ', 'check-out', 'checkout', 'heure départ', 'quelle heure partir', 'libérer', 'quitter'],
-    priority: 1
-  },
-  draps: {
-    keywords: ['draps', 'drap', 'linge de lit', 'literie'],
-    priority: 2
-  },
-  serviettes: {
-    keywords: ['serviettes', 'serviette', 'linge de toilette', 'bain'],
-    priority: 2
-  },
-  cuisine: {
-    keywords: ['cuisine', 'cuisiner', 'équipée', 'ustensiles', 'vaisselle'],
-    priority: 2
-  },
-  wifi: {
-    keywords: ['wifi', 'wi-fi', 'internet', 'réseau', 'connexion', 'mot de passe wifi', 'code wifi'],
-    priority: 1
-  },
-  acces_code: {
-    keywords: ['code', 'clé', 'clef', 'accès', 'entrer', 'porte', 'digicode'],
-    priority: 1
-  },
-  animaux: {
-    keywords: ['animaux', 'animal', 'chien', 'chat', 'accepté'],
-    priority: 2
-  },
-  parking: {
-    keywords: ['parking', 'garer', 'stationnement', 'voiture', 'se garer'],
-    priority: 2
-  }
-};
+// ── Résolution des raccourcis {{variable}} ────────────────────
+// Appelée avant l'envoi si le message contient {{ }}
+async function resolveShortcuts(text, conv) {
+  if (!text || (!text.includes('{{') && !text.includes('{'))) return text;
 
-function normalizeText(text) {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w\s-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+  const firstName  = conv.guest_first_name || (conv.guest_name || '').split(' ')[0] || '';
+  const guestName  = [conv.guest_first_name, conv.guest_last_name].filter(Boolean).join(' ')
+                     || conv.guest_name || 'Voyageur';
+  const propName   = conv.property_name || '';
 
-function detectQuestions(message) {
-  const normalized = normalizeText(message);
-  const detected = [];
-  
-  for (const [category, config] of Object.entries(QUESTION_PATTERNS)) {
-    for (const keyword of config.keywords) {
-      const normalizedKeyword = normalizeText(keyword);
-      if (normalized.includes(normalizedKeyword)) {
-        detected.push({ category, priority: config.priority });
-        break;
-      }
-    }
-  }
-  
-  return detected.sort((a, b) => a.priority - b.priority);
-}
-
-function generateAutoResponse(property, detectedQuestions) {
-  if (!property || detectedQuestions.length === 0) return null;
-  
-  const amenities = typeof property.amenities === 'string' ? JSON.parse(property.amenities) : (property.amenities || {});
-  const houseRules = typeof property.house_rules === 'string' ? JSON.parse(property.house_rules) : (property.house_rules || {});
-  const practicalInfo = typeof property.practical_info === 'string' ? JSON.parse(property.practical_info) : (property.practical_info || {});
-  
-  const responses = [];
-  
-  for (const question of detectedQuestions) {
-    let response = null;
-    
-    switch (question.category) {
-      case 'checkin':
-        if (property.arrival_time) response = `L'arrivée est possible à partir de ${property.arrival_time}.`;
-        break;
-      case 'checkout':
-        if (property.departure_time) response = `Le départ doit se faire avant ${property.departure_time}.`;
-        break;
-      case 'draps':
-        response = amenities.draps ? 'Oui, les draps sont fournis.' : 'Non, les draps ne sont pas fournis.';
-        break;
-      case 'serviettes':
-        response = amenities.serviettes ? 'Oui, les serviettes sont fournies.' : 'Non, les serviettes ne sont pas fournies.';
-        break;
-      case 'cuisine':
-        response = amenities.cuisine_equipee ? 'Oui, la cuisine est équipée.' : 'La cuisine dispose d\'équipements de base.';
-        break;
-      case 'wifi':
-        if (property.wifi_name && property.wifi_password) {
-          response = `Réseau WiFi : "${property.wifi_name}"\nMot de passe : "${property.wifi_password}"`;
-        }
-        break;
-      case 'acces_code':
-        if (property.access_code) response = `Le code d'accès est : ${property.access_code}`;
-        break;
-      case 'animaux':
-        response = houseRules.animaux ? 'Oui, les animaux sont acceptés.' : 'Non, les animaux ne sont pas acceptés.';
-        break;
-      case 'parking':
-        if (amenities.parking && practicalInfo.parking_details) {
-          response = `Oui, voici les informations parking : ${practicalInfo.parking_details}`;
-        } else if (amenities.parking) {
-          response = 'Oui, un parking est disponible.';
-        }
-        break;
-    }
-    
-    if (response) responses.push(response);
-  }
-  
-  return responses.length > 0 ? responses.join('\n\n') : null;
-}
-
-// ============================================
-// Configuration des routes de chat
-// ============================================
-
-/**
- * Configuration des routes de chat
- * @param {Object} app - Express app
- * @param {Object} pool - PostgreSQL pool
- * @param {Object} io - Socket.io instance
- */
-function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
-  
-  // ✅ Import des fonctions de gestion des permissions depuis le middleware
-  const { 
-    requirePermission, 
-    loadSubAccountData, 
-    filterByAccessibleProperties, 
-    getRealUserId 
-  } = require('../sub-accounts-middleware');
-  
-  // Garder authenticateToken pour compatibilité avec les routes existantes
-  const authenticateToken = authenticateAny;
-
-  // ============================================
-  // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
-  // ============================================
-  
-  /**
-   * Middleware qui tente d'authentifier l'utilisateur mais ne bloque pas si absent
-   * Utilisé pour les routes accessibles aux propriétaires ET aux voyageurs
-   */
-  const optionalAuth = async (req, res, next) => {
-    try {
-      const authHeader = req.headers.authorization;
-      
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        // Pas de token = continue comme invité
-        req.user = null;
-        return next();
-      }
-      
-      const token = authHeader.substring(7);
-      const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-      
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded; // Ajouter les infos user à req
-        next();
-      } catch (error) {
-        // Token invalide = continue comme invité
-        console.warn('⚠️ Token invalide dans optionalAuth:', error.message);
-        req.user = null;
-        next();
-      }
-    } catch (error) {
-      console.error('❌ Erreur dans optionalAuth:', error);
-      req.user = null;
-      next();
-    }
+  const fmtDate = (iso) => {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }); }
+    catch { return iso; }
   };
-  
-  // ============================================
-  // 1. GÉNÉRATION DE CONVERSATION POUR NOUVELLE RÉSERVATION
-  // ============================================
-  
-  /**
-   * Crée automatiquement une conversation quand une réservation arrive
-   * Appelé par le service iCal lors de la synchronisation
-   */
-  app.post('/api/chat/create-for-reservation', authenticateToken, checkSubscription, async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email } = req.body;
 
-      if (!property_id || !reservation_start_date) {
-        return res.status(400).json({ error: 'property_id et reservation_start_date requis' });
-      }
-
-      // Vérifier si conversation existe déjà
-      const existing = await pool.query(
-        `SELECT id, unique_token, pin_code FROM conversations 
-         WHERE user_id = $1 AND property_id = $2 AND reservation_start_date = $3 AND platform = $4`,
-        [userId, property_id, reservation_start_date, platform || 'direct']
-      );
-
-      if (existing.rows.length > 0) {
-        const conv = existing.rows[0];
-        return res.json({
-          success: true,
-          already_exists: true,
-          conversation_id: conv.id,
-          chat_link: `${process.env.APP_URL || 'http://localhost:3000'}/chat/${conv.unique_token}`,
-          pin_code: conv.pin_code
-        });
-      }
-
-      // Générer PIN à 4 chiffres
-      const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
-
-      // Générer token unique
-      const uniqueToken = crypto.randomBytes(32).toString('hex');
-      const photosToken = crypto.randomBytes(32).toString('hex');
-
-      // Créer la conversation
-      const result = await pool.query(
-        `INSERT INTO conversations 
-        (user_id, property_id, reservation_start_date, reservation_end_date, platform, guest_name, guest_email, pin_code, unique_token, photos_token, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
-        RETURNING id, unique_token, pin_code, photos_token`,
-        [userId, property_id, reservation_start_date, reservation_end_date, platform || 'direct', guest_name, guest_email, pinCode, uniqueToken, photosToken]
-      );
-
-      const conversation = result.rows[0];
-
-      // ✅ Envoyer le message de bienvenue automatique
-      await sendWelcomeMessage(pool, io, conversation.id, property_id, userId);
-
-      res.json({
-        success: true,
-        conversation_id: conversation.id,
-        chat_link: `${process.env.APP_URL || 'http://localhost:3000'}/chat/${conversation.unique_token}`,
-        pin_code: conversation.pin_code,
-        photos_token: conversation.photos_token
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur création conversation:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  // ============================================
-  // 2. LISTE DES CONVERSATIONS (PROPRIÉTAIRE)
-  // ============================================
-  
-  app.get('/api/chat/conversations', 
-    authenticateToken, 
-    checkSubscription, 
-    requirePermission(pool, 'can_view_conversations'),
-    loadSubAccountData(pool),
-    async (req, res) => {
-    try {
-      // ✅ Support des sous-comptes : récupérer l'ID utilisateur réel
-      const userId = await getRealUserId(pool, req);
-      const { status, property_id } = req.query;
-
-      let query = `
-        SELECT DISTINCT ON (c.id)
-          c.*,
-          c.guest_first_name,
-          c.guest_last_name,
-          c.guest_phone,
-          p.name as property_name,
-          p.color as property_color,
-          r.guest_country,
-          r.guest_language,
-          r.guest_city,
-          r.occupancy_adults,
-          r.occupancy_children,
-          r.amount_total,
-          r.amount_rooms,
-          r.amount_taxes,
-          r.amount_cleaning,
-          r.ota_commission,
-          r.host_payout,
-          r.days_breakdown,
-          r.currency,
-          (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
-          (SELECT message FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
-          (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
-        FROM conversations c
-        LEFT JOIN properties p ON c.property_id = p.id
-        LEFT JOIN reservations r ON (
-          (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
-          OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
-              AND DATE(r.start_date) = DATE(c.reservation_start_date))
-        )
-        WHERE c.user_id = $1
-      `;
-
-      const params = [userId];
-      let paramCount = 1;
-
-      if (status) {
-        paramCount++;
-        query += ` AND c.status = $${paramCount}`;
-        params.push(status);
-      }
-
-      if (property_id) {
-        paramCount++;
-        query += ` AND c.property_id = $${paramCount}`;
-        params.push(property_id);
-      }
-
-      query += ` ORDER BY c.id, last_message_time DESC NULLS LAST, c.created_at DESC`;
-
-      const result = await pool.query(query, params);
-
-      // ✅ Filtrer par propriétés accessibles si sous-compte
-      const filteredConversations = filterByAccessibleProperties(result.rows, req);
-
-      // ⭐ Enrichir les conversations avec les infos du voyageur
-      const enrichedConversations = filteredConversations.map(conv => ({
-        ...conv,
-        guest_display_name: conv.guest_first_name 
-          ? `${conv.guest_first_name} ${conv.guest_last_name || ''}`.trim()
-          : conv.guest_name || `Voyageur ${conv.platform || 'Booking'}`,
-        guest_initial: conv.guest_first_name 
-          ? conv.guest_first_name.charAt(0).toUpperCase() 
-          : (conv.guest_name ? conv.guest_name.charAt(0).toUpperCase() : 'V'),
-        // Données financières converties en nombres
-        amount_total:    conv.amount_total    ? parseFloat(conv.amount_total)    : null,
-        amount_rooms:    conv.amount_rooms    ? parseFloat(conv.amount_rooms)    : null,
-        amount_taxes:    conv.amount_taxes    ? parseFloat(conv.amount_taxes)    : null,
-        amount_cleaning: conv.amount_cleaning ? parseFloat(conv.amount_cleaning) : null,
-        ota_commission:  conv.ota_commission  ? parseFloat(conv.ota_commission)  : null,
-        host_payout:     conv.host_payout     ? parseFloat(conv.host_payout)     : null,
-      }));
-
-      res.json({
-        success: true,
-        conversations: enrichedConversations
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur récupération conversations:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  // ============================================
-  // 3. VÉRIFICATION ET ACCÈS AU CHAT (VOYAGEUR)
-  // ============================================
-  
-  /**
-   * Vérification par token unique (lien direct)
-   */
-  app.post('/api/chat/verify', async (req, res) => {
-    try {
-      const { token, pin_code } = req.body;
-
-      if (!token || !pin_code) {
-        return res.status(400).json({ error: 'Token et PIN requis' });
-      }
-
-      const result = await pool.query(
-        `SELECT 
-          c.*,
-          c.guest_first_name,
-          c.guest_last_name,
-          c.guest_phone,
-          p.name as property_name,
-          p.address as property_address
-         FROM conversations c
-         LEFT JOIN properties p ON c.property_id = p.id
-         WHERE c.unique_token = $1 AND c.pin_code = $2`,
-        [token, pin_code]
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Conversation introuvable ou code incorrect' });
-      }
-
-      const conversation = result.rows[0];
-
-      // Marquer comme vérifiée si pas déjà fait
-      if (!conversation.is_verified) {
-        await pool.query(
-          `UPDATE conversations 
-           SET is_verified = TRUE, verified_at = NOW(), status = 'active'
-           WHERE id = $1`,
-          [conversation.id]
-        );
-      }
-
-      res.json({
-        success: true,
-        conversation_id: conversation.id,
-        property_id: conversation.property_id,
-        property_name: conversation.property_name,
-        property_address: conversation.property_address,
-        reservation_start: conversation.reservation_start_date,
-        reservation_end: conversation.reservation_end_date,
-        // ⭐ Ajouter les infos du voyageur
-        guest_first_name: conversation.guest_first_name,
-        guest_last_name: conversation.guest_last_name,
-        guest_phone: conversation.guest_phone,
-        guest_display_name: conversation.guest_first_name 
-          ? `${conversation.guest_first_name} ${conversation.guest_last_name || ''}`.trim()
-          : `Voyageur ${conversation.platform || 'Booking'}`,
-        guest_initial: conversation.guest_first_name 
-          ? conversation.guest_first_name.charAt(0).toUpperCase() 
-          : 'V'
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur vérification:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  /**
-   * Vérification par property + dates + PIN
-   */
-  app.post('/api/chat/verify-by-property', async (req, res) => {
-    try {
-      const { property_id, chat_pin, checkin_date, checkout_date, platform } = req.body;
-
-      if (!property_id || !chat_pin || !checkin_date || !platform) {
-        return res.status(400).json({ 
-          error: 'property_id, chat_pin, checkin_date et platform requis' 
-        });
-      }
-
-      // Vérifier que la propriété existe ET récupérer le PIN de la propriété
-      const property = await pool.query(
-        `SELECT id, name, user_id, chat_pin FROM properties WHERE id = $1`,
-        [property_id]
-      );
-
-      if (property.rows.length === 0) {
-        console.log('❌ [VERIFY] Propriété introuvable');
-        return res.status(404).json({ error: 'Propriété introuvable' });
-      }
-
-      console.log('✅ [VERIFY] Propriété trouvée:', property.rows[0].name, 'PIN attendu:', property.rows[0].chat_pin);
-
-      // ✅ VÉRIFIER LE PIN DE LA PROPRIÉTÉ
-      if (property.rows[0].chat_pin && property.rows[0].chat_pin !== chat_pin) {
-        console.log('❌ [VERIFY] PIN incorrect. Attendu:', property.rows[0].chat_pin, 'Reçu:', chat_pin);
-        return res.status(403).json({ error: 'Code PIN incorrect' });
-      }
-
-      console.log('✅ [VERIFY] PIN correct !');
-
-      const checkinDateStr = new Date(checkin_date).toISOString().split('T')[0];
-      const checkoutDateStr = checkout_date ? new Date(checkout_date).toISOString().split('T')[0] : null;
-
-      // Vérifier qu'une réservation existe
-      console.log('🔍 [VERIFY] Recherche réservation avec:', {
-        property_id,
-        checkinDateStr,
-        checkoutDateStr,
-        platform
-      });
-      
-      // Recherche FLEXIBLE bidirectionnelle
-      const reservationResult = await pool.query(
-        `SELECT id, source, platform FROM reservations 
-         WHERE property_id = $1 
-         AND DATE(start_date) = $2 
-         AND ($3::date IS NULL OR DATE(end_date) = $3)
-         AND (
-           -- Match exact
-           LOWER(source) = LOWER($4)
-           OR LOWER(platform) = LOWER($4)
-           -- Source/Platform contient ce que l'utilisateur cherche
-           OR LOWER(source) LIKE '%' || LOWER($4) || '%'
-           OR LOWER(platform) LIKE '%' || LOWER($4) || '%'
-           -- CE QUE L'UTILISATEUR CHERCHE contient source/platform (inversé)
-           OR LOWER($4) LIKE '%' || LOWER(source) || '%'
-           OR LOWER($4) LIKE '%' || LOWER(platform) || '%'
-           -- Cas spécial : Direct = MANUEL
-           OR (LOWER($4) = 'direct' AND LOWER(source) = 'manuel')
-           OR (LOWER($4) = 'direct' AND LOWER(platform) = 'manuel')
-           OR (LOWER($4) = 'manuel' AND LOWER(source) = 'direct')
-           OR (LOWER($4) = 'manuel' AND LOWER(platform) = 'direct')
-         )
-         LIMIT 1`,
-        [property_id, checkinDateStr, checkoutDateStr, platform]
-      );
-
-      console.log('📊 [VERIFY] Résultat recherche:', {
-        found: reservationResult.rows.length > 0,
-        data: reservationResult.rows[0]
-      });
-
-      if (reservationResult.rows.length === 0) {
-        // Debug : voir ce qu'il y a vraiment dans la base
-        const debugResult = await pool.query(
-          `SELECT id, source, platform, start_date, end_date 
-           FROM reservations 
-           WHERE property_id = $1 
-           AND DATE(start_date) = $2 
-           LIMIT 3`,
-          [property_id, checkinDateStr]
-        );
-        
-        console.log('❌ [VERIFY] Aucune réservation trouvée. Voici ce qui existe pour cette date:', debugResult.rows);
-        
-        return res.status(404).json({ 
-          error: 'Aucune réservation trouvée avec ces informations',
-          debug: debugResult.rows.length > 0 ? {
-            available: debugResult.rows.map(r => ({
-              source: r.source,
-              platform: r.platform
-            }))
-          } : 'Aucune réservation pour cette date'
-        });
-      }
-
-      // ✅ Chercher ou créer la conversation
-      // IMPORTANT : On ne vérifie PAS le pin_code ici car on utilise le PIN de la PROPRIÉTÉ
-      let conversation;
-      const existingConv = await pool.query(
-        `SELECT * FROM conversations 
-         WHERE property_id = $1 
-         AND DATE(reservation_start_date) = $2 
-         AND LOWER(platform) = LOWER($3)`,
-        [property_id, checkinDateStr, platform]
-      );
-
-      console.log('🔍 [VERIFY] Recherche conversation existante:', {
-        found: existingConv.rows.length > 0,
-        conversation_id: existingConv.rows[0]?.id
-      });
-
-      if (existingConv.rows.length > 0) {
-        console.log('✅ [VERIFY] Conversation existante trouvée');
-        conversation = existingConv.rows[0];
-        
-        if (!conversation.is_verified) {
-          await pool.query(
-            `UPDATE conversations 
-             SET is_verified = TRUE, verified_at = NOW(), status = 'active'
-             WHERE id = $1`,
-            [conversation.id]
-          );
-        }
-      } else {
-        console.log('📝 [VERIFY] Création nouvelle conversation avec PIN propriété');
-        const uniqueToken = crypto.randomBytes(32).toString('hex');
-        const photosToken = crypto.randomBytes(32).toString('hex');
-
-        const newConvResult = await pool.query(
-          `INSERT INTO conversations 
-          (user_id, property_id, reservation_start_date, reservation_end_date, platform, pin_code, unique_token, photos_token, is_verified, verified_at, status)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, NOW(), 'active')
-          RETURNING *`,
-          [property.rows[0].user_id, property_id, checkinDateStr, checkoutDateStr, platform, property.rows[0].chat_pin || chat_pin, uniqueToken, photosToken]
-        );
-
-        conversation = newConvResult.rows[0];
-        console.log('✅ [VERIFY] Conversation créée:', conversation.id);
-        
-        // ✅ Envoyer le message de bienvenue pour la nouvelle conversation
-        await sendWelcomeMessage(pool, io, conversation.id, property_id, property.rows[0].user_id);
-      }
-
-      // ⭐ Récupérer les infos du voyageur de la conversation
-      const convDetailsResult = await pool.query(
-        `SELECT guest_first_name, guest_last_name, guest_phone, platform 
-         FROM conversations 
-         WHERE id = $1`,
-        [conversation.id]
-      );
-      
-      const convDetails = convDetailsResult.rows[0] || {};
-
-      res.json({
-        success: true,
-        conversation_id: conversation.id,
-        property_id: property_id,
-        property_name: property.rows[0].name,
-        unique_token: conversation.unique_token, // ✅ AJOUT
-        reservation_start: conversation.reservation_start_date, // ✅ AJOUT
-        reservation_end: conversation.reservation_end_date, // ✅ AJOUT
-        // ⭐ Ajouter les infos du voyageur
-        guest_first_name: convDetails.guest_first_name,
-        guest_last_name: convDetails.guest_last_name,
-        guest_phone: convDetails.guest_phone,
-        guest_display_name: convDetails.guest_first_name 
-          ? `${convDetails.guest_first_name} ${convDetails.guest_last_name || ''}`.trim()
-          : `Voyageur ${convDetails.platform || 'Booking'}`,
-        guest_initial: convDetails.guest_first_name 
-          ? convDetails.guest_first_name.charAt(0).toUpperCase() 
-          : 'V'
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur vérification:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  // ============================================
-  // 4. RÉCUPÉRER LES MESSAGES D'UNE CONVERSATION
-  // ============================================
-  
-  app.get('/api/chat/messages/:conversationId', optionalAuth, async (req, res) => {
-    try {
-      const { conversationId } = req.params;
-
-      const convCheck = await pool.query(
-        `SELECT c.id, c.user_id, c.property_id,
-                c.guest_first_name, c.guest_last_name, c.guest_phone, c.platform 
-         FROM conversations c 
-         WHERE c.id = $1`,
-        [conversationId]
-      );
-
-      if (convCheck.rows.length === 0) {
-        return res.status(404).json({ error: 'Conversation introuvable' });
-      }
-
-      const conversation = convCheck.rows[0];
-
-      // Vérifier les permissions (propriétaire OU sous-compte OU voyageur vérifié)
-      if (req.user) {
-        // ✅ Support des sous-comptes
-        const realUserId = req.user.isSubAccount 
-          ? (await getRealUserId(pool, req))
-          : req.user.id;
-        
-        if (realUserId !== conversation.user_id) {
-          // Vérifier si sous-compte avec accès à cette propriété
-          if (req.user.isSubAccount) {
-            const subAccountData = await pool.query(
-              'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
-              [req.user.subAccountId]
-            );
-            
-            if (subAccountData.rows.length > 0) {
-              const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
-              if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-                return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-              }
-            }
-          } else {
-            return res.status(403).json({ error: 'Accès refusé' });
-          }
-        }
-      }
-
-      const messages = await pool.query(
-        `SELECT 
-          id, conversation_id, sender_type, sender_name, message,
-          is_read, is_bot_response, is_auto_response,
-          created_at, read_at, delivered_at
-         FROM messages
-         WHERE conversation_id = $1
-         ORDER BY created_at ASC`,
-        [conversationId]
-      );
-
-      res.json({
-        success: true,
-        messages: messages.rows,
-        // ⭐ Ajouter les infos de la conversation
-        conversation: {
-          id: conversation.id,
-          guest_first_name: conversation.guest_first_name,
-          guest_last_name: conversation.guest_last_name,
-          guest_phone: conversation.guest_phone,
-          guest_display_name: conversation.guest_first_name 
-            ? `${conversation.guest_first_name} ${conversation.guest_last_name || ''}`.trim()
-            : `Voyageur ${conversation.platform || 'Booking'}`,
-          guest_initial: conversation.guest_first_name 
-            ? conversation.guest_first_name.charAt(0).toUpperCase() 
-            : 'V'
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur récupération messages:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  // ============================================
-  // 5. ENVOYER UN MESSAGE
-  // ============================================
-  
-  app.post('/api/chat/send', optionalAuth, async (req, res) => {
-    try {
-      const { conversation_id, message, sender_type, sender_name, photo_data } = req.body;
-
-      if (!conversation_id || !sender_type) {
-        return res.status(400).json({ error: 'Données manquantes' });
-      }
-      
-      // Si c'est une photo, le message peut être vide
-      if (!message && !photo_data) {
-        return res.status(400).json({ error: 'Message ou photo requis' });
-      }
-
-      // Vérifier que la conversation existe
-      const convResult = await pool.query(
-        `SELECT id, user_id, property_id, status FROM conversations WHERE id = $1`,
-        [conversation_id]
-      );
-
-      if (convResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Conversation introuvable' });
-      }
-
-      const conversation = convResult.rows[0];
-
-      // Vérifier les permissions
-      if (req.user && sender_type === 'owner') {
-        // ✅ Support des sous-comptes
-        const realUserId = req.user.isSubAccount 
-          ? (await getRealUserId(pool, req))
-          : req.user.id;
-        
-        if (realUserId !== conversation.user_id) {
-          return res.status(403).json({ error: 'Accès refusé' });
-        }
-        
-        // ✅ Vérifier accès propriété si sous-compte
-        if (req.user.isSubAccount) {
-          const subAccountData = await pool.query(
-            'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
-            [req.user.subAccountId]
-          );
-          
-          if (subAccountData.rows.length > 0) {
-            const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
-            if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-              return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-            }
-          }
-        }
-      }
-
-      // ============================================
-      // 📷 GESTION DES PHOTOS
-      // ============================================
-      let photoUrl = null;
-      if (photo_data) {
-        try {
-          const fs = require('fs');
-          const path = require('path');
-          const crypto = require('crypto');
-          
-          // Créer le dossier uploads/chat-photos s'il n'existe pas
-          const uploadsDir = path.join(__dirname, '../uploads/chat-photos');
-          if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir, { recursive: true });
-          }
-          
-          // Extraire le base64 (enlever le préfixe data:image/...)
-          const base64Data = photo_data.replace(/^data:image\/\w+;base64,/, '');
-          const buffer = Buffer.from(base64Data, 'base64');
-          
-          // Générer un nom de fichier unique
-          const filename = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}.jpg`;
-          const filepath = path.join(uploadsDir, filename);
-          
-          // Sauvegarder le fichier
-          fs.writeFileSync(filepath, buffer);
-          
-          // URL publique de la photo
-          photoUrl = `/uploads/chat-photos/${filename}`;
-          
-          console.log('✅ Photo sauvegardée:', photoUrl);
-        } catch (error) {
-          console.error('❌ Erreur sauvegarde photo:', error);
-          // On continue sans la photo en cas d'erreur
-        }
-      }
-
-      // Insérer le message
-      const result = await pool.query(
-        `INSERT INTO messages 
-        (conversation_id, sender_type, sender_name, message, photo_url, is_read, created_at)
-        VALUES ($1, $2, $3, $4, $5, FALSE, NOW())
-        RETURNING id, conversation_id, sender_type, sender_name, message, photo_url, is_read, is_bot_response, is_auto_response, created_at`,
-        [conversation_id, sender_type, sender_name || 'Anonyme', message || '', photoUrl]
-      );
-
-      const newMessage = result.rows[0];
-
-      // Marquer conversation comme active
-      await pool.query(
-        `UPDATE conversations SET status = 'active', last_message_at = NOW() WHERE id = $1`,
-        [conversation_id]
-      );
-
-      // Émettre via Socket.io
-      if (io) {
-        io.to(`conversation_${conversation_id}`).emit('new_message', newMessage);
-      }
-// ============================================
-// 🔔 NOTIFICATION PUSH FIREBASE - PROPRIÉTAIRE → VOYAGEUR  
-// ============================================
-
-// Si c'est le propriétaire qui répond, notifier le voyageur (s'il a l'app)
-if (sender_type === 'owner') {
-  try {
-    // Récupérer l'email du voyageur depuis la conversation
-    const guestResult = await pool.query(
-      'SELECT guest_email FROM conversations WHERE id = $1',
-      [conversation_id]
-    );
-    
-    if (guestResult.rows.length > 0 && guestResult.rows[0].guest_email) {
-      const guestEmail = guestResult.rows[0].guest_email;
-      
-      // Vérifier si le voyageur a un compte et un token
-      const guestUserResult = await pool.query(
-        `SELECT u.id 
-         FROM users u
-         JOIN user_fcm_tokens t ON u.id = t.user_id
-         WHERE u.email = $1 AND t.fcm_token IS NOT NULL
-         LIMIT 1`,
-        [guestEmail]
-      );
-      
-      if (guestUserResult.rows.length > 0) {
-        const guestUserId = guestUserResult.rows[0].id;
-        
-        // Récupérer le nom de la propriété
-        const propertyResult = await pool.query(
-          'SELECT name FROM properties WHERE id = $1',
-          [conversation.property_id]
-        );
-        
-        const propertyName = propertyResult.rows.length > 0 
-          ? propertyResult.rows[0].name 
-          : 'Votre logement';
-        
-        const { sendNewMessageNotification } = require('../services/notifications-service');
-        
-        const messagePreview = message.length > 100 
-          ? message.substring(0, 97) + '...' 
-          : message;
-        
-        await sendNewMessageNotification(
-          guestUserId,
-          conversation_id,
-          messagePreview,
-          propertyName
-        );
-        
-        console.log(`✅ Notification push envoyée au voyageur ${guestUserId}`);
-      }
-    }
-  } catch (notifError) {
-    console.error('❌ Erreur notification push voyageur:', notifError.message);
-  }
-}
-
-// ============================================
-// 🔔 NOTIFICATION PUSH VOYAGEUR → PROPRIÉTAIRE (APP GUEST)
-// ============================================
-
-// Si c'est le voyageur qui écrit, notifier le propriétaire
-if (sender_type === 'guest') {
-  try {
-    const { sendNewMessageNotification } = require('../services/notifications-service');
-    
-    const propertyResult = await pool.query(
-      'SELECT name, internal_name FROM properties WHERE id = $1',
-      [conversation.property_id]
-    );
-    
-    const propertyName = propertyResult.rows.length > 0 
-      ? (propertyResult.rows[0].internal_name?.trim() || propertyResult.rows[0].name)
-      : 'Votre logement';
-    
-    const messagePreview = message.length > 100 
-      ? message.substring(0, 97) + '...' 
-      : message;
-    
-    await sendNewMessageNotification(
-      conversation.user_id,
-      conversation_id,
-      messagePreview,
-      propertyName
-    );
-    
-    console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
-    
-  } catch (notifError) {
-    console.error('❌ Erreur notification push propriétaire:', notifError.message);
-  }
-}
-
-// ============================================
-// 🔔 NOTIFICATION PUSH PROPRIÉTAIRE → VOYAGEUR (APP GUEST)
-// ============================================
-
-// Si c'est le propriétaire qui répond, notifier le voyageur via son token guest
-if (sender_type === 'owner' || sender_type === 'property') {
-  try {
-    // Récupérer le(s) token(s) FCM du guest pour cette conversation
-    const guestTokensResult = await pool.query(
-      `SELECT DISTINCT gft.fcm_token FROM guest_fcm_tokens gft
-       WHERE gft.conversation_id = $1 AND gft.fcm_token IS NOT NULL
-       ORDER BY gft.fcm_token`,
-      [conversation_id]
-    );
-    
-    if (guestTokensResult.rows.length > 0) {
-      const admin = require('firebase-admin');
-      
-      // Récupérer le nom de la propriété
-      const propertyResult = await pool.query(
-        'SELECT name, internal_name FROM properties WHERE id = $1',
-        [conversation.property_id]
-      );
-      
-      const propertyName = propertyResult.rows.length > 0 
-        ? (propertyResult.rows[0].internal_name?.trim() || propertyResult.rows[0].name)
-        : 'Votre hôte';
-      
-      const messagePreview = message.length > 100 
-        ? message.substring(0, 97) + '...' 
-        : message;
-      
-      // Envoyer la notification à tous les tokens du guest
-      const tokens = guestTokensResult.rows.map(row => row.fcm_token);
-      
-      const notificationPayload = {
-        notification: {
-          title: propertyName,
-          body: messagePreview
-        },
-        data: {
-          conversation_id: conversation_id.toString(),
-          type: 'new_message',
-          click_action: 'FLUTTER_NOTIFICATION_CLICK'
-        }
-      };
-      
-      for (const token of tokens) {
-        try {
-          await admin.messaging().send({
-            ...notificationPayload,
-            token: token
-          });
-          console.log(`✅ Notification guest envoyée via token:`, token.substring(0, 20) + '...');
-        } catch (tokenError) {
-          console.error(`❌ Erreur envoi notification au token:`, tokenError.message);
-          
-          // Si le token est invalide, le supprimer
-          if (tokenError.code === 'messaging/invalid-registration-token' || 
-              tokenError.code === 'messaging/registration-token-not-registered') {
-            await pool.query(
-              'DELETE FROM guest_fcm_tokens WHERE fcm_token = $1',
-              [token]
-            );
-            console.log(`🗑️ Token guest invalide supprimé`);
-          }
-        }
-      }
+  const checkinDate  = fmtDate(conv.reservation_start_date);
+  const checkoutDate = fmtDate(conv.reservation_end_date);
+
+  // Infos logement depuis cache ou API
+  let prop = {};
+  if (conv.property_id) {
+    if (_propertiesCache[conv.property_id]) {
+      prop = _propertiesCache[conv.property_id];
     } else {
-      console.log(`ℹ️ Aucun token guest trouvé pour conversation ${conversation_id}`);
+      try {
+        const token = localStorage.getItem('lcc_token');
+        const res = await fetch(`${API_URL}/api/properties/${conv.property_id}`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          prop = data.property || data || {};
+          _propertiesCache[conv.property_id] = prop;
+        }
+      } catch (e) {
+        console.warn('[SHORTCUTS] Propriété non chargée:', e.message);
+      }
     }
-  } catch (notifError) {
-    console.error('❌ Erreur notification push guest:', notifError.message);
+  }
+
+  const vars = {
+    // Voyageur — double ET simple accolade
+    '{{guest_name}}':        guestName,   '{guest_name}':        guestName,
+    '{{nom}}':               guestName,   '{nom}':               guestName,
+    '{{prenom}}':            firstName,   '{prenom}':            firstName,
+    '{{first_name}}':        firstName,   '{first_name}':        firstName,
+    '{{guest_first_name}}':  firstName,   '{guest_first_name}':  firstName,
+    // Logement
+    '{{property_name}}':     propName,    '{property_name}':     propName,
+    '{{logement}}':          propName,    '{logement}':          propName,
+    // Dates
+    '{{checkin_date}}':      checkinDate, '{checkin_date}':      checkinDate,
+    '{{checkout_date}}':    checkoutDate, '{checkout_date}':    checkoutDate,
+    '{{date_arrivee}}':      checkinDate, '{date_arrivee}':      checkinDate,
+    '{{arrivee}}':           checkinDate, '{arrivee}':           checkinDate,
+    '{{date_depart}}':      checkoutDate, '{date_depart}':      checkoutDate,
+    '{{depart}}':           checkoutDate, '{depart}':           checkoutDate,
+    '{{arrival_date}}':      checkinDate, '{arrival_date}':      checkinDate,
+    '{{departure_date}}':   checkoutDate, '{departure_date}':   checkoutDate,
+    // Horaires
+    '{{arrival_time}}':      prop.arrivalTime    || prop.arrival_time    || '', '{arrival_time}':      prop.arrivalTime    || prop.arrival_time    || '',
+    '{{departure_time}}':    prop.departureTime  || prop.departure_time  || '', '{departure_time}':    prop.departureTime  || prop.departure_time  || '',
+    '{{heure_arrivee}}':     prop.arrivalTime    || prop.arrival_time    || '', '{heure_arrivee}':     prop.arrivalTime    || prop.arrival_time    || '',
+    '{{heure_depart}}':      prop.departureTime  || prop.departure_time  || '', '{heure_depart}':      prop.departureTime  || prop.departure_time  || '',
+    '{{departureTime}}':     prop.departureTime  || prop.departure_time  || '', '{departureTime}':     prop.departureTime  || prop.departure_time  || '',
+    '{{arrivalTime}}':       prop.arrivalTime    || prop.arrival_time    || '', '{arrivalTime}':       prop.arrivalTime    || prop.arrival_time    || '',
+    // Accès
+    '{{access_code}}':       prop.accessCode || prop.access_code || '', '{access_code}':  prop.accessCode || prop.access_code || '',
+    '{{code_acces}}':        prop.accessCode || prop.access_code || '', '{code_acces}':   prop.accessCode || prop.access_code || '',
+    '{{keybox_code}}':       prop.accessCode || prop.access_code || '', '{keybox_code}':  prop.accessCode || prop.access_code || '',
+    // Wifi
+    '{{wifi_name}}':         prop.wifiName || prop.wifi_name || '', '{wifi_name}':     prop.wifiName || prop.wifi_name || '',
+    '{{wifi_password}}':     prop.wifiPassword || prop.wifi_password || '', '{wifi_password}': prop.wifiPassword || prop.wifi_password || '',
+    '{{wifi_ssid}}':         prop.wifiName || prop.wifi_name || '', '{wifi_ssid}':     prop.wifiName || prop.wifi_name || '',
+    '{{mot_de_passe_wifi}}': prop.wifiPassword || prop.wifi_password || '', '{mot_de_passe_wifi}': prop.wifiPassword || prop.wifi_password || '',
+    '{{wifi_nom}}':          prop.wifiName || prop.wifi_name || '', '{wifi_nom}':      prop.wifiName || prop.wifi_name || '',
+    '{{wifi_mdp}}':          prop.wifiPassword || prop.wifi_password || '', '{wifi_mdp}':      prop.wifiPassword || prop.wifi_password || '',
+    // Livret — la route /api/properties/:id retourne welcomeBookUrl (camelCase)
+    '{{welcome_book_url}}':  prop.welcomeBookUrl || prop.welcome_book_url || '', '{welcome_book_url}': prop.welcomeBookUrl || prop.welcome_book_url || '',
+    '{{livret}}':            prop.welcomeBookUrl || prop.welcome_book_url || '', '{livret}':           prop.welcomeBookUrl || prop.welcome_book_url || '',
+    '{{livret_url}}':        prop.welcomeBookUrl || prop.welcome_book_url || '', '{livret_url}':       prop.welcomeBookUrl || prop.welcome_book_url || '',
+    // Adresse
+    '{{address}}':           prop.address || '', '{address}': prop.address || '',
+    '{{adresse}}':           prop.address || '', '{adresse}': prop.address || '',
+  };
+
+  let result = text;
+  for (const [key, val] of Object.entries(vars)) {
+    result = result.split(key).join(val);
+  }
+  // Les {{variables_inconnues}} restantes sont laissées telles quelles
+  // pour que l'hôte puisse les voir et les corriger
+  return result;
+}
+
+// ============================================
+// DÉTECTION MOBILE (pour redirection)
+// ============================================
+function isMobileDevice() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+}
+
+// ============================================
+// INIT
+// ============================================
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('💬 Chat Propriétaire - Initialisation...');
+  
+  // Récupérer le userId
+  const rawUser = localStorage.getItem('lcc_user');
+  if (rawUser) {
+    try {
+      const user = JSON.parse(rawUser);
+      userId = user.id;
+    } catch (e) {
+      console.error('Erreur lecture user:', e);
+    }
+  }
+  
+  // Charger les propriétés pour le filtre
+  await loadProperties();
+  
+  // Charger les conversations
+  await loadConversations();
+
+  // ── Pull to refresh sur la liste des conversations ──────────
+  (function initPullToRefresh() {
+    const listContainer = document.querySelector('.msgs-left') || document.getElementById('conversationsList');
+    if (!listContainer) return;
+
+    let startY = 0, pulling = false, indicator = null;
+
+    const createIndicator = () => {
+      const el = document.createElement('div');
+      el.id = 'ptr-indicator';
+      el.style.cssText = 'position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height .2s;z-index:100;background:#F5F2EC;';
+      el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#1A7A5E;"><i class="fas fa-sync-alt" id="ptr-icon"></i><span id="ptr-text">Tirer pour actualiser</span></div>';
+      listContainer.style.position = 'relative';
+      listContainer.insertBefore(el, listContainer.firstChild);
+      return el;
+    };
+
+    listContainer.addEventListener('touchstart', (e) => {
+      if (listContainer.scrollTop > 0) return;
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }, { passive: true });
+
+    listContainer.addEventListener('touchmove', (e) => {
+      if (!pulling) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy < 10) return;
+      if (!indicator) indicator = createIndicator();
+      const h = Math.min(dy * 0.4, 52);
+      indicator.style.height = h + 'px';
+      const icon = document.getElementById('ptr-icon');
+      const text = document.getElementById('ptr-text');
+      if (h > 40) {
+        if (icon) { icon.style.transform = 'rotate(180deg)'; icon.style.transition = 'transform .2s'; }
+        if (text) text.textContent = 'Relâcher pour actualiser';
+      } else {
+        if (icon) { icon.style.transform = 'rotate(0deg)'; }
+        if (text) text.textContent = 'Tirer pour actualiser';
+      }
+    }, { passive: true });
+
+    listContainer.addEventListener('touchend', async (e) => {
+      if (!pulling || !indicator) { pulling = false; return; }
+      const dy = e.changedTouches[0].clientY - startY;
+      pulling = false;
+      if (dy > 50) {
+        // Déclencher le refresh
+        const icon = document.getElementById('ptr-icon');
+        const text = document.getElementById('ptr-text');
+        if (icon) { icon.classList.add('fa-spin'); icon.style.transform = 'none'; }
+        if (text) text.textContent = 'Actualisation…';
+        indicator.style.height = '44px';
+        // Haptic si dispo
+        try { window.Capacitor?.Plugins?.Haptics?.impact({ style: 'LIGHT' }); } catch {}
+        await loadConversations();
+        // Mettre à jour le badge de la bottom bar
+        try {
+          const totalUnread = (window.allConversations || []).reduce((s, c) => s + (parseInt(c.unread_count) || 0), 0);
+          // IDs possibles du badge selon les pages/composants
+          ['msgBadgeMobile','msgBadgeDesktop','messageBadge','unreadCount','tabGuestsBadge'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.textContent = totalUnread || '0'; el.style.display = totalUnread > 0 ? '' : 'none'; }
+          });
+          // Badge dans la bottom bar mobile (géré par bh-layout.js / messages-badge-desktop-mobile.js)
+          document.querySelectorAll('[id*="badge"][id*="essage"], [id*="Badge"][id*="essage"], .tab-badge, .nav-badge').forEach(el => {
+            if (el.closest && el.closest('[href*="messages"], [onclick*="messages"]')) {
+              el.textContent = totalUnread || '0';
+            }
+          });
+          if (typeof window._refreshBadge === 'function') window._refreshBadge();
+          if (typeof window.refreshMessagesBadge === 'function') window.refreshMessagesBadge();
+        } catch(e) {}
+        // Cacher l'indicateur
+        indicator.style.height = '0';
+        setTimeout(() => { indicator?.remove(); indicator = null; }, 300);
+      } else {
+        indicator.style.height = '0';
+        setTimeout(() => { indicator?.remove(); indicator = null; }, 300);
+      }
+    }, { passive: true });
+  })();
+
+  // ── Auto-ouvrir une conversation depuis ?conv=ID dans l'URL ──
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const convIdParam = urlParams.get('conv');
+    if (convIdParam) {
+      const convId = parseInt(convIdParam, 10);
+      if (!isNaN(convId)) {
+        const tryOpenConv = async (attempts) => {
+          const item = document.querySelector(`[data-conversation-id="${convId}"]`);
+          if (item) {
+            await openChat(convId);
+            item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            item.classList.add('active');
+            window.history.replaceState({}, '', window.location.pathname);
+          } else if (attempts > 0) {
+            setTimeout(() => tryOpenConv(attempts - 1), 300);
+          }
+        };
+        setTimeout(() => tryOpenConv(10), 500);
+      }
+    }
+  } catch (e) {
+    console.warn('[chat-owner] Erreur auto-open conv:', e);
+  }
+
+  // Connecter Socket.IO
+  connectSocket();
+  
+  // Event listeners pour les filtres
+  setupFilters();
+  
+  // Auto-resize textarea
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput) {
+    chatInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+      // Déclencher le popup de raccourcis si {{ détecté
+      _checkShortcutTrigger(this);
+    });
+
+    // ── Résolution automatique des raccourcis au collage ──
+    chatInput.addEventListener('paste', function() {
+      const inputEl = this;
+      setTimeout(async function() {
+        const text = inputEl.value;
+        if (!text || !text.includes('{')) return;
+        const convId = currentConversationId || window.currentConversationId;
+        if (!convId) return;
+        const conv = (typeof allConversations !== 'undefined' ? allConversations : [])
+          .find(c => c.id == convId);
+        if (!conv) return;
+        const resolved = await resolveShortcuts(text, conv);
+        if (resolved !== text) {
+          inputEl.value = resolved;
+          inputEl.style.height = 'auto';
+          inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+        }
+      }, 50);
+    });
+
+    // ── Résolution automatique des raccourcis au collage ──────────
+    chatInput.addEventListener('paste', function() {
+      const inputEl = this;
+      setTimeout(async function() {
+        const text = inputEl.value;
+        if (!text || (!text.includes('{') && !text.includes('{'))) return;
+        const convId = currentConversationId || window.currentConversationId;
+        if (!convId) return;
+        const conv = (typeof allConversations !== 'undefined' ? allConversations : [])
+          .find(c => c.id == convId);
+        if (!conv) return;
+        const resolved = await resolveShortcuts(text, conv);
+        if (resolved !== text) {
+          inputEl.value = resolved;
+          inputEl.style.height = 'auto';
+          inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+        }
+      }, 50); // Attendre que le texte collé soit dans l'input
+    });
+    
+    // Send on Ctrl+Enter or Shift+Enter, new line on Enter
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.shiftKey)) {
+        e.preventDefault();
+        sendMessageOwner();
+      }
+    });
+
+    // Fermer le popup si Escape
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') _closeShortcutPopup();
+    });
+  }
+
+  // Injecter le popup de raccourcis dans le DOM
+  _injectShortcutPopup();
+  
+  // Fermer le modal en cliquant sur l'overlay
+  const chatModal = document.getElementById('chatModal');
+  if (chatModal) {
+    chatModal.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeChat();
+      }
+    });
+  }
+  
+  console.log('✅ Chat initialisé');
+});
+
+// ============================================
+// CHARGEMENT DES PROPRIÉTÉS
+// ============================================
+async function loadProperties() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    console.log("📤 [CHAT] Fetching properties:", "/api/properties");
+    const response = await fetch(`/api/properties`, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    // Vérifier content-type
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      console.warn('⚠️ Properties non-JSON');
+      return;
+    }
+    
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    const select = document.getElementById('filterProperty');
+    
+    if (select && data.properties) {
+      data.properties.forEach(property => {
+        const option = document.createElement('option');
+        option.value = property.id;
+        option.textContent = property.name;
+        select.appendChild(option);
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur chargement propriétés:', error);
   }
 }
 
-      // ✅ Si c'est un message du voyageur → traitement complet (onboarding + réponses auto + Groq)
-      // NOTE: findAutoResponse() supprimé — handleIncomingMessage() gère tout (mots-clés inclus)
-      if (sender_type === 'guest') {
-
-        // ============================================
-        // 🤖 TRAITEMENT AUTOMATIQUE (Onboarding + Groq + Escalade)
-        // ============================================
-        try {
-          const fullConvResult = await pool.query(
-            'SELECT * FROM conversations WHERE id = $1',
-            [conversation_id]
-          );
-          
-          if (fullConvResult.rows.length > 0) {
-            const fullConversation = fullConvResult.rows[0];
-            
-            // Traiter le message (onboarding + réponses auto + Groq)
-            const handled = await handleIncomingMessage(newMessage, fullConversation, pool, io);
-            
-            console.log(`✅ Message traité (handled: ${handled}) pour conversation ${conversation_id}`);
-            
-            // ============================================
-            // 🔔 NOTIFICATIONS PROPRIÉTAIRE
-            // Seulement si la conversation est escaladée
-            // ============================================
-            const updatedConvResult = await pool.query(
-              'SELECT escalated, onboarding_completed FROM conversations WHERE id = $1',
-              [conversation_id]
-            );
-            const updatedConv = updatedConvResult.rows[0];
-            
-            if (updatedConv && updatedConv.escalated === true) {
-              // Notification in-app
-              await createNotification(pool, io, conversation.user_id, conversation_id, newMessage.id, 'new_message');
-              
-              // Notification push Firebase
-              try {
-                const { sendNewMessageNotification } = require('../services/notifications-service');
-                const messagePreview = message.length > 100 ? message.substring(0, 97) + '...' : message;
-                await sendNewMessageNotification(
-                  conversation.user_id,
-                  'Voyageur',
-                  messagePreview,
-                  conversation_id
-                );
-                console.log(`✅ Notification push envoyée au propriétaire ${conversation.user_id}`);
-              } catch (notifError) {
-                console.error('❌ Erreur notification push:', notifError.message);
-              }
-            } else {
-              console.log(`ℹ️ Pas de notification propriétaire (escalated: ${updatedConv?.escalated})`);
-            }
-          }
-        } catch (autoError) {
-          console.error('❌ Erreur traitement auto:', autoError);
-        }
-      }
-      
-      res.json({
-        success: true,
-        message: newMessage
-      });
-    } catch (error) {
-      console.error('❌ Erreur envoi message:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-  // ============================================
-  // 6. MARQUER MESSAGES COMME LUS
-  // ============================================
+// ============================================
+// CHARGEMENT DES CONVERSATIONS
+// ============================================
+async function loadConversations() {
+  showLoading();
   
-  app.post('/api/chat/mark-read/:conversationId', optionalAuth, async (req, res) => {
-    try {
-      const { conversationId } = req.params;
-
-      await pool.query(
-        `UPDATE messages 
-         SET is_read = TRUE, read_at = NOW()
-         WHERE conversation_id = $1 AND is_read = FALSE`,
-        [conversationId]
-      );
-
-      // Émettre via Socket.io
-      if (io) {
-        io.to(`conversation_${conversationId}`).emit('messages_read', { conversationId });
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const status = document.getElementById('filterStatus')?.value || '';
+    const propertyId = document.getElementById('filterProperty')?.value || '';
+    
+    let url = `/api/chat/conversations?`;
+    if (status) url += `status=${status}&`;
+    if (propertyId) url += `property_id=${propertyId}&`;
+    
+    console.log("📤 [CHAT] Fetching conversations:", url);
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': 'Bearer ' + token
       }
-
-      res.json({ success: true });
-
-    } catch (error) {
-      console.error('❌ Erreur marquage lu:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+      throw new Error('Erreur chargement conversations');
     }
-  });
-
-  // ============================================
-  // 7. GÉNÉRER LE MESSAGE POUR AIRBNB/BOOKING
-  // ============================================
-  
-  app.get('/api/chat/generate-booking-message/:conversationId', 
-    authenticateToken, 
-    checkSubscription, 
-    requirePermission(pool, 'can_generate_booking_messages'),
-    loadSubAccountData(pool),
-    async (req, res) => {
-    try {
-      const { conversationId } = req.params;
-      // ✅ Support des sous-comptes
-      const userId = await getRealUserId(pool, req);
-
-      const result = await pool.query(
-        `SELECT c.unique_token, c.pin_code, c.user_id, c.property_id 
-         FROM conversations c 
-         WHERE c.id = $1`,
-        [conversationId]
-      );
-
-      if (result.rows.length === 0 || result.rows[0].user_id !== userId) {
-        return res.status(404).json({ error: 'Conversation introuvable' });
-      }
-
-      const conversation = result.rows[0];
-      
-      // ✅ Vérifier accès propriété si sous-compte
-      if (req.user.isSubAccount && req.subAccountData.accessible_property_ids.length > 0) {
-        if (!req.subAccountData.accessible_property_ids.includes(conversation.property_id)) {
-          return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-        }
-      }
-
-      const message = generateMessageTemplate(conversation.pin_code, conversation.unique_token);
-
-      res.json({
-        success: true,
-        message
-      });
-
-    } catch (error) {
-      console.error('❌ Erreur génération message:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
-  // ============================================
-  // 8. SOCKET.IO EVENTS
-  // ============================================
-  
-  io.on('connection', (socket) => {
-    console.log('🔌 Client connecté:', socket.id);
-
-    // Rejoindre une conversation
-    socket.on('join_conversation', async (conversationId) => {
-      socket.join(`conversation_${conversationId}`);
-      console.log(`✅ Socket ${socket.id} rejoint conversation ${conversationId}`);
+    
+    const data = await response.json();
+    allConversations = data.conversations || [];
+    // Trier immédiatement par dernier message DESC
+    allConversations.sort((a, b) => {
+      const tA = new Date(a.last_message_time || a.created_at || 0).getTime();
+      const tB = new Date(b.last_message_time || b.created_at || 0).getTime();
+      return tB - tA;
     });
-
-    // Quitter une conversation
-    socket.on('leave_conversation', (conversationId) => {
-      socket.leave(`conversation_${conversationId}`);
-      console.log(`👋 Socket ${socket.id} quitte conversation ${conversationId}`);
-    });
-
-    // Typing indicator
-    socket.on('typing', ({ conversationId, senderName }) => {
-      socket.to(`conversation_${conversationId}`).emit('user_typing', { senderName });
-    });
-
-    socket.on('stop_typing', ({ conversationId }) => {
-      socket.to(`conversation_${conversationId}`).emit('user_stop_typing');
-    });
-
-    socket.on('disconnect', () => {
-      console.log('🔌 Client déconnecté:', socket.id);
-    });
-  });
-
-  // ============================================
-  // 📱 ROUTE: Enregistrer token FCM voyageur  
-  // ============================================
-  app.post('/api/chat/register-guest-token', async (req, res) => {
-    try {
-      // Accepter les deux formats: token ou fcm_token
-      const { conversation_id, token, fcm_token, device_type } = req.body;
-      const finalToken = fcm_token || token;
-      
-      if (!conversation_id || !finalToken) {
-        return res.status(400).json({ error: 'conversation_id et token/fcm_token requis' });
-      }
-      
-      const conv = await pool.query('SELECT id FROM conversations WHERE id = $1', [conversation_id]);
-      if (conv.rows.length === 0) {
-        return res.status(404).json({ error: 'Conversation introuvable' });
-      }
-      
-      await pool.query(
-        `INSERT INTO guest_fcm_tokens (conversation_id, fcm_token, device_type, created_at, last_used_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         ON CONFLICT (conversation_id, fcm_token) 
-         DO UPDATE SET last_used_at = NOW(), device_type = $3`,
-        [conversation_id, finalToken, device_type || 'unknown']
-      );
-      
-      console.log('✅ Token FCM voyageur enregistré:', conversation_id, '- Type:', device_type);
-      res.json({ success: true });
-    } catch (error) {
-      console.error('❌ Erreur register token:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
-    }
-  });
-
+    window.allConversations = allConversations; // exposé pour messages.html
+    
+    console.log(`📦 ${allConversations.length} conversation(s) chargée(s)`);
+    
+    // Mettre à jour les stats
+    updateStats();
+    
+    // Afficher les conversations
+    renderConversations();
+    
+  } catch (error) {
+    console.error('❌ Erreur:', error);
+    showToast('Erreur de chargement', 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 // ============================================
-// FONCTIONS HELPER
+// MISE À JOUR DES STATS
 // ============================================
-
-/**
- * Génère le template de message à envoyer sur Airbnb/Booking
- */
-function generateMessageTemplate(pinCode, token) {
-  const chatLink = `${process.env.APP_URL || 'http://localhost:3000'}/chat/${token}`;
+function updateStats() {
+  const total = allConversations.length;
+  const unread = allConversations.reduce((sum, conv) => sum + (parseInt(conv.unread_count) || 0), 0);
+  const active = allConversations.filter(conv => conv.status === 'active').length;
   
-  return `🎉 Bonjour et merci pour votre réservation !
+  // Mettre à jour les statistiques de la page
+  const statTotal = document.getElementById('statTotal');
+  const statUnread = document.getElementById('statUnread');
+  const statActive = document.getElementById('statActive');
+  
+  if (statTotal) statTotal.textContent = total;
+  if (statUnread) statUnread.textContent = unread;
+  if (statActive) statActive.textContent = active;
+  
+  // Mettre à jour le badge rouge dans la sidebar (géré par messages-badge-dynamic.js)
+  // On ne touche plus à ce badge ici, il est géré automatiquement
+  
+  // LEGACY: Support de l'ancien badge vert (si encore présent)
+  const oldBadge = document.getElementById('unreadCount');
+  if (oldBadge) {
+    oldBadge.textContent = unread || '';
+  }
+}
+
+// ============================================
+// AFFICHAGE DES CONVERSATIONS
+// ============================================
+function renderConversations() {
+  const container = document.getElementById('conversationsList');
+  if (!container) return;
+  
+  // Filtrer selon la recherche en cours
+  const q = searchQuery.toLowerCase().trim();
+  const filtered = q
+    ? allConversations.filter(conv => {
+        const name = (cleanGuestName(conv) || '').toLowerCase();
+        const prop  = (conv.property_name || '').toLowerCase();
+        const plat  = (conv.platform || '').toLowerCase();
+        return name.includes(q) || prop.includes(q) || plat.includes(q);
+      })
+    : allConversations;
+
+  // Trier par dernier message DESC (ou created_at si pas de message)
+  filtered.sort((a, b) => {
+    const tA = new Date(a.last_message_time || a.created_at || 0).getTime();
+    const tB = new Date(b.last_message_time || b.created_at || 0).getTime();
+    return tB - tA;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-comments"></i>
+        <h3>${q ? 'Aucun résultat' : 'Aucune conversation'}</h3>
+        <p>${q ? 'Aucune conversation ne correspond à votre recherche.' : 'Les conversations avec vos voyageurs apparaîtront ici.'}</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = filtered.map(conv => {
+    const unreadCount = parseInt(conv.unread_count) || 0;
+    const statusClass = conv.status;
+    const statusLabel = getStatusLabel(conv.status);
+    
+    const guestName = cleanGuestName(conv);
+    const guestInitial = getGuestInitial(conv);
+    const guestPhone = getGuestPhone(conv);
+    
+    const checkinDate = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short'
+    });
+    
+    const lastMessageTime = conv.last_message_time 
+      ? formatTime(conv.last_message_time)
+      : formatTime(conv.created_at);
+    
+    const platformIcon = getPlatformIcon(conv.platform);
+    const platformColor = getPlatformColor(conv.platform);
+    
+    // ── Préparation du snippet du dernier message ──────────────
+    const rawSnippet = conv.last_message || '';
+    const cleanSnippet = rawSnippet
+      .replace(/\{[^}]+\}/g, '')           // supprimer les variables non résolues
+      .replace(/https?:\/\/\S+/g, '🔗 Lien') // remplacer les URLs par un label
+      .replace(/\s+/g, ' ').trim();
+    const snippet = cleanSnippet.length > 72 ? cleanSnippet.substring(0, 72) + '…' : cleanSnippet;
+    const isUnread = unreadCount > 0;
+
+    return `
+      <div class="conversation-item ${isUnread ? 'conv-unread' : ''}" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
+
+        <!-- Avatar avec indicateur non-lu -->
+        <div style="position:relative;flex-shrink:0;">
+          <div class="conversation-avatar" style="background: ${getPlatformColor(conv.platform)};">
+            ${guestInitial}
+          </div>
+          ${isUnread ? `<div style="position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#1A7A5E;border:2px solid white;"></div>` : ''}
+        </div>
+
+        <div class="conversation-content">
+          <!-- Ligne 1 : Nom + heure + badge -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1px;">
+            <h3 style="font-size:13.5px;font-weight:${isUnread ? '800' : '600'};color:${isUnread ? '#0D1117' : '#374151'};margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62%;font-family:'DM Sans',sans-serif;">${guestName}</h3>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+              <span style="font-size:11px;color:${isUnread ? '#1A7A5E' : '#B0BAC5'};font-weight:${isUnread ? '600' : '400'};white-space:nowrap;">${lastMessageTime}</span>
+              ${unreadCount > 0 ? `<span style="min-width:18px;height:18px;padding:0 5px;background:#1A7A5E;color:#fff;font-size:10px;font-weight:700;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;">${unreadCount}</span>` : ''}
+            </div>
+          </div>
+
+          <!-- Ligne 2 : Logement · Date · Plateforme -->
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;overflow:hidden;">
+            <span style="font-size:11px;font-weight:600;color:${conv.property_color || '#10B981'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${conv.property_name || 'Logement'}</span>
+            <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
+            <span style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">${checkinDate}</span>
+            <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
+            ${(conv.platform || '').toLowerCase().includes('boostinghost') || (conv.platform || '').toLowerCase().includes('guest')
+              ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#7C3AED;font-weight:700;white-space:nowrap;flex-shrink:0;"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#7C3AED;border-radius:3px;color:white;font-size:9px;font-weight:900;font-family:'DM Sans',sans-serif;">B</span>BOOSTINGHOST GUEST</span>`
+              : `<span style="font-size:11px;color:${platformColor};font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fas ${platformIcon}" style="font-size:9px;margin-right:2px;"></i>${(conv.platform || 'direct').toUpperCase()}</span>`
+            }
+          </div>
+
+          <!-- Ligne 3 : Aperçu dernier message -->
+          ${snippet ? `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+            <p style="font-size:12px;color:${isUnread ? '#374151' : '#94A3B8'};font-weight:${isUnread ? '500' : '400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0;flex:1;font-family:'DM Sans',sans-serif;">${snippet}</p>
+            ${isUnread ? `<div style="width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></div>` : ''}
+          </div>` : ''}
+
+          <!-- Éléments cachés pour compatibilité (delete, status, unread-badge, meta) -->
+          <div class="conversation-actions" style="display:none;">
+            <button class="btn-delete-conversation" onclick="deleteConversation(${conv.id}, event)" title="Supprimer"><i class="fas fa-trash"></i></button>
+          </div>
+          <div class="status-badge ${statusClass}" style="display:none;">${statusLabel}</div>
+<!-- unread-badge supprimé -->
+          <div class="meta" style="display:none;"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================
+// FONCTIONS UTILITAIRES
+// ============================================
+function cleanGuestName(conv) {
+  if (!conv) return 'Voyageur';
+  
+  // Priorité 1 : guest_display_name (construit par le serveur)
+  if (conv.guest_display_name && 
+      conv.guest_display_name !== 'Voyageur' && 
+      conv.guest_display_name.trim() !== '') {
+    return conv.guest_display_name;
+  }
+  
+  // Priorité 2 : Construire depuis guest_first_name + guest_last_name
+  if (conv.guest_first_name) {
+    const firstName = conv.guest_first_name.trim();
+    const lastName = conv.guest_last_name ? conv.guest_last_name.trim() : '';
+    return lastName ? `${firstName} ${lastName}` : firstName;
+  }
+  
+  // Priorité 3 : Fallback sur guest_name / guestName
+  const rawName = conv.guest_name || conv.guestName;
+  if (rawName && rawName !== 'undefined' && rawName !== 'null' && rawName.trim() !== '') {
+    return rawName.trim();
+  }
+  
+  // Fallback final
+  return 'Voyageur';
+}
+
+function getGuestInitial(conv) {
+  const name = cleanGuestName(conv);
+  return name.charAt(0).toUpperCase();
+}
+
+function getGuestPhone(conv) {
+  if (!conv) return '';
+  return conv.guest_phone || conv.guestPhone || '';
+}
+
+function getPlatformIcon(platform) {
+  const p = (platform || '').toLowerCase();
+  if (p.includes('airbnb')) return 'fa-home';  // ✅ Airbnb (fa-airbnb n'existe pas dans Font Awesome free)
+  if (p.includes('booking')) return 'fa-bed';
+  if (p.includes('boostinghost') || p.includes('guest')) return 'fa-bolt';
+  return 'fa-calendar';
+}
+
+function getPlatformColor(platform) {
+  const p = (platform || '').toLowerCase();
+  // Valeurs converties par server.js (OTA_MAP)
+  if (p.includes('airbnb') || p === 'abb') return '#FF5A5F';
+  if (p.includes('booking') || p === 'bdc') return '#003580';
+  if (p.includes('expedia') || p === 'exp') return '#FFC72C';
+  if (p.includes('vrbo') || p.includes('homeaway') || p.includes('abritel')) return '#3D6AFF';
+  // Autres OTAs
+  if (p.includes('tripadvisor')) return '#00AA6C';
+  if (p.includes('google'))      return '#4285F4';
+  if (p.includes('agoda'))       return '#5392FF';
+  if (p.includes('holidu'))      return '#00C2A8';
+  if (p.includes('tui'))         return '#E2001A';
+  // BHGuest
+  if (p.includes('boostinghost') || p.includes('guest')) return '#7C3AED';
+  // Direct / manuel
+  if (p.includes('direct') || p.includes('manual')) return '#1A7A5E';
+  // Fallback vert Boostinghost
+  return '#1A7A5E';
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    'active': 'Active',
+    'pending': 'En attente',
+    'closed': 'Fermée',
+    'archived': 'Archivée'
+  };
+  return labels[status] || 'Active';
+}
+
+// ============================================
+// FILTRES
+// ============================================
+function setupFilters() {
+  const statusFilter = document.getElementById('filterStatus');
+  const propertyFilter = document.getElementById('filterProperty');
+  
+  if (statusFilter) {
+    statusFilter.addEventListener('change', loadConversations);
+  }
+  
+  if (propertyFilter) {
+    propertyFilter.addEventListener('change', loadConversations);
+  }
+
+  // Barre de recherche (desktop + mobile)
+  const searchInput = document.getElementById('msgsSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      searchQuery = this.value;
+      renderConversations();
+    });
+  }
+}
+
+// ============================================
+// OUVRIR UNE CONVERSATION
+// ============================================
+async function openChat(conversationId) {
+  console.log('💬 Ouverture conversation:', conversationId);
+  
+  // 🔥 SUR MOBILE : Rediriger vers une page dédiée
+  // Exception : sur messages.html, rester en mode inline même sur mobile
+  const isMessagesPage = !!document.getElementById('msgsChatPlaceholder');
+  if (isMobileDevice() && !isMessagesPage) {
+    // Sauvegarder l'ID de conversation
+    sessionStorage.setItem('current_conversation_id', conversationId);
+    
+    // Rediriger vers la page de chat mobile
+    // Pour Capacitor, utiliser le chemin complet
+    const chatUrl = IS_NATIVE 
+      ? `${window.location.origin}/chat-mobile.html?id=${conversationId}`
+      : `/chat-mobile.html?id=${conversationId}`;
+    
+    console.log('🔄 Redirection vers:', chatUrl);
+    window.location.href = chatUrl;
+    return;
+  }
+  
+  // 💻 SUR DESKTOP : Garder le modal (comportement actuel)
+  currentConversationId = conversationId;
+  window.currentConversationId = conversationId;
+  window.currentConversationId = conversationId; // sync avec messages.html
+  const conv = allConversations.find(c => c.id == conversationId);
+  
+  if (!conv) return;
+
+  // ✅ Supprimer le badge NEW à l'ouverture + mémoriser dans localStorage
+  const newBadge = document.querySelector(`.conv-new-badge[data-conv-id="${conversationId}"]`);
+  if (newBadge) newBadge.remove();
+  const openedIds = JSON.parse(localStorage.getItem('bh_opened_convs') || '[]');
+  if (!openedIds.includes(conversationId)) {
+    openedIds.push(conversationId);
+    localStorage.setItem('bh_opened_convs', JSON.stringify(openedIds));
+  }
+  
+  // Nom complet : priorité guest_first_name + guest_last_name (Channex)
+  const firstName = conv.guest_first_name || null;
+  const lastName  = conv.guest_last_name  || null;
+  const fullName  = (firstName || lastName)
+    ? [firstName, lastName].filter(Boolean).join(' ')
+    : cleanGuestName(conv);
+
+  const titleEl = document.getElementById('chatModalTitle');
+  if (titleEl) titleEl.textContent = fullName;
+
+  // Nationalité
+  const countryCode = conv.guest_country || null;
+  const countryNames = {
+    FR:'France', GB:'Royaume-Uni', DE:'Allemagne', ES:'Espagne', IT:'Italie',
+    US:'États-Unis', NL:'Pays-Bas', BE:'Belgique', CH:'Suisse', PT:'Portugal',
+    CA:'Canada', AU:'Australie', JP:'Japon', CN:'Chine', BR:'Brésil',
+    MX:'Mexique', RU:'Russie', IN:'Inde', ZA:'Afrique du Sud', MA:'Maroc',
+    TN:'Tunisie', DZ:'Algérie', LU:'Luxembourg', IE:'Irlande', SE:'Suède',
+    NO:'Norvège', DK:'Danemark', FI:'Finlande', PL:'Pologne', AT:'Autriche',
+    GR:'Grèce', TR:'Turquie', AE:'Émirats arabes unis', SG:'Singapour',
+  };
+  const countryEl = document.getElementById('chatGuestCountry');
+  if (countryEl) {
+    if (countryCode) {
+      const flag = countryCode.toUpperCase().replace(/./g, c =>
+        String.fromCodePoint(c.charCodeAt(0) + 127397)
+      );
+      const countryName = countryNames[countryCode] || countryCode;
+      countryEl.textContent = flag + ' ' + countryName;
+      countryEl.style.display = 'block';
+    } else {
+      countryEl.style.display = 'none';
+    }
+  }
+
+  // Remplir les infos dans le header
+  const propertyNameEl = document.getElementById('chatPropertyName');
+  const checkinDateEl  = document.getElementById('chatCheckinDate');
+
+  if (propertyNameEl) propertyNameEl.textContent = conv.property_name || 'Logement';
+  if (checkinDateEl && conv.reservation_start_date) {
+    const checkin = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR');
+    checkinDateEl.textContent = checkin;
+  }
+  
+  // Afficher le bouton de copie du lien
+  const copyLinkBtn = document.getElementById('btnCopyInviteLink');
+  if (copyLinkBtn && conv.chat_token && conv.pin_code) {
+    copyLinkBtn.style.display = 'inline-flex';
+    copyLinkBtn.onclick = () => copyInviteLink(conv.chat_token, conv.pin_code);
+  } else if (copyLinkBtn) {
+    copyLinkBtn.style.display = 'none';
+  }
+  
+  // Détecter Channex en arrière-plan (après que showInlineChat ait rendu l'UI)
+  currentChannexBookingId = null;
+  window._currentChannexBookingId = null;
+  const bookingBtn = document.getElementById('btnBookingMessage');
+  if (bookingBtn) bookingBtn.style.display = 'none';
+  setTimeout(() => _checkChannexConversation(conversationId, conv), 200);
+  
+  // Afficher la modal
+  const modal = document.getElementById('chatModal');
+  if (modal) {
+    modal.classList.add('active');
+  }
+  
+  // ✅ BLOQUER LE SCROLL DU BODY (FIX iOS) — seulement si pas en mode inline (messages.html)
+  if (!document.getElementById('msgsChatPlaceholder')) {
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    document.documentElement.style.overflow = 'hidden';
+  }
+  
+  // Charger les messages
+  await loadMessages(conversationId);
+  
+  // Marquer comme lu
+  await markMessagesAsRead(conversationId);
+  
+  // Rejoindre la room Socket.IO
+  if (socket) {
+    socket.emit('join_conversation', conversationId);
+  }
+}
+
+async function markMessagesAsRead(conversationId) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(`/api/chat/mark-read/${conversationId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    // Recharger les conversations pour mettre à jour le badge
+    await loadConversations();
+  } catch (error) {
+    console.error('❌ Erreur marquage lu:', error);
+  }
+}
+
+function closeChat() {
+  const modal = document.getElementById('chatModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+  
+  // ✅ DÉBLOQUER LE SCROLL DU BODY (FIX iOS)
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.height = '';
+  document.documentElement.style.overflow = '';
+  
+  if (socket && currentConversationId) {
+    socket.emit('leave_conversation', currentConversationId);
+  }
+  
+  currentConversationId = null;
+}
+
+// ============================================
+// MESSAGES
+// ============================================
+async function loadMessages(conversationId) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const response = await fetch(`/api/chat/messages/${conversationId}`, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur chargement messages');
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.messages) {
+      displayMessages(data.messages);
+    }
+  } catch (error) {
+    console.error('❌ Erreur chargement messages:', error);
+    showToast('Erreur de chargement des messages', 'error');
+  }
+}
+
+function displayMessages(messages) {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  if (!messages || messages.length === 0) {
+    // ✅ Attendre que les messages Channex soient injectés avant d'afficher "Aucun message"
+    container.innerHTML = `<div class="empty-state" id="emptyMsgState"><i class="fas fa-comments"></i><p>Aucun message</p></div>`;
+    setTimeout(() => {
+      const el = document.getElementById('emptyMsgState');
+      const chatEl = document.getElementById('chatMessages');
+      // S'il y a des messages Channex injectés, cacher l'empty state
+      if (el && chatEl && chatEl.children.length > 1) {
+        el.style.display = 'none';
+      }
+    }, 800);
+    return;
+  }
+  
+  // ✅ Trier par created_at ASC — les messages sans date valide vont à la fin
+  const sorted = [...messages].sort((a, b) => {
+    const tA = a.created_at ? new Date(a.created_at).getTime() : Infinity;
+    const tB = b.created_at ? new Date(b.created_at).getTime() : Infinity;
+    return tA - tB;
+  });
+
+  // ✅ Filtrer les messages sans date ET sans contenu (artefacts vides)
+  const filtered = sorted.filter(msg => {
+    const hasDate = msg.created_at && !isNaN(new Date(msg.created_at).getTime());
+    const hasContent = (msg.message || '').trim().length > 0;
+    if (!hasDate && !hasContent) return false;
+    return true;
+  });
+
+  filtered.forEach(msg => appendMessage(msg));
+
+  // ✅ Nettoyer les divs .chat-message sans contenu (artefacts DOM)
+  setTimeout(() => {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    container.querySelectorAll('.chat-message').forEach(el => {
+      // Vérifier .chat-text OU .chat-bubble OU data-ts — si rien → artefact
+      const textEl = el.querySelector('.chat-text, .chat-bubble');
+      const hasText = textEl && textEl.textContent?.trim().length > 0;
+      const hasTs = !!el.getAttribute('data-ts');
+      const hasContent = el.querySelector('img, a, .chat-bubble');
+      if (!hasText && !hasTs && !hasContent) el.remove();
+    });
+    scrollToBottom();
+  }, 100);
+}
+
+function appendMessage(message) {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+
+  // ── Anti-doublon : ne pas afficher deux fois le même message ──
+  if (message.id && container.querySelector(`[data-msg-id="${message.id}"]`)) {
+    console.log(`⏭️ [CHAT] Message ${message.id} déjà affiché — skip`);
+    return;
+  }
+
+  const isOwner = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
+  if (message.id) messageDiv.setAttribute('data-msg-id', message.id);
+  if (message.created_at) {
+    messageDiv.setAttribute('data-ts', new Date(message.created_at).getTime());
+  }
+  
+  const avatar = document.createElement('div');
+  avatar.className = 'chat-avatar';
+  avatar.textContent = isOwner ? '🏠' : '👤';
+  
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'chat-content';
+  
+  const sender = document.createElement('div');
+  sender.className = 'chat-sender';
+  sender.textContent = isOwner ? 'Vous' : 'Voyageur';
+  
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble';
+
+  const stripeMatch = (message.message || '').match(/(https?:\/\/(?:checkout\.stripe\.com|tinyurl\.com)\/\S+)/);
+  if (stripeMatch) {
+    const url = stripeMatch[1];
+    const textBefore = (message.message || '').replace(url, '').trim();
+    if (textBefore) {
+      const textNode = document.createElement('div');
+      textNode.style.cssText = 'margin-bottom:8px;';
+      textNode.textContent = textBefore;
+      bubble.appendChild(textNode);
+    }
+    const card = document.createElement('a');
+    card.href = url;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+    card.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:12px;padding:10px 14px;text-decoration:none;color:inherit;';
+    card.innerHTML = '<span style="font-size:22px;">🔒</span>'
+      + '<div><div style="font-weight:700;font-size:13px;">Déposer la caution</div>'
+      + '<div style="font-size:11px;opacity:0.75;margin-top:2px;">Cliquer pour déposer en ligne</div></div>'
+      + '<span style="margin-left:auto;font-size:16px;">→</span>';
+    bubble.appendChild(card);
+  } else {
+    bubble.textContent = message.message;
+  }
+  
+  // Meta : heure + statut
+  const meta = document.createElement('div');
+  meta.className = 'chat-meta';
+  
+  const time = document.createElement('span');
+  time.className = 'chat-time';
+  const _ts = message.created_at || message.timestamp || message.sent_at || null;
+  time.textContent = _ts ? formatTime(_ts) : '';
+  
+  const status = document.createElement('span');
+  status.className = 'chat-status';
+  const _isOwnerMsg = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
+  status.textContent = _isOwnerMsg ? 'Envoyé' : '';
+  
+  meta.appendChild(time);
+  meta.appendChild(status);
+  
+  contentDiv.appendChild(sender);
+  contentDiv.appendChild(bubble);
+  contentDiv.appendChild(meta);
+  
+  // ── Bouton traduction ───────────────────────────────────────────────────
+  // Affiché sur : messages voyageur + messages bot/propriétaire (pour voir la traduction en FR)
+  const msgTextOnly = (message.message || '').replace(/\[IMAGE:[^\]]+\]/g, '').trim();
+  const isBotOrOwner = message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
+  const showTxBtn = msgTextOnly && (!isOwner || isBotOrOwner);
+
+  if (showTxBtn) {
+    // Détecter la langue source du message pour afficher le bon drapeau
+    const FLAGS = {
+      fr: '🇫🇷', en: '🇬🇧', pt: '🇵🇹', es: '🇪🇸',
+      de: '🇩🇪', it: '🇮🇹', nl: '🇳🇱', ru: '🇷🇺',
+      zh: '🇨🇳', ja: '🇯🇵', ko: '🇰🇷', ar: '🇸🇦',
+    };
+
+    function detectMsgLang(text) {
+      const t = text.toLowerCase();
+      const scores = {
+        pt: (t.match(/\b(olá|ola|obrigado|obrigada|por favor|onde|quando|posso|quero|preciso|senha|bom dia|boa tarde|boa noite|como|entrada|saída)\b/g) || []).length,
+        en: (t.match(/\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|can|could|would|wifi|password|check|arrival|departure|need|want)\b/g) || []).length,
+        es: (t.match(/\b(hola|gracias|por favor|dónde|cuándo|puedo|quiero|necesito|contraseña|llegada|salida|buenos días)\b/g) || []).length,
+        de: (t.match(/\b(hallo|hei|danke|bitte|wo|wann|wie|was|kann|möchte|passwort|ankunft|abreise|guten)\b/g) || []).length,
+        it: (t.match(/\b(ciao|grazie|dove|quando|posso|vorrei|ho bisogno|indirizzo|arrivo|partenza|buongiorno)\b/g) || []).length,
+        nl: (t.match(/\b(hallo|hoi|bedankt|dank|alsjeblieft|waar|wanneer|kan|wil|wachtwoord|aankomst|vertrek)\b/g) || []).length,
+        fr: (t.match(/\b(bonjour|bonsoir|merci|où|quand|comment|puis-je|voudrais|besoin|arrivée|départ|nous|vous|je|salut)\b/g) || []).length,
+      };
+      const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+      return best[1] >= 1 ? best[0] : 'en';
+    }
+
+    const srcLang = isBotOrOwner ? 'bot' : detectMsgLang(msgTextOnly);
+    const srcFlag = FLAGS[srcLang] || '🌐';
+    const dstFlag = '🇫🇷';
+
+    const txBar = document.createElement('div');
+    txBar.className = 'tx-bar';
+
+    const txBtn = document.createElement('button');
+    txBtn.className = 'tx-chip';
+    txBtn.innerHTML = `<span class="tx-flags">${srcFlag}→${dstFlag}</span><span class="tx-label">Traduire</span>`;
+    txBtn.setAttribute('data-original', message.message);
+    txBtn.setAttribute('data-translated', '');
+    txBtn.setAttribute('data-state', 'original');
+
+    txBtn.addEventListener('click', async function() {
+      const state = txBtn.getAttribute('data-state');
+      const original = txBtn.getAttribute('data-original');
+
+      if (state === 'translated') {
+        bubble.textContent = original;
+        txBtn.innerHTML = `<span class="tx-flags">${srcFlag}→${dstFlag}</span><span class="tx-label">Traduire</span>`;
+        txBtn.setAttribute('data-state', 'original');
+        txBtn.classList.remove('translated');
+        return;
+      }
+
+      const cached = txBtn.getAttribute('data-translated');
+      if (cached) {
+        bubble.textContent = cached;
+        txBtn.innerHTML = `<span class="tx-flags">${dstFlag}→${srcFlag}</span><span class="tx-label">Original</span>`;
+        txBtn.setAttribute('data-state', 'translated');
+        txBtn.classList.add('translated');
+        return;
+      }
+
+      txBtn.innerHTML = '<span class="tx-flags">⏳</span><span class="tx-label">...</span>';
+      txBtn.setAttribute('data-state', 'loading');
+      txBtn.disabled = true;
+
+      try {
+        const translated = await chatTranslate(original, 'fr');
+        txBtn.setAttribute('data-translated', translated);
+        bubble.textContent = translated;
+        txBtn.innerHTML = `<span class="tx-flags">${dstFlag}→${srcFlag}</span><span class="tx-label">Original</span>`;
+        txBtn.setAttribute('data-state', 'translated');
+        txBtn.classList.add('translated');
+      } catch(e) {
+        txBtn.innerHTML = `<span class="tx-flags">${srcFlag}→${dstFlag}</span><span class="tx-label">Traduire</span>`;
+        txBtn.setAttribute('data-state', 'original');
+      }
+      txBtn.disabled = false;
+    });
+
+    txBar.appendChild(txBtn);
+    contentDiv.appendChild(txBar);
+  }
+  
+  messageDiv.appendChild(avatar);
+  messageDiv.appendChild(contentDiv);
+  
+  container.appendChild(messageDiv);
+  scrollToBottom();
+}
+
+// ── Traduction via DeepL (proxy backend) ────────────────────────────────
+const _txCache = {};
+async function chatTranslate(text, targetLang) {
+  // targetLang : 'fr' (→ français) ou 'en' (→ anglais)
+  const deeplTarget = targetLang === 'fr' ? 'FR' : 'EN-GB';
+  const key = deeplTarget + '|' + text.slice(0, 60);
+  if (_txCache[key]) return _txCache[key];
+
+  try {
+    const r = await fetch(`${API_URL}/api/translate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('lcc_token') || '')
+      },
+      body: JSON.stringify({ text, target_lang: deeplTarget })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const translated = d.translated || d.text || d.translation;
+    if (!translated) throw new Error('Pas de traduction retournée');
+    _txCache[key] = translated;
+    return translated;
+  } catch (err) {
+    console.warn('⚠️ [TRANSLATE] Erreur DeepL backend:', err.message);
+    // Fallback MyMemory si le backend échoue
+    const langMap = { fr: 'en|fr', en: 'fr|en' };
+    const langpair = langMap[targetLang] || 'en|fr';
+    const r2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0,450))}&langpair=${langpair}`);
+    const d2 = await r2.json();
+    if (d2.responseStatus === 200) {
+      _txCache[key] = d2.responseData.translatedText;
+      return _txCache[key];
+    }
+    throw new Error('Translation failed');
+  }
+}
+
+// Langue du proprio (sauvegardée dans localStorage)
+function setOwnerLang(lang) {
+  localStorage.setItem('owner_lang', lang);
+}
+
+async function sendMessageOwner() {
+  const input = document.getElementById('chatInput');
+  // Sur messages.html, currentConversationId est dans window — fallback
+  if (!currentConversationId && window.currentConversationId) {
+    currentConversationId = window.currentConversationId;
+  }
+  if (!currentChannexBookingId && window._currentChannexBookingId) {
+    currentChannexBookingId = window._currentChannexBookingId;
+  }
+  if (!input || !currentConversationId) return;
+
+  let message = input.value.trim();
+  if (!message) return;
+
+  // ── Résoudre les raccourcis {{variable}} avant l'envoi ──
+  if (message.includes('{{') || message.includes('{')) {
+    const conv = allConversations.find(c => c.id == currentConversationId);
+    if (conv) {
+      const resolved = await resolveShortcuts(message, conv);
+      if (resolved !== message) {
+        // Afficher un aperçu avant envoi si des variables ont été remplacées
+        message = resolved;
+        input.value = resolved;
+      }
+    }
+  }
+
+  const sendBtn = document.getElementById('sendBtn');
+  if (sendBtn) sendBtn.disabled = true;
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+
+    // ── Si conversation liée à Channex : envoyer via plateforme ──
+    if (currentChannexBookingId) {
+      const response = await fetch(`${API_URL}/api/chat/conversations/${currentConversationId}/send-platform`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ message })
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur envoi plateforme');
+      }
+      input.value = '';
+      input.style.height = 'auto';
+      showToast('✅ Envoyé sur la plateforme', 'success');
+      return;
+    }
+
+    // ── Conversation BH classique ──────────────────────────────
+    const response = await fetch(API_URL + '/api/chat/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        conversation_id: currentConversationId,
+        message: message,
+        sender_type: 'owner'
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Erreur envoi message');
+    }
+
+    input.value = '';
+    input.style.height = 'auto';
+    // Le message sera ajouté via Socket.IO
+
+  } catch (error) {
+    console.error('❌ Erreur envoi message:', error);
+    showToast('Erreur lors de l\'envoi : ' + error.message, 'error');
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+  }
+}
+
+// ── Injecter les messages Channex dans le chat UI ─────────────
+function _injectChannexMessages(channexMsgs) {
+  const chatEl = document.getElementById('chatMessages');
+  if (!chatEl) return;
+
+  // Trier les messages Channex par date avant injection
+  const sorted = [...channexMsgs].sort((a, b) => {
+    const tA = a.inserted_at ? new Date(a.inserted_at).getTime() : 0;
+    const tB = b.inserted_at ? new Date(b.inserted_at).getTime() : 0;
+    return tA - tB;
+  });
+
+  sorted.forEach(m => {
+    if (!m.id || !m.message) return; // ignorer les messages vides/invalides
+    if (chatEl.querySelector(`[data-channex-id="${m.id}"]`)) return;
+    const isGuest = m.sender === 'guest';
+    const ts = m.inserted_at ? new Date(m.inserted_at).getTime() : 0;
+    const time = m.inserted_at
+      ? new Date(m.inserted_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    const div = document.createElement('div');
+    div.className = `chat-message${isGuest ? '' : ' owner'}`;
+    div.setAttribute('data-channex-id', m.id);
+    div.setAttribute('data-ts', ts); // ✅ Ajouter data-ts pour le tri
+    div.innerHTML = `
+      <div class="chat-bubble">
+        <div class="chat-sender">${isGuest ? 'Voyageur' : 'Vous'} <span style="font-size:10px;opacity:.6;">· via plateforme</span></div>
+        <div class="chat-text">${m.message}</div>
+        <div class="chat-time">${time}</div>
+      </div>`;
+
+    // Insérer au bon endroit chronologiquement
+    if (ts > 0) {
+      const allMsgs = Array.from(chatEl.children);
+      let inserted = false;
+      for (const existing of allMsgs) {
+        const existingTs = parseInt(existing.getAttribute('data-ts') || '0');
+        if (existingTs > 0 && ts < existingTs) {
+          chatEl.insertBefore(div, existing);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) chatEl.appendChild(div);
+    } else {
+      chatEl.appendChild(div);
+    }
+  });
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function formatTime(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  
+  if (isToday) {
+    return date.toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } else {
+    return date.toLocaleDateString('fr-FR', { 
+      day: '2-digit', 
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+}
+
+function scrollToBottom() {
+  const container = document.getElementById('chatMessages');
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+    // Retry après injection des messages Channex (asynchrone)
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+    }, 500);
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+    }, 1200);
+  }
+}
+
+// ============================================
+// GÉNÉRATION MESSAGE BOOKING
+// ============================================
+async function openBookingMessageModal(conversationId) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const response = await fetch(`/api/chat/generate-booking-message/${conversationId}`, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Erreur génération message');
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.message) {
+      // Copier dans le presse-papier
+      await navigator.clipboard.writeText(data.message);
+      
+      // Afficher une notification
+      showToast('✅ Message copié dans le presse-papier !', 'success');
+    }
+  } catch (error) {
+    console.error('❌ Erreur génération message:', error);
+    showToast('❌ Erreur lors de la génération', 'error');
+  }
+}
+
+// ============================================
+// COPIER LE LIEN D'INVITATION
+// ============================================
+function copyInviteLink(token, pinCode) {
+  const chatLink = `${window.location.origin}/chat/${token}`;
+  const message = `🎉 Bonjour et merci pour votre réservation !
 
 Pour faciliter votre séjour et recevoir toutes les informations importantes (accès, livret d'accueil, etc.), merci de cliquer sur le lien ci-dessous :
 
@@ -1227,98 +1360,509 @@ Vous devrez saisir :
 - Ce code à 4 chiffres
 
 Au plaisir de vous accueillir ! 🏠`;
+  
+  navigator.clipboard.writeText(message).then(
+    () => {
+      showToast('Message copié dans le presse-papier !', 'success');
+    },
+    err => {
+      console.error('Erreur copie:', err);
+      showToast('Erreur lors de la copie', 'error');
+    }
+  );
 }
 
-/**
- * Envoie le message de bienvenue avec livret d'accueil
- */
-async function sendWelcomeMessage(pool, io, conversationId, propertyId, userId) {
+// ============================================
+// SUPPRESSION DE CONVERSATION
+// ============================================
+async function deleteConversation(conversationId, event) {
+  // Empêcher l'ouverture du chat
+  event.stopPropagation();
+  
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.')) {
+    return;
+  }
+  
   try {
-    console.log(`🎯 Démarrage de l'onboarding pour conversation ${conversationId}`);
+    const token = localStorage.getItem('lcc_token');
     
-    // Démarrer l'onboarding au lieu du message de bienvenue classique
-    const { startOnboarding } = require('../onboarding-system');
-    await startOnboarding(conversationId, pool, io);
+    const response = await fetch(`/api/chat/conversations/${conversationId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
     
-    console.log(`✅ Onboarding démarré pour conversation ${conversationId}`);
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Erreur lors de la suppression');
+    }
+    
+    // Supprimer visuellement avec animation
+    const conversationElement = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+    if (conversationElement) {
+      conversationElement.style.transition = 'all 0.3s ease';
+      conversationElement.style.opacity = '0';
+      conversationElement.style.transform = 'translateX(-20px)';
+      
+      setTimeout(() => {
+        conversationElement.remove();
+        
+        // Retirer de allConversations
+        allConversations = allConversations.filter(c => c.id !== conversationId);
+        
+        // Mettre à jour les stats
+        updateStats();
+        
+        // Si plus aucune conversation, afficher le message vide
+        const conversationsList = document.getElementById('conversationsList');
+        if (conversationsList && conversationsList.children.length === 0) {
+          conversationsList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-comments"></i>
+              <h3>Aucune conversation</h3>
+              <p>Les conversations avec vos voyageurs apparaîtront ici.</p>
+            </div>
+          `;
+        }
+      }, 300);
+    }
+    
+    // Toast de confirmation
+    showToast('Conversation supprimée avec succès', 'success');
+    
   } catch (error) {
-    console.error('❌ Erreur sendWelcomeMessage (onboarding):', error);
+    console.error('❌ Erreur suppression conversation:', error);
+    showToast('Erreur: ' + error.message, 'error');
   }
 }
 
-/**
- * Trouve une réponse automatique correspondante
- */
-async function findAutoResponse(pool, userId, propertyId, messageContent) {
-  try {
-    // Récupérer les infos complètes de la propriété
-    const propertyResult = await pool.query(
-      `SELECT 
-        id, name, address, arrival_time, departure_time,
-        wifi_name, wifi_password, access_code, access_instructions,
-        amenities, house_rules, practical_info, auto_responses_enabled
-       FROM properties 
-       WHERE id = $1 AND user_id = $2`,
-      [propertyId, userId]
-    );
+// ============================================
+// SOCKET.IO
+// ============================================
+function connectSocket() {
+  console.log('🔌 [SOCKET] Connexion à:', API_URL);
+  
+  // Options Socket.io optimisées pour mobile natif
+  const socketOptions = {
+    transports: ['websocket', 'polling'], // Websocket en premier
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5,
+    timeout: 20000
+  };
+  
+  socket = io(API_URL, socketOptions);
+  
+  socket.on('connect', () => {
+    console.log('✅ Socket connecté');
     
-    if (propertyResult.rows.length === 0) {
-      return null;
+    // Rejoindre la room utilisateur pour les notifications
+    if (userId) {
+      socket.emit('join_user_room', userId);
+    }
+  });
+  
+  socket.on('connect_error', (error) => {
+    console.error('❌ [SOCKET] Erreur de connexion:', error.message);
+  });
+  
+  socket.on('new_message', (message) => {
+    console.log('📨 Nouveau message reçu:', message);
+    
+    // Si c'est dans la conversation actuelle, afficher le message
+    if (currentConversationId && message.conversation_id === currentConversationId) {
+      appendMessage(message);
+      scrollToBottom();
     }
     
-    const property = propertyResult.rows[0];
-    
-    // Vérifier si les réponses auto sont activées
-    if (property.auto_responses_enabled === false) {
-      return null;
-    }
-    
-    // Détecter les questions
-    const detectedQuestions = detectQuestions(messageContent);
-    
-    if (detectedQuestions.length === 0) {
-      return null;
-    }
-    
-    // Générer la réponse
-    const response = generateAutoResponse(property, detectedQuestions);
-    
-    if (response) {
-      console.log('🤖 Réponse auto générée pour:', detectedQuestions.map(q => q.category).join(', '));
-      return response;
-    }
-    
-    return null;
+    // Mettre à jour le compteur de messages non lus
+    loadConversations();
+  });
+  
+  socket.on('new_notification', (notification) => {
+    console.log('🔔 Nouvelle notification:', notification);
+    // Afficher une notification toast
+    showToast('Nouveau message reçu', 'info');
+    // Recharger les conversations
+    loadConversations();
+  });
+  
+  socket.on('messages_read', ({ conversationId }) => {
+    console.log('✅ Messages marqués comme lus:', conversationId);
+    // Recharger les conversations
+    loadConversations();
+  });
+  
+  socket.on('disconnect', () => {
+    console.log('❌ Socket déconnecté');
+  });
 
-  } catch (error) {
-    console.error('❌ Erreur recherche réponse auto:', error);
-    return null;
+  // ── Messages entrants depuis les plateformes (Airbnb/Booking) ──
+  // ⚠️ Ne PAS ajouter de div ici : le message est déjà affiché via 'new_message'.
+  // On garde seulement la mise à jour du badge + le toast.
+  socket.on('new_platform_message', (data) => {
+    console.log('💬 [CHANNEX] Message plateforme reçu (toast uniquement):', data);
+
+    // Recharger la liste des conversations (badge non-lu)
+    loadConversations();
+
+    showToast('💬 Nouveau message voyageur', 'info');
+  });
+
+  // Exposer le socket pour messages.html
+  window._chatSocket = socket;
+}
+
+// ============================================
+// LOADING & TOASTS
+// ============================================
+function showLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.classList.add('active');
   }
 }
 
-/**
- * Crée une notification pour le propriétaire
- */
-async function createNotification(pool, io, userId, conversationId, messageId, type) {
-  try {
-    await pool.query(
-      `INSERT INTO chat_notifications (user_id, conversation_id, message_id, notification_type)
-       VALUES ($1, $2, $3, $4)`,
-      [userId, conversationId, messageId, type]
-    );
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+  }
+}
 
-    // Émettre notification via Socket.io
-    io.to(`user_${userId}`).emit('new_notification', {
-      type,
-      conversationId,
-      messageId
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  
+  // Fallback si pas de container
+  if (!container) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+    return;
+  }
+
+  const icons = {
+    success: 'fa-check-circle',
+    error: 'fa-exclamation-circle',
+    info: 'fa-info-circle'
+  };
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <i class="fas ${icons[type] || icons.info}"></i>
+    <span class="toast-message">${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('hide');
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3500);
+}
+
+// ============================================
+// GESTION CLAVIER
+// ============================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && currentConversationId) {
+    closeChat();
+  }
+});
+
+// ============================================
+// DÉTECTION CHANNEX (appelée après rendu UI)
+// ============================================
+async function _checkChannexConversation(conversationId, conv) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const chxRes = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/messages-channex`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!chxRes.ok) return;
+
+    const chxData = await chxRes.json();
+
+    if (chxData.channex_booking_id) {
+      currentChannexBookingId = chxData.channex_booking_id;
+      window._currentChannexBookingId = currentChannexBookingId;
+
+      // Adapter le sendBtn pour la plateforme
+      const platform = (conv ? conv.platform || '' : '').toLowerCase();
+      const platformLabel = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking.com' : 'Plateforme';
+      const platformColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) {
+        sendBtn.title = `Envoyer sur ${platformLabel}`;
+        sendBtn.style.background = platformColor;
+      }
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) chatInput.placeholder = `Répondre via ${platformLabel}…`;
+
+      // Injecter messages Channex non encore en DB
+      if (chxData.channex_messages && chxData.channex_messages.length > 0) {
+        _injectChannexMessages(chxData.channex_messages);
+      }
+
+      console.log(`✅ [CHANNEX] Conversation ${conversationId} liée au booking ${chxData.channex_booking_id}`);
+    } else {
+      // Reset sendBtn état normal
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) { sendBtn.style.background = ''; sendBtn.title = 'Envoyer'; }
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) chatInput.placeholder = 'Répondre à…';
+    }
+  } catch(e) {
+    console.warn('⚠️ [CHANNEX] check:', e.message);
+  }
+}
+
+// ============================================
+// EXPOSER LES FONCTIONS GLOBALEMENT
+// ============================================
+window.openChat = openChat;
+window.displayMessages = displayMessages;
+window.loadMessages = loadMessages;
+window.closeChat = closeChat;
+window.sendMessageOwner = sendMessageOwner;
+window.loadQuickReplies = loadQuickReplies;
+window.openBookingMessageModal = openBookingMessageModal;
+window.copyInviteLink = copyInviteLink;
+window.deleteConversation = deleteConversation;
+window.cleanGuestName = cleanGuestName;
+window.getGuestInitial = getGuestInitial;
+window.getGuestPhone = getGuestPhone;
+window.formatRelativeTime = formatTime; // Alias pour compatibilité
+
+// ============================================
+// RACCOURCIS MESSAGES
+// ============================================
+async function loadQuickReplies(conversationId) {
+  const bar = document.getElementById('quickRepliesBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  bar.style.display = 'none';
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/quick-context`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const chips = [];
+
+    // Raccourcis texte
+    (data.quickReplies || []).forEach(reply => {
+      // Compatibilité : ancien format string ou nouveau format {title, text}
+      const text  = (typeof reply === 'object') ? reply.text  : reply;
+      const title = (typeof reply === 'object') ? reply.title : reply;
+      const btn = document.createElement('button');
+      btn.className = 'qr-chip';
+      btn.textContent = title || text;
+      btn.title = text; // tooltip au survol
+      btn.onclick = () => {
+        const input = document.getElementById('chatInput');
+        if (input) {
+          const current = input.value;
+          input.value = current ? current + ' ' + text : text;
+          input.focus();
+          input.dispatchEvent(new Event('input'));
+        }
+      };
+      chips.push(btn);
     });
 
-    console.log(`🔔 Notification envoyée à ${userId} pour conversation ${conversationId}`);
+    // Bouton lien caution — masqué pour Airbnb (caution gérée par la plateforme)
+    const _convForDeposit = window.currentChatConv || {};
+    const _platDeposit = (_convForDeposit.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+    const _isAirbnbConv = _platDeposit.includes('airbnb') || _platDeposit === 'abb';
+    if (data.depositUrl && !_isAirbnbConv) {
+      const btn = document.createElement('button');
+      btn.className = 'qr-chip deposit';
+      btn.innerHTML = '🔒 Envoyer lien caution';
+      btn.onclick = async () => {
+        const input = document.getElementById('chatInput');
+        if (!input) return;
+        btn.innerHTML = '⏳...';
+        btn.disabled = true;
+        try {
+          // Utiliser notre propre endpoint de lien court (domaine boostinghost.fr)
+          const token = localStorage.getItem('lcc_token');
+          const r = await fetch(`${API_URL}/api/short-link`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: data.depositUrl })
+          });
+          const d = r.ok ? await r.json() : null;
+          const shortUrl = d?.shortUrl || data.depositUrl;
+          const current = input.value;
+          input.value = current ? current + ' ' + shortUrl : shortUrl;
+          input.focus();
+          input.dispatchEvent(new Event('input'));
+        } catch(e) {
+          const current = input.value;
+          input.value = current ? current + ' ' + data.depositUrl : data.depositUrl;
+          input.focus();
+          input.dispatchEvent(new Event('input'));
+        } finally {
+          btn.innerHTML = '🔒 Envoyer lien caution';
+          btn.disabled = false;
+        }
+      };
+      chips.push(btn);
+    }
 
-  } catch (error) {
-    console.error('❌ Erreur création notification:', error);
+    if (chips.length > 0) {
+      chips.forEach(c => bar.appendChild(c));
+      bar.style.display = 'flex';
+    }
+  } catch(e) {
+    console.warn('Erreur loadQuickReplies:', e);
   }
 }
 
-module.exports = { setupChatRoutes };
+// ============================================================
+// POPUP RACCOURCIS {{variables}}
+// Apparaît quand l'hôte tape {{ dans le textarea
+// ============================================================
+const SHORTCUTS_LIST = [
+  { key: '{{guest_name}}',       label: 'Nom du voyageur',       icon: '👤' },
+  { key: '{{prenom}}',           label: 'Prénom du voyageur',     icon: '👤' },
+  { key: '{{property_name}}',    label: 'Nom du logement',        icon: '🏠' },
+  { key: '{{checkin_date}}',     label: "Date d'arrivée",         icon: '📅' },
+  { key: '{{checkout_date}}',    label: 'Date de départ',         icon: '📅' },
+  { key: '{{arrival_time}}',     label: "Heure d'arrivée",        icon: '⏰' },
+  { key: '{{departure_time}}',   label: 'Heure de départ',        icon: '⏰' },
+  { key: '{{access_code}}',      label: "Code d'accès",           icon: '🔑' },
+  { key: '{{wifi_name}}',        label: 'Nom du WiFi',            icon: '📶' },
+  { key: '{{wifi_password}}',    label: 'Mot de passe WiFi',      icon: '📶' },
+  { key: '{{welcome_book_url}}', label: 'Lien livret d\'accueil', icon: '📖' },
+  { key: '{{adresse}}',          label: 'Adresse du logement',    icon: '📍' },
+];
+
+function _injectShortcutPopup() {
+  if (document.getElementById('shortcutPopup')) return;
+  const popup = document.createElement('div');
+  popup.id = 'shortcutPopup';
+  popup.style.cssText = [
+    'position:absolute',
+    'bottom:100%',
+    'left:0',
+    'right:0',
+    'background:white',
+    'border:1px solid rgba(200,184,154,.4)',
+    'border-radius:12px',
+    'box-shadow:0 -4px 24px rgba(13,17,23,.12)',
+    'max-height:220px',
+    'overflow-y:auto',
+    'z-index:9999',
+    'display:none',
+    'margin-bottom:6px',
+  ].join(';');
+  // Insérer dans le parent du textarea
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput && chatInput.parentElement) {
+    chatInput.parentElement.style.position = 'relative';
+    chatInput.parentElement.insertBefore(popup, chatInput);
+  } else {
+    document.body.appendChild(popup);
+  }
+}
+
+function _checkShortcutTrigger(input) {
+  const val = input.value;
+  const cursor = input.selectionStart;
+  const before = val.substring(0, cursor);
+  const match = before.match(/\{\{([^}]*)$/);
+
+  const popup = document.getElementById('shortcutPopup');
+  if (!popup) return;
+
+  if (!match) { _closeShortcutPopup(); return; }
+
+  const query = match[1].toLowerCase();
+  const filtered = SHORTCUTS_LIST.filter(s =>
+    s.key.toLowerCase().includes(query) ||
+    s.label.toLowerCase().includes(query)
+  );
+
+  if (!filtered.length) { _closeShortcutPopup(); return; }
+
+  popup.innerHTML = filtered.map((s, i) => `
+    <div class="shortcut-item" data-key="${s.key}"
+      style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;border-bottom:1px solid rgba(200,184,154,.2);transition:background .1s;"
+      onmouseenter="this.style.background='rgba(26,122,94,.06)'"
+      onmouseleave="this.style.background=''"
+      onmousedown="event.preventDefault();_selectShortcut('${s.key}')">
+      <span style="font-size:16px;">${s.icon}</span>
+      <div>
+        <div style="font-weight:600;color:#0D1117;">${s.label}</div>
+        <div style="font-size:11px;color:#7A8695;font-family:monospace;">${s.key}</div>
+      </div>
+    </div>
+  `).join('');
+
+  popup.style.display = 'block';
+}
+
+function _selectShortcut(key) {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+
+  const val = input.value;
+  const cursor = input.selectionStart;
+  const before = val.substring(0, cursor);
+  const after  = val.substring(cursor);
+
+  // Remplacer le {{ partiel par la variable complète
+  const newBefore = before.replace(/\{\{[^}]*$/, key);
+  input.value = newBefore + after;
+
+  // Replacer le curseur après la variable insérée
+  const newCursor = newBefore.length;
+  input.setSelectionRange(newCursor, newCursor);
+  input.focus();
+  input.dispatchEvent(new Event('input'));
+  _closeShortcutPopup();
+}
+
+function _closeShortcutPopup() {
+  const popup = document.getElementById('shortcutPopup');
+  if (popup) popup.style.display = 'none';
+}
+
+// Fermer le popup si on clique ailleurs
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#shortcutPopup') && e.target.id !== 'chatInput') {
+    _closeShortcutPopup();
+  }
+});
+
+console.log('✅ Chat owner initialized');
