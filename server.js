@@ -32569,6 +32569,56 @@ N'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
 });
 
 
+// ── Dédupliquer les conversations BHGuest en doublon ─────────
+app.post('/api/guest/dedup-conversations', authenticateToken, async (req, res) => {
+  try {
+    // Trouver les doublons : même property_id + guest_email + reservation_start_date
+    const dupsResult = await pool.query(`
+      SELECT property_id, guest_email, reservation_start_date,
+             COUNT(*) as cnt,
+             MIN(id) as keep_id,
+             ARRAY_AGG(id ORDER BY id) as all_ids
+      FROM conversations
+      WHERE platform = 'Boostinghost Guest'
+      GROUP BY property_id, guest_email, reservation_start_date
+      HAVING COUNT(*) > 1
+    `);
+
+    if (dupsResult.rows.length === 0) {
+      return res.json({ message: 'Aucun doublon trouvé', deleted: 0 });
+    }
+
+    let totalDeleted = 0;
+    const details = [];
+
+    for (const row of dupsResult.rows) {
+      // Garder le plus ancien (MIN id), supprimer les autres
+      const toDelete = row.all_ids.filter(id => id !== row.keep_id);
+      
+      // Supprimer les messages des conversations en doublon
+      await pool.query(`DELETE FROM messages WHERE conversation_id = ANY($1)`, [toDelete]);
+      // Supprimer les conversations en doublon
+      await pool.query(`DELETE FROM conversations WHERE id = ANY($1)`, [toDelete]);
+      
+      totalDeleted += toDelete.length;
+      details.push({
+        guest_email: row.guest_email,
+        property_id: row.property_id,
+        date: row.reservation_start_date,
+        kept: row.keep_id,
+        deleted: toDelete
+      });
+      console.log(`🧹 [DEDUP] ${row.guest_email} / ${row.property_id}: gardé ${row.keep_id}, supprimé ${toDelete.join(', ')}`);
+    }
+
+    res.json({ message: `${totalDeleted} conversation(s) en doublon supprimée(s)`, deleted: totalDeleted, details });
+  } catch(e) {
+    console.error('❌ [DEDUP]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // ── Admin : gérer les codes promo ────────────────────────────
 app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
   try {
