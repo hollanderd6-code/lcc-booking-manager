@@ -669,6 +669,13 @@ html[data-theme-v3="1"] .conversations-section {
 }
 @media (max-width: 1366px) { .bh-desktop-header { display: none !important; } }
 
+/* Décaler le contenu sous le header fixe desktop */
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] .main-content {
+    padding-top: 64px !important;
+  }
+}
+
 html[data-theme-v3="1"] .page-content {
   padding: 0 !important;
   margin: 0 !important;
