@@ -31926,11 +31926,19 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
     // Et récupérer le montant réel payé (source de vérité)
     let stripeAmountPaid = null;
     if (session_id) {
-      const session = await stripe.checkout.sessions.retrieve(session_id);
-      if (session.payment_status !== 'paid') {
-        return res.status(402).json({ error: 'Paiement non confirmé' });
+      try {
+        // Récupérer le compte Connect du propriétaire pour le retrieve Stripe
+        const { stripeAccountId } = await getStripeForProperty(pool, property_id, null);
+        const stripeOpts = stripeAccountId ? { stripeAccount: stripeAccountId } : {};
+        const session = await stripe.checkout.sessions.retrieve(session_id, {}, stripeOpts);
+        if (session.payment_status !== 'paid') {
+          return res.status(402).json({ error: 'Paiement non confirmé' });
+        }
+        stripeAmountPaid = session.amount_total ? session.amount_total / 100 : null;
+      } catch(stripeErr) {
+        // Si la session est introuvable (ex: Connect vs principal), on continue sans vérification montant
+        console.warn('⚠️ [GUEST] Stripe session retrieve failed, continuing:', stripeErr.message);
       }
-      stripeAmountPaid = session.amount_total ? session.amount_total / 100 : null;
     }
 
     // Vérifier dispo
@@ -32062,7 +32070,9 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
     let savedPaymentId = null;
     try {
       const amtCents = Math.round(totalTTC * 100);
-      const stripeSessionObj = session_id ? await stripe.checkout.sessions.retrieve(session_id).catch(() => null) : null;
+      const { stripeAccountId: _saId } = await getStripeForProperty(pool, property_id, prop.owner_user_id).catch(() => ({ stripeAccountId: null }));
+      const _stripeOpts = _saId ? { stripeAccount: _saId } : {};
+      const stripeSessionObj = session_id ? await stripe.checkout.sessions.retrieve(session_id, {}, _stripeOpts).catch(() => null) : null;
       const paymentIntentId = stripeSessionObj?.payment_intent || null;
       const payInsert = await pool.query(`
         INSERT INTO payments
