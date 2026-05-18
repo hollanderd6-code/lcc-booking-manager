@@ -136,7 +136,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   height: 40px; padding: 0 20px; border: none; border-radius: 12px;
   background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
-  white-space: nowrap; position: fixed; top: calc(40px + 13px); right: 24px; z-index: 200;
+  white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
 .contrat-back-btn:hover { background: #15624B; }
 
@@ -732,6 +732,27 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     height: 18px;
   }
 }
+/* Desktop page header */
+@media (min-width: 1367px) {
+  .bh-desktop-header {
+    position: fixed; top: 40px; left: 260px; right: 0;
+    height: 64px; background: white; border-bottom: 1px solid rgba(200,184,154,.35);
+    display: flex; align-items: center; padding: 0 32px;
+    z-index: 45;
+  }
+  .bh-desktop-header .bh-dh-kicker {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .1em; color: rgba(13,17,23,.38);
+    margin-bottom: 2px;
+  }
+  .bh-desktop-header .bh-dh-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px; font-weight: 400; color: #0D1117;
+    line-height: 1.1;
+  }
+}
+@media (max-width: 1366px) { .bh-desktop-header { display: none !important; } }
 </style>
 </head>
 <body data-page="contrat" data-title="Contrats">
@@ -741,6 +762,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <div class="app-container">
 <div id="bhSidebar"></div>
 <main class="main-content"><div id="bhHeader"></div>
+<div class="bh-desktop-header"><div><div class="bh-dh-kicker">Gestion</div><div class="bh-dh-title">Contrats</div></div></div>
 <header class="main-header contrat-static-header" style="position:fixed;top:40px;left:260px;right:0;z-index:50;background:var(--bg-primary,#F5F2EC);border-bottom:1px solid rgba(200,184,154,.35);padding:16px 24px;display:flex;align-items:center;">
   <div class="header-left">
     <div class="page-kicker" style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(13,17,23,.38);margin-bottom:2px;">Gestion</div>
