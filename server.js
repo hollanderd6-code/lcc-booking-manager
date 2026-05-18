@@ -2006,6 +2006,8 @@ ON invoice_download_tokens(token);
     try {
       await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS guest_language TEXT`);
       await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS language TEXT`);
+      await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS reservation_uid TEXT`);
+      await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS source TEXT`);
       console.log('✅ Colonnes guest_language + language OK');
     } catch(e) { console.log('ℹ️ guest_language:', e.message); }
 
@@ -32167,14 +32169,14 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
             (user_id, property_id, reservation_start_date, reservation_end_date,
              platform, guest_name, guest_email, guest_phone,
              pin_code, unique_token, photos_token,
-             reservation_uid, status, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'active',NOW(),NOW())
+             reservation_uid, source, status, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',NOW(),NOW())
            RETURNING id`,
           [
             prop.owner_user_id, property_id, checkin, checkout,
             'Boostinghost Guest',
             guest_name, guest_email, guest_phone || null,
-            pinCode, uniqueToken, photosToken, uid
+            pinCode, uniqueToken, photosToken, uid, 'guest_app'
           ]
         );
         conversationId = convResult.rows[0].id;
@@ -32433,8 +32435,8 @@ app.post('/api/guest/recover-sessions', authenticateToken, async (req, res) => {
                 (user_id, property_id, reservation_start_date, reservation_end_date,
                  platform, guest_name, guest_email, guest_phone,
                  pin_code, unique_token, photos_token,
-                 reservation_uid, status, created_at, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'active',NOW(),NOW())
+                 reservation_uid, source, status, created_at, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',NOW(),NOW())
                RETURNING id`,
               [
                 ownerId, property_id, checkin, checkout,
@@ -32443,7 +32445,7 @@ app.post('/api/guest/recover-sessions', authenticateToken, async (req, res) => {
                 Math.floor(1000 + Math.random() * 9000).toString(),
                 crypto.randomBytes(16).toString('hex'),
                 crypto.randomBytes(12).toString('hex'),
-                existingUid
+                existingUid, 'guest_app'
               ]
             );
             const convId = convResult.rows[0].id;
@@ -32498,8 +32500,8 @@ N'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
               (user_id, property_id, reservation_start_date, reservation_end_date,
                platform, guest_name, guest_email, guest_phone,
                pin_code, unique_token, photos_token,
-               reservation_uid, status, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'active',NOW(),NOW())
+               reservation_uid, source, status, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',NOW(),NOW())
              RETURNING id`,
             [
               ownerId, property_id, checkin, checkout,
@@ -32508,7 +32510,7 @@ N'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
               Math.floor(1000 + Math.random() * 9000).toString(),
               crypto.randomBytes(16).toString('hex'),
               crypto.randomBytes(12).toString('hex'),
-              uid
+              uid, 'guest_app'
             ]
           );
           conversationId = convResult.rows[0].id;
