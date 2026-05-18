@@ -329,7 +329,8 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         `SELECT 1 FROM messages
          WHERE conversation_id = $1
          AND sender_type IN ('owner', 'property')
-         AND sender_name NOT IN ('bot', 'system', 'auto', 'IA', 'Boostinghost')
+         AND (is_bot_response IS NULL OR is_bot_response = FALSE)
+         AND sender_name NOT IN ('bot', 'system', 'auto', 'IA', 'Boostinghost', 'Assistant automatique')
          AND created_at > NOW() - INTERVAL '2 hours'
          LIMIT 1`,
         [conversation.id]
