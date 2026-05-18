@@ -12696,7 +12696,7 @@ async function clearNotifHistory() {
 }
 window.clearNotifHistory = clearNotifHistory;
 
-function updateNotifBadge(count) {
+window.updateNotifBadge = function updateNotifBadge(count) {
   ['notifHistoryBadge', 'bh-mobile-notif-badge', 'notifTabBadge'].forEach(function(id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -12709,7 +12709,7 @@ function updateNotifBadge(count) {
   });
 }
 
-async function initNotifBadge() {
+window.initNotifBadge = async function initNotifBadge() {
   try {
     var token = localStorage.getItem('lcc_token');
     var headers = {};
