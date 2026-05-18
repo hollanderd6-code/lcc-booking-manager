@@ -32573,16 +32573,17 @@ N'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
 app.post('/api/guest/dedup-conversations', authenticateToken, async (req, res) => {
   try {
     // Trouver les doublons : même property_id + guest_email + reservation_start_date
+    const userId = req.user?.id || req.user?.userId;
     const dupsResult = await pool.query(`
       SELECT property_id, guest_email, reservation_start_date,
              COUNT(*) as cnt,
              MIN(id) as keep_id,
              ARRAY_AGG(id ORDER BY id) as all_ids
       FROM conversations
-      WHERE platform = 'Boostinghost Guest'
+      WHERE user_id = $1
       GROUP BY property_id, guest_email, reservation_start_date
       HAVING COUNT(*) > 1
-    `);
+    `, [userId]);
 
     if (dupsResult.rows.length === 0) {
       return res.json({ message: 'Aucun doublon trouvé', deleted: 0 });
