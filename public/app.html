@@ -12737,19 +12737,9 @@ function openNotifPanel() {
   }
 }
 
-// Bind boutons
+// Bind boutons - les deux boutons ont déjà onclick="openNotifPanel()" inline
 (function() {
-  function bindNotifBtns() {
-    // Desktop
-    var btnD = document.getElementById('notifHistoryBtn');
-    if (btnD && !btnD._notifBound) {
-      btnD._notifBound = true;
-      btnD.addEventListener('click', openNotifPanel);
-    }
-    // Mobile : le bouton a déjà onclick="openNotifPanel()" inline, pas de listener supplémentaire
-  }
   document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(bindNotifBtns, 500);
     setTimeout(initNotifBadge, 800);
   });
 })();
