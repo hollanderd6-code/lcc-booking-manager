@@ -32415,7 +32415,53 @@ app.post('/api/guest/recover-sessions', authenticateToken, async (req, res) => {
           [property_id, checkin, guest_email]
         );
         if (existingResa.rows.length > 0) {
-          results.push({ sessionId, status: 'skipped', reason: 'Réservation déjà existante: ' + existingResa.rows[0].uid });
+          // Réservation existe déjà — vérifier si la conversation manque et la créer
+          const existingUid = existingResa.rows[0].uid;
+          const existingConvCheck = await pool.query(
+            `SELECT id FROM conversations WHERE reservation_uid = $1 OR (LOWER(guest_email) = LOWER($2) AND property_id = $3 AND reservation_start_date = $4) LIMIT 1`,
+            [existingUid, guest_email, property_id, checkin]
+          );
+          if (existingConvCheck.rows.length > 0) {
+            results.push({ sessionId, status: 'skipped', reason: 'Réservation et conversation déjà existantes: ' + existingUid });
+            continue;
+          }
+          // Créer la conversation manquante
+          try {
+            const crypto = require('crypto');
+            const convResult = await pool.query(
+              `INSERT INTO conversations
+                (user_id, property_id, reservation_start_date, reservation_end_date,
+                 platform, guest_name, guest_email, guest_phone,
+                 pin_code, unique_token, photos_token,
+                 reservation_uid, status, created_at, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'active',NOW(),NOW())
+               RETURNING id`,
+              [
+                ownerId, property_id, checkin, checkout,
+                'Boostinghost Guest',
+                guest_name, guest_email, guest_phone || null,
+                Math.floor(1000 + Math.random() * 9000).toString(),
+                crypto.randomBytes(16).toString('hex'),
+                crypto.randomBytes(12).toString('hex'),
+                existingUid
+              ]
+            );
+            const convId = convResult.rows[0].id;
+            await pool.query(
+              `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_bot_response, is_read, created_at)
+               VALUES ($1, 'property', $2, $3, TRUE, FALSE, NOW())`,
+              [convId, prop.name || 'Boostinghost',
+               `Bonjour ${(guest_name || 'cher voyageur').split(' ')[0]} ! 👋
+
+Votre réservation à **${prop.name}** est confirmée du ${checkin} au ${checkout}.
+
+N'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
+            );
+            results.push({ sessionId, status: 'conv_created', uid: existingUid, conversationId: convId });
+            console.log(`✅ [RECOVER] Conversation créée pour résa existante: ${existingUid} → conv ${convId}`);
+          } catch(convErr) {
+            results.push({ sessionId, status: 'conv_error', error: convErr.message });
+          }
           continue;
         }
 
