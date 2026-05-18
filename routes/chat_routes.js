@@ -282,7 +282,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
       const { status, property_id } = req.query;
 
       let query = `
-        SELECT 
+        SELECT DISTINCT ON (c.id)
           c.*,
           c.guest_first_name,
           c.guest_last_name,
@@ -330,7 +330,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
         params.push(property_id);
       }
 
-      query += ` ORDER BY last_message_time DESC NULLS LAST, c.created_at DESC`;
+      query += ` ORDER BY c.id, last_message_time DESC NULLS LAST, c.created_at DESC`;
 
       const result = await pool.query(query, params);
 
