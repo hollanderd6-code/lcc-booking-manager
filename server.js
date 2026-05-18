@@ -32620,6 +32620,59 @@ app.post('/api/guest/dedup-conversations', authenticateToken, async (req, res) =
 });
 
 
+// ── Diagnostic + force dedup conversations BHGuest ───────────
+app.post('/api/guest/dedup-force', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?.userId;
+
+    // Lister toutes les conversations créées aujourd'hui
+    const diagResult = await pool.query(`
+      SELECT id, property_id, guest_email, guest_name, reservation_start_date, platform, created_at
+      FROM conversations
+      WHERE user_id = $1
+      AND created_at > NOW() - INTERVAL '24 hours'
+      ORDER BY guest_email, property_id, reservation_start_date, id
+    `, [userId]);
+
+    // Grouper manuellement par (property_id, guest_name, reservation_start_date)
+    const groups = {};
+    for (const row of diagResult.rows) {
+      const key = row.property_id + '|' + (row.guest_name || '').toLowerCase() + '|' + String(row.reservation_start_date).substring(0, 10);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(row);
+    }
+
+    let totalDeleted = 0;
+    const details = [];
+
+    for (const [key, rows] of Object.entries(groups)) {
+      if (rows.length <= 1) continue;
+      // Garder le plus ancien
+      rows.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const keep = rows[0];
+      const toDelete = rows.slice(1).map(r => r.id);
+
+      await pool.query(`DELETE FROM messages WHERE conversation_id = ANY($1)`, [toDelete]);
+      await pool.query(`DELETE FROM conversations WHERE id = ANY($1)`, [toDelete]);
+
+      totalDeleted += toDelete.length;
+      details.push({ key, kept: keep.id, deleted: toDelete, guest: keep.guest_name });
+      console.log(`🧹 [DEDUP-FORCE] ${key}: gardé ${keep.id}, supprimé [${toDelete.join(', ')}]`);
+    }
+
+    res.json({
+      total_today: diagResult.rows.length,
+      groups_found: Object.keys(groups).length,
+      duplicates_deleted: totalDeleted,
+      details
+    });
+  } catch(e) {
+    console.error('❌ [DEDUP-FORCE]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // ── Admin : gérer les codes promo ────────────────────────────
 app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
   try {
