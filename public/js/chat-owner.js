@@ -555,7 +555,10 @@ function renderConversations() {
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
             <span style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">${checkinDate}</span>
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
-            <span style="font-size:11px;color:${platformColor};font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fas ${platformIcon}" style="font-size:9px;margin-right:2px;"></i>${(conv.platform || 'direct').toUpperCase()}</span>
+            ${(conv.platform || '').toLowerCase().includes('boostinghost') || (conv.platform || '').toLowerCase().includes('guest')
+              ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#7C3AED;font-weight:700;white-space:nowrap;flex-shrink:0;"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#7C3AED;border-radius:3px;color:white;font-size:9px;font-weight:900;font-family:'DM Sans',sans-serif;">B</span>BOOSTINGHOST GUEST</span>`
+              : `<span style="font-size:11px;color:${platformColor};font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fas ${platformIcon}" style="font-size:9px;margin-right:2px;"></i>${(conv.platform || 'direct').toUpperCase()}</span>`
+            }
           </div>
 
           <!-- Ligne 3 : Aperçu dernier message -->
@@ -622,6 +625,7 @@ function getPlatformIcon(platform) {
   const p = (platform || '').toLowerCase();
   if (p.includes('airbnb')) return 'fa-home';  // ✅ Airbnb (fa-airbnb n'existe pas dans Font Awesome free)
   if (p.includes('booking')) return 'fa-bed';
+  if (p.includes('boostinghost') || p.includes('guest')) return 'fa-bolt';
   return 'fa-calendar';
 }
 
@@ -638,6 +642,8 @@ function getPlatformColor(platform) {
   if (p.includes('agoda'))       return '#5392FF';
   if (p.includes('holidu'))      return '#00C2A8';
   if (p.includes('tui'))         return '#E2001A';
+  // BHGuest
+  if (p.includes('boostinghost') || p.includes('guest')) return '#7C3AED';
   // Direct / manuel
   if (p.includes('direct') || p.includes('manual')) return '#1A7A5E';
   // Fallback vert Boostinghost
