@@ -31930,7 +31930,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
         // Récupérer le compte Connect du propriétaire pour le retrieve Stripe
         const { stripeAccountId } = await getStripeForProperty(pool, property_id, null);
         const stripeOpts = stripeAccountId ? { stripeAccount: stripeAccountId } : {};
-        const session = await stripe.checkout.sessions.retrieve(session_id, {}, stripeOpts);
+        const session = await stripe.checkout.sessions.retrieve(session_id, stripeOpts);
         if (session.payment_status !== 'paid') {
           return res.status(402).json({ error: 'Paiement non confirmé' });
         }
@@ -32072,19 +32072,18 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       const amtCents = Math.round(totalTTC * 100);
       const { stripeAccountId: _saId } = await getStripeForProperty(pool, property_id, prop.owner_user_id).catch(() => ({ stripeAccountId: null }));
       const _stripeOpts = _saId ? { stripeAccount: _saId } : {};
-      const stripeSessionObj = session_id ? await stripe.checkout.sessions.retrieve(session_id, {}, _stripeOpts).catch(() => null) : null;
+      const stripeSessionObj = session_id ? await stripe.checkout.sessions.retrieve(session_id, _stripeOpts).catch(() => null) : null;
       const paymentIntentId = stripeSessionObj?.payment_intent || null;
       const payInsert = await pool.query(`
         INSERT INTO payments
           (user_id, property_id, reservation_uid, amount_cents, status,
-           stripe_session_id, stripe_payment_intent_id, description, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, 'paid', $5, $6, $7, NOW(), NOW())
+           stripe_session_id, stripe_payment_intent_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, 'paid', $5, $6, NOW(), NOW())
         ON CONFLICT DO NOTHING
         RETURNING id
       `, [
         prop.owner_user_id, property_id, uid,
-        amtCents, session_id, paymentIntentId,
-        `BHGuest — ${guest_name || 'Voyageur'} — ${checkin} → ${checkout}`
+        amtCents, session_id, paymentIntentId
       ]);
       savedPaymentId = payInsert.rows[0]?.id || null;
       console.log(`💳 [GUEST] Paiement enregistré: ${savedPaymentId} (${totalTTC}€)`);
@@ -32166,14 +32165,14 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
         const convResult = await pool.query(
           `INSERT INTO conversations
             (user_id, property_id, reservation_start_date, reservation_end_date,
-             platform, source, guest_name, guest_email, guest_phone,
+             platform, guest_name, guest_email, guest_phone,
              pin_code, unique_token, photos_token,
              reservation_uid, status, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',NOW(),NOW())
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'active',NOW(),NOW())
            RETURNING id`,
           [
             prop.owner_user_id, property_id, checkin, checkout,
-            'Boostinghost Guest', 'guest_app',
+            'Boostinghost Guest',
             guest_name, guest_email, guest_phone || null,
             pinCode, uniqueToken, photosToken, uid
           ]
@@ -32367,7 +32366,7 @@ app.post('/api/guest/recover-sessions', authenticateToken, async (req, res) => {
         if (!session || session.payment_status === undefined) {
           try {
             const CONNECT_ACCOUNT = 'acct_1TE4RFFT0WaR8aHH';
-            session = await stripe.checkout.sessions.retrieve(sessionId, {}, { stripeAccount: CONNECT_ACCOUNT });
+            session = await stripe.checkout.sessions.retrieve(sessionId, { stripeAccount: CONNECT_ACCOUNT });
             stripeAccountId = CONNECT_ACCOUNT;
           } catch(e2) { /* pas sur ce compte non plus */ }
         }
@@ -32451,14 +32450,14 @@ app.post('/api/guest/recover-sessions', authenticateToken, async (req, res) => {
           const convResult = await pool.query(
             `INSERT INTO conversations
               (user_id, property_id, reservation_start_date, reservation_end_date,
-               platform, source, guest_name, guest_email, guest_phone,
+               platform, guest_name, guest_email, guest_phone,
                pin_code, unique_token, photos_token,
                reservation_uid, status, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',NOW(),NOW())
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'active',NOW(),NOW())
              RETURNING id`,
             [
               ownerId, property_id, checkin, checkout,
-              'Boostinghost Guest', 'guest_app',
+              'Boostinghost Guest',
               guest_name, guest_email, guest_phone || null,
               Math.floor(1000 + Math.random() * 9000).toString(),
               crypto.randomBytes(16).toString('hex'),
