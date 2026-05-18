@@ -12711,10 +12711,19 @@ function updateNotifBadge(count) {
 
 async function initNotifBadge() {
   try {
-    var res = await fetch('/api/notifications/history?limit=1', { credentials: 'include' });
+    var token = localStorage.getItem('lcc_token');
+    var headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var res = await fetch('/api/notifications/history?limit=50', { headers: headers });
     if (!res.ok) return;
     var data = await res.json();
-    updateNotifBadge(data.unreadCount || 0);
+    // Priorité : unreadCount si renvoyé par le backend, sinon compter les non lues
+    var count = data.unreadCount;
+    if (typeof count !== 'number') {
+      var notifs = data.notifications || (Array.isArray(data) ? data : []);
+      count = notifs.filter(function(n) { return !n.is_read; }).length;
+    }
+    updateNotifBadge(count);
   } catch(e) {}
 }
 
@@ -12739,13 +12748,7 @@ function openNotifPanel() {
       btnD._notifBound = true;
       btnD.addEventListener('click', openNotifPanel);
     }
-    // Mobile
-    var btnM = document.getElementById('bh-mobile-notif-btn');
-    if (btnM && !btnM._notifBound) {
-      btnM._notifBound = true;
-      btnM.addEventListener('click', openNotifPanel);
-      btnM.addEventListener('touchend', function(e) { e.preventDefault(); openNotifPanel(); }, { passive: false });
-    }
+    // Mobile : le bouton a déjà onclick="openNotifPanel()" inline, pas de listener supplémentaire
   }
   document.addEventListener('DOMContentLoaded', function() {
     setTimeout(bindNotifBtns, 500);
@@ -13998,9 +14001,11 @@ function openNotifPanel() {
 
   document.body.appendChild(panel);
 
-  // Charger l'onglet activité par défaut
+  // Charger l'onglet push par défaut
   notifSwitchTab('push');
   if (typeof loadPushNotifHistory === 'function') loadPushNotifHistory();
+  // Remettre le badge à 0 (l'utilisateur a vu les notifs)
+  if (typeof updateNotifBadge === 'function') updateNotifBadge(0);
 }
 
 function closeNotifPanel() {
