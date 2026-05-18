@@ -727,9 +727,11 @@ html[data-theme-v3="1"] .emoji-panel {
   transition: background .15s;
   white-space: nowrap;
   position: fixed;
-  top: calc(40px + 16px);
-  right: 24px;
+  top: calc(40px + 13px);
+  right: 28px;
   z-index: 200;
+  max-width: calc(100vw - 280px - 48px);
+  overflow: hidden;
 }
 .msgs-back-btn:hover { background: #15624B; }
 .msgs-back-btn i { font-size: 13px; }
