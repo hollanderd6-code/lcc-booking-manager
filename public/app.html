@@ -9624,7 +9624,8 @@ if (editBookingForm) {
               checkin: start,
               checkout: end,
               guests: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
-              notes: notes || null
+              notes: notes || null,
+              amount_total: document.getElementById('editPrice')?.value ? parseFloat(document.getElementById('editPrice').value) : null
             })
           });
           let updateBody = {};
