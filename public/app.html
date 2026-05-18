@@ -3104,7 +3104,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </button>
     <button id="bh-mobile-notif-btn" title="Notifications" onclick="openNotifPanel()" style="background:transparent;border:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;-webkit-tap-highlight-color:transparent;">
       <i class="fas fa-bell"></i>
-      <span id="bh-mobile-notif-badge" style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 2px;pointer-events:none;"></span>
+      <span id="bh-mobile-notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;background:#EF4444;color:#fff;border-radius:99px;font-size:11px;font-weight:700;line-height:18px;text-align:center;padding:0 4px;pointer-events:none;border:2px solid #F5F0E8;z-index:10;"></span>
     </button>
   </div>
 
@@ -3134,7 +3134,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </button>
 <button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" onclick="openNotifPanel()" style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
   <i class="fas fa-bell"></i>
-  <span id="notifHistoryBadge" style="display:none;position:absolute;top:5px;right:5px;min-width:16px;height:16px;background:#EF4444;color:#fff;border-radius:8px;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px;pointer-events:none;"></span>
+  <span id="notifHistoryBadge" style="display:none;position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:#EF4444;color:#fff;border-radius:99px;font-size:11px;font-weight:700;line-height:18px;text-align:center;padding:0 4px;pointer-events:none;border:2px solid #fff;z-index:10;"></span>
 </button>
 <button id="newReservationBtn" onclick="if(typeof openNewReservationModal==='function'){openNewReservationModal();}else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
   <i class="fas fa-plus"></i> Nouvelle réservation
@@ -12559,6 +12559,8 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 </script>
 
+<!-- ============================================================
+     MODAL FACTURE — insérer avant 
 <script>
 // ═══════════════════════════════════════════
 // HISTORIQUE NOTIFICATIONS PUSH
@@ -12756,6 +12758,7 @@ function openNotifPanel() {
 </script>
 
 </body>
+     ============================================================ -->
 <style>
 #invoiceModal {
   display: none; position: fixed; inset: 0; z-index: 9999;
