@@ -379,8 +379,37 @@ async function handleStripeReturn(params) {
   window.history.replaceState({}, '', window.location.pathname);
 
   // Récupérer les infos de la réservation en attente
-  const pending = JSON.parse(localStorage.getItem('guest_pending_booking') || 'null');
-  if (!pending) { showToast('Paiement reçu !'); return; }
+  let pending = JSON.parse(localStorage.getItem('guest_pending_booking') || 'null');
+
+  // Fallback : reconstruire depuis les params URL (cas lien libre BH ou perte localStorage natif)
+  if (!pending) {
+    const pid    = params.get('property_id');
+    const ci     = params.get('checkin');
+    const co     = params.get('checkout');
+    const sid    = params.get('session_id');
+    const gName  = params.get('guest_name') || params.get('guest_name') || '';
+    const gEmail = params.get('guest_email') || '';
+    const gPhone = params.get('guest_phone') || '';
+    const fp     = params.get('fixed_price') || null;
+    if (pid && ci && co && gEmail) {
+      pending = {
+        property_id: pid,
+        checkin: ci,
+        checkout: co,
+        guests: parseInt(params.get('guests')) || 1,
+        guest_name: decodeURIComponent(gName),
+        guest_email: decodeURIComponent(gEmail),
+        guest_phone: decodeURIComponent(gPhone),
+        promo_code: params.get('promo_code') || '',
+        fixed_price_override: fp ? parseFloat(fp) : null,
+        session_id: sid
+      };
+      console.log('[GUEST] Pending reconstruit depuis URL params');
+    } else {
+      showToast('Paiement reçu !');
+      return;
+    }
+  }
 
   localStorage.removeItem('guest_pending_booking');
 
