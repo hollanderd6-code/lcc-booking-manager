@@ -32342,6 +32342,186 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
   }
 });
 
+// ── Rattrapage réservations BHGuest manquantes ───────────────
+app.post('/api/guest/recover-sessions', authenticateToken, async (req, res) => {
+  try {
+    const { session_ids } = req.body; // array of Stripe session IDs
+    if (!session_ids || !Array.isArray(session_ids)) {
+      return res.status(400).json({ error: 'session_ids array requis' });
+    }
+
+    const results = [];
+
+    for (const sessionId of session_ids) {
+      try {
+        // Récupérer la session Stripe — essayer d'abord sur le compte principal, puis Connect
+        let session = null;
+        let stripeAccountId = null;
+
+        // Essayer d'abord sur le compte principal
+        try {
+          session = await stripe.checkout.sessions.retrieve(sessionId);
+        } catch(e) { /* pas sur ce compte */ }
+
+        // Si pas trouvé, essayer sur le compte Connect connu
+        if (!session || session.payment_status === undefined) {
+          try {
+            const CONNECT_ACCOUNT = 'acct_1TE4RFFT0WaR8aHH';
+            session = await stripe.checkout.sessions.retrieve(sessionId, {}, { stripeAccount: CONNECT_ACCOUNT });
+            stripeAccountId = CONNECT_ACCOUNT;
+          } catch(e2) { /* pas sur ce compte non plus */ }
+        }
+
+        if (!session) {
+          results.push({ sessionId, status: 'error', error: 'Session introuvable sur compte principal et Connect' });
+          continue;
+        }
+
+        if (session.payment_status !== 'paid') {
+          results.push({ sessionId, status: 'skipped', reason: 'Non payé: ' + session.payment_status });
+          continue;
+        }
+
+        const sMeta = session.metadata || {};
+        const property_id = sMeta.property_id;
+        const checkin     = sMeta.checkin;
+        const checkout    = sMeta.checkout;
+        const guest_name  = sMeta.guest_name || session.customer_details?.name || 'Voyageur';
+        const guest_email = sMeta.guest_email || session.customer_email || null;
+        const guest_phone = sMeta.guest_phone || null;
+        const guests      = parseInt(sMeta.guests) || 1;
+
+        if (!property_id || !checkin || !checkout) {
+          // Essayer sur compte Connect
+          results.push({ sessionId, status: 'error', error: 'Métadonnées manquantes: property_id/checkin/checkout' });
+          continue;
+        }
+
+        // Récupérer le logement
+        const propResult = await pool.query(
+          'SELECT *, user_id as owner_user_id FROM properties WHERE id = $1',
+          [property_id]
+        );
+        if (!propResult.rows[0]) {
+          results.push({ sessionId, status: 'error', error: 'Logement introuvable: ' + property_id });
+          continue;
+        }
+        const prop = propResult.rows[0];
+        const ownerId = prop.owner_user_id;
+
+        // Vérifier si résa existe déjà
+        const existingResa = await pool.query(
+          `SELECT uid FROM reservations WHERE source = 'guest_app'
+           AND property_id = $1 AND start_date = $2 AND guest_email = $3`,
+          [property_id, checkin, guest_email]
+        );
+        if (existingResa.rows.length > 0) {
+          results.push({ sessionId, status: 'skipped', reason: 'Réservation déjà existante: ' + existingResa.rows[0].uid });
+          continue;
+        }
+
+        const amountTotal = session.amount_total ? session.amount_total / 100 : null;
+        const uid = `GUEST_RECOVER_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
+
+        // Créer la réservation
+        await pool.query(`
+          INSERT INTO reservations
+            (uid, property_id, user_id, start_date, end_date,
+             guest_name, guest_email, guest_phone,
+             amount_total, platform, source, status, occupancy_adults, currency)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        `, [
+          uid, property_id, ownerId,
+          checkin, checkout,
+          guest_name, guest_email, guest_phone,
+          amountTotal, 'Boostinghost Guest', 'guest_app', 'confirmed',
+          guests, 'EUR'
+        ]);
+
+        // Créer la conversation
+        const crypto = require('crypto');
+        const existingConv = await pool.query(
+          `SELECT id FROM conversations WHERE LOWER(guest_email) = LOWER($1) AND property_id = $2 AND reservation_start_date = $3 LIMIT 1`,
+          [guest_email, property_id, checkin]
+        );
+        let conversationId = null;
+        if (existingConv.rows[0]) {
+          conversationId = existingConv.rows[0].id;
+        } else {
+          const convResult = await pool.query(
+            `INSERT INTO conversations
+              (user_id, property_id, reservation_start_date, reservation_end_date,
+               platform, source, guest_name, guest_email, guest_phone,
+               pin_code, unique_token, photos_token,
+               reservation_uid, status, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',NOW(),NOW())
+             RETURNING id`,
+            [
+              ownerId, property_id, checkin, checkout,
+              'Boostinghost Guest', 'guest_app',
+              guest_name, guest_email, guest_phone || null,
+              Math.floor(1000 + Math.random() * 9000).toString(),
+              crypto.randomBytes(16).toString('hex'),
+              crypto.randomBytes(12).toString('hex'),
+              uid
+            ]
+          );
+          conversationId = convResult.rows[0].id;
+
+          // Message de bienvenue
+          await pool.query(
+            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_bot_response, is_read, created_at)
+             VALUES ($1, 'property', $2, $3, TRUE, FALSE, NOW())`,
+            [conversationId, prop.name || 'Boostinghost',
+             `Bonjour ${(guest_name || 'cher voyageur').split(' ')[0]} ! 👋\n\nVotre réservation à **${prop.name}** est confirmée du ${checkin} au ${checkout}.\n\nN'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
+          );
+        }
+
+        // Sync Channex
+        if (prop.channex_enabled && prop.channex_property_id) {
+          try {
+            const { pushAvailability } = require('./channex');
+            const allResas = await pool.query(
+              `SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+              [property_id]
+            );
+            const allBlocked = [];
+            allResas.rows.forEach(r => {
+              const s = new Date(r.start_date), e = new Date(r.end_date);
+              for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+                allBlocked.push(d.toISOString().split('T')[0]);
+              }
+            });
+            await pushAvailability(pool, {
+              property_id, channex_property_id: prop.channex_property_id,
+              channex_room_type_id: prop.channex_room_type_id, dates_blocked: allBlocked
+            });
+          } catch(channexErr) {
+            console.warn('⚠️ [RECOVER] Channex sync:', channexErr.message);
+          }
+        }
+
+        // Notif push
+        try {
+          await sendNewReservationNotification(ownerId, guest_name, prop.name, checkin, checkout);
+        } catch(nErr) { console.warn('⚠️ [RECOVER] Notif:', nErr.message); }
+
+        results.push({ sessionId, status: 'ok', uid, conversationId, guest: guest_name, checkin, checkout });
+        console.log(`✅ [RECOVER] Résa créée: ${uid} | ${guest_name} | ${checkin} → ${checkout}`);
+
+      } catch(err) {
+        results.push({ sessionId, status: 'error', error: err.message });
+        console.error(`❌ [RECOVER] Session ${sessionId}:`, err.message);
+      }
+    }
+
+    res.json({ recovered: results });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // ── Admin : gérer les codes promo ────────────────────────────
 app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
   try {
