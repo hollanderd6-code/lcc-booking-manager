@@ -3132,9 +3132,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
 </button>
-<button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" onclick="openNotifPanel()" style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
+<button class="btn-icon" id="notifHistoryBtn" title="Historique des notifications" onclick="openNotifPanel()" style="position:relative;display:inline-flex;align-items:center;justify-content:center;overflow:visible;">
   <i class="fas fa-bell"></i>
-  <span id="notifHistoryBadge" style="display:none;position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:#EF4444;color:#fff;border-radius:99px;font-size:11px;font-weight:700;line-height:normal;text-align:center;padding:0 4px;pointer-events:none;border:2px solid #fff;z-index:10;align-items:center;justify-content:center;"></span>
+  <span id="notifHistoryBadge" style="display:none;position:absolute;top:-6px;right:0px;min-width:18px;height:18px;background:#EF4444;color:#fff;border-radius:99px;font-size:11px;font-weight:700;line-height:normal;text-align:center;padding:0 4px;pointer-events:none;border:2px solid #fff;z-index:10;align-items:center;justify-content:center;"></span>
 </button>
 <button id="newReservationBtn" onclick="if(typeof openNewReservationModal==='function'){openNewReservationModal();}else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
   <i class="fas fa-plus"></i> Nouvelle réservation
