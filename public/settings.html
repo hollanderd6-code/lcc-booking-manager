@@ -1131,6 +1131,27 @@ html[data-theme-v3="1"] .sidebar {
   .score-bar-fill { height:100%; background:linear-gradient(90deg,#1A7A5E,#2AAE86); border-radius:2px; transition:width .4s ease; }
   .score-bar-value { font-size:11px; font-weight:600; color:#374151; width:24px; text-align:right; }
   .hidden-badge { font-size:10px; background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 7px; border-radius:999px; font-weight:600; }
+/* Desktop page header */
+@media (min-width: 1367px) {
+  .bh-desktop-header {
+    position: fixed; top: 40px; left: 260px; right: 0;
+    height: 64px; background: white; border-bottom: 1px solid rgba(200,184,154,.35);
+    display: flex; align-items: center; padding: 0 32px;
+    z-index: 45;
+  }
+  .bh-desktop-header .bh-dh-kicker {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .1em; color: rgba(13,17,23,.38);
+    margin-bottom: 2px;
+  }
+  .bh-desktop-header .bh-dh-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px; font-weight: 400; color: #0D1117;
+    line-height: 1.1;
+  }
+}
+@media (max-width: 1366px) { .bh-desktop-header { display: none !important; } }
 </style>
 <!-- Script auth + user + logout -->
 <script src="/js/auth-fetch.js"></script>
@@ -1204,6 +1225,7 @@ html[data-theme-v3="1"] .sidebar {
 <div id="bhSidebar"></div>
 <!-- MAIN -->
 <main class="main-content"><div id="bhHeader"></div>
+<div class="bh-desktop-header"><div><div class="bh-dh-kicker">Gestion</div><div class="bh-dh-title">Mes logements</div></div></div>
     <button class="settings-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
 
 <div class="page-content">
