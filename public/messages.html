@@ -4593,12 +4593,9 @@ async function loadSmsStatus() {
     const toggle = document.getElementById('smsToggle');
     if (toggle) toggle.checked = data.smsEnabled;
 
-    // Désactiver le toggle si solo/standard sans option
+    // Réactiver le toggle (au cas où il était désactivé)
     const wrap = document.getElementById('smsToggleWrap');
-    if (wrap && !data.smsIncluded && !data.smsEnabled) {
-      toggle.disabled = true;
-      toggle.style.opacity = '0.4';
-    }
+    if (toggle) { toggle.disabled = false; toggle.style.opacity = '1'; }
 
     // Banner option
     const banner = document.getElementById('smsOptionBanner');
@@ -4632,7 +4629,7 @@ async function toggleSms(enabled) {
     const smsStatus = window._smsStatus || {};
     const isPro = smsStatus.smsIncluded === true;
     if (!isPro) {
-      const confirmed = confirm('Souhaitez-vous activer l'option SMS automatiques ?\n\nDes frais de 5,99 €/mois seront automatiquement ajoutés à votre abonnement. Vous pouvez désactiver cette option à tout moment depuis votre espace.');
+      const confirmed = await showSmsConfirm();
       if (!confirmed) {
         if (toggle) toggle.checked = false;
         return;
