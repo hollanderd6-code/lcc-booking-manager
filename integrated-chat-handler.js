@@ -64,7 +64,8 @@ async function _flushDebounce(convId, pool, io) {
     combinedMessage = messages[0];
   } else {
     const combined = messages.map((m, i) => `[Message ${i+1}] ${m.message}`).join('\n');
-    combinedMessage = { ...messages[messages.length - 1], message: combined };
+    // _rawMessage = dernier message brut, pour les notifs push (sans préfixe [Message N])
+    combinedMessage = { ...messages[messages.length - 1], message: combined, _rawMessage: messages[messages.length - 1].message };
     console.log(`⏳ [DEBOUNCE] Conv ${convId} — ${messages.length} messages fusionnés → 1 appel Groq`);
   }
 
@@ -347,7 +348,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             await sendNotification(
               tok.fcm_token,
               `💬 ${conversation.guest_name || 'Voyageur'}`,
-              (message.message || '').substring(0, 80),
+              (message._rawMessage || message.message || '').substring(0, 80),
               { type: 'new_guest_message', conversation_id: String(conversation.id) }
             );
           }
