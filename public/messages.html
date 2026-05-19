@@ -4659,7 +4659,7 @@ window.toggleSms = async function toggleSms(enabled) {
     const data = await res.json();
     if (data.error === 'option_required') {
       if (toggle) toggle.checked = false;
-      alert('Cette fonctionnalité nécessite l'option SMS (5,99€/mois). Rendez-vous sur la page Tarifs pour l'activer.');
+      alert("Cette fonctionnalité nécessite l'option SMS (5,99€/mois). Rendez-vous sur la page Tarifs pour l'activer.");
     } else if (data.success) {
       const banner = document.getElementById('smsOptionBanner');
       if (banner) {
