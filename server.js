@@ -9003,7 +9003,7 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
 
       // Email de notification admin
       await sendEmailViaBrevo({
-        to: 'charles.induni@gmail.com',
+        to: 'contact@boostinghost.fr',
         subject: `📱 Option SMS activée — ${userName} (${basePlan})`,
         html: `
           <p><strong>${userName}</strong> (${userEmail}) vient d'activer l'option SMS.</p>
