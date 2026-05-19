@@ -1285,17 +1285,13 @@ html[data-theme-v3="1"] .app-container {
         <div id="smsOptionBanner" style="display:none;margin-bottom:20px;"></div>
 
         <!-- Toggle principal -->
-        <div style="background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin-bottom:16px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:4px;"><i class="fas fa-mobile-alt" style="color:#1A7A5E;margin-right:8px;"></i>Envoi SMS activé</div>
-              <div style="font-size:12px;color:#6b7280;">Les SMS sont envoyés via votre téléphone Android configuré.</div>
-            </div>
-            <label class="toggle-switch" id="smsToggleWrap">
-              <input type="checkbox" id="smsToggle" onchange="toggleSms(this.checked)">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
+        <div style="background:white;border:1px solid #e5e7eb;border-radius:14px;padding:24px;margin-bottom:16px;text-align:center;">
+          <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:16px;"><i class="fas fa-mobile-alt" style="color:#1A7A5E;margin-right:8px;"></i>Envoi SMS activé</div>
+          <label class="toggle-switch" id="smsToggleWrap" style="transform:scale(1.6);display:inline-block;margin-bottom:16px;">
+            <input type="checkbox" id="smsToggle" onchange="toggleSms(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <div style="font-size:12px;color:#6b7280;margin-top:8px;">Les SMS sont envoyés via notre système Boostinghost.</div>
         </div>
 
         <!-- Info messages envoyés -->
@@ -1317,10 +1313,10 @@ html[data-theme-v3="1"] .app-container {
           </div>
         </div>
 
-        <!-- Android gateway status -->
-        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:16px;">
-          <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px;"><i class="fas fa-android" style="color:#3DDC84;margin-right:6px;"></i>Gateway Android</div>
-          <div style="font-size:12px;color:#6b7280;">L'envoi est géré via votre Android avec la SIM configurée. Assurez-vous que l'app SMS Gateway est active et connectée.</div>
+        <!-- Info valeur ajoutée SMS -->
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px;">
+          <div style="font-size:13px;font-weight:600;color:#166534;margin-bottom:6px;"><i class="fas fa-star" style="color:#1A7A5E;margin-right:6px;"></i>Un accueil sans friction, sur tous les canaux</div>
+          <div style="font-size:12px;color:#374151;line-height:1.6;">Vos voyageurs reçoivent les informations essentielles à la fois sur leur plateforme de réservation <strong>et par SMS</strong> — garantissant qu'aucun message ne passe inaperçu. Un double canal qui réduit les questions, rassure vos locataires et vous fait gagner du temps dès le jour J.</div>
         </div>
       </div>
     </div><!-- /panelSms -->
@@ -2997,7 +2993,7 @@ function switchMsgsTab(tab) {
   }
   if (tab === 'logs') { loadLogs(); loadScheduled(); }
   if (tab === 'sms') { loadSmsStatus(); }
-  if (tab === 'smslogs') { loadSmsLogs(); }
+  if (tab === 'smslogs') { loadSmsLogs(); loadSmsLogsProperties(); }
   if (tab === 'ota' && !channexPropertiesLoaded) {
     loadChannexProperties();
   }
@@ -4582,6 +4578,22 @@ async function toggleSms(enabled) {
   } catch(e) {
     console.error('[SMS] toggleSms error:', e);
   }
+}
+
+async function loadSmsLogsProperties() {
+  const token = localStorage.getItem('lcc_token');
+  const select = document.getElementById('smsLogsFilterProperty');
+  if (!select || select.options.length > 1) return;
+  try {
+    const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    (data.properties || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.internalName || p.name;
+      select.appendChild(opt);
+    });
+  } catch(e) { console.warn('[SMS] loadSmsLogsProperties error:', e); }
 }
 
 async function loadSmsLogs() {
