@@ -4442,8 +4442,15 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   html[data-theme-v3="1"] .app-container { margin-left: 0 !important; padding: 0 !important; }
   html[data-theme-v3="1"] .main-wrapper { margin-left: 0 !important; }
 
-  /* CRITIQUE : retirer overflow-y:auto du main-content pour que le scroll
-     se fasse sur body — sinon sticky et fixed ne fonctionnent pas */
+  /* CRITIQUE : scroll sur body sur mobile (iOS + Android) */
+  html[data-theme-v3="1"],
+  html[data-theme-v3="1"] body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+    min-height: 100% !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
   html[data-theme-v3="1"] main.main-content {
     overflow-y: visible !important;
     height: auto !important;
