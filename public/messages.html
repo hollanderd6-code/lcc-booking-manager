@@ -1349,19 +1349,19 @@ html[data-theme-v3="1"] .app-container {
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 14px;background:white;border:1px solid #e5e7eb;border-radius:12px;">
           <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:140px;">
             <i class="fas fa-calendar" style="color:#9ca3af;font-size:12px;"></i>
-            <input type="date" id="smsLogsFilterDate" style="border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#374151;background:transparent;width:100%;cursor:pointer;" onchange="loadSmsLogs()">
+            <input type="date" id="smsLogsFilterDate" style="border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#374151;background:transparent;width:100%;cursor:pointer;" onchange="applySmsLogsFilters()">
           </div>
           <div style="width:1px;height:20px;background:#e5e7eb;"></div>
           <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:150px;">
             <i class="fas fa-home" style="color:#9ca3af;font-size:12px;"></i>
-            <select id="smsLogsFilterProperty" style="border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#374151;background:transparent;width:100%;cursor:pointer;" onchange="loadSmsLogs()">
+            <select id="smsLogsFilterProperty" style="border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#374151;background:transparent;width:100%;cursor:pointer;" onchange="applySmsLogsFilters()">
               <option value="">Tous les logements</option>
             </select>
           </div>
           <div style="width:1px;height:20px;background:#e5e7eb;"></div>
           <div style="display:flex;align-items:center;gap:6px;">
             <i class="fas fa-filter" style="color:#9ca3af;font-size:12px;"></i>
-            <select id="smsLogsFilterStatus" style="border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#374151;background:transparent;cursor:pointer;" onchange="loadSmsLogs()">
+            <select id="smsLogsFilterStatus" style="border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#374151;background:transparent;cursor:pointer;" onchange="applySmsLogsFilters()">
               <option value="">Tous</option>
               <option value="sent">Envoyés</option>
               <option value="error">Échecs</option>
@@ -3006,7 +3006,7 @@ function switchMsgsTab(tab) {
   }
   if (tab === 'logs') { loadLogs(); loadScheduled(); }
   if (tab === 'sms') { loadSmsStatus(); }
-  if (tab === 'smslogs') { loadSmsLogs(); loadSmsLogsProperties(); }
+  if (tab === 'smslogs') { loadSmsLogs(); }
   if (tab === 'ota' && !channexPropertiesLoaded) {
     loadChannexProperties();
   }
@@ -4577,6 +4577,7 @@ async function loadSmsStatus() {
 
 async function toggleSms(enabled) {
   const token = localStorage.getItem('lcc_token');
+  const toggle = document.getElementById('smsToggle');
   try {
     const res = await fetch('/api/sms/toggle', {
       method: 'POST',
@@ -4585,11 +4586,20 @@ async function toggleSms(enabled) {
     });
     const data = await res.json();
     if (data.error === 'option_required') {
-      const toggle = document.getElementById('smsToggle');
       if (toggle) toggle.checked = false;
-      alert('Cette fonctionnalité nécessite l'option SMS (5,99€/mois). Rendez-vous sur la page Tarifs pour l'activer.');
+      alert('Cette fonctionnalité nécessite l\'option SMS (5,99€/mois). Rendez-vous sur la page Tarifs pour l\'activer.');
+    } else if (data.success) {
+      const banner = document.getElementById('smsOptionBanner');
+      if (banner) {
+        const msg = enabled ? '✅ SMS activés avec succès' : '⏸️ SMS désactivés';
+        banner.style.display = 'block';
+        const prev = banner.innerHTML;
+        banner.innerHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 16px;font-size:13px;color:#166534;">${msg}</div>`;
+        setTimeout(() => { banner.innerHTML = prev; }, 2000);
+      }
     }
   } catch(e) {
+    if (toggle) toggle.checked = !enabled;
     console.error('[SMS] toggleSms error:', e);
   }
 }
@@ -4610,50 +4620,75 @@ async function loadSmsLogsProperties() {
   } catch(e) { console.warn('[SMS] loadSmsLogsProperties error:', e); }
 }
 
+let _allSmsLogs = [];
+
 async function loadSmsLogs() {
   const token = localStorage.getItem('lcc_token');
   const list = document.getElementById('smsLogsList');
   if (!list) return;
   list.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:20px 0;text-align:center;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
 
-  const date = document.getElementById('smsLogsFilterDate')?.value || '';
-  const property = document.getElementById('smsLogsFilterProperty')?.value || '';
-  const status = document.getElementById('smsLogsFilterStatus')?.value || '';
-
   try {
-    const params = new URLSearchParams();
-    if (date) params.append('date', date);
-    if (property) params.append('property_id', property);
-    if (status) params.append('status', status);
-
-    const res = await fetch('/api/sms/logs?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('/api/sms/logs?limit=200', { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
+    _allSmsLogs = data.logs || [];
 
-    if (!data.logs?.length) {
-      list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#9ca3af;"><i class="fas fa-sms" style="font-size:32px;display:block;margin-bottom:12px;opacity:.3;"></i><div style="font-size:14px;">Aucun SMS envoyé</div></div>';
-      return;
+    // Peupler le select logements depuis les logs
+    const sel = document.getElementById('smsLogsFilterProperty');
+    if (sel) {
+      const current = sel.value;
+      while (sel.options.length > 1) sel.remove(1);
+      const names = [...new Set(_allSmsLogs.map(l => l.property_name).filter(Boolean))].sort();
+      names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.value = current;
     }
 
-    list.innerHTML = data.logs.map(log => {
-      const date = new Date(log.created_at).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-      const triggerLabel = { before_arrival: 'Caution', on_arrival: 'Arrivée' }[log.trigger_type] || log.trigger_type;
-      const statusColor = log.status === 'sent' ? '#1A7A5E' : '#ef4444';
-      const statusIcon = log.status === 'sent' ? 'fa-check' : 'fa-times';
-      return `
-        <div style="background:white;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
-          <div style="width:36px;height:36px;border-radius:10px;background:${log.status==='sent'?'#f0fdf4':'#fef2f2'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="fas ${statusIcon}" style="color:${statusColor};font-size:13px;"></i>
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:600;color:#0D1117;">${log.guest_name || 'Voyageur'}</div>
-            <div style="font-size:12px;color:#6b7280;">${log.property_name || ''} · ${log.phone_number || ''} · ${triggerLabel}</div>
-          </div>
-          <div style="font-size:11px;color:#9ca3af;flex-shrink:0;">${date}</div>
-        </div>`;
-    }).join('');
+    renderSmsLogs(_allSmsLogs);
   } catch(e) {
     list.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:16px;">Erreur de chargement</div>';
   }
+}
+
+function applySmsLogsFilters() {
+  const dateVal = document.getElementById('smsLogsFilterDate')?.value || '';
+  const propVal = document.getElementById('smsLogsFilterProperty')?.value || '';
+  const statusVal = document.getElementById('smsLogsFilterStatus')?.value || '';
+  let filtered = _allSmsLogs;
+  if (dateVal) filtered = filtered.filter(l => l.created_at && new Date(l.created_at).toISOString().slice(0,10) === dateVal);
+  if (propVal) filtered = filtered.filter(l => l.property_name === propVal);
+  if (statusVal) filtered = filtered.filter(l => l.status === statusVal);
+  renderSmsLogs(filtered);
+}
+
+function renderSmsLogs(logs) {
+  const list = document.getElementById('smsLogsList');
+  if (!list) return;
+  if (!logs.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#9ca3af;"><i class="fas fa-sms" style="font-size:32px;display:block;margin-bottom:12px;opacity:.3;"></i><div style="font-size:14px;">Aucun SMS envoyé</div></div>';
+    return;
+  }
+  list.innerHTML = logs.map(log => {
+    const d = new Date(log.created_at).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    const triggerLabel = { before_arrival: 'Caution', on_arrival: 'Arrivée' }[log.trigger_type] || (log.trigger_type || '');
+    const statusColor = log.status === 'sent' ? '#1A7A5E' : '#ef4444';
+    const statusIcon = log.status === 'sent' ? 'fa-check' : 'fa-times';
+    return `
+      <div style="background:white;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:${log.status==='sent'?'#f0fdf4':'#fef2f2'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas ${statusIcon}" style="color:${statusColor};font-size:13px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:#0D1117;">${log.guest_name || 'Voyageur'}</div>
+          <div style="font-size:12px;color:#6b7280;">${log.property_name || ''} · ${log.phone_number || ''} · ${triggerLabel}</div>
+        </div>
+        <div style="font-size:11px;color:#9ca3af;flex-shrink:0;">${d}</div>
+      </div>`;
+  }).join('');
 }
 </script>
 </body>
