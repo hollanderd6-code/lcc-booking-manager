@@ -9003,7 +9003,7 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
 
       // Email de notification admin
       await sendEmailViaBrevo({
-        to: 'contact@boostinghost.fr',
+        to: 'charles.induni@gmail.com',
         subject: `📱 Option SMS activée — ${userName} (${basePlan})`,
         html: `
           <p><strong>${userName}</strong> (${userEmail}) vient d'activer l'option SMS.</p>
@@ -22887,7 +22887,20 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
       const smsEligibleTriggers = ['before_arrival', 'on_arrival'];
       const convPlatform = (conv.platform || conv.channex_platform || conv.ota_name || '').toLowerCase();
       const isAirbnb = convPlatform.includes('airbnb') || convPlatform === 'abb';
-      const guestPhone = conv.guest_phone || null;
+      let guestPhone = conv.guest_phone || null;
+      if (!guestPhone && conv.id) {
+        try {
+          const phoneRow = await pool.query(
+            `SELECT r.guest_phone FROM reservations r
+             WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3)
+                OR (r.property_id = $1 AND DATE(r.start_date) = DATE($2) AND r.status != 'cancelled')
+             ORDER BY (r.channex_booking_id = $3) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+            [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
+          );
+          guestPhone = phoneRow.rows[0]?.guest_phone || null;
+          if (guestPhone) console.log(`📱 [SMS] guest_phone récupéré depuis reservations pour conv ${conv.id}`);
+        } catch(e) { /* non bloquant */ }
+      }
 
       if (smsEligibleTriggers.includes(template.trigger_type) && !isAirbnb && guestPhone) {
         // Pour before_arrival : envoyer uniquement si le message contient un lien de caution
