@@ -8945,7 +8945,7 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
     const userId = req.user.id;
     const { enabled } = req.body;
 
-    // Vérifier le plan
+    // Récupérer le plan et les infos utilisateur
     const subResult = await pool.query(
       `SELECT plan_type, sms_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
       [userId]
@@ -8953,7 +8953,12 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
     const sub = subResult.rows[0];
     const basePlan = getBasePlanName(sub?.plan_type || 'solo');
 
-    // Solo/Standard : ne peut désactiver que si déjà payé (sms_enabled), ne peut pas activer sans paiement
+    const userResult = await pool.query(`SELECT email, first_name, last_name FROM users WHERE id = $1`, [userId]);
+    const user = userResult.rows[0];
+    const userEmail = user?.email;
+    const userName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || userEmail;
+
+    // Solo/Standard : ne peut pas activer sans option payée
     if (basePlan !== 'pro' && enabled && !sub?.sms_enabled) {
       return res.status(403).json({ error: 'option_required', message: 'Option SMS requise pour ce plan' });
     }
@@ -8963,7 +8968,51 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
       [enabled, userId]
     );
 
-    console.log(`📱 [SMS] Toggle ${enabled ? 'ON' : 'OFF'} pour user ${userId}`);
+    console.log(`📱 [SMS] Toggle ${enabled ? 'ON' : 'OFF'} pour user ${userId} (${userEmail})`);
+
+    // Envoi emails si activation
+    if (enabled) {
+      // Email de confirmation à l'utilisateur
+      if (userEmail) {
+        await sendEmailViaBrevo({
+          to: userEmail,
+          subject: '✅ Option SMS activée sur votre compte Boostinghost',
+          html: `
+            <div style="font-family:'DM Sans',Arial,sans-serif;max-width:600px;margin:0 auto;color:#0D1117;">
+              <div style="background:#1A7A5E;padding:24px 32px;border-radius:12px 12px 0 0;">
+                <h1 style="color:white;margin:0;font-size:20px;">📱 Option SMS activée</h1>
+              </div>
+              <div style="background:#ffffff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
+                <p style="margin:0 0 16px;">Bonjour ${userName},</p>
+                <p style="margin:0 0 16px;">L'option <strong>SMS automatiques</strong> vient d'être activée sur votre compte Boostinghost.</p>
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;margin:20px 0;">
+                  <p style="margin:0 0 8px;font-weight:600;color:#166534;">Ce qui est activé :</p>
+                  <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;">
+                    <li style="margin-bottom:6px;">SMS de demande de caution avec lien Stripe (J-2 avant l'arrivée)</li>
+                    <li style="margin-bottom:6px;">SMS d'informations d'arrivée le jour J (si caution validée)</li>
+                    <li>Pour toutes les plateformes sauf Airbnb</li>
+                  </ul>
+                </div>
+                ${basePlan !== 'pro' ? `<p style="margin:16px 0;font-size:13px;color:#6b7280;">Des frais de <strong>5,99€/mois</strong> s'appliquent à cette option. Vous pouvez la désactiver à tout moment depuis votre espace Boostinghost.</p>` : ''}
+                <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">L'équipe Boostinghost</p>
+              </div>
+            </div>
+          `
+        }).catch(e => console.warn('⚠️ [SMS] Email utilisateur error:', e.message));
+      }
+
+      // Email de notification admin
+      await sendEmailViaBrevo({
+        to: 'charles.induni@gmail.com',
+        subject: `📱 Option SMS activée — ${userName} (${basePlan})`,
+        html: `
+          <p><strong>${userName}</strong> (${userEmail}) vient d'activer l'option SMS.</p>
+          <p>Plan : <strong>${basePlan}</strong> | User ID : ${userId}</p>
+          ${basePlan !== 'pro' ? '<p>⚠️ Plan Solo/Standard — facturation 5,99€/mois à vérifier.</p>' : '<p>Plan Pro — inclus.</p>'}
+        `
+      }).catch(e => console.warn('⚠️ [SMS] Email admin error:', e.message));
+    }
+
     res.json({ success: true, smsEnabled: enabled });
   } catch(e) {
     res.status(500).json({ error: e.message });
