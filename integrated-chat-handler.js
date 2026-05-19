@@ -708,6 +708,14 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
     }
     try {
       const { sendNotification } = require('./services/notifications-service');
+      let _propName = null;
+      if (conversation.property_id) {
+        try {
+          const _pr = await pool.query('SELECT internal_name, name FROM properties WHERE id = $1', [conversation.property_id]);
+          const _p = _pr.rows[0];
+          if (_p) _propName = _p.internal_name || _p.name || null;
+        } catch(e) {}
+      }
       const tokens = await pool.query(
         'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
         [conversation.user_id]
