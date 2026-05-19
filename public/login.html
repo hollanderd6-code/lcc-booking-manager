@@ -166,6 +166,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 <script>
   const IS_NATIVE=!!(window.Capacitor?.isNativePlatform?.()||window.location.protocol==='capacitor:'||window.location.protocol==='ionic:');
   const IS_IOS = IS_NATIVE && (window.Capacitor?.getPlatform?.() === 'ios');
+  const IS_ANDROID = IS_NATIVE && (window.Capacitor?.getPlatform?.() === 'android');
   if (IS_IOS) {
     document.getElementById('navRegisterBtn')?.style && (document.getElementById('navRegisterBtn').style.display = 'none');
     document.getElementById('registerFooter')?.style && (document.getElementById('registerFooter').style.display = 'none');
@@ -177,8 +178,12 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   checkMagicToken().then(async (h) => {
     if (!h) {
       await restoreFromPreferences();
-      await checkAuth();
-      await initFaceID();
+      // Android : auto-login direct sans biométrie
+      const androidLoggedIn = await autoLoginAndroid();
+      if (!androidLoggedIn) {
+        await checkAuth();
+        await initFaceID();
+      }
     }
   });
   document.getElementById('tpw').addEventListener('click',()=>{const i=document.getElementById('loginPassword'),ic=document.getElementById('tpwIcon');i.type=i.type==='password'?'text':'password';ic.className=i.type==='text'?'fas fa-eye':'fas fa-eye-slash';});
@@ -193,29 +198,57 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   const FACE_ID_KEY = 'lcc_faceid_enabled';
   const FACE_ID_TOKEN_KEY = 'lcc_faceid_token';
 
-  // Restaurer depuis Capacitor Preferences si localStorage vide (iOS purge)
+  // Restaurer depuis Capacitor Preferences si localStorage vide (iOS/Android)
   async function restoreFromPreferences() {
     try {
-      if (!IS_NATIVE || !window.Capacitor?.Plugins?.Preferences) return;
-      const keysToRestore = ['lcc_token', FACE_ID_TOKEN_KEY, FACE_ID_KEY, 'lcc_user'];
+      if (!IS_NATIVE) return;
+
+      // Attendre que Preferences soit disponible (Android peut être lent)
+      let prefs = window.Capacitor?.Plugins?.Preferences;
+      if (!prefs) {
+        await new Promise(r => setTimeout(r, 300));
+        prefs = window.Capacitor?.Plugins?.Preferences;
+      }
+      if (!prefs) return;
+
+      const keysToRestore = ['lcc_token', 'lcc_faceid_token', 'lcc_faceid_enabled', 'lcc_user'];
       for (const key of keysToRestore) {
         if (!localStorage.getItem(key)) {
-          const result = await window.Capacitor.Plugins.Preferences.get({ key });
+          const result = await prefs.get({ key });
           if (result?.value) {
             localStorage.setItem(key, result.value);
-            console.log('💾 [FaceID] Restauré depuis Preferences:', key);
+            console.log('💾 [Auth] Restauré depuis Preferences:', key);
           }
         }
       }
+
       // Si lcc_token toujours absent mais lcc_faceid_token présent → utiliser comme fallback
       if (!localStorage.getItem('lcc_token')) {
-        const faceToken = localStorage.getItem(FACE_ID_TOKEN_KEY);
+        const faceToken = localStorage.getItem('lcc_faceid_token');
         if (faceToken) {
           localStorage.setItem('lcc_token', faceToken);
-          console.log('💾 [FaceID] lcc_token restauré depuis faceid_token (fallback)');
+          console.log('💾 [Auth] lcc_token restauré depuis faceid_token (fallback)');
         }
       }
-    } catch(e) { console.warn('⚠️ [FaceID] Preferences restore:', e?.message); }
+    } catch(e) { console.warn('⚠️ [Auth] Preferences restore:', e?.message); }
+  }
+
+  // Auto-login Android : si token présent après restore, rediriger directement
+  async function autoLoginAndroid() {
+    if (!IS_ANDROID) return false;
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return false;
+    try {
+      const r = await fetch(API_BASE + '/api/user', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (r.ok) {
+        console.log('✅ [Android] Auto-login réussi');
+        window.location.href = 'app.html';
+        return true;
+      } else {
+        localStorage.removeItem('lcc_token');
+        return false;
+      }
+    } catch { return false; }
   }
 
   function isBiometricAvailable() {
