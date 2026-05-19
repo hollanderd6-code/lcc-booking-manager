@@ -201,9 +201,9 @@ function getDeepLTarget(guestCountry, guestLanguage) {
     const country = guestCountry.toUpperCase().trim();
     const target = COUNTRY_TO_DEEPL_LANG[country];
     if (target === null) return null; // francophone explicite → pas de traduction
-    return target || 'EN-GB'; // pays inconnu → anglais par défaut
+    return target || null; // pays inconnu → pas de traduction
   }
-  return 'EN-GB'; // pas d'info pays/langue → anglais par défaut
+  return null; // pas d'info pays/langue → pas de traduction
 }
 
 
