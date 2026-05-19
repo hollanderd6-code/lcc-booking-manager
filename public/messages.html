@@ -3411,7 +3411,21 @@ function showBHToast(msg, type = 'info') {
 
 
 <!-- ============================================================
-     MODAL FACTURE — insérer avant </body>
+     MODAL FACTURE — insérer avant 
+<!-- Modal confirm SMS -->
+<div id="smsConfirmModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:18px;padding:28px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="font-size:32px;text-align:center;margin-bottom:12px;">📱</div>
+    <h3 style="font-family:'Instrument Serif',serif;font-size:20px;color:#0D1117;margin:0 0 10px;text-align:center;">Activer les SMS</h3>
+    <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 8px;text-align:center;">Souhaitez-vous activer l'option SMS automatiques ?</p>
+    <p style="font-size:12px;color:#6b7280;text-align:center;margin:0 0 24px;">Des frais de <strong>5,99 €/mois</strong> seront automatiquement ajoutés à votre abonnement. Vous pouvez désactiver cette option à tout moment.</p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="window.smsConfirmResolve(false)" style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#374151;cursor:pointer;">Annuler</button>
+      <button onclick="window.smsConfirmResolve(true)" style="flex:1;padding:12px;border:none;border-radius:12px;background:#1A7A5E;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:white;cursor:pointer;">Activer</button>
+    </div>
+  </div>
+</div>
+</body>
      ============================================================ -->
 <style>
 #invoiceModal {
@@ -4582,7 +4596,7 @@ function renderLogs(logs) {
 // ============================================================
 // 📱 SMS — Fonctions onglet SMS
 // ============================================================
-async function loadSmsStatus() {
+window.loadSmsStatus = async function loadSmsStatus() {
   const token = localStorage.getItem('lcc_token');
   try {
     const res = await fetch('/api/sms/status', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -4593,8 +4607,7 @@ async function loadSmsStatus() {
     const toggle = document.getElementById('smsToggle');
     if (toggle) toggle.checked = data.smsEnabled;
 
-    // Réactiver le toggle (au cas où il était désactivé)
-    const wrap = document.getElementById('smsToggleWrap');
+    // Toggle toujours cliquable
     if (toggle) { toggle.disabled = false; toggle.style.opacity = '1'; }
 
     // Banner option
@@ -4620,7 +4633,7 @@ async function loadSmsStatus() {
   }
 }
 
-async function toggleSms(enabled) {
+window.toggleSms = async function toggleSms(enabled) {
   const token = localStorage.getItem('lcc_token');
   const toggle = document.getElementById('smsToggle');
 
@@ -4629,7 +4642,7 @@ async function toggleSms(enabled) {
     const smsStatus = window._smsStatus || {};
     const isPro = smsStatus.smsIncluded === true;
     if (!isPro) {
-      const confirmed = await showSmsConfirm();
+      const confirmed = await window.showSmsConfirm();
       if (!confirmed) {
         if (toggle) toggle.checked = false;
         return;
@@ -4663,7 +4676,7 @@ async function toggleSms(enabled) {
   }
 }
 
-async function loadSmsLogsProperties() {
+window.loadSmsLogsProperties = async function loadSmsLogsProperties() {
   const token = localStorage.getItem('lcc_token');
   const select = document.getElementById('smsLogsFilterProperty');
   if (!select || select.options.length > 1) return;
@@ -4681,7 +4694,7 @@ async function loadSmsLogsProperties() {
 
 let _allSmsLogs = [];
 
-async function loadSmsLogs() {
+window.loadSmsLogs = async function loadSmsLogs() {
   const token = localStorage.getItem('lcc_token');
   const list = document.getElementById('smsLogsList');
   if (!list) return;
@@ -4727,7 +4740,7 @@ async function loadSmsLogs() {
   }
 }
 
-function applySmsLogsFilters() {
+window.applySmsLogsFilters = function applySmsLogsFilters() {
   const dateVal = document.getElementById('smsLogsFilterDate')?.value || '';
   const propVal = document.getElementById('smsLogsFilterProperty')?.value || '';
   const statusVal = document.getElementById('smsLogsFilterStatus')?.value || '';
@@ -4745,7 +4758,7 @@ function applySmsLogsFilters() {
   renderSmsLogs(filtered);
 }
 
-function renderSmsLogs(logs) {
+window.renderSmsLogs = function renderSmsLogs(logs) {
   const list = document.getElementById('smsLogsList');
   if (!list) return;
   if (!logs.length) {
@@ -4770,6 +4783,33 @@ function renderSmsLogs(logs) {
       </div>`;
   }).join('');
 }
+
+
+window.smsConfirmResolve = null;
+
+window.showSmsConfirm = function() {
+  return new Promise(resolve => {
+    window.smsConfirmResolve = (val) => {
+      document.getElementById('smsConfirmModal').style.display = 'none';
+      resolve(val);
+    };
+    document.getElementById('smsConfirmModal').style.display = 'flex';
+  });
+};
 </script>
+
+<!-- Modal confirm SMS -->
+<div id="smsConfirmModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:18px;padding:28px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="font-size:32px;text-align:center;margin-bottom:12px;">📱</div>
+    <h3 style="font-family:'Instrument Serif',serif;font-size:20px;color:#0D1117;margin:0 0 10px;text-align:center;">Activer les SMS</h3>
+    <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 8px;text-align:center;">Souhaitez-vous activer l'option SMS automatiques ?</p>
+    <p style="font-size:12px;color:#6b7280;text-align:center;margin:0 0 24px;">Des frais de <strong>5,99 €/mois</strong> seront automatiquement ajoutés à votre abonnement. Vous pouvez désactiver cette option à tout moment.</p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="window.smsConfirmResolve(false)" style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#374151;cursor:pointer;">Annuler</button>
+      <button onclick="window.smsConfirmResolve(true)" style="flex:1;padding:12px;border:none;border-radius:12px;background:#1A7A5E;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:white;cursor:pointer;">Activer</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
