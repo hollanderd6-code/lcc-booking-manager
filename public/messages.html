@@ -4587,6 +4587,7 @@ async function loadSmsStatus() {
   try {
     const res = await fetch('/api/sms/status', { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
+    window._smsStatus = data; // stocker pour toggleSms
 
     // Toggle
     const toggle = document.getElementById('smsToggle');
@@ -4626,11 +4627,10 @@ async function toggleSms(enabled) {
   const token = localStorage.getItem('lcc_token');
   const toggle = document.getElementById('smsToggle');
 
-  // Confirmation pour l'activation uniquement
+  // Confirmation pour l'activation uniquement (Solo/Standard)
   if (enabled) {
-    const lccUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
-    const plan = (lccUser.plan_type || '').toLowerCase().replace(/_monthly|_annual/g, '');
-    const isPro = plan === 'pro';
+    const smsStatus = window._smsStatus || {};
+    const isPro = smsStatus.smsIncluded === true;
     if (!isPro) {
       const confirmed = confirm('Souhaitez-vous activer l'option SMS automatiques ?\n\nDes frais de 5,99 €/mois seront automatiquement ajoutés à votre abonnement. Vous pouvez désactiver cette option à tout moment depuis votre espace.');
       if (!confirmed) {
