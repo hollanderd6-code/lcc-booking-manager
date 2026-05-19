@@ -664,6 +664,84 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         await escalateToOwner(conversation, pool, io, language, channexId);
         return false;
       }
+
+      // ─── Détection tag [FACTURE] ──────────────────────────────
+      const factureMatch = aiResponse.match(/\[FACTURE(?::([^\]]*))?\]/);
+      if (factureMatch) {
+        const cleanMsg = aiResponse.replace(/\[FACTURE(?:[^\]]*)\]/, '').trim();
+        try {
+          // Parser les infos éventuelles (siret=XXX,company=YYY,address=ZZZ)
+          const params = {};
+          if (factureMatch[1]) {
+            factureMatch[1].split(',').forEach(pair => {
+              const [k, ...v] = pair.split('=');
+              if (k && v.length) params[k.trim()] = v.join('=').trim();
+            });
+          }
+          // Récupérer la réservation liée
+          const resRow = await pool.query(
+            `SELECT r.uid, r.guest_name, r.guest_email, r.start_date, r.end_date,
+                    r.amount_total, r.amount_rooms, r.amount_cleaning, r.amount_taxes
+             FROM reservations r
+             WHERE (r.channex_booking_id = $1 AND $1 IS NOT NULL)
+                OR (r.property_id = $2 AND DATE(r.start_date) = DATE($3) AND r.status != 'cancelled')
+             ORDER BY (r.channex_booking_id = $1) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+            [conversation.channex_booking_id || null, conversation.property_id, conversation.reservation_start_date]
+          );
+          const res = resRow.rows[0];
+          // Vérifier si une demande existe déjà pour cette conv
+          const existing = await pool.query(
+            `SELECT id FROM invoice_requests WHERE conversation_id = $1 AND status = 'pending' LIMIT 1`,
+            [conversation.id]
+          );
+          if (existing.rows.length > 0) {
+            // Mettre à jour les infos si fournies
+            if (Object.keys(params).length > 0) {
+              const updates = [];
+              const vals = [];
+              let i = 1;
+              if (params.siret)   { updates.push(`client_siret = $${i++}`);   vals.push(params.siret); }
+              if (params.company) { updates.push(`client_company = $${i++}`); vals.push(params.company); }
+              if (params.address) { updates.push(`client_address = $${i++}`); vals.push(params.address); }
+              if (params.name)    { updates.push(`client_name = $${i++}`);    vals.push(params.name); }
+              if (updates.length) {
+                vals.push(existing.rows[0].id);
+                await pool.query(`UPDATE invoice_requests SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${i}`, vals);
+                console.log(`🧾 [FACTURE] Demande ${existing.rows[0].id} mise à jour:`, params);
+              }
+            }
+          } else {
+            // Créer la demande
+            await pool.query(
+              `INSERT INTO invoice_requests
+               (conversation_id, reservation_uid, user_id, property_id,
+                client_name, client_email, client_siret, client_company, client_address,
+                rent_amount, cleaning_fee, tourist_tax, status, created_at, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pending',NOW(),NOW())`,
+              [
+                conversation.id,
+                res?.uid || null,
+                conversation.user_id,
+                conversation.property_id,
+                params.name    || res?.guest_name  || conversation.guest_name  || null,
+                params.email   || res?.guest_email || conversation.guest_email || null,
+                params.siret   || null,
+                params.company || null,
+                params.address || null,
+                res?.amount_rooms  || res?.amount_total || null,
+                res?.amount_cleaning || null,
+                res?.amount_taxes  || null,
+              ]
+            );
+            console.log(`🧾 [FACTURE] Demande créée pour conv ${conversation.id}`);
+          }
+        } catch(fErr) {
+          console.warn('⚠️ [FACTURE] Erreur création demande:', fErr.message);
+        }
+        if (cleanMsg) await sendBotMessage(conversation.id, cleanMsg, pool, io, channexId);
+        return true;
+      }
+
       await sendBotMessage(conversation.id, aiResponse, pool, io, channexId);
       return true;
     }
