@@ -955,6 +955,15 @@ html[data-theme-v3="1"] .app-container {
   .msgs-tab { padding: 12px 14px; font-size: 12px; }
   #panelOTA { height: calc(100vh - 180px); }
 }
+
+/* Toggle switch SMS */
+.toggle-switch { position:relative; display:inline-block; width:52px; height:28px; cursor:pointer; }
+.toggle-switch input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; top:0; left:0; right:0; bottom:0; background:#D1D5DB; border-radius:999px; transition:.3s; }
+.toggle-slider:before { content:''; position:absolute; width:22px; height:22px; left:3px; bottom:3px; background:white; border-radius:50%; transition:.3s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+.toggle-switch input:checked + .toggle-slider { background:#1A7A5E; }
+.toggle-switch input:checked + .toggle-slider:before { transform:translateX(24px); }
+.toggle-switch input:disabled + .toggle-slider { opacity:.5; cursor:not-allowed; }
 </style>
 <style>
 /* Fix templateModal boutons cachés sous bottom bar sur mobile */
@@ -1285,13 +1294,17 @@ html[data-theme-v3="1"] .app-container {
         <div id="smsOptionBanner" style="display:none;margin-bottom:20px;"></div>
 
         <!-- Toggle principal -->
-        <div style="background:white;border:1px solid #e5e7eb;border-radius:14px;padding:24px;margin-bottom:16px;text-align:center;">
-          <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:16px;"><i class="fas fa-mobile-alt" style="color:#1A7A5E;margin-right:8px;"></i>Envoi SMS activé</div>
-          <label class="toggle-switch" id="smsToggleWrap" style="transform:scale(1.6);display:inline-block;margin-bottom:16px;">
-            <input type="checkbox" id="smsToggle" onchange="toggleSms(this.checked)">
-            <span class="toggle-slider"></span>
-          </label>
-          <div style="font-size:12px;color:#6b7280;margin-top:8px;">Les SMS sont envoyés via notre système Boostinghost.</div>
+        <div style="background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:4px;"><i class="fas fa-mobile-alt" style="color:#1A7A5E;margin-right:8px;"></i>Envoi SMS activé</div>
+              <div style="font-size:12px;color:#6b7280;">Les SMS sont envoyés via votre téléphone Android configuré.</div>
+            </div>
+            <label class="toggle-switch" id="smsToggleWrap">
+              <input type="checkbox" id="smsToggle" onchange="toggleSms(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
 
         <!-- Info messages envoyés -->
@@ -1313,10 +1326,10 @@ html[data-theme-v3="1"] .app-container {
           </div>
         </div>
 
-        <!-- Info valeur ajoutée SMS -->
-        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px;">
-          <div style="font-size:13px;font-weight:600;color:#166534;margin-bottom:6px;"><i class="fas fa-star" style="color:#1A7A5E;margin-right:6px;"></i>Un accueil sans friction, sur tous les canaux</div>
-          <div style="font-size:12px;color:#374151;line-height:1.6;">Vos voyageurs reçoivent les informations essentielles à la fois sur leur plateforme de réservation <strong>et par SMS</strong> — garantissant qu'aucun message ne passe inaperçu. Un double canal qui réduit les questions, rassure vos locataires et vous fait gagner du temps dès le jour J.</div>
+        <!-- Android gateway status -->
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:16px;">
+          <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px;"><i class="fas fa-android" style="color:#3DDC84;margin-right:6px;"></i>Gateway Android</div>
+          <div style="font-size:12px;color:#6b7280;">L'envoi est géré via votre Android avec la SIM configurée. Assurez-vous que l'app SMS Gateway est active et connectée.</div>
         </div>
       </div>
     </div><!-- /panelSms -->
@@ -2993,7 +3006,7 @@ function switchMsgsTab(tab) {
   }
   if (tab === 'logs') { loadLogs(); loadScheduled(); }
   if (tab === 'sms') { loadSmsStatus(); }
-  if (tab === 'smslogs') { loadSmsLogs(); loadSmsLogsProperties(); }
+  if (tab === 'smslogs') { loadSmsLogs(); }
   if (tab === 'ota' && !channexPropertiesLoaded) {
     loadChannexProperties();
   }
@@ -4517,7 +4530,8 @@ function renderLogs(logs) {
 }
 
 </script>
-<script src="/js/bh-onboarding-pages.js">
+<script src="/js/bh-onboarding-pages.js"></script>
+<script>
 // ============================================================
 // 📱 SMS — Fonctions onglet SMS
 // ============================================================
@@ -4580,22 +4594,6 @@ async function toggleSms(enabled) {
   }
 }
 
-async function loadSmsLogsProperties() {
-  const token = localStorage.getItem('lcc_token');
-  const select = document.getElementById('smsLogsFilterProperty');
-  if (!select || select.options.length > 1) return;
-  try {
-    const res = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
-    const data = await res.json();
-    (data.properties || []).forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.internalName || p.name;
-      select.appendChild(opt);
-    });
-  } catch(e) { console.warn('[SMS] loadSmsLogsProperties error:', e); }
-}
-
 async function loadSmsLogs() {
   const token = localStorage.getItem('lcc_token');
   const list = document.getElementById('smsLogsList');
@@ -4641,7 +4639,6 @@ async function loadSmsLogs() {
     list.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:16px;">Erreur de chargement</div>';
   }
 }
-
 </script>
 </body>
 </html>
