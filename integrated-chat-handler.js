@@ -277,6 +277,16 @@ async function handleIncomingMessage(message, conversation, pool, io) {
 
     if (message.sender_type !== 'guest') return false;
 
+    // ─── Nom du logement (pour les notifs push) ────────────────────
+    let _propName = null;
+    if (conversation.property_id) {
+      try {
+        const _pr = await pool.query('SELECT internal_name, name FROM properties WHERE id = $1', [conversation.property_id]);
+        const _p = _pr.rows[0];
+        if (_p) _propName = _p.internal_name || _p.name || null;
+      } catch(e) {}
+    }
+
     // ─── Filtre messages système OTA ───────────────────────────────
     const msgText = message.message || '';
     const isOtaSystemMessage = (
@@ -312,7 +322,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
           for (const tok of tokens.rows) {
             await sendNotification(
               tok.fcm_token,
-              `💬 ${conversation.guest_name || 'Voyageur'} a répondu`,
+              `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} a répondu`,
               `Nouveau message dans une conversation en attente.`,
               { type: 'new_guest_message', conversation_id: String(conversation.id) }
             );
@@ -347,7 +357,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
           for (const tok of tokensRes.rows) {
             await sendNotification(
               tok.fcm_token,
-              `💬 ${conversation.guest_name || 'Voyageur'}`,
+              `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''}`,
               (message._rawMessage || message.message || '').substring(0, 80),
               { type: 'new_guest_message', conversation_id: String(conversation.id) }
             );
@@ -541,7 +551,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         for (const tok of tokensRes.rows) {
           await sendNotification(
             tok.fcm_token,
-            `😠 Message négatif — ${conversation.guest_name || 'Un voyageur'}`,
+            `😠 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} — Message négatif`,
             `Un voyageur semble insatisfait. Vérifiez la conversation.`,
             { type: 'negative_sentiment', conversationId: String(conversation.id), screen: 'messages' }
           );
@@ -705,7 +715,7 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
       for (const tok of tokens.rows) {
         await sendNotification(
           tok.fcm_token,
-          `🤝 ${conversation.guest_name || 'Voyageur'} — Prise en charge requise`,
+          `🤝 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} — Prise en charge requise`,
           `L'IA a passé la main. Répondez dès que possible.`,
           { type: 'escalation', conversation_id: String(conversation.id), screen: 'messages' }
         );
