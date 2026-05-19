@@ -22484,6 +22484,57 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
   return { skip: false };
 }
 
+
+// ============================================================
+// 📱 SMS GATEWAY — Envoi SMS via Android (api.sms-gate.app)
+// ============================================================
+async function sendSmsGateway(phoneNumber, message) {
+  try {
+    const login    = process.env.SMS_GATEWAY_LOGIN;
+    const password = process.env.SMS_GATEWAY_PASSWORD;
+    if (!login || !password) {
+      console.warn('⚠️ [SMS] Credentials manquants (SMS_GATEWAY_LOGIN / SMS_GATEWAY_PASSWORD)');
+      return false;
+    }
+    if (!phoneNumber) {
+      console.warn('⚠️ [SMS] Numéro de téléphone manquant');
+      return false;
+    }
+
+    // Normaliser le numéro (ajouter +33 si numéro français sans indicatif)
+    let phone = phoneNumber.replace(/\s/g, '').replace(/-/g, '');
+    if (phone.startsWith('0') && phone.length === 10) {
+      phone = '+33' + phone.substring(1);
+    } else if (!phone.startsWith('+')) {
+      phone = '+' + phone;
+    }
+
+    const SMS_FOOTER = "\n\n---\nCe message est envoyé automatiquement pour votre réservation. Merci de ne pas répondre à ce SMS, nous n\'y avons pas accès. Pour nous contacter, répondez via votre plateforme de réservation.";
+    const fullMsg = message + SMS_FOOTER;
+
+    const credentials = Buffer.from(`${login}:${password}`).toString('base64');
+    const response = await fetch('https://api.sms-gate.app/3rdparty/v1/message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${credentials}`
+      },
+      body: JSON.stringify({ message: fullMsg, phoneNumbers: [phone] })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.warn(`⚠️ [SMS] Échec envoi à ${phone}:`, data);
+      return false;
+    }
+    console.log(`📱 [SMS] Envoyé à ${phone} — id: ${data.id} state: ${data.state}`);
+    return true;
+  } catch(e) {
+    console.warn('⚠️ [SMS] Erreur:', e.message);
+    return false;
+  }
+}
+
 async function sendTemplateMessage(pool, io, { template, conv, property }) {
   const { sendBookingMessage } = require('./channex');
   const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
@@ -22636,6 +22687,29 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
           console.warn(`⚠️ [TPL SEND] Channex error:`, channexErr.message);
         }
       }
+    }
+
+
+    // 📱 Envoi SMS via Android Gateway
+    // Uniquement pour before_arrival (caution) et on_arrival (infos arrivée), jamais Airbnb
+    try {
+      const smsEligibleTriggers = ['before_arrival', 'on_arrival'];
+      const convPlatform = (conv.platform || conv.channex_platform || conv.ota_name || '').toLowerCase();
+      const isAirbnb = convPlatform.includes('airbnb') || convPlatform === 'abb';
+      const guestPhone = conv.guest_phone || null;
+
+      if (smsEligibleTriggers.includes(template.trigger_type) && !isAirbnb && guestPhone) {
+        // Pour before_arrival : envoyer uniquement si le message contient un lien de caution
+        if (template.trigger_type === 'before_arrival' && !msg.includes('{caution_url}') && !msg.match(/https?:\/\//)) {
+          console.log(`ℹ️ [SMS] before_arrival sans lien → SMS non envoyé conv ${conv.id}`);
+        } else {
+          await sendSmsGateway(guestPhone, msg);
+        }
+      } else if (smsEligibleTriggers.includes(template.trigger_type) && !isAirbnb && !guestPhone) {
+        console.log(`ℹ️ [SMS] Pas de numéro de téléphone pour conv ${conv.id} (${conv.guest_name})`);
+      }
+    } catch(smsErr) {
+      console.warn('⚠️ [SMS] Erreur non bloquante:', smsErr.message);
     }
 
   } catch(e) {
