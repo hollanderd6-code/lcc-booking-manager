@@ -2442,6 +2442,60 @@ if (logoInput && logoPreview) {
       return 'Solo';
     }
 
+
+    function loadSmsOption(subData) {
+      const el = document.getElementById('smsOptionContent');
+      if (!el) return;
+      const basePlan = (subData?.planType || 'solo').toLowerCase().replace(/_monthly|_annual/g, '');
+      const smsIncluded = basePlan === 'pro';
+      const smsEnabled = subData?.smsEnabled || false;
+      const isIOS = window.Capacitor?.isNativePlatform?.() ||
+                    window.location.protocol === 'capacitor:' ||
+                    (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream);
+
+      if (smsIncluded) {
+        el.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:4px;"><i class="fas fa-check-circle" style="color:#1A7A5E;margin-right:6px;"></i>Inclus dans votre plan Pro</div>
+              <div style="font-size:12px;color:#6b7280;">Les SMS automatiques sont inclus sans surcoût. Vous pouvez les activer/désactiver dans l'onglet Messages → SMS.</div>
+            </div>
+            <span style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;">Inclus</span>
+          </div>`;
+      } else if (smsEnabled) {
+        el.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:4px;"><i class="fas fa-mobile-alt" style="color:#1A7A5E;margin-right:6px;"></i>Option SMS active</div>
+              <div style="font-size:12px;color:#6b7280;">5,99€/mois · Renouvellement automatique</div>
+            </div>
+            <span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;">Actif — 5,99€/mois</span>
+          </div>`;
+      } else {
+        el.innerHTML = isIOS ? `
+          <div style="font-size:13px;color:var(--text-secondary);">Pour activer l'option SMS, rendez-vous sur <strong>boostinghost.fr</strong> depuis votre navigateur.</div>
+        ` : `
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div style="flex:1;min-width:200px;">
+              <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:6px;">Envoi de SMS automatiques aux voyageurs</div>
+              <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">SMS de demande de caution + SMS d'arrivée. Fonctionne avec votre Android et SIM dédiée. Non disponible pour Airbnb.</div>
+              <ul style="list-style:none;display:flex;flex-direction:column;gap:6px;padding:0;margin:0;">
+                <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> SMS caution avec lien Stripe J-2</li>
+                <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> SMS infos d'arrivée le jour J</li>
+                <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> Toutes plateformes sauf Airbnb</li>
+              </ul>
+            </div>
+            <div style="text-align:center;flex-shrink:0;">
+              <div style="font-family:'Instrument Serif',serif;font-size:28px;color:#0D1117;line-height:1;">5,99€</div>
+              <div style="font-size:11px;color:#9ca3af;margin-bottom:12px;">/mois</div>
+              <a href="/pricing.html#sms-option" class="btn btn-primary" style="font-size:13px;padding:9px 18px;white-space:nowrap;">
+                <i class="fas fa-plus"></i> Activer l'option
+              </a>
+            </div>
+          </div>`;
+      }
+    }
+
     async function loadSubscriptionStatus() {
       const token = localStorage.getItem('lcc_token');
       const subscriptionCard = document.getElementById('subscriptionCard');
@@ -4274,58 +4328,6 @@ async function executeDeleteAccount() {
   });
 </script>
 <script src="/js/bh-onboarding-pages.js">
-    function loadSmsOption(subData) {
-      const el = document.getElementById('smsOptionContent');
-      if (!el) return;
-      const basePlan = (subData?.planType || 'solo').toLowerCase().replace(/_monthly|_annual/g, '');
-      const smsIncluded = basePlan === 'pro';
-      const smsEnabled = subData?.smsEnabled || false;
-      const isIOS = window.Capacitor?.isNativePlatform?.() ||
-                    window.location.protocol === 'capacitor:' ||
-                    (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream);
-
-      if (smsIncluded) {
-        el.innerHTML = `
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-            <div>
-              <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:4px;"><i class="fas fa-check-circle" style="color:#1A7A5E;margin-right:6px;"></i>Inclus dans votre plan Pro</div>
-              <div style="font-size:12px;color:#6b7280;">Les SMS automatiques sont inclus sans surcoût. Vous pouvez les activer/désactiver dans l'onglet Messages → SMS.</div>
-            </div>
-            <span style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;">Inclus</span>
-          </div>`;
-      } else if (smsEnabled) {
-        el.innerHTML = `
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-            <div>
-              <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:4px;"><i class="fas fa-mobile-alt" style="color:#1A7A5E;margin-right:6px;"></i>Option SMS active</div>
-              <div style="font-size:12px;color:#6b7280;">5,99€/mois · Renouvellement automatique</div>
-            </div>
-            <span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;">Actif — 5,99€/mois</span>
-          </div>`;
-      } else {
-        el.innerHTML = isIOS ? `
-          <div style="font-size:13px;color:var(--text-secondary);">Pour activer l'option SMS, rendez-vous sur <strong>boostinghost.fr</strong> depuis votre navigateur.</div>
-        ` : `
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-            <div style="flex:1;min-width:200px;">
-              <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:6px;">Envoi de SMS automatiques aux voyageurs</div>
-              <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">SMS de demande de caution + SMS d'arrivée. Fonctionne avec votre Android et SIM dédiée. Non disponible pour Airbnb.</div>
-              <ul style="list-style:none;display:flex;flex-direction:column;gap:6px;padding:0;margin:0;">
-                <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> SMS caution avec lien Stripe J-2</li>
-                <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> SMS infos d'arrivée le jour J</li>
-                <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> Toutes plateformes sauf Airbnb</li>
-              </ul>
-            </div>
-            <div style="text-align:center;flex-shrink:0;">
-              <div style="font-family:'Instrument Serif',serif;font-size:28px;color:#0D1117;line-height:1;">5,99€</div>
-              <div style="font-size:11px;color:#9ca3af;margin-bottom:12px;">/mois</div>
-              <a href="/pricing.html#sms-option" class="btn btn-primary" style="font-size:13px;padding:9px 18px;white-space:nowrap;">
-                <i class="fas fa-plus"></i> Activer l'option
-              </a>
-            </div>
-          </div>`;
-      }
-    }
 
 </script>    
 </body>
