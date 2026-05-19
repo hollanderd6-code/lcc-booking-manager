@@ -8916,6 +8916,112 @@ if (req.file) {
   }
 });
 // Route pour vérifier le statut de l'abonnement
+
+// ============================================================
+// 📱 ROUTES SMS GATEWAY
+// ============================================================
+
+// GET /api/sms/status — statut SMS (plan + toggle)
+app.get('/api/sms/status', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await pool.query(
+      `SELECT plan_type, sms_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    const sub = result.rows[0];
+    const basePlan = getBasePlanName(sub?.plan_type || 'solo');
+    const smsIncluded = basePlan === 'pro';
+    const smsEnabled = smsIncluded || (sub?.sms_enabled === true);
+    res.json({ smsEnabled, smsIncluded, planType: basePlan });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/sms/toggle — activer/désactiver SMS
+app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { enabled } = req.body;
+
+    // Vérifier le plan
+    const subResult = await pool.query(
+      `SELECT plan_type, sms_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    const sub = subResult.rows[0];
+    const basePlan = getBasePlanName(sub?.plan_type || 'solo');
+
+    // Solo/Standard : ne peut désactiver que si déjà payé (sms_enabled), ne peut pas activer sans paiement
+    if (basePlan !== 'pro' && enabled && !sub?.sms_enabled) {
+      return res.status(403).json({ error: 'option_required', message: 'Option SMS requise pour ce plan' });
+    }
+
+    await pool.query(
+      `UPDATE subscriptions SET sms_enabled = $1 WHERE user_id = $2`,
+      [enabled, userId]
+    );
+
+    console.log(`📱 [SMS] Toggle ${enabled ? 'ON' : 'OFF'} pour user ${userId}`);
+    res.json({ success: true, smsEnabled: enabled });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/sms/logs — historique SMS envoyés
+app.get('/api/sms/logs', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { property_id, status, date, limit = 50, offset = 0 } = req.query;
+
+    let where = `WHERE sl.user_id = $1`;
+    const params = [userId];
+    let idx = 2;
+
+    if (property_id) { where += ` AND sl.property_id = $${idx++}`; params.push(property_id); }
+    if (status) { where += ` AND sl.status = $${idx++}`; params.push(status); }
+    if (date) { where += ` AND DATE(sl.created_at) = $${idx++}`; params.push(date); }
+
+    // Créer la table si elle n'existe pas
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sms_logs (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        property_id TEXT,
+        guest_name TEXT,
+        phone_number TEXT,
+        message TEXT,
+        trigger_type TEXT,
+        status TEXT DEFAULT 'sent',
+        gateway_id TEXT,
+        error_message TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    const result = await pool.query(
+      `SELECT sl.*, p.name as property_name
+       FROM sms_logs sl
+       LEFT JOIN properties p ON p.id = sl.property_id
+       ${where}
+       ORDER BY sl.created_at DESC
+       LIMIT $${idx++} OFFSET $${idx++}`,
+      [...params, limit, offset]
+    );
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM sms_logs sl ${where}`,
+      params
+    );
+
+    res.json({ logs: result.rows, total: parseInt(countResult.rows[0].count) });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/subscription/status', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -8926,7 +9032,8 @@ app.get('/api/subscription/status', authenticateAny, async (req, res) => {
         plan_type, 
         trial_end_date,
         current_period_end,
-        stripe_subscription_id
+        stripe_subscription_id,
+        sms_enabled
       FROM subscriptions 
       WHERE user_id = $1`,
       [userId]
@@ -8962,6 +9069,10 @@ app.get('/api/subscription/status', authenticateAny, async (req, res) => {
       displayMessage = 'Abonnement annulé';
     }
 
+    const basePlan = getBasePlanName(sub.plan_type || 'solo');
+    const smsIncluded = basePlan === 'pro';
+    const smsEnabled = smsIncluded || (sub.sms_enabled === true);
+
     res.json({
       status: sub.status,
       planType: sub.plan_type,
@@ -8970,7 +9081,9 @@ app.get('/api/subscription/status', authenticateAny, async (req, res) => {
       currentPeriodEnd: sub.current_period_end,
       daysRemaining: daysRemaining,
       displayMessage: displayMessage,
-      showAlert: sub.status === 'trial' && daysRemaining !== null && daysRemaining <= 3
+      showAlert: sub.status === 'trial' && daysRemaining !== null && daysRemaining <= 3,
+      smsEnabled: smsEnabled,
+      smsIncluded: smsIncluded
     });
 
   } catch (err) {
@@ -22488,7 +22601,7 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
 // ============================================================
 // 📱 SMS GATEWAY — Envoi SMS via Android (api.sms-gate.app)
 // ============================================================
-async function sendSmsGateway(phoneNumber, message, userId = null) {
+async function sendSmsGateway(phoneNumber, message, userId = null, _logData = null) {
   try {
     // ── Vérification plan : SMS uniquement pour Pro (inclus) ou option activée ──
     if (userId) {
@@ -22548,6 +22661,15 @@ async function sendSmsGateway(phoneNumber, message, userId = null) {
       return false;
     }
     console.log(`📱 [SMS] Envoyé à ${phone} — id: ${data.id} state: ${data.state}`);
+    // Logger en DB
+    try {
+      await pool.query(
+        `INSERT INTO sms_logs (user_id, property_id, guest_name, phone_number, message, trigger_type, status, gateway_id)
+         VALUES ($1,$2,$3,$4,$5,$6,'sent',$7)
+         ON CONFLICT DO NOTHING`,
+        [userId, _logData?.property_id||null, _logData?.guest_name||null, phone, message, _logData?.trigger_type||null, data.id]
+      );
+    } catch(logErr) { console.warn('⚠️ [SMS] Log error:', logErr.message); }
     return true;
   } catch(e) {
     console.warn('⚠️ [SMS] Erreur:', e.message);
@@ -22723,7 +22845,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
         if (template.trigger_type === 'before_arrival' && !msg.includes('{caution_url}') && !msg.match(/https?:\/\//)) {
           console.log(`ℹ️ [SMS] before_arrival sans lien → SMS non envoyé conv ${conv.id}`);
         } else {
-          await sendSmsGateway(guestPhone, msg, conv.user_id);
+          await sendSmsGateway(guestPhone, msg, conv.user_id, { property_id: property?.id, guest_name: conv.guest_name, trigger_type: template.trigger_type });
         }
       } else if (smsEligibleTriggers.includes(template.trigger_type) && !isAirbnb && !guestPhone) {
         console.log(`ℹ️ [SMS] Pas de numéro de téléphone pour conv ${conv.id} (${conv.guest_name})`);
