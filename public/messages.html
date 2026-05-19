@@ -4619,6 +4619,21 @@ async function loadSmsStatus() {
 async function toggleSms(enabled) {
   const token = localStorage.getItem('lcc_token');
   const toggle = document.getElementById('smsToggle');
+
+  // Confirmation pour l'activation uniquement
+  if (enabled) {
+    const lccUser = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+    const plan = (lccUser.plan_type || '').toLowerCase().replace(/_monthly|_annual/g, '');
+    const isPro = plan === 'pro';
+    if (!isPro) {
+      const confirmed = confirm('Souhaitez-vous activer l'option SMS automatiques ?\n\nDes frais de 5,99 €/mois seront automatiquement ajoutés à votre abonnement. Vous pouvez désactiver cette option à tout moment depuis votre espace.');
+      if (!confirmed) {
+        if (toggle) toggle.checked = false;
+        return;
+      }
+    }
+  }
+
   try {
     const res = await fetch('/api/sms/toggle', {
       method: 'POST',
@@ -4628,15 +4643,15 @@ async function toggleSms(enabled) {
     const data = await res.json();
     if (data.error === 'option_required') {
       if (toggle) toggle.checked = false;
-      alert('Cette fonctionnalité nécessite l\'option SMS (5,99€/mois). Rendez-vous sur la page Tarifs pour l\'activer.');
+      alert('Cette fonctionnalité nécessite l'option SMS (5,99€/mois). Rendez-vous sur la page Tarifs pour l'activer.');
     } else if (data.success) {
       const banner = document.getElementById('smsOptionBanner');
       if (banner) {
-        const msg = enabled ? '✅ SMS activés avec succès' : '⏸️ SMS désactivés';
+        const msg = enabled ? '✅ Option SMS activée — un email de confirmation vous a été envoyé.' : '⏸️ SMS désactivés';
         banner.style.display = 'block';
         const prev = banner.innerHTML;
         banner.innerHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 16px;font-size:13px;color:#166534;">${msg}</div>`;
-        setTimeout(() => { banner.innerHTML = prev; }, 2000);
+        setTimeout(() => { if(banner) banner.innerHTML = prev; }, 4000);
       }
     }
   } catch(e) {
