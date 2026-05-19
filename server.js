@@ -22488,8 +22488,28 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
 // ============================================================
 // 📱 SMS GATEWAY — Envoi SMS via Android (api.sms-gate.app)
 // ============================================================
-async function sendSmsGateway(phoneNumber, message) {
+async function sendSmsGateway(phoneNumber, message, userId = null) {
   try {
+    // ── Vérification plan : SMS uniquement pour Pro (inclus) ou option activée ──
+    if (userId) {
+      try {
+        const subRow = await pool.query(
+          `SELECT plan_type, sms_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+          [userId]
+        );
+        const sub = subRow.rows[0];
+        const basePlan = getBasePlanName(sub?.plan_type || 'solo');
+        const smsEnabled = sub?.sms_enabled === true;
+        if (basePlan !== 'pro' && !smsEnabled) {
+          console.log(`ℹ️ [SMS] Plan ${basePlan} sans option SMS → envoi annulé`);
+          return false;
+        }
+      } catch(planErr) {
+        console.warn('⚠️ [SMS] Erreur vérif plan:', planErr.message);
+        return false;
+      }
+    }
+
     const login    = process.env.SMS_GATEWAY_LOGIN;
     const password = process.env.SMS_GATEWAY_PASSWORD;
     if (!login || !password) {
@@ -22703,7 +22723,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
         if (template.trigger_type === 'before_arrival' && !msg.includes('{caution_url}') && !msg.match(/https?:\/\//)) {
           console.log(`ℹ️ [SMS] before_arrival sans lien → SMS non envoyé conv ${conv.id}`);
         } else {
-          await sendSmsGateway(guestPhone, msg);
+          await sendSmsGateway(guestPhone, msg, conv.user_id);
         }
       } else if (smsEligibleTriggers.includes(template.trigger_type) && !isAirbnb && !guestPhone) {
         console.log(`ℹ️ [SMS] Pas de numéro de téléphone pour conv ${conv.id} (${conv.guest_name})`);
