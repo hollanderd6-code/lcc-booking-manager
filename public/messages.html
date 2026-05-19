@@ -4633,19 +4633,33 @@ async function loadSmsLogs() {
     const data = await res.json();
     _allSmsLogs = data.logs || [];
 
-    // Peupler le select logements depuis les logs
+    // Peupler le select logements depuis les logs, ou depuis /api/properties si vide
     const sel = document.getElementById('smsLogsFilterProperty');
     if (sel) {
       const current = sel.value;
       while (sel.options.length > 1) sel.remove(1);
-      const names = [...new Set(_allSmsLogs.map(l => l.property_name).filter(Boolean))].sort();
-      names.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        sel.appendChild(opt);
-      });
-      sel.value = current;
+      const namesFromLogs = [...new Set(_allSmsLogs.map(l => l.property_name).filter(Boolean))].sort();
+      if (namesFromLogs.length > 0) {
+        namesFromLogs.forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+        sel.value = current;
+      } else {
+        // Fallback : charger depuis /api/properties
+        try {
+          const propRes = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + token } });
+          const propData = await propRes.json();
+          (propData.properties || []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.internalName || p.name;
+            opt.textContent = p.internalName || p.name;
+            sel.appendChild(opt);
+          });
+        } catch(e) {}
+      }
     }
 
     renderSmsLogs(_allSmsLogs);
