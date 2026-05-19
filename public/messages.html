@@ -2993,6 +2993,11 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 let currentMsgsTab = 'guests';
 let channexPropertiesLoaded = false;
 
+document.addEventListener('DOMContentLoaded', () => {
+  const savedTab = localStorage.getItem('msgs_active_tab');
+  if (savedTab) switchMsgsTab(savedTab);
+});
+
 function switchMsgsTab(tab) {
   // Sur mobile, afficher/cacher le bouton flottant et le retour
   const isMobile = window.innerWidth <= 1366;
@@ -3002,6 +3007,7 @@ function switchMsgsTab(tab) {
   if (mobileBack) mobileBack.style.display = (isMobile && tab === 'templates') ? 'block' : 'none';
 
   currentMsgsTab = tab;
+  localStorage.setItem('msgs_active_tab', tab);
 
   document.getElementById('tabGuests').classList.toggle('active', tab === 'guests');
   const tabTpl = document.getElementById('tabTemplates');
