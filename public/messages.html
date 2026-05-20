@@ -3852,6 +3852,9 @@ ${result.downloadUrl}
             });
             showBHToast('✅ Facture envoyée dans le chat !', 'success');
             closeInvoiceModal();
+            if (window.openConversation && window.currentConversationId) {
+              setTimeout(() => window.openConversation(window.currentConversationId), 400);
+            }
           } catch(e) {
             // Fallback : copier le lien
             try { await navigator.clipboard.writeText(result.downloadUrl); } catch(e2) {}
@@ -3895,6 +3898,9 @@ ${result.downloadUrl}
       if (!res.ok) throw new Error(result.error || 'Erreur envoi');
       showBHToast('✅ Email envoyé à ' + clientEmail, 'success');
       closeInvoiceModal();
+      if (window.openConversation && window.currentConversationId) {
+        setTimeout(() => window.openConversation(window.currentConversationId), 400);
+      }
     } catch(err) {
       showBHToast('❌ ' + err.message, 'error');
     } finally {
