@@ -18233,12 +18233,12 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
   const total = subtotal + vatAmount;
 
-  const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (user?.company || 'Ma Conciergerie');
-  const emitterAddr  = ownerInfo?.address || '';
-  const emitterCP    = ownerInfo?.postal_code || '';
-  const emitterCity  = ownerInfo?.city || '';
-  const emitterEmail = ownerInfo?.email || user?.email || '';
-  const emitterSiret = ownerInfo?.siret || '';
+  const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (data.emitterName || user?.company || 'Ma Conciergerie');
+  const emitterAddr  = ownerInfo?.address     || data.emitterAddress    || '';
+  const emitterCP    = ownerInfo?.postal_code || data.emitterPostalCode || '';
+  const emitterCity  = ownerInfo?.city        || data.emitterCity       || '';
+  const emitterEmail = ownerInfo?.email       || data.emitterEmail      || user?.email || '';
+  const emitterSiret = ownerInfo?.siret       || data.emitterSiret      || '';
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
@@ -19029,7 +19029,13 @@ app.post('/api/invoice/create',
         cleaningFee: cleaningFee || 0,
         vatRate: vatRate || 0,
         total: dlTotal,
-        invoiceNumber
+        invoiceNumber,
+        emitterName: ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (user?.company || ''),
+        emitterAddress: ownerInfo?.address || '',
+        emitterPostalCode: ownerInfo?.postal_code || '',
+        emitterCity: ownerInfo?.city || '',
+        emitterEmail: ownerInfo?.email || user?.email || '',
+        emitterSiret: ownerInfo?.siret || ''
       });
 
       // Générer le PDF si pas encore fait (cas sans sendEmail)
