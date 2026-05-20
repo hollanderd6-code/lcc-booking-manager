@@ -19042,7 +19042,7 @@ app.post('/api/invoice/create',
         `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT DO NOTHING`,
-        [dlToken, userId, invoiceNumber, pdfPath2, dlExpires]
+        [dlToken, userId, invoiceNumber, dlMeta, dlExpires]
       );
 
       const baseUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
