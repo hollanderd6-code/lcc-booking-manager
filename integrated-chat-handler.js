@@ -342,6 +342,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
          AND sender_type IN ('owner', 'property')
          AND (is_bot_response IS NULL OR is_bot_response = FALSE)
          AND sender_name NOT IN ('bot', 'system', 'auto', 'IA', 'Boostinghost', 'Assistant automatique')
+         AND (sender_name IS NULL OR sender_name NOT LIKE 'tpl_%')
          AND created_at > NOW() - INTERVAL '2 hours'
          LIMIT 1`,
         [conversation.id]
