@@ -24344,6 +24344,38 @@ app.post('/api/test/deposit-reminders', authenticateAny, async (req, res) => {
 
 console.log('✅ Route de test /api/test/deposit-reminders ajoutée');
 
+// ── ROUTE DE TEST : Déclencher le cron factures manuellement ─────────────────
+app.post('/api/test/invoice-cron', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { date } = req.body; // optionnel: forcer une date ex: "2026-05-20"
+    const today = date || new Date().toISOString().split('T')[0];
+
+    console.log(`🧾 [INVOICE CRON MANUAL] Déclenchement manuel pour date=${today} par user=${userId}`);
+
+    const requests = await pool.query(
+      `SELECT ir.*, r.guest_name, r.guest_email, r.start_date, r.end_date,
+              r.amount_total, r.amount_rooms, r.amount_cleaning, r.amount_taxes,
+              p.name as property_name, p.address as property_address,
+              p.cleaning_fee as prop_cleaning_fee, p.tourist_tax_per_night,
+              u.email as user_email, u.company as user_company
+       FROM invoice_requests ir
+       LEFT JOIN reservations r ON r.uid = ir.reservation_uid
+       LEFT JOIN properties p ON p.id = ir.property_id
+       LEFT JOIN users u ON u.id = ir.user_id
+       WHERE ir.status = 'pending'
+       AND (DATE(r.end_date) = $1 OR $2 = 'force')
+       AND ir.user_id = $3`,
+      [today, req.body.force ? 'force' : 'normal', userId]
+    );
+
+    res.json({ found: requests.rows.length, message: `${requests.rows.length} facture(s) en attente trouvée(s) pour le ${today}` });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+console.log('✅ Route de test /api/test/invoice-cron ajoutée');
+
 // 🗓️ ROUTE : Synchronisation iCal manuelle
 app.post('/api/sync/ical', authenticateAny, async (req, res) => {
   try {
