@@ -19231,7 +19231,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
     const { token } = req.params;
 
     const r = await pool.query(
-      `SELECT file_path, invoice_number, expires_at
+      `SELECT file_path, invoice_number, user_id, expires_at
        FROM invoice_download_tokens
        WHERE token = $1`,
       [token]
@@ -19244,19 +19244,25 @@ app.get('/api/invoice/download/:token', async (req, res) => {
       return res.status(410).send('Lien expiré.');
     }
 
-    const absolutePath = path.resolve(row.file_path);
+    const invoiceNumber = row.invoice_number;
 
-    if (!fs.existsSync(absolutePath)) {
-      return res.status(404).send('Fichier introuvable.');
-    }
+    // Lire les métadonnées (file_path contient du JSON depuis la nouvelle version)
+    let meta = {};
+    try { meta = JSON.parse(row.file_path || '{}'); } catch(e) { meta = { invoiceNumber }; }
+    if (!meta.invoiceNumber) meta.invoiceNumber = invoiceNumber;
+
+    // Récupérer le profil utilisateur pour la génération PDF
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [row.user_id]);
+    const user = profileResult.rows[0];
+
+    const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_pub_${token.slice(0,8)}.pdf`);
+    await generateInvoicePdf(pdfPath, meta, user, null);
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${row.invoice_number}.pdf"`
-    );
-
-    fs.createReadStream(absolutePath).pipe(res);
+    res.setHeader('Content-Disposition', `attachment; filename="${invoiceNumber}.pdf"`);
+    const stream = fs.createReadStream(pdfPath);
+    stream.pipe(res);
+    stream.on('end', () => { try { fs.unlinkSync(pdfPath); } catch(e) {} });
 
   } catch (err) {
     console.error('❌ Erreur download invoice:', err);
@@ -23785,7 +23791,8 @@ cron.schedule('0 10 * * *', async () => {
        LEFT JOIN properties p ON p.id = ir.property_id
        LEFT JOIN users u ON u.id = ir.user_id
        WHERE ir.status = 'pending'
-       AND DATE(r.end_date) = $1`,
+       AND DATE(r.end_date) = $1
+       FOR UPDATE OF ir SKIP LOCKED`,
       [today]
     );
 
@@ -23859,7 +23866,33 @@ cron.schedule('0 10 * * *', async () => {
 
         // Envoyer l'email avec le lien de téléchargement
         const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
-        const downloadUrl = `${appUrl}/api/invoice/download-by-number/${invoiceNumber}`;
+        // Générer un token public de téléchargement (pas d'auth requise)
+        const publicToken = require('crypto').randomBytes(32).toString('hex');
+        const tokenExpires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+        const invoiceMeta = JSON.stringify({
+          clientName: clientName || '',
+          clientEmail: clientEmail || '',
+          clientAddress: req.client_address || '',
+          clientPostalCode: req.client_postal_code || '',
+          clientCity: req.client_city || '',
+          clientSiret: req.client_siret || '',
+          propertyName: req.property_name || '',
+          propertyAddress: req.property_address || '',
+          checkinDate: req.start_date,
+          checkoutDate: req.end_date,
+          nights,
+          rentAmount: parseFloat(rentAmount),
+          touristTaxAmount: parseFloat(touristTax),
+          cleaningFee: parseFloat(cleaningFee),
+          vatRate: 0,
+          invoiceNumber
+        });
+        await pool.query(
+          `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+          [publicToken, userId, invoiceNumber, invoiceMeta, tokenExpires]
+        ).catch(() => {});
+        const downloadUrl = `${appUrl}/api/invoice/download/${publicToken}`;
 
         const emailHtml = bhEmailTemplate({
           icon: '📄',
@@ -23874,7 +23907,7 @@ cron.schedule('0 10 * * *', async () => {
               </a>
             </div>
             <p style="font-size:12px;color:#9ca3af;text-align:center;">Lien valable 1 an</p>
-            <p style="font-size:14px;color:#666;">Cordialement, <strong>${user.company || 'Boostinghost'}</strong></p>
+            <p style="font-size:14px;color:#666;">Cordialement,</p>
           `
         });
 
@@ -23889,6 +23922,42 @@ cron.schedule('0 10 * * *', async () => {
           `UPDATE invoice_requests SET status = 'sent', invoice_number = $1, sent_at = NOW(), updated_at = NOW() WHERE id = $2`,
           [invoiceNumber, req.id]
         );
+
+        // ── Envoyer un message dans la conversation BH ──────────────────
+        try {
+          const convRow = await pool.query(
+            `SELECT id, channex_booking_id FROM conversations
+             WHERE conversation_id = $1 OR (reservation_uid = $2 AND user_id = $3)
+             ORDER BY created_at DESC LIMIT 1`,
+            [req.conversation_id, req.reservation_uid, userId]
+          );
+          // Fallback direct sur conversation_id
+          const convId = req.conversation_id || convRow.rows[0]?.id;
+          const channexBookingId = convRow.rows[0]?.channex_booking_id;
+
+          if (convId) {
+            const invoiceMsg = `📄 Votre facture a été envoyée par email à ${clientEmail}.
+
+Numéro : ${invoiceNumber}
+Séjour du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}`;
+            await sendAutomatedMessage(convId, invoiceMsg, io);
+
+            // Envoyer aussi via Channex si booking_id disponible
+            if (channexBookingId) {
+              try {
+                const channexMsg = `Votre facture a été envoyée par email. Référence : ${invoiceNumber}`;
+                await channexAPI.post(`/bookings/${channexBookingId}/messages`, {
+                  message: { content: channexMsg }
+                });
+                console.log(`✅ [INVOICE CRON] Message Channex envoyé pour booking ${channexBookingId}`);
+              } catch(chErr) {
+                console.warn(`⚠️ [INVOICE CRON] Erreur message Channex (non bloquant):`, chErr.message);
+              }
+            }
+          }
+        } catch(msgErr) {
+          console.warn('⚠️ [INVOICE CRON] Erreur envoi message conv (non bloquant):', msgErr.message);
+        }
 
         console.log(`✅ [INVOICE CRON] Facture ${invoiceNumber} envoyée à ${clientEmail}`);
       } catch(e) {
