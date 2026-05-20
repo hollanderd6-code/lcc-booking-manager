@@ -144,17 +144,56 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
 
     // ✅ Installer automatiquement l'app Messages & Reviews sur ce logement
     try {
-      await channexAPI.post('/applications/install', {
-        application_installation: {
-          property_id: channex_property_id,
-          application_code: 'messages_and_reviews'
+      // 1. Récupérer l'ID de l'app dynamiquement
+      let appInstalled = false;
+
+      // Essai 1 : via application_code direct
+      try {
+        await channexAPI.post('/applications/install', {
+          application_installation: {
+            property_id: channex_property_id,
+            application_code: 'messages_and_reviews'
+          }
+        });
+        console.log(`✅ [CHANNEX] App Messages & Reviews installée (code) pour property ${channex_property_id}`);
+        appInstalled = true;
+      } catch (e1) {
+        console.warn(`⚠️ [CHANNEX] Essai 1 (code) échoué: ${e1.response?.data?.errors?.title || e1.message}`);
+      }
+
+      // Essai 2 : récupérer l'ID via /applications puis installer via /applications/install avec application_id
+      if (!appInstalled) {
+        try {
+          const appsRes = await channexAPI.get('/applications');
+          const apps = appsRes.data?.data || [];
+          const msgApp = apps.find(a => {
+            const t = (a.attributes?.title || a.title || '').toLowerCase();
+            return t.includes('message') || t.includes('review');
+          });
+          if (msgApp) {
+            const appId = msgApp.attributes?.id || msgApp.id;
+            console.log(`📦 [CHANNEX] App trouvée: ${msgApp.attributes?.title} (${appId})`);
+            await channexAPI.post('/applications/install', {
+              application_installation: {
+                property_id: channex_property_id,
+                application_id: appId
+              }
+            });
+            console.log(`✅ [CHANNEX] App Messages & Reviews installée (id) pour property ${channex_property_id}`);
+            appInstalled = true;
+          } else {
+            console.warn('⚠️ [CHANNEX] App Messages & Reviews non trouvée dans /applications');
+          }
+        } catch (e2) {
+          console.warn(`⚠️ [CHANNEX] Essai 2 (id) échoué: ${e2.response?.data || e2.message}`);
         }
-      });
-      console.log(`✅ [CHANNEX] App Messages & Reviews installée pour property ${channex_property_id}`);
+      }
+
+      if (!appInstalled) {
+        console.warn(`⚠️ [CHANNEX] Installation app messages échouée pour ${channex_property_id} — à installer manuellement`);
+      }
     } catch (appErr) {
-      // Peut échouer si déjà installée — non bloquant
-      const errMsg = appErr.response?.data?.errors?.title || appErr.message;
-      console.warn(`⚠️ [CHANNEX] Installation app messages (non bloquant): ${errMsg}`);
+      console.warn(`⚠️ [CHANNEX] Erreur installation app messages (non bloquant): ${appErr.message}`);
     }
 
     // ✅ Les webhooks sont gérés via Global Webhooks dans Channex
