@@ -3890,12 +3890,16 @@ ${result.downloadUrl}
             showBHToast('✅ Facture envoyée dans le chat !', 'success');
             closeInvoiceModal();
             if (window.openConversation && window.currentConversationId) {
-              setTimeout(() => window.openConversation(window.currentConversationId), 400);
+              setTimeout(() => window.openConversation(window.currentConversationId), 1200);
             }
           } catch(e) {
             // Fallback : copier le lien
             try { await navigator.clipboard.writeText(result.downloadUrl); } catch(e2) {}
             showBHToast('✅ Lien copié (envoi chat indisponible)', 'info');
+            closeInvoiceModal();
+            if (window.openConversation && window.currentConversationId) {
+              setTimeout(() => window.openConversation(window.currentConversationId), 400);
+            }
           }
         } else {
           // Pas de conversation — copier le lien
