@@ -894,6 +894,10 @@ html[data-theme-v3="1"] .btn-ghost {
 <input id="clientName" placeholder="Jean Dupont" required="" type="text"/>
 </div>
 <div class="form-row">
+<label for="clientNationality">Nationalité</label>
+<input id="clientNationality" placeholder="Française" type="text"/>
+</div>
+<div class="form-row">
 <label for="clientEmail">Email</label>
 <input id="clientEmail" placeholder="client@exemple.com" type="email"/>
 </div>
@@ -958,7 +962,7 @@ html[data-theme-v3="1"] .btn-ghost {
                     Montants
                   </div>
 <div class="form-row">
-<label for="rentAmount">Loyer (prix total en €)</label>
+<label for="rentAmount">Séjour (prix total en €)</label>
 <input id="rentAmount" min="0" placeholder="1050.00" step="0.01" type="number"/>
 </div>
 <div class="form-row">
@@ -1325,6 +1329,7 @@ html[data-theme-v3="1"] .btn-ghost {
             <div class="invoice-section-content">
               <strong>${document.getElementById('isCompany').checked && document.getElementById('clientCompanyName').value ? document.getElementById('clientCompanyName').value : clientName}</strong><br>
               ${document.getElementById('isCompany').checked && document.getElementById('clientCompanyName').value ? clientName + '<br>' : ''}
+              ${document.getElementById('clientNationality').value ? 'Nationalité : ' + document.getElementById('clientNationality').value + '<br>' : ''}
               ${document.getElementById('clientEmail').value ? document.getElementById('clientEmail').value + '<br>' : ''}
               ${document.getElementById('clientAddress').value ? document.getElementById('clientAddress').value + '<br>' : ''}
               ${(document.getElementById('clientPostalCode').value || document.getElementById('clientCity').value) ? (document.getElementById('clientPostalCode').value || '') + ' ' + (document.getElementById('clientCity').value || '') + '<br>' : ''}
@@ -1348,7 +1353,7 @@ html[data-theme-v3="1"] .btn-ghost {
 
           <div class="invoice-section">
             <h3>Détails</h3>
-            ${rentAmount > 0 ? '<div class="invoice-line"><span>Loyer</span><span>' + rentAmount.toFixed(2) + ' €</span></div>' : ''}
+            ${rentAmount > 0 ? '<div class="invoice-line"><span>Séjour' + (nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : '') + '</span><span>' + rentAmount.toFixed(2) + ' €</span></div>' : ''}
             ${touristTaxAmount > 0 ? '<div class="invoice-line"><span>Taxes de séjour</span><span>' + touristTaxAmount.toFixed(2) + ' €</span></div>' : ''}
             ${cleaningFee > 0 ? '<div class="invoice-line"><span>Frais de ménage</span><span>' + cleaningFee.toFixed(2) + ' €</span></div>' : ''}
           </div>
@@ -1393,6 +1398,7 @@ html[data-theme-v3="1"] .btn-ghost {
 
         const data = {
           clientName: document.getElementById('clientName').value,
+          clientNationality: document.getElementById('clientNationality')?.value || '',
           clientEmail: clientEmail,
           clientAddress: document.getElementById('clientAddress').value,
           clientPostalCode: document.getElementById('clientPostalCode').value,
@@ -1481,6 +1487,7 @@ html[data-theme-v3="1"] .btn-ghost {
           const data = {
             invoiceNumber,
             clientName: document.getElementById('clientName').value,
+            clientNationality: document.getElementById('clientNationality')?.value || '',
             clientEmail: document.getElementById('clientEmail').value,
             clientAddress: document.getElementById('clientAddress').value,
             clientPostalCode: document.getElementById('clientPostalCode').value,
