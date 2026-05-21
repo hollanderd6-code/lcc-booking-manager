@@ -18616,8 +18616,23 @@ app.get('/api/invoice/history',
       [userId]
     );
 
+    // Si rien dans invoice_download_tokens, fallback sur owner_invoices
+    let rows = result.rows;
+    if (rows.length === 0) {
+      const fallback = await pool.query(
+        `SELECT invoice_number, NULL as file_path, created_at
+         FROM owner_invoices
+         WHERE user_id = $1
+           AND (is_credit_note IS NULL OR is_credit_note = FALSE)
+         ORDER BY created_at DESC
+         LIMIT 100`,
+        [userId]
+      );
+      rows = fallback.rows;
+    }
+
     // Enrichir avec les métadonnées stockées dans file_path (on stocke aussi client/property)
-    const invoices = result.rows.map(row => {
+    const invoices = rows.map(row => {
       let meta = {};
       try { meta = JSON.parse(row.file_path || '{}'); } catch(e) {}
       return {
