@@ -17860,14 +17860,32 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     // ── PAGE 1 : Facture ──
     let y = mg;
 
-    // Logo à droite si disponible
+    // Logo à droite si disponible — base64 ou URL distante
     const senderLogo = emitter.logo || '';
-    if (senderLogo && senderLogo.startsWith('data:image')) {
+    let senderLogoBuffer = null;
+    if (senderLogo) {
       try {
-        const logoData = senderLogo.split(',')[1];
-        const logoBuffer = Buffer.from(logoData, 'base64');
-        const ext = senderLogo.includes('image/png') ? 'png' : 'jpeg';
-        doc.image(logoBuffer, W - mg - 120, y, { width: 120, height: 50, fit: [120, 50], align: 'right' });
+        if (senderLogo.startsWith('data:image')) {
+          senderLogoBuffer = Buffer.from(senderLogo.split(',')[1], 'base64');
+        } else if (senderLogo.startsWith('http')) {
+          const lr = await axios.get(senderLogo, { responseType: 'arraybuffer', timeout: 5000 });
+          if (lr.data.byteLength > 0) senderLogoBuffer = Buffer.from(lr.data);
+        }
+      } catch(e) { /* non bloquant */ }
+    }
+    if (!senderLogoBuffer) {
+      try {
+        const uRes = await pool.query('SELECT logo_url FROM users WHERE id = $1', [userId]);
+        const dbLogoUrl = uRes.rows[0]?.logo_url;
+        if (dbLogoUrl) {
+          const lr = await axios.get(dbLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
+          if (lr.data.byteLength > 0) senderLogoBuffer = Buffer.from(lr.data);
+        }
+      } catch(e) { /* non bloquant */ }
+    }
+    if (senderLogoBuffer) {
+      try {
+        doc.image(senderLogoBuffer, W - mg - 120, y, { width: 120, height: 50, fit: [120, 50], align: 'right' });
       } catch(e) { /* non bloquant */ }
     }
 
