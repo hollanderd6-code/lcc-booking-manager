@@ -18616,7 +18616,7 @@ app.get('/api/invoice/history',
       [userId]
     );
 
-    // Si rien dans invoice_download_tokens, fallback sur owner_invoices
+    // Si rien dans invoice_download_tokens, fallback sur owner_invoices (factures voyageurs uniquement)
     let rows = result.rows;
     if (rows.length === 0) {
       const fallback = await pool.query(
@@ -18624,6 +18624,8 @@ app.get('/api/invoice/history',
          FROM owner_invoices
          WHERE user_id = $1
            AND (is_credit_note IS NULL OR is_credit_note = FALSE)
+           AND client_id IS NULL
+           AND (period_start IS NULL OR period_start = period_end)
          ORDER BY created_at DESC
          LIMIT 100`,
         [userId]
@@ -18695,13 +18697,13 @@ app.post('/api/invoice/create',
     } = req.body;
 
     // Générer le numéro de facture lisible : FACT-2026-0001
+    // On utilise invoice_download_tokens comme compteur (factures voyageurs uniquement)
     const yearStr = new Date().getFullYear();
     const maxResult = await pool.query(
       `SELECT MAX(CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER)) as max_seq
-       FROM owner_invoices
+       FROM invoice_download_tokens
        WHERE user_id = $1
-         AND invoice_number LIKE $2
-         AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
+         AND invoice_number LIKE $2`,
       [userId, `FACT-${yearStr}-%`]
     ).catch(() => ({ rows: [{ max_seq: 0 }] }));
     const nextSeq = (parseInt(maxResult.rows[0]?.max_seq || 0) + 1);
