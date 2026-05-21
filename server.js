@@ -18291,25 +18291,30 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     doc.text('FACTURÉ À', col2, y);
     y += 14;
 
+    // ── Colonne gauche (émetteur) ──
+    let yL = y;
     doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK);
-    doc.text(emitterName, mg, y, { width: colW });
-    // Société sur sa propre ligne, nom en dessous
-    if (clientCompany) {
-      doc.text(clientCompany, col2, y, { width: colW });
-      y += 16;
-      doc.font('Helvetica').fontSize(9).fillColor(GRAY);
-      doc.text(clientName, col2, y, { width: colW });
-    } else {
-      doc.text(clientName, col2, y, { width: colW });
-    }
-    y += 16;
-
+    doc.text(emitterName, mg, yL, { width: colW });
+    yL += doc.heightOfString(emitterName, { width: colW }) + 5;
     doc.font('Helvetica').fontSize(9).fillColor(GRAY);
-    let yL = y, yR = clientCompany ? y : y;
-    if (emitterAddr)  { doc.text(emitterAddr, mg, yL, { width: colW }); yL += 13; }
+    if (emitterAddr)            { doc.text(emitterAddr, mg, yL, { width: colW }); yL += 13; }
     if (emitterCP||emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, yL); yL += 13; }
-    if (emitterEmail) { doc.text(emitterEmail, mg, yL); yL += 13; }
-    if (clientAddress) { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
+    if (emitterEmail)           { doc.text(emitterEmail, mg, yL); yL += 13; }
+
+    // ── Colonne droite (client) ──
+    let yR = y;
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK);
+    if (clientCompany) {
+      doc.text(clientCompany, col2, yR, { width: colW });
+      yR += doc.heightOfString(clientCompany, { width: colW }) + 5;
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+      doc.text(clientName, col2, yR, { width: colW }); yR += 13;
+    } else {
+      doc.text(clientName, col2, yR, { width: colW });
+      yR += doc.heightOfString(clientName, { width: colW }) + 5;
+    }
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    if (clientAddress)    { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
     const cpCity = `${clientPostalCode||''} ${clientCity||''}`.trim();
     if (cpCity)           { doc.text(cpCity, col2, yR); yR += 13; }
     if (clientNationality){ doc.text(`Nationalité : ${clientNationality}`, col2, yR); yR += 13; }
@@ -19092,14 +19097,7 @@ app.post('/api/invoice/create',
     }
 
     res.json({ 
-      success: true, 
-      invoiceNumber,
-      invoiceId,
-      downloadUrl,
-      message: 'Facture créée avec succès' 
-    });
-
-    // ✅ INSERT dans owner_invoices pour que le compteur de numérotation fonctionne
+    // ✅ INSERT dans owner_invoices AVANT res.json pour que le compteur soit correct dès la prochaine facture
     try {
       await pool.query(
         `INSERT INTO owner_invoices (user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
@@ -19108,6 +19106,14 @@ app.post('/api/invoice/create',
          parseFloat(rentAmount||0) + parseFloat(touristTaxAmount||0) + parseFloat(cleaningFee||0)]
       );
     } catch(e) { /* non bloquant */ }
+
+    res.json({ 
+      success: true, 
+      invoiceNumber,
+      invoiceId,
+      downloadUrl,
+      message: 'Facture créée avec succès' 
+    });
     
   } catch (err) {
     console.error('Erreur création facture:', err);
