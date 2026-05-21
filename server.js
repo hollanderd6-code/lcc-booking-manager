@@ -18224,7 +18224,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const {
     clientName = '', clientEmail = '', clientAddress = '', clientPostalCode = '',
     clientCity = '', clientSiret = '', clientCompany = '', freeNote = '',
-    clientNationality = '',
+    clientNationality = '', platform = '',
     propertyName = '', propertyAddress = '',
     checkinDate = '', checkoutDate = '', nights = 0,
     rentAmount = 0, touristTaxAmount = 0, cleaningFee = 0,
@@ -18293,21 +18293,28 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
 
     doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK);
     doc.text(emitterName, mg, y, { width: colW });
-    doc.text(clientCompany || clientName, col2, y, { width: colW });
+    // Société sur sa propre ligne, nom en dessous
+    if (clientCompany) {
+      doc.text(clientCompany, col2, y, { width: colW });
+      y += 16;
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+      doc.text(clientName, col2, y, { width: colW });
+    } else {
+      doc.text(clientName, col2, y, { width: colW });
+    }
     y += 16;
 
     doc.font('Helvetica').fontSize(9).fillColor(GRAY);
-    let yL = y, yR = y;
+    let yL = y, yR = clientCompany ? y : y;
     if (emitterAddr)  { doc.text(emitterAddr, mg, yL, { width: colW }); yL += 13; }
     if (emitterCP||emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, yL); yL += 13; }
     if (emitterEmail) { doc.text(emitterEmail, mg, yL); yL += 13; }
-    if (clientCompany) { doc.text(clientName, col2, yR, { width: colW }); yR += 13; }
     if (clientAddress) { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
     const cpCity = `${clientPostalCode||''} ${clientCity||''}`.trim();
     if (cpCity)           { doc.text(cpCity, col2, yR); yR += 13; }
     if (clientNationality){ doc.text(`Nationalité : ${clientNationality}`, col2, yR); yR += 13; }
     if (clientEmail)      { doc.text(clientEmail, col2, yR); yR += 13; }
-    if (clientSiret)      { doc.text(`SIRET : ${clientSiret}`, col2, yR); yR += 13; }
+    if (clientSiret)      { doc.text(`N° fiscal : ${clientSiret}`, col2, yR); yR += 13; }
     if (freeNote)         { doc.font('Helvetica-Oblique').text(freeNote, col2, yR, { width: colW }); yR += 13; doc.font('Helvetica'); }
 
     y = Math.max(yL, yR) + 22;
@@ -18325,6 +18332,16 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
       const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
       const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
       doc.text(`Séjour du ${ci} au ${co} · ${nights} nuit${nights>1?'s':''}`, mg, y); y += 13;
+    }
+    if (platform) {
+      const platformLabels = {
+        airbnb: 'Airbnb', booking: 'Booking.com', bookingcom: 'Booking.com',
+        direct: 'Réservation directe', guest_app: 'BHGuest', bhguest: 'BHGuest',
+        abritel: 'Abritel / VRBO', vrbo: 'VRBO', expedia: 'Expedia', hotels: 'Hotels.com',
+        gites: 'Gîtes de France'
+      };
+      const pLabel = platformLabels[platform.toLowerCase()] || platform;
+      doc.text(`Plateforme : ${pLabel}`, mg, y); y += 13;
     }
     y += 18;
 
@@ -18644,6 +18661,7 @@ app.post('/api/invoice/create',
       clientCompany,
       freeNote,
       clientNationality,
+      platform,
       propertyName, 
       propertyAddress,
       checkinDate,
@@ -18699,7 +18717,7 @@ app.post('/api/invoice/create',
       return generateInvoicePdf(outputPath, {
         clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret,
         clientCompany: clientCompany || '', freeNote: freeNote || '',
-        clientNationality: clientNationality || '',
+        clientNationality: clientNationality || '', platform: platform || '',
         propertyName, propertyAddress, checkinDate, checkoutDate, nights,
         rentAmount, touristTaxAmount, cleaningFee, vatRate, invoiceNumber
       }, user, ownerInfo);
@@ -19033,6 +19051,7 @@ app.post('/api/invoice/create',
         clientSiret: clientSiret || '',
         freeNote: freeNote || '',
         clientNationality: clientNationality || '',
+        platform: platform || '',
         propertyName: propertyName || '',
         propertyAddress: propertyAddress || '',
         checkinDate: checkinDate || '',
