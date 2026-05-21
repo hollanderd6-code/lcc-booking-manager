@@ -19096,8 +19096,7 @@ app.post('/api/invoice/create',
       console.warn('⚠️ Erreur génération lien téléchargement:', dlErr.message);
     }
 
-    res.json({ 
-    // ✅ INSERT dans owner_invoices AVANT res.json pour que le compteur soit correct dès la prochaine facture
+    // ✅ INSERT dans owner_invoices AVANT res.json pour que le compteur soit correct
     try {
       await pool.query(
         `INSERT INTO owner_invoices (user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
