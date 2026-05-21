@@ -17592,6 +17592,17 @@ app.post('/api/owner-invoices',
       return res.status(400).json({ error: 'Données facture incomplètes' });
     }
 
+    // Vérifier si le clientId est bien dans owner_clients (pas un agency_client)
+    let resolvedClientId = clientId;
+    if (clientId.startsWith('agency_client_')) {
+      // Agency client — pas dans owner_clients, on met NULL pour éviter la FK violation
+      resolvedClientId = null;
+    } else {
+      // Vérifier existence dans owner_clients
+      const clientCheck = await pool.query('SELECT id FROM owner_clients WHERE id = $1 AND user_id = $2', [clientId, userId]);
+      if (clientCheck.rows.length === 0) resolvedClientId = null;
+    }
+
     await client.query('BEGIN');
 
     // Recalculer les totaux de la même façon que dans le PUT /api/owner-invoices/:id
@@ -17654,7 +17665,7 @@ app.post('/api/owner-invoices',
       RETURNING *
     `, [
       userId,
-      clientId,
+      resolvedClientId,
       periodStart || null,
       periodEnd || null,
       issueDate,
@@ -26291,6 +26302,17 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
       const reversementLabels = { par_resa: 'À chaque réservation', hebdo: 'Hebdomadaire', mensuel: 'Mensuel', encaissement_direct: 'Encaissement direct' };
       const exclusiviteLabels = { non: 'Sans exclusivité', totale: 'Exclusivité totale', partielle: 'Exclusivité partielle' };
 
+      // Charger le logo depuis la DB
+      let contractLogoBuffer = null;
+      try {
+        const uRes = await pool.query('SELECT logo_url FROM users WHERE id = $1', [userId]);
+        const logoUrl = uRes.rows[0]?.logo_url;
+        if (logoUrl) {
+          const lr = await axios.get(logoUrl, { responseType: 'arraybuffer', timeout: 5000 });
+          if (lr.data.byteLength > 0) contractLogoBuffer = Buffer.from(lr.data);
+        }
+      } catch(e) { console.warn('⚠️ Logo contrat non chargé:', e.message); }
+
       await new Promise((resolve, reject) => {
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
         const stream = fs.createWriteStream(pdfPath);
@@ -26300,8 +26322,14 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
         const pageW = doc.page.width - 100;
 
         doc.rect(0, 0, doc.page.width, 52).fill(green);
-        doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(d.companyName || 'BOOSTINGHOST', 50, 18);
-        doc.fontSize(9).font('Helvetica').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
+        if (contractLogoBuffer) {
+          try { doc.image(contractLogoBuffer, 50, 8, { height: 36, fit: [120, 36] }); } catch(e) {
+            doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(d.companyName || 'BOOSTINGHOST', 50, 18);
+          }
+        } else {
+          doc.fillColor('white').fontSize(14).font('Helvetica-Bold').text(d.companyName || 'BOOSTINGHOST', 50, 18);
+        }
+        doc.fontSize(9).font('Helvetica').fillColor('white').text(`Généré le ${fmtDateShort(new Date())}`, 0, 22, { align: 'right', width: doc.page.width - 50 });
         if (isSigned) doc.fontSize(8).font('Helvetica-Bold').fillColor('#4ADE80').text('✓ MANDAT SIGNÉ', 0, 30, { align: 'right', width: doc.page.width - 50 });
 
         let y = 75;
