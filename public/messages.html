@@ -3564,6 +3564,7 @@ function showBHToast(msg, type = 'info') {
           <div class="inv-row"><label>SIRET</label><input id="inv_clientSiret" maxlength="17" placeholder="123 456 789 00012" type="text" oninput="renderInvoicePreview()"/></div>
         </div>
         <div class="inv-row"><label>Note libre (optionnel)</label><input id="inv_freeNote" placeholder="Ex : référence commande, mention particulière…" type="text" oninput="renderInvoicePreview()"/></div>
+        <input type="hidden" id="inv_platform" value=""/>
 
         <div class="inv-section-title"><i class="fas fa-calendar-alt"></i> Séjour</div>
         <div class="inv-row">
@@ -3624,21 +3625,9 @@ function showBHToast(msg, type = 'info') {
 (function() {
   window.openInvoiceModal = function(data) {
     window._invoiceConversationId = data.conversationId || null;
+    // data = { guestName, guestEmail, propertyId, propertyName, checkin, checkout,
+    //          amountRooms, amountTaxes, amountCleaning, guest_country, occupancy_adults }
     data = data || {};
-
-    const _nationalityMap = {
-      FR:'Française', GB:'Britannique', DE:'Allemande', ES:'Espagnole', IT:'Italienne',
-      US:'Américaine', NL:'Néerlandaise', BE:'Belge', CH:'Suisse', PT:'Portugaise',
-      CA:'Canadienne', AU:'Australienne', JP:'Japonaise', CN:'Chinoise', BR:'Brésilienne',
-      MX:'Mexicaine', RU:'Russe', IN:'Indienne', ZA:'Sud-africaine', MA:'Marocaine',
-      TN:'Tunisienne', DZ:'Algérienne', SN:'Sénégalaise', LU:'Luxembourgeoise',
-      IE:'Irlandaise', SE:'Suédoise', NO:'Norvégienne', DK:'Danoise', FI:'Finlandaise',
-      PL:'Polonaise', CZ:'Tchèque', AT:'Autrichienne', GR:'Grecque', TR:'Turque',
-      AE:'Émiratie', SG:'Singapourienne', KR:'Sud-coréenne', CI:'Ivoirienne',
-    };
-    const nationality = data.guestCountry
-      ? (_nationalityMap[data.guestCountry.toUpperCase()] || data.guestCountry)
-      : '';
 
     // Remplir logements si pas encore fait
     _populateInvPropertySelect(data.propertyId, data.propertyName);
@@ -3652,6 +3641,8 @@ function showBHToast(msg, type = 'info') {
     _setVal('inv_rent',              data.amountRooms || data.amountTotal || '');
     _setVal('inv_taxes',             data.amountTaxes    || '');
     _setVal('inv_cleaning',          data.amountCleaning || '');
+    const invPlatformEl = document.getElementById('inv_platform');
+    if (invPlatformEl) invPlatformEl.value = data.platform || '';
 
     document.getElementById('invoiceModal').classList.add('active');
     renderInvoicePreview();
@@ -3783,7 +3774,7 @@ function showBHToast(msg, type = 'info') {
         <strong>${clientCompany || clientName}</strong><br>
         ${clientCompany ? clientName + '<br>' : ''}
         ${clientNationality ? 'Nationalité : ' + clientNationality + '<br>' : ''}
-        ${clientSiret ? 'SIRET : ' + clientSiret + '<br>' : ''}
+        ${clientSiret ? 'N° fiscal : ' + clientSiret + '<br>' : ''}
         ${clientEmail ? clientEmail + '<br>' : ''}
         ${clientAddr ? clientAddr + '<br>' : ''}
         ${(clientCP || clientCity) ? (clientCP + ' ' + clientCity).trim() : ''}
@@ -3821,9 +3812,15 @@ function showBHToast(msg, type = 'info') {
     const propSel = document.getElementById('inv_propertyName');
     const data = {
       clientName:    document.getElementById('inv_clientName')?.value,
+      clientEmail:   document.getElementById('inv_clientEmail')?.value || '',
+      clientAddress: document.getElementById('inv_clientAddress')?.value || '',
+      clientPostalCode: document.getElementById('inv_clientPostalCode')?.value || '',
+      clientCity:    document.getElementById('inv_clientCity')?.value || '',
       clientNationality: document.getElementById('inv_clientNationality')?.value || '',
+      clientCompany: document.getElementById('inv_isCompany')?.checked ? (document.getElementById('inv_clientCompany')?.value || '') : '',
       clientSiret:   document.getElementById('inv_isCompany')?.checked ? (document.getElementById('inv_clientSiret')?.value || '') : '',
       freeNote:      document.getElementById('inv_freeNote')?.value || '',
+      platform:      document.getElementById('inv_platform')?.value || '',
       propertyName:  propSel?.options[propSel.selectedIndex]?.text || '',
       propertyAddress: propSel?.options[propSel.selectedIndex]?.dataset?.address || '',
       checkinDate:   document.getElementById('inv_checkin')?.value,
@@ -3978,6 +3975,7 @@ window.openInvoiceFromConversation = function() {
     guestName:      name.trim() || conv.guest_name || '',
     guestEmail:     conv.guest_email || '',
     guestCountry:   conv.guest_country || '',
+    platform:       conv.platform || conv.source || '',
     propertyId:     conv.property_id || '',
     propertyName:   conv.property_name || '',
     checkin,
