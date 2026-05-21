@@ -929,6 +929,20 @@ html[data-theme-v3="1"] .btn-ghost {
 <label for="freeNote">Note libre (optionnel)</label>
 <input id="freeNote" placeholder="Ex : référence commande, mention particulière…" type="text"/>
 </div>
+<div class="form-row">
+<label for="invoicePlatform">Plateforme de réservation</label>
+<select id="invoicePlatform">
+<option value="">— Non renseignée —</option>
+<option value="direct">Réservation directe</option>
+<option value="airbnb">Airbnb</option>
+<option value="bookingcom">Booking.com</option>
+<option value="abritel">Abritel / VRBO</option>
+<option value="expedia">Expedia</option>
+<option value="hotels">Hotels.com</option>
+<option value="gites">Gîtes de France</option>
+<option value="guest_app">BHGuest</option>
+</select>
+</div>
 </div>
 <div class="form-divider"></div>
 <!-- Séjour -->
@@ -1348,6 +1362,12 @@ html[data-theme-v3="1"] .btn-ghost {
                   ' au ' + new Date(checkout).toLocaleDateString('fr-FR') +
                   (nights ? ' (' + nights + ' ' + (nights > 1 ? 'nuits' : 'nuit') + ')' : '')
                 : ''}
+              ${(function() {
+                const platEl = document.getElementById('invoicePlatform');
+                const platVal = platEl?.value || '';
+                const platLabels = { direct:'Réservation directe', airbnb:'Airbnb', bookingcom:'Booking.com', abritel:'Abritel / VRBO', expedia:'Expedia', hotels:'Hotels.com', gites:'Gîtes de France', guest_app:'BHGuest' };
+                return platVal ? '<br>Plateforme : ' + (platLabels[platVal] || platVal) : '';
+              })()}
             </div>
           </div>
 
@@ -1406,6 +1426,7 @@ html[data-theme-v3="1"] .btn-ghost {
           clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
           clientCompany: document.getElementById('isCompany').checked ? (document.getElementById('clientCompanyName').value || '') : '',
           freeNote: document.getElementById('freeNote').value || '',
+          platform: document.getElementById('invoicePlatform')?.value || '',
           propertyName: document.getElementById('propertyName').value,
           propertyAddress: getSelectedPropertyAddress(),
           checkinDate: document.getElementById('checkinDate').value,
@@ -1495,7 +1516,8 @@ html[data-theme-v3="1"] .btn-ghost {
             clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
             clientCompany: document.getElementById('isCompany').checked ? (document.getElementById('clientCompanyName').value || '') : '',
             freeNote: document.getElementById('freeNote').value || '',
-            propertyName: document.getElementById('propertyName').value,
+            freeNote: document.getElementById('freeNote').value || '',
+            platform: document.getElementById('invoicePlatform')?.value || '',
             propertyAddress: getSelectedPropertyAddress(),
             checkinDate: document.getElementById('checkinDate').value,
             checkoutDate: document.getElementById('checkoutDate').value,
