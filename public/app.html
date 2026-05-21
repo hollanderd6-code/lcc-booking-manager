@@ -7720,6 +7720,14 @@ try {
         }
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
         window._currentBlockId=null; window._currentBlockEnd=null;
+        // Patch immédiat du store local pour éviter d'avoir à cliquer 2 fois
+        if(blockId && Array.isArray(window.LCC_RESERVATIONS)){
+          window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r){ return r.uid !== blockId && r.id !== blockId; });
+          try { localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(window.LCC_RESERVATIONS)); } catch(e){}
+        }
+        if(window.calendarState && Array.isArray(window.calendarState.bookings)){
+          window.calendarState.bookings = window.calendarState.bookings.filter(function(r){ return r.uid !== blockId && r.id !== blockId; });
+        }
         if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
         if(typeof window.loadCalendarData==='function')window.loadCalendarData();
       } else if(activeTab==='price'){
