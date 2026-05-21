@@ -12917,6 +12917,12 @@ body.notif-panel-open {
           <div class="inv-row"><label>Code postal</label><input id="inv_clientPostalCode" placeholder="75001" type="text" oninput="renderInvoicePreview()"/></div>
           <div class="inv-row"><label>Ville</label><input id="inv_clientCity" placeholder="Paris" type="text" oninput="renderInvoicePreview()"/></div>
         </div>
+        <label class="inv-checkbox"><input id="inv_isCompany" type="checkbox" onchange="document.getElementById('inv_companyGroup').style.display=this.checked?'block':'none';renderInvoicePreview()"/> Client professionnel</label>
+        <div id="inv_companyGroup" style="display:none;">
+          <div class="inv-row"><label>Nom de société</label><input id="inv_clientCompany" placeholder="Acme SAS" type="text" oninput="renderInvoicePreview()"/></div>
+          <div class="inv-row"><label>SIRET</label><input id="inv_clientSiret" maxlength="17" placeholder="123 456 789 00012" type="text" oninput="renderInvoicePreview()"/></div>
+        </div>
+        <div class="inv-row"><label>Note libre (optionnel)</label><input id="inv_freeNote" placeholder="Ex : référence commande, mention particulière…" type="text" oninput="renderInvoicePreview()"/></div>
 
         <div class="inv-section-title"><i class="fas fa-calendar-alt"></i> Séjour</div>
         <div class="inv-row">
@@ -13055,6 +13061,10 @@ body.notif-panel-open {
     const clientAddr   = document.getElementById('inv_clientAddress')?.value || '';
     const clientCP     = document.getElementById('inv_clientPostalCode')?.value || '';
     const clientCity   = document.getElementById('inv_clientCity')?.value || '';
+    const isCompany    = document.getElementById('inv_isCompany')?.checked || false;
+    const clientCompany= isCompany ? (document.getElementById('inv_clientCompany')?.value || '') : '';
+    const clientSiret  = isCompany ? (document.getElementById('inv_clientSiret')?.value || '') : '';
+    const freeNote     = document.getElementById('inv_freeNote')?.value || '';
     const propSel      = document.getElementById('inv_propertyName');
     const propId       = propSel?.value || '';
     const propName     = propSel?.options[propSel.selectedIndex]?.text || '';
@@ -13119,10 +13129,13 @@ body.notif-panel-open {
 
       <div class="inv-sec">
         <h3>Facturé à</h3>
-        <strong>${clientName}</strong><br>
+        <strong>${clientCompany || clientName}</strong><br>
+        ${clientCompany ? clientName + '<br>' : ''}
+        ${clientSiret ? 'SIRET : ' + clientSiret + '<br>' : ''}
         ${clientEmail ? clientEmail + '<br>' : ''}
         ${clientAddr ? clientAddr + '<br>' : ''}
         ${(clientCP || clientCity) ? (clientCP + ' ' + clientCity).trim() : ''}
+        ${freeNote ? '<br><em>' + freeNote + '</em>' : ''}
       </div>
 
       <div class="inv-sec">
@@ -13161,6 +13174,9 @@ body.notif-panel-open {
       clientAddress: document.getElementById('inv_clientAddress')?.value,
       clientPostalCode: document.getElementById('inv_clientPostalCode')?.value,
       clientCity:    document.getElementById('inv_clientCity')?.value,
+      clientCompany: document.getElementById('inv_isCompany')?.checked ? (document.getElementById('inv_clientCompany')?.value || '') : '',
+      clientSiret:   document.getElementById('inv_isCompany')?.checked ? (document.getElementById('inv_clientSiret')?.value || '') : '',
+      freeNote:      document.getElementById('inv_freeNote')?.value || '',
       propertyName:  propSel?.options[propSel.selectedIndex]?.text || '',
       propertyAddress: propSel?.options[propSel.selectedIndex]?.dataset?.address || '',
       checkinDate:   document.getElementById('inv_checkin')?.value,
