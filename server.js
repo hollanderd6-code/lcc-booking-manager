@@ -17849,14 +17849,25 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     // ── PAGE 1 : Facture ──
     let y = mg;
 
-    // Titre
+    // Logo à droite si disponible
+    const senderLogo = emitter.logo || '';
+    if (senderLogo && senderLogo.startsWith('data:image')) {
+      try {
+        const logoData = senderLogo.split(',')[1];
+        const logoBuffer = Buffer.from(logoData, 'base64');
+        const ext = senderLogo.includes('image/png') ? 'png' : 'jpeg';
+        doc.image(logoBuffer, W - mg - 120, y, { width: 120, height: 50, fit: [120, 50], align: 'right' });
+      } catch(e) { /* non bloquant */ }
+    }
+
+    // Titre + date
     const invTitle = inv.is_credit_note ? 'AVOIR' : (inv.invoice_number ? 'FACTURE' : 'FACTURE BROUILLON');
     const invRef   = inv.invoice_number || 'BROUILLON';
     doc.font('Helvetica-Bold').fontSize(22).fillColor(GREEN).text(invTitle + (inv.invoice_number ? '' : ''), mg, y);
     y += 28;
     const issDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
     doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(issDate, mg, y);
-    y += 6;
+    y += 14; // ← augmenté pour que la date soit au-dessus de la ligne
 
     // Ligne verte
     doc.rect(mg, y, W - mg*2, 2).fill(GREEN);
