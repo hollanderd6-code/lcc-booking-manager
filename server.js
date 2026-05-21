@@ -18223,7 +18223,8 @@ app.post('/api/owner-invoices/:id/credit-note',
 async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const {
     clientName = '', clientEmail = '', clientAddress = '', clientPostalCode = '',
-    clientCity = '', clientSiret = '', propertyName = '', propertyAddress = '',
+    clientCity = '', clientSiret = '', clientCompany = '', freeNote = '',
+    propertyName = '', propertyAddress = '',
     checkinDate = '', checkoutDate = '', nights = 0,
     rentAmount = 0, touristTaxAmount = 0, cleaningFee = 0,
     vatRate = 0, invoiceNumber = ''
@@ -18291,7 +18292,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
 
     doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK);
     doc.text(emitterName, mg, y, { width: colW });
-    doc.text(clientName,  col2, y, { width: colW });
+    doc.text(clientCompany || clientName, col2, y, { width: colW });
     y += 16;
 
     doc.font('Helvetica').fontSize(9).fillColor(GRAY);
@@ -18299,11 +18300,13 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     if (emitterAddr)  { doc.text(emitterAddr, mg, yL, { width: colW }); yL += 13; }
     if (emitterCP||emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, yL); yL += 13; }
     if (emitterEmail) { doc.text(emitterEmail, mg, yL); yL += 13; }
+    if (clientCompany) { doc.text(clientName, col2, yR, { width: colW }); yR += 13; }
     if (clientAddress) { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
     const cpCity = `${clientPostalCode||''} ${clientCity||''}`.trim();
     if (cpCity)        { doc.text(cpCity, col2, yR); yR += 13; }
     if (clientEmail)   { doc.text(clientEmail, col2, yR); yR += 13; }
     if (clientSiret)   { doc.text(`SIRET : ${clientSiret}`, col2, yR); yR += 13; }
+    if (freeNote)      { doc.font('Helvetica-Oblique').text(freeNote, col2, yR, { width: colW }); yR += 13; doc.font('Helvetica'); }
 
     y = Math.max(yL, yR) + 22;
 
@@ -18636,6 +18639,8 @@ app.post('/api/invoice/create',
       clientPostalCode, 
       clientCity, 
       clientSiret,
+      clientCompany,
+      freeNote,
       propertyName, 
       propertyAddress,
       checkinDate,
@@ -18690,6 +18695,7 @@ app.post('/api/invoice/create',
     async function generateInvoicePdfToFile(outputPath) {
       return generateInvoicePdf(outputPath, {
         clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret,
+        clientCompany: clientCompany || '', freeNote: freeNote || '',
         propertyName, propertyAddress, checkinDate, checkoutDate, nights,
         rentAmount, touristTaxAmount, cleaningFee, vatRate, invoiceNumber
       }, user, ownerInfo);
@@ -19019,6 +19025,9 @@ app.post('/api/invoice/create',
         clientAddress: clientAddress || '',
         clientPostalCode: clientPostalCode || '',
         clientCity: clientCity || '',
+        clientCompany: clientCompany || '',
+        clientSiret: clientSiret || '',
+        freeNote: freeNote || '',
         propertyName: propertyName || '',
         propertyAddress: propertyAddress || '',
         checkinDate: checkinDate || '',
