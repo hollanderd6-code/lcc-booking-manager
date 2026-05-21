@@ -17918,8 +17918,24 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     doc.text('TOTAL HT', colTotal, y+9, {width:W-mg-colTotal, align:'right'});
     y += rowH;
 
+    const PAGE_BOTTOM = doc.page.height - 60; // marge bas
+
     // Lignes items
     items.forEach((item, idx) => {
+      // Saut de page si on déborde
+      if (y + rowH > PAGE_BOTTOM) {
+        doc.addPage();
+        y = mg;
+        // Réafficher l'en-tête tableau sur la nouvelle page
+        doc.rect(mg, y, W-mg*2, rowH).fill(GREEN);
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('white');
+        doc.text('DESCRIPTION', colDesc+6, y+9, {width:260});
+        doc.text('BASE', colBase, y+9, {width:80, align:'right'});
+        doc.text('TAUX/QTÉ', colTaux, y+9, {width:80, align:'right'});
+        doc.text('TOTAL HT', colTotal, y+9, {width:W-mg-colTotal, align:'right'});
+        y += rowH;
+      }
+
       const bg = idx % 2 === 1 ? LIGHT : 'white';
       doc.rect(mg, y, W-mg*2, rowH).fill(bg);
       doc.rect(mg, y, W-mg*2, rowH).strokeColor(BORDER).lineWidth(0.5).stroke();
@@ -17945,6 +17961,12 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     });
 
     y += 16;
+
+    // Saut de page si les totaux ne tiennent pas
+    if (y + 120 > PAGE_BOTTOM) {
+      doc.addPage();
+      y = mg;
+    }
 
     // Totaux
     const subtotal = parseFloat(inv.subtotal_ht || 0);
