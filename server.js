@@ -17908,7 +17908,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
     y += 4;
 
     // En-tête tableau
-    const colDesc = mg, colBase = mg+270, colTaux = mg+360, colTotal = mg+450;
+    const colDesc = mg, colBase = mg+250, colTaux = mg+345, colTotal = mg+430;
     const rowH = 28;
     doc.rect(mg, y, W-mg*2, rowH).fill(GREEN);
     doc.font('Helvetica-Bold').fontSize(9).fillColor('white');
