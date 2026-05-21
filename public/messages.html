@@ -3551,6 +3551,7 @@ function showBHToast(msg, type = 'info') {
       <div class="inv-form-panel">
         <div class="inv-section-title"><i class="fas fa-user"></i> Client</div>
         <div class="inv-row"><label>Nom complet *</label><input id="inv_clientName" placeholder="Jean Dupont" type="text" oninput="renderInvoicePreview()"/></div>
+        <div class="inv-row"><label>Nationalité</label><input id="inv_clientNationality" placeholder="Française" type="text" oninput="renderInvoicePreview()"/></div>
         <div class="inv-row"><label>Email</label><input id="inv_clientEmail" placeholder="jean@email.com" type="email" oninput="renderInvoicePreview()"/></div>
         <div class="inv-row"><label>Adresse</label><input id="inv_clientAddress" placeholder="12 rue de la République" type="text" oninput="renderInvoicePreview()"/></div>
         <div class="inv-row-inline">
@@ -3577,7 +3578,7 @@ function showBHToast(msg, type = 'info') {
         </div>
 
         <div class="inv-section-title"><i class="fas fa-euro-sign"></i> Montants</div>
-        <div class="inv-row"><label>Loyer / Nuits (€)</label><input id="inv_rent" min="0" placeholder="180.00" step="0.01" type="number" oninput="renderInvoicePreview()"/></div>
+        <div class="inv-row"><label>Séjour (€)</label><input id="inv_rent" min="0" placeholder="180.00" step="0.01" type="number" oninput="renderInvoicePreview()"/></div>
         <div class="inv-row"><label>Taxe de séjour (€)</label><input id="inv_taxes" min="0" placeholder="0.00" step="0.01" type="number" oninput="renderInvoicePreview()"/></div>
         <div class="inv-row"><label>Frais de ménage (€)</label><input id="inv_cleaning" min="0" placeholder="0.00" step="0.01" type="number" oninput="renderInvoicePreview()"/></div>
         <label class="inv-checkbox"><input id="inv_withVat" type="checkbox" onchange="document.getElementById('inv_vatGroup').style.display=this.checked?'block':'none';renderInvoicePreview()"/> Avec TVA</label>
@@ -3693,6 +3694,7 @@ function showBHToast(msg, type = 'info') {
     if (!preview) return;
 
     const clientName   = document.getElementById('inv_clientName')?.value || '';
+    const clientNationality = document.getElementById('inv_clientNationality')?.value || '';
     const clientEmail  = document.getElementById('inv_clientEmail')?.value || '';
     const clientAddr   = document.getElementById('inv_clientAddress')?.value || '';
     const clientCP     = document.getElementById('inv_clientPostalCode')?.value || '';
@@ -3767,6 +3769,7 @@ function showBHToast(msg, type = 'info') {
         <h3>Facturé à</h3>
         <strong>${clientCompany || clientName}</strong><br>
         ${clientCompany ? clientName + '<br>' : ''}
+        ${clientNationality ? 'Nationalité : ' + clientNationality + '<br>' : ''}
         ${clientSiret ? 'SIRET : ' + clientSiret + '<br>' : ''}
         ${clientEmail ? clientEmail + '<br>' : ''}
         ${clientAddr ? clientAddr + '<br>' : ''}
@@ -3783,7 +3786,7 @@ function showBHToast(msg, type = 'info') {
 
       <div class="inv-sec">
         <h3>Détails</h3>
-        ${rent > 0   ? '<div class="inv-line"><span>Loyer / Nuits</span><span>' + fmtAmt(rent) + '</span></div>' : ''}
+        ${rent > 0   ? '<div class="inv-line"><span>Séjour' + (nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : '') + '</span><span>' + fmtAmt(rent) + '</span></div>' : ''}
         ${taxes > 0  ? '<div class="inv-line"><span>Taxe de séjour</span><span>' + fmtAmt(taxes) + '</span></div>' : ''}
         ${cleaning > 0 ? '<div class="inv-line"><span>Frais de ménage</span><span>' + fmtAmt(cleaning) + '</span></div>' : ''}
       </div>
@@ -3805,11 +3808,7 @@ function showBHToast(msg, type = 'info') {
     const propSel = document.getElementById('inv_propertyName');
     const data = {
       clientName:    document.getElementById('inv_clientName')?.value,
-      clientEmail,
-      clientAddress: document.getElementById('inv_clientAddress')?.value,
-      clientPostalCode: document.getElementById('inv_clientPostalCode')?.value,
-      clientCity:    document.getElementById('inv_clientCity')?.value,
-      clientCompany: document.getElementById('inv_isCompany')?.checked ? (document.getElementById('inv_clientCompany')?.value || '') : '',
+      clientNationality: document.getElementById('inv_clientNationality')?.value || '',
       clientSiret:   document.getElementById('inv_isCompany')?.checked ? (document.getElementById('inv_clientSiret')?.value || '') : '',
       freeNote:      document.getElementById('inv_freeNote')?.value || '',
       propertyName:  propSel?.options[propSel.selectedIndex]?.text || '',
