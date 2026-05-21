@@ -9589,9 +9589,10 @@ if (editBookingForm) {
 
       } else {
         const uid = currentBookingData.uid || currentBookingData.id;
-        const platform = (currentBookingData.source || currentBookingData.platform || '').toLowerCase();
+        const selectedPlatform = (document.getElementById('editPlatform')?.value || '').toLowerCase();
+        const platform = selectedPlatform || (currentBookingData.source || currentBookingData.platform || '').toLowerCase();
         const BHGUEST_PLATFORMS = ['guest_app', 'bhguest', 'boostinghost_guest', 'boostinghost guest', 'boostinghost'];
-        const _srcRaw = (currentBookingData.source || currentBookingData.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+        const _srcRaw = platform.replace(/[_\-\s]/g, '');
         const isBHGuest = BHGUEST_PLATFORMS.includes(platform) || BHGUEST_PLATFORMS.includes(currentBookingData.source)
           || _srcRaw === 'guestapp' || _srcRaw === 'bhguest' || _srcRaw === 'boostinghostguest'
           || (currentBookingData.uid && (String(currentBookingData.uid).startsWith('GUEST_') || String(currentBookingData.uid).startsWith('BHGUEST_')));
