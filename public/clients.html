@@ -3087,6 +3087,7 @@ window.deleteOwnerInvoice = function (id) {
       phone:       ep.phone     || sp.phone      || '',
       email:       ep.email     || sp.invoiceEmail|| up.email || '',
       website:     ep.website   || sp.website    || '',
+      logo:        ep.logoDataUrl || up.logoUrl  || '',
     };
     // Généré côté serveur avec PDFKit (fiable, inclut les annexes débours)
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/pdf', {
