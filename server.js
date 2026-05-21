@@ -18224,6 +18224,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const {
     clientName = '', clientEmail = '', clientAddress = '', clientPostalCode = '',
     clientCity = '', clientSiret = '', clientCompany = '', freeNote = '',
+    clientNationality = '',
     propertyName = '', propertyAddress = '',
     checkinDate = '', checkoutDate = '', nights = 0,
     rentAmount = 0, touristTaxAmount = 0, cleaningFee = 0,
@@ -18303,10 +18304,11 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     if (clientCompany) { doc.text(clientName, col2, yR, { width: colW }); yR += 13; }
     if (clientAddress) { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
     const cpCity = `${clientPostalCode||''} ${clientCity||''}`.trim();
-    if (cpCity)        { doc.text(cpCity, col2, yR); yR += 13; }
-    if (clientEmail)   { doc.text(clientEmail, col2, yR); yR += 13; }
-    if (clientSiret)   { doc.text(`SIRET : ${clientSiret}`, col2, yR); yR += 13; }
-    if (freeNote)      { doc.font('Helvetica-Oblique').text(freeNote, col2, yR, { width: colW }); yR += 13; doc.font('Helvetica'); }
+    if (cpCity)           { doc.text(cpCity, col2, yR); yR += 13; }
+    if (clientNationality){ doc.text(`Nationalité : ${clientNationality}`, col2, yR); yR += 13; }
+    if (clientEmail)      { doc.text(clientEmail, col2, yR); yR += 13; }
+    if (clientSiret)      { doc.text(`SIRET : ${clientSiret}`, col2, yR); yR += 13; }
+    if (freeNote)         { doc.font('Helvetica-Oblique').text(freeNote, col2, yR, { width: colW }); yR += 13; doc.font('Helvetica'); }
 
     y = Math.max(yL, yR) + 22;
 
@@ -18342,7 +18344,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
       doc.rect(mg, y+26, W-mg*2, 0.5).fill(BORDER);
       y += 26; alt = !alt;
     };
-    addRow('Loyer', rentAmount);
+    addRow(`Séjour${nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : ''}`, rentAmount);
     addRow('Taxe de séjour', touristTaxAmount);
     addRow('Frais de ménage', cleaningFee);
     y += 18;
@@ -18641,6 +18643,7 @@ app.post('/api/invoice/create',
       clientSiret,
       clientCompany,
       freeNote,
+      clientNationality,
       propertyName, 
       propertyAddress,
       checkinDate,
@@ -18696,6 +18699,7 @@ app.post('/api/invoice/create',
       return generateInvoicePdf(outputPath, {
         clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret,
         clientCompany: clientCompany || '', freeNote: freeNote || '',
+        clientNationality: clientNationality || '',
         propertyName, propertyAddress, checkinDate, checkoutDate, nights,
         rentAmount, touristTaxAmount, cleaningFee, vatRate, invoiceNumber
       }, user, ownerInfo);
@@ -18807,7 +18811,7 @@ app.post('/api/invoice/create',
           doc.rect(mg, y+26, W-mg*2, 0.5).fill(BORDER);
           y += 26; alt = !alt;
         };
-        addRow('Loyer', rentAmount);
+        addRow(`Séjour${nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : ''}`, rentAmount);
         addRow('Taxe de séjour', touristTaxAmount);
         addRow('Frais de ménage', cleaningFee);
         y += 18;
@@ -18913,7 +18917,7 @@ app.post('/api/invoice/create',
               ${checkinDate && checkoutDate ? `
               <tr><td style="padding:5px 0;color:#666;">Séjour</td><td style="padding:5px 0;font-weight:600;text-align:right;">${checkinFr} → ${checkoutFr}</td></tr>
               <tr><td style="padding:5px 0;color:#666;">Durée</td><td style="padding:5px 0;font-weight:600;text-align:right;">${nights} nuit${nights > 1 ? 's' : ''}</td></tr>` : ''}
-              ${rentAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">Loyer</td><td style="padding:5px 0;text-align:right;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
+              ${rentAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">Séjour${nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : ''}</td><td style="padding:5px 0;text-align:right;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
               ${touristTaxAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">Taxe de séjour</td><td style="padding:5px 0;text-align:right;">${parseFloat(touristTaxAmount).toFixed(2)} €</td></tr>` : ''}
               ${cleaningFee > 0 ? `<tr><td style="padding:5px 0;color:#666;">Frais de ménage</td><td style="padding:5px 0;text-align:right;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
               ${vatAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">TVA (${vatRate}%)</td><td style="padding:5px 0;text-align:right;">${vatAmount.toFixed(2)} €</td></tr>` : ''}
@@ -19028,6 +19032,7 @@ app.post('/api/invoice/create',
         clientCompany: clientCompany || '',
         clientSiret: clientSiret || '',
         freeNote: freeNote || '',
+        clientNationality: clientNationality || '',
         propertyName: propertyName || '',
         propertyAddress: propertyAddress || '',
         checkinDate: checkinDate || '',
@@ -19074,6 +19079,16 @@ app.post('/api/invoice/create',
       downloadUrl,
       message: 'Facture créée avec succès' 
     });
+
+    // ✅ INSERT dans owner_invoices pour que le compteur de numérotation fonctionne
+    try {
+      await pool.query(
+        `INSERT INTO owner_invoices (user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, 'sent', NOW()) ON CONFLICT DO NOTHING`,
+        [userId, invoiceNumber, clientName || '', clientEmail || '',
+         parseFloat(rentAmount||0) + parseFloat(touristTaxAmount||0) + parseFloat(cleaningFee||0)]
+      );
+    } catch(e) { /* non bloquant */ }
     
   } catch (err) {
     console.error('Erreur création facture:', err);
