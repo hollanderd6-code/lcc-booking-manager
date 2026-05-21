@@ -3624,21 +3624,34 @@ function showBHToast(msg, type = 'info') {
 (function() {
   window.openInvoiceModal = function(data) {
     window._invoiceConversationId = data.conversationId || null;
-    // data = { guestName, guestEmail, propertyId, propertyName, checkin, checkout,
-    //          amountRooms, amountTaxes, amountCleaning, guest_country, occupancy_adults }
     data = data || {};
+
+    const _nationalityMap = {
+      FR:'Française', GB:'Britannique', DE:'Allemande', ES:'Espagnole', IT:'Italienne',
+      US:'Américaine', NL:'Néerlandaise', BE:'Belge', CH:'Suisse', PT:'Portugaise',
+      CA:'Canadienne', AU:'Australienne', JP:'Japonaise', CN:'Chinoise', BR:'Brésilienne',
+      MX:'Mexicaine', RU:'Russe', IN:'Indienne', ZA:'Sud-africaine', MA:'Marocaine',
+      TN:'Tunisienne', DZ:'Algérienne', SN:'Sénégalaise', LU:'Luxembourgeoise',
+      IE:'Irlandaise', SE:'Suédoise', NO:'Norvégienne', DK:'Danoise', FI:'Finlandaise',
+      PL:'Polonaise', CZ:'Tchèque', AT:'Autrichienne', GR:'Grecque', TR:'Turque',
+      AE:'Émiratie', SG:'Singapourienne', KR:'Sud-coréenne', CI:'Ivoirienne',
+    };
+    const nationality = data.guestCountry
+      ? (_nationalityMap[data.guestCountry.toUpperCase()] || data.guestCountry)
+      : '';
 
     // Remplir logements si pas encore fait
     _populateInvPropertySelect(data.propertyId, data.propertyName);
 
     // Remplir champs
-    _setVal('inv_clientName',   data.guestName   || '');
-    _setVal('inv_clientEmail',  data.guestEmail  || '');
-    _setVal('inv_checkin',      data.checkin     || '');
-    _setVal('inv_checkout',     data.checkout    || '');
-    _setVal('inv_rent',         data.amountRooms || data.amountTotal || '');
-    _setVal('inv_taxes',        data.amountTaxes    || '');
-    _setVal('inv_cleaning',     data.amountCleaning || '');
+    _setVal('inv_clientName',        data.guestName   || '');
+    _setVal('inv_clientEmail',       data.guestEmail  || '');
+    _setVal('inv_clientNationality', nationality);
+    _setVal('inv_checkin',           data.checkin     || '');
+    _setVal('inv_checkout',          data.checkout    || '');
+    _setVal('inv_rent',              data.amountRooms || data.amountTotal || '');
+    _setVal('inv_taxes',             data.amountTaxes    || '');
+    _setVal('inv_cleaning',          data.amountCleaning || '');
 
     document.getElementById('invoiceModal').classList.add('active');
     renderInvoicePreview();
@@ -3964,6 +3977,7 @@ window.openInvoiceFromConversation = function() {
   openInvoiceModal({
     guestName:      name.trim() || conv.guest_name || '',
     guestEmail:     conv.guest_email || '',
+    guestCountry:   conv.guest_country || '',
     propertyId:     conv.property_id || '',
     propertyName:   conv.property_name || '',
     checkin,
