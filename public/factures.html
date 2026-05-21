@@ -1347,7 +1347,7 @@ html[data-theme-v3="1"] .btn-ghost {
               ${document.getElementById('clientEmail').value ? document.getElementById('clientEmail').value + '<br>' : ''}
               ${document.getElementById('clientAddress').value ? document.getElementById('clientAddress').value + '<br>' : ''}
               ${(document.getElementById('clientPostalCode').value || document.getElementById('clientCity').value) ? (document.getElementById('clientPostalCode').value || '') + ' ' + (document.getElementById('clientCity').value || '') + '<br>' : ''}
-              ${document.getElementById('isCompany').checked && document.getElementById('clientSiret').value ? 'SIRET: ' + document.getElementById('clientSiret').value + '<br>' : ''}
+              ${document.getElementById('isCompany').checked && document.getElementById('clientSiret').value ? 'N° fiscal : ' + document.getElementById('clientSiret').value + '<br>' : ''}
               ${document.getElementById('freeNote').value ? '<em>' + document.getElementById('freeNote').value + '</em>' : ''}
             </div>
           </div>
