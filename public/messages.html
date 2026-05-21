@@ -3625,9 +3625,21 @@ function showBHToast(msg, type = 'info') {
 (function() {
   window.openInvoiceModal = function(data) {
     window._invoiceConversationId = data.conversationId || null;
-    // data = { guestName, guestEmail, propertyId, propertyName, checkin, checkout,
-    //          amountRooms, amountTaxes, amountCleaning, guest_country, occupancy_adults }
     data = data || {};
+
+    const _nationalityMap = {
+      FR:'Française', GB:'Britannique', DE:'Allemande', ES:'Espagnole', IT:'Italienne',
+      US:'Américaine', NL:'Néerlandaise', BE:'Belge', CH:'Suisse', PT:'Portugaise',
+      CA:'Canadienne', AU:'Australienne', JP:'Japonaise', CN:'Chinoise', BR:'Brésilienne',
+      MX:'Mexicaine', RU:'Russe', IN:'Indienne', ZA:'Sud-africaine', MA:'Marocaine',
+      TN:'Tunisienne', DZ:'Algérienne', SN:'Sénégalaise', LU:'Luxembourgeoise',
+      IE:'Irlandaise', SE:'Suédoise', NO:'Norvégienne', DK:'Danoise', FI:'Finlandaise',
+      PL:'Polonaise', CZ:'Tchèque', AT:'Autrichienne', GR:'Grecque', TR:'Turque',
+      AE:'Émiratie', SG:'Singapourienne', KR:'Sud-coréenne', CI:'Ivoirienne',
+    };
+    const nationality = data.guestCountry
+      ? (_nationalityMap[data.guestCountry.toUpperCase()] || data.guestCountry)
+      : '';
 
     // Remplir logements si pas encore fait
     _populateInvPropertySelect(data.propertyId, data.propertyName);
