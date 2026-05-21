@@ -916,8 +916,14 @@ html[data-theme-v3="1"] .btn-ghost {
 <label for="isCompany">Client professionnel</label>
 </div>
 <div class="form-row" id="siretGroup" style="display: none;">
-<label for="clientSiret">SIRET</label>
+<label for="clientCompanyName">Nom de société</label>
+<input id="clientCompanyName" placeholder="Acme SAS" type="text"/>
+<label for="clientSiret" style="margin-top:8px;">SIRET</label>
 <input id="clientSiret" maxlength="17" placeholder="123 456 789 00012" type="text"/>
+</div>
+<div class="form-row">
+<label for="freeNote">Note libre (optionnel)</label>
+<input id="freeNote" placeholder="Ex : référence commande, mention particulière…" type="text"/>
 </div>
 </div>
 <div class="form-divider"></div>
@@ -1317,11 +1323,13 @@ html[data-theme-v3="1"] .btn-ghost {
           <div class="invoice-section">
             <h3>Facturé à</h3>
             <div class="invoice-section-content">
-              <strong>${clientName}</strong><br>
+              <strong>${document.getElementById('isCompany').checked && document.getElementById('clientCompanyName').value ? document.getElementById('clientCompanyName').value : clientName}</strong><br>
+              ${document.getElementById('isCompany').checked && document.getElementById('clientCompanyName').value ? clientName + '<br>' : ''}
               ${document.getElementById('clientEmail').value ? document.getElementById('clientEmail').value + '<br>' : ''}
               ${document.getElementById('clientAddress').value ? document.getElementById('clientAddress').value + '<br>' : ''}
               ${(document.getElementById('clientPostalCode').value || document.getElementById('clientCity').value) ? (document.getElementById('clientPostalCode').value || '') + ' ' + (document.getElementById('clientCity').value || '') + '<br>' : ''}
-              ${document.getElementById('isCompany').checked && document.getElementById('clientSiret').value ? 'SIRET: ' + document.getElementById('clientSiret').value : ''}
+              ${document.getElementById('isCompany').checked && document.getElementById('clientSiret').value ? 'SIRET: ' + document.getElementById('clientSiret').value + '<br>' : ''}
+              ${document.getElementById('freeNote').value ? '<em>' + document.getElementById('freeNote').value + '</em>' : ''}
             </div>
           </div>
 
@@ -1390,6 +1398,8 @@ html[data-theme-v3="1"] .btn-ghost {
           clientPostalCode: document.getElementById('clientPostalCode').value,
           clientCity: document.getElementById('clientCity').value,
           clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
+          clientCompany: document.getElementById('isCompany').checked ? (document.getElementById('clientCompanyName').value || '') : '',
+          freeNote: document.getElementById('freeNote').value || '',
           propertyName: document.getElementById('propertyName').value,
           propertyAddress: getSelectedPropertyAddress(),
           checkinDate: document.getElementById('checkinDate').value,
@@ -1476,6 +1486,8 @@ html[data-theme-v3="1"] .btn-ghost {
             clientPostalCode: document.getElementById('clientPostalCode').value,
             clientCity: document.getElementById('clientCity').value,
             clientSiret: document.getElementById('isCompany').checked ? document.getElementById('clientSiret').value : '',
+            clientCompany: document.getElementById('isCompany').checked ? (document.getElementById('clientCompanyName').value || '') : '',
+            freeNote: document.getElementById('freeNote').value || '',
             propertyName: document.getElementById('propertyName').value,
             propertyAddress: getSelectedPropertyAddress(),
             checkinDate: document.getElementById('checkinDate').value,
