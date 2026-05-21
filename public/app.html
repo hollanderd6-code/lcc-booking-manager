@@ -12551,6 +12551,7 @@ document.addEventListener('DOMContentLoaded', function() {
       guestName:      booking.guestName || booking.guest_display_name || '',
       guestEmail:     booking.guestEmail || booking.guest_email || '',
       guestCountry:   booking.guest_country || '',
+      platform:       booking.platform || booking.source || '',
       propertyId:     booking.propertyId || '',
       propertyName:   booking.propertyName || '',
       checkin,
@@ -12925,6 +12926,7 @@ body.notif-panel-open {
           <div class="inv-row"><label>SIRET</label><input id="inv_clientSiret" maxlength="17" placeholder="123 456 789 00012" type="text" oninput="renderInvoicePreview()"/></div>
         </div>
         <div class="inv-row"><label>Note libre (optionnel)</label><input id="inv_freeNote" placeholder="Ex : référence commande, mention particulière…" type="text" oninput="renderInvoicePreview()"/></div>
+        <input type="hidden" id="inv_platform" value=""/>
 
         <div class="inv-section-title"><i class="fas fa-calendar-alt"></i> Séjour</div>
         <div class="inv-row">
@@ -13011,6 +13013,9 @@ body.notif-panel-open {
     _setVal('inv_rent',              data.amountRooms || data.amountTotal || '');
     _setVal('inv_taxes',             data.amountTaxes    || '');
     _setVal('inv_cleaning',          data.amountCleaning || '');
+    // Stocker la plateforme dans un champ caché
+    const invPlatformEl = document.getElementById('inv_platform');
+    if (invPlatformEl) invPlatformEl.value = data.platform || '';
 
     document.getElementById('invoiceModal').classList.add('active');
     renderInvoicePreview();
@@ -13197,6 +13202,7 @@ body.notif-panel-open {
       clientCompany: document.getElementById('inv_isCompany')?.checked ? (document.getElementById('inv_clientCompany')?.value || '') : '',
       clientSiret:   document.getElementById('inv_isCompany')?.checked ? (document.getElementById('inv_clientSiret')?.value || '') : '',
       freeNote:      document.getElementById('inv_freeNote')?.value || '',
+      platform:      document.getElementById('inv_platform')?.value || '',
       propertyName:  propSel?.options[propSel.selectedIndex]?.text || '',
       propertyAddress: propSel?.options[propSel.selectedIndex]?.dataset?.address || '',
       checkinDate:   document.getElementById('inv_checkin')?.value,
