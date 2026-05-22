@@ -28250,37 +28250,65 @@ app.post('/api/channex/webhook', async (req, res) => {
       if (result && result.property_id && result.uid) {
 
         // ── Mettre à jour la conversation si les dates ont changé (modification) ──
-        // Sans ça, le cron des messages automatiques ne trouve pas la bonne conversation
-        // car il cherche par reservation_start_date
         if (result.status !== 'cancelled' && result.start_date) {
           try {
-            const convUpdateResult = await pool.query(
-              `UPDATE conversations
-               SET reservation_start_date = $1,
-                   reservation_end_date   = $2,
-                   updated_at             = NOW()
-               WHERE channex_booking_id = $3
-               AND DATE(reservation_start_date) != DATE($1)
-               RETURNING id, reservation_start_date, reservation_end_date`,
-              [
-                result.start_date,
-                result.end_date,
-                result.channex_booking_id || result.uid,
-              ]
+            // Ne mettre à jour que si l'ancien séjour n'est pas encore terminé
+            // Si l'ancien séjour est passé ET les nouvelles dates sont futures → nouvelle conversation
+            const existingConvCheck = await pool.query(
+              `SELECT id, reservation_start_date, reservation_end_date
+               FROM conversations
+               WHERE channex_booking_id = $1
+               ORDER BY created_at DESC LIMIT 1`,
+              [result.channex_booking_id || result.uid]
             );
-            if (convUpdateResult.rows.length > 0) {
-              console.log(`✏️ [CHANNEX] Conversation(s) mise(s) à jour avec nouvelles dates: ${convUpdateResult.rows.map(r => `#${r.id} → ${r.reservation_start_date}`).join(', ')}`);
-              // Émettre un event Socket.IO pour rafraîchir les messages côté front
-              if (io) {
-                io.to(`user_${result.user_id}`).emit('conversation_updated', {
-                  property_id: result.property_id,
-                  uid: result.uid,
-                  start_date: result.start_date,
-                  end_date: result.end_date,
-                });
-              }
+            const oldConv = existingConvCheck.rows[0];
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const oldEndDate = oldConv ? new Date(oldConv.reservation_end_date) : null;
+            const newStartDate = new Date(result.start_date);
+
+            const oldStayPast = oldEndDate && oldEndDate < today;
+            const newStayFuture = newStartDate >= today;
+
+            if (oldConv && oldStayPast && newStayFuture) {
+              console.log(`ℹ️ [CHANNEX] Ancien séjour terminé (${oldConv.reservation_end_date}) — nouvelle conv créée au lieu de mise à jour`);
+              await pool.query(
+                `INSERT INTO conversations
+                  (user_id, property_id, channex_booking_id, reservation_uid,
+                   reservation_start_date, reservation_end_date,
+                   platform, guest_name, guest_email, guest_phone,
+                   guest_country, guest_language, status, created_at, updated_at)
+                 SELECT user_id, property_id, channex_booking_id, $1,
+                   $2, $3, platform, guest_name, guest_email, guest_phone,
+                   guest_country, guest_language, 'active', NOW(), NOW()
+                 FROM conversations WHERE id = $4
+                 ON CONFLICT DO NOTHING`,
+                [result.uid, result.start_date, result.end_date, oldConv.id]
+              );
             } else {
-              console.log(`ℹ️ [CHANNEX] Aucune conversation à mettre à jour (dates déjà correctes ou non trouvée)`);
+              const convUpdateResult = await pool.query(
+                `UPDATE conversations
+                 SET reservation_start_date = $1,
+                     reservation_end_date   = $2,
+                     updated_at             = NOW()
+                 WHERE channex_booking_id = $3
+                 AND DATE(reservation_start_date) != DATE($1)
+                 RETURNING id, reservation_start_date, reservation_end_date`,
+                [result.start_date, result.end_date, result.channex_booking_id || result.uid]
+              );
+              if (convUpdateResult.rows.length > 0) {
+                console.log(`✏️ [CHANNEX] Conversation(s) mise(s) à jour avec nouvelles dates: ${convUpdateResult.rows.map(r => `#${r.id} → ${r.reservation_start_date}`).join(', ')}`);
+                if (io) {
+                  io.to(`user_${result.user_id}`).emit('conversation_updated', {
+                    property_id: result.property_id,
+                    uid: result.uid,
+                    start_date: result.start_date,
+                    end_date: result.end_date,
+                  });
+                }
+              } else {
+                console.log(`ℹ️ [CHANNEX] Aucune conversation à mettre à jour (dates déjà correctes ou non trouvée)`);
+              }
             }
           } catch (convErr) {
             console.error('⚠️ [CHANNEX] Erreur mise à jour conversation:', convErr.message);
