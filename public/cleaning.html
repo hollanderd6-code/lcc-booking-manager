@@ -3077,55 +3077,122 @@ function formatDateFr(dateStr) {
         if (modal) modal.remove();
         modal = document.createElement('div');
         modal.id = 'addPropertyModal';
+        modal._cleanerId = cleanerId;
+
         const rows = !available.length
           ? '<p style="font-size:13px;color:var(--text-secondary);text-align:center;padding:8px 0;">Tous vos logements sont déjà associés à ce cleaner.</p>'
           : available.map(p => {
               const pid = String(p.id || p.propertyId);
-              const pname = (p.name || p.title || p.label || pid).replace(/'/g,"\\'");
-              return `<button onclick="addCleanerProperty('${cleanerId}','${pid}','${pname}',this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1.5px solid rgba(200,184,154,.4);border-radius:12px;background:var(--bg-secondary,#f8f6f1);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--text-primary);text-align:left;width:100%;"><span><i class="fas fa-home" style="color:#1A7A5E;margin-right:8px;"></i>${p.name||p.title||p.label||pid}</span><i class="fas fa-plus" style="color:#1A7A5E;font-size:12px;"></i></button>`;
+              const pname = p.name || p.title || p.label || pid;
+              return `
+                <label style="display:flex;align-items:center;gap:12px;padding:11px 14px;border:1.5px solid rgba(200,184,154,.4);border-radius:12px;background:var(--bg-secondary,#f8f6f1);cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#e8f5f0'" onmouseout="this.style.background='var(--bg-secondary,#f8f6f1)'">
+                  <input type="checkbox" class="prop-checkbox" data-pid="${pid}" data-pname="${pname.replace(/"/g,'&quot;')}" style="width:18px;height:18px;accent-color:#1A7A5E;cursor:pointer;flex-shrink:0;">
+                  <span style="font-size:13px;font-weight:600;color:var(--text-primary);"><i class="fas fa-home" style="color:#1A7A5E;margin-right:7px;"></i>${pname}</span>
+                </label>`;
             }).join('');
 
         modal.innerHTML = `
-          <div id="addPropBackdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:9998;" onclick="closeAddPropertyModal()"></div>
-          <div style="position:fixed;left:50%;transform:translateX(-50%);z-index:9999;width:100%;max-width:420px;padding:16px;box-sizing:border-box;bottom:0;">
-            <div style="background:var(--bg-primary,#fff);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.22);">
-              <div style="padding:18px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(200,184,154,.3);">
-                <div style="width:36px;height:36px;border-radius:10px;background:#d1fae5;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#059669;font-size:15px;"></i></div>
-                <div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--text-primary);">Associer un logement</div><div style="font-size:12px;color:var(--text-secondary);margin-top:1px;">Ce cleaner sera le cleaner par défaut pour ce logement</div></div>
+          <div style="position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:9998;" onclick="closeAddPropertyModal()"></div>
+          <div style="position:fixed;left:50%;transform:translateX(-50%);z-index:9999;width:100%;max-width:440px;padding:16px;box-sizing:border-box;bottom:0;">
+            <div style="background:var(--bg-primary,#fff);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.22);display:flex;flex-direction:column;max-height:80vh;">
+
+              <!-- Header -->
+              <div style="padding:18px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(200,184,154,.3);flex-shrink:0;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#d1fae5;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="fas fa-home" style="color:#059669;font-size:15px;"></i>
+                </div>
+                <div style="flex:1;">
+                  <div style="font-weight:700;font-size:15px;color:var(--text-primary);">Associer des logements</div>
+                  <div style="font-size:12px;color:var(--text-secondary);margin-top:1px;">Cochez les logements à associer à ce cleaner</div>
+                </div>
                 <button onclick="closeAddPropertyModal()" style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(200,184,154,.4);background:transparent;cursor:pointer;font-size:16px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;">&times;</button>
               </div>
-              <div style="padding:16px 20px;display:flex;flex-direction:column;gap:8px;">${rows}</div>
+
+              ${available.length ? `
+              <!-- Tout sélectionner -->
+              <div style="padding:10px 20px;border-bottom:1px solid rgba(200,184,154,.2);flex-shrink:0;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1A7A5E;">
+                  <input type="checkbox" id="selectAllProps" style="width:17px;height:17px;accent-color:#1A7A5E;cursor:pointer;" onchange="toggleSelectAllProps(this)">
+                  Tout sélectionner
+                </label>
+              </div>
+              ` : ''}
+
+              <!-- Liste scrollable -->
+              <div style="padding:12px 20px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
+                ${rows}
+              </div>
+
+              ${available.length ? `
+              <!-- Footer -->
+              <div style="padding:14px 20px;border-top:1px solid rgba(200,184,154,.3);flex-shrink:0;display:flex;gap:8px;">
+                <button onclick="closeAddPropertyModal()" style="flex:1;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;background:transparent;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Annuler</button>
+                <button onclick="confirmAddProperties('${cleanerId}')" style="flex:2;padding:12px;border:none;border-radius:12px;background:#1A7A5E;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                  <i class="fas fa-check"></i> <span id="confirmBtnLabel">Confirmer</span>
+                </button>
+              </div>
+              ` : ''}
             </div>
           </div>`;
-        modal._cleanerId = cleanerId;
+
         document.body.appendChild(modal);
+
+        // Mettre à jour le label du bouton selon la sélection
+        modal.querySelectorAll('.prop-checkbox').forEach(cb => {
+          cb.addEventListener('change', updateConfirmLabel);
+        });
+      }
+
+      function updateConfirmLabel() {
+        const checked = document.querySelectorAll('.prop-checkbox:checked').length;
+        const label = document.getElementById('confirmBtnLabel');
+        if (label) label.textContent = checked > 0 ? `Confirmer (${checked})` : 'Confirmer';
+        // Sync "tout sélectionner"
+        const all = document.querySelectorAll('.prop-checkbox');
+        const selectAll = document.getElementById('selectAllProps');
+        if (selectAll) selectAll.checked = all.length > 0 && checked === all.length;
+      }
+
+      function toggleSelectAllProps(masterCb) {
+        document.querySelectorAll('.prop-checkbox').forEach(cb => { cb.checked = masterCb.checked; });
+        updateConfirmLabel();
+      }
+
+      async function confirmAddProperties(cleanerId) {
+        const checked = [...document.querySelectorAll('.prop-checkbox:checked')];
+        if (!checked.length) { showToast('Aucun logement sélectionné', 'warning'); return; }
+
+        const btn = document.querySelector('#addPropertyModal button[onclick*="confirmAddProperties"]');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement…'; }
+
+        const token = localStorage.getItem('lcc_token');
+        const cleaner = cleaners.find(c => c.id === cleanerId);
+        let successCount = 0;
+
+        for (const cb of checked) {
+          const pid = cb.dataset.pid;
+          const pname = cb.dataset.pname;
+          try {
+            const res = await fetch(`${API_URL}/api/cleaning/default-cleaner/${pid}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify({ cleanerId })
+            });
+            if (res.ok) {
+              defaultCleanersMap[pid] = { cleanerId, cleanerName: cleaner?.name || '', pinCode: cleaner?.pin_code || '' };
+              successCount++;
+            }
+          } catch(e) { console.error(e); }
+        }
+
+        closeAddPropertyModal();
+        renderCleaners();
+        showToast(`✅ ${successCount} logement${successCount > 1 ? 's' : ''} associé${successCount > 1 ? 's' : ''} à ${cleaner?.name || 'ce cleaner'}`, 'success');
       }
 
       function closeAddPropertyModal() {
         const m = document.getElementById('addPropertyModal');
         if (m) m.remove();
-      }
-
-      async function addCleanerProperty(cleanerId, propertyId, propertyName, btn) {
-        if (btn) { btn.disabled = true; }
-        try {
-          const token = localStorage.getItem('lcc_token');
-          const res = await fetch(`${API_URL}/api/cleaning/default-cleaner/${propertyId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-            body: JSON.stringify({ cleanerId })
-          });
-          if (!res.ok) throw new Error('Erreur serveur');
-          const cleaner = cleaners.find(c => c.id === cleanerId);
-          defaultCleanersMap[propertyId] = { cleanerId, cleanerName: cleaner?.name || '', pinCode: cleaner?.pin_code || '' };
-          closeAddPropertyModal();
-          renderCleaners();
-          showToast('✅ ' + propertyName + ' associé à ' + (cleaner?.name || 'ce cleaner'), 'success');
-        } catch(e) {
-          console.error(e);
-          if (btn) btn.disabled = false;
-          showToast("Erreur lors de l'association", 'error');
-        }
       }
 
       async function removeCleanerProperty(cleanerId, propertyId) {
@@ -3149,7 +3216,9 @@ function formatDateFr(dateStr) {
 
       window.openAddPropertyModal = openAddPropertyModal;
       window.closeAddPropertyModal = closeAddPropertyModal;
-      window.addCleanerProperty = addCleanerProperty;
+      window.confirmAddProperties = confirmAddProperties;
+      window.toggleSelectAllProps = toggleSelectAllProps;
+      window.updateConfirmLabel = updateConfirmLabel;
       window.removeCleanerProperty = removeCleanerProperty;
 
       let allTemplates = [];
