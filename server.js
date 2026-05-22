@@ -11464,7 +11464,24 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
 
     const allAssignments = [...assignmentsResult.rows, ...defaultAssignments];
 
-    if (allAssignments.length === 0) {
+    // ── Ajouter les checklists rejetées qui auraient été filtrées par date ──
+    // (la résa est passée mais le complément n'a pas encore été corrigé)
+    try {
+      const rejectedRows = await pool.query(
+        `SELECT reservation_key, property_id
+         FROM cleaning_checklists
+         WHERE cleaner_id = $1 AND owner_status = 'rejected'`,
+        [cleaner.id]
+      );
+      for (const row of rejectedRows.rows) {
+        const alreadyIn = allAssignments.some(a => a.reservation_key === row.reservation_key);
+        if (!alreadyIn && row.reservation_key && row.property_id) {
+          allAssignments.push({ reservation_key: row.reservation_key, property_id: row.property_id, isRejected: true });
+        }
+      }
+    } catch(e) {
+      console.warn('[TASKS] Erreur chargement checklists rejetées:', e.message);
+    }
       return res.json({ tasks: [], cleaner: { id: cleaner.id, name: cleaner.name } });
     }
 
