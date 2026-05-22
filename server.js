@@ -28693,6 +28693,58 @@ app.post('/api/channex/webhook', async (req, res) => {
           console.error('⚠️ [CHANNEX WEBHOOK] Erreur notif push:', notifErr.message);
         }
 
+
+        // ── SMS dernière minute au cleaner si résa après 20h avec départ demain ──
+        try {
+          const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+          const hourParis = nowParis.getHours();
+          const tomorrow = new Date(nowParis);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+          const departureDate = (booking.attributes || booking).departure_date || result.end_date || '';
+          const departureDateStr = String(departureDate).slice(0, 10);
+          const isLastMinute = hourParis >= 20 && departureDateStr === tomorrowStr;
+
+          if (isLastMinute) {
+            // Chercher le cleaner par défaut pour ce logement avec SMS recap activé
+            const cleanerRow = await pool.query(
+              `SELECT c.id, c.name, c.phone, c.pin_code
+               FROM property_default_cleaners pdc
+               JOIN cleaners c ON c.id = pdc.cleaner_id
+               WHERE pdc.property_id = $1 AND pdc.user_id = $2
+                 AND c.sms_recap_enabled = TRUE
+                 AND c.is_active = TRUE
+                 AND c.phone IS NOT NULL AND c.phone != ''
+               LIMIT 1`,
+              [result.property_id, result.user_id]
+            );
+
+            if (cleanerRow.rows.length > 0) {
+              const cleaner = cleanerRow.rows[0];
+              const propRes2 = await pool.query('SELECT name, internal_name FROM properties WHERE id = $1', [result.property_id]);
+              const propName = displayName(propRes2.rows[0]) || result.property_id;
+              const taskUrl = 'https://www.boostinghost.fr/cleaning-tasks.html';
+              const pinStr = cleaner.pin_code ? ` (PIN : ${cleaner.pin_code})` : '';
+
+              const message =
+                `Bonjour ${cleaner.name}, réservation de dernière minute !\n` +
+                `Un ménage s'ajoute pour demain : ${propName}.\n` +
+                `Accès checklist : ${taskUrl}${pinStr}`;
+
+              await sendSmsGateway(
+                cleaner.phone,
+                message,
+                result.user_id,
+                { trigger_type: 'cleaning_lastminute', property_id: result.property_id, guest_name: null }
+              );
+              console.log(`📱 [SMS-LASTMINUTE] Envoyé à ${cleaner.name} pour ${propName}`);
+            }
+          }
+        } catch (smsLastMinuteErr) {
+          console.error('⚠️ [SMS-LASTMINUTE] Erreur:', smsLastMinuteErr.message);
+        }
+
         // ── Créer la conversation + message de confirmation ──────
         try {
           const { sendAutoMessage } = require('./integrated-chat-handler');
