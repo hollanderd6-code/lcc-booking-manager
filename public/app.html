@@ -10988,6 +10988,14 @@ function populateChecklistModal(checklist) {
     validateBtn.innerHTML = '<i class="fas fa-check"></i> Valider le ménage';
     validateBtn.onclick = () => validateChecklist(checklist.id);
     footer.insertBefore(validateBtn, footer.firstChild);
+
+    const complementBtn = document.createElement('button');
+    complementBtn.id = 'btnComplementChecklist';
+    complementBtn.className = 'btn';
+    complementBtn.style.cssText = 'background:#fff3cd;color:#b45309;border:1.5px solid #f59e0b;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;';
+    complementBtn.innerHTML = '<i class="fas fa-undo"></i> Demander un complément';
+    complementBtn.onclick = () => openComplementModal(checklist.id);
+    footer.insertBefore(complementBtn, validateBtn.nextSibling);
   }
 
   // Garder une ref à la checklist courante
@@ -11027,6 +11035,86 @@ async function validateChecklist(checklistId) {
     console.error('Erreur validation:', e);
     showToast('Erreur : ' + e.message, 'error');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Valider le ménage'; }
+  }
+}
+
+function openComplementModal(id) {
+  let modal = document.getElementById('appComplementModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'appComplementModal';
+    modal.innerHTML = `
+      <div id="appComplementBackdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:10000;" onclick="closeComplementModal()"></div>
+      <div id="appComplementPanel" style="position:fixed;left:50%;transform:translateX(-50%);z-index:10001;width:100%;max-width:440px;padding:16px;box-sizing:border-box;bottom:0;">
+        <div style="background:var(--bg-primary,#fff);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.22);">
+          <div style="padding:20px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(200,184,154,.3);">
+            <div style="width:36px;height:36px;border-radius:10px;background:#fff3cd;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="fas fa-undo" style="color:#b45309;font-size:15px;"></i>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:15px;color:var(--text-primary);">Demande de complément</div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:1px;">Le message sera envoyé par notification push</div>
+            </div>
+            <button onclick="closeComplementModal()" style="margin-left:auto;width:30px;height:30px;border-radius:8px;border:1px solid rgba(200,184,154,.4);background:transparent;cursor:pointer;font-size:16px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;">&times;</button>
+          </div>
+          <div style="padding:16px 20px;">
+            <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);display:block;margin-bottom:8px;">Message pour la personne de ménage</label>
+            <textarea id="appComplementText" rows="3" placeholder="Ex : Merci de repasser sur la salle de bain, quelques points sont à revoir." style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;font-size:14px;font-family:inherit;resize:none;background:var(--bg-secondary,#f8f6f1);color:var(--text-primary);outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='rgba(200,184,154,.5)'"></textarea>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button onclick="closeComplementModal()" style="flex:1;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;background:transparent;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Annuler</button>
+              <button onclick="submitComplement()" style="flex:2;padding:12px;border:none;border-radius:12px;background:#b45309;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <i class="fas fa-paper-plane"></i> Envoyer la demande
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  modal._targetId = id;
+  modal.style.display = 'block';
+  setTimeout(() => { const ta = document.getElementById('appComplementText'); if(ta){ta.value='';ta.focus();} }, 50);
+}
+
+function closeComplementModal() {
+  const modal = document.getElementById('appComplementModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function submitComplement() {
+  const modal = document.getElementById('appComplementModal');
+  const id = modal._targetId;
+  const notes = (document.getElementById('appComplementText').value || '').trim();
+  if (!notes) { document.getElementById('appComplementText').focus(); return; }
+  closeComplementModal();
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/cleaning/checklists/${id}/reject`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ notes })
+    });
+    if (!res.ok) throw new Error('err');
+
+    // Mettre à jour le statut dans le modal
+    const statusEl = document.getElementById('modalChecklistStatus');
+    if (statusEl) {
+      statusEl.className = 'checklist-modal-status status-pending';
+      statusEl.innerHTML = '<i class="fas fa-undo"></i> Complément demandé';
+      statusEl.style.background = 'rgba(245,158,11,.1)';
+      statusEl.style.color = '#b45309';
+    }
+    // Retirer les boutons d'action
+    const vBtn = document.getElementById('btnValidateChecklist');
+    const cBtn = document.getElementById('btnComplementChecklist');
+    if (vBtn) vBtn.remove();
+    if (cBtn) cBtn.remove();
+
+    loadCleaningChecklists();
+    showToast('📨 Complément demandé — le cleaner a été notifié', 'warning');
+  } catch(e) {
+    console.error(e);
+    showToast('Erreur lors de l\'envoi', 'error');
   }
 }
 
