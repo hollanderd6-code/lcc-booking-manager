@@ -11490,9 +11490,15 @@ if (reservation_key && reservation_key !== null) {
   console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
   
   // Ne garder que les réservations du mois en cours et du mois suivant
+  // Exception : si une checklist rejected existe pour cette clé, on la garde quand même
   const now = new Date();
   const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
-  if (endDate < todayStr || endDate > endOfNextMonth) {
+  const hasRejectedChecklist = await pool.query(
+    `SELECT 1 FROM cleaning_checklists WHERE reservation_key = $1 AND cleaner_id = $2 AND owner_status = 'rejected' LIMIT 1`,
+    [reservation_key, cleaner.id]
+  ).then(r => r.rows.length > 0).catch(() => false);
+
+  if ((endDate < todayStr || endDate > endOfNextMonth) && !hasRejectedChecklist) {
     console.log(`🚫 [TASKS] Filtrée: ${reservation_key} endDate=${endDate} todayStr=${todayStr}`);
     continue;
   }
