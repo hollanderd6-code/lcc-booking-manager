@@ -2319,7 +2319,6 @@ function formatDateFr(dateStr) {
                   ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
                   ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
                   ${c.pin_code ? `<span class="cleaner-pill" style="background: #d1fae5; color: #059669; font-weight: 600;"><i class="fas fa-key"></i> PIN: ${c.pin_code}</span>` : ''}
-                  ${c.sub_account_id ? `<span class="cleaner-pill" style="background: #dbeafe; color: #2563eb; font-weight: 600;"><i class="fas fa-bell"></i> Notifs activées</span>` : ''}
                   ${c.phone ? `<span class="cleaner-pill cleaner-sms-pill ${c.sms_recap_enabled ? 'sms-on' : 'sms-off'}" data-id="${c.id}" data-enabled="${c.sms_recap_enabled ? '1' : '0'}" onclick="toggleCleanerSms(this)" title="${c.sms_recap_enabled ? 'SMS récap activé — cliquer pour désactiver' : 'Activer le SMS récap du soir'}" style="cursor:pointer;user-select:none;${c.sms_recap_enabled ? 'background:#d1fae5;color:#059669;' : 'background:#f3f4f6;color:#9ca3af;'}"><i class="fas fa-sms"></i> SMS recap ${c.sms_recap_enabled ? 'ON' : 'OFF'}</span>` : ''}
                 </div>
               </div>
