@@ -11517,17 +11517,22 @@ if (reservation_key && reservation_key !== null) {
     
     // Vérifier quelles checklists existent déjà
     const existingChecklists = await pool.query(
-      `SELECT reservation_key, completed_at 
+      `SELECT reservation_key, completed_at, owner_status, owner_notes
        FROM cleaning_checklists 
        WHERE cleaner_id = $1`,
       [cleaner.id]
     );
     
     const completedKeys = new Set(existingChecklists.rows.map(c => c.reservation_key));
+    const checklistByKey = {};
+    existingChecklists.rows.forEach(c => { checklistByKey[c.reservation_key] = c; });
     
-    // Marquer les tâches complétées
+    // Marquer les tâches complétées + statut propriétaire
     tasks.forEach(task => {
+      const cl = checklistByKey[task.reservationKey];
       task.completed = completedKeys.has(task.reservationKey);
+      task.ownerStatus = cl?.owner_status || null;
+      task.ownerNotes  = cl?.owner_notes  || null;
     });
     
     // Trier par date de départ
@@ -11674,7 +11679,8 @@ app.post('/api/cleaning/checklist', async (req, res) => {
          duration_seconds = EXCLUDED.duration_seconds,
          started_at = EXCLUDED.started_at,
          completed_at = NOW(),
-         owner_status = CASE WHEN cleaning_checklists.owner_status IN ('validated', 'rejected') THEN cleaning_checklists.owner_status ELSE 'pending' END,
+         owner_status = CASE WHEN cleaning_checklists.owner_status = 'validated' THEN 'validated' ELSE 'pending' END,
+         owner_notes = CASE WHEN cleaning_checklists.owner_status = 'validated' THEN cleaning_checklists.owner_notes ELSE NULL END,
          updated_at = NOW(),
          signature_data = EXCLUDED.signature_data,
          signature_ip = EXCLUDED.signature_ip,
@@ -12400,14 +12406,53 @@ app.put('/api/cleaning/checklists/:id/reject',
       // Notifier le cleaner
       try {
         const cleanerResult = await pool.query(
-          'SELECT email, phone, name FROM cleaners WHERE id = $1',
+          `SELECT c.email, c.phone, c.name, c.sub_account_id, c.user_id,
+            COALESCE(uft_sub.fcm_token, uft_user.fcm_token) as fcm_token
+           FROM cleaners c
+           LEFT JOIN user_fcm_tokens uft_sub ON uft_sub.sub_account_id = c.sub_account_id AND c.sub_account_id IS NOT NULL
+           LEFT JOIN user_fcm_tokens uft_user ON uft_user.user_id = c.user_id AND c.user_id IS NOT NULL AND c.sub_account_id IS NULL
+           WHERE c.id = $1 LIMIT 1`,
           [checklist.cleaner_id]
         );
         if (cleanerResult.rows.length > 0) {
           const cleaner = cleanerResult.rows[0];
           const property = PROPERTIES.find(p => p.id === checklist.property_id);
           const propertyName = displayName(property) || checklist.property_id;
+          const checkoutFmt = checklist.checkout_date ? new Date(checklist.checkout_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
 
+          // 🔔 Push FCM
+          const alreadyNotifiedTokens = new Set();
+          if (cleaner.fcm_token) {
+            alreadyNotifiedTokens.add(cleaner.fcm_token);
+            await sendNotificationLogged(
+              cleaner.fcm_token,
+              `⚠️ Complément demandé — ${propertyName}`,
+              notes ? notes : `Le propriétaire demande un complément pour le ménage du ${checkoutFmt}.`,
+              { type: 'cleaning_complement', checklistId: String(id), propertyId: checklist.property_id }
+            );
+            console.log(`📱 Push complément envoyé au cleaner ${checklist.cleaner_id}`);
+          }
+
+          // Push sur sous-compte cleaner si applicable
+          if (cleaner.sub_account_id) {
+            const subTokens = await pool.query(
+              'SELECT uft.fcm_token FROM user_fcm_tokens uft WHERE uft.sub_account_id = $1 AND uft.fcm_token IS NOT NULL',
+              [cleaner.sub_account_id]
+            );
+            for (const row of subTokens.rows) {
+              if (!alreadyNotifiedTokens.has(row.fcm_token)) {
+                alreadyNotifiedTokens.add(row.fcm_token);
+                await sendNotificationLogged(
+                  row.fcm_token,
+                  `⚠️ Complément demandé — ${propertyName}`,
+                  notes ? notes : `Le propriétaire demande un complément pour le ménage du ${checkoutFmt}.`,
+                  { type: 'cleaning_complement', checklistId: String(id), propertyId: checklist.property_id }
+                );
+              }
+            }
+          }
+
+          // 📧 Email
           if (cleaner.email) {
             const subject = `⚠️ Complément demandé — ${propertyName}`;
             const htmlBody = bhEmailTemplate({
