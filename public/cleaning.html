@@ -2816,7 +2816,7 @@ function formatDateFr(dateStr) {
           var footer = document.getElementById('detailFooter');
           var dlBtn = '<button class="btn btn-ghost" onclick="downloadCleaningDetailPDF(' + c.id + ')" style="flex:1;"><i class="fas fa-download"></i> PDF</button>';
           footer.innerHTML = st === 'pending'
-            ? '<button class="btn btn-validate" onclick="validateChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-check-circle"></i> Valider</button><button class="btn btn-reject" onclick="rejectChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-undo"></i> Complément</button>' + dlBtn
+            ? '<button class="btn btn-validate" onclick="validateChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-check-circle"></i> Valider</button><button class="btn btn-reject" onclick="closeChecklistDetail();setTimeout(()=>openComplementModal(' + c.id + '),200);"><i class="fas fa-undo"></i> Complément</button>' + dlBtn
             : '<button class="btn btn-ghost" onclick="closeChecklistDetail()" style="flex:1;">Fermer</button>' + dlBtn;
           window._currentCleaningDetailId = c.id;
           document.getElementById('checklistDetailModal').classList.add('active');
@@ -2950,7 +2950,63 @@ function formatDateFr(dateStr) {
       window.closeChecklistDetail = closeChecklistDetail;
       async function validateChecklist(id) { if (!confirm('Valider ce ménage ?')) return; try { var token = localStorage.getItem('lcc_token'); var res = await fetch(API_URL+'/api/cleaning/checklists/'+id+'/validate', { method:'PUT', headers:{'Content-Type':'application/json',Authorization:'Bearer '+token} }); if (!res.ok) throw new Error('err'); await loadChecklistsList(); } catch(e){ console.error(e); alert('Erreur'); } }
       window.validateChecklist = validateChecklist;
-      async function rejectChecklist(id) { var notes = prompt('Message pour la personne de ménage :'); if (notes === null) return; try { var token = localStorage.getItem('lcc_token'); var res = await fetch(API_URL+'/api/cleaning/checklists/'+id+'/reject', { method:'PUT', headers:{'Content-Type':'application/json',Authorization:'Bearer '+token}, body:JSON.stringify({notes:notes||'Merci de compléter'}) }); if (!res.ok) throw new Error('err'); await loadChecklistsList(); } catch(e){ console.error(e); alert('Erreur'); } }
+      async function rejectChecklist(id) {
+        openComplementModal(id);
+      }
+      function openComplementModal(id) {
+        let modal = document.getElementById('complementModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'complementModal';
+          modal.innerHTML = `
+            <div id="complementBackdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:9998;" onclick="closeComplementModal()"></div>
+            <div id="complementPanel" style="position:fixed;left:50%;transform:translateX(-50%);z-index:9999;width:100%;max-width:440px;padding:16px;box-sizing:border-box;bottom:0;">
+              <div style="background:var(--bg-primary,#fff);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.22);">
+                <div style="padding:20px 20px 0;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(200,184,154,.3);padding-bottom:14px;margin-bottom:0;">
+                  <div style="width:36px;height:36px;border-radius:10px;background:#fff3cd;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-undo" style="color:#b45309;font-size:15px;"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight:700;font-size:15px;color:var(--text-primary);">Demande de complément</div>
+                    <div style="font-size:12px;color:var(--text-secondary);margin-top:1px;">Le message sera envoyé par notification push</div>
+                  </div>
+                  <button onclick="closeComplementModal()" style="margin-left:auto;width:30px;height:30px;border-radius:8px;border:1px solid rgba(200,184,154,.4);background:transparent;cursor:pointer;font-size:16px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;">&times;</button>
+                </div>
+                <div style="padding:16px 20px;">
+                  <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);display:block;margin-bottom:8px;">Message pour la personne de ménage</label>
+                  <textarea id="complementText" rows="3" placeholder="Ex : Merci de repasser sur la salle de bain, quelques points sont à revoir." style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;font-size:14px;font-family:inherit;resize:none;background:var(--bg-secondary,#f8f6f1);color:var(--text-primary);outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='rgba(200,184,154,.5)'"></textarea>
+                  <div style="display:flex;gap:8px;margin-top:12px;">
+                    <button onclick="closeComplementModal()" style="flex:1;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;background:transparent;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Annuler</button>
+                    <button onclick="submitComplement()" style="flex:2;padding:12px;border:none;border-radius:12px;background:#b45309;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                      <i class="fas fa-paper-plane"></i> Envoyer la demande
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+          document.body.appendChild(modal);
+        }
+        modal._targetId = id;
+        modal.style.display = 'block';
+        setTimeout(() => { const ta = document.getElementById('complementText'); if(ta){ta.value='';ta.focus();} }, 50);
+      }
+      function closeComplementModal() {
+        const modal = document.getElementById('complementModal');
+        if (modal) modal.style.display = 'none';
+      }
+      async function submitComplement() {
+        const modal = document.getElementById('complementModal');
+        const id = modal._targetId;
+        const notes = (document.getElementById('complementText').value || '').trim();
+        if (!notes) { document.getElementById('complementText').focus(); return; }
+        closeComplementModal();
+        try {
+          var token = localStorage.getItem('lcc_token');
+          var res = await fetch(API_URL+'/api/cleaning/checklists/'+id+'/reject', { method:'PUT', headers:{'Content-Type':'application/json',Authorization:'Bearer '+token}, body:JSON.stringify({notes:notes||'Merci de compléter'}) });
+          if (!res.ok) throw new Error('err');
+          await loadChecklistsList();
+        } catch(e){ console.error(e); alert('Erreur'); }
+      }
       window.rejectChecklist = rejectChecklist;
 
       // ========== TEMPLATES ==========
@@ -3358,9 +3414,18 @@ function formatDateFr(dateStr) {
   html[data-theme-v3="1"] .cleaning-tab {
     flex-shrink: 0 !important;
     white-space: nowrap !important;
-    padding: 8px 16px !important;
+    padding: 7px 14px !important;
     border-radius: 999px !important;
     font-size: 13px !important;
+    font-weight: 600 !important;
+  }
+  html[data-theme-v3="1"] .cleaning-tab.active {
+    background: #1A7A5E !important;
+    color: white !important;
+  }
+  html[data-theme-v3="1"] .cleaning-tab:not(.active) {
+    background: transparent !important;
+    color: #7A8695 !important;
   }
 
   /* 5. GRID 2 COLONNES → 1 COLONNE */
