@@ -337,6 +337,38 @@ html, body {
   color: var(--accent-dark);
 }
 
+.badge-complement {
+  background: #fff3cd;
+  color: #b45309;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+.task-card.complement {
+  border-color: #f59e0b;
+  border-left: 4px solid #f59e0b;
+  box-shadow: 0 4px 20px rgba(245,158,11,0.13);
+}
+
+.complement-banner {
+  margin: 0 16px 14px;
+  padding: 10px 14px;
+  background: #fff3cd;
+  border: 1px solid rgba(245,158,11,0.4);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.45;
+}
+.complement-banner strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+  color: #b45309;
+}
+
 .badge-in-progress {
   background: #dbeafe;
   color: #1d4ed8;
@@ -1393,11 +1425,12 @@ function renderTasks() {
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   
-  // Séparer : aujourd'hui, demain, à venir, terminé
+  // Séparer : aujourd'hui, demain, à venir, complément demandé, terminé
   const todayTasks = tasks.filter(t => t.checkoutDate === today && !t.completed);
   const tomorrowTasks = tasks.filter(t => t.checkoutDate === tomorrow && !t.completed);
   const upcomingTasks = tasks.filter(t => t.checkoutDate > tomorrow && !t.completed);
-  const doneTasks = tasks.filter(t => t.completed);
+  const complementTasks = tasks.filter(t => t.completed && t.ownerStatus === 'rejected');
+  const doneTasks = tasks.filter(t => t.completed && t.ownerStatus !== 'rejected');
   
   let html = '';
   
@@ -1422,6 +1455,13 @@ function renderTasks() {
     html += '</div>';
   }
   
+  if (complementTasks.length) {
+    html += `<div class="section-label">⚠️ Complément demandé — ${complementTasks.length} ménage${complementTasks.length > 1 ? 's' : ''}</div>`;
+    html += '<div class="tasks-list">';
+    complementTasks.forEach(t => { html += renderTaskCard(t, 'complement'); });
+    html += '</div>';
+  }
+
   if (doneTasks.length) {
     html += `<div class="section-label">✅ Terminés — ${doneTasks.length}</div>`;
     html += '<div class="tasks-list">';
@@ -1463,8 +1503,18 @@ function renderTaskCard(task, type) {
       cardClass = 'completed';
       actionBtn = `<button class="task-card-btn" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-eye"></i> Revoir</button>`;
       break;
+    case 'complement':
+      badgeClass = 'badge-complement';
+      badgeText = '⚠️ Complément';
+      cardClass = 'complement';
+      actionBtn = `<button class="task-card-btn btn-start" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-redo"></i> Corriger</button>`;
+      break;
   }
-  
+
+  const complementBanner = (type === 'complement' && task.ownerNotes)
+    ? `<div class="complement-banner"><strong>Message du propriétaire</strong>${task.ownerNotes}</div>`
+    : '';
+
   return `
     <div class="task-card ${cardClass}">
       <div class="task-card-top">
@@ -1482,6 +1532,7 @@ function renderTaskCard(task, type) {
           <span>${task.guestName}</span>
         </div>` : ''}
       </div>
+      ${complementBanner}
       <div class="task-card-action">
         ${actionBtn}
       </div>
