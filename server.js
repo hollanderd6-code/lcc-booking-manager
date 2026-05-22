@@ -20296,6 +20296,85 @@ initDynamicPricingCron(pool, sendEmail, sendPushForDynamicPricing);
 // ROUTES STRIPE - À COPIER DANS server.js
 // Placer APRÈS les autres routes API, AVANT server.listen()
 // ============================================
+// WEBHOOK SMS ENTRANT — Réponses des cleaners
+// ============================================
+app.post('/api/sms/incoming', async (req, res) => {
+  try {
+    res.status(200).json({ ok: true }); // Répondre immédiatement à SMS Gateway
+
+    const payload = req.body?.payload || req.body;
+    const from = payload?.phoneNumber || payload?.from;
+    const text = payload?.message || payload?.text || payload?.body;
+
+    if (!from || !text) {
+      console.log('📩 [SMS-IN] Payload incomplet:', JSON.stringify(req.body));
+      return;
+    }
+
+    console.log(`📩 [SMS-IN] Message reçu de ${from}: "${text}"`);
+
+    // Normaliser le numéro pour chercher dans la DB
+    let normalizedPhone = from.replace(/\s|-/g, '');
+    if (normalizedPhone.startsWith('+33')) {
+      normalizedPhone = '0' + normalizedPhone.slice(3);
+    }
+    const phoneVariants = [from, normalizedPhone];
+
+    // Chercher le cleaner correspondant à ce numéro
+    const cleanerResult = await pool.query(
+      `SELECT c.id, c.name, c.user_id
+       FROM cleaners c
+       WHERE c.phone = ANY($1) AND c.is_active = TRUE
+       LIMIT 1`,
+      [phoneVariants]
+    );
+
+    let senderName = from;
+    let targetUserId = null;
+
+    if (cleanerResult.rows.length > 0) {
+      const cleaner = cleanerResult.rows[0];
+      senderName = cleaner.name;
+      targetUserId = cleaner.user_id;
+      console.log(`📩 [SMS-IN] Cleaner identifié : ${cleaner.name} (user_id: ${cleaner.user_id})`);
+    } else {
+      // Pas un cleaner — chercher quand même à quel propriétaire notifier
+      // (numéro inconnu → notifier tous les owners qui ont ce numéro en contact)
+      console.log(`📩 [SMS-IN] Numéro inconnu : ${from}`);
+    }
+
+    if (!targetUserId) return;
+
+    // Récupérer les tokens FCM du propriétaire
+    const tokensResult = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+      [targetUserId]
+    );
+
+    if (!tokensResult.rows.length) {
+      console.log(`📩 [SMS-IN] Aucun token FCM pour user ${targetUserId}`);
+      return;
+    }
+
+    // Tronquer le message si trop long pour la notif
+    const preview = text.length > 100 ? text.slice(0, 97) + '…' : text;
+
+    for (const { fcm_token } of tokensResult.rows) {
+      await sendNotificationLogged(
+        fcm_token,
+        `📩 ${senderName}`,
+        preview,
+        { type: 'sms_reply', from, cleanerName: senderName }
+      );
+    }
+
+    console.log(`📩 [SMS-IN] Push envoyé à ${tokensResult.rows.length} token(s) pour réponse de ${senderName}`);
+  } catch (err) {
+    console.error('❌ [SMS-IN] Erreur:', err.message);
+  }
+});
+
+// ============================================
 
 // ============================================
 // 1. FONCTION : Récupérer le Price ID Stripe
@@ -22902,7 +22981,7 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
 // ============================================================
 // 📱 SMS GATEWAY — Envoi SMS via Android (api.sms-gate.app)
 // ============================================================
-async function sendSmsGateway(phoneNumber, message, userId = null, _logData = null) {
+async function sendSmsGateway(phoneNumber, message, userId = null, _logData = null, skipFooter = false) {
   try {
     // ── Vérification plan : SMS uniquement pour Pro (inclus) ou option activée ──
     if (userId) {
@@ -22944,7 +23023,7 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
     }
 
     const SMS_FOOTER = "\n\n---\nCe message est envoyé automatiquement pour votre réservation. Merci de ne pas répondre à ce SMS, nous n\'y avons pas accès. Pour nous contacter, répondez via votre plateforme de réservation.";
-    const fullMsg = message + SMS_FOOTER;
+    const fullMsg = skipFooter ? message : message + SMS_FOOTER;
 
     const credentials = Buffer.from(`${login}:${password}`).toString('base64');
     const response = await fetch('https://api.sms-gate.app/3rdparty/v1/message', {
@@ -25371,7 +25450,8 @@ cron.schedule('0 20 * * *', async () => {
           cleaner.phone,
           message,
           cleaner.user_id,
-          { trigger_type: 'cleaning_recap', property_id: [...propertyIds][0], guest_name: null }
+          { trigger_type: 'cleaning_recap', property_id: [...propertyIds][0], guest_name: null },
+          true // skipFooter — le cleaner peut répondre
         );
 
         if (sent) {
@@ -27695,7 +27775,41 @@ setPool(pool);
 initializeFirebase();
 console.log('✅ Service de notifications initialisé');
   
-  // ✅ Initialiser les tables livrets d'accueil
+  // ✅ Enregistrer le webhook SMS entrant (réponses cleaners)
+  try {
+    const smsLogin = process.env.SMS_GATEWAY_LOGIN;
+    const smsPassword = process.env.SMS_GATEWAY_PASSWORD;
+    const appUrl = process.env.APP_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
+    if (smsLogin && smsPassword && appUrl) {
+      const credentials = Buffer.from(`${smsLogin}:${smsPassword}`).toString('base64');
+      const webhookUrl = `${appUrl}/api/sms/incoming`;
+      // Vérifier si le webhook existe déjà
+      const existing = await fetch('https://api.sms-gate.app/3rdparty/v1/webhooks', {
+        headers: { 'Authorization': `Basic ${credentials}` }
+      });
+      const webhooks = await existing.json().catch(() => []);
+      const alreadyRegistered = Array.isArray(webhooks) && webhooks.some(w => w.url === webhookUrl && w.event === 'sms:received');
+      if (!alreadyRegistered) {
+        const reg = await fetch('https://api.sms-gate.app/3rdparty/v1/webhooks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
+          body: JSON.stringify({ url: webhookUrl, event: 'sms:received' })
+        });
+        if (reg.ok) {
+          console.log(`✅ Webhook SMS entrant enregistré : ${webhookUrl}`);
+        } else {
+          const err = await reg.text();
+          console.warn(`⚠️ Webhook SMS : erreur enregistrement : ${err}`);
+        }
+      } else {
+        console.log('✅ Webhook SMS entrant déjà enregistré');
+      }
+    } else {
+      console.log('ℹ️ Webhook SMS ignoré (SMS_GATEWAY_LOGIN/PASSWORD ou APP_URL manquant)');
+    }
+  } catch (webhookErr) {
+    console.warn('⚠️ Webhook SMS entrant : erreur:', webhookErr.message);
+  }
   await initWelcomeBookTables(pool);
   console.log('✅ Tables welcome_books initialisées');
   
@@ -28761,7 +28875,8 @@ app.post('/api/channex/webhook', async (req, res) => {
                 cleaner.phone,
                 message,
                 result.user_id,
-                { trigger_type: 'cleaning_lastminute', property_id: result.property_id, guest_name: null }
+                { trigger_type: 'cleaning_lastminute', property_id: result.property_id, guest_name: null },
+                true // skipFooter — le cleaner peut répondre
               );
               console.log(`📱 [SMS-LASTMINUTE] Envoyé à ${cleaner.name} pour ${propName}`);
             }
