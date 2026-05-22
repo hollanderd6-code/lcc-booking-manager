@@ -11482,6 +11482,8 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     } catch(e) {
       console.warn('[TASKS] Erreur chargement checklists rejetées:', e.message);
     }
+
+    if (allAssignments.length === 0) {
       return res.json({ tasks: [], cleaner: { id: cleaner.id, name: cleaner.name } });
     }
 
