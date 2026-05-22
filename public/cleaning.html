@@ -2320,6 +2320,7 @@ function formatDateFr(dateStr) {
                   ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
                   ${c.pin_code ? `<span class="cleaner-pill" style="background: #d1fae5; color: #059669; font-weight: 600;"><i class="fas fa-key"></i> PIN: ${c.pin_code}</span>` : ''}
                   ${c.sub_account_id ? `<span class="cleaner-pill" style="background: #dbeafe; color: #2563eb; font-weight: 600;"><i class="fas fa-bell"></i> Notifs activées</span>` : ''}
+                  ${c.phone ? `<span class="cleaner-pill cleaner-sms-pill ${c.sms_recap_enabled ? 'sms-on' : 'sms-off'}" data-id="${c.id}" data-enabled="${c.sms_recap_enabled ? '1' : '0'}" onclick="toggleCleanerSms(this)" title="${c.sms_recap_enabled ? 'SMS récap activé — cliquer pour désactiver' : 'Activer le SMS récap du soir'}" style="cursor:pointer;user-select:none;${c.sms_recap_enabled ? 'background:#d1fae5;color:#059669;' : 'background:#f3f4f6;color:#9ca3af;'}"><i class="fas fa-sms"></i> SMS recap ${c.sms_recap_enabled ? 'ON' : 'OFF'}</span>` : ''}
                 </div>
               </div>
               <div style="display:flex;gap:6px;">
@@ -3009,7 +3010,44 @@ function formatDateFr(dateStr) {
       }
       window.rejectChecklist = rejectChecklist;
 
-      // ========== TEMPLATES ==========
+      // ========== SMS RECAP TOGGLE ==========
+      async function toggleCleanerSms(pill) {
+        const cleanerId = pill.dataset.id;
+        const currentEnabled = pill.dataset.enabled === '1';
+        const newEnabled = !currentEnabled;
+        pill.style.opacity = '0.5';
+        pill.style.pointerEvents = 'none';
+        try {
+          const token = localStorage.getItem('lcc_token');
+          const res = await fetch(`${API_URL}/api/cleaners/${cleanerId}/sms-toggle`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ enabled: newEnabled })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            if (err.error === 'option_required') {
+              showToast('⚠️ Option SMS requise — activez-la dans vos paramètres', 'warning');
+            } else {
+              showToast('Erreur lors de la mise à jour', 'error');
+            }
+            pill.style.opacity = '';
+            pill.style.pointerEvents = '';
+            return;
+          }
+          // Mettre à jour localement
+          const cleaner = cleaners.find(c => c.id === cleanerId);
+          if (cleaner) cleaner.sms_recap_enabled = newEnabled;
+          renderCleaners();
+          showToast(newEnabled ? '📱 SMS récap activé pour ce cleaner' : 'SMS récap désactivé', newEnabled ? 'success' : 'info');
+        } catch(e) {
+          console.error(e);
+          pill.style.opacity = '';
+          pill.style.pointerEvents = '';
+          showToast('Erreur réseau', 'error');
+        }
+      }
+      window.toggleCleanerSms = toggleCleanerSms;
       let allTemplates = [];
       var ROOM_DEFAULTS = { kitchen:{name:'Cuisine',color:'#f97316'}, bathroom:{name:'Salle de bain',color:'#06b6d4'}, bedroom:{name:'Chambre',color:'#8b5cf6'}, living:{name:'Salon',color:'#ec4899'}, terrace:{name:'Terrasse',color:'#84cc16'}, general:{name:'Général',color:'#6b7280'} };
       let editingTemplateTasks = [];
