@@ -2108,6 +2108,12 @@ ON invoice_download_tokens(token);
     } catch (e) {
       console.log('ℹ️ sub_account_id cleaners déjà existante:', e.message);
     }
+    try {
+      await pool.query(`ALTER TABLE cleaners ADD COLUMN IF NOT EXISTS sms_recap_enabled BOOLEAN NOT NULL DEFAULT FALSE`);
+      console.log('✅ Colonne sms_recap_enabled ajoutée à cleaners');
+    } catch (e) {
+      console.log('ℹ️ sms_recap_enabled cleaners déjà existante:', e.message);
+    }
 
     // Migration : permissions paiements pour sous-comptes
     try {
@@ -10998,7 +11004,7 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(p
     }
 
     const result = await pool.query(
-      `SELECT id, name, phone, email, notes, pin_code, is_active, sub_account_id, created_at
+      `SELECT id, name, phone, email, notes, pin_code, is_active, sub_account_id, sms_recap_enabled, created_at
        FROM cleaners
        WHERE user_id = $1
        ORDER BY name ASC`,
@@ -11123,6 +11129,43 @@ app.put('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manag
     });
   } catch (err) {
     console.error('Erreur PUT /api/cleaners/:id :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+
+// PUT - Toggle SMS recap pour un cleaner
+app.put('/api/cleaners/:id/sms-toggle', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { id } = req.params;
+    const { enabled } = req.body;
+
+    // Vérifier plan SMS
+    const subRow = await pool.query(
+      `SELECT plan_type, sms_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    const sub = subRow.rows[0];
+    const basePlan = getBasePlanName(sub?.plan_type || 'solo');
+    if (basePlan !== 'pro' && !sub?.sms_enabled) {
+      return res.status(403).json({ error: 'option_required', message: 'Option SMS requise pour ce plan' });
+    }
+
+    const result = await pool.query(
+      `UPDATE cleaners SET sms_recap_enabled = $1 WHERE id = $2 AND user_id = $3 RETURNING id, name, sms_recap_enabled`,
+      [!!enabled, id, userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Cleaner non trouvé' });
+
+    console.log(`📱 [SMS-RECAP] Toggle ${enabled ? 'ON' : 'OFF'} pour cleaner ${id} (${result.rows[0].name})`);
+    res.json({ success: true, cleaner: result.rows[0] });
+  } catch (err) {
+    console.error('Erreur PUT /api/cleaners/:id/sms-toggle :', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -25218,6 +25261,110 @@ cron.schedule('0 18 * * *', async () => {
 });
 
 console.log('CRON rappels J-1 configure (18h quotidien)');
+
+// ============================================
+// CRON : SMS RÉCAP MÉNAGE — CHAQUE SOIR À 20H
+// ============================================
+// Envoie un SMS aux cleaners avec sms_recap_enabled = true
+// listant leurs logements à nettoyer le lendemain
+cron.schedule('0 20 * * *', async () => {
+  console.log('CRON: SMS récap ménage 20h');
+  try {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+    // Récupérer tous les cleaners avec SMS recap activé + numéro
+    const cleanersResult = await pool.query(
+      `SELECT c.id, c.name, c.phone, c.user_id
+       FROM cleaners c
+       WHERE c.sms_recap_enabled = TRUE
+         AND c.is_active = TRUE
+         AND c.phone IS NOT NULL
+         AND c.phone != ''`
+    );
+
+    if (!cleanersResult.rows.length) {
+      console.log('CRON SMS-RECAP: Aucun cleaner avec SMS activé');
+      return;
+    }
+
+    for (const cleaner of cleanersResult.rows) {
+      try {
+        // 1. Assignations explicites pour ce cleaner demain
+        const explicitResult = await pool.query(
+          `SELECT DISTINCT ca.property_id
+           FROM cleaning_assignments ca
+           WHERE ca.cleaner_id = $1
+             AND ca.reservation_key LIKE $2`,
+          [cleaner.id, `%_${tomorrowStr}`]
+        );
+
+        // 2. Logements par défaut avec résa demain
+        const defaultResult = await pool.query(
+          `SELECT DISTINCT r.property_id
+           FROM reservations r
+           JOIN property_default_cleaners pdc ON pdc.property_id = r.property_id AND pdc.user_id = $2
+           WHERE pdc.cleaner_id = $1
+             AND TO_CHAR(r.end_date, 'YYYY-MM-DD') = $3
+             AND r.status != 'cancelled'`,
+          [cleaner.id, cleaner.user_id, tomorrowStr]
+        );
+
+        // Fusionner les deux listes sans doublon
+        const propertyIds = new Set([
+          ...explicitResult.rows.map(r => r.property_id),
+          ...defaultResult.rows.map(r => r.property_id)
+        ]);
+
+        if (!propertyIds.size) continue;
+
+        // Résoudre les noms de logements
+        const propertyNames = [];
+        for (const pid of propertyIds) {
+          const prop = PROPERTIES.find(p => p.id === pid);
+          propertyNames.push(displayName(prop) || pid);
+        }
+
+        const count = propertyNames.length;
+        const listStr = propertyNames.join(', ');
+        const taskUrl = `https://www.boostinghost.fr/cleaning-tasks.html`;
+        const pinStr = await (async () => {
+          const r = await pool.query(`SELECT pin_code FROM cleaners WHERE id = $1`, [cleaner.id]);
+          return r.rows[0]?.pin_code || '';
+        })();
+
+        const message =
+          `Bonjour ${cleaner.name},\n` +
+          `Vous avez ${count} ménage${count > 1 ? 's' : ''} demain ` +
+          `(${new Date(tomorrowStr + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}) :\n` +
+          `${listStr}\n` +
+          `Accès checklist : ${taskUrl}` +
+          (pinStr ? ` (PIN : ${pinStr})` : '');
+
+        const sent = await sendSmsGateway(
+          cleaner.phone,
+          message,
+          cleaner.user_id,
+          { trigger_type: 'cleaning_recap', property_id: [...propertyIds][0], guest_name: null }
+        );
+
+        if (sent) {
+          console.log(`📱 [SMS-RECAP] Envoyé à ${cleaner.name} (${cleaner.phone}) — ${count} logement(s)`);
+        }
+      } catch (cleanerErr) {
+        console.error(`❌ [SMS-RECAP] Erreur cleaner ${cleaner.id}:`, cleanerErr.message);
+      }
+    }
+
+    console.log('CRON SMS-RECAP: Terminé');
+  } catch (err) {
+    console.error('Erreur CRON SMS-RECAP:', err);
+  }
+}, { timezone: 'Europe/Paris' });
+
+console.log('CRON SMS récap ménage configuré (20h quotidien)');
+
 
 // ============================================
 // CRON : ALERTE MÉNAGE NON VALIDÉ — 1H AVANT ARRIVÉE
