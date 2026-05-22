@@ -1549,6 +1549,7 @@ async function saveWelcomeBook(e) {
     if (data.uniqueId) currentUniqueId = data.uniqueId;
 
     // Affichage succès
+    hideDraftToast();
     hideFormShowSuccess();
     document.getElementById('successMessage').style.display = 'block';
 
