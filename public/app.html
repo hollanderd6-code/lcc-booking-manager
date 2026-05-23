@@ -10983,6 +10983,8 @@ function populateChecklistModal(checklist) {
   const footer = document.getElementById('modalFooter');
   const existingBtn = document.getElementById('btnValidateChecklist');
   if (existingBtn) existingBtn.remove();
+  const existingComplementBtn = document.getElementById('btnComplementChecklist');
+  if (existingComplementBtn) existingComplementBtn.remove();
 
   if (!isCompleted) {
     const validateBtn = document.createElement('button');
