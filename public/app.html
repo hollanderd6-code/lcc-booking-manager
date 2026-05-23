@@ -12075,7 +12075,7 @@ html[data-theme-v3="1"] .booking-block.gites,   .booking-block.gites   { backgro
     <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border-color,#e5e7eb);display:flex;align-items:center;justify-content:space-between;">
       <div>
         <div style="font-size:16px;font-weight:700;color:var(--text-primary,#0D1117);">Ordre des logements</div>
-        <div style="font-size:12px;color:var(--text-secondary,#6B7280);margin-top:2px;">Glisser-déposer pour réorganiser</div>
+        <div style="font-size:12px;color:var(--text-secondary,#6B7280);margin-top:2px;">Utilisez les boutons ▲▼ pour réorganiser</div>
       </div>
       <button onclick="closeReorderModal()" style="background:none;border:none;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary,#6B7280);font-size:16px;" onmouseover="this.style.background='var(--bg-hover,#f3f4f6)'" onmouseout="this.style.background='none'">
         <i class="fas fa-times"></i>
@@ -12292,10 +12292,18 @@ function openReorderModal() {
 
   const modal = document.getElementById('reorderModal');
   modal.style.display = 'flex';
+  // Bloquer le scroll du body (iOS)
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
 }
 
 function closeReorderModal() {
   document.getElementById('reorderModal').style.display = 'none';
+  // Restaurer le scroll du body
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
 }
 
 // Touch drag for mobile reorder
@@ -12464,6 +12472,16 @@ function onDragEnd() {
 document.getElementById('reorderModal').addEventListener('click', function(e) {
   if (e.target === this) closeReorderModal();
 });
+
+// Bloquer le scroll de l'arrière-plan iOS sur le modal
+document.getElementById('reorderModal').addEventListener('touchmove', function(e) {
+  e.stopPropagation();
+}, { passive: true });
+
+// Permettre le scroll dans la liste uniquement
+document.getElementById('reorderList').addEventListener('touchmove', function(e) {
+  e.stopPropagation();
+}, { passive: true });
 
 // Applique l\'ordre au premier chargement
 document.addEventListener('DOMContentLoaded', function() {
