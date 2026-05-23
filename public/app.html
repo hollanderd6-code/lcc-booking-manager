@@ -12268,25 +12268,26 @@ function openReorderModal() {
   }
 
   reorderList.innerHTML = '';
+  const isMobile = window.innerWidth < 768 || ('ontouchstart' in window);
   props.forEach(function(prop) {
     const row = document.createElement('div');
     row.setAttribute('data-id', String(prop.id));
-    row.setAttribute('draggable', 'true');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;cursor:grab;user-select:none;transition:all .15s;';
-    row.innerHTML = '<i class="fas fa-grip-vertical" style="color:#9CA3AF;font-size:14px;flex-shrink:0;"></i>'
+    if (!isMobile) row.setAttribute('draggable', 'true');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;' + (!isMobile ? 'cursor:grab;' : '') + 'user-select:none;transition:all .15s;';
+    row.innerHTML = '<i class="fas fa-grip-vertical" style="color:' + (isMobile ? '#d1d5db' : '#9CA3AF') + ';font-size:14px;flex-shrink:0;"></i>'
       + '<span style="flex:1;font-size:14px;font-weight:600;color:#111827;">' + (prop.name || String(prop.id)) + '</span>'
       + '<div style="display:flex;gap:6px;">'
       + '<button ontouchstart="" onclick="moveReorderItem(this.closest(\'[data-id]\'),-1)" style="width:44px;height:44px;background:white;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;font-size:18px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;"><i class="fas fa-chevron-up"></i></button>'
       + '<button ontouchstart="" onclick="moveReorderItem(this.closest(\'[data-id]\'),1)" style="width:44px;height:44px;background:white;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;font-size:18px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;"><i class="fas fa-chevron-down"></i></button>'
       + '</div>';
-    row.addEventListener('dragstart', onDragStart);
-    row.addEventListener('dragover', onDragOver);
-    row.addEventListener('drop', onDrop);
-    row.addEventListener('dragend', onDragEnd);
+    if (!isMobile) {
+      row.addEventListener('dragstart', onDragStart);
+      row.addEventListener('dragover', onDragOver);
+      row.addEventListener('drop', onDrop);
+      row.addEventListener('dragend', onDragEnd);
+    }
     row.addEventListener('mouseenter', function(){ this.style.background='#f3f4f6'; this.style.borderColor='#1A7A5E'; });
     row.addEventListener('mouseleave', function(){ this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb'; });
-    // Touch drag support for mobile
-    addTouchDrag(row);
     reorderList.appendChild(row);
   });
 
