@@ -4451,6 +4451,7 @@ window.closeChecklistsKpiModal = function() {
         if (v.includes('vrbo') || v.includes('homeaway')) return 'Vrbo';
         if (v.includes('abritel')) return 'Abritel';
         if (v === 'direct') return 'Direct';
+        if (v === 'guest_app' || v.includes('bhguest') || v.includes('boostinghost')) return 'BHGuest';
         return src;
       }
       return 'Direct';
@@ -6596,7 +6597,10 @@ try {
     }
     var checkins=0, checkouts=0, totalG=0, seen={}, list=[];
     state.bookings.forEach(function(r) {
-      if (r.type==='block' || r.type==='manual' || (r.source||r.platform||'').toUpperCase()==='BLOCK') return;
+      if (r.type==='block' || (r.source||r.platform||'').toUpperCase()==='BLOCK') return;
+      // Ne pas exclure les résas BHGuest même si elles ont type='manual'
+      const _isBHGuestLocal = ['guest_app','bhguest','boostinghost_guest','boostinghost guest','boostinghost'].includes((r.source||r.platform||'').toLowerCase());
+      if (r.type==='manual' && !_isBHGuestLocal) return;
       var s=(r.startDate||r.start||'').split('T')[0];
       var e=(r.endDate||r.end||'').split('T')[0];
       if (!s||!e) return;
