@@ -8000,7 +8000,20 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
     // Enrichir les réservations du store iCal avec les données DB
     filteredProps.forEach(property => {
-      const allPropertyReservations = reservationsStore.properties[property.id] || [];
+      let allPropertyReservations = reservationsStore.properties[property.id] || [];
+
+      // ── Dédupliquer par dates (start+end) — garder la plus récente ──
+      const dateDedup = new Map();
+      for (const r of allPropertyReservations) {
+        const s = String(r.start || r.startDate || r.start_date || '').slice(0, 10);
+        const e = String(r.end   || r.endDate   || r.end_date   || '').slice(0, 10);
+        if (!s || !e) { dateDedup.set(Math.random(), { r, ts: '' }); continue; }
+        const dk = `${s}_${e}`;
+        const rTs = String(r.updatedAt || r.updated_at || r.createdAt || r.created_at || '');
+        const existing = dateDedup.get(dk);
+        if (!existing || rTs > existing.ts) dateDedup.set(dk, { r, ts: rTs });
+      }
+      allPropertyReservations = [...dateDedup.values()].map(v => v.r);
 
       // Filtrer les blocs Airbnb qui chevauchent des résas manuelles/directes
       const manualReservations = allPropertyReservations.filter(r =>
@@ -11489,13 +11502,24 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
       } catch(e) {
         // fallback cache mémoire
         const propReservations = reservationsStore.properties[propId] || [];
+        // Dédupliquer par dates — garder la résa la plus récente
+        const seenDates = new Map();
         for (const r of propReservations) {
-          const rEnd   = String(r.end   || '').slice(0, 10);
-          const rStart = String(r.start || '').slice(0, 10);
+          const rEnd   = String(r.end   || r.end_date   || '').slice(0, 10);
+          const rStart = String(r.start || r.start_date || '').slice(0, 10);
+          if (!rEnd || !rStart) continue;
           if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
+          const dk = `${rStart}_${rEnd}`;
+          const rTs = String(r.updatedAt || r.updated_at || r.createdAt || r.created_at || '');
+          const existing = seenDates.get(dk);
+          if (!existing || rTs > existing.ts) seenDates.set(dk, { r, ts: rTs });
+        }
+        for (const { r } of seenDates.values()) {
+          const rEnd   = String(r.end   || r.end_date   || '').slice(0, 10);
+          const rStart = String(r.start || r.start_date || '').slice(0, 10);
           const rKey = propId + '_' + rStart + '_' + rEnd;
           if (explicitKeys.has(rKey)) continue;
-          if (explicitPropDates.has(rKey)) continue; // dédup cross-format
+          if (explicitPropDates.has(rKey)) continue;
           defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
         }
       }
