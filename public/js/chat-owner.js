@@ -1191,8 +1191,13 @@ async function sendMessageOwner() {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || 'Erreur envoi plateforme');
       }
+      const data = await response.json();
       input.value = '';
       input.style.height = 'auto';
+      // Afficher immédiatement le message avec son vrai id (pas de doublon possible via socket)
+      const savedMsg = data.message || { content: message, sender_type: 'property', created_at: new Date().toISOString(), id: 'tmp_' + Date.now() };
+      appendMessage({ ...savedMsg, sender_type: 'owner' });
+      scrollToBottom();
       showToast('✅ Envoyé sur la plateforme', 'success');
       return;
     }
