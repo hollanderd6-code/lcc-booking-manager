@@ -3579,12 +3579,13 @@ if (typeof _orig === 'function') {
 
         // Icône d'édition au hover
         var editIcon = document.createElement('div');
-        editIcon.innerHTML = '<i class="fas fa-pen" style="font-size:22px;color:white;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4));"></i>';
+        editIcon.innerHTML = '<i class="fas fa-pen" style="font-size:22px;color:white;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4));opacity:0;transition:opacity .2s;"></i>';
         editIcon.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);transition:background .2s;pointer-events:none;border-radius:inherit;';
         imgWrapper.style.position = 'relative';
         imgWrapper.appendChild(editIcon);
-        imgWrapper.addEventListener('mouseenter', function(){ editIcon.style.background = 'rgba(0,0,0,.32)'; });
-        imgWrapper.addEventListener('mouseleave', function(){ editIcon.style.background = 'rgba(0,0,0,0)'; });
+        var penIcon = editIcon.querySelector('i');
+        imgWrapper.addEventListener('mouseenter', function(){ editIcon.style.background = 'rgba(0,0,0,.32)'; if(penIcon) penIcon.style.opacity='1'; });
+        imgWrapper.addEventListener('mouseleave', function(){ editIcon.style.background = 'rgba(0,0,0,0)'; if(penIcon) penIcon.style.opacity='0'; });
       }
 
       // Supprimer le bouton Gérer
