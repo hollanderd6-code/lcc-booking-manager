@@ -12104,6 +12104,23 @@ html[data-theme-v3="1"] .booking-block.gites,   .booking-block.gites   { backgro
 
 const STORAGE_KEY = 'LCC_PROPERTY_ORDER';
 
+// ── Charger l'ordre depuis la DB au démarrage ──
+(async function loadOrderFromDB() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+    const res = await fetch((window.API_URL || '') + '/api/properties/reorder-bulk', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.order) && data.order.length) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.order));
+      console.log('✅ Ordre logements restauré depuis DB');
+    }
+  } catch(e) { /* ignore */ }
+})();
+
 // Récupère l\'ordre sauvegardé [id, id, id, ...]
 function getSavedOrder() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
@@ -12256,11 +12273,11 @@ function openReorderModal() {
     row.setAttribute('data-id', String(prop.id));
     row.setAttribute('draggable', 'true');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;cursor:grab;user-select:none;transition:all .15s;';
-    row.innerHTML = '<i class="fas fa-grip-vertical" style="color:#9CA3AF;font-size:13px;flex-shrink:0;"></i>'
-      + '<span style="flex:1;font-size:13px;font-weight:500;color:#111827;">' + (prop.name || String(prop.id)) + '</span>'
-      + '<div style="display:flex;flex-direction:column;gap:2px;">'
-      + '<button onclick="moveReorderItem(this.closest(\"[data-id]\"),-1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:#9CA3AF;font-size:10px;"><i class="fas fa-chevron-up"></i></button>'
-      + '<button onclick="moveReorderItem(this.closest(\"[data-id]\"),1)" style="background:none;border:none;cursor:pointer;padding:2px 5px;color:#9CA3AF;font-size:10px;"><i class="fas fa-chevron-down"></i></button>'
+    row.innerHTML = '<i class="fas fa-grip-vertical" style="color:#9CA3AF;font-size:14px;flex-shrink:0;"></i>'
+      + '<span style="flex:1;font-size:14px;font-weight:600;color:#111827;">' + (prop.name || String(prop.id)) + '</span>'
+      + '<div style="display:flex;gap:6px;">'
+      + '<button ontouchstart="" onclick="moveReorderItem(this.closest(\'[data-id]\'),-1)" style="width:44px;height:44px;background:white;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;font-size:18px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;"><i class="fas fa-chevron-up"></i></button>'
+      + '<button ontouchstart="" onclick="moveReorderItem(this.closest(\'[data-id]\'),1)" style="width:44px;height:44px;background:white;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;font-size:18px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;"><i class="fas fa-chevron-down"></i></button>'
       + '</div>';
     row.addEventListener('dragstart', onDragStart);
     row.addEventListener('dragover', onDragOver);
@@ -12355,6 +12372,20 @@ function savePropertyOrder() {
   const items = Array.from(reorderList.querySelectorAll('[data-id]'));
   const order = items.map(x => x.getAttribute('data-id'));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+
+  // ── Sauvegarder en DB pour persistance entre mises à jour ──
+  const token = localStorage.getItem('lcc_token');
+  if (token) {
+    fetch((window.API_URL || '') + '/api/properties/reorder-bulk', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ order })
+    }).then(r => {
+      if (!r.ok) console.warn('⚠️ Sauvegarde ordre DB échouée:', r.status);
+      else console.log('✅ Ordre logements sauvegardé en DB');
+    }).catch(e => console.warn('⚠️ Erreur sauvegarde ordre:', e.message));
+  }
+
   closeReorderModal();
 
   // Réappliquer l'ordre sur calendarState.properties et re-render
