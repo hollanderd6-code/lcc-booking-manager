@@ -25481,7 +25481,8 @@ cron.schedule('0 20 * * *', async () => {
           `(${new Date(tomorrowStr + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}) :\n` +
           `${listStr}\n` +
           `Accès checklist : ${taskUrl}` +
-          (pinStr ? ` (PIN : ${pinStr})` : '');
+          (pinStr ? ` (PIN : ${pinStr})` : '') +
+          `\nRépondez OK pour confirmer.`;
 
         const sent = await sendSmsGateway(
           cleaner.phone,
@@ -28906,7 +28907,8 @@ app.post('/api/channex/webhook', async (req, res) => {
               const message =
                 `Bonjour ${cleaner.name}, réservation de dernière minute !\n` +
                 `Un ménage s'ajoute pour demain : ${propName}.\n` +
-                `Accès checklist : ${taskUrl}${pinStr}`;
+                `Accès checklist : ${taskUrl}${pinStr}\n` +
+                `Répondez OK pour confirmer.`;
 
               await sendSmsGateway(
                 cleaner.phone,
