@@ -5004,6 +5004,15 @@ function generateToken(user) {
   );
 }
 
+function generateLongToken(user) {
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+  return jwt.sign(
+    { id: user.id, email: user.email, faceid: true },
+    secret,
+    { expiresIn: '90d' }
+  );
+}
+
 function publicUser(user) {
   const { passwordHash, ...safe } = user;
   return safe;
@@ -15730,13 +15739,41 @@ if (!row.email_verified) {
 // ============================================
 app.get('/api/auth/verify', authenticateToken, (req, res) => {
   try {
-    // Si le token est valide, authenticateToken a déjà vérifié et ajouté req.user
-    res.json({
-      valid: true,
-      user: req.user
-    });
+    res.json({ valid: true, user: req.user });
   } catch (err) {
     console.error('Erreur verify:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
+// 🔄 REFRESH TOKEN FACE ID — Token longue durée (90j)
+// ============================================
+app.post('/api/auth/refresh-faceid', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT id, company, first_name, last_name, email, created_at, stripe_account_id, logo_url
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    const row = result.rows[0];
+    const user = {
+      id: row.id, company: row.company,
+      firstName: row.first_name, lastName: row.last_name,
+      email: row.email, createdAt: row.created_at,
+      stripeAccountId: row.stripe_account_id, logoUrl: row.logo_url || null
+    };
+
+    const longToken = generateLongToken(user);
+    console.log(`🔑 [FACEID] Token 90j généré pour user ${userId}`);
+    res.json({ token: longToken, expiresIn: '90d' });
+  } catch (err) {
+    console.error('Erreur refresh-faceid:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
