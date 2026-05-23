@@ -285,9 +285,11 @@
           localStorage.removeItem('lcc_user');
           localStorage.removeItem('lcc_account_type');
           localStorage.removeItem('lcc_permissions');
+          localStorage.removeItem('lcc_faceid_token'); // ← évite la boucle restore
           // Effacer aussi Capacitor Preferences
           if (isNative() && window.Capacitor?.Plugins?.Preferences) {
             window.Capacitor.Plugins.Preferences.remove({ key: 'lcc_token' }).catch(() => {});
+            window.Capacitor.Plugins.Preferences.remove({ key: 'lcc_faceid_token' }).catch(() => {});
           }
         } catch {}
 
