@@ -11431,8 +11431,24 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().slice(0, 10);
     const todayStr = now.toISOString().slice(0, 10);
 
-    // Construire une map des assignations explicites (reservation_key → true) pour éviter les doublons
+    // Construire une map des assignations explicites (property_id+dates → true) pour éviter les doublons
     const explicitKeys = new Set(assignmentsResult.rows.map(a => a.reservation_key).filter(Boolean));
+
+    // Map property_id → Set de plages de dates déjà couvertes par une assignation explicite
+    // Pour dédupliquer même quand les reservation_key ont des formats différents (CHX_ vs propId_start_end)
+    const explicitPropDates = new Set();
+    for (const a of assignmentsResult.rows) {
+      if (!a.reservation_key) continue;
+      // Extraire les dates du reservation_key (format: propId_YYYY-MM-DD_YYYY-MM-DD ou CHX_xxx)
+      const parts = a.reservation_key.split('_');
+      if (parts.length >= 3) {
+        const start = parts[parts.length - 2];
+        const end   = parts[parts.length - 1];
+        if (start && end && start.match(/^\d{4}-\d{2}-\d{2}$/) && end.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          explicitPropDates.add(`${a.property_id}_${start}_${end}`);
+        }
+      }
+    }
 
     // Ajouter les résas futures des logements par défaut (sans assignation explicite)
     const defaultAssignments = [];
@@ -11455,6 +11471,7 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
           const rEnd   = r.end;
           const rKey = propId + '_' + rStart + '_' + rEnd;
           if (explicitKeys.has(rKey)) continue;
+          if (explicitPropDates.has(rKey)) continue; // dédup cross-format
           defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
         }
       } catch(e) {
