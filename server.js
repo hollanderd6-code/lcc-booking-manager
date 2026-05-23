@@ -29051,12 +29051,14 @@ app.post('/api/channex/webhook', async (req, res) => {
 
           // 1. Chercher une conversation existante
           let convId = null;
+          // Ne réutiliser une conv existante que si le channex_booking_id correspond exactement
+          // Évite de réutiliser la conv d'une résa annulée sur le même logement/date
           const existingConv = await pool.query(
             `SELECT id FROM conversations
              WHERE channex_booking_id = $1
-                OR (property_id = $2 AND DATE(reservation_start_date) = DATE($3))
+               AND channex_booking_id IS NOT NULL
              ORDER BY created_at DESC LIMIT 1`,
-            [result.channex_booking_id || null, result.property_id, result.start_date || arrivalDate]
+            [result.channex_booking_id || null]
           );
 
           if (existingConv.rows.length > 0) {
