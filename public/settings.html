@@ -3544,6 +3544,70 @@ if (typeof _orig === 'function') {
     }
   };
 }
+
+// ── Rendre la photo cliquable + supprimer le bouton Gérer ──
+(function() {
+  function patchCards() {
+    document.querySelectorAll('#propertiesGrid .property-card:not(.property-card-add):not([data-photo-patched])').forEach(function(card) {
+      card.setAttribute('data-photo-patched', '1');
+
+      // Trouver le bouton Gérer (btn-jade dans property-actions)
+      var gererBtn = card.querySelector('.property-actions .btn-jade');
+      if (!gererBtn) return;
+
+      // Récupérer l'onclick du bouton Gérer
+      var onclickAttr = gererBtn.getAttribute('onclick') || '';
+      var onclickFn = gererBtn.onclick;
+
+      // Rendre la photo/img cliquable
+      var imgWrapper = card.querySelector('.property-img, .property-img-bg, .property-photo-wrapper, .property-card-image, [class*="img"]');
+      if (!imgWrapper) imgWrapper = card.querySelector('img');
+      if (!imgWrapper) {
+        // Chercher le premier enfant visuel
+        imgWrapper = card.querySelector('div[style*="background"]') || card.firstElementChild;
+      }
+
+      if (imgWrapper) {
+        imgWrapper.style.cursor = 'pointer';
+        imgWrapper.setAttribute('title', 'Modifier ce logement');
+        imgWrapper.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (onclickFn) onclickFn.call(gererBtn);
+          else if (onclickAttr) eval(onclickAttr);
+          else gererBtn.click();
+        });
+
+        // Icône d'édition au hover
+        var editIcon = document.createElement('div');
+        editIcon.innerHTML = '<i class="fas fa-pen" style="font-size:22px;color:white;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4));"></i>';
+        editIcon.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);transition:background .2s;pointer-events:none;border-radius:inherit;';
+        imgWrapper.style.position = 'relative';
+        imgWrapper.appendChild(editIcon);
+        imgWrapper.addEventListener('mouseenter', function(){ editIcon.style.background = 'rgba(0,0,0,.32)'; });
+        imgWrapper.addEventListener('mouseleave', function(){ editIcon.style.background = 'rgba(0,0,0,0)'; });
+      }
+
+      // Supprimer le bouton Gérer
+      gererBtn.remove();
+
+      // Si property-actions est maintenant vide ou n'a plus que le bouton supprimer, garder propre
+      var actions = card.querySelector('.property-actions');
+      if (actions && actions.querySelectorAll('.btn').length === 0) {
+        actions.remove();
+      }
+    });
+  }
+
+  // Observer les nouvelles cards
+  var grid = document.getElementById('propertiesGrid');
+  if (grid) {
+    new MutationObserver(function() { setTimeout(patchCards, 50); }).observe(grid, { childList: true, subtree: true });
+  }
+  // Patch initial
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(patchCards, 500); });
+  setTimeout(patchCards, 800);
+  setTimeout(patchCards, 2000);
+})();
 </script>
 
 
