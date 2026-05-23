@@ -15452,6 +15452,55 @@ app.post('/api/properties/test-ical', async (req, res) => {
   // ============================================
 // Réorganiser l'ordre des logements (SAFE)
 // ============================================
+// GET - Récupérer l'ordre des logements sauvegardé
+app.get('/api/properties/reorder-bulk', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT id FROM properties WHERE user_id = $1 ORDER BY display_order ASC, created_at ASC`,
+      [userId]
+    );
+    const order = result.rows.map(r => String(r.id));
+    res.json({ order });
+  } catch (err) {
+    console.error('Erreur GET reorder-bulk:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT - Sauvegarder l'ordre complet des logements
+app.put('/api/properties/reorder-bulk', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { order } = req.body;
+    if (!Array.isArray(order) || !order.length) {
+      return res.status(400).json({ error: 'Ordre invalide' });
+    }
+
+    // Mettre à jour display_order pour chaque logement
+    for (let i = 0; i < order.length; i++) {
+      await pool.query(
+        `UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = $3`,
+        [i + 1, order[i], userId]
+      );
+    }
+
+    console.log(`✅ [REORDER] Ordre sauvegardé pour user ${userId}: ${order.join(', ')}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erreur PUT reorder-bulk:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.put('/api/properties/:propertyId/reorder', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount 
