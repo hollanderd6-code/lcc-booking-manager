@@ -11434,20 +11434,32 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
     // Construire une map des assignations explicites (property_id+dates → true) pour éviter les doublons
     const explicitKeys = new Set(assignmentsResult.rows.map(a => a.reservation_key).filter(Boolean));
 
-    // Map property_id → Set de plages de dates déjà couvertes par une assignation explicite
     // Pour dédupliquer même quand les reservation_key ont des formats différents (CHX_ vs propId_start_end)
+    // On récupère les vraies dates depuis la DB pour chaque assignation explicite
     const explicitPropDates = new Set();
     for (const a of assignmentsResult.rows) {
-      if (!a.reservation_key) continue;
-      // Extraire les dates du reservation_key (format: propId_YYYY-MM-DD_YYYY-MM-DD ou CHX_xxx)
+      if (!a.reservation_key || !a.property_id) continue;
+      // Format propId_YYYY-MM-DD_YYYY-MM-DD → extraire directement
       const parts = a.reservation_key.split('_');
       if (parts.length >= 3) {
         const start = parts[parts.length - 2];
         const end   = parts[parts.length - 1];
-        if (start && end && start.match(/^\d{4}-\d{2}-\d{2}$/) && end.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        if (start?.match(/^\d{4}-\d{2}-\d{2}$/) && end?.match(/^\d{4}-\d{2}-\d{2}$/)) {
           explicitPropDates.add(`${a.property_id}_${start}_${end}`);
+          continue;
         }
       }
+      // Format CHX_ → chercher les dates réelles en DB
+      try {
+        const r = await pool.query(
+          `SELECT TO_CHAR(start_date,'YYYY-MM-DD') as s, TO_CHAR(end_date,'YYYY-MM-DD') as e
+           FROM reservations WHERE reservation_key = $1 LIMIT 1`,
+          [a.reservation_key]
+        );
+        if (r.rows.length) {
+          explicitPropDates.add(`${a.property_id}_${r.rows[0].s}_${r.rows[0].e}`);
+        }
+      } catch(e) { /* ignore */ }
     }
 
     // Ajouter les résas futures des logements par défaut (sans assignation explicite)
@@ -11483,6 +11495,7 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
           if (rEnd < todayStr || rEnd > endOfNextMonth) continue;
           const rKey = propId + '_' + rStart + '_' + rEnd;
           if (explicitKeys.has(rKey)) continue;
+          if (explicitPropDates.has(rKey)) continue; // dédup cross-format
           defaultAssignments.push({ reservation_key: rKey, property_id: propId, isDefault: true });
         }
       }
