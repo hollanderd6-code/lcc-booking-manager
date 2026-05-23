@@ -309,16 +309,39 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
       document.getElementById('faceIdContainer').style.display = 'block';
       faceIdBtn.addEventListener('click', async () => {
         const ok = await authenticateWithFaceID();
-        if (ok) {
-          localStorage.setItem('lcc_token', savedToken);
-          // Resauvegarder dans Preferences pour résister au prochain kill
-          if (window.Capacitor?.Plugins?.Preferences) {
-            window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: savedToken }).catch(() => {});
-            window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: savedToken }).catch(() => {});
+        if (!ok) return;
+
+        // ── Vérifier que le token n'est pas expiré ──
+        let tokenToUse = savedToken;
+        try {
+          const verifyRes = await fetch(API_BASE + '/api/auth/verify', {
+            headers: { 'Authorization': 'Bearer ' + savedToken }
+          });
+          if (!verifyRes.ok) {
+            // Token expiré → demander à l'utilisateur de se reconnecter une fois
+            console.warn('⚠️ [FaceID] Token expiré, reconnexion requise');
+            localStorage.removeItem(FACE_ID_TOKEN_KEY);
+            localStorage.removeItem(FACE_ID_KEY);
+            if (window.Capacitor?.Plugins?.Preferences) {
+              window.Capacitor.Plugins.Preferences.remove({ key: FACE_ID_TOKEN_KEY }).catch(() => {});
+              window.Capacitor.Plugins.Preferences.remove({ key: FACE_ID_KEY }).catch(() => {});
+            }
+            showToast('Votre session a expiré. Reconnectez-vous pour réactiver Face ID.');
+            document.getElementById('faceIdContainer').style.display = 'none';
+            return;
           }
-          if (window._syncTokenToNative) window._syncTokenToNative(savedToken);
-          window.location.href = 'app.html';
+        } catch(e) {
+          // Erreur réseau → utiliser le token quand même (mode offline)
+          console.warn('⚠️ [FaceID] Vérification impossible (hors ligne ?), token utilisé tel quel');
         }
+
+        localStorage.setItem('lcc_token', tokenToUse);
+        if (window.Capacitor?.Plugins?.Preferences) {
+          window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: tokenToUse }).catch(() => {});
+          window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: tokenToUse }).catch(() => {});
+        }
+        if (window._syncTokenToNative) window._syncTokenToNative(tokenToUse);
+        window.location.href = 'app.html';
       });
     }
   }
@@ -327,17 +350,37 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   window._onLoginSuccess = async function(token) {
     if (!IS_NATIVE) return;
     const alreadyEnabled = localStorage.getItem(FACE_ID_KEY) === 'true';
+
+    // ── Toujours rafraîchir le faceid_token avec un token 90j ──
+    try {
+      const refreshRes = await fetch(API_BASE + '/api/auth/refresh-faceid', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        if (refreshData.token) {
+          localStorage.setItem(FACE_ID_TOKEN_KEY, refreshData.token);
+          if (window.Capacitor?.Plugins?.Preferences) {
+            window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: refreshData.token }).catch(() => {});
+          }
+          console.log('✅ [FaceID] Token 90j sauvegardé');
+        }
+      }
+    } catch(e) {
+      // Fallback : sauvegarder le token normal si refresh échoue
+      localStorage.setItem(FACE_ID_TOKEN_KEY, token);
+      console.warn('⚠️ [FaceID] Refresh 90j échoué, token 7j utilisé');
+    }
+
     if (alreadyEnabled) return;
     const available = await isBiometricAvailable();
     if (!available) return;
     const confirm = window.confirm('Activer Face ID pour vous connecter plus rapidement ?');
     if (confirm) {
       localStorage.setItem(FACE_ID_KEY, 'true');
-      localStorage.setItem(FACE_ID_TOKEN_KEY, token);
-      // Sauvegarder aussi dans Preferences pour résister à la purge iOS
       if (IS_NATIVE && window.Capacitor?.Plugins?.Preferences) {
         window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_KEY, value: 'true' }).catch(() => {});
-        window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: token }).catch(() => {});
         window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: token }).catch(() => {});
       }
       console.log('✅ Face ID activé');
