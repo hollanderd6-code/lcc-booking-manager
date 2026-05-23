@@ -31332,6 +31332,12 @@ app.post('/api/guest/book', async (req, res) => {
       });
     }
 
+    // Montant réellement payé (depuis Stripe si disponible, sinon calcul)
+    const stripeAmountPaid = paymentIntent?.amount_received
+      ? paymentIntent.amount_received / 100
+      : (paymentIntent?.amount ? paymentIntent.amount / 100 : null);
+    const realAmount = stripeAmountPaid || (totalTTC / 100);
+
     // Créer la réservation dans BH
     const uid = `GUEST_${Date.now()}`;
     const crypto = require('crypto');
@@ -31347,7 +31353,7 @@ app.post('/api/guest/book', async (req, res) => {
       uid, property_id, prop.owner_user_id,
       checkin, checkout,
       guest_name, guest_email, guest_phone || null,
-      (stripeAmountPaid || totalTTC), 'Boostinghost Guest', 'guest_app', 'confirmed',
+      realAmount, 'Boostinghost Guest', 'guest_app', 'confirmed',
       guests || 1, 'EUR'
     ]);
 
@@ -31474,7 +31480,7 @@ app.post('/api/guest/book', async (req, res) => {
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="font-size:16px;font-weight:800;color:#1F1346;font-family:Arial,sans-serif;">Total payé</td>
-                        <td align="right" style="font-size:20px;font-weight:900;color:#7c3aed;font-family:Arial,sans-serif;">${totalTTC / 100}€</td>
+                        <td align="right" style="font-size:20px;font-weight:900;color:#7c3aed;font-family:Arial,sans-serif;">${realAmount}€</td>
                       </tr>
                     </table>
                   </td>
