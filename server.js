@@ -25530,6 +25530,7 @@ cron.schedule('0 20 * * *', async () => {
         })();
 
         const message =
+          `Boostinghost récap\n` +
           `Bonjour ${cleaner.name},\n` +
           `Vous avez ${count} ménage${count > 1 ? 's' : ''} demain ` +
           `(${new Date(tomorrowStr + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}) :\n` +
@@ -28959,6 +28960,7 @@ app.post('/api/channex/webhook', async (req, res) => {
               const pinStr = cleaner.pin_code ? ` (PIN : ${cleaner.pin_code})` : '';
 
               const message =
+                `Boostinghost récap\n` +
                 `Bonjour ${cleaner.name}, réservation de dernière minute !\n` +
                 `Un ménage s'ajoute pour demain : ${propName}.\n` +
                 `Accès checklist : ${taskUrl}${pinStr}\n` +
