@@ -13735,8 +13735,12 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     `;
 
     document.body.appendChild(panel);
-    bhPromoTab('link');
-    bhLoadProperties();
+    // Charger les logements d'abord, puis afficher l'onglet lien
+    bhLoadProperties().then(() => {
+      bhPromoTab('link');
+    }).catch(() => {
+      bhPromoTab('link');
+    });
   };
 
   window.closePromoPanel = function() {
@@ -13762,7 +13766,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   // ── Charger les logements (pour le générateur de lien) ───────
   var _bhProperties = [];
   function bhLoadProperties() {
-    fetch(BH_API + '/api/properties', {
+    return fetch(BH_API + '/api/properties', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     }).then(r => r.json()).then(data => {
       _bhProperties = Array.isArray(data) ? data : (data.properties || []);
