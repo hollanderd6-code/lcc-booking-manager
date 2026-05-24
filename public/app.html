@@ -7691,7 +7691,10 @@ try {
   }
   window.switchBlockTab=switchBlockTab;
 
+  window._blockSaveInProgress = false;
   window.handleBlockModalSave = async function() {
+    if (window._blockSaveInProgress) return;
+    window._blockSaveInProgress = true;
     var API2=(typeof API_URL!=='undefined')?API_URL:'https://lcc-booking-manager.onrender.com';
     var token=localStorage.getItem('lcc_token');
     var activeTab = window._activeBlockTab || 'block';
@@ -7798,7 +7801,7 @@ try {
         btn.disabled=false;return;
       }
     }catch(err){alert('Erreur : '+err.message);}
-    finally{btn.disabled=false;}
+    finally{btn.disabled=false; window._blockSaveInProgress=false;}
   };
   
   // Fermeture du modal
