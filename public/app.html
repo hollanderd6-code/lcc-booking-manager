@@ -13722,11 +13722,11 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
       <!-- Onglets -->
       <div id="bhPromoTabs" style="display:flex;gap:0;background:white;border-bottom:1px solid #E5E7EB;flex-shrink:0;">
-        <button onclick="bhPromoTab('codes')" id="bhTabCodes" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;">
-          <i class="fas fa-ticket-alt" style="margin-right:5px;"></i>Codes promo
-        </button>
-        <button onclick="bhPromoTab('link')" id="bhTabLink" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
+        <button onclick="bhPromoTab('link')" id="bhTabLink" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;">
           <i class="fas fa-link" style="margin-right:5px;"></i>Lien personnalisé
+        </button>
+        <button onclick="bhPromoTab('codes')" id="bhTabCodes" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
+          <i class="fas fa-ticket-alt" style="margin-right:5px;"></i>Codes promo
         </button>
       </div>
 
@@ -13735,7 +13735,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     `;
 
     document.body.appendChild(panel);
-    bhPromoTab('codes');
+    bhPromoTab('link');
     bhLoadProperties();
   };
 
