@@ -14011,6 +14011,20 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
           </div>
 
           <div style="border-top:1.5px dashed #E5E7EB;padding-top:12px;margin-top:2px;">
+            <!-- Email client -->
+            <div style="margin-bottom:10px;">
+              <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Email client (optionnel)</label>
+              <input type="email" id="bhLinkEmail" placeholder="client@email.com" oninput="bhUpdateLink()"
+                style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
+                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+            </div>
+            <!-- Téléphone client -->
+            <div style="margin-bottom:12px;">
+              <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Téléphone client (optionnel)</label>
+              <input type="tel" id="bhLinkPhone" placeholder="+33 6 00 00 00 00" oninput="bhUpdateLink()"
+                style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
+                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+            </div>
             <label style="font-size:11px;font-weight:600;color:#1A7A5E;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">
               💶 Prix fixe total (optionnel)
             </label>
@@ -14036,22 +14050,6 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
         <div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#713F12;display:flex;align-items:center;gap:8px;">
           <i class="fas fa-clock" style="flex-shrink:0;"></i>
           <span>La création du lien bloque automatiquement les dates pendant <strong>4 heures</strong> pour éviter les réservations simultanées.</span>
-        </div>
-
-        <!-- Email client -->
-        <div style="margin-bottom:8px;">
-          <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Email client (optionnel)</div>
-          <input type="email" id="bhLinkEmail" placeholder="client@email.com" oninput="bhUpdateLink()"
-            style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
-            onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
-        </div>
-
-        <!-- Téléphone client -->
-        <div style="margin-bottom:12px;">
-          <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Téléphone client (optionnel)</div>
-          <input type="tel" id="bhLinkPhone" placeholder="+33 6 00 00 00 00" oninput="bhUpdateLink()"
-            style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
-            onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
         </div>
 
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
