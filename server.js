@@ -31405,7 +31405,8 @@ app.post('/api/guest/book', async (req, res) => {
     const {
       property_id, checkin, checkout,
       guests, guest_name, guest_email, guest_phone,
-      payment_method_id  // token Stripe
+      payment_method_id,  // token Stripe
+      fixed_price         // prix fixe négocié (lien personnalisé)
     } = req.body;
 
     if (!property_id || !checkin || !checkout || !guest_name || !guest_email) {
@@ -31440,17 +31441,23 @@ app.post('/api/guest/book', async (req, res) => {
     const start = new Date(checkin);
     const end = new Date(checkout);
     const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
-    
+
+    // Prix fixe négocié (lien personnalisé) — remplace le calcul standard
+    const isFixedPrice = fixed_price && parseFloat(fixed_price) > 0;
     let totalBase = 0;
-    for (let i = 0; i < nights; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const dow = d.getDay();
-      const isPremium = dow === 5 || dow === 6;
-      const nightPrice = isPremium && prop.weekend_price
-        ? parseFloat(prop.weekend_price)
-        : parseFloat(prop.base_price || 0);
-      totalBase += nightPrice;
+    if (isFixedPrice) {
+      totalBase = parseFloat(fixed_price);
+    } else {
+      for (let i = 0; i < nights; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dow = d.getDay();
+        const isPremium = dow === 5 || dow === 6;
+        const nightPrice = isPremium && prop.weekend_price
+          ? parseFloat(prop.weekend_price)
+          : parseFloat(prop.base_price || 0);
+        totalBase += nightPrice;
+      }
     }
 
     const commission = Math.round(totalBase * 0.03 * 100) / 100;
