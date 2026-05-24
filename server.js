@@ -33461,7 +33461,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     const totalTTC = Math.round((discountedBase + cleaningFee + touristTax + commission) * 100); // centimes
 
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
-    const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&session_id={CHECKOUT_SESSION_ID}&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}`;
+    const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&session_id={CHECKOUT_SESSION_ID}&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}&fixed_price=${encodeURIComponent(fixed_price_override || '')}`;
     const cancelUrl = `${appUrl}/guest-app/public/index.html?payment=cancel`;
 
     // Recuperer le compte Stripe Connect du proprietaire du logement
@@ -33573,17 +33573,23 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
     const start = new Date(checkin);
     const end = new Date(checkout);
     const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
+    // ✅ Si fixed_price_override → utiliser directement comme base (prix négocié)
+    const isFixedPrice = fixed_price_override && parseFloat(fixed_price_override) > 0;
     let totalBase = 0;
-    for (let i = 0; i < nights; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const dow = d.getDay();
-      totalBase += (dow === 5 || dow === 6) && prop.weekend_price
-        ? parseFloat(prop.weekend_price)
-        : parseFloat(prop.base_price || 0);
+    if (isFixedPrice) {
+      totalBase = parseFloat(fixed_price_override);
+    } else {
+      for (let i = 0; i < nights; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const dow = d.getDay();
+        totalBase += (dow === 5 || dow === 6) && prop.weekend_price
+          ? parseFloat(prop.weekend_price)
+          : parseFloat(prop.base_price || 0);
+      }
     }
     let discount = 0;
-    if (promo_code) {
+    if (promo_code && !isFixedPrice) {
       const promoResult = await pool.query(`
         SELECT * FROM guest_promo_codes WHERE UPPER(code) = UPPER($1) AND active = TRUE
       `, [promo_code]);
@@ -33592,13 +33598,10 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
         discount = promo.discount_type === 'percent'
           ? Math.round(totalBase * parseFloat(promo.discount_value) / 100 * 100) / 100
           : Math.min(parseFloat(promo.discount_value), totalBase);
-        // Incrémenter uses_count
         await pool.query('UPDATE guest_promo_codes SET uses_count = uses_count + 1 WHERE UPPER(code) = UPPER($1)', [promo_code]);
       }
     }
     const discountedBase = Math.max(0, totalBase - discount);
-    // ✅ Fix : si prix fixe override, ménage et taxes sont inclus — ne pas les rajouter
-    const isFixedPrice = fixed_price_override && parseFloat(fixed_price_override) > 0;
     const cleaningFee = (!isFixedPrice && prop.cleaning_fee != null) ? parseFloat(prop.cleaning_fee) : 0;
     const nbGuests = parseInt(guests) || 1;
     const touristTax = (!isFixedPrice && prop.tourist_tax_per_night != null)
