@@ -31890,10 +31890,14 @@ app.get('/api/guest/my-bookings', async (req, res) => {
       SELECT r.uid, r.start_date, r.end_date, r.amount_total,
              r.status, r.guest_name, r.created_at,
              p.name as property_name, p.photo_url, p.address, p.city,
-             p.arrival_time, p.departure_time
+             p.arrival_time, p.departure_time, p.welcome_book_url,
+             (SELECT c.id FROM conversations c
+              WHERE LOWER(c.guest_email) = LOWER(r.guest_email)
+              AND c.property_id = r.property_id
+              ORDER BY c.created_at DESC LIMIT 1) as conversation_id
       FROM reservations r
       JOIN properties p ON p.id = r.property_id
-      WHERE r.guest_email = $1
+      WHERE LOWER(r.guest_email) = LOWER($1)
         AND r.source = 'guest_app'
       ORDER BY r.start_date DESC
     `, [email]);
@@ -31906,13 +31910,15 @@ app.get('/api/guest/my-bookings', async (req, res) => {
       status: r.status,
       guestName: r.guest_name,
       createdAt: r.created_at,
+      conversationId: r.conversation_id || null,
       property: {
         name: r.property_name,
         photoUrl: r.photo_url,
         address: r.address,
         city: r.city,
         arrivalTime: r.arrival_time,
-        departureTime: r.departure_time
+        departureTime: r.departure_time,
+        welcomeBookUrl: r.welcome_book_url || null
       }
     })));
 
