@@ -33895,6 +33895,24 @@ app.post('/api/guest/cancel-reservation', authenticateAny, async (req, res) => {
       }
     } catch(e) { console.error('⚠️ [GUEST] Channex annulation:', e.message); }
 
+    // ✅ Nettoyer reservationsStore en mémoire → le calendrier se rafraîchit immédiatement
+    try {
+      const pid = resa.property_id;
+      if (reservationsStore.properties && reservationsStore.properties[pid]) {
+        const before = reservationsStore.properties[pid].length;
+        reservationsStore.properties[pid] = reservationsStore.properties[pid].filter(
+          r => r.uid !== uid && String(r.id) !== String(uid)
+        );
+        const after = reservationsStore.properties[pid].length;
+        if (before > after) console.log(`✅ [GUEST CANCEL] Supprimé du store (${before} → ${after})`);
+      }
+      // Émettre via Socket.IO pour rafraîchissement immédiat du calendrier front
+      if (io) {
+        io.to(`user_${resa.owner_user_id}`).emit('reservation_cancelled', { uid, propertyId: pid });
+        io.to(`user_${resa.owner_user_id}`).emit('reservations:updated', { propertyId: pid });
+      }
+    } catch(storeErr) { console.warn('⚠️ [GUEST CANCEL] Store update:', storeErr.message); }
+
     res.json({ success: true });
   } catch(e) {
     console.error('❌ [GUEST] cancel-reservation:', e.message);
