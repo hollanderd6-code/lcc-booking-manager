@@ -1009,6 +1009,18 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .booking-block.abritel { background: linear-gradient(135deg, #0096D6, #0077B3) !important; }
 .booking-block.gites   { background: linear-gradient(135deg, #2E7D32, #1B5E20) !important; }
 .booking-block.bhguest { background: linear-gradient(135deg, #7C3AED, #5B21B6) !important; }
+.booking-block.bhguest-hold {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(124,58,237,0.15),
+    rgba(124,58,237,0.15) 4px,
+    rgba(124,58,237,0.35) 4px,
+    rgba(124,58,237,0.35) 8px
+  ) !important;
+  border: 2px dashed #7C3AED !important;
+  color: #5B21B6 !important;
+  opacity: 0.85;
+}
 html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-blocked {
   background: repeating-linear-gradient(
     45deg,
@@ -6256,6 +6268,7 @@ try {
     bhguest:           { bg:'#7C3AED', label:'BHGuest',       cls:'bhguest'  },
     'boostinghost guest': { bg:'#7C3AED', label:'BHGuest',    cls:'bhguest'  },
     boostinghost_guest:{ bg:'#7C3AED', label:'BHGuest',       cls:'bhguest'  },
+    bhguest_hold:      { bg:'rgba(124,58,237,0.3)', label:'Pré-réservation', cls:'bhguest-hold' },
   };
 
   function pltInfo(r) {
@@ -8441,6 +8454,7 @@ console.log('👤 DEBUG GUEST:', {
       if (v.includes('vrbo') || v.includes('homeaway')) return 'vrbo';
       if (v.includes('abritel')) return 'abritel';
       if (v === 'guest_app' || v.includes('bhguest') || v.includes('boostinghost_guest') || v.includes('boostinghost guest')) return 'bhguest';
+      if (v === 'bhguest_hold' || v === 'hold') return 'bhguest-hold';
       return 'direct';
     })(platformRaw, otaName);
 
@@ -14008,6 +14022,20 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             </div>
             <div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Prix total du séjour affiché au voyageur. Les 3% de frais BHGuest s'appliqueront en plus.</div>
           </div>
+
+          <!-- Email client -->
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Email client (optionnel)</div>
+            <input type="email" id="bhLinkEmail" placeholder="client@email.com" onchange="bhUpdateLink()"
+              style="width:100%;padding:10px 12px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+
+          <!-- Téléphone client -->
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Téléphone client (optionnel)</div>
+            <input type="tel" id="bhLinkPhone" placeholder="+33 6 00 00 00 00" onchange="bhUpdateLink()"
+              style="width:100%;padding:10px 12px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
         </div>
       </div>
 
@@ -14017,9 +14045,9 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
           <i class="fas fa-link" style="margin-right:5px;"></i>Lien généré
         </div>
         <div id="bhLinkText" style="font-size:11px;color:#374151;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;word-break:break-all;line-height:1.5;margin-bottom:12px;font-family:monospace;"></div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button onclick="bhCopyLink()" id="bhCopyBtn"
-            style="flex:1;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+            style="flex:1;min-width:120px;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
             <i class="fas fa-copy"></i> Copier le lien
           </button>
           <button onclick="bhShareLink()" id="bhShareBtn"
@@ -14027,6 +14055,19 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             <i class="fas fa-share-alt"></i> Partager
           </button>
         </div>
+        <!-- Boutons envoi + blocage -->
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+          <button onclick="bhSendEmail()" id="bhSendEmailBtn" style="display:none;flex:1;min-width:120px;padding:11px;background:#3B82F6;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;align-items:center;justify-content:center;gap:7px;">
+            <i class="fas fa-envelope"></i> Envoyer par email
+          </button>
+          <button onclick="bhSendSMS()" id="bhSendSMSBtn" style="display:none;flex:1;min-width:120px;padding:11px;background:#8B5CF6;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;align-items:center;justify-content:center;gap:7px;">
+            <i class="fas fa-sms"></i> Envoyer par SMS
+          </button>
+        </div>
+        <button onclick="bhHoldDates()" id="bhHoldBtn" style="display:none;width:100%;margin-top:8px;padding:11px;background:#F59E0B;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;align-items:center;justify-content:center;gap:7px;">
+          <i class="fas fa-lock"></i> Bloquer les dates 4h sur Channex
+        </button>
+        <div id="bhHoldStatus" style="margin-top:8px;font-size:12px;text-align:center;display:none;"></div>
         <div id="bhLinkSummary" style="margin-top:10px;font-size:12px;color:#6B7280;text-align:center;line-height:1.5;"></div>
       </div>
     `;
@@ -14039,6 +14080,8 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     var promo      = (document.getElementById('bhLinkPromo')?.value || '').trim();
     var guests     = document.getElementById('bhLinkGuests')?.value || 2;
     var fixedPrice = parseFloat(document.getElementById('bhLinkFixedPrice')?.value) || null;
+    var email      = (document.getElementById('bhLinkEmail')?.value || '').trim();
+    var phone      = (document.getElementById('bhLinkPhone')?.value || '').trim();
 
     var preview = document.getElementById('bhLinkPreview');
     if (!propId) { if(preview) preview.style.display='none'; return; }
@@ -14074,6 +14117,76 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     }
     if (promo) lines.push('🏷️ Code promo : ' + promo);
     document.getElementById('bhLinkSummary').innerHTML = lines.join('<br>');
+
+    // Afficher/masquer les boutons selon ce qui est rempli
+    var emailBtn = document.getElementById('bhSendEmailBtn');
+    var smsBtn   = document.getElementById('bhSendSMSBtn');
+    var holdBtn  = document.getElementById('bhHoldBtn');
+    if (emailBtn) { emailBtn.style.display = email ? 'flex' : 'none'; }
+    if (smsBtn)   { smsBtn.style.display   = phone ? 'flex' : 'none'; }
+    if (holdBtn)  { holdBtn.style.display  = (checkin && checkout && propId) ? 'flex' : 'none'; }
+  };
+
+
+  window.bhHoldDates = async function() {
+    var propId     = document.getElementById('bhLinkProp')?.value;
+    var checkin    = document.getElementById('bhLinkCheckin')?.value;
+    var checkout   = document.getElementById('bhLinkCheckout')?.value;
+    var fixedPrice = parseFloat(document.getElementById('bhLinkFixedPrice')?.value) || null;
+    var email      = (document.getElementById('bhLinkEmail')?.value || '').trim();
+    var phone      = (document.getElementById('bhLinkPhone')?.value || '').trim();
+    if (!propId || !checkin || !checkout) return;
+
+    var btn = document.getElementById('bhHoldBtn');
+    var status = document.getElementById('bhHoldStatus');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Blocage en cours...';
+    status.style.display = 'none';
+
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch((window.API_URL || '') + '/api/guest/hold', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ property_id: propId, checkin, checkout, fixed_price: fixedPrice, guest_email: email || null, guest_phone: phone || null })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        var exp = new Date(data.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        btn.innerHTML = '<i class="fas fa-lock"></i> Dates bloquées sur Channex';
+        btn.style.background = '#059669';
+        status.style.display = 'block';
+        status.style.color = '#059669';
+        status.innerHTML = '✅ Dates réservées jusqu\'à ' + exp + (email || phone ? ' · Lien envoyé au client' : '');
+      } else {
+        btn.innerHTML = '<i class="fas fa-lock"></i> Bloquer les dates 4h sur Channex';
+        btn.style.background = '#F59E0B';
+        btn.disabled = false;
+        status.style.display = 'block';
+        status.style.color = '#DC2626';
+        status.innerHTML = '❌ ' + (data.error || 'Erreur lors du blocage');
+      }
+    } catch(e) {
+      btn.innerHTML = '<i class="fas fa-lock"></i> Bloquer les dates 4h sur Channex';
+      btn.disabled = false;
+      status.style.display = 'block';
+      status.style.color = '#DC2626';
+      status.innerHTML = '❌ Erreur réseau';
+    }
+  };
+
+  window.bhSendEmail = async function() {
+    var email = (document.getElementById('bhLinkEmail')?.value || '').trim();
+    if (!email) return;
+    // Déclenche le hold (qui envoie l'email automatiquement)
+    await window.bhHoldDates();
+  };
+
+  window.bhSendSMS = async function() {
+    var phone = (document.getElementById('bhLinkPhone')?.value || '').trim();
+    if (!phone) return;
+    // Déclenche le hold (qui envoie le SMS automatiquement)
+    await window.bhHoldDates();
   };
 
   window.bhCopyLink = function() {
