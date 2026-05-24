@@ -271,6 +271,8 @@ async function verifyMagicToken(token) {
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   initStripe(); // Lance en parallèle — polling interne jusqu'à 5s
+  // Initialiser le badge messages à 0 dès le démarrage
+  updateGuestMsgBadge(0);
   // Récupérer session existante
   state.session = getSession();
   updateNavAccount();
