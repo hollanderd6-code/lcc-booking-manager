@@ -573,8 +573,9 @@ async function loadGuestConversations() {
 function updateGuestMsgBadge(count) {
   const badge = document.getElementById('navMsgsBadge');
   if (!badge) return;
-  if (count > 0) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = 'block'; }
-  else { badge.style.display = 'none'; }
+  badge.textContent = count > 9 ? '9+' : count;
+  badge.style.display = 'block';
+  badge.style.background = count > 0 ? '#ef4444' : '#94a3b8';
 }
 
 async function openGuestChat(convId, propName, checkin, checkout) {
