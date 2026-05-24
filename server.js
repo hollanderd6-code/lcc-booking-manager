@@ -2114,8 +2114,30 @@ ON invoice_download_tokens(token);
     } catch (e) {
       console.log('ℹ️ sms_recap_enabled cleaners déjà existante:', e.message);
     }
-
-    // Migration : permissions paiements pour sous-comptes
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS bhguest_holds (
+          id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          property_id TEXT NOT NULL,
+          checkin DATE NOT NULL,
+          checkout DATE NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          link_token TEXT UNIQUE NOT NULL,
+          guest_email TEXT,
+          guest_phone TEXT,
+          fixed_price NUMERIC(10,2),
+          status TEXT NOT NULL DEFAULT 'active',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_bhguest_holds_token ON bhguest_holds(link_token);
+        CREATE INDEX IF NOT EXISTS idx_bhguest_holds_property ON bhguest_holds(property_id, status);
+        CREATE INDEX IF NOT EXISTS idx_bhguest_holds_expires ON bhguest_holds(expires_at, status);
+      `);
+      console.log('✅ Table bhguest_holds OK');
+    } catch(e) {
+      console.log('ℹ️ bhguest_holds déjà existante:', e.message);
+    }
     try {
       await pool.query(`
         ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_payments BOOLEAN DEFAULT FALSE;
@@ -8222,6 +8244,37 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     console.log(`👤 Réservations avec infos guest: ${withGuestInfo.length}`);
     if (withGuestInfo.length > 0) {
       console.log(`   Exemple: ${withGuestInfo[0].guest_display_name} (${withGuestInfo[0].guest_phone || 'pas de tel'})`);
+    }
+
+    // ── Ajouter les holds BHGuest actifs comme pré-réservations ──
+    try {
+      const holdsRes = await pool.query(
+        `SELECT h.*, p.name as property_name
+         FROM bhguest_holds h
+         LEFT JOIN properties p ON p.id = h.property_id
+         WHERE h.user_id = $1 AND h.status = 'active' AND h.expires_at > NOW()`,
+        [userId]
+      );
+      for (const hold of holdsRes.rows) {
+        finalReservations.push({
+          uid: `hold_${hold.id}`,
+          propertyId: hold.property_id,
+          propertyName: hold.property_name || hold.property_id,
+          guestName: hold.guest_email ? `En attente (${hold.guest_email})` : 'Pré-réservation',
+          startDate: hold.checkin,
+          endDate: hold.checkout,
+          start: hold.checkin,
+          end: hold.checkout,
+          status: 'hold',
+          type: 'hold',
+          source: 'bhguest_hold',
+          platform: 'bhguest_hold',
+          expires_at: hold.expires_at,
+          holdToken: hold.link_token
+        });
+      }
+    } catch(holdErr) {
+      console.warn('⚠️ Holds non inclus:', holdErr.message);
     }
 
     res.json({
@@ -23121,6 +23174,46 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
 // ============================================================
 // 📱 SMS GATEWAY — Envoi SMS via Android (api.sms-gate.app)
 // ============================================================
+// Helper : libérer le blocage Channex d'un hold
+async function releaseHoldChannex(pool, hold) {
+  try {
+    const propRes = await pool.query(
+      `SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1`,
+      [hold.property_id]
+    );
+    const prop = propRes.rows[0];
+    if (!prop?.channex_enabled || !prop?.channex_property_id) return;
+    const { pushAvailability } = require('./channex');
+    // Recalculer les dates bloquées sans ce hold
+    const allResas = await pool.query(
+      `SELECT start_date::date as s, end_date::date as e FROM reservations
+       WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+      [hold.property_id]
+    );
+    const allHolds = await pool.query(
+      `SELECT checkin as s, checkout as e FROM bhguest_holds
+       WHERE property_id = $1 AND status = 'active' AND expires_at > NOW() AND link_token != $2`,
+      [hold.property_id, hold.link_token]
+    );
+    const allBlocked = [];
+    [...allResas.rows, ...allHolds.rows].forEach(r => {
+      const s = new Date(r.s), e = new Date(r.e);
+      for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+        allBlocked.push(d.toISOString().split('T')[0]);
+      }
+    });
+    await pushAvailability(pool, {
+      property_id: hold.property_id,
+      channex_property_id: prop.channex_property_id,
+      channex_room_type_id: prop.channex_room_type_id,
+      dates_blocked: [...new Set(allBlocked)]
+    });
+    console.log(`🔓 [HOLD] Channex libéré pour ${hold.property_id} ${hold.checkin}→${hold.checkout}`);
+  } catch(e) {
+    console.warn('⚠️ [HOLD] Erreur libération Channex:', e.message);
+  }
+}
+
 async function sendSmsGateway(phoneNumber, message, userId = null, _logData = null, skipFooter = false) {
   try {
     // ── Vérification plan : SMS uniquement pour Pro (inclus) ou option activée ──
@@ -25611,6 +25704,28 @@ cron.schedule('0 20 * * *', async () => {
 }, { timezone: 'Europe/Paris' });
 
 console.log('CRON SMS récap ménage configuré (20h quotidien)');
+
+// ============================================
+// CRON : Nettoyage des holds BHGuest expirés (toutes les 15 min)
+// ============================================
+cron.schedule('*/15 * * * *', async () => {
+  try {
+    const expired = await pool.query(
+      `UPDATE bhguest_holds SET status = 'expired'
+       WHERE status = 'active' AND expires_at <= NOW()
+       RETURNING *`
+    );
+    if (expired.rows.length === 0) return;
+    console.log(`🔓 [HOLD CRON] ${expired.rows.length} hold(s) expiré(s), libération Channex...`);
+    for (const hold of expired.rows) {
+      await releaseHoldChannex(pool, hold);
+    }
+  } catch(e) {
+    console.error('❌ [HOLD CRON] Erreur:', e.message);
+  }
+});
+console.log('CRON nettoyage holds BHGuest configuré (toutes les 15 min)');
+
 
 
 // ============================================
@@ -31359,7 +31474,20 @@ app.post('/api/guest/book', async (req, res) => {
 
     const reservation = insertResult.rows[0];
 
-    // Bloquer les dates dans Channex si le logement est connecté
+    // Libérer le hold associé à ces dates si existant
+    try {
+      const holdRes = await pool.query(
+        `UPDATE bhguest_holds SET status = 'converted'
+         WHERE property_id = $1 AND checkin = $2 AND checkout = $3
+           AND status = 'active' AND user_id = $4 RETURNING *`,
+        [property_id, checkin, checkout, prop.owner_user_id]
+      );
+      if (holdRes.rows.length > 0) {
+        console.log(`✅ [HOLD] Converti en réservation pour ${property_id} ${checkin}→${checkout}`);
+      }
+    } catch(holdErr) {
+      console.warn('⚠️ [HOLD] Erreur conversion hold:', holdErr.message);
+    }
     if (prop.channex_enabled && prop.channex_property_id) {
       try {
         const { pushAvailability } = require('./channex');
@@ -32834,6 +32962,181 @@ pool.query(`
 `).catch(e => console.error('❌ guest_promo_codes table:', e.message));
 
 // ── Vérifier un code promo ───────────────────────────────────
+
+// ============================================
+// 🔒 BHGUEST HOLDS — Pré-réservation 4h
+// ============================================
+
+// POST — Créer un hold (bloquer les dates 4h)
+app.post('/api/guest/hold', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { property_id, checkin, checkout, guest_email, guest_phone, fixed_price } = req.body;
+    if (!property_id || !checkin || !checkout) {
+      return res.status(400).json({ error: 'property_id, checkin et checkout requis' });
+    }
+
+    // Vérifier qu'aucun hold actif n'existe déjà sur ces dates
+    const conflictHold = await pool.query(
+      `SELECT id FROM bhguest_holds
+       WHERE property_id = $1 AND status = 'active' AND expires_at > NOW()
+         AND checkin < $3 AND checkout > $2`,
+      [property_id, checkin, checkout]
+    );
+    if (conflictHold.rows.length > 0) {
+      return res.status(409).json({ error: 'Ces dates sont déjà en attente de paiement' });
+    }
+
+    // Générer un token unique
+    const crypto = require('crypto');
+    const linkToken = crypto.randomBytes(16).toString('hex');
+    const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000); // +4h
+
+    // Insérer le hold en DB
+    await pool.query(
+      `INSERT INTO bhguest_holds
+        (user_id, property_id, checkin, checkout, expires_at, link_token, guest_email, guest_phone, fixed_price)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [userId, property_id, checkin, checkout, expiresAt, linkToken,
+       guest_email || null, guest_phone || null, fixed_price || null]
+    );
+
+    // Bloquer sur Channex si connecté
+    try {
+      const propRes = await pool.query(
+        `SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1`,
+        [property_id]
+      );
+      const prop = propRes.rows[0];
+      if (prop?.channex_enabled && prop?.channex_property_id) {
+        const { pushAvailability } = require('./channex');
+        // Récupérer toutes les dates bloquées (réservations + holds actifs)
+        const allResas = await pool.query(
+          `SELECT start_date::date as s, end_date::date as e FROM reservations
+           WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+          [property_id]
+        );
+        const allHolds = await pool.query(
+          `SELECT checkin as s, checkout as e FROM bhguest_holds
+           WHERE property_id = $1 AND status = 'active' AND expires_at > NOW()`,
+          [property_id]
+        );
+        const allBlocked = [];
+        [...allResas.rows, ...allHolds.rows].forEach(r => {
+          const s = new Date(r.s), e = new Date(r.e);
+          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+            allBlocked.push(d.toISOString().split('T')[0]);
+          }
+        });
+        await pushAvailability(pool, {
+          property_id,
+          channex_property_id: prop.channex_property_id,
+          channex_room_type_id: prop.channex_room_type_id,
+          dates_blocked: [...new Set(allBlocked)]
+        });
+        console.log(`🔒 [HOLD] Channex bloqué pour ${property_id} ${checkin}→${checkout} (4h)`);
+      }
+    } catch (channexErr) {
+      console.warn('⚠️ [HOLD] Channex non bloqué (non bloquant):', channexErr.message);
+    }
+
+    // Envoyer le lien par email si fourni
+    if (guest_email) {
+      try {
+        const propNameRes = await pool.query('SELECT name FROM properties WHERE id = $1', [property_id]);
+        const propName = propNameRes.rows[0]?.name || property_id;
+        const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+        const params = new URLSearchParams({ property: property_id, checkin, checkout });
+        if (fixed_price) params.set('fixed_price', fixed_price);
+        if (guest_phone) params.set('guest_phone', guest_phone);
+        if (guest_email) params.set('guest_email', guest_email);
+        params.set('hold_token', linkToken);
+        const bookingUrl = `${appUrl}/guest-app/public/index.html?${params.toString()}`;
+        const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        await sendEmailViaBrevo({
+          to: guest_email,
+          subject: `🏠 Votre lien de réservation — ${propName}`,
+          text: `Bonjour,\n\nVoici votre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}.\n\nLien : ${bookingUrl}\n\nCe lien et les dates sont réservés pour vous pendant 4 heures.`,
+          html: `<p>Bonjour,</p><p>Voici votre lien de réservation pour <strong>${propName}</strong> du <strong>${fmtDate(checkin)}</strong> au <strong>${fmtDate(checkout)}</strong>.</p>${fixed_price ? `<p>Prix total : <strong>${fixed_price}€</strong> + 3% frais BHGuest</p>` : ''}<p><a href="${bookingUrl}" style="display:inline-block;background:#1A7A5E;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Réserver maintenant</a></p><p style="color:#6B7280;font-size:12px;">Ce lien expire dans 4 heures.</p>`
+        });
+        console.log(`📧 [HOLD] Email envoyé à ${guest_email}`);
+      } catch(emailErr) {
+        console.warn('⚠️ [HOLD] Email non envoyé:', emailErr.message);
+      }
+    }
+
+    // Envoyer le lien par SMS si fourni
+    if (guest_phone) {
+      try {
+        const propNameRes = await pool.query('SELECT name FROM properties WHERE id = $1', [property_id]);
+        const propName = propNameRes.rows[0]?.name || property_id;
+        const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+        const params = new URLSearchParams({ property: property_id, checkin, checkout });
+        if (fixed_price) params.set('fixed_price', fixed_price);
+        if (guest_email) params.set('guest_email', guest_email);
+        params.set('hold_token', linkToken);
+        const bookingUrl = `${appUrl}/guest-app/public/index.html?${params.toString()}`;
+        const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        const smsMsg = `Boostinghost\nVotre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}${fixed_price ? ` (${fixed_price}€)` : ''} :\n${bookingUrl}\n(Valable 4h)`;
+        await sendSmsGateway(guest_phone, smsMsg, userId, { trigger_type: 'bhguest_hold', property_id }, true);
+        console.log(`📱 [HOLD] SMS envoyé à ${guest_phone}`);
+      } catch(smsErr) {
+        console.warn('⚠️ [HOLD] SMS non envoyé:', smsErr.message);
+      }
+    }
+
+    res.json({ success: true, token: linkToken, expires_at: expiresAt });
+  } catch (err) {
+    console.error('Erreur POST /api/guest/hold:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET — Liste des holds actifs
+app.get('/api/guest/holds', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT h.*, p.name as property_name
+       FROM bhguest_holds h
+       LEFT JOIN properties p ON p.id = h.property_id
+       WHERE h.user_id = $1 AND h.status = 'active' AND h.expires_at > NOW()
+       ORDER BY h.created_at DESC`,
+      [userId]
+    );
+    res.json({ holds: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE — Libérer un hold manuellement
+app.delete('/api/guest/hold/:token', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    const { token } = req.params;
+    const result = await pool.query(
+      `UPDATE bhguest_holds SET status = 'cancelled' WHERE link_token = $1 AND user_id = $2 RETURNING *`,
+      [token, userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Hold introuvable' });
+    await releaseHoldChannex(pool, result.rows[0]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/guest/promo/check', async (req, res) => {
   try {
     const { code, amount } = req.body;
