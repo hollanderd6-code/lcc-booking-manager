@@ -4044,47 +4044,6 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       );
                     }
                   } catch(nErr) { console.error('❌ Notif BHGUEST:', nErr.message); }
-
-                  // ── Déclencher templates on_booking ──
-                  try {
-                    const convRowBhg = await pool.query(
-                      `SELECT * FROM conversations
-                       WHERE property_id = $1 AND DATE(reservation_start_date) = $2::date
-                         AND status != 'cancelled'
-                       ORDER BY created_at DESC LIMIT 1`,
-                      [propId, startDate]
-                    );
-                    const convBhg = convRowBhg.rows[0];
-                    if (convBhg) {
-                      const tplsBhg = await pool.query(
-                        `SELECT * FROM message_templates
-                         WHERE user_id = $1 AND trigger_type = 'on_booking' AND active = TRUE
-                         AND (property_id IS NULL OR property_id::text = $2::text)`,
-                        [ownerId, propId]
-                      );
-                      if (tplsBhg.rows.length > 0) {
-                        const propInfoBhg = await pool.query(
-                          `SELECT address, arrival_time, departure_time, access_code, wifi_name,
-                                  wifi_password, practical_info, welcome_book_url, name, internal_name
-                           FROM properties WHERE id = $1`, [propId]
-                        );
-                        if (propInfoBhg.rows[0]) {
-                          const { sendAutoMessage } = require('./integrated-chat-handler');
-                          for (const tmpl of tplsBhg.rows) {
-                            try {
-                              await sendAutoMessage(pool, io, convBhg.id, null, null, {
-                                template: tmpl, conversation: convBhg,
-                                property: propInfoBhg.rows[0], triggerType: 'on_booking'
-                              });
-                              console.log(`✅ [TPL on_booking BHGuest Stripe] "${tmpl.name}" → conv ${convBhg.id}`);
-                            } catch(e) { console.warn('⚠️ TPL BHGuest Stripe:', e.message); }
-                          }
-                        }
-                      }
-                    }
-                  } catch(tplBhgErr) {
-                    console.warn('⚠️ [BHGUEST Stripe] Templates on_booking:', tplBhgErr.message);
-                  }
                 }
               }
             } catch(resaErr) {
@@ -23517,6 +23476,26 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
       } else if (smsEligibleTriggers.includes(template.trigger_type) && !isAirbnb && !guestPhone) {
         console.log(`ℹ️ [SMS] Pas de numéro de téléphone pour conv ${conv.id} (${conv.guest_name})`);
       }
+
+      // 📲 SMS de notification BHGuest — informe le guest qu'un message l'attend dans l'app
+      try {
+        const isBHGuestPlatform = convPlatform.includes('guest_app') || convPlatform.includes('bhguest')
+          || convPlatform.includes('boostinghost') || convPlatform === 'direct' || convPlatform === '';
+        const notifTriggers = ['on_booking', 'on_arrival', 'before_arrival'];
+        if (isBHGuestPlatform && notifTriggers.includes(template.trigger_type) && guestPhone && !isAirbnb) {
+          const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+          const convLink = `${appUrl}/guest-app/public/index.html?conv=${conv.id}`;
+          const guestFirstName = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
+          const notifSms = `Bonjour ${guestFirstName}, vous avez reçu un nouveau message de votre hôte concernant votre réservation. Consultez-le ici : ${convLink}`;
+          await sendSmsGateway(guestPhone, notifSms, conv.user_id,
+            { property_id: property?.id, guest_name: conv.guest_name, trigger_type: 'bhguest_notif' },
+            true
+          );
+          console.log(`📲 [SMS NOTIF BHGuest] Envoyé à ${guestPhone} pour conv ${conv.id}`);
+        }
+      } catch(notifSmsErr) {
+        console.warn('⚠️ [SMS NOTIF BHGuest] Non bloquant:', notifSmsErr.message);
+      }
     } catch(smsErr) {
       console.warn('⚠️ [SMS] Erreur non bloquante:', smsErr.message);
     }
@@ -31756,27 +31735,43 @@ app.post('/api/guest/book', async (req, res) => {
       console.error('⚠️ [GUEST] Erreur notif hôte:', notifErr.message);
     }
 
-    // ── Déclencher les templates on_booking ──────────────────
+    // ── Déclencher les templates on_booking (et on_arrival si arrivée aujourd'hui après 7h) ──
     try {
+      const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+      const pad = n => String(n).padStart(2, '0');
+      const todayStr = `${nowParis.getFullYear()}-${pad(nowParis.getMonth()+1)}-${pad(nowParis.getDate())}`;
+      const isArrivalToday = checkin === todayStr;
+      const isAfter7h = nowParis.getHours() >= 7;
+
+      // Trouver la conversation créée
       const convRow = await pool.query(
-        `SELECT c.*, r.guest_country, r.guest_language
+        `SELECT c.*, r.guest_country, r.guest_language, r.guest_phone as r_phone
          FROM conversations c
-         LEFT JOIN reservations r ON r.uid = $1
+         LEFT JOIN reservations r ON (r.uid = $1)
          WHERE c.property_id = $2 AND DATE(c.reservation_start_date) = $3::date
            AND c.status != 'cancelled'
          ORDER BY c.created_at DESC LIMIT 1`,
         [uid, property_id, checkin]
       );
       const conv = convRow.rows[0];
+
       if (conv) {
+        const triggersToRun = ['on_booking'];
+        if (isArrivalToday && isAfter7h) {
+          triggersToRun.push('on_arrival');
+          console.log(`🏠 [GUEST] Arrivée aujourd'hui après 7h → on_arrival déclenché immédiatement`);
+        }
+
         const templates = await pool.query(
           `SELECT * FROM message_templates
-           WHERE user_id = $1 AND trigger_type = 'on_booking' AND active = TRUE
+           WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
            AND (property_id IS NULL OR property_id::text = $2::text
                 OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
-                    AND property_ids @> to_jsonb($2::text)))`,
-          [prop.owner_user_id, property_id]
+                    AND property_ids @> to_jsonb($2::text)))
+           ORDER BY trigger_type = 'on_booking' DESC`,
+          [prop.owner_user_id, property_id, triggersToRun]
         );
+
         if (templates.rows.length > 0) {
           const propInfo = await pool.query(
             `SELECT address, arrival_time, departure_time, access_code, wifi_name,
@@ -31784,29 +31779,27 @@ app.post('/api/guest/book', async (req, res) => {
              FROM properties WHERE id = $1`, [property_id]
           );
           if (propInfo.rows[0]) {
-            const { sendAutoMessage } = require('./integrated-chat-handler');
             for (const tmpl of templates.rows) {
               try {
-                await sendAutoMessage(pool, io, conv.id, null, null, {
+                await sendTemplateMessage(pool, io, {
                   template: tmpl,
-                  conversation: conv,
-                  property: propInfo.rows[0],
-                  triggerType: 'on_booking'
+                  conv: { ...conv, user_id: prop.owner_user_id, guest_phone: conv.r_phone || guest_phone },
+                  property: propInfo.rows[0]
                 });
-                console.log(`✅ [TPL on_booking BHGuest] Template "${tmpl.name}" → conv ${conv.id}`);
+                console.log(`✅ [TPL ${tmpl.trigger_type} BHGuest] "${tmpl.title}" → conv ${conv.id}`);
               } catch(tplErr) {
-                console.warn(`⚠️ [TPL on_booking BHGuest] Erreur "${tmpl.name}":`, tplErr.message);
+                console.warn(`⚠️ [TPL ${tmpl.trigger_type} BHGuest]:`, tplErr.message);
               }
             }
           }
         } else {
-          console.log(`ℹ️ [TPL on_booking BHGuest] Aucun template on_booking actif pour ${property_id}`);
+          console.log(`ℹ️ [TPL BHGuest] Aucun template ${triggersToRun.join('/')} actif pour ${property_id}`);
         }
       } else {
-        console.warn(`⚠️ [TPL on_booking BHGuest] Conversation introuvable pour ${property_id} ${checkin}`);
+        console.warn(`⚠️ [TPL BHGuest] Conversation introuvable pour ${property_id} ${checkin}`);
       }
-    } catch (tplCronErr) {
-      console.error('⚠️ [GUEST] Erreur déclenchement templates on_booking:', tplCronErr.message);
+    } catch(tplErr) {
+      console.error('⚠️ [GUEST] Erreur déclenchement templates:', tplErr.message);
     }
 
     res.json({
