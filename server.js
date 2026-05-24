@@ -25654,43 +25654,51 @@ cron.schedule('0 20 * * *', async () => {
           ...defaultResult.rows.map(r => r.property_id)
         ]);
 
-        if (!propertyIds.size) continue;
-
-        // Résoudre les noms de logements
-        const propertyNames = [];
-        for (const pid of propertyIds) {
-          const prop = PROPERTIES.find(p => p.id === pid);
-          propertyNames.push(displayName(prop) || pid);
-        }
-
-        const count = propertyNames.length;
-        const listStr = propertyNames.join(', ');
-        const taskUrl = `https://www.boostinghost.fr/cleaning-tasks.html`;
         const pinStr = await (async () => {
           const r = await pool.query(`SELECT pin_code FROM cleaners WHERE id = $1`, [cleaner.id]);
           return r.rows[0]?.pin_code || '';
         })();
 
-        const message =
-          `Boostinghost récap\n` +
-          `Bonjour ${cleaner.name},\n` +
-          `Vous avez ${count} ménage${count > 1 ? 's' : ''} demain ` +
-          `(${new Date(tomorrowStr + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}) :\n` +
-          `${listStr}\n` +
-          `Accès checklist : ${taskUrl}` +
-          (pinStr ? ` (PIN : ${pinStr})` : '') +
-          `\nRépondez OK pour confirmer.`;
+        let message;
+        const tomorrowLabel = new Date(tomorrowStr + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+        if (!propertyIds.size) {
+          // Aucun ménage demain → message de repos
+          message =
+            `Boostinghost récap\n` +
+            `Bonjour ${cleaner.name},\n` +
+            `Pas de ménage à effectuer demain (${tomorrowLabel}). Bonne soirée ! 😊`;
+        } else {
+          // Résoudre les noms de logements
+          const propertyNames = [];
+          for (const pid of propertyIds) {
+            const prop = PROPERTIES.find(p => p.id === pid);
+            propertyNames.push(displayName(prop) || pid);
+          }
+          const count = propertyNames.length;
+          const listStr = propertyNames.join(', ');
+          const taskUrl = `https://www.boostinghost.fr/cleaning-tasks.html`;
+          message =
+            `Boostinghost récap\n` +
+            `Bonjour ${cleaner.name},\n` +
+            `Vous avez ${count} ménage${count > 1 ? 's' : ''} demain ` +
+            `(${tomorrowLabel}) :\n` +
+            `${listStr}\n` +
+            `Accès checklist : ${taskUrl}` +
+            (pinStr ? ` (PIN : ${pinStr})` : '') +
+            `\nRépondez OK pour confirmer.`;
+        }
 
         const sent = await sendSmsGateway(
           cleaner.phone,
           message,
           cleaner.user_id,
-          { trigger_type: 'cleaning_recap', property_id: [...propertyIds][0], guest_name: null },
+          { trigger_type: 'cleaning_recap', property_id: propertyIds.size ? [...propertyIds][0] : null, guest_name: null },
           true // skipFooter — le cleaner peut répondre
         );
 
         if (sent) {
-          console.log(`📱 [SMS-RECAP] Envoyé à ${cleaner.name} (${cleaner.phone}) — ${count} logement(s)`);
+          console.log(`📱 [SMS-RECAP] Envoyé à ${cleaner.name} (${cleaner.phone}) — ${propertyIds.size} logement(s)`);
         }
       } catch (cleanerErr) {
         console.error(`❌ [SMS-RECAP] Erreur cleaner ${cleaner.id}:`, cleanerErr.message);
