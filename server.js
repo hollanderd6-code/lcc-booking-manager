@@ -31556,9 +31556,9 @@ app.post('/api/guest/book', async (req, res) => {
       const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
 
       // Récupérer infos hôte
-      const ownerInfoRes = await pool.query('SELECT email, company_name, first_name, last_name FROM users WHERE id = $1', [prop.owner_user_id || prop.user_id]).catch(() => ({ rows: [] }));
+      const ownerInfoRes = await pool.query('SELECT email, first_name, last_name FROM users WHERE id = $1', [prop.owner_user_id || prop.user_id]).catch(() => ({ rows: [] }));
       const ownerInfo = ownerInfoRes.rows[0] || {};
-      const hostName = ownerInfo.company_name || `${ownerInfo.first_name || ''} ${ownerInfo.last_name || ''}`.trim() || 'Votre hôte';
+      const hostName = `${ownerInfo.first_name || ''} ${ownerInfo.last_name || ''}`.trim() || 'Votre hôte';
 
       await sendEmailViaBrevo({
         to: guest_email,
@@ -31671,7 +31671,7 @@ app.post('/api/guest/book', async (req, res) => {
 
     // ── Email de notification à l'hôte ───────────────────────
     try {
-      const ownerResult = await pool.query('SELECT email, company_name FROM users WHERE id = $1', [prop.owner_user_id]);
+      const ownerResult = await pool.query('SELECT email FROM users WHERE id = $1', [prop.owner_user_id]);
       const owner = ownerResult.rows[0];
       const fmtDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -31735,6 +31735,55 @@ app.post('/api/guest/book', async (req, res) => {
       console.error('⚠️ [GUEST] Erreur notif hôte:', notifErr.message);
     }
 
+    // ── Créer la conversation BHGuest ────────────────────────
+    let guestConvId = null;
+    try {
+      const existingConv = await pool.query(
+        `SELECT id FROM conversations
+         WHERE LOWER(guest_email) = LOWER($1) AND property_id = $2
+         AND DATE(reservation_start_date) = $3::date
+         ORDER BY created_at DESC LIMIT 1`,
+        [guest_email, property_id, checkin]
+      );
+      if (existingConv.rows[0]) {
+        guestConvId = existingConv.rows[0].id;
+        console.log(`✅ [GUEST] Conversation existante réutilisée: ${guestConvId}`);
+      } else {
+        const pinCode = Math.floor(1000 + Math.random() * 9000).toString();
+        const uniqueToken = crypto.randomBytes(16).toString('hex');
+        const photosToken = crypto.randomBytes(12).toString('hex');
+        const convResult = await pool.query(
+          `INSERT INTO conversations
+            (user_id, property_id, reservation_start_date, reservation_end_date,
+             platform, guest_name, guest_email, guest_phone,
+             pin_code, unique_token, photos_token,
+             reservation_uid, source, status, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',NOW(),NOW())
+           RETURNING id`,
+          [
+            prop.owner_user_id, property_id, checkin, checkout,
+            'Boostinghost Guest',
+            guest_name, guest_email, guest_phone || null,
+            pinCode, uniqueToken, photosToken, uid, 'guest_app'
+          ]
+        );
+        guestConvId = convResult.rows[0].id;
+        console.log(`✅ [GUEST] Conversation créée: ${guestConvId} pour résa ${uid}`);
+        // Message de bienvenue
+        try {
+          const welcomeMsg = `Bonjour ${(guest_name || 'cher voyageur').split(' ')[0]} ! 👋\n\nVotre réservation à **${prop.name || prop.internal_name}** est confirmée du ${new Date(checkin + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'long'})} au ${new Date(checkout + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'long'})}.\n\nN'hésitez pas à nous contacter via cette messagerie pour toute question. Bon séjour ! 🏠`;
+          await pool.query(
+            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_bot_response, is_read, created_at)
+             VALUES ($1, 'property', $2, $3, TRUE, FALSE, NOW())`,
+            [guestConvId, prop.name || 'Boostinghost', welcomeMsg]
+          );
+          if (io) io.to(`conversation_${guestConvId}`).emit('new_message', { conversation_id: guestConvId, sender_type: 'property', message: welcomeMsg });
+        } catch(welcomeErr) { console.warn('⚠️ [GUEST] Message bienvenue:', welcomeErr.message); }
+      }
+    } catch(convErr) {
+      console.warn('⚠️ [GUEST] Erreur création conversation:', convErr.message);
+    }
+
     // ── Déclencher les templates on_booking (et on_arrival si arrivée aujourd'hui après 7h) ──
     try {
       const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
@@ -31743,17 +31792,30 @@ app.post('/api/guest/book', async (req, res) => {
       const isArrivalToday = checkin === todayStr;
       const isAfter7h = nowParis.getHours() >= 7;
 
-      // Trouver la conversation créée
-      const convRow = await pool.query(
-        `SELECT c.*, r.guest_country, r.guest_language, r.guest_phone as r_phone
-         FROM conversations c
-         LEFT JOIN reservations r ON (r.uid = $1)
-         WHERE c.property_id = $2 AND DATE(c.reservation_start_date) = $3::date
-           AND c.status != 'cancelled'
-         ORDER BY c.created_at DESC LIMIT 1`,
-        [uid, property_id, checkin]
-      );
-      const conv = convRow.rows[0];
+      // Utiliser la conversation créée juste au-dessus, ou fallback DB
+      let conv = null;
+      if (guestConvId) {
+        const convRow = await pool.query(
+          `SELECT c.*, r.guest_country, r.guest_language, r.guest_phone as r_phone
+           FROM conversations c
+           LEFT JOIN reservations r ON r.uid = $1
+           WHERE c.id = $2`,
+          [uid, guestConvId]
+        );
+        conv = convRow.rows[0] || null;
+      }
+      if (!conv) {
+        const convRow = await pool.query(
+          `SELECT c.*, r.guest_country, r.guest_language, r.guest_phone as r_phone
+           FROM conversations c
+           LEFT JOIN reservations r ON r.uid = $1
+           WHERE c.property_id = $2 AND DATE(c.reservation_start_date) = $3::date
+             AND c.status != 'cancelled'
+           ORDER BY c.created_at DESC LIMIT 1`,
+          [uid, property_id, checkin]
+        );
+        conv = convRow.rows[0] || null;
+      }
 
       if (conv) {
         const triggersToRun = ['on_booking'];
