@@ -13709,7 +13709,7 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
        WHERE (id = $1 OR uid = $2) 
        AND user_id = $3 
        AND (reservation_type = 'block' OR source = 'BLOCK' OR platform = 'BLOCK')
-       RETURNING id, uid, property_id`,
+       RETURNING id, uid, property_id, start_date, end_date`,
       [isNaN(id) ? -1 : parseInt(id), id, user.id]
     );
     console.log(`🔓 Résultat: ${result.rows.length} ligne(s) supprimée(s)`);
@@ -13727,7 +13727,33 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
       MANUAL_RESERVATIONS[pid] = MANUAL_RESERVATIONS[pid].filter(r => r.uid !== row.uid);
     }
     console.log(`✅ Blocage supprimé: id=${row.id} uid=${row.uid}`);
+
+    // ✅ Notifier le front via Socket.io pour rafraîchissement immédiat du calendrier
+    if (io) {
+      io.to('user_' + user.id).emit('calendar:block_removed', { uid: row.uid, propertyId: pid });
+    }
+
     res.json({ success: true, deleted: row.id });
+
+    // ✅ Sync Channex (libérer les dates) + iCal en arrière-plan
+    setImmediate(async () => {
+      try {
+        const targetDates = [];
+        if (row.start_date && row.end_date) {
+          const d = new Date(row.start_date);
+          const end = new Date(row.end_date);
+          while (d < end) { targetDates.push(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
+        }
+        await triggerChannexAvailabilitySync(pid, targetDates.length > 0 ? targetDates : null);
+        syncAllCalendars();
+        if (io) {
+          io.to('user_' + user.id).emit('reservations:updated', { propertyId: pid });
+        }
+      } catch (bgErr) {
+        console.error('⚠️ Sync Channex après suppression bloc:', bgErr.message);
+      }
+    });
+
   } catch (err) {
     console.error('❌ DELETE /api/blocks/:id:', err);
     res.status(500).json({ error: 'Erreur serveur' });
