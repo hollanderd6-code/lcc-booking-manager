@@ -11792,6 +11792,16 @@ if (window.Capacitor) {
       else if (typeof refreshCalendar === 'function') refreshCalendar();
       else if (typeof renderCalendar === 'function') renderCalendar();
     });
+    s.on('hold_converted', function(d) {
+      console.log('✅ Hold converti en réservation, rafraîchissement calendrier...', d);
+      if (typeof loadCalendarData === 'function') loadCalendarData();
+      else if (typeof refreshCalendar === 'function') refreshCalendar();
+    });
+    s.on('reservations:updated', function(d) {
+      console.log('📅 Réservations mises à jour, rafraîchissement calendrier...', d);
+      if (typeof loadCalendarData === 'function') loadCalendarData();
+      else if (typeof refreshCalendar === 'function') refreshCalendar();
+    });
     s.on('calendar:block_removed', function(d) {
       console.log('📅 Blocage supprimé via socket, rafraîchissement calendrier...');
       if (typeof loadCalendarData === 'function') loadCalendarData();
