@@ -31519,6 +31519,13 @@ app.post('/api/guest/book', async (req, res) => {
       );
       if (holdRes.rows.length > 0) {
         console.log(`✅ [HOLD] Converti en réservation pour ${property_id} ${checkin}→${checkout}`);
+        // Rafraîchir le calendrier BH côté hôte — le hold doit disparaître
+        if (io) {
+          io.to(`user_${prop.owner_user_id}`).emit('reservations:updated', { propertyId: property_id });
+          io.to(`user_${prop.owner_user_id}`).emit('hold_converted', {
+            propertyId: property_id, checkin, checkout
+          });
+        }
       }
     } catch(holdErr) {
       console.warn('⚠️ [HOLD] Erreur conversion hold:', holdErr.message);
@@ -33587,6 +33594,26 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
 
     const reservation = insertResult.rows[0];
 
+    // Libérer le hold associé + rafraîchir calendrier BH
+    try {
+      const holdRes = await pool.query(
+        `UPDATE bhguest_holds SET status = 'converted'
+         WHERE property_id = $1 AND checkin = $2 AND checkout = $3
+           AND status = 'active' AND user_id = $4 RETURNING *`,
+        [property_id, checkin, checkout, prop.owner_user_id]
+      );
+      if (holdRes.rows.length > 0) {
+        console.log(`✅ [HOLD] Converti (confirm-after-payment) pour ${property_id} ${checkin}→${checkout}`);
+      }
+      // Toujours émettre pour rafraîchir le calendrier côté hôte
+      if (io) {
+        io.to(`user_${prop.owner_user_id}`).emit('reservations:updated', { propertyId: property_id });
+        io.to(`user_${prop.owner_user_id}`).emit('hold_converted', { propertyId: property_id, checkin, checkout });
+      }
+    } catch(holdErr) {
+      console.warn('⚠️ [HOLD] Erreur conversion (confirm-after-payment):', holdErr.message);
+    }
+
     // Sync Channex si activé
     if (prop.channex_enabled && prop.channex_property_id) {
       try {
@@ -33679,7 +33706,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       // ✅ Fix 4 : notif paiement reçu (séparée de la notif réservation)
       try {
         const propLabel = propName ? ` — ${propName}` : '';
-        const amtLabel = totalTTC ? ` ${totalTTC}€` : '';
+        const amtLabel = totalTTC ? ` ${typeof totalTTC === 'number' ? totalTTC.toFixed(2) : totalTTC}€` : '';
         const tokensRes = await pool.query(
           'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1',
           [prop.owner_user_id]
