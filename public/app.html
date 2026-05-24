@@ -7734,6 +7734,15 @@ try {
           var du2=await ru2.json();
           console.log('🔓 Batch:', du2);
           if(!du2.success) throw new Error(du2.error||'Erreur déblocage');
+          // Patch store local après fallback batch (par dates)
+          if(Array.isArray(window.LCC_RESERVATIONS)){
+            window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r){
+              var isBlock = r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block'||r.isManual;
+              var overlaps = r.propertyId===bProp2 && r.start < bTo && r.end > bFrom;
+              return !(isBlock && overlaps);
+            });
+            try { localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(window.LCC_RESERVATIONS)); } catch(e){}
+          }
         }
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
         window._currentBlockId=null; window._currentBlockEnd=null;
@@ -7746,7 +7755,10 @@ try {
           window.calendarState.bookings = window.calendarState.bookings.filter(function(r){ return r.uid !== blockId && r.id !== blockId; });
         }
         if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
-        if(typeof window.loadCalendarData==='function')window.loadCalendarData();
+        // Attendre un tick pour que le serveur ait bien commité avant de recharger
+        setTimeout(function(){
+          if(typeof window.loadCalendarData==='function')window.loadCalendarData();
+        }, 300);
       } else if(activeTab==='price'){
         var pid3=document.getElementById('dayPricePropertySelect').value;
         var from3=document.getElementById('dayPriceFrom').value;
