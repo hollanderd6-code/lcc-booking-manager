@@ -33769,6 +33769,70 @@ N'hésitez pas à nous contacter via cette messagerie pour toute question. Bon s
       console.error('⚠️ [GUEST] Création conversation:', convErr.message);
     }
 
+    // ── Déclencher les templates on_booking (et on_arrival si arrivée aujourd'hui après 7h) ──
+    try {
+      const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+      const pad = n => String(n).padStart(2, '0');
+      const todayStr = `${nowParis.getFullYear()}-${pad(nowParis.getMonth()+1)}-${pad(nowParis.getDate())}`;
+      const isArrivalToday = checkin === todayStr;
+      const isAfter7h = nowParis.getHours() >= 7;
+
+      if (conversationId) {
+        const convRow = await pool.query(
+          `SELECT c.*, r.guest_country, r.guest_language, r.guest_phone as r_phone
+           FROM conversations c
+           LEFT JOIN reservations r ON r.uid = $1
+           WHERE c.id = $2`,
+          [uid, conversationId]
+        );
+        const conv = convRow.rows[0];
+
+        if (conv) {
+          const triggersToRun = ['on_booking'];
+          if (isArrivalToday && isAfter7h) {
+            triggersToRun.push('on_arrival');
+            console.log(`🏠 [GUEST] Arrivée aujourd'hui après 7h → on_arrival déclenché immédiatement`);
+          }
+
+          const templates = await pool.query(
+            `SELECT * FROM message_templates
+             WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
+             AND (property_id IS NULL OR property_id::text = $2::text
+                  OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                      AND property_ids @> to_jsonb($2::text)))
+             ORDER BY trigger_type = 'on_booking' DESC`,
+            [prop.owner_user_id, property_id, triggersToRun]
+          );
+
+          if (templates.rows.length > 0) {
+            const propInfo = await pool.query(
+              `SELECT address, arrival_time, departure_time, access_code, wifi_name,
+                      wifi_password, practical_info, welcome_book_url, name, internal_name
+               FROM properties WHERE id = $1`, [property_id]
+            );
+            if (propInfo.rows[0]) {
+              for (const tmpl of templates.rows) {
+                try {
+                  await sendTemplateMessage(pool, io, {
+                    template: tmpl,
+                    conv: { ...conv, user_id: prop.owner_user_id, guest_phone: conv.r_phone || guest_phone },
+                    property: propInfo.rows[0]
+                  });
+                  console.log(`✅ [TPL ${tmpl.trigger_type} BHGuest] "${tmpl.title}" → conv ${conv.id}`);
+                } catch(tplErr) {
+                  console.warn(`⚠️ [TPL ${tmpl.trigger_type} BHGuest]:`, tplErr.message);
+                }
+              }
+            }
+          } else {
+            console.log(`ℹ️ [TPL BHGuest] Aucun template ${triggersToRun.join('/')} actif pour ${property_id}`);
+          }
+        }
+      }
+    } catch(tplErr) {
+      console.warn('⚠️ [GUEST] Erreur déclenchement templates confirm-after-payment:', tplErr.message);
+    }
+
     res.json({
       success: true, reservation_uid: uid,
       conversation_id: conversationId,
