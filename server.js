@@ -31678,11 +31678,11 @@ app.post('/api/guest/book', async (req, res) => {
       if (owner?.email) {
         await sendEmailViaBrevo({
           to: owner.email,
-          subject: `🏠 Nouvelle réservation directe — ${displayName(prop)}`,
+          subject: `🏠 Nouvelle réservation BHGuest — ${displayName(prop)}`,
           text: `${guest_name} vient de réserver ${displayName(prop)} du ${fmtDate(checkin)} au ${fmtDate(checkout)} via Boostinghost Guest.`,
           html: bhEmailTemplate({
             icon: '🏠',
-            title: 'Nouvelle réservation directe',
+            title: 'Nouvelle réservation BHGuest',
             tag: 'Réservation directe',
             bodyHtml: `
               <div class="info-card">
@@ -31726,7 +31726,7 @@ app.post('/api/guest/book', async (req, res) => {
       );
       for (const tok of tokensRes.rows) {
         await sendNotificationLogged(tok.fcm_token,
-          '🏠 Nouvelle réservation directe',
+          '🏠 Nouvelle réservation BHGuest',
           `${guest_name} · ${displayName(prop)} · ${checkin} → ${checkout}`,
           { type: 'new_booking_guest', uid, propertyId: property_id, screen: 'calendar' }
         );
