@@ -22055,6 +22055,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
 
     // ✅ SUPPRIMER DE LA DB EN PREMIER (source de vérité)
     let deleted = false;
+    let deletedRow = null;
     try {
       const deleteResult = await pool.query(
         'DELETE FROM reservations WHERE uid = $1 AND user_id = $2 RETURNING *',
@@ -22062,6 +22063,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       );
       
       deleted = deleteResult.rowCount > 0;
+      if (deleteResult.rows[0]) deletedRow = deleteResult.rows[0];
       
       if (deleted) {
         console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
@@ -22156,7 +22158,7 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       setImmediate(async () => {
         try {
           // Récupérer les dates de la résa supprimée pour les cibler
-          const deletedRow = deleteResult.rows[0];
+          // deletedRow est disponible depuis le scope parent
           const targetDates = [];
           if (deletedRow?.start_date && deletedRow?.end_date) {
             const d = new Date(deletedRow.start_date);
