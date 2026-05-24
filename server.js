@@ -8229,9 +8229,16 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     const cancelledUids = new Set();
     // Construire la liste des UIDs channex présents en DB (non cancelled)
     const dbUids = new Set(reservationsDbRows.filter(r => r.source === 'channex').map(r => r.uid));
+    // ✅ Les blocs manuels sont aussi vérifiés en DB pour éviter les fantômes après suppression
+    const dbBlockUids = new Set(reservationsDbRows.filter(r => r.source === 'BLOCK' || r.platform === 'BLOCK' || r.reservation_type === 'block').map(r => r.uid));
     const finalReservations = allReservations.filter(r => {
       if (r.source === 'channex' && r.uid && !dbUids.has(r.uid)) {
         console.log(`🗑️ [FILTER] Résa ${r.uid} retirée (cancelled ou absente de la DB)`);
+        return false;
+      }
+      // Filtrer les blocs supprimés de la DB mais encore dans le store
+      if ((r.source === 'BLOCK' || r.platform === 'BLOCK' || r.type === 'block') && r.uid && r.uid.startsWith('block_') && !dbBlockUids.has(r.uid)) {
+        console.log(`🗑️ [FILTER] Bloc ${r.uid} retiré (absent de la DB)`);
         return false;
       }
       return true;
