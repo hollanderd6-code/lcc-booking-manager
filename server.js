@@ -13395,66 +13395,14 @@ app.post('/api/properties',
     );
 
     if (existingProperty.rows.length > 0) {
-      // ✅ UPDATE si elle existe
-      console.log('🔄 UPDATE - Propriété existe déjà, mise à jour...');
-      
-      await pool.query(
-        `UPDATE properties SET
-           name = $1, color = $2, ical_urls = $3,
-           address = $4, arrival_time = $5, departure_time = $6,
-           deposit_amount = $7, photo_url = $8, welcome_book_url = $9,
-           access_code = $10, wifi_name = $11, wifi_password = $12,
-           access_instructions = $13, owner_id = $14, chat_pin = $15,
-           amenities = $16, house_rules = $17, practical_info = $18,
-           auto_responses_enabled = $19, arrival_message = $20,
-           base_price = $22, weekend_price = $23,
-           cleaning_fee = $24, tourist_tax_per_night = $25, concierge_pct = $26,
-           max_guests = $27, bedrooms = $28, beds = $29, bathrooms = $30,
-           internal_name = $31, airbnb_commission_pct = $32, booking_commission_pct = $33
-         WHERE id = $21`,
-        [
-          name,
-          color,
-          JSON.stringify(normalizedIcal),
-          address || null,
-          arrivalTime || null,
-          departureTime || null,
-          depositAmount ? parseFloat(depositAmount) : null,
-          photoUrl,
-          welcomeBookUrl || null,
-          accessCode || null,
-          wifiName || null,
-          wifiPassword || null,
-          accessInstructions || null,
-          ownerId,
-          finalChatPin,
-          JSON.stringify(amenities),
-          JSON.stringify(houseRules),
-          JSON.stringify(practicalInfo),
-          autoResponsesEnabled,
-          arrivalMessage || null,
-          id,
-          basePrice ? parseFloat(basePrice) : null,
-          weekendPrice ? parseFloat(weekendPrice) : null,
-          cleaningFee != null && cleaningFee !== '' ? parseFloat(cleaningFee) : null,
-          touristTaxPerNight != null && touristTaxPerNight !== '' ? parseFloat(touristTaxPerNight) : null,
-          conciergePct != null && conciergePct !== '' ? parseFloat(conciergePct) : null,
-          maxGuests != null && maxGuests !== '' ? parseInt(maxGuests, 10) : null,
-          bedrooms != null && bedrooms !== '' ? parseInt(bedrooms, 10) : null,
-          beds != null && beds !== '' ? parseInt(beds, 10) : null,
-          bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
-          internal_name != null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null,
-          body.airbnbCommissionPct != null && body.airbnbCommissionPct !== '' ? parseFloat(body.airbnbCommissionPct) : 3,
-          body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : 15
-        ]
-      );
-
-      await loadProperties();
-      setImmediate(() => triggerChannexRatesSync(id, userId));
-      return res.json({
-        success: true,
-        message: 'Propriété mise à jour avec succès',
-        property: { id }
+      // ❌ REFUS — un POST ne doit jamais écraser un logement existant.
+      // L'id est généré depuis le nom (slug), donc deux logements avec un nom
+      // similaire provoqueraient un écrasement silencieux et destructeur.
+      // → Utiliser PUT /api/properties/:propertyId pour modifier un logement existant.
+      console.warn(`⚠️ POST /api/properties : collision d'id détectée pour "${id}" — création refusée`);
+      return res.status(409).json({
+        error: 'Un logement avec un nom similaire existe déjà. Veuillez choisir un nom différent ou modifier le logement existant.',
+        existingId: id
       });
     }
 
