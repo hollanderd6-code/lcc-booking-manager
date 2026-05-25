@@ -13783,6 +13783,27 @@ app.post('/api/blocks/batch', async (req, res) => {
 
     console.log(`✅ [BATCH BLOCK] action=${action} ${count} opérations sur ${property_ids.length} logements`);
     res.json({ success: true, count, properties: property_ids.length });
+
+    // ✅ Notifier le front + sync Channex en arrière-plan
+    if (io) {
+      for (const property_id of property_ids) {
+        io.to('user_' + user.id).emit('reservations:updated', { propertyId: property_id });
+        // Pour un unblock, émettre aussi block_removed avec uid générique pour forcer le refresh calendrier
+        if (action === 'unblock') {
+          io.to('user_' + user.id).emit('calendar:block_removed', { uid: null, propertyId: property_id });
+        }
+      }
+    }
+    setImmediate(async () => {
+      try {
+        for (const property_id of property_ids) {
+          await triggerChannexAvailabilitySync(property_id, null);
+        }
+        syncAllCalendars();
+      } catch (bgErr) {
+        console.error('❌ Erreur background sync batch block:', bgErr.message);
+      }
+    });
   } catch (err) {
     console.error('❌ POST /api/blocks/batch:', err);
     res.status(500).json({ error: 'Erreur serveur' });
