@@ -22129,8 +22129,38 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       }
     }
 
+    // ✅ Si pas trouvé dans reservations, chercher dans bhguest_holds (uid = hold_{id})
+    if (!deleted && uid.startsWith('hold_')) {
+      try {
+        const holdId = uid.replace('hold_', '');
+        const holdResult = await pool.query(
+          `UPDATE bhguest_holds SET status = 'cancelled'
+           WHERE id = $1 AND user_id = $2 AND status IN ('pending','active')
+           RETURNING id, property_id, checkin, checkout`,
+          [holdId, user.id]
+        );
+        if (holdResult.rowCount > 0) {
+          deleted = true;
+          deletedRow = {
+            start_date: holdResult.rows[0].checkin,
+            end_date:   holdResult.rows[0].checkout
+          };
+          console.log(`✅ Hold BHGuest ${uid} annulé dans bhguest_holds`);
+        } else {
+          console.log(`⚠️ Hold ${uid} non trouvé ou déjà annulé dans bhguest_holds`);
+        }
+      } catch (holdErr) {
+        console.error('❌ Erreur annulation hold:', holdErr.message);
+      }
+    }
+
     // ✅ Répondre avec succès (même si pas dans les caches)
     if (deleted) {
+      // Nettoyer reservationsStore des holds mémoire
+      if (reservationsStore.properties && reservationsStore.properties[propertyId]) {
+        reservationsStore.properties[propertyId] =
+          reservationsStore.properties[propertyId].filter(r => r.uid !== uid);
+      }
       // Notifier le front via Socket.io pour rafraîchissement immédiat
       if (io) {
         io.to('user_' + user.id).emit('calendar:block_removed', { uid, propertyId });
@@ -22138,8 +22168,6 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       // ✅ Channex sync — libérer les dates de la résa supprimée
       setImmediate(async () => {
         try {
-          // Récupérer les dates de la résa supprimée pour les cibler
-          // deletedRow est disponible depuis le scope parent
           const targetDates = [];
           if (deletedRow?.start_date && deletedRow?.end_date) {
             const d = new Date(deletedRow.start_date);
