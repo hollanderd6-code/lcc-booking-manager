@@ -7760,10 +7760,7 @@ try {
           window.calendarState.bookings = window.calendarState.bookings.filter(function(r){ return r.uid !== blockId && r.id !== blockId; });
         }
         if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
-        // Attendre un tick pour que le serveur ait bien commité avant de recharger
-        setTimeout(function(){
-          if(typeof window.loadCalendarData==='function')window.loadCalendarData();
-        }, 300);
+        // Pas de loadCalendarData ici — le socket calendar:block_removed s'en charge
       } else if(activeTab==='price'){
         var pid3=document.getElementById('dayPricePropertySelect').value;
         var from3=document.getElementById('dayPriceFrom').value;
@@ -11821,9 +11818,18 @@ if (window.Capacitor) {
     });
     s.on('calendar:block_removed', function(d) {
       console.log('📅 Blocage supprimé via socket, rafraîchissement calendrier...');
+      // 1. Patch immédiat du store local pour re-render sans attendre le fetch
+      if (d && d.uid && window.calendarState && Array.isArray(window.calendarState.bookings)) {
+        window.calendarState.bookings = window.calendarState.bookings.filter(function(r) {
+          return r.uid !== d.uid && String(r.id) !== String(d.uid);
+        });
+      }
+      // 2. Re-render calendrier immédiatement depuis le store patché
+      if (typeof window.renderModernCalendar === 'function' && window.calendarState) {
+        window.renderModernCalendar(window.calendarState.bookings || [], window.LCC_PROPERTIES || []);
+      }
+      // 3. Recharger depuis l'API pour confirmer (sans bloquer l'affichage)
       if (typeof loadCalendarData === 'function') loadCalendarData();
-      else if (typeof refreshCalendar === 'function') refreshCalendar();
-      else if (typeof renderCalendar === 'function') renderCalendar();
     });
     s.on('reservation_cancelled', function(d) {
       console.log('❌ Réservation annulée via socket, rafraîchissement calendrier...', d);
