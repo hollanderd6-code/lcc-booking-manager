@@ -12889,7 +12889,7 @@ async function loadPushNotifHistory() {
 window.loadPushNotifHistory = loadPushNotifHistory;
 
 async function clearNotifHistory() {
-  if (!confirm("Vider tout l'historique des notifications ?")) return;
+  if (!await bhConfirm("Vider tout l'historique des notifications ?")) return;
   var token = localStorage.getItem('lcc_token');
   var headers = {};
   if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -12947,6 +12947,35 @@ function openNotifPanel() {
     setTimeout(initNotifBadge, 800);
   });
 })();
+</script>
+
+
+<!-- ── Modal confirmation custom (remplace window.confirm pour Capacitor) ── -->
+<div id="bhConfirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:24px;max-width:300px;width:90%;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div id="bhConfirmText" style="font-size:15px;font-weight:600;color:#1a1a18;margin-bottom:20px;text-align:center;line-height:1.4;"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="bhConfirmCancel" style="flex:1;padding:12px;border-radius:10px;border:1px solid #e8e0d0;background:white;font-size:14px;font-weight:600;color:#6b6459;cursor:pointer;">Annuler</button>
+      <button id="bhConfirmOk" style="flex:1;padding:12px;border-radius:10px;border:none;background:#EF4444;color:white;font-size:14px;font-weight:600;cursor:pointer;">Confirmer</button>
+    </div>
+  </div>
+</div>
+<script>
+function bhConfirm(message) {
+  return new Promise(function(resolve) {
+    var modal = document.getElementById('bhConfirmModal');
+    document.getElementById('bhConfirmText').textContent = message;
+    modal.style.display = 'flex';
+    document.getElementById('bhConfirmOk').onclick = function() {
+      modal.style.display = 'none';
+      resolve(true);
+    };
+    document.getElementById('bhConfirmCancel').onclick = function() {
+      modal.style.display = 'none';
+      resolve(false);
+    };
+  });
+}
 </script>
 
 </body>
@@ -13979,7 +14008,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   };
 
   window.bhDeletePromo = async function(id) {
-    if (!confirm('Désactiver ce code promo ?')) return;
+    if (!await bhConfirm('Désactiver ce code promo ?')) return;
     try {
       await fetch(BH_API + '/api/guest/promo/' + id, {
         method: 'DELETE',
