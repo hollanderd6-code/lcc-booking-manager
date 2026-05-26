@@ -290,6 +290,20 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 @media (max-width: 520px) {
   .slider-section { margin: 28px 0 0; }
 }
+
+/* ─── FEATURE SECTIONS ─── */
+.feat-section { margin-bottom: 18px; }
+.feat-section:last-child { margin-bottom: 0; }
+.feat-section-title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); padding-bottom: 8px;
+  border-bottom: 1px solid rgba(200,184,154,.2); margin-bottom: 10px;
+}
+.feat-section-title i { font-size: 10px; color: var(--primary); width: 14px; text-align: center; }
+.feat-section-unavailable .feat-section-title { color: #d1d5db; }
+.feat-section-unavailable .feat-section-title i { color: #d1d5db; }
+.feat-section-unavailable li { opacity: .5; }
 </style>
 </head>
 <body>
@@ -346,14 +360,14 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
       <div class="slider-count" id="sliderCount">1</div>
       <div class="slider-unit">logement<span id="sliderPlural"></span></div>
       <div class="range-wrap">
-        <input type="range" id="propSlider" min="1" max="60" value="1" oninput="updateSlider(this.value)">
+        <input type="range" id="propSlider" min="1" max="200" value="1" oninput="updateSlider(this.value)">
         <div class="range-ticks">
           <span class="range-tick">1</span>
           <span class="range-tick">10</span>
-          <span class="range-tick">20</span>
           <span class="range-tick">30</span>
           <span class="range-tick">50</span>
-          <span class="range-tick">60+</span>
+          <span class="range-tick">100</span>
+          <span class="range-tick">200</span>
         </div>
       </div>
       <div class="slider-plan-hint" id="sliderHint">
@@ -370,21 +384,21 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   <div class="container">
     <div class="plans-grid">
 
-      <!-- STARTER -->
+      <!-- ─── STARTER ─── -->
       <div class="plan-card" id="card-starter">
         <div class="plan-header">
           <div class="plan-badge default"><i class="fas fa-seedling"></i> Starter</div>
           <div class="plan-name">Starter</div>
-          <div class="plan-desc">Pour les propriétaires qui démarrent. Jusqu'à 3 logements, tout ce qu'il faut pour gérer.</div>
+          <div class="plan-desc">Pour les propriétaires qui démarrent. Jusqu'à 3 logements, tout ce qu'il faut pour bien gérer.</div>
           <div class="plan-price">
             <div class="price-old" id="starter-old"></div>
             <div class="price-row">
               <span class="price-currency">€</span>
-              <span class="price-amount" id="starter-amount">19</span>
+              <span class="price-amount" id="starter-amount">15</span>
               <span class="price-period" id="starter-period">/mois</span>
             </div>
             <div class="price-annual-note" id="starter-annual-note"></div>
-            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Offre lancement</div>
+            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Prix garanti à vie · 200 premiers</div>
           </div>
           <div class="plan-includes"><i class="fas fa-home"></i> <strong>Jusqu'à 3 logements</strong> · +9€/logement supp.</div>
         </div>
@@ -392,31 +406,59 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
           <button class="btn btn-outline" onclick="startCheckout('starter', event)">Essayer 14 jours gratuit</button>
         </div>
         <div class="plan-features">
-          <div class="features-title">Inclus dans Starter</div>
-          <ul>
-            <li><i class="fas fa-check"></i> Calendrier centralisé</li>
-            <li><i class="fas fa-check"></i> Connexion API (Airbnb, Booking, Abritel, Expedia)</li>
-            <li><i class="fas fa-check"></i> Import iCal universel</li>
-            <li><i class="fas fa-check"></i> Paiements directs Stripe</li>
-            <li><i class="fas fa-check"></i> Gestion des cautions <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">3% de commission</span></li>
-            <li><i class="fas fa-check"></i> Messagerie IA 24/7 en 26 langues</li>
-            <li><i class="fas fa-check"></i> Ménage & checklists</li>
-            <li><i class="fas fa-check"></i> Livret d'accueil digital</li>
-            <li><i class="fas fa-check"></i> App iOS & Android</li>
-            <li><i class="fas fa-check"></i> App voyageur BHGuest</li>
-            <li><i class="fas fa-check"></i> Règles tarifaires</li>
-            <li><i class="fas fa-check"></i> Rapports & revenus</li>
-            <li><i class="fas fa-check"></i> Contrats de location PDF</li>
-            <li><i class="fas fa-check"></i> Notifications push</li>
-            <li><i class="fas fa-check"></i> SMS voyageurs <span class="feat-tag">Option +7,99€/mois</span></li>
-            <li><i class="fas fa-clock" style="color:#f59e0b;"></i> <span style="color:#92400e;">Pricing dynamique</span> <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
-            <li><i class="fas fa-minus"></i> Facturation propriétaires</li>
-            <li><i class="fas fa-minus"></i> Sous-comptes équipe</li>
-          </ul>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-calendar-alt"></i> Calendrier & sync</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Calendrier centralisé</li>
+              <li><i class="fas fa-check"></i> Connexion API (Airbnb, Booking, Abritel…)</li>
+              <li><i class="fas fa-check"></i> Import / Export iCal</li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-credit-card"></i> Paiements & cautions</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Paiements directs Stripe</li>
+              <li><i class="fas fa-check"></i> Cautions voyageurs <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">3% commission</span></li>
+              <li><i class="fas fa-check"></i> App voyageur BHGuest</li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-robot"></i> Messagerie & IA</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Messagerie IA 24/7 · 26 langues</li>
+              <li><i class="fas fa-check"></i> Notifications push</li>
+              <li><i class="fas fa-check"></i> SMS voyageurs <span class="feat-tag">Option +7,99€/mois</span></li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-broom"></i> Ménage & outils</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Ménage & checklists</li>
+              <li><i class="fas fa-check"></i> Livret d'accueil digital</li>
+              <li><i class="fas fa-check"></i> App iOS & Android</li>
+              <li><i class="fas fa-check"></i> Règles tarifaires</li>
+              <li><i class="fas fa-check"></i> Rapports & revenus</li>
+              <li><i class="fas fa-check"></i> Contrats de location PDF</li>
+              <li><i class="fas fa-clock" style="color:#f59e0b;"></i> Pricing dynamique <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
+            </ul>
+          </div>
+
+          <div class="feat-section feat-section-unavailable">
+            <div class="feat-section-title"><i class="fas fa-times-circle" style="color:#d1d5db;"></i> Non inclus</div>
+            <ul>
+              <li><i class="fas fa-minus"></i> Facturation propriétaires</li>
+              <li><i class="fas fa-minus"></i> Sous-comptes équipe</li>
+            </ul>
+          </div>
+
         </div>
       </div>
 
-      <!-- PRO (featured) -->
+      <!-- ─── PRO ─── -->
       <div class="plan-card featured" id="card-pro">
         <div class="plan-header">
           <div class="plan-badge featured"><i class="fas fa-star"></i> Recommandé</div>
@@ -426,53 +468,90 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
             <div class="price-old" id="pro-old"></div>
             <div class="price-row">
               <span class="price-currency">€</span>
-              <span class="price-amount" id="pro-amount">69</span>
+              <span class="price-amount" id="pro-amount">49</span>
               <span class="price-period" id="pro-period">/mois</span>
             </div>
             <div class="price-annual-note" id="pro-annual-note"></div>
-            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Offre lancement</div>
+            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Prix garanti à vie · 200 premiers</div>
           </div>
           <div class="plan-includes"><i class="fas fa-home"></i> <strong>4 logements inclus</strong> · +7€/logement (max 50)</div>
         </div>
         <div class="plan-cta">
-          <button class="btn btn-primary" onclick="startCheckout('agence', event)">Essayer 14 jours gratuit</button>
+          <button class="btn btn-primary" onclick="startCheckout('pro', event)">Essayer 14 jours gratuit</button>
         </div>
         <div class="plan-features">
-          <div class="features-title">Tout Starter, plus :</div>
-          <ul>
-            <li><i class="fas fa-check"></i> Gestion multi-logements (jusqu'à 50)</li>
-            <li><i class="fas fa-check"></i> <strong>Cautions sans commission</strong></li>
-            <li><i class="fas fa-check"></i> <strong>Facturation propriétaires</strong> <span class="feat-tag">Conciergerie</span></li>
-            <li><i class="fas fa-check"></i> Factures clients & débours</li>
-            <li><i class="fas fa-check"></i> Attestation fiscale conciergerie</li>
-            <li><i class="fas fa-check"></i> Livret d'accueil par logement</li>
-            <li><i class="fas fa-check"></i> Équipe & assignation ménages</li>
-            <li><i class="fas fa-check"></i> <strong>Sous-comptes équipe</strong></li>
-            <li><i class="fas fa-check"></i> Administration droits par profil <span class="feat-tag">Option +5€/mois</span></li>
-            <li><i class="fas fa-check"></i> Rapports financiers avancés</li>
-            <li><i class="fas fa-check"></i> SMS voyageurs <span class="feat-tag">Option +1€/log/mois</span></li>
-            <li><i class="fas fa-clock" style="color:#f59e0b;"></i> <span style="color:#92400e;">Pricing dynamique</span> <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
-            <li><i class="fas fa-minus"></i> Mode Agence (multi-comptes)</li>
-            <li><i class="fas fa-minus"></i> Support prioritaire</li>
-          </ul>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-calendar-alt"></i> Calendrier & sync</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Tout Starter, jusqu'à 50 logements</li>
+              <li><i class="fas fa-check"></i> Règles tarifaires avancées</li>
+              <li><i class="fas fa-clock" style="color:#f59e0b;"></i> Pricing dynamique <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-credit-card"></i> Paiements & cautions</div>
+            <ul>
+              <li><i class="fas fa-check"></i> <strong>Cautions sans commission</strong></li>
+              <li><i class="fas fa-check"></i> App voyageur BHGuest</li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-robot"></i> Messagerie & IA</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Messagerie IA 24/7 · 26 langues</li>
+              <li><i class="fas fa-check"></i> Notifications push</li>
+              <li><i class="fas fa-check"></i> SMS voyageurs <span class="feat-tag">Option +1€/log/mois</span></li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-file-invoice"></i> Facturation & admin</div>
+            <ul>
+              <li><i class="fas fa-check"></i> <strong>Facturation propriétaires</strong> <span class="feat-tag">Conciergerie</span></li>
+              <li><i class="fas fa-check"></i> Factures clients & débours</li>
+              <li><i class="fas fa-check"></i> Attestation fiscale conciergerie</li>
+              <li><i class="fas fa-check"></i> Rapports financiers avancés</li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-users"></i> Équipe</div>
+            <ul>
+              <li><i class="fas fa-check"></i> <strong>Sous-comptes équipe</strong></li>
+              <li><i class="fas fa-check"></i> Checklists avancées par logement</li>
+              <li><i class="fas fa-check"></i> Droits par profil <span class="feat-tag">Option +5€/mois</span></li>
+            </ul>
+          </div>
+
+          <div class="feat-section feat-section-unavailable">
+            <div class="feat-section-title"><i class="fas fa-times-circle" style="color:#d1d5db;"></i> Non inclus</div>
+            <ul>
+              <li><i class="fas fa-minus"></i> Mode Agence (multi-comptes clients)</li>
+              <li><i class="fas fa-minus"></i> Support prioritaire</li>
+            </ul>
+          </div>
+
         </div>
       </div>
 
-      <!-- AGENCE -->
+      <!-- ─── AGENCE ─── -->
       <div class="plan-card" id="card-agence">
         <div class="plan-header">
           <div class="plan-badge pro"><i class="fas fa-building"></i> Agences</div>
           <div class="plan-name">Agence</div>
-          <div class="plan-desc">Pour les agences et grands gestionnaires. Portefeuille illimité, mode multi-comptes clients.</div>
+          <div class="plan-desc">Pour les agences et grands gestionnaires. Portefeuille illimité, multi-comptes clients.</div>
           <div class="plan-price">
             <div class="price-old" id="agence-old"></div>
             <div class="price-row">
               <span class="price-currency">€</span>
-              <span class="price-amount" id="agence-amount">399</span>
+              <span class="price-amount" id="agence-amount">299</span>
               <span class="price-period" id="agence-period">/mois</span>
             </div>
             <div class="price-annual-note" id="agence-annual-note"></div>
-            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Offre lancement</div>
+            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Prix garanti à vie · 200 premiers</div>
           </div>
           <div class="plan-includes"><i class="fas fa-home"></i> <strong>51 logements inclus</strong> · +5€/logement (illimité)</div>
         </div>
@@ -480,18 +559,55 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
           <button class="btn btn-dark" onclick="startCheckout('agence', event)">Essayer 14 jours gratuit</button>
         </div>
         <div class="plan-features">
-          <div class="features-title">Tout Pro, plus :</div>
-          <ul>
-            <li><i class="fas fa-check"></i> <strong>Mode Agence</strong> <span class="feat-tag" style="background:#7c3aed;color:white;border-color:#7c3aed;">Exclusif Agence</span></li>
-            <li><i class="fas fa-check"></i> Gérez les comptes de vos clients propriétaires</li>
-            <li><i class="fas fa-check"></i> Portefeuille illimité</li>
-            <li><i class="fas fa-check"></i> Administration droits par profil <span class="feat-tag" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0;">Inclus</span></li>
-            <li><i class="fas fa-check"></i> SMS voyageurs inclus <span style="color:#6b7280;font-size:12px;">(0,50€/log/mois)</span></li>
-            <li><i class="fas fa-check"></i> Rapports financiers avancés</li>
-            <li><i class="fas fa-check"></i> Checklists avancées par logement</li>
-            <li><i class="fas fa-check"></i> <strong>Support prioritaire</strong></li>
-            <li><i class="fas fa-clock" style="color:#f59e0b;"></i> <span style="color:#92400e;">Pricing dynamique</span> <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
-          </ul>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-building"></i> Mode Agence <span class="feat-tag" style="background:#7c3aed;color:white;border-color:#7c3aed;margin-left:6px;">Exclusif</span></div>
+            <ul>
+              <li><i class="fas fa-check"></i> <strong>Accès aux comptes clients propriétaires</strong></li>
+              <li><i class="fas fa-check"></i> Notifications résas & messages clients</li>
+              <li><i class="fas fa-check"></i> Facturation clients depuis votre compte</li>
+              <li><i class="fas fa-check"></i> Portefeuille illimité</li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-credit-card"></i> Paiements & cautions</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Cautions sans commission</li>
+              <li><i class="fas fa-check"></i> App voyageur BHGuest</li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-robot"></i> Messagerie & IA</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Messagerie IA 24/7 · 26 langues</li>
+              <li><i class="fas fa-check"></i> Notifications push</li>
+              <li><i class="fas fa-check"></i> SMS inclus <span style="color:#6b7280;font-size:11px;">(0,50€/log/mois)</span></li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-file-invoice"></i> Facturation & admin</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Facturation propriétaires</li>
+              <li><i class="fas fa-check"></i> Factures clients & débours</li>
+              <li><i class="fas fa-check"></i> Attestation fiscale conciergerie</li>
+              <li><i class="fas fa-check"></i> Rapports financiers avancés</li>
+            </ul>
+          </div>
+
+          <div class="feat-section">
+            <div class="feat-section-title"><i class="fas fa-users"></i> Équipe & support</div>
+            <ul>
+              <li><i class="fas fa-check"></i> Sous-comptes équipe</li>
+              <li><i class="fas fa-check"></i> Droits par profil <span class="feat-tag" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0;">Inclus</span></li>
+              <li><i class="fas fa-check"></i> Checklists avancées</li>
+              <li><i class="fas fa-check"></i> <strong>Support prioritaire</strong></li>
+              <li><i class="fas fa-clock" style="color:#f59e0b;"></i> Pricing dynamique <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
+            </ul>
+          </div>
+
         </div>
       </div>
 
@@ -699,9 +815,10 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 <script>
 /* ─── DATA ─── */
 const PLANS = {
-  starter: { monthly: 19, annual: 190, oldMonthly: 29, oldAnnual: 290, maxProps: 3, extraPrice: 9 },
-  pro:     { monthly: 69, annual: 690, oldMonthly: 89, oldAnnual: 890, maxProps: 50, extraPrice: 7 },
-  agence:  { monthly: 399, annual: 3990, oldMonthly: 499, oldAnnual: 4990, maxProps: 999, extraPrice: 5 },
+  //                  lancement  barré    lancement annuel  barré annuel
+  starter: { monthly: 15, annual: 150, oldMonthly: 19, oldAnnual: 190, maxProps: 3,  extraPrice: 9 },
+  pro:     { monthly: 49, annual: 490, oldMonthly: 69, oldAnnual: 690, maxProps: 50, extraPrice: 7 },
+  agence:  { monthly: 299, annual: 2990, oldMonthly: 399, oldAnnual: 3990, maxProps: 999, extraPrice: 5 },
 };
 
 let billing = 'monthly';
@@ -714,7 +831,7 @@ function setBilling(mode) {
   document.getElementById('btnAnnual').classList.toggle('active', mode === 'annual');
   const savingEl = document.getElementById('billingSaving');
   savingEl.innerHTML = mode === 'annual'
-    ? '<strong>2 mois offerts</strong> · Vous économisez jusqu\'à <strong>200€/an</strong>'
+    ? '<strong>2 mois offerts</strong> · Vous économisez jusqu\'à <strong>98€/an</strong> en Starter'
     : '&nbsp;';
   updateAllPrices();
 }
@@ -723,7 +840,7 @@ function setBilling(mode) {
 function updateSlider(val) {
   propCount = parseInt(val);
   const slider = document.getElementById('propSlider');
-  const pct = ((val - 1) / 59 * 100).toFixed(1);
+  const pct = Math.min(((val - 1) / 199 * 100), 100).toFixed(1);
   slider.style.setProperty('--pct', pct + '%');
 
   document.getElementById('sliderCount').textContent = propCount;
@@ -734,11 +851,15 @@ function updateSlider(val) {
   const hint = document.getElementById('sliderHint');
   let recommendedPlan, hintText;
   if (propCount <= 3) { recommendedPlan = 'starter'; hintText = 'Le plan Starter est fait pour vous'; }
-  else if (propCount <= 50) { recommendedPlan = 'pro'; hintText = 'Le plan Pro est recommandé'; }
+  else if (propCount <= 50) {
+    recommendedPlan = 'pro';
+    const extraPro = Math.max(0, propCount - 4);
+    hintText = 'Plan Pro' + (extraPro > 0 ? ' + ' + extraPro + ' logement' + (extraPro>1?'s':'') + ' supp. (+' + (extraPro*7) + '€/mois)' : '');
+  }
   else {
-    const extra = propCount - 51;
     recommendedPlan = 'agence';
-    hintText = `Plan Agence${extra > 0 ? ' + ' + extra + ' logement' + (extra>1?'s':'') + ' supplémentaire' + (extra>1?'s':'') + ' (' + (extra * 5) + '€/mois en plus)' : ''}`;
+    const extraAgence = Math.max(0, propCount - 51);
+    hintText = 'Plan Agence' + (extraAgence > 0 ? ' + ' + extraAgence + ' logement' + (extraAgence>1?'s':'') + ' supp. (+' + (extraAgence*5) + '€/mois)' : '');
   }
   hintEl.textContent = hintText;
 
@@ -785,11 +906,17 @@ function updateAllPrices() {
     const base = isAnnual ? plan.annual : plan.monthly;
     const old = isAnnual ? plan.oldAnnual : plan.oldMonthly;
 
-    // Extra props cost (only for plan with max)
+    // Extra props cost
+    // starter: inclus jusqu'à 3, extra au-delà
+    // pro: inclus 4 logements (base 69€), extra à partir du 5ème
+    // agence: inclus 51 logements (base 399€), extra à partir du 52ème
     let extra = 0;
-    if (plan.extraPrice > 0 && propCount > plan.maxProps) {
-      const extraProps = propCount - plan.maxProps;
-      extra = extraProps * plan.extraPrice * (isAnnual ? 10 : 1); // annual = 10 months
+    const includedProps = planKey === 'starter' ? 3 : planKey === 'pro' ? 4 : 51;
+    if (propCount > includedProps) {
+      const extraProps = propCount - includedProps;
+      // Pour agence: pas de max; pour pro: max 50 logements total (inclus+extra)
+      const cappedExtra = planKey === 'pro' ? Math.min(extraProps, 50 - includedProps) : extraProps;
+      extra = cappedExtra * plan.extraPrice * (isAnnual ? 10 : 1);
     }
 
     const total = base + extra;
@@ -801,8 +928,11 @@ function updateAllPrices() {
 
     const annualNote = document.getElementById(planKey + '-annual-note');
     if (isAnnual) {
-      const monthly = (total / 10).toFixed(2);
-      annualNote.textContent = `soit ${monthly}€/mois (2 mois offerts)`;
+      // L'abonnement annuel = 10 mois payés pour 12 mois d'accès (2 mois offerts)
+      // Le prix annuel affiché = total annuel (base + extras sur 10 mois)
+      // On affiche : "soit X€/mois sur 12 mois"
+      const monthlyEquiv = (total / 12).toFixed(0);
+      annualNote.textContent = `soit ${monthlyEquiv}€/mois sur 12 mois`;
     } else {
       annualNote.textContent = '';
     }
