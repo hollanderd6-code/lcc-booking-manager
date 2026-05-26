@@ -20812,75 +20812,86 @@ app.post('/api/sms/incoming', async (req, res) => {
 
 // ============================================
 // 1. FONCTION : Obtenir le Price ID Stripe
+// Nouveaux plans : starter / pro / agence
+// Variables d'env à définir dans Render :
+//   STRIPE_PRICE_STARTER_MONTHLY       = price_1T7HULFDAmyxvgFKj5pVnkbs
+//   STRIPE_PRICE_STARTER_ANNUAL        = price_1T7HURFDAmyxvgFKCMsOZHFP
+//   STRIPE_PRICE_STARTER_EXTRA_MONTHLY = price_1TbQ0hFDAmyxvgFKqMS4QUNV
+//   STRIPE_PRICE_STARTER_EXTRA_ANNUAL  = price_1TbQ1zFDAmyxvgFK89R0shfR
+//   STRIPE_PRICE_PRO_MONTHLY           = price_1TbPyvFDAmyxvgFKjIjF0EpS
+//   STRIPE_PRICE_PRO_ANNUAL            = price_1T7HUnFDAmyxvgFKdfjMJiLe
+//   STRIPE_PRICE_PRO_EXTRA_MONTHLY     = price_1T7HUsFDAmyxvgFKFaAzzTht
+//   STRIPE_PRICE_PRO_EXTRA_ANNUAL      = price_1T7HUwFDAmyxvgFKnEdRoAWh
+//   STRIPE_PRICE_AGENCE_MONTHLY        = price_1TbPzhFDAmyxvgFKhWSHzBUu
+//   STRIPE_PRICE_AGENCE_ANNUAL         = price_1T7HToFDAmyxvgFKZtsSaEui
+//   STRIPE_PRICE_AGENCE_EXTRA_MONTHLY  = price_1T7HTlFDAmyxvgFKLKmRpP51
+//   STRIPE_PRICE_AGENCE_EXTRA_ANNUAL   = price_1T7HTiFDAmyxvgFKWR5EwhbH
 // ============================================
 function getPriceIdForPlan(plan) {
-  const planLower = (plan || 'solo_monthly').toLowerCase();
-  
-  // ✅ Plan Solo (15€/mois - 149€/an)
-  if (planLower === 'solo_monthly' || planLower === 'solo') {
-    return process.env.STRIPE_PRICE_SOLO_MONTHLY;
-  }
-  if (planLower === 'solo_annual') {
-    return process.env.STRIPE_PRICE_SOLO_ANNUAL;
-  }
-  
-  // ✅ Plan Standard (29€/mois - 289€/an)
-  if (planLower === 'standard_monthly' || planLower === 'standard') {
-    return process.env.STRIPE_PRICE_STANDARD_MONTHLY;
-  }
-  if (planLower === 'standard_annual') {
-    return process.env.STRIPE_PRICE_STANDARD_ANNUAL;
-  }
-  
-  // ✅ Plan Standard Extra (7€/mois - 70€/an par logement supplémentaire)
-  if (planLower === 'standard_extra_monthly') {
-    return process.env.STRIPE_PRICE_STANDARD_EXTRA_MONTHLY;
-  }
-  if (planLower === 'standard_extra_annual') {
-    return process.env.STRIPE_PRICE_STANDARD_EXTRA_ANNUAL;
-  }
-  
-  // ✅ Plan Pro (49€/mois - 489€/an)
-  if (planLower === 'pro_monthly' || planLower === 'pro') {
-    return process.env.STRIPE_PRICE_PRO_MONTHLY;
-  }
-  if (planLower === 'pro_annual') {
-    return process.env.STRIPE_PRICE_PRO_ANNUAL;
-  }
-  
-  // ✅ Plan Pro Extra (5€/mois - 50€/an par logement supplémentaire)
-  if (planLower === 'pro_extra_monthly') {
-    return process.env.STRIPE_PRICE_PRO_EXTRA_MONTHLY;
-  }
-  if (planLower === 'pro_extra_annual') {
-    return process.env.STRIPE_PRICE_PRO_EXTRA_ANNUAL;
-  }
-  
-  // Par défaut : Solo mensuel
-  console.warn(`⚠️ Plan inconnu: ${plan}, utilisation du plan Solo mensuel par défaut`);
-  return process.env.STRIPE_PRICE_SOLO_MONTHLY;
+  const p = (plan || 'starter_monthly').toLowerCase();
+
+  // ── Starter (15€/mois · 150€/an) ──────────────────────────────────────
+  if (p === 'starter_monthly' || p === 'starter' || p === 'solo_monthly' || p === 'solo')
+    return process.env.STRIPE_PRICE_STARTER_MONTHLY || 'price_1T7HULFDAmyxvgFKj5pVnkbs';
+  if (p === 'starter_annual' || p === 'solo_annual')
+    return process.env.STRIPE_PRICE_STARTER_ANNUAL  || 'price_1T7HURFDAmyxvgFKCMsOZHFP';
+  if (p === 'starter_extra_monthly')
+    return process.env.STRIPE_PRICE_STARTER_EXTRA_MONTHLY || 'price_1TbQ0hFDAmyxvgFKqMS4QUNV';
+  if (p === 'starter_extra_annual')
+    return process.env.STRIPE_PRICE_STARTER_EXTRA_ANNUAL  || 'price_1TbQ1zFDAmyxvgFK89R0shfR';
+
+  // ── Pro (49€/mois · 490€/an) ──────────────────────────────────────────
+  if (p === 'pro_monthly' || p === 'standard_monthly' || p === 'standard')
+    return process.env.STRIPE_PRICE_PRO_MONTHLY     || 'price_1TbPyvFDAmyxvgFKjIjF0EpS';
+  if (p === 'pro_annual' || p === 'standard_annual')
+    return process.env.STRIPE_PRICE_PRO_ANNUAL      || 'price_1T7HUnFDAmyxvgFKdfjMJiLe';
+  if (p === 'pro_extra_monthly' || p === 'standard_extra_monthly')
+    return process.env.STRIPE_PRICE_PRO_EXTRA_MONTHLY || 'price_1T7HUsFDAmyxvgFKFaAzzTht';
+  if (p === 'pro_extra_annual' || p === 'standard_extra_annual')
+    return process.env.STRIPE_PRICE_PRO_EXTRA_ANNUAL  || 'price_1T7HUwFDAmyxvgFKnEdRoAWh';
+
+  // ── Agence (299€/mois · 2990€/an) ────────────────────────────────────
+  if (p === 'agence_monthly' || p === 'business_monthly')
+    return process.env.STRIPE_PRICE_AGENCE_MONTHLY   || 'price_1TbPzhFDAmyxvgFKhWSHzBUu';
+  if (p === 'agence_annual' || p === 'business_annual')
+    return process.env.STRIPE_PRICE_AGENCE_ANNUAL    || 'price_1T7HToFDAmyxvgFKZtsSaEui';
+  if (p === 'agence_extra_monthly')
+    return process.env.STRIPE_PRICE_AGENCE_EXTRA_MONTHLY || 'price_1T7HTlFDAmyxvgFKLKmRpP51';
+  if (p === 'agence_extra_annual')
+    return process.env.STRIPE_PRICE_AGENCE_EXTRA_ANNUAL  || 'price_1T7HTiFDAmyxvgFKWR5EwhbH';
+
+  console.warn(`⚠️ Plan inconnu: ${plan} — fallback starter_monthly`);
+  return process.env.STRIPE_PRICE_STARTER_MONTHLY || 'price_1T7HULFDAmyxvgFKj5pVnkbs';
 }
 
 // ============================================
 // 1b. FONCTION : Récupérer le nom du plan depuis un Price ID
 // ============================================
 function getPlanFromPriceId(priceId) {
-  if (!priceId) return 'solo_monthly';
-  
-  // Solo
-  if (priceId === process.env.STRIPE_PRICE_SOLO_MONTHLY) return 'solo_monthly';
-  if (priceId === process.env.STRIPE_PRICE_SOLO_ANNUAL) return 'solo_annual';
-  
-  // Standard
-  if (priceId === process.env.STRIPE_PRICE_STANDARD_MONTHLY) return 'standard_monthly';
-  if (priceId === process.env.STRIPE_PRICE_STANDARD_ANNUAL) return 'standard_annual';
-  
-  // Pro
-  if (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY) return 'pro_monthly';
-  if (priceId === process.env.STRIPE_PRICE_PRO_ANNUAL) return 'pro_annual';
-  
-  console.warn(`⚠️ Price ID inconnu: ${priceId}, utilisation du plan Solo par défaut`);
-  return 'solo_monthly';
+  if (!priceId) return 'starter_monthly';
+
+  const MAP = {
+    // Starter
+    [process.env.STRIPE_PRICE_STARTER_MONTHLY        || 'price_1T7HULFDAmyxvgFKj5pVnkbs']: 'starter_monthly',
+    [process.env.STRIPE_PRICE_STARTER_ANNUAL         || 'price_1T7HURFDAmyxvgFKCMsOZHFP']: 'starter_annual',
+    [process.env.STRIPE_PRICE_STARTER_EXTRA_MONTHLY  || 'price_1TbQ0hFDAmyxvgFKqMS4QUNV']: 'starter_extra_monthly',
+    [process.env.STRIPE_PRICE_STARTER_EXTRA_ANNUAL   || 'price_1TbQ1zFDAmyxvgFK89R0shfR']: 'starter_extra_annual',
+    // Pro
+    [process.env.STRIPE_PRICE_PRO_MONTHLY            || 'price_1TbPyvFDAmyxvgFKjIjF0EpS']: 'pro_monthly',
+    [process.env.STRIPE_PRICE_PRO_ANNUAL             || 'price_1T7HUnFDAmyxvgFKdfjMJiLe']: 'pro_annual',
+    [process.env.STRIPE_PRICE_PRO_EXTRA_MONTHLY      || 'price_1T7HUsFDAmyxvgFKFaAzzTht']: 'pro_extra_monthly',
+    [process.env.STRIPE_PRICE_PRO_EXTRA_ANNUAL       || 'price_1T7HUwFDAmyxvgFKnEdRoAWh']: 'pro_extra_annual',
+    // Agence
+    [process.env.STRIPE_PRICE_AGENCE_MONTHLY         || 'price_1TbPzhFDAmyxvgFKhWSHzBUu']: 'agence_monthly',
+    [process.env.STRIPE_PRICE_AGENCE_ANNUAL          || 'price_1T7HToFDAmyxvgFKZtsSaEui']: 'agence_annual',
+    [process.env.STRIPE_PRICE_AGENCE_EXTRA_MONTHLY   || 'price_1T7HTlFDAmyxvgFKLKmRpP51']: 'agence_extra_monthly',
+    [process.env.STRIPE_PRICE_AGENCE_EXTRA_ANNUAL    || 'price_1T7HTiFdAmyxvgFKWR5EwhbH']: 'agence_extra_annual',
+  };
+
+  const found = MAP[priceId];
+  if (found) return found;
+  console.warn(`⚠️ Price ID inconnu: ${priceId} — fallback starter_monthly`);
+  return 'starter_monthly';
 }
 
 // ============================================
@@ -21084,47 +21095,62 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
       });
     }
 
-    // Obtenir le Price ID
+    // Obtenir le Price ID de base
     const priceId = getPriceIdForPlan(plan);
     if (!priceId) {
       console.error(`❌ Aucun Price ID trouvé pour le plan: ${plan}`);
       return res.status(400).json({ 
         error: 'Plan non configuré dans Stripe',
-        hint: `Vérifiez que STRIPE_PRICE_${plan.toUpperCase()} existe dans votre .env`
+        hint: `Vérifiez les variables STRIPE_PRICE_* dans vos variables d'environnement`
       });
     }
 
+    // Logements supplémentaires
+    const { extraProps = 0 } = req.body;
+    const extraCount = Math.max(0, parseInt(extraProps) || 0);
+    const isAnnual = plan.includes('annual');
+    const basePlanName = getBasePlanName(plan);
+
+    // Valider le nombre de logements extra selon le plan
+    const planLimits = { starter: 2, pro: 46, agence: 9999 }; // max extra = max_total - inclus
+    const maxExtra = planLimits[basePlanName] || 0;
+    const cappedExtra = Math.min(extraCount, maxExtra);
+
+    // Construire les line_items (plan de base + extra si besoin)
+    const lineItems = [{ price: priceId, quantity: 1 }];
+    if (cappedExtra > 0) {
+      const extraPriceId = getPriceIdForPlan(`${basePlanName}_extra_${isAnnual ? 'annual' : 'monthly'}`);
+      if (extraPriceId) {
+        lineItems.push({ price: extraPriceId, quantity: cappedExtra });
+      }
+    }
+
     console.log('✅ Création session Stripe:', {
-      user: user.email,
-      userId: user.id,
-      plan: plan,
-      priceId: priceId
+      user: user.email, userId: user.id,
+      plan, priceId, extraProps: cappedExtra, lineItems: lineItems.length
     });
 
     const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
 
-    // ✅ CORRECTION CRITIQUE : Créer la session Stripe Checkout
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1
-        }
-      ],
+      line_items: lineItems,
       subscription_data: {
         metadata: {
           userId: user.id.toString(),
           plan: plan,
-          planDisplay: getPlanDisplayName(plan)
+          planDisplay: getPlanDisplayName(plan),
+          extraProps: String(cappedExtra)
         }
       },
       customer_email: user.email,
       client_reference_id: user.id.toString(),
       success_url: `${appUrl}/settings-account.html?tab=subscription&success=true`,
       cancel_url: `${appUrl}/pricing.html?cancelled=true`,
-      locale: 'fr'
+      locale: 'fr',
+      // Permettre la modification de la quantité dans le checkout
+      allow_promotion_codes: true
     });
 
     console.log('✅ Session créée avec succès:', session.id);
