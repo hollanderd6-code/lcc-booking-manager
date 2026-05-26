@@ -5809,9 +5809,10 @@ window.confirmImportReservations = function() {
     window.showToast(`${nb} ligne${nb>1?'s':''} ajoutée${nb>1?'s':''} à la facture`, 'success');
   }
 };
-</script>
 
-</body></html>`);
+};
+
+
 };
 
 // ── Sauvegarder débours ──
@@ -5973,6 +5974,238 @@ window.confirmImportDebours = function() {
 };
 
 // switchTab hookup intégré directement dans la définition principale
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL IMPORT RÉSERVATIONS → FACTURE
+     ═══════════════════════════════════════════════════════════ -->
+<div id="importResaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:white;border-radius:16px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#111827;">📅 Importer depuis les réservations</div>
+        <div id="importResaSubtitle" style="font-size:12px;color:#6B7280;margin-top:2px;"></div>
+      </div>
+      <button onclick="closeImportResaModal()" style="background:none;border:none;font-size:20px;color:#9ca3af;cursor:pointer;padding:4px;">✕</button>
+    </div>
+    <div style="padding:16px 24px;border-bottom:1px solid #f3f4f6;background:#fafafa;flex-shrink:0;">
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">PÉRIODE DU</label>
+          <input type="date" id="importResaFrom" class="form-control" style="font-size:13px;"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">AU</label>
+          <input type="date" id="importResaTo" class="form-control" style="font-size:13px;"/>
+        </div>
+        <button onclick="fetchInvoiceSummary()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+          <i class="fas fa-search" style="margin-right:6px;"></i>Charger
+        </button>
+      </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">LOGEMENTS</label>
+        <div id="importResaPropList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
+    <div id="importResaContent" style="flex:1;overflow-y:auto;padding:16px 24px;">
+      <div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px;">
+        <i class="fas fa-calendar" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.3;"></i>
+        Sélectionnez une période et cliquez sur Charger
+      </div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:#fafafa;">
+      <span id="importResaTotalLabel" style="font-size:13px;color:#6b7280;"></span>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeImportResaModal()" style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">Annuler</button>
+        <button id="importResaConfirmBtn" onclick="confirmImportReservations()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;" disabled>
+          <i class="fas fa-plus" style="margin-right:6px;"></i>Ajouter les lignes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window._importResaSummary = null;
+window._importResaChecked = {};
+
+window.openImportReservations = function() {
+  var periodStart = document.getElementById('invoicePeriodStart') ? document.getElementById('invoicePeriodStart').value : '';
+  var periodEnd   = document.getElementById('invoicePeriodEnd')   ? document.getElementById('invoicePeriodEnd').value   : '';
+  if (periodStart) document.getElementById('importResaFrom').value = periodStart;
+  if (periodEnd)   document.getElementById('importResaTo').value   = periodEnd;
+
+  var clientId = document.getElementById('invoiceClientId') ? document.getElementById('invoiceClientId').value : '';
+  var client = (window.clients || []).find(function(c){ return String(c.id) === clientId; });
+  var clientName = client ? (client.company_name || ((client.first_name||'') + ' ' + (client.last_name||'')).trim()) : '';
+  document.getElementById('importResaSubtitle').textContent = clientName ? ('Facture pour : ' + clientName) : '';
+
+  var checkedProps = [];
+  document.querySelectorAll('#propertyCheckboxList input[type=checkbox]:checked').forEach(function(cb){ checkedProps.push(cb.value); });
+
+  var propListEl = document.getElementById('importResaPropList');
+  var allProps = window.LCC_PROPERTIES || window.userProperties || [];
+  propListEl.innerHTML = allProps.length === 0
+    ? '<span style="font-size:12px;color:#9ca3af;">Aucun logement trouvé</span>'
+    : allProps.map(function(p) {
+        var pid  = p.id || p.propertyId;
+        var name = p.internal_name || p.internalName || p.name || pid;
+        var isChecked = checkedProps.length === 0 || checkedProps.indexOf(pid) !== -1;
+        return '<label style="display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid #e5e7eb;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;background:' + (isChecked?'#ecfdf5':'white') + ';color:' + (isChecked?'#1A7A5E':'#374151') + ';">'
+          + '<input type="checkbox" value="' + pid + '" ' + (isChecked?'checked':'') + ' onchange="this.parentElement.style.background=this.checked?'#ecfdf5':'white';this.parentElement.style.color=this.checked?'#1A7A5E':'#374151';" style="accent-color:#1A7A5E;">'
+          + name + '</label>';
+      }).join('');
+
+  window._importResaSummary = null;
+  window._importResaChecked = {};
+  document.getElementById('importResaContent').innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px;"><i class="fas fa-calendar" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.3;"></i>Sélectionnez une période et cliquez sur Charger</div>';
+  document.getElementById('importResaTotalLabel').textContent = '';
+  document.getElementById('importResaConfirmBtn').disabled = true;
+  document.getElementById('importResaModal').style.display = 'flex';
+};
+
+window.closeImportResaModal = function() {
+  document.getElementById('importResaModal').style.display = 'none';
+};
+
+window.fetchInvoiceSummary = async function() {
+  var dateFrom = document.getElementById('importResaFrom').value;
+  var dateTo   = document.getElementById('importResaTo').value;
+  if (!dateFrom || !dateTo) { alert('Veuillez sélectionner une période.'); return; }
+  if (dateFrom >= dateTo)   { alert('La date de début doit être avant la date de fin.'); return; }
+
+  var propIds = [];
+  document.querySelectorAll('#importResaPropList input[type=checkbox]:checked').forEach(function(cb){ propIds.push(cb.value); });
+
+  var content = document.getElementById('importResaContent');
+  content.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Chargement des réservations...</div>';
+  document.getElementById('importResaConfirmBtn').disabled = true;
+
+  try {
+    var token = localStorage.getItem('lcc_token');
+    var url = API_BASE + '/api/reservations/invoice-summary?date_from=' + dateFrom + '&date_to=' + dateTo;
+    if (propIds.length > 0) url += '&property_ids=' + propIds.join(',');
+
+    var res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    var data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Erreur serveur');
+
+    window._importResaSummary = data;
+
+    if (!data.summary || data.summary.length === 0) {
+      content.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px;"><i class="fas fa-calendar-times" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.3;"></i>Aucune réservation trouvée sur cette période</div>';
+      document.getElementById('importResaTotalLabel').textContent = '';
+      return;
+    }
+
+    window._importResaChecked = {};
+    data.summary.forEach(function(p){ window._importResaChecked[p.platform] = true; });
+    renderImportResaSummary(data);
+
+  } catch(e) {
+    document.getElementById('importResaContent').innerHTML = '<div style="text-align:center;padding:20px;color:#dc2626;font-size:13px;">❌ Erreur : ' + e.message + '</div>';
+    console.error('fetchInvoiceSummary error:', e);
+  }
+};
+
+function renderImportResaSummary(data) {
+  var platColors = {
+    'Airbnb':       { bg:'#fff0f0', border:'#fecaca', color:'#dc2626', icon:'fa-brands fa-airbnb' },
+    'Booking.com':  { bg:'#eff6ff', border:'#bfdbfe', color:'#2563eb', icon:'fas fa-hotel' },
+    'BHGuest':      { bg:'#ecfdf5', border:'#a7f3d0', color:'#059669', icon:'fas fa-mobile-alt' },
+    'Direct':       { bg:'#f5f3ff', border:'#ddd6fe', color:'#7c3aed', icon:'fas fa-user' },
+    'default':      { bg:'#f9fafb', border:'#e5e7eb', color:'#374151', icon:'fas fa-globe' }
+  };
+
+  document.getElementById('importResaContent').innerHTML = data.summary.map(function(p) {
+    var c = platColors[p.platform] || platColors['default'];
+    var isChecked = window._importResaChecked[p.platform] !== false;
+    var resaRows = p.reservations.map(function(r) {
+      return '<tr style="border-top:1px solid #f3f4f6;">'
+        + '<td style="padding:6px 8px;font-size:12px;color:#374151;">' + r.guestName + '</td>'
+        + '<td style="padding:6px 8px;font-size:12px;color:#6b7280;">' + r.propertyName + '</td>'
+        + '<td style="padding:6px 8px;font-size:12px;color:#6b7280;">' + r.startDate + ' → ' + r.endDate + '</td>'
+        + '<td style="padding:6px 8px;font-size:12px;font-weight:600;color:#1A7A5E;text-align:right;">' + r.netHote.toFixed(2) + ' €</td>'
+        + '</tr>';
+    }).join('');
+
+    return '<div style="border:1px solid ' + c.border + ';border-radius:12px;margin-bottom:12px;overflow:hidden;background:white;">'
+      + '<label style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:' + c.bg + ';cursor:pointer;">'
+      + '<input type="checkbox" ' + (isChecked?'checked':'') + ' data-platform="' + p.platform + '" '
+      + 'onchange="window._importResaChecked['' + p.platform + '']=this.checked;updateImportResaTotal();" '
+      + 'style="width:16px;height:16px;accent-color:' + c.color + ';flex-shrink:0;">'
+      + '<div style="width:32px;height:32px;background:' + c.color + '20;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+      + '<i class="' + c.icon + '" style="color:' + c.color + ';font-size:14px;"></i></div>'
+      + '<div style="flex:1;">'
+      + '<div style="font-size:14px;font-weight:700;color:#111827;">' + p.platform + '</div>'
+      + '<div style="font-size:12px;color:#6b7280;">' + p.count + ' réservation' + (p.count>1?'s':'') + ' · Brut : ' + p.totalBrut.toFixed(2) + ' €</div>'
+      + '</div>'
+      + '<div style="text-align:right;">'
+      + '<div style="font-size:16px;font-weight:800;color:' + c.color + ';">' + p.totalNet.toFixed(2) + ' €</div>'
+      + '<div style="font-size:10px;color:#9ca3af;font-weight:500;">NET HÔTE</div>'
+      + '</div></label>'
+      + '<div style="padding:0 4px 4px;"><table style="width:100%;border-collapse:collapse;">'
+      + '<thead><tr style="background:#f9fafb;">'
+      + '<th style="padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:left;">VOYAGEUR</th>'
+      + '<th style="padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:left;">LOGEMENT</th>'
+      + '<th style="padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:left;">DATES</th>'
+      + '<th style="padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:right;">NET</th>'
+      + '</tr></thead><tbody>' + resaRows + '</tbody></table></div></div>';
+  }).join('');
+
+  updateImportResaTotal();
+}
+
+window.updateImportResaTotal = function() {
+  if (!window._importResaSummary) return;
+  var total = 0; var count = 0;
+  window._importResaSummary.summary.forEach(function(p) {
+    if (window._importResaChecked[p.platform]) { total += p.totalNet; count++; }
+  });
+  var lbl = document.getElementById('importResaTotalLabel');
+  var btn = document.getElementById('importResaConfirmBtn');
+  if (count > 0) {
+    lbl.textContent = count + ' plateforme' + (count>1?'s':'') + ' · Total net : ' + total.toFixed(2) + ' €';
+    btn.disabled = false;
+  } else {
+    lbl.textContent = 'Aucune plateforme sélectionnée';
+    btn.disabled = true;
+  }
+};
+
+window.confirmImportReservations = function() {
+  if (!window._importResaSummary) return;
+  var dateFrom = document.getElementById('importResaFrom').value;
+  var dateTo   = document.getElementById('importResaTo').value;
+
+  var periodStartEl = document.getElementById('invoicePeriodStart');
+  var periodEndEl   = document.getElementById('invoicePeriodEnd');
+  if (periodStartEl && !periodStartEl.value) periodStartEl.value = dateFrom;
+  if (periodEndEl   && !periodEndEl.value)   periodEndEl.value   = dateTo;
+
+  window._importResaSummary.summary.forEach(function(p) {
+    if (!window._importResaChecked[p.platform]) return;
+    prestationCounter++;
+    var pid = 'p' + prestationCounter;
+    var fromFr = new Date(dateFrom).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'});
+    var toFr   = new Date(dateTo).toLocaleDateString('fr-FR',   {day:'2-digit',month:'2-digit',year:'numeric'});
+    var desc = 'Loyer net ' + p.platform + ' — ' + p.count + ' résa' + (p.count>1?'s':'') + ' — ' + fromFr + ' au ' + toFr;
+    prestations.push({
+      id: pid, type: 'commission', description: desc,
+      rentalAmount: Math.round(p.totalNet * 100) / 100,
+      commissionRate: 100,
+      quantity: 1, unitPrice: 0, isDebours: false
+    });
+  });
+
+  renderEditorPrestations();
+  updatePreview();
+  closeImportResaModal();
+  if (typeof window.showToast === 'function') {
+    var nb = Object.values(window._importResaChecked).filter(Boolean).length;
+    window.showToast(nb + ' ligne' + (nb>1?'s':'') + ' ajoutée' + (nb>1?'s':'') + ' à la facture', 'success');
+  }
+};
 </script>
 <script src="/js/bh-onboarding-pages.js"></script>
 </body>
