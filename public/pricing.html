@@ -989,7 +989,17 @@ async function startCheckout(plan, event) {
 
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirection...';
     const billingPlan = billing === 'annual' ? plan + '_annual' : plan + '_monthly';
-    const res = await fetch('/api/billing/create-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ plan: billingPlan }) });
+
+    // Calculer le nombre de logements supplémentaires selon le plan sélectionné
+    const includedByPlan = { starter: 1, pro: 4, agence: 51 };
+    const included = includedByPlan[plan] || 1;
+    const extraProps = Math.max(0, propCount - included);
+
+    const res = await fetch('/api/billing/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ plan: billingPlan, extraProps })
+    });
     if (!res.ok) throw new Error('Erreur session');
     const data = await res.json();
     if (data.url) window.location.href = data.url;
