@@ -296,14 +296,26 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .feat-section:last-child { margin-bottom: 0; }
 .feat-section-title {
   display: flex; align-items: center; gap: 7px;
-  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--muted); padding-bottom: 8px;
-  border-bottom: 1px solid rgba(200,184,154,.2); margin-bottom: 10px;
+  font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--ink); padding-bottom: 8px;
+  border-bottom: 1px solid rgba(200,184,154,.25); margin-bottom: 10px;
 }
 .feat-section-title i { font-size: 10px; color: var(--primary); width: 14px; text-align: center; }
 .feat-section-unavailable .feat-section-title { color: #d1d5db; }
 .feat-section-unavailable .feat-section-title i { color: #d1d5db; }
 .feat-section-unavailable li { opacity: .5; }
+
+/* ─── SLIDER CONTROLS ─── */
+.slider-controls { display: flex; align-items: center; gap: 12px; }
+.slider-controls .range-wrap { flex: 1; }
+.slider-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--border);
+  background: white; color: var(--ink); font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all .15s; box-shadow: 0 1px 4px rgba(13,17,23,.08);
+}
+.slider-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.slider-btn:active { transform: scale(.92); }
 </style>
 </head>
 <body>
@@ -359,16 +371,24 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
       <div class="slider-label">Combien de logements gérez-vous ?</div>
       <div class="slider-count" id="sliderCount">1</div>
       <div class="slider-unit">logement<span id="sliderPlural"></span></div>
-      <div class="range-wrap">
-        <input type="range" id="propSlider" min="1" max="200" value="1" oninput="updateSlider(this.value)">
-        <div class="range-ticks">
-          <span class="range-tick">1</span>
-          <span class="range-tick">10</span>
-          <span class="range-tick">30</span>
-          <span class="range-tick">50</span>
-          <span class="range-tick">100</span>
-          <span class="range-tick">200</span>
+      <div class="slider-controls">
+        <button class="slider-btn" onclick="updateSlider(Math.max(1, propCount - 1))" aria-label="Moins">
+          <i class="fas fa-minus"></i>
+        </button>
+        <div class="range-wrap">
+          <input type="range" id="propSlider" min="1" max="200" value="1" oninput="updateSlider(this.value)">
+          <div class="range-ticks">
+            <span class="range-tick">1</span>
+            <span class="range-tick">10</span>
+            <span class="range-tick">30</span>
+            <span class="range-tick">50</span>
+            <span class="range-tick">100</span>
+            <span class="range-tick">200</span>
+          </div>
         </div>
+        <button class="slider-btn" onclick="updateSlider(Math.min(200, propCount + 1))" aria-label="Plus">
+          <i class="fas fa-plus"></i>
+        </button>
       </div>
       <div class="slider-plan-hint" id="sliderHint">
         <i class="fas fa-check-circle"></i>
@@ -840,7 +860,8 @@ function setBilling(mode) {
 function updateSlider(val) {
   propCount = parseInt(val);
   const slider = document.getElementById('propSlider');
-  const pct = Math.min(((val - 1) / 199 * 100), 100).toFixed(1);
+  slider.value = propCount; // sync l'input quand appelé depuis les boutons +/-
+  const pct = Math.min(((propCount - 1) / 199 * 100), 100).toFixed(1);
   slider.style.setProperty('--pct', pct + '%');
 
   document.getElementById('sliderCount').textContent = propCount;
@@ -911,7 +932,7 @@ function updateAllPrices() {
     // pro: inclus 4 logements (base 69€), extra à partir du 5ème
     // agence: inclus 51 logements (base 399€), extra à partir du 52ème
     let extra = 0;
-    const includedProps = planKey === 'starter' ? 3 : planKey === 'pro' ? 4 : 51;
+    const includedProps = planKey === 'starter' ? 1 : planKey === 'pro' ? 4 : 51; // starter: 1 log inclus, +9€/log supp jusqu'à 3
     if (propCount > includedProps) {
       const extraProps = propCount - includedProps;
       // Pour agence: pas de max; pour pro: max 50 logements total (inclus+extra)
