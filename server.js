@@ -9282,7 +9282,7 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
     if (enabled && !sub?.sms_enabled) {
       return res.status(403).json({
         error: 'payment_required',
-        message: 'Veuillez souscrire à l'option SMS via Stripe.',
+        message: "Veuillez souscrire à l'option SMS via Stripe.",
         action: 'subscribe' // le front redirige vers /api/billing/sms/subscribe
       });
     }
@@ -21327,7 +21327,7 @@ function requireFeature(feature) {
       // Droits par profil : Pro doit avoir souscrit l'option, Agence = toujours inclus
       if (feature === 'droits_par_profil' && basePlan === 'pro' && !sub.droits_enabled) {
         return res.status(403).json({
-          error: 'L'option "Droits par profil" n'est pas activée (5€/mois).',
+          error: "L'option \"Droits par profil\" n'est pas activée (5€/mois).",
           featureBlocked: true, feature,
           optionRequired: true, optionPrice: '5€/mois',
           upgradeAction: '/api/billing/droits/subscribe'
