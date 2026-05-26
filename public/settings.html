@@ -2356,17 +2356,17 @@ function insertVariable(textareaId, variable, event) {
 
   // Config des plans
   const PLAN_LIMITS = {
-    solo:     { included: 1,  extraPrice: null, extraPriceAnnual: null },
-    standard: { included: 3,  extraPrice: 7,    extraPriceAnnual: 70 },
-    pro:      { included: 6,  extraPrice: 5,    extraPriceAnnual: 50 }
+    starter: { included: 1,  max: 3,    extraPrice: 9,  extraPriceAnnual: 90  },
+    pro:     { included: 4,  max: 50,   extraPrice: 7,  extraPriceAnnual: 70  },
+    agence:  { included: 51, max: 9999, extraPrice: 5,  extraPriceAnnual: 50  },
   };
 
   function getBasePlan(planType) {
     const p = (planType || '').toLowerCase();
-    if (p.includes('solo')) return 'solo';
-    if (p.includes('standard')) return 'standard';
-    if (p.includes('pro')) return 'pro';
-    return 'solo';
+    if (p.includes('agence') || p.includes('business')) return 'agence';
+    if (p.includes('pro') || p.includes('standard'))    return 'pro';
+    if (p.includes('starter') || p.includes('solo'))    return 'starter';
+    return 'starter';
   }
 
   // Données chargées au démarrage
@@ -2407,26 +2407,23 @@ function insertVariable(textareaId, variable, event) {
     if (!badge) return;
 
     const basePlan = getBasePlan(userPlanType);
-    const limits = PLAN_LIMITS[basePlan];
+    const limits   = PLAN_LIMITS[basePlan];
+    const planLabels = { starter: 'Starter', pro: 'Pro', agence: 'Agence' };
+    const planLabel  = planLabels[basePlan] || basePlan;
 
-    if (basePlan === 'solo') {
-      if (propertyCount >= 1) {
-        badge.textContent = '⚠️ Limite atteinte (plan Solo : 1 logement max)';
-        badge.style.color = '#dc2626';
-      } else {
-        badge.textContent = `${propertyCount}/1 logement inclus`;
-        badge.style.color = '#6b7280';
-      }
+    if (propertyCount <= limits.included) {
+      // Dans le quota inclus
+      badge.textContent = `${propertyCount}/${limits.included} logement${limits.included > 1 ? 's' : ''} inclus`;
+      badge.style.color = '#6b7280';
+    } else if (propertyCount <= limits.max) {
+      // Au-delà des inclus, dans la limite du plan
+      const extraCount = propertyCount - limits.included;
+      badge.textContent = `${propertyCount} logements (${extraCount} supplémentaire${extraCount > 1 ? 's' : ''} facturé${extraCount > 1 ? 's' : ''})`;
+      badge.style.color = '#f59e0b';
     } else {
-      const remaining = Math.max(0, limits.included - propertyCount);
-      if (remaining > 0) {
-        badge.textContent = `${propertyCount}/${limits.included} logements inclus`;
-        badge.style.color = '#6b7280';
-      } else {
-        const extraCount = propertyCount - limits.included;
-        badge.textContent = `${propertyCount} logements (${extraCount} supplémentaire${extraCount > 1 ? 's' : ''} facturé${extraCount > 1 ? 's' : ''})`;
-        badge.style.color = '#f59e0b';
-      }
+      // Dépassement de la limite max du plan
+      badge.textContent = `⚠️ Limite atteinte (plan ${planLabel} : max ${limits.max} logements)`;
+      badge.style.color = '#dc2626';
     }
     badge.style.display = 'inline';
   }
@@ -2437,19 +2434,19 @@ function insertVariable(textareaId, variable, event) {
     const limits = PLAN_LIMITS[basePlan];
     const isAnnual = (userPlanType || '').toLowerCase().includes('annual');
 
-    // Plan Solo : bloquer si déjà 1 logement
-    if (basePlan === 'solo' && propertyCount >= 1) {
-      showPlanLimitModal('solo');
+    // Limite max du plan atteinte → bloquer
+    if (propertyCount >= limits.max) {
+      showPlanLimitModal(basePlan);
       return;
     }
 
-    // Standard/Pro : avertir si au-delà du quota inclus
-    if (limits.extraPrice !== null && propertyCount >= limits.included) {
+    // Au-delà des inclus → avertir sur la facturation extra
+    if (propertyCount >= limits.included) {
       const price = isAnnual ? limits.extraPriceAnnual : limits.extraPrice;
       const period = isAnnual ? 'an' : 'mois';
-      const planName = basePlan.charAt(0).toUpperCase() + basePlan.slice(1);
+      const planLabel = { starter: 'Starter', pro: 'Pro', agence: 'Agence' }[basePlan] || basePlan;
       document.getElementById('extraPropertyModalText').textContent =
-        `Vous avez atteint les ${limits.included} logements inclus dans votre plan ${planName}. Un logement supplémentaire peut être ajouté.`;
+        `Vous avez atteint les ${limits.included} logements inclus dans votre plan ${planLabel}. Chaque logement supplémentaire est facturé automatiquement.`;
       document.getElementById('extraPropertyPriceText').textContent =
         `+${price}€/${period} par logement supplémentaire`;
       document.getElementById('extraPropertyModal').style.display = 'flex';
