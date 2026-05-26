@@ -4650,30 +4650,40 @@ window.loadSmsStatus = async function loadSmsStatus() {
   try {
     const res = await fetch('/api/sms/status', { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
-    window._smsStatus = data; // stocker pour toggleSms
+    window._smsStatus = data;
 
-    // Toggle
     const toggle = document.getElementById('smsToggle');
-    if (toggle) toggle.checked = data.smsEnabled;
-
-    // Toggle toujours cliquable
-    if (toggle) { toggle.disabled = false; toggle.style.opacity = '1'; }
-
-    // Banner option
     const banner = document.getElementById('smsOptionBanner');
-    if (banner) {
-      if (data.smsIncluded) {
-        banner.style.display = 'none';
-      } else if (data.smsEnabled) {
+
+    const smsPrices = { starter: '7,99€/mois', pro: '1€/log/mois', agence: '0,50€/log/mois' };
+    const smsPrice  = smsPrices[data.planType] || '7,99€/mois';
+
+    if (data.smsEnabled) {
+      // SMS payé et actif → toggle activable
+      if (toggle) { toggle.checked = true; toggle.disabled = false; toggle.style.opacity = '1'; }
+      if (banner) {
         banner.style.display = 'block';
-        banner.innerHTML = `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 16px;font-size:13px;color:#1e40af;display:flex;align-items:center;gap:10px;"><i class="fas fa-check-circle" style="color:#3b82f6;"></i><span>Option SMS active — <strong>5,99€/mois</strong></span></div>`;
-      } else {
+        banner.innerHTML = `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 16px;font-size:13px;color:#1e40af;display:flex;align-items:center;gap:10px;">
+          <i class="fas fa-check-circle" style="color:#3b82f6;"></i>
+          <span>Option SMS active — <strong>${smsPrice}</strong></span>
+        </div>`;
+      }
+    } else {
+      // SMS non souscrit → toggle désactivé, bannière d'upgrade
+      if (toggle) { toggle.checked = false; toggle.disabled = true; toggle.style.opacity = '0.4'; }
+      if (banner) {
         banner.style.display = 'block';
         banner.innerHTML = `
           <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;">
-            <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:8px;"><i class="fas fa-lock" style="margin-right:6px;"></i>Option SMS — 5,99€/mois</div>
-            <div style="font-size:12px;color:#78350f;margin-bottom:12px;">Disponible en option pour les abonnements Solo et Standard. Inclus dans le plan Pro.</div>
-            <a href="/pricing.html" class="btn btn-primary" style="font-size:13px;padding:8px 16px;"><i class="fas fa-arrow-right"></i> Activer l'option</a>
+            <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:6px;">
+              <i class="fas fa-lock" style="margin-right:6px;"></i>Option SMS — ${smsPrice}
+            </div>
+            <div style="font-size:12px;color:#78350f;margin-bottom:12px;">
+              Recevez des SMS automatiques pour les cautions et les arrivées. Option disponible pour tous les plans.
+            </div>
+            <button onclick="window._activateSmsFromMessages()" class="btn btn-primary" style="font-size:13px;padding:8px 16px;">
+              <i class="fas fa-plus"></i> Activer l'option SMS
+            </button>
           </div>`;
       }
     }
@@ -4682,21 +4692,31 @@ window.loadSmsStatus = async function loadSmsStatus() {
   }
 }
 
+// Redirect Stripe pour activer SMS depuis l'onglet Messages
+window._activateSmsFromMessages = async function() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/billing/sms/subscribe', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else alert(data.error || 'Impossible de démarrer le paiement SMS.');
+  } catch(e) {
+    alert('Erreur réseau. Réessayez plus tard.');
+  }
+}
+
 window.toggleSms = async function toggleSms(enabled) {
   const token = localStorage.getItem('lcc_token');
   const toggle = document.getElementById('smsToggle');
 
-  // Confirmation pour l'activation uniquement (Solo/Standard)
-  if (enabled) {
-    const smsStatus = window._smsStatus || {};
-    const isPro = smsStatus.smsIncluded === true;
-    if (!isPro) {
-      const confirmed = await window.showSmsConfirm();
-      if (!confirmed) {
-        if (toggle) toggle.checked = false;
-        return;
-      }
-    }
+  // Si le toggle est désactivé (pas encore souscrit), rediriger vers Stripe
+  if (enabled && toggle?.disabled) {
+    toggle.checked = false;
+    await window._activateSmsFromMessages();
+    return;
   }
 
   try {
@@ -4706,17 +4726,21 @@ window.toggleSms = async function toggleSms(enabled) {
       body: JSON.stringify({ enabled })
     });
     const data = await res.json();
-    if (data.error === 'option_required') {
+
+    if (data.error === 'payment_required') {
+      // Pas encore souscrit → redirect Stripe
       if (toggle) toggle.checked = false;
-      alert("Cette fonctionnalité nécessite l'option SMS (5,99€/mois). Rendez-vous sur la page Tarifs pour l'activer.");
+      await window._activateSmsFromMessages();
     } else if (data.success) {
       const banner = document.getElementById('smsOptionBanner');
       if (banner) {
-        const msg = enabled ? '✅ Option SMS activée — un email de confirmation vous a été envoyé.' : '⏸️ SMS désactivés';
+        const msg = enabled
+          ? '<i class="fas fa-check-circle" style="color:#1A7A5E;margin-right:6px;"></i>SMS activés'
+          : '<i class="fas fa-pause-circle" style="color:#9ca3af;margin-right:6px;"></i>SMS désactivés';
         banner.style.display = 'block';
         const prev = banner.innerHTML;
         banner.innerHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 16px;font-size:13px;color:#166534;">${msg}</div>`;
-        setTimeout(() => { if(banner) banner.innerHTML = prev; }, 4000);
+        setTimeout(() => { if(banner) banner.innerHTML = prev; }, 3000);
       }
     }
   } catch(e) {
