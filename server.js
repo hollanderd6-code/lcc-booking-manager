@@ -9698,6 +9698,185 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
 });
 
 // ============================================
+// GET /api/reservations/invoice-summary
+// Agrège les réservations par plateforme sur une période + logements donnés
+// Retourne le net hôte par plateforme pour pré-remplir une facture propriétaire
+// ============================================
+app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { date_from, date_to, property_ids } = req.query;
+    if (!date_from || !date_to) {
+      return res.status(400).json({ error: 'date_from et date_to sont requis' });
+    }
+
+    // Parser les property_ids (peut être une string ou tableau)
+    let propIds = [];
+    if (property_ids) {
+      propIds = Array.isArray(property_ids) ? property_ids : property_ids.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    // Construire la condition SQL sur les logements
+    let propCondition = 'AND r.user_id = $3';
+    let queryParams = [date_from, date_to, user.id];
+    if (propIds.length > 0) {
+      propCondition = `AND r.property_id = ANY($4) AND r.user_id = $3`;
+      queryParams.push(propIds);
+    }
+
+    // Récupérer toutes les résas sur la période (check-in dans la plage)
+    const result = await pool.query(`
+      SELECT
+        r.uid,
+        r.property_id,
+        p.name as property_name,
+        p.internal_name as property_internal_name,
+        r.source,
+        r.platform,
+        r.ota_name,
+        r.start_date,
+        r.end_date,
+        r.guest_name,
+        r.guest_first_name,
+        r.guest_last_name,
+        r.amount_total,
+        r.amount_rooms,
+        r.amount_taxes,
+        r.amount_cleaning,
+        r.ota_commission,
+        r.host_payout,
+        r.currency,
+        r.status
+      FROM reservations r
+      LEFT JOIN properties p ON p.id = r.property_id
+      WHERE r.start_date >= $1::date
+        AND r.start_date < $2::date
+        AND r.status NOT IN ('cancelled', 'denied')
+        AND (r.reservation_type != 'block' OR r.reservation_type IS NULL)
+        AND (r.source != 'BLOCK' OR r.source IS NULL)
+        ${propCondition}
+      ORDER BY r.start_date ASC, r.source ASC
+    `, queryParams);
+
+    const rows = result.rows;
+
+    // Helper : normaliser la plateforme
+    function normPlatform(row) {
+      const src = (row.source || row.platform || row.ota_name || '').toLowerCase();
+      if (src.includes('airbnb')) return 'Airbnb';
+      if (src.includes('booking')) return 'Booking.com';
+      if (src.includes('bhguest') || src.includes('boostinghost') || src.includes('guest_app')) return 'BHGuest';
+      if (src === 'direct' || src === 'manuel' || src === 'manual' || src === '') return 'Direct';
+      if (src.includes('abritel') || src.includes('vrbo')) return 'Abritel/VRBO';
+      if (src.includes('leboncoin')) return 'Leboncoin';
+      return (row.ota_name || row.source || 'Autre').replace(/\.com$/i, '');
+    }
+
+    // Helper : calculer le net hôte d'une résa
+    function calcNetHote(row) {
+      const total     = parseFloat(row.amount_total)   || 0;
+      const rooms     = parseFloat(row.amount_rooms)   || 0;
+      const taxes     = parseFloat(row.amount_taxes)   || 0;
+      const cleaning  = parseFloat(row.amount_cleaning)|| 0;
+      const otaCom    = parseFloat(row.ota_commission) || 0;
+      const hostPayout= parseFloat(row.host_payout)    || 0;
+
+      // Priorité 1 : host_payout renseigné directement par Channex
+      if (hostPayout > 0) return hostPayout;
+      // Priorité 2 : amount_rooms (loyer brut) - commission OTA
+      if (rooms > 0 && otaCom > 0) return rooms - otaCom;
+      if (rooms > 0) return rooms;
+      // Priorité 3 : total - ménage - taxes - commission OTA
+      if (total > 0) return Math.max(0, total - cleaning - taxes - otaCom);
+      return 0;
+    }
+
+    // Agréger par plateforme
+    const byPlatform = {};
+    const reservationsList = [];
+
+    for (const row of rows) {
+      const platform = normPlatform(row);
+      const netHote = calcNetHote(row);
+      const startDate = row.start_date ? new Date(row.start_date).toISOString().split('T')[0] : '';
+      const endDate   = row.end_date   ? new Date(row.end_date).toISOString().split('T')[0]   : '';
+      const guestName = row.guest_first_name
+        ? `${row.guest_first_name} ${row.guest_last_name || ''}`.trim()
+        : (row.guest_name || 'Voyageur');
+      const propLabel = row.property_internal_name || row.property_name || row.property_id;
+
+      if (!byPlatform[platform]) {
+        byPlatform[platform] = {
+          platform,
+          count: 0,
+          totalNet: 0,
+          totalBrut: 0,
+          totalCleaning: 0,
+          totalTaxes: 0,
+          totalOtaCom: 0,
+          reservations: []
+        };
+      }
+
+      byPlatform[platform].count++;
+      byPlatform[platform].totalNet     += netHote;
+      byPlatform[platform].totalBrut    += parseFloat(row.amount_total)    || 0;
+      byPlatform[platform].totalCleaning+= parseFloat(row.amount_cleaning) || 0;
+      byPlatform[platform].totalTaxes   += parseFloat(row.amount_taxes)    || 0;
+      byPlatform[platform].totalOtaCom  += parseFloat(row.ota_commission)  || 0;
+      byPlatform[platform].reservations.push({
+        uid: row.uid,
+        guestName,
+        propertyName: propLabel,
+        startDate,
+        endDate,
+        amountTotal:   parseFloat(row.amount_total)    || 0,
+        amountRooms:   parseFloat(row.amount_rooms)    || 0,
+        amountTaxes:   parseFloat(row.amount_taxes)    || 0,
+        amountCleaning:parseFloat(row.amount_cleaning) || 0,
+        otaCommission: parseFloat(row.ota_commission)  || 0,
+        hostPayout:    parseFloat(row.host_payout)     || 0,
+        netHote:       Math.round(netHote * 100) / 100,
+        currency:      row.currency || 'EUR'
+      });
+
+      reservationsList.push({
+        uid: row.uid, platform, guestName, propertyName: propLabel,
+        startDate, endDate,
+        netHote: Math.round(netHote * 100) / 100
+      });
+    }
+
+    // Arrondir les totaux
+    const summary = Object.values(byPlatform).map(p => ({
+      ...p,
+      totalNet:      Math.round(p.totalNet      * 100) / 100,
+      totalBrut:     Math.round(p.totalBrut     * 100) / 100,
+      totalCleaning: Math.round(p.totalCleaning * 100) / 100,
+      totalTaxes:    Math.round(p.totalTaxes    * 100) / 100,
+      totalOtaCom:   Math.round(p.totalOtaCom   * 100) / 100,
+    }));
+
+    console.log(`📊 [invoice-summary] ${rows.length} résas du ${date_from} au ${date_to} → ${summary.length} plateforme(s)`);
+
+    res.json({
+      success: true,
+      dateFrom: date_from,
+      dateTo: date_to,
+      totalReservations: rows.length,
+      summary,
+      reservations: reservationsList
+    });
+
+  } catch (err) {
+    console.error('❌ GET /api/reservations/invoice-summary:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // GET /api/reservations-with-payments
 // Même structure que reservations-with-deposits mais avec payments
 // ============================================
