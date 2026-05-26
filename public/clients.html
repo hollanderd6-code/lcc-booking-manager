@@ -756,6 +756,42 @@ html[data-theme-v3="1"] .modal-content {
   border: 1px solid rgba(200,184,154,.4) !important;
   box-shadow: 0 24px 64px rgba(13,17,23,.2) !important;
 }
+
+/* ═══ PLAN GATE — Feature Locking UI ═══ */
+.btn-locked {
+  position: relative; overflow: hidden;
+  opacity: 0.55; cursor: not-allowed !important;
+}
+.btn-locked::after {
+  content: "\f023";
+  font-family: "Font Awesome 6 Free"; font-weight: 900;
+  margin-left: 7px; font-size: 11px;
+}
+.plan-gate-banner {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border: 1.5px solid #c4b5fd;
+  border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
+}
+.plan-gate-banner .pgb-icon {
+  width: 42px; height: 42px; flex-shrink: 0;
+  background: #7c3aed; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 18px;
+}
+.plan-gate-banner .pgb-text { flex: 1; }
+.plan-gate-banner .pgb-title { font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 3px; }
+.plan-gate-banner .pgb-desc  { font-size: 12px; color: #6d28d9; line-height: 1.5; }
+.plan-gate-banner .pgb-btn {
+  flex-shrink: 0; padding: 8px 16px;
+  background: #7c3aed; color: white; border: none;
+  border-radius: 8px; font-size: 12px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.plan-gate-banner .pgb-btn:hover { background: #6d28d9; color: white; }
+.tab-lock-icon { margin-left: 5px; font-size: 10px; opacity: .65; }
+
 </style>
 <style>
 /* [OK] Uniformisation du bouton "Retour au dashboard" (header) */
@@ -5927,5 +5963,76 @@ window.confirmImportReservations = function() {
 };
 </script>
 <script src="/js/bh-onboarding-pages.js"></script>
+
+<script>
+
+// ═══ PLAN GATE ═══
+window._bhFeatures = null;
+async function bhLoadFeatures() {
+  if (window._bhFeatures) return window._bhFeatures;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(API_BASE + '/api/subscription/features', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return null;
+    window._bhFeatures = await res.json();
+    return window._bhFeatures;
+  } catch(e) { return null; }
+}
+function bhLockBtn(el, plan) {
+  if (!el) return;
+  el.classList.add('btn-locked');
+  el.setAttribute('title', 'Disponible à partir du plan ' + plan);
+  el.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); bhShowUpgradeModal(plan); }, true);
+}
+function bhLockSection(id, title, desc, plan) {
+  const el = document.getElementById(id); if (!el) return;
+  const banner = document.createElement('div'); banner.className = 'plan-gate-banner';
+  banner.innerHTML = '<div class="pgb-icon"><i class="fas fa-lock"></i></div>'
+    + '<div class="pgb-text"><div class="pgb-title">' + title + '</div><div class="pgb-desc">' + desc + '</div></div>'
+    + '<a href="/pricing.html" class="pgb-btn"><i class="fas fa-arrow-up"></i> Plan ' + plan + '</a>';
+  el.style.position = 'relative';
+  el.insertAdjacentElement('afterbegin', banner);
+  Array.from(el.children).forEach(function(c) {
+    if (!c.classList.contains('plan-gate-banner')) { c.style.filter = 'blur(3px)'; c.style.pointerEvents = 'none'; c.style.userSelect = 'none'; }
+  });
+}
+function bhShowUpgradeModal(plan) {
+  const ex = document.getElementById('bhUpgradeModal'); if (ex) ex.remove();
+  const m = document.createElement('div'); m.id = 'bhUpgradeModal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  m.innerHTML = '<div style="background:white;border-radius:20px;padding:32px;max-width:440px;width:100%;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,.2);">'
+    + '<div style="width:64px;height:64px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;"><i class="fas fa-lock" style="font-size:28px;color:white;"></i></div>'
+    + '<div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">Fonctionnalité ' + plan + '</div>'
+    + '<div style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;">Cette fonctionnalité est disponible à partir du plan <strong>' + plan + '</strong>.</div>'
+    + '<div style="display:flex;gap:12px;justify-content:center;">'
+    + '<button onclick="document.getElementById('bhUpgradeModal').remove()" style="padding:10px 20px;border:1.5px solid #e5e7eb;background:white;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#374151;">Plus tard</button>'
+    + '<a href="/pricing.html" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;"><i class="fas fa-arrow-up"></i> Voir les plans</a>'
+    + '</div></div>';
+  m.onclick = function(e) { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+}
+
+// Appliquer les gates au chargement de clients.html
+window.addEventListener('DOMContentLoaded', async function() {
+  const features = await bhLoadFeatures();
+  if (!features || features.isTrial) return; // trial = tout débloqué
+
+  // Facturation propriétaires (plan Pro+)
+  if (features.features.facturation_proprietaires === false) {
+    // Nav tabs
+    const tabDash = document.getElementById('btn-dashboard');
+    const tabDeb  = document.getElementById('btn-debours');
+    if (tabDash) { tabDash.style.opacity='0.45'; tabDash.style.pointerEvents='none'; tabDash.setAttribute('title','Plan Pro requis'); if (!tabDash.querySelector('.tab-lock-icon')) { const i=document.createElement('i'); i.className='fas fa-lock tab-lock-icon'; tabDash.appendChild(i); } }
+    if (tabDeb)  { tabDeb.style.opacity='0.45';  tabDeb.style.pointerEvents='none';  tabDeb.setAttribute('title','Plan Pro requis');  if (!tabDeb.querySelector('.tab-lock-icon'))  { const i=document.createElement('i'); i.className='fas fa-lock tab-lock-icon'; tabDeb.appendChild(i); } }
+    // Bouton "Nouvelle facture" dans tab clients
+    const btnNewClient = document.querySelector('.fp-btn-new');
+    // On ne bloque pas la création de client, juste la facturation
+    // Section factures
+    bhLockSection('tab-dashboard', '🔒 Facturation propriétaires', 'Créez et gérez les factures pour vos clients propriétaires. Disponible à partir du plan Pro.', 'Pro');
+    bhLockSection('tab-debours', '🔒 Débours', 'Gérez les dépenses et débours associés à vos clients. Disponible à partir du plan Pro.', 'Pro');
+  }
+});
+
+</script>
 </body>
 </html>
