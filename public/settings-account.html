@@ -2472,32 +2472,28 @@ if (logoInput && logoPreview) {
     }
 
     // ✅ CORRIGÉ : Nouveaux plans et prix
-    function priceForPlan(planType) {
-      const p = (planType || 'solo').toLowerCase();
-      
-      // Nouveaux plans
-      if (p === 'solo') return 15.00;
-      if (p === 'standard') return 29.00;
-      if (p === 'pro') return 49.00;
-      if (p === 'business') return 99.00;
-      
-      // Anciens plans (pour compatibilité)
-      if (p === 'basic') return 15.00; // Redirection vers Solo
-      
-      return 15.00; // Par défaut : Solo
+    function getBasePlanName(planType) {
+      const p = (planType || '').toLowerCase();
+      if (p.includes('agence') || p.includes('business')) return 'agence';
+      if (p.includes('pro')    || p.includes('standard')) return 'pro';
+      if (p.includes('starter')|| p.includes('solo'))     return 'starter';
+      return 'starter';
     }
 
-    // ✅ NOUVEAU : Retourner le nom lisible du plan
+    function priceForPlan(planType) {
+      const isAnnual = (planType || '').toLowerCase().includes('annual');
+      const base = getBasePlanName(planType);
+      const prices = {
+        starter: { monthly: 15.00,  annual: 150.00  },
+        pro:     { monthly: 49.00,  annual: 490.00  },
+        agence:  { monthly: 299.00, annual: 2990.00 },
+      };
+      return (prices[base] || prices.starter)[isAnnual ? 'annual' : 'monthly'];
+    }
+
     function planDisplayName(planType) {
-      const p = (planType || 'solo').toLowerCase();
-      
-      if (p === 'solo') return 'Solo';
-      if (p === 'standard') return 'Standard';
-      if (p === 'pro') return 'Pro';
-      if (p === 'business') return 'Business';
-      if (p === 'basic') return 'Solo'; // Ancien nom
-      
-      return 'Solo';
+      const base = getBasePlanName(planType);
+      return { starter: 'Starter', pro: 'Pro', agence: 'Agence' }[base] || 'Starter';
     }
 
 
@@ -2709,10 +2705,10 @@ if (logoInput && logoPreview) {
               <i class="fas fa-cog"></i>
               Gérer mon abonnement
             </button>
-            ${data.planType === 'solo' || data.planType === 'standard' || data.planType === 'basic' ? `
+            ${getBasePlanName(data.planType) === 'starter' ? `
               <a href="/pricing.html" class="btn btn-primary">
                 <i class="fas fa-arrow-up"></i>
-                ${data.planType === 'solo' || data.planType === 'basic' ? 'Passer à Standard ou Pro' : 'Passer à Pro'}
+                ${getBasePlanName(data.planType) === 'starter' ? 'Passer à Pro ou Agence' : 'Passer à Agence'}
               </a>
             ` : ''}
           `;
