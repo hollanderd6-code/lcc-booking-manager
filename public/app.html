@@ -7751,16 +7751,38 @@ try {
         }
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
         window._currentBlockId=null; window._currentBlockEnd=null;
-        // Patch immédiat du store local pour éviter d'avoir à cliquer 2 fois
-        if(blockId && Array.isArray(window.LCC_RESERVATIONS)){
-          window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r){ return r.uid !== blockId && r.id !== blockId; });
+        // Patch immédiat du store local
+        if(blockId){
+          if(Array.isArray(window.LCC_RESERVATIONS)){
+            window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r){ return r.uid !== blockId && r.id !== blockId; });
+            try { localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(window.LCC_RESERVATIONS)); } catch(e){}
+          }
+        }
+        // Patch par dates pour le fallback batch (blockId peut être null)
+        if(Array.isArray(window.LCC_RESERVATIONS)){
+          window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r){
+            var isBlock = r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block';
+            var overlaps = r.propertyId===bProp2 && r.start < bTo && r.end > bFrom;
+            return !(isBlock && overlaps);
+          });
           try { localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(window.LCC_RESERVATIONS)); } catch(e){}
         }
+        // Patch calendarState.bookings
         if(window.calendarState && Array.isArray(window.calendarState.bookings)){
-          window.calendarState.bookings = window.calendarState.bookings.filter(function(r){ return r.uid !== blockId && r.id !== blockId; });
+          window.calendarState.bookings = window.calendarState.bookings.filter(function(r){
+            if(blockId && (r.uid === blockId || String(r.id) === String(blockId))) return false;
+            var isBlock = r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block';
+            var overlaps = r.propertyId===bProp2 && r.startDate < bTo && r.endDate > bFrom;
+            return !(isBlock && overlaps);
+          });
+        }
+        // Re-render IMMÉDIAT sans attendre le socket
+        if(typeof window.renderModernCalendar==='function' && window.calendarState){
+          window.renderModernCalendar(window.calendarState.bookings||[], window.calendarState.properties||window.LCC_PROPERTIES||[]);
         }
         if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
-        // Pas de loadCalendarData ici — le socket calendar:block_removed s'en charge
+        // loadCalendarData en fond pour confirmer avec les données fraîches du serveur
+        setTimeout(function(){ if(typeof window.loadCalendarData==='function') window.loadCalendarData(); }, 800);
       } else if(activeTab==='price'){
         var pid3=document.getElementById('dayPricePropertySelect').value;
         var from3=document.getElementById('dayPriceFrom').value;
@@ -11817,19 +11839,24 @@ if (window.Capacitor) {
       else if (typeof refreshCalendar === 'function') refreshCalendar();
     });
     s.on('calendar:block_removed', function(d) {
-      console.log('📅 Blocage supprimé via socket, rafraîchissement calendrier...');
-      // 1. Patch immédiat du store local pour re-render sans attendre le fetch
+      console.log('📅 [socket] calendar:block_removed reçu uid=' + (d&&d.uid));
+      // Patch store local si uid fourni (DELETE /api/blocks/:id)
       if (d && d.uid && window.calendarState && Array.isArray(window.calendarState.bookings)) {
+        var prevLen = window.calendarState.bookings.length;
         window.calendarState.bookings = window.calendarState.bookings.filter(function(r) {
           return r.uid !== d.uid && String(r.id) !== String(d.uid);
         });
+        console.log('📅 [socket] Bookings: ' + prevLen + ' → ' + window.calendarState.bookings.length);
       }
-      // 2. Re-render calendrier immédiatement depuis le store patché
+      // Re-render depuis le store patché
       if (typeof window.renderModernCalendar === 'function' && window.calendarState) {
-        window.renderModernCalendar(window.calendarState.bookings || [], window.LCC_PROPERTIES || []);
+        window.renderModernCalendar(window.calendarState.bookings || [], window.calendarState.properties || window.LCC_PROPERTIES || []);
       }
-      // 3. Recharger depuis l'API pour confirmer (sans bloquer l'affichage)
-      if (typeof loadCalendarData === 'function') loadCalendarData();
+      // Recharger depuis l'API seulement si l'uid est null (batch unblock)
+      // ou si ce socket vient d'un autre onglet (pas notre propre action)
+      if (!d || !d.uid) {
+        if (typeof loadCalendarData === 'function') loadCalendarData();
+      }
     });
     s.on('reservation_cancelled', function(d) {
       console.log('❌ Réservation annulée via socket, rafraîchissement calendrier...', d);
