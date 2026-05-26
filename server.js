@@ -29806,15 +29806,31 @@ app.post('/api/channex/webhook-message', async (req, res) => {
     let guest_name = resa.guest_name || 'Voyageur';
     let user_id = resa.user_id || resa.prop_user_id;
 
-    // Chercher conversation existante liée à cette réservation (par dates + property)
-    const existConv = await pool.query(
+    // Chercher conversation existante liée à cette réservation
+    // Priorité 1 : match exact sur channex_booking_id (le plus fiable)
+    // Priorité 2 : match sur property + date + status actif (jamais annulé)
+    // On ne réutilise JAMAIS une conversation annulée → évite d'injecter les messages
+    // d'un nouveau voyageur dans la conv d'un voyageur précédent sur le même créneau
+    let existConv = await pool.query(
       `SELECT id FROM conversations
-       WHERE property_id = $1
-         AND user_id = $2
-         AND reservation_start_date = $3::date
-       LIMIT 1`,
-      [resa.property_id, user_id, resa.start_date]
+       WHERE channex_booking_id = $1
+         AND channex_booking_id IS NOT NULL
+       ORDER BY created_at DESC LIMIT 1`,
+      [channex_booking_id]
     );
+
+    if (existConv.rows.length === 0) {
+      // Fallback : même logement + même date d'arrivée, mais JAMAIS une conv annulée
+      existConv = await pool.query(
+        `SELECT id FROM conversations
+         WHERE property_id = $1
+           AND user_id = $2
+           AND reservation_start_date = $3::date
+           AND status NOT IN ('cancelled', 'denied')
+         ORDER BY created_at DESC LIMIT 1`,
+        [resa.property_id, user_id, resa.start_date]
+      );
+    }
 
     let conversation_id;
     if (existConv.rows.length > 0) {
