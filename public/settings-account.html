@@ -1557,6 +1557,28 @@ html[data-theme-v3="1"] .subscription-card {
     </div>
   </section>
 
+  <!-- ═══ Section Droits par profil ═══ -->
+  <section class="card mb-lg" id="sectionDroitsProfil">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-shield-alt"></i>
+        Administration droits par profil
+      </div>
+      <span id="droitsBadge" style="display:none;"></span>
+    </div>
+    <div class="card-body">
+      <p style="color:#6b7280;margin-bottom:20px;">
+        Définissez des permissions granulaires pour chaque membre de votre équipe selon son rôle 
+        (ménage, assistant, comptable). Contrôle total sur ce que chacun peut voir et modifier.
+      </p>
+      <div id="droitsOptionContent">
+        <div style="text-align:center;padding:20px;color:#9ca3af;">
+          <i class="fas fa-spinner fa-spin"></i> Chargement...
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ═══ Section Compte Agence ═══ -->
   <section class="card" style="border:2px solid #7c3aed20;">
     <div class="card-header" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
@@ -4455,26 +4477,137 @@ function bhShowUpgradeModalSettings(plan) {
   document.body.appendChild(m);
 }
 
+// ─── Droits par profil ──────────────────────────────────────────────────────
+async function loadDroitsOption() {
+  const el = document.getElementById('droitsOptionContent');
+  const badge = document.getElementById('droitsBadge');
+  if (!el) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const r = await fetch('/api/billing/droits/status', { headers: { Authorization: 'Bearer ' + token } });
+    const data = r.ok ? await r.json() : {};
+
+    if (data.droitsIncluded) {
+      // Agence : inclus
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.innerHTML = '<span style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;">Inclus Agence</span>';
+      }
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;">
+          <i class="fas fa-check-circle" style="color:#1A7A5E;font-size:20px;flex-shrink:0;"></i>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#065f46;">Inclus dans votre plan Agence</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">Gérez les permissions de chaque membre depuis la section Équipe.</div>
+          </div>
+        </div>`;
+    } else if (data.droitsEnabled) {
+      // Pro + option activée
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.innerHTML = '<span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;">Actif — 5€/mois</span>';
+      }
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:4px;">
+              <i class="fas fa-shield-alt" style="color:#1A7A5E;margin-right:6px;"></i>Option active — 5€/mois
+            </div>
+            <div style="font-size:12px;color:#6b7280;">Renouvellement automatique · Permissions par rôle disponibles dans la section Équipe</div>
+          </div>
+        </div>`;
+    } else if (data.planType === 'pro') {
+      // Pro sans option
+      el.innerHTML = `
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:14px;font-weight:600;color:#0D1117;margin-bottom:6px;">Permissions granulaires par rôle</div>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:10px;">
+              Définissez précisément ce que chaque membre peut voir et modifier selon son rôle.
+            </div>
+            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;">
+              <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> Contrôle par rôle (ménage, assistant, comptable)</li>
+              <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> Restriction calendrier, finance, messagerie</li>
+              <li style="font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;"><i class="fas fa-check" style="color:#1A7A5E;font-size:10px;"></i> Accès par logement</li>
+            </ul>
+          </div>
+          <div style="text-align:center;flex-shrink:0;">
+            <div style="font-family:'Instrument Serif',serif;font-size:28px;color:#0D1117;line-height:1;">5€</div>
+            <div style="font-size:11px;color:#9ca3af;margin-bottom:12px;">/mois</div>
+            <button onclick="activateDroitsOption()" id="btnActivateDroits" class="btn btn-primary" style="font-size:13px;padding:9px 18px;white-space:nowrap;">
+              <i class="fas fa-plus"></i> Activer
+            </button>
+          </div>
+        </div>`;
+    } else {
+      // Starter : pas disponible
+      el.innerHTML = `
+        <div class="plan-gate-banner">
+          <div class="pgb-icon"><i class="fas fa-lock"></i></div>
+          <div class="pgb-text">
+            <div class="pgb-title">🔒 Droits par profil</div>
+            <div class="pgb-desc">Disponible à partir du plan Pro (option +5€/mois) ou inclus dans le plan Agence.</div>
+          </div>
+          <a href="/pricing.html" class="pgb-btn"><i class="fas fa-arrow-up"></i> Plan Pro</a>
+        </div>`;
+    }
+  } catch(e) {
+    console.error('[Droits] loadDroitsOption error:', e);
+  }
+}
+
+async function activateDroitsOption() {
+  const btn = document.getElementById('btnActivateDroits');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirection...'; }
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/billing/droits/subscribe', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert(data.error || 'Impossible de démarrer le paiement.');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Activer'; }
+    }
+  } catch(e) {
+    alert('Erreur réseau. Réessayez plus tard.');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Activer'; }
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async function() {
   const features = await bhLoadFeaturesSettings();
+
+  // Charger la section droits par profil (toujours, pour tous les plans)
+  loadDroitsOption();
+
   if (!features || features.isTrial) return;
 
   // Sous-comptes équipe (plan Pro+)
   if (features.features.sous_comptes === false) {
     bhLockBtnSettings(document.getElementById('btnAddTeamMember'), 'Pro');
-    // Le deuxième bouton "Ajouter votre premier membre" est généré dynamiquement → on bloque via la section
     bhLockSectionSettings('teamMembersList', '🔒 Sous-comptes équipe', 'Ajoutez des membres à votre équipe (ménage, assistants, comptables). Disponible à partir du plan Pro.', 'Pro');
   }
 
   // Mode Agence (plan Agence uniquement)
   if (features.features.mode_agence === false) {
     bhLockBtnSettings(document.getElementById('inviteAgencyBtn'), 'Agence');
-    // Bannière sur la section agence
     const agenceSection = document.querySelector('section.card[style*="7c3aed"]');
     if (agenceSection) {
       const body = agenceSection.querySelector('.card-body');
       if (body) bhLockSectionSettings(null, '🔒 Mode Agence', 'Gérez plusieurs comptes propriétaires depuis votre interface. Exclusif plan Agence.', 'Agence');
     }
+  }
+
+  // Vérifier si succès activation droits
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('droits_success') === 'true') {
+    if (typeof window.showToast === 'function') window.showToast('✅ Option Droits par profil activée !', 'success');
+    loadDroitsOption(); // recharger
+    history.replaceState(null, '', window.location.pathname + '?tab=subscription');
   }
 });
 
