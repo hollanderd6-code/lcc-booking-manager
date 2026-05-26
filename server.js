@@ -1551,7 +1551,10 @@ async function checkSubscription(req, res, next) {
       });
     }
 
-    // Abonnement valide, continuer
+    // Abonnement valide — attacher le plan à req pour usage downstream
+    req.planBase = getBasePlanName(sub.status === 'trial' ? 'starter' : (sub.plan_type || 'starter'));
+    req.planType = sub.plan_type;
+    req.isTrial  = sub.status === 'trial' || sub.status === 'trialing';
     next();
 
   } catch (err) {
@@ -1760,6 +1763,17 @@ ON invoice_download_tokens(token);
       CREATE INDEX IF NOT EXISTS idx_subscription_invoices_number
         ON subscription_invoices(invoice_number);
     `);
+
+    // ── Migration plans : solo→starter, standard→pro, pro(ancien)→agence ──
+    try {
+      await pool.query(`UPDATE subscriptions SET plan_type = 'starter_monthly' WHERE plan_type = 'solo_monthly'`);
+      await pool.query(`UPDATE subscriptions SET plan_type = 'starter_annual'  WHERE plan_type = 'solo_annual'`);
+      await pool.query(`UPDATE subscriptions SET plan_type = 'pro_monthly'     WHERE plan_type = 'standard_monthly'`);
+      await pool.query(`UPDATE subscriptions SET plan_type = 'pro_annual'      WHERE plan_type = 'standard_annual'`);
+      await pool.query(`UPDATE subscriptions SET plan_type = 'agence_monthly'  WHERE plan_type IN ('pro_monthly','business_monthly')`);
+      await pool.query(`UPDATE subscriptions SET plan_type = 'agence_annual'   WHERE plan_type IN ('pro_annual','business_annual')`);
+      console.log('✅ [MIGRATION] Plans renommés : solo→starter, standard→pro, ancien-pro→agence');
+    } catch(migErr) { console.warn('⚠️ [MIGRATION] plans:', migErr.message); }
 
     // ============================================
     // 🧹 MIGRATIONS MÉNAGE — Templates + colonnes enrichies
@@ -9334,6 +9348,44 @@ app.get('/api/sms/logs', authenticateAny, async (req, res) => {
   }
 });
 
+
+// ============================================
+// GET /api/subscription/features
+// Retourne les features accessibles pour l'utilisateur courant
+// ============================================
+app.get('/api/subscription/features', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user?.isSubAccount ? req.user.parentUserId : req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const subResult = await pool.query(
+      `SELECT plan_type, status, trial_end_date FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    const sub = subResult.rows[0];
+    const isTrial = sub && (sub.status === 'trial' || sub.status === 'trialing');
+    const trialValid = isTrial && sub.trial_end_date && new Date() < new Date(sub.trial_end_date);
+    const basePlan = sub ? getBasePlanName(sub.plan_type) : 'starter';
+
+    // En trial : accès complet
+    const features = {};
+    for (const [feature, plans] of Object.entries(PLAN_FEATURES)) {
+      features[feature] = trialValid || plans.includes(basePlan);
+    }
+
+    res.json({
+      plan: basePlan,
+      planType: sub?.plan_type || 'starter',
+      status: sub?.status || 'none',
+      isTrial: trialValid,
+      features
+    });
+  } catch(err) {
+    console.error('GET /api/subscription/features:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.get('/api/subscription/status', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -13472,12 +13524,12 @@ app.post('/api/properties',
       if (!isExistingProperty && !overrideLimit) {
         const basePlanName = getBasePlanName(planType);
 
-        // Plan Solo : 1 logement max, pas de supplément possible
-        if (basePlanName === 'solo' && currentCount >= 1) {
+        // Plan Starter : jusqu'à 3 logements (1 inclus + 2 extra à +9€)
+        if (basePlanName === 'starter' && currentCount >= 3) {
           return res.status(403).json({
             error: 'Limite atteinte',
-            code: 'PLAN_LIMIT_SOLO',
-            message: 'Le plan Solo est limité à 1 logement. Passez au plan Standard pour gérer jusqu\'à 3 logements.',
+            code: 'PLAN_LIMIT_STARTER',
+            message: 'Le plan Starter est limité à 3 logements. Passez au plan Pro pour gérer jusqu\'à 50 logements.',
             currentCount,
             limit: 1,
             upgradeUrl: '/pricing.html'
@@ -20835,33 +20887,27 @@ function getPlanFromPriceId(priceId) {
 // 2. FONCTION : Extraire le nom de base du plan
 // ============================================
 function getBasePlanName(plan) {
-  const planLower = (plan || 'solo').toLowerCase();
-  
-  if (planLower.includes('solo')) return 'solo';
-  if (planLower.includes('standard')) return 'standard';
-  if (planLower.includes('pro')) return 'pro';
-  
-  return 'solo';
+  const p = (plan || 'starter').toLowerCase();
+  // Anciens noms → nouveaux (migration)
+  if (p.includes('agence') || p.includes('business')) return 'agence';
+  if (p.includes('pro') || p.includes('standard'))    return 'pro';
+  if (p.includes('starter') || p.includes('solo'))    return 'starter';
+  return 'starter';
 }
 
 // ============================================
-// 3. FONCTION : Calculer le montant du plan (en euros)
+// 3. FONCTION : Calculer le montant de base du plan (en euros)
 // ============================================
 function getPlanAmount(plan) {
   const basePlan = getBasePlanName(plan);
   const isAnnual = (plan || '').toLowerCase().includes('annual');
-  
-  if (basePlan === 'solo') {
-    return isAnnual ? 149 : 15;
-  }
-  if (basePlan === 'standard') {
-    return isAnnual ? 289 : 29;
-  }
-  if (basePlan === 'pro') {
-    return isAnnual ? 489 : 49;
-  }
-  
-  return 15; // Par défaut
+  // Prix lancement (200 premiers) — à terme géré via un flag is_launch en DB
+  const prices = {
+    starter: { monthly: 15, annual: 150 },
+    pro:     { monthly: 49, annual: 490 },
+    agence:  { monthly: 299, annual: 2990 },
+  };
+  return (prices[basePlan] || prices.starter)[isAnnual ? 'annual' : 'monthly'];
 }
 
 // ============================================
@@ -20869,39 +20915,111 @@ function getPlanAmount(plan) {
 // ============================================
 function getPlanDisplayName(plan) {
   const basePlan = getBasePlanName(plan);
-  
-  if (basePlan === 'solo') return 'Solo';
-  if (basePlan === 'standard') return 'Standard';
-  if (basePlan === 'pro') return 'Pro';
-  
-  return 'Solo';
+  return { starter: 'Starter', pro: 'Pro', agence: 'Agence' }[basePlan] || 'Starter';
 }
 
 // ============================================
-// 5. FONCTION : Limites du plan
+// 5. FONCTION : Limites du plan (logements)
 // ============================================
 function getPlanLimits(plan) {
   const basePlan = getBasePlanName(plan);
-  
+  const isAnnual = (plan || '').toLowerCase().includes('annual');
   const limits = {
-    solo: {
-      included: 1,
-      extraPrice: null,
-      extraPriceAnnual: null
-    },
-    standard: {
-      included: 3,
-      extraPrice: 7,
-      extraPriceAnnual: 70
-    },
-    pro: {
-      included: 6,
-      extraPrice: 5,
-      extraPriceAnnual: 50
+    starter: { included: 1,  max: 3,   extraPrice: 9, extraPriceAnnual: 90  },
+    pro:     { included: 4,  max: 50,  extraPrice: 7, extraPriceAnnual: 70  },
+    agence:  { included: 51, max: 9999,extraPrice: 5, extraPriceAnnual: 50  },
+  };
+  return limits[basePlan] || limits.starter;
+}
+
+// ============================================
+// PLAN_FEATURES — config centralisée des permissions par plan
+// Utilisé par requireFeature() middleware
+// ============================================
+const PLAN_FEATURES = {
+  // Disponible pour tous
+  calendar:                  ['starter', 'pro', 'agence'],
+  channex_sync:              ['starter', 'pro', 'agence'],
+  ical:                      ['starter', 'pro', 'agence'],
+  stripe_payments:           ['starter', 'pro', 'agence'],
+  cautions:                  ['starter', 'pro', 'agence'], // starter: 3% com, pro/agence: sans com
+  messaging_ai:              ['starter', 'pro', 'agence'],
+  cleaning_basic:            ['starter', 'pro', 'agence'],
+  welcome_book:              ['starter', 'pro', 'agence'],
+  app_mobile:                ['starter', 'pro', 'agence'],
+  bhguest:                   ['starter', 'pro', 'agence'],
+  pricing_rules_basic:       ['starter', 'pro', 'agence'],
+  reports_basic:             ['starter', 'pro', 'agence'],
+  contracts_rental:          ['starter', 'pro', 'agence'],
+  push_notifications:        ['starter', 'pro', 'agence'],
+
+  // Pro + Agence uniquement
+  cautions_no_commission:    ['pro', 'agence'],
+  facturation_proprietaires: ['pro', 'agence'],
+  invoices_clients:          ['pro', 'agence'],
+  attestation_conciergerie:  ['pro', 'agence'],
+  cleaning_advanced:         ['pro', 'agence'],
+  sous_comptes:              ['pro', 'agence'],
+  reports_advanced:          ['pro', 'agence'],
+  pricing_rules_advanced:    ['pro', 'agence'],
+
+  // Options payantes Pro (vérifier sms_enabled en DB)
+  sms:                       ['pro', 'agence'], // option pour starter aussi mais vérif séparée
+  droits_par_profil:         ['pro', 'agence'], // option +5€/mois pour Pro
+
+  // Agence uniquement
+  mode_agence:               ['agence'],
+  multi_comptes_clients:     ['agence'],
+  support_prioritaire:       ['agence'],
+};
+
+// ============================================
+// requireFeature(feature) — middleware de vérification plan
+// Usage: app.get('/api/...', authenticateAny, requireFeature('facturation_proprietaires'), ...)
+// ============================================
+function requireFeature(feature) {
+  return async function(req, res, next) {
+    try {
+      // Sous-comptes : héritent des droits du compte parent
+      const userId = req.user?.isSubAccount ? req.user.parentUserId : req.user?.id;
+      if (!userId) return res.status(403).json({ error: 'Non authentifié', featureBlocked: true });
+
+      const allowedPlans = PLAN_FEATURES[feature];
+      if (!allowedPlans) {
+        // Feature inconnue → autoriser par défaut (pas de régression)
+        console.warn(`⚠️ [requireFeature] Feature inconnue: ${feature} — accès autorisé par défaut`);
+        return next();
+      }
+
+      // En période d'essai : accès complet (toutes features)
+      const subResult = await pool.query(
+        `SELECT plan_type, status, trial_end_date FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      );
+      const sub = subResult.rows[0];
+      if (!sub) return res.status(403).json({ error: 'Aucun abonnement', featureBlocked: true, feature });
+
+      const isTrial = sub.status === 'trial' || sub.status === 'trialing';
+      const trialValid = isTrial && sub.trial_end_date && new Date() < new Date(sub.trial_end_date);
+      if (trialValid) return next(); // trial = accès complet
+
+      const basePlan = getBasePlanName(sub.plan_type);
+      if (!allowedPlans.includes(basePlan)) {
+        return res.status(403).json({
+          error: `Cette fonctionnalité nécessite un plan supérieur.`,
+          featureBlocked: true,
+          feature,
+          requiredPlans: allowedPlans,
+          currentPlan: basePlan,
+          upgradeTo: allowedPlans[0]
+        });
+      }
+      next();
+    } catch(e) {
+      console.error('requireFeature:', e.message);
+      res.status(500).json({ error: 'Erreur serveur' });
     }
   };
-  
-  return limits[basePlan] || limits.solo;
 }
 
 // ============================================
@@ -20947,11 +21065,14 @@ app.post('/api/billing/create-checkout-session', async (req, res) => {
       });
     }
 
-    // ✅ Plans valides (UNIQUEMENT solo, standard, pro)
+    // ✅ Plans valides : starter, pro, agence (+ anciens noms pour compatibilité)
     const validPlans = [
+      'starter_monthly', 'starter_annual',
+      'pro_monthly', 'pro_annual',
+      'agence_monthly', 'agence_annual',
+      // Anciens noms acceptés pour compatibilité ascendante
       'solo_monthly', 'solo_annual',
       'standard_monthly', 'standard_annual',
-      'pro_monthly', 'pro_annual'
     ];
     
     const planLower = plan.toLowerCase();
@@ -32387,31 +32508,8 @@ pool.query(`ALTER TABLE account_delegations ADD COLUMN IF NOT EXISTS billing_ove
 
 // ── Middleware : réserver le mode agence au plan Pro ─────────────
 async function requireProPlan(req, res, next) {
-  try {
-    const userId = req.user?.isSubAccount ? req.user.parentUserId : req.user?.id;
-    if (!userId) return res.status(403).json({ error: 'Non authentifié', agencyBlocked: true });
-    const subResult = await pool.query(
-      `SELECT plan_type, status FROM subscriptions WHERE user_id = $1 LIMIT 1`,
-      [userId]
-    );
-    const planType = subResult.rows[0]?.plan_type || 'solo';
-    const status   = subResult.rows[0]?.status || 'trial';
-    const basePlan = getBasePlanName(planType);
-    // Pro, business et trial actif ont accès
-    const allowed = ['pro', 'business'].includes(basePlan) ||
-      (status === 'trial' && new Date() < new Date(subResult.rows[0]?.trial_end_date));
-    if (!allowed) {
-      return res.status(403).json({
-        error: 'Le mode agence est réservé au plan Pro et supérieur.',
-        agencyBlocked: true,
-        currentPlan: basePlan
-      });
-    }
-    next();
-  } catch(e) {
-    console.error('requireProPlan:', e.message);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
+  // Alias vers requireFeature('mode_agence') — le mode agence est réservé au plan Agence
+  return requireFeature('mode_agence')(req, res, next);
 }
 
 // ── Route : inviter un gestionnaire (agence) ──────────────────
