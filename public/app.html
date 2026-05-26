@@ -7781,8 +7781,8 @@ try {
           window.renderModernCalendar(window.calendarState.bookings||[], window.calendarState.properties||window.LCC_PROPERTIES||[]);
         }
         if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
-        // loadCalendarData en fond pour confirmer avec les données fraîches du serveur
-        setTimeout(function(){ if(typeof window.loadCalendarData==='function') window.loadCalendarData(); }, 800);
+        // Le socket calendar:block_removed (émis par le serveur) déclenchera un refresh si nécessaire
+        // On NE fait PAS de loadCalendarData ici pour éviter les race conditions
       } else if(activeTab==='price'){
         var pid3=document.getElementById('dayPricePropertySelect').value;
         var from3=document.getElementById('dayPriceFrom').value;
