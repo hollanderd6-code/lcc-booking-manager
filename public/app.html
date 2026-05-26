@@ -9530,16 +9530,9 @@ document.addEventListener('click', function(e) {
 
       window.deletingInProgress = false;
 
-      // Petit délai pour laisser la DB se stabiliser avant le refetch
-      setTimeout(function() {
-        if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
-        else setTimeout(function() {
-        if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
-        else if (typeof loadCalendarData === 'function') loadCalendarData();
-        else if (typeof refreshCalendar === 'function') refreshCalendar();
-        else location.reload();
-      }, 400);
-      }, 400);
+      // Le socket calendar:block_removed s'occupe du refresh immédiat.
+      // On ne fait PAS de loadCalendarData ici pour éviter les race conditions.
+      // Le flag _blockRemovedAt est déjà positionné par le socket handler.
     })
     .catch(err => {
       window.deletingInProgress = false;
