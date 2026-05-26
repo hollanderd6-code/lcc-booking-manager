@@ -1770,6 +1770,13 @@ ON invoice_download_tokens(token);
       console.log('✅ sms_stripe_subscription_id colonne OK');
     } catch(e) { console.warn('⚠️ sms_stripe_subscription_id:', e.message); }
 
+    // ── Colonnes droits par profil ──────────────────────────────────────────
+    try {
+      await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS droits_enabled BOOLEAN DEFAULT FALSE`);
+      await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS droits_stripe_subscription_id TEXT`);
+      console.log('✅ droits_enabled + droits_stripe_subscription_id colonnes OK');
+    } catch(e) { console.warn('⚠️ droits colonnes:', e.message); }
+
     // ── Migration plans : solo→starter, standard→pro, pro(ancien)→agence ──
     try {
       await pool.query(`UPDATE subscriptions SET plan_type = 'starter_monthly' WHERE plan_type = 'solo_monthly'`);
@@ -4269,7 +4276,18 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
             [subscriptionId, userId]
           );
           console.log(`📱 [SMS BILLING] SMS activé via webhook pour user ${userId}`);
-          // Pas de mise à jour du plan principal
+          break;
+        }
+
+        // Détecter si c'est l'option Droits par profil
+        const isDroitsOption = session.metadata?.droitsOption === 'true'
+          || stripeSubscription.metadata?.droitsOption === 'true';
+        if (isDroitsOption) {
+          await pool.query(
+            `UPDATE subscriptions SET droits_enabled = TRUE, droits_stripe_subscription_id = $1 WHERE user_id = $2`,
+            [subscriptionId, userId]
+          );
+          console.log(`🔐 [DROITS BILLING] Droits par profil activés via webhook pour user ${userId}`);
           break;
         }
 
@@ -9499,6 +9517,120 @@ app.delete('/api/billing/sms/unsubscribe', authenticateAny, async (req, res) => 
   } catch(err) {
     console.error('❌ DELETE /api/billing/sms/unsubscribe:', err);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+
+// ============================================
+// POST /api/billing/droits/subscribe
+// Activer l'option "Droits par profil" (Pro — 5€/mois)
+// ============================================
+app.post('/api/billing/droits/subscribe', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const subResult = await pool.query(
+      `SELECT plan_type, status, droits_enabled, stripe_customer_id FROM subscriptions
+       WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    const sub = subResult.rows[0];
+    if (!sub) return res.status(403).json({ error: 'Aucun abonnement actif' });
+
+    const basePlan = getBasePlanName(sub.plan_type);
+    if (!['pro', 'agence'].includes(basePlan)) {
+      return res.status(403).json({ error: 'Option réservée au plan Pro et Agence' });
+    }
+    if (sub.droits_enabled) {
+      return res.status(400).json({ error: 'Option Droits par profil déjà activée' });
+    }
+
+    const priceId = getPriceIdForPlan('droits_par_profil');
+    const appUrl  = process.env.APP_URL || 'https://boostinghost.fr';
+
+    const sessionParams = {
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        metadata: { userId: user.id.toString(), droitsOption: 'true', basePlan }
+      },
+      client_reference_id: user.id.toString(),
+      success_url: `${appUrl}/settings-account.html?tab=subscription&droits_success=true`,
+      cancel_url:  `${appUrl}/settings-account.html?tab=subscription`,
+      locale: 'fr',
+      metadata: { userId: user.id.toString(), droitsOption: 'true' }
+    };
+
+    if (sub.stripe_customer_id) sessionParams.customer = sub.stripe_customer_id;
+    else sessionParams.customer_email = user.email;
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    console.log(`🔐 [DROITS BILLING] Session créée pour user ${user.id}`);
+    res.json({ url: session.url, sessionId: session.id });
+
+  } catch(err) {
+    console.error('❌ POST /api/billing/droits/subscribe:', err);
+    res.status(500).json({ error: 'Impossible de créer la session', details: err.message });
+  }
+});
+
+// DELETE /api/billing/droits/unsubscribe
+app.delete('/api/billing/droits/unsubscribe', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const subResult = await pool.query(
+      `SELECT droits_stripe_subscription_id FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    const sub = subResult.rows[0];
+
+    if (sub?.droits_stripe_subscription_id) {
+      try {
+        await stripe.subscriptions.cancel(sub.droits_stripe_subscription_id);
+      } catch(e) { console.warn('⚠️ [DROITS] Stripe cancel:', e.message); }
+    }
+
+    await pool.query(
+      `UPDATE subscriptions SET droits_enabled = FALSE, droits_stripe_subscription_id = NULL WHERE user_id = $1`,
+      [user.id]
+    );
+    console.log(`🔐 [DROITS BILLING] Droits désactivés pour user ${user.id}`);
+    res.json({ success: true });
+
+  } catch(err) {
+    console.error('❌ DELETE /api/billing/droits/unsubscribe:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/billing/droits/status
+app.get('/api/billing/droits/status', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const subResult = await pool.query(
+      `SELECT plan_type, droits_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    const sub = subResult.rows[0];
+    const basePlan = getBasePlanName(sub?.plan_type || 'starter');
+    const droitsEnabled = sub?.droits_enabled === true || basePlan === 'agence'; // Agence = toujours inclus
+
+    res.json({
+      droitsEnabled,
+      droitsIncluded: basePlan === 'agence',
+      planType: basePlan,
+      price: basePlan === 'agence' ? 'Inclus' : '5€/mois'
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -21021,6 +21153,10 @@ function getPriceIdForPlan(plan) {
   if (p === 'sms_agence')
     return process.env.STRIPE_PRICE_SMS_AGENCE  || 'price_1TbRCJFDAmyxvgFKrzzmBuon';
 
+  // ── Droits par profil (Pro uniquement — 5€/mois) ─────────────────────────
+  if (p === 'droits_par_profil')
+    return process.env.STRIPE_PRICE_DROITS_PAR_PROFIL || 'price_1TbRgXFDAmyxvgFKYcAOyaZK';
+
   console.warn(`⚠️ Plan inconnu: ${plan} — fallback starter_monthly`);
   return process.env.STRIPE_PRICE_STARTER_MONTHLY || 'price_1T7HULFDAmyxvgFKj5pVnkbs';
 }
@@ -21051,6 +21187,8 @@ function getPlanFromPriceId(priceId) {
     [process.env.STRIPE_PRICE_SMS_STARTER            || 'price_1TbR8cFDAmyxvgFKyJkpmWFk']: 'sms_starter',
     [process.env.STRIPE_PRICE_SMS_PRO                || 'price_1TbRBrFDAmyxvgFKqmlSIhze']: 'sms_pro',
     [process.env.STRIPE_PRICE_SMS_AGENCE             || 'price_1TbRCJFDAmyxvgFKrzzmBuon']: 'sms_agence',
+    // Droits par profil
+    [process.env.STRIPE_PRICE_DROITS_PAR_PROFIL      || 'price_1TbRgXFDAmyxvgFKYcAOyaZK']: 'droits_par_profil',
   };
 
   const found = MAP[priceId];
@@ -21156,20 +21294,18 @@ const PLAN_FEATURES = {
 function requireFeature(feature) {
   return async function(req, res, next) {
     try {
-      // Sous-comptes : héritent des droits du compte parent
       const userId = req.user?.isSubAccount ? req.user.parentUserId : req.user?.id;
       if (!userId) return res.status(403).json({ error: 'Non authentifié', featureBlocked: true });
 
       const allowedPlans = PLAN_FEATURES[feature];
       if (!allowedPlans) {
-        // Feature inconnue → autoriser par défaut (pas de régression)
         console.warn(`⚠️ [requireFeature] Feature inconnue: ${feature} — accès autorisé par défaut`);
         return next();
       }
 
-      // En période d'essai : accès complet (toutes features)
       const subResult = await pool.query(
-        `SELECT plan_type, status, trial_end_date FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        `SELECT plan_type, status, trial_end_date, droits_enabled FROM subscriptions
+         WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
         [userId]
       );
       const sub = subResult.rows[0];
@@ -21177,19 +21313,27 @@ function requireFeature(feature) {
 
       const isTrial = sub.status === 'trial' || sub.status === 'trialing';
       const trialValid = isTrial && sub.trial_end_date && new Date() < new Date(sub.trial_end_date);
-      if (trialValid) return next(); // trial = accès complet
+      if (trialValid) return next();
 
       const basePlan = getBasePlanName(sub.plan_type);
       if (!allowedPlans.includes(basePlan)) {
         return res.status(403).json({
-          error: `Cette fonctionnalité nécessite un plan supérieur.`,
-          featureBlocked: true,
-          feature,
-          requiredPlans: allowedPlans,
-          currentPlan: basePlan,
-          upgradeTo: allowedPlans[0]
+          error: 'Cette fonctionnalité nécessite un plan supérieur.',
+          featureBlocked: true, feature,
+          requiredPlans: allowedPlans, currentPlan: basePlan, upgradeTo: allowedPlans[0]
         });
       }
+
+      // Droits par profil : Pro doit avoir souscrit l'option, Agence = toujours inclus
+      if (feature === 'droits_par_profil' && basePlan === 'pro' && !sub.droits_enabled) {
+        return res.status(403).json({
+          error: 'L'option "Droits par profil" n'est pas activée (5€/mois).',
+          featureBlocked: true, feature,
+          optionRequired: true, optionPrice: '5€/mois',
+          upgradeAction: '/api/billing/droits/subscribe'
+        });
+      }
+
       next();
     } catch(e) {
       console.error('requireFeature:', e.message);
