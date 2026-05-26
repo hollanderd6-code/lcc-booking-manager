@@ -1764,6 +1764,12 @@ ON invoice_download_tokens(token);
         ON subscription_invoices(invoice_number);
     `);
 
+    // ── Colonne sms_stripe_subscription_id ──────────────────────────────────
+    try {
+      await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS sms_stripe_subscription_id TEXT`);
+      console.log('✅ sms_stripe_subscription_id colonne OK');
+    } catch(e) { console.warn('⚠️ sms_stripe_subscription_id:', e.message); }
+
     // ── Migration plans : solo→starter, standard→pro, pro(ancien)→agence ──
     try {
       await pool.query(`UPDATE subscriptions SET plan_type = 'starter_monthly' WHERE plan_type = 'solo_monthly'`);
@@ -4254,6 +4260,18 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
         
         const basePlan = getBasePlanName(plan);
         const subscriptionStatus = isTrialing ? 'trial' : 'active';
+        // Détecter si c'est un abonnement SMS
+        const isSmsOption = session.metadata?.smsOption === 'true'
+          || stripeSubscription.metadata?.smsOption === 'true';
+        if (isSmsOption) {
+          await pool.query(
+            `UPDATE subscriptions SET sms_enabled = TRUE, sms_stripe_subscription_id = $1 WHERE user_id = $2`,
+            [subscriptionId, userId]
+          );
+          console.log(`📱 [SMS BILLING] SMS activé via webhook pour user ${userId}`);
+          // Pas de mise à jour du plan principal
+          break;
+        }
 
         if (isTrialing) {
           // Avec période d'essai
@@ -9207,10 +9225,17 @@ app.get('/api/sms/status', authenticateAny, async (req, res) => {
       [userId]
     );
     const sub = result.rows[0];
-    const basePlan = getBasePlanName(sub?.plan_type || 'solo');
-    const smsIncluded = basePlan === 'pro';
-    const smsEnabled = smsIncluded || (sub?.sms_enabled === true);
-    res.json({ smsEnabled, smsIncluded, planType: basePlan });
+    const basePlan = getBasePlanName(sub?.plan_type || 'starter');
+    // SMS = option payante pour tous les plans (jamais "inclus" d'office)
+    const smsEnabled = sub?.sms_enabled === true;
+    const smsPrices  = { starter: '7,99€/mois', pro: '1€/log/mois', agence: '0,50€/log/mois' };
+    res.json({
+      smsEnabled,
+      smsIncluded: false, // toujours une option payante
+      planType: basePlan,
+      smsPrice: smsPrices[basePlan] || null,
+      smsStripeSubId: sub?.sms_stripe_subscription_id || null
+    });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
@@ -9235,9 +9260,13 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
     const userEmail = user?.email;
     const userName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || userEmail;
 
-    // Solo/Standard : ne peut pas activer sans option payée
-    if (basePlan !== 'pro' && enabled && !sub?.sms_enabled) {
-      return res.status(403).json({ error: 'option_required', message: 'Option SMS requise pour ce plan' });
+    // Tous les plans : ne peut activer que si déjà payé via Stripe (sms_enabled en DB)
+    if (enabled && !sub?.sms_enabled) {
+      return res.status(403).json({
+        error: 'payment_required',
+        message: 'Veuillez souscrire à l'option SMS via Stripe.',
+        action: 'subscribe' // le front redirige vers /api/billing/sms/subscribe
+      });
     }
 
     await pool.query(
@@ -9348,6 +9377,130 @@ app.get('/api/sms/logs', authenticateAny, async (req, res) => {
   }
 });
 
+
+
+// ============================================
+// POST /api/billing/sms/subscribe
+// Créer une session Stripe Checkout pour l'option SMS
+// ============================================
+app.post('/api/billing/sms/subscribe', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    // Récupérer le plan actif
+    const subResult = await pool.query(
+      `SELECT plan_type, status, stripe_subscription_id, sms_enabled, stripe_customer_id
+       FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    const sub = subResult.rows[0];
+    if (!sub) return res.status(403).json({ error: 'Aucun abonnement actif' });
+
+    // Déjà activé ?
+    if (sub.sms_enabled) {
+      return res.status(400).json({ error: 'Option SMS déjà activée' });
+    }
+
+    const basePlan = getBasePlanName(sub.plan_type);
+    const smsPriceKey = `sms_${basePlan}`; // sms_starter | sms_pro | sms_agence
+    const smsPriceId = getPriceIdForPlan(smsPriceKey);
+
+    if (!smsPriceId) {
+      return res.status(400).json({ error: 'Prix SMS non configuré pour ce plan' });
+    }
+
+    // Nombre de logements pour les plans à tarif par siège (pro/agence)
+    let smsQuantity = 1;
+    if (basePlan !== 'starter') {
+      const propCount = await pool.query(
+        'SELECT COUNT(*) AS count FROM properties WHERE user_id = $1',
+        [user.id]
+      );
+      smsQuantity = Math.max(1, parseInt(propCount.rows[0].count) || 1);
+    }
+
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
+
+    // Si l'utilisateur a déjà un customer Stripe, l'utiliser
+    const sessionParams = {
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: smsPriceId, quantity: smsQuantity }],
+      subscription_data: {
+        metadata: {
+          userId: user.id.toString(),
+          smsOption: 'true',
+          basePlan,
+          smsQuantity: String(smsQuantity)
+        }
+      },
+      client_reference_id: user.id.toString(),
+      success_url: `${appUrl}/settings-account.html?tab=subscription&sms_success=true`,
+      cancel_url:  `${appUrl}/settings-account.html?tab=subscription&sms_cancelled=true`,
+      locale: 'fr',
+      metadata: { userId: user.id.toString(), smsOption: 'true' }
+    };
+
+    if (sub.stripe_customer_id) {
+      sessionParams.customer = sub.stripe_customer_id;
+    } else {
+      sessionParams.customer_email = user.email;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+
+    console.log(`📱 [SMS BILLING] Session créée pour user ${user.id} (${basePlan}) qty=${smsQuantity} price=${smsPriceId}`);
+
+    res.json({ url: session.url, sessionId: session.id });
+
+  } catch(err) {
+    console.error('❌ POST /api/billing/sms/subscribe:', err);
+    res.status(500).json({ error: 'Impossible de créer la session SMS', details: err.message });
+  }
+});
+
+// ============================================
+// DELETE /api/billing/sms/unsubscribe
+// Annuler l'option SMS (via Stripe Customer Portal ou directement)
+// ============================================
+app.delete('/api/billing/sms/unsubscribe', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const subResult = await pool.query(
+      `SELECT sms_stripe_subscription_id, stripe_customer_id FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    const sub = subResult.rows[0];
+
+    // Annuler l'abonnement SMS dans Stripe si on a l'ID
+    if (sub?.sms_stripe_subscription_id) {
+      try {
+        await stripe.subscriptions.cancel(sub.sms_stripe_subscription_id);
+        console.log(`📱 [SMS BILLING] Abonnement SMS annulé: ${sub.sms_stripe_subscription_id}`);
+      } catch(stripeErr) {
+        console.warn('⚠️ [SMS] Stripe cancel error:', stripeErr.message);
+      }
+    }
+
+    // Désactiver en DB
+    await pool.query(
+      `UPDATE subscriptions SET sms_enabled = FALSE, sms_stripe_subscription_id = NULL WHERE user_id = $1`,
+      [user.id]
+    );
+
+    console.log(`📱 [SMS BILLING] SMS désactivé pour user ${user.id}`);
+    res.json({ success: true });
+
+  } catch(err) {
+    console.error('❌ DELETE /api/billing/sms/unsubscribe:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ============================================
 // GET /api/subscription/features
@@ -20860,6 +21013,14 @@ function getPriceIdForPlan(plan) {
   if (p === 'agence_extra_annual')
     return process.env.STRIPE_PRICE_AGENCE_EXTRA_ANNUAL  || 'price_1T7HTiFDAmyxvgFKWR5EwhbH';
 
+  // ── SMS Options ────────────────────────────────────────────────────────
+  if (p === 'sms_starter')
+    return process.env.STRIPE_PRICE_SMS_STARTER || 'price_1TbR8cFDAmyxvgFKyJkpmWFk';
+  if (p === 'sms_pro')
+    return process.env.STRIPE_PRICE_SMS_PRO     || 'price_1TbRBrFDAmyxvgFKqmlSIhze';
+  if (p === 'sms_agence')
+    return process.env.STRIPE_PRICE_SMS_AGENCE  || 'price_1TbRCJFDAmyxvgFKrzzmBuon';
+
   console.warn(`⚠️ Plan inconnu: ${plan} — fallback starter_monthly`);
   return process.env.STRIPE_PRICE_STARTER_MONTHLY || 'price_1T7HULFDAmyxvgFKj5pVnkbs';
 }
@@ -20886,6 +21047,10 @@ function getPlanFromPriceId(priceId) {
     [process.env.STRIPE_PRICE_AGENCE_ANNUAL          || 'price_1T7HToFDAmyxvgFKZtsSaEui']: 'agence_annual',
     [process.env.STRIPE_PRICE_AGENCE_EXTRA_MONTHLY   || 'price_1T7HTlFDAmyxvgFKLKmRpP51']: 'agence_extra_monthly',
     [process.env.STRIPE_PRICE_AGENCE_EXTRA_ANNUAL    || 'price_1T7HTiFdAmyxvgFKWR5EwhbH']: 'agence_extra_annual',
+    // SMS options
+    [process.env.STRIPE_PRICE_SMS_STARTER            || 'price_1TbR8cFDAmyxvgFKyJkpmWFk']: 'sms_starter',
+    [process.env.STRIPE_PRICE_SMS_PRO                || 'price_1TbRBrFDAmyxvgFKqmlSIhze']: 'sms_pro',
+    [process.env.STRIPE_PRICE_SMS_AGENCE             || 'price_1TbRCJFDAmyxvgFKrzzmBuon']: 'sms_agence',
   };
 
   const found = MAP[priceId];
