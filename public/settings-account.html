@@ -1182,6 +1182,42 @@ html[data-theme-v3="1"] .subscription-card {
       .inv-filters { flex-direction: column; align-items: stretch; }
       .inv-filter-group select { width: 100% !important; }
     }
+
+/* ═══ PLAN GATE — Feature Locking UI ═══ */
+.btn-locked {
+  position: relative; overflow: hidden;
+  opacity: 0.55; cursor: not-allowed !important;
+}
+.btn-locked::after {
+  content: "\f023";
+  font-family: "Font Awesome 6 Free"; font-weight: 900;
+  margin-left: 7px; font-size: 11px;
+}
+.plan-gate-banner {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border: 1.5px solid #c4b5fd;
+  border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;
+}
+.plan-gate-banner .pgb-icon {
+  width: 42px; height: 42px; flex-shrink: 0;
+  background: #7c3aed; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 18px;
+}
+.plan-gate-banner .pgb-text { flex: 1; }
+.plan-gate-banner .pgb-title { font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 3px; }
+.plan-gate-banner .pgb-desc  { font-size: 12px; color: #6d28d9; line-height: 1.5; }
+.plan-gate-banner .pgb-btn {
+  flex-shrink: 0; padding: 8px 16px;
+  background: #7c3aed; color: white; border: none;
+  border-radius: 8px; font-size: 12px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.plan-gate-banner .pgb-btn:hover { background: #6d28d9; color: white; }
+.tab-lock-icon { margin-left: 5px; font-size: 10px; opacity: .65; }
+
 </style>
 <script src="/js/auth-fetch.js"></script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
@@ -4330,5 +4366,78 @@ async function executeDeleteAccount() {
 <script src="/js/bh-onboarding-pages.js">
 
 </script>    
+
+<script>
+
+// ═══ PLAN GATE ═══
+window._bhFeatures = window._bhFeatures || null;
+async function bhLoadFeaturesSettings() {
+  if (window._bhFeatures) return window._bhFeatures;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/subscription/features', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return null;
+    window._bhFeatures = await res.json();
+    return window._bhFeatures;
+  } catch(e) { return null; }
+}
+function bhLockBtnSettings(el, plan) {
+  if (!el) return;
+  el.classList.add('btn-locked');
+  el.setAttribute('title', 'Disponible à partir du plan ' + plan);
+  el.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); bhShowUpgradeModalSettings(plan); }, true);
+}
+function bhLockSectionSettings(id, title, desc, plan) {
+  const el = document.getElementById(id); if (!el) return;
+  const banner = document.createElement('div'); banner.className = 'plan-gate-banner';
+  banner.innerHTML = '<div class="pgb-icon"><i class="fas fa-lock"></i></div>'
+    + '<div class="pgb-text"><div class="pgb-title">' + title + '</div><div class="pgb-desc">' + desc + '</div></div>'
+    + '<a href="/pricing.html" class="pgb-btn"><i class="fas fa-arrow-up"></i> Plan ' + plan + '</a>';
+  el.style.position = 'relative';
+  el.insertAdjacentElement('afterbegin', banner);
+  Array.from(el.children).forEach(function(c) {
+    if (!c.classList.contains('plan-gate-banner')) { c.style.filter = 'blur(3px)'; c.style.pointerEvents = 'none'; c.style.userSelect = 'none'; }
+  });
+}
+function bhShowUpgradeModalSettings(plan) {
+  const ex = document.getElementById('bhUpgradeModal'); if (ex) ex.remove();
+  const m = document.createElement('div'); m.id = 'bhUpgradeModal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  m.innerHTML = '<div style="background:white;border-radius:20px;padding:32px;max-width:440px;width:100%;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,.2);">'
+    + '<div style="width:64px;height:64px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;"><i class="fas fa-lock" style="font-size:28px;color:white;"></i></div>'
+    + '<div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">Fonctionnalité ' + plan + '</div>'
+    + '<div style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;">Cette fonctionnalité est disponible à partir du plan <strong>' + plan + '</strong>.</div>'
+    + '<div style="display:flex;gap:12px;justify-content:center;">'
+    + '<button onclick="document.getElementById('bhUpgradeModal').remove()" style="padding:10px 20px;border:1.5px solid #e5e7eb;background:white;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#374151;">Plus tard</button>'
+    + '<a href="/pricing.html" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;"><i class="fas fa-arrow-up"></i> Voir les plans</a>'
+    + '</div></div>';
+  m.onclick = function(e) { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+}
+
+window.addEventListener('DOMContentLoaded', async function() {
+  const features = await bhLoadFeaturesSettings();
+  if (!features || features.isTrial) return;
+
+  // Sous-comptes équipe (plan Pro+)
+  if (features.features.sous_comptes === false) {
+    bhLockBtnSettings(document.getElementById('btnAddTeamMember'), 'Pro');
+    // Le deuxième bouton "Ajouter votre premier membre" est généré dynamiquement → on bloque via la section
+    bhLockSectionSettings('teamMembersList', '🔒 Sous-comptes équipe', 'Ajoutez des membres à votre équipe (ménage, assistants, comptables). Disponible à partir du plan Pro.', 'Pro');
+  }
+
+  // Mode Agence (plan Agence uniquement)
+  if (features.features.mode_agence === false) {
+    bhLockBtnSettings(document.getElementById('inviteAgencyBtn'), 'Agence');
+    // Bannière sur la section agence
+    const agenceSection = document.querySelector('section.card[style*="7c3aed"]');
+    if (agenceSection) {
+      const body = agenceSection.querySelector('.card-body');
+      if (body) bhLockSectionSettings(null, '🔒 Mode Agence', 'Gérez plusieurs comptes propriétaires depuis votre interface. Exclusif plan Agence.', 'Agence');
+    }
+  }
+});
+
+</script>
 </body>
 </html>
