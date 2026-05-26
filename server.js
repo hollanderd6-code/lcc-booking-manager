@@ -8287,9 +8287,19 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         return false;
       }
       // Filtrer les blocs supprimés de la DB mais encore dans le store
-      if ((r.source === 'BLOCK' || r.platform === 'BLOCK' || r.type === 'block') && r.uid && r.uid.startsWith('block_') && !dbBlockUids.has(r.uid)) {
+      // On filtre TOUS les blocs (peu importe le format d'uid) absents de la DB
+      const isBlock = r.source === 'BLOCK' || r.platform === 'BLOCK' || r.type === 'block' || r.reservation_type === 'block';
+      if (isBlock && r.uid && !dbBlockUids.has(r.uid)) {
         console.log(`🗑️ [FILTER] Bloc ${r.uid} retiré (absent de la DB)`);
         return false;
+      }
+      // Si le bloc n'a pas d'uid mais a un id numérique, vérifier aussi par id
+      if (isBlock && !r.uid && r.id) {
+        const dbBlockIds = new Set(reservationsDbRows.filter(rb => rb.source === 'BLOCK' || rb.platform === 'BLOCK' || rb.reservation_type === 'block').map(rb => String(rb.id)));
+        if (!dbBlockIds.has(String(r.id))) {
+          console.log(`🗑️ [FILTER] Bloc id=${r.id} retiré (absent de la DB)`);
+          return false;
+        }
       }
       return true;
     });
