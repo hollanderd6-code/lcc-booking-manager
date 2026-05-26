@@ -7781,8 +7781,8 @@ try {
           window.renderModernCalendar(window.calendarState.bookings||[], window.calendarState.properties||window.LCC_PROPERTIES||[]);
         }
         if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
-        // Le socket calendar:block_removed (émis par le serveur) déclenchera un refresh si nécessaire
-        // On NE fait PAS de loadCalendarData ici pour éviter les race conditions
+        // loadCalendarData en fond pour confirmer avec les données fraîches du serveur
+        setTimeout(function(){ if(typeof window.loadCalendarData==='function') window.loadCalendarData(); }, 800);
       } else if(activeTab==='price'){
         var pid3=document.getElementById('dayPricePropertySelect').value;
         var from3=document.getElementById('dayPriceFrom').value;
@@ -11833,13 +11833,22 @@ if (window.Capacitor) {
       if (typeof loadCalendarData === 'function') loadCalendarData();
       else if (typeof refreshCalendar === 'function') refreshCalendar();
     });
+    // Flag pour éviter les refreshes en cascade après un déblocage
+    window._blockRemovedAt = 0;
+
     s.on('reservations:updated', function(d) {
       console.log('📅 Réservations mises à jour, rafraîchissement calendrier...', d);
+      // Ignorer pendant 2s après un block_removed (le calendrier est déjà à jour)
+      if (Date.now() - window._blockRemovedAt < 2000) {
+        console.log('📅 reservations:updated ignoré (block_removed récent)');
+        return;
+      }
       if (typeof loadCalendarData === 'function') loadCalendarData();
       else if (typeof refreshCalendar === 'function') refreshCalendar();
     });
     s.on('calendar:block_removed', function(d) {
       console.log('📅 [socket] calendar:block_removed reçu uid=' + (d&&d.uid));
+      window._blockRemovedAt = Date.now(); // bloquer reservations:updated pendant 2s
       // Patch store local si uid fourni (DELETE /api/blocks/:id)
       if (d && d.uid && window.calendarState && Array.isArray(window.calendarState.bookings)) {
         var prevLen = window.calendarState.bookings.length;
@@ -11853,7 +11862,6 @@ if (window.Capacitor) {
         window.renderModernCalendar(window.calendarState.bookings || [], window.calendarState.properties || window.LCC_PROPERTIES || []);
       }
       // Recharger depuis l'API seulement si l'uid est null (batch unblock)
-      // ou si ce socket vient d'un autre onglet (pas notre propre action)
       if (!d || !d.uid) {
         if (typeof loadCalendarData === 'function') loadCalendarData();
       }
