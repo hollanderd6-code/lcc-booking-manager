@@ -5746,16 +5746,28 @@ window.openImportReservations = function() {
   var clientName = client ? (client.company_name || ((client.first_name||"") + " " + (client.last_name||"")).trim()) : "";
   document.getElementById("importResaSubtitle").textContent = clientName ? ("Facture pour : " + clientName) : "";
 
+  // Récupérer les logements cochés dans l'éditeur de facture
   var checkedProps = [];
   document.querySelectorAll("#propertyCheckboxList input[type=checkbox]:checked").forEach(function(cb){ checkedProps.push(cb.value); });
 
+  // Source des logements : priorité aux logements du client (allProperties filtré par owner_id)
+  // Fallback sur LCC_PROPERTIES si allProperties n'est pas disponible
+  var clientId2 = document.getElementById("invoiceClientId") ? document.getElementById("invoiceClientId").value : "";
+  var allProps = [];
+  if (window.allProperties && window.allProperties.length > 0 && clientId2) {
+    allProps = window.allProperties.filter(function(p) { return String(p.owner_id) === String(clientId2); });
+  }
+  if (allProps.length === 0) {
+    allProps = window.LCC_PROPERTIES || window.userProperties || [];
+  }
+
   var propListEl = document.getElementById("importResaPropList");
-  var allProps = window.LCC_PROPERTIES || window.userProperties || [];
   propListEl.innerHTML = allProps.length === 0
     ? "<span style=\"font-size:12px;color:#9ca3af;\">Aucun logement trouv\u00e9</span>"
     : allProps.map(function(p) {
         var pid  = p.id || p.propertyId;
         var name = p.internal_name || p.internalName || p.name || pid;
+        // Coché si : explicitement coché dans l'éditeur, ou si aucun logement sélectionné dans l'éditeur (tout coché)
         var isChecked = checkedProps.length === 0 || checkedProps.indexOf(pid) !== -1;
         var bg    = isChecked ? "#ecfdf5" : "white";
         var color = isChecked ? "#1A7A5E" : "#374151";
