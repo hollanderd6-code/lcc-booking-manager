@@ -16490,7 +16490,7 @@ app.post('/api/stripe/create-onboarding-link', async (req, res) => {
 // ============================================
 
 // POST /api/owner-clients/:id/stripe/connect — Lancer onboarding Stripe pour un proprio
-app.post('/api/owner-clients/:id/stripe/connect', authenticateAny, async (req, res) => {
+app.post('/api/owner-clients/:id/stripe/connect', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -16540,7 +16540,7 @@ app.post('/api/owner-clients/:id/stripe/connect', authenticateAny, async (req, r
 });
 
 // GET /api/owner-clients/:id/stripe/status — Statut Stripe d'un proprio
-app.get('/api/owner-clients/:id/stripe/status', authenticateAny, async (req, res) => {
+app.get('/api/owner-clients/:id/stripe/status', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -16576,7 +16576,7 @@ app.get('/api/owner-clients/:id/stripe/status', authenticateAny, async (req, res
 });
 
 // PATCH /api/owner-clients/:id/stripe/toggle — Activer/désactiver Stripe BH pour un proprio
-app.patch('/api/owner-clients/:id/stripe/toggle', authenticateAny, async (req, res) => {
+app.patch('/api/owner-clients/:id/stripe/toggle', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -17663,7 +17663,7 @@ const uploadAttachment = multer({
 // ============================================
 
 // 1. LISTE DES CLIENTS
-app.get('/api/owner-clients', async (req, res) => {
+app.get('/api/owner-clients', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -17772,7 +17772,7 @@ app.patch('/api/agency/billing-override/:delegatorUserId', authenticateAny, requ
 });
 
 // 2. DÉTAIL D'UN CLIENT
-app.get('/api/owner-clients/:id', async (req, res) => {
+app.get('/api/owner-clients/:id', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -17794,7 +17794,7 @@ app.get('/api/owner-clients/:id', async (req, res) => {
 });
 
 // 3. CRÉER UN CLIENT
-app.post('/api/owner-clients', async (req, res) => {
+app.post('/api/owner-clients', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -17859,7 +17859,7 @@ app.post('/api/owner-clients', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
-app.put('/api/owner-clients/:id', async (req, res) => {
+app.put('/api/owner-clients/:id', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -17911,7 +17911,7 @@ app.put('/api/owner-clients/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-app.delete('/api/owner-clients/:id', async (req, res) => {
+app.delete('/api/owner-clients/:id', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -18068,7 +18068,7 @@ app.post('/api/owner-articles/init-defaults', async (req, res) => {
 
 // 1. LISTE DES FACTURES PROPRIÉTAIRES
 app.get('/api/owner-invoices',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_view_invoices'),
   async (req, res) => {
   try {
@@ -18102,7 +18102,7 @@ app.get('/api/owner-invoices',
 
 // 2. CRÉER UNE NOUVELLE FACTURE PROPRIÉTAIRE (BROUILLON PAR DÉFAUT)
 app.post('/api/owner-invoices',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
   const client = await pool.connect();
@@ -18281,7 +18281,7 @@ if (Array.isArray(propertyIds) && propertyIds.length > 0) {
 });
 // 2bis. RÉCUPÉRER UNE FACTURE PROPRIÉTAIRE PAR ID
 app.get('/api/owner-invoices/:id',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_view_invoices'),
   async (req, res) => {
   try {
@@ -18331,7 +18331,7 @@ res.json({
   }
 });
 // ── Télécharger PDF d'une facture propriétaire (généré server-side avec PDFKit) ──
-app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
+app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -18654,7 +18654,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, async (req, res) => {
 
 // CRÉER UN AVOIR SUR UNE FACTURE EXISTANTE
 app.post('/api/owner-invoices/:id/credit-note',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
   const client = await pool.connect();
@@ -19789,7 +19789,7 @@ app.post('/api/invoice/send-link', authenticateAny, async (req, res) => {
 
 // 6. MODIFIER UNE FACTURE BROUILLON
 app.put('/api/owner-invoices/:id',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
   const client = await pool.connect();
@@ -19945,7 +19945,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
 
 // 7. SUPPRIMER UNE FACTURE BROUILLON
 app.delete('/api/owner-invoices/:id',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
   try {
@@ -19978,7 +19978,7 @@ app.delete('/api/owner-invoices/:id',
 });
 // 2bis. VALIDER UNE FACTURE (BROUILLON -> FACTURÉE)
 app.post('/api/owner-invoices/:id/finalize',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
   try {
@@ -20310,7 +20310,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
 
 
 app.post('/api/owner-invoices/:id/send',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
   try {
@@ -20419,7 +20419,7 @@ app.post('/api/owner-invoices/:id/send',
 });
 // MARQUER UNE FACTURE COMME ENCAISSÉE
 app.post('/api/owner-invoices/:id/mark-paid',
-  authenticateAny,
+  authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
   try {
@@ -24899,6 +24899,9 @@ console.log('✅ Cron job rappels caution initialisé');
 // ============================================
 // ✅ INITIALISATION DES ROUTES SOUS-COMPTES
 // ============================================
+// Protéger toutes les routes sous-comptes (plan Pro ou Agence)
+app.use('/api/sub-accounts', authenticateAny, requireFeature('sous_comptes'));
+app.use('/api/team', authenticateAny, requireFeature('sous_comptes'));
 setupSubAccountsRoutes(app, pool, authenticateAny, sendEmail, bhEmailTemplate);
 console.log('✅ Routes sous-comptes initialisées');
 
@@ -27607,7 +27610,7 @@ const uploadDebours = multer({
 });
 
 // POST /api/debours — créer un justificatif
-app.post('/api/debours', authenticateAny, requirePermission(pool, 'can_manage_debours'), uploadDebours.single('photo'), async (req, res) => {
+app.post('/api/debours', authenticateAny, requireFeature('invoices_clients'), requirePermission(pool, 'can_manage_debours'), uploadDebours.single('photo'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -27650,7 +27653,7 @@ app.post('/api/debours', authenticateAny, requirePermission(pool, 'can_manage_de
 });
 
 // GET /api/debours — liste des justificatifs
-app.get('/api/debours', authenticateAny, requirePermission(pool, 'can_view_debours'), async (req, res) => {
+app.get('/api/debours', authenticateAny, requireFeature('invoices_clients'), requirePermission(pool, 'can_view_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -27675,7 +27678,7 @@ app.get('/api/debours', authenticateAny, requirePermission(pool, 'can_view_debou
 
 // PATCH /api/debours/:id/status — changer le statut
 // GET /api/debours/:id — récupérer un justificatif par ID
-app.get('/api/debours/:id', authenticateAny, requirePermission(pool, 'can_view_debours'), async (req, res) => {
+app.get('/api/debours/:id', authenticateAny, requireFeature('invoices_clients'), requirePermission(pool, 'can_view_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -27690,7 +27693,7 @@ app.get('/api/debours/:id', authenticateAny, requirePermission(pool, 'can_view_d
   }
 });
 
-app.patch('/api/debours/:id/status', authenticateAny, requirePermission(pool, 'can_manage_debours'), async (req, res) => {
+app.patch('/api/debours/:id/status', authenticateAny, requireFeature('invoices_clients'), requirePermission(pool, 'can_manage_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -27712,7 +27715,7 @@ app.patch('/api/debours/:id/status', authenticateAny, requirePermission(pool, 'c
 });
 
 // DELETE /api/debours/:id
-app.delete('/api/debours/:id', authenticateAny, requirePermission(pool, 'can_manage_debours'), async (req, res) => {
+app.delete('/api/debours/:id', authenticateAny, requireFeature('invoices_clients'), requirePermission(pool, 'can_manage_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -31524,7 +31527,7 @@ app.get('/api/reservations/notes/:property_id', authenticateToken, async (req, r
 // ============================================================
 // 📄 ATTESTATION FISCALE — Envoi par email via Brevo
 // ============================================================
-app.post('/api/attestation/send', authenticateToken, async (req, res) => {
+app.post('/api/attestation/send', authenticateToken, requireFeature('attestation_conciergerie'), async (req, res) => {
   try {
     const userId = req.user.id;
     const {
