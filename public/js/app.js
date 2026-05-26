@@ -542,10 +542,13 @@ async function loadReservations() {
 
     // Calendrier moderne (vue tableau par logement)
     if (window.renderModernCalendar) {
-      try {
-        window.renderModernCalendar(allReservations, data.properties || []);
-      } catch (e) {
-        console.warn('Erreur calendrier moderne', e);
+      // Ne pas re-render si un block_removed vient d'être traité (évite d'écraser le patch local)
+      if (!window._blockRemovedAt || Date.now() - window._blockRemovedAt > 2000) {
+        try {
+          window.renderModernCalendar(allReservations, data.properties || []);
+        } catch (e) {
+          console.warn('Erreur calendrier moderne', e);
+        }
       }
     }
 
