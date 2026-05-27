@@ -6180,7 +6180,12 @@ try {
 
       window.__LCC_KPI_STATE = { reservations, properties };
       if (window.renderModernCalendar) {
-        window.renderModernCalendar(reservations, properties);
+        // Ne pas re-render si un block_removed vient d'arriver (patch local déjà correct)
+        if (!window._blockRemovedAt || Date.now() - window._blockRemovedAt > 2000) {
+          window.renderModernCalendar(reservations, properties);
+        } else {
+          console.log('📅 renderModernCalendar ignoré dans loadDataAndUpdateKpis (block_removed récent)');
+        }
       }
       computeKpis(reservations, properties);
 
