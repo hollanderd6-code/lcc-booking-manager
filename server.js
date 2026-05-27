@@ -14323,8 +14323,17 @@ app.post('/api/blocks/batch', async (req, res) => {
     }
     setImmediate(async () => {
       try {
+        // Calculer les dates ciblées pour éviter un full sync qui pourrait
+        // réintroduire des blocs si la DB n'est pas encore à jour
+        const targetDates = [];
+        if (date_from && date_to) {
+          const d = new Date(date_from + 'T00:00:00Z');
+          const end = new Date(date_to + 'T00:00:00Z');
+          while (d < end) { targetDates.push(d.toISOString().split('T')[0]); d.setUTCDate(d.getUTCDate() + 1); }
+        }
         for (const property_id of property_ids) {
-          await triggerChannexAvailabilitySync(property_id, null);
+          // Utiliser les dates ciblées (pas null) pour éviter les race conditions
+          await triggerChannexAvailabilitySync(property_id, targetDates.length > 0 ? targetDates : null);
         }
         syncAllCalendars();
       } catch (bgErr) {
