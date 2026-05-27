@@ -8689,7 +8689,19 @@ app.post('/api/blocks', async (req, res) => {
       createdAt: new Date().toISOString()
     };
     
-    // ✅ Sauvegarder en base de données (persistant entre déploiements)
+    // ✅ Sauvegarder en base de données — dédoublonner avant d'insérer
+    const existingBlock = await pool.query(
+      `SELECT uid FROM reservations
+       WHERE property_id = $1 AND user_id = $2 AND start_date = $3 AND end_date = $4
+         AND (reservation_type = 'block' OR source = 'BLOCK')
+         AND status != 'cancelled'
+       LIMIT 1`,
+      [propertyId, user.id, start, end]
+    );
+    if (existingBlock.rows.length > 0) {
+      console.log(`⚠️ Bloc identique déjà en DB: ${existingBlock.rows[0].uid} — ignoré`);
+      return res.status(201).json({ message: 'Blocage existant', block });
+    }
     await pool.query(`
       INSERT INTO reservations (
         uid, property_id, user_id,

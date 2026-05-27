@@ -7732,43 +7732,15 @@ try {
         var bFrom=document.getElementById('blockStartDate').value;
         var bTo=window._currentBlockEnd || document.getElementById('blockEndDate').value;
         console.log('🔓 Déblocage uid:', blockId, 'prop:', bProp2, 'dates:', bFrom, '->', bTo);
-        var unblockOk=false;
-        // 1. DELETE par uid (blockId = "block_TIMESTAMP" ou id numérique)
-        if(blockId){
-          try{
-            var ru=await fetch(API2+'/api/blocks/'+encodeURIComponent(blockId),{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
-            var du=await ru.json();
-            console.log('🔓 DELETE', ru.status, du);
-            if(ru.ok){ unblockOk=true; }
-          }catch(e){console.warn('DELETE failed:',e);}
-        }
-        // 2. Fallback batch avec les vraies dates du bloc
-        if(!unblockOk){
-          console.log('🔓 Fallback batch unblock:', bProp2, bFrom, bTo);
-          var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
-          var du2=await ru2.json();
-          console.log('🔓 Batch:', du2);
-          if(!du2.success) throw new Error(du2.error||'Erreur déblocage');
-          // Patch store local après fallback batch (par dates)
-          if(Array.isArray(window.LCC_RESERVATIONS)){
-            window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r){
-              var isBlock = r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block'||r.isManual;
-              var overlaps = r.propertyId===bProp2 && r.start < bTo && r.end > bFrom;
-              return !(isBlock && overlaps);
-            });
-            try { localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(window.LCC_RESERVATIONS)); } catch(e){}
-          }
-        }
+        // Batch unblock par dates — supprime TOUS les blocs chevauchants (y compris doublons)
+        console.log('🔓 Batch unblock:', bProp2, bFrom, bTo);
+        var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
+        var du2=await ru2.json();
+        console.log('🔓 Batch result:', du2);
+        if(!du2.success) throw new Error(du2.error||'Erreur déblocage');
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
         window._currentBlockId=null; window._currentBlockEnd=null;
-        // Patch immédiat du store local
-        if(blockId){
-          if(Array.isArray(window.LCC_RESERVATIONS)){
-            window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r){ return r.uid !== blockId && r.id !== blockId; });
-            try { localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(window.LCC_RESERVATIONS)); } catch(e){}
-          }
-        }
-        // Patch par dates pour le fallback batch (blockId peut être null)
+        // Patch local par dates (couvre tous les blocs chevauchants)
         if(Array.isArray(window.LCC_RESERVATIONS)){
           window.LCC_RESERVATIONS = window.LCC_RESERVATIONS.filter(function(r){
             var isBlock = r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block';
