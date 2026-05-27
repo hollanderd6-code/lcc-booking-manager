@@ -6980,7 +6980,7 @@ try {
         var anchorCell = grid.querySelector('.bh-day-cell[data-property-id="'+prop.id+'"][data-col-idx="'+clippedStart+'"]');
         if (!anchorCell) return;
 
-        var isBlock = r.type==='block';
+        var isBlock = r.type==='block' || r.source==='BLOCK';
         var p2 = pltInfo(r);
 
         // Le bloc est position:absolute dans anchorCell, width = nb cols * colW

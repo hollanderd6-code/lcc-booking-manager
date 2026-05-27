@@ -14189,8 +14189,7 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
     );
     console.log(`🔓 Résultat: ${result.rows.length} ligne(s) supprimée(s)`);
     if (result.rows.length === 0) {
-      // Pas d'erreur — le bloc n'existe peut-être plus, renvoyer succès quand même
-      return res.json({ success: true, deleted: null, warning: 'Blocage non trouvé en DB' });
+      return res.status(404).json({ success: false, error: 'Blocage non trouvé en DB' });
     }
     const row = result.rows[0];
     // Nettoyer le store mémoire
