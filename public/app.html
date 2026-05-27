@@ -6822,7 +6822,6 @@ try {
   // VUE MOIS
   // ─────────────────────────────────────────
   function renderMonth(body) {
-    console.log('🗓️ [renderMonth] appelée avec ' + state.bookings.length + ' bookings, blocs: ' + state.bookings.filter(function(r){ return r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block'; }).length);
     var year  = state.date.getFullYear();
     var month = state.date.getMonth();
     var firstDay = new Date(year, month, 1);
@@ -11847,7 +11846,6 @@ if (window.Capacitor) {
     });
     s.on('calendar:block_removed', function(d) {
       console.log('📅 [socket] calendar:block_removed reçu uid=' + (d&&d.uid));
-      window._blockRemovedAt = Date.now(); // bloquer reservations:updated pendant 2s
       // Patch store local si uid fourni (DELETE /api/blocks/:id)
       if (d && d.uid && window.calendarState && Array.isArray(window.calendarState.bookings)) {
         var prevLen = window.calendarState.bookings.length;
@@ -11856,10 +11854,14 @@ if (window.Capacitor) {
         });
         console.log('📅 [socket] Bookings: ' + prevLen + ' → ' + window.calendarState.bookings.length);
       }
-      // Re-render depuis le store patché
+      // Re-render depuis le store patché — AVANT de setter _blockRemovedAt
+      // pour que le wrapper ne bloque pas ce render-ci
       if (typeof window.renderModernCalendar === 'function' && window.calendarState) {
+        window._blockRemovedAt = 0; // reset temporaire pour autoriser CE render
         window.renderModernCalendar(window.calendarState.bookings || [], window.calendarState.properties || window.LCC_PROPERTIES || []);
       }
+      // Setter le flag APRÈS le render pour bloquer les renders suivants (2s)
+      window._blockRemovedAt = Date.now();
       // Recharger depuis l'API seulement si l'uid est null (batch unblock)
       if (!d || !d.uid) {
         if (typeof loadCalendarData === 'function') loadCalendarData();
@@ -12239,6 +12241,11 @@ function applyPropertyOrder(props) {
   };
   // Meilleure approche : patcher directement state après chargement
   window.renderModernCalendar = function(reservations, properties) {
+    // Guard : ne pas re-render si block_removed récent (patch local déjà correct)
+    if (window._blockRemovedAt && Date.now() - window._blockRemovedAt < 2000) {
+      console.log('📅 renderModernCalendar (wrapper) ignoré — block_removed récent');
+      return;
+    }
     _orig.call(this, reservations, properties);
     // Après l\'appel, state.properties est peuplé — on réapplique l\'ordre
     if (window._calendarState) {
