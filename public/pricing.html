@@ -854,12 +854,15 @@ function setBilling(mode) {
 function updateSlider(val) {
   propCount = parseInt(val);
   const slider = document.getElementById('propSlider');
+  if (!slider) return;
   slider.value = propCount; // sync l'input quand appelé depuis les boutons +/-
   const pct = Math.min(((propCount - 1) / 199 * 100), 100).toFixed(1);
   slider.style.setProperty('--pct', pct + '%');
 
-  document.getElementById('sliderCount').textContent = propCount;
-  const pluralEl = document.getElementById('sliderPlural'); if (pluralEl) pluralEl.textContent = propCount > 1 ? 's' : '';
+  const countEl = document.getElementById('sliderCount');
+  if (countEl) countEl.textContent = propCount;
+  const pluralEl = document.getElementById('sliderPlural');
+  if (pluralEl) pluralEl.textContent = propCount > 1 ? 's' : '';
 
   // Plan hint
   const hintEl = document.getElementById('sliderHintText');
