@@ -7736,7 +7736,7 @@ try {
         console.log('🔓 Batch unblock:', bProp2, bFrom, bTo);
         var ru2=await fetch(API2+'/api/blocks/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[bProp2],date_from:bFrom,date_to:bTo,action:'unblock'})});
         var du2=await ru2.json();
-        console.log('🔓 Batch result:', du2);
+        console.log('🔓 Batch result:', du2, 'HTTP status:', ru2.status);
         if(!du2.success) throw new Error(du2.error||'Erreur déblocage');
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
         window._currentBlockId=null; window._currentBlockEnd=null;
@@ -7750,21 +7750,28 @@ try {
           try { localStorage.setItem('LCC_RESERVATIONS', JSON.stringify(window.LCC_RESERVATIONS)); } catch(e){}
         }
         // Patch calendarState.bookings
+        var beforeCount = window.calendarState ? (window.calendarState.bookings||[]).length : -1;
         if(window.calendarState && Array.isArray(window.calendarState.bookings)){
           window.calendarState.bookings = window.calendarState.bookings.filter(function(r){
             if(blockId && (r.uid === blockId || String(r.id) === String(blockId))) return false;
-            var isBlock = r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block';
+            var isBlock = r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block'||r.platform==='block';
             var overlaps = r.propertyId===bProp2 && r.startDate < bTo && r.endDate > bFrom;
             return !(isBlock && overlaps);
           });
         }
+        var afterCount = window.calendarState ? (window.calendarState.bookings||[]).length : -1;
+        console.log('🔓 calendarState.bookings avant/après patch:', beforeCount, '->', afterCount, '| _blockRemovedAt:', window._blockRemovedAt, 'âge:', Date.now() - (window._blockRemovedAt||0), 'ms');
         // Re-render IMMÉDIAT sans attendre le socket
+        window._blockRemovedAt = 0; // forcer le rendu immédiat
         if(typeof window.renderModernCalendar==='function' && window.calendarState){
           window.renderModernCalendar(window.calendarState.bookings||[], window.calendarState.properties||window.LCC_PROPERTIES||[]);
         }
-        if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
-        // loadCalendarData en fond pour confirmer avec les données fraîches du serveur
-        // Le socket calendar:block_removed gère le refresh — pas de loadCalendarData ici
+        if(typeof window.showToast==='function')window.showToast('Déblocage OK ('+du2.count+' supprimé(s) en DB)','success');
+        // Forcer un refresh complet après 2.5s pour confirmer avec les données fraîches du serveur
+        setTimeout(function(){
+          window._blockRemovedAt = 0;
+          if(typeof window.loadCalendarData==='function') window.loadCalendarData();
+        }, 2500);
       } else if(activeTab==='price'){
         var pid3=document.getElementById('dayPricePropertySelect').value;
         var from3=document.getElementById('dayPriceFrom').value;
