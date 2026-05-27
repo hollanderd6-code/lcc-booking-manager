@@ -7766,7 +7766,7 @@ try {
         if(typeof window.renderModernCalendar==='function' && window.calendarState){
           window.renderModernCalendar(window.calendarState.bookings||[], window.calendarState.properties||window.LCC_PROPERTIES||[]);
         }
-        if(typeof window.showToast==='function')window.showToast('Déblocage OK ('+du2.count+' supprimé(s) en DB)','success');
+        if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
         // Forcer un refresh complet après 2.5s pour confirmer avec les données fraîches du serveur
         setTimeout(function(){
           window._blockRemovedAt = 0;
