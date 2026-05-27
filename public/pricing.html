@@ -141,18 +141,17 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   background: var(--primary);
   color: white;
   text-align: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: .08em;
   text-transform: uppercase;
-  padding: 9px 20px;
+  padding: 12px 24px;
 }
 .plan-card.featured:hover { transform: translateY(-12px); box-shadow: 0 20px 56px rgba(26,122,94,.2); }
 .plan-card.highlighted { border-color: rgba(26,122,94,.4); box-shadow: 0 4px 16px rgba(26,122,94,.1); }
 .plan-card.active-recommendation {
   border-color: var(--primary) !important;
   box-shadow: 0 8px 32px rgba(26,122,94,.25) !important;
-  transform: translateY(-6px) !important;
   transition: all .3s cubic-bezier(.34,1.56,.64,1);
 }
 .plan-card.active-recommendation .plan-badge {
@@ -307,7 +306,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   /* Plan cards — padding réduit + typo ajustée */
   .plans-grid { max-width: 100%; }
   .plan-header { padding: 18px 16px 16px; }
-  .plan-title-banner { margin: 0 -16px 16px -16px; }
+
   .plan-cta { padding: 0 16px 16px; }
   .plan-features { padding: 16px 16px 20px; }
   .price-amount { font-size: 42px; }
@@ -371,19 +370,19 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 /* ─── PLAN TITLE BANNER ─── */
 .plan-title-banner {
   display: flex; align-items: center;
-  gap: 12px; padding: 11px 20px;
-  margin: 0 -28px 20px -28px;
+  gap: 12px; padding: 12px 24px;
+  margin: 0 0 20px 0;
   font-family: 'DM Sans', sans-serif;
-  font-size: 11px; font-weight: 800;
+  font-size: 14px; font-weight: 800;
   letter-spacing: .1em; text-transform: uppercase;
 }
 .plan-title-banner .plan-title-icon {
-  font-size: 14px; flex-shrink: 0;
+  font-size: 16px; flex-shrink: 0;
 }
 .plan-title-banner .plan-name {
   flex: 1; text-align: center;
   font-family: 'DM Sans', sans-serif;
-  font-size: 11px; font-weight: 800;
+  font-size: 14px; font-weight: 800;
   letter-spacing: .1em; text-transform: uppercase;
   margin: 0; color: inherit;
 }
@@ -613,8 +612,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
       <!-- ─── STARTER ─── -->
       <div class="plan-card" id="card-starter">
+        <div class="plan-title-banner plan-title-banner-starter"><i class="fas fa-rocket plan-title-icon"></i><span class="plan-name">Starter</span></div>
         <div class="plan-header">
-          <div class="plan-title-banner plan-title-banner-starter"><i class="fas fa-rocket plan-title-icon"></i><span class="plan-name">Starter</span></div>
           <div class="plan-desc">Pour les propriétaires qui démarrent. Jusqu'à 3 logements, tout ce qu'il faut pour bien gérer.</div>
           <div class="plan-price">
             <div class="price-old" id="starter-old"></div>
@@ -688,8 +687,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
       <!-- ─── PRO ─── -->
       <div class="plan-card featured" id="card-pro">
         <div class="plan-popular-banner"><i class="fas fa-star" style="font-size:10px;margin-right:6px;"></i>Le plus populaire</div>
+        <div class="plan-title-banner plan-title-banner-pro"><i class="fas fa-gear plan-title-icon"></i><span class="plan-name">Pro</span></div>
         <div class="plan-header">
-          <div class="plan-title-banner plan-title-banner-pro"><i class="fas fa-gear plan-title-icon"></i><span class="plan-name">Pro</span></div>
           <div class="plan-desc">Pour les conciergeries et gestionnaires. Jusqu'à 50 logements, toutes les fonctionnalités.</div>
           <div class="plan-price">
             <div class="price-old" id="pro-old"></div>
@@ -767,8 +766,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
       <!-- ─── AGENCE ─── -->
       <div class="plan-card" id="card-agence">
+        <div class="plan-title-banner plan-title-banner-agence"><i class="fas fa-building plan-title-icon"></i><span class="plan-name">Agence</span></div>
         <div class="plan-header">
-          <div class="plan-title-banner plan-title-banner-agence"><i class="fas fa-building plan-title-icon"></i><span class="plan-name">Agence</span></div>
           <div class="plan-desc">Pour les agences et grands gestionnaires. Portefeuille illimité, multi-comptes clients.</div>
           <div class="plan-price">
             <div class="price-old" id="agence-old"></div>
