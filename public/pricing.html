@@ -882,7 +882,7 @@ function updateSlider(val) {
   const hintEl = document.getElementById('sliderHintText');
   const hint = document.getElementById('sliderHint');
   let recommendedPlan, hintText;
-  if (propCount <= 3) { recommendedPlan = 'starter'; hintText = 'Plan Starter'; }
+  if (propCount <= 3) { recommendedPlan = 'starter'; const extraStarter = Math.max(0, propCount - 1); hintText = 'Plan Starter' + (extraStarter > 0 ? ' +' + extraStarter + ' log. (+' + (extraStarter * 9) + '€)' : ''); }
   else if (propCount <= 50) {
     recommendedPlan = 'pro';
     const extraPro = Math.max(0, propCount - 4);
