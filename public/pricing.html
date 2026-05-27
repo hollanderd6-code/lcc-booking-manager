@@ -85,7 +85,7 @@ a { color: var(--primary); text-decoration: none; }
   background: white; border: 1.5px solid var(--border);
   border-radius: 20px; padding: 14px 20px;
   box-shadow: 0 4px 24px rgba(13,17,23,.05);
-  gap: 10px; flex-wrap: nowrap;
+  gap: 10px; flex-wrap: wrap;
 }
 .cb-group { display: flex; align-items: center; gap: 10px; }
 .cb-group-props { gap: 6px; }
@@ -291,6 +291,20 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   .header-actions .btn-primary .btn-label-short { display: inline; }
   .slider-section { padding: 24px 20px; }
   .cta-box { padding: 52px 24px; }
+
+  /* Plan cards — padding réduit + typo ajustée */
+  .plans-grid { max-width: 100%; }
+  .plan-header { padding: 18px 16px 16px; }
+  .plan-cta { padding: 0 16px 16px; }
+  .plan-features { padding: 16px 16px 20px; }
+  .price-amount { font-size: 42px; }
+  .plan-name { font-size: 24px; }
+  .plan-includes { font-size: 12px; flex-wrap: wrap; }
+  .plan-features li { font-size: 13px; }
+  .feat-tag { font-size: 9px; }
+
+  /* Footer */
+  .footer-badges { flex-direction: row; flex-wrap: wrap; }
 }
 @media (max-width: 520px) {
   .slider-section { margin: 28px 0 0; }
@@ -354,9 +368,25 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
 /* ─── CONTROLS BAR RESPONSIVE ─── */
 @media (max-width: 768px) {
-  .controls-bar-inner { gap: 8px; }
+  .controls-bar { margin: 20px 0 0; }
+  .controls-bar-inner {
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
   .cb-sep { display: none; }
-  .cb-group-range { width: 100%; order: 10; }
+  /* Ligne 1 : toggle facturation pleine largeur */
+  .cb-group:first-child { width: 100%; justify-content: space-between; }
+  /* Billing toggle s'étire */
+  .billing-toggle { width: auto; flex: 1; }
+  .billing-btn { flex: 1; text-align: center; padding: 9px 10px; font-size: 13px; }
+  /* Ligne 2 : compteur + hint */
+  .cb-group-props { flex: 0 0 auto; }
+  .cb-group:last-child { flex: 1; justify-content: flex-end; }
+  .slider-plan-hint { font-size: 12px !important; padding: 6px 11px !important; white-space: nowrap; }
+  /* Ligne 3 : slider pleine largeur */
+  .cb-group-range { width: 100%; order: 10; min-width: unset; }
 }
 
 /* ─── HIDE OLD slider styles no longer needed ─── */
