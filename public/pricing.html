@@ -530,6 +530,127 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   .hero-content-col { align-items: center; }
 }
 
+/* ─── SOBERING OVERRIDES ─── */
+
+/* Plan title banners : tous neutres, différenciés par poids/bordure */
+.plan-title-banner-starter {
+  background: var(--cream);
+  color: var(--ink);
+  border-bottom: 2px solid rgba(26,122,94,.25);
+}
+.plan-title-banner-pro {
+  background: var(--ink);
+  color: white;
+}
+.plan-title-banner-agence {
+  background: var(--cream);
+  color: var(--ink);
+  border-bottom: 2px solid rgba(13,17,23,.15);
+}
+
+/* Plan title icon : couleur de l'icône assortie */
+.plan-title-banner-starter .plan-title-icon { color: var(--primary); }
+.plan-title-banner-pro .plan-title-icon { color: rgba(255,255,255,.6); }
+.plan-title-banner-agence .plan-title-icon { color: var(--muted); }
+
+/* Bandeau "Le plus populaire" : plus discret */
+.plan-wrap-banner {
+  background: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  padding: 9px 24px;
+}
+
+/* Feature rows : retirer le fond vert/ambre, garder juste l'icône */
+.fi-included {
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+}
+.fi-included i { color: var(--primary) !important; }
+
+.fi-option {
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+}
+/* Icône option : sobre, neutre */
+.fi-option i.fa-circle-dot { display: none; }
+.fi-option i.fa-check { color: var(--muted) !important; }
+
+/* feat-tag : unifier en gris neutre */
+.feat-tag {
+  background: rgba(13,17,23,.06) !important;
+  color: var(--muted) !important;
+  border: 1px solid rgba(13,17,23,.1) !important;
+  font-size: 10px;
+}
+/* Sauf "Exclusif" sur Agence : garder distinct mais sobre */
+.plan-title-banner-agence + .plan-header .feat-tag,
+.feat-section-title .feat-tag {
+  background: rgba(13,17,23,.08) !important;
+  color: var(--ink) !important;
+  border-color: rgba(13,17,23,.15) !important;
+}
+
+/* commission badge "3%" sur Starter : sobre */
+li .feat-tag[style*="fef3c7"] {
+  background: rgba(13,17,23,.06) !important;
+  color: var(--muted) !important;
+  border-color: rgba(13,17,23,.1) !important;
+}
+
+/* Badges "Conciergerie", "Inclus", etc */
+.feat-section-title .feat-tag[style*="7c3aed"],
+li .feat-tag[style*="ecfdf5"],
+li .feat-tag[style*="7c3aed"] {
+  background: rgba(13,17,23,.07) !important;
+  color: var(--ink) !important;
+  border-color: rgba(13,17,23,.12) !important;
+}
+
+/* price-badge "Prix garanti à vie" : sobre */
+.price-badge {
+  background: rgba(13,17,23,.05);
+  color: var(--muted);
+  border: 1px solid rgba(13,17,23,.1);
+}
+.price-badge i { color: var(--muted); }
+
+/* Section titles icons : atténuer */
+.feat-section-title i { color: var(--muted) !important; }
+.feat-section-unavailable .feat-section-title i { color: #d1d5db !important; }
+
+/* launch-strip : sobre */
+.launch-strip {
+  background: rgba(13,17,23,.05);
+  border: 1px solid rgba(13,17,23,.12);
+  color: var(--muted);
+}
+.launch-strip i { color: var(--muted); }
+
+/* annual-badge : sobre */
+.annual-badge {
+  background: rgba(255,255,255,.15);
+  color: rgba(255,255,255,.85);
+  border: 1px solid rgba(255,255,255,.2);
+}
+.billing-btn.active .annual-badge {
+  background: rgba(255,255,255,.18);
+  color: white;
+  border-color: rgba(255,255,255,.25);
+}
+
+/* plan-recommended-tag : sobre */
+.plan-recommended-tag {
+  background: rgba(13,17,23,.06);
+  color: var(--ink);
+  border: 1px solid rgba(13,17,23,.12);
+}
+
 </style>
 </head>
 <body>
