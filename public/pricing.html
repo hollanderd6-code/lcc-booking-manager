@@ -388,6 +388,52 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   text-align: center;
 }
 
+
+/* ─── HERO SPLIT ─── */
+.pricing-hero-split { padding: 52px 0 0 !important; text-align: left !important; }
+.hero-split {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 64px;
+  align-items: center;
+  min-height: 460px;
+}
+.hero-photo-col { position: relative; }
+.hero-photo-wrap { position: relative; }
+.hero-photo-main {
+  width: 100%; height: 420px;
+  object-fit: cover;
+  border-radius: 28px;
+  display: block;
+  box-shadow: 0 24px 64px rgba(13,17,23,.14);
+}
+.hero-photo-badge {
+  position: absolute; left: -20px;
+  display: flex; align-items: center; gap: 10px;
+  background: white; border: 1px solid var(--border);
+  border-radius: 14px; padding: 10px 16px;
+  box-shadow: 0 8px 24px rgba(13,17,23,.1);
+  animation: floatBadge 3s ease-in-out infinite alternate;
+}
+.hero-badge-top { top: 32px; animation-delay: 0s; }
+.hero-badge-bottom { bottom: 44px; animation-delay: 1.5s; }
+@keyframes floatBadge {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-7px); }
+}
+.hero-content-col {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+}
+.hero-content-col h1 { margin-bottom: 0; }
+.hero-content-col p { margin-bottom: 0; }
+.hero-content-col .launch-strip { margin-top: 4px; }
+@media (max-width: 920px) {
+  .hero-split { grid-template-columns: 1fr; }
+  .hero-photo-col { display: none; }
+  .pricing-hero-split { text-align: center !important; }
+  .hero-content-col { align-items: center; }
+}
+
 </style>
 </head>
 <body>
@@ -414,13 +460,42 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 </header>
 
 <!-- HERO -->
-<section class="pricing-hero">
+<section class="pricing-hero pricing-hero-split">
   <div class="container">
-    <div class="reveal">
-      <div class="hero-kicker"><i class="fas fa-tag"></i> Tarifs simples & transparents</div>
-      <h1>Choisissez votre plan,<br>démarrez en 15 minutes.</h1>
-      <p>14 jours d'essai gratuit · Aucune carte requise · Annulez à tout moment</p>
-      <div class="launch-strip"><i class="fas fa-rocket"></i> Offre de lancement — Prix réduits pour les 200 premiers clients !</div>
+    <div class="hero-split reveal">
+
+      <!-- Photo gauche -->
+      <div class="hero-photo-col">
+        <div class="hero-photo-wrap">
+          <img
+            src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=700&q=80"
+            alt="Gestion de logements"
+            class="hero-photo-main">
+          <div class="hero-photo-badge hero-badge-top">
+            <i class="fas fa-chart-line" style="color:var(--primary);font-size:15px;"></i>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--ink);">+34% de revenus</div>
+              <div style="font-size:11px;color:var(--muted);">en moyenne · nos hôtes</div>
+            </div>
+          </div>
+          <div class="hero-photo-badge hero-badge-bottom">
+            <i class="fas fa-home" style="color:#7c3aed;font-size:15px;"></i>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--ink);">2 400+ logements</div>
+              <div style="font-size:11px;color:var(--muted);">gérés sur la plateforme</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenu droite -->
+      <div class="hero-content-col">
+        <div class="hero-kicker"><i class="fas fa-tag"></i> Tarifs simples & transparents</div>
+        <h1>Choisissez votre plan,<br>démarrez en <em>15 minutes.</em></h1>
+        <p>14 jours d'essai gratuit · Aucune carte requise · Annulez à tout moment</p>
+        <div class="launch-strip"><i class="fas fa-rocket"></i> Offre de lancement — Prix réduits pour les 200 premiers clients !</div>
+      </div>
+
     </div>
   </div>
 </section>
