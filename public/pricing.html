@@ -122,7 +122,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
 /* ─── PLANS GRID ─── */
 .plans-section { padding: 48px 0 0; }
-.plans-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; align-items: start; }
+.plans-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; align-items: end; }
 .plan-card {
   background: white; border: 1.5px solid var(--border);
   border-radius: 24px; overflow: hidden;
@@ -133,11 +133,12 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .plan-card.featured {
   border-color: var(--primary);
   box-shadow: 0 8px 32px rgba(26,122,94,.15);
-  transform: translateY(-8px);
   overflow: hidden;
 }
 /* ─── BANDEAU "LE PLUS POPULAIRE" ─── */
-.plan-popular-banner {
+/* .plan-popular-banner remplacé par .plan-wrap-banner */
+.plan-wrap { display: flex; flex-direction: column; }
+.plan-wrap-banner {
   background: var(--primary);
   color: white;
   text-align: center;
@@ -147,11 +148,10 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   letter-spacing: .08em;
   text-transform: uppercase;
   padding: 13px 24px;
+  border-radius: 16px 16px 0 0;
 }
-.plan-popular-spacer {
-  height: 45px; /* identique à .plan-popular-banner : 16px * 1.2lh + 13px*2 padding */
-}
-.plan-card.featured:hover { transform: translateY(-12px); box-shadow: 0 20px 56px rgba(26,122,94,.2); }
+.plan-wrap-spacer { height: 45px; }
+.plan-card.featured:hover { transform: translateY(-4px); box-shadow: 0 20px 56px rgba(26,122,94,.2); }
 .plan-card.highlighted { border-color: rgba(26,122,94,.4); box-shadow: 0 4px 16px rgba(26,122,94,.1); }
 .plan-card.active-recommendation {
   border-color: var(--primary) !important;
@@ -278,6 +278,29 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .footer-badges { display: flex; flex-direction: column; gap: 10px; }
 .footer-badge { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 10px 16px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); display: flex; align-items: center; gap: 7px; }
 .footer-badge i { color: #6ee7b7; }
+
+
+/* ─── SCROLL ARROW ─── */
+.scroll-arrow-wrap {
+  display: flex; justify-content: center;
+  padding: 8px 0 0;
+}
+.scroll-arrow {
+  width: 48px; height: 48px;
+  background: var(--primary);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 20px;
+  animation: bounceDown 1.8s ease-in-out infinite;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(26,122,94,.35);
+  border: none; text-decoration: none;
+}
+.scroll-arrow:hover { background: var(--primary-dark); color: white; }
+@keyframes bounceDown {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(8px); }
+}
 
 /* ─── SCROLL REVEAL ─── */
 .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s cubic-bezier(.25,0,0,1), transform .7s cubic-bezier(.25,0,0,1); }
@@ -560,8 +583,12 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   </div>
 </section>
 
+<div class="scroll-arrow-wrap">
+  <a class="scroll-arrow" onclick="document.getElementById('plansAnchor').scrollIntoView({behavior:'smooth'})" aria-label="Voir les plans"><i class="fas fa-chevron-down"></i></a>
+</div>
+
 <!-- TOGGLE + SLIDER -->
-<div class="container">
+<div id="plansAnchor" class="container">
   <div class="billing-section reveal">
 
     <!-- Barre unique horizontale : toggle + logements -->
@@ -615,8 +642,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
     <div class="plans-grid">
 
       <!-- ─── STARTER ─── -->
-      <div class="plan-card" id="card-starter">
-        <div class="plan-popular-spacer"></div>
+      <div class="plan-wrap">
+        <div class="plan-wrap-spacer"></div>
+        <div class="plan-card" id="card-starter">
         <div class="plan-title-banner plan-title-banner-starter"><i class="fas fa-rocket plan-title-icon"></i><span class="plan-name">Starter</span></div>
         <div class="plan-header">
           <div class="plan-desc">Pour les propriétaires qui démarrent. Jusqu'à 3 logements, tout ce qu'il faut pour bien gérer.</div>
@@ -687,11 +715,13 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
           </div>
 
         </div>
-      </div>
+      </div><!-- /card-starter -->
+      </div><!-- /plan-wrap starter -->
 
       <!-- ─── PRO ─── -->
-      <div class="plan-card featured" id="card-pro">
-        <div class="plan-popular-banner"><i class="fas fa-star" style="font-size:10px;margin-right:6px;"></i>Le plus populaire</div>
+      <div class="plan-wrap">
+        <div class="plan-wrap-banner"><i class="fas fa-star" style="font-size:12px;margin-right:8px;"></i>Le plus populaire</div>
+        <div class="plan-card featured" id="card-pro">
         <div class="plan-title-banner plan-title-banner-pro"><i class="fas fa-gear plan-title-icon"></i><span class="plan-name">Pro</span></div>
         <div class="plan-header">
           <div class="plan-desc">Pour les conciergeries et gestionnaires. Jusqu'à 50 logements, toutes les fonctionnalités.</div>
@@ -767,11 +797,13 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
           </div>
 
         </div>
-      </div>
+      </div><!-- /card-pro -->
+      </div><!-- /plan-wrap pro -->
 
       <!-- ─── AGENCE ─── -->
-      <div class="plan-card" id="card-agence">
-        <div class="plan-popular-spacer"></div>
+      <div class="plan-wrap">
+        <div class="plan-wrap-spacer"></div>
+        <div class="plan-card" id="card-agence">
         <div class="plan-title-banner plan-title-banner-agence"><i class="fas fa-building plan-title-icon"></i><span class="plan-name">Agence</span></div>
         <div class="plan-header">
           <div class="plan-desc">Pour les agences et grands gestionnaires. Portefeuille illimité, multi-comptes clients.</div>
@@ -842,7 +874,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
           </div>
 
         </div>
-      </div>
+      </div><!-- /card-agence -->
+      </div><!-- /plan-wrap agence -->
 
     </div>
   </div>
