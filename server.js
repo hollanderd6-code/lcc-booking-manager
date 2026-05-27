@@ -19525,9 +19525,12 @@ app.get('/api/invoice/history',
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(
-      `SELECT invoice_number, file_path, created_at
-       FROM invoice_download_tokens
-       WHERE user_id = $1
+      `SELECT invoice_number, file_path, created_at FROM (
+         SELECT DISTINCT ON (invoice_number) invoice_number, file_path, created_at
+         FROM invoice_download_tokens
+         WHERE user_id = $1
+         ORDER BY invoice_number, created_at DESC
+       ) sub
        ORDER BY created_at DESC
        LIMIT 100`,
       [userId]
