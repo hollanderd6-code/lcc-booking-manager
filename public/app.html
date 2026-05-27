@@ -6086,6 +6086,8 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
 
   // ---------- Data loading + binding ----------
   window.loadDataAndUpdateKpis = async function loadDataAndUpdateKpis() {
+    window._loadCalVersion = (window._loadCalVersion || 0) + 1;
+    const myVersion = window._loadCalVersion;
     try {
       const token = localStorage.getItem('lcc_token');
       let reservations = [];
@@ -6095,8 +6097,10 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
         const baseRes = await fetch(`${API_URL}/api/reservations`, {
           headers: { Authorization: 'Bearer ' + token }
         });
+        if (myVersion !== window._loadCalVersion) return; // stale — newer call in flight
         let baseData = {};
         if (baseRes.ok) baseData = await baseRes.json().catch(() => ({}));
+        if (myVersion !== window._loadCalVersion) return; // stale — newer call in flight
 
         // 🔍 DEBUG: Vérifier les données reçues
         console.log('📊 API /api/reservations response:', {
@@ -6181,6 +6185,7 @@ try {
       window.__LCC_KPI_STATE = { reservations, properties };
       if (window.renderModernCalendar) {
         // Ne pas re-render si un block_removed vient d'arriver (patch local déjà correct)
+        if (myVersion !== window._loadCalVersion) return; // stale — newer call already rendered
         if (!window._blockRemovedAt || Date.now() - window._blockRemovedAt > 2000) {
           window.renderModernCalendar(reservations, properties);
         } else {
