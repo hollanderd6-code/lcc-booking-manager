@@ -395,19 +395,38 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .fi-included i { color: var(--primary) !important; }
 .fi-unavailable { opacity: .4; }
 .fi-unavailable i { color: #d1d5db !important; }
-.fi-option { background: none; border-radius: 0; padding: 0; margin: 0; }
-.fi-option i.fa-circle-dot { display: none; }
-.fi-option i.fa-check { color: var(--muted) !important; }
-.fi-soon { opacity: .55; }
+
+/* Option : fond ambre original restauré */
+.fi-option { background: rgba(254,243,199,.5); border-radius: 6px; padding: 2px 6px 2px 4px; margin: 0 -6px; }
+.fi-option i.fa-circle-dot { color: #d97706 !important; display: inline-block; }
+.fi-option i.fa-check { color: #d97706 !important; }
+
+/* Bientôt : style original restauré */
+.fi-soon { opacity: .65; }
 .fi-soon i { color: #9ca3af !important; }
 
-/* feat-tag : badges sobres */
+/* feat-tag par défaut : sobre (commission 3%, etc.) */
 .feat-tag {
   background: rgba(13,17,23,.06) !important;
   color: var(--muted) !important;
   border: 1px solid rgba(13,17,23,.1) !important;
 }
-/* "Exclusif" et "Conciergerie" : légèrement plus marqués */
+
+/* feat-tag "Option +X€" dans fi-option : couleur ambre */
+.fi-option .feat-tag {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #f59e0b !important;
+}
+
+/* feat-tag "Bientôt" dans fi-soon : couleur ambre */
+.fi-soon .feat-tag {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #f59e0b !important;
+}
+
+/* feat-tag dans les titres de section (Exclusif, Conciergerie) */
 .feat-section-title .feat-tag {
   background: rgba(13,17,23,.08) !important;
   color: var(--ink) !important;
@@ -450,23 +469,60 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 @media (max-width: 768px) {
   .controls-bar { margin: 20px 0 0; }
   .controls-bar-inner {
-    flex-wrap: wrap;
-    gap: 10px 14px;
-    padding: 12px 14px;
-    border-radius: 16px;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 18px;
   }
   .cb-sep { display: none; }
-  /* Ligne 1 : toggle facturation pleine largeur */
+
+  /* Ligne 1 : toggle mensuel/annuel pleine largeur */
   .cb-group:first-child { width: 100%; justify-content: space-between; }
-  /* Billing toggle s'étire */
-  .billing-toggle { width: auto; flex: 1; }
-  .billing-btn { flex: 1; text-align: center; padding: 9px 10px; font-size: 13px; }
-  /* Ligne 2 : compteur + hint */
+  .billing-toggle { flex: 1; }
+  .billing-btn { flex: 1; text-align: center; padding: 10px 12px; font-size: 14px; }
+
+  /* Ligne 2 : logements + hint côte à côte */
   .cb-group-props { flex: 0 0 auto; }
   .cb-group:last-child { flex: 1; justify-content: flex-end; }
-  .slider-plan-hint { font-size: 12px !important; padding: 6px 11px !important; white-space: nowrap; }
-  /* Ligne 3 : slider pleine largeur */
-  .cb-group-range { width: 100%; order: 10; min-width: unset; }
+
+  /* Wrapper ligne 2 */
+  .cb-group-props,
+  .cb-group:last-child {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Réorganiser : compteur à gauche, hint à droite sur la même ligne */
+  .controls-bar-inner {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  /* Ligne 2 : compteur + hint sur une même rangée */
+  .cb-group-props { order: 2; flex: 1; }
+  .cb-group:last-child { order: 2; }
+
+  /* Slider pleine largeur en dernier */
+  .cb-group-range { order: 3; width: 100%; min-width: unset; }
+
+  /* Compteur de logements : plus grand et lisible */
+  .cb-count { font-size: 32px; min-width: 48px; }
+  .cb-label { font-size: 13px; }
+
+  /* Hint plus compact */
+  .slider-plan-hint {
+    font-size: 13px !important;
+    padding: 8px 14px !important;
+    white-space: nowrap;
+    border-radius: 10px;
+  }
+
+  /* Boutons +/- plus grands sur mobile */
+  .slider-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 15px;
+  }
 }
 
 /* ─── HIDE OLD slider styles no longer needed ─── */
@@ -944,8 +1000,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
           <span style="font-size:15px;font-weight:700;color:white;">3 ce mois</span>
         </div>
         <div style="margin-top:8px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;">
-          <button style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:white;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;">Voir calendrier</button>
-          <button style="flex:1;background:#7c3aed;border:none;color:white;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Créer facture</button>
+          <button style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:white;padding:8px;border-radius:8px;font-size:12px;cursor:default;pointer-events:none;opacity:.7;" disabled>Voir calendrier</button>
+          <button style="flex:1;background:#7c3aed;border:none;color:white;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:default;pointer-events:none;opacity:.85;" disabled>Créer facture</button>
         </div>
       </div>
     </div>
