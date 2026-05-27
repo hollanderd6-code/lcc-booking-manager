@@ -7782,7 +7782,7 @@ try {
         }
         if(typeof window.showToast==='function')window.showToast('Blocage supprimé','success');
         // loadCalendarData en fond pour confirmer avec les données fraîches du serveur
-        setTimeout(function(){ if(typeof window.loadCalendarData==='function') window.loadCalendarData(); }, 800);
+        // Le socket calendar:block_removed gère le refresh — pas de loadCalendarData ici
       } else if(activeTab==='price'){
         var pid3=document.getElementById('dayPricePropertySelect').value;
         var from3=document.getElementById('dayPriceFrom').value;
@@ -9498,7 +9498,7 @@ document.addEventListener('click', function(e) {
     .then(() => {
       if (detailsModal) { detailsModal.style.display = 'none'; window.showFab && window.showFab(); }
       window.deletingInProgress = false;
-      setTimeout(() => { if (typeof window.loadCalendarData === 'function') window.loadCalendarData(); else location.reload(); }, 400);
+      // Le socket calendar:block_removed gère le refresh — pas de loadCalendarData ici
     })
     .catch(err => { window.deletingInProgress = false; alert('Erreur annulation BHGuest: ' + err.message); });
     return;
