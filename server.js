@@ -25268,7 +25268,10 @@ console.log('✅ Cron job rappels caution initialisé');
 // ✅ INITIALISATION DES ROUTES SOUS-COMPTES
 // ============================================
 // Protéger toutes les routes sous-comptes (plan Pro ou Agence)
-app.use('/api/sub-accounts', authenticateAny, requireFeature('sous_comptes'));
+app.use('/api/sub-accounts', (req, res, next) => {
+  if (req.path === '/login') return next();
+  authenticateAny(req, res, () => requireFeature('sous_comptes')(req, res, next));
+});
 app.use('/api/team', authenticateAny, requireFeature('sous_comptes'));
 setupSubAccountsRoutes(app, pool, authenticateAny, sendEmail, bhEmailTemplate);
 console.log('✅ Routes sous-comptes initialisées');
