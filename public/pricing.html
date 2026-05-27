@@ -79,13 +79,13 @@ a { color: var(--primary); text-decoration: none; }
 .billing-saving strong { color: var(--primary); }
 
 /* ─── CONTROLS BAR ─── */
-.controls-bar { max-width: 1000px; margin: 32px auto 0; }
+.controls-bar { max-width: 1060px; margin: 32px auto 0; }
 .controls-bar-inner {
-  display: flex; align-items: center; gap: 0;
+  display: flex; align-items: center;
   background: white; border: 1.5px solid var(--border);
-  border-radius: 20px; padding: 16px 24px;
+  border-radius: 20px; padding: 14px 20px;
   box-shadow: 0 4px 24px rgba(13,17,23,.05);
-  flex-wrap: wrap; gap: 12px;
+  gap: 10px; flex-wrap: nowrap;
 }
 .cb-group { display: flex; align-items: center; gap: 10px; }
 .cb-group-props { gap: 6px; }
@@ -374,18 +374,18 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
 /* ─── PLAN OVER LIMIT ─── */
 .plan-over-limit {
-  opacity: .45;
-  filter: grayscale(.6);
+  opacity: .38;
+  filter: grayscale(.5);
   pointer-events: none;
-  position: relative;
 }
-.plan-over-limit::after {
-  content: 'Limite dépassée · Plan suivant recommandé';
-  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-  background: #f3f4f6; color: #6b7280;
-  font-size: 11px; font-weight: 600; white-space: nowrap;
-  padding: 4px 10px; border-radius: 999px;
-  border: 1px solid #e5e7eb;
+.plan-over-limit .plan-header::before {
+  content: '⚠ Limite dépassée';
+  display: block;
+  background: #fef9c3; color: #854d0e;
+  font-size: 11px; font-weight: 700;
+  padding: 5px 12px; margin: -28px -28px 16px -28px;
+  border-bottom: 1px solid #fde68a;
+  text-align: center;
 }
 
 </style>
@@ -462,7 +462,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         <div class="cb-sep"></div>
         <!-- Hint -->
         <div class="cb-group">
-          <div class="slider-plan-hint" id="sliderHint" style="margin:0;padding:8px 14px;">
+          <div class="slider-plan-hint" id="sliderHint" style="margin:0;padding:7px 13px;flex-shrink:0;white-space:nowrap;">
             <i class="fas fa-check-circle"></i>
             <span id="sliderHintText">Plan Starter</span>
           </div>
@@ -882,16 +882,16 @@ function updateSlider(val) {
   const hintEl = document.getElementById('sliderHintText');
   const hint = document.getElementById('sliderHint');
   let recommendedPlan, hintText;
-  if (propCount <= 3) { recommendedPlan = 'starter'; hintText = 'Le plan Starter est fait pour vous'; }
+  if (propCount <= 3) { recommendedPlan = 'starter'; hintText = 'Plan Starter'; }
   else if (propCount <= 50) {
     recommendedPlan = 'pro';
     const extraPro = Math.max(0, propCount - 4);
-    hintText = 'Plan Pro' + (extraPro > 0 ? ' + ' + extraPro + ' logement' + (extraPro>1?'s':'') + ' supp. (+' + (extraPro*7) + '€/mois)' : '');
+    hintText = 'Plan Pro' + (extraPro > 0 ? ' +' + extraPro + ' log. (+' + (extraPro*7) + '€)' : '');
   }
   else {
     recommendedPlan = 'agence';
     const extraAgence = Math.max(0, propCount - 51);
-    hintText = 'Plan Agence' + (extraAgence > 0 ? ' + ' + extraAgence + ' logement' + (extraAgence>1?'s':'') + ' supp. (+' + (extraAgence*5) + '€/mois)' : '');
+    hintText = 'Plan Agence' + (extraAgence > 0 ? ' +' + extraAgence + ' log. (+' + (extraAgence*5) + '€)' : '');
   }
   hintEl.textContent = hintText;
 
