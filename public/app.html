@@ -6822,6 +6822,7 @@ try {
   // VUE MOIS
   // ─────────────────────────────────────────
   function renderMonth(body) {
+    console.log('🗓️ [renderMonth] appelée avec ' + state.bookings.length + ' bookings, blocs: ' + state.bookings.filter(function(r){ return r.source==='BLOCK'||r.platform==='BLOCK'||r.type==='block'; }).length);
     var year  = state.date.getFullYear();
     var month = state.date.getMonth();
     var firstDay = new Date(year, month, 1);
