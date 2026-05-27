@@ -859,7 +859,7 @@ function updateSlider(val) {
   slider.style.setProperty('--pct', pct + '%');
 
   document.getElementById('sliderCount').textContent = propCount;
-  document.getElementById('sliderPlural').textContent = propCount > 1 ? 's' : '';
+  const pluralEl = document.getElementById('sliderPlural'); if (pluralEl) pluralEl.textContent = propCount > 1 ? 's' : '';
 
   // Plan hint
   const hintEl = document.getElementById('sliderHintText');
