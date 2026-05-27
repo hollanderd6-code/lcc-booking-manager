@@ -134,6 +134,18 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   border-color: var(--primary);
   box-shadow: 0 8px 32px rgba(26,122,94,.15);
   transform: translateY(-8px);
+  overflow: hidden;
+}
+/* ─── BANDEAU "LE PLUS POPULAIRE" ─── */
+.plan-popular-banner {
+  background: var(--primary);
+  color: white;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 9px 20px;
 }
 .plan-card.featured:hover { transform: translateY(-12px); box-shadow: 0 20px 56px rgba(26,122,94,.2); }
 .plan-card.highlighted { border-color: rgba(26,122,94,.4); box-shadow: 0 4px 16px rgba(26,122,94,.1); }
@@ -661,8 +673,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
       <!-- ─── PRO ─── -->
       <div class="plan-card featured" id="card-pro">
+        <div class="plan-popular-banner"><i class="fas fa-star" style="font-size:10px;margin-right:6px;"></i>Le plus populaire</div>
         <div class="plan-header">
-          <div class="plan-badge featured plan-badge-with-icon"> Recommandé</div>
           <div class="plan-header-top"><div class="plan-name">Pro</div><div class="plan-hero-icon plan-hero-pro"><i class="fas fa-gear"></i></div></div>
           <div class="plan-desc">Pour les conciergeries et gestionnaires. Jusqu'à 50 logements, toutes les fonctionnalités.</div>
           <div class="plan-price">
