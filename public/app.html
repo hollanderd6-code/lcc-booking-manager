@@ -6880,7 +6880,7 @@ try {
       var dstr2   = ds(dayDate);
       var inMonth = dayDate.getMonth()===month;
       var isToday = dstr2===today;
-      var isWknd  = dayDate.getDay()===0||dayDate.getDay()===6;
+      var isWknd  = dayDate.getDay()===5||dayDate.getDay()===6; // ven + sam = nuits premium
 
       var hcell = div('position:sticky;top:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-bottom:2px solid #E8E4DF;cursor:pointer;user-select:none;'
         +(isToday?'background:rgba(26,122,94,.08);':'background:white;'));
@@ -6940,7 +6940,7 @@ try {
         var dayDate2 = new Date(rangeStart); dayDate2.setDate(rangeStart.getDate()+di2);
         var dstr3    = ds(dayDate2);
         var inMonth2 = dayDate2.getMonth()===month;
-        var isWknd2  = dayDate2.getDay()===0||dayDate2.getDay()===6;
+        var isWknd2  = dayDate2.getDay()===5||dayDate2.getDay()===6; // ven + sam = nuits premium
         var isToday2 = dstr3===today;
 
         var dcell = div('box-sizing:border-box;border-right:1px solid #F5F2EC;border-bottom:1px solid #EEEBE6;position:relative;overflow:hidden;'
