@@ -710,9 +710,12 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         <div class="cb-sep"></div>
         <!-- Hint -->
         <div class="cb-group">
-          <div class="slider-plan-hint" id="sliderHint" style="margin:0;padding:7px 13px;flex-shrink:0;white-space:nowrap;min-width:148px;text-align:center;justify-content:center;">
-            <i class="fas fa-check-circle"></i>
-            <span id="sliderHintText">Plan Starter</span>
+          <div class="slider-plan-hint" id="sliderHint" style="margin:0;padding:6px 13px;flex-shrink:0;white-space:nowrap;min-width:148px;text-align:center;justify-content:center;flex-direction:column;gap:1px;height:52px;">
+            <div style="display:flex;align-items:center;gap:6px;justify-content:center;font-weight:700;">
+              <i class="fas fa-check-circle"></i>
+              <span id="sliderHintText">Plan Starter</span>
+            </div>
+            <div id="sliderHintExtra" style="font-size:11px;font-weight:500;opacity:0.75;height:16px;line-height:16px;">&nbsp;</div>
           </div>
         </div>
       </div>
@@ -1135,19 +1138,20 @@ function updateSlider(val) {
   // Plan hint
   const hintEl = document.getElementById('sliderHintText');
   const hint = document.getElementById('sliderHint');
-  let recommendedPlan, hintText;
-  if (propCount <= 3) { recommendedPlan = 'starter'; const extraStarter = Math.max(0, propCount - 1); hintText = 'Plan Starter' + (extraStarter > 0 ? ' +' + extraStarter + ' log. (+' + (extraStarter * 9) + '€)' : ''); }
+  let recommendedPlan, hintText, hintExtra = '';
+  if (propCount <= 3) { recommendedPlan = 'starter'; const extraStarter = Math.max(0, propCount - 1); hintText = 'Plan Starter'; hintExtra = extraStarter > 0 ? '+' + extraStarter + ' log. (+' + (extraStarter * 9) + '€)' : ''; }
   else if (propCount <= 50) {
     recommendedPlan = 'pro';
     const extraPro = Math.max(0, propCount - 4);
-    hintText = 'Plan Pro' + (extraPro > 0 ? ' +' + extraPro + ' log. (+' + (extraPro*7) + '€)' : '');
+    hintText = 'Plan Pro'; hintExtra = extraPro > 0 ? '+' + extraPro + ' log. (+' + (extraPro*7) + '€)' : '';
   }
   else {
     recommendedPlan = 'agence';
     const extraAgence = Math.max(0, propCount - 51);
-    hintText = 'Plan Agence' + (extraAgence > 0 ? ' +' + extraAgence + ' log. (+' + (extraAgence*5) + '€)' : '');
+    hintText = 'Plan Agence'; hintExtra = extraAgence > 0 ? '+' + extraAgence + ' log. (+' + (extraAgence*5) + '€)' : '';
   }
-  hintEl.textContent = hintText;
+  document.getElementById('sliderHintText').textContent = hintText;
+  document.getElementById('sliderHintExtra').textContent = hintExtra || '\u00a0';
 
   // Mettre à jour uniquement le tag "Recommandé pour vous" — sans bouger la classe featured
   ['starter','pro','agence'].forEach(p => {
