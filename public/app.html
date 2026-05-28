@@ -13749,14 +13749,20 @@ function _getSelectedDays() {
 }
 
 function _expandDatesToSelectedDays(dateFrom, dateTo, selectedDays) {
-  // Returns array of date strings 'YYYY-MM-DD' within range that match selected weekdays
-  // JS getDay(): 0=Sun, 1=Mon, ..., 6=Sat — same as our data-day values
+  // Travail en dates locales pour éviter les décalages UTC (timezone France)
+  const parseLocal = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+  const fmtLocal = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+day;
+  };
   const dates = [];
-  const cur = new Date(dateFrom + 'T00:00:00');
-  const end = new Date(dateTo + 'T00:00:00');
+  const cur = parseLocal(dateFrom);
+  const end = parseLocal(dateTo);
   while (cur <= end) {
     if (selectedDays.includes(cur.getDay())) {
-      dates.push(cur.toISOString().split('T')[0]);
+      dates.push(fmtLocal(cur));
     }
     cur.setDate(cur.getDate() + 1);
   }
@@ -13809,32 +13815,41 @@ async function applyBatchEdit() {
         if (!data.success) throw new Error(data.error);
       }
     } else {
-      // Jours filtrés : on envoie chaque date individuelle
+      // Jours filtrés : dates individuelles correspondant aux jours cochés
       const dates = _expandDatesToSelectedDays(dateFrom, dateTo, selectedDays);
       if (dates.length === 0) { alert('Aucune date ne correspond aux jours sélectionnés dans cette plage.'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Appliquer'; return; }
 
+      let done = 0;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 0/' + dates.length + '...';
+
+      const chunk = 5; // requêtes en parallèle par paquet
       if (_batchAction === 'price') {
         const price = document.getElementById('batchPrice').value;
-        // Envoyer par lots de dates individuelles
-        for (const d of dates) {
-          const res = await fetch(_API + '/api/pricing/overrides/batch', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ property_ids: selectedProps, date_from: d, date_to: d, price: price === '' ? '' : parseFloat(price) })
-          });
-          const data = await res.json();
-          if (!data.success) throw new Error(data.error);
+        for (let i = 0; i < dates.length; i += chunk) {
+          await Promise.all(dates.slice(i, i + chunk).map(async d => {
+            const res = await fetch(_API + '/api/pricing/overrides/batch', {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ property_ids: selectedProps, date_from: d, date_to: d, price: price === '' ? '' : parseFloat(price) })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (++done) + '/' + dates.length + '...';
+          }));
         }
       } else {
         const reason = document.getElementById('batchReason').value;
-        for (const d of dates) {
-          const res = await fetch(_API + '/api/blocks/batch', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ property_ids: selectedProps, date_from: d, date_to: d, reason, action: _batchAction })
-          });
-          const data = await res.json();
-          if (!data.success) throw new Error(data.error);
+        for (let i = 0; i < dates.length; i += chunk) {
+          await Promise.all(dates.slice(i, i + chunk).map(async d => {
+            const res = await fetch(_API + '/api/blocks/batch', {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ property_ids: selectedProps, date_from: d, date_to: d, reason, action: _batchAction })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (++done) + '/' + dates.length + '...';
+          }));
         }
       }
     }
