@@ -79,13 +79,14 @@ a { color: var(--primary); text-decoration: none; }
 .billing-saving strong { color: var(--primary); }
 
 /* ─── CONTROLS BAR ─── */
-.controls-bar { max-width: 1060px; margin: 32px auto 0; }
+.controls-bar { max-width: 1144px; margin: 32px auto 0; }
 .controls-bar-inner {
   display: flex; align-items: center;
   background: white; border: 1.5px solid var(--border);
   border-radius: 20px; padding: 14px 20px;
   box-shadow: 0 4px 24px rgba(13,17,23,.05);
-  gap: 10px; flex-wrap: wrap;
+  gap: 10px; flex-wrap: nowrap;
+  min-height: 72px;
 }
 .cb-group { display: flex; align-items: center; gap: 10px; }
 .cb-group-props { gap: 6px; }
@@ -366,9 +367,11 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   border-bottom: 1px solid rgba(200,184,154,.25); margin-bottom: 10px;
 }
 .feat-section-title i { font-size: 10px; color: var(--primary); width: 14px; text-align: center; }
-.feat-section-unavailable .feat-section-title { color: #d1d5db; }
-.feat-section-unavailable .feat-section-title i { color: #d1d5db; }
+.feat-section-unavailable .feat-section-title { color: var(--ink); }
+.feat-section-unavailable .feat-section-title i { color: var(--muted); }
 .feat-section-unavailable li { opacity: .5; }
+/* Items de la liste : jamais en gras, seul le titre de section l'est */
+.plan-features li strong { font-weight: 400; }
 
 /* ─── SLIDER CONTROLS ─── */
 .slider-controls { display: flex; align-items: center; gap: 12px; }
@@ -401,9 +404,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .fi-option i.fa-circle-dot { color: #d97706 !important; display: inline-block; }
 .fi-option i.fa-check { color: #d97706 !important; }
 
-/* Bientôt : style original restauré */
-.fi-soon { opacity: .65; }
-.fi-soon i { color: #9ca3af !important; }
+/* Bientôt : bleu ardoise, distinct des options ambre */
+.fi-soon { opacity: .75; }
+.fi-soon i { color: #6366f1 !important; }
 
 /* feat-tag par défaut : sobre (commission 3%, etc.) */
 .feat-tag {
@@ -419,11 +422,11 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   border: 1px solid #f59e0b !important;
 }
 
-/* feat-tag "Bientôt" dans fi-soon : couleur ambre */
+/* feat-tag "Bientôt" : bleu ardoise */
 .fi-soon .feat-tag {
-  background: #fef3c7 !important;
-  color: #92400e !important;
-  border: 1px solid #f59e0b !important;
+  background: #ede9fe !important;
+  color: #4338ca !important;
+  border: 1px solid #c4b5fd !important;
 }
 
 /* feat-tag dans les titres de section (Exclusif, Conciergerie) */
@@ -446,7 +449,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   letter-spacing: .1em; text-transform: uppercase;
 }
 .plan-title-banner .plan-title-icon {
-  font-size: 18px; flex-shrink: 0;
+  font-size: 26px; flex-shrink: 0;
   text-align: left;
 }
 .plan-title-banner .plan-name {
@@ -785,12 +788,12 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
               <li class="fi-included"><i class="fas fa-check"></i> Règles tarifaires</li>
               <li class="fi-included"><i class="fas fa-check"></i> Rapports & revenus</li>
               <li class="fi-included"><i class="fas fa-check"></i> Contrats de location PDF</li>
-              <li class="fi-soon"><i class="fas fa-clock" style="color:#9ca3af;"></i> Pricing dynamique <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
+              <li class="fi-soon"><i class="fas fa-clock"></i> Pricing dynamique <span class="feat-tag">Bientôt</span></li>
             </ul>
           </div>
 
           <div class="feat-section feat-section-unavailable">
-            <div class="feat-section-title"><i class="fas fa-times-circle" style="color:#d1d5db;"></i> Non inclus</div>
+            <div class="feat-section-title"><i class="fas fa-times-circle"></i> Non inclus</div>
             <ul>
               <li class="fi-unavailable"><i class="fas fa-minus"></i> Facturation propriétaires</li>
               <li class="fi-unavailable"><i class="fas fa-minus"></i> Sous-comptes équipe</li>
@@ -831,7 +834,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
             <ul>
               <li class="fi-included"><i class="fas fa-check"></i> Tout Starter, jusqu'à 50 logements</li>
               <li class="fi-included"><i class="fas fa-check"></i> Règles tarifaires avancées</li>
-              <li class="fi-soon"><i class="fas fa-clock" style="color:#9ca3af;"></i> Pricing dynamique <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
+              <li class="fi-soon"><i class="fas fa-clock"></i> Pricing dynamique <span class="feat-tag">Bientôt</span></li>
             </ul>
           </div>
 
@@ -872,7 +875,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
           </div>
 
           <div class="feat-section feat-section-unavailable">
-            <div class="feat-section-title"><i class="fas fa-times-circle" style="color:#d1d5db;"></i> Non inclus</div>
+            <div class="feat-section-title"><i class="fas fa-times-circle"></i> Non inclus</div>
             <ul>
               <li class="fi-unavailable"><i class="fas fa-minus"></i> Mode Agence (multi-comptes clients)</li>
               <li class="fi-unavailable"><i class="fas fa-minus"></i> Support prioritaire</li>
@@ -952,7 +955,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
               <li class="fi-included"><i class="fas fa-check"></i> Droits par profil <span class="feat-tag" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0;">Inclus</span></li>
               <li class="fi-included"><i class="fas fa-check"></i> Checklists avancées</li>
               <li class="fi-included"><i class="fas fa-check"></i> <strong>Support prioritaire</strong></li>
-              <li class="fi-soon"><i class="fas fa-clock" style="color:#9ca3af;"></i> Pricing dynamique <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">Bientôt</span></li>
+              <li class="fi-soon"><i class="fas fa-clock"></i> Pricing dynamique <span class="feat-tag">Bientôt</span></li>
             </ul>
           </div>
 
