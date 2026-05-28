@@ -14137,13 +14137,14 @@ app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool
       return res.status(403).json({ error: 'Un ou plusieurs logements sont inaccessibles' });
     }
 
-    // Générer toutes les dates entre date_from (inclus) et date_to (exclus)
-    // Ex: du 15 au 16 = 1 nuit (celle du 15)
+    // Générer toutes les dates entre date_from (inclus) et date_to (INCLUS)
+    // Un override de prix s'applique à une date (jour) précise : la plage est inclusive
+    // aux deux bornes. Ex: du 15 au 15 = la date du 15. Du 1 au 31 = les 31 jours.
     const { weekdays } = req.body; // tableau optionnel [0,1,2,3,4,5,6] (0=dim, 1=lun, ...)
     const dates = [];
     const cur = new Date(date_from + 'T12:00:00Z');
     const end = new Date(date_to + 'T12:00:00Z');
-    while (cur < end) {
+    while (cur <= end) {
       const dateStr = cur.toISOString().split('T')[0];
       const dayOfWeek = cur.getUTCDay(); // 0=dim, 1=lun, ..., 6=sam
       if (!weekdays || weekdays.length === 0 || weekdays.includes(dayOfWeek)) {
@@ -14290,11 +14291,11 @@ app.post('/api/blocks/batch', async (req, res) => {
         console.log(`🔓 Unblock property ${property_id}: ${result.rowCount} blocage(s) supprimé(s)`);
       }
     } else {
-      // Bloquer chaque nuit individuellement
+      // Bloquer chaque nuit individuellement (plage inclusive aux deux bornes)
       for (const property_id of property_ids) {
         const cur = new Date(date_from + 'T12:00:00Z');
         const end = new Date(date_to + 'T12:00:00Z');
-        while (cur < end) {
+        while (cur <= end) {
           const dayOfWeek = cur.getUTCDay();
           const dateStr = cur.toISOString().split('T')[0];
           cur.setUTCDate(cur.getUTCDate() + 1);
