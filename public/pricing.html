@@ -90,9 +90,9 @@ a { color: var(--primary); text-decoration: none; }
 }
 .cb-group { display: flex; align-items: center; gap: 10px; }
 .cb-group-props { gap: 6px; }
-.cb-group-range { flex: 1; min-width: 120px; }
+.cb-group-range { flex: 1; min-width: 160px; }
 .cb-label { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
-.cb-count { font-family: 'Instrument Serif', serif; font-size: 26px; color: var(--primary); min-width: 42px; text-align: center; line-height: 1; }
+.cb-count { font-family: 'Instrument Serif', serif; font-size: 26px; color: var(--primary); min-width: 56px; width: 56px; text-align: center; line-height: 1; }
 .cb-sep { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
 .cb-props-row { display: flex; align-items: center; gap: 8px; }
 .range-wrap { position: relative; padding: 4px 0; }
@@ -710,7 +710,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         <div class="cb-sep"></div>
         <!-- Hint -->
         <div class="cb-group">
-          <div class="slider-plan-hint" id="sliderHint" style="margin:0;padding:7px 13px;flex-shrink:0;white-space:nowrap;">
+          <div class="slider-plan-hint" id="sliderHint" style="margin:0;padding:7px 13px;flex-shrink:0;white-space:nowrap;min-width:148px;text-align:center;justify-content:center;">
             <i class="fas fa-check-circle"></i>
             <span id="sliderHintText">Plan Starter</span>
           </div>
