@@ -8337,7 +8337,10 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           source: 'bhguest_hold',
           platform: 'bhguest_hold',
           expires_at: hold.expires_at,
-          holdToken: hold.link_token
+          holdToken: hold.link_token,
+          fixedPrice: hold.fixed_price != null ? parseFloat(hold.fixed_price) : null,
+          guestEmail: hold.guest_email || null,
+          guestPhone: hold.guest_phone || null
         });
       }
     } catch(holdErr) {
@@ -33882,6 +33885,14 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       [userId, property_id, checkin, checkout, expiresAt, linkToken,
        guest_email || null, guest_phone || null, fixed_price || null]
     );
+
+    // 🔔 Notifier le propriétaire en temps réel pour rafraîchir le calendrier
+    // (la pré-réservation doit apparaître sans avoir à actualiser la page)
+    try {
+      if (io) io.to('user_' + userId).emit('reservations:updated', { propertyId: property_id });
+    } catch (sockErr) {
+      console.warn('⚠️ [HOLD] Socket non émis (non bloquant):', sockErr.message);
+    }
 
     // Bloquer sur Channex si connecté
     try {
