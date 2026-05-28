@@ -13566,6 +13566,38 @@ body.notif-panel-open {
         </div>
       </div>
 
+      <!-- Jours de la semaine -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+          <span>Jours de la semaine</span>
+          <button onclick="toggleAllBatchDays()" style="font-size:11px;color:#1A7A5E;background:none;border:none;cursor:pointer;font-weight:600;" id="batchDaysToggleBtn">Tous</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <label id="batchDay1" style="flex:1;min-width:36px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:white;transition:all .15s;user-select:none;">
+            <input type="checkbox" data-day="1" checked style="display:none;" />Lu
+          </label>
+          <label id="batchDay2" style="flex:1;min-width:36px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:white;transition:all .15s;user-select:none;">
+            <input type="checkbox" data-day="2" checked style="display:none;" />Ma
+          </label>
+          <label id="batchDay3" style="flex:1;min-width:36px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:white;transition:all .15s;user-select:none;">
+            <input type="checkbox" data-day="3" checked style="display:none;" />Me
+          </label>
+          <label id="batchDay4" style="flex:1;min-width:36px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:white;transition:all .15s;user-select:none;">
+            <input type="checkbox" data-day="4" checked style="display:none;" />Je
+          </label>
+          <label id="batchDay5" style="flex:1;min-width:36px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:white;transition:all .15s;user-select:none;">
+            <input type="checkbox" data-day="5" checked style="display:none;" />Ve
+          </label>
+          <label id="batchDay6" style="flex:1;min-width:36px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:white;transition:all .15s;user-select:none;">
+            <input type="checkbox" data-day="6" checked style="display:none;" />Sa
+          </label>
+          <label id="batchDay0" style="flex:1;min-width:36px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:white;transition:all .15s;user-select:none;">
+            <input type="checkbox" data-day="0" checked style="display:none;" />Di
+          </label>
+        </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:6px;">Tous les jours cochés dans la plage seront modifiés</div>
+      </div>
+
       <!-- Prix (affiché uniquement en mode price) -->
       <div id="batchPriceSection">
         <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Prix par nuit</div>
@@ -13637,6 +13669,13 @@ function openBatchEditModal() {
       }).join('');
 
   setBatchAction('price');
+
+  // Reset jours de la semaine : tous cochés par défaut
+  document.querySelectorAll('#batchEditModal input[data-day]').forEach(cb => {
+    cb.checked = true;
+    _updateBatchDayLabel(cb);
+  });
+  document.getElementById('batchDaysToggleBtn').textContent = 'Aucun';
 }
 
 function closeBatchEditModal() {
@@ -13670,14 +13709,75 @@ function toggleAllBatchProperties() {
   });
 }
 
+function toggleAllBatchDays() {
+  const checkboxes = document.querySelectorAll('#batchEditModal input[data-day]');
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  checkboxes.forEach(cb => {
+    cb.checked = !allChecked;
+    _updateBatchDayLabel(cb);
+  });
+  document.getElementById('batchDaysToggleBtn').textContent = allChecked ? 'Tous' : 'Aucun';
+}
+
+function _updateBatchDayLabel(cb) {
+  const label = cb.closest('label');
+  if (!label) return;
+  if (cb.checked) {
+    label.style.borderColor = '#1A7A5E';
+    label.style.background = '#e8f5f1';
+    label.style.color = '#1A7A5E';
+  } else {
+    label.style.borderColor = '#e2e8f0';
+    label.style.background = 'white';
+    label.style.color = '#9ca3af';
+  }
+}
+
+// Init day labels on load + bind change events
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('#batchEditModal input[data-day]').forEach(cb => {
+    _updateBatchDayLabel(cb);
+    cb.addEventListener('change', function() {
+      _updateBatchDayLabel(this);
+    });
+  });
+});
+
+function _getSelectedDays() {
+  return Array.from(document.querySelectorAll('#batchEditModal input[data-day]:checked'))
+    .map(cb => parseInt(cb.getAttribute('data-day')));
+}
+
+function _expandDatesToSelectedDays(dateFrom, dateTo, selectedDays) {
+  // Returns array of date strings 'YYYY-MM-DD' within range that match selected weekdays
+  // JS getDay(): 0=Sun, 1=Mon, ..., 6=Sat — same as our data-day values
+  const dates = [];
+  const cur = new Date(dateFrom + 'T00:00:00');
+  const end = new Date(dateTo + 'T00:00:00');
+  while (cur <= end) {
+    if (selectedDays.includes(cur.getDay())) {
+      dates.push(cur.toISOString().split('T')[0]);
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
 async function applyBatchEdit() {
   const dateFrom = document.getElementById('batchDateFrom').value;
   const dateTo = document.getElementById('batchDateTo').value;
   const selectedProps = Array.from(document.querySelectorAll('#batchPropertiesList input[type="checkbox"]:checked')).map(cb => cb.getAttribute('data-property-id'));
+  const selectedDays = _getSelectedDays();
 
   if (!dateFrom || !dateTo) { alert('Veuillez sélectionner une plage de dates.'); return; }
   if (dateTo < dateFrom) { alert('La date de fin doit être après la date de début.'); return; }
   if (selectedProps.length === 0) { alert('Veuillez sélectionner au moins un logement.'); return; }
+  if (selectedDays.length === 0) { alert('Veuillez sélectionner au moins un jour de la semaine.'); return; }
+
+  // Si tous les jours sont sélectionnés, on envoie la plage complète (comportement classique)
+  // Sinon, on explose la plage en dates individuelles filtrées
+  const allDays = [0,1,2,3,4,5,6];
+  const useFullRange = allDays.every(d => selectedDays.includes(d));
 
   const btn = document.getElementById('batchApplyBtn');
   btn.disabled = true;
@@ -13685,30 +13785,61 @@ async function applyBatchEdit() {
 
   try {
     const token = localStorage.getItem('lcc_token');
-
     const _API = (typeof API_URL !== 'undefined') ? API_URL : 'https://lcc-booking-manager.onrender.com';
-    if (_batchAction === 'price') {
-      const price = document.getElementById('batchPrice').value;
-      const res = await fetch(_API + '/api/pricing/overrides/batch', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, price: price === '' ? '' : parseFloat(price) })
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+
+    if (useFullRange) {
+      // Comportement classique : plage continue
+      if (_batchAction === 'price') {
+        const price = document.getElementById('batchPrice').value;
+        const res = await fetch(_API + '/api/pricing/overrides/batch', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, price: price === '' ? '' : parseFloat(price) })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+      } else {
+        const reason = document.getElementById('batchReason').value;
+        const res = await fetch(_API + '/api/blocks/batch', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, reason, action: _batchAction })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+      }
     } else {
-      const reason = document.getElementById('batchReason').value;
-      const res = await fetch(_API + '/api/blocks/batch', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, reason, action: _batchAction })
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+      // Jours filtrés : on envoie chaque date individuelle
+      const dates = _expandDatesToSelectedDays(dateFrom, dateTo, selectedDays);
+      if (dates.length === 0) { alert('Aucune date ne correspond aux jours sélectionnés dans cette plage.'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Appliquer'; return; }
+
+      if (_batchAction === 'price') {
+        const price = document.getElementById('batchPrice').value;
+        // Envoyer par lots de dates individuelles
+        for (const d of dates) {
+          const res = await fetch(_API + '/api/pricing/overrides/batch', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ property_ids: selectedProps, date_from: d, date_to: d, price: price === '' ? '' : parseFloat(price) })
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error);
+        }
+      } else {
+        const reason = document.getElementById('batchReason').value;
+        for (const d of dates) {
+          const res = await fetch(_API + '/api/blocks/batch', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ property_ids: selectedProps, date_from: d, date_to: d, reason, action: _batchAction })
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error);
+        }
+      }
     }
 
     closeBatchEditModal();
-    // Recharger prix ET calendrier
     if (typeof window.loadPricingOverrides === 'function') {
       var props = window.LCC_PROPERTIES || window.allProperties || [];
       await window.loadPricingOverrides(props);
