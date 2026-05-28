@@ -6247,7 +6247,13 @@ try {
       // loadCleaningChecklists est déjà appelé via son propre DOMContentLoaded
       // mais on s'assure que les KPI cautions et checklists partent en même temps
       typeof loadAndUpdateDepositsKPI === 'function' ? loadAndUpdateDepositsKPI() : Promise.resolve(),
-    ]).catch(() => {});
+    ]).then(() => {
+      // ✅ Charger les overrides de prix + règles de prix APRÈS le rendu du calendrier
+      // (sinon au rafraîchissement les prix modifiés reviennent au prix par défaut)
+      var props = window.LCC_PROPERTIES || JSON.parse(localStorage.getItem('LCC_PROPERTIES') || '[]');
+      if (typeof window.loadPricingOverrides === 'function') window.loadPricingOverrides(props);
+      if (typeof window.loadPricingRules === 'function') window.loadPricingRules(props);
+    }).catch(() => {});
   });
 })();
 </script>
