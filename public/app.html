@@ -8975,6 +8975,59 @@ try {
       console.warn("Erreur lors de l\'injection des infos ménage dans le modal", e);
     }
 
+    // 6️⃣ Lien BHGuest (pré-réservation) — retrouver le lien envoyé au voyageur
+    try {
+      var _bhSrc = String(booking.source || booking.platform || '').toLowerCase();
+      var _bhIsHold = _bhSrc === 'bhguest_hold' || booking.type === 'hold' || booking.status === 'hold'
+        || (booking.uid && String(booking.uid).indexOf('hold_') === 0);
+      var _bhToken = booking.holdToken || booking.hold_token || booking.link_token;
+      var _bhStale = detailsContent.querySelector('[data-bhguest-link="1"]');
+      if (_bhStale) _bhStale.remove(); // éviter un lien périmé d'une précédente ouverture
+      if (_bhIsHold && _bhToken) {
+        var _bhCi = String(booking.startDate || booking.start || booking.checkin || '').split('T')[0];
+        var _bhCo = String(booking.endDate || booking.end || booking.checkout || '').split('T')[0];
+        var _bhParams = new URLSearchParams();
+        _bhParams.set('property', booking.propertyId || booking.property_id || '');
+        if (_bhCi) _bhParams.set('checkin', _bhCi);
+        if (_bhCo) _bhParams.set('checkout', _bhCo);
+        var _bhFp = (booking.fixedPrice != null) ? booking.fixedPrice : booking.fixed_price;
+        if (_bhFp) _bhParams.set('fixed_price', _bhFp);
+        _bhParams.set('hold_token', _bhToken);
+        var _bhLink = 'https://www.boostinghost.fr/guest-app/public/index.html?' + _bhParams.toString();
+
+        var linkGroup = detailsContent.querySelector('[data-bhguest-link="1"]');
+        if (!linkGroup) {
+          linkGroup = document.createElement('div');
+          linkGroup.setAttribute('data-bhguest-link', '1');
+          linkGroup.style.cssText = 'margin-bottom:18px;';
+          var _bhInfoCards = detailsContent.querySelector('[data-info-cards="1"]');
+          if (_bhInfoCards && _bhInfoCards.parentNode) _bhInfoCards.parentNode.insertBefore(linkGroup, _bhInfoCards.nextSibling);
+          else detailsContent.appendChild(linkGroup);
+        }
+        linkGroup.innerHTML =
+          '<div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:5px;">'
+          + '<i class="fas fa-link" style="font-size:11px;"></i> Lien BHGuest envoyé</div>'
+          + '<div style="background:rgba(124,58,237,.06);border:1.5px solid rgba(124,58,237,.25);border-radius:14px;padding:12px 14px;">'
+          + '<div style="font-size:12px;color:#5B21B6;word-break:break-all;line-height:1.5;font-family:monospace;">' + _bhLink + '</div>'
+          + '<button type="button" data-bh-copy-link style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;background:#7C3AED;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;">'
+          + '<i class="fas fa-copy"></i> Copier le lien</button></div>';
+
+        var _bhCopyBtn = linkGroup.querySelector('[data-bh-copy-link]');
+        if (_bhCopyBtn) {
+          _bhCopyBtn.addEventListener('click', function() {
+            var done = function() {
+              _bhCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+              _bhCopyBtn.style.background = '#059669';
+              setTimeout(function(){ _bhCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien'; _bhCopyBtn.style.background = '#7C3AED'; }, 2000);
+            };
+            var fallback = function(){ var ta=document.createElement('textarea');ta.value=_bhLink;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done(); };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(_bhLink).then(done).catch(fallback);
+            else fallback();
+          });
+        }
+      }
+    } catch(e) { console.warn('Lien BHGuest modal:', e.message); }
+
     // 7️⃣ Raccourcis rapides : Messages + Caution + Paiement
     try {
       const existingShortcuts = detailsContent.querySelector('[data-shortcuts="1"]');
@@ -14388,6 +14441,9 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
         if (email) dest.push('email');
         if (phone) dest.push('SMS');
         status.innerHTML = '✅ Lien envoyé' + (dest.length ? ' par ' + dest.join(' et ') : '') + ' · Dates bloquées jusqu\'à ' + exp;
+        // 🔄 Rafraîchir le calendrier tout de suite (la pré-réservation doit apparaître sans F5)
+        if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+        else if (typeof window.renderCalendar === 'function') window.renderCalendar();
       } else {
         btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le lien';
         btn.style.background = '#3B82F6';
