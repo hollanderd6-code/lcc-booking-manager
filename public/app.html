@@ -13780,10 +13780,12 @@ async function applyBatchEdit() {
   if (selectedProps.length === 0) { alert('Veuillez sélectionner au moins un logement.'); return; }
   if (selectedDays.length === 0) { alert('Veuillez sélectionner au moins un jour de la semaine.'); return; }
 
-  // Si tous les jours sont sélectionnés, on envoie la plage complète (comportement classique)
-  // Sinon, on explose la plage en dates individuelles filtrées
+  // Si tous les jours sont cochés, on n'envoie pas de filtre (toute la plage).
+  // Sinon on envoie le tableau `weekdays` et le backend filtre lui-même les dates.
+  // => UNE seule requête, le backend génère toutes les dates de la plage.
   const allDays = [0,1,2,3,4,5,6];
   const useFullRange = allDays.every(d => selectedDays.includes(d));
+  const weekdaysFilter = useFullRange ? undefined : selectedDays;
 
   const btn = document.getElementById('batchApplyBtn');
   btn.disabled = true;
@@ -13793,65 +13795,37 @@ async function applyBatchEdit() {
     const token = localStorage.getItem('lcc_token');
     const _API = (typeof API_URL !== 'undefined') ? API_URL : 'https://lcc-booking-manager.onrender.com';
 
-    if (useFullRange) {
-      // Comportement classique : plage continue
-      if (_batchAction === 'price') {
-        const price = document.getElementById('batchPrice').value;
-        const res = await fetch(_API + '/api/pricing/overrides/batch', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, price: price === '' ? '' : parseFloat(price) })
-        });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error);
-      } else {
-        const reason = document.getElementById('batchReason').value;
-        const res = await fetch(_API + '/api/blocks/batch', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ property_ids: selectedProps, date_from: dateFrom, date_to: dateTo, reason, action: _batchAction })
-        });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error);
-      }
+    if (_batchAction === 'price') {
+      const price = document.getElementById('batchPrice').value;
+      const res = await fetch(_API + '/api/pricing/overrides/batch', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_ids: selectedProps,
+          date_from: dateFrom,
+          date_to: dateTo,
+          price: price === '' ? '' : parseFloat(price),
+          weekdays: weekdaysFilter
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Erreur serveur');
     } else {
-      // Jours filtrés : dates individuelles correspondant aux jours cochés
-      const dates = _expandDatesToSelectedDays(dateFrom, dateTo, selectedDays);
-      if (dates.length === 0) { alert('Aucune date ne correspond aux jours sélectionnés dans cette plage.'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Appliquer'; return; }
-
-      let done = 0;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 0/' + dates.length + '...';
-
-      const chunk = 5; // requêtes en parallèle par paquet
-      if (_batchAction === 'price') {
-        const price = document.getElementById('batchPrice').value;
-        for (let i = 0; i < dates.length; i += chunk) {
-          await Promise.all(dates.slice(i, i + chunk).map(async d => {
-            const res = await fetch(_API + '/api/pricing/overrides/batch', {
-              method: 'POST',
-              headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ property_ids: selectedProps, date_from: d, date_to: d, price: price === '' ? '' : parseFloat(price) })
-            });
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error);
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (++done) + '/' + dates.length + '...';
-          }));
-        }
-      } else {
-        const reason = document.getElementById('batchReason').value;
-        for (let i = 0; i < dates.length; i += chunk) {
-          await Promise.all(dates.slice(i, i + chunk).map(async d => {
-            const res = await fetch(_API + '/api/blocks/batch', {
-              method: 'POST',
-              headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ property_ids: selectedProps, date_from: d, date_to: d, reason, action: _batchAction })
-            });
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error);
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (++done) + '/' + dates.length + '...';
-          }));
-        }
-      }
+      const reason = document.getElementById('batchReason').value;
+      const res = await fetch(_API + '/api/blocks/batch', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_ids: selectedProps,
+          date_from: dateFrom,
+          date_to: dateTo,
+          reason,
+          action: _batchAction,
+          weekdays: weekdaysFilter
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Erreur serveur');
     }
 
     closeBatchEditModal();
