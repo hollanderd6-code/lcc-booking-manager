@@ -3610,7 +3610,7 @@ function showBHToast(msg, type = 'info') {
 
     <div class="inv-actions">
       <button class="inv-btn inv-btn-ghost" onclick="closeInvoiceModal()">Annuler</button>
-      <button class="inv-btn inv-btn-ghost" id="inv_emailBtn" onclick="sendInvoiceEmail()" disabled>
+      <button class="inv-btn inv-btn-ghost" id="inv_emailBtn" onclick="sendInvoiceEmail()">
         <i class="fas fa-envelope"></i> Envoyer par email
       </button>
       <button class="inv-btn inv-btn-primary" id="inv_sendBtn" onclick="sendInvoiceFromModal()" disabled>
@@ -3625,6 +3625,9 @@ function showBHToast(msg, type = 'info') {
 (function() {
   window.openInvoiceModal = function(data) {
     window._invoiceConversationId = data.conversationId || null;
+    // Réinitialiser le lien généré (éviter de réutiliser la facture d'un précédent voyageur)
+    window._lastInvoiceDownloadUrl = null;
+    window._lastInvoiceNumber = null;
     data = data || {};
 
     const _nationalityMap = {
@@ -3818,11 +3821,10 @@ function showBHToast(msg, type = 'info') {
     if (sendBtn) sendBtn.disabled = false;  // ✅ Actif dès que nom + logement sont remplis
   };
 
-  window.sendInvoiceFromModal = async function() {
-    const clientEmail = document.getElementById('inv_clientEmail')?.value || null;
-
+  // Collecte les champs du formulaire facture (partagé entre envoi message et email)
+  window._collectInvoiceData = function() {
     const propSel = document.getElementById('inv_propertyName');
-    const data = {
+    return {
       clientName:    document.getElementById('inv_clientName')?.value,
       clientEmail:   document.getElementById('inv_clientEmail')?.value || '',
       clientAddress: document.getElementById('inv_clientAddress')?.value || '',
@@ -3845,9 +3847,15 @@ function showBHToast(msg, type = 'info') {
       rentAmount:       document.getElementById('inv_rent')?.value || 0,
       touristTaxAmount: document.getElementById('inv_taxes')?.value || 0,
       cleaningFee:      document.getElementById('inv_cleaning')?.value || 0,
-      vatRate: document.getElementById('inv_withVat')?.checked ? document.getElementById('inv_vatRate')?.value : 0,
-      sendEmail: false
+      vatRate: document.getElementById('inv_withVat')?.checked ? document.getElementById('inv_vatRate')?.value : 0
     };
+  };
+
+  window.sendInvoiceFromModal = async function() {
+    const clientEmail = document.getElementById('inv_clientEmail')?.value || null;
+
+    const data = window._collectInvoiceData();
+    data.sendEmail = false;
 
     const btn = document.getElementById('inv_sendBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération…'; }
@@ -3917,13 +3925,35 @@ ${result.downloadUrl}
   // ── Envoyer le lien par email ─────────────────────────────
   window.sendInvoiceEmail = async function() {
     const clientEmail = document.getElementById('inv_clientEmail')?.value;
+    const clientName  = document.getElementById('inv_clientName')?.value;
+    if (!clientName)  { showBHToast('Nom du client requis', 'warning'); return; }
     if (!clientEmail) { showBHToast('Email voyageur requis', 'warning'); return; }
-    if (!window._lastInvoiceDownloadUrl) { showBHToast('Générez d\'abord le lien', 'warning'); return; }
+
+    const propSel = document.getElementById('inv_propertyName');
+    const propertyName = propSel?.options[propSel.selectedIndex]?.text || '';
 
     const btn = document.getElementById('inv_emailBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…'; }
 
     try {
+      // 1) Générer la facture (et le lien) si ce n'est pas déjà fait dans cette ouverture du modal
+      if (!window._lastInvoiceDownloadUrl) {
+        if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération…';
+        const data = window._collectInvoiceData();
+        data.sendEmail = false;
+        const createRes = await fetch('/api/invoice/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
+          body: JSON.stringify(data)
+        });
+        const createResult = await createRes.json();
+        if (!createRes.ok || !createResult.downloadUrl) throw new Error(createResult.error || 'Erreur génération de la facture');
+        window._lastInvoiceDownloadUrl = createResult.downloadUrl;
+        window._lastInvoiceNumber = createResult.invoiceNumber;
+      }
+
+      // 2) Envoyer le lien par email
+      if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…';
       const res = await fetch('/api/invoice/send-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') },
@@ -3931,8 +3961,8 @@ ${result.downloadUrl}
           clientEmail,
           downloadUrl: window._lastInvoiceDownloadUrl,
           invoiceNumber: window._lastInvoiceNumber,
-          clientName: document.getElementById('inv_clientName')?.value,
-          propertyName: document.getElementById('inv_property')?.options[document.getElementById('inv_property')?.selectedIndex]?.text
+          clientName,
+          propertyName
         })
       });
       const result = await res.json();
