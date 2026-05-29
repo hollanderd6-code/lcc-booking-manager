@@ -6891,6 +6891,7 @@ try {
       });
       scope.querySelectorAll('.cell-price').forEach(function(p){ p.style.opacity = '1'; });
       scope.querySelectorAll('.booking-block-bh').forEach(function(b){ b.style.opacity = '1'; });
+      scope.querySelectorAll('.bh-col-veil').forEach(function(v){ v.remove(); });
     }
 
     for (var di=0; di<numDays; di++) {
@@ -6925,23 +6926,26 @@ try {
           c.dataset.bhColHi = '1';
           c.style.boxShadow = 'inset 0 0 0 9999px rgba(26,122,94,.06)';
         });
-        // On estompe UNIQUEMENT les prix des autres colonnes (jamais les cellules
-        // elles-mêmes : sinon les blocs/réservations qu'elles contiennent seraient
-        // estompés par cascade — c'était la cause du bug).
-        outer.querySelectorAll('.bh-day-cell').forEach(function(c){
-          if (c.dataset.colIdx !== String(idx5)) {
-            var pr = c.querySelector('.cell-price');
-            if (pr) pr.style.opacity = '0.18';
-          }
-        });
-        // Les réservations EN COURS sur ce jour restent visibles (on lit qui
-        // séjourne le 29) ; les autres sont estompées. Séjour = [colStart, colEnd[.
-        outer.querySelectorAll('.booking-block-bh').forEach(function(b){
-          var cs = parseInt(b.dataset.colStart || '0');
-          var ce = parseInt(b.dataset.colEnd   || '1'); // checkout exclusif
-          var enCours = (idx5 >= cs && idx5 < ce);
-          b.style.opacity = enCours ? '1' : '0.12';
-        });
+        // « Spotlight » : on pose un voile blanc sur TOUTE la grille SAUF la colonne
+        // sélectionnée. Une barre de résa qui traverse plusieurs jours n'apparaît
+        // donc en clair que sur la tranche du jour sélectionné ; le reste est voilé.
+        // z-index entre les blocs (3) et la colonne logements/en-têtes (8/15) :
+        // les noms et l'en-tête restent nets, seules les cellules+barres sont voilées.
+        var bodyH   = totalH - hdrH;
+        var slotX   = propW + idx5 * colW;          // bord gauche de la colonne active
+        var rightX  = slotX + colW;                 // bord droit de la colonne active
+        function bhVeil(left, width){
+          if (width <= 0) return;
+          var v = div('position:absolute;pointer-events:none;background:rgba(248,245,239,.72);z-index:6;');
+          v.className = 'bh-col-veil';
+          v.style.left   = left + 'px';
+          v.style.top    = hdrH + 'px';
+          v.style.width  = width + 'px';
+          v.style.height = bodyH + 'px';
+          grid.appendChild(v);
+        }
+        bhVeil(propW, slotX - propW);                // voile à gauche de la colonne
+        bhVeil(rightX, totalW - rightX);             // voile à droite de la colonne
       };})(di, hcell);
       grid.appendChild(hcell);
     }
