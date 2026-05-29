@@ -33912,6 +33912,36 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       console.warn('⚠️ [HOLD] Socket non émis (non bloquant):', sockErr.message);
     }
 
+    // 💳 Créer un paiement "EN ATTENTE" pour le suivi dans Cautions & Paiements
+    // (dès l'envoi du lien : carte logement + prix + dates + statut "en attente")
+    try {
+      const propNameRes2 = await pool.query('SELECT name FROM properties WHERE id = $1', [property_id]);
+      const propName2 = propNameRes2.rows[0]?.name || property_id;
+      const appUrl2 = process.env.APP_URL || 'https://www.boostinghost.fr';
+      const params2 = new URLSearchParams({ property: property_id, checkin, checkout });
+      if (fixed_price) params2.set('fixed_price', fixed_price);
+      if (guest_phone) params2.set('guest_phone', guest_phone);
+      if (guest_email) params2.set('guest_email', guest_email);
+      params2.set('hold_token', linkToken);
+      const bookingUrl2 = `${appUrl2}/guest-app/public/index.html?${params2.toString()}`;
+      const amountCents2 = fixed_price ? Math.round(parseFloat(fixed_price) * 100) : 0;
+      await pool.query(
+        `INSERT INTO payments
+           (id, user_id, property_id, reservation_uid, amount_cents, status, checkout_url, metadata, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          'bhgpay_' + linkToken,
+          userId, property_id, 'BHGUEST_HOLD_' + linkToken,
+          amountCents2, bookingUrl2,
+          JSON.stringify({ source: 'bhguest_hold', holdToken: linkToken, propertyName: propName2, checkin, checkout, guestEmail: guest_email || null, guestPhone: guest_phone || null })
+        ]
+      );
+      console.log(`💳 [HOLD] Paiement en attente créé (bhgpay_${linkToken})`);
+    } catch (payErr) {
+      console.warn('⚠️ [HOLD] Paiement en attente non créé (non bloquant):', payErr.message);
+    }
+
     // Bloquer sur Channex si connecté
     try {
       const propRes = await pool.query(
@@ -34402,19 +34432,49 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       const _stripeOpts = _saId ? { stripeAccount: _saId } : {};
       const stripeSessionObj = session_id ? await stripe.checkout.sessions.retrieve(session_id, _stripeOpts).catch(() => null) : null;
       const paymentIntentId = stripeSessionObj?.payment_intent || null;
-      const payInsert = await pool.query(`
-        INSERT INTO payments
-          (user_id, property_id, reservation_uid, amount_cents, status,
-           stripe_session_id, stripe_payment_intent_id, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, 'paid', $5, $6, NOW(), NOW())
-        ON CONFLICT DO NOTHING
-        RETURNING id
-      `, [
-        prop.owner_user_id, property_id, uid,
-        amtCents, session_id, paymentIntentId
-      ]);
-      savedPaymentId = payInsert.rows[0]?.id || null;
-      console.log(`💳 [GUEST] Paiement enregistré: ${savedPaymentId} (${totalTTC}€)`);
+      const paidGuestName = (typeof cleanGuestName === 'function') ? cleanGuestName(guest_name, 'guest_app') : (guest_name || null);
+
+      // Réconcilier le paiement "en attente" créé à l'envoi du lien BHGuest (même logement + mêmes dates)
+      // → on le fait passer en "payé" + on récupère le nom du voyageur (pas de doublon de carte).
+      const pendingPay = await pool.query(
+        `SELECT id FROM payments
+           WHERE user_id = $1 AND property_id = $2 AND status = 'pending'
+             AND metadata->>'source' = 'bhguest_hold'
+             AND metadata->>'checkin' = $3 AND metadata->>'checkout' = $4
+           ORDER BY created_at DESC LIMIT 1`,
+        [prop.owner_user_id, property_id, checkin, checkout]
+      );
+
+      if (pendingPay.rows[0]) {
+        await pool.query(
+          `UPDATE payments
+              SET status='paid', reservation_uid=$1, amount_cents=$2,
+                  stripe_session_id=$3, stripe_payment_intent_id=$4,
+                  metadata = COALESCE(metadata,'{}'::jsonb) || $5::jsonb,
+                  updated_at=NOW()
+            WHERE id=$6`,
+          [uid, amtCents, session_id || null, paymentIntentId,
+           JSON.stringify({ guestName: paidGuestName }), pendingPay.rows[0].id]
+        );
+        savedPaymentId = pendingPay.rows[0].id;
+        console.log(`💳 [GUEST] Paiement en attente réconcilié → payé: ${savedPaymentId} (${totalTTC}€)`);
+      } else {
+        const newPayId = 'bhgpay_' + (paymentIntentId || session_id || (uid + '_' + Date.now()));
+        const payInsert = await pool.query(`
+          INSERT INTO payments
+            (id, user_id, property_id, reservation_uid, amount_cents, status,
+             stripe_session_id, stripe_payment_intent_id, metadata, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, 'paid', $6, $7, $8, NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING
+          RETURNING id
+        `, [
+          newPayId, prop.owner_user_id, property_id, uid,
+          amtCents, session_id || null, paymentIntentId,
+          JSON.stringify({ source: 'bhguest', guestName: paidGuestName, checkin, checkout })
+        ]);
+        savedPaymentId = payInsert.rows[0]?.id || newPayId;
+        console.log(`💳 [GUEST] Paiement enregistré: ${savedPaymentId} (${totalTTC}€)`);
+      }
     } catch (payErr) {
       console.error('⚠️ [GUEST] Enregistrement paiement:', payErr.message);
     }
