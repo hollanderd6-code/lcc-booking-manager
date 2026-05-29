@@ -6934,13 +6934,10 @@ try {
             if (pr) pr.style.opacity = '0.18';
           }
         });
-        // Les blocs sont gérés indépendamment (opacité propre, pas de cascade) :
-        // visibles s'ils COUVRENT la colonne cliquée, estompés sinon.
+        // On estompe TOUTES les réservations : seule la colonne s'allume,
+        // pas les barres de réservation (même celles qui traversent le jour).
         outer.querySelectorAll('.booking-block-bh').forEach(function(b){
-          var cs = parseInt(b.dataset.colStart || '0');
-          var ce = parseInt(b.dataset.colEnd   || '1'); // checkout exclusif
-          var covers = (idx5 >= cs && idx5 < ce);
-          b.style.opacity = covers ? '1' : '0.15';
+          b.style.opacity = '0.15';
         });
       };})(di, hcell);
       grid.appendChild(hcell);
