@@ -25057,12 +25057,17 @@ console.log('✅ Cron message_templates initialisé (7h avant/arrivée+before_de
 initDepositRemindersCron(pool, io);
 
 // ── CRON : Envoi automatique des factures le jour du départ (10h00) ──────────
-cron.schedule('0 10 * * *', async () => {
-  console.log('🧾 [INVOICE CRON] Vérification des demandes de facture à envoyer...');
+// mode = 'due_or_overdue' (séjour terminé aujourd'hui OU déjà passé) | 'overdue' (strictement passé)
+async function runInvoiceQueue(mode) {
+  console.log(`🧾 [INVOICE CRON] Vérification des demandes de facture à envoyer (mode=${mode})...`);
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // Trouver les demandes pending dont la réservation se termine aujourd'hui
+    // Demandes pending dont le séjour est terminé.
+    // - 'due_or_overdue' : end_date <= aujourd'hui (le jour du départ + rattrapage des oubliées)
+    // - 'overdue'        : end_date <  aujourd'hui (demandes créées APRÈS le départ, ex: client qui réclame sa facture)
+    // Borne basse à 120 jours pour ne pas traiter un très vieux backlog.
+    const cmp = (mode === 'overdue') ? '<' : '<=';
     const requests = await pool.query(
       `SELECT ir.*, r.guest_name, r.guest_email, r.start_date, r.end_date,
               r.amount_total, r.amount_rooms, r.amount_cleaning, r.amount_taxes,
@@ -25074,7 +25079,8 @@ cron.schedule('0 10 * * *', async () => {
        LEFT JOIN properties p ON p.id = ir.property_id
        LEFT JOIN users u ON u.id = ir.user_id
        WHERE ir.status = 'pending'
-       AND DATE(r.end_date) = $1
+       AND DATE(r.end_date) ${cmp} $1
+       AND DATE(r.end_date) >= ($1::date - INTERVAL '120 days')
        FOR UPDATE OF ir SKIP LOCKED`,
       [today]
     );
@@ -25250,7 +25256,13 @@ Séjour du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date
   } catch(e) {
     console.error('❌ [INVOICE CRON] Erreur globale:', e.message);
   }
-});
+}
+
+// Jour du départ + rattrapage des demandes en retard — 10h00 Europe/Paris
+cron.schedule('0 10 * * *', () => runInvoiceQueue('due_or_overdue'), { timezone: 'Europe/Paris' });
+// Rattrapage rapide des demandes créées APRÈS le départ (client qui réclame sa facture) — toutes les heures
+cron.schedule('0 * * * *', () => runInvoiceQueue('overdue'), { timezone: 'Europe/Paris' });
+console.log('✅ Cron factures initialisé (10h jour du départ + rattrapage horaire des retards)');
 
 // ── CRON : Régénération liens Stripe expirés (toutes les 23h30) ──────────────
 cron.schedule('0 */23 * * *', async () => {
@@ -25658,7 +25670,10 @@ app.post('/api/test/invoice-cron', authenticateAny, async (req, res) => {
       [today, req.body.force ? 'force' : 'normal', userId]
     );
 
-    res.json({ found: requests.rows.length, message: `${requests.rows.length} facture(s) en attente trouvée(s) pour le ${today}` });
+    // Déclencher réellement l'envoi des factures en attente déjà dues (toutes celles dont le séjour est terminé)
+    runInvoiceQueue('due_or_overdue').catch(e => console.error('❌ [INVOICE CRON MANUAL]', e.message));
+
+    res.json({ found: requests.rows.length, message: `${requests.rows.length} facture(s) en attente trouvée(s). Envoi des factures dues déclenché en arrière-plan.` });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
