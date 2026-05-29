@@ -6934,10 +6934,13 @@ try {
             if (pr) pr.style.opacity = '0.18';
           }
         });
-        // On estompe TOUTES les réservations : seule la colonne s'allume,
-        // pas les barres de réservation (même celles qui traversent le jour).
+        // Les réservations EN COURS sur ce jour restent visibles (on lit qui
+        // séjourne le 29) ; les autres sont estompées. Séjour = [colStart, colEnd[.
         outer.querySelectorAll('.booking-block-bh').forEach(function(b){
-          b.style.opacity = '0.15';
+          var cs = parseInt(b.dataset.colStart || '0');
+          var ce = parseInt(b.dataset.colEnd   || '1'); // checkout exclusif
+          var enCours = (idx5 >= cs && idx5 < ce);
+          b.style.opacity = enCours ? '1' : '0.12';
         });
       };})(di, hcell);
       grid.appendChild(hcell);
