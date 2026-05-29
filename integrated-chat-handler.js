@@ -705,6 +705,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
               if (params.company) { updates.push(`client_company = $${i++}`); vals.push(params.company); }
               if (params.address) { updates.push(`client_address = $${i++}`); vals.push(params.address); }
               if (params.name)    { updates.push(`client_name = $${i++}`);    vals.push(params.name); }
+              if (params.email)   { updates.push(`client_email = $${i++}`);   vals.push(params.email); }
               if (updates.length) {
                 vals.push(existing.rows[0].id);
                 await pool.query(`UPDATE invoice_requests SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${i}`, vals);
