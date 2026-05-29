@@ -12329,6 +12329,19 @@ app.post('/api/cleaning/photo-upload', async (req, res) => {
   }
 })();
 
+// Index pour accélérer l'enrichissement des checklists (jointures sur
+// reservations / conversations par user + logement). Isolé + try/catch :
+// si une table/colonne diffère, on log sans bloquer le démarrage.
+(async () => {
+  try {
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_reservations_user_prop ON reservations(user_id, property_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_conversations_user_prop ON conversations(user_id, property_id)`);
+    console.log('✅ Index checklists (reservations/conversations) OK');
+  } catch(e) {
+    console.error('❌ Migration index checklists:', e.message);
+  }
+})();
+
 app.post('/api/cleaning/checklist', async (req, res) => {
   try {
     const { pinCode, reservationKey, propertyId, tasks, photos, notes, duration, startedAt, completedAt, signatureData, certifiedAt } = req.body;
@@ -12589,11 +12602,19 @@ app.get('/api/cleaning/checklists',
     }
 
     const result = await pool.query(
-      `SELECT 
-        cc.*,
+      `SELECT
+        -- Colonnes légères uniquement (pas de photos/signature_data : trop lourds
+        -- pour la liste, ils sont rechargés à l'ouverture du détail via /:id).
+        cc.id, cc.user_id, cc.property_id, cc.reservation_key, cc.cleaner_id,
+        cc.guest_name, cc.checkout_date, cc.tasks, cc.completed_at,
+        cc.sent_to_owner, cc.sent_to_guest, cc.created_at, cc.updated_at,
+        cc.duration_seconds, cc.started_at, cc.owner_status,
+        cc.certified_at, cc.cleaner_certified,
+        COALESCE(jsonb_array_length(cc.photos), 0) AS photo_count,
+
         c.name as cleaner_name,
         c.email as cleaner_email,
-        
+
         -- Enrichissement guest depuis conversations (onboarding)
         COALESCE(
           NULLIF(TRIM(COALESCE(conv.guest_first_name, '') || ' ' || COALESCE(conv.guest_last_name, '')), ''),
@@ -12601,12 +12622,12 @@ app.get('/api/cleaning/checklists',
           r.guest_name,
           'Voyageur'
         ) as guest_display_name,
-        
+
         conv.guest_first_name,
         conv.guest_last_name,
         conv.guest_phone,
-        
-        CASE 
+
+        CASE
           WHEN conv.guest_first_name IS NOT NULL AND conv.guest_first_name != ''
           THEN LEFT(UPPER(conv.guest_first_name), 1)
           WHEN cc.guest_name IS NOT NULL AND cc.guest_name != ''
@@ -12615,17 +12636,32 @@ app.get('/api/cleaning/checklists',
           THEN LEFT(UPPER(r.guest_name), 1)
           ELSE 'V'
         END as guest_initial,
-        
+
         r.source as platform
 
        FROM cleaning_checklists cc
        LEFT JOIN cleaners c ON c.id = cc.cleaner_id
-       LEFT JOIN reservations r ON r.property_id = cc.property_id 
-         AND r.end_date::date = cc.checkout_date::date
-         AND r.user_id = cc.user_id
-       LEFT JOIN conversations conv ON conv.property_id = cc.property_id
-         AND conv.reservation_start_date::date = r.start_date::date
-         AND conv.user_id = cc.user_id
+       -- LATERAL + LIMIT 1 : garantit UNE seule réservation par checklist,
+       -- même si Channex a créé plusieurs révisions sur la même date (sinon
+       -- chaque doublon dupliquait toute la ligne → liste lente / infinie).
+       LEFT JOIN LATERAL (
+         SELECT r.guest_name, r.source, r.start_date
+         FROM reservations r
+         WHERE r.property_id = cc.property_id
+           AND r.user_id = cc.user_id
+           AND r.end_date::date = cc.checkout_date::date
+         ORDER BY r.start_date DESC
+         LIMIT 1
+       ) r ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT conv.guest_first_name, conv.guest_last_name, conv.guest_phone
+         FROM conversations conv
+         WHERE conv.property_id = cc.property_id
+           AND conv.user_id = cc.user_id
+           AND conv.reservation_start_date::date = r.start_date::date
+         ORDER BY conv.id DESC
+         LIMIT 1
+       ) conv ON TRUE
        WHERE cc.user_id = $1
        ORDER BY
          CASE WHEN (cc.owner_status = 'pending' OR cc.owner_status IS NULL) AND cc.completed_at IS NOT NULL THEN 0 ELSE 1 END ASC,
