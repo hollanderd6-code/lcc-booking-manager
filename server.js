@@ -23535,12 +23535,24 @@ const io = new Server(server, {
 // Notif depuis _flushDebounce quand l'IA n'a pas repondu apres le delai
 io.on('_debounce_notif_needed', async ({ conversation_id, user_id, message, guest_name }) => {
   try {
+    // Récupère le nom du logement pour le titre "💬 Message <logement> <voyageur>"
+    let bhLogement = 'Logement';
+    try {
+      const prRes = await pool.query(
+        `SELECT COALESCE(p.internal_name, p.name) AS logement
+         FROM conversations c LEFT JOIN properties p ON p.id = c.property_id
+         WHERE c.id = $1`,
+        [conversation_id]
+      );
+      if (prRes.rows[0] && prRes.rows[0].logement) bhLogement = prRes.rows[0].logement;
+    } catch (_) {}
+    const bhNotifTitle = '💬 Message ' + bhLogement + ' ' + (guest_name || 'Voyageur');
     const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [user_id]);
     for (const tok of tokensRes.rows) {
-      await sendNotificationLogged(tok.fcm_token, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
+      await sendNotificationLogged(tok.fcm_token, bhNotifTitle, (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
     }
     // Envoyer aussi aux agents agence
-    await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
+    await sendNotificationToDelegatesOf(user_id, bhNotifTitle, (guest_name || 'Voyageur') + ': ' + (message || '').substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
     console.log(`📱 [DEBOUNCE NOTIF] Notif envoyée conv ${conversation_id} après éscalade post-debounce`);
   } catch(e) { console.error('[DEBOUNCE NOTIF] Erreur:', e.message); }
 });
@@ -30401,7 +30413,8 @@ app.post('/api/channex/webhook-message', async (req, res) => {
 
       // Récupérer la conversation complète pour le handler
       const convResult = await pool.query(
-        `SELECT c.*, p.auto_responses_enabled
+        `SELECT c.*, p.auto_responses_enabled,
+                p.name AS bh_prop_name, p.internal_name AS bh_prop_internal
          FROM conversations c
          LEFT JOIN properties p ON p.id = c.property_id
          WHERE c.id = $1`,
@@ -30411,6 +30424,9 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       if (convResult.rows.length > 0) {
         const conversation = convResult.rows[0];
         const autoEnabled = conversation.auto_responses_enabled !== false;
+        // Titre notif : "💬 Message <logement> <nom voyageur>"
+        const bhLogement  = conversation.bh_prop_internal || conversation.bh_prop_name || 'Logement';
+        const bhNotifTitle = '💬 Message ' + bhLogement + ' ' + (guest_name || 'Voyageur');
 
         if (autoEnabled) {
           console.log(`🤖 [CHANNEX MSG] Conv ${conversation_id} | escalated=${conversation.escalated} | autoEnabled=${autoEnabled} | msg="${savedMsg.message.substring(0,40)}"`);
@@ -30429,12 +30445,12 @@ app.post('/api/channex/webhook-message', async (req, res) => {
               [user_id]
             );
             for (const tok of tokensRes.rows) {
-              await sendNotificationLogged(tok.fcm_token, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), {
+              await sendNotificationLogged(tok.fcm_token, bhNotifTitle, guest_name + ': ' + messageText.substring(0, 80), {
                 type: 'new_guest_message',
                 conversation_id: String(conversation_id)
               });
             }
-            await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
+            await sendNotificationToDelegatesOf(user_id, bhNotifTitle, guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
           } else {
             console.log(`✅ [CHANNEX MSG] Réponse auto envoyée → pas de notif push`);
           }
@@ -30445,12 +30461,12 @@ app.post('/api/channex/webhook-message', async (req, res) => {
             [user_id]
           );
           for (const tok of tokensRes.rows) {
-            await sendNotificationLogged(tok.fcm_token, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), {
+            await sendNotificationLogged(tok.fcm_token, bhNotifTitle, guest_name + ': ' + messageText.substring(0, 80), {
               type: 'new_guest_message',
               conversation_id: String(conversation_id)
             });
           }
-          await sendNotificationToDelegatesOf(user_id, '💬 Nouveau message voyageur', guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
+          await sendNotificationToDelegatesOf(user_id, bhNotifTitle, guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
         }
       }
     } catch (autoErr) {
