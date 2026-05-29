@@ -30418,9 +30418,12 @@ app.post('/api/channex/webhook-message', async (req, res) => {
           const handled = await handleIncomingMessageDebounced(savedMsg, conversation, pool, io);
           console.log(`🤖 [CHANNEX MSG] handleIncomingMessage retourné: ${handled}`);
 
-          // Notif push seulement si PAS de réponse auto (escalade ou aucune réponse)
-          if (!handled) {
-            console.log(`📱 [CHANNEX MSG] Pas de réponse auto → notif push propriétaire`);
+          // Notif push si AUCUNE réponse auto (escalade, pause, etc.).
+          // ⚠️ handleIncomingMessageDebounced retourne toujours true (debounce) : on ne peut
+          // pas se fier à `handled` seul. Si la conv est escaladée, l'IA NE répondra pas →
+          // il FAUT notifier le proprio à chaque message voyageur.
+          if (!handled || conversation.escalated) {
+            console.log(`📱 [CHANNEX MSG] ${conversation.escalated ? 'Conv escaladée' : 'Pas de réponse auto'} → notif push propriétaire`);
             const tokensRes = await pool.query(
               'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
               [user_id]
