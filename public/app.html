@@ -6893,14 +6893,25 @@ try {
 
       (function(idx5, el){ el.onclick = function(){
         var active = el.classList.contains('bh-col-active');
-        // Reset tout : colonne ET logement
+        // Reset COMPLET : colonne, logements (noms), cellules, blocs et prix
         outer.querySelectorAll('.bh-day-hcell').forEach(function(c){c.classList.remove('bh-col-active');c.style.background='';});
-        outer.querySelectorAll('.bh-prop-cell').forEach(function(c){c.classList.remove('bh-row-active');c.style.background='';});
+        outer.querySelectorAll('.bh-prop-cell').forEach(function(c){
+          c.classList.remove('bh-row-active');
+          c.style.background='';
+          c.style.opacity='1';
+          var sp=c.querySelector('span'); if(sp) sp.style.opacity='1';
+        });
         outer.querySelectorAll('.bh-day-cell').forEach(function(c){c.style.opacity='1';});
+        outer.querySelectorAll('.cell-price').forEach(function(c){c.style.opacity='1';});
         outer.querySelectorAll('.booking-block-bh').forEach(function(b){b.style.opacity='1';});
         if(!active){
           el.classList.add('bh-col-active');
           el.style.background='rgba(26,122,94,.13)';
+          // ⚠️ Les noms de logements (colonne de gauche) restent TOUJOURS pleinement visibles
+          outer.querySelectorAll('.bh-prop-cell').forEach(function(c){
+            c.style.opacity='1';
+            var sp=c.querySelector('span'); if(sp) sp.style.opacity='1';
+          });
           // Dim les dcells (sauf colonne active)
           outer.querySelectorAll('.bh-day-cell').forEach(function(c){
             if(c.dataset.colIdx!==String(idx5)) c.style.opacity='0.25';
