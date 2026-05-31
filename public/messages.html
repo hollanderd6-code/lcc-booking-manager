@@ -4931,46 +4931,41 @@ window.showSmsConfirm = function() {
 
   var SEL = '#chatMessages .chat-bubble';
 
-  function bhCopyText(text) {
-    // Capacitor en priorité (natif iOS/Android, sans contrainte de geste)
-    try {
-      var Cap = window.Capacitor;
-      if (Cap && Cap.Plugins && Cap.Plugins.Clipboard) {
-        return Cap.Plugins.Clipboard.write({ string: text }).then(function () { return true; }).catch(function () { return fallbackCopy(text); });
-      }
-    } catch (e) {}
-    // API web (doit être appelée DANS le geste utilisateur)
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        return navigator.clipboard.writeText(text).then(function () { return true; }).catch(function () { return fallbackCopy(text); });
-      }
-    } catch (e) {}
-    return Promise.resolve(fallbackCopy(text));
-  }
-
   function fallbackCopy(text) {
-    // Repli compatible iOS WKWebView : textarea éditable + Range + execCommand
+    // Repli synchrone (doit tourner DANS le geste). Sélection spécifique iOS.
+    var ok = false;
     try {
       var ta = document.createElement('textarea');
       ta.value = text;
-      ta.contentEditable = 'true';
       ta.readOnly = false;
+      ta.contentEditable = 'true';
       ta.style.position = 'fixed';
       ta.style.top = '0'; ta.style.left = '0';
       ta.style.width = '1px'; ta.style.height = '1px';
+      ta.style.fontSize = '16px';   // évite le zoom auto iOS
       ta.style.opacity = '0';
+      ta.style.webkitUserSelect = 'text';
+      ta.style.userSelect = 'text';
       document.body.appendChild(ta);
-      var range = document.createRange();
-      range.selectNodeContents(ta);
-      var sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      ta.setSelectionRange(0, text.length);
-      var ok = document.execCommand('copy');
+
+      var isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        var range = document.createRange();
+        range.selectNodeContents(ta);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        ta.setSelectionRange(0, text.length);
+      } else {
+        ta.focus();
+        ta.select();
+      }
+      ok = document.execCommand('copy');
       document.body.removeChild(ta);
-      try { sel.removeAllRanges(); } catch (e) {}
-      return ok;
-    } catch (e) { return false; }
+      try { var s = window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
+    } catch (e) { ok = false; }
+    return ok;
   }
 
   function bubbleText(bubble) {
@@ -4985,10 +4980,34 @@ window.showSmsConfirm = function() {
   function copyBubble(bubble) {
     var txt = bubbleText(bubble);
     if (!txt) return; // bulle image seule : rien à copier
-    Promise.resolve(bhCopyText(txt)).then(function (ok) {
-      if (window.showToast) showToast(ok ? '📋 Message copié' : '❌ Copie impossible', ok ? 'success' : 'error');
-      try { if (ok && navigator.vibrate) navigator.vibrate(15); } catch (e) {}
-    });
+
+    function done(success) {
+      if (window.showToast) showToast(success ? '📋 Message copié' : '❌ Copie impossible', success ? 'success' : 'error');
+      try { if (success && navigator.vibrate) navigator.vibrate(15); } catch (e) {}
+    }
+
+    // 1) Plugin Capacitor (natif, sans contrainte de geste)
+    try {
+      var Cap = window.Capacitor;
+      if (Cap && Cap.Plugins && Cap.Plugins.Clipboard) {
+        Cap.Plugins.Clipboard.write({ string: txt })
+          .then(function () { done(true); })
+          .catch(function () { done(fallbackCopy(txt)); });
+        return;
+      }
+    } catch (e) {}
+
+    // 2) Repli SYNCHRONE dans le geste (le plus fiable sur Safari iOS)
+    if (fallbackCopy(txt)) { done(true); return; }
+
+    // 3) API web async en dernier recours (navigateurs récents)
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function () { done(true); }).catch(function () { done(false); });
+        return;
+      }
+    } catch (e) {}
+    done(false);
   }
 
   // 2) Appui long (mobile) — on mesure la DURÉE et on copie DANS le touchend
