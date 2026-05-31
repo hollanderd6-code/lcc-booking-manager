@@ -4914,5 +4914,93 @@ window.showSmsConfirm = function() {
     </div>
   </div>
 </div>
+<script>
+/* ── Copie d'un message entier (appui long sur mobile, clic droit sur desktop) ──
+   Au lieu de la sélection mot-à-mot native, un appui long copie tout le bloc.
+   Délégation sur document → marche pour les bulles créées par chat-owner.js
+   ET par _injectChannexMessages, même ajoutées dynamiquement. */
+(function () {
+  // 1) Empêcher la sélection partielle native + le menu "callout" iOS sur les bulles
+  var st = document.createElement('style');
+  st.textContent =
+    '#chatMessages .chat-bubble, #chatMessages .chat-text {' +
+    '  -webkit-user-select: none; -moz-user-select: none; user-select: none;' +
+    '  -webkit-touch-callout: none; cursor: pointer; }' +
+    '#chatMessages .chat-bubble img { -webkit-touch-callout: default; cursor: pointer; }';
+  document.head.appendChild(st);
+
+  var SEL = '#chatMessages .chat-bubble';
+
+  function bhCopyText(text) {
+    // Capacitor en priorité (natif iOS/Android), puis API web, puis fallback
+    try {
+      var Cap = window.Capacitor;
+      if (Cap && Cap.Plugins && Cap.Plugins.Clipboard) {
+        return Cap.Plugins.Clipboard.write({ string: text }).then(function () { return true; }).catch(function () { return false; });
+      }
+    } catch (e) {}
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).then(function () { return true; }).catch(function () { return false; });
+      }
+    } catch (e) {}
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      var ok = document.execCommand('copy'); document.body.removeChild(ta);
+      return Promise.resolve(ok);
+    } catch (e) { return Promise.resolve(false); }
+  }
+
+  function bubbleText(bubble) {
+    // On préfère .chat-text (le texte pur du message). Sinon on clone la bulle
+    // et on retire l'heure, la méta, les boutons et le widget de traduction.
+    var src = bubble.querySelector('.chat-text');
+    var el = (src || bubble).cloneNode(true);
+    el.querySelectorAll('.chat-time, .chat-meta, button, [class*="translate"], [class*="traduire"], [class*="Traduire"]').forEach(function (n) { n.remove(); });
+    return (el.innerText || el.textContent || '').replace(/\s+\n/g, '\n').trim();
+  }
+
+  function copyBubble(bubble) {
+    var txt = bubbleText(bubble);
+    if (!txt) return; // bulle image seule : rien à copier
+    Promise.resolve(bhCopyText(txt)).then(function (ok) {
+      if (window.showToast) showToast(ok ? '📋 Message copié' : '❌ Copie impossible', ok ? 'success' : 'error');
+      try { if (ok && navigator.vibrate) navigator.vibrate(15); } catch (e) {}
+      try { var s = window.getSelection && window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
+    });
+  }
+
+  // 2) Appui long (mobile)
+  var timer = null, sx = 0, sy = 0;
+  function clear() { if (timer) { clearTimeout(timer); timer = null; } }
+
+  document.addEventListener('touchstart', function (e) {
+    var b = e.target.closest && e.target.closest(SEL);
+    if (!b) return;
+    var t = e.touches[0]; sx = t.clientX; sy = t.clientY;
+    clear();
+    timer = setTimeout(function () { timer = null; copyBubble(b); }, 450);
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function (e) {
+    if (!timer) return;
+    var t = e.touches[0];
+    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) clear();
+  }, { passive: true });
+
+  document.addEventListener('touchend', clear);
+  document.addEventListener('touchcancel', clear);
+
+  // 3) Clic droit / appui long natif (desktop + repli)
+  document.addEventListener('contextmenu', function (e) {
+    var b = e.target.closest && e.target.closest(SEL);
+    if (!b) return;
+    e.preventDefault();
+    copyBubble(b);
+  });
+})();
+</script>
 </body>
 </html>
