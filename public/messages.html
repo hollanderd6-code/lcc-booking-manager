@@ -4932,25 +4932,45 @@ window.showSmsConfirm = function() {
   var SEL = '#chatMessages .chat-bubble';
 
   function bhCopyText(text) {
-    // Capacitor en priorité (natif iOS/Android), puis API web, puis fallback
+    // Capacitor en priorité (natif iOS/Android, sans contrainte de geste)
     try {
       var Cap = window.Capacitor;
       if (Cap && Cap.Plugins && Cap.Plugins.Clipboard) {
-        return Cap.Plugins.Clipboard.write({ string: text }).then(function () { return true; }).catch(function () { return false; });
+        return Cap.Plugins.Clipboard.write({ string: text }).then(function () { return true; }).catch(function () { return fallbackCopy(text); });
       }
     } catch (e) {}
+    // API web (doit être appelée DANS le geste utilisateur)
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        return navigator.clipboard.writeText(text).then(function () { return true; }).catch(function () { return false; });
+        return navigator.clipboard.writeText(text).then(function () { return true; }).catch(function () { return fallbackCopy(text); });
       }
     } catch (e) {}
+    return Promise.resolve(fallbackCopy(text));
+  }
+
+  function fallbackCopy(text) {
+    // Repli compatible iOS WKWebView : textarea éditable + Range + execCommand
     try {
       var ta = document.createElement('textarea');
-      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.focus(); ta.select();
-      var ok = document.execCommand('copy'); document.body.removeChild(ta);
-      return Promise.resolve(ok);
-    } catch (e) { return Promise.resolve(false); }
+      ta.value = text;
+      ta.contentEditable = 'true';
+      ta.readOnly = false;
+      ta.style.position = 'fixed';
+      ta.style.top = '0'; ta.style.left = '0';
+      ta.style.width = '1px'; ta.style.height = '1px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      var range = document.createRange();
+      range.selectNodeContents(ta);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      try { sel.removeAllRanges(); } catch (e) {}
+      return ok;
+    } catch (e) { return false; }
   }
 
   function bubbleText(bubble) {
@@ -4968,30 +4988,38 @@ window.showSmsConfirm = function() {
     Promise.resolve(bhCopyText(txt)).then(function (ok) {
       if (window.showToast) showToast(ok ? '📋 Message copié' : '❌ Copie impossible', ok ? 'success' : 'error');
       try { if (ok && navigator.vibrate) navigator.vibrate(15); } catch (e) {}
-      try { var s = window.getSelection && window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
     });
   }
 
-  // 2) Appui long (mobile)
-  var timer = null, sx = 0, sy = 0;
-  function clear() { if (timer) { clearTimeout(timer); timer = null; } }
+  // 2) Appui long (mobile) — on mesure la DURÉE et on copie DANS le touchend
+  //    (le geste utilisateur doit être actif au moment de la copie, sinon la
+  //     WebView refuse → c'était la cause du "Copie impossible").
+  var pressStart = 0, sx = 0, sy = 0, pressBubble = null, moved = false;
+  var LONG_PRESS_MS = 400;
 
   document.addEventListener('touchstart', function (e) {
     var b = e.target.closest && e.target.closest(SEL);
-    if (!b) return;
+    if (!b) { pressBubble = null; return; }
+    pressBubble = b; moved = false;
+    pressStart = Date.now();
     var t = e.touches[0]; sx = t.clientX; sy = t.clientY;
-    clear();
-    timer = setTimeout(function () { timer = null; copyBubble(b); }, 450);
   }, { passive: true });
 
   document.addEventListener('touchmove', function (e) {
-    if (!timer) return;
+    if (!pressBubble) return;
     var t = e.touches[0];
-    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) clear();
+    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) moved = true;
   }, { passive: true });
 
-  document.addEventListener('touchend', clear);
-  document.addEventListener('touchcancel', clear);
+  document.addEventListener('touchend', function () {
+    if (!pressBubble) return;
+    var dur = Date.now() - pressStart;
+    var b = pressBubble; pressBubble = null;
+    if (!moved && dur >= LONG_PRESS_MS) {
+      copyBubble(b); // exécuté dans le geste → presse-papier autorisé
+    }
+  });
+  document.addEventListener('touchcancel', function () { pressBubble = null; });
 
   // 3) Clic droit / appui long natif (desktop + repli)
   document.addEventListener('contextmenu', function (e) {
