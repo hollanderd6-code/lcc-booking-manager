@@ -10113,12 +10113,17 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
         stripeSessionId: d.stripe_session_id,
         createdAt: d.created_at
       };
-      // Garder le deposit le plus récent par clé (au cas où doublons)
+      // Garder le deposit ABOUTI en priorité (capturé/payé/autorisé), puis le
+      // plus récent — pour éviter d'afficher un lien "En attente" alors qu'un
+      // autre lien de la même réservation a bien été réglé.
+      const depRank = (s) => ({ captured: 5, paid: 5, authorized: 4, processing: 2, pending: 1 }[s] || 0);
       const setIfNewer = (key) => {
         if (!key) return;
-        if (!depositsMap.has(key) || depositsMap.get(key).createdAt < obj.createdAt) {
-          depositsMap.set(key, obj);
-        }
+        const cur = depositsMap.get(key);
+        if (!cur) { depositsMap.set(key, obj); return; }
+        const better = depRank(obj.status) > depRank(cur.status)
+          || (depRank(obj.status) === depRank(cur.status) && cur.createdAt < obj.createdAt);
+        if (better) depositsMap.set(key, obj);
       };
 
       // Indexer par reservation_uid tel quel (ex: 'CHX_xxx' ou 'manual_xxx')
@@ -10258,19 +10263,26 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
     );
     const paymentsRows = paymentsResult.rows;
 
-    // Indexer par reservation_uid
+    // Indexer par reservation_uid — en cas de plusieurs liens pour la même
+    // réservation (ex: un 1er lien erroné puis un 2e), on garde EN PRIORITÉ le
+    // paiement abouti (payé), puis le plus récent. Évite d'afficher "En attente"
+    // alors qu'un des liens a bien été réglé.
+    const payRank = (s) => ({ paid: 4, captured: 4, authorized: 3, processing: 2, pending: 1 }[s] || 0);
     const paymentByUid = {};
     paymentsRows.forEach(p => {
-      if (!paymentByUid[p.reservation_uid]) {
-        paymentByUid[p.reservation_uid] = {
-          id: p.id,
-          amountCents: p.amount_cents,
-          status: p.status,
-          checkoutUrl: p.checkout_url,
-          description: p.metadata?.description || '',
-          createdAt: p.created_at
-        };
-      }
+      const cand = {
+        id: p.id,
+        amountCents: p.amount_cents,
+        status: p.status,
+        checkoutUrl: p.checkout_url,
+        description: p.metadata?.description || '',
+        createdAt: p.created_at
+      };
+      const cur = paymentByUid[p.reservation_uid];
+      if (!cur) { paymentByUid[p.reservation_uid] = cand; return; }
+      const better = payRank(cand.status) > payRank(cur.status)
+        || (payRank(cand.status) === payRank(cur.status) && new Date(cand.createdAt) > new Date(cur.createdAt));
+      if (better) paymentByUid[p.reservation_uid] = cand;
     });
 
     // Charger toutes les réservations enrichies depuis la DB
@@ -34510,6 +34522,26 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
         );
         savedPaymentId = pendingPay.rows[0].id;
         console.log(`💳 [GUEST] Paiement en attente réconcilié → payé: ${savedPaymentId} (${totalTTC}€)`);
+
+        // 🧹 Annuler les AUTRES liens en attente du même séjour (logement + dates),
+        // ex: un 1er lien erroné puis un 2e. Évite une carte "En attente" fantôme
+        // qui reste à côté du paiement réellement réglé.
+        try {
+          const cancelDup = await pool.query(
+            `UPDATE payments
+                SET status='cancelled', updated_at=NOW()
+              WHERE user_id=$1 AND property_id=$2 AND status='pending'
+                AND metadata->>'source'='bhguest_hold'
+                AND metadata->>'checkin'=$3 AND metadata->>'checkout'=$4
+                AND id <> $5`,
+            [prop.owner_user_id, property_id, checkin, checkout, pendingPay.rows[0].id]
+          );
+          if (cancelDup.rowCount > 0) {
+            console.log(`🧹 [GUEST] ${cancelDup.rowCount} lien(s) BHGuest en attente annulé(s) (doublon même séjour)`);
+          }
+        } catch (dupErr) {
+          console.warn('⚠️ [GUEST] Annulation doublons holds non bloquante:', dupErr.message);
+        }
       } else {
         const newPayId = 'bhgpay_' + (paymentIntentId || session_id || (uid + '_' + Date.now()));
         const payInsert = await pool.query(`
