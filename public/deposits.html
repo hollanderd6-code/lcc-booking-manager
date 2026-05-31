@@ -3051,9 +3051,14 @@ async function loadPayments(silent = false) {
           });
         }
 
-        // 🏠 Injecter les liens de paiement BHGuest EN ATTENTE (envoyés mais pas encore payés)
+        // 🏠 Injecter les liens de paiement BHGuest (envoyés via lien) — quel que
+        // soit le statut SAUF annulé/expiré : ainsi un lien PAYÉ apparaît bien en
+        // "Payé" (avant, seuls les 'pending' étaient injectés → le payé disparaissait).
         const _parseMd = (m) => { try { return m ? (typeof m === 'string' ? JSON.parse(m) : m) : {}; } catch(e) { return {}; } };
-        const bhgPending = (freeData.payments || []).filter(p => p.status === 'pending' && _parseMd(p.metadata).source === 'bhguest_hold');
+        const bhgPending = (freeData.payments || []).filter(p =>
+          ['bhguest_hold', 'bhguest'].includes(_parseMd(p.metadata).source)
+          && p.status !== 'cancelled' && p.status !== 'expired'
+        );
         for (const p of bhgPending) {
           if (existingUids.has(p.id)) continue;
           const md = _parseMd(p.metadata);
