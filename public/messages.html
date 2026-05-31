@@ -4915,138 +4915,124 @@ window.showSmsConfirm = function() {
   </div>
 </div>
 <script>
-/* ── Copie d'un message entier (appui long sur mobile, clic droit sur desktop) ──
-   Au lieu de la sélection mot-à-mot native, un appui long copie tout le bloc.
-   Délégation sur document → marche pour les bulles créées par chat-owner.js
-   ET par _injectChannexMessages, même ajoutées dynamiquement. */
+/* ── Copie d'un message entier ──────────────────────────────────────────────
+   iOS Safari intercepte l'appui long et execCommand copie souvent du vide.
+   → On touche un message : un bouton "Copier" apparaît. Le clic du bouton
+   copie via navigator.clipboard (fiable sur iOS car c'est un vrai geste).
+   Délégation sur document → marche pour les bulles de chat-owner.js ET Channex. */
 (function () {
-  // 1) Empêcher la sélection partielle native + le menu "callout" iOS sur les bulles
+  // Empêcher la sélection mot-à-mot native + callout iOS sur les bulles
   var st = document.createElement('style');
   st.textContent =
     '#chatMessages .chat-bubble, #chatMessages .chat-text {' +
     '  -webkit-user-select: none; -moz-user-select: none; user-select: none;' +
     '  -webkit-touch-callout: none; cursor: pointer; }' +
-    '#chatMessages .chat-bubble img { -webkit-touch-callout: default; cursor: pointer; }';
+    '#chatMessages .chat-bubble img { -webkit-touch-callout: default; cursor: pointer; }' +
+    '.bh-copy-pill { position: fixed; z-index: 99999; background:#111827; color:#fff;' +
+    '  border:none; border-radius:22px; padding:9px 16px; font-size:13px; font-weight:700;' +
+    '  font-family:inherit; box-shadow:0 6px 18px rgba(0,0,0,.28); display:flex;' +
+    '  align-items:center; gap:7px; cursor:pointer; -webkit-user-select:none; user-select:none; }' +
+    '.bh-copy-pill:active { transform: scale(.96); }';
   document.head.appendChild(st);
 
   var SEL = '#chatMessages .chat-bubble';
+  var pill = null, pillText = '';
 
-  function fallbackCopy(text) {
-    // Repli synchrone (doit tourner DANS le geste). Sélection spécifique iOS.
-    var ok = false;
-    try {
-      var ta = document.createElement('textarea');
-      ta.value = text;
-      ta.readOnly = false;
-      ta.contentEditable = 'true';
-      ta.style.position = 'fixed';
-      ta.style.top = '0'; ta.style.left = '0';
-      ta.style.width = '1px'; ta.style.height = '1px';
-      ta.style.fontSize = '16px';   // évite le zoom auto iOS
-      ta.style.opacity = '0';
-      ta.style.webkitUserSelect = 'text';
-      ta.style.userSelect = 'text';
-      document.body.appendChild(ta);
-
-      var isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent)
-        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      if (isIOS) {
-        var range = document.createRange();
-        range.selectNodeContents(ta);
-        var sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        ta.setSelectionRange(0, text.length);
-      } else {
-        ta.focus();
-        ta.select();
-      }
-      ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-      try { var s = window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
-    } catch (e) { ok = false; }
-    return ok;
-  }
+  function hidePill() { if (pill) { pill.remove(); pill = null; pillText = ''; } }
 
   function bubbleText(bubble) {
-    // On préfère .chat-text (le texte pur du message). Sinon on clone la bulle
-    // et on retire l'heure, la méta, les boutons et le widget de traduction.
     var src = bubble.querySelector('.chat-text');
     var el = (src || bubble).cloneNode(true);
-    el.querySelectorAll('.chat-time, .chat-meta, button, [class*="translate"], [class*="traduire"], [class*="Traduire"]').forEach(function (n) { n.remove(); });
+    el.querySelectorAll('.chat-time, .chat-meta, button, .bh-copy-pill, [class*="translate"], [class*="traduire"], [class*="Traduire"]')
+      .forEach(function (n) { n.remove(); });
     return (el.innerText || el.textContent || '').replace(/\s+\n/g, '\n').trim();
   }
 
-  function copyBubble(bubble) {
-    var txt = bubbleText(bubble);
-    if (!txt) return; // bulle image seule : rien à copier
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.readOnly = false; ta.contentEditable = 'true';
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;';
+      ta.style.webkitUserSelect = 'text'; ta.style.userSelect = 'text';
+      document.body.appendChild(ta);
+      var isIOS = /ipad|iphone|ipod/i.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        var range = document.createRange(); range.selectNodeContents(ta);
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        ta.setSelectionRange(0, text.length);
+      } else { ta.focus(); ta.select(); }
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) { return false; }
+  }
 
-    function done(success) {
-      if (window.showToast) showToast(success ? '📋 Message copié' : '❌ Copie impossible', success ? 'success' : 'error');
-      try { if (success && navigator.vibrate) navigator.vibrate(15); } catch (e) {}
+  function doCopy(text) {
+    function done(ok) {
+      if (window.showToast) showToast(ok ? '📋 Message copié' : '❌ Copie impossible', ok ? 'success' : 'error');
+      try { if (ok && navigator.vibrate) navigator.vibrate(12); } catch (e) {}
     }
-
-    // 1) Plugin Capacitor (natif, sans contrainte de geste)
+    // 1) Capacitor natif
     try {
       var Cap = window.Capacitor;
       if (Cap && Cap.Plugins && Cap.Plugins.Clipboard) {
-        Cap.Plugins.Clipboard.write({ string: txt })
-          .then(function () { done(true); })
-          .catch(function () { done(fallbackCopy(txt)); });
+        Cap.Plugins.Clipboard.write({ string: text }).then(function () { done(true); }).catch(function () { done(legacyCopy(text)); });
         return;
       }
     } catch (e) {}
-
-    // 2) Repli SYNCHRONE dans le geste (le plus fiable sur Safari iOS)
-    if (fallbackCopy(txt)) { done(true); return; }
-
-    // 3) API web async en dernier recours (navigateurs récents)
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(txt).then(function () { done(true); }).catch(function () { done(false); });
-        return;
-      }
-    } catch (e) {}
-    done(false);
+    // 2) API web (fiable dans le clic du bouton, copie le vrai texte)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }).catch(function () { done(legacyCopy(text)); });
+      return;
+    }
+    // 3) Repli
+    done(legacyCopy(text));
   }
 
-  // 2) Appui long (mobile) — on mesure la DURÉE et on copie DANS le touchend
-  //    (le geste utilisateur doit être actif au moment de la copie, sinon la
-  //     WebView refuse → c'était la cause du "Copie impossible").
-  var pressStart = 0, sx = 0, sy = 0, pressBubble = null, moved = false;
-  var LONG_PRESS_MS = 400;
+  function showPill(bubble) {
+    var text = bubbleText(bubble);
+    if (!text) { hidePill(); return; }
+    hidePill();
+    pillText = text;
+    pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'bh-copy-pill';
+    pill.innerHTML = '<i class="fas fa-copy"></i> Copier';
+    // Le copier se fait DANS le clic du bouton → presse-papier autorisé sur iOS
+    pill.addEventListener('click', function (ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      doCopy(pillText);
+      hidePill();
+    });
+    document.body.appendChild(pill);
+    // Positionner au-dessus de la bulle, centré, en restant dans l'écran
+    var r = bubble.getBoundingClientRect();
+    var pr = pill.getBoundingClientRect();
+    var left = r.left + r.width / 2 - pr.width / 2;
+    var top = r.top - pr.height - 8;
+    left = Math.max(8, Math.min(left, window.innerWidth - pr.width - 8));
+    if (top < 8) top = r.bottom + 8; // si pas de place au-dessus, en dessous
+    pill.style.left = left + 'px';
+    pill.style.top = top + 'px';
+  }
 
-  document.addEventListener('touchstart', function (e) {
+  // Tap sur une bulle → affiche le bouton "Copier"
+  document.addEventListener('click', function (e) {
+    if (pill && (e.target === pill || pill.contains(e.target))) return;
     var b = e.target.closest && e.target.closest(SEL);
-    if (!b) { pressBubble = null; return; }
-    pressBubble = b; moved = false;
-    pressStart = Date.now();
-    var t = e.touches[0]; sx = t.clientX; sy = t.clientY;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', function (e) {
-    if (!pressBubble) return;
-    var t = e.touches[0];
-    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) moved = true;
-  }, { passive: true });
-
-  document.addEventListener('touchend', function () {
-    if (!pressBubble) return;
-    var dur = Date.now() - pressStart;
-    var b = pressBubble; pressBubble = null;
-    if (!moved && dur >= LONG_PRESS_MS) {
-      copyBubble(b); // exécuté dans le geste → presse-papier autorisé
+    if (b) {
+      if (e.target.tagName === 'IMG') { hidePill(); return; } // laisser l'image s'ouvrir
+      e.stopPropagation();
+      showPill(b);
+    } else {
+      hidePill();
     }
   });
-  document.addEventListener('touchcancel', function () { pressBubble = null; });
 
-  // 3) Clic droit / appui long natif (desktop + repli)
-  document.addEventListener('contextmenu', function (e) {
-    var b = e.target.closest && e.target.closest(SEL);
-    if (!b) return;
-    e.preventDefault();
-    copyBubble(b);
-  });
+  // Masquer le bouton quand on scrolle ou qu'on touche ailleurs
+  document.addEventListener('scroll', hidePill, true);
+  window.addEventListener('resize', hidePill);
 })();
 </script>
 </body>
