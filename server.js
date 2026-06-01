@@ -8951,6 +8951,9 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
       totalCleaning: Math.round(p.totalCleaning * 100) / 100,
       totalTaxes:    Math.round(p.totalTaxes    * 100) / 100,
       totalOtaCom:   Math.round(p.totalOtaCom   * 100) / 100,
+      // Versement attendu de la plateforme = loyer net proprio + ménage conservé par la conciergerie.
+      // (identité : ce que la plateforme te vire = nets proprios + ménages que tu gardes)
+      bookingPayout: Math.round((p.totalNet + p.totalCleaning) * 100) / 100,
     }));
 
     console.log(`📊 [invoice-summary] ${rows.length} résas du ${date_from} au ${date_to} → ${summary.length} plateforme(s)`);
