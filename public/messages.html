@@ -5017,18 +5017,29 @@ window.showSmsConfirm = function() {
     pill.style.top = top + 'px';
   }
 
-  // Tap sur une bulle → affiche le bouton "Copier"
-  document.addEventListener('click', function (e) {
+  // Tap sur une bulle → affiche le bouton "Copier".
+  // Phase CAPTURE (3e arg = true) : s'exécute AVANT un éventuel stopPropagation
+  // posé par chat-owner.js sur la bulle → le bouton s'affiche quand même.
+  function onTapBubble(e) {
     if (pill && (e.target === pill || pill.contains(e.target))) return;
     var b = e.target.closest && e.target.closest(SEL);
     if (b) {
       if (e.target.tagName === 'IMG') { hidePill(); return; } // laisser l'image s'ouvrir
-      e.stopPropagation();
       showPill(b);
     } else {
       hidePill();
     }
-  });
+  }
+  document.addEventListener('click', onTapBubble, true);
+  // Repli : sur certains WebView iOS le 'click' ne remonte pas → on écoute aussi touchend
+  document.addEventListener('touchend', function (e) {
+    var t = (e.changedTouches && e.changedTouches[0]) || e.target;
+    var node = document.elementFromPoint ? document.elementFromPoint(t.clientX, t.clientY) : e.target;
+    if (!node) return;
+    if (pill && (node === pill || pill.contains(node))) return;
+    var b = node.closest && node.closest(SEL);
+    if (b && node.tagName !== 'IMG') { showPill(b); }
+  }, true);
 
   // Masquer le bouton quand on scrolle ou qu'on touche ailleurs
   document.addEventListener('scroll', hidePill, true);
