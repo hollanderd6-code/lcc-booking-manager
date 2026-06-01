@@ -5736,11 +5736,11 @@ window.confirmImportDebours = function() {
       <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;">
         <div>
           <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">PÉRIODE DU</label>
-          <input type="date" id="importResaFrom" class="form-control" style="font-size:13px;"/>
+          <input type="text" id="importResaFrom" class="form-control" placeholder="JJ/MM/AAAA" maxlength="10" inputmode="numeric" autocomplete="off" oninput="window.autoFormatFrDate(this)" style="font-size:13px;"/>
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">AU</label>
-          <input type="date" id="importResaTo" class="form-control" style="font-size:13px;"/>
+          <input type="text" id="importResaTo" class="form-control" placeholder="JJ/MM/AAAA" maxlength="10" inputmode="numeric" autocomplete="off" oninput="window.autoFormatFrDate(this)" style="font-size:13px;"/>
         </div>
         <button onclick="fetchInvoiceSummary()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
           <i class="fas fa-search" style="margin-right:6px;"></i>Charger
@@ -5776,8 +5776,8 @@ window._importResaChecked = {};
 window.openImportReservations = function() {
   var periodStart = document.getElementById("invoicePeriodStart") ? document.getElementById("invoicePeriodStart").value : "";
   var periodEnd   = document.getElementById("invoicePeriodEnd")   ? document.getElementById("invoicePeriodEnd").value   : "";
-  if (periodStart) document.getElementById("importResaFrom").value = periodStart;
-  if (periodEnd)   document.getElementById("importResaTo").value   = periodEnd;
+  if (periodStart) document.getElementById("importResaFrom").value = window.isoToFrDate(periodStart);
+  if (periodEnd)   document.getElementById("importResaTo").value   = window.isoToFrDate(periodEnd);
 
   var clientId = document.getElementById("invoiceClientId") ? document.getElementById("invoiceClientId").value : "";
   var client = (window.clients || []).find(function(c){ return String(c.id) === clientId; });
@@ -5809,7 +5809,7 @@ window.openImportReservations = function() {
         var isChecked = checkedProps.length === 0 || checkedProps.indexOf(pid) !== -1;
         var bg    = isChecked ? "#ecfdf5" : "white";
         var color = isChecked ? "#1A7A5E" : "#374151";
-        return "<label style=\"display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid #e5e7eb;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;background:" + bg + ";color:" + color + ";\"><input type=\"checkbox\" value=\"" + pid + "\" " + (isChecked ? "checked" : "") + " onchange=\"var c=this.checked;this.parentElement.style.background=c?'#ecfdf5':'white';this.parentElement.style.color=c?'#1A7A5E':'#374151';\" style=\"accent-color:#1A7A5E;\">" + name + "</label>";
+        return "<label style=\"display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid #e5e7eb;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;flex:0 0 auto;white-space:nowrap;background:" + bg + ";color:" + color + ";\"><input type=\"checkbox\" value=\"" + pid + "\" " + (isChecked ? "checked" : "") + " onchange=\"var c=this.checked;this.parentElement.style.background=c?'#ecfdf5':'white';this.parentElement.style.color=c?'#1A7A5E':'#374151';\" style=\"accent-color:#1A7A5E;width:16px;height:16px;margin:0;flex:0 0 16px;\">" + name + "</label>";
       }).join("");
 
   window._importResaSummary = null;
@@ -5824,10 +5824,31 @@ window.closeImportResaModal = function() {
   document.getElementById("importResaModal").style.display = "none";
 };
 
+// ── Helpers dates JJ/MM/AAAA ↔ ISO ──
+window.isoToFrDate = function(iso) {
+  if (!iso) return "";
+  var s = String(iso).slice(0, 10);
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? (m[3] + "/" + m[2] + "/" + m[1]) : "";
+};
+window.frToIsoDate = function(fr) {
+  if (!fr) return "";
+  var m = String(fr).trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? (m[3] + "-" + m[2] + "-" + m[1]) : "";
+};
+// Auto-insère les "/" pendant la saisie : "01062026" → "01/06/2026"
+window.autoFormatFrDate = function(el) {
+  var d = (el.value || "").replace(/\D/g, "").slice(0, 8);
+  var out = d;
+  if (d.length > 4) out = d.slice(0,2) + "/" + d.slice(2,4) + "/" + d.slice(4);
+  else if (d.length > 2) out = d.slice(0,2) + "/" + d.slice(2);
+  el.value = out;
+};
+
 window.fetchInvoiceSummary = async function() {
-  var dateFrom = document.getElementById("importResaFrom").value;
-  var dateTo   = document.getElementById("importResaTo").value;
-  if (!dateFrom || !dateTo) { alert("Veuillez s\u00e9lectionner une p\u00e9riode."); return; }
+  var dateFrom = window.frToIsoDate(document.getElementById("importResaFrom").value);
+  var dateTo   = window.frToIsoDate(document.getElementById("importResaTo").value);
+  if (!dateFrom || !dateTo) { alert("Veuillez saisir une p\u00e9riode au format JJ/MM/AAAA."); return; }
   if (dateFrom >= dateTo)   { alert("La date de d\u00e9but doit \u00eatre avant la date de fin."); return; }
 
   var propIds = [];
@@ -5881,7 +5902,7 @@ function renderImportResaSummary(data) {
       return "<tr style=\"border-top:1px solid #f3f4f6;\">"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#374151;\">" + r.guestName + "</td>"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + r.propertyName + "</td>"
-        + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + r.startDate + " \u2192 " + r.endDate + "</td>"
+        + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + (window.isoToFrDate ? window.isoToFrDate(r.startDate) : r.startDate) + " \u2192 " + (window.isoToFrDate ? window.isoToFrDate(r.endDate) : r.endDate) + "</td>"
         + "<td style=\"padding:6px 8px;font-size:12px;font-weight:600;color:#1A7A5E;text-align:right;\">" + (r.bookingPayout != null ? r.bookingPayout : (r.netHote + (r.amountCleaning || 0))).toFixed(2) + " \u20ac</td>"
         + "</tr>";
     }).join("");
@@ -5937,8 +5958,8 @@ window.updateImportResaTotal = function() {
 
 window.confirmImportReservations = function() {
   if (!window._importResaSummary) return;
-  var dateFrom = document.getElementById("importResaFrom").value;
-  var dateTo   = document.getElementById("importResaTo").value;
+  var dateFrom = window.frToIsoDate(document.getElementById("importResaFrom").value);
+  var dateTo   = window.frToIsoDate(document.getElementById("importResaTo").value);
 
   var psEl = document.getElementById("invoicePeriodStart");
   var peEl = document.getElementById("invoicePeriodEnd");
