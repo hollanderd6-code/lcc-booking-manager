@@ -8628,6 +8628,36 @@ console.log('👤 DEBUG GUEST:', {
       }
     }
 
+    // ── Somme réelle des nuits (corrige amount_rooms qui contient parfois le brut total) ──
+    let nightsSum = null;
+    if (daysBreakdown && typeof daysBreakdown === 'object') {
+      const _vals = Object.values(daysBreakdown).map(v => parseFloat(v)).filter(v => !isNaN(v));
+      if (_vals.length) nightsSum = +_vals.reduce((a, b) => a + b, 0).toFixed(2);
+    }
+    // "Nuits" affiché = somme réelle si dispo, sinon amount_rooms
+    const roomsDisplay    = (nightsSum != null) ? nightsSum : amountRooms;
+    const roomsDisplayFmt = fmtAmount(roomsDisplay);
+
+    // ── Net hôte : vrai payout si fourni par le backend, sinon estimation ──
+    let hostNet = null, hostNetIsEstimate = false, hostNetPayFee = 0;
+    {
+      const _gross = parseFloat(amountTotal);
+      const _comm  = parseFloat(otaCommission) || 0;
+      const _tax   = parseFloat(amountTaxes)   || 0;
+      if (hostPayout != null && !isNaN(parseFloat(hostPayout))) {
+        hostNet = +parseFloat(hostPayout).toFixed(2);            // valeur réelle (backend)
+      } else if (!isNaN(_gross) && _gross > 0) {
+        const _plat = (booking.platform || booking.source || '').toLowerCase();
+        let _rate = 0.015;                                       // direct / Stripe ≈ 1,5%
+        if (_plat.includes('booking'))     _rate = 0.012;        // Booking Online Payments ≈ 1,2%
+        else if (_plat.includes('airbnb')) _rate = 0;            // Airbnb reverse déjà net
+        hostNetPayFee = +(_gross * _rate).toFixed(2);
+        hostNet = +(_gross - _comm - _tax - hostNetPayFee).toFixed(2);
+        hostNetIsEstimate = true;
+      }
+    }
+    const hostNetFmt = fmtAmount(hostNet);
+
     // 4️⃣ Contenu "de base" du modal
     detailsContent.innerHTML = `
 
@@ -8702,10 +8732,10 @@ console.log('👤 DEBUG GUEST:', {
         <div style="background:rgba(255,255,255,.55);border-radius:16px;padding:14px 16px;margin-bottom:18px;">
           <div style="font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Prix détaillé</div>
 
-          ${amountRoomsFmt ? `
+          ${roomsDisplayFmt ? `
             <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05);">
               <span style="color:#6B7280;display:flex;align-items:center;gap:6px;"><i class="fas fa-moon" style="width:12px;opacity:.5;"></i> Nuits</span>
-              <span style="font-weight:600;">${amountRoomsFmt}</span>
+              <span style="font-weight:600;">${roomsDisplayFmt}</span>
             </div>
           ` : ''}
 
@@ -8752,11 +8782,15 @@ console.log('👤 DEBUG GUEST:', {
             return '';
           })()}
 
-          ${hostPayoutFmt ? `
-            <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#6B7280;">
-              <span style="display:flex;align-items:center;gap:6px;"><i class="fas fa-wallet" style="width:12px;opacity:.5;"></i> Reversement hôte</span>
-              <span style="font-weight:600;color:#1A7A5E;">${hostPayoutFmt}</span>
+          ${hostNetFmt ? `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0 2px;margin-top:6px;border-top:1px solid rgba(0,0,0,.06);">
+              <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#111827;">
+                <i class="fas fa-wallet" style="width:12px;opacity:.5;"></i> Net hôte
+                ${hostNetIsEstimate ? '<span style="font-size:10px;font-weight:600;color:#9CA3AF;background:rgba(0,0,0,.04);padding:1px 6px;border-radius:6px;">estimé</span>' : ''}
+              </span>
+              <span style="font-size:15px;font-weight:800;color:#1A7A5E;">${hostNetFmt}</span>
             </div>
+            ${hostNetIsEstimate ? `<div style="font-size:11px;color:#9CA3AF;padding:1px 0 2px;text-align:right;">après commission${amountTaxes ? ', taxe séjour' : ''}${hostNetPayFee ? ' &amp; frais paiement ≈ ' + fmtAmount(hostNetPayFee) : ''}</div>` : ''}
           ` : ''}
         </div>
       ` : ''}
