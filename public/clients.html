@@ -5880,7 +5880,7 @@ function renderImportResaSummary(data) {
         + "<td style=\"padding:6px 8px;font-size:12px;color:#374151;\">" + r.guestName + "</td>"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + r.propertyName + "</td>"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + r.startDate + " \u2192 " + r.endDate + "</td>"
-        + "<td style=\"padding:6px 8px;font-size:12px;font-weight:600;color:#1A7A5E;text-align:right;\">" + r.netHote.toFixed(2) + " \u20ac</td>"
+        + "<td style=\"padding:6px 8px;font-size:12px;font-weight:600;color:#1A7A5E;text-align:right;\">" + (r.bookingPayout != null ? r.bookingPayout : (r.netHote + (r.amountCleaning || 0))).toFixed(2) + " \u20ac</td>"
         + "</tr>";
     }).join("");
 
@@ -5896,16 +5896,16 @@ function renderImportResaSummary(data) {
       + "<div style=\"font-size:12px;color:#6b7280;\">" + p.count + " r\u00e9servation" + (p.count > 1 ? "s" : "") + " \u00b7 Brut : " + p.totalBrut.toFixed(2) + " \u20ac</div>"
       + "</div>"
       + "<div style=\"text-align:right;\">"
-      + "<div style=\"font-size:16px;font-weight:800;color:" + c.color + ";\">" + p.totalNet.toFixed(2) + " \u20ac</div>"
-      + "<div style=\"font-size:10px;color:#9ca3af;font-weight:500;\">NET H\u00d4TE</div>"
-      + "<div style=\"font-size:11px;color:#6b7280;margin-top:3px;\">Versement attendu : " + (p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0))).toFixed(2) + " \u20ac</div>"
+      + "<div style=\"font-size:16px;font-weight:800;color:" + c.color + ";\">" + (p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0))).toFixed(2) + " \u20ac</div>"
+      + "<div style=\"font-size:10px;color:#9ca3af;font-weight:500;\">MONTANT BOOKING (m\u00e9nage inclus)</div>"
+      + "<div style=\"font-size:11px;color:#6b7280;margin-top:3px;\">dont loyer net : " + p.totalNet.toFixed(2) + " \u20ac \u00b7 m\u00e9nage : " + (p.totalCleaning || 0).toFixed(2) + " \u20ac</div>"
       + "</div></label>"
       + "<div style=\"padding:0 4px 4px;\"><table style=\"width:100%;border-collapse:collapse;\">"
       + "<thead><tr style=\"background:#f9fafb;\">"
       + "<th style=\"padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:left;\">VOYAGEUR</th>"
       + "<th style=\"padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:left;\">LOGEMENT</th>"
       + "<th style=\"padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:left;\">DATES</th>"
-      + "<th style=\"padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:right;\">NET</th>"
+      + "<th style=\"padding:6px 8px;font-size:10px;font-weight:600;color:#9ca3af;text-align:right;\">MONTANT</th>"
       + "</tr></thead><tbody>" + resaRows + "</tbody></table></div></div>";
   }).join("");
 
@@ -5925,7 +5925,7 @@ window.updateImportResaTotal = function() {
   var lbl = document.getElementById("importResaTotalLabel");
   var btn = document.getElementById("importResaConfirmBtn");
   if (count > 0) {
-    lbl.textContent = count + " plateforme" + (count > 1 ? "s" : "") + " \u00b7 Total net : " + total.toFixed(2) + " \u20ac \u00b7 Versement attendu : " + payout.toFixed(2) + " \u20ac";
+    lbl.textContent = count + " plateforme" + (count > 1 ? "s" : "") + " \u00b7 Montant Booking : " + payout.toFixed(2) + " \u20ac \u00b7 dont loyer net : " + total.toFixed(2) + " \u20ac";
     btn.disabled = false;
   } else {
     lbl.textContent = "Aucune plateforme s\u00e9lectionn\u00e9e";
@@ -5949,10 +5949,11 @@ window.confirmImportReservations = function() {
     var pid = "p" + prestationCounter;
     var fromFr = new Date(dateFrom).toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit", year:"numeric"});
     var toFr   = new Date(dateTo).toLocaleDateString("fr-FR",   {day:"2-digit", month:"2-digit", year:"numeric"});
-    var desc = "Loyer net " + p.platform + " \u2014 " + p.count + " r\u00e9sa" + (p.count > 1 ? "s" : "") + " \u2014 " + fromFr + " au " + toFr;
+    var desc = "Montant Booking " + p.platform + " (m\u00e9nage inclus) \u2014 " + p.count + " r\u00e9sa" + (p.count > 1 ? "s" : "") + " \u2014 " + fromFr + " au " + toFr;
+    var payoutAmount = (p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0)));
     prestations.push({
       id: pid, type: "commission", description: desc,
-      rentalAmount: Math.round(p.totalNet * 100) / 100,
+      rentalAmount: Math.round(payoutAmount * 100) / 100,
       commissionRate: 100,
       quantity: 1, unitPrice: 0, isDebours: false
     });
