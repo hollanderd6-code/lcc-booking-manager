@@ -8848,7 +8848,21 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
       return (row.ota_name || row.source || 'Autre').replace(/\.com$/i, '');
     }
 
-    // Helper : calculer le net hôte d'une résa
+    // Helper : frais de paiement estimés selon la plateforme
+    function calcPayFee(row, otaCom, total) {
+      const src = (row.source || row.platform || row.ota_name || '').toLowerCase();
+      if (src.includes('booking'))   return Math.round(otaCom * 0.0824 * 100) / 100; // ≈ 8,24 % de la commission (relevé Booking)
+      if (src.includes('airbnb'))    return 0;                                       // Airbnb reverse déjà net
+      if (otaCom === 0 && total > 0) return Math.round(total * 0.015 * 100) / 100;    // direct / Stripe ≈ 1,5 %
+      return 0;                                                                       // autre OTA : frais inconnus
+    }
+
+    // Helper : calculer le loyer NET propriétaire d'une résa.
+    // Règle : loyer net = loyer - commission OTA - frais de paiement.
+    //   • ménage exclu  → conservé par la conciergerie (paie le cleaner)
+    //   • taxe séjour exclue → reversée à la commune
+    //   • commission OTA + frais de paiement à la charge du propriétaire
+    // 👉 Si le ménage doit revenir au propriétaire, retirer les "- cleaning" ci-dessous.
     function calcNetHote(row) {
       const total     = parseFloat(row.amount_total)   || 0;
       const rooms     = parseFloat(row.amount_rooms)   || 0;
@@ -8856,15 +8870,19 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
       const cleaning  = parseFloat(row.amount_cleaning)|| 0;
       const otaCom    = parseFloat(row.ota_commission) || 0;
       const hostPayout= parseFloat(row.host_payout)    || 0;
+      const payFee    = calcPayFee(row, otaCom, total);
 
-      // Priorité 1 : host_payout renseigné directement par Channex
-      if (hostPayout > 0) return hostPayout;
-      // Priorité 2 : amount_rooms (loyer brut) - commission OTA
-      if (rooms > 0 && otaCom > 0) return rooms - otaCom;
-      if (rooms > 0) return rooms;
-      // Priorité 3 : total - ménage - taxes - commission OTA
-      if (total > 0) return Math.max(0, total - cleaning - taxes - otaCom);
-      return 0;
+      // Loyer fiable : total - ménage - taxes (amount_rooms parfois corrompu avec le brut total)
+      let rent = 0;
+      if (total > 0)      rent = total - cleaning - taxes;
+      else if (rooms > 0) rent = rooms;
+
+      // Priorité 1 : host_payout réel (Channex/Booking) — inclut le ménage, commission/frais/taxe déjà retirés
+      //              → loyer net proprio = host_payout - ménage
+      if (hostPayout > 0) return Math.max(0, Math.round((hostPayout - cleaning) * 100) / 100);
+
+      // Priorité 2 : loyer - commission OTA - frais de paiement
+      return Math.max(0, Math.round((rent - otaCom - payFee) * 100) / 100);
     }
 
     // Agréger par plateforme
