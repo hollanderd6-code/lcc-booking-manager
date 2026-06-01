@@ -8648,10 +8648,14 @@ console.log('👤 DEBUG GUEST:', {
         hostNet = +parseFloat(hostPayout).toFixed(2);            // valeur réelle (backend)
       } else if (!isNaN(_gross) && _gross > 0) {
         const _plat = (booking.platform || booking.source || '').toLowerCase();
-        let _rate = 0.015;                                       // direct / Stripe ≈ 1,5%
-        if (_plat.includes('booking'))     _rate = 0.012;        // Booking Online Payments ≈ 1,2%
-        else if (_plat.includes('airbnb')) _rate = 0;            // Airbnb reverse déjà net
-        hostNetPayFee = +(_gross * _rate).toFixed(2);
+        if (_plat.includes('booking')) {
+          // Frais de paiement Booking ≈ 8,24 % de la commission (déduit du relevé mensuel)
+          hostNetPayFee = +(_comm * 0.0824).toFixed(2);
+        } else if (_plat.includes('airbnb')) {
+          hostNetPayFee = 0;                                     // Airbnb reverse déjà net
+        } else {
+          hostNetPayFee = +(_gross * 0.015).toFixed(2);         // direct / Stripe ≈ 1,5 %
+        }
         hostNet = +(_gross - _comm - _tax - hostNetPayFee).toFixed(2);
         hostNetIsEstimate = true;
       }
