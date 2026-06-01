@@ -5736,11 +5736,11 @@ window.confirmImportDebours = function() {
       <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;">
         <div>
           <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">PÉRIODE DU</label>
-          <input type="text" id="importResaFrom" class="form-control" placeholder="JJ/MM/AAAA" maxlength="10" inputmode="numeric" autocomplete="off" oninput="window.autoFormatFrDate(this)" style="font-size:13px;"/>
+          <input type="date" id="importResaFrom" class="form-control" style="font-size:13px;"/>
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">AU</label>
-          <input type="text" id="importResaTo" class="form-control" placeholder="JJ/MM/AAAA" maxlength="10" inputmode="numeric" autocomplete="off" oninput="window.autoFormatFrDate(this)" style="font-size:13px;"/>
+          <input type="date" id="importResaTo" class="form-control" style="font-size:13px;"/>
         </div>
         <button onclick="fetchInvoiceSummary()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
           <i class="fas fa-search" style="margin-right:6px;"></i>Charger
@@ -5776,8 +5776,8 @@ window._importResaChecked = {};
 window.openImportReservations = function() {
   var periodStart = document.getElementById("invoicePeriodStart") ? document.getElementById("invoicePeriodStart").value : "";
   var periodEnd   = document.getElementById("invoicePeriodEnd")   ? document.getElementById("invoicePeriodEnd").value   : "";
-  if (periodStart) document.getElementById("importResaFrom").value = window.isoToFrDate(periodStart);
-  if (periodEnd)   document.getElementById("importResaTo").value   = window.isoToFrDate(periodEnd);
+  if (periodStart) document.getElementById("importResaFrom").value = periodStart;
+  if (periodEnd)   document.getElementById("importResaTo").value   = periodEnd;
 
   var clientId = document.getElementById("invoiceClientId") ? document.getElementById("invoiceClientId").value : "";
   var client = (window.clients || []).find(function(c){ return String(c.id) === clientId; });
@@ -5846,9 +5846,9 @@ window.autoFormatFrDate = function(el) {
 };
 
 window.fetchInvoiceSummary = async function() {
-  var dateFrom = window.frToIsoDate(document.getElementById("importResaFrom").value);
-  var dateTo   = window.frToIsoDate(document.getElementById("importResaTo").value);
-  if (!dateFrom || !dateTo) { alert("Veuillez saisir une p\u00e9riode au format JJ/MM/AAAA."); return; }
+  var dateFrom = document.getElementById("importResaFrom").value;
+  var dateTo   = document.getElementById("importResaTo").value;
+  if (!dateFrom || !dateTo) { alert("Veuillez s\u00e9lectionner une p\u00e9riode."); return; }
   if (dateFrom >= dateTo)   { alert("La date de d\u00e9but doit \u00eatre avant la date de fin."); return; }
 
   var propIds = [];
@@ -5958,8 +5958,8 @@ window.updateImportResaTotal = function() {
 
 window.confirmImportReservations = function() {
   if (!window._importResaSummary) return;
-  var dateFrom = window.frToIsoDate(document.getElementById("importResaFrom").value);
-  var dateTo   = window.frToIsoDate(document.getElementById("importResaTo").value);
+  var dateFrom = document.getElementById("importResaFrom").value;
+  var dateTo   = document.getElementById("importResaTo").value;
 
   var psEl = document.getElementById("invoicePeriodStart");
   var peEl = document.getElementById("invoicePeriodEnd");
