@@ -18895,8 +18895,15 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
 
     // Lignes items
     items.forEach((item, idx) => {
-      // Saut de page si on déborde
-      if (y + rowH > PAGE_BOTTOM) {
+      const desc = item.description || 'Prestation';
+      // Hauteur réelle de la ligne : si la description tient sur plusieurs lignes,
+      // on agrandit la ligne (sinon la hauteur fixe désynchronise la pagination).
+      doc.font('Helvetica').fontSize(10);
+      const descH = doc.heightOfString(desc, { width: 260 });
+      const thisRowH = Math.max(rowH, Math.ceil(descH) + 14);
+
+      // Saut de page si on déborde (en tenant compte de la hauteur réelle)
+      if (y + thisRowH > PAGE_BOTTOM) {
         doc.addPage();
         y = mg;
         // Réafficher l'en-tête tableau sur la nouvelle page
@@ -18910,10 +18917,9 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
       }
 
       const bg = idx % 2 === 1 ? LIGHT : 'white';
-      doc.rect(mg, y, W-mg*2, rowH).fill(bg);
-      doc.rect(mg, y, W-mg*2, rowH).strokeColor(BORDER).lineWidth(0.5).stroke();
+      doc.rect(mg, y, W-mg*2, thisRowH).fill(bg);
+      doc.rect(mg, y, W-mg*2, thisRowH).strokeColor(BORDER).lineWidth(0.5).stroke();
 
-      const desc = item.description || 'Prestation';
       const total = parseFloat(item.total || 0);
       let baseStr, tauxStr;
 
@@ -18930,7 +18936,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
       doc.text(baseStr, colBase, y+9, {width:80, align:'right'});
       doc.text(tauxStr, colTaux, y+9, {width:80, align:'right'});
       doc.font('Helvetica-Bold').text(total.toFixed(2)+' €', colTotal, y+9, {width:W-mg-colTotal, align:'right'});
-      y += rowH;
+      y += thisRowH;
     });
 
     y += 16;
