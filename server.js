@@ -8879,9 +8879,10 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
       if (total > 0)      rent = total - cleaning - taxes;
       else if (rooms > 0) rent = rooms;
 
-      // Priorité 1 : host_payout réel (Channex/Booking) — inclut le ménage, commission/frais/taxe déjà retirés
-      //              → loyer net proprio = host_payout - ménage
-      if (hostPayout > 0) return Math.max(0, Math.round((hostPayout - cleaning) * 100) / 100);
+      // Priorité 1 : host_payout (Channex) = revenu - commission, MAIS sans les frais de paiement
+      //              (Channex ne connaît pas les frais Booking, prélevés au versement).
+      //              → loyer net proprio = host_payout - ménage - frais de paiement
+      if (hostPayout > 0) return Math.max(0, Math.round((hostPayout - cleaning - payFee) * 100) / 100);
 
       // Priorité 2 : loyer - commission OTA - frais de paiement
       return Math.max(0, Math.round((rent - otaCom - payFee) * 100) / 100);
