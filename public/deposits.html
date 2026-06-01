@@ -2105,12 +2105,70 @@ function copyDepositLinkByUid(uid) {
         return endDate < today && endDate >= oneMonthAgo;
       });
     }
+
+    // ============================================
+    // CAUTIONS : règle spécifique
+    // Une caution autorisée reste dans "Cautions actives" jusqu'à J+1 de sa date
+    // d'expiration (createdAt + 7j, comme le badge "Expire le ..."), afin de pouvoir
+    // la capturer / la libérer depuis l'app — même après le départ du voyageur.
+    // ============================================
+    function isDepositActionable(r) {
+      const dep = r.deposit;
+      if (!dep) return false;
+      if (dep.status !== 'authorized' && dep.status !== 'paid') return false;
+      const created = dep.createdAt || dep.created_at || dep.authorizedAt || dep.authorized_at;
+      const exp = getExpirationDate(created);
+      if (!exp) return true; // date inconnue → on garde par sécurité
+      const cutoff = new Date(exp);
+      cutoff.setDate(cutoff.getDate() + 1);   // J+1 de l'expiration
+      cutoff.setHours(23, 59, 59, 999);
+      return new Date() <= cutoff;
+    }
+
+    function isDepositFinalized(r) {
+      const s = r.deposit && r.deposit.status;
+      return s === 'captured' || s === 'released' || s === 'refunded'
+          || s === 'expired'  || s === 'canceled' || s === 'cancelled';
+    }
+
+    function filterActiveDeposits(reservations) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return reservations.filter(r => {
+        if (isDepositActionable(r)) return true;   // autorisée & dans la fenêtre → reste active
+        if (isDepositFinalized(r))  return false;  // capturée/libérée/expirée → historique
+        if (!r.endDate) return true;               // séjour direct sans date, caution à créer
+        const endDate = new Date(r.endDate);
+        endDate.setHours(0, 0, 0, 0);
+        return endDate >= today;                    // séjour à venir / en cours
+      });
+    }
+
+    function filterHistoryDeposits(reservations) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const oneMonthAgo = new Date(today);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      return reservations.filter(r => {
+        if (isDepositActionable(r)) return false;  // encore actionnable → pas dans l'historique
+        if (isDepositFinalized(r)) {
+          if (!r.endDate) return true;             // caution libre finalisée sans date → historique
+          const endDate = new Date(r.endDate);
+          endDate.setHours(0, 0, 0, 0);
+          return endDate >= oneMonthAgo;
+        }
+        if (!r.endDate) return false;
+        const endDate = new Date(r.endDate);
+        endDate.setHours(0, 0, 0, 0);
+        return endDate < today && endDate >= oneMonthAgo;
+      });
+    }
     
     function updateTabCounts() {
       const noAirbnb = (arr) => arr.filter(r => !((r.source || r.sourceRaw || r.channel || '').toLowerCase().includes('airbnb')));
 
-      const activeData = filterActiveReservations(noAirbnb(allReservationsWithDeposits));
-      const historyData = filterHistoryReservations(noAirbnb(allReservationsWithDeposits));
+      const activeData = filterActiveDeposits(noAirbnb(allReservationsWithDeposits));
+      const historyData = filterHistoryDeposits(noAirbnb(allReservationsWithDeposits));
 
       // Compteurs paiements
       const activePayments = allPayments.filter(r => r.payment && filterActiveReservations([r]).length > 0);
@@ -2161,8 +2219,8 @@ function copyDepositLinkByUid(uid) {
         !selectedPropertyId || r.propertyId === selectedPropertyId
       );
       
-      // ✅ Filtrer uniquement les réservations ACTIVES (date de fin >= aujourd'hui)
-      filtered = filterActiveReservations(filtered);
+      // ✅ Cautions actives : séjours à venir + cautions autorisées encore actionnables (jusqu'à J+1 d'expiration)
+      filtered = filterActiveDeposits(filtered);
 
       // 🚫 Exclure les réservations Airbnb (caution gérée par Airbnb)
       filtered = filtered.filter(r => {
@@ -2229,8 +2287,8 @@ function copyDepositLinkByUid(uid) {
         !selectedPropertyId || r.propertyId === selectedPropertyId
       );
       
-      // ✅ Filtrer uniquement les réservations PASSÉES (< 1 mois)
-      filtered = filterHistoryReservations(filtered);
+      // ✅ Historique : cautions terminées (capturées/libérées/expirées) — pas celles encore actionnables
+      filtered = filterHistoryDeposits(filtered);
 
       // 🚫 Exclure les réservations Airbnb
       filtered = filtered.filter(r => {
