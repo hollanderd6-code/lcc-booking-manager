@@ -8840,11 +8840,14 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
 
     // Helper : normaliser la plateforme
     function normPlatform(row) {
-      const src = (row.source || row.platform || row.ota_name || '').toLowerCase();
+      // Cf. calcPayFee : on concatène les 3 champs pour ne pas rater la détection
+      // quand row.source = "channex" et l'info réelle est dans row.ota_name.
+      const src = `${row.source||''} ${row.platform||''} ${row.ota_name||''}`.toLowerCase();
       if (src.includes('airbnb')) return 'Airbnb';
       if (src.includes('booking')) return 'Booking.com';
       if (src.includes('bhguest') || src.includes('boostinghost') || src.includes('guest_app')) return 'BHGuest';
-      if (src === 'direct' || src === 'manuel' || src === 'manual' || src === '') return 'Direct';
+      if (!row.source && !row.platform && !row.ota_name) return 'Direct';
+      if (src.includes('direct') || src.includes('manuel') || src.includes('manual')) return 'Direct';
       if (src.includes('abritel') || src.includes('vrbo')) return 'Abritel/VRBO';
       if (src.includes('leboncoin')) return 'Leboncoin';
       return (row.ota_name || row.source || 'Autre').replace(/\.com$/i, '');
@@ -8852,7 +8855,9 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
 
     // Helper : frais de paiement estimés selon la plateforme
     function calcPayFee(row, otaCom, total) {
-      const src = (row.source || row.platform || row.ota_name || '').toLowerCase();
+      // On concatène les 3 champs pour que la détection trouve "booking"/"airbnb"
+      // même si row.source vaut "channex" et que l'info est dans row.ota_name.
+      const src = `${row.source||''} ${row.platform||''} ${row.ota_name||''}`.toLowerCase();
       if (src.includes('booking'))   return Math.round(otaCom * 0.0824 * 100) / 100; // ≈ 8,24 % de la commission (relevé Booking)
       if (src.includes('airbnb'))    return 0;                                       // Airbnb reverse déjà net
       if (otaCom === 0 && total > 0) return Math.round(total * 0.015 * 100) / 100;    // direct / Stripe ≈ 1,5 %
