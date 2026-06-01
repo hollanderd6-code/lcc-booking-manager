@@ -5556,7 +5556,9 @@ window.openDeboursPhoto = function(id) {
   const d = deboursData.find(x => x.id === id);
   if (!d?.photoDataUrl) return;
   const w = window.open('', '_blank');
-  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;">
+  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"></body></html>`);
+};
+
 // ── Sauvegarder débours ──
 window.saveDebours = async function() {
   const clientId = document.getElementById('deboursClientId').value;
@@ -6011,7 +6013,7 @@ function bhShowUpgradeModal(plan) {
     + '<div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">Fonctionnalité ' + plan + '</div>'
     + '<div style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;">Cette fonctionnalité est disponible à partir du plan <strong>' + plan + '</strong>.</div>'
     + '<div style="display:flex;gap:12px;justify-content:center;">'
-    + '<button onclick="document.getElementById('bhUpgradeModal').remove()" style="padding:10px 20px;border:1.5px solid #e5e7eb;background:white;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#374151;">Plus tard</button>'
+    + '<button onclick="document.getElementById(\'bhUpgradeModal\').remove()" style="padding:10px 20px;border:1.5px solid #e5e7eb;background:white;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#374151;">Plus tard</button>'
     + '<a href="/pricing.html" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;"><i class="fas fa-arrow-up"></i> Voir les plans</a>'
     + '</div></div>';
   m.onclick = function(e) { if (e.target === m) m.remove(); };
