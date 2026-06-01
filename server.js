@@ -20536,37 +20536,59 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     }
 
     // ── TABLEAU ITEMS ──────────────────────────────────────────
-    // Header
-    const colDesc = 230, colBase = 90, colRate = 80, colTot = W - mg*2 - colDesc - colBase - colRate;
-    doc.rect(mg, y, W-mg*2, 26).fill(GREEN);
-    doc.font('Helvetica-Bold').fontSize(9).fillColor('white')
-       .text('DESCRIPTION', mg+8,  y+8, { width: colDesc })
-       .text('BASE',        mg+colDesc+colBase-8, y+8, { width: colBase, align: 'right' })
-       .text('TAUX/QTÉ',   mg+colDesc+colBase+colRate-8, y+8, { width: colRate, align: 'right' })
-       .text('TOTAL HT',   mg+colDesc+colBase+colRate+colTot-8, y+8, { width: colTot, align: 'right' });
-    y += 26;
+    // Colonnes en positions ABSOLUES (mêmes que le PDF de téléchargement)
+    const colDesc = mg, colBase = mg+250, colTaux = mg+345, colTotal = mg+430;
+    const rowH = 26;
+    const drawTableHeader = () => {
+      doc.rect(mg, y, W-mg*2, rowH).fill(GREEN);
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('white');
+      doc.text('DESCRIPTION', colDesc+6, y+8, { width: 240 });
+      doc.text('BASE',        colBase,   y+8, { width: 80, align: 'right' });
+      doc.text('TAUX/QTÉ',   colTaux,   y+8, { width: 80, align: 'right' });
+      doc.text('TOTAL HT',   colTotal,  y+8, { width: W-mg-colTotal, align: 'right' });
+      y += rowH;
+    };
+    drawTableHeader();
 
+    const PAGE_BOTTOM = doc.page.height - 60;
     let alt = false;
     (items || []).forEach(item => {
+      const desc = item.description || 'Prestation';
+      doc.font('Helvetica').fontSize(10);
+      const descH = doc.heightOfString(desc, { width: 240 });
+      const thisRowH = Math.max(rowH, Math.ceil(descH) + 12);
+
+      // Saut de page propre + réaffichage de l'en-tête sur la nouvelle page
+      if (y + thisRowH > PAGE_BOTTOM) {
+        doc.addPage();
+        y = mg;
+        drawTableHeader();
+      }
+
       const total = parseFloat(item.total || 0);
       let baseDisp, rateDisp;
       if (item.item_type === 'commission') {
         baseDisp = parseFloat(item.rental_amount || 0).toFixed(2) + ' €';
         rateDisp = parseFloat(item.commission_rate || 0) + ' %';
       } else {
-        baseDisp = parseFloat(item.unit_price || 0).toFixed(2) + ' €';
-        rateDisp = String(item.quantity || 1);
+        baseDisp = String(item.quantity || 1);
+        rateDisp = parseFloat(item.unit_price || 0).toFixed(2) + ' €';
       }
-      if (alt) doc.rect(mg, y, W-mg*2, 24).fill(LIGHT);
+
+      if (alt) doc.rect(mg, y, W-mg*2, thisRowH).fill(LIGHT);
       doc.font('Helvetica').fontSize(10).fillColor(DARK)
-         .text(item.description || 'Prestation', mg+8,  y+6, { width: colDesc })
-         .text(baseDisp, mg+colDesc+colBase-8,              y+6, { width: colBase, align: 'right' })
-         .text(rateDisp, mg+colDesc+colBase+colRate-8,      y+6, { width: colRate, align: 'right' })
-         .text(total.toFixed(2)+' €', mg+colDesc+colBase+colRate+colTot-8, y+6, { width: colTot, align: 'right' });
-      doc.rect(mg, y+24, W-mg*2, 0.5).fill(BORDER);
-      y += 24; alt = !alt;
+         .text(desc,     colDesc+6, y+7, { width: 240 })
+         .text(baseDisp, colBase,   y+7, { width: 80, align: 'right' })
+         .text(rateDisp, colTaux,   y+7, { width: 80, align: 'right' });
+      doc.font('Helvetica-Bold').fillColor(DARK)
+         .text(total.toFixed(2)+' €', colTotal, y+7, { width: W-mg-colTotal, align: 'right' });
+      doc.rect(mg, y+thisRowH, W-mg*2, 0.5).fill(BORDER);
+      y += thisRowH; alt = !alt;
     });
     y += 12;
+
+    // Saut de page si le bloc totaux + conditions ne tient pas
+    if (y + 140 > PAGE_BOTTOM) { doc.addPage(); y = mg; }
 
     // ── TOTAUX (droite) ────────────────────────────────────────
     const totW = 200, totX = W - mg - totW;
