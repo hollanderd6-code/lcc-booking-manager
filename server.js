@@ -8933,6 +8933,8 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
         otaCommission: parseFloat(row.ota_commission)  || 0,
         hostPayout:    parseFloat(row.host_payout)     || 0,
         netHote:       Math.round(netHote * 100) / 100,
+        // Montant Booking de la résa (= net proprio + ménage), pour matcher le relevé à la ligne
+        bookingPayout: Math.round((netHote + (parseFloat(row.amount_cleaning) || 0)) * 100) / 100,
         currency:      row.currency || 'EUR'
       });
 
