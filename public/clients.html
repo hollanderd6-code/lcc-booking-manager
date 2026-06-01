@@ -5898,6 +5898,7 @@ function renderImportResaSummary(data) {
       + "<div style=\"text-align:right;\">"
       + "<div style=\"font-size:16px;font-weight:800;color:" + c.color + ";\">" + p.totalNet.toFixed(2) + " \u20ac</div>"
       + "<div style=\"font-size:10px;color:#9ca3af;font-weight:500;\">NET H\u00d4TE</div>"
+      + "<div style=\"font-size:11px;color:#6b7280;margin-top:3px;\">Versement attendu : " + (p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0))).toFixed(2) + " \u20ac</div>"
       + "</div></label>"
       + "<div style=\"padding:0 4px 4px;\"><table style=\"width:100%;border-collapse:collapse;\">"
       + "<thead><tr style=\"background:#f9fafb;\">"
@@ -5913,14 +5914,18 @@ function renderImportResaSummary(data) {
 
 window.updateImportResaTotal = function() {
   if (!window._importResaSummary) return;
-  var total = 0, count = 0;
+  var total = 0, payout = 0, count = 0;
   window._importResaSummary.summary.forEach(function(p) {
-    if (window._importResaChecked[p.platform]) { total += p.totalNet; count++; }
+    if (window._importResaChecked[p.platform]) {
+      total += p.totalNet;
+      payout += (p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0)));
+      count++;
+    }
   });
   var lbl = document.getElementById("importResaTotalLabel");
   var btn = document.getElementById("importResaConfirmBtn");
   if (count > 0) {
-    lbl.textContent = count + " plateforme" + (count > 1 ? "s" : "") + " \u00b7 Total net : " + total.toFixed(2) + " \u20ac";
+    lbl.textContent = count + " plateforme" + (count > 1 ? "s" : "") + " \u00b7 Total net : " + total.toFixed(2) + " \u20ac \u00b7 Versement attendu : " + payout.toFixed(2) + " \u20ac";
     btn.disabled = false;
   } else {
     lbl.textContent = "Aucune plateforme s\u00e9lectionn\u00e9e";
