@@ -8800,7 +8800,9 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
       queryParams.push(propIds);
     }
 
-    // Récupérer toutes les résas sur la période (check-in dans la plage)
+    // Récupérer toutes les résas dont la DATE DE PAIEMENT Booking tombe dans la période.
+    // Booking paie 1 jour après le départ → date de paiement = end_date + 1.
+    // La fenêtre [date_from, date_to[ calque ainsi exactement le relevé de versement Booking.
     const result = await pool.query(`
       SELECT
         r.uid,
@@ -8825,13 +8827,13 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
         r.status
       FROM reservations r
       LEFT JOIN properties p ON p.id = r.property_id
-      WHERE r.start_date >= $1::date
-        AND r.start_date < $2::date
+      WHERE (r.end_date + 1) >= $1::date
+        AND (r.end_date + 1) < $2::date
         AND r.status NOT IN ('cancelled', 'denied')
         AND (r.reservation_type != 'block' OR r.reservation_type IS NULL)
         AND (r.source != 'BLOCK' OR r.source IS NULL)
         ${propCondition}
-      ORDER BY r.start_date ASC, r.source ASC
+      ORDER BY r.end_date ASC, r.source ASC
     `, queryParams);
 
     const rows = result.rows;
