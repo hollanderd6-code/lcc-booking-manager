@@ -25047,7 +25047,7 @@ cron.schedule('0 9 1 * *', async () => {
     for (const user of users.rows) {
       try {
         // Stats du mois
-        const [sejours, messages, escalades, groqMessages] = await Promise.all([
+        const [sejours, messages, escalades, autoMsgs] = await Promise.all([
           pool.query(
             `SELECT COUNT(*) FROM conversations
              WHERE user_id = $1 AND created_at BETWEEN $2 AND $3 AND status != 'cancelled'`,
@@ -25065,11 +25065,16 @@ cron.schedule('0 9 1 * *', async () => {
              AND escalated_at BETWEEN $2 AND $3`,
             [user.id, firstDay, lastDay]
           ),
+          // % traités automatiquement = part des messages de la conversation
+          // écrits par l'IA (is_bot_response), sur l'ensemble des messages réels
+          // (on exclut les messages 'system' qui sont des notifs internes).
           pool.query(
-            `SELECT COUNT(*) FROM messages m
+            `SELECT
+               COUNT(*) FILTER (WHERE m.is_bot_response = TRUE)   AS bot,
+               COUNT(*) FILTER (WHERE m.sender_type <> 'system')  AS reels
+             FROM messages m
              JOIN conversations c ON c.id = m.conversation_id
-             WHERE c.user_id = $1 AND m.sender_type = 'bot'
-             AND m.created_at BETWEEN $2 AND $3`,
+             WHERE c.user_id = $1 AND m.created_at BETWEEN $2 AND $3`,
             [user.id, firstDay, lastDay]
           ),
         ]);
@@ -25077,8 +25082,9 @@ cron.schedule('0 9 1 * *', async () => {
         const nSejours   = parseInt(sejours.rows[0].count)   || 0;
         const nMessages  = parseInt(messages.rows[0].count)  || 0;
         const nEscalades = parseInt(escalades.rows[0].count) || 0;
-        const nGroq      = parseInt(groqMessages.rows[0].count) || 0;
-        const pctAuto    = nMessages > 0 ? Math.round((nGroq / nMessages) * 100) : 0;
+        const nBotMsgs   = parseInt(autoMsgs.rows[0].bot)   || 0;
+        const nRealMsgs  = parseInt(autoMsgs.rows[0].reels) || 0;
+        const pctAuto    = nRealMsgs > 0 ? Math.round((nBotMsgs / nRealMsgs) * 100) : 0;
 
         if (nSejours === 0) continue; // rien à résumer
 
@@ -25088,7 +25094,7 @@ cron.schedule('0 9 1 * *', async () => {
         );
         const { sendNotification } = require('./services/notifications-service');
         const title = `📊 Résumé ${monthLabel}`;
-        const body  = `${nSejours} séjour${nSejours>1?'s':''} · ${nMessages} messages · ${pctAuto}% traités automatiquement · ${nEscalades} escalade${nEscalades>1?'s':''}`;
+        const body  = `${nSejours} séjour${nSejours>1?'s':''} · ${nMessages} messages · ${pctAuto}% traités automatiquement · ${nEscalades} main${nEscalades>1?'s':''} passée${nEscalades>1?'s':''}`;
         for (const tok of tokens.rows) {
           await sendNotificationLogged(tok.fcm_token, title, body,
             { type: 'monthly_summary', month: monthLabel, screen: 'dashboard' }
