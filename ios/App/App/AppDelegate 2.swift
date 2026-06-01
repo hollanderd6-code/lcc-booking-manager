@@ -323,6 +323,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // WEBVIEW NAVIGATION
 // ============================================
 extension AppDelegate: WKNavigationDelegate {
+
+    // Router les schémas externes (tel:, sms:, mailto:, facetime:) vers le système.
+    // Nécessaire car on a remplacé le navigationDelegate de Capacitor par self :
+    // sans ça, WKWebView ne sait pas ouvrir tel: ("unsupported URL") → rien ne se passe.
+    func webView(_ webView: WKWebView,
+                 decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = navigationAction.request.url,
+           let scheme = url.scheme?.lowercased() {
+            let externalSchemes = ["tel", "telprompt", "sms", "mailto", "facetime", "facetime-audio"]
+            if externalSchemes.contains(scheme) {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                decisionHandler(.cancel)   // on ne tente pas de charger tel: dans la WebView
+                return
+            }
+        }
+        decisionHandler(.allow)            // tout le reste : navigation normale
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         disablePullToRefresh(on: webView)
         
