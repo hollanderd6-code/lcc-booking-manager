@@ -3160,7 +3160,22 @@ window.deleteOwnerInvoice = function (id) {
       phone:       ep.phone     || sp.phone      || '',
       email:       ep.email     || sp.invoiceEmail|| up.email || '',
       website:     ep.website   || sp.website    || '',
-      logo:        ep.logoDataUrl || up.logoUrl  || '',
+      logo:        await (async function() {
+        var src = ep.logoDataUrl || up.logoUrl || '';
+        if (!src) return '';
+        // Déjà PNG/JPEG en base64 → on envoie tel quel
+        if (/^data:image\/(png|jpe?g)/i.test(src)) return src;
+        // Sinon (URL, SVG, WebP, data URL exotique) → on tente la conversion canvas
+        try {
+          var conv = await window.imageUrlToPngDataUrl(src);
+          if (conv && /^data:image\/png/i.test(conv)) return conv;
+          console.warn('[PDF] logo conversion n\'a pas produit de PNG, envoi sans logo');
+          return '';
+        } catch (e) {
+          console.warn('[PDF] logo non convertible (' + (e && e.message) + '), envoi sans logo');
+          return '';
+        }
+      })(),
     };
     // Généré côté serveur avec PDFKit (fiable, inclut les annexes débours)
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/pdf', {
