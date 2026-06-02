@@ -18809,7 +18809,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
           const lr = await axios.get(senderLogo, { responseType: 'arraybuffer', timeout: 5000 });
           if (lr.data.byteLength > 0) senderLogoBuffer = Buffer.from(lr.data);
         }
-      } catch(e) { /* non bloquant */ }
+      } catch(e) { console.error('[PDF] échec chargement logo (emitter.logo):', e.message); }
     }
     if (!senderLogoBuffer) {
       try {
@@ -18819,12 +18819,15 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
           const lr = await axios.get(dbLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
           if (lr.data.byteLength > 0) senderLogoBuffer = Buffer.from(lr.data);
         }
-      } catch(e) { /* non bloquant */ }
+      } catch(e) { console.error('[PDF] échec chargement logo (users.logo_url):', e.message); }
+    }
+    if (!senderLogoBuffer) {
+      console.warn('[PDF] aucun logo embarqué (ni emitter.logo ni users.logo_url disponibles ou exploitables)');
     }
     if (senderLogoBuffer) {
       try {
         doc.image(senderLogoBuffer, W - mg - 120, y, { width: 120, height: 50, fit: [120, 50], align: 'right' });
-      } catch(e) { /* non bloquant */ }
+      } catch(e) { console.error('[PDF] doc.image a rejeté le buffer logo (format non supporté ?) :', e.message); }
     }
 
     // Titre + date
