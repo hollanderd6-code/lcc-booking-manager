@@ -2319,7 +2319,8 @@ window.openStatsModal = function(type) {
     titleEl.textContent = 'Factures facturées';
     const filtered = invoices.filter(function(inv) {
       const status = inv.status || '';
-      return !inv.is_credit_note && status !== 'draft';
+      // Exclut brouillons, avoirs, factures annulées (cancelled ou ayant un avoir lié)
+      return !inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !inv.credit_note_id;
     });
     if (filtered.length === 0) {
       htmlContent = '<p>Aucune facture facturée.</p>';
@@ -2343,7 +2344,8 @@ window.openStatsModal = function(type) {
     titleEl.textContent = 'Factures en attente de paiement';
     const filtered = invoices.filter(function(inv) {
       const status = inv.status || '';
-      return !inv.is_credit_note && status !== 'draft' && status !== 'paid';
+      // Exclut brouillons, avoirs, factures payées et factures annulées/avec avoir lié
+      return !inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !inv.credit_note_id;
     });
     if (filtered.length === 0) {
       htmlContent = '<p>Aucune facture en attente de paiement.</p>';
@@ -2610,13 +2612,13 @@ function renderFpGrid(invs) {
       const total = parseFloat(inv.total_ttc || 0) || 0;
       const status = inv.status || '';
 
-      // Total facturé : toutes les factures non brouillon et non avoir
-      if (!inv.is_credit_note && status !== 'draft') {
+      // Total facturé : toutes les factures non brouillon, non avoir, non annulées
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !inv.credit_note_id) {
         totalRev += total;
       }
 
-      // En attente : factures non brouillon, non avoir, non payées
-      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid') {
+      // En attente : factures non brouillon, non avoir, non payées, non annulées
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !inv.credit_note_id) {
         totalPending += total;
       }
 
@@ -2627,6 +2629,9 @@ function renderFpGrid(invs) {
       let statusClass = 'invoice-badge-draft';
       if (inv.is_credit_note) {
         statusLabel = 'Avoir';
+        statusClass = 'invoice-badge-credit';
+      } else if (status === 'cancelled' || inv.credit_note_id) {
+        statusLabel = 'Annulée';
         statusClass = 'invoice-badge-credit';
       } else if (status === 'draft') {
         statusLabel = 'Brouillon';
