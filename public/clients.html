@@ -2857,9 +2857,24 @@ window.sendOwnerInvoice = function (id) {
   showConfirm('Envoyer cette facture par email au client ?', async function() {
 
   try {
+    // Convertit le logo en PNG (canvas) avant l'envoi — pdfkit ne supporte
+    // que PNG/JPEG côté serveur, le format brut en base (WebP/SVG) ne passe pas.
+    const logoPng = await (async function() {
+      const ep = window.emitterProfile || {};
+      const up = window.userProfile || {};
+      const src = ep.logoDataUrl || up.logoUrl || '';
+      if (!src) return '';
+      if (/^data:image\/(png|jpe?g)/i.test(src)) return src;
+      try {
+        const conv = await window.imageUrlToPngDataUrl(src);
+        return (conv && /^data:image\/png/i.test(conv)) ? conv : '';
+      } catch (e) { return ''; }
+    })();
+
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/send', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emitter: { logo: logoPng } })
     });
     const json = await res.json();
     if (!res.ok) {
