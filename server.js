@@ -18824,6 +18824,19 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     if (!senderLogoBuffer) {
       console.warn('[PDF] aucun logo embarqué (ni emitter.logo ni users.logo_url disponibles ou exploitables)');
     }
+    // Garde-fou : pdfkit ne supporte que JPEG et PNG. On vérifie la signature
+    // (octets magiques) du buffer avant de l'envoyer, sinon il jette "Unknown image format".
+    if (senderLogoBuffer) {
+      const isPng  = senderLogoBuffer.length >= 8 && senderLogoBuffer[0] === 0x89 && senderLogoBuffer[1] === 0x50 && senderLogoBuffer[2] === 0x4E && senderLogoBuffer[3] === 0x47;
+      const isJpeg = senderLogoBuffer.length >= 3 && senderLogoBuffer[0] === 0xFF && senderLogoBuffer[1] === 0xD8 && senderLogoBuffer[2] === 0xFF;
+      if (!isPng && !isJpeg) {
+        // Indices pour identifier le format reçu dans les logs
+        const head = senderLogoBuffer.slice(0, 8).toString('utf8');
+        const hex  = senderLogoBuffer.slice(0, 4).toString('hex');
+        console.warn('[PDF] logo non supporté par pdfkit (uniquement PNG/JPEG accepté). Format reçu — début hex: 0x' + hex + ', début texte: ' + JSON.stringify(head) + '. → logo omis. L\'utilisateur devrait re-uploader en PNG ou JPEG.');
+        senderLogoBuffer = null;
+      }
+    }
     if (senderLogoBuffer) {
       try {
         doc.image(senderLogoBuffer, W - mg - 120, y, { width: 120, height: 50, fit: [120, 50], align: 'right' });
