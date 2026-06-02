@@ -7626,7 +7626,7 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
 
     // Récupérer les anciennes dates avant mise à jour
     const oldResa = await pool.query(
-      'SELECT start_date, end_date FROM reservations WHERE uid = $1 AND user_id = $2',
+      'SELECT start_date, end_date, property_id FROM reservations WHERE uid = $1 AND user_id = $2',
       [uid, user.id]
     );
     if (oldResa.rows.length === 0) return res.status(404).json({ error: 'Réservation non trouvée' });
@@ -7646,11 +7646,13 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
       return res.status(409).json({ error: 'Ces dates sont déjà prises' });
     }
 
-    // Mettre à jour en DB
+    // Mettre à jour en DB — préserver source si Channex
     await pool.query(
       `UPDATE reservations SET
         property_id = $1, start_date = $2, end_date = $3,
-        guest_name = $4, notes = $5, platform = $6, source = $6,
+        guest_name = $4, notes = $5,
+        platform = $6,
+        source = CASE WHEN source = 'channex' THEN 'channex' ELSE $6 END,
         price = $7, amount_total = $7, guest_phone = $8, guest_email = $9,
         guest_country = $10, guest_address = $11, guest_zip = $12, occupancy_adults = $13,
         amount_rooms = $14, amount_cleaning = $15, amount_taxes = $16, ota_commission = $17,
@@ -7666,13 +7668,31 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
       ]
     );
 
-    // Mettre à jour reservationsStore
+    // Mettre à jour la conversation associée si le logement change
+    const oldPropertyId = oldResa.rows[0].property_id || null;
+    if (oldPropertyId && oldPropertyId !== propertyId) {
+      await pool.query(
+        `UPDATE conversations SET property_id = $1, updated_at = NOW()
+         WHERE property_id = $2 AND user_id = $3
+           AND DATE(reservation_start_date) = DATE($4)
+           AND status != 'cancelled'`,
+        [propertyId, oldPropertyId, user.id, oldResa.rows[0].start_date]
+      ).catch(e => console.warn('⚠️ Erreur update conversation property:', e.message));
+    }
+
+    // Mettre à jour reservationsStore — recherche élargie (uid, channex_booking_id, dates)
     if (reservationsStore.properties) {
+      let found = false;
       for (const pid of Object.keys(reservationsStore.properties)) {
-        const idx = reservationsStore.properties[pid]?.findIndex(r => r.uid === uid);
+        const arr = reservationsStore.properties[pid] || [];
+        const idx = arr.findIndex(r =>
+          r.uid === uid ||
+          r.reservationKey === uid ||
+          (r.channex_booking_id && r.channex_booking_id === uid)
+        );
         if (idx !== -1) {
-          reservationsStore.properties[pid][idx] = {
-            ...reservationsStore.properties[pid][idx],
+          arr[idx] = {
+            ...arr[idx],
             start: start, end: end, start_date: start, end_date: end,
             propertyId, guestName: guestName || 'Réservation manuelle',
             notes: notes || null,
@@ -7680,30 +7700,41 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
             platform: platform || 'MANUEL'
           };
           if (pid !== propertyId) {
-            // Déplacer vers le bon logement si changement de logement
             reservationsStore.properties[propertyId] = reservationsStore.properties[propertyId] || [];
-            reservationsStore.properties[propertyId].push(reservationsStore.properties[pid][idx]);
-            reservationsStore.properties[pid].splice(idx, 1);
+            reservationsStore.properties[propertyId].push(arr[idx]);
+            arr.splice(idx, 1);
           }
+          found = true;
           break;
         }
+      }
+      if (!found) {
+        console.log(`ℹ️ Résa ${uid} non trouvée dans store — sera actualisée au prochain GET via DB`);
       }
     }
 
     res.json({ success: true, message: 'Réservation mise à jour' });
 
-    // Sync Channex — libérer anciennes dates ET bloquer nouvelles en un seul push
+    // Sync Channex — libérer anciennes dates ET bloquer nouvelles
     setImmediate(async () => {
       try {
-        // Collecter toutes les dates concernées (anciennes + nouvelles)
         const allTargetDates = new Set();
         const addDates = (s, e) => {
           const d = new Date(s); const end = new Date(e);
           while (d < end) { allTargetDates.add(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
         };
-        addDates(oldStart, oldEnd); // anciennes dates à libérer
-        addDates(start, end);       // nouvelles dates à bloquer
-        await triggerChannexAvailabilitySync(propertyId, [...allTargetDates]);
+        addDates(oldStart, oldEnd);
+        addDates(start, end);
+        const dates = [...allTargetDates];
+        // Sync le nouveau logement
+        await triggerChannexAvailabilitySync(propertyId, dates);
+        // Si changement de logement, aussi libérer les dates de l'ancien
+        if (oldPropertyId && oldPropertyId !== propertyId) {
+          const oldDates = [];
+          const d2 = new Date(oldStart); const e2 = new Date(oldEnd);
+          while (d2 < e2) { oldDates.push(d2.toISOString().split('T')[0]); d2.setDate(d2.getDate() + 1); }
+          await triggerChannexAvailabilitySync(oldPropertyId, oldDates);
+        }
       } catch(e) { console.error('⚠️ [CHANNEX SYNC] Erreur modif résa:', e.message); }
     });
 
@@ -35098,7 +35129,7 @@ app.post('/api/guest/cancel-reservation', authenticateAny, async (req, res) => {
 // ── Modification réservation BHGuest ─────────────────────
 app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
   try {
-    const { uid, checkin, checkout, guests, notes, amount_total } = req.body;
+    const { uid, propertyId, checkin, checkout, guests, notes, amount_total } = req.body;
     if (!uid) return res.status(400).json({ error: 'uid requis' });
 
     const resaRes = await pool.query(
@@ -35107,12 +35138,13 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
     );
     if (!resaRes.rows[0]) return res.status(404).json({ error: 'Réservation introuvable' });
     const resa = resaRes.rows[0];
+    const targetPropertyId = propertyId || resa.property_id;
 
-    // Vérifier dispo si dates changées
+    // Vérifier dispo si dates ou logement changés
     if (checkin && checkout) {
       const conflict = await pool.query(
         `SELECT id FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled') AND uid != $2 AND start_date < $4 AND end_date > $3`,
-        [resa.property_id, uid, checkin, checkout]
+        [targetPropertyId, uid, checkin, checkout]
       );
       if (conflict.rows.length > 0) return res.status(409).json({ error: 'Ces dates ne sont plus disponibles' });
     }
@@ -35120,6 +35152,7 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
     const updates = [];
     const values = [];
     let idx = 1;
+    if (propertyId && propertyId !== resa.property_id) { updates.push(`property_id = $${idx++}`); values.push(propertyId); }
     if (checkin)  { updates.push(`start_date = $${idx++}`); values.push(checkin); }
     if (checkout) { updates.push(`end_date = $${idx++}`); values.push(checkout); }
     if (guests)   { updates.push(`occupancy_adults = $${idx++}`); values.push(parseInt(guests)); }
@@ -35129,9 +35162,22 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
     values.push(uid);
     await pool.query(`UPDATE reservations SET ${updates.join(', ')} WHERE uid = $${idx}`, values);
 
+    // Mettre à jour la conversation si le logement a changé
+    if (propertyId && propertyId !== resa.property_id) {
+      await pool.query(
+        `UPDATE conversations SET property_id = $1, updated_at = NOW()
+         WHERE property_id = $2 AND user_id = $3
+           AND DATE(reservation_start_date) = DATE($4)
+           AND status != 'cancelled'`,
+        [propertyId, resa.property_id, resa.owner_user_id, resa.start_date]
+      ).catch(e => console.warn('⚠️ [GUEST] Erreur update conversation property:', e.message));
+    }
+
     // Notif push proprio + sous-comptes
     try {
-      const propName = resa.prop_name || resa.property_id;
+      const propName = (propertyId && propertyId !== resa.property_id)
+        ? (await pool.query('SELECT name FROM properties WHERE id=$1',[propertyId]).catch(()=>({rows:[]}))).rows[0]?.name || propertyId
+        : (resa.prop_name || resa.property_id);
       const cleanName = cleanGuestName(resa.guest_name, 'guest_app');
       const newCheckin = checkin || String(resa.start_date).slice(0,10);
       const newCheckout = checkout || String(resa.end_date).slice(0,10);
