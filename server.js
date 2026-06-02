@@ -32422,11 +32422,33 @@ app.post('/api/guest/book', async (req, res) => {
     const end = new Date(checkout);
     const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
 
-    // Prix fixe négocié (lien personnalisé) — remplace le calcul standard
-    const isFixedPrice = fixed_price && parseFloat(fixed_price) > 0;
+    // 🔒 Valider fixed_price contre un hold actif en base
+    let validatedFixedPrice = null;
+    if (fixed_price && parseFloat(fixed_price) > 0) {
+      try {
+        const holdVal = await pool.query(
+          `SELECT fixed_price FROM bhguest_holds
+           WHERE property_id = $1 AND checkin = $2 AND checkout = $3
+             AND LOWER(guest_email) = LOWER($4)
+             AND status = 'active' AND expires_at > NOW()
+           ORDER BY created_at DESC LIMIT 1`,
+          [property_id, checkin, checkout, guest_email]
+        );
+        if (holdVal.rows.length > 0 && holdVal.rows[0].fixed_price != null) {
+          validatedFixedPrice = parseFloat(holdVal.rows[0].fixed_price);
+        } else {
+          console.warn(`⚠️ [GUEST] book: fixed_price ${fixed_price}€ rejeté — aucun hold actif correspondant`);
+        }
+      } catch (fpErr) {
+        console.warn('⚠️ [GUEST] book: validation fixed_price non bloquante:', fpErr.message);
+      }
+    }
+
+    // Prix fixe négocié (lien personnalisé) — validé contre un hold actif
+    const isFixedPrice = validatedFixedPrice != null;
     let totalBase = 0;
     if (isFixedPrice) {
-      totalBase = parseFloat(fixed_price);
+      totalBase = validatedFixedPrice;
     } else {
       for (let i = 0; i < nights; i++) {
         const d = new Date(start);
@@ -34396,6 +34418,31 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       console.warn('⚠️ [GUEST] Vérification hold non bloquante:', hgErr.message);
     }
 
+    // 🔒 Valider fixed_price_override : n'accepter un prix fixe QUE si un hold actif
+    // existe pour ces dates exactes + même email + même logement.
+    // Empêche la réutilisation d'un lien avec des dates modifiées ou après conversion.
+    let validatedFixedPrice = null;
+    if (fixed_price_override && parseFloat(fixed_price_override) > 0) {
+      try {
+        const holdVal = await pool.query(
+          `SELECT fixed_price FROM bhguest_holds
+           WHERE property_id = $1 AND checkin = $2 AND checkout = $3
+             AND LOWER(guest_email) = LOWER($4)
+             AND status = 'active' AND expires_at > NOW()
+           ORDER BY created_at DESC LIMIT 1`,
+          [property_id, checkin, checkout, guest_email]
+        );
+        if (holdVal.rows.length > 0 && holdVal.rows[0].fixed_price != null) {
+          validatedFixedPrice = parseFloat(holdVal.rows[0].fixed_price);
+          console.log(`✅ [GUEST] Prix fixe validé par hold actif: ${validatedFixedPrice}€`);
+        } else {
+          console.warn(`⚠️ [GUEST] fixed_price_override ${fixed_price_override}€ rejeté — aucun hold actif correspondant pour ${property_id} ${checkin}→${checkout}`);
+        }
+      } catch (fpErr) {
+        console.warn('⚠️ [GUEST] Validation fixed_price non bloquante:', fpErr.message);
+      }
+    }
+
     // Calcul prix
     const start = new Date(checkin);
     const end = new Date(checkout);
@@ -34410,12 +34457,12 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
         : parseFloat(prop.base_price || 0);
     }
 
-    // Prix fixe override (convenu avec l'hôte) — ignore le calcul normal et les promos
+    // Prix fixe override (convenu avec l'hôte) — validé contre un hold actif en base
     let discount = 0;
     let discountedBase;
-    if (fixed_price_override && parseFloat(fixed_price_override) > 0) {
-      discountedBase = parseFloat(fixed_price_override);
-      console.log(`✅ [GUEST] Prix fixe override: ${discountedBase}€ (au lieu de ${totalBase}€)`);
+    if (validatedFixedPrice != null) {
+      discountedBase = validatedFixedPrice;
+      console.log(`✅ [GUEST] Prix fixe validé: ${discountedBase}€ (au lieu de ${totalBase}€)`);
     } else {
       // Appliquer promo si fournie
       if (promo_code) {
@@ -34435,7 +34482,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       discountedBase = Math.max(0, totalBase - discount);
     }
     // Prix fixe = tout inclus (ménage + taxes compris) — on n'ajoute que les 3% BHGuest
-    const isFixedPrice = fixed_price_override && parseFloat(fixed_price_override) > 0;
+    const isFixedPrice = validatedFixedPrice != null;
     const cleaningFee = (!isFixedPrice && prop.cleaning_fee != null) ? parseFloat(prop.cleaning_fee) : 0;
     const nbGuests = parseInt(guests) || 1;
     const touristTax = (!isFixedPrice && prop.tourist_tax_per_night != null)
@@ -34445,7 +34492,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     const totalTTC = Math.round((discountedBase + cleaningFee + touristTax + commission) * 100); // centimes
 
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
-    const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&session_id={CHECKOUT_SESSION_ID}&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}&fixed_price=${encodeURIComponent(fixed_price_override || '')}`;
+    const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&session_id={CHECKOUT_SESSION_ID}&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}&fixed_price=${encodeURIComponent(validatedFixedPrice != null ? String(validatedFixedPrice) : '')}`;
     const cancelUrl = `${appUrl}/guest-app/public/index.html?payment=cancel`;
 
     // Recuperer le compte Stripe Connect du proprietaire du logement
@@ -34563,11 +34610,33 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
     const start = new Date(checkin);
     const end = new Date(checkout);
     const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
-    // ✅ Si fixed_price_override → utiliser directement comme base (prix négocié)
-    const isFixedPrice = fixed_price_override && parseFloat(fixed_price_override) > 0;
+
+    // 🔒 Valider fixed_price_override contre un hold actif en base
+    let validatedFixedPrice = null;
+    if (fixed_price_override && parseFloat(fixed_price_override) > 0) {
+      try {
+        const holdVal = await pool.query(
+          `SELECT fixed_price FROM bhguest_holds
+           WHERE property_id = $1 AND checkin = $2 AND checkout = $3
+             AND LOWER(guest_email) = LOWER($4)
+             AND status IN ('active','converted') AND fixed_price IS NOT NULL
+           ORDER BY created_at DESC LIMIT 1`,
+          [property_id, checkin, checkout, guest_email]
+        );
+        if (holdVal.rows.length > 0) {
+          validatedFixedPrice = parseFloat(holdVal.rows[0].fixed_price);
+        } else {
+          console.warn(`⚠️ [GUEST] confirm: fixed_price_override ${fixed_price_override}€ rejeté — aucun hold correspondant`);
+        }
+      } catch (fpErr) {
+        console.warn('⚠️ [GUEST] confirm: validation fixed_price non bloquante:', fpErr.message);
+      }
+    }
+
+    const isFixedPrice = validatedFixedPrice != null;
     let totalBase = 0;
     if (isFixedPrice) {
-      totalBase = parseFloat(fixed_price_override);
+      totalBase = validatedFixedPrice;
     } else {
       for (let i = 0; i < nights; i++) {
         const d = new Date(start);
