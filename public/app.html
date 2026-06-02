@@ -9795,6 +9795,7 @@ if (editBookingForm) {
             method: 'POST', headers,
             body: JSON.stringify({
               uid,
+              propertyId,
               checkin: start,
               checkout: end,
               guests: document.getElementById('editGuestAdults')?.value ? parseInt(document.getElementById('editGuestAdults').value) : null,
