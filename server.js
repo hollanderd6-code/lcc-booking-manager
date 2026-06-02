@@ -18483,6 +18483,7 @@ app.get('/api/owner-invoices',
         i.total_ttc,
         i.status,
         i.is_credit_note,
+        i.credit_note_id,
         COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS client_name
 
       FROM owner_invoices i
