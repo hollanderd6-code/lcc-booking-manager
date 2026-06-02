@@ -25030,17 +25030,11 @@ async function runTemplatesCron(triggerTypes) {
            LEFT JOIN reservations r ON (
              r.property_id = c.property_id
              AND DATE(r.start_date) = DATE(c.reservation_start_date)
+             AND r.status != 'cancelled'
            )
            WHERE c.user_id = $1
            AND DATE(c.${dateCol} AT TIME ZONE 'Europe/Paris') = $2
            AND c.status != 'cancelled'
-           AND (r.id IS NULL OR r.status != 'cancelled')
-           AND NOT EXISTS (
-             SELECT 1 FROM reservations r2
-             WHERE r2.property_id = c.property_id
-             AND DATE(r2.start_date) = DATE(c.reservation_start_date)
-             AND r2.status = 'cancelled'
-           )
            ${(() => {
              const ids = tmpl.property_ids
                ? (Array.isArray(tmpl.property_ids) ? tmpl.property_ids : (() => { try { return JSON.parse(tmpl.property_ids); } catch(e) { return []; } })())
