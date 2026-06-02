@@ -2315,12 +2315,21 @@ window.openStatsModal = function(type) {
   const invoices = window.ownerInvoices || [];
   const clientsList = window.clients || [];
 
+  // Ensemble des IDs de factures annulées par un avoir : on collecte les
+  // original_invoice_id de tous les avoirs (lignes is_credit_note=true).
+  const creditedIds = new Set();
+  invoices.forEach(function(inv) {
+    if (inv.is_credit_note && inv.original_invoice_id) {
+      creditedIds.add(inv.original_invoice_id);
+    }
+  });
+
   if (type === 'billed') {
     titleEl.textContent = 'Factures facturées';
     const filtered = invoices.filter(function(inv) {
       const status = inv.status || '';
-      // Exclut brouillons, avoirs, factures annulées (cancelled ou ayant un avoir lié)
-      return !inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !inv.credit_note_id;
+      // Exclut brouillons, avoirs, factures annulées (status cancelled ou ayant un avoir lié)
+      return !inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !creditedIds.has(inv.id);
     });
     if (filtered.length === 0) {
       htmlContent = '<p>Aucune facture facturée.</p>';
@@ -2345,7 +2354,7 @@ window.openStatsModal = function(type) {
     const filtered = invoices.filter(function(inv) {
       const status = inv.status || '';
       // Exclut brouillons, avoirs, factures payées et factures annulées/avec avoir lié
-      return !inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !inv.credit_note_id;
+      return !inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !creditedIds.has(inv.id);
     });
     if (filtered.length === 0) {
       htmlContent = '<p>Aucune facture en attente de paiement.</p>';
@@ -2608,17 +2617,26 @@ function renderFpGrid(invs) {
     
     console.log('🔄 Génération des cartes de factures...');
 
+    // Ensemble des IDs de factures annulées par un avoir (collecté depuis les
+    // avoirs eux-mêmes via leur original_invoice_id).
+    const creditedIds = new Set();
+    invs.forEach(function(inv) {
+      if (inv.is_credit_note && inv.original_invoice_id) {
+        creditedIds.add(inv.original_invoice_id);
+      }
+    });
+
     invs.forEach(function(inv) {
       const total = parseFloat(inv.total_ttc || 0) || 0;
       const status = inv.status || '';
 
       // Total facturé : toutes les factures non brouillon, non avoir, non annulées
-      if (!inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !inv.credit_note_id) {
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !creditedIds.has(inv.id)) {
         totalRev += total;
       }
 
       // En attente : factures non brouillon, non avoir, non payées, non annulées
-      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !inv.credit_note_id) {
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !creditedIds.has(inv.id)) {
         totalPending += total;
       }
 
@@ -2630,7 +2648,7 @@ function renderFpGrid(invs) {
       if (inv.is_credit_note) {
         statusLabel = 'Avoir';
         statusClass = 'invoice-badge-credit';
-      } else if (status === 'cancelled' || inv.credit_note_id) {
+      } else if (status === 'cancelled' || creditedIds.has(inv.id)) {
         statusLabel = 'Annulée';
         statusClass = 'invoice-badge-credit';
       } else if (status === 'draft') {
