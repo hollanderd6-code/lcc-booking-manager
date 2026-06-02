@@ -6067,7 +6067,7 @@ window.confirmImportReservations = function() {
     var pid = "p" + prestationCounter;
     var fromFr = new Date(dateFrom).toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit", year:"numeric"});
     var toFr   = new Date(dateTo).toLocaleDateString("fr-FR",   {day:"2-digit", month:"2-digit", year:"numeric"});
-    var desc = "Montant Booking " + p.platform + " (m\u00e9nage inclus) \u2014 " + p.count + " r\u00e9sa" + (p.count > 1 ? "s" : "") + " \u2014 " + fromFr + " au " + toFr;
+    var desc = "Montant " + p.platform + " (m\u00e9nage inclus) \u2014 " + p.count + " r\u00e9sa" + (p.count > 1 ? "s" : "") + " \u2014 " + fromFr + " au " + toFr;
     var payoutAmount = (p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0)));
     prestations.push({
       id: pid, type: "commission", description: desc,
