@@ -3943,8 +3943,8 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
         const paymentType = session.metadata?.payment_type;
         const depositId = session.metadata?.deposit_id;
         const paymentId = session.metadata?.payment_id;
-        // 💰 PAIEMENT DE LOCATION
-        if (paymentType === 'location' || paymentId) {
+        // 💰 PAIEMENT DE LOCATION (inclut les sessions BHGuest : filet serveur)
+        if (paymentType === 'location' || paymentId || session.metadata?.source === 'boostinghost_guest') {
           console.log('Paiement de location detecte');
           try {
             await pool.query(`
@@ -3986,10 +3986,14 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
               }
 
               if ((isFreeLinkWithDates || isGuestAppSession) && startDate && endDate && propId && ownerId) {
-                // Vérifier qu'une résa n'existe pas déjà pour ce paiement
+                // Vérifier qu'aucune résa active ne couvre déjà ces dates
+                // (évite tout doublon avec confirm-after-payment qui crée un uid GUEST_*)
                 const existingResa = await pool.query(
-                  `SELECT uid FROM reservations WHERE uid = $1`,
-                  [`BHGUEST_${paymentId || session.id}`]
+                  `SELECT uid FROM reservations
+                     WHERE property_id = $1 AND status NOT IN ('cancelled')
+                       AND start_date < $3 AND end_date > $2
+                     LIMIT 1`,
+                  [propId, startDate, endDate]
                 );
                 if (existingResa.rows.length === 0) {
                   const amountTotal = session.amount_total ? session.amount_total / 100 : null;
@@ -4071,6 +4075,59 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       );
                     }
                   } catch(nErr) { console.error('❌ Notif BHGUEST:', nErr.message); }
+
+                  // ✅ Convertir le hold associé (évite que le CRON le passe en "expired")
+                  try {
+                    await pool.query(
+                      `UPDATE bhguest_holds SET status='converted'
+                         WHERE property_id=$1 AND checkin=$2 AND checkout=$3
+                           AND status='active' AND user_id=$4`,
+                      [propId, startDate, endDate, ownerId]
+                    );
+                  } catch(hcErr) { console.warn('⚠️ [BHGUEST][webhook] Conversion hold:', hcErr.message); }
+
+                  // 💳 Réconcilier le paiement "en attente" du lien BHGuest → payé
+                  try {
+                    const reconciled = await pool.query(
+                      `UPDATE payments
+                          SET status='paid', reservation_uid=$1, amount_cents=$2,
+                              stripe_session_id=$3, stripe_payment_intent_id=$4, updated_at=NOW()
+                        WHERE user_id=$5 AND property_id=$6 AND status='pending'
+                          AND metadata->>'source'='bhguest_hold'
+                          AND metadata->>'checkin'=$7 AND metadata->>'checkout'=$8`,
+                      [
+                        `BHGUEST_${paymentId || session.id}`,
+                        session.amount_total || (amountTotal ? Math.round(amountTotal * 100) : 0),
+                        session.id, session.payment_intent || null,
+                        ownerId, propId, startDate, endDate
+                      ]
+                    );
+                    if (reconciled.rowCount > 0) {
+                      console.log(`💳 [BHGUEST][webhook] Paiement en attente réconcilié → payé (${propId} ${startDate}→${endDate})`);
+                    }
+                  } catch(recErr) { console.warn('⚠️ [BHGUEST][webhook] Réconciliation paiement:', recErr.message); }
+
+                  // ✉️ Email de confirmation voyageur (filet si le client n'est jamais revenu)
+                  if (guestEmail) {
+                    try {
+                      const fmtD = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+                      const pNameRow = await pool.query('SELECT name FROM properties WHERE id = $1', [propId]).catch(() => ({ rows: [] }));
+                      const pName = pNameRow.rows[0]?.name || 'votre logement';
+                      await sendEmailViaBrevo({
+                        to: guestEmail,
+                        subject: `✅ Réservation confirmée — ${pName}`,
+                        text: `Votre réservation est confirmée pour ${pName} du ${fmtD(startDate)} au ${fmtD(endDate)}.`,
+                        html: bhEmailTemplate({
+                          icon:'🏠', title:'Réservation confirmée !', subtitle:pName,
+                          bodyHtml:`<div class="success-card"><strong>Paiement reçu ✓</strong><br>Référence : BHGUEST_${paymentId || session.id}</div>
+                            <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Arrivée</strong><br>${fmtD(startDate)}</div></div>
+                            <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Départ</strong><br>${fmtD(endDate)}</div></div>
+                            <p class="signoff">À très bientôt,<br>L'équipe Boostinghost</p>`,
+                          footerNote:'Boostinghost Guest'
+                        })
+                      });
+                    } catch(mErr) { console.warn('⚠️ [BHGUEST][webhook] Email voyageur:', mErr.message); }
+                  }
                 }
               }
             } catch(resaErr) {
@@ -34315,6 +34372,30 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     const prop = propResult.rows[0];
     const propUserId = prop.user_id;
 
+    // 🔒 Lien valable 4 h : si ces dates ont été "tenues" pour CE voyageur (hold avec
+    // ce même email) mais qu'aucun hold actif ne subsiste, le lien est mort → refuser.
+    // (Les réservations publiques sans hold ne sont pas concernées.)
+    let activeHoldUntil = null;
+    try {
+      const holdState = await pool.query(
+        `SELECT
+           MAX(expires_at) FILTER (WHERE status='active' AND expires_at > NOW()) AS active_until,
+           COUNT(*)        FILTER (WHERE status='active' AND expires_at > NOW()) AS active_cnt,
+           COUNT(*) AS total_cnt
+         FROM bhguest_holds
+         WHERE property_id = $1 AND checkin = $2 AND checkout = $3
+           AND LOWER(guest_email) = LOWER($4)`,
+        [property_id, checkin, checkout, guest_email]
+      );
+      const hs = holdState.rows[0] || {};
+      activeHoldUntil = hs.active_until ? new Date(hs.active_until) : null;
+      if (parseInt(hs.total_cnt || 0) > 0 && parseInt(hs.active_cnt || 0) === 0) {
+        return res.status(410).json({ error: 'Ce lien de réservation a expiré (délai de 4 h dépassé). Demandez un nouveau lien à votre hôte.' });
+      }
+    } catch (hgErr) {
+      console.warn('⚠️ [GUEST] Vérification hold non bloquante:', hgErr.message);
+    }
+
     // Calcul prix
     const start = new Date(checkin);
     const end = new Date(checkout);
@@ -34388,8 +34469,14 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       }],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      // Stripe max = 24h pour les sessions de paiement standard
-      expires_at: Math.floor(Date.now() / 1000) + (23 * 60 * 60),
+      // Stripe max = 24h ; on cale sur la fin du hold (4h) si un hold actif existe
+      expires_at: (() => {
+        const base = Math.floor(Date.now() / 1000) + (23 * 60 * 60);
+        if (!activeHoldUntil) return base;
+        const minE  = Math.floor(Date.now() / 1000) + 31 * 60; // mini Stripe ~30 min
+        const holdE = Math.floor(activeHoldUntil.getTime() / 1000);
+        return Math.max(minE, Math.min(base, holdE));
+      })(),
       metadata: {
         property_id, checkin, checkout,
         guest_name: guest_name || '',
