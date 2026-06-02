@@ -2154,6 +2154,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 }
 
+// Convertit n'importe quelle URL d'image (PNG/JPG/SVG/WebP) en PNG data URL via canvas.
+// Garantit un format supporté par pdfkit (JPEG/PNG uniquement) et évite tout fetch
+// réseau côté serveur lors de la génération PDF.
+window.imageUrlToPngDataUrl = function(url) {
+  return new Promise(function(resolve, reject) {
+    if (!url) { resolve(null); return; }
+    // Déjà une data URL PNG/JPEG → on garde tel quel
+    if (/^data:image\/(png|jpe?g)/i.test(url)) { resolve(url); return; }
+    var img = new Image();
+    img.crossOrigin = 'anonymous'; // tolère les CDN cross-origin si CORS ok
+    img.onload = function() {
+      try {
+        var w = img.naturalWidth  || 400;
+        var h = img.naturalHeight || 200;
+        // Limite raisonnable pour éviter des data URL énormes
+        var max = 600;
+        if (w > max || h > max) {
+          var r = Math.min(max / w, max / h);
+          w = Math.round(w * r); h = Math.round(h * r);
+        }
+        var c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/png'));
+      } catch (e) { reject(e); }
+    };
+    img.onerror = function() { reject(new Error('image load failed (CORS ou URL invalide)')); };
+    img.src = url;
+  });
+};
+
 // Charger les infos du profil utilisateur
 async function loadUserProfile() {
   try {
@@ -2197,12 +2228,23 @@ async function loadUserProfile() {
     
     // Charger le logo si présent
     if (profile.logoUrl) {
-      emitterProfile.logoDataUrl = profile.logoUrl;
       const logoPreview = document.getElementById('logoPreviewImg');
       if (logoPreview) {
         logoPreview.src = profile.logoUrl;
         logoPreview.style.display = 'block';
       }
+      // Convertir tout format (JPG/PNG/SVG/WebP) en PNG data URL via canvas.
+      // pdfkit côté serveur ne supporte que JPEG/PNG → on garantit le format
+      // peu importe ce que le client a uploadé, et on évite le fetch réseau.
+      window.imageUrlToPngDataUrl(profile.logoUrl)
+        .then(dataUrl => {
+          emitterProfile.logoDataUrl = dataUrl || profile.logoUrl;
+          if (window.updateEmitterProfile) window.updateEmitterProfile();
+        })
+        .catch(err => {
+          console.warn('Logo: conversion PNG échouée, fallback URL brute:', err && err.message);
+          emitterProfile.logoDataUrl = profile.logoUrl;
+        });
     }
     if (window.updateEmitterProfile) window.updateEmitterProfile();
   } catch (e) {
