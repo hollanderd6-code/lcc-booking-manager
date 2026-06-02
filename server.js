@@ -20873,7 +20873,9 @@ app.post('/api/owner-invoices/:id/send',
           userPostalCode: profile.postal_code,
           userCity:       profile.city,
           userSiret:      profile.siret,
-          userLogo:       profile.logo_url || '',
+          // Logo : priorité au PNG converti par le front (req.body.emitter.logo),
+          // sinon fallback sur l'URL en base (qui peut être WebP/SVG → souvent rejeté).
+          userLogo:       (req.body && req.body.emitter && req.body.emitter.logo) || profile.logo_url || '',
           deboursPhotos
         });
         console.log('✅ Email facture propriétaire envoyé à:', clientEmail);
