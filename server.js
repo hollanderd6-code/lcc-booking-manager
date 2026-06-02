@@ -18839,7 +18839,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     }
     if (senderLogoBuffer) {
       try {
-        doc.image(senderLogoBuffer, W - mg - 120, y, { width: 120, height: 50, fit: [120, 50], align: 'right' });
+        doc.image(senderLogoBuffer, W - mg - 160, y - 8, { width: 160, height: 70, fit: [160, 70], align: 'right' });
       } catch(e) { console.error('[PDF] doc.image a rejeté le buffer logo (format non supporté ?) :', e.message); }
     }
 
@@ -20464,7 +20464,7 @@ app.post('/api/owner-invoices/:id/finalize',
 // ============================================================
 // ENVOI EMAIL FACTURE PROPRIÉTAIRE
 // ============================================================
-async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret, deboursPhotos }) {
+async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret, userLogo, deboursPhotos }) {
   deboursPhotos = deboursPhotos || {};
   if (!clientEmail) throw new Error('Email client manquant');
 
@@ -20504,6 +20504,35 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     const GREEN = '#1A7A5E', DARK = '#1f2937', GRAY = '#6B7280', LIGHT = '#f9fafb', BORDER = '#e5e7eb';
 
     let y = mg;
+
+    // ── LOGO à droite (même ligne que le titre) ───────────────────
+    // Mêmes garde-fous que la route /pdf : data URL préférée, sinon fetch HTTP.
+    // pdfkit ne supporte que JPEG/PNG : on vérifie la signature avant doc.image.
+    let logoBuffer = null;
+    if (userLogo) {
+      try {
+        if (userLogo.startsWith('data:image')) {
+          logoBuffer = Buffer.from(userLogo.split(',')[1], 'base64');
+        } else if (userLogo.startsWith('http')) {
+          const lr = await axios.get(userLogo, { responseType: 'arraybuffer', timeout: 5000 });
+          if (lr.data.byteLength > 0) logoBuffer = Buffer.from(lr.data);
+        }
+      } catch(e) { console.error('[PDF email] échec chargement logo:', e.message); }
+    }
+    if (logoBuffer) {
+      const isPng  = logoBuffer.length >= 4 && logoBuffer[0] === 0x89 && logoBuffer[1] === 0x50 && logoBuffer[2] === 0x4E && logoBuffer[3] === 0x47;
+      const isJpeg = logoBuffer.length >= 3 && logoBuffer[0] === 0xFF && logoBuffer[1] === 0xD8 && logoBuffer[2] === 0xFF;
+      if (!isPng && !isJpeg) {
+        const hex = logoBuffer.slice(0, 4).toString('hex');
+        console.warn('[PDF email] logo non supporté par pdfkit (PNG/JPEG uniquement). Début hex: 0x' + hex + ' → logo omis.');
+        logoBuffer = null;
+      }
+    }
+    if (logoBuffer) {
+      try {
+        doc.image(logoBuffer, W - mg - 160, y - 8, { width: 160, height: 70, fit: [160, 70], align: 'right' });
+      } catch(e) { console.error('[PDF email] doc.image rejeté:', e.message); }
+    }
 
     // ── HEADER : titre gauche ──────────────────────────────────
     const invTitle = (invoiceNumber || '').startsWith('A-') ? 'AVOIR' : 'FACTURE';
@@ -20796,7 +20825,7 @@ app.post('/api/owner-invoices/:id/send',
     // Envoyer email
     // Récupérer le profil complet + email du client via JOIN
     const profileResult = await pool.query(
-      'SELECT company, email, address, postal_code, city, siret FROM users WHERE id = $1',
+      'SELECT company, email, address, postal_code, city, siret, logo_url FROM users WHERE id = $1',
       [userId]
     );
     const profile = profileResult.rows[0] || {};
@@ -20844,6 +20873,7 @@ app.post('/api/owner-invoices/:id/send',
           userPostalCode: profile.postal_code,
           userCity:       profile.city,
           userSiret:      profile.siret,
+          userLogo:       profile.logo_url || '',
           deboursPhotos
         });
         console.log('✅ Email facture propriétaire envoyé à:', clientEmail);
