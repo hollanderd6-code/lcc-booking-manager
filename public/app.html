@@ -13986,35 +13986,69 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   function updateStickyTops() {
     var calHeader = document.querySelector('.calendar-modern-header');
     var daysHeader = document.getElementById('daysHeader');
-    var propHeader = document.querySelector('.property-list-header');
     if (!calHeader) return;
 
-    // Calculer le top offset (header app si présent)
+    // Header vert du calendrier → sticky (fonctionne car il est hors du wrapper)
     var appHeader = document.querySelector('header.main-header');
     var appH = appHeader ? appHeader.getBoundingClientRect().height : 0;
-    var calH = calHeader.getBoundingClientRect().height;
-    var totalTop = appH + calH;
-
-    // Header vert du calendrier → sticky
     calHeader.style.position = 'sticky';
     calHeader.style.top = appH + 'px';
     calHeader.style.zIndex = '40';
 
-    // Barre des dates → sticky sous le header vert
-    if (daysHeader) {
-      daysHeader.style.position = 'sticky';
-      daysHeader.style.top = totalTop + 'px';
-      daysHeader.style.zIndex = '39';
-      daysHeader.style.background = 'var(--surface-color, #F5F0E8)';
+    // ── Clone sticky pour la barre des dates ──
+    if (!daysHeader) return;
+    var wrapper = document.querySelector('.calendar-grid-wrapper');
+    if (!wrapper) return;
+
+    // Créer le clone une seule fois
+    var clone = document.getElementById('daysHeaderClone');
+    if (!clone) {
+      clone = document.createElement('div');
+      clone.id = 'daysHeaderClone';
+      clone.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:38;display:none;overflow:hidden;background:var(--surface-color,#F5F0E8);border-bottom:2px solid #DDD9D3;box-shadow:0 2px 8px rgba(0,0,0,.08);';
+      document.body.appendChild(clone);
     }
 
-    // Colonne LOGEMENTS → sticky aussi
-    if (propHeader) {
-      propHeader.style.position = 'sticky';
-      propHeader.style.top = totalTop + 'px';
-      propHeader.style.zIndex = '41';
-      propHeader.style.background = 'var(--surface-color, #F5F0E8)';
+    var scrollContainer = document.querySelector('main.main-content') || document.documentElement;
+
+    function syncClone() {
+      var calHeaderRect = calHeader.getBoundingClientRect();
+      var calHeaderBottom = calHeaderRect.bottom;
+      var daysRect = daysHeader.getBoundingClientRect();
+      var wrapperRect = wrapper.getBoundingClientRect();
+
+      // Montrer le clone quand daysHeader est caché sous le header sticky
+      if (daysRect.top < calHeaderBottom && wrapperRect.bottom > calHeaderBottom + 40) {
+        // Cloner le contenu
+        clone.innerHTML = daysHeader.innerHTML;
+        clone.style.display = 'block';
+        clone.style.top = calHeaderBottom + 'px';
+        clone.style.left = wrapperRect.left + 'px';
+        clone.style.width = wrapperRect.width + 'px';
+        clone.style.height = daysRect.height + 'px';
+
+        // Sync scroll horizontal
+        clone.scrollLeft = wrapper.scrollLeft;
+
+        // Appliquer le même style que daysHeader
+        var cs = getComputedStyle(daysHeader);
+        clone.style.display = 'flex';
+        clone.style.alignItems = cs.alignItems;
+        clone.style.fontSize = cs.fontSize;
+      } else {
+        clone.style.display = 'none';
+      }
     }
+
+    // Écouter le scroll vertical + horizontal
+    scrollContainer.addEventListener('scroll', syncClone, { passive: true });
+    wrapper.addEventListener('scroll', function() {
+      if (clone.style.display !== 'none') {
+        clone.scrollLeft = wrapper.scrollLeft;
+      }
+    }, { passive: true });
+
+    syncClone();
   }
   document.addEventListener('DOMContentLoaded', updateStickyTops);
   window.addEventListener('resize', updateStickyTops);
