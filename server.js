@@ -234,18 +234,31 @@ async function triggerChannexAvailabilitySync(propertyId, targetDates = null) {
 
     console.log(`🔄 [CHANNEX SYNC] Déclenchement pour ${propertyId} (${targetDates ? targetDates.length + ' dates ciblées' : 'full sync'})`);
 
-    // Récupérer toutes les dates bloquées (pour savoir lesquelles sont dispo ou non)
+    // ✅ Timezone-safe : convertir en date Paris avant extraction
     const resaResult = await pool.query(
-      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')",
+      `SELECT
+         to_char(start_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as start_str,
+         to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as end_str
+       FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+      [propertyId]
+    );
+
+    // Inclure aussi les holds BHGuest actifs
+    const holdsResult = await pool.query(
+      `SELECT checkin as start_str, checkout as end_str FROM bhguest_holds
+       WHERE property_id = $1 AND status = 'active' AND expires_at > NOW()`,
       [propertyId]
     );
 
     const dates_blocked = [];
-    resaResult.rows.forEach(r => {
-      const start = new Date(r.start_date);
-      const end = new Date(r.end_date);
+    [...resaResult.rows, ...holdsResult.rows].forEach(r => {
+      const start = new Date(r.start_str + 'T00:00:00');
+      const end = new Date(r.end_str + 'T00:00:00');
       for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-        dates_blocked.push(d.toISOString().split('T')[0]);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        dates_blocked.push(`${yyyy}-${mm}-${dd}`);
       }
     });
 
@@ -253,7 +266,7 @@ async function triggerChannexAvailabilitySync(propertyId, targetDates = null) {
       property_id: propertyId,
       channex_property_id: prop.channex_property_id,
       channex_room_type_id: prop.channex_room_type_id,
-      dates_blocked,
+      dates_blocked: [...new Set(dates_blocked)],
       dates_to_update: targetDates  // null = full sync, tableau = mode partiel
     });
 
@@ -24147,7 +24160,9 @@ async function releaseHoldChannex(pool, hold) {
     const { pushAvailability } = require('./channex');
     // Recalculer les dates bloquées sans ce hold
     const allResas = await pool.query(
-      `SELECT start_date::date as s, end_date::date as e FROM reservations
+      `SELECT to_char(start_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as s,
+              to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as e
+       FROM reservations
        WHERE property_id = $1 AND status NOT IN ('cancelled')`,
       [hold.property_id]
     );
@@ -24158,9 +24173,10 @@ async function releaseHoldChannex(pool, hold) {
     );
     const allBlocked = [];
     [...allResas.rows, ...allHolds.rows].forEach(r => {
-      const s = new Date(r.s), e = new Date(r.e);
+      const s = new Date(r.s + 'T00:00:00'), e = new Date(r.e + 'T00:00:00');
       for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-        allBlocked.push(d.toISOString().split('T')[0]);
+        const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+        allBlocked.push(`${yyyy}-${mm}-${dd}`);
       }
     });
     await pushAvailability(pool, {
@@ -32806,33 +32822,15 @@ app.post('/api/guest/book', async (req, res) => {
     }
     if (prop.channex_enabled && prop.channex_property_id) {
       try {
-        const { pushAvailability } = require('./channex');
-        // Construire les dates bloquées
-        const blockedDates = [];
+        // Dates de la réservation à bloquer
+        const targetDates = [];
         for (let i = 0; i < nights; i++) {
           const d = new Date(start);
           d.setDate(start.getDate() + i);
-          blockedDates.push(d.toISOString().split('T')[0]);
+          const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+          targetDates.push(`${yyyy}-${mm}-${dd}`);
         }
-        // Récupérer toutes les réservations confirmées
-        const allResas = await pool.query(
-          `SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
-          [property_id]
-        );
-        const allBlocked = [];
-        allResas.rows.forEach(r => {
-          const s = new Date(r.start_date), e = new Date(r.end_date);
-          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-            allBlocked.push(d.toISOString().split('T')[0]);
-          }
-        });
-        await pushAvailability(pool, {
-          property_id,
-          channex_property_id: prop.channex_property_id,
-          channex_room_type_id: prop.channex_room_type_id,
-          dates_blocked: allBlocked
-        });
-        console.log(`✅ [GUEST] Disponibilités Channex mises à jour pour ${property_id}`);
+        await triggerChannexAvailabilitySync(property_id, targetDates);
       } catch (channexErr) {
         console.error('⚠️ [GUEST] Erreur sync Channex (non bloquant):', channexErr.message);
       }
@@ -34482,7 +34480,9 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
         const { pushAvailability } = require('./channex');
         // Récupérer toutes les dates bloquées (réservations + holds actifs)
         const allResas = await pool.query(
-          `SELECT start_date::date as s, end_date::date as e FROM reservations
+          `SELECT to_char(start_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as s,
+                  to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as e
+           FROM reservations
            WHERE property_id = $1 AND status NOT IN ('cancelled')`,
           [property_id]
         );
@@ -34493,9 +34493,10 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
         );
         const allBlocked = [];
         [...allResas.rows, ...allHolds.rows].forEach(r => {
-          const s = new Date(r.s), e = new Date(r.e);
+          const s = new Date(r.s + 'T00:00:00'), e = new Date(r.e + 'T00:00:00');
           for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-            allBlocked.push(d.toISOString().split('T')[0]);
+            const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+            allBlocked.push(`${yyyy}-${mm}-${dd}`);
           }
         });
         await pushAvailability(pool, {
@@ -34986,22 +34987,13 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
     // Sync Channex si activé
     if (prop.channex_enabled && prop.channex_property_id) {
       try {
-        const { pushAvailability } = require('./channex');
-        const allResas = await pool.query(
-          `SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
-          [property_id]
-        );
-        const allBlocked = [];
-        allResas.rows.forEach(r => {
-          const s = new Date(r.start_date), e = new Date(r.end_date);
-          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-            allBlocked.push(d.toISOString().split('T')[0]);
-          }
-        });
-        await pushAvailability(pool, {
-          property_id, channex_property_id: prop.channex_property_id,
-          channex_room_type_id: prop.channex_room_type_id, dates_blocked: allBlocked
-        });
+        const targetDates = [];
+        const s = new Date(checkin + 'T00:00:00'), e = new Date(checkout + 'T00:00:00');
+        for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+          const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+          targetDates.push(`${yyyy}-${mm}-${dd}`);
+        }
+        await triggerChannexAvailabilitySync(property_id, targetDates);
       } catch (channexErr) {
         console.error('⚠️ [GUEST] Erreur sync Channex:', channexErr.message);
       }
@@ -35637,22 +35629,13 @@ N'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
         // Sync Channex
         if (prop.channex_enabled && prop.channex_property_id) {
           try {
-            const { pushAvailability } = require('./channex');
-            const allResas = await pool.query(
-              `SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
-              [property_id]
-            );
-            const allBlocked = [];
-            allResas.rows.forEach(r => {
-              const s = new Date(r.start_date), e = new Date(r.end_date);
-              for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-                allBlocked.push(d.toISOString().split('T')[0]);
-              }
-            });
-            await pushAvailability(pool, {
-              property_id, channex_property_id: prop.channex_property_id,
-              channex_room_type_id: prop.channex_room_type_id, dates_blocked: allBlocked
-            });
+            const targetDates = [];
+            const s2 = new Date(checkin + 'T00:00:00'), e2 = new Date(checkout + 'T00:00:00');
+            for (let d = new Date(s2); d < e2; d.setDate(d.getDate() + 1)) {
+              const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+              targetDates.push(`${yyyy}-${mm}-${dd}`);
+            }
+            await triggerChannexAvailabilitySync(property_id, targetDates);
           } catch(channexErr) {
             console.warn('⚠️ [RECOVER] Channex sync:', channexErr.message);
           }
