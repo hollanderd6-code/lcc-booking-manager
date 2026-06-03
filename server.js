@@ -35822,3 +35822,4 @@ app.delete('/api/guest/promo/:id', authenticateToken, async (req, res) => {
 app.get('/guest-app/public', (req, res) => {
   res.sendFile(path.join(__dirname, 'guest-app', 'public', 'index.html'));
 });
+app.get('/api/force-sync', authenticateAny, async (req, res) => { const u = req.user.parentUserId||req.user.id; if(u!=='u_mmj5c6hq') return res.status(403).json({error:'Admin only'}); const p = await pool.query(`SELECT id,name FROM properties WHERE channex_enabled=TRUE AND channex_property_id IS NOT NULL AND user_id=$1`,[u]); const r=[]; for(const x of p.rows){try{await triggerChannexAvailabilitySync(x.id,null);r.push('✅ '+x.name)}catch(e){r.push('❌ '+x.name)
