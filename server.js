@@ -24251,6 +24251,60 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
   }
 }
 
+// ── Helper : résoudre ou générer un code serrure à la volée ──
+async function resolveOrGenerateLockCode(pool, propertyId, userId, reservationUid, startDate, endDate, guestName) {
+  try {
+    // 1. Chercher un code existant
+    const existing = await pool.query(
+      `SELECT slc.code FROM smart_lock_codes slc
+       JOIN smart_lock_assignments sla ON sla.lock_id = slc.lock_id
+       WHERE sla.property_id = $1 AND slc.user_id = $2 AND slc.status = 'active'
+         AND slc.reservation_uid = $3
+       ORDER BY slc.created_at DESC LIMIT 1`,
+      [propertyId, userId, reservationUid]
+    );
+    if (existing.rows[0]?.code) return existing.rows[0].code;
+
+    // 2. Pas de code → vérifier si une serrure est assignée
+    if (!reservationUid || !startDate || !endDate) return '';
+
+    const lockInfo = await pool.query(
+      `SELECT sl.*, sla.property_id, slc.id AS connection_id, slc.brand, slc.credentials
+       FROM smart_lock_assignments sla
+       JOIN smart_locks sl ON sl.id = sla.lock_id
+       JOIN smart_lock_connections slc ON slc.id = sl.connection_id AND slc.is_active = TRUE
+       WHERE sla.property_id = $1 AND sla.user_id = $2
+       LIMIT 1`,
+      [propertyId, userId]
+    );
+    if (!lockInfo.rows[0]) return ''; // pas de serrure assignée
+
+    const lock = lockInfo.rows[0];
+    const { getAdapter } = require('./routes/adapters');
+    const connection = { id: lock.connection_id, user_id: userId, brand: lock.brand, credentials: lock.credentials };
+    const adapter = getAdapter(connection, pool);
+
+    // 3. Générer le code via l'adapter
+    const result = await adapter.generateCode(lock, { startDate, endDate, guestName: guestName || 'Voyageur' });
+
+    // 4. Sauvegarder en DB
+    await pool.query(
+      `INSERT INTO smart_lock_codes
+        (user_id, lock_id, property_id, reservation_uid, brand, external_code_id, code, code_type, guest_name, valid_from, valid_until, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'temporary',$8,$9,$10,'active')
+       ON CONFLICT DO NOTHING`,
+      [userId, lock.id, propertyId, reservationUid, lock.brand,
+       result.externalCodeId, result.code, guestName || 'Voyageur', result.validFrom, result.validUntil]
+    );
+
+    console.log(`🔑 [AUTO-INSTANT] Code ${result.code} généré à la volée pour ${guestName} → ${lock.lock_name}`);
+    return result.code;
+  } catch (e) {
+    console.error('⚠️ [SMART-LOCK] resolveOrGenerateLockCode:', e.message);
+    return '';
+  }
+}
+
 async function sendTemplateMessage(pool, io, { template, conv, property }) {
   const { sendBookingMessage } = require('./channex');
   const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
@@ -24273,23 +24327,13 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     .replace(/{instructions}/gi, property?.practical_info || '')
     .replace(/{livret}/gi, property?.welcome_book_url || '');
 
-  // Résoudre {code_serrure} — code smart lock pour cette réservation
+  // Résoudre {code_serrure} — code smart lock (génération à la volée si nécessaire)
   if (msg.includes('{code_serrure}') || msg.includes('{lock_code}')) {
-    try {
-      const slcResult = await pool.query(
-        `SELECT slc.code FROM smart_lock_codes slc
-         JOIN smart_lock_assignments sla ON sla.lock_id = slc.lock_id
-         WHERE sla.property_id = $1 AND slc.user_id = $2 AND slc.status = 'active'
-           AND slc.valid_from <= NOW() AND slc.valid_until >= NOW()
-         ORDER BY slc.created_at DESC LIMIT 1`,
-        [conv.property_id, conv.user_id]
-      );
-      const lockCode = slcResult.rows[0]?.code || '';
-      msg = msg.replace(/{code_serrure}/gi, lockCode).replace(/{lock_code}/gi, lockCode);
-    } catch(slcErr) {
-      console.warn('⚠️ [SMART-LOCK] Erreur résolution {code_serrure}:', slcErr.message);
-      msg = msg.replace(/{code_serrure}/gi, '').replace(/{lock_code}/gi, '');
-    }
+    const lockCode = await resolveOrGenerateLockCode(
+      pool, conv.property_id, conv.user_id,
+      conv.reservation_uid, conv.reservation_start_date, conv.reservation_end_date, conv.guest_name
+    );
+    msg = msg.replace(/{code_serrure}/gi, lockCode).replace(/{lock_code}/gi, lockCode);
   }
 
   // Résoudre {caution_url} — chercher le lien Stripe dans deposits
@@ -24646,22 +24690,13 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
       .replace(/\{instructions\}/gi, pi.practical_info || '')
       .replace(/\{livret\}/gi, pi.welcome_book_url || '');
 
-    // Résoudre {code_serrure}
+    // Résoudre {code_serrure} (génération à la volée si nécessaire)
     if (msg.includes('{code_serrure}') || msg.includes('{lock_code}')) {
-      try {
-        const slcResult = await pool.query(
-          `SELECT slc.code FROM smart_lock_codes slc
-           JOIN smart_lock_assignments sla ON sla.lock_id = slc.lock_id
-           WHERE sla.property_id = $1 AND slc.user_id = $2 AND slc.status = 'active'
-             AND slc.valid_from <= NOW() AND slc.valid_until >= NOW()
-           ORDER BY slc.created_at DESC LIMIT 1`,
-          [c.property_id, userId]
-        );
-        const lockCode = slcResult.rows[0]?.code || '';
-        msg = msg.replace(/\{code_serrure\}/gi, lockCode).replace(/\{lock_code\}/gi, lockCode);
-      } catch(slcErr) {
-        msg = msg.replace(/\{code_serrure\}/gi, '').replace(/\{lock_code\}/gi, '');
-      }
+      const lockCode = await resolveOrGenerateLockCode(
+        pool, c.property_id, userId,
+        c.reservation_uid, c.reservation_start_date, c.reservation_end_date, c.guest_name
+      );
+      msg = msg.replace(/\{code_serrure\}/gi, lockCode).replace(/\{lock_code\}/gi, lockCode);
     }
 
     // Résoudre {caution_url} si présent
