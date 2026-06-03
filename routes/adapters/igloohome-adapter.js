@@ -66,8 +66,8 @@ class IgloohomeAdapter extends SmartLockAdapter {
       cursor = data.nextCursor || null;
     } while (cursor);
 
-    console.log('🔍 [IGLOO RAW] Premier device:', JSON.stringify(allDevices[0], null, 2));
-
+console.log('🔍 [IGLOO] Bridges:', JSON.stringify(allDevices.filter(d => d.type === 'Bridge'), null, 2));
+    
     // Collecter les homeIds des bridges pour déterminer quelles serrures sont "en ligne"
     const bridgeHomeIds = new Set();
     for (const d of allDevices) {
