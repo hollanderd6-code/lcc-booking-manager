@@ -903,13 +903,21 @@ async function loadReservationsForProperty(propertyId) {
   if (!propertyId) return;
 
   try {
-    const res = await fetch(`/api/reservations?propertyId=${propertyId}&status=confirmed,pending`, { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('/api/reservations', { headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
-    const resas = data.reservations || [];
+    const now = new Date();
+    const resas = (data.reservations || []).filter(r =>
+      r.propertyId === propertyId &&
+      r.status !== 'cancelled' &&
+      new Date(r.endDate || r.end_date) >= now
+    );
     resas.forEach(r => {
-      const from = new Date(r.start_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-      const to = new Date(r.end_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-      select.innerHTML += `<option value="${r.uid}" data-guest="${esc(r.guest_name || '')}" data-start="${r.start_date}" data-end="${r.end_date}">${esc(r.guest_name || 'Voyageur')} — ${from} → ${to}</option>`;
+      const sd = r.startDate || r.start_date;
+      const ed = r.endDate || r.end_date;
+      const gn = r.guestName || r.guest_name || '';
+      const from = new Date(sd).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+      const to = new Date(ed).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+      select.innerHTML += `<option value="${r.uid}" data-guest="${esc(gn)}" data-start="${sd}" data-end="${ed}">${esc(gn || 'Voyageur')} — ${from} → ${to}</option>`;
     });
 
     // Auto-fill on selection
