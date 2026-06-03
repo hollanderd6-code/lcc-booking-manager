@@ -1,6 +1,8 @@
 const SmartLockAdapter = require('./base-adapter');
 
-const BASE_URL = 'https://api.igloocompany.co/iglooaccess/v1';
+const AUTH_URL = 'https://auth.igloohome.co/oauth2/token';
+const BASE_URL = 'https://api.igloodeveloper.co/igloohome';
+const SCOPES = 'igloohomeapi/algopin-hourly igloohomeapi/algopin-daily igloohomeapi/algopin-permanent igloohomeapi/algopin-onetime igloohomeapi/get-devices';
 
 class IgloohomeAdapter extends SmartLockAdapter {
   constructor(connection, pool) {
@@ -8,7 +10,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
   }
 
   async authenticate() {
-    // Igloohome utilise client_credentials OAuth2
+    // Igloohome utilise client_credentials OAuth2 avec HTTP Basic Auth
     const { clientId, clientSecret } = this.credentials;
     if (!clientId || !clientSecret) throw new Error('Igloohome: clientId et clientSecret requis');
 
@@ -20,13 +22,17 @@ class IgloohomeAdapter extends SmartLockAdapter {
     }
 
     const fetch = (await import('node-fetch')).default;
-    const res = await fetch('https://api.igloocompany.co/iglooaccess/v1/oauth2/token', {
+    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    const res = await fetch(AUTH_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${basicAuth}`,
+      },
       body: new URLSearchParams({
         grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
+        scope: SCOPES,
       }),
     });
 
