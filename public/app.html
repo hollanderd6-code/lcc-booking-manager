@@ -2249,7 +2249,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       display: flex;
       flex-direction: column;
       overflow-x: auto !important;
-      overflow-y: visible !important; /* plus de scroll vertical interne */
+      overflow-y: clip !important; /* clip au lieu de visible — permet position:sticky */
     }
 
     /* 3. Plus de scroll vertical séparé : 
@@ -13981,140 +13981,46 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 <script src="/js/bh-onboarding.js"></script>
 
 <script>
-// ── Sticky calendar header sur mobile uniquement ──────────────
+// ── Sticky calendar headers (mobile + desktop) ──────────────
 (function() {
   function updateStickyTops() {
-    if (window.innerWidth > 768) {
-      // Desktop : retirer le sticky
-      ['calendar-modern-header','daysHeader'].forEach(function(id) {
-        var el = id === 'daysHeader' ? document.getElementById(id) : document.querySelector('.' + id);
-        if (el) { el.style.position = ''; el.style.top = ''; el.style.zIndex = ''; }
-      });
-      return;
-    }
-    var appHeader = document.querySelector('header.main-header');
     var calHeader = document.querySelector('.calendar-modern-header');
     var daysHeader = document.getElementById('daysHeader');
+    var propHeader = document.querySelector('.property-list-header');
     if (!calHeader) return;
+
+    // Calculer le top offset (header app si présent)
+    var appHeader = document.querySelector('header.main-header');
     var appH = appHeader ? appHeader.getBoundingClientRect().height : 0;
     var calH = calHeader.getBoundingClientRect().height;
+    var totalTop = appH + calH;
+
+    // Header vert du calendrier → sticky
     calHeader.style.position = 'sticky';
     calHeader.style.top = appH + 'px';
     calHeader.style.zIndex = '40';
+
+    // Barre des dates → sticky sous le header vert
     if (daysHeader) {
       daysHeader.style.position = 'sticky';
-      daysHeader.style.top = (appH + calH) + 'px';
+      daysHeader.style.top = totalTop + 'px';
       daysHeader.style.zIndex = '39';
       daysHeader.style.background = 'var(--surface-color, #F5F0E8)';
+    }
+
+    // Colonne LOGEMENTS → sticky aussi
+    if (propHeader) {
+      propHeader.style.position = 'sticky';
+      propHeader.style.top = totalTop + 'px';
+      propHeader.style.zIndex = '41';
+      propHeader.style.background = 'var(--surface-color, #F5F0E8)';
     }
   }
   document.addEventListener('DOMContentLoaded', updateStickyTops);
   window.addEventListener('resize', updateStickyTops);
   setTimeout(updateStickyTops, 300);
   setTimeout(updateStickyTops, 800);
-})();
-</script>
-
-<!-- Sticky dates header clone (scroll vertical) -->
-<script>
-(function() {
-  let clone = null;
-  let propClone = null;
-  let ticking = false;
-
-  function initStickyDatesHeader() {
-    const daysHeader = document.getElementById('daysHeader');
-    const gridWrapper = daysHeader?.closest('.calendar-grid-wrapper');
-    const calContainer = daysHeader?.closest('.calendar-container');
-    const propHeader = calContainer?.querySelector('.property-list-header');
-    if (!daysHeader || !gridWrapper || !calContainer) return;
-
-    // Hauteur du header vert du calendrier (s'il est sticky)
-    function getTopOffset() {
-      const calModernHeader = document.querySelector('.calendar-modern-header');
-      if (!calModernHeader) return 0;
-      const rect = calModernHeader.getBoundingClientRect();
-      // Si le header est visible et sticky, son bottom est le top offset
-      return rect.bottom > 0 ? rect.bottom : 0;
-    }
-
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        ticking = false;
-        const rect = daysHeader.getBoundingClientRect();
-        const topOffset = getTopOffset();
-
-        if (rect.top < topOffset - 2) {
-          // Header hors écran → afficher le clone
-          if (!clone) {
-            clone = daysHeader.cloneNode(true);
-            clone.id = 'daysHeaderClone';
-            clone.style.cssText = `
-              position: fixed; top: ${topOffset}px; z-index: 39;
-              left: ${gridWrapper.getBoundingClientRect().left}px;
-              width: ${gridWrapper.clientWidth}px;
-              height: ${daysHeader.offsetHeight}px;
-              background: var(--surface-color, #F5F0E8);
-              border-bottom: 2px solid var(--calendar-border, rgba(200,184,154,.35));
-              overflow: hidden; pointer-events: none;
-              box-shadow: 0 2px 8px rgba(0,0,0,.08);
-            `;
-            document.body.appendChild(clone);
-          }
-          // Aussi cloner le header "LOGEMENTS"
-          if (!propClone && propHeader) {
-            propClone = propHeader.cloneNode(true);
-            propClone.id = 'propHeaderClone';
-            const propCol = calContainer.querySelector('.property-list-column');
-            propClone.style.cssText = `
-              position: fixed; top: ${topOffset}px; z-index: 40;
-              left: ${propCol.getBoundingClientRect().left}px;
-              width: ${propCol.offsetWidth}px;
-              height: ${daysHeader.offsetHeight}px;
-              background: var(--surface-color, #F5F0E8);
-              border-bottom: 2px solid var(--calendar-border, rgba(200,184,154,.35));
-              display: flex; align-items: center;
-              box-shadow: 0 2px 8px rgba(0,0,0,.08);
-            `;
-            document.body.appendChild(propClone);
-          }
-          // Sync horizontal scroll
-          if (clone) {
-            clone.style.left = gridWrapper.getBoundingClientRect().left + 'px';
-            clone.style.width = gridWrapper.clientWidth + 'px';
-            clone.scrollLeft = gridWrapper.scrollLeft;
-          }
-          if (propClone) {
-            const propCol = calContainer.querySelector('.property-list-column');
-            propClone.style.left = propCol.getBoundingClientRect().left + 'px';
-            propClone.style.top = clone ? clone.style.top : topOffset + 'px';
-          }
-        } else {
-          // Header visible → supprimer les clones
-          if (clone) { clone.remove(); clone = null; }
-          if (propClone) { propClone.remove(); propClone = null; }
-        }
-      });
-    }
-
-    // Sync scroll horizontal du clone
-    gridWrapper.addEventListener('scroll', () => {
-      if (clone) clone.scrollLeft = gridWrapper.scrollLeft;
-    }, { passive: true });
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', () => {
-      if (clone) { clone.remove(); clone = null; }
-      if (propClone) { propClone.remove(); propClone = null; }
-    });
-  }
-
-  // Init après le rendu du calendrier
-  setTimeout(initStickyDatesHeader, 1000);
-  setTimeout(initStickyDatesHeader, 2500);
-  document.addEventListener('DOMContentLoaded', () => setTimeout(initStickyDatesHeader, 1500));
+  setTimeout(updateStickyTops, 2000);
 })();
 </script>
 
