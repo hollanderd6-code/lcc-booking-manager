@@ -539,7 +539,10 @@ async function loadCodes() {
 // RENDER: LOCKS
 // ══════════════════════════════════════
 function renderLocks() {
-  if (locks.length === 0) {
+  const visibleLocks = locks.filter(l => l.lock_type !== 'bridge' && (l.model || '').toLowerCase() !== 'keypad');
+  document.getElementById('lockCount').textContent = visibleLocks.length;
+
+  if (visibleLocks.length === 0) {
     const hasConnection = connections.some(c => c.connected);
     document.getElementById('locksContent').innerHTML = `
       <div class="empty-state">
@@ -550,7 +553,7 @@ function renderLocks() {
     return;
   }
 
-  const html = locks.map(lock => {
+  const html = visibleLocks.map(lock => {
     const prop = lock.assignment;
     const bat = lock.battery_level;
     const batClass = bat == null ? '' : bat > 50 ? 'high' : bat > 20 ? 'mid' : 'low';
