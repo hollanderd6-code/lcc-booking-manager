@@ -70,6 +70,7 @@ function getSidebarHTML() {
       clients: 'can_view_invoices',
       reporting: 'can_view_reporting',
       pricing: 'can_view_pricing',
+      'smart-locks': 'can_view_smart_locks',
     };
     const perm = permMap[page];
     return perm ? permissions[perm] === true : false;
@@ -180,15 +181,16 @@ function getSidebarHTML() {
     </div>
     ` : ''}
 
-    <!-- À VENIR -->
+    <!-- SERRURES -->
+    ${canSeePage('smart-locks') ? `
     <div class="nav-section">
-      <div class="nav-section-title">À venir</div>
-      <div class="nav-item nav-item--soon" style="opacity:0.45;cursor:default;pointer-events:none;" title="Fonctionnalité bientôt disponible">
+      <div class="nav-section-title">Avancé</div>
+      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
         <i class="fas fa-lock"></i>
         <span>Serrures connectées</span>
-        <span style="margin-left:auto;font-size:10px;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:2px 7px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;opacity:1;">Bientôt</span>
-      </div>
+      </a>
     </div>
+    ` : ''}
 
     <!-- PARAMÈTRES (compte principal uniquement) -->
     ${!isSubAccount ? `
