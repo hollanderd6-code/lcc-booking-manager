@@ -523,7 +523,32 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
         );
 
         // TODO V3 : push vers Channex ici
-        // await pushPriceToChannex(pool, row.property_id, row.week_start, priceApplied);
+        try {
+          const { pushRates } = require('../channex');
+          const propRes = await pool.query(
+            `SELECT channex_enabled, channex_property_id, channex_rate_plan_id
+             FROM properties WHERE id = $1`, [row.property_id]
+          );
+          const prop = propRes.rows[0];
+          if (prop?.channex_enabled && prop.channex_rate_plan_id) {
+            // Générer les dates de la semaine (lundi → dimanche)
+            const ws = new Date(row.week_start);
+            const rates = [];
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(ws); d.setDate(ws.getDate() + i);
+              rates.push({ date: d.toISOString().slice(0, 10), price: priceApplied });
+            }
+            await pushRates(pool, {
+              property_id: row.property_id,
+              channex_property_id: prop.channex_property_id,
+              channex_rate_plan_id: prop.channex_rate_plan_id,
+              rates
+            });
+            console.log(`📡 [DYNAMIC-PRICING] Prix poussé sur Channex: ${priceApplied}€ × 7 jours`);
+          }
+        } catch (chErr) {
+          console.error('⚠️ [DYNAMIC-PRICING] Channex push error:', chErr.message);
+        }
 
         console.log(`✅ [DYNAMIC-PRICING] Suggestion acceptée — historyId:${historyId} — ${priceApplied}€`);
         res.json({ success: true, action: 'applied', priceApplied });
@@ -756,4 +781,5 @@ module.exports = {
   factorSelf,
   factorSeasonality,
   getSelfOccupancy,
+  buildWeeklyEmailHtml,
 };
