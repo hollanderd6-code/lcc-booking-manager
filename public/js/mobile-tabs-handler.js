@@ -147,9 +147,8 @@
     }
 
     buttons += `
-      <button class="btn btn-secondary" disabled style="width: 100%; justify-content: flex-start; opacity: 0.45; cursor: default; pointer-events: none;">
+      <button class="btn btn-secondary" onclick="window.location.href='/smart-locks.html'" style="width: 100%; justify-content: flex-start;">
         <i class="fas fa-lock"></i> Serrures connectées
-        <span style="margin-left:auto;font-size:10px;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:2px 7px;border-radius:20px;opacity:1;">Bientôt</span>
       </button>`;
 
     buttons += hr;
