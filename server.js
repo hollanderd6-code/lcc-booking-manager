@@ -4099,6 +4099,20 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                     );
                   } catch(hcErr) { console.warn('⚠️ [BHGUEST][webhook] Conversion hold:', hcErr.message); }
 
+                  // 🔄 Sync Channex — bloquer les dates sur les OTA
+                  try {
+                    const targetDates = [];
+                    const s = new Date(startDate + 'T00:00:00'), e = new Date(endDate + 'T00:00:00');
+                    for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+                      const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+                      targetDates.push(`${yyyy}-${mm}-${dd}`);
+                    }
+                    await triggerChannexAvailabilitySync(propId, targetDates);
+                    console.log(`🔄 [BHGUEST][webhook] Channex synced pour ${propId} ${startDate}→${endDate}`);
+                  } catch(channexErr) {
+                    console.error('⚠️ [BHGUEST][webhook] Erreur sync Channex:', channexErr.message);
+                  }
+
                   // 💳 Réconcilier le paiement "en attente" du lien BHGuest → payé
                   try {
                     const reconciled = await pool.query(
