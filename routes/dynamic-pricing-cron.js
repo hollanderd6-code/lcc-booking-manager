@@ -394,6 +394,35 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       const historyId = histResult.rows[0]?.id;
       console.log(`✅ [DP-CRON] pricing_history #${historyId}: status=${status} prix=${priceCalculated}€`);
 
+      // 7b. Si appliqué (auto) → push vers Channex
+      if (status === 'applied') {
+        try {
+          const { pushRates } = require('../channex');
+          const propRes = await pool.query(
+            `SELECT channex_enabled, channex_property_id, channex_rate_plan_id
+             FROM properties WHERE id = $1`, [cfg.property_id]
+          );
+          const prop = propRes.rows[0];
+          if (prop?.channex_enabled && prop.channex_rate_plan_id) {
+            const ws = new Date(weekStart);
+            const rates = [];
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(ws); d.setDate(ws.getDate() + i);
+              rates.push({ date: d.toISOString().slice(0, 10), price: priceCalculated });
+            }
+            await pushRates(pool, {
+              property_id: cfg.property_id,
+              channex_property_id: prop.channex_property_id,
+              channex_rate_plan_id: prop.channex_rate_plan_id,
+              rates
+            });
+            console.log(`📡 [DP-CRON] Prix poussé sur Channex: ${priceCalculated}€ × 7 jours`);
+          }
+        } catch (chErr) {
+          console.error('⚠️ [DP-CRON] Channex push error:', chErr.message);
+        }
+      }
+
       // 8. Notification push
       if (!isStable && cfg.notify_push) {
         const pushMsg = cfg.mode === 'auto'
@@ -445,23 +474,36 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
     if (!userResults.length) continue;
 
     const user = configs.find(c => c.user_id === userId);
-    if (!user?.notify_email) continue;
+    if (!user?.notify_email || !user?.user_email) continue;
 
-    // Appel à la route send-weekly-report via fetch interne
-    // (ou on peut appeler directement la fonction d'email ici)
     try {
-      const appliedCount = userResults.filter(r => r.status === 'applied').length;
-      const pendingCount = userResults.filter(r => r.status === 'pending').length;
-      const totalGain    = userResults
-        .filter(r => r.status === 'applied' && r.priceApplied && r.priceBefore)
-        .reduce((s, r) => s + (r.priceApplied - r.priceBefore), 0);
+      const weekLabel = new Date(weekStart).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      console.log(`📧 [DP-CRON] Email récap → ${user.user_email}: ${appliedCount} appliqué(s), ${pendingCount} en attente, gain estimé +${Math.round(totalGain)}€`);
-      // L'email HTML est généré par dynamic-pricing-routes.js → buildWeeklyEmailHtml
-      // On le déclenche via la route POST /api/dynamic-pricing/send-weekly-report
-      // (appelée en interne depuis le cron dans server.js)
+      // Récupérer l'historique de la semaine pour l'email
+      const histResult = await pool.query(
+        `SELECT ph.*, p.name AS property_name
+         FROM pricing_history ph
+         LEFT JOIN properties p ON p.id = ph.property_id
+         WHERE ph.user_id = $1 AND ph.week_start = $2
+         ORDER BY ph.created_at ASC`,
+        [userId, weekStart]
+      );
+
+      if (histResult.rows.length === 0) continue;
+
+      const { buildWeeklyEmailHtml } = require('./dynamic-pricing-routes');
+      const html = buildWeeklyEmailHtml(user.user_first_name || 'Bonjour', histResult.rows, weekLabel);
+
+      await sendEmail({
+        from: '"Boostinghost" <noreply@boostinghost.fr>',
+        to: user.user_email,
+        subject: `📊 Votre marché cette semaine — ${histResult.rows.length} logement${histResult.rows.length > 1 ? 's' : ''}`,
+        html,
+      });
+
+      console.log(`📧 [DP-CRON] Email récap envoyé à ${user.user_email}`);
     } catch (emailErr) {
-      console.error('❌ [DP-CRON] Email error:', emailErr.message);
+      console.error(`❌ [DP-CRON] Email error for ${user.user_email}:`, emailErr.message);
     }
   }
 
