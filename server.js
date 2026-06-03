@@ -4051,8 +4051,8 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                           (user_id, property_id, reservation_start_date, reservation_end_date,
                            platform, guest_name, guest_email, guest_phone,
                            pin_code, unique_token, photos_token,
-                           is_verified, status)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, FALSE, 'pending')
+                           reservation_uid, is_verified, status)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, FALSE, 'pending')
                          RETURNING id`,
                         [
                           ownerId,
@@ -4066,9 +4066,39 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                           Math.floor(1000 + Math.random() * 9000).toString(),
                           require('crypto').randomBytes(32).toString('hex'),
                           require('crypto').randomBytes(32).toString('hex'),
+                          `BHGUEST_${paymentId || session.id}`,
                         ]
                       );
                       console.log(`💬 [BHGUEST] Conversation créée: ${convResult.rows[0].id}`);
+
+                      // 📩 Déclencher les templates on_booking
+                      try {
+                        const tplTemplates = await pool.query(
+                          `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = 'on_booking' AND active = TRUE
+                           AND (property_id IS NULL OR property_id::text = $2::text)`,
+                          [ownerId, propId]
+                        );
+                        if (tplTemplates.rows.length > 0) {
+                          const convData = await pool.query('SELECT * FROM conversations WHERE id = $1 LIMIT 1', [convResult.rows[0].id]);
+                          const propData = await pool.query(
+                            `SELECT address, arrival_time, departure_time, access_code, wifi_name,
+                                    wifi_password, practical_info, welcome_book_url, name, internal_name
+                             FROM properties WHERE id = $1`, [propId]
+                          );
+                          if (convData.rows[0] && propData.rows[0]) {
+                            for (const tmpl of tplTemplates.rows) {
+                              await sendTemplateMessage(pool, io, {
+                                template: tmpl,
+                                conv: { ...convData.rows[0], user_id: ownerId },
+                                property: propData.rows[0]
+                              });
+                            }
+                            console.log(`📩 [BHGUEST] ${tplTemplates.rows.length} template(s) on_booking envoyé(s)`);
+                          }
+                        }
+                      } catch(tplErr) {
+                        console.error('⚠️ [BHGUEST] Templates on_booking:', tplErr.message);
+                      }
                     } else {
                       console.log(`💬 [BHGUEST] Conversation existante: ${existingConv.rows[0].id}`);
                     }
