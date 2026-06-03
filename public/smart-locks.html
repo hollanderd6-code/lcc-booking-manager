@@ -539,7 +539,7 @@ async function loadCodes() {
 // RENDER: LOCKS
 // ══════════════════════════════════════
 function renderLocks() {
-  const visibleLocks = locks.filter(l => l.lock_type !== 'bridge' && (l.model || '').toLowerCase() !== 'keypad');
+  const visibleLocks = locks.filter(l => l.lock_type !== 'bridge');
   document.getElementById('lockCount').textContent = visibleLocks.length;
 
   if (visibleLocks.length === 0) {
