@@ -54,7 +54,9 @@ class IgloohomeAdapter extends SmartLockAdapter {
     const token = await this.authenticate();
     const allDevices = [];
     let cursor = null;
-do {
+
+    // Pagination avec nextCursor
+    do {
       const url = cursor ? `${BASE_URL}/devices?cursor=${cursor}` : `${BASE_URL}/devices`;
       const data = await this.apiCall(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -66,8 +68,17 @@ do {
 
     console.log('🔍 [IGLOO RAW] Premier device:', JSON.stringify(allDevices[0], null, 2));
 
+    // Collecter les homeIds des bridges pour déterminer quelles serrures sont "en ligne"
+    const bridgeHomeIds = new Set();
+    for (const d of allDevices) {
+      if (d.type === 'Bridge') {
+        (d.homeId || []).forEach(h => bridgeHomeIds.add(h));
+      }
+    }
+
     return allDevices.map(d => {
-      const linkedBridge = (d.linkedDevices || []).some(ld => ld.type === 'Bridge');
+      // Une serrure est "en ligne" si un bridge existe dans le même homeId
+      const hasBridge = (d.homeId || []).some(h => bridgeHomeIds.has(h));
       return {
         deviceId: d.deviceId || d.id,
         name: d.deviceName || d.name || 'Igloohome Lock',
@@ -75,10 +86,10 @@ do {
         model: d.type || null,
         serialNumber: d.deviceId || null,
         battery: d.batteryLevel ?? null,
-        isOnline: linkedBridge,
+        isOnline: hasBridge,
         metadata: {
           linkedDevices: d.linkedDevices || [],
-          hasBridge: linkedBridge,
+          hasBridge,
           homeId: d.homeId || [],
           raw: d,
         },
@@ -132,15 +143,16 @@ do {
       const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const linkedBridge = (data.linkedDevices || []).some(ld => ld.type === 'Bridge');
+      // isOnline est déterminé lors du sync (hasBridge dans metadata)
+      const hasBridge = lock.metadata?.hasBridge ?? false;
       return {
         battery: data.batteryLevel ?? null,
-        isOnline: linkedBridge,
+        isOnline: hasBridge,
         lastActivity: data.pairedAt || null,
         firmwareVersion: null,
       };
     } catch (e) {
-      return { battery: null, isOnline: false, lastActivity: null, firmwareVersion: null };
+      return { battery: null, isOnline: lock.metadata?.hasBridge ?? false, lastActivity: null, firmwareVersion: null };
     }
   }
 
