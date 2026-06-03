@@ -54,9 +54,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
     const token = await this.authenticate();
     const allDevices = [];
     let cursor = null;
-
-    // Pagination avec nextCursor
-    do {
+do {
       const url = cursor ? `${BASE_URL}/devices?cursor=${cursor}` : `${BASE_URL}/devices`;
       const data = await this.apiCall(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -65,6 +63,8 @@ class IgloohomeAdapter extends SmartLockAdapter {
       if (Array.isArray(devices)) allDevices.push(...devices);
       cursor = data.nextCursor || null;
     } while (cursor);
+
+    console.log('🔍 [IGLOO RAW] Premier device:', JSON.stringify(allDevices[0], null, 2));
 
     return allDevices.map(d => {
       const linkedBridge = (d.linkedDevices || []).some(ld => ld.type === 'Bridge');
