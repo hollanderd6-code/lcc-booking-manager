@@ -773,11 +773,25 @@ async function openLockDetail(lockId) {
     status = await api(`/lock/${lockId}/status`);
   } catch (e) {}
 
-  // Fetch codes for this lock
-  const lockCodes = codes.filter(c => c.lock_id === lockId && c.status === 'active');
+  // Fetch codes FRAIS depuis l'API (pas le cache local)
+  let lockCodes = [];
+  try {
+    const codeData = await api('/codes');
+    lockCodes = (codeData.codes || []).filter(c => c.lock_id === lockId);
+    // Trier : actifs d'abord, puis par date
+    lockCodes.sort((a, b) => {
+      if (a.status === 'active' && b.status !== 'active') return -1;
+      if (b.status === 'active' && a.status !== 'active') return 1;
+      return new Date(a.valid_from || 0) - new Date(b.valid_from || 0);
+    });
+  } catch (e) { console.error('Fetch lock codes:', e); }
 
+  const activeCodes = lockCodes.filter(c => c.status === 'active');
   const batVal = status.battery;
   const batClass = batVal == null ? '' : batVal > 50 ? 'high' : batVal > 20 ? 'mid' : 'low';
+
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
 
   document.getElementById('lockDetailBody').innerHTML = `
     <div class="detail-grid">
@@ -813,17 +827,29 @@ async function openLockDetail(lockId) {
       </div>
     `}
 
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Codes actifs (${lockCodes.length})</div>
-    ${lockCodes.length > 0 ? lockCodes.map(c => `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;">
-        <span style="font-family:monospace;font-weight:700;font-size:16px;letter-spacing:2px;">${esc(c.code)}</span>
-        <span style="font-size:12px;color:var(--sl-text-muted);">${esc(c.guest_name || 'Voyageur')}</span>
-        <span style="margin-left:auto;"><button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')"><i class="fa fa-ban" style="color:var(--sl-danger);"></i></button></span>
-      </div>
-    `).join('') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucun code actif</div>'}
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🔑 Codes par réservation (${lockCodes.length})</div>
+    ${lockCodes.length > 0 ? lockCodes.map(c => {
+      const statusClass = c.status === 'active' ? 'status-active' : c.status === 'expired' ? 'status-expired' : 'status-revoked';
+      const statusLabel = c.status === 'active' ? 'Actif' : c.status === 'expired' ? 'Expiré' : 'Révoqué';
+      return `
+      <div style="background:#f9fafb;border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid ${c.status === 'active' ? 'rgba(16,185,129,.3)' : '#e5e7eb'};">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:20px;letter-spacing:3px;color:${c.status === 'active' ? 'var(--sl-primary)' : 'var(--sl-text-muted)'};">${esc(c.code)}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="status-badge ${statusClass}">${statusLabel}</span>
+            ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')" title="Révoquer"><i class="fa fa-ban" style="color:var(--sl-danger);font-size:12px;"></i></button>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--sl-text-muted);">
+          <span><i class="fa fa-user" style="width:14px;"></i> ${esc(c.guest_name || 'Voyageur')}</span>
+          <span><i class="fa fa-calendar" style="width:14px;"></i> ${fmtDate(c.valid_from)} → ${fmtDate(c.valid_until)}</span>
+          ${c.reservation_uid ? `<span><i class="fa fa-bookmark" style="width:14px;"></i> ${esc(c.reservation_uid)}</span>` : '<span style="color:#D97706;"><i class="fa fa-hand-paper" style="width:14px;"></i> Manuel</span>'}
+        </div>
+      </div>`;
+    }).join('') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucun code généré. Les codes seront créés automatiquement pour chaque réservation.</div>'}
 
     <div class="detail-actions">
-      ${lock.assignment ? `<button class="btn btn-primary btn-sm" onclick="closeLockDetail(); openGenerateCodeForProperty('${lock.assignment.property_id}')"><i class="fa fa-key"></i> Générer un code</button>` : ''}
+      ${lock.assignment ? `<button class="btn btn-primary btn-sm" onclick="closeLockDetail(); openGenerateCodeForProperty('${lock.assignment.property_id}')"><i class="fa fa-key"></i> Générer un code manuel</button>` : ''}
       <button class="btn btn-secondary btn-sm" onclick="closeLockDetail(); openAssignModal('${lock.id}')"><i class="fa fa-link"></i> ${lock.assignment ? 'Changer logement' : 'Associer'}</button>
     </div>
   `;
@@ -856,6 +882,8 @@ async function assignLockToProperty() {
     showToast('Serrure associée !', 'success');
     closeModal('assignModal');
     await loadLocks();
+    await loadCodes();
+    await loadStatus();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
