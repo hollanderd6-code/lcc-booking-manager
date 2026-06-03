@@ -9,6 +9,61 @@ module.exports = function createSmartLocksRoutes(pool) {
     return req.user?.parentUserId || req.user?.id;
   }
 
+  // ── Helper : auto-générer les codes pour toutes les réservations futures d'un logement (ou de tous) ──
+  async function autoGenerateCodesForProperty(pool, userId, propertyId) {
+    const propertyFilter = propertyId
+      ? 'AND r.property_id = $2'
+      : '';
+    const params = propertyId ? [userId, propertyId] : [userId];
+
+    const reservations = await pool.query(`
+      SELECT r.uid, r.property_id, r.start_date, r.end_date, r.guest_name,
+             sla.lock_id, sl.lock_name, sl.brand, sl.connection_id
+      FROM reservations r
+      JOIN smart_lock_assignments sla ON sla.property_id = r.property_id AND sla.user_id = $1
+      JOIN smart_locks sl ON sl.id = sla.lock_id
+      JOIN smart_lock_connections slc ON slc.id = sl.connection_id AND slc.is_active = TRUE
+      WHERE r.user_id = $1
+        AND r.start_date >= NOW() - INTERVAL '1 day'
+        AND r.start_date <= NOW() + INTERVAL '30 days'
+        AND r.status NOT IN ('cancelled')
+        ${propertyFilter}
+        AND NOT EXISTS (
+          SELECT 1 FROM smart_lock_codes c
+          WHERE c.reservation_uid = r.uid AND c.status = 'active'
+        )`, params);
+
+    let generated = 0;
+    for (const resa of reservations.rows) {
+      try {
+        const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [resa.connection_id]);
+        if (!connResult.rows[0]) continue;
+        const adapter = getAdapter(connResult.rows[0], pool);
+        const lockRow = await pool.query('SELECT * FROM smart_locks WHERE id = $1', [resa.lock_id]);
+        if (!lockRow.rows[0]) continue;
+
+        const result = await adapter.generateCode(lockRow.rows[0], {
+          startDate: resa.start_date,
+          endDate: resa.end_date,
+          guestName: resa.guest_name,
+        });
+
+        await pool.query(
+          `INSERT INTO smart_lock_codes
+            (user_id, lock_id, property_id, reservation_uid, brand, external_code_id, code, code_type, guest_name, valid_from, valid_until, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,'temporary',$8,$9,$10,'active')`,
+          [userId, resa.lock_id, resa.property_id, resa.uid, resa.brand,
+           result.externalCodeId, result.code, resa.guest_name, result.validFrom, result.validUntil]);
+
+        console.log(`🔑 [AUTO] Code ${result.code} → ${resa.guest_name} (${resa.lock_name})`);
+        generated++;
+      } catch (genErr) {
+        console.error(`[SMART-LOCKS] Auto-gen failed for ${resa.uid}:`, genErr.message);
+      }
+    }
+    return generated;
+  }
+
   // ══════════════════════════════════════════════
   // CONFIG & CONNEXIONS
   // ══════════════════════════════════════════════
@@ -265,7 +320,15 @@ module.exports = function createSmartLocksRoutes(pool) {
         [lockId, propertyId, userId]
       );
 
-      res.json({ success: true });
+      // Auto-générer les codes pour les réservations futures de ce logement
+      try {
+        const generated = await autoGenerateCodesForProperty(pool, userId, propertyId);
+        console.log(`🔑 [ASSIGN] ${generated} code(s) auto-générés pour property ${propertyId}`);
+        res.json({ success: true, codesGenerated: generated });
+      } catch (autoErr) {
+        console.error('[ASSIGN] Auto-gen codes failed:', autoErr.message);
+        res.json({ success: true, codesGenerated: 0 });
+      }
     } catch (e) {
       res.status(500).json({ error: 'Erreur association' });
     }
@@ -459,66 +522,13 @@ module.exports = function createSmartLocksRoutes(pool) {
   // GÉNÉRATION AUTOMATIQUE (appelé par le cron/webhook)
   // ══════════════════════════════════════════════
 
-  /** POST /codes/auto-generate — Générer automatiquement les codes pour les arrivées du jour */
+  /** POST /codes/auto-generate — Générer automatiquement les codes pour les réservations futures (30j) */
   router.post('/codes/auto-generate', async (req, res) => {
     try {
       const userId = getUserId(req);
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-      // Trouver les réservations du jour qui ont une serrure assignée et pas encore de code
-      const reservations = await pool.query(
-        `SELECT r.uid, r.property_id, r.start_date, r.end_date, r.guest_name,
-                sla.lock_id, sl.lock_name, sl.brand, sl.connection_id
-         FROM reservations r
-         JOIN smart_lock_assignments sla ON sla.property_id = r.property_id AND sla.user_id = $1
-         JOIN smart_locks sl ON sl.id = sla.lock_id
-         JOIN smart_lock_connections slc ON slc.id = sl.connection_id AND slc.is_active = TRUE
-         WHERE r.user_id = $1
-           AND DATE(r.start_date) = $2
-           AND r.status NOT IN ('cancelled')
-           AND NOT EXISTS (
-             SELECT 1 FROM smart_lock_codes c
-             WHERE c.reservation_uid = r.uid AND c.status = 'active'
-           )`,
-        [userId, todayStr]
-      );
-
-      let generated = 0;
-      const errors = [];
-
-      for (const resa of reservations.rows) {
-        try {
-          const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [resa.connection_id]);
-          const adapter = getAdapter(connResult.rows[0], pool);
-          const lock = { device_id: resa.lock_id, metadata: {} };
-
-          // Récupérer le vrai lock row
-          const lockRow = await pool.query('SELECT * FROM smart_locks WHERE id = $1', [resa.lock_id]);
-          const result = await adapter.generateCode(lockRow.rows[0], {
-            startDate: resa.start_date,
-            endDate: resa.end_date,
-            guestName: resa.guest_name,
-          });
-
-          await pool.query(
-            `INSERT INTO smart_lock_codes
-              (user_id, lock_id, property_id, reservation_uid, brand, external_code_id, code, code_type, guest_name, valid_from, valid_until, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'temporary', $8, $9, $10, 'active')`,
-            [userId, resa.lock_id, resa.property_id, resa.uid, resa.brand,
-             result.externalCodeId, result.code, resa.guest_name,
-             result.validFrom, result.validUntil]
-          );
-
-          console.log(`🔑 [AUTO] Code ${result.code} généré pour ${resa.guest_name} → ${resa.lock_name}`);
-          generated++;
-        } catch (genErr) {
-          console.error(`[SMART-LOCKS] Auto-gen failed for ${resa.uid}:`, genErr.message);
-          errors.push({ reservationUid: resa.uid, error: genErr.message });
-        }
-      }
-
-      res.json({ success: true, generated, total: reservations.rows.length, errors });
+      const { propertyId } = req.body || {};
+      const generated = await autoGenerateCodesForProperty(pool, userId, propertyId || null);
+      res.json({ success: true, generated });
     } catch (e) {
       console.error('[SMART-LOCKS] POST /codes/auto-generate:', e.message);
       res.status(500).json({ error: 'Erreur auto-génération' });
