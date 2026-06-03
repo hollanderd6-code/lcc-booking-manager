@@ -836,6 +836,90 @@ html[data-theme-v3="1"] .mobile-header {
 </div>
 </section>
 
+<!-- ====== Guides interactifs ====== -->
+<section class="card mb-lg">
+<div class="card-header">
+  <div class="card-title">
+    <i class="fas fa-book-open"></i> Guides interactifs
+  </div>
+</div>
+<div class="card-body">
+  <p style="color:var(--text-secondary);font-size:14px;margin-bottom:20px;">Des tutoriels illustrés étape par étape pour maîtriser chaque fonctionnalité.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;" id="guidesGrid">
+
+    <!-- Guide 1 — Calendrier -->
+    <a href="tuto-calendrier-annotator.html" class="guide-card" style="text-decoration:none;color:inherit;">
+      <div class="guide-icon" style="background:linear-gradient(135deg,#059669,#10b981);">📅</div>
+      <div class="guide-info">
+        <div class="guide-title">Calendrier des réservations</div>
+        <div class="guide-desc">4 vues, recherche, actions rapides, édition groupée et taux d'occupation.</div>
+        <div class="guide-meta"><span class="guide-pill">⏱ 5 min</span> <span class="guide-pill">10 étapes</span></div>
+      </div>
+    </a>
+
+    <!-- Guide 2 — Messages -->
+    <a href="tuto-messages-annotator.html" class="guide-card" style="text-decoration:none;color:inherit;">
+      <div class="guide-icon" style="background:linear-gradient(135deg,#3b82f6,#6366f1);">💬</div>
+      <div class="guide-info">
+        <div class="guide-title">Messages automatiques</div>
+        <div class="guide-desc">Configurez vos templates, conditions d'envoi et messagerie avec les voyageurs.</div>
+        <div class="guide-meta"><span class="guide-pill">⏱ 5 min</span> <span class="guide-pill">Airbnb · Booking · Direct</span></div>
+      </div>
+    </a>
+
+    <!-- Guide 3 — Connecter Airbnb -->
+    <a href="tuto-connecter-airbnb-annotator.html" class="guide-card" style="text-decoration:none;color:inherit;">
+      <div class="guide-icon" style="background:linear-gradient(135deg,#ef4444,#f97316);">🔗</div>
+      <div class="guide-info">
+        <div class="guide-title">Connecter Airbnb</div>
+        <div class="guide-desc">Synchronisez votre compte Airbnb, créez le channel et mappez vos annonces.</div>
+        <div class="guide-meta"><span class="guide-pill">⏱ 3 min</span> <span class="guide-pill">9 étapes</span></div>
+      </div>
+    </a>
+
+    <!-- Guide 4 — BHGuest -->
+    <a href="tuto-bhguest-annotator.html" class="guide-card" style="text-decoration:none;color:inherit;">
+      <div class="guide-icon" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">🏠</div>
+      <div class="guide-info">
+        <div class="guide-title">BHGuest — Réservations directes</div>
+        <div class="guide-desc">Créez des liens de réservation, gérez les holds et les paiements directs.</div>
+        <div class="guide-meta"><span class="guide-pill">⏱ 4 min</span> <span class="guide-pill">Lien · Paiement · Hold</span></div>
+      </div>
+    </a>
+
+  </div>
+</div>
+</section>
+
+<style>
+.guide-card {
+  border-radius:14px;overflow:hidden;
+  border:1px solid rgba(200,184,154,.4);
+  background:rgba(255,255,255,.6);
+  transition:transform .18s,box-shadow .18s;
+  display:flex;gap:14px;padding:18px;align-items:flex-start;
+  cursor:pointer;
+}
+.guide-card:hover {
+  transform:translateY(-3px);
+  box-shadow:0 8px 24px rgba(26,122,94,.12);
+}
+[data-theme="dark"] .guide-card { background:var(--bg-secondary); }
+.guide-icon {
+  width:48px;height:48px;border-radius:14px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.guide-info { flex:1;min-width:0; }
+.guide-title { font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px; }
+.guide-desc { font-size:12.5px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px; }
+.guide-meta { display:flex;gap:6px;flex-wrap:wrap; }
+.guide-pill {
+  font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px;
+  background:rgba(26,122,94,.08);color:#1A7A5E;
+}
+</style>
+
 <!-- Modal player YouTube -->
 <div id="tutoModal" style="
   display:none;position:fixed;inset:0;z-index:9999;
