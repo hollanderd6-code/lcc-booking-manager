@@ -14015,6 +14015,109 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 })();
 </script>
 
+<!-- Sticky dates header clone (scroll vertical) -->
+<script>
+(function() {
+  let clone = null;
+  let propClone = null;
+  let ticking = false;
+
+  function initStickyDatesHeader() {
+    const daysHeader = document.getElementById('daysHeader');
+    const gridWrapper = daysHeader?.closest('.calendar-grid-wrapper');
+    const calContainer = daysHeader?.closest('.calendar-container');
+    const propHeader = calContainer?.querySelector('.property-list-header');
+    if (!daysHeader || !gridWrapper || !calContainer) return;
+
+    // Hauteur du header vert du calendrier (s'il est sticky)
+    function getTopOffset() {
+      const calModernHeader = document.querySelector('.calendar-modern-header');
+      if (!calModernHeader) return 0;
+      const rect = calModernHeader.getBoundingClientRect();
+      // Si le header est visible et sticky, son bottom est le top offset
+      return rect.bottom > 0 ? rect.bottom : 0;
+    }
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const rect = daysHeader.getBoundingClientRect();
+        const topOffset = getTopOffset();
+
+        if (rect.top < topOffset - 2) {
+          // Header hors écran → afficher le clone
+          if (!clone) {
+            clone = daysHeader.cloneNode(true);
+            clone.id = 'daysHeaderClone';
+            clone.style.cssText = `
+              position: fixed; top: ${topOffset}px; z-index: 39;
+              left: ${gridWrapper.getBoundingClientRect().left}px;
+              width: ${gridWrapper.clientWidth}px;
+              height: ${daysHeader.offsetHeight}px;
+              background: var(--surface-color, #F5F0E8);
+              border-bottom: 2px solid var(--calendar-border, rgba(200,184,154,.35));
+              overflow: hidden; pointer-events: none;
+              box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            `;
+            document.body.appendChild(clone);
+          }
+          // Aussi cloner le header "LOGEMENTS"
+          if (!propClone && propHeader) {
+            propClone = propHeader.cloneNode(true);
+            propClone.id = 'propHeaderClone';
+            const propCol = calContainer.querySelector('.property-list-column');
+            propClone.style.cssText = `
+              position: fixed; top: ${topOffset}px; z-index: 40;
+              left: ${propCol.getBoundingClientRect().left}px;
+              width: ${propCol.offsetWidth}px;
+              height: ${daysHeader.offsetHeight}px;
+              background: var(--surface-color, #F5F0E8);
+              border-bottom: 2px solid var(--calendar-border, rgba(200,184,154,.35));
+              display: flex; align-items: center;
+              box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            `;
+            document.body.appendChild(propClone);
+          }
+          // Sync horizontal scroll
+          if (clone) {
+            clone.style.left = gridWrapper.getBoundingClientRect().left + 'px';
+            clone.style.width = gridWrapper.clientWidth + 'px';
+            clone.scrollLeft = gridWrapper.scrollLeft;
+          }
+          if (propClone) {
+            const propCol = calContainer.querySelector('.property-list-column');
+            propClone.style.left = propCol.getBoundingClientRect().left + 'px';
+            propClone.style.top = clone ? clone.style.top : topOffset + 'px';
+          }
+        } else {
+          // Header visible → supprimer les clones
+          if (clone) { clone.remove(); clone = null; }
+          if (propClone) { propClone.remove(); propClone = null; }
+        }
+      });
+    }
+
+    // Sync scroll horizontal du clone
+    gridWrapper.addEventListener('scroll', () => {
+      if (clone) clone.scrollLeft = gridWrapper.scrollLeft;
+    }, { passive: true });
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', () => {
+      if (clone) { clone.remove(); clone = null; }
+      if (propClone) { propClone.remove(); propClone = null; }
+    });
+  }
+
+  // Init après le rendu du calendrier
+  setTimeout(initStickyDatesHeader, 1000);
+  setTimeout(initStickyDatesHeader, 2500);
+  document.addEventListener('DOMContentLoaded', () => setTimeout(initStickyDatesHeader, 1500));
+})();
+</script>
+
 <!-- ═══════════════════════════════════════════════════════════
      PANNEAU OFFRES & CODES PROMO
 ═══════════════════════════════════════════════════════════ -->
