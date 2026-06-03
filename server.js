@@ -26464,6 +26464,105 @@ cron.schedule('5 * * * *', async () => {
   } catch(e) { /* silent */ }
 });
 
+// ══════════════════════════════════════════════
+// CRON SMART LOCKS — Monitoring batterie (1x/jour à 9h)
+// ══════════════════════════════════════════════
+cron.schedule('0 9 * * *', async () => {
+  console.log('🔋 [CRON BATTERIE] Vérification des niveaux de batterie serrures...');
+  try {
+    const { getAdapter } = require('./routes/adapters');
+    const THRESHOLDS = [30, 20, 10]; // seuils d'alerte
+
+    // Toutes les serrures avec connexion active
+    const locksResult = await pool.query(`
+      SELECT sl.*, slc.id AS connection_id, slc.brand, slc.credentials, slc.user_id,
+             sla.property_id, p.name AS property_name
+      FROM smart_locks sl
+      JOIN smart_lock_connections slc ON slc.id = sl.connection_id AND slc.is_active = TRUE
+      LEFT JOIN smart_lock_assignments sla ON sla.lock_id = sl.id
+      LEFT JOIN properties p ON p.id = sla.property_id
+    `);
+
+    let updated = 0, alerts = 0;
+
+    for (const lock of locksResult.rows) {
+      try {
+        // Créer l'adapter pour récupérer le statut
+        const connection = {
+          id: lock.connection_id,
+          user_id: lock.user_id,
+          brand: lock.brand,
+          credentials: lock.credentials,
+        };
+        const adapter = getAdapter(connection, pool);
+        const status = await adapter.getLockStatus(lock);
+
+        if (status.battery == null) continue;
+
+        // Mettre à jour le niveau en DB
+        await pool.query(
+          `UPDATE smart_locks SET battery_level = $1, is_online = $2, updated_at = NOW() WHERE id = $3`,
+          [status.battery, status.isOnline ?? true, lock.id]
+        );
+        updated++;
+
+        // Vérifier les seuils d'alerte
+        const currentAlert = lock.battery_alert_sent || 0;
+        let newAlertLevel = 0;
+        for (const threshold of THRESHOLDS) {
+          if (status.battery <= threshold) {
+            newAlertLevel = threshold;
+            break; // prendre le seuil le plus bas atteint
+          }
+        }
+
+        // Envoyer une notif seulement si on franchit un NOUVEAU seuil (plus bas que le précédent)
+        if (newAlertLevel > 0 && newAlertLevel < currentAlert || (newAlertLevel > 0 && currentAlert === 0)) {
+          const propertyLabel = lock.property_name ? ` — ${lock.property_name}` : '';
+          const emoji = newAlertLevel <= 10 ? '🔴' : newAlertLevel <= 20 ? '🟠' : '🟡';
+          const title = `${emoji} Batterie faible : ${lock.lock_name}`;
+          const body = `Niveau de batterie à ${status.battery}%${propertyLabel}. Pensez à remplacer la pile.`;
+
+          // Récupérer les FCM tokens de l'utilisateur
+          const tokensRes = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+            [lock.user_id]
+          );
+          if (tokensRes.rows.length > 0) {
+            const fcmTokens = tokensRes.rows.map(r => r.fcm_token);
+            await sendNotificationToMultipleLogged(
+              fcmTokens,
+              title,
+              body,
+              { type: 'smart_lock_battery', lockId: lock.id, battery: String(status.battery), userId: lock.user_id }
+            );
+            console.log(`  ${emoji} ${lock.lock_name}: ${status.battery}%${propertyLabel} → notif envoyée`);
+            alerts++;
+          }
+
+          // Stocker le seuil notifié
+          await pool.query(
+            'UPDATE smart_locks SET battery_alert_sent = $1 WHERE id = $2',
+            [newAlertLevel, lock.id]
+          );
+        }
+
+        // Remettre à 0 si la batterie remonte au-dessus de 30% (pile changée)
+        if (status.battery > 30 && currentAlert > 0) {
+          await pool.query('UPDATE smart_locks SET battery_alert_sent = 0 WHERE id = $1', [lock.id]);
+        }
+
+      } catch (lockErr) {
+        console.error(`  ❌ ${lock.lock_name}:`, lockErr.message);
+      }
+    }
+
+    console.log(`🔋 [CRON BATTERIE] ${updated} serrure(s) mises à jour, ${alerts} alerte(s) envoyée(s)`);
+  } catch (e) {
+    console.error('❌ [CRON BATTERIE]', e.message);
+  }
+});
+
 cron.schedule('0 8 * * *', async () => {
   console.log('======================================== CRON 8H ========================================');
   console.log('CRON 8H: Envoi des notifications quotidiennes');
