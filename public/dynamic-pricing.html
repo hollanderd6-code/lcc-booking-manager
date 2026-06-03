@@ -842,25 +842,31 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   <div class="tab-panel" id="panel-config">
     <div id="config-loading" style="text-align:center;padding:48px 0;color:var(--muted);font-size:14px;">
       <i class="fas fa-circle-notch fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>
-      Chargement de la configuration...
+      Chargement de vos logements...
     </div>
     <div id="config-content" style="display:none;">
-      <!-- Cartes config — injectées dynamiquement -->
-      <div id="config-cards"></div>
+      <div class="pcard" style="margin-bottom:16px;">
+        <div class="pcard-header">
+          <div class="pcard-title"><i class="fas fa-sliders-h"></i> Activer le pricing dynamique</div>
+        </div>
+        <div class="pcard-body" style="padding:0;">
+          <p style="padding:16px 20px 0;font-size:13px;color:var(--muted);margin:0;">
+            Activez le pricing sur chaque logement, définissez vos prix min/max et choisissez le mode. L'analyse de marché se lance chaque lundi à 6h.
+          </p>
+          <div id="config-cards" style="padding:12px 20px 20px;"></div>
+        </div>
+      </div>
       <!-- Zone d'analyse -->
       <div class="pcard" style="margin-bottom:16px;">
         <div class="pcard-header">
           <div class="pcard-title"><i class="fas fa-map-marker-alt"></i> Zone d'analyse de marché</div>
-          <span style="font-size:11.5px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
-            <i class="fas fa-check-circle"></i> Détectée automatiquement
-          </span>
         </div>
         <div class="pcard-body">
           <div class="zone-info">
             <div class="zone-map-thumb">🗺️</div>
             <div>
               <p style="font-size:13.5px;color:var(--text);line-height:1.6;">
-                <strong>Cercle de 1,5 km</strong> autour de chaque logement — concurrents similaires identifiés automatiquement.
+                <strong>Cercle de 1,5 km</strong> autour de chaque logement — concurrents similaires identifiés automatiquement via l'adresse du logement.
               </p>
               <div class="zone-stats" id="zone-stats">
                 <div class="zone-stat"><strong>Lundi 6h00</strong> analyse hebdo</div>
@@ -869,9 +875,6 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
           </div>
         </div>
       </div>
-      <button class="btn-accept" style="width:100%;margin-top:4px;" onclick="savePricingConfig()">
-        <i class="fas fa-check"></i> Enregistrer la configuration
-      </button>
     </div>
   </div>
 
@@ -1368,43 +1371,43 @@ async function loadConfig() {
   $('config-content').style.display  = 'none';
 
   try {
-    // On utilise les données du dashboard si déjà chargées, sinon on fetche /config
-    let configs;
-    if (state.dashboard?.properties?.length) {
-      configs = state.dashboard.properties.map(p => ({
-        propertyId:   p.propertyId,
-        propertyName: p.propertyName,
-        priceMin:     p.priceMin,
-        priceMax:     p.priceMax,
-        mode:         p.mode,
-        isActive:     true,
-      }));
-    } else {
-      const res = await fetch(`${API_BASE}${DP}/config`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      configs = data.configs || [];
-    }
-    state.configs = configs;
+    // 1. Charger TOUS les logements
+    const propRes = await fetch('/api/properties', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') } });
+    const propData = await propRes.json();
+    const allProperties = propData.properties || [];
 
-    // Initialiser les pendingConfigs
-    configs.forEach(c => {
-      state.pendingConfigs[c.propertyId] = {
-        priceMin: c.priceMin,
-        priceMax: c.priceMax,
-        mode: c.mode,
+    // 2. Charger les configs existantes
+    let existingConfigs = [];
+    try {
+      const cfgRes = await fetch(`${API_BASE}${DP}/config`);
+      if (cfgRes.ok) {
+        const cfgData = await cfgRes.json();
+        existingConfigs = cfgData.configs || [];
+      }
+    } catch {}
+
+    // 3. Merger : chaque logement avec sa config (ou défauts)
+    const merged = allProperties.map(p => {
+      const cfg = existingConfigs.find(c => String(c.propertyId) === String(p.id));
+      return {
+        propertyId: p.id,
+        propertyName: p.name || p.internal_name || p.id,
+        isActive: cfg?.isActive ?? false,
+        priceMin: cfg?.priceMin ?? 40,
+        priceMax: cfg?.priceMax ?? 200,
+        mode: cfg?.mode ?? 'manual',
       };
     });
 
-    if (!configs.length) {
-      // Proposer d'activer pour tous les logements
+    state.configs = merged;
+
+    if (!allProperties.length) {
       $('config-cards').innerHTML = `
         <div style="text-align:center;padding:32px 0;color:var(--muted);font-size:14px;">
-          <i class="fas fa-sliders-h" style="font-size:32px;margin-bottom:12px;display:block;color:var(--pg);"></i>
-          Aucun logement configuré — utilisez le bouton ci-dessous pour démarrer.
+          Aucun logement trouvé dans votre compte.
         </div>`;
     } else {
-      $('config-cards').innerHTML = configs.map((c, i) => renderConfigCard(c, i)).join('');
+      $('config-cards').innerHTML = merged.map((c, i) => renderConfigCard(c, i)).join('');
     }
 
     $('config-loading').style.display = 'none';
@@ -1419,128 +1422,149 @@ async function loadConfig() {
 }
 
 function renderConfigCard(cfg, idx) {
-  const id = idx + 1;
-  const modeAuto   = cfg.mode === 'auto';
+  const isOn = cfg.isActive;
+  const modeAuto = cfg.mode === 'auto';
+  const pid = cfg.propertyId;
   return `
-  <div class="pcard" style="margin-bottom:16px;">
-    <div class="pcard-header">
-      <div class="pcard-title">
-        <i class="fas fa-home"></i>
-        ${cfg.propertyName || cfg.propertyId}
+  <div class="prop-config-row" id="pcfg-${pid}" style="border:1px solid ${isOn ? 'rgba(26,122,94,.25)' : 'rgba(200,184,154,.3)'};border-radius:14px;padding:16px;margin-bottom:12px;background:${isOn ? 'rgba(26,122,94,.03)' : 'white'};transition:all .2s;">
+    <!-- Header : nom + toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${isOn ? '14px' : '0'};">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:${isOn ? 'rgba(26,122,94,.1)' : '#f3f4f6'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas fa-home" style="font-size:14px;color:${isOn ? 'var(--pg)' : 'var(--muted)'};"></i>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);">${esc(cfg.propertyName)}</div>
+          ${isOn ? '<span style="font-size:11px;font-weight:600;color:var(--pg);">● Pricing actif</span>' : '<span style="font-size:11px;color:var(--muted);">Pricing inactif</span>'}
+        </div>
       </div>
-      <span style="font-size:12px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;">
-        <i class="fas fa-circle" style="font-size:7px;"></i> Actif
-      </span>
+      <label style="position:relative;width:48px;height:26px;cursor:pointer;flex-shrink:0;">
+        <input type="checkbox" ${isOn ? 'checked' : ''} onchange="togglePropertyPricing('${pid}', this.checked)"
+          style="opacity:0;width:0;height:0;position:absolute;">
+        <span style="position:absolute;inset:0;background:${isOn ? 'var(--pg)' : '#d1d5db'};border-radius:999px;transition:all .2s;"></span>
+        <span style="position:absolute;top:3px;left:${isOn ? '25px' : '3px'};width:20px;height:20px;background:white;border-radius:50%;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.15);"></span>
+      </label>
     </div>
-    <div class="pcard-body">
-      <div class="config-grid">
-        <div class="config-field">
-          <label>Prix minimum / nuit</label>
-          <div class="input-wrap">
-            <input type="number" value="${cfg.priceMin}" id="min-${id}"
-              oninput="onConfigChange('${cfg.propertyId}','priceMin',this.value); updateBar(${id})" />
-            <span class="input-suffix">€</span>
-          </div>
-          <div class="config-hint">Plancher absolu — jamais en dessous</div>
-        </div>
-        <div class="config-field">
-          <label>Prix maximum / nuit</label>
-          <div class="input-wrap">
-            <input type="number" value="${cfg.priceMax}" id="max-${id}"
-              oninput="onConfigChange('${cfg.propertyId}','priceMax',this.value); updateBar(${id})" />
-            <span class="input-suffix">€</span>
-          </div>
-          <div class="config-hint">Plafond absolu — jamais au-dessus</div>
-        </div>
-      </div>
-      <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:8px;">Votre fourchette de pricing</div>
-      <div class="price-range-bar"><div class="price-range-fill" id="bar-${id}"></div></div>
-      <div class="price-range-labels">
-        <span id="lbl-min-${id}">${cfg.priceMin}€</span>
-        <span id="lbl-max-${id}">${cfg.priceMax}€</span>
-      </div>
-      <div class="price-range-center">Zone automatique</div>
 
-      <div style="margin-top:20px;">
-        <label style="display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:10px;">Mode de pricing</label>
-        <div class="mode-toggle">
-          <div class="mode-option ${!modeAuto ? 'selected' : ''}" onclick="selectMode(this,'manual','${cfg.propertyId}')" data-mode-group="${cfg.propertyId}">
-            <h4><i class="fas fa-hand-pointer" style="color:var(--muted);font-size:12px;"></i> Manuel</h4>
-            <p>Vous recevez une suggestion chaque semaine. Vous validez chaque changement en 1 tap.</p>
-          </div>
-          <div class="mode-option ${modeAuto ? 'selected' : ''}" onclick="selectMode(this,'auto','${cfg.propertyId}')" data-mode-group="${cfg.propertyId}">
-            <h4><i class="fas fa-robot" style="color:var(--pg);font-size:12px;"></i> Automatique <span class="mode-pill">Recommandé</span></h4>
-            <p>Boostinghost applique les prix chaque semaine via Channex, sans aucune intervention.</p>
-          </div>
+    <!-- Config (visible si actif) -->
+    ${isOn ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div>
+        <label style="font-size:11.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Prix minimum</label>
+        <div style="display:flex;align-items:center;gap:0;border:1px solid rgba(13,17,23,.12);border-radius:8px;overflow:hidden;background:white;">
+          <input type="number" value="${cfg.priceMin}" id="pmin-${pid}"
+            style="border:none;padding:8px 10px;width:100%;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;outline:none;"
+            oninput="markDirty('${pid}')"/>
+          <span style="padding:8px 10px;background:#f9fafb;color:var(--muted);font-size:13px;font-weight:600;border-left:1px solid rgba(13,17,23,.08);">€</span>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Prix maximum</label>
+        <div style="display:flex;align-items:center;gap:0;border:1px solid rgba(13,17,23,.12);border-radius:8px;overflow:hidden;background:white;">
+          <input type="number" value="${cfg.priceMax}" id="pmax-${pid}"
+            style="border:none;padding:8px 10px;width:100%;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;outline:none;"
+            oninput="markDirty('${pid}')"/>
+          <span style="padding:8px 10px;background:#f9fafb;color:var(--muted);font-size:13px;font-weight:600;border-left:1px solid rgba(13,17,23,.08);">€</span>
         </div>
       </div>
     </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div onclick="setMode('${pid}','manual')" id="mode-manual-${pid}"
+        style="padding:10px 12px;border-radius:10px;border:1.5px solid ${!modeAuto ? 'var(--pg)' : 'rgba(200,184,154,.3)'};background:${!modeAuto ? 'var(--pg-soft2)' : 'white'};cursor:pointer;transition:all .15s;">
+        <div style="font-size:12.5px;font-weight:700;color:${!modeAuto ? 'var(--pg)' : 'var(--ink)'};">🖐 Manuel</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Suggestion + validation</div>
+      </div>
+      <div onclick="setMode('${pid}','auto')" id="mode-auto-${pid}"
+        style="padding:10px 12px;border-radius:10px;border:1.5px solid ${modeAuto ? 'var(--pg)' : 'rgba(200,184,154,.3)'};background:${modeAuto ? 'var(--pg-soft2)' : 'white'};cursor:pointer;transition:all .15s;">
+        <div style="font-size:12.5px;font-weight:700;color:${modeAuto ? 'var(--pg)' : 'var(--ink)'};">🤖 Auto <span style="font-size:10px;background:var(--pg);color:white;padding:1px 6px;border-radius:4px;margin-left:4px;">Recommandé</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Prix mis à jour automatiquement</div>
+      </div>
+    </div>
+
+    <button class="btn-accept" id="save-${pid}" style="width:100%;padding:10px;font-size:13px;display:none;" onclick="savePropertyConfig('${pid}')">
+      <i class="fas fa-check"></i> Enregistrer
+    </button>
+    ` : ''}
   </div>`;
 }
 
-// Écoute les changements dans les inputs config
-function onConfigChange(propertyId, field, value) {
-  if (!state.pendingConfigs[propertyId]) state.pendingConfigs[propertyId] = {};
-  state.pendingConfigs[propertyId][field] = parseFloat(value);
-  state.configsModified = true;
-}
+function togglePropertyPricing(pid, isOn) {
+  const cfg = state.configs.find(c => String(c.propertyId) === String(pid));
+  if (cfg) cfg.isActive = isOn;
 
-function selectMode(el, mode, propertyId) {
-  document.querySelectorAll(`[data-mode-group="${propertyId}"]`).forEach(o => o.classList.remove('selected'));
-  el.classList.add('selected');
-  if (!state.pendingConfigs[propertyId]) state.pendingConfigs[propertyId] = {};
-  state.pendingConfigs[propertyId].mode = mode;
-  state.configsModified = true;
-}
-
-function updateBar(id) {
-  const min = parseInt($('min-' + id)?.value) || 0;
-  const max = parseInt($('max-' + id)?.value) || 200;
-  $('lbl-min-' + id).textContent = min + '€';
-  $('lbl-max-' + id).textContent = max + '€';
-}
-
-async function savePricingConfig() {
-  const entries = Object.entries(state.pendingConfigs);
-  if (!entries.length) { showToast('Aucune modification à enregistrer', ''); return; }
-
-  let saved = 0, errors = 0;
-  for (const [propertyId, cfg] of entries) {
-    try {
-      const base = state.configs.find(c => c.propertyId === propertyId) || {};
-      const payload = {
-        propertyId,
-        priceMin: cfg.priceMin ?? base.priceMin ?? 30,
-        priceMax: cfg.priceMax ?? base.priceMax ?? 300,
-        mode:     cfg.mode    ?? base.mode     ?? 'manual',
-        isActive: true,
-      };
-      if (parseFloat(payload.priceMin) >= parseFloat(payload.priceMax)) {
-        showToast(`Prix min doit être < prix max pour ${propertyId}`, '');
-        continue;
-      }
-      const res = await fetch(`${API_BASE}${DP}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      saved++;
-    } catch (err) {
-      console.error('❌ [DP] save config:', err);
-      errors++;
-    }
-  }
-
-  if (errors === 0) {
-    showToast(`Configuration enregistrée ✓`, 'success');
-    state.configsModified = false;
-    state.configs = []; // force reload au prochain switchTab
-    state.dashboard = null; // force reload dashboard
+  if (isOn) {
+    // Sauvegarder directement avec les valeurs par défaut
+    savePropertyConfig(pid);
   } else {
-    showToast(`${saved} enregistré(s), ${errors} erreur(s)`, '');
+    // Désactiver
+    fetch(`${API_BASE}${DP}/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ propertyId: pid, priceMin: cfg?.priceMin || 40, priceMax: cfg?.priceMax || 200, mode: cfg?.mode || 'manual', isActive: false }),
+    }).then(() => {
+      showToast('Pricing désactivé', '');
+      loadConfig();
+    }).catch(e => showToast('Erreur: ' + e.message, ''));
+  }
+
+  // Re-render la carte
+  const container = document.getElementById('pcfg-' + pid);
+  if (container) {
+    container.outerHTML = renderConfigCard(cfg, 0);
   }
 }
+
+function setMode(pid, mode) {
+  const cfg = state.configs.find(c => String(c.propertyId) === String(pid));
+  if (cfg) cfg.mode = mode;
+
+  // Update UI
+  const manEl = document.getElementById('mode-manual-' + pid);
+  const autoEl = document.getElementById('mode-auto-' + pid);
+  if (manEl && autoEl) {
+    manEl.style.borderColor = mode === 'manual' ? 'var(--pg)' : 'rgba(200,184,154,.3)';
+    manEl.style.background = mode === 'manual' ? 'var(--pg-soft2)' : 'white';
+    manEl.querySelector('div').style.color = mode === 'manual' ? 'var(--pg)' : 'var(--ink)';
+    autoEl.style.borderColor = mode === 'auto' ? 'var(--pg)' : 'rgba(200,184,154,.3)';
+    autoEl.style.background = mode === 'auto' ? 'var(--pg-soft2)' : 'white';
+    autoEl.querySelector('div').style.color = mode === 'auto' ? 'var(--pg)' : 'var(--ink)';
+  }
+  markDirty(pid);
+}
+
+function markDirty(pid) {
+  const btn = document.getElementById('save-' + pid);
+  if (btn) btn.style.display = 'flex';
+}
+
+async function savePropertyConfig(pid) {
+  const cfg = state.configs.find(c => String(c.propertyId) === String(pid));
+  const minEl = document.getElementById('pmin-' + pid);
+  const maxEl = document.getElementById('pmax-' + pid);
+  const priceMin = minEl ? parseFloat(minEl.value) : (cfg?.priceMin || 40);
+  const priceMax = maxEl ? parseFloat(maxEl.value) : (cfg?.priceMax || 200);
+  const mode = cfg?.mode || 'manual';
+
+  if (priceMin >= priceMax) { showToast('Prix min doit être < prix max', ''); return; }
+
+  try {
+    const res = await fetch(`${API_BASE}${DP}/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ propertyId: pid, priceMin, priceMax, mode, isActive: true }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    showToast('Configuration sauvegardée ✓', '');
+    const btn = document.getElementById('save-' + pid);
+    if (btn) btn.style.display = 'none';
+    if (cfg) { cfg.priceMin = priceMin; cfg.priceMax = priceMax; cfg.isActive = true; }
+  } catch (err) {
+    showToast('Erreur: ' + err.message, '');
+  }
+}
+
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 // ── Charger l'historique ─────────────────────────────────────
 async function loadHistory() {
