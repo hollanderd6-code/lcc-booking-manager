@@ -66,19 +66,20 @@ class IgloohomeAdapter extends SmartLockAdapter {
       cursor = data.nextCursor || null;
     } while (cursor);
 
-console.log('🔍 [IGLOO] Bridges:', JSON.stringify(allDevices.filter(d => d.type === 'Bridge'), null, 2));
-    
-    // Collecter les homeIds des bridges pour déterminer quelles serrures sont "en ligne"
-    const bridgeHomeIds = new Set();
+    // Collecter tous les deviceId reliés à un bridge
+    const bridgeLinkedIds = new Set();
     for (const d of allDevices) {
       if (d.type === 'Bridge') {
-        (d.homeId || []).forEach(h => bridgeHomeIds.add(h));
+        (d.linkedDevices || []).forEach(ld => bridgeLinkedIds.add(ld.deviceId));
       }
     }
+    console.log(`🔍 [IGLOO] ${bridgeLinkedIds.size} device(s) reliés à un bridge`);
 
     return allDevices.map(d => {
-      // Une serrure est "en ligne" si un bridge existe dans le même homeId
-      const hasBridge = (d.homeId || []).some(h => bridgeHomeIds.has(h));
+      // Une serrure est "en ligne" si son deviceId ou un de ses linkedDevices est relié à un bridge
+      const selfLinked = bridgeLinkedIds.has(d.deviceId);
+      const childLinked = (d.linkedDevices || []).some(ld => bridgeLinkedIds.has(ld.deviceId));
+      const hasBridge = selfLinked || childLinked;
       return {
         deviceId: d.deviceId || d.id,
         name: d.deviceName || d.name || 'Igloohome Lock',
