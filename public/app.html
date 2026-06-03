@@ -7015,12 +7015,31 @@ try {
       var fIsToday = ds(fDate)===today;
       var fIsWknd  = fDate.getDay()===5||fDate.getDay()===6;
 
-      var fcell = div('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-top:2px solid #E8E4DF;'
+      var fcell = div('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-top:2px solid #E8E4DF;cursor:pointer;user-select:none;'
         +(fIsToday?'background:rgba(26,122,94,.08);':'background:white;'));
       fcell.style.gridColumn = String(fi+2);
       fcell.style.gridRow = String(footerRow);
+      fcell.className = 'bh-day-hcell';
+      fcell.dataset.colIdx = String(fi);
       fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#1A7A5E':fIsWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
         +'<span style="font-size:12px;font-weight:'+(fIsToday?800:600)+';color:'+(fIsToday?'#1A7A5E':fInMonth?(fIsWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+fDate.getDate()+'</span>';
+
+      // Même clic que le header : voile + highlight colonne
+      (function(idx, el){ el.onclick = function(){
+        var wasActive = el.classList.contains('bh-col-active');
+        bhClearColHighlight(outer);
+        if (wasActive) return;
+        // Activer aussi la cellule header correspondante
+        var headerCell = outer.querySelector('.bh-day-hcell[data-col-idx="'+idx+'"]');
+        [el, headerCell].forEach(function(c){ if(c){ c.dataset.bhPrevBg = c.style.background||''; c.classList.add('bh-col-active'); c.style.background='rgba(26,122,94,.13)'; }});
+        outer.querySelectorAll('.bh-day-cell[data-col-idx="'+idx+'"]').forEach(function(c){
+          c.dataset.bhColHi='1'; c.style.boxShadow='inset 0 0 0 9999px rgba(26,122,94,.06)';
+        });
+        var bodyH=totalH-hdrH, slotX=propW+idx*colW, rightX=slotX+colW;
+        function bhV(l,w){ if(w<=0)return; var v=div('position:absolute;pointer-events:none;background:rgba(248,245,239,.72);z-index:6;');v.className='bh-col-veil';v.style.left=l+'px';v.style.top=hdrH+'px';v.style.width=w+'px';v.style.height=bodyH+'px';grid.appendChild(v);}
+        bhV(propW,slotX-propW); bhV(rightX,totalW-rightX);
+      };})(fi, fcell);
+
       grid.appendChild(fcell);
     }
 
