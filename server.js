@@ -42,7 +42,7 @@ const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 // ✅ IMPORT DES ROUTES DU CHAT
 // ============================================
 const { setupChatRoutes } = require('./routes/chat_routes');
-const smartLocksRoutes = require('./routes/smart-locks-routes');
+const createSmartLocksRoutes = require('./routes/smart-locks-routes');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -13664,7 +13664,7 @@ app.get('/api/cleaning/qr/:propertyId',
 app.use('/api/smart-locks', 
   authenticateAny, 
   requirePermission(pool, 'can_view_smart_locks'),
-  smartLocksRoutes
+  createSmartLocksRoutes(pool)
 );
 // ============================================
 
@@ -24273,6 +24273,25 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     .replace(/{instructions}/gi, property?.practical_info || '')
     .replace(/{livret}/gi, property?.welcome_book_url || '');
 
+  // Résoudre {code_serrure} — code smart lock pour cette réservation
+  if (msg.includes('{code_serrure}') || msg.includes('{lock_code}')) {
+    try {
+      const slcResult = await pool.query(
+        `SELECT slc.code FROM smart_lock_codes slc
+         JOIN smart_lock_assignments sla ON sla.lock_id = slc.lock_id
+         WHERE sla.property_id = $1 AND slc.user_id = $2 AND slc.status = 'active'
+           AND slc.valid_from <= NOW() AND slc.valid_until >= NOW()
+         ORDER BY slc.created_at DESC LIMIT 1`,
+        [conv.property_id, conv.user_id]
+      );
+      const lockCode = slcResult.rows[0]?.code || '';
+      msg = msg.replace(/{code_serrure}/gi, lockCode).replace(/{lock_code}/gi, lockCode);
+    } catch(slcErr) {
+      console.warn('⚠️ [SMART-LOCK] Erreur résolution {code_serrure}:', slcErr.message);
+      msg = msg.replace(/{code_serrure}/gi, '').replace(/{lock_code}/gi, '');
+    }
+  }
+
   // Résoudre {caution_url} — chercher le lien Stripe dans deposits
   if (msg.includes('{caution_url}')) {
     try {
@@ -24626,6 +24645,24 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
       .replace(/\{wifi_mdp\}/gi, pi.wifi_password || '')
       .replace(/\{instructions\}/gi, pi.practical_info || '')
       .replace(/\{livret\}/gi, pi.welcome_book_url || '');
+
+    // Résoudre {code_serrure}
+    if (msg.includes('{code_serrure}') || msg.includes('{lock_code}')) {
+      try {
+        const slcResult = await pool.query(
+          `SELECT slc.code FROM smart_lock_codes slc
+           JOIN smart_lock_assignments sla ON sla.lock_id = slc.lock_id
+           WHERE sla.property_id = $1 AND slc.user_id = $2 AND slc.status = 'active'
+             AND slc.valid_from <= NOW() AND slc.valid_until >= NOW()
+           ORDER BY slc.created_at DESC LIMIT 1`,
+          [c.property_id, userId]
+        );
+        const lockCode = slcResult.rows[0]?.code || '';
+        msg = msg.replace(/\{code_serrure\}/gi, lockCode).replace(/\{lock_code\}/gi, lockCode);
+      } catch(slcErr) {
+        msg = msg.replace(/\{code_serrure\}/gi, '').replace(/\{lock_code\}/gi, '');
+      }
+    }
 
     // Résoudre {caution_url} si présent
     let finalMsg = msg;
@@ -26351,6 +26388,82 @@ console.log('ℹ️ CRON messages arrivée (doublon) désactivé');
 // ============================================
 // CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
 // ============================================
+// ══════════════════════════════════════════════
+// CRON SMART LOCKS — Génération auto des codes (6h) + expiration (toutes les heures)
+// ══════════════════════════════════════════════
+cron.schedule('0 6 * * *', async () => {
+  console.log('🔑 [CRON 6H] Génération automatique des codes serrures...');
+  try {
+    const { getAdapter } = require('./routes/adapters');
+    const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+    const users = await pool.query('SELECT DISTINCT user_id FROM smart_lock_assignments');
+    let totalGenerated = 0;
+
+    for (const { user_id } of users.rows) {
+      try {
+        const reservations = await pool.query(`
+          SELECT r.uid, r.property_id, r.start_date, r.end_date, r.guest_name,
+                 sla.lock_id, sl.lock_name, sl.brand, sl.connection_id
+          FROM reservations r
+          JOIN smart_lock_assignments sla ON sla.property_id = r.property_id AND sla.user_id = $1
+          JOIN smart_locks sl ON sl.id = sla.lock_id
+          JOIN smart_lock_connections slc ON slc.id = sl.connection_id AND slc.is_active = TRUE
+          WHERE r.user_id = $1
+            AND DATE(r.start_date) = $2
+            AND r.status NOT IN ('cancelled')
+            AND NOT EXISTS (
+              SELECT 1 FROM smart_lock_codes c
+              WHERE c.reservation_uid = r.uid AND c.status = 'active'
+            )`, [user_id, todayStr]);
+
+        for (const resa of reservations.rows) {
+          try {
+            const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [resa.connection_id]);
+            if (!connResult.rows[0]) continue;
+            const adapter = getAdapter(connResult.rows[0], pool);
+            const lockRow = await pool.query('SELECT * FROM smart_locks WHERE id = $1', [resa.lock_id]);
+            if (!lockRow.rows[0]) continue;
+
+            const result = await adapter.generateCode(lockRow.rows[0], {
+              startDate: resa.start_date, endDate: resa.end_date, guestName: resa.guest_name,
+            });
+
+            await pool.query(
+              `INSERT INTO smart_lock_codes
+                (user_id, lock_id, property_id, reservation_uid, brand, external_code_id, code, code_type, guest_name, valid_from, valid_until, status)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,'temporary',$8,$9,$10,'active')`,
+              [user_id, resa.lock_id, resa.property_id, resa.uid, resa.brand,
+               result.externalCodeId, result.code, resa.guest_name, result.validFrom, result.validUntil]);
+
+            console.log(`  🔑 ${result.code} → ${resa.guest_name} (${resa.lock_name})`);
+            totalGenerated++;
+          } catch(genErr) {
+            console.error(`  ❌ Code pour ${resa.guest_name}:`, genErr.message);
+          }
+        }
+      } catch(userErr) {
+        console.error(`  ❌ User ${user_id}:`, userErr.message);
+      }
+    }
+    console.log(`🔑 [CRON 6H] ${totalGenerated} code(s) serrure générés`);
+  } catch(e) {
+    console.error('❌ [CRON SMART-LOCKS]', e.message);
+  }
+});
+
+// Expiration des codes serrures (toutes les heures)
+cron.schedule('5 * * * *', async () => {
+  try {
+    const result = await pool.query(
+      `UPDATE smart_lock_codes SET status = 'expired', updated_at = NOW()
+       WHERE status = 'active' AND valid_until < NOW()
+       RETURNING id`
+    );
+    if (result.rowCount > 0) console.log(`🕐 [SMART-LOCKS] ${result.rowCount} code(s) expirés`);
+  } catch(e) { /* silent */ }
+});
+
 cron.schedule('0 8 * * *', async () => {
   console.log('======================================== CRON 8H ========================================');
   console.log('CRON 8H: Envoi des notifications quotidiennes');
