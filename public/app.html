@@ -6998,6 +6998,32 @@ try {
       }
     });
 
+    // ── FOOTER ROW : barre des dates dupliquée en bas ──
+    var footerRow = nRows + 2; // header=1, properties=2..nRows+1, footer=nRows+2
+    grid.style.gridTemplateRows = hdrH + 'px repeat(' + nRows + ', ' + rowH + 'px) ' + hdrH + 'px';
+
+    // Coin footer (vide)
+    var footerCorner = div('position:sticky;left:0;z-index:20;background:#F0EDE8;border-right:2px solid #DDD9D3;border-top:2px solid #E8E4DF;box-sizing:border-box;');
+    footerCorner.style.gridColumn = '1';
+    footerCorner.style.gridRow = String(footerRow);
+    grid.appendChild(footerCorner);
+
+    // Cellules jours footer
+    for (var fi=0; fi<numDays; fi++) {
+      var fDate = new Date(rangeStart); fDate.setDate(rangeStart.getDate()+fi);
+      var fInMonth = fDate.getMonth()===month;
+      var fIsToday = ds(fDate)===today;
+      var fIsWknd  = fDate.getDay()===5||fDate.getDay()===6;
+
+      var fcell = div('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-top:2px solid #E8E4DF;'
+        +(fIsToday?'background:rgba(26,122,94,.08);':'background:white;'));
+      fcell.style.gridColumn = String(fi+2);
+      fcell.style.gridRow = String(footerRow);
+      fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#1A7A5E':fIsWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(fIsToday?800:600)+';color:'+(fIsToday?'#1A7A5E':fInMonth?(fIsWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+fDate.getDate()+'</span>';
+      grid.appendChild(fcell);
+    }
+
     outer.appendChild(grid);
 
     // ── BLOCS : placés directement dans les dcell (pas d'overlay absolu)
@@ -13985,70 +14011,13 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 (function() {
   function updateStickyTops() {
     var calHeader = document.querySelector('.calendar-modern-header');
-    var daysHeader = document.getElementById('daysHeader');
     if (!calHeader) return;
 
-    // Header vert du calendrier → sticky (fonctionne car il est hors du wrapper)
     var appHeader = document.querySelector('header.main-header');
     var appH = appHeader ? appHeader.getBoundingClientRect().height : 0;
     calHeader.style.position = 'sticky';
     calHeader.style.top = appH + 'px';
     calHeader.style.zIndex = '40';
-
-    // ── Clone sticky pour la barre des dates ──
-    if (!daysHeader) return;
-    var wrapper = document.querySelector('.calendar-grid-wrapper');
-    if (!wrapper) return;
-
-    // Créer le clone une seule fois
-    var clone = document.getElementById('daysHeaderClone');
-    if (!clone) {
-      clone = document.createElement('div');
-      clone.id = 'daysHeaderClone';
-      clone.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:38;display:none;overflow:hidden;background:var(--surface-color,#F5F0E8);border-bottom:2px solid #DDD9D3;box-shadow:0 2px 8px rgba(0,0,0,.08);';
-      document.body.appendChild(clone);
-    }
-
-    var scrollContainer = document.querySelector('main.main-content') || document.documentElement;
-
-    function syncClone() {
-      var calHeaderRect = calHeader.getBoundingClientRect();
-      var calHeaderBottom = calHeaderRect.bottom;
-      var daysRect = daysHeader.getBoundingClientRect();
-      var wrapperRect = wrapper.getBoundingClientRect();
-
-      // Montrer le clone quand daysHeader est caché sous le header sticky
-      if (daysRect.top < calHeaderBottom && wrapperRect.bottom > calHeaderBottom + 40) {
-        // Cloner le contenu
-        clone.innerHTML = daysHeader.innerHTML;
-        clone.style.display = 'block';
-        clone.style.top = calHeaderBottom + 'px';
-        clone.style.left = wrapperRect.left + 'px';
-        clone.style.width = wrapperRect.width + 'px';
-        clone.style.height = daysRect.height + 'px';
-
-        // Sync scroll horizontal
-        clone.scrollLeft = wrapper.scrollLeft;
-
-        // Appliquer le même style que daysHeader
-        var cs = getComputedStyle(daysHeader);
-        clone.style.display = 'flex';
-        clone.style.alignItems = cs.alignItems;
-        clone.style.fontSize = cs.fontSize;
-      } else {
-        clone.style.display = 'none';
-      }
-    }
-
-    // Écouter le scroll vertical + horizontal
-    scrollContainer.addEventListener('scroll', syncClone, { passive: true });
-    wrapper.addEventListener('scroll', function() {
-      if (clone.style.display !== 'none') {
-        clone.scrollLeft = wrapper.scrollLeft;
-      }
-    }, { passive: true });
-
-    syncClone();
   }
   document.addEventListener('DOMContentLoaded', updateStickyTops);
   window.addEventListener('resize', updateStickyTops);
