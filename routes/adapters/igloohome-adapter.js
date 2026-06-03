@@ -52,21 +52,38 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
   async listLocks() {
     const token = await this.authenticate();
-    const data = await this.apiCall(`${BASE_URL}/devices`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const allDevices = [];
+    let cursor = null;
 
-    const devices = data.payload || data.results || data || [];
-    return (Array.isArray(devices) ? devices : []).map(d => ({
-      deviceId: d.deviceId || d.id,
-      name: d.name || d.deviceName || 'Igloohome Lock',
-      type: this._mapType(d.type || d.deviceType),
-      model: d.model || d.deviceModel || null,
-      serialNumber: d.serialNo || d.serialNumber || null,
-      battery: d.batteryLevel ?? d.battery ?? null,
-      isOnline: d.status === 'online' || d.connected === true,
-      metadata: { raw: d },
-    }));
+    // Pagination avec nextCursor
+    do {
+      const url = cursor ? `${BASE_URL}/devices?cursor=${cursor}` : `${BASE_URL}/devices`;
+      const data = await this.apiCall(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const devices = data.payload || data.results || data || [];
+      if (Array.isArray(devices)) allDevices.push(...devices);
+      cursor = data.nextCursor || null;
+    } while (cursor);
+
+    return allDevices.map(d => {
+      const linkedBridge = (d.linkedDevices || []).some(ld => ld.type === 'Bridge');
+      return {
+        deviceId: d.deviceId || d.id,
+        name: d.deviceName || d.name || 'Igloohome Lock',
+        type: this._mapType(d.type),
+        model: d.type || null,
+        serialNumber: d.deviceId || null,
+        battery: d.batteryLevel ?? null,
+        isOnline: linkedBridge,
+        metadata: {
+          linkedDevices: d.linkedDevices || [],
+          hasBridge: linkedBridge,
+          homeId: d.homeId || [],
+          raw: d,
+        },
+      };
+    });
   }
 
   async generateCode(lock, { startDate, endDate, guestName }) {
@@ -115,11 +132,12 @@ class IgloohomeAdapter extends SmartLockAdapter {
       const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      const linkedBridge = (data.linkedDevices || []).some(ld => ld.type === 'Bridge');
       return {
-        battery: data.batteryLevel ?? data.battery ?? null,
-        isOnline: data.status === 'online' || data.connected === true,
-        lastActivity: data.lastActivity || null,
-        firmwareVersion: data.firmwareVersion || null,
+        battery: data.batteryLevel ?? null,
+        isOnline: linkedBridge,
+        lastActivity: data.pairedAt || null,
+        firmwareVersion: null,
       };
     } catch (e) {
       return { battery: null, isOnline: false, lastActivity: null, firmwareVersion: null };
@@ -127,8 +145,14 @@ class IgloohomeAdapter extends SmartLockAdapter {
   }
 
   _mapType(t) {
-    const map = { '1': 'smart_lock', '2': 'padlock', '3': 'keybox', lock: 'smart_lock', padlock: 'padlock', keybox: 'keybox' };
-    return map[String(t).toLowerCase()] || 'smart_lock';
+    if (!t) return 'smart_lock';
+    const lower = String(t).toLowerCase();
+    if (lower === 'bridge') return 'bridge';
+    if (lower === 'lock') return 'smart_lock';
+    if (lower === 'padlock') return 'padlock';
+    if (lower === 'keybox') return 'keybox';
+    const map = { '1': 'smart_lock', '2': 'padlock', '3': 'keybox' };
+    return map[lower] || 'smart_lock';
   }
 }
 
