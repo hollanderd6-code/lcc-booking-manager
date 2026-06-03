@@ -26389,13 +26389,12 @@ console.log('ℹ️ CRON messages arrivée (doublon) désactivé');
 // CRON JOB : NOTIFICATIONS PUSH QUOTIDIENNES
 // ============================================
 // ══════════════════════════════════════════════
-// CRON SMART LOCKS — Génération auto des codes (6h) + expiration (toutes les heures)
+// CRON SMART LOCKS — Génération auto des codes (toutes les 2h) + expiration (toutes les heures)
 // ══════════════════════════════════════════════
-cron.schedule('0 6 * * *', async () => {
-  console.log('🔑 [CRON 6H] Génération automatique des codes serrures...');
+cron.schedule('0 */2 * * *', async () => {
+  console.log('🔑 [CRON SMART-LOCKS] Génération automatique des codes (30 prochains jours)...');
   try {
     const { getAdapter } = require('./routes/adapters');
-    const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
     const users = await pool.query('SELECT DISTINCT user_id FROM smart_lock_assignments');
     let totalGenerated = 0;
@@ -26410,12 +26409,13 @@ cron.schedule('0 6 * * *', async () => {
           JOIN smart_locks sl ON sl.id = sla.lock_id
           JOIN smart_lock_connections slc ON slc.id = sl.connection_id AND slc.is_active = TRUE
           WHERE r.user_id = $1
-            AND DATE(r.start_date) = $2
+            AND r.start_date >= NOW() - INTERVAL '1 day'
+            AND r.start_date <= NOW() + INTERVAL '30 days'
             AND r.status NOT IN ('cancelled')
             AND NOT EXISTS (
               SELECT 1 FROM smart_lock_codes c
               WHERE c.reservation_uid = r.uid AND c.status = 'active'
-            )`, [user_id, todayStr]);
+            )`, [user_id]);
 
         for (const resa of reservations.rows) {
           try {
@@ -26446,7 +26446,7 @@ cron.schedule('0 6 * * *', async () => {
         console.error(`  ❌ User ${user_id}:`, userErr.message);
       }
     }
-    console.log(`🔑 [CRON 6H] ${totalGenerated} code(s) serrure générés`);
+    console.log(`🔑 [CRON SMART-LOCKS] ${totalGenerated} code(s) serrure générés`);
   } catch(e) {
     console.error('❌ [CRON SMART-LOCKS]', e.message);
   }
