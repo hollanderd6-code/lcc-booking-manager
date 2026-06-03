@@ -66,20 +66,24 @@ class IgloohomeAdapter extends SmartLockAdapter {
       cursor = data.nextCursor || null;
     } while (cursor);
 
-    // Collecter tous les deviceId reliés à un bridge
+    // Vérifier si des bridges existent dans le compte
+    const bridges = allDevices.filter(d => d.type === 'Bridge');
+    const hasBridgesInAccount = bridges.length > 0;
+
+    // Collecter TOUS les deviceId reliés aux bridges (keypads + locks)
     const bridgeLinkedIds = new Set();
-    for (const d of allDevices) {
-      if (d.type === 'Bridge') {
-        (d.linkedDevices || []).forEach(ld => bridgeLinkedIds.add(ld.deviceId));
-      }
+    for (const b of bridges) {
+      (b.linkedDevices || []).forEach(ld => {
+        if (ld.deviceId) bridgeLinkedIds.add(ld.deviceId);
+      });
     }
-    console.log(`🔍 [IGLOO] ${bridgeLinkedIds.size} device(s) reliés à un bridge`);
 
     return allDevices.map(d => {
-      // Une serrure est "en ligne" si son deviceId ou un de ses linkedDevices est relié à un bridge
-      const selfLinked = bridgeLinkedIds.has(d.deviceId);
+      // Relié au bridge si le device OU un de ses linkedDevices apparaît dans un bridge
+      const directlyLinked = bridgeLinkedIds.has(d.deviceId);
       const childLinked = (d.linkedDevices || []).some(ld => bridgeLinkedIds.has(ld.deviceId));
-      const hasBridge = selfLinked || childLinked;
+      const hasBridge = directlyLinked || childLinked || (hasBridgesInAccount && d.type === 'Lock');
+
       return {
         deviceId: d.deviceId || d.id,
         name: d.deviceName || d.name || 'Igloohome Lock',
@@ -89,7 +93,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
         battery: d.batteryLevel ?? null,
         isOnline: hasBridge,
         metadata: {
-          linkedDevices: d.linkedDevices || [],
+          apiId: d.id,  // ID interne Igloohome (pour les appels API)
           hasBridge,
           homeId: d.homeId || [],
           raw: d,
@@ -139,22 +143,14 @@ class IgloohomeAdapter extends SmartLockAdapter {
   }
 
   async getLockStatus(lock) {
-    const token = await this.authenticate();
-    try {
-      const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      // isOnline est déterminé lors du sync (hasBridge dans metadata)
-      const hasBridge = lock.metadata?.hasBridge ?? false;
-      return {
-        battery: data.batteryLevel ?? null,
-        isOnline: hasBridge,
-        lastActivity: data.pairedAt || null,
-        firmwareVersion: null,
-      };
-    } catch (e) {
-      return { battery: null, isOnline: lock.metadata?.hasBridge ?? false, lastActivity: null, firmwareVersion: null };
-    }
+    // Utiliser les données stockées lors du sync (plus fiable que re-fetch)
+    // Le cron batterie mettra à jour périodiquement via listLocks
+    return {
+      battery: lock.battery_level ?? null,
+      isOnline: lock.metadata?.hasBridge ?? lock.is_online ?? false,
+      lastActivity: null,
+      firmwareVersion: null,
+    };
   }
 
   _mapType(t) {
