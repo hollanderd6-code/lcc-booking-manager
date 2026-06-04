@@ -590,5 +590,90 @@ module.exports = function createSmartLocksRoutes(pool) {
     }
   });
 
+  // ══════════════════════════════════════════════
+  // COMMANDES À DISTANCE (bridge)
+  // ══════════════════════════════════════════════
+
+  /** POST /lock/:id/unlock — Déverrouiller à distance */
+  router.post('/lock/:id/unlock', async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+      if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
+
+      const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [lock.rows[0].connection_id]);
+      const adapter = getAdapter(connResult.rows[0], pool);
+
+      if (typeof adapter.unlock !== 'function') return res.status(400).json({ error: 'Déverrouillage non supporté pour cette marque' });
+
+      const result = await adapter.unlock(lock.rows[0]);
+      res.json(result);
+    } catch (e) {
+      console.error('[SMART-LOCKS] unlock:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /** POST /lock/:id/lock — Verrouiller à distance */
+  router.post('/lock/:id/lock', async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+      if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
+
+      const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [lock.rows[0].connection_id]);
+      const adapter = getAdapter(connResult.rows[0], pool);
+
+      if (typeof adapter.lockDevice !== 'function') return res.status(400).json({ error: 'Verrouillage non supporté pour cette marque' });
+
+      const result = await adapter.lockDevice(lock.rows[0]);
+      res.json(result);
+    } catch (e) {
+      console.error('[SMART-LOCKS] lock:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /** POST /lock/:id/custom-pin — Créer un PIN custom via bridge */
+  router.post('/lock/:id/custom-pin', async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { code, name, startDate, endDate } = req.body;
+      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+      if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
+
+      const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [lock.rows[0].connection_id]);
+      const adapter = getAdapter(connResult.rows[0], pool);
+
+      if (typeof adapter.createCustomPin !== 'function') return res.status(400).json({ error: 'PIN custom non supporté pour cette marque' });
+
+      const result = await adapter.createCustomPin(lock.rows[0], { code, name, startDate, endDate });
+      res.json(result);
+    } catch (e) {
+      console.error('[SMART-LOCKS] custom-pin:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /** GET /lock/:id/activity — Logs d'activité */
+  router.get('/lock/:id/activity', async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+      if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
+
+      const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [lock.rows[0].connection_id]);
+      const adapter = getAdapter(connResult.rows[0], pool);
+
+      if (typeof adapter.getActivityLogs !== 'function') return res.status(400).json({ error: 'Logs non supportés pour cette marque' });
+
+      const logs = await adapter.getActivityLogs(lock.rows[0]);
+      res.json({ logs });
+    } catch (e) {
+      console.error('[SMART-LOCKS] activity:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   return router;
 };
