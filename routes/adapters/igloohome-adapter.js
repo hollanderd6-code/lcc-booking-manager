@@ -112,39 +112,49 @@ class IgloohomeAdapter extends SmartLockAdapter {
   }
 
   async generateCode(lock, { startDate, endDate, guestName }) {
+    // Utiliser le bridge pour créer un PIN custom (l'algoPIN n'existe plus sur la nouvelle API)
+    const bridgeId = lock.metadata?.bridgeDeviceId;
+    if (!bridgeId) {
+      throw new Error('Aucun bridge associé — impossible de créer un code. Vérifiez que la serrure est reliée à un bridge.');
+    }
+
     const token = await this.authenticate();
-    const deviceId = lock.device_id;
+    const code = this._generatePin(6);
 
-    // Igloohome algo PIN : code temporaire basé sur les dates
-    const body = {
-      type: 'duration',
-      name: guestName || 'Guest',
-      startDate: new Date(startDate).toISOString(),
-      endDate: new Date(endDate).toISOString(),
+    const payload = {
+      jobType: 4, // BRIDGE_JOB_CREATE_CUSTOM_PIN
+      pin: code,
+      pinName: (guestName || 'Guest').substring(0, 32),
     };
+    if (startDate) payload.startDate = new Date(startDate).toISOString();
+    if (endDate) payload.endDate = new Date(endDate).toISOString();
 
-    const data = await this.apiCall(`${BASE_URL}/devices/${deviceId}/algopin`, {
+    const job = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/jobs/bridges/${bridgeId}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
 
+    console.log(`🔑 [Igloohome] Create PIN job: ${job.jobId}`);
+
+    // Attendre la confirmation du bridge
+    const result = await this._waitForJob(job.jobId, 20000);
+
     return {
-      externalCodeId: data.pinId || data.id || String(Date.now()),
-      code: data.pin || data.code,
+      externalCodeId: job.jobId || String(Date.now()),
+      code: code,
       validFrom: startDate,
       validUntil: endDate,
     };
   }
 
   async revokeCode(lock, externalCodeId) {
-    const token = await this.authenticate();
     try {
-      await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/${externalCodeId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return true;
+      const bridgeId = lock.metadata?.bridgeDeviceId;
+      if (!bridgeId) return false;
+      const job = await this._createBridgeJob(lock, 5, { pinId: externalCodeId }); // DELETE_PIN
+      const result = await this._waitForJob(job.jobId);
+      return result.completed;
     } catch (e) {
       console.error(`[Igloohome] Erreur révocation code ${externalCodeId}:`, e.message);
       return false;
