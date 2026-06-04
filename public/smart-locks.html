@@ -830,7 +830,7 @@ async function openLockDetail(lockId) {
       </div>
     `}
 
-    <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🔑 Codes par réservation (${lockCodes.length})</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🔑 Codes enregistrés (${lockCodes.length})</div>
     ${lockCodes.length > 0 ? lockCodes.map(c => {
       const statusClass = c.status === 'active' ? 'status-active' : c.status === 'expired' ? 'status-expired' : 'status-revoked';
       const statusLabel = c.status === 'active' ? 'Actif' : c.status === 'expired' ? 'Expiré' : 'Révoqué';
@@ -840,16 +840,44 @@ async function openLockDetail(lockId) {
           <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:20px;letter-spacing:3px;color:${c.status === 'active' ? 'var(--sl-primary)' : 'var(--sl-text-muted)'};">${esc(c.code)}</span>
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="status-badge ${statusClass}">${statusLabel}</span>
-            ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')" title="Révoquer"><i class="fa fa-ban" style="color:var(--sl-danger);font-size:12px;"></i></button>` : ''}
+            ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')" title="Supprimer"><i class="fa fa-trash" style="color:var(--sl-danger);font-size:12px;"></i></button>` : ''}
           </div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--sl-text-muted);">
           <span><i class="fa fa-user" style="width:14px;"></i> ${esc(c.guest_name || 'Voyageur')}</span>
           <span><i class="fa fa-calendar" style="width:14px;"></i> ${fmtDate(c.valid_from)} → ${fmtDate(c.valid_until)}</span>
-          ${c.reservation_uid ? `<span><i class="fa fa-bookmark" style="width:14px;"></i> ${esc(c.reservation_uid)}</span>` : '<span style="color:#D97706;"><i class="fa fa-hand-paper" style="width:14px;"></i> Manuel</span>'}
+          ${c.reservation_uid ? `<span><i class="fa fa-bookmark" style="width:14px;"></i> Réservation</span>` : '<span style="color:#D97706;"><i class="fa fa-hand-paper" style="width:14px;"></i> Manuel</span>'}
         </div>
       </div>`;
-    }).join('') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucun code généré. Les codes seront créés automatiquement pour chaque réservation.</div>'}
+    }).join('') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucun code enregistré.</div>'}
+
+    <!-- Formulaire ajout code -->
+    <div style="margin-top:16px;background:#f9fafb;border-radius:12px;padding:14px;border:1px dashed rgba(200,184,154,.4);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">➕ Ajouter un code</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Nom</label>
+          <input type="text" id="newcode-name-${lock.id}" placeholder="Ex: Ménage" class="form-control" style="padding:8px 10px;font-size:13px;"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Code (optionnel)</label>
+          <input type="text" id="newcode-pin-${lock.id}" placeholder="Auto (6 chiffres)" class="form-control" style="padding:8px 10px;font-size:13px;" maxlength="6"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Début</label>
+          <input type="datetime-local" id="newcode-start-${lock.id}" class="form-control" style="padding:8px 10px;font-size:12px;" value="${toLocalISO(new Date())}"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Fin</label>
+          <input type="datetime-local" id="newcode-end-${lock.id}" class="form-control" style="padding:8px 10px;font-size:12px;" value="${toLocalISO(new Date(Date.now() + 7*24*3600*1000))}"/>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="width:100%;" id="newcode-btn-${lock.id}" onclick="createQuickCode('${lock.id}')">
+        <i class="fa fa-key"></i> Créer le code
+      </button>
+    </div>
 
     <div class="detail-actions">
       ${status.isOnline && lock.lock_type !== 'keypad' ? `
@@ -906,6 +934,60 @@ async function loadActivity(lockId) {
       }).join('');
   } catch (e) {
     container.innerHTML = `<div style="font-size:13px;color:var(--sl-danger);">Erreur : ${esc(e.message)}</div>`;
+  }
+}
+
+// ══════════════════════════════════════
+// QUICK CODE (from lock detail)
+// ══════════════════════════════════════
+async function createQuickCode(lockId) {
+  const lock = locks.find(l => l.id === lockId);
+  if (!lock) return;
+
+  const name = document.getElementById('newcode-name-' + lockId)?.value.trim() || 'Code BH';
+  const pin = document.getElementById('newcode-pin-' + lockId)?.value.trim() || null;
+  const startDate = document.getElementById('newcode-start-' + lockId)?.value;
+  const endDate = document.getElementById('newcode-end-' + lockId)?.value;
+
+  if (!startDate || !endDate) return showToast('Remplissez les dates', 'error');
+
+  const btn = document.getElementById('newcode-btn-' + lockId);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Création via bridge...'; }
+
+  try {
+    const data = await api('/lock/' + lockId + '/custom-pin', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        code: pin,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+      }),
+    });
+
+    // Sauvegarder aussi en DB via /codes/generate
+    if (lock.assignment) {
+      try {
+        await api('/codes/generate', {
+          method: 'POST',
+          body: JSON.stringify({
+            propertyId: lock.assignment.property_id,
+            guestName: name,
+            startDate: new Date(startDate).toISOString(),
+            endDate: new Date(endDate).toISOString(),
+          }),
+        });
+      } catch (e) { /* DB save optionnel */ }
+    }
+
+    showToast(`Code ${data.code || pin || ''} créé ! (envoyé au bridge)`, 'success');
+    closeLockDetail();
+    await loadCodes();
+    await loadStatus();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-key"></i> Créer le code'; }
   }
 }
 
