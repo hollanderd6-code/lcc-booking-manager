@@ -2899,7 +2899,7 @@ window.exitAgencyMode = function() {
   const orig = localStorage.getItem('lcc_agency_token');
   if (orig) {
     localStorage.setItem('lcc_token', orig);
-    ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(k => localStorage.removeItem(k));
+    ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache','lcc_agency_permissions'].forEach(k => localStorage.removeItem(k));
     window.location.reload();
   }
 };
@@ -3019,6 +3019,7 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
       localStorage.setItem('lcc_agency_token', myToken);
       localStorage.setItem('lcc_token', data.token);
       localStorage.setItem('lcc_managed_user', JSON.stringify(data.managedUser));
+      if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
       localStorage.removeItem('lcc_settings_profile');
       localStorage.removeItem('lcc_properties_cache');
       window.location.reload();
@@ -3039,10 +3040,95 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
       .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
   }
   initAgencyBanner();
+
+  // ── Auto-refresh token agence toutes les 6h ──
+  if (localStorage.getItem('lcc_managed_user')) {
+    agencyRefreshToken(); // refresh immédiat au chargement (vérifie validité)
+    setInterval(agencyRefreshToken, 6 * 60 * 60 * 1000);
+  }
 })();
+
+// ── Refresh token agence ──
+window.agencyRefreshToken = async function() {
+  const managed = localStorage.getItem('lcc_managed_user');
+  if (!managed) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/agency/refresh', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('lcc_token', data.token);
+      if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
+      console.log('🔄 [AGENCY] Token refreshed');
+    } else if (res.status === 403 || res.status === 401) {
+      console.warn('⚠️ [AGENCY] Token expiré ou délégation révoquée — retour au compte principal');
+      exitAgencyMode();
+    }
+  } catch(e) {
+    console.warn('⚠️ [AGENCY] Refresh échoué:', e.message);
+  }
+};
+
+// ── Masquer les pages non autorisées selon permissions agence ──
+window.applyAgencyPermissions = function() {
+  const managed = localStorage.getItem('lcc_managed_user');
+  if (!managed) return;
+  const perms = JSON.parse(localStorage.getItem('lcc_agency_permissions') || '{}');
+  // Mapping permission → pages à masquer
+  const permPageMap = {
+    can_view_messages:  ['/messages.html'],
+    can_view_cleaning:  ['/cleaning.html'],
+    can_view_reporting: ['/reporting.html', '/kpis.html'],
+    can_view_finances:  ['/deposits.html', '/factures.html', '/owner-invoices.html'],
+    can_view_calendar:  ['/app.html']
+  };
+  // Collecter les pages interdites
+  var blockedPages = [];
+  Object.keys(permPageMap).forEach(function(perm) {
+    if (perms[perm] === false) {
+      blockedPages = blockedPages.concat(permPageMap[perm]);
+    }
+  });
+  // Masquer dans la nav desktop (bhDemoNav)
+  document.querySelectorAll('#bhDemoNav a[href]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Masquer dans la sidebar desktop
+  document.querySelectorAll('aside.sidebar a[href], .sidebar a.nav-item[href]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Masquer dans le bottom tab bar mobile
+  document.querySelectorAll('.mobile-tabs a[href], .tab-bar a[href], [data-mobile-tab]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Bloquer l'accès à la page courante si pas autorisée
+  var curPath = location.pathname.toLowerCase();
+  if (blockedPages.includes(curPath)) {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:DM Sans,sans-serif;">'
+      + '<div><div style="font-size:48px;margin-bottom:16px;">🔒</div>'
+      + '<h2 style="margin:0 0 8px;">Accès non autorisé</h2>'
+      + '<p style="color:#6b7280;margin:0 0 24px;">Le propriétaire n\'a pas activé cette permission pour votre accès agence.</p>'
+      + '<button onclick="exitAgencyMode()" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;">← Retour à mon compte</button>'
+      + '</div></div>';
+  }
+};
 
 document.addEventListener('DOMContentLoaded', function() {
   loadAgencyAccountsForSwitcher();
+  // Appliquer les permissions après que la nav soit rendue
+  setTimeout(applyAgencyPermissions, 300);
 });
 </script>
 
@@ -11562,7 +11648,7 @@ if (document.readyState === 'loading') {
     var active = p.p === curPage || curPath === p.h.toLowerCase();
     var isProtected = p.h === '/settings.html' || p.h === '/support.html' || p.h === '/settings-account.html';
     var onclickAttr = isProtected
-      ? ' onclick="if(localStorage.getItem(\'lcc_managed_user\')){event.preventDefault();var o=localStorage.getItem(\'lcc_agency_token\');if(o){localStorage.setItem(\'lcc_token\',o);[\'lcc_agency_token\',\'lcc_managed_user\',\'lcc_settings_profile\',\'lcc_properties_cache\'].forEach(function(k){localStorage.removeItem(k)});window.location.href=\'' + p.h + '?v3=1\';}return false;}"'
+      ? ' onclick="if(localStorage.getItem(\'lcc_managed_user\')){event.preventDefault();var o=localStorage.getItem(\'lcc_agency_token\');if(o){localStorage.setItem(\'lcc_token\',o);[\'lcc_agency_token\',\'lcc_managed_user\',\'lcc_settings_profile\',\'lcc_properties_cache\',\'lcc_agency_permissions\'].forEach(function(k){localStorage.removeItem(k)});window.location.href=\'' + p.h + '?v3=1\';}return false;}"'
       : '';
     html += '<a href="' + p.h + '?v3=1"' + onclickAttr + ' style="'
       + 'padding:4px 12px;border-radius:999px;text-decoration:none;'
