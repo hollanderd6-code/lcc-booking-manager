@@ -284,10 +284,10 @@ html[data-theme-v3="1"] .page-content { max-width: none !important; width: 100% 
 </div>
 
 <!-- TABS -->
-<div class="nav-tabs">
-<button class="nav-tab active" data-tab="locks"><i class="fa fa-lock" style="margin-right:4px;"></i> Serrures</button>
-<button class="nav-tab" data-tab="codes"><i class="fa fa-key" style="margin-right:4px;"></i> Codes d'accès</button>
-<button class="nav-tab" data-tab="config"><i class="fa fa-cog" style="margin-right:4px;"></i> Configuration</button>
+<div class="nav-tabs" style="background:white !important;border:1px solid rgba(200,184,154,.4) !important;border-radius:14px !important;padding:5px !important;display:flex !important;width:100% !important;">
+<button class="nav-tab active" data-tab="locks" style="flex:1;text-align:center;border-radius:10px;padding:10px 8px;font-size:13px;"><i class="fa fa-lock" style="margin-right:4px;"></i> Serrures</button>
+<button class="nav-tab" data-tab="codes" style="flex:1;text-align:center;border-radius:10px;padding:10px 8px;font-size:13px;"><i class="fa fa-key" style="margin-right:4px;"></i> Codes d'accès</button>
+<button class="nav-tab" data-tab="config" style="flex:1;text-align:center;border-radius:10px;padding:10px 8px;font-size:13px;"><i class="fa fa-cog" style="margin-right:4px;"></i> Configuration</button>
 </div>
 
 <!-- TAB: SERRURES -->
@@ -1056,30 +1056,11 @@ window.addEventListener('DOMContentLoaded', init);
   .stat-label { font-size: 10px !important; }
   .stat-value { font-size: 20px !important; }
 
-  /* 5. TABS */
-  html[data-theme-v3="1"] .nav-tabs { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; gap: 4px !important; background: transparent !important; border: none !important; border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important; border-radius: 0 !important; padding: 4px 0 10px !important; margin-bottom: 12px !important; width: 100% !important; }
+  /* 5. TABS — Smart Locks */
+  html[data-theme-v3="1"] .nav-tabs { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; gap: 4px !important; background: white !important; border: 1px solid rgba(200,184,154,.4) !important; border-radius: 14px !important; padding: 5px !important; margin-bottom: 16px !important; width: 100% !important; }
   html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
-  html[data-theme-v3="1"] .nav-tab { flex-shrink: 0 !important; white-space: nowrap !important; padding: 8px 14px !important; border-radius: 999px !important; font-size: 12px !important; }
-
-  /* Fix Smart Locks : tabs visibles sur fond crème */
-  body[data-page="smart-locks"] .nav-tabs {
-    background: white !important;
-    border: 1px solid rgba(200,184,154,.4) !important;
-    border-radius: 14px !important;
-    padding: 5px !important;
-    border-bottom: 1px solid rgba(200,184,154,.4) !important;
-  }
-  body[data-page="smart-locks"] .nav-tab {
-    flex: 1 !important;
-    text-align: center !important;
-    border-radius: 10px !important;
-    font-size: 13px !important;
-    padding: 10px 8px !important;
-  }
-  body[data-page="smart-locks"] .nav-tab.active {
-    background: var(--sl-primary, #1A7A5E) !important;
-    color: white !important;
-  }
+  html[data-theme-v3="1"] .nav-tab { flex: 1 !important; white-space: nowrap !important; padding: 10px 8px !important; border-radius: 10px !important; font-size: 13px !important; text-align: center !important; }
+  html[data-theme-v3="1"] .nav-tab.active { background: var(--sl-primary, #1A7A5E) !important; color: white !important; }
 
   /* 5b. Sync button + titre section pas trop gros */
   .section-card .btn { max-width: 140px !important; font-size: 12px !important; padding: 6px 12px !important; }
