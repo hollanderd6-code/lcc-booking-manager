@@ -1029,7 +1029,7 @@ window.addEventListener('DOMContentLoaded', init);
 
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
-<script src="/js/mobile-tabs-handler.js"></script>
+<!-- mobile-tabs-handler.js retiré : conflit avec les nav-tabs custom de cette page -->
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 
 <style id="smart-locks-mobile-master">
@@ -1057,7 +1057,7 @@ window.addEventListener('DOMContentLoaded', init);
   .stat-value { font-size: 20px !important; }
 
   /* 5. TABS */
-  html[data-theme-v3="1"] .nav-tabs { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; gap: 4px !important; background: rgba(245,242,236,.97) !important; border: none !important; border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important; border-radius: 0 !important; padding: 8px 0 12px !important; margin-bottom: 16px !important; width: 100% !important; position: relative !important; z-index: 5 !important; }
+  html[data-theme-v3="1"] .nav-tabs { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; gap: 6px !important; background: rgba(245,242,236,.97) !important; border: none !important; border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important; border-radius: 0 !important; padding: 8px 0 12px !important; margin-bottom: 16px !important; width: 100% !important; }
   html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
   html[data-theme-v3="1"] .nav-tab { flex-shrink: 0 !important; white-space: nowrap !important; padding: 10px 16px !important; border-radius: 999px !important; font-size: 13px !important; background: white !important; border: 1px solid rgba(200,184,154,.3) !important; }
   html[data-theme-v3="1"] .nav-tab.active { background: var(--sl-primary) !important; color: white !important; border-color: var(--sl-primary) !important; }
