@@ -2,7 +2,7 @@ const SmartLockAdapter = require('./base-adapter');
 
 const AUTH_URL = 'https://auth.igloohome.co/oauth2/token';
 const BASE_URL = 'https://api.igloodeveloper.co/igloohome';
-const SCOPES = 'igloohomeapi/algopin-hourly igloohomeapi/algopin-daily igloohomeapi/algopin-permanent igloohomeapi/algopin-onetime igloohomeapi/get-devices';
+const SCOPES = 'igloohomeapi/algopin-hourly igloohomeapi/algopin-daily igloohomeapi/algopin-permanent igloohomeapi/algopin-onetime igloohomeapi/get-devices igloohomeapi/unlock-bridge-proxied-job igloohomeapi/lock-bridge-proxied-job igloohomeapi/create-custom-pin-bridge-proxied-job igloohomeapi/delete-custom-pin-bridge-proxied-job igloohomeapi/get-activity-logs-bridge-proxied-job igloohomeapi/get-battery-level-bridge-proxied-job';
 
 class IgloohomeAdapter extends SmartLockAdapter {
   constructor(connection, pool) {
@@ -78,11 +78,19 @@ class IgloohomeAdapter extends SmartLockAdapter {
       });
     }
 
+    // Mapper chaque device à son bridge (pour les commandes à distance)
+    const deviceToBridge = {};
+    for (const b of bridges) {
+      (b.linkedDevices || []).forEach(ld => {
+        if (ld.deviceId) deviceToBridge[ld.deviceId] = b.deviceId;
+      });
+    }
+
     return allDevices.map(d => {
-      // Relié au bridge si le device OU un de ses linkedDevices apparaît dans un bridge
       const directlyLinked = bridgeLinkedIds.has(d.deviceId);
       const childLinked = (d.linkedDevices || []).some(ld => bridgeLinkedIds.has(ld.deviceId));
       const hasBridge = directlyLinked || childLinked || (hasBridgesInAccount && d.type === 'Lock');
+      const bridgeDeviceId = deviceToBridge[d.deviceId] || (bridges[0]?.deviceId) || null;
 
       return {
         deviceId: d.deviceId || d.id,
@@ -93,8 +101,9 @@ class IgloohomeAdapter extends SmartLockAdapter {
         battery: d.batteryLevel ?? null,
         isOnline: hasBridge,
         metadata: {
-          apiId: d.id,  // ID interne Igloohome (pour les appels API)
+          apiId: d.id,
           hasBridge,
+          bridgeDeviceId,
           homeId: d.homeId || [],
           raw: d,
         },
@@ -143,8 +152,6 @@ class IgloohomeAdapter extends SmartLockAdapter {
   }
 
   async getLockStatus(lock) {
-    // Utiliser les données stockées lors du sync (plus fiable que re-fetch)
-    // Le cron batterie mettra à jour périodiquement via listLocks
     return {
       battery: lock.battery_level ?? null,
       isOnline: lock.metadata?.hasBridge ?? lock.is_online ?? false,
@@ -153,11 +160,98 @@ class IgloohomeAdapter extends SmartLockAdapter {
     };
   }
 
+  // ── Bridge Jobs : commandes à distance ──
+
+  async _createBridgeJob(lock, jobType, payload = {}) {
+    const token = await this.authenticate();
+    const bridgeId = lock.metadata?.bridgeDeviceId;
+    if (!bridgeId) throw new Error('Aucun bridge associé à cette serrure');
+
+    const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/jobs/bridges/${bridgeId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ jobType, ...payload }),
+    });
+    return data;
+  }
+
+  async _waitForJob(jobId, maxWait = 15000) {
+    const token = await this.authenticate();
+    const start = Date.now();
+    while (Date.now() - start < maxWait) {
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        const data = await this.apiCall(`${BASE_URL}/jobs/${jobId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (data.completed) return data;
+      } catch (e) { /* retry */ }
+    }
+    return { completed: false, jobId };
+  }
+
+  async unlock(lock) {
+    const job = await this._createBridgeJob(lock, 2); // BRIDGE_JOB_UNLOCK
+    console.log(`🔓 [Igloohome] Unlock job créé: ${job.jobId}`);
+    const result = await this._waitForJob(job.jobId);
+    return { success: result.completed, jobId: job.jobId };
+  }
+
+  async lockDevice(lock) {
+    const job = await this._createBridgeJob(lock, 1); // BRIDGE_JOB_LOCK
+    console.log(`🔒 [Igloohome] Lock job créé: ${job.jobId}`);
+    const result = await this._waitForJob(job.jobId);
+    return { success: result.completed, jobId: job.jobId };
+  }
+
+  async createCustomPin(lock, { code, name, startDate, endDate }) {
+    const payload = {
+      pin: code || this._generatePin(6),
+      pinName: (name || 'Code BH').substring(0, 32),
+    };
+    if (startDate) payload.startDate = new Date(startDate).toISOString();
+    if (endDate) payload.endDate = new Date(endDate).toISOString();
+
+    const job = await this._createBridgeJob(lock, 4, payload); // BRIDGE_JOB_CREATE_CUSTOM_PIN
+    const result = await this._waitForJob(job.jobId, 20000);
+    return { success: result.completed, jobId: job.jobId, code: payload.pin };
+  }
+
+  async deleteCustomPin(lock, pinId) {
+    try {
+      const job = await this._createBridgeJob(lock, 5, { pinId }); // BRIDGE_JOB_DELETE_CUSTOM_PIN
+      const result = await this._waitForJob(job.jobId);
+      return result.completed;
+    } catch (e) {
+      console.error(`[Igloohome] Erreur suppression PIN:`, e.message);
+      return false;
+    }
+  }
+
+  async getActivityLogs(lock) {
+    try {
+      const job = await this._createBridgeJob(lock, 15); // BRIDGE_JOB_GET_ACTIVITY_LOGS
+      const result = await this._waitForJob(job.jobId, 20000);
+      return result.jobResponse?.logs || result.jobResponse || [];
+    } catch (e) {
+      console.error(`[Igloohome] Erreur logs activité:`, e.message);
+      return [];
+    }
+  }
+
+  _generatePin(length = 6) {
+    let pin = '';
+    for (let i = 0; i < length; i++) pin += Math.floor(Math.random() * 10);
+    if (/^(\d)\1+$/.test(pin) || pin === '123456') return this._generatePin(length);
+    return pin;
+  }
+
   _mapType(t) {
     if (!t) return 'smart_lock';
     const lower = String(t).toLowerCase();
     if (lower === 'bridge') return 'bridge';
     if (lower === 'lock') return 'smart_lock';
+    if (lower === 'keypad') return 'keypad';
     if (lower === 'padlock') return 'padlock';
     if (lower === 'keybox') return 'keybox';
     const map = { '1': 'smart_lock', '2': 'padlock', '3': 'keybox' };
