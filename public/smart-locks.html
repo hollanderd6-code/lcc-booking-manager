@@ -1061,6 +1061,26 @@ window.addEventListener('DOMContentLoaded', init);
   html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
   html[data-theme-v3="1"] .nav-tab { flex-shrink: 0 !important; white-space: nowrap !important; padding: 8px 14px !important; border-radius: 999px !important; font-size: 12px !important; }
 
+  /* Fix Smart Locks : tabs visibles sur fond crème */
+  body[data-page="smart-locks"] .nav-tabs {
+    background: white !important;
+    border: 1px solid rgba(200,184,154,.4) !important;
+    border-radius: 14px !important;
+    padding: 5px !important;
+    border-bottom: 1px solid rgba(200,184,154,.4) !important;
+  }
+  body[data-page="smart-locks"] .nav-tab {
+    flex: 1 !important;
+    text-align: center !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    padding: 10px 8px !important;
+  }
+  body[data-page="smart-locks"] .nav-tab.active {
+    background: var(--sl-primary, #1A7A5E) !important;
+    color: white !important;
+  }
+
   /* 5b. Sync button + titre section pas trop gros */
   .section-card .btn { max-width: 140px !important; font-size: 12px !important; padding: 6px 12px !important; }
 
