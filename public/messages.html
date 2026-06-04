@@ -2095,13 +2095,16 @@ document.addEventListener('DOMContentLoaded', function() {
       const user = JSON.parse(managedUser);
       const banner = document.createElement('div');
       banner.id = 'agencyBanner';
-      var darkNav = document.querySelector('.bh-demo-nav, #bhDemoNav');
-      var topOffset = darkNav ? darkNav.offsetHeight || 40 : 0;
+      var isV3 = document.documentElement.getAttribute('data-theme-v3') === '1';
+      var topOffset = isV3 ? 40 : 0;
       banner.style.cssText = 'position:fixed;top:' + topOffset + 'px;left:0;right:0;z-index:9998;background:#7c3aed;color:white;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);height:36px;box-sizing:border-box;';
       banner.innerHTML = '<span><i class="fas fa-building" style="margin-right:8px;"></i>Mode Agence — Messages de <strong>' + (user.name || user.email) + '</strong></span>'
         + '<button onclick="exitAgencyMode()" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:white;padding:4px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600;">← Mon compte</button>';
       document.body.prepend(banner);
-      document.body.style.paddingTop = (topOffset + 36) + 'px';
+      var style = document.createElement('style');
+      style.textContent = '#agencyBanner { display:flex !important; } body.agency-mode { padding-top: ' + (topOffset + 36) + 'px !important; }';
+      document.head.appendChild(style);
+      document.body.classList.add('agency-mode');
     } catch(e) {}
   });
 
