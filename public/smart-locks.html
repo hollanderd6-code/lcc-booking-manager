@@ -41,7 +41,10 @@ html, body { margin: 0; padding: 0; background: var(--sl-bg); font-family: 'DM S
 .stat-value { font-size: 24px; font-weight: 700; color: var(--sl-text); }
 
 /* TABS */
-/* TABS — handled by settings-tabs theme styles */
+.settings-tabs { display: flex; flex-wrap: wrap; gap: 4px; background: white; border: 1px solid rgba(200,184,154,.35); border-radius: 14px; padding: 5px; width: fit-content; margin-bottom: 16px; }
+.settings-tab { padding: 8px 18px; border-radius: 10px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #7A8695; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 7px; }
+.settings-tab.active { background: #1A7A5E; color: white; }
+.settings-tab:not(.active):hover { background: rgba(26,122,94,.08); color: #1A7A5E; }
 .tab-content { display: none; }
 .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
@@ -1053,7 +1056,10 @@ window.addEventListener('DOMContentLoaded', init);
   .stat-label { font-size: 10px !important; }
   .stat-value { font-size: 20px !important; }
 
-  /* 5. TABS — handled by theme settings-tabs */
+  /* 5. TABS mobile */
+  .settings-tabs { width: 100% !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; border-radius: 0 !important; border: none !important; border-bottom: 1px solid rgba(200,184,154,.35) !important; background: transparent !important; padding: 4px 0 8px !important; }
+  .settings-tabs::-webkit-scrollbar { display: none !important; }
+  .settings-tab { flex-shrink: 0 !important; white-space: nowrap !important; font-size: 12.5px !important; padding: 8px 14px !important; }
 
   /* 5b. Sync button + titre section pas trop gros */
   .section-card .btn { max-width: 140px !important; font-size: 12px !important; padding: 6px 12px !important; }
