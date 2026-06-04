@@ -1051,18 +1051,19 @@ window.addEventListener('DOMContentLoaded', init);
   html[data-theme-v3="1"] main.main-content { padding: 0 14px 90px !important; padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important; max-width: 100% !important; margin: 0 !important; box-sizing: border-box !important; width: 100% !important; }
 
   /* 4. STATS */
-  html[data-theme-v3="1"] .stats-row { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; margin-top: 0 !important; }
-  .stat-card { padding: 12px 10px !important; }
-  .stat-label { font-size: 10px !important; }
-  .stat-value { font-size: 20px !important; }
+  html[data-theme-v3="1"] .stats-row { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; margin-bottom: 8px !important; margin-top: 0 !important; }
+  .stat-card { padding: 10px 10px !important; }
+  .stat-label { font-size: 9px !important; margin-bottom: 4px !important; }
+  .stat-value { font-size: 18px !important; }
 
   /* 5. TABS mobile */
-  .settings-tabs { width: 100% !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; border-radius: 0 !important; border: none !important; border-bottom: 1px solid rgba(200,184,154,.35) !important; background: transparent !important; padding: 4px 0 8px !important; }
+  .settings-tabs { width: 100% !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; border-radius: 0 !important; border: none !important; border-bottom: 1px solid rgba(200,184,154,.35) !important; background: transparent !important; padding: 6px 0 10px !important; margin-bottom: 20px !important; }
   .settings-tabs::-webkit-scrollbar { display: none !important; }
   .settings-tab { flex-shrink: 0 !important; white-space: nowrap !important; font-size: 12.5px !important; padding: 8px 14px !important; }
 
   /* 5b. Sync button + titre section pas trop gros */
   .section-card .btn { max-width: 140px !important; font-size: 12px !important; padding: 6px 12px !important; }
+  .tab-content { padding-top: 4px !important; }
 
   /* 6. CARDS */
   .lock-list { grid-template-columns: 1fr !important; gap: 10px !important; }
