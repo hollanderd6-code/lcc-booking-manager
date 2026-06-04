@@ -21632,7 +21632,13 @@ const PLAN_FEATURES = {
 function requireFeature(feature) {
   return async function(req, res, next) {
     try {
-      const userId = req.user?.isSubAccount ? req.user.parentUserId : req.user?.id;
+      // ── Mode Agence : vérifier le plan de l'AGENT (pas du compte géré) ──
+      let userId;
+      if (req.user?.isAgencyAccess && req.user.agentId) {
+        userId = req.user.agentId;
+      } else {
+        userId = req.user?.isSubAccount ? req.user.parentUserId : req.user?.id;
+      }
       if (!userId) return res.status(403).json({ error: 'Non authentifié', featureBlocked: true });
 
       const allowedPlans = PLAN_FEATURES[feature];
@@ -33718,7 +33724,7 @@ app.post('/api/agency/switch', authenticateAny, requireProPlan, async (req, res)
       agentId: userId,        // qui gère
       delegationId: delegation.rows[0].id,
       permissions: delegation.rows[0].permissions
-    }, secret, { expiresIn: '8h' });
+    }, secret, { expiresIn: '24h' });
 
     // Récupérer infos du compte cible
     const target = await pool.query('SELECT id, first_name, last_name, company, email FROM users WHERE id = $1', [targetUserId]);
@@ -33728,6 +33734,7 @@ app.post('/api/agency/switch', authenticateAny, requireProPlan, async (req, res)
     res.json({
       success: true,
       token: agencyToken,
+      permissions: delegation.rows[0].permissions,
       managedUser: {
         id: t.id,
         name: t.company || `${t.first_name || ''} ${t.last_name || ''}`.trim(),
@@ -33736,6 +33743,35 @@ app.post('/api/agency/switch', authenticateAny, requireProPlan, async (req, res)
     });
   } catch(e) {
     console.error('❌ [AGENCY] switch:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── Route : refresh un token agence avant expiration ─────────
+app.post('/api/agency/refresh', authenticateAny, async (req, res) => {
+  try {
+    if (!req.user?.isAgencyAccess || !req.user.agentId) {
+      return res.status(400).json({ error: 'Pas en mode agence' });
+    }
+    // Vérifier que la délégation est toujours active
+    const delegation = await pool.query(
+      `SELECT * FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+      [req.user.agentId, req.user.id]
+    );
+    if (!delegation.rows[0]) return res.status(403).json({ error: 'Délégation révoquée' });
+
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const newToken = jwt.sign({
+      id: req.user.id,
+      type: 'agency_access',
+      agentId: req.user.agentId,
+      delegationId: delegation.rows[0].id,
+      permissions: delegation.rows[0].permissions
+    }, secret, { expiresIn: '24h' });
+
+    res.json({ success: true, token: newToken, permissions: delegation.rows[0].permissions });
+  } catch(e) {
+    console.error('❌ [AGENCY] refresh:', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
