@@ -3122,11 +3122,17 @@ window.applyAgencyPermissions = function() {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-  initAgencyBanner();
   loadAgencyAccountsForSwitcher();
-  // Appliquer les permissions après que la nav soit rendue
   setTimeout(applyAgencyPermissions, 300);
 });
+
+// Banner agence : exécuté via window.load + setTimeout pour garantir qu'il s'affiche APRÈS tout le reste
+window.addEventListener('load', function() {
+  initAgencyBanner();
+});
+setTimeout(function() {
+  initAgencyBanner();
+}, 1500);
 </script>
 
 <style id="bh-cal-v4">
@@ -6370,12 +6376,16 @@ try {
 
   function pltInfo(r) {
     var raw = (r.platform || r.source || 'direct').toLowerCase().trim();
-    // Normaliser booking.com
-    raw = raw.replace(/\.com$/, '').replace(/booking\.com/, 'booking');
+    // Normaliser booking.com / bookingcom / bdc
+    raw = raw.replace(/\.com$/, '').replace(/booking\.com/, 'booking').replace(/bookingcom/, 'booking');
     // Correspondance exacte d'abord
     if (PLT[raw]) return PLT[raw];
-    // Correspondances partielles pour BHguest
+    // Correspondances partielles
+    if (raw.includes('booking') || raw === 'bdc') return PLT['booking'];
     if (raw.includes('guest_app') || raw.includes('bhguest') || raw.includes('boostinghost')) return PLT['guest_app'];
+    if (raw.includes('airbnb')) return PLT['airbnb'];
+    if (raw.includes('abritel')) return PLT['abritel'];
+    if (raw.includes('expedia')) return PLT['expedia'];
     // Fallback
     return { bg:'#6B7280', label:(raw||'Direct'), cls:'unknown' };
   }
