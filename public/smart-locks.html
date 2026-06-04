@@ -41,10 +41,10 @@ html, body { margin: 0; padding: 0; background: var(--sl-bg); font-family: 'DM S
 .stat-value { font-size: 24px; font-weight: 700; color: var(--sl-text); }
 
 /* TABS */
-.nav-tabs { display: flex; gap: 4px; background: white; border: 1px solid var(--sl-border-light); border-radius: 14px; padding: 5px; width: fit-content; margin-bottom: 20px; }
-.nav-tab { padding: 8px 18px; border-radius: 10px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--sl-text-muted); cursor: pointer; transition: all .15s; white-space: nowrap; }
-.nav-tab.active { background: var(--sl-primary); color: white; }
-.nav-tab:not(.active):hover { background: rgba(26,122,94,.08); color: var(--sl-primary); }
+.sl-tabs { display: flex; gap: 4px; background: white; border: 1px solid var(--sl-border-light); border-radius: 14px; padding: 5px; width: fit-content; margin-bottom: 20px; }
+.sl-tab { padding: 8px 18px; border-radius: 10px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--sl-text-muted); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.sl-tab.active { background: var(--sl-primary); color: white; }
+.sl-tab:not(.active):hover { background: rgba(26,122,94,.08); color: var(--sl-primary); }
 .tab-content { display: none; }
 .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
@@ -284,10 +284,10 @@ html[data-theme-v3="1"] .page-content { max-width: none !important; width: 100% 
 </div>
 
 <!-- TABS -->
-<div class="nav-tabs">
-<button class="nav-tab active" data-tab="locks"><i class="fa fa-lock" style="margin-right:4px;"></i> Serrures</button>
-<button class="nav-tab" data-tab="codes"><i class="fa fa-key" style="margin-right:4px;"></i> Codes d'accès</button>
-<button class="nav-tab" data-tab="config"><i class="fa fa-cog" style="margin-right:4px;"></i> Configuration</button>
+<div class="sl-tabs">
+<button class="sl-tab active" data-tab="locks"><i class="fa fa-lock" style="margin-right:4px;"></i> Serrures</button>
+<button class="sl-tab" data-tab="codes"><i class="fa fa-key" style="margin-right:4px;"></i> Codes d'accès</button>
+<button class="sl-tab" data-tab="config"><i class="fa fa-cog" style="margin-right:4px;"></i> Configuration</button>
 </div>
 
 <!-- TAB: SERRURES -->
@@ -436,9 +436,9 @@ async function init() {
 }
 
 function setupTabs() {
-  document.querySelectorAll('.nav-tab').forEach(btn => {
+  document.querySelectorAll('.sl-tab').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sl-tab').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
@@ -1029,7 +1029,7 @@ window.addEventListener('DOMContentLoaded', init);
 
 <script src="/js/bh-layout.js"></script>
 <script src="/js/mobile-native-experience.js"></script>
-<!-- mobile-tabs-handler.js retiré : conflit avec les nav-tabs custom de cette page -->
+<script src="/js/mobile-tabs-handler.js"></script>
 <script src="/js/messages-badge-desktop-mobile.js"></script>
 
 <style id="smart-locks-mobile-master">
@@ -1057,10 +1057,10 @@ window.addEventListener('DOMContentLoaded', init);
   .stat-value { font-size: 20px !important; }
 
   /* 5. TABS */
-  html[data-theme-v3="1"] .nav-tabs { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; gap: 6px !important; background: rgba(245,242,236,.97) !important; border: none !important; border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important; border-radius: 0 !important; padding: 8px 0 12px !important; margin-bottom: 16px !important; width: 100% !important; }
-  html[data-theme-v3="1"] .nav-tabs::-webkit-scrollbar { display: none !important; }
-  html[data-theme-v3="1"] .nav-tab { flex-shrink: 0 !important; white-space: nowrap !important; padding: 10px 16px !important; border-radius: 999px !important; font-size: 13px !important; background: white !important; border: 1px solid rgba(200,184,154,.3) !important; }
-  html[data-theme-v3="1"] .nav-tab.active { background: var(--sl-primary) !important; color: white !important; border-color: var(--sl-primary) !important; }
+  html[data-theme-v3="1"] .sl-tabs { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; gap: 6px !important; background: rgba(245,242,236,.97) !important; border: none !important; border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important; border-radius: 0 !important; padding: 8px 0 12px !important; margin-bottom: 16px !important; width: 100% !important; }
+  html[data-theme-v3="1"] .sl-tabs::-webkit-scrollbar { display: none !important; }
+  html[data-theme-v3="1"] .sl-tab { flex-shrink: 0 !important; white-space: nowrap !important; padding: 10px 16px !important; border-radius: 999px !important; font-size: 13px !important; background: white !important; border: 1px solid rgba(200,184,154,.3) !important; }
+  html[data-theme-v3="1"] .sl-tab.active { background: var(--sl-primary) !important; color: white !important; border-color: var(--sl-primary) !important; }
 
   /* 5b. Sync button + titre section pas trop gros */
   .section-card .btn { max-width: 140px !important; font-size: 12px !important; padding: 6px 12px !important; }
