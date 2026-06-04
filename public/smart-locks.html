@@ -1084,5 +1084,30 @@ window.addEventListener('DOMContentLoaded', init);
 }
 </style>
 
+<script>
+// Force les styles des tabs après tous les scripts externes
+function forceTabStyles() {
+  const tabs = document.querySelector('.nav-tabs');
+  if (!tabs) return;
+  tabs.setAttribute('style', 'background:white !important;border:1px solid rgba(200,184,154,.4) !important;border-radius:14px !important;padding:5px !important;display:flex !important;width:100% !important;gap:4px !important;margin-bottom:16px !important;');
+  tabs.querySelectorAll('.nav-tab').forEach(btn => {
+    btn.style.cssText = 'flex:1 !important;text-align:center !important;border-radius:10px !important;padding:10px 8px !important;font-size:13px !important;font-weight:600 !important;border:none !important;cursor:pointer !important;font-family:DM Sans,sans-serif !important;white-space:nowrap !important;';
+    if (btn.classList.contains('active')) {
+      btn.style.background = '#1A7A5E';
+      btn.style.color = 'white';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = '#6b7280';
+    }
+  });
+}
+setTimeout(forceTabStyles, 100);
+setTimeout(forceTabStyles, 500);
+setTimeout(forceTabStyles, 1200);
+setTimeout(forceTabStyles, 2500);
+// Observer pour re-forcer si un script modifie les classes
+new MutationObserver(forceTabStyles).observe(document.querySelector('.nav-tabs') || document.body, { attributes: true, childList: true, subtree: true });
+</script>
+
 </body>
 </html>
