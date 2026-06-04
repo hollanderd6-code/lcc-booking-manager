@@ -18264,7 +18264,7 @@ app.get('/api/owner-clients', authenticateAny, requireFeature('facturation_propr
 
 // ── GET /api/agency/properties/:delegatorUserId ─────────────────
 // Retourner les logements d'un compte délégué (pour la modal de facturation)
-app.get('/api/agency/properties/:delegatorUserId', authenticateAny, requireProPlan, async (req, res) => {
+app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -33486,7 +33486,7 @@ async function requireProPlan(req, res, next) {
 }
 
 // ── Route : inviter un gestionnaire (agence) ──────────────────
-app.post('/api/agency/invite', authenticateAny, requireProPlan, async (req, res) => {
+app.post('/api/agency/invite', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount ? null : req.user.id;
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
@@ -33629,7 +33629,7 @@ app.post('/api/agency/accept', authenticateAny, async (req, res) => {
 });
 
 // ── Route : révoquer un accès ────────────────────────────────
-app.post('/api/agency/revoke', authenticateAny, requireProPlan, async (req, res) => {
+app.post('/api/agency/revoke', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount ? null : req.user.id;
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
@@ -33647,7 +33647,7 @@ app.post('/api/agency/revoke', authenticateAny, requireProPlan, async (req, res)
 });
 
 // ── Route : lister les délégations (pour l'UI settings) ──────
-app.get('/api/agency/delegations', authenticateAny, requireProPlan, async (req, res) => {
+app.get('/api/agency/delegations', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount ? null : req.user.id;
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
@@ -33675,7 +33675,18 @@ app.get('/api/agency/delegations', authenticateAny, requireProPlan, async (req, 
       [userId]
     );
 
+    // Vérifier si l'utilisateur a le plan Agence (pour savoir s'il peut switcher)
+    const agentSub = await pool.query(
+      `SELECT plan_type, status, trial_end_date FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    const sub = agentSub.rows[0];
+    const isTrial = sub && (sub.status === 'trial' || sub.status === 'trialing') && sub.trial_end_date && new Date() < new Date(sub.trial_end_date);
+    const basePlan = sub ? getBasePlanName(sub.plan_type) : null;
+    const canActAsAgent = isTrial || basePlan === 'agence';
+
     res.json({
+      canActAsAgent,
       iManage: iManage.rows.map(r => ({
         id: r.id,
         userId: r.delegator_user_id,
@@ -33702,10 +33713,22 @@ app.get('/api/agency/delegations', authenticateAny, requireProPlan, async (req, 
 });
 
 // ── Route : switcher vers un compte géré ─────────────────────
-app.post('/api/agency/switch', authenticateAny, requireProPlan, async (req, res) => {
+app.post('/api/agency/switch', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount ? null : req.user.id;
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    // Vérifier que l'agent a le plan Agence
+    const agentSub = await pool.query(
+      `SELECT plan_type, status, trial_end_date FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    const sub = agentSub.rows[0];
+    const isTrial = sub && (sub.status === 'trial' || sub.status === 'trialing') && sub.trial_end_date && new Date() < new Date(sub.trial_end_date);
+    const basePlan = sub ? getBasePlanName(sub.plan_type) : null;
+    if (!isTrial && basePlan !== 'agence') {
+      return res.status(403).json({ error: 'Le plan Agence est requis pour gérer d\'autres comptes.', featureBlocked: true, requiredPlans: ['agence'], currentPlan: basePlan });
+    }
 
     const { targetUserId } = req.body;
 
@@ -33802,7 +33825,7 @@ async function getAgencyAccounts(pool, agentUserId) {
 
 // ── GET /api/agency/unified/reservations ─────────────────────
 // Agrège les réservations de tous les comptes délégués
-app.get('/api/agency/unified/reservations', authenticateAny, requireProPlan, async (req, res) => {
+app.get('/api/agency/unified/reservations', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount ? null : (req.user.agentId || req.user.id);
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
@@ -33842,7 +33865,7 @@ app.get('/api/agency/unified/reservations', authenticateAny, requireProPlan, asy
 });
 
 // ── GET /api/agency/unified/conversations ────────────────────
-app.get('/api/agency/unified/conversations', authenticateAny, requireProPlan, async (req, res) => {
+app.get('/api/agency/unified/conversations', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount ? null : (req.user.agentId || req.user.id);
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
@@ -33887,7 +33910,7 @@ app.get('/api/agency/unified/conversations', authenticateAny, requireProPlan, as
 });
 
 // ── GET /api/agency/unified/cleaning ────────────────────────
-app.get('/api/agency/unified/cleaning', authenticateAny, requireProPlan, async (req, res) => {
+app.get('/api/agency/unified/cleaning', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount ? null : (req.user.agentId || req.user.id);
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
@@ -33945,7 +33968,7 @@ app.get('/api/agency/unified/cleaning', authenticateAny, requireProPlan, async (
 });
 
 // ── GET /api/agency/unified/kpis ─────────────────────────────
-app.get('/api/agency/unified/kpis', authenticateAny, requireProPlan, async (req, res) => {
+app.get('/api/agency/unified/kpis', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount ? null : (req.user.agentId || req.user.id);
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
