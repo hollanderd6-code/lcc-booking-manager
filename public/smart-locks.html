@@ -1084,5 +1084,33 @@ window.addEventListener('DOMContentLoaded', init);
 }
 </style>
 
+<script>
+// Force tabs visibles après les scripts externes qui les cachent
+(function forceTabsVisible() {
+  function fix() {
+    var tabs = document.querySelector('.settings-tabs');
+    if (tabs) {
+      tabs.style.setProperty('display', 'flex', 'important');
+      tabs.style.setProperty('visibility', 'visible', 'important');
+      tabs.style.setProperty('opacity', '1', 'important');
+      tabs.style.setProperty('height', 'auto', 'important');
+      tabs.style.setProperty('overflow', 'visible', 'important');
+      tabs.style.setProperty('position', 'relative', 'important');
+      tabs.style.setProperty('pointer-events', 'auto', 'important');
+    }
+  }
+  fix();
+  setTimeout(fix, 100);
+  setTimeout(fix, 300);
+  setTimeout(fix, 600);
+  setTimeout(fix, 1200);
+  // Observer pour contrer toute modification future
+  var tabs = document.querySelector('.settings-tabs');
+  if (tabs && window.MutationObserver) {
+    new MutationObserver(fix).observe(tabs, { attributes: true, attributeFilter: ['style', 'class'] });
+  }
+})();
+</script>
+
 </body>
 </html>
