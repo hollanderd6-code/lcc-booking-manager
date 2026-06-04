@@ -2882,14 +2882,21 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 function initAgencyBanner() {
   const managedUser = localStorage.getItem('lcc_managed_user');
   if (!managedUser) return;
+  if (document.getElementById('agencyBanner')) return; // déjà affiché
   try {
     const user = JSON.parse(managedUser);
     const banner = document.createElement('div');
-    banner.id = 'agencyBanner'; banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:white;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);';
+    banner.id = 'agencyBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:white;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);height:36px;box-sizing:border-box;';
     banner.innerHTML = '<span><i class="fas fa-building" style="margin-right:8px;"></i>Mode Agence — Compte de <strong>' + (user.name || user.email) + '</strong></span><button onclick="exitAgencyMode()" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:white;padding:4px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600;">← Mon compte</button>';
     document.body.prepend(banner);
+    // Décaler tout le contenu de 36px
     document.body.style.paddingTop = (parseInt(document.body.style.paddingTop||0)+36)+'px';
-  } catch(e) {}
+    // Forcer la visibilité même si un autre script touche le z-index
+    var style = document.createElement('style');
+    style.textContent = '#agencyBanner { z-index: 99999 !important; display: flex !important; }';
+    document.head.appendChild(style);
+  } catch(e) { console.error('[AGENCY] Banner error:', e); }
 }
 window.exitAgencyMode = function() {
   const orig = localStorage.getItem('lcc_agency_token');
@@ -3022,7 +3029,7 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
     if (t) fetch('/api/agency/accept', { method:'POST', headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'}, body:JSON.stringify({token:at}) })
       .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
   }
-  initAgencyBanner();
+  // initAgencyBanner appelé dans DOMContentLoaded ci-dessous
 
   // ── Auto-refresh token agence toutes les 6h ──
   if (localStorage.getItem('lcc_managed_user')) {
@@ -3109,6 +3116,7 @@ window.applyAgencyPermissions = function() {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+  initAgencyBanner();
   loadAgencyAccountsForSwitcher();
   // Appliquer les permissions après que la nav soit rendue
   setTimeout(applyAgencyPermissions, 300);
