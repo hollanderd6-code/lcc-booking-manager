@@ -2,7 +2,7 @@ const SmartLockAdapter = require('./base-adapter');
 
 const AUTH_URL = 'https://auth.igloohome.co/oauth2/token';
 const BASE_URL = 'https://api.igloodeveloper.co/igloohome';
-const SCOPES = 'igloohomeapi/algopin-hourly igloohomeapi/algopin-daily igloohomeapi/algopin-permanent igloohomeapi/algopin-onetime igloohomeapi/get-devices igloohomeapi/unlock-bridge-proxied-job igloohomeapi/lock-bridge-proxied-job igloohomeapi/create-custom-pin-bridge-proxied-job igloohomeapi/delete-custom-pin-bridge-proxied-job igloohomeapi/get-activity-logs-bridge-proxied-job igloohomeapi/get-battery-level-bridge-proxied-job';
+const SCOPES = 'igloohomeapi/algopin-hourly igloohomeapi/algopin-daily igloohomeapi/algopin-permanent igloohomeapi/algopin-onetime igloohomeapi/get-devices igloohomeapi/unlock-bridge-proxied-job igloohomeapi/lock-bridge-proxied-job igloohomeapi/create-pin-bridge-proxied-job igloohomeapi/delete-pin-bridge-proxied-job igloohomeapi/get-job-status igloohomeapi/get-properties';
 
 class IgloohomeAdapter extends SmartLockAdapter {
   constructor(connection, pool) {
