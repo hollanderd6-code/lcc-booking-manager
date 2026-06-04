@@ -852,7 +852,7 @@ async function openLockDetail(lockId) {
     }).join('') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucun code généré. Les codes seront créés automatiquement pour chaque réservation.</div>'}
 
     <div class="detail-actions">
-      ${status.isOnline ? `
+      ${status.isOnline && lock.lock_type !== 'keypad' ? `
         <button class="btn btn-primary btn-sm" onclick="remoteLock('${lock.id}', 'unlock')" id="btn-unlock-${lock.id}"><i class="fa fa-lock-open"></i> Déverrouiller</button>
         <button class="btn btn-ghost btn-sm" onclick="remoteLock('${lock.id}', 'lock')" id="btn-lock-${lock.id}"><i class="fa fa-lock"></i> Verrouiller</button>
       ` : ''}
