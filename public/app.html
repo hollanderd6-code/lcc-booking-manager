@@ -2944,6 +2944,11 @@ window.loadAgencyAccountsForSwitcher = async function loadAgencyAccountsForSwitc
     if (!res.ok) return;
     const data = await res.json();
     if (!data.iManage || !data.iManage.length) return;
+    // L'agent doit avoir le plan Agence pour switcher
+    if (!data.canActAsAgent) {
+      console.log('ℹ️ [AGENCY] Délégations trouvées mais plan Agence requis pour switcher');
+      return;
+    }
     window._agencyAccounts = data.iManage;
     // Afficher le toggle automatiquement
     renderAgencyToggle(data.iManage);
