@@ -8926,9 +8926,22 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const { date_from, date_to, property_ids } = req.query;
+    const { date_from, date_to, property_ids, owner_user_id } = req.query;
     if (!date_from || !date_to) {
       return res.status(400).json({ error: 'date_from et date_to sont requis' });
+    }
+
+    // Déterminer le user_id cible (compte géré ou propre compte)
+    let targetUserId = user.id;
+    if (owner_user_id && owner_user_id !== user.id) {
+      // Vérifier que l'agent a une délégation active sur ce compte
+      const delegation = await pool.query(
+        `SELECT id FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+        [user.id, owner_user_id]
+      );
+      if (delegation.rows.length > 0) {
+        targetUserId = owner_user_id;
+      }
     }
 
     // Parser les property_ids (peut être une string ou tableau)
@@ -8939,7 +8952,7 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
 
     // Construire la condition SQL sur les logements
     let propCondition = 'AND r.user_id = $3';
-    let queryParams = [date_from, date_to, user.id];
+    let queryParams = [date_from, date_to, targetUserId];
     if (propIds.length > 0) {
       propCondition = `AND r.property_id = ANY($4) AND r.user_id = $3`;
       queryParams.push(propIds);
@@ -15744,9 +15757,19 @@ app.patch('/api/properties/:propertyId', authenticateAny, async (req, res) => {
     const { propertyId } = req.params;
     const { ownerId } = req.body;
 
-    // Vérifier que le logement appartient à cet user
-    const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [propertyId, user.id]);
+    // Vérifier que le logement appartient à cet user OU à un compte géré
+    const check = await pool.query('SELECT id, user_id FROM properties WHERE id = $1', [propertyId]);
     if (!check.rows.length) return res.status(404).json({ error: 'Logement non trouvé' });
+    
+    const propUserId = check.rows[0].user_id;
+    if (propUserId !== user.id) {
+      // Vérifier si l'utilisateur a une délégation sur le compte propriétaire du logement
+      const delegation = await pool.query(
+        `SELECT id FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+        [user.id, propUserId]
+      );
+      if (!delegation.rows.length) return res.status(403).json({ error: 'Accès non autorisé à ce logement' });
+    }
 
     await pool.query(
       'UPDATE properties SET owner_id = $1 WHERE id = $2',
@@ -33882,6 +33905,52 @@ app.get('/api/agency/unified/reservations', authenticateAny, async (req, res) =>
     });
   } catch(e) {
     console.error('❌ [AGENCY] unified/reservations:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── GET /api/agency/managed-properties ───────────────────────
+// Retourne les propriétés de tous les comptes gérés par l'agent (pour la page clients/factures)
+app.get('/api/agency/managed-properties', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount ? null : req.user.id;
+    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
+
+    const accounts = await getAgencyAccounts(pool, userId);
+    if (!accounts.length) return res.json({ properties: [] });
+
+    const allProps = [];
+    await Promise.all(accounts.map(async account => {
+      try {
+        const result = await pool.query(
+          `SELECT id, name, internal_name, color, base_price, weekend_price, address, owner_id
+           FROM properties WHERE user_id = $1
+           ORDER BY display_order ASC, created_at ASC`,
+          [account.userId]
+        );
+        result.rows.forEach(p => {
+          allProps.push({
+            id: p.id,
+            name: p.name,
+            internalName: p.internal_name,
+            internal_name: p.internal_name,
+            color: p.color,
+            address: p.address,
+            owner_id: p.owner_id,
+            basePrice: p.base_price != null ? parseFloat(p.base_price) : null,
+            weekendPrice: p.weekend_price != null ? parseFloat(p.weekend_price) : null,
+            _managedAccount: { userId: account.userId, name: account.name },
+            _isManaged: true
+          });
+        });
+      } catch(e) {
+        console.error(`❌ [AGENCY] Props compte ${account.userId}:`, e.message);
+      }
+    }));
+
+    res.json({ properties: allProps });
+  } catch(e) {
+    console.error('❌ [AGENCY] managed-properties:', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

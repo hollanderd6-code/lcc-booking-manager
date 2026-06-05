@@ -2260,7 +2260,30 @@ async function loadPropertiesForInvoice() {
       headers: { Authorization: 'Bearer ' + token }
     });
     const data = await res.json();
-    window.allProperties = data.properties || [];
+    var myProps = (data.properties || []).map(function(p) { p._isManaged = false; return p; });
+
+    // Charger aussi les propriétés des comptes gérés (mode agence)
+    var managedProps = [];
+    try {
+      var agRes = await fetch(API_BASE + '/api/agency/managed-properties', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (agRes.ok) {
+        var agData = await agRes.json();
+        managedProps = (agData.properties || []);
+        if (managedProps.length) console.log('🏢 [AGENCY] ' + managedProps.length + ' propriétés gérées chargées');
+      }
+    } catch(e) {}
+
+    // Fusionner sans doublons
+    var allIds = new Set(myProps.map(function(p) { return String(p.id); }));
+    managedProps.forEach(function(p) {
+      if (!allIds.has(String(p.id))) {
+        allIds.add(String(p.id));
+        myProps.push(p);
+      }
+    });
+    window.allProperties = myProps;
   } catch(e) {
     console.error('Erreur chargement propriétés:', e);
   }
@@ -4246,11 +4269,13 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     }
     container.innerHTML = allProps.map(p => {
       const isChecked = clientId && String(p.owner_id || p.ownerId || '') === String(clientId);
+      const managedBadge = p._isManaged && p._managedAccount ? `<span style="font-size:9px;background:#ede9fe;color:#6d28d9;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:auto;white-space:nowrap;">${p._managedAccount.name}</span>` : '';
       return `
         <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ${isChecked ? '#bbf7d0' : '#e5e7eb'};border-radius:8px;cursor:pointer;background:${isChecked ? '#f0fdf4' : 'white'};transition:all 0.15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor='${isChecked ? '#bbf7d0' : '#e5e7eb'}'">
-          <input type="checkbox" data-property-id="${p.id}" ${isChecked ? 'checked' : ''} style="accent-color:#1A7A5E;width:16px;height:16px;cursor:pointer;">
+          <input type="checkbox" data-property-id="${p.id}" data-managed-user-id="${p._managedAccount?.userId || ''}" ${isChecked ? 'checked' : ''} style="accent-color:#1A7A5E;width:16px;height:16px;cursor:pointer;">
           <span style="font-size:13px;font-weight:500;color:#111827;">${p.name}</span>
-          ${p.address ? `<span style="font-size:11px;color:#9ca3af;margin-left:auto;">${p.address}</span>` : ''}
+          ${managedBadge}
+          ${p.address && !managedBadge ? `<span style="font-size:11px;color:#9ca3af;margin-left:auto;">${p.address}</span>` : ''}
         </label>`;
     }).join('');
   }
@@ -6024,6 +6049,18 @@ window.fetchInvoiceSummary = async function() {
     var token = localStorage.getItem("lcc_token");
     var url = API_BASE + "/api/reservations/invoice-summary?date_from=" + dateFrom + "&date_to=" + dateTo;
     if (propIds.length > 0) url += "&property_ids=" + propIds.join(",");
+
+    // Détecter si les propriétés sélectionnées appartiennent à un compte géré
+    var managedUserId = null;
+    if (window.allProperties) {
+      propIds.forEach(function(pid) {
+        var prop = window.allProperties.find(function(p) { return String(p.id) === String(pid); });
+        if (prop && prop._isManaged && prop._managedAccount && prop._managedAccount.userId) {
+          managedUserId = prop._managedAccount.userId;
+        }
+      });
+    }
+    if (managedUserId) url += "&owner_user_id=" + managedUserId;
 
     var res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
     var data = await res.json();
