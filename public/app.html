@@ -3150,7 +3150,7 @@ setTimeout(function() {
 }
 
 /* Scroll sync */
-#bhCalRoot .bh-cal-body { min-height: 300px; transform: translateZ(0); -webkit-transform: translateZ(0); }
+#bhCalRoot .bh-cal-body { min-height: 300px; }
 
 /* Pricing cells */
 .cell-price { pointer-events: none; user-select: none; }
@@ -11799,9 +11799,6 @@ if (document.readyState === 'loading') {
   const el = document.querySelector('.calendar-grid-wrapper');
   if (!el) return;
 
-  el.style.touchAction = 'pan-y';
-  el.style.willChange = 'scroll-position';
-
   let startX = 0, startY = 0, startLeft = 0;
   let dragging = false;
 
@@ -11820,6 +11817,7 @@ if (document.readyState === 'loading') {
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
 
+    // On prend la main seulement si le geste est clairement horizontal
     if (!dragging) {
       if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) dragging = true;
       else return;
