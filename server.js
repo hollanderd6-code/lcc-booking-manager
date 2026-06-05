@@ -35576,10 +35576,15 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
     // Vérifier dispo si dates ou logement changés
     if (checkin && checkout) {
       const conflict = await pool.query(
-        `SELECT id FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled') AND uid != $2 AND start_date < $4 AND end_date > $3`,
+        `SELECT uid, guest_name, start_date, end_date, status FROM reservations 
+         WHERE property_id = $1 AND status NOT IN ('cancelled','completed') 
+         AND uid != $2 AND start_date::date < $4::date AND end_date::date > $3::date`,
         [targetPropertyId, uid, checkin, checkout]
       );
-      if (conflict.rows.length > 0) return res.status(409).json({ error: 'Ces dates ne sont plus disponibles' });
+      if (conflict.rows.length > 0) {
+        console.log(`⚠️ [GUEST] Conflit modification ${uid}: ${JSON.stringify(conflict.rows.map(r => ({uid:r.uid, guest:r.guest_name, start:String(r.start_date).slice(0,10), end:String(r.end_date).slice(0,10), status:r.status})))}`);
+        return res.status(409).json({ error: 'Ces dates ne sont plus disponibles', conflicts: conflict.rows.map(r => ({uid:r.uid, guest:r.guest_name})) });
+      }
     }
 
     const updates = [];
