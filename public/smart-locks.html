@@ -567,7 +567,7 @@ function renderLocks() {
             <div class="lock-name">${esc(lock.lock_name)}</div>
             <div class="lock-meta">
               <span class="brand-tag">${esc(lock.brand)}</span>
-              <span>${lock.lock_type === 'padlock' ? 'Cadenas' : lock.lock_type === 'keybox' ? 'Boîte à clés' : 'Serrure'}</span>
+              <span>${lock.lock_type === 'padlock' ? 'Cadenas' : lock.lock_type === 'keybox' ? 'Boîte à clés' : lock.lock_type === 'keypad' ? 'Keypad' : 'Serrure'}</span>
               ${lock.serial_number ? `<span>S/N: ${esc(lock.serial_number)}</span>` : ''}
             </div>
           </div>
@@ -804,7 +804,7 @@ async function openLockDetail(lockId) {
       </div>
       <div class="detail-item">
         <div class="detail-item-label">Type</div>
-        <div class="detail-item-value">${lock.lock_type === 'padlock' ? 'Cadenas' : lock.lock_type === 'keybox' ? 'Boîte à clés' : 'Serrure'}</div>
+        <div class="detail-item-value">${lock.lock_type === 'padlock' ? 'Cadenas' : lock.lock_type === 'keybox' ? 'Boîte à clés' : lock.lock_type === 'keypad' ? 'Keypad' : 'Serrure'}</div>
       </div>
       <div class="detail-item">
         <div class="detail-item-label">Batterie</div>
@@ -830,7 +830,7 @@ async function openLockDetail(lockId) {
       </div>
     `}
 
-    <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🔑 Codes par réservation (${lockCodes.length})</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🔑 Codes enregistrés (${lockCodes.length})</div>
     ${lockCodes.length > 0 ? lockCodes.map(c => {
       const statusClass = c.status === 'active' ? 'status-active' : c.status === 'expired' ? 'status-expired' : 'status-revoked';
       const statusLabel = c.status === 'active' ? 'Actif' : c.status === 'expired' ? 'Expiré' : 'Révoqué';
@@ -840,21 +840,55 @@ async function openLockDetail(lockId) {
           <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:20px;letter-spacing:3px;color:${c.status === 'active' ? 'var(--sl-primary)' : 'var(--sl-text-muted)'};">${esc(c.code)}</span>
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="status-badge ${statusClass}">${statusLabel}</span>
-            ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')" title="Révoquer"><i class="fa fa-ban" style="color:var(--sl-danger);font-size:12px;"></i></button>` : ''}
+            ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')" title="Supprimer"><i class="fa fa-trash" style="color:var(--sl-danger);font-size:12px;"></i></button>` : ''}
           </div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--sl-text-muted);">
           <span><i class="fa fa-user" style="width:14px;"></i> ${esc(c.guest_name || 'Voyageur')}</span>
           <span><i class="fa fa-calendar" style="width:14px;"></i> ${fmtDate(c.valid_from)} → ${fmtDate(c.valid_until)}</span>
-          ${c.reservation_uid ? `<span><i class="fa fa-bookmark" style="width:14px;"></i> ${esc(c.reservation_uid)}</span>` : '<span style="color:#D97706;"><i class="fa fa-hand-paper" style="width:14px;"></i> Manuel</span>'}
+          ${c.reservation_uid ? `<span><i class="fa fa-bookmark" style="width:14px;"></i> Réservation</span>` : '<span style="color:#D97706;"><i class="fa fa-hand-paper" style="width:14px;"></i> Manuel</span>'}
         </div>
       </div>`;
-    }).join('') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucun code généré. Les codes seront créés automatiquement pour chaque réservation.</div>'}
+    }).join('') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucun code enregistré.</div>'}
+
+    <!-- Formulaire ajout code -->
+    <div style="margin-top:16px;background:#f9fafb;border-radius:12px;padding:14px;border:1px dashed rgba(200,184,154,.4);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">➕ Ajouter un code</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Nom</label>
+          <input type="text" id="newcode-name-${lock.id}" placeholder="Ex: Ménage" class="form-control" style="padding:8px 10px;font-size:13px;"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Code (optionnel)</label>
+          <input type="text" id="newcode-pin-${lock.id}" placeholder="Auto (6 chiffres)" class="form-control" style="padding:8px 10px;font-size:13px;" maxlength="6"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Début</label>
+          <input type="datetime-local" id="newcode-start-${lock.id}" class="form-control" style="padding:8px 10px;font-size:12px;" value="${toLocalISO(new Date())}"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Fin</label>
+          <input type="datetime-local" id="newcode-end-${lock.id}" class="form-control" style="padding:8px 10px;font-size:12px;" value="${toLocalISO(new Date(Date.now() + 7*24*3600*1000))}"/>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="width:100%;" id="newcode-btn-${lock.id}" onclick="createQuickCode('${lock.id}')">
+        <i class="fa fa-key"></i> Créer le code
+      </button>
+    </div>
 
     <div class="detail-actions">
-      ${lock.assignment ? `<button class="btn btn-primary btn-sm" onclick="closeLockDetail(); openGenerateCodeForProperty('${lock.assignment.property_id}')"><i class="fa fa-key"></i> Générer un code manuel</button>` : ''}
-      <button class="btn btn-secondary btn-sm" onclick="closeLockDetail(); openAssignModal('${lock.id}')"><i class="fa fa-link"></i> ${lock.assignment ? 'Changer logement' : 'Associer'}</button>
+      ${status.isOnline && lock.lock_type !== 'keypad' ? `
+        <button class="btn btn-primary btn-sm" onclick="remoteLock('${lock.id}', 'unlock')" id="btn-unlock-${lock.id}"><i class="fa fa-lock-open"></i> Déverrouiller</button>
+        <button class="btn btn-ghost btn-sm" onclick="remoteLock('${lock.id}', 'lock')" id="btn-lock-${lock.id}"><i class="fa fa-lock"></i> Verrouiller</button>
+      ` : ''}
+      ${lock.assignment ? `<button class="btn btn-secondary btn-sm" onclick="closeLockDetail(); openGenerateCodeForProperty('${lock.assignment.property_id}')"><i class="fa fa-key"></i> Code manuel</button>` : ''}
+      ${status.isOnline ? `<button class="btn btn-ghost btn-sm" onclick="loadActivity('${lock.id}')"><i class="fa fa-history"></i> Historique</button>` : ''}
+      <button class="btn btn-ghost btn-sm" onclick="closeLockDetail(); openAssignModal('${lock.id}')"><i class="fa fa-link"></i> ${lock.assignment ? 'Changer' : 'Associer'}</button>
     </div>
+    <div id="activity-${lock.id}" style="display:none;margin-top:16px;"></div>
   `;
 
   document.getElementById('lockDetailSheet').classList.add('open');
@@ -862,6 +896,99 @@ async function openLockDetail(lockId) {
 
 function closeLockDetail() {
   document.getElementById('lockDetailSheet').classList.remove('open');
+}
+
+async function remoteLock(lockId, action) {
+  const btn = document.getElementById(`btn-${action}-${lockId}`);
+  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${action === 'unlock' ? 'Déverrouillage...' : 'Verrouillage...'}`; }
+  try {
+    const data = await api(`/lock/${lockId}/${action}`, { method: 'POST', body: '{}' });
+    showToast(data.success ? (action === 'unlock' ? '🔓 Serrure déverrouillée !' : '🔒 Serrure verrouillée !') : 'Commande envoyée (en attente)', 'success');
+  } catch (e) {
+    showToast(`Erreur : ${e.message}`, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = action === 'unlock' ? '<i class="fa fa-lock-open"></i> Déverrouiller' : '<i class="fa fa-lock"></i> Verrouiller'; }
+  }
+}
+
+async function loadActivity(lockId) {
+  const container = document.getElementById('activity-' + lockId);
+  if (!container) return;
+  container.style.display = 'block';
+  container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--sl-text-muted);font-size:13px;"><i class="fa fa-spinner fa-spin"></i> Chargement des logs...</div>';
+  try {
+    const data = await api(`/lock/${lockId}/activity`);
+    const logs = data.logs || [];
+    if (!logs.length) {
+      container.innerHTML = '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucune activité récente.</div>';
+      return;
+    }
+    container.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:8px;">📋 Dernière activité</div>' +
+      logs.slice(0, 20).map(log => {
+        const date = log.createdAt || log.timestamp || '';
+        const fDate = date ? new Date(date).toLocaleString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+        const type = log.eventType || log.type || log.action || '—';
+        return `<div style="padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12px;display:flex;justify-content:space-between;">
+          <span>${esc(type)}</span><span style="color:var(--sl-text-muted);">${fDate}</span>
+        </div>`;
+      }).join('');
+  } catch (e) {
+    container.innerHTML = `<div style="font-size:13px;color:var(--sl-danger);">Erreur : ${esc(e.message)}</div>`;
+  }
+}
+
+// ══════════════════════════════════════
+// QUICK CODE (from lock detail)
+// ══════════════════════════════════════
+async function createQuickCode(lockId) {
+  const lock = locks.find(l => l.id === lockId);
+  if (!lock) return;
+
+  const name = document.getElementById('newcode-name-' + lockId)?.value.trim() || 'Code BH';
+  const pin = document.getElementById('newcode-pin-' + lockId)?.value.trim() || null;
+  const startDate = document.getElementById('newcode-start-' + lockId)?.value;
+  const endDate = document.getElementById('newcode-end-' + lockId)?.value;
+
+  if (!startDate || !endDate) return showToast('Remplissez les dates', 'error');
+
+  const btn = document.getElementById('newcode-btn-' + lockId);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Création via bridge...'; }
+
+  try {
+    const data = await api('/lock/' + lockId + '/custom-pin', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        code: pin,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+      }),
+    });
+
+    // Sauvegarder aussi en DB via /codes/generate
+    if (lock.assignment) {
+      try {
+        await api('/codes/generate', {
+          method: 'POST',
+          body: JSON.stringify({
+            propertyId: lock.assignment.property_id,
+            guestName: name,
+            startDate: new Date(startDate).toISOString(),
+            endDate: new Date(endDate).toISOString(),
+          }),
+        });
+      } catch (e) { /* DB save optionnel */ }
+    }
+
+    showToast(`Code ${data.code || pin || ''} créé ! (envoyé au bridge)`, 'success');
+    closeLockDetail();
+    await loadCodes();
+    await loadStatus();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-key"></i> Créer le code'; }
+  }
 }
 
 // ══════════════════════════════════════
@@ -1025,6 +1152,71 @@ function toLocalISO(date) {
 
 // INIT
 window.addEventListener('DOMContentLoaded', init);
+</script>
+
+<script>
+// ── Mode Agence : banner, exit, refresh token ─────────────────
+(function() {
+  window.exitAgencyMode = function(redirectTo) {
+    var orig = localStorage.getItem('lcc_agency_token');
+    if (orig) localStorage.setItem('lcc_token', orig);
+    ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache','lcc_agency_permissions'].forEach(function(k){ localStorage.removeItem(k); });
+    window.location.href = redirectTo || '/app.html';
+  };
+  var managedUser = localStorage.getItem('lcc_managed_user');
+  if (!managedUser) return;
+  var token = localStorage.getItem('lcc_token');
+
+  // Bloquer l'accès à settings-account et support en mode agence
+  var curPath = location.pathname.toLowerCase();
+  if (curPath.includes('settings-account') || curPath.includes('support')) {
+    exitAgencyMode(location.pathname + location.search);
+    return;
+  }
+
+  // Auto-refresh token agence
+  (async function() {
+    try {
+      var res = await fetch('/api/agency/refresh', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'} });
+      if (res.ok) { var d = await res.json(); localStorage.setItem('lcc_token', d.token); if (d.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(d.permissions)); }
+      else if (res.status === 403 || res.status === 401) { exitAgencyMode(); }
+    } catch(e) {}
+  })();
+
+  // Intercepter les clics vers settings-account et support dans la nav
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    var href = (a.getAttribute('href') || '').toLowerCase();
+    if (href.includes('settings-account') || href.includes('support')) {
+      e.preventDefault();
+      exitAgencyMode(a.getAttribute('href'));
+    }
+  }, true);
+
+  // Banner agence
+  function showBanner() {
+    if (document.getElementById('agencyBanner')) return;
+    try {
+      var user = JSON.parse(managedUser);
+      var isV3 = document.documentElement.getAttribute('data-theme-v3') === '1';
+      var topOffset = isV3 ? 40 : 0;
+      var banner = document.createElement('div');
+      banner.id = 'agencyBanner';
+      banner.style.cssText = 'position:fixed;top:'+topOffset+'px;left:0;right:0;z-index:9998;background:#7c3aed;color:white;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);height:36px;box-sizing:border-box;';
+      var pageTitle = document.body.getAttribute('data-title') || '';
+      banner.innerHTML = '<span><i class="fas fa-building" style="margin-right:8px;"></i>Mode Agence'+(pageTitle?' — '+pageTitle+' de':' — Compte de')+' <strong>'+(user.name||user.email)+'</strong></span>'
+        +'<button onclick="exitAgencyMode()" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:white;padding:4px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600;">← Mon compte</button>';
+      document.body.prepend(banner);
+      var s = document.createElement('style');
+      s.textContent = '#agencyBanner{display:flex!important} body.agency-mode{padding-top:'+(topOffset+36)+'px!important} body.agency-mode .sidebar{top:'+(topOffset+36)+'px!important}';
+      document.head.appendChild(s);
+      document.body.classList.add('agency-mode');
+    } catch(e){}
+  }
+  window.addEventListener('load', showBanner);
+  setTimeout(showBanner, 1500);
+})();
 </script>
 
 <script src="/js/bh-layout.js"></script>

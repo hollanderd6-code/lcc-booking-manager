@@ -2050,46 +2050,70 @@ function closeBookingMessageModal() {
   </script>
 
 <!-- ✅ ULTIMATE FIX iOS - Version simple -->
+
+
 <script>
-// Attendre que le DOM soit prêt
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('✅ Ultimate iOS fix - Version simple chargée');
-});
-
-// ── Mode Agence : badge compte sur les conversations ─────────
+// ── Mode Agence : banner, exit, refresh token ─────────────────
 (function() {
-  const token = localStorage.getItem('lcc_token');
-  const managedUser = localStorage.getItem('lcc_managed_user');
-  const agencyToken = localStorage.getItem('lcc_agency_token');
+  window.exitAgencyMode = function(redirectTo) {
+    var orig = localStorage.getItem('lcc_agency_token');
+    if (orig) localStorage.setItem('lcc_token', orig);
+    ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache','lcc_agency_permissions'].forEach(function(k){ localStorage.removeItem(k); });
+    window.location.href = redirectTo || '/app.html';
+  };
+  var managedUser = localStorage.getItem('lcc_managed_user');
+  if (!managedUser) return;
+  var token = localStorage.getItem('lcc_token');
 
-  // Si on est en mode agence, afficher la bannière
-  if (managedUser) {
+  // Bloquer l'accès à settings-account et support en mode agence
+  var curPath = location.pathname.toLowerCase();
+  if (curPath.includes('settings-account') || curPath.includes('support')) {
+    exitAgencyMode(location.pathname + location.search);
+    return;
+  }
+
+  // Auto-refresh token agence
+  (async function() {
     try {
-      const user = JSON.parse(managedUser);
-      const banner = document.createElement('div');
-      banner.style.cssText = 'position:sticky;top:0;z-index:999;background:#7c3aed;color:white;padding:6px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;';
-      banner.innerHTML = `<span><i class="fas fa-building" style="margin-right:6px;"></i>Messages de : <strong>${user.name || user.email}</strong></span><a href="/app.html" style="color:rgba(255,255,255,.8);font-size:11px;">← Retour</a>`;
-      document.querySelector('.msgs-sidebar')?.prepend(banner);
+      var res = await fetch('/api/agency/refresh', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'} });
+      if (res.ok) { var d = await res.json(); localStorage.setItem('lcc_token', d.token); if (d.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(d.permissions)); }
+      else if (res.status === 403 || res.status === 401) { exitAgencyMode(); }
     } catch(e) {}
-  }
+  })();
 
-  // Injecter badge compte sur chaque conversation si mode agence
-  // Observer les nouveaux items ajoutés à la liste
-  const convList = document.getElementById('conversationsList');
-  if (convList && agencyToken) {
-    const observer = new MutationObserver(() => {
-      convList.querySelectorAll('.conversation-item:not([data-agency-badge])').forEach(item => {
-        item.setAttribute('data-agency-badge', '1');
-        // Badge minimal en haut à droite
-        const badge = document.createElement('span');
-        badge.style.cssText = 'position:absolute;top:6px;right:8px;font-size:9px;background:#7c3aed;color:white;padding:1px 5px;border-radius:8px;font-weight:700;';
-        badge.textContent = 'Agence';
-        item.style.position = 'relative';
-        item.appendChild(badge);
-      });
-    });
-    observer.observe(convList, { childList: true, subtree: true });
+  // Intercepter les clics vers settings-account et support dans la nav
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    var href = (a.getAttribute('href') || '').toLowerCase();
+    if (href.includes('settings-account') || href.includes('support')) {
+      e.preventDefault();
+      exitAgencyMode(a.getAttribute('href'));
+    }
+  }, true);
+
+  // Banner agence
+  function showBanner() {
+    if (document.getElementById('agencyBanner')) return;
+    try {
+      var user = JSON.parse(managedUser);
+      var isV3 = document.documentElement.getAttribute('data-theme-v3') === '1';
+      var topOffset = isV3 ? 40 : 0;
+      var banner = document.createElement('div');
+      banner.id = 'agencyBanner';
+      banner.style.cssText = 'position:fixed;top:'+topOffset+'px;left:0;right:0;z-index:9998;background:#7c3aed;color:white;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);height:36px;box-sizing:border-box;';
+      var pageTitle = document.body.getAttribute('data-title') || '';
+      banner.innerHTML = '<span><i class="fas fa-building" style="margin-right:8px;"></i>Mode Agence'+(pageTitle?' — '+pageTitle+' de':' — Compte de')+' <strong>'+(user.name||user.email)+'</strong></span>'
+        +'<button onclick="exitAgencyMode()" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:white;padding:4px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600;">← Mon compte</button>';
+      document.body.prepend(banner);
+      var s = document.createElement('style');
+      s.textContent = '#agencyBanner{display:flex!important} body.agency-mode{padding-top:'+(topOffset+36)+'px!important} body.agency-mode .sidebar{top:'+(topOffset+36)+'px!important}';
+      document.head.appendChild(s);
+      document.body.classList.add('agency-mode');
+    } catch(e){}
   }
+  window.addEventListener('load', showBanner);
+  setTimeout(showBanner, 1500);
 })();
 </script>
 

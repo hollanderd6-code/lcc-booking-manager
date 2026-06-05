@@ -2863,10 +2863,6 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     // Forcer via JS après rendu (override inline styles + subtitle)
 
 
-document.addEventListener('DOMContentLoaded', function() {
-  loadAgencyAccountsForSwitcher();
-});
-
     document.addEventListener('DOMContentLoaded', function() {
       var btn = document.getElementById('newReservationBtn');
       var fab = document.getElementById('fabAddResa');
@@ -2886,22 +2882,34 @@ document.addEventListener('DOMContentLoaded', function() {
 function initAgencyBanner() {
   const managedUser = localStorage.getItem('lcc_managed_user');
   if (!managedUser) return;
+  if (document.getElementById('agencyBanner')) return;
   try {
     const user = JSON.parse(managedUser);
     const banner = document.createElement('div');
-    banner.id = 'agencyBanner'; banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:white;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);';
+    banner.id = 'agencyBanner';
+    // La barre dark (.bh-demo-nav) fait 40px sur les pages v3
+    var isV3 = document.documentElement.getAttribute('data-theme-v3') === '1';
+    var topOffset = isV3 ? 40 : 0;
+    banner.style.cssText = 'position:fixed;top:' + topOffset + 'px;left:0;right:0;z-index:9998;background:#7c3aed;color:white;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2);height:36px;box-sizing:border-box;';
     banner.innerHTML = '<span><i class="fas fa-building" style="margin-right:8px;"></i>Mode Agence — Compte de <strong>' + (user.name || user.email) + '</strong></span><button onclick="exitAgencyMode()" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:white;padding:4px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600;">← Mon compte</button>';
     document.body.prepend(banner);
-    document.body.style.paddingTop = (parseInt(document.body.style.paddingTop||0)+36)+'px';
-  } catch(e) {}
+    // Injecter une règle CSS qui override le !important du theme v3
+    var style = document.createElement('style');
+    style.textContent = '#agencyBanner { display:flex !important; }'
+      + ' body.agency-mode { padding-top: ' + (topOffset + 36) + 'px !important; }'
+      + ' body.agency-mode .sidebar { top: ' + (topOffset + 36) + 'px !important; }'
+      + ' body.agency-mode header.main-header { margin-top: 0 !important; }'
+      + ' body.agency-mode .bh-demo-nav { top: 0 !important; }';
+    document.head.appendChild(style);
+    document.body.classList.add('agency-mode');
+  } catch(e) { console.error('[AGENCY] Banner error:', e); }
 }
-window.exitAgencyMode = function() {
-  const orig = localStorage.getItem('lcc_agency_token');
-  if (orig) {
-    localStorage.setItem('lcc_token', orig);
-    ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(k => localStorage.removeItem(k));
-    window.location.reload();
-  }
+window.exitAgencyMode = function(redirectTo) {
+  var orig = localStorage.getItem('lcc_agency_token');
+  if (orig) localStorage.setItem('lcc_token', orig);
+  ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache','lcc_agency_permissions'].forEach(function(k){ localStorage.removeItem(k); });
+  if (redirectTo) window.location.href = redirectTo;
+  else window.location.reload();
 };
 
 // ── Switcher compte agence ────────────────────────────────────
@@ -2917,26 +2925,8 @@ window.loadAgencyAccountsForSwitcher = async function loadAgencyAccountsForSwitc
   const token = localStorage.getItem('lcc_token');
   if (!token) return;
 
-  // En mode switché : afficher une barre minimaliste avec bouton retour
+  // En mode switché : le bandeau agencyBanner (via initAgencyBanner) suffit
   if (localStorage.getItem('lcc_managed_user')) {
-    const existing = document.getElementById('agencyToggleBar');
-    if (existing) existing.remove();
-    const bar = document.createElement('div');
-    bar.id = 'agencyToggleBar';
-    var _isMobile = window.innerWidth <= 768;
-    bar.style.cssText = _isMobile
-      ? 'background:#1F2937;padding:6px 16px;display:flex;align-items:center;height:36px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;width:100%;box-sizing:border-box;'
-      : 'background:#1F2937;padding:0px 16px;display:flex;align-items:center;height:18px;justify-content:space-between;border-bottom:1px solid #374151;gap:8px;position:fixed;top:112px;left:248px;right:0;z-index:200;';
-    bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;">'
-      + '<i class="fas fa-building" style="color:#9CA3AF;font-size:12px;"></i>'
-      + '<span style="font-size:10px;color:#9CA3AF;font-weight:600;">MODE AGENCE</span>'
-      + '</div>'
-      + '<button onclick="exitAgencyMode()" style="padding:1px 8px;border-radius:18px;border:none;font-size:10px;font-weight:600;cursor:pointer;background:#7c3aed;color:white;">← Mon compte</button>';
-    const agencyBanner = document.getElementById('agencyBanner');
-    const header = document.getElementById('bhMainHeader') || document.querySelector('header.main-header');
-    if (agencyBanner) agencyBanner.insertAdjacentElement('afterend', bar);
-    else if (header) header.insertAdjacentElement('afterend', bar);
-    else document.body.prepend(bar);
     return;
   }
   try {
@@ -2944,6 +2934,11 @@ window.loadAgencyAccountsForSwitcher = async function loadAgencyAccountsForSwitc
     if (!res.ok) return;
     const data = await res.json();
     if (!data.iManage || !data.iManage.length) return;
+    // L'agent doit avoir le plan Agence pour switcher
+    if (!data.canActAsAgent) {
+      console.log('ℹ️ [AGENCY] Délégations trouvées mais plan Agence requis pour switcher');
+      return;
+    }
     window._agencyAccounts = data.iManage;
     // Afficher le toggle automatiquement
     renderAgencyToggle(data.iManage);
@@ -3019,6 +3014,7 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
       localStorage.setItem('lcc_agency_token', myToken);
       localStorage.setItem('lcc_token', data.token);
       localStorage.setItem('lcc_managed_user', JSON.stringify(data.managedUser));
+      if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
       localStorage.removeItem('lcc_settings_profile');
       localStorage.removeItem('lcc_properties_cache');
       window.location.reload();
@@ -3038,14 +3034,104 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
     if (t) fetch('/api/agency/accept', { method:'POST', headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'}, body:JSON.stringify({token:at}) })
       .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
   }
-  initAgencyBanner();
+  // initAgencyBanner appelé dans DOMContentLoaded ci-dessous
+
+  // ── Auto-refresh token agence toutes les 6h ──
+  if (localStorage.getItem('lcc_managed_user')) {
+    agencyRefreshToken(); // refresh immédiat au chargement (vérifie validité)
+    setInterval(agencyRefreshToken, 6 * 60 * 60 * 1000);
+  }
 })();
+
+// ── Refresh token agence ──
+window.agencyRefreshToken = async function() {
+  const managed = localStorage.getItem('lcc_managed_user');
+  if (!managed) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/agency/refresh', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('lcc_token', data.token);
+      if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
+      console.log('🔄 [AGENCY] Token refreshed');
+    } else if (res.status === 403 || res.status === 401) {
+      console.warn('⚠️ [AGENCY] Token expiré ou délégation révoquée — retour au compte principal');
+      exitAgencyMode();
+    }
+  } catch(e) {
+    console.warn('⚠️ [AGENCY] Refresh échoué:', e.message);
+  }
+};
+
+// ── Masquer les pages non autorisées selon permissions agence ──
+window.applyAgencyPermissions = function() {
+  const managed = localStorage.getItem('lcc_managed_user');
+  if (!managed) return;
+  const perms = JSON.parse(localStorage.getItem('lcc_agency_permissions') || '{}');
+  // Mapping permission → pages à masquer
+  const permPageMap = {
+    can_view_messages:  ['/messages.html'],
+    can_view_cleaning:  ['/cleaning.html'],
+    can_view_reporting: ['/reporting.html', '/kpis.html'],
+    can_view_finances:  ['/deposits.html', '/factures.html', '/owner-invoices.html'],
+    can_view_calendar:  ['/app.html']
+  };
+  // Collecter les pages interdites
+  var blockedPages = [];
+  Object.keys(permPageMap).forEach(function(perm) {
+    if (perms[perm] === false) {
+      blockedPages = blockedPages.concat(permPageMap[perm]);
+    }
+  });
+  // Masquer dans la nav desktop (bhDemoNav)
+  document.querySelectorAll('#bhDemoNav a[href]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Masquer dans la sidebar desktop
+  document.querySelectorAll('aside.sidebar a[href], .sidebar a.nav-item[href]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Masquer dans le bottom tab bar mobile
+  document.querySelectorAll('.mobile-tabs a[href], .tab-bar a[href], [data-mobile-tab]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Bloquer l'accès à la page courante si pas autorisée
+  var curPath = location.pathname.toLowerCase();
+  if (blockedPages.includes(curPath)) {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:DM Sans,sans-serif;">'
+      + '<div><div style="font-size:48px;margin-bottom:16px;">🔒</div>'
+      + '<h2 style="margin:0 0 8px;">Accès non autorisé</h2>'
+      + '<p style="color:#6b7280;margin:0 0 24px;">Le propriétaire n\'a pas activé cette permission pour votre accès agence.</p>'
+      + '<button onclick="exitAgencyMode()" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;">← Retour à mon compte</button>'
+      + '</div></div>';
+  }
+};
 
 document.addEventListener('DOMContentLoaded', function() {
   loadAgencyAccountsForSwitcher();
+  setTimeout(applyAgencyPermissions, 300);
 });
-</script>
 
+// Banner agence : exécuté via window.load + setTimeout pour garantir qu'il s'affiche APRÈS tout le reste
+window.addEventListener('load', function() {
+  initAgencyBanner();
+});
+setTimeout(function() {
+  initAgencyBanner();
+}, 1500);
 </script>
 
 <style id="bh-cal-v4">
@@ -6289,12 +6375,16 @@ try {
 
   function pltInfo(r) {
     var raw = (r.platform || r.source || 'direct').toLowerCase().trim();
-    // Normaliser booking.com
-    raw = raw.replace(/\.com$/, '').replace(/booking\.com/, 'booking');
+    // Normaliser booking.com / bookingcom / bdc
+    raw = raw.replace(/\.com$/, '').replace(/booking\.com/, 'booking').replace(/bookingcom/, 'booking');
     // Correspondance exacte d'abord
     if (PLT[raw]) return PLT[raw];
-    // Correspondances partielles pour BHguest
+    // Correspondances partielles
+    if (raw.includes('booking') || raw === 'bdc') return PLT['booking'];
     if (raw.includes('guest_app') || raw.includes('bhguest') || raw.includes('boostinghost')) return PLT['guest_app'];
+    if (raw.includes('airbnb')) return PLT['airbnb'];
+    if (raw.includes('abritel')) return PLT['abritel'];
+    if (raw.includes('expedia')) return PLT['expedia'];
     // Fallback
     return { bg:'#6B7280', label:(raw||'Direct'), cls:'unknown' };
   }
@@ -11560,9 +11650,9 @@ if (document.readyState === 'loading') {
   var html = '<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-right:4px;flex-shrink:0;">Vue</span>';
   PAGES.forEach(function(p){
     var active = p.p === curPage || curPath === p.h.toLowerCase();
-    var isProtected = p.h === '/settings.html' || p.h === '/support.html' || p.h === '/settings-account.html';
+    var isProtected = p.h === '/support.html' || p.h === '/settings-account.html';
     var onclickAttr = isProtected
-      ? ' onclick="if(localStorage.getItem(\'lcc_managed_user\')){event.preventDefault();var o=localStorage.getItem(\'lcc_agency_token\');if(o){localStorage.setItem(\'lcc_token\',o);[\'lcc_agency_token\',\'lcc_managed_user\',\'lcc_settings_profile\',\'lcc_properties_cache\'].forEach(function(k){localStorage.removeItem(k)});window.location.href=\'' + p.h + '?v3=1\';}return false;}"'
+      ? ' onclick="if(localStorage.getItem(\'lcc_managed_user\')){event.preventDefault();exitAgencyMode(\'' + p.h + '?v3=1\');return false;}"'
       : '';
     html += '<a href="' + p.h + '?v3=1"' + onclickAttr + ' style="'
       + 'padding:4px 12px;border-radius:999px;text-decoration:none;'
