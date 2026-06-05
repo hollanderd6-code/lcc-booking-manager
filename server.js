@@ -33831,31 +33831,53 @@ app.get('/api/agency/unified/reservations', authenticateAny, async (req, res) =>
     if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
 
     const accounts = await getAgencyAccounts(pool, userId);
-    if (!accounts.length) return res.json({ reservations: [], accounts: [] });
+    if (!accounts.length) return res.json({ reservations: [], accounts: [], properties: [] });
 
-    // Requête parallèle sur tous les comptes
-    const allReservations = await Promise.all(accounts.map(async account => {
+    // Requête parallèle : réservations + propriétés pour tous les comptes
+    const allReservations = [];
+    const allProperties = [];
+
+    await Promise.all(accounts.map(async account => {
       try {
-        const result = await pool.query(
-          `SELECT r.*, p.name as property_name, p.color as property_color, p.internal_name
-           FROM reservations r
-           LEFT JOIN properties p ON p.id = r.property_id
-           WHERE r.user_id = $1 AND r.status != 'cancelled'
-           ORDER BY r.start_date DESC`,
-          [account.userId]
-        );
-        return result.rows.map(r => ({
-          ...r,
-          _agencyAccount: { userId: account.userId, name: account.name, color: account.color }
-        }));
+        const [resaResult, propsResult] = await Promise.all([
+          pool.query(
+            `SELECT r.*, p.name as property_name, p.color as property_color, p.internal_name
+             FROM reservations r
+             LEFT JOIN properties p ON p.id = r.property_id
+             WHERE r.user_id = $1 AND r.status != 'cancelled'
+             ORDER BY r.start_date DESC`,
+            [account.userId]
+          ),
+          pool.query(
+            `SELECT id, name, internal_name, color, base_price, weekend_price
+             FROM properties WHERE user_id = $1
+             ORDER BY display_order ASC, created_at ASC`,
+            [account.userId]
+          )
+        ]);
+        resaResult.rows.forEach(r => {
+          allReservations.push({ ...r, _agencyAccount: { userId: account.userId, name: account.name, color: account.color } });
+        });
+        propsResult.rows.forEach(p => {
+          allProperties.push({
+            id: p.id,
+            name: p.name,
+            internalName: p.internal_name,
+            internal_name: p.internal_name,
+            color: p.color,
+            basePrice: p.base_price != null ? parseFloat(p.base_price) : null,
+            weekendPrice: p.weekend_price != null ? parseFloat(p.weekend_price) : null,
+            _agencyAccount: { userId: account.userId, name: account.name, color: account.color }
+          });
+        });
       } catch(e) {
         console.error(`❌ [AGENCY] Résas compte ${account.userId}:`, e.message);
-        return [];
       }
     }));
 
     res.json({
-      reservations: allReservations.flat(),
+      reservations: allReservations,
+      properties: allProperties,
       accounts: accounts.map(a => ({ userId: a.userId, name: a.name, color: a.color }))
     });
   } catch(e) {

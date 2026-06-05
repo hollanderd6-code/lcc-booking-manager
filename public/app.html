@@ -6255,9 +6255,18 @@ try {
               // Fusionner sans doublons
               const myUids = new Set(reservations.map(r => r.uid));
               const merged = [...reservations, ...agResas.filter(r => !myUids.has(r.uid))];
-              const agProps = agData.reservations
-                .map(r => ({ id: r.property_id, name: r.property_name, color: r._agencyAccount?.color }))
-                .filter((p, i, arr) => p.id && arr.findIndex(x => x.id === p.id) === i);
+              // Utiliser les propriétés retournées par l'API (avec basePrice)
+              const agProps = (agData.properties || []).map(p => ({
+                id: p.id,
+                name: p.internalName || p.internal_name || p.name,
+                internalName: p.internalName || p.internal_name,
+                internal_name: p.internal_name,
+                color: p.color || p._agencyAccount?.color,
+                basePrice: p.basePrice || p.base_price || null,
+                weekendPrice: p.weekendPrice || p.weekend_price || null,
+                _agencyBadge: p._agencyAccount?.name,
+                _agencyColor: p._agencyAccount?.color
+              }));
               reservations = merged;
               properties = [...properties, ...agProps.filter(p => !properties.find(x => x.id === p.id))];
               console.log(`🏢 [AGENCY] Vue globale: ${merged.length} résas (${agResas.length} externes)`);
