@@ -4344,18 +4344,21 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
       const d = await r.json();
       if (!d.success) { alert(d.error || 'Erreur'); return; }
 
-      // 2. Mettre à jour owner_id sur les logements cochés/décochés (comme saveClient)
+      // 2. Mettre à jour owner_id sur les logements cochés/décochés
       const checkboxes = document.querySelectorAll('#agencyClientPropertiesList input[type="checkbox"]');
       await Promise.all(Array.from(checkboxes).map(async (cb) => {
         const propId = cb.value || cb.dataset.propertyId;
-        if (cb.checked) {
+        const currentProp = (window.allProperties || []).find(function(p) { return String(p.id) === String(propId); });
+        const currentOwner = String(currentProp?.owner_id || currentProp?.ownerId || '');
+        if (cb.checked && currentOwner !== String(clientRealId)) {
+          // Cocher : associer à ce client
           await fetch(API_BASE + '/api/properties/' + propId, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
             body: JSON.stringify({ ownerId: clientRealId })
           });
-        } else {
-          // Décocher : retirer owner_id seulement si c'est ce client
+        } else if (!cb.checked && currentOwner === String(clientRealId)) {
+          // Décocher : retirer SEULEMENT si c'était ce client
           await fetch(API_BASE + '/api/properties/' + propId, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
