@@ -7033,6 +7033,7 @@ try {
         var bodyH   = totalH - hdrH;
         var slotX   = propW + idx5 * colW;          // bord gauche de la colonne active
         var rightX  = slotX + colW;                 // bord droit de la colonne active
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         function bhVeil(left, width){
           if (width <= 0) return;
           var v = div('position:absolute;pointer-events:none;background:rgba(248,245,239,.72);z-index:6;');
@@ -7043,8 +7044,8 @@ try {
           v.style.height = bodyH + 'px';
           grid.appendChild(v);
         }
-        bhVeil(propW, slotX - propW);                // voile à gauche de la colonne
-        bhVeil(rightX, totalW - rightX);             // voile à droite de la colonne
+        if (!isIOS) { bhVeil(propW, slotX - propW); }                // voile à gauche de la colonne
+        if (!isIOS) { bhVeil(rightX, totalW - rightX); }             // voile à droite de la colonne
       };})(di, hcell);
       grid.appendChild(hcell);
     }
@@ -7136,7 +7137,7 @@ try {
         });
         var bodyH=totalH-hdrH, slotX=propW+idx*colW, rightX=slotX+colW;
         function bhV(l,w){ if(w<=0)return; var v=div('position:absolute;pointer-events:none;background:rgba(248,245,239,.72);z-index:6;');v.className='bh-col-veil';v.style.left=l+'px';v.style.top=hdrH+'px';v.style.width=w+'px';v.style.height=bodyH+'px';grid.appendChild(v);}
-        bhV(propW,slotX-propW); bhV(rightX,totalW-rightX);
+        if(!isIOS){bhV(propW,slotX-propW); bhV(rightX,totalW-rightX);}
       };})(fi, fcell);
 
       grid.appendChild(fcell);
