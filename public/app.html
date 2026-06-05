@@ -11804,8 +11804,6 @@ if (document.readyState === 'loading') {
 
   let startX = 0, startY = 0, startLeft = 0;
   let dragging = false;
-  let rafPending = false;
-  let lastDx = 0;
 
   el.addEventListener('touchstart', (e) => {
     if (!e.touches || e.touches.length !== 1) return;
@@ -11814,7 +11812,6 @@ if (document.readyState === 'loading') {
     startY = t.clientY;
     startLeft = el.scrollLeft;
     dragging = false;
-    rafPending = false;
   }, { passive: true });
 
   el.addEventListener('touchmove', (e) => {
@@ -11829,14 +11826,7 @@ if (document.readyState === 'loading') {
     }
 
     e.preventDefault();
-    lastDx = dx;
-    if (!rafPending) {
-      rafPending = true;
-      requestAnimationFrame(() => {
-        el.scrollLeft = startLeft - lastDx;
-        rafPending = false;
-      });
-    }
+    el.scrollLeft = startLeft - dx;
   }, { passive: false });
 })();
 </script>    
