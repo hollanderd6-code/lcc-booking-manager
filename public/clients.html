@@ -2062,8 +2062,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           // Logements
           let propsHtml;
           if (isAgency) {
-            const nb = c.property_count || 0;
-            propsHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class="fas fa-building" style="font-size:10px;"></i>' + nb + ' logement' + (nb > 1 ? 's gérés' : ' géré') + '</span>';
+            const realId = String(c.original_id || c.id || '').replace('agency_client_', '');
+            const props = (window.allProperties || []).filter(p => String(p.owner_id || p.ownerId || '') === realId);
+            if (props.length > 0) {
+              propsHtml = props.map(p => '<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class="fas fa-home" style="font-size:10px;"></i>' + (p.name || p.internal_name) + '</span>').join('');
+            } else {
+              propsHtml = '<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class="fas fa-building" style="font-size:10px;"></i>0 logement géré</span>';
+            }
           } else {
             const props = (window.allProperties || []).filter(p => String(p.owner_id || p.ownerId || '') === String(c.id));
             propsHtml = props.length > 0
@@ -2301,7 +2306,8 @@ function loadClientDefaults() {
   }
   
   // Afficher les logements de ce client
-  const clientProperties = (window.allProperties || []).filter(p => p.owner_id == clientId);
+  const realCid = String(clientId).replace('agency_client_', '');
+  const clientProperties = (window.allProperties || []).filter(p => String(p.owner_id) === realCid);
   
   const container = document.getElementById('propertyCheckboxList');
   const section = document.getElementById('propertySelectSection');
@@ -6006,7 +6012,8 @@ window.openImportReservations = function() {
   var clientId2 = document.getElementById("invoiceClientId") ? document.getElementById("invoiceClientId").value : "";
   var allProps = [];
   if (window.allProperties && window.allProperties.length > 0 && clientId2) {
-    allProps = window.allProperties.filter(function(p) { return String(p.owner_id) === String(clientId2); });
+    var realClientId = String(clientId2).replace('agency_client_', '');
+    allProps = window.allProperties.filter(function(p) { return String(p.owner_id) === realClientId; });
   }
   if (allProps.length === 0) {
     allProps = window.LCC_PROPERTIES || window.userProperties || [];
