@@ -35632,6 +35632,59 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
       }
     } catch(e) { console.error('⚠️ [GUEST] Notif modification:', e.message); }
 
+    // ── Sync Channex après modification ──
+    try {
+      const propData = await pool.query(
+        `SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1`,
+        [targetPropertyId]
+      );
+      const pd = propData.rows[0];
+      if (pd?.channex_enabled && pd?.channex_property_id) {
+        const allResas = await pool.query(
+          `SELECT to_char(start_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as s,
+                  to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as e
+           FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+          [targetPropertyId]
+        );
+        const allHolds = await pool.query(
+          `SELECT checkin as s, checkout as e FROM bhguest_holds
+           WHERE property_id = $1 AND status = 'active' AND expires_at > NOW()`,
+          [targetPropertyId]
+        );
+        const allBlocked = [];
+        [...allResas.rows, ...allHolds.rows].forEach(r => {
+          const s = new Date(r.s + 'T00:00:00'), e = new Date(r.e + 'T00:00:00');
+          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+            allBlocked.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+          }
+        });
+        // Mettre à jour les anciennes ET nouvelles dates
+        const datesToUpdate = [];
+        const oldS = new Date(String(resa.start_date).slice(0,10) + 'T00:00:00');
+        const oldE = new Date(String(resa.end_date).slice(0,10) + 'T00:00:00');
+        for (let d = new Date(oldS); d < oldE; d.setDate(d.getDate() + 1)) {
+          datesToUpdate.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+        }
+        if (checkin && checkout) {
+          const ns = new Date(checkin + 'T00:00:00'), ne = new Date(checkout + 'T00:00:00');
+          for (let d = new Date(ns); d < ne; d.setDate(d.getDate() + 1)) {
+            const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+            if (!datesToUpdate.includes(ds)) datesToUpdate.push(ds);
+          }
+        }
+        await pushAvailability(pool, {
+          property_id: targetPropertyId,
+          channex_property_id: pd.channex_property_id,
+          channex_room_type_id: pd.channex_room_type_id,
+          dates_blocked: [...new Set(allBlocked)],
+          dates_to_update: datesToUpdate
+        });
+        console.log(`🔄 [GUEST] Channex mis à jour après modification ${uid}`);
+      }
+    } catch(chErr) {
+      console.warn('⚠️ [GUEST] Channex non mis à jour après modification:', chErr.message);
+    }
+
     res.json({ success: true });
   } catch(e) {
     console.error('❌ [GUEST] modify-reservation:', e.message);
