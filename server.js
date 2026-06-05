@@ -18301,7 +18301,7 @@ app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, 
     if (!check.rows.length) return res.status(403).json({ error: 'Accès non autorisé' });
 
     const props = await pool.query(
-      `SELECT id, name FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
+      `SELECT id, name, internal_name, address, owner_id FROM properties WHERE user_id = $1 ORDER BY display_order ASC, name`,
       [delegatorUserId]
     );
     res.json({ properties: props.rows });
