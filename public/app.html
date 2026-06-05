@@ -2249,7 +2249,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       display: flex;
       flex-direction: column;
       overflow-x: auto !important;
-      overflow-y: clip !important; /* clip au lieu de visible — permet position:sticky */
+      overflow-y: visible !important; /* visible requis pour iOS touch scroll */
     }
 
     /* 3. Plus de scroll vertical séparé : 
