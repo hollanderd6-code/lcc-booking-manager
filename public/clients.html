@@ -1746,6 +1746,7 @@ html[data-theme-v3="1"] .invoice-paper {
     </div>
     <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;max-height:65vh;overflow-y:auto;">
       <input type="hidden" id="agencyClientDelegatorId">
+      <input type="hidden" id="agencyClientOriginalId">
       <div>
         <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Nom / Entreprise</label>
         <input id="agencyClientCompany" type="text" placeholder="Nom d'entreprise ou nom complet" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
@@ -4284,6 +4285,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   // ── Modal agence client ────────────────────────────────────────
   window.openAgencyClientModal = function(client) {
     document.getElementById('agencyClientDelegatorId').value = client.delegator_user_id || '';
+    document.getElementById('agencyClientOriginalId').value = client.original_id || client.id || '';
     document.getElementById('agencyClientSubtitle').textContent = client.email || 'Compte Agence';
     document.getElementById('agencyClientCompany').value = client.company_name || '';
     document.getElementById('agencyClientSiret').value = client.siret || '';
@@ -4295,18 +4297,21 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     // Charger les logements du compte délégué
     const list = document.getElementById('agencyClientPropertiesList');
     list.innerHTML = '<p style="font-size:12px;color:#9ca3af;margin:4px;">Chargement...</p>';
-    const selected = client.selected_property_ids || [];
+    const clientRealId = String(client.original_id || client.id || '').replace('agency_client_', '');
 
     fetch(API_BASE + '/api/agency/properties/' + client.delegator_user_id, { headers: { Authorization: 'Bearer ' + token } })
       .then(r => r.json())
       .then(data => {
         const props = data.properties || [];
         if (!props.length) { list.innerHTML = '<p style="font-size:12px;color:#9ca3af;margin:4px;">Aucun logement trouvé</p>'; return; }
-        list.innerHTML = props.map(p => `
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 0;">
-            <input type="checkbox" value="${p.id}" ${selected.includes(p.id) ? 'checked' : ''} style="width:14px;height:14px;accent-color:#1A7A5E;">
+        list.innerHTML = props.map(p => {
+          const isChecked = String(p.owner_id || '') === String(clientRealId);
+          return `
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 8px;border:1px solid ${isChecked ? '#bbf7d0' : '#e5e7eb'};border-radius:8px;background:${isChecked ? '#f0fdf4' : 'white'};">
+            <input type="checkbox" value="${p.id}" data-property-id="${p.id}" ${isChecked ? 'checked' : ''} style="width:14px;height:14px;accent-color:#1A7A5E;">
             <span>${p.name}</span>
-          </label>`).join('');
+          </label>`;
+        }).join('');
       })
       .catch(() => { list.innerHTML = '<p style="font-size:12px;color:#ef4444;">Erreur chargement</p>'; });
 
@@ -4315,27 +4320,48 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
   window.saveAgencyClientOverride = async function() {
     const delegatorId = document.getElementById('agencyClientDelegatorId').value;
-    const selected = [...document.querySelectorAll('#agencyClientPropertiesList input[type=checkbox]:checked')].map(cb => cb.value);
+    const clientRealId = document.getElementById('agencyClientOriginalId').value;
     const body = {
       company_name: document.getElementById('agencyClientCompany').value.trim(),
       siret: document.getElementById('agencyClientSiret').value.trim(),
       phone: document.getElementById('agencyClientPhone').value.trim(),
       address: document.getElementById('agencyClientAddress').value.trim(),
       postal_code: document.getElementById('agencyClientPostal').value.trim(),
-      city: document.getElementById('agencyClientCity').value.trim(),
-      selected_property_ids: selected
+      city: document.getElementById('agencyClientCity').value.trim()
     };
     try {
+      // 1. Sauvegarder les infos de facturation
       const r = await fetch(API_BASE + '/api/agency/billing-override/' + delegatorId, {
         method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
       const d = await r.json();
-      if (d.success) {
-        document.getElementById('agencyClientModal').style.display = 'none';
-        await loadClients();
-        showToast('✅ Infos de facturation enregistrées');
-      } else { alert(d.error || 'Erreur'); }
+      if (!d.success) { alert(d.error || 'Erreur'); return; }
+
+      // 2. Mettre à jour owner_id sur les logements cochés/décochés (comme saveClient)
+      const checkboxes = document.querySelectorAll('#agencyClientPropertiesList input[type="checkbox"]');
+      await Promise.all(Array.from(checkboxes).map(async (cb) => {
+        const propId = cb.value || cb.dataset.propertyId;
+        if (cb.checked) {
+          await fetch(API_BASE + '/api/properties/' + propId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ ownerId: clientRealId })
+          });
+        } else {
+          // Décocher : retirer owner_id seulement si c'est ce client
+          await fetch(API_BASE + '/api/properties/' + propId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ ownerId: null })
+          });
+        }
+      }));
+
+      document.getElementById('agencyClientModal').style.display = 'none';
+      await loadPropertiesForInvoice();
+      await loadClients();
+      showToast('✅ Infos de facturation enregistrées');
     } catch(e) { alert('Erreur réseau'); }
   };
 
