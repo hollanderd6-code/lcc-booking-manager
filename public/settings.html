@@ -2874,17 +2874,24 @@ function insertVariable(textareaId, variable, event) {
 <script>
 // ── Mode Agence : banner, exit, refresh token ─────────────────
 (function() {
-  window.exitAgencyMode = function() {
+  window.exitAgencyMode = function(redirectTo) {
     var orig = localStorage.getItem('lcc_agency_token');
     if (orig) {
       localStorage.setItem('lcc_token', orig);
       ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache','lcc_agency_permissions'].forEach(function(k){ localStorage.removeItem(k); });
-      window.location.href = '/app.html';
+      window.location.href = redirectTo || '/app.html';
     }
   };
   var managedUser = localStorage.getItem('lcc_managed_user');
   if (!managedUser) return;
   var token = localStorage.getItem('lcc_token');
+
+  // Bloquer l'accès à settings-account et support en mode agence → retour au compte agent
+  var curPath = location.pathname.toLowerCase();
+  if (curPath.includes('settings-account') || curPath.includes('support')) {
+    exitAgencyMode(location.pathname + location.search);
+    return;
+  }
 
   // Auto-refresh token agence
   (async function() {
@@ -2895,7 +2902,18 @@ function insertVariable(textareaId, variable, event) {
     } catch(e) {}
   })();
 
-  // Banner agence (window.load + setTimeout pour s'assurer que bh-layout.js a tourné)
+  // Intercepter les clics vers settings-account et support dans la nav
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    var href = (a.getAttribute('href') || '').toLowerCase();
+    if (href.includes('settings-account') || href.includes('support')) {
+      e.preventDefault();
+      exitAgencyMode(a.getAttribute('href'));
+    }
+  }, true);
+
+  // Banner agence
   function showBanner() {
     if (document.getElementById('agencyBanner')) return;
     try {
