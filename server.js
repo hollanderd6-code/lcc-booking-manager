@@ -29744,20 +29744,8 @@ app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
     );
     await loadProperties();
 
-    // Pousser les disponibilités existantes vers Channex
-    const resaResult = await pool.query(
-      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
-      [property_id]
-    );
-    const dates_blocked = [];
-    resaResult.rows.forEach(r => {
-      const start = new Date(r.start_date);
-      const end = new Date(r.end_date);
-      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-        dates_blocked.push(d.toISOString().split('T')[0]);
-      }
-    });
-    await pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked });
+    // Pousser les disponibilités existantes vers Channex (inclut holds)
+    await triggerChannexAvailabilitySync(property_id);
 
     res.json({ success: true, message: 'Logement associé à Channex avec succès' });
   } catch (e) {
@@ -31440,28 +31428,9 @@ app.post('/api/channex/sync-availability/:property_id', authenticateToken, async
       return res.status(400).json({ error: 'Logement non connecté à Channex' });
     }
 
-    const resaResult = await pool.query(
-      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
-      [property_id]
-    );
+    await triggerChannexAvailabilitySync(property_id);
 
-    const dates_blocked = [];
-    resaResult.rows.forEach(r => {
-      const start = new Date(r.start_date);
-      const end = new Date(r.end_date);
-      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-        dates_blocked.push(d.toISOString().split('T')[0]);
-      }
-    });
-
-    await pushAvailability(pool, {
-      property_id,
-      channex_property_id: property.channex_property_id,
-      channex_room_type_id: property.channex_room_type_id,
-      dates_blocked
-    });
-
-    res.json({ success: true, message: 'Disponibilités synchronisées', blocked: dates_blocked.length });
+    res.json({ success: true, message: 'Disponibilités synchronisées (holds inclus)' });
   } catch (e) {
     console.error('❌ [CHANNEX SYNC]', e.message);
     res.status(500).json({ error: e.message });
@@ -32754,11 +32723,11 @@ app.post('/api/guest/book', async (req, res) => {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
 
-    // Vérifier que le logement est disponible
+    // Vérifier que le logement est disponible (exclure holds et annulées)
     const conflict = await pool.query(`
       SELECT id FROM reservations
       WHERE property_id = $1
-        AND status NOT IN ('cancelled')
+        AND status NOT IN ('cancelled','hold','block')
         AND start_date < $3
         AND end_date > $2
     `, [property_id, checkin, checkout]);
@@ -35055,10 +35024,10 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       }
     }
 
-    // Vérifier dispo
+    // Vérifier dispo (exclure holds et annulées)
     const conflict = await pool.query(`
       SELECT id FROM reservations
-      WHERE property_id = $1 AND status NOT IN ('cancelled')
+      WHERE property_id = $1 AND status NOT IN ('cancelled','hold','block')
         AND start_date < $3 AND end_date > $2
     `, [property_id, checkin, checkout]);
     if (conflict.rows.length > 0) {
@@ -35577,7 +35546,7 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
     if (checkin && checkout) {
       const conflict = await pool.query(
         `SELECT uid, guest_name, start_date, end_date, status FROM reservations 
-         WHERE property_id = $1 AND status NOT IN ('cancelled','completed') 
+         WHERE property_id = $1 AND status NOT IN ('cancelled','completed','hold','block') 
          AND uid != $2 AND start_date::date < $4::date AND end_date::date > $3::date`,
         [targetPropertyId, uid, checkin, checkout]
       );
