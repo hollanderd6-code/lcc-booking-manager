@@ -45,63 +45,20 @@ function applyPropertyOrder(props) {
   return ordered;
 }
 
-// Intercepte renderModernCalendar pour injecter l\'ordre
+// Intercepte renderModernCalendar pour injecter l'ordre AVANT le rendu.
+// Important performance : on ne re-render plus la grille après coup et on ne déplace plus le DOM
+// pendant/après le scroll. Ça évite les saccades sur mobile.
 (function() {
   const _orig = window.renderModernCalendar;
   if (typeof _orig !== 'function') return;
-  window.renderModernCalendar = function(reservations, properties) {
-    // On appelle l\'original mais on patch state.properties après
-    _orig.call(this, reservations, properties);
-    // state est dans la closure — on doit re-trier via le render
-    // On utilise une autre approche : patcher avant l\'appel
-  };
-  // Meilleure approche : patcher directement state après chargement
-  window.renderModernCalendar = function(reservations, properties) {
-    // Guard : ne pas re-render si block_removed récent (patch local déjà correct)
-    if (window._blockRemovedAt && Date.now() - window._blockRemovedAt < 2000) {
-      console.log('📅 renderModernCalendar (wrapper) ignoré — block_removed récent');
-      return;
-    }
-    _orig.call(this, reservations, properties);
-    // Après l\'appel, state.properties est peuplé — on réapplique l\'ordre
-    if (window._calendarState) {
-      window._calendarState.properties = applyPropertyOrder(window._calendarState.properties);
-      // Re-render silencieux
-      if (window._renderGrid) window._renderGrid();
-      if (window._renderPropertyList) window._renderPropertyList();
-    }
-  };
-})();
 
-// Patch plus simple : hook sur state directement via MutationObserver sur propertyList
-// On patche renderPropertyList et renderGrid via le hook de rendu existant
-(function patchCalendarOrder() {
-  // Attend que le calendrier soit initialisé
-  let attempts = 0;
-  const interval = setInterval(function() {
-    attempts++;
-    const grid = document.getElementById('calendarGrid');
-    const list = document.getElementById('propertyList');
-    if (grid && list && grid.children.length > 0) {
-      clearInterval(interval);
-      reapplyOrderToDOM();
-    }
-    if (attempts > 30) clearInterval(interval);
-  }, 300);
+  window.renderModernCalendar = function(reservations, properties) {
+    const orderedProperties = Array.isArray(properties)
+      ? applyPropertyOrder(properties)
+      : properties;
 
-  // Observe les changements du calendrier pour réappliquer l\'ordre
-  // Observer sur calendarGrid ET propertyList
-  // MAIS on déconnecte avant de manipuler le DOM dans reapplyOrderToDOM
-  var _reorderObserver = null;
-  document.addEventListener('DOMContentLoaded', function() {
-    const grid = document.getElementById('calendarGrid');
-    const list = document.getElementById('propertyList');
-    _reorderObserver = new MutationObserver(function() {
-      setTimeout(reapplyOrderToDOM, 50);
-    });
-    if (grid) _reorderObserver.observe(grid, { childList: true });
-    if (list) _reorderObserver.observe(list, { childList: true });
-  });
+    return _orig.call(this, reservations, orderedProperties);
+  };
 })();
 
 // Réapplique l\'ordre sauvegardé aux DOM rows du calendrier + property list
@@ -390,8 +347,5 @@ document.getElementById('reorderList').addEventListener('touchmove', function(e)
   e.stopPropagation();
 }, { passive: true });
 
-// Applique l\'ordre au premier chargement
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() { reapplyOrderToDOM(); }, 800);
-  setTimeout(function() { reapplyOrderToDOM(); }, 2000);
-});
+// L'ordre est appliqué avant le rendu via renderModernCalendar.
+// On évite les setTimeout(reapplyOrderToDOM) automatiques qui pouvaient provoquer un lag pendant le swipe.

@@ -9029,40 +9029,8 @@ html[data-theme-v3="1"] .sidebar .nav-section {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js?v=2"></script>
 
-<script>
-(function() {
-  const el = document.querySelector('.calendar-grid-wrapper');
-  if (!el) return;
-
-  let startX = 0, startY = 0, startLeft = 0;
-  let dragging = false;
-
-  el.addEventListener('touchstart', (e) => {
-    if (!e.touches || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    startLeft = el.scrollLeft;
-    dragging = false;
-  }, { passive: true });
-
-  el.addEventListener('touchmove', (e) => {
-    if (!e.touches || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-
-    // On prend la main seulement si le geste est clairement horizontal
-    if (!dragging) {
-      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) dragging = true;
-      else return;
-    }
-
-    e.preventDefault();
-    el.scrollLeft = startLeft - dx;
-  }, { passive: false });
-})();
-</script>    
+<!-- Scroll horizontal calendrier : on laisse le scroll natif mobile gérer le swipe.
+     Ancien touchmove + preventDefault + scrollLeft supprimé pour éviter les saccades. -->
 <script src="/js/push-notifications-handler.js"></script>    
 <script>
 // console.log('🚀 FIREBASE MESSAGING PUSH CODE');
