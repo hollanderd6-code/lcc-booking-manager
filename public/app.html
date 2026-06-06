@@ -2548,6 +2548,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     overflow-x: auto !important;
     overflow-y: visible !important;
     -webkit-overflow-scrolling: touch !important;
+    contain: layout style !important;
+    will-change: scroll-position !important;
   }
 
   /* Les cellules et booking-blocks ne capturent pas les gestes verticaux */
@@ -7044,8 +7046,8 @@ try {
           v.style.height = bodyH + 'px';
           grid.appendChild(v);
         }
-        if (!isIOS) { bhVeil(propW, slotX - propW); }                // voile à gauche de la colonne
-        if (!isIOS) { bhVeil(rightX, totalW - rightX); }             // voile à droite de la colonne
+        bhVeil(propW, slotX - propW);                // voile à gauche de la colonne
+        bhVeil(rightX, totalW - rightX);             // voile à droite de la colonne
       };})(di, hcell);
       grid.appendChild(hcell);
     }
@@ -7097,6 +7099,51 @@ try {
         grid.appendChild(dcell);
       }
     });
+
+    // ── FOOTER ROW : barre des dates dupliquée en bas ──
+    var footerRow = nRows + 2; // header=1, properties=2..nRows+1, footer=nRows+2
+    grid.style.gridTemplateRows = hdrH + 'px repeat(' + nRows + ', ' + rowH + 'px) ' + hdrH + 'px';
+
+    // Coin footer (vide)
+    var footerCorner = div('position:sticky;left:0;z-index:20;background:#F0EDE8;border-right:2px solid #DDD9D3;border-top:2px solid #E8E4DF;box-sizing:border-box;');
+    footerCorner.style.gridColumn = '1';
+    footerCorner.style.gridRow = String(footerRow);
+    grid.appendChild(footerCorner);
+
+    // Cellules jours footer
+    for (var fi=0; fi<numDays; fi++) {
+      var fDate = new Date(rangeStart); fDate.setDate(rangeStart.getDate()+fi);
+      var fInMonth = fDate.getMonth()===month;
+      var fIsToday = ds(fDate)===today;
+      var fIsWknd  = fDate.getDay()===5||fDate.getDay()===6;
+
+      var fcell = div('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-top:2px solid #E8E4DF;cursor:pointer;user-select:none;'
+        +(fIsToday?'background:rgba(26,122,94,.08);':'background:white;'));
+      fcell.style.gridColumn = String(fi+2);
+      fcell.style.gridRow = String(footerRow);
+      fcell.className = 'bh-day-hcell';
+      fcell.dataset.colIdx = String(fi);
+      fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#1A7A5E':fIsWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(fIsToday?800:600)+';color:'+(fIsToday?'#1A7A5E':fInMonth?(fIsWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+fDate.getDate()+'</span>';
+
+      // Même clic que le header : voile + highlight colonne
+      (function(idx, el){ el.onclick = function(){
+        var wasActive = el.classList.contains('bh-col-active');
+        bhClearColHighlight(outer);
+        if (wasActive) return;
+        // Activer aussi la cellule header correspondante
+        var headerCell = outer.querySelector('.bh-day-hcell[data-col-idx="'+idx+'"]');
+        [el, headerCell].forEach(function(c){ if(c){ c.dataset.bhPrevBg = c.style.background||''; c.classList.add('bh-col-active'); c.style.background='rgba(26,122,94,.13)'; }});
+        outer.querySelectorAll('.bh-day-cell[data-col-idx="'+idx+'"]').forEach(function(c){
+          c.dataset.bhColHi='1'; c.style.boxShadow='inset 0 0 0 9999px rgba(26,122,94,.06)';
+        });
+        var bodyH=totalH-hdrH, slotX=propW+idx*colW, rightX=slotX+colW;
+        function bhV(l,w){ if(w<=0)return; var v=div('position:absolute;pointer-events:none;background:rgba(248,245,239,.72);z-index:6;');v.className='bh-col-veil';v.style.left=l+'px';v.style.top=hdrH+'px';v.style.width=w+'px';v.style.height=bodyH+'px';grid.appendChild(v);}
+        bhV(propW,slotX-propW); bhV(rightX,totalW-rightX);
+      };})(fi, fcell);
+
+      grid.appendChild(fcell);
+    }
 
     outer.appendChild(grid);
 
