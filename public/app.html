@@ -6950,7 +6950,10 @@ try {
     var nRows = state.properties.length;
 
     // Un seul scroll container
-    var outer = div('overflow:auto;-webkit-overflow-scrolling:touch;background:white;position:relative;');
+    var isMobile = window.innerWidth <= 768;
+    var outer = div(isMobile
+      ? 'overflow:visible;background:white;position:relative;'
+      : 'overflow:auto;-webkit-overflow-scrolling:touch;background:white;position:relative;');
     outer.id = 'bhMonthOuter';
 
     // La grille interne a une largeur fixe
