@@ -20,6 +20,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         sv.bounces = false
         sv.alwaysBounceVertical = false
         sv.refreshControl = nil
+        sv.isDirectionalLockEnabled = true
+        sv.delaysContentTouches = false
+        sv.decelerationRate = .normal
         if #available(iOS 11.0, *) {
             sv.contentInsetAdjustmentBehavior = .never
         }
@@ -121,6 +124,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             webView.scrollView.bounces = false
             webView.scrollView.alwaysBounceVertical = false
             webView.scrollView.refreshControl = nil
+            webView.scrollView.isDirectionalLockEnabled = true
+            webView.scrollView.delaysContentTouches = false
+            webView.scrollView.decelerationRate = .normal
             webView.alpha = 0
             webView.navigationDelegate = self
 
@@ -324,9 +330,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // ============================================
 extension AppDelegate: WKNavigationDelegate {
 
-    // Router les schémas externes (tel:, sms:, mailto:, facetime:) vers le système.
-    // Nécessaire car on a remplacé le navigationDelegate de Capacitor par self :
-    // sans ça, WKWebView ne sait pas ouvrir tel: ("unsupported URL") → rien ne se passe.
     func webView(_ webView: WKWebView,
                  decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -335,11 +338,11 @@ extension AppDelegate: WKNavigationDelegate {
             let externalSchemes = ["tel", "telprompt", "sms", "mailto", "facetime", "facetime-audio"]
             if externalSchemes.contains(scheme) {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
-                decisionHandler(.cancel)   // on ne tente pas de charger tel: dans la WebView
+                decisionHandler(.cancel)
                 return
             }
         }
-        decisionHandler(.allow)            // tout le reste : navigation normale
+        decisionHandler(.allow)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

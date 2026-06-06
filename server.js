@@ -4121,16 +4121,18 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
 
                   // ✅ Convertir le hold associé (évite que le CRON le passe en "expired")
                   try {
-                    const holdConvertRes = await pool.query(
+                    const holdConvRes = await pool.query(
                       `UPDATE bhguest_holds SET status='converted'
                          WHERE property_id=$1 AND checkin=$2 AND checkout=$3
-                           AND status='active' AND user_id=$4
-                         RETURNING link_token`,
+                           AND status='active' AND user_id=$4 RETURNING link_token`,
                       [propId, startDate, endDate, ownerId]
                     );
-                    // Annuler la réservation hold (la vraie réservation est créée juste après)
-                    for (const h of holdConvertRes.rows) {
-                      await pool.query(`UPDATE reservations SET status='cancelled', updated_at=NOW() WHERE uid=$1`, ['HOLD_' + h.link_token]);
+                    // Supprimer l'ancienne réservation "Pré-résa" (HOLD_xxx)
+                    for (const hold of holdConvRes.rows) {
+                      if (hold.link_token) {
+                        await pool.query(`DELETE FROM reservations WHERE uid = $1`, ['HOLD_' + hold.link_token]);
+                        console.log(`🗑️ [HOLD] Ancienne résa HOLD_${hold.link_token} supprimée (webhook)`);
+                      }
                     }
                   } catch(hcErr) { console.warn('⚠️ [BHGUEST][webhook] Conversion hold:', hcErr.message); }
 
@@ -7473,12 +7475,12 @@ app.post('/api/reservations/manual', async (req, res) => {
     
     console.log('✅ Logement trouvé:', property.name);
 
-    // ✅ Vérification chevauchement de dates (exclure holds/blocks)
+    // ✅ Vérification chevauchement de dates
     const overlapCheck = await pool.query(
       `SELECT uid, guest_name, start_date, end_date FROM reservations
        WHERE property_id = $1
          AND user_id = $4
-         AND status NOT IN ('cancelled', 'completed', 'hold', 'block')
+         AND status NOT IN ('cancelled', 'completed')
          AND start_date::date < $3::date
          AND end_date::date > $2::date`,
       [propertyId, start, end, user.id]
@@ -7696,16 +7698,15 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
     const oldStart = oldResa.rows[0].start_date;
     const oldEnd = oldResa.rows[0].end_date;
 
-    // Vérifier chevauchement (sauf avec soi-même, exclure holds/blocks)
+    // Vérifier chevauchement (sauf avec soi-même)
     const overlapCheck = await pool.query(
-      `SELECT uid, guest_name, status, start_date, end_date FROM reservations
+      `SELECT uid FROM reservations
        WHERE property_id = $1 AND user_id = $2 AND uid != $3
-         AND status NOT IN ('cancelled','completed','hold','block')
+         AND status NOT IN ('cancelled','completed')
          AND start_date::date < $5::date AND end_date::date > $4::date`,
       [propertyId, user.id, uid, start, end]
     );
     if (overlapCheck.rows.length > 0) {
-      console.log(`⚠️ [MANUAL PUT] Conflit modif ${uid}: conflits = ${JSON.stringify(overlapCheck.rows.map(r => ({uid:r.uid, guest:r.guest_name, status:r.status, start:String(r.start_date).slice(0,10), end:String(r.end_date).slice(0,10)})))}`);
       return res.status(409).json({ error: 'Ces dates sont déjà prises' });
     }
 
@@ -8571,12 +8572,12 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     const property = propertyCheck.rows[0];
     console.log('✅ Logement trouvé:', property.name);
 
-    // ✅ Vérification chevauchement de dates (exclure holds/blocks)
+    // ✅ Vérification chevauchement de dates
     const overlapCheck = await pool.query(
       `SELECT uid, guest_name, start_date, end_date FROM reservations
        WHERE property_id = $1
          AND user_id = $4
-         AND status NOT IN ('cancelled', 'completed', 'hold', 'block')
+         AND status NOT IN ('cancelled', 'completed')
          AND start_date::date < $3::date
          AND end_date::date > $2::date`,
       [propertyId, checkIn, checkOut, user.id]
@@ -8932,22 +8933,9 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const { date_from, date_to, property_ids, owner_user_id } = req.query;
+    const { date_from, date_to, property_ids } = req.query;
     if (!date_from || !date_to) {
       return res.status(400).json({ error: 'date_from et date_to sont requis' });
-    }
-
-    // Déterminer le user_id cible (compte géré ou propre compte)
-    let targetUserId = user.id;
-    if (owner_user_id && owner_user_id !== user.id) {
-      // Vérifier que l'agent a une délégation active sur ce compte
-      const delegation = await pool.query(
-        `SELECT id FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
-        [user.id, owner_user_id]
-      );
-      if (delegation.rows.length > 0) {
-        targetUserId = owner_user_id;
-      }
     }
 
     // Parser les property_ids (peut être une string ou tableau)
@@ -8958,7 +8946,7 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
 
     // Construire la condition SQL sur les logements
     let propCondition = 'AND r.user_id = $3';
-    let queryParams = [date_from, date_to, targetUserId];
+    let queryParams = [date_from, date_to, user.id];
     if (propIds.length > 0) {
       propCondition = `AND r.property_id = ANY($4) AND r.user_id = $3`;
       queryParams.push(propIds);
@@ -15763,19 +15751,9 @@ app.patch('/api/properties/:propertyId', authenticateAny, async (req, res) => {
     const { propertyId } = req.params;
     const { ownerId } = req.body;
 
-    // Vérifier que le logement appartient à cet user OU à un compte géré
-    const check = await pool.query('SELECT id, user_id FROM properties WHERE id = $1', [propertyId]);
+    // Vérifier que le logement appartient à cet user
+    const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [propertyId, user.id]);
     if (!check.rows.length) return res.status(404).json({ error: 'Logement non trouvé' });
-    
-    const propUserId = check.rows[0].user_id;
-    if (propUserId !== user.id) {
-      // Vérifier si l'utilisateur a une délégation sur le compte propriétaire du logement
-      const delegation = await pool.query(
-        `SELECT id FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
-        [user.id, propUserId]
-      );
-      if (!delegation.rows.length) return res.status(403).json({ error: 'Accès non autorisé à ce logement' });
-    }
 
     await pool.query(
       'UPDATE properties SET owner_id = $1 WHERE id = $2',
@@ -18307,7 +18285,7 @@ app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, 
     if (!check.rows.length) return res.status(403).json({ error: 'Accès non autorisé' });
 
     const props = await pool.query(
-      `SELECT id, name, internal_name, address, owner_id FROM properties WHERE user_id = $1 ORDER BY display_order ASC, name`,
+      `SELECT id, name FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
       [delegatorUserId]
     );
     res.json({ properties: props.rows });
@@ -27068,14 +27046,9 @@ cron.schedule('*/15 * * * *', async () => {
        RETURNING *`
     );
     if (expired.rows.length === 0) return;
-    console.log(`🔓 [HOLD CRON] ${expired.rows.length} hold(s) expiré(s), annulation des réservations hold...`);
+    console.log(`🔓 [HOLD CRON] ${expired.rows.length} hold(s) expiré(s), libération Channex...`);
     for (const hold of expired.rows) {
-      // Annuler la réservation hold → triggerChannexAvailabilitySync la prendra en compte
-      const holdUid = 'HOLD_' + hold.link_token;
-      await pool.query(`UPDATE reservations SET status = 'cancelled', updated_at = NOW() WHERE uid = $1`, [holdUid]);
-      // Sync Channex (la réservation annulée sera exclue automatiquement)
-      try { await triggerChannexAvailabilitySync(hold.property_id); } catch(e) {}
-      console.log(`  🔓 Hold ${holdUid} annulé pour ${hold.property_id}`);
+      await releaseHoldChannex(pool, hold);
     }
   } catch(e) {
     console.error('❌ [HOLD CRON] Erreur:', e.message);
@@ -29755,8 +29728,20 @@ app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
     );
     await loadProperties();
 
-    // Pousser les disponibilités existantes vers Channex (inclut holds)
-    await triggerChannexAvailabilitySync(property_id);
+    // Pousser les disponibilités existantes vers Channex
+    const resaResult = await pool.query(
+      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
+      [property_id]
+    );
+    const dates_blocked = [];
+    resaResult.rows.forEach(r => {
+      const start = new Date(r.start_date);
+      const end = new Date(r.end_date);
+      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        dates_blocked.push(d.toISOString().split('T')[0]);
+      }
+    });
+    await pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked });
 
     res.json({ success: true, message: 'Logement associé à Channex avec succès' });
   } catch (e) {
@@ -31439,9 +31424,28 @@ app.post('/api/channex/sync-availability/:property_id', authenticateToken, async
       return res.status(400).json({ error: 'Logement non connecté à Channex' });
     }
 
-    await triggerChannexAvailabilitySync(property_id);
+    const resaResult = await pool.query(
+      "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
+      [property_id]
+    );
 
-    res.json({ success: true, message: 'Disponibilités synchronisées (holds inclus)' });
+    const dates_blocked = [];
+    resaResult.rows.forEach(r => {
+      const start = new Date(r.start_date);
+      const end = new Date(r.end_date);
+      for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        dates_blocked.push(d.toISOString().split('T')[0]);
+      }
+    });
+
+    await pushAvailability(pool, {
+      property_id,
+      channex_property_id: property.channex_property_id,
+      channex_room_type_id: property.channex_room_type_id,
+      dates_blocked
+    });
+
+    res.json({ success: true, message: 'Disponibilités synchronisées', blocked: dates_blocked.length });
   } catch (e) {
     console.error('❌ [CHANNEX SYNC]', e.message);
     res.status(500).json({ error: e.message });
@@ -32734,11 +32738,11 @@ app.post('/api/guest/book', async (req, res) => {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
 
-    // Vérifier que le logement est disponible (exclure holds et annulées)
+    // Vérifier que le logement est disponible
     const conflict = await pool.query(`
       SELECT id FROM reservations
       WHERE property_id = $1
-        AND status NOT IN ('cancelled','hold','block')
+        AND status NOT IN ('cancelled')
         AND start_date < $3
         AND end_date > $2
     `, [property_id, checkin, checkout]);
@@ -32857,12 +32861,18 @@ app.post('/api/guest/book', async (req, res) => {
       const holdRes = await pool.query(
         `UPDATE bhguest_holds SET status = 'converted'
          WHERE property_id = $1 AND checkin = $2 AND checkout = $3
-           AND status = 'active' AND user_id = $4 RETURNING *`,
+           AND status = 'active' AND user_id = $4 RETURNING link_token`,
         [property_id, checkin, checkout, prop.owner_user_id]
       );
       if (holdRes.rows.length > 0) {
         console.log(`✅ [HOLD] Converti en réservation pour ${property_id} ${checkin}→${checkout}`);
-        // Rafraîchir le calendrier BH côté hôte — le hold doit disparaître
+        // Supprimer l'ancienne réservation "Pré-résa" (HOLD_xxx)
+        for (const hold of holdRes.rows) {
+          if (hold.link_token) {
+            await pool.query(`DELETE FROM reservations WHERE uid = $1`, ['HOLD_' + hold.link_token]);
+            console.log(`🗑️ [HOLD] Ancienne résa HOLD_${hold.link_token} supprimée`);
+          }
+        }
         if (io) {
           io.to(`user_${prop.owner_user_id}`).emit('reservations:updated', { propertyId: property_id });
           io.to(`user_${prop.owner_user_id}`).emit('hold_converted', {
@@ -33889,52 +33899,6 @@ app.get('/api/agency/unified/reservations', authenticateAny, async (req, res) =>
   }
 });
 
-// ── GET /api/agency/managed-properties ───────────────────────
-// Retourne les propriétés de tous les comptes gérés par l'agent (pour la page clients/factures)
-app.get('/api/agency/managed-properties', authenticateAny, async (req, res) => {
-  try {
-    const userId = req.user.isSubAccount ? null : req.user.id;
-    if (!userId) return res.status(403).json({ error: 'Compte principal requis' });
-
-    const accounts = await getAgencyAccounts(pool, userId);
-    if (!accounts.length) return res.json({ properties: [] });
-
-    const allProps = [];
-    await Promise.all(accounts.map(async account => {
-      try {
-        const result = await pool.query(
-          `SELECT id, name, internal_name, color, base_price, weekend_price, address, owner_id
-           FROM properties WHERE user_id = $1
-           ORDER BY display_order ASC, created_at ASC`,
-          [account.userId]
-        );
-        result.rows.forEach(p => {
-          allProps.push({
-            id: p.id,
-            name: p.name,
-            internalName: p.internal_name,
-            internal_name: p.internal_name,
-            color: p.color,
-            address: p.address,
-            owner_id: p.owner_id,
-            basePrice: p.base_price != null ? parseFloat(p.base_price) : null,
-            weekendPrice: p.weekend_price != null ? parseFloat(p.weekend_price) : null,
-            _managedAccount: { userId: account.userId, name: account.name },
-            _isManaged: true
-          });
-        });
-      } catch(e) {
-        console.error(`❌ [AGENCY] Props compte ${account.userId}:`, e.message);
-      }
-    }));
-
-    res.json({ properties: allProps });
-  } catch(e) {
-    console.error('❌ [AGENCY] managed-properties:', e.message);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 // ── GET /api/agency/unified/conversations ────────────────────
 app.get('/api/agency/unified/conversations', authenticateAny, async (req, res) => {
   try {
@@ -34605,30 +34569,12 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
        guest_email || null, guest_phone || null, fixed_price || null]
     );
 
-    // ✅ Créer une réservation temporaire status='hold' pour bloquer le calendrier + Channex
-    const holdUid = 'HOLD_' + linkToken;
-    await pool.query(
-      `INSERT INTO reservations (uid, property_id, user_id, start_date, end_date, guest_name, source, platform, status, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, 'bhguest_hold', 'HOLD', 'hold', $7)
-       ON CONFLICT (uid) DO NOTHING`,
-      [holdUid, property_id, userId, checkin, checkout,
-       guest_email ? `Pré-résa (${guest_email})` : 'Pré-réservation',
-       `Hold expire à ${expiresAt.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}`]
-    );
-
     // 🔔 Notifier le propriétaire en temps réel pour rafraîchir le calendrier
+    // (la pré-réservation doit apparaître sans avoir à actualiser la page)
     try {
       if (io) io.to('user_' + userId).emit('reservations:updated', { propertyId: property_id });
     } catch (sockErr) {
       console.warn('⚠️ [HOLD] Socket non émis (non bloquant):', sockErr.message);
-    }
-
-    // Push Channex (la réservation hold est maintenant dans la table reservations)
-    try {
-      await triggerChannexAvailabilitySync(property_id);
-      console.log(`🔒 [HOLD] Channex bloqué via réservation hold pour ${property_id} ${checkin}→${checkout} (4h)`);
-    } catch (channexErr) {
-      console.warn('⚠️ [HOLD] Channex non bloqué (non bloquant):', channexErr.message);
     }
 
     // 💳 Créer un paiement "EN ATTENTE" pour le suivi dans Cautions & Paiements
@@ -34659,6 +34605,48 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       console.log(`💳 [HOLD] Paiement en attente créé (bhgpay_${linkToken})`);
     } catch (payErr) {
       console.warn('⚠️ [HOLD] Paiement en attente non créé (non bloquant):', payErr.message);
+    }
+
+    // Bloquer sur Channex si connecté
+    try {
+      const propRes = await pool.query(
+        `SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1`,
+        [property_id]
+      );
+      const prop = propRes.rows[0];
+      if (prop?.channex_enabled && prop?.channex_property_id) {
+        const { pushAvailability } = require('./channex');
+        // Récupérer toutes les dates bloquées (réservations + holds actifs)
+        const allResas = await pool.query(
+          `SELECT to_char(start_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as s,
+                  to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as e
+           FROM reservations
+           WHERE property_id = $1 AND status NOT IN ('cancelled')`,
+          [property_id]
+        );
+        const allHolds = await pool.query(
+          `SELECT checkin as s, checkout as e FROM bhguest_holds
+           WHERE property_id = $1 AND status = 'active' AND expires_at > NOW()`,
+          [property_id]
+        );
+        const allBlocked = [];
+        [...allResas.rows, ...allHolds.rows].forEach(r => {
+          const s = new Date(r.s + 'T00:00:00'), e = new Date(r.e + 'T00:00:00');
+          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
+            const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+            allBlocked.push(`${yyyy}-${mm}-${dd}`);
+          }
+        });
+        await pushAvailability(pool, {
+          property_id,
+          channex_property_id: prop.channex_property_id,
+          channex_room_type_id: prop.channex_room_type_id,
+          dates_blocked: [...new Set(allBlocked)]
+        });
+        console.log(`🔒 [HOLD] Channex bloqué pour ${property_id} ${checkin}→${checkout} (4h)`);
+      }
+    } catch (channexErr) {
+      console.warn('⚠️ [HOLD] Channex non bloqué (non bloquant):', channexErr.message);
     }
 
     // Envoyer le lien par email si fourni
@@ -34747,9 +34735,7 @@ app.delete('/api/guest/hold/:token', authenticateAny, async (req, res) => {
       [token, userId]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Hold introuvable' });
-    // Annuler la réservation hold + sync Channex
-    await pool.query(`UPDATE reservations SET status='cancelled', updated_at=NOW() WHERE uid=$1`, ['HOLD_' + token]);
-    try { await triggerChannexAvailabilitySync(result.rows[0].property_id); } catch(e) {}
+    await releaseHoldChannex(pool, result.rows[0]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
@@ -35013,10 +34999,10 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       }
     }
 
-    // Vérifier dispo (exclure holds et annulées)
+    // Vérifier dispo
     const conflict = await pool.query(`
       SELECT id FROM reservations
-      WHERE property_id = $1 AND status NOT IN ('cancelled','hold','block')
+      WHERE property_id = $1 AND status NOT IN ('cancelled')
         AND start_date < $3 AND end_date > $2
     `, [property_id, checkin, checkout]);
     if (conflict.rows.length > 0) {
@@ -35121,11 +35107,21 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
       const holdRes = await pool.query(
         `UPDATE bhguest_holds SET status = 'converted'
          WHERE property_id = $1 AND checkin = $2 AND checkout = $3
-           AND status = 'active' AND user_id = $4 RETURNING *`,
+           AND status = 'active' AND user_id = $4 RETURNING link_token`,
         [property_id, checkin, checkout, prop.owner_user_id]
       );
       if (holdRes.rows.length > 0) {
         console.log(`✅ [HOLD] Converti (confirm-after-payment) pour ${property_id} ${checkin}→${checkout}`);
+        // Supprimer l'ancienne réservation "Pré-résa" (HOLD_xxx)
+        for (const hold of holdRes.rows) {
+          if (hold.link_token) {
+            await pool.query(
+              `DELETE FROM reservations WHERE uid = $1`,
+              ['HOLD_' + hold.link_token]
+            );
+            console.log(`🗑️ [HOLD] Ancienne résa HOLD_${hold.link_token} supprimée`);
+          }
+        }
       }
       // Toujours émettre pour rafraîchir le calendrier côté hôte
       if (io) {
@@ -35534,15 +35530,10 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
     // Vérifier dispo si dates ou logement changés
     if (checkin && checkout) {
       const conflict = await pool.query(
-        `SELECT uid, guest_name, start_date, end_date, status FROM reservations 
-         WHERE property_id = $1 AND status NOT IN ('cancelled','completed','hold','block') 
-         AND uid != $2 AND start_date::date < $4::date AND end_date::date > $3::date`,
+        `SELECT id FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled') AND uid != $2 AND start_date < $4 AND end_date > $3`,
         [targetPropertyId, uid, checkin, checkout]
       );
-      if (conflict.rows.length > 0) {
-        console.log(`⚠️ [GUEST] Conflit modification ${uid}: ${JSON.stringify(conflict.rows.map(r => ({uid:r.uid, guest:r.guest_name, start:String(r.start_date).slice(0,10), end:String(r.end_date).slice(0,10), status:r.status})))}`);
-        return res.status(409).json({ error: 'Ces dates ne sont plus disponibles', conflicts: conflict.rows.map(r => ({uid:r.uid, guest:r.guest_name})) });
-      }
+      if (conflict.rows.length > 0) return res.status(409).json({ error: 'Ces dates ne sont plus disponibles' });
     }
 
     const updates = [];
@@ -35594,59 +35585,6 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
         );
       }
     } catch(e) { console.error('⚠️ [GUEST] Notif modification:', e.message); }
-
-    // ── Sync Channex après modification ──
-    try {
-      const propData = await pool.query(
-        `SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1`,
-        [targetPropertyId]
-      );
-      const pd = propData.rows[0];
-      if (pd?.channex_enabled && pd?.channex_property_id) {
-        const allResas = await pool.query(
-          `SELECT to_char(start_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as s,
-                  to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') as e
-           FROM reservations WHERE property_id = $1 AND status NOT IN ('cancelled')`,
-          [targetPropertyId]
-        );
-        const allHolds = await pool.query(
-          `SELECT checkin as s, checkout as e FROM bhguest_holds
-           WHERE property_id = $1 AND status = 'active' AND expires_at > NOW()`,
-          [targetPropertyId]
-        );
-        const allBlocked = [];
-        [...allResas.rows, ...allHolds.rows].forEach(r => {
-          const s = new Date(r.s + 'T00:00:00'), e = new Date(r.e + 'T00:00:00');
-          for (let d = new Date(s); d < e; d.setDate(d.getDate() + 1)) {
-            allBlocked.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
-          }
-        });
-        // Mettre à jour les anciennes ET nouvelles dates
-        const datesToUpdate = [];
-        const oldS = new Date(String(resa.start_date).slice(0,10) + 'T00:00:00');
-        const oldE = new Date(String(resa.end_date).slice(0,10) + 'T00:00:00');
-        for (let d = new Date(oldS); d < oldE; d.setDate(d.getDate() + 1)) {
-          datesToUpdate.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
-        }
-        if (checkin && checkout) {
-          const ns = new Date(checkin + 'T00:00:00'), ne = new Date(checkout + 'T00:00:00');
-          for (let d = new Date(ns); d < ne; d.setDate(d.getDate() + 1)) {
-            const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-            if (!datesToUpdate.includes(ds)) datesToUpdate.push(ds);
-          }
-        }
-        await pushAvailability(pool, {
-          property_id: targetPropertyId,
-          channex_property_id: pd.channex_property_id,
-          channex_room_type_id: pd.channex_room_type_id,
-          dates_blocked: [...new Set(allBlocked)],
-          dates_to_update: datesToUpdate
-        });
-        console.log(`🔄 [GUEST] Channex mis à jour après modification ${uid}`);
-      }
-    } catch(chErr) {
-      console.warn('⚠️ [GUEST] Channex non mis à jour après modification:', chErr.message);
-    }
 
     res.json({ success: true });
   } catch(e) {
