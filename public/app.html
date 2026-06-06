@@ -2249,7 +2249,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       display: flex;
       flex-direction: column;
       overflow-x: auto !important;
-      overflow-y: hidden !important; /* hidden pour éviter conflit scroll iOS */
+      overflow-y: visible !important; /* visible requis pour iOS touch scroll */
     }
 
     /* 3. Plus de scroll vertical séparé : 
@@ -3154,25 +3154,6 @@ setTimeout(function() {
 
 /* Pricing cells */
 .cell-price { pointer-events: none; user-select: none; }
-</style>
-<style id="calendar-mobile-scroll-performance-fix">
-@media (max-width: 1366px) {
-  .calendar-container {
-    overflow: hidden !important;
-    max-width: 100vw !important;
-  }
-  .calendar-grid-wrapper {
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    touch-action: pan-x !important;
-    overscroll-behavior-x: contain !important;
-  }
-  .calendar-cell,
-  .booking-block {
-    touch-action: pan-x !important;
-  }
-}
 </style>
 </head>
 <body data-page="app">
@@ -11815,8 +11796,38 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-tabs-handler.js?v=2"></script>
 
 <script>
-// Scroll manuel désactivé : on laisse le scroll natif mobile gérer le swipe horizontal.
-// Le scroll natif est beaucoup plus fluide que touchmove + scrollLeft.
+(function() {
+  const el = document.querySelector('.calendar-grid-wrapper');
+  if (!el) return;
+
+  let startX = 0, startY = 0, startLeft = 0;
+  let dragging = false;
+
+  el.addEventListener('touchstart', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    startLeft = el.scrollLeft;
+    dragging = false;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    // On prend la main seulement si le geste est clairement horizontal
+    if (!dragging) {
+      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) dragging = true;
+      else return;
+    }
+
+    e.preventDefault();
+    el.scrollLeft = startLeft - dx;
+  }, { passive: false });
+})();
 </script>    
 <script src="/js/push-notifications-handler.js"></script>    
 <script>
