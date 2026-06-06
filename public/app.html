@@ -2249,7 +2249,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       display: flex;
       flex-direction: column;
       overflow-x: auto !important;
-      overflow-y: visible !important; /* visible requis pour iOS touch scroll */
+      overflow-y: clip !important; /* clip au lieu de visible — permet position:sticky */
     }
 
     /* 3. Plus de scroll vertical séparé : 
@@ -7033,7 +7033,6 @@ try {
         var bodyH   = totalH - hdrH;
         var slotX   = propW + idx5 * colW;          // bord gauche de la colonne active
         var rightX  = slotX + colW;                 // bord droit de la colonne active
-        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         function bhVeil(left, width){
           if (width <= 0) return;
           var v = div('position:absolute;pointer-events:none;background:rgba(248,245,239,.72);z-index:6;');
