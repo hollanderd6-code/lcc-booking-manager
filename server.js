@@ -32829,14 +32829,14 @@ app.post('/api/guest/book', async (req, res) => {
           `SELECT fixed_price FROM bhguest_holds
            WHERE property_id = $1 AND checkin = $2 AND checkout = $3
              AND LOWER(guest_email) = LOWER($4)
-             AND status = 'active' AND expires_at > NOW()
+             AND fixed_price IS NOT NULL
            ORDER BY created_at DESC LIMIT 1`,
           [property_id, checkin, checkout, guest_email]
         );
         if (holdVal.rows.length > 0 && holdVal.rows[0].fixed_price != null) {
           validatedFixedPrice = parseFloat(holdVal.rows[0].fixed_price);
         } else {
-          console.warn(`⚠️ [GUEST] book: fixed_price ${fixed_price}€ rejeté — aucun hold actif correspondant`);
+          console.warn(`⚠️ [GUEST] book: fixed_price ${fixed_price}€ rejeté — aucun hold correspondant`);
         }
       } catch (fpErr) {
         console.warn('⚠️ [GUEST] book: validation fixed_price non bloquante:', fpErr.message);
@@ -34883,9 +34883,8 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       console.warn('⚠️ [GUEST] Vérification hold non bloquante:', hgErr.message);
     }
 
-    // 🔒 Valider fixed_price_override : n'accepter un prix fixe QUE si un hold actif
-    // existe pour ces dates exactes + même email + même logement.
-    // Empêche la réutilisation d'un lien avec des dates modifiées ou après conversion.
+    // 🔒 Valider fixed_price_override : accepter si un hold a EXISTÉ pour ces dates
+    // (même expiré — le prix convenu avec l'hôte reste valide)
     let validatedFixedPrice = null;
     if (fixed_price_override && parseFloat(fixed_price_override) > 0) {
       try {
@@ -34893,15 +34892,15 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
           `SELECT fixed_price FROM bhguest_holds
            WHERE property_id = $1 AND checkin = $2 AND checkout = $3
              AND LOWER(guest_email) = LOWER($4)
-             AND status = 'active' AND expires_at > NOW()
+             AND fixed_price IS NOT NULL
            ORDER BY created_at DESC LIMIT 1`,
           [property_id, checkin, checkout, guest_email]
         );
         if (holdVal.rows.length > 0 && holdVal.rows[0].fixed_price != null) {
           validatedFixedPrice = parseFloat(holdVal.rows[0].fixed_price);
-          console.log(`✅ [GUEST] Prix fixe validé par hold actif: ${validatedFixedPrice}€`);
+          console.log(`✅ [GUEST] Prix fixe validé par hold: ${validatedFixedPrice}€`);
         } else {
-          console.warn(`⚠️ [GUEST] fixed_price_override ${fixed_price_override}€ rejeté — aucun hold actif correspondant pour ${property_id} ${checkin}→${checkout}`);
+          console.warn(`⚠️ [GUEST] fixed_price_override ${fixed_price_override}€ rejeté — aucun hold correspondant pour ${property_id} ${checkin}→${checkout}`);
         }
       } catch (fpErr) {
         console.warn('⚠️ [GUEST] Validation fixed_price non bloquante:', fpErr.message);
@@ -35076,7 +35075,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
     const end = new Date(checkout);
     const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
 
-    // 🔒 Valider fixed_price_override contre un hold actif en base
+    // 🔒 Valider fixed_price_override contre un hold (même expiré)
     let validatedFixedPrice = null;
     if (fixed_price_override && parseFloat(fixed_price_override) > 0) {
       try {
@@ -35084,7 +35083,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
           `SELECT fixed_price FROM bhguest_holds
            WHERE property_id = $1 AND checkin = $2 AND checkout = $3
              AND LOWER(guest_email) = LOWER($4)
-             AND status IN ('active','converted') AND fixed_price IS NOT NULL
+             AND fixed_price IS NOT NULL
            ORDER BY created_at DESC LIMIT 1`,
           [property_id, checkin, checkout, guest_email]
         );
