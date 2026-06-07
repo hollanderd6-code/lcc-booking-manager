@@ -7,6 +7,23 @@ const API_URL = IS_NATIVE
   ? 'https://www.boostinghost.fr'
   : window.location.origin;
 
+// 🔗 Capturer l'URL native LE PLUS TÔT POSSIBLE (avant DOMContentLoaded)
+let _pendingNativeUrl = null;
+if (IS_NATIVE && window.Capacitor?.Plugins?.App) {
+  try {
+    window.Capacitor.Plugins.App.addListener('appUrlOpen', (data) => {
+      if (data && data.url) {
+        console.log('🔗 [NATIVE] URL reçue (early):', data.url);
+        _pendingNativeUrl = data.url;
+        // Si l'app est déjà initialisée, traiter immédiatement
+        if (typeof handleDeepLink === 'function') {
+          handleDeepLink(data.url);
+        }
+      }
+    });
+  } catch(e) {}
+}
+
 // Stripe publishable key
 const STRIPE_PK = 'pk_live_51Su7Z1FDAmyxvgFK3uralsUfB7fEX3UfOop2G4krZr6hgMNajjPYYCCJ14Ds7LSK19GT68xfJoftkjFhVBFe4d8100Vv1T8lSz'; // ← remplace par ta clé publishable Stripe live
 
@@ -323,6 +340,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Cas ou l'app est deja ouverte en background et recoit un nouveau lien
   if (IS_NATIVE) {
+    // Retry: si l'URL native est arrivée pendant l'init
+    if (_pendingNativeUrl) {
+      console.log('🔗 [NATIVE] URL en attente détectée après init:', _pendingNativeUrl);
+      await handleDeepLink(_pendingNativeUrl);
+      _pendingNativeUrl = null;
+    }
     try {
       const { App } = window.Capacitor.Plugins;
       App.addListener('appUrlOpen', async (data) => {
@@ -339,6 +362,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function handleDeepLink(overrideUrl) {
   // Sur Capacitor natif, window.location.search est vide -- on lit l'URL via getLaunchUrl()
   let search = window.location.search;
+
+  // Vérifier l'URL native capturée en early listener
+  if (IS_NATIVE && !search && !overrideUrl && _pendingNativeUrl) {
+    overrideUrl = _pendingNativeUrl;
+    _pendingNativeUrl = null;
+  }
+
   if (IS_NATIVE && !search && !overrideUrl) {
     try {
       const { App } = window.Capacitor.Plugins;
