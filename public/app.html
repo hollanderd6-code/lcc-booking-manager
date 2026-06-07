@@ -3155,6 +3155,56 @@ setTimeout(function() {
 /* Pricing cells */
 .cell-price { pointer-events: none; user-select: none; }
 </style>
+
+
+<!-- ✅ FIX PERFORMANCE CALENDRIER APP NATIVE / CAPACITOR -->
+<style id="native-app-calendar-performance-fix">
+/*
+  Ce bloc ne s'applique QUE dans l'app native Capacitor.
+  Objectif : laisser la WebView scroller nativement et réduire les repaints
+  coûteux pendant le slide horizontal du calendrier.
+*/
+html.native-app .calendar-grid-wrapper {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x !important;
+  overscroll-behavior-x: contain !important;
+}
+
+html.native-app .calendar-cell,
+html.native-app .booking-block {
+  touch-action: pan-x !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Version allégée uniquement dans l'app : évite les effets coûteux pendant le scroll */
+html.native-app .booking-block {
+  box-shadow: none !important;
+  filter: none !important;
+  transition: none !important;
+}
+
+html.native-app .booking-block:hover {
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+/* Évite certains recalculs graphiques dans la WebView */
+html.native-app .calendar-wrapper {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Dans l'app, on évite que :has() déclenche trop de repaint sur les bordures */
+html.native-app .calendar-cell:has(.booking-block),
+html.native-app .calendar-cell:has(.booking-block.end),
+html.native-app .calendar-cell:has(.booking-block.single) {
+  border-right-color: #e5e7eb !important;
+}
+</style>
+
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -11775,6 +11825,35 @@ if (document.readyState === 'loading') {
 <!-- Capacitor Core -->
 <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
 
+<script id="native-app-detector">
+(function() {
+  function isNativeApp() {
+    try {
+      return !!(
+        window.Capacitor &&
+        typeof window.Capacitor.isNativePlatform === 'function' &&
+        window.Capacitor.isNativePlatform()
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function applyNativeClass() {
+    if (isNativeApp()) {
+      document.documentElement.classList.add('native-app');
+      console.log('📱 Mode performance app native activé');
+    }
+  }
+
+  applyNativeClass();
+  document.addEventListener('DOMContentLoaded', applyNativeClass);
+  setTimeout(applyNativeClass, 250);
+  setTimeout(applyNativeClass, 1000);
+})();
+</script>
+
+
 <!-- Initialisation des notifications -->
 <script>
   // Initialiser les notifications au chargement
@@ -11794,8 +11873,28 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js?v=2"></script>
 
-<script>
+<script id="calendar-swipe-native-safe">
 (function() {
+  function isNativeApp() {
+    try {
+      return !!(
+        window.Capacitor &&
+        typeof window.Capacitor.isNativePlatform === 'function' &&
+        window.Capacitor.isNativePlatform()
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Dans l'app Capacitor, on ne force plus scrollLeft à chaque touchmove.
+  // La WebView garde ainsi son scroll natif, beaucoup plus fluide.
+  if (isNativeApp()) {
+    document.documentElement.classList.add('native-app');
+    console.log('📱 Swipe manuel calendrier désactivé dans l’app native');
+    return;
+  }
+
   const el = document.querySelector('.calendar-grid-wrapper');
   if (!el) return;
 
