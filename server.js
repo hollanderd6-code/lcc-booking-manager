@@ -6817,18 +6817,27 @@ async function captureDeposit(depositId, amountCents = null) {
       throw new Error('Pas de Payment Intent associé - caution manuelle non débit possible');
     }
 
+    // Récupérer le compte Connect si la caution a été créée sur un compte connecté
+    let stripeAccount = null;
+    if (depositData.user_id) {
+      const userRes = await pool.query('SELECT "stripeAccountId" FROM users WHERE id = $1', [depositData.user_id]);
+      if (userRes.rows[0]?.stripeAccountId) stripeAccount = userRes.rows[0].stripeAccountId;
+    }
+    const stripeOpts = stripeAccount ? { stripeAccount } : {};
+
     // Vérifier l'état réel du PI depuis Stripe avant de capturer
-    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
-    console.log(`PI Stripe status avant capture: ${pi.status}`);
+    const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, stripeOpts);
+    console.log(`PI Stripe status avant capture: ${pi.status} (account: ${stripeAccount || 'platform'})`);
     
     if (pi.status !== 'requires_capture') {
       throw new Error(`Impossible de débiter : la caution est dans l'état "${pi.status}" côté Stripe (expiré ou déjà traité)`);
     }
 
-    // Capturer via Stripe (compte plateforme - pas de stripeAccount)
+    // Capturer via Stripe (sur le bon compte)
     const capture = await stripe.paymentIntents.capture(
       depositData.stripe_payment_intent_id,
-      amountCents ? { amount_to_capture: amountCents } : {}
+      amountCents ? { amount_to_capture: amountCents } : {},
+      stripeOpts
     );
 
     // Mettre à jour en base
@@ -6839,7 +6848,7 @@ async function captureDeposit(depositId, amountCents = null) {
     return true;
   } catch (error) {
     console.error('❌ Erreur captureDeposit:', error);
-    throw error; // On throw pour que la route renvoie le vrai message d'erreur
+    throw error;
   }
 }
 
@@ -6859,28 +6868,30 @@ async function releaseDeposit(depositId) {
   if (depositData.stripe_payment_intent_id) {
     console.log(`Liberation caution Stripe ${depositId} (status: ${depositData.status})`);
     
+    // Récupérer le compte Connect
+    let stripeAccount = null;
+    if (depositData.user_id) {
+      const userRes = await pool.query('SELECT "stripeAccountId" FROM users WHERE id = $1', [depositData.user_id]);
+      if (userRes.rows[0]?.stripeAccountId) stripeAccount = userRes.rows[0].stripeAccountId;
+    }
+    const stripeOpts = stripeAccount ? { stripeAccount } : {};
+
     try {
-      // Récupérer l'état réel du PI depuis Stripe
-      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id);
-      console.log(`PI Stripe status: ${pi.status}`);
+      const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, stripeOpts);
+      console.log(`PI Stripe status: ${pi.status} (account: ${stripeAccount || 'platform'})`);
       
       if (pi.status === 'requires_capture') {
-        // Autorisation active → annuler
         console.log(`Annulation PI ${pi.id}`);
-        await stripe.paymentIntents.cancel(pi.id);
+        await stripe.paymentIntents.cancel(pi.id, stripeOpts);
         
       } else if (pi.status === 'succeeded') {
-        // Déjà capturé → rembourser
         console.log(`Remboursement PI ${pi.id}`);
-        await stripe.refunds.create({ payment_intent: pi.id });
+        await stripe.refunds.create({ payment_intent: pi.id }, stripeOpts);
         
       } else {
-        // PI déjà canceled, expired, etc. → rien à faire côté Stripe
         console.log(`PI ${pi.id} déjà dans état terminal (${pi.status}), mise à jour BDD seulement`);
       }
     } catch (stripeError) {
-      // Stripe peut échouer si le PI est expiré ou déjà traité
-      // Dans ce cas on met quand même released en BDD car la caution n'est plus active
       console.warn(`⚠️ Erreur Stripe lors release (ignorée, mise à jour BDD quand même):`, stripeError.message);
     }
   } 
