@@ -34924,6 +34924,19 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
           [property_id, checkin, checkout, guest_email]
         );
         holdRow = holdRes.rows[0] || null;
+        console.log(`🔍 [GUEST] Hold by email: ${holdRow ? 'FOUND' : 'NOT FOUND'}`);
+      }
+      if (!holdRow) {
+        // Fallback par property+dates seulement (pas d'email match requis)
+        const holdRes = await pool.query(
+          `SELECT *, expires_at > NOW() AND status = 'active' AS is_active FROM bhguest_holds
+           WHERE property_id = $1 AND checkin = $2 AND checkout = $3
+             AND fixed_price IS NOT NULL
+           ORDER BY created_at DESC LIMIT 1`,
+          [property_id, checkin, checkout]
+        );
+        holdRow = holdRes.rows[0] || null;
+        console.log(`🔍 [GUEST] Hold by dates only: ${holdRow ? 'FOUND (fixed_price=' + holdRow.fixed_price + ')' : 'NOT FOUND'}`);
       }
 
       if (holdRow) {
