@@ -989,7 +989,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 
 /* Masquer la bordure droite des cellules avec réservation pour éviter les lignes verticales */
-/* [PERF APP] :has() désactivé pour alléger le scroll horizontal en WKWebView.
 .calendar-cell:has(.booking-block) {
   border-right-color: transparent !important;
 }
@@ -999,7 +998,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .calendar-cell:has(.booking-block.single) {
   border-right-color: var(--calendar-border) !important;
 }
-*/
 
 /* Couleurs par plateforme — toutes hardcodées pour éviter override par style.css */
 .booking-block.airbnb  { background: linear-gradient(135deg, #FF5A5F, #E84C50) !important; }
@@ -1085,11 +1083,9 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     .calendar-cell.weekend .cell-price {
       color: #dc2626;
     }
-    /* [PERF APP] :has() désactivé pour alléger le scroll horizontal en WKWebView.
     .calendar-cell:has(.booking-block) .cell-price {
       display: none;
     }
-    */
 
     /* Prix personnalisé (override) — souligné pointillé */
     .cell-price-override {
@@ -11794,153 +11790,44 @@ if (document.readyState === 'loading') {
     }
   }
 </script>
-<!-- 📱 Expérience Mobile Native -->
-<script src="/js/mobile-native-experience.js"></script>
-<script src="/js/mobile-tabs-handler.js?v=2"></script>
+<!-- 📱 Expérience Mobile Native désactivée temporairement pour test scroll horizontal app -->
+<!-- <script src="/js/mobile-native-experience.js"></script> -->
+<!-- <script src="/js/mobile-tabs-handler.js?v=2"></script> -->
 
-<style id="calendar-native-horizontal-scroll-fix">
-/* Correctif scroll horizontal calendrier.
-   Objectif : utiliser le vrai scroll natif mobile/WebView avec inertie,
-   au lieu de simuler le slide avec touchmove + scrollLeft. */
-.calendar-container .calendar-grid-wrapper {
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  overscroll-behavior-x: contain !important;
-  touch-action: pan-x pan-y !important;
-  scroll-behavior: auto !important;
-}
-
-.calendar-container .days-header {
-  overflow-x: visible !important;
-}
-
-.calendar-container .calendar-grid {
-  overflow-x: visible !important;
-  overflow-y: visible !important;
-}
-
-.calendar-container .calendar-cell,
-.calendar-container .booking-block,
-.calendar-container .day-header {
-  touch-action: pan-x pan-y !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-/* Pendant le scroll mobile, les effets hover/transition peuvent ralentir la WebView. */
-@media (hover: none) and (pointer: coarse) {
-  .calendar-container .booking-block,
-  .calendar-container .calendar-cell,
-  .calendar-container .property-item {
-    transition: none !important;
-    animation: none !important;
-  }
-
-  .calendar-container .booking-block:hover {
-    box-shadow: none !important;
-    filter: none !important;
-    transform: none !important;
-  }
-}
-</style>
-
-<script id="calendar-light-mode-detector">
+<script>
 (function() {
-  function enableLightMode() {
-    var isCapacitor = !!window.Capacitor;
-    var isMobileLike = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-    if (isCapacitor || isMobileLike) {
-      document.documentElement.classList.add('lcc-calendar-light-mode');
-      console.log('⚡ Mode calendrier allégé activé');
+  const el = document.querySelector('.calendar-grid-wrapper');
+  if (!el) return;
+
+  let startX = 0, startY = 0, startLeft = 0;
+  let dragging = false;
+
+  el.addEventListener('touchstart', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    startLeft = el.scrollLeft;
+    dragging = false;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    // On prend la main seulement si le geste est clairement horizontal
+    if (!dragging) {
+      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) dragging = true;
+      else return;
     }
-  }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', enableLightMode);
-  } else {
-    enableLightMode();
-  }
-  window.addEventListener('load', enableLightMode);
+    e.preventDefault();
+    el.scrollLeft = startLeft - dx;
+  }, { passive: false });
 })();
-</script>
-
-<style id="calendar-webview-lightweight-test">
-/* ================================================================
-   VERSION ALLÉGÉE TEST — Calendrier horizontal WebView / Capacitor
-   But : réduire le coût de repaint pendant les grands slides gauche/droite.
-   ================================================================ */
-html.lcc-calendar-light-mode .calendar-container .calendar-grid-wrapper {
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  touch-action: pan-x pan-y !important;
-  overscroll-behavior-x: contain !important;
-  scroll-behavior: auto !important;
-  contain: layout paint style !important;
-}
-
-html.lcc-calendar-light-mode .calendar-container .calendar-grid,
-html.lcc-calendar-light-mode .calendar-container .days-header,
-html.lcc-calendar-light-mode .calendar-container .calendar-row,
-html.lcc-calendar-light-mode .calendar-container .calendar-cell {
-  transition: none !important;
-  animation: none !important;
-  box-shadow: none !important;
-  filter: none !important;
-}
-
-html.lcc-calendar-light-mode .calendar-container .calendar-cell {
-  overflow: hidden !important;
-  background-image: none !important;
-  contain: paint !important;
-}
-
-html.lcc-calendar-light-mode .calendar-container .calendar-cell:hover,
-html.lcc-calendar-light-mode .calendar-container .property-item:hover,
-html.lcc-calendar-light-mode .calendar-container .booking-block:hover {
-  background-color: inherit !important;
-  transform: none !important;
-  box-shadow: none !important;
-  filter: none !important;
-}
-
-/* Blocs de réservation en couleurs plates : pas de linear-gradient/repeating-gradient. */
-html.lcc-calendar-light-mode .calendar-container .booking-block {
-  background-image: none !important;
-  box-shadow: none !important;
-  filter: none !important;
-  transition: none !important;
-  animation: none !important;
-  border: none !important;
-  opacity: 1 !important;
-  transform: translateZ(0) !important;
-  will-change: auto !important;
-}
-
-html.lcc-calendar-light-mode .booking-block.airbnb  { background: #FF5A5F !important; }
-html.lcc-calendar-light-mode .booking-block.booking { background: #003580 !important; }
-html.lcc-calendar-light-mode .booking-block.expedia { background: #FFC72C !important; color: #111827 !important; }
-html.lcc-calendar-light-mode .booking-block.vrbo    { background: #1569C7 !important; }
-html.lcc-calendar-light-mode .booking-block.hotels  { background: #D32F2F !important; }
-html.lcc-calendar-light-mode .booking-block.direct  { background: #F97316 !important; }
-html.lcc-calendar-light-mode .booking-block.abritel { background: #0096D6 !important; }
-html.lcc-calendar-light-mode .booking-block.gites   { background: #2E7D32 !important; }
-html.lcc-calendar-light-mode .booking-block.bhguest { background: #7C3AED !important; }
-html.lcc-calendar-light-mode .booking-block.bhguest-hold { background: #C4B5FD !important; color: #4C1D95 !important; }
-html.lcc-calendar-light-mode .booking-block.booking-blocked { background: #9CA3AF !important; color: white !important; }
-
-/* Moins de peinture sur les prix/mini badges pendant le scroll. */
-html.lcc-calendar-light-mode .calendar-container .cell-min-stay,
-html.lcc-calendar-light-mode .calendar-container .platform-icon {
-  display: none !important;
-}
-
-/* Colonne gauche : pas d'ombre pendant le scroll. */
-html.lcc-calendar-light-mode .calendar-container .property-list-column {
-  box-shadow: none !important;
-}
-</style>
-<!-- Le script touchmove + scrollLeft a été supprimé : il cassait l'inertie du scroll horizontal mobile. -->
+</script>    
 <script src="/js/push-notifications-handler.js"></script>    
 <script>
 // console.log('🚀 FIREBASE MESSAGING PUSH CODE');
@@ -12599,22 +12486,64 @@ function applyPropertyOrder(props) {
   return ordered;
 }
 
-// Intercepte renderModernCalendar pour injecter l'ordre AVANT le rendu.
-// Ancienne version : rendait le calendrier puis relançait _renderGrid/_renderPropertyList,
-// ce qui pouvait provoquer une grosse saccade sur WebView pendant le scroll.
+// Intercepte renderModernCalendar pour injecter l\'ordre
 (function() {
   const _orig = window.renderModernCalendar;
   if (typeof _orig !== 'function') return;
   window.renderModernCalendar = function(reservations, properties) {
-    const orderedProperties = Array.isArray(properties) ? applyPropertyOrder(properties) : properties;
-    return _orig.call(this, reservations, orderedProperties);
+    // On appelle l\'original mais on patch state.properties après
+    _orig.call(this, reservations, properties);
+    // state est dans la closure — on doit re-trier via le render
+    // On utilise une autre approche : patcher avant l\'appel
+  };
+  // Meilleure approche : patcher directement state après chargement
+  window.renderModernCalendar = function(reservations, properties) {
+    // Guard : ne pas re-render si block_removed récent (patch local déjà correct)
+    if (window._blockRemovedAt && Date.now() - window._blockRemovedAt < 2000) {
+      console.log('📅 renderModernCalendar (wrapper) ignoré — block_removed récent');
+      return;
+    }
+    _orig.call(this, reservations, properties);
+    // Après l\'appel, state.properties est peuplé — on réapplique l\'ordre
+    if (window._calendarState) {
+      window._calendarState.properties = applyPropertyOrder(window._calendarState.properties);
+      // Re-render silencieux
+      if (window._renderGrid) window._renderGrid();
+      if (window._renderPropertyList) window._renderPropertyList();
+    }
   };
 })();
 
-// Patch DOM automatique désactivé pour éviter les saccades pendant le scroll.
-// L'ordre est désormais appliqué AVANT le rendu via renderModernCalendar ci-dessus.
-// On conserve reapplyOrderToDOM() plus bas pour la sauvegarde manuelle de l'ordre,
-// mais on ne déplace plus les lignes automatiquement avec un MutationObserver.
+// Patch plus simple : hook sur state directement via MutationObserver sur propertyList
+// On patche renderPropertyList et renderGrid via le hook de rendu existant
+(function patchCalendarOrder() {
+  // Attend que le calendrier soit initialisé
+  let attempts = 0;
+  const interval = setInterval(function() {
+    attempts++;
+    const grid = document.getElementById('calendarGrid');
+    const list = document.getElementById('propertyList');
+    if (grid && list && grid.children.length > 0) {
+      clearInterval(interval);
+      reapplyOrderToDOM();
+    }
+    if (attempts > 30) clearInterval(interval);
+  }, 300);
+
+  // Observe les changements du calendrier pour réappliquer l\'ordre
+  // Observer sur calendarGrid ET propertyList
+  // MAIS on déconnecte avant de manipuler le DOM dans reapplyOrderToDOM
+  var _reorderObserver = null;
+  document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.getElementById('calendarGrid');
+    const list = document.getElementById('propertyList');
+    _reorderObserver = new MutationObserver(function() {
+      setTimeout(reapplyOrderToDOM, 50);
+    });
+    if (grid) _reorderObserver.observe(grid, { childList: true });
+    if (list) _reorderObserver.observe(list, { childList: true });
+  });
+})();
 
 // Réapplique l\'ordre sauvegardé aux DOM rows du calendrier + property list
 let _reapplying = false;
