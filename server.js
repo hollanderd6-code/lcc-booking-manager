@@ -23545,8 +23545,8 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--ink);line
 /* ── Nav mobile : masquer le titre du logement, garder liens + langue ── */
 @media(max-width:640px){
   .nav-logo{display:none}
-  .nav{overflow-x:hidden}
-  .nav-links{flex:1;overflow-x:auto}
+  .nav{overflow:visible}
+  .nav-links{flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .nav-links a{padding:.85rem .9rem;font-size:10px;letter-spacing:.08em}
 }
 .wrap{max-width:880px;margin:0 auto;padding:0 5vw 8rem}
