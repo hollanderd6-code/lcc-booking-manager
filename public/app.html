@@ -3155,6 +3155,42 @@ setTimeout(function() {
 /* Pricing cells */
 .cell-price { pointer-events: none; user-select: none; }
 </style>
+
+<style id="calendar-horizontal-after-vertical-fix-css">
+/* Test ciblé WebView iOS : après un scroll vertical, le calendrier garde la priorité au geste horizontal. */
+@media (max-width: 1366px) {
+  .calendar-container .calendar-grid-wrapper {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x !important;
+    overscroll-behavior-x: contain !important;
+    overscroll-behavior-y: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  .calendar-container .calendar-grid-wrapper.is-horizontal-scrolling,
+  .calendar-container .calendar-grid-wrapper.is-horizontal-scrolling * {
+    touch-action: pan-x !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  .calendar-container .calendar-grid,
+  .calendar-container .days-header,
+  .calendar-container .calendar-row,
+  .calendar-container .calendar-cell {
+    touch-action: pan-x !important;
+  }
+
+  /* Pendant le swipe horizontal, éviter les effets hover/repaint inutiles dans la WebView. */
+  .calendar-grid-wrapper.is-horizontal-scrolling .calendar-cell,
+  .calendar-grid-wrapper.is-horizontal-scrolling .booking-block {
+    transition: none !important;
+  }
+}
+</style>
+
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -11794,38 +11830,80 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js?v=2"></script>
 
-<script>
+<script id="calendar-horizontal-scroll-lock-fix">
 (function() {
-  const el = document.querySelector('.calendar-grid-wrapper');
-  if (!el) return;
+  function initCalendarHorizontalLock() {
+    var wrapper = document.querySelector('.calendar-grid-wrapper');
+    if (!wrapper || wrapper._horizontalLockFixInstalled) return;
+    wrapper._horizontalLockFixInstalled = true;
 
-  let startX = 0, startY = 0, startLeft = 0;
-  let dragging = false;
+    var startX = 0;
+    var startY = 0;
+    var horizontalLock = false;
+    var verticalLock = false;
 
-  el.addEventListener('touchstart', (e) => {
-    if (!e.touches || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    startLeft = el.scrollLeft;
-    dragging = false;
-  }, { passive: true });
+    wrapper.addEventListener('touchstart', function(e) {
+      if (!e.touches || e.touches.length !== 1) return;
+      var t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      horizontalLock = false;
+      verticalLock = false;
+      wrapper.classList.remove('is-horizontal-scrolling');
+    }, { passive: true });
 
-  el.addEventListener('touchmove', (e) => {
-    if (!e.touches || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
+    wrapper.addEventListener('touchmove', function(e) {
+      if (!e.touches || e.touches.length !== 1) return;
 
-    // On prend la main seulement si le geste est clairement horizontal
-    if (!dragging) {
-      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) dragging = true;
-      else return;
-    }
+      var t = e.touches[0];
+      var dx = t.clientX - startX;
+      var dy = t.clientY - startY;
+      var absX = Math.abs(dx);
+      var absY = Math.abs(dy);
 
-    e.preventDefault();
-    el.scrollLeft = startLeft - dx;
-  }, { passive: false });
+      // Laisser la page scroller verticalement si le geste est clairement vertical.
+      if (!horizontalLock && !verticalLock && absY > 10 && absY > absX * 1.15) {
+        verticalLock = true;
+        wrapper.classList.remove('is-horizontal-scrolling');
+        return;
+      }
+
+      // Si le geste est clairement horizontal, on empêche les handlers parents
+      // de voler le geste, mais on ne touche PAS à scrollLeft : scroll natif iOS.
+      if (!horizontalLock && !verticalLock && absX > 8 && absX > absY * 1.05) {
+        horizontalLock = true;
+        wrapper.classList.add('is-horizontal-scrolling');
+      }
+
+      if (horizontalLock) {
+        e.stopPropagation();
+      }
+    }, { passive: true });
+
+    wrapper.addEventListener('touchend', function() {
+      horizontalLock = false;
+      verticalLock = false;
+      setTimeout(function() {
+        wrapper.classList.remove('is-horizontal-scrolling');
+      }, 80);
+    }, { passive: true });
+
+    wrapper.addEventListener('touchcancel', function() {
+      horizontalLock = false;
+      verticalLock = false;
+      wrapper.classList.remove('is-horizontal-scrolling');
+    }, { passive: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCalendarHorizontalLock);
+  } else {
+    initCalendarHorizontalLock();
+  }
+
+  // Si le calendrier est rerendu, on réinstalle sans dupliquer.
+  var observer = new MutationObserver(function() { initCalendarHorizontalLock(); });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 })();
 </script>    
 <script src="/js/push-notifications-handler.js"></script>    
