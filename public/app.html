@@ -6796,7 +6796,7 @@ try {
       // Ne pas exclure les résas BHGuest ou Direct même si elles ont type='manual'
       const _srcLocal = (r.source||r.platform||'').toLowerCase();
       const _isBHGuestLocal = ['guest_app','bhguest','boostinghost_guest','boostinghost guest','boostinghost'].includes(_srcLocal);
-      const _isDirectLocal = ['direct','manual',''].includes(_srcLocal);
+      const _isDirectLocal = ['direct','manual','manuel',''].includes(_srcLocal);
       if (r.type==='manual' && !_isBHGuestLocal && !_isDirectLocal) return;
       var s=(r.startDate||r.start||'').split('T')[0];
       var e=(r.endDate||r.end||'').split('T')[0];
