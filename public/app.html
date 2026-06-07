@@ -3191,6 +3191,37 @@ setTimeout(function() {
 }
 </style>
 
+
+<style id="calendar-horizontal-scroll-lock-css-v2">
+@media (max-width: 1366px) {
+  .calendar-grid-wrapper {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y !important;
+    overscroll-behavior-x: contain !important;
+    overscroll-behavior-y: contain !important;
+  }
+
+  .calendar-grid-wrapper.is-horizontal-scrolling {
+    touch-action: pan-x !important;
+    cursor: grabbing;
+  }
+
+  html.calendar-horizontal-active,
+  body.calendar-horizontal-active {
+    overscroll-behavior-y: none !important;
+  }
+
+  .calendar-grid,
+  .days-header,
+  .calendar-row,
+  .calendar-cell {
+    touch-action: pan-x pan-y !important;
+  }
+}
+</style>
+
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -11830,17 +11861,45 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js?v=2"></script>
 
-<script id="calendar-horizontal-scroll-lock-fix">
+<script id="calendar-horizontal-scroll-lock-fix-v2">
 (function() {
-  function initCalendarHorizontalLock() {
+  function initCalendarHorizontalLockV2() {
     var wrapper = document.querySelector('.calendar-grid-wrapper');
-    if (!wrapper || wrapper._horizontalLockFixInstalled) return;
-    wrapper._horizontalLockFixInstalled = true;
+    if (!wrapper || wrapper._horizontalLockFixV2Installed) return;
+    wrapper._horizontalLockFixV2Installed = true;
 
     var startX = 0;
     var startY = 0;
     var horizontalLock = false;
     var verticalLock = false;
+    var frozenScrollY = 0;
+    var bodyWasFixed = false;
+
+    function freezePageVerticalScroll() {
+      if (bodyWasFixed) return;
+      frozenScrollY = window.scrollY || window.pageYOffset || 0;
+      bodyWasFixed = true;
+      document.documentElement.classList.add('calendar-horizontal-active');
+      document.body.classList.add('calendar-horizontal-active');
+      document.body.style.position = 'fixed';
+      document.body.style.top = (-frozenScrollY) + 'px';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+    }
+
+    function unfreezePageVerticalScroll() {
+      if (!bodyWasFixed) return;
+      bodyWasFixed = false;
+      document.documentElement.classList.remove('calendar-horizontal-active');
+      document.body.classList.remove('calendar-horizontal-active');
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      window.scrollTo(0, frozenScrollY);
+    }
 
     wrapper.addEventListener('touchstart', function(e) {
       if (!e.touches || e.touches.length !== 1) return;
@@ -11850,6 +11909,10 @@ if (document.readyState === 'loading') {
       horizontalLock = false;
       verticalLock = false;
       wrapper.classList.remove('is-horizontal-scrolling');
+
+      // Stoppe l'inertie verticale restante de la WebView juste au moment où
+      // l'utilisateur reprend contact avec le calendrier.
+      window.scrollTo(window.scrollX || 0, window.scrollY || window.pageYOffset || 0);
     }, { passive: true });
 
     wrapper.addEventListener('touchmove', function(e) {
@@ -11861,18 +11924,19 @@ if (document.readyState === 'loading') {
       var absX = Math.abs(dx);
       var absY = Math.abs(dy);
 
-      // Laisser la page scroller verticalement si le geste est clairement vertical.
-      if (!horizontalLock && !verticalLock && absY > 10 && absY > absX * 1.15) {
+      // Si le geste est clairement vertical, on laisse la page scroller normalement.
+      if (!horizontalLock && !verticalLock && absY > 10 && absY > absX * 1.25) {
         verticalLock = true;
         wrapper.classList.remove('is-horizontal-scrolling');
         return;
       }
 
-      // Si le geste est clairement horizontal, on empêche les handlers parents
-      // de voler le geste, mais on ne touche PAS à scrollLeft : scroll natif iOS.
+      // Si le geste est clairement horizontal, on fige temporairement le scroll vertical
+      // de la page pour que l'inertie verticale iOS ne vole plus le geste.
       if (!horizontalLock && !verticalLock && absX > 8 && absX > absY * 1.05) {
         horizontalLock = true;
         wrapper.classList.add('is-horizontal-scrolling');
+        freezePageVerticalScroll();
       }
 
       if (horizontalLock) {
@@ -11880,30 +11944,23 @@ if (document.readyState === 'loading') {
       }
     }, { passive: true });
 
-    wrapper.addEventListener('touchend', function() {
-      horizontalLock = false;
-      verticalLock = false;
-      setTimeout(function() {
-        wrapper.classList.remove('is-horizontal-scrolling');
-      }, 80);
-    }, { passive: true });
-
-    wrapper.addEventListener('touchcancel', function() {
-      horizontalLock = false;
-      verticalLock = false;
-      wrapper.classList.remove('is-horizontal-scrolling');
-    }, { passive: true });
+    ['touchend','touchcancel'].forEach(function(evtName) {
+      wrapper.addEventListener(evtName, function() {
+        horizontalLock = false;
+        verticalLock = false;
+        setTimeout(function() {
+          wrapper.classList.remove('is-horizontal-scrolling');
+          unfreezePageVerticalScroll();
+        }, 80);
+      }, { passive: true });
+    });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCalendarHorizontalLock);
+    document.addEventListener('DOMContentLoaded', initCalendarHorizontalLockV2);
   } else {
-    initCalendarHorizontalLock();
+    initCalendarHorizontalLockV2();
   }
-
-  // Si le calendrier est rerendu, on réinstalle sans dupliquer.
-  var observer = new MutationObserver(function() { initCalendarHorizontalLock(); });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
 })();
 </script>    
 <script src="/js/push-notifications-handler.js"></script>    
