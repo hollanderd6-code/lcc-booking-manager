@@ -4469,6 +4469,34 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
             await logEmailSent(userId, 'subscription_confirmed', { plan: basePlan, planAmount });
             console.log(`✅ Abonnement actif créé pour user ${userId} (plan: ${basePlan})`);
           }
+
+          // 🔔 NOTIFICATION ADMIN : nouvel abonnement
+          try {
+            const planLabel = basePlan === 'starter' ? 'Starter' : basePlan === 'pro' ? 'Pro' : basePlan === 'agence' ? 'Agence' : basePlan;
+            const statusLabel = isTrialing ? 'Essai gratuit' : 'Abonnement payant';
+            const billingLabel = plan.includes('annual') ? 'Annuel' : 'Mensuel';
+            await sendEmailViaBrevo({
+              to: ['contact@boostinghost.fr', 'charles.induni@gmail.com'],
+              subject: `💰 ${statusLabel} — ${userFirstName} (${planLabel} ${billingLabel})`,
+              html: bhEmailTemplate({
+                icon: isTrialing ? '🆓' : '💰',
+                title: statusLabel,
+                tag: 'Notification admin',
+                bodyHtml: `
+                  <div class="info-card">
+                    <strong>Client :</strong> ${userFirstName} (${userEmail})<br>
+                    <strong>Plan :</strong> ${planLabel} ${billingLabel}<br>
+                    <strong>Statut :</strong> ${statusLabel}<br>
+                    <strong>Montant :</strong> ${(planAmount / 100).toFixed(2)}€/${plan.includes('annual') ? 'an' : 'mois'}<br>
+                    <strong>Date :</strong> ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}
+                  </div>
+                `
+              })
+            });
+            console.log(`✅ Notification abonnement envoyée aux admins (${planLabel})`);
+          } catch (notifErr) {
+            console.error('❌ Notification abonnement (non bloquant):', notifErr.message);
+          }
         }
 
         break;
@@ -4512,6 +4540,32 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
 
               await sendSubscriptionConfirmedEmail(userEmail, userFirstName, basePlan, planAmount);
               await logEmailSent(userId, 'subscription_confirmed', { plan: basePlan, planAmount });
+
+              // 🔔 NOTIFICATION ADMIN : essai converti en payant
+              try {
+                const planLabel = basePlan === 'starter' ? 'Starter' : basePlan === 'pro' ? 'Pro' : basePlan === 'agence' ? 'Agence' : basePlan;
+                const billingLabel = (plan || '').includes('annual') ? 'Annuel' : 'Mensuel';
+                await sendEmailViaBrevo({
+                  to: ['contact@boostinghost.fr', 'charles.induni@gmail.com'],
+                  subject: `🎉 Essai converti en payant — ${userFirstName} (${planLabel})`,
+                  html: bhEmailTemplate({
+                    icon: '🎉',
+                    title: 'Conversion essai → payant',
+                    tag: 'Notification admin',
+                    bodyHtml: `
+                      <div class="info-card">
+                        <strong>Client :</strong> ${userFirstName} (${userEmail})<br>
+                        <strong>Plan :</strong> ${planLabel} ${billingLabel}<br>
+                        <strong>Montant :</strong> ${(planAmount / 100).toFixed(2)}€/${(plan || '').includes('annual') ? 'an' : 'mois'}<br>
+                        <strong>Date :</strong> ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}
+                      </div>
+                    `
+                  })
+                });
+                console.log(`✅ Notification conversion envoyée aux admins`);
+              } catch (notifErr) {
+                console.error('❌ Notification conversion (non bloquant):', notifErr.message);
+              }
             }
           }
         } else {
