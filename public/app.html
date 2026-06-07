@@ -989,6 +989,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 
 /* Masquer la bordure droite des cellules avec réservation pour éviter les lignes verticales */
+/* [PERF APP] :has() désactivé pour alléger le scroll horizontal en WKWebView.
 .calendar-cell:has(.booking-block) {
   border-right-color: transparent !important;
 }
@@ -998,6 +999,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .calendar-cell:has(.booking-block.single) {
   border-right-color: var(--calendar-border) !important;
 }
+*/
 
 /* Couleurs par plateforme — toutes hardcodées pour éviter override par style.css */
 .booking-block.airbnb  { background: linear-gradient(135deg, #FF5A5F, #E84C50) !important; }
@@ -1083,9 +1085,11 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     .calendar-cell.weekend .cell-price {
       color: #dc2626;
     }
+    /* [PERF APP] :has() désactivé pour alléger le scroll horizontal en WKWebView.
     .calendar-cell:has(.booking-block) .cell-price {
       display: none;
     }
+    */
 
     /* Prix personnalisé (override) — souligné pointillé */
     .cell-price-override {
@@ -11837,6 +11841,103 @@ if (document.readyState === 'loading') {
     filter: none !important;
     transform: none !important;
   }
+}
+</style>
+
+<script id="calendar-light-mode-detector">
+(function() {
+  function enableLightMode() {
+    var isCapacitor = !!window.Capacitor;
+    var isMobileLike = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (isCapacitor || isMobileLike) {
+      document.documentElement.classList.add('lcc-calendar-light-mode');
+      console.log('⚡ Mode calendrier allégé activé');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', enableLightMode);
+  } else {
+    enableLightMode();
+  }
+  window.addEventListener('load', enableLightMode);
+})();
+</script>
+
+<style id="calendar-webview-lightweight-test">
+/* ================================================================
+   VERSION ALLÉGÉE TEST — Calendrier horizontal WebView / Capacitor
+   But : réduire le coût de repaint pendant les grands slides gauche/droite.
+   ================================================================ */
+html.lcc-calendar-light-mode .calendar-container .calendar-grid-wrapper {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y !important;
+  overscroll-behavior-x: contain !important;
+  scroll-behavior: auto !important;
+  contain: layout paint style !important;
+}
+
+html.lcc-calendar-light-mode .calendar-container .calendar-grid,
+html.lcc-calendar-light-mode .calendar-container .days-header,
+html.lcc-calendar-light-mode .calendar-container .calendar-row,
+html.lcc-calendar-light-mode .calendar-container .calendar-cell {
+  transition: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+html.lcc-calendar-light-mode .calendar-container .calendar-cell {
+  overflow: hidden !important;
+  background-image: none !important;
+  contain: paint !important;
+}
+
+html.lcc-calendar-light-mode .calendar-container .calendar-cell:hover,
+html.lcc-calendar-light-mode .calendar-container .property-item:hover,
+html.lcc-calendar-light-mode .calendar-container .booking-block:hover {
+  background-color: inherit !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Blocs de réservation en couleurs plates : pas de linear-gradient/repeating-gradient. */
+html.lcc-calendar-light-mode .calendar-container .booking-block {
+  background-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transition: none !important;
+  animation: none !important;
+  border: none !important;
+  opacity: 1 !important;
+  transform: translateZ(0) !important;
+  will-change: auto !important;
+}
+
+html.lcc-calendar-light-mode .booking-block.airbnb  { background: #FF5A5F !important; }
+html.lcc-calendar-light-mode .booking-block.booking { background: #003580 !important; }
+html.lcc-calendar-light-mode .booking-block.expedia { background: #FFC72C !important; color: #111827 !important; }
+html.lcc-calendar-light-mode .booking-block.vrbo    { background: #1569C7 !important; }
+html.lcc-calendar-light-mode .booking-block.hotels  { background: #D32F2F !important; }
+html.lcc-calendar-light-mode .booking-block.direct  { background: #F97316 !important; }
+html.lcc-calendar-light-mode .booking-block.abritel { background: #0096D6 !important; }
+html.lcc-calendar-light-mode .booking-block.gites   { background: #2E7D32 !important; }
+html.lcc-calendar-light-mode .booking-block.bhguest { background: #7C3AED !important; }
+html.lcc-calendar-light-mode .booking-block.bhguest-hold { background: #C4B5FD !important; color: #4C1D95 !important; }
+html.lcc-calendar-light-mode .booking-block.booking-blocked { background: #9CA3AF !important; color: white !important; }
+
+/* Moins de peinture sur les prix/mini badges pendant le scroll. */
+html.lcc-calendar-light-mode .calendar-container .cell-min-stay,
+html.lcc-calendar-light-mode .calendar-container .platform-icon {
+  display: none !important;
+}
+
+/* Colonne gauche : pas d'ombre pendant le scroll. */
+html.lcc-calendar-light-mode .calendar-container .property-list-column {
+  box-shadow: none !important;
 }
 </style>
 <!-- Le script touchmove + scrollLeft a été supprimé : il cassait l'inertie du scroll horizontal mobile. -->
