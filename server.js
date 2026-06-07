@@ -6820,8 +6820,8 @@ async function captureDeposit(depositId, amountCents = null) {
     // Récupérer le compte Connect si la caution a été créée sur un compte connecté
     let stripeAccount = null;
     if (depositData.user_id) {
-      const userRes = await pool.query('SELECT "stripeAccountId" FROM users WHERE id = $1', [depositData.user_id]);
-      if (userRes.rows[0]?.stripeAccountId) stripeAccount = userRes.rows[0].stripeAccountId;
+      const userRes = await pool.query('SELECT stripe_account_id FROM users WHERE id = $1', [depositData.user_id]);
+      if (userRes.rows[0]?.stripe_account_id) stripeAccount = userRes.rows[0].stripe_account_id;
     }
     const stripeOpts = stripeAccount ? { stripeAccount } : {};
 
@@ -6871,8 +6871,8 @@ async function releaseDeposit(depositId) {
     // Récupérer le compte Connect
     let stripeAccount = null;
     if (depositData.user_id) {
-      const userRes = await pool.query('SELECT "stripeAccountId" FROM users WHERE id = $1', [depositData.user_id]);
-      if (userRes.rows[0]?.stripeAccountId) stripeAccount = userRes.rows[0].stripeAccountId;
+      const userRes = await pool.query('SELECT stripe_account_id FROM users WHERE id = $1', [depositData.user_id]);
+      if (userRes.rows[0]?.stripe_account_id) stripeAccount = userRes.rows[0].stripe_account_id;
     }
     const stripeOpts = stripeAccount ? { stripeAccount } : {};
 
@@ -34904,6 +34904,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     // 🔒 Vérifier le hold : par hold_token (prioritaire) ou par email+dates (fallback)
     let activeHoldUntil = null;
     let holdRow = null;
+    console.log(`🔍 [GUEST] Checkout: hold_token=${hold_token || 'NONE'}, fixed_price_override=${fixed_price_override || 'NONE'}, email=${guest_email}`);
     try {
       if (hold_token) {
         // Recherche par token (fiable, pas de problème d'email)
@@ -34912,6 +34913,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
           [hold_token]
         );
         holdRow = holdRes.rows[0] || null;
+        console.log(`🔍 [GUEST] Hold by token: ${holdRow ? 'FOUND (fixed_price=' + holdRow.fixed_price + ', status=' + holdRow.status + ')' : 'NOT FOUND'}`);
       }
       if (!holdRow && guest_email) {
         // Fallback par email+dates
