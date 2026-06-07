@@ -11794,85 +11794,52 @@ if (document.readyState === 'loading') {
 <script src="/js/mobile-native-experience.js"></script>
 <script src="/js/mobile-tabs-handler.js?v=2"></script>
 
-<style id="calendar-scroll-jank-fix">
-/* Correctif performance calendrier : ne bloque PAS le scroll vertical.
-   On désactive seulement les effets coûteux pendant un vrai drag horizontal. */
-html.calendar-horizontal-dragging .booking-block,
-html.calendar-horizontal-dragging .calendar-cell,
-html.calendar-horizontal-dragging .property-item {
-  transition: none !important;
-  animation: none !important;
+<style id="calendar-native-horizontal-scroll-fix">
+/* Correctif scroll horizontal calendrier.
+   Objectif : utiliser le vrai scroll natif mobile/WebView avec inertie,
+   au lieu de simuler le slide avec touchmove + scrollLeft. */
+.calendar-container .calendar-grid-wrapper {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-x: contain !important;
+  touch-action: pan-x pan-y !important;
+  scroll-behavior: auto !important;
 }
-html.calendar-horizontal-dragging .booking-block:hover {
-  box-shadow: none !important;
-  filter: none !important;
-  transform: none !important;
+
+.calendar-container .days-header {
+  overflow-x: visible !important;
 }
-</style>
-<script id="calendar-scroll-jank-fix-script">
-(function() {
-  const el = document.querySelector('.calendar-grid-wrapper');
-  if (!el) return;
 
-  let startX = 0, startY = 0, startLeft = 0;
-  let dragging = false;
-  let rafId = 0;
-  let nextLeft = 0;
-  let dragEndTimer = 0;
+.calendar-container .calendar-grid {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
 
-  function endDrag() {
-    dragging = false;
-    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-    clearTimeout(dragEndTimer);
-    dragEndTimer = setTimeout(function() {
-      document.documentElement.classList.remove('calendar-horizontal-dragging');
-    }, 120);
+.calendar-container .calendar-cell,
+.calendar-container .booking-block,
+.calendar-container .day-header {
+  touch-action: pan-x pan-y !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Pendant le scroll mobile, les effets hover/transition peuvent ralentir la WebView. */
+@media (hover: none) and (pointer: coarse) {
+  .calendar-container .booking-block,
+  .calendar-container .calendar-cell,
+  .calendar-container .property-item {
+    transition: none !important;
+    animation: none !important;
   }
 
-  el.addEventListener('touchstart', function(e) {
-    if (!e.touches || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    startLeft = el.scrollLeft;
-    nextLeft = startLeft;
-    dragging = false;
-    clearTimeout(dragEndTimer);
-  }, { passive: true });
-
-  el.addEventListener('touchmove', function(e) {
-    if (!e.touches || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-
-    // Vertical = on laisse complètement la page scroller normalement.
-    // Horizontal = on prend la main seulement quand le geste est net.
-    if (!dragging) {
-      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.25) {
-        dragging = true;
-        document.documentElement.classList.add('calendar-horizontal-dragging');
-      } else {
-        return;
-      }
-    }
-
-    e.preventDefault();
-    nextLeft = startLeft - dx;
-
-    // requestAnimationFrame évite de modifier scrollLeft 60-120 fois/sec hors frame.
-    if (!rafId) {
-      rafId = requestAnimationFrame(function() {
-        el.scrollLeft = nextLeft;
-        rafId = 0;
-      });
-    }
-  }, { passive: false });
-
-  el.addEventListener('touchend', endDrag, { passive: true });
-  el.addEventListener('touchcancel', endDrag, { passive: true });
-})();
-</script>    
+  .calendar-container .booking-block:hover {
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+</style>
+<!-- Le script touchmove + scrollLeft a été supprimé : il cassait l'inertie du scroll horizontal mobile. -->
 <script src="/js/push-notifications-handler.js"></script>    
 <script>
 // console.log('🚀 FIREBASE MESSAGING PUSH CODE');
