@@ -1244,6 +1244,16 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 <option value="">Tous les logements</option>
 </select>
 </div>
+<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;" id="depositStatusFilters">
+<button class="dep-filter-chip active" data-status="active" onclick="setDepositFilter('active')">🟢 Actives</button>
+<button class="dep-filter-chip" data-status="captured" onclick="setDepositFilter('captured')">💰 Débitées</button>
+<button class="dep-filter-chip" data-status="all" onclick="setDepositFilter('all')">📋 Toutes</button>
+</div>
+<style>
+.dep-filter-chip{padding:7px 14px;border-radius:999px;border:1.5px solid rgba(200,184,154,.35);background:white;font-size:12px;font-weight:600;color:#6b7280;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.dep-filter-chip.active{background:#1A7A5E;color:white;border-color:#1A7A5E;}
+.dep-filter-chip:not(.active):hover{background:rgba(26,122,94,.06);color:#1A7A5E;border-color:#1A7A5E;}
+</style>
 <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
 <div id="depositsContainer">
 <p class="empty-state">Chargement des réservations…</p>
@@ -2209,6 +2219,15 @@ function copyDepositLinkByUid(uid) {
     // ============================================
     // RENDER CAUTIONS ACTIVES
     // ============================================
+    let currentDepositFilter = 'active'; // active | captured | all
+
+    function setDepositFilter(status) {
+      currentDepositFilter = status;
+      document.querySelectorAll('.dep-filter-chip').forEach(c => c.classList.remove('active'));
+      document.querySelector(`.dep-filter-chip[data-status="${status}"]`)?.classList.add('active');
+      renderDepositsTable();
+    }
+
     function renderDepositsTable() {
       const container = document.getElementById('depositsContainer');
       const select = document.getElementById('propertyFilter');
@@ -2218,15 +2237,20 @@ function copyDepositLinkByUid(uid) {
       let filtered = allReservationsWithDeposits.filter((r) =>
         !selectedPropertyId || r.propertyId === selectedPropertyId
       );
-      
-      // ✅ Cautions actives : séjours à venir + cautions autorisées encore actionnables (jusqu'à J+1 d'expiration)
-      filtered = filterActiveDeposits(filtered);
 
-      // 🚫 Exclure les réservations Airbnb (caution gérée par Airbnb)
+      // 🚫 Exclure les réservations Airbnb
       filtered = filtered.filter(r => {
         const src = (r.source || r.sourceRaw || r.channel || '').toLowerCase();
         return !src.includes('airbnb');
       });
+
+      // Filtrer par statut selon l'onglet sélectionné
+      if (currentDepositFilter === 'active') {
+        filtered = filterActiveDeposits(filtered);
+      } else if (currentDepositFilter === 'captured') {
+        filtered = filtered.filter(r => r.deposit?.status === 'captured');
+      }
+      // 'all' = pas de filtre supplémentaire
 
       // Regrouper par séjour
       const byReservation = new Map();
@@ -2406,7 +2430,8 @@ function copyDepositLinkByUid(uid) {
           } else if (d.status === 'paid' || d.status === 'authorized') {
             statusBadge = '<span class="badge badge-paid">Autorisée</span>';
           } else if (d.status === 'captured') {
-            statusBadge = '<span class="badge badge-warning">Débitée</span>';
+            const capturedEur = d.captured_amount ? (d.captured_amount / 100).toFixed(2) + '€' : '';
+            statusBadge = `<span class="badge badge-warning">Débitée${capturedEur ? ' · ' + capturedEur : ''}</span>`;
           } else if (d.status === 'released') {
             statusBadge = '<span class="badge badge-success">Libérée</span>';
           } else if (d.status === 'refunded') {

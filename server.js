@@ -1965,6 +1965,7 @@ ON invoice_download_tokens(token);
       await pool.query(`
         ALTER TABLE deposits ADD COLUMN IF NOT EXISTS stripe_session_expires_at TIMESTAMPTZ;
         ALTER TABLE deposits ADD COLUMN IF NOT EXISTS stripe_session_params JSONB;
+        ALTER TABLE deposits ADD COLUMN IF NOT EXISTS captured_amount INTEGER;
       `);
       await pool.query(`
         ALTER TABLE payments ADD COLUMN IF NOT EXISTS stripe_session_expires_at TIMESTAMPTZ;
@@ -6840,10 +6841,37 @@ async function captureDeposit(depositId, amountCents = null) {
       stripeOpts
     );
 
-    // Mettre à jour en base
-    await updateDepositStatus(depositId, 'captured', {
-      stripeChargeId: capture.charges?.data[0]?.id
-    });
+    const capturedAmount = amountCents || capture.amount;
+
+    // Mettre à jour en base (avec montant capturé)
+    await pool.query(
+      `UPDATE deposits SET status = 'captured', captured_at = NOW(), captured_amount = $2, updated_at = NOW() WHERE id = $1`,
+      [depositId, capturedAmount]
+    );
+
+    // 🔔 Notification FCM au gestionnaire
+    try {
+      const guestName = depositData.guest_name || depositData.reservation_uid || 'Voyageur';
+      const amountEur = (capturedAmount / 100).toFixed(2);
+      const propRes = await pool.query('SELECT name FROM properties WHERE id = $1', [depositData.property_id]);
+      const propName = propRes.rows[0]?.name || depositData.property_id;
+
+      const tokensRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+        [depositData.user_id]
+      );
+      if (tokensRes.rows.length > 0) {
+        await sendNotificationToMultipleLogged(
+          tokensRes.rows.map(r => r.fcm_token),
+          `💰 Caution débitée : ${amountEur}€`,
+          `${guestName} — ${propName}`,
+          { type: 'deposit_captured', depositId: String(depositId), amount: String(capturedAmount) }
+        );
+      }
+      console.log(`🔔 Notification caution débitée: ${amountEur}€ (${guestName})`);
+    } catch (notifErr) {
+      console.warn('⚠️ Notification caution (non bloquant):', notifErr.message);
+    }
 
     return true;
   } catch (error) {
