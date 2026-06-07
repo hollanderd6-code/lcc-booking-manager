@@ -34950,8 +34950,9 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     let validatedFixedPrice = null;
     if (fixed_price_override && parseFloat(fixed_price_override) > 0) {
       if (holdRow && holdRow.fixed_price != null) {
-        validatedFixedPrice = parseFloat(holdRow.fixed_price);
-        console.log(`✅ [GUEST] Prix fixe validé par hold ${hold_token || 'email'}: ${validatedFixedPrice}€`);
+        // Le hold valide l'accord de prix — utiliser le prix de l'URL (affiché au guest)
+        validatedFixedPrice = parseFloat(fixed_price_override);
+        console.log(`✅ [GUEST] Prix fixe validé: ${validatedFixedPrice}€ (hold DB: ${holdRow.fixed_price}€)`);
       } else {
         console.warn(`⚠️ [GUEST] fixed_price_override ${fixed_price_override}€ rejeté — aucun hold correspondant pour ${property_id} ${checkin}→${checkout}`);
       }
