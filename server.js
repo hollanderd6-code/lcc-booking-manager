@@ -34887,7 +34887,7 @@ app.get('/api/guest/hold-status', async (req, res) => {
 app.post('/api/guest/create-checkout-session', async (req, res) => {
   try {
     const { property_id, checkin, checkout, guests, promo_code,
-            guest_name, guest_email, guest_phone, fixed_price_override } = req.body;
+            guest_name, guest_email, guest_phone, fixed_price_override, hold_token } = req.body;
 
     if (!property_id || !checkin || !checkout || !guest_email) {
       return res.status(400).json({ error: 'Champs requis manquants' });
@@ -34901,51 +34901,44 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     const prop = propResult.rows[0];
     const propUserId = prop.user_id;
 
-    // 🔒 Lien valable 4 h : si ces dates ont été "tenues" pour CE voyageur (hold avec
-    // ce même email) mais qu'aucun hold actif ne subsiste, le lien est mort → refuser.
-    // (Les réservations publiques sans hold ne sont pas concernées.)
+    // 🔒 Vérifier le hold : par hold_token (prioritaire) ou par email+dates (fallback)
     let activeHoldUntil = null;
+    let holdRow = null;
     try {
-      const holdState = await pool.query(
-        `SELECT
-           MAX(expires_at) FILTER (WHERE status='active' AND expires_at > NOW()) AS active_until,
-           COUNT(*)        FILTER (WHERE status='active' AND expires_at > NOW()) AS active_cnt,
-           COUNT(*) AS total_cnt
-         FROM bhguest_holds
-         WHERE property_id = $1 AND checkin = $2 AND checkout = $3
-           AND LOWER(guest_email) = LOWER($4)`,
-        [property_id, checkin, checkout, guest_email]
-      );
-      const hs = holdState.rows[0] || {};
-      activeHoldUntil = hs.active_until ? new Date(hs.active_until) : null;
-      if (parseInt(hs.total_cnt || 0) > 0 && parseInt(hs.active_cnt || 0) === 0) {
-        return res.status(410).json({ error: 'Ce lien de réservation a expiré (délai de 4 h dépassé). Demandez un nouveau lien à votre hôte.' });
+      if (hold_token) {
+        // Recherche par token (fiable, pas de problème d'email)
+        const holdRes = await pool.query(
+          `SELECT *, expires_at > NOW() AND status = 'active' AS is_active FROM bhguest_holds WHERE link_token = $1 LIMIT 1`,
+          [hold_token]
+        );
+        holdRow = holdRes.rows[0] || null;
+      }
+      if (!holdRow && guest_email) {
+        // Fallback par email+dates
+        const holdRes = await pool.query(
+          `SELECT *, expires_at > NOW() AND status = 'active' AS is_active FROM bhguest_holds
+           WHERE property_id = $1 AND checkin = $2 AND checkout = $3 AND LOWER(guest_email) = LOWER($4)
+           ORDER BY created_at DESC LIMIT 1`,
+          [property_id, checkin, checkout, guest_email]
+        );
+        holdRow = holdRes.rows[0] || null;
+      }
+
+      if (holdRow) {
+        activeHoldUntil = holdRow.is_active ? new Date(holdRow.expires_at) : null;
       }
     } catch (hgErr) {
       console.warn('⚠️ [GUEST] Vérification hold non bloquante:', hgErr.message);
     }
 
-    // 🔒 Valider fixed_price_override : accepter si un hold a EXISTÉ pour ces dates
-    // (même expiré — le prix convenu avec l'hôte reste valide)
+    // 🔒 Valider fixed_price : si un hold existe (même expiré) avec un prix fixe
     let validatedFixedPrice = null;
     if (fixed_price_override && parseFloat(fixed_price_override) > 0) {
-      try {
-        const holdVal = await pool.query(
-          `SELECT fixed_price FROM bhguest_holds
-           WHERE property_id = $1 AND checkin = $2 AND checkout = $3
-             AND LOWER(guest_email) = LOWER($4)
-             AND fixed_price IS NOT NULL
-           ORDER BY created_at DESC LIMIT 1`,
-          [property_id, checkin, checkout, guest_email]
-        );
-        if (holdVal.rows.length > 0 && holdVal.rows[0].fixed_price != null) {
-          validatedFixedPrice = parseFloat(holdVal.rows[0].fixed_price);
-          console.log(`✅ [GUEST] Prix fixe validé par hold: ${validatedFixedPrice}€`);
-        } else {
-          console.warn(`⚠️ [GUEST] fixed_price_override ${fixed_price_override}€ rejeté — aucun hold correspondant pour ${property_id} ${checkin}→${checkout}`);
-        }
-      } catch (fpErr) {
-        console.warn('⚠️ [GUEST] Validation fixed_price non bloquante:', fpErr.message);
+      if (holdRow && holdRow.fixed_price != null) {
+        validatedFixedPrice = parseFloat(holdRow.fixed_price);
+        console.log(`✅ [GUEST] Prix fixe validé par hold ${hold_token || 'email'}: ${validatedFixedPrice}€`);
+      } else {
+        console.warn(`⚠️ [GUEST] fixed_price_override ${fixed_price_override}€ rejeté — aucun hold correspondant pour ${property_id} ${checkin}→${checkout}`);
       }
     }
 

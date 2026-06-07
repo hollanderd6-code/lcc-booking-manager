@@ -361,6 +361,7 @@ async function handleDeepLink(overrideUrl) {
   const promoCode  = params.get('promo');
   const guests     = params.get('guests');
   const fixedPrice = parseFloat(params.get('fixed_price')) || null;
+  const holdToken = params.get('hold_token') || null;
 
   if (!propertyId) return;
 
@@ -368,6 +369,7 @@ async function handleDeepLink(overrideUrl) {
   if (checkout)    state.search.checkout = checkout;
   if (guests)      state.search.guests   = parseInt(guests) || 2;
   if (fixedPrice)  state._pendingFixedPrice = fixedPrice;
+  if (holdToken)   state._holdToken = holdToken;
 
   if (!IS_NATIVE) window.history.replaceState({}, '', window.location.pathname);
 
@@ -1360,7 +1362,8 @@ async function submitBooking() {
         guest_email: guestEmail,
         guest_phone: guestPhone,
         promo_code: promoCode,
-        fixed_price_override: fixedPriceOverride
+        fixed_price_override: fixedPriceOverride,
+        hold_token: state._holdToken || null
       })
     });
     const data = await res.json();
