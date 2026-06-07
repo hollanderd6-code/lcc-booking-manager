@@ -1004,5 +1004,45 @@ body.screen-detail #bottomNav { display: none !important; }
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="js/push-notifications-guest.js"></script>
 <script src="js/app-guest.js"></script>
+<script>
+// Vérifier si le hold est expiré au chargement
+(function checkHoldExpiry() {
+  const params = new URLSearchParams(window.location.search);
+  const holdToken = params.get('hold_token');
+  const propertyId = params.get('property') || params.get('property_id');
+  const checkin = params.get('checkin');
+  const checkout = params.get('checkout');
+  const email = params.get('guest_email');
+
+  if (!holdToken && !propertyId) return; // pas de hold
+
+  const qs = holdToken
+    ? `token=${encodeURIComponent(holdToken)}`
+    : `property_id=${encodeURIComponent(propertyId)}&checkin=${encodeURIComponent(checkin || '')}&checkout=${encodeURIComponent(checkout || '')}&email=${encodeURIComponent(email || '')}`;
+
+  fetch(`/api/guest/hold-status?${qs}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.expired) {
+        // Afficher overlay "lien expiré"
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(248,247,255,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;';
+        overlay.innerHTML = `
+          <div style="font-size:56px;margin-bottom:16px;">⏰</div>
+          <h2 style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#1e1b4b;margin-bottom:8px;">Lien expiré</h2>
+          <p style="font-family:'DM Sans',sans-serif;font-size:15px;color:#6b7280;max-width:340px;line-height:1.6;">
+            Ce lien de réservation a expiré (délai de 4 heures dépassé).<br>
+            Veuillez demander un nouveau lien à votre hôte.
+          </p>
+          <div style="margin-top:24px;padding:14px 20px;background:#ede9fe;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;color:#7c3aed;font-weight:600;">
+            <i class="fas fa-info-circle" style="margin-right:6px;"></i> Contactez votre hôte pour recevoir un nouveau lien
+          </div>
+        `;
+        document.body.appendChild(overlay);
+      }
+    })
+    .catch(() => {}); // en cas d'erreur, laisser la page se charger normalement
+})();
+</script>
 </body>
 </html>

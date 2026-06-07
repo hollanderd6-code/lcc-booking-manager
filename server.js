@@ -34842,6 +34842,37 @@ app.post('/api/guest/promo/check', async (req, res) => {
 
 // ── Créer un PaymentIntent avec promo optionnelle ────────────
 // ── Créer une session Stripe Checkout ───────────────────────
+// ── Vérifier si un hold est encore actif (appelé au chargement de la page guest) ──
+app.get('/api/guest/hold-status', async (req, res) => {
+  try {
+    const { property_id, checkin, checkout, email, token } = req.query;
+    if (!property_id || !checkin || !checkout) return res.json({ active: true }); // pas de hold = pas de restriction
+
+    const query = token
+      ? `SELECT status, expires_at FROM bhguest_holds WHERE link_token = $1 ORDER BY created_at DESC LIMIT 1`
+      : `SELECT status, expires_at FROM bhguest_holds WHERE property_id = $1 AND checkin = $2 AND checkout = $3 ${email ? "AND LOWER(guest_email) = LOWER($4)" : ''} ORDER BY created_at DESC LIMIT 1`;
+
+    const params = token ? [token] : email ? [property_id, checkin, checkout, email] : [property_id, checkin, checkout];
+    const result = await pool.query(query, params);
+
+    if (!result.rows.length) return res.json({ active: true }); // pas de hold trouvé = accès libre
+
+    const hold = result.rows[0];
+    const isActive = hold.status === 'active' && new Date(hold.expires_at) > new Date();
+    const isConverted = hold.status === 'converted';
+
+    res.json({
+      active: isActive,
+      converted: isConverted,
+      expired: !isActive && !isConverted,
+      expiresAt: hold.expires_at,
+    });
+  } catch (e) {
+    console.error('❌ [GUEST] hold-status:', e.message);
+    res.json({ active: true }); // en cas d'erreur, laisser passer
+  }
+});
+
 app.post('/api/guest/create-checkout-session', async (req, res) => {
   try {
     const { property_id, checkin, checkout, guests, promo_code,
