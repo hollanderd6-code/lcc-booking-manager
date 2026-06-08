@@ -495,20 +495,8 @@ function getSidebarHTML() {
 
     normalizeBranding();
     setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); }, 100);
-    setTimeout(function(){ normalizeBranding(); injectMobileAgencyBtn(); }, 400);
+    setTimeout(function(){ normalizeBranding(); }, 400);
 
-  }
-
-  function injectMobileAgencyBtn() {
-    var mh = document.getElementById('bhMobileHeader') || document.querySelector('.mobile-header');
-    if (!mh || document.getElementById('agencySwitcherBtnMobile')) return;
-    var btn = document.createElement('button');
-    btn.id = 'agencySwitcherBtnMobile';
-    btn.onclick = function() { if (window.openAgencySwitcherModal) window.openAgencySwitcherModal(); };
-    btn.style.cssText = 'display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:"DM Sans",sans-serif;font-size:11px;font-weight:600;color:#7c3aed;gap:5px;align-items:center;white-space:nowrap;z-index:10;transition:all .2s;';
-    btn.innerHTML = '<i class="fas fa-building" style="font-size:10px;"></i><span id="agencySwitcherLabelMobile">Agence</span>';
-    mh.style.position = 'relative';
-    mh.appendChild(btn);
   }
 
 
@@ -1099,7 +1087,21 @@ window.confirm = function(msg) {
   };
 
   // Auto-show button if agency accounts exist or user is in managed mode
+  function injectMobileAgencyBtn() {
+    if (document.getElementById('agencySwitcherBtnMobile')) return;
+    var mh = document.getElementById('bhMobileHeader') || document.querySelector('.mobile-header');
+    if (!mh) return;
+    var btn = document.createElement('button');
+    btn.id = 'agencySwitcherBtnMobile';
+    btn.onclick = function() { if (window.openAgencySwitcherModal) window.openAgencySwitcherModal(); };
+    btn.style.cssText = 'display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:"DM Sans",sans-serif;font-size:11px;font-weight:600;color:#7c3aed;gap:5px;align-items:center;white-space:nowrap;z-index:10;transition:all .2s;';
+    btn.innerHTML = '<i class="fas fa-building" style="font-size:10px;"></i><span id="agencySwitcherLabelMobile">Agence</span>';
+    if (!mh.style.position || mh.style.position === 'static') mh.style.position = 'relative';
+    mh.appendChild(btn);
+  }
+
   window.initAgencySwitcherBtn = function() {
+    if (window.innerWidth <= 1366) injectMobileAgencyBtn();
     var btn = document.getElementById('agencySwitcherBtn');
     var btnMobile = document.getElementById('agencySwitcherBtnMobile');
     var hasManagedUser = !!localStorage.getItem('lcc_managed_user');
@@ -1116,12 +1118,8 @@ window.confirm = function(msg) {
   window.renderAgencyToggle = function(accounts) {
     var btn = document.getElementById('agencySwitcherBtn');
     var btnMobile = document.getElementById('agencySwitcherBtnMobile');
-    if (btn) {
-      btn.style.display = 'inline-flex';
-    }
-    if (btnMobile) {
-      btnMobile.style.display = 'inline-flex';
-    }
+    if (btn) btn.style.display = 'inline-flex';
+    if (btnMobile) btnMobile.style.display = 'inline-flex';
     updateAgencySwitcherLabel();
     // Don't call old bar rendering
   };
