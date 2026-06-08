@@ -143,11 +143,10 @@ html, body { margin: 0; padding: 0; background: var(--sl-bg); font-family: 'DM S
 .bottom-sheet-content { position: relative; width: 100%; background: white; border-radius: 20px 20px 0 0; padding: 20px 20px 40px; transform: translateY(100%); transition: transform 0.3s ease; overflow-y: auto; max-height: 80vh; }
 .bottom-sheet.open .bottom-sheet-content { transform: translateY(0); }
 @media (min-width: 768px) {
-  .bottom-sheet { display: block; overflow-y: auto; padding: 40px 20px; background: rgba(0,0,0,0); transition: background 0.3s ease; }
-  .bottom-sheet.open { background: rgba(0,0,0,0.5); }
+  .bottom-sheet { display: none !important; }
+  .bottom-sheet.open { display: flex !important; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); padding: 0; }
   .bottom-sheet-overlay { display: none; }
-  .bottom-sheet-content { max-width: 700px; border-radius: 20px; padding: 24px 28px 32px; margin: 0 auto; transform: translateY(20px); opacity: 0; max-height: none; }
-  .bottom-sheet.open .bottom-sheet-content { transform: translateY(0); opacity: 1; }
+  .bottom-sheet-content { position: relative; width: 90%; max-width: 700px; border-radius: 20px; max-height: 90vh; overflow-y: auto; padding: 24px 28px 32px; transform: none; opacity: 1; margin: 0; box-shadow: 0 24px 64px rgba(13,17,23,.2); }
   .bottom-sheet .sheet-handle { display: none; }
 }
 .sheet-handle { width: 40px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 0 auto 16px; }
