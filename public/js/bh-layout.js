@@ -527,6 +527,11 @@ function getSidebarHTML() {
     topBar.className = 'bh-demo-nav';
     topBar.id = 'bhTopBar';
     topBar.innerHTML = [
+      '<button id="agencySwitcherBtn" onclick="window.openAgencySwitcherModal && window.openAgencySwitcherModal()" style="display:none;position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:4px 12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:600;color:#C4B5FD;gap:6px;align-items:center;transition:all .25s cubic-bezier(.4,0,.2,1);white-space:nowrap;" onmouseover="this.style.background=\'rgba(124,58,237,.25)\';this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.color=\'#DDD6FE\'" onmouseout="this.style.background=\'rgba(124,58,237,.15)\';this.style.borderColor=\'rgba(124,58,237,.3)\';this.style.color=\'#C4B5FD\'">',
+      '  <i class="fas fa-building" style="font-size:10px;"></i>',
+      '  <span id="agencySwitcherLabel">Agence</span>',
+      '  <i class="fas fa-chevron-down" style="font-size:8px;opacity:.6;margin-left:1px;"></i>',
+      '</button>',
       '<div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;white-space:nowrap;">',
       '  <div style="display:flex;align-items:center;gap:7px;">',
       '    <i class="fas fa-server" style="font-size:11px;color:rgba(255,255,255,.5);"></i>',
@@ -970,3 +975,141 @@ window.confirm = function(msg) {
   window.bhConfirm(msg || '', '', 'Confirmer', 'Annuler', 'danger');
   return true;
 };
+
+// ── Agency Switcher Modal (bh-layout.js) ─────────────────────
+(function() {
+  // Inject modal HTML
+  function injectAgencyModal() {
+    if (document.getElementById('agencySwitcherModal')) return;
+    var modal = document.createElement('div');
+    modal.id = 'agencySwitcherModal';
+    modal.onclick = function(e) { if (e.target === modal) window.closeAgencySwitcherModal(); };
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;opacity:0;transition:opacity .2s ease;';
+    modal.innerHTML = '<div style="background:white;border-radius:20px;width:90%;max-width:400px;padding:0;box-shadow:0 24px 64px rgba(13,17,23,.25);max-height:80vh;overflow:hidden;display:flex;flex-direction:column;transform:scale(.95) translateY(8px);transition:transform .25s cubic-bezier(.4,0,.2,1);" id="agencySwitcherInner">'
+      + '<div style="padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.2);">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+      + '<div style="font-size:15px;font-weight:700;color:#1F2937;display:flex;align-items:center;gap:8px;"><i class="fas fa-building" style="color:#7c3aed;font-size:14px;"></i>Changer de compte</div>'
+      + '<button onclick="closeAgencySwitcherModal()" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background=\'rgba(0,0,0,.05)\'" onmouseout="this.style.background=\'none\'"><i class="fas fa-times" style="color:#9CA3AF;font-size:14px;"></i></button>'
+      + '</div>'
+      + '</div>'
+      + '<div id="agencySwitcherList" style="overflow-y:auto;padding:6px 8px 10px;"></div>'
+      + '</div>';
+    document.body.appendChild(modal);
+  }
+
+  window.openAgencySwitcherModal = function() {
+    injectAgencyModal();
+    var modal = document.getElementById('agencySwitcherModal');
+    if (!modal) return;
+    var accounts = window._agencyAccounts || [];
+    var managedUser = localStorage.getItem('lcc_managed_user');
+    var currentManagedId = managedUser ? JSON.parse(managedUser).id : null;
+    var isOwnAccount = !currentManagedId && !window._agencyViewActive;
+
+    var html = '';
+    // Mon compte
+    html += agencyAccountBtn('exitAgencyModeFromModal()', '#1A7A5E', '<i class="fas fa-user" style="color:white;font-size:12px;"></i>', 'Mon compte', 'Votre espace personnel', isOwnAccount, '#1A7A5E');
+    // Tous les comptes  
+    html += agencyAccountBtn('setAgencyViewFromModal()', '#7c3aed', '<i class="fas fa-layer-group" style="color:white;font-size:12px;"></i>', 'Tous les comptes', 'Vue globale agence', window._agencyViewActive, '#7c3aed');
+    // Separator
+    html += '<div style="border-top:1px solid rgba(200,184,154,.15);margin:2px 4px;"></div>';
+    // Individual accounts
+    accounts.forEach(function(a) {
+      var uid = (a.userId || '').replace(/'/g, "\\'");
+      var nm = (a.name || a.email || '').replace(/'/g, "\\'");
+      var clr = a.color || '#6B7280';
+      var isActive = currentManagedId === (a.userId || '');
+      var initial = (a.name || a.email || '?').charAt(0).toUpperCase();
+      html += agencyAccountBtn("switchAgencyAccountFromModal('" + uid + "','" + nm + "','" + clr + "')", clr, '<span style="font-size:11px;font-weight:700;color:white;">' + initial + '</span>', a.name || a.email, '', isActive, '#1A7A5E');
+    });
+
+    document.getElementById('agencySwitcherList').innerHTML = html;
+    modal.style.display = 'flex';
+    requestAnimationFrame(function() {
+      modal.style.opacity = '1';
+      document.getElementById('agencySwitcherInner').style.transform = 'scale(1) translateY(0)';
+    });
+  };
+
+  function agencyAccountBtn(onclick, avatarBg, avatarContent, title, subtitle, isActive, checkColor) {
+    return '<button onclick="' + onclick + '" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;border:none;background:' + (isActive ? 'rgba(26,122,94,.06)' : 'transparent') + ';cursor:pointer;text-align:left;transition:all .15s;" onmouseover="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.06)' : 'rgba(0,0,0,.03)') + '\'" onmouseout="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.06)' : 'transparent') + '\'">'
+      + '<span style="width:30px;height:30px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + avatarContent + '</span>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1F2937;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + title + '</div>' + (subtitle ? '<div style="font-size:11px;color:#9CA3AF;">' + subtitle + '</div>' : '') + '</div>'
+      + (isActive ? '<i class="fas fa-check-circle" style="color:' + (checkColor || '#1A7A5E') + ';font-size:15px;flex-shrink:0;"></i>' : '')
+      + '</button>';
+  }
+
+  window.closeAgencySwitcherModal = function() {
+    var modal = document.getElementById('agencySwitcherModal');
+    var inner = document.getElementById('agencySwitcherInner');
+    if (!modal) return;
+    modal.style.opacity = '0';
+    if (inner) inner.style.transform = 'scale(.95) translateY(8px)';
+    setTimeout(function() { modal.style.display = 'none'; }, 200);
+  };
+
+  window.exitAgencyModeFromModal = function() {
+    closeAgencySwitcherModal();
+    if (localStorage.getItem('lcc_managed_user')) {
+      if (typeof exitAgencyMode === 'function') exitAgencyMode();
+    } else if (window._agencyViewActive) {
+      if (typeof setAgencyView === 'function') setAgencyView('mine');
+      updateAgencySwitcherLabel();
+    }
+  };
+
+  window.setAgencyViewFromModal = function() {
+    closeAgencySwitcherModal();
+    if (typeof setAgencyView === 'function') setAgencyView('all');
+    updateAgencySwitcherLabel();
+  };
+
+  window.switchAgencyAccountFromModal = function(uid, name, color) {
+    closeAgencySwitcherModal();
+    if (typeof switchAgencyAccount === 'function') switchAgencyAccount(uid, name, color);
+  };
+
+  window.updateAgencySwitcherLabel = function() {
+    var label = document.getElementById('agencySwitcherLabel');
+    if (!label) return;
+    var managed = localStorage.getItem('lcc_managed_user');
+    if (managed) {
+      try {
+        var u = JSON.parse(managed);
+        label.textContent = u.name || u.email || 'Compte géré';
+      } catch(e) {}
+    } else if (window._agencyViewActive) {
+      label.textContent = 'Tous les comptes';
+    } else {
+      label.textContent = 'Agence';
+    }
+  };
+
+  // Auto-show button if agency accounts exist or user is in managed mode
+  window.initAgencySwitcherBtn = function() {
+    var btn = document.getElementById('agencySwitcherBtn');
+    if (!btn) return;
+    var hasManagedUser = !!localStorage.getItem('lcc_managed_user');
+    var hasAccounts = window._agencyAccounts && window._agencyAccounts.length;
+    if (hasManagedUser || hasAccounts) {
+      btn.style.display = 'inline-flex';
+      updateAgencySwitcherLabel();
+    }
+  };
+
+  // Watch for agency accounts to be loaded
+  var _origRenderToggle = window.renderAgencyToggle;
+  window.renderAgencyToggle = function(accounts) {
+    var btn = document.getElementById('agencySwitcherBtn');
+    if (btn) {
+      btn.style.display = 'inline-flex';
+      updateAgencySwitcherLabel();
+    }
+    // Don't call old bar rendering
+  };
+
+  // On page load, check if in managed mode
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(initAgencySwitcherBtn, 500);
+  });
+})();

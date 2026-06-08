@@ -2945,94 +2945,11 @@ window.loadAgencyAccountsForSwitcher = async function loadAgencyAccountsForSwitc
 
 window.renderAgencyToggle = function renderAgencyToggle(accounts) {
   if (!accounts || !accounts.length) return;
-  // Show the agency button in header
+  // bh-layout.js handles the button display
   var btn = document.getElementById('agencySwitcherBtn');
   if (btn) { btn.style.display = 'inline-flex'; }
-  // Remove old bar if exists
   var oldBar = document.getElementById('agencyToggleBar');
   if (oldBar) oldBar.remove();
-}
-
-window.openAgencySwitcherModal = function() {
-  var modal = document.getElementById('agencySwitcherModal');
-  if (!modal) return;
-  var accounts = window._agencyAccounts || [];
-  var managedUser = localStorage.getItem('lcc_managed_user');
-  var currentManagedId = managedUser ? JSON.parse(managedUser).id : null;
-  var isOwnAccount = !currentManagedId && !window._agencyViewActive;
-
-  var html = '';
-  // Mon compte
-  html += '<button onclick="exitAgencyModeFromModal()" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px;border-radius:12px;border:none;background:' + (isOwnAccount ? 'rgba(26,122,94,.08)' : 'transparent') + ';cursor:pointer;text-align:left;transition:background .15s;" onmouseover="this.style.background=\'' + (isOwnAccount ? 'rgba(26,122,94,.08)' : 'rgba(0,0,0,.03)') + '\'" onmouseout="this.style.background=\'' + (isOwnAccount ? 'rgba(26,122,94,.08)' : 'transparent') + '\'">'
-    + '<span style="width:32px;height:32px;border-radius:50%;background:#1A7A5E;display:flex;align-items:center;justify-content:center;"><i class="fas fa-user" style="color:white;font-size:13px;"></i></span>'
-    + '<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#1F2937;">Mon compte</div><div style="font-size:11px;color:#9CA3AF;">Votre espace personnel</div></div>'
-    + (isOwnAccount ? '<i class="fas fa-check-circle" style="color:#1A7A5E;font-size:16px;"></i>' : '')
-    + '</button>';
-
-  // Tous les comptes
-  html += '<button onclick="setAgencyViewFromModal()" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px;border-radius:12px;border:none;background:' + (window._agencyViewActive ? 'rgba(124,58,237,.08)' : 'transparent') + ';cursor:pointer;text-align:left;transition:background .15s;" onmouseover="this.style.background=\'' + (window._agencyViewActive ? 'rgba(124,58,237,.08)' : 'rgba(0,0,0,.03)') + '\'" onmouseout="this.style.background=\'' + (window._agencyViewActive ? 'rgba(124,58,237,.08)' : 'transparent') + '\'">'
-    + '<span style="width:32px;height:32px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;"><i class="fas fa-layer-group" style="color:white;font-size:13px;"></i></span>'
-    + '<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#1F2937;">Tous les comptes</div><div style="font-size:11px;color:#9CA3AF;">Vue globale agence</div></div>'
-    + (window._agencyViewActive ? '<i class="fas fa-check-circle" style="color:#7c3aed;font-size:16px;"></i>' : '')
-    + '</button>';
-
-  // Separator
-  html += '<div style="border-top:1px solid rgba(200,184,154,.2);margin:4px 0;"></div>';
-
-  // Individual accounts
-  accounts.forEach(function(a) {
-    var uid = a.userId || '';
-    var nm = a.name || a.email || '';
-    var clr = a.color || '#6B7280';
-    var isActive = currentManagedId === uid;
-    html += '<button onclick="switchAgencyAccountFromModal(\'' + uid.replace(/'/g,"\\'") + '\',\'' + nm.replace(/'/g,"\\'") + '\',\'' + clr + '\')" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;border:none;background:' + (isActive ? 'rgba(107,114,128,.08)' : 'transparent') + ';cursor:pointer;text-align:left;transition:background .15s;" onmouseover="if(!' + isActive + ')this.style.background=\'rgba(0,0,0,.03)\'" onmouseout="this.style.background=\'' + (isActive ? 'rgba(107,114,128,.08)' : 'transparent') + '\'">'
-      + '<span style="width:28px;height:28px;border-radius:50%;background:' + clr + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;">' + nm.charAt(0).toUpperCase() + '</span>'
-      + '<div style="flex:1;font-size:13px;font-weight:500;color:#374151;">' + nm + '</div>'
-      + (isActive ? '<i class="fas fa-check-circle" style="color:#1A7A5E;font-size:14px;"></i>' : '')
-      + '</button>';
-  });
-
-  document.getElementById('agencySwitcherList').innerHTML = html;
-  modal.style.display = 'flex';
-}
-
-window.closeAgencySwitcherModal = function() {
-  document.getElementById('agencySwitcherModal').style.display = 'none';
-}
-
-window.exitAgencyModeFromModal = function() {
-  closeAgencySwitcherModal();
-  if (localStorage.getItem('lcc_managed_user')) {
-    exitAgencyMode();
-  } else if (window._agencyViewActive) {
-    setAgencyView('mine');
-    updateAgencySwitcherLabel();
-  }
-}
-
-window.setAgencyViewFromModal = function() {
-  closeAgencySwitcherModal();
-  setAgencyView('all');
-  updateAgencySwitcherLabel();
-}
-
-window.switchAgencyAccountFromModal = function(uid, name, color) {
-  closeAgencySwitcherModal();
-  switchAgencyAccount(uid, name, color);
-}
-
-window.updateAgencySwitcherLabel = function() {
-  var label = document.getElementById('agencySwitcherLabel');
-  if (!label) return;
-  var managed = localStorage.getItem('lcc_managed_user');
-  if (managed) {
-    var u = JSON.parse(managed);
-    label.textContent = u.name || u.email || 'Compte géré';
-  } else if (window._agencyViewActive) {
-    label.textContent = 'Tous les comptes';
-  } else {
-    label.textContent = 'Mode Agence';
-  }
 }
 
 window.setAgencyView = async function setAgencyView(mode) {
@@ -3341,7 +3258,6 @@ setTimeout(function() {
 <!-- Header -->
 <header class="main-header" id="bhMainHeader">
 <div class="header-left">
-<button id="agencySwitcherBtn" style="display:none;background:none;border:1.5px solid rgba(200,184,154,.35);border-radius:10px;padding:6px 12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#374151;gap:6px;align-items:center;margin-bottom:6px;transition:all .2s;" onclick="openAgencySwitcherModal()"><i class="fas fa-building" style="color:#7c3aed;"></i><span id="agencySwitcherLabel">Mode Agence</span><i class="fas fa-chevron-down" style="font-size:9px;color:#9CA3AF;margin-left:4px;"></i></button>
 <div class="page-kicker">Vue d’ensemble</div>
 <h1 class="page-title">Dashboard</h1>
 <p class="page-subtitle">
@@ -13466,19 +13382,6 @@ function bhConfirm(message) {
 }
 </script>
 
-<!-- Agency Switcher Modal -->
-<div id="agencySwitcherModal" onclick="if(event.target===this)closeAgencySwitcherModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;">
-<div style="background:white;border-radius:20px;width:90%;max-width:420px;padding:0;box-shadow:0 24px 64px rgba(13,17,23,.2);max-height:80vh;overflow:hidden;display:flex;flex-direction:column;">
-  <div style="padding:20px 20px 12px;border-bottom:1px solid rgba(200,184,154,.25);">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:16px;font-weight:700;color:#1F2937;">Changer de compte</div>
-      <button onclick="closeAgencySwitcherModal()" style="background:none;border:none;cursor:pointer;padding:4px;"><i class="fas fa-times" style="color:#9CA3AF;font-size:16px;"></i></button>
-    </div>
-    <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">Sélectionnez le compte à gérer</div>
-  </div>
-  <div id="agencySwitcherList" style="overflow-y:auto;padding:8px 12px;"></div>
-</div>
-</div>
 </body>
 <style>
 #invoiceModal {
