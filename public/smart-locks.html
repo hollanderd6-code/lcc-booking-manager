@@ -897,7 +897,9 @@ async function openLockDetail(lockId) {
     <div id="activity-${lock.id}" style="display:none;margin-top:16px;"></div>
   `;
 
-  document.getElementById('lockDetailSheet').classList.add('open');
+  const sheet = document.getElementById('lockDetailSheet');
+  sheet.scrollTop = 0;
+  sheet.classList.add('open');
 }
 
 function closeLockDetail() {
