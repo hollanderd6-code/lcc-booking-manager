@@ -407,23 +407,11 @@ html[data-theme-v3="1"] .page-content { max-width: none !important; width: 100% 
   </div>
 </div>
 
-<!-- BOTTOM SHEET: Lock Detail -->
-<div class="bottom-sheet" id="lockDetailSheet" onclick="if(event.target===this)closeLockDetail()">
-  <div class="bottom-sheet-overlay" onclick="closeLockDetail()"></div>
-  <div class="bottom-sheet-content">
-    <div class="sheet-handle"></div>
-    <div class="sheet-header">
-      <h3 id="detailLockName">Serrure</h3>
-      <button class="sheet-close" onclick="closeLockDetail()">&times;</button>
-    </div>
-    <div id="lockDetailBody"></div>
-  </div>
-</div>
+<!-- Lock Detail Modal (created dynamically, appended to body) -->
 
 <script>
 const token = localStorage.getItem('lcc_token');
 // Move modals to body to escape sidebar transform stacking context
-document.body.appendChild(document.getElementById('lockDetailSheet'));
 document.body.appendChild(document.getElementById('connectModal'));
 document.body.appendChild(document.getElementById('generateCodeModal'));
 document.body.appendChild(document.getElementById('assignModal'));
@@ -780,6 +768,25 @@ async function openLockDetail(lockId) {
   if (!lock) return;
   selectedLock = lock;
 
+  // Create modal if not exists (appended to body to escape sidebar stacking context)
+  let modal = document.getElementById('lockDetailModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'lockDetailModal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 12px;border-bottom:1px solid rgba(200,184,154,.4);flex-shrink:0;">
+          <div id="detailLockName" style="font-size:17px;font-weight:700;color:#0D1117;"></div>
+          <button onclick="closeLockDetail()" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
+        </div>
+        <div id="lockDetailBody" style="overflow-y:auto;padding:16px 20px 32px;"></div>
+      </div>
+    `;
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeLockDetail(); });
+    document.body.appendChild(modal);
+  }
+
   document.getElementById('detailLockName').textContent = lock.lock_name;
 
   // Fetch status
@@ -903,13 +910,13 @@ async function openLockDetail(lockId) {
     <div id="activity-${lock.id}" style="display:none;margin-top:16px;"></div>
   `;
 
-  const sheet = document.getElementById('lockDetailSheet');
-  sheet.scrollTop = 0;
-  sheet.classList.add('open');
+  modal.style.display = 'flex';
+  modal.querySelector('[style*="overflow-y"]').scrollTop = 0;
 }
 
 function closeLockDetail() {
-  document.getElementById('lockDetailSheet').classList.remove('open');
+  const modal = document.getElementById('lockDetailModal');
+  if (modal) modal.style.display = 'none';
 }
 
 async function remoteLock(lockId, action) {
