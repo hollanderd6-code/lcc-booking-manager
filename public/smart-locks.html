@@ -143,8 +143,9 @@ html, body { margin: 0; padding: 0; background: var(--sl-bg); font-family: 'DM S
 .bottom-sheet-content { position: relative; width: 100%; background: white; border-radius: 20px 20px 0 0; padding: 20px 20px 40px; transform: translateY(100%); transition: transform 0.3s ease; overflow-y: auto; max-height: 80vh; }
 .bottom-sheet.open .bottom-sheet-content { transform: translateY(0); }
 @media (min-width: 768px) {
-  .bottom-sheet { align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 20px; }
-  .bottom-sheet-content { max-width: 700px; border-radius: 20px; max-height: none; padding: 24px 28px 32px; transform: translateY(20px); opacity: 0; margin: auto; flex-shrink: 0; }
+  .bottom-sheet { align-items: center; justify-content: center; }
+  .bottom-sheet-overlay { position: fixed; inset: 0; }
+  .bottom-sheet-content { max-width: 700px; border-radius: 20px; max-height: calc(100vh - 80px); overflow-y: auto; padding: 24px 28px 32px; transform: translateY(20px); opacity: 0; }
   .bottom-sheet.open .bottom-sheet-content { transform: translateY(0); opacity: 1; }
   .bottom-sheet .sheet-handle { display: none; }
 }
