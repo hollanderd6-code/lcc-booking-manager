@@ -1201,20 +1201,10 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 <span>Cautions</span>
 <span class="tab-badge" id="depositsCount" style="display:none;">0</span>
 </button>
-<button class="tab-button" data-tab="history">
-<i class="fas fa-history"></i>
-<span>Historique cautions</span>
-<span class="tab-badge history" id="historyCount" style="display:none;">0</span>
-</button>
 <button class="tab-button" data-tab="payments">
 <i class="fas fa-euro-sign"></i>
 <span>Paiements</span>
 <span class="tab-badge" id="paymentsCount" style="display:none;">0</span>
-</button>
-<button class="tab-button" data-tab="payments-history">
-<i class="fas fa-history"></i>
-<span>Historique paiements</span>
-<span class="tab-badge history" id="paymentsHistoryCount" style="display:none;">0</span>
 </button>
 </div>
 
@@ -1249,10 +1239,17 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 <button class="dep-filter-chip" data-status="captured" onclick="setDepositFilter('captured')">💰 Débitées</button>
 <button class="dep-filter-chip" data-status="all" onclick="setDepositFilter('all')">📋 Toutes</button>
 </div>
+<div id="depositMonthFilter" class="month-filter-row" style="display:none;">
+<label style="font-size:12px;font-weight:500;color:var(--text-secondary,#666);">Période :</label>
+<select id="depositMonthSelect" onchange="renderDepositsTable()" style="padding:5px 10px;border-radius:8px;border:1.5px solid rgba(200,184,154,.35);font-size:12px;font-family:'DM Sans',sans-serif;background:white;color:#374151;">
+<option value="">Tous</option>
+</select>
+</div>
 <style>
 .dep-filter-chip{padding:7px 14px;border-radius:999px;border:1.5px solid rgba(200,184,154,.35);background:white;font-size:12px;font-weight:600;color:#6b7280;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
 .dep-filter-chip.active{background:#1A7A5E;color:white;border-color:#1A7A5E;}
 .dep-filter-chip:not(.active):hover{background:rgba(26,122,94,.06);color:#1A7A5E;border-color:#1A7A5E;}
+.month-filter-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
 </style>
 <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
 <div id="depositsContainer">
@@ -1262,43 +1259,6 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 </section>
 </div>
 <!-- FIN ONGLET CAUTIONS -->
-
-<!-- ONGLET : HISTORIQUE -->
-<div class="tab-pane" id="tab-history">
-<section class="card">
-<div class="card-header">
-<div class="card-title">
-<i class="fas fa-history"></i>
-<span>Historique des cautions</span>
-</div>
-<button class="btn btn-ghost btn-xs" id="refreshHistoryBtn">
-<i class="fas fa-sync-alt"></i>
-              Actualiser
-            </button>
-</div>
-
-<div class="history-notice">
-  <i class="fas fa-info-circle"></i>
-  <span>L'historique affiche les cautions des séjours terminés depuis moins d'un mois.</span>
-  <a href="https://dashboard.stripe.com/payments" target="_blank" class="btn btn-ghost" style="margin-left: auto; padding: 6px 12px; font-size: 12px;">
-    <i class="fas fa-external-link-alt"></i> Voir sur Stripe
-  </a>
-</div>
-
-<div class="form-row" style="margin-bottom: 10px; display:flex; align-items:center; gap:8px;">
-<label for="propertyFilterHistory" style="font-size:13px; font-weight:500;">Logement :</label>
-<select id="propertyFilterHistory">
-<option value="">Tous les logements</option>
-</select>
-</div>
-<div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
-<div id="historyContainer">
-<p class="empty-state">Chargement de l'historique…</p>
-</div>
-</div>
-</section>
-</div>
-<!-- FIN ONGLET HISTORIQUE -->
 
 <!-- ONGLET : PAIEMENTS DE LOCATIONS -->
 <div class="tab-pane" id="tab-payments">
@@ -1363,6 +1323,17 @@ Actualiser
 <option value="">Tous les logements</option>
 </select>
 </div>
+<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+<button class="dep-filter-chip active" data-pstatus="active" onclick="setPaymentFilter('active')">🟢 Actifs</button>
+<button class="dep-filter-chip" data-pstatus="paid" onclick="setPaymentFilter('paid')">💰 Payés</button>
+<button class="dep-filter-chip" data-pstatus="all" onclick="setPaymentFilter('all')">📋 Tous</button>
+</div>
+<div id="paymentMonthFilter" class="month-filter-row" style="display:none;">
+<label style="font-size:12px;font-weight:500;color:var(--text-secondary,#666);">Période :</label>
+<select id="paymentMonthSelect" onchange="renderPaymentsTable()" style="padding:5px 10px;border-radius:8px;border:1.5px solid rgba(200,184,154,.35);font-size:12px;font-family:'DM Sans',sans-serif;background:white;color:#374151;">
+<option value="">Tous</option>
+</select>
+</div>
 <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
 <div id="paymentsContainer">
 <p class="empty-state">Chargement des réservations…</p>
@@ -1372,41 +1343,6 @@ Actualiser
 
 </div>
 <!-- FIN ONGLET PAIEMENTS -->
-
-<!-- ONGLET : HISTORIQUE PAIEMENTS -->
-<div class="tab-pane" id="tab-payments-history">
-<section class="card">
-<div class="card-header">
-<div class="card-title">
-<i class="fas fa-history"></i>
-<span>Historique des paiements</span>
-</div>
-<button class="btn btn-ghost btn-xs" id="refreshPaymentsHistoryBtn">
-<i class="fas fa-sync-alt"></i>
-Actualiser
-</button>
-</div>
-<div class="history-notice">
-  <i class="fas fa-info-circle"></i>
-  <span>Paiements des séjours terminés depuis moins d'un mois.</span>
-  <a href="https://dashboard.stripe.com/payments" target="_blank" class="btn btn-ghost" style="margin-left:auto;padding:6px 12px;font-size:12px;">
-    <i class="fas fa-external-link-alt"></i> Voir sur Stripe
-  </a>
-</div>
-<div class="form-row" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-<label for="propertyFilterPaymentsHistory" style="font-size:13px;font-weight:500;">Logement :</label>
-<select id="propertyFilterPaymentsHistory">
-<option value="">Tous les logements</option>
-</select>
-</div>
-<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;">
-<div id="paymentsHistoryContainer">
-<p class="empty-state">Chargement de l'historique…</p>
-</div>
-</div>
-</section>
-</div>
-<!-- FIN ONGLET HISTORIQUE PAIEMENTS -->
 
 </div>
 </main>
@@ -1934,7 +1870,6 @@ function copyDepositLinkByUid(uid) {
 
     async function loadPropertiesForFilter() {
       const select = document.getElementById('propertyFilter');
-      const selectHistory = document.getElementById('propertyFilterHistory');
       if (!select) return;
 
       try {
@@ -1953,14 +1888,6 @@ function copyDepositLinkByUid(uid) {
           opt.value = p.id;
           opt.textContent = p.name;
           select.appendChild(opt);
-          
-          // Aussi pour le filtre historique
-          if (selectHistory) {
-            const opt2 = document.createElement('option');
-            opt2.value = p.id;
-            opt2.textContent = p.name;
-            selectHistory.appendChild(opt2);
-          }
         });
 
         // ✅ Peupler aussi le select logement du modal caution libre
@@ -1976,9 +1903,6 @@ function copyDepositLinkByUid(uid) {
         }
 
         select.addEventListener('change', renderDepositsTable);
-        if (selectHistory) {
-          selectHistory.addEventListener('change', renderHistoryTable);
-        }
 
         // ✅ Charger les propriétaires pour le select du modal caution libre
         try {
@@ -2065,7 +1989,6 @@ function copyDepositLinkByUid(uid) {
 
         console.log('✅ Réservations chargées:', allReservationsWithDeposits.length);
         renderDepositsTable();
-        renderHistoryTable();
         updateTabCounts();
       } catch (e) {
         console.error(e);
@@ -2176,26 +2099,22 @@ function copyDepositLinkByUid(uid) {
     
     function updateTabCounts() {
       const noAirbnb = (arr) => arr.filter(r => !((r.source || r.sourceRaw || r.channel || '').toLowerCase().includes('airbnb')));
+      const noBlocks = (arr) => arr.filter(r => {
+        const src = (r.source || r.sourceRaw || r.channel || r.guestName || '').toLowerCase();
+        return !(src.includes('block') || src.includes('blocage') || src.includes('indispo') || src.includes('not available') || src.includes('closed'));
+      });
 
-      const activeData = filterActiveDeposits(noAirbnb(allReservationsWithDeposits));
-      const historyData = filterHistoryDeposits(noAirbnb(allReservationsWithDeposits));
+      const activeData = filterActiveDeposits(noBlocks(noAirbnb(allReservationsWithDeposits)));
 
       // Compteurs paiements
       const activePayments = allPayments.filter(r => r.payment && filterActiveReservations([r]).length > 0);
-      const historyPayments = allPayments.filter(r => r.payment && filterHistoryReservations([r]).length > 0);
       const paymentsCountEl = document.getElementById('paymentsCount');
-      const paymentsHistoryCountEl = document.getElementById('paymentsHistoryCount');
       if (paymentsCountEl) {
         if (activePayments.length > 0) { paymentsCountEl.textContent = activePayments.length; paymentsCountEl.style.display = 'inline-flex'; }
         else paymentsCountEl.style.display = 'none';
       }
-      if (paymentsHistoryCountEl) {
-        if (historyPayments.length > 0) { paymentsHistoryCountEl.textContent = historyPayments.length; paymentsHistoryCountEl.style.display = 'inline-flex'; }
-        else paymentsHistoryCountEl.style.display = 'none';
-      }
       
       const depositsCountEl = document.getElementById('depositsCount');
-      const historyCountEl = document.getElementById('historyCount');
       
       if (depositsCountEl) {
         if (activeData.length > 0) {
@@ -2205,26 +2124,57 @@ function copyDepositLinkByUid(uid) {
           depositsCountEl.style.display = 'none';
         }
       }
-      
-      if (historyCountEl) {
-        if (historyData.length > 0) {
-          historyCountEl.textContent = historyData.length;
-          historyCountEl.style.display = 'inline-block';
-        } else {
-          historyCountEl.style.display = 'none';
-        }
-      }
+
+      // Populate month filters
+      populateMonthFilter(noBlocks(noAirbnb(allReservationsWithDeposits)), 'depositMonthSelect');
+      populateMonthFilter(allPayments, 'paymentMonthSelect');
+    }
+
+    // ============================================
+    // POPULATE MONTH/YEAR FILTER
+    // ============================================
+    function populateMonthFilter(data, selectId) {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const months = new Set();
+      data.forEach(r => {
+        const d = r.startDate || r.endDate;
+        if (d) months.add(d.substring(0, 7));
+      });
+      const sorted = Array.from(months).sort().reverse();
+      const current = select.value;
+      select.innerHTML = '<option value="">Tous</option>';
+      const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+      sorted.forEach(m => {
+        const [y, mo] = m.split('-');
+        const label = `${moisNoms[parseInt(mo)]} ${y}`;
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = label;
+        if (m === current) opt.selected = true;
+        select.appendChild(opt);
+      });
     }
 
     // ============================================
     // RENDER CAUTIONS ACTIVES
     // ============================================
     let currentDepositFilter = 'active'; // active | captured | all
+    let currentPaymentFilter = 'active'; // active | paid | all
+
+    function setPaymentFilter(status) {
+      currentPaymentFilter = status;
+      document.querySelectorAll('[data-pstatus]').forEach(c => c.classList.remove('active'));
+      document.querySelector(`[data-pstatus="${status}"]`)?.classList.add('active');
+      document.getElementById('paymentMonthFilter').style.display = (status === 'all') ? 'flex' : 'none';
+      renderPaymentsTable();
+    }
 
     function setDepositFilter(status) {
       currentDepositFilter = status;
-      document.querySelectorAll('.dep-filter-chip').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.dep-filter-chip[data-status]').forEach(c => c.classList.remove('active'));
       document.querySelector(`.dep-filter-chip[data-status="${status}"]`)?.classList.add('active');
+      document.getElementById('depositMonthFilter').style.display = (status === 'all') ? 'flex' : 'none';
       renderDepositsTable();
     }
 
@@ -2244,13 +2194,28 @@ function copyDepositLinkByUid(uid) {
         return !src.includes('airbnb');
       });
 
+      // 🚫 Exclure les blocages manuels
+      filtered = filtered.filter(r => {
+        const src = (r.source || r.sourceRaw || r.channel || r.guestName || '').toLowerCase();
+        return !(src.includes('block') || src.includes('blocage') || src.includes('indispo') || src.includes('not available') || src.includes('closed'));
+      });
+
       // Filtrer par statut selon l'onglet sélectionné
       if (currentDepositFilter === 'active') {
         filtered = filterActiveDeposits(filtered);
       } else if (currentDepositFilter === 'captured') {
         filtered = filtered.filter(r => r.deposit?.status === 'captured');
       }
-      // 'all' = pas de filtre supplémentaire
+      // 'all' = pas de filtre statut mais filtre mois possible
+      if (currentDepositFilter === 'all') {
+        const monthVal = document.getElementById('depositMonthSelect')?.value;
+        if (monthVal) {
+          filtered = filtered.filter(r => {
+            const d = r.startDate || r.endDate;
+            return d && d.substring(0, 7) === monthVal;
+          });
+        }
+      }
 
       // Regrouper par séjour
       const byReservation = new Map();
@@ -2876,11 +2841,6 @@ function showLinkModal(title, url) {
       if (refreshBtn) {
         refreshBtn.addEventListener('click', loadReservationsWithDeposits);
       }
-      
-      const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
-      if (refreshHistoryBtn) {
-        refreshHistoryBtn.addEventListener('click', loadReservationsWithDeposits);
-      }
 
       document.getElementById('depositModalClose').addEventListener('click', closeDepositModal);
       document.getElementById('depositCancelBtn').addEventListener('click', closeDepositModal);
@@ -3010,10 +2970,6 @@ function showLinkModal(title, url) {
       if (targetTab === 'payments') {
         checkStripeConnectStatus();
         loadPayments();
-      } else if (targetTab === 'history') {
-        renderHistoryTable();
-      } else if (targetTab === 'payments-history') {
-        renderPaymentsHistoryTable();
       }
     });
   });
@@ -3194,24 +3150,49 @@ function renderPaymentsTable() {
     return !PLATFORM_SOURCES.some(p => src.includes(p));
   };
 
-  // Fenêtre de temps : J-15 jusqu'à l'infini (réservations à venir + en cours + récentes)
+  // 🚫 Exclure les blocages manuels
+  const isNotBlock = (r) => {
+    const src = (r.source || r.guestName || '').toLowerCase();
+    return !(src.includes('block') || src.includes('blocage') || src.includes('indispo') || src.includes('not available') || src.includes('closed'));
+  };
+
+  // Fenêtre de temps selon le filtre
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const j15 = new Date(today);
   j15.setDate(j15.getDate() - 15);
 
   const isInWindow = (r) => {
+    if (currentPaymentFilter === 'all' || currentPaymentFilter === 'paid') return true;
     if (!r.endDate) return true;
     const end = new Date(r.endDate);
     end.setHours(0, 0, 0, 0);
-    return end >= j15; // séjours dont la fin est après J-15
+    return end >= j15;
   };
 
-  const filtered = allPayments.filter((r) =>
+  let filtered = allPayments.filter((r) =>
     (!selectedPropertyId || r.propertyId === selectedPropertyId) &&
     isDirectReservation(r) &&
+    isNotBlock(r) &&
     isInWindow(r)
   );
+
+  // Filtrer par statut selon l'onglet
+  if (currentPaymentFilter === 'active') {
+    // Actifs = pas encore payés ou en attente
+  } else if (currentPaymentFilter === 'paid') {
+    filtered = filtered.filter(r => r.payment && (r.payment.status === 'paid' || r.payment.status === 'succeeded'));
+  }
+  // 'all' = tout, avec filtre mois possible
+  if (currentPaymentFilter === 'all') {
+    const monthVal = document.getElementById('paymentMonthSelect')?.value;
+    if (monthVal) {
+      filtered = filtered.filter(r => {
+        const d = r.startDate || r.endDate;
+        return d && d.substring(0, 7) === monthVal;
+      });
+    }
+  }
 
   // Séparer : avec paiement en premier, sans paiement ensuite
   const withPayment = filtered.filter(r => r.payment);
@@ -3750,13 +3731,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const refreshPaymentsHistoryBtn = document.getElementById('refreshPaymentsHistoryBtn');
-  if (refreshPaymentsHistoryBtn) {
-    refreshPaymentsHistoryBtn.addEventListener('click', renderPaymentsHistoryTable);
-  }
-
-  loadPropertiesForPaymentsHistoryFilter();
-  
   loadPropertiesForPaymentsFilter();
 });
 </script>
