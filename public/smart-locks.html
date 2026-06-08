@@ -162,7 +162,7 @@ html, body { margin: 0; padding: 0; background: var(--sl-bg); font-family: 'DM S
 .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 
 /* SECTION CARD */
-.section-card { background: white; border-radius: 16px; border: 1px solid var(--sl-border-light); padding: 14px; }
+.section-card { background: white; border-radius: 16px; border: 1px solid var(--sl-border-light); padding: 20px; }
 
 /* ============================================================
    DARK BAR + STICKY HEADER
@@ -300,7 +300,7 @@ html[data-theme-v3="1"] .page-content { max-width: none !important; width: 100% 
 <!-- TAB: SERRURES -->
 <div class="tab-content active" id="tab-locks">
 <div class="section-card">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
   <div style="font-size:15px; font-weight:700; color:var(--sl-text);">Mes serrures</div>
   <button class="btn btn-primary btn-sm" onclick="syncAllLocks()"><i class="fa fa-sync"></i> Synchroniser</button>
 </div>
@@ -313,7 +313,7 @@ html[data-theme-v3="1"] .page-content { max-width: none !important; width: 100% 
 <!-- TAB: CODES -->
 <div class="tab-content" id="tab-codes">
 <div class="section-card">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
   <div style="font-size:15px; font-weight:700; color:var(--sl-text);">Codes d'accès</div>
   <button class="btn btn-primary btn-sm" onclick="openGenerateCodeModal()"><i class="fa fa-plus"></i> Générer un code</button>
 </div>
@@ -422,6 +422,11 @@ html[data-theme-v3="1"] .page-content { max-width: none !important; width: 100% 
 
 <script>
 const token = localStorage.getItem('lcc_token');
+// Move modals to body to escape sidebar transform stacking context
+document.body.appendChild(document.getElementById('lockDetailSheet'));
+document.body.appendChild(document.getElementById('connectModal'));
+document.body.appendChild(document.getElementById('generateCodeModal'));
+document.body.appendChild(document.getElementById('assignModal'));
 let connections = [];
 let locks = [];
 let codes = [];
@@ -827,12 +832,12 @@ async function openLockDetail(lockId) {
 
     <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Logement associé</div>
     ${lock.assignment ? `
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <span class="property-badge"><i class="fa fa-home"></i> ${esc(lock.assignment.property_name)}</span>
         <button class="btn btn-ghost btn-sm" onclick="unassignLock('${lock.id}')"><i class="fa fa-times" style="color:var(--sl-danger);"></i></button>
       </div>
     ` : `
-      <div style="margin-bottom:10px;">
+      <div style="margin-bottom:16px;">
         <button class="btn btn-secondary btn-sm" onclick="closeLockDetail(); openAssignModal('${lock.id}')"><i class="fa fa-link"></i> Associer à un logement</button>
       </div>
     `}
@@ -861,7 +866,7 @@ async function openLockDetail(lockId) {
     <!-- Formulaire ajout code -->
     <div style="margin-top:10px;background:#f9fafb;border-radius:10px;padding:10px;border:1px dashed rgba(200,184,154,.4);">
       <div style="font-size:12px;font-weight:700;margin-bottom:6px;">➕ Ajouter un code</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Nom</label>
           <input type="text" id="newcode-name-${lock.id}" placeholder="Ex: Ménage" class="form-control" style="padding:6px 8px;font-size:12px;"/>
@@ -871,7 +876,7 @@ async function openLockDetail(lockId) {
           <input type="text" id="newcode-pin-${lock.id}" placeholder="Auto (6 chiffres)" class="form-control" style="padding:6px 8px;font-size:12px;" maxlength="6"/>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Début</label>
           <input type="datetime-local" id="newcode-start-${lock.id}" class="form-control" style="padding:6px 8px;font-size:11px;" value="${toLocalISO(new Date())}"/>
