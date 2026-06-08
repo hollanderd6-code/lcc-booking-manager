@@ -24420,6 +24420,20 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
 // ── Helper : résoudre ou générer un code serrure à la volée ──
 async function resolveOrGenerateLockCode(pool, propertyId, userId, reservationUid, startDate, endDate, guestName) {
   try {
+    // 0. Si reservation_uid manquant, le résoudre depuis la table reservations
+    if (!reservationUid && propertyId && startDate) {
+      const resLookup = await pool.query(
+        `SELECT uid FROM reservations
+         WHERE property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled'
+         ORDER BY created_at DESC LIMIT 1`,
+        [propertyId, startDate]
+      );
+      if (resLookup.rows[0]?.uid) {
+        reservationUid = resLookup.rows[0].uid;
+        console.log(`🔑 [SMART-LOCK] reservation_uid résolu: ${reservationUid}`);
+      }
+    }
+
     // 1. Chercher un code existant
     const existing = await pool.query(
       `SELECT slc.code FROM smart_lock_codes slc
