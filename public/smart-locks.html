@@ -136,33 +136,33 @@ html, body { margin: 0; padding: 0; background: var(--sl-bg); font-family: 'DM S
 .filter-chip:not(.active):hover { background: rgba(26,122,94,.08); color: var(--sl-primary); }
 
 /* BOTTOM SHEET */
-.bottom-sheet { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: flex-end; pointer-events: none; }
+.bottom-sheet { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
 .bottom-sheet.open { pointer-events: auto; }
 .bottom-sheet-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0); transition: background 0.3s ease; }
 .bottom-sheet.open .bottom-sheet-overlay { background: rgba(0,0,0,0.5); }
-.bottom-sheet-content { position: relative; width: 100%; background: white; border-radius: 20px 20px 0 0; padding: 20px 20px 40px; transform: translateY(100%); transition: transform 0.3s ease; overflow-y: auto; max-height: 80vh; }
+.bottom-sheet-content { position: relative; width: 100%; background: white; border-radius: 20px 20px 0 0; padding: 16px 16px 32px; transform: translateY(100%); transition: transform 0.3s ease; overflow-y: auto; max-height: 85vh; }
 .bottom-sheet.open .bottom-sheet-content { transform: translateY(0); }
 @media (min-width: 768px) {
   .bottom-sheet { display: none !important; }
   .bottom-sheet.open { display: flex !important; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); padding: 0; }
   .bottom-sheet-overlay { display: none; }
-  .bottom-sheet-content { position: relative; width: 90%; max-width: 700px; border-radius: 20px; max-height: 90vh; overflow-y: auto; padding: 24px 28px 32px; transform: none; opacity: 1; margin: 0; box-shadow: 0 24px 64px rgba(13,17,23,.2); }
+  .bottom-sheet-content { position: relative; width: 90%; max-width: 560px; border-radius: 20px; max-height: 85vh; overflow-y: auto; padding: 20px 24px 24px; transform: none; opacity: 1; margin: 0; box-shadow: 0 24px 64px rgba(13,17,23,.2); }
   .bottom-sheet .sheet-handle { display: none; }
 }
-.sheet-handle { width: 40px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 0 auto 16px; }
-.sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.sheet-header h3 { margin: 0; font-size: 18px; font-weight: 700; }
+.sheet-handle { width: 40px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 0 auto 12px; }
+.sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.sheet-header h3 { margin: 0; font-size: 17px; font-weight: 700; }
 .sheet-close { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; width: 32px; height: 32px; color: #6b7280; }
 
 /* LOCK DETAIL */
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.detail-item { background: #f9fafb; border-radius: 10px; padding: 12px; }
-.detail-item-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--sl-text-muted); margin-bottom: 4px; }
-.detail-item-value { font-size: 15px; font-weight: 600; color: var(--sl-text); }
-.detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.detail-item { background: #f9fafb; border-radius: 10px; padding: 10px; }
+.detail-item-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--sl-text-muted); margin-bottom: 2px; }
+.detail-item-value { font-size: 14px; font-weight: 600; color: var(--sl-text); }
+.detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 
 /* SECTION CARD */
-.section-card { background: white; border-radius: 16px; border: 1px solid var(--sl-border-light); padding: 20px; }
+.section-card { background: white; border-radius: 16px; border: 1px solid var(--sl-border-light); padding: 14px; }
 
 /* ============================================================
    DARK BAR + STICKY HEADER
@@ -825,26 +825,26 @@ async function openLockDetail(lockId) {
       ${status.firmwareVersion ? `<div class="detail-item"><div class="detail-item-label">Firmware</div><div class="detail-item-value">${esc(status.firmwareVersion)}</div></div>` : ''}
     </div>
 
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Logement associé</div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Logement associé</div>
     ${lock.assignment ? `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <span class="property-badge"><i class="fa fa-home"></i> ${esc(lock.assignment.property_name)}</span>
         <button class="btn btn-ghost btn-sm" onclick="unassignLock('${lock.id}')"><i class="fa fa-times" style="color:var(--sl-danger);"></i></button>
       </div>
     ` : `
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:10px;">
         <button class="btn btn-secondary btn-sm" onclick="closeLockDetail(); openAssignModal('${lock.id}')"><i class="fa fa-link"></i> Associer à un logement</button>
       </div>
     `}
 
-    <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🔑 Codes enregistrés (${lockCodes.length})</div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px;">🔑 Codes enregistrés (${lockCodes.length})</div>
     ${lockCodes.length > 0 ? lockCodes.map(c => {
       const statusClass = c.status === 'active' ? 'status-active' : c.status === 'expired' ? 'status-expired' : 'status-revoked';
       const statusLabel = c.status === 'active' ? 'Actif' : c.status === 'expired' ? 'Expiré' : 'Révoqué';
       return `
-      <div style="background:#f9fafb;border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid ${c.status === 'active' ? 'rgba(16,185,129,.3)' : '#e5e7eb'};">
+      <div style="background:#f9fafb;border-radius:10px;padding:10px;margin-bottom:6px;border:1px solid ${c.status === 'active' ? 'rgba(16,185,129,.3)' : '#e5e7eb'};">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:20px;letter-spacing:3px;color:${c.status === 'active' ? 'var(--sl-primary)' : 'var(--sl-text-muted)'};">${esc(c.code)}</span>
+          <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:16px;letter-spacing:2px;color:${c.status === 'active' ? 'var(--sl-primary)' : 'var(--sl-text-muted)'};">${esc(c.code)}</span>
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="status-badge ${statusClass}">${statusLabel}</span>
             ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')" title="Supprimer"><i class="fa fa-trash" style="color:var(--sl-danger);font-size:12px;"></i></button>` : ''}
@@ -859,7 +859,7 @@ async function openLockDetail(lockId) {
     }).join('') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucun code enregistré.</div>'}
 
     <!-- Formulaire ajout code -->
-    <div style="margin-top:16px;background:#f9fafb;border-radius:12px;padding:14px;border:1px dashed rgba(200,184,154,.4);">
+    <div style="margin-top:12px;background:#f9fafb;border-radius:10px;padding:12px;border:1px dashed rgba(200,184,154,.4);">
       <div style="font-size:13px;font-weight:700;margin-bottom:10px;">➕ Ajouter un code</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <div>
