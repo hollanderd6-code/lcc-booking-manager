@@ -1094,8 +1094,8 @@ window.confirm = function(msg) {
     var btn = document.createElement('button');
     btn.id = 'agencySwitcherBtnMobile';
     btn.onclick = function() { if (window.openAgencySwitcherModal) window.openAgencySwitcherModal(); };
-    btn.style.cssText = 'display:none;position:absolute;right:90px;top:50%;transform:translateY(-50%);background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:"DM Sans",sans-serif;font-size:11px;font-weight:600;color:#7c3aed;gap:5px;align-items:center;white-space:nowrap;z-index:10;transition:all .2s;';
-    btn.innerHTML = '<i class="fas fa-building" style="font-size:10px;"></i><span id="agencySwitcherLabelMobile">Agence</span>';
+    btn.style.cssText = 'display:none;position:absolute;right:75px;top:50%;transform:translateY(-50%);background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:8px;padding:7px 9px;cursor:pointer;font-family:"DM Sans",sans-serif;font-size:11px;font-weight:600;color:#7c3aed;gap:5px;align-items:center;white-space:nowrap;z-index:10;transition:all .2s;';
+    btn.innerHTML = '<i class="fas fa-building" style="font-size:13px;"></i>';
     if (!mh.style.position || mh.style.position === 'static') mh.style.position = 'relative';
     mh.appendChild(btn);
   }
