@@ -9,6 +9,18 @@ module.exports = function createSmartLocksRoutes(pool) {
     return req.user?.parentUserId || req.user?.id;
   }
 
+  // ── Helper agence : retourne tous les user IDs si agency=all ──
+  async function getAgencyUserIds(req, userId) {
+    if (req.query.agency !== 'all') return [userId];
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      );
+      return [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch(e) { return [userId]; }
+  }
+
   // ── Helper : auto-générer les codes pour toutes les réservations futures d'un logement (ou de tous) ──
   async function autoGenerateCodesForProperty(pool, userId, propertyId) {
     const propertyFilter = propertyId
@@ -72,14 +84,15 @@ module.exports = function createSmartLocksRoutes(pool) {
   router.get('/', async (req, res) => {
     try {
       const userId = getUserId(req);
+      const agencyIds = await getAgencyUserIds(req, userId);
       const result = await pool.query(
         `SELECT sl.*, sla.property_id, p.name AS property_name
          FROM smart_locks sl
          LEFT JOIN smart_lock_assignments sla ON sla.lock_id = sl.id
          LEFT JOIN properties p ON p.id = sla.property_id
-         WHERE sl.user_id = $1
+         WHERE sl.user_id = ANY($1::text[])
          ORDER BY sl.lock_name`,
-        [userId]
+        [agencyIds]
       );
 
       const locks = result.rows.map(r => ({
@@ -120,9 +133,10 @@ module.exports = function createSmartLocksRoutes(pool) {
   router.get('/status', async (req, res) => {
     try {
       const userId = getUserId(req);
+      const agencyIds = await getAgencyUserIds(req, userId);
       const result = await pool.query(
-        `SELECT id, brand, is_active, last_sync_at, created_at FROM smart_lock_connections WHERE user_id = $1`,
-        [userId]
+        `SELECT id, brand, is_active, last_sync_at, created_at FROM smart_lock_connections WHERE user_id = ANY($1::text[])`,
+        [agencyIds]
       );
 
       const connections = result.rows.map(r => ({
@@ -137,10 +151,10 @@ module.exports = function createSmartLocksRoutes(pool) {
 
       // Stats
       const lockCount = await pool.query(
-        'SELECT COUNT(*) FROM smart_locks WHERE user_id = $1', [userId]
+        'SELECT COUNT(*) FROM smart_locks WHERE user_id = ANY($1::text[])', [agencyIds]
       );
       const codeCount = await pool.query(
-        `SELECT COUNT(*) FROM smart_lock_codes WHERE user_id = $1 AND status = 'active'`, [userId]
+        `SELECT COUNT(*) FROM smart_lock_codes WHERE user_id = ANY($1::text[]) AND status = 'active'`, [agencyIds]
       );
 
       res.json({
@@ -473,6 +487,7 @@ module.exports = function createSmartLocksRoutes(pool) {
   router.get('/codes', async (req, res) => {
     try {
       const userId = getUserId(req);
+      const agencyIds = await getAgencyUserIds(req, userId);
       const { status, propertyId, reservationUid } = req.query;
 
       let query = `
@@ -480,9 +495,9 @@ module.exports = function createSmartLocksRoutes(pool) {
         FROM smart_lock_codes slc
         JOIN smart_locks sl ON sl.id = slc.lock_id
         LEFT JOIN properties p ON p.id = slc.property_id
-        WHERE slc.user_id = $1
+        WHERE slc.user_id = ANY($1::text[])
       `;
-      const params = [userId];
+      const params = [agencyIds];
       let idx = 2;
 
       if (status) { query += ` AND slc.status = $${idx++}`; params.push(status); }

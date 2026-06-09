@@ -107,6 +107,19 @@ const initWelcomeBookTables = async (_pool) => {
   return;
 };
 
+// ── Helper agence : retourne tous les user IDs si agency=all ──
+async function getAgencyUserIds(req, userId) {
+  if (req.query.agency !== 'all') return [userId];
+  try {
+    const pool = req.app.locals.pool;
+    const delegations = await pool.query(
+      `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+      [userId]
+    );
+    return [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+  } catch(e) { return [userId]; }
+}
+
 // ---------- Helpers ----------
 function safeJsonParse(val, fallback) {
   try {
@@ -141,14 +154,15 @@ router.get('/my-book', authenticateUser, async (req, res) => {
   try {
     const pool = req.app.locals.pool;
     
-    // On cherche le livret de l'utilisateur connectÃ©
+    const agencyIds = await getAgencyUserIds(req, req.userId);
+    // On cherche le livret de l'utilisateur connecté
     const result = await pool.query(
       `SELECT unique_id, data
        FROM welcome_books_v2
-       WHERE user_id = $1
+       WHERE user_id = ANY($1::text[])
        ORDER BY (data->>'sortOrder')::int ASC NULLS LAST, updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
        LIMIT 1`,
-      [req.userId]
+      [agencyIds]
     );
 
     if (result.rows.length === 0) {
@@ -347,15 +361,16 @@ router.get('/user/list', authenticateUser, async (req, res) => {
     const pool = req.app.locals.pool;
     if (!pool) return res.status(500).json({ success: false, error: 'Pool DB manquant (app.locals.pool)' });
 
+    const agencyIds = await getAgencyUserIds(req, req.userId);
     const result = await pool.query(
       `SELECT unique_id, property_name, data->'photos'->>'cover' as cover_photo,
               (data->>'isDraft')::boolean as is_draft,
               (data->>'lastSection')::int as last_section,
               updated_at
        FROM public.welcome_books_v2
-       WHERE user_id = $1
+       WHERE user_id = ANY($1::text[])
        ORDER BY (data->>'sortOrder')::int ASC NULLS LAST, updated_at DESC`,
-      [req.userId]
+      [agencyIds]
     );
 
     // Return a compact list for UI
