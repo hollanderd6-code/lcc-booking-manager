@@ -38,14 +38,29 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
   };
   _debounceMap.set(convId, entry);
 
-  // Vérif rapide : si la conv est déjà escaladée, notifier et sortir
+  // Vérif rapide : si l'IA est désactivée ou conv escaladée récemment
   try {
-    const freshConv = await pool.query('SELECT escalated FROM conversations WHERE id = $1', [convId]);
-    if (freshConv.rows[0]?.escalated) {
+    const freshConv = await pool.query('SELECT escalated, escalated_at, ai_disabled FROM conversations WHERE id = $1', [convId]);
+    const conv = freshConv.rows[0];
+    if (conv?.ai_disabled) {
       clearTimeout(entry.timer);
       _debounceMap.delete(convId);
-      console.log(`ℹ️ [DEBOUNCE] Message OTA système ignoré (conv ${convId}) — pas de réponse Groq`);
+      console.log(`🔇 [DEBOUNCE] IA désactivée pour conv ${convId}`);
       return true;
+    }
+    if (conv?.escalated) {
+      // Auto-reprise après 4h
+      const hoursAgo = conv.escalated_at ? (Date.now() - new Date(conv.escalated_at).getTime()) / 3600000 : 999;
+      if (hoursAgo < 4) {
+        clearTimeout(entry.timer);
+        _debounceMap.delete(convId);
+        console.log(`ℹ️ [DEBOUNCE] Conv escaladée il y a ${hoursAgo.toFixed(1)}h → bot silencieux`);
+        return true;
+      } else {
+        // Reset escalade — l'IA reprend la main
+        await pool.query('UPDATE conversations SET escalated = FALSE, escalated_at = NULL WHERE id = $1', [convId]);
+        console.log(`🔄 [DEBOUNCE] Conv ${convId} : escalade expirée (${hoursAgo.toFixed(1)}h) → IA reprend`);
+      }
     }
   } catch {}
 
@@ -308,27 +323,45 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       return false;
     }
 
-    // ─── Conversation déjà escaladée ──────────────────────────────
+    // ─── IA désactivée manuellement ─────────────────────────────
     try {
-      const freshConv = await pool.query('SELECT escalated FROM conversations WHERE id = $1', [conversation.id]);
+      const aiCheck = await pool.query('SELECT ai_disabled FROM conversations WHERE id = $1', [conversation.id]);
+      if (aiCheck.rows[0]?.ai_disabled) {
+        console.log(`🔇 [HANDLER] IA désactivée pour conv ${conversation.id}`);
+        return false;
+      }
+    } catch(e) {}
+
+    // ─── Conversation déjà escaladée (auto-reprise après 4h) ──
+    try {
+      const freshConv = await pool.query('SELECT escalated, escalated_at FROM conversations WHERE id = $1', [conversation.id]);
       if (freshConv.rows[0]?.escalated) {
-        console.log(`ℹ️ [HANDLER] Conv escaladée → bot silencieux, notif proprio`);
-        try {
-          const tokens = await pool.query(
-            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-            [conversation.user_id]
-          );
-          const { sendNotification } = require('./services/notifications-service');
-          for (const tok of tokens.rows) {
-            await sendNotification(
-              tok.fcm_token,
-              `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} a répondu`,
-              `Nouveau message dans une conversation en attente.`,
-              { type: 'new_guest_message', conversation_id: String(conversation.id) }
+        const hoursAgo = freshConv.rows[0].escalated_at 
+          ? (Date.now() - new Date(freshConv.rows[0].escalated_at).getTime()) / 3600000 
+          : 999;
+        if (hoursAgo < 4) {
+          console.log(`ℹ️ [HANDLER] Conv escaladée il y a ${hoursAgo.toFixed(1)}h → bot silencieux, notif proprio`);
+          try {
+            const tokens = await pool.query(
+              'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+              [conversation.user_id]
             );
-          }
-        } catch(e) { console.error('❌ [HANDLER] Erreur notif escalade:', e.message); }
-        return true;
+            const { sendNotification } = require('./services/notifications-service');
+            for (const tok of tokens.rows) {
+              await sendNotification(
+                tok.fcm_token,
+                `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} a répondu`,
+                `Nouveau message dans une conversation en attente.`,
+                { type: 'new_guest_message', conversation_id: String(conversation.id) }
+              );
+            }
+          } catch(e) { console.error('❌ [HANDLER] Erreur notif escalade:', e.message); }
+          return true;
+        } else {
+          // Reset escalade — l'IA reprend
+          await pool.query('UPDATE conversations SET escalated = FALSE, escalated_at = NULL WHERE id = $1', [conversation.id]);
+          console.log(`🔄 [HANDLER] Conv ${conversation.id} : escalade expirée → IA reprend la main`);
+        }
       }
     } catch(e) {
       if (conversation.escalated) return true;

@@ -2052,6 +2052,12 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonnes guest_language + language OK');
     } catch(e) { console.log('ℹ️ guest_language:', e.message); }
 
+    // ✅ Migration : ai_disabled sur conversations
+    try {
+      await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS ai_disabled BOOLEAN DEFAULT FALSE`);
+      console.log('✅ Colonne ai_disabled OK');
+    } catch(e) { console.log('ℹ️ ai_disabled:', e.message); }
+
     // ✅ Migration : quick_replies sur properties
     try {
       await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS quick_replies JSONB DEFAULT '[]'::jsonb`);

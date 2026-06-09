@@ -1156,6 +1156,10 @@ html[data-theme-v3="1"] .app-container {
             </div>
           </div>
           <div class="msgs-chat-actions">
+            <button class="msgs-icon-btn" id="btnToggleAI" title="Activer/Désactiver l'IA" onclick="toggleConversationAI()" style="display:none;font-size:13px;gap:4px;align-items:center;padding:4px 10px;border-radius:8px;cursor:pointer;transition:all .2s;">
+              <i class="fas fa-robot"></i>
+              <span id="btnToggleAILabel" style="font-size:11px;"></span>
+            </button>
             <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i> Envoyer la facture</button>
             
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
@@ -2236,6 +2240,21 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
     // Stocker la conv courante pour la facture
     window.currentChatConv = conv || null;
+
+    // ── Toggle IA : afficher l'état ──
+    var aiBtn = document.getElementById('btnToggleAI');
+    var aiLabel = document.getElementById('btnToggleAILabel');
+    if (aiBtn && conv) {
+      aiBtn.style.display = 'inline-flex';
+      var isDisabled = conv.ai_disabled === true;
+      aiLabel.textContent = isDisabled ? 'IA off' : 'IA on';
+      aiBtn.style.background = isDisabled ? 'rgba(239,68,68,.1)' : 'rgba(16,185,129,.1)';
+      aiBtn.style.color = isDisabled ? '#EF4444' : '#10B981';
+      aiBtn.style.border = isDisabled ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(16,185,129,.25)';
+      aiBtn.title = isDisabled ? 'IA désactivée — cliquez pour réactiver' : 'IA active — cliquez pour désactiver';
+    } else if (aiBtn) {
+      aiBtn.style.display = 'none';
+    }
 
     // Active state in list
     document.querySelectorAll('#conversationsList .conversation-item').forEach(function(el) {
@@ -4050,10 +4069,38 @@ window.openInvoiceFromConversation = function() {
     conversationId: conv.id || window.currentConversationId || null,
   });
 };
+
+// ── Toggle IA par conversation ──
+window.toggleConversationAI = async function() {
+  var conv = window.currentChatConv;
+  if (!conv) return;
+  var token = localStorage.getItem('lcc_token');
+  try {
+    var res = await fetch('/api/chat/toggle-ai/' + conv.id, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    var data = await res.json();
+    if (data.success) {
+      conv.ai_disabled = data.ai_disabled;
+      var aiBtn = document.getElementById('btnToggleAI');
+      var aiLabel = document.getElementById('btnToggleAILabel');
+      if (aiBtn) {
+        var isOff = data.ai_disabled;
+        aiLabel.textContent = isOff ? 'IA off' : 'IA on';
+        aiBtn.style.background = isOff ? 'rgba(239,68,68,.1)' : 'rgba(16,185,129,.1)';
+        aiBtn.style.color = isOff ? '#EF4444' : '#10B981';
+        aiBtn.style.border = isOff ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(16,185,129,.25)';
+        aiBtn.title = isOff ? 'IA désactivée — cliquez pour réactiver' : 'IA active — cliquez pour désactiver';
+      }
+      if (window._allConversations) {
+        var c = window._allConversations.find(function(x) { return x.id == conv.id; });
+        if (c) c.ai_disabled = data.ai_disabled;
+      }
+    }
+  } catch(e) { console.error('Erreur toggle IA:', e); }
+};
 </script>
-
-
-
 <script>
 // Helper : formater timestamp avec date si pas aujourd'hui
 function fmtMsgTime(isoStr) {

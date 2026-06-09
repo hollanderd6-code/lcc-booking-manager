@@ -1100,6 +1100,31 @@ if (sender_type === 'owner' || sender_type === 'property') {
   });
 
   // ============================================
+  // 6b. TOGGLE IA PAR CONVERSATION
+  // ============================================
+  app.post('/api/chat/toggle-ai/:conversationId', authenticateToken, async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.id;
+      // Vérifier que la conversation appartient à l'utilisateur
+      const conv = await pool.query('SELECT id, ai_disabled FROM conversations WHERE id = $1 AND user_id = $2', [conversationId, userId]);
+      if (!conv.rows.length) return res.status(404).json({ error: 'Conversation non trouvée' });
+
+      const newState = !conv.rows[0].ai_disabled;
+      await pool.query('UPDATE conversations SET ai_disabled = $1 WHERE id = $2', [newState, conversationId]);
+      // Si on réactive l'IA, reset l'escalade aussi
+      if (!newState) {
+        await pool.query('UPDATE conversations SET escalated = FALSE, escalated_at = NULL WHERE id = $1', [conversationId]);
+      }
+      console.log(`🤖 [CHAT] Conv ${conversationId} : IA ${newState ? 'désactivée' : 'réactivée'}`);
+      res.json({ success: true, ai_disabled: newState });
+    } catch(e) {
+      console.error('❌ toggle-ai:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ============================================
   // 7. GÉNÉRER LE MESSAGE POUR AIRBNB/BOOKING
   // ============================================
   
