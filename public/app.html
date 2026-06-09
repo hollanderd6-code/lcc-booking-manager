@@ -14266,6 +14266,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     if (document.getElementById('bhPromoPanel')) {
       closePromoPanel(); return;
     }
+    window._bhHoldCreated = false; // reset pour nouveau lien
 
     // Overlay
     var ov = document.createElement('div');
@@ -14610,7 +14611,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <input type="number" id="bhLinkFixedPrice" placeholder="350" min="1" onchange="bhUpdateLink()" oninput="bhUpdateLink()"
                 style="flex:1;padding:9px 12px;border:none;font-size:14px;font-weight:600;box-sizing:border-box;font-family:inherit;outline:none;background:transparent;">
             </div>
-            <div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Prix total du séjour affiché au voyageur. Les 3% de frais BHGuest s'appliqueront en plus.</div>
+            <div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Prix total payé par le voyageur (frais BHGuest 3% inclus).</div>
           </div>
         </div>
       </div>
@@ -14688,8 +14689,9 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
         + ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')');
     }
     if (fixedPrice) {
-      var commission = Math.round(fixedPrice * 0.03 * 100) / 100;
-      lines.push('💶 Prix fixe : ' + fixedPrice + '€ + ' + commission + '€ frais BHGuest = ' + (fixedPrice + commission) + '€ TTC');
+      var commission = Math.round(fixedPrice * 100 / 103 * 3) / 100;
+      var hostReceives = Math.round((fixedPrice - commission) * 100) / 100;
+      lines.push('💶 Prix total : ' + fixedPrice + '€ TTC (dont ' + commission.toFixed(2) + '€ frais BHGuest)');
     }
     if (promo) lines.push('🏷️ Code promo : ' + promo);
     document.getElementById('bhLinkSummary').innerHTML = lines.join('<br>');
@@ -14722,6 +14724,11 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     var email      = (document.getElementById('bhLinkEmail')?.value || '').trim();
     var phone      = (document.getElementById('bhLinkPhone')?.value || '').trim();
     if (!propId || !checkin || !checkout) return;
+    if (!email && !phone) {
+      var status = document.getElementById('bhHoldStatus');
+      if (status) { status.style.display = 'block'; status.style.color = '#DC2626'; status.innerHTML = '❌ Veuillez renseigner au moins un email ou un téléphone client.'; }
+      return;
+    }
 
     var btn = document.getElementById('bhHoldBtn');
     var status = document.getElementById('bhHoldStatus');
@@ -14781,30 +14788,63 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     await window.bhHoldDates();
   };
 
-  window.bhCopyLink = function() {
+  window.bhCopyLink = async function() {
     var url = window._bhGeneratedLink;
     if (!url) return;
+
+    // Vérifier email ou téléphone obligatoire
+    var email = (document.getElementById('bhLinkEmail')?.value || '').trim();
+    var phone = (document.getElementById('bhLinkPhone')?.value || '').trim();
+    if (!email && !phone) {
+      var status = document.getElementById('bhHoldStatus');
+      if (status) {
+        status.style.display = 'block';
+        status.style.color = '#DC2626';
+        status.innerHTML = '❌ Veuillez renseigner au moins un email ou un téléphone client.';
+      }
+      return;
+    }
+
     var btn = document.getElementById('bhCopyBtn');
-    navigator.clipboard.writeText(url).then(() => {
-      btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-      btn.style.background = '#059669';
-      setTimeout(() => {
-        btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
-        btn.style.background = '#1A7A5E';
-      }, 2000);
-    }).catch(() => {
-      // Fallback
-      var ta = document.createElement('textarea');
-      ta.value = url; ta.style.position='fixed'; ta.style.opacity='0';
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-      ta.remove();
-      btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-      btn.style.background = '#059669';
-      setTimeout(() => {
-        btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
-        btn.style.background = '#1A7A5E';
-      }, 2000);
-    });
+
+    // Copier le lien
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(url);
+      else { var ta = document.createElement('textarea'); ta.value = url; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    } catch(e) {}
+
+    // Créer le hold si pas encore fait
+    if (!window._bhHoldCreated) {
+      var propId   = document.getElementById('bhLinkProp')?.value;
+      var checkin  = document.getElementById('bhLinkCheckin')?.value;
+      var checkout = document.getElementById('bhLinkCheckout')?.value;
+      var fixedPrice = parseFloat(document.getElementById('bhLinkFixedPrice')?.value) || null;
+      if (propId && checkin && checkout) {
+        try {
+          var token = localStorage.getItem('lcc_token');
+          var res = await fetch((window.API_URL || '') + '/api/guest/hold', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ property_id: propId, checkin, checkout, fixed_price: fixedPrice, guest_email: email || null, guest_phone: phone || null, skip_send: true })
+          });
+          if (res.ok) {
+            window._bhHoldCreated = true;
+            var data = await res.json();
+            var exp = new Date(data.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            var statusEl = document.getElementById('bhHoldStatus');
+            if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#059669'; statusEl.innerHTML = '✅ Lien copié · Dates bloquées jusqu\'à ' + exp; }
+            if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+          }
+        } catch(e) { console.warn('Hold creation on copy:', e.message); }
+      }
+    }
+
+    btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+    btn.style.background = '#059669';
+    setTimeout(() => {
+      btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
+      btn.style.background = '#1A7A5E';
+    }, 2000);
   };
 
   window.bhShareLink = function() {

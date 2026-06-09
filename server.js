@@ -32935,7 +32935,8 @@ app.post('/api/guest/book', async (req, res) => {
       }
     }
 
-    const commission = Math.round(totalBase * 0.03 * 100) / 100;
+    // Si prix fixe : commission incluse (pas ajoutée en plus)
+    const commission = isFixedPrice ? 0 : Math.round(totalBase * 0.03 * 100) / 100;
     const totalTTC = Math.round((totalBase + commission) * 100); // en centimes
 
     // Créer le PaymentIntent Stripe
@@ -34667,7 +34668,7 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       : (await getUserFromRequest(req))?.id;
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
-    const { property_id, checkin, checkout, guest_email, guest_phone, fixed_price } = req.body;
+    const { property_id, checkin, checkout, guest_email, guest_phone, fixed_price, skip_send } = req.body;
     if (!property_id || !checkin || !checkout) {
       return res.status(400).json({ error: 'property_id, checkin et checkout requis' });
     }
@@ -34777,8 +34778,8 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       console.warn('⚠️ [HOLD] Channex non bloqué (non bloquant):', channexErr.message);
     }
 
-    // Envoyer le lien par email si fourni
-    if (guest_email) {
+    // Envoyer le lien par email si fourni (sauf si skip_send)
+    if (guest_email && !skip_send) {
       try {
         const propNameRes = await pool.query('SELECT name FROM properties WHERE id = $1', [property_id]);
         const propName = propNameRes.rows[0]?.name || property_id;
@@ -34794,7 +34795,7 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
           to: guest_email,
           subject: `🏠 Votre lien de réservation — ${propName}`,
           text: `Bonjour,\n\nVoici votre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}.\n\nLien : ${bookingUrl}\n\nCe lien et les dates sont réservés pour vous pendant 4 heures.`,
-          html: `<p>Bonjour,</p><p>Voici votre lien de réservation pour <strong>${propName}</strong> du <strong>${fmtDate(checkin)}</strong> au <strong>${fmtDate(checkout)}</strong>.</p>${fixed_price ? `<p>Prix total : <strong>${fixed_price}€</strong> + 3% frais BHGuest</p>` : ''}<p><a href="${bookingUrl}" style="display:inline-block;background:#1A7A5E;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Réserver maintenant</a></p><p style="color:#6B7280;font-size:12px;">Ce lien expire dans 4 heures.</p>`
+          html: `<p>Bonjour,</p><p>Voici votre lien de réservation pour <strong>${propName}</strong> du <strong>${fmtDate(checkin)}</strong> au <strong>${fmtDate(checkout)}</strong>.</p>${fixed_price ? `<p>Prix total : <strong>${fixed_price}€</strong></p>` : ''}<p><a href="${bookingUrl}" style="display:inline-block;background:#1A7A5E;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Réserver maintenant</a></p><p style="color:#6B7280;font-size:12px;">Ce lien expire dans 4 heures.</p>`
         });
         console.log(`📧 [HOLD] Email envoyé à ${guest_email}`);
       } catch(emailErr) {
@@ -34802,8 +34803,8 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       }
     }
 
-    // Envoyer le lien par SMS si fourni
-    if (guest_phone) {
+    // Envoyer le lien par SMS si fourni (sauf si skip_send)
+    if (guest_phone && !skip_send) {
       try {
         const propNameRes = await pool.query('SELECT name FROM properties WHERE id = $1', [property_id]);
         const propName = propNameRes.rows[0]?.name || property_id;
@@ -35065,14 +35066,15 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       }
       discountedBase = Math.max(0, totalBase - discount);
     }
-    // Prix fixe = tout inclus (ménage + taxes compris) — on n'ajoute que les 3% BHGuest
+    // Prix fixe = tout inclus (ménage + taxes + frais BHGuest 3% compris)
     const isFixedPrice = validatedFixedPrice != null;
     const cleaningFee = (!isFixedPrice && prop.cleaning_fee != null) ? parseFloat(prop.cleaning_fee) : 0;
     const nbGuests = parseInt(guests) || 1;
     const touristTax = (!isFixedPrice && prop.tourist_tax_per_night != null)
       ? Math.round(parseFloat(prop.tourist_tax_per_night) * nights * nbGuests * 100) / 100
       : 0;
-    const commission = Math.round(discountedBase * 0.03 * 100) / 100;
+    // Si prix fixe : commission incluse dans le montant (pas ajoutée en plus)
+    const commission = isFixedPrice ? 0 : Math.round(discountedBase * 0.03 * 100) / 100;
     const totalTTC = Math.round((discountedBase + cleaningFee + touristTax + commission) * 100); // centimes
 
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
@@ -35081,7 +35083,11 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
 
     // Recuperer le compte Stripe Connect du proprietaire du logement
     const { stripeAccountId, applyFee } = await getStripeForProperty(pool, property_id, propUserId);
-    const feeAmount = applyFee ? Math.round(discountedBase * 0.03 * 100) : 0; // 3% sur le montant base HT
+    const feeAmount = applyFee
+      ? (isFixedPrice
+          ? Math.round(totalTTC * 3 / 103) // 3% inclus dans le prix fixe
+          : Math.round(discountedBase * 0.03 * 100)) // 3% ajouté sur prix calculé
+      : 0;
 
     const sessionParams = {
       payment_method_types: ['card'],
