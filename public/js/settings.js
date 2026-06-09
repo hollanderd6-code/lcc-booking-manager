@@ -842,7 +842,7 @@ function resetPropertyForm() {
   document.getElementById("propertyDepartureTime").value = "";
   document.getElementById("propertyDeposit").value = "";
   var drdField = document.getElementById("propertyDepositReleaseDays");
-  if (drdField) drdField.value = "7";
+  if (drdField) drdField.value = "";
   
   // ✅ RESET NOUVEAUX CHAMPS
   if (document.getElementById("propertyWelcomeBookUrl")) {
@@ -966,7 +966,7 @@ function duplicateProperty(propertyId) {
   setVal('propertyArrivalTime', property.arrivalTime || '');
   setVal('propertyDepartureTime', property.departureTime || '');
   setVal('propertyDeposit', property.depositAmount != null ? property.depositAmount : '');
-  setVal('propertyDepositReleaseDays', property.deposit_release_days || property.depositReleaseDays || 7);
+  setVal('propertyDepositReleaseDays', property.depositReleaseDays != null ? property.depositReleaseDays : '');
 
   const colorInput = document.getElementById('propertyColor');
   const preview = document.getElementById('colorPreview');
@@ -1077,7 +1077,7 @@ function openEditPropertyModal(propertyId) {
   document.getElementById("propertyDeposit").value =
     property.depositAmount != null ? property.depositAmount : "";
   var drdField2 = document.getElementById("propertyDepositReleaseDays");
-  if (drdField2) drdField2.value = property.deposit_release_days || property.depositReleaseDays || 7;
+  if (drdField2) drdField2.value = property.depositReleaseDays != null ? property.depositReleaseDays : '';
 
   const colorInput = document.getElementById("propertyColor");
   const preview = document.getElementById("colorPreview");

@@ -8622,6 +8622,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         arrivalTime: p.arrival_time || null,
         departureTime: p.departure_time || null,
         depositAmount: p.deposit_amount || null,
+        depositReleaseDays: p.deposit_release_days || 7,
         address: p.address || null
       }))
     });
@@ -13925,6 +13926,7 @@ app.get('/api/properties',
         arrivalTime: p.arrival_time || p.arrivalTime || null,
         departureTime: p.departure_time || p.departureTime || null,
         depositAmount: p.deposit_amount ?? p.depositAmount ?? null,
+        depositReleaseDays: p.deposit_release_days ?? p.depositReleaseDays ?? 7,
         photoUrl: p.photo_url || p.photoUrl || null,
         welcomeBookUrl: p.welcome_book_url || null,
         accessCode: p.access_code || null,
@@ -14012,6 +14014,7 @@ app.get('/api/properties/:propertyId',
       arrivalTime: property.arrival_time || property.arrivalTime || null,
       departureTime: property.departure_time || property.departureTime || null,
       depositAmount: property.deposit_amount ?? property.depositAmount ?? null,
+      depositReleaseDays: property.deposit_release_days ?? property.depositReleaseDays ?? 7,
       photoUrl: property.photo_url || property.photoUrl || null,
       
       // ✅ NOUVEAUX CHAMPS ENRICHIS
