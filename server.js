@@ -3609,12 +3609,13 @@ app.options('/api/property-groups/bulk-import', cors());
 app.get('/api/property-groups', cors(), authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const result = await pool.query(
       `SELECT id, name, property_ids, created_at, updated_at
        FROM property_groups
-       WHERE user_id = $1
+       WHERE user_id = ANY($1::text[])
        ORDER BY created_at ASC`,
-      [userId]
+      [agencyIds]
     );
     const groups = result.rows.map(row => ({
       id: row.id,
@@ -9685,10 +9686,11 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
 app.get('/api/sms/logs', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const { property_id, status, date, limit = 50, offset = 0 } = req.query;
 
-    let where = `WHERE sl.user_id = $1`;
-    const params = [userId];
+    let where = `WHERE sl.user_id = ANY($1::text[])`;
+    const params = [agencyIds];
     let idx = 2;
 
     if (property_id) { where += ` AND sl.property_id = $${idx++}`; params.push(property_id); }
@@ -10394,11 +10396,13 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     }
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
+    const agencyIds = await getAgencyUserIds(req, userId);
+
     // Propriétés accessibles — lire depuis la DB pour être sûr d'avoir toutes les props
     // (PROPERTIES en mémoire peut être désynchronisé si props créées après démarrage)
     const propsResult = await pool.query(
-      `SELECT id, name, internal_name FROM properties WHERE user_id = $1`,
-      [userId]
+      `SELECT id, name, internal_name FROM properties WHERE user_id = ANY($1::text[])`,
+      [agencyIds]
     );
     let userProps = propsResult.rows;
     if (req.user.isSubAccount && req.subAccountData?.accessible_property_ids?.length > 0) {
@@ -10413,8 +10417,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     // ── 1. Tous les deposits de l'utilisateur ──────────────────────────────
     const depositsResult = await pool.query(
       `SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at
-       FROM deposits WHERE user_id = $1`,
-      [userId]
+       FROM deposits WHERE user_id = ANY($1::text[])`,
+      [agencyIds]
     );
     const depositsMap = new Map();
     depositsResult.rows.forEach(d => {
@@ -10458,8 +10462,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
 
     // Récupérer d'abord les uids de deposits actifs pour cet user (pour inclure résas annulées)
     const activeDepUids = await pool.query(
-      `SELECT reservation_uid FROM deposits WHERE user_id = $1 AND status IN ('authorized','captured')`,
-      [userId]
+      `SELECT reservation_uid FROM deposits WHERE user_id = ANY($1::text[]) AND status IN ('authorized','captured')`,
+      [agencyIds]
     );
     const activeDepUidList = activeDepUids.rows.map(r => r.reservation_uid).filter(Boolean);
 
@@ -10484,11 +10488,11 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
       ' p.name as prop_name, p.internal_name as prop_internal_name' +
       ' FROM reservations r' +
       ' LEFT JOIN properties p ON p.id = r.property_id' +
-      ' WHERE r.user_id = $1' +
+      ' WHERE r.user_id = ANY($1::text[])' +
       ' AND r.property_id IN (' + placeholders + ')' +
 ' AND (r.status != \'cancelled\' OR ' + cancelledWithDepCondition + ')' +
       ' ORDER BY r.start_date DESC',
-      [userId, ...propIds, ...extraParams]
+      [agencyIds, ...propIds, ...extraParams]
     );
 
 
@@ -10569,10 +10573,12 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
 
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
+    const agencyIds = await getAgencyUserIds(req, userId);
+
     // Charger tous les paiements de l'utilisateur depuis PostgreSQL
     const paymentsResult = await pool.query(
-      'SELECT * FROM payments WHERE user_id = $1 ORDER BY created_at DESC',
-      [userId]
+      'SELECT * FROM payments WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC',
+      [agencyIds]
     );
     const paymentsRows = paymentsResult.rows;
 
@@ -10607,8 +10613,8 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
         r.amount_total, r.amount_rooms, r.amount_taxes,
         r.amount_cleaning, r.ota_commission, r.host_payout,
         r.currency, r.source, r.channex_booking_id, r.ota_name
-      FROM reservations r WHERE r.user_id = $1
-    `, [userId]);
+      FROM reservations r WHERE r.user_id = ANY($1::text[])
+    `, [agencyIds]);
     const dbResMap = new Map();
     dbResResult.rows.forEach(r => {
       dbResMap.set(r.uid, r);
@@ -10620,7 +10626,7 @@ app.get('/api/reservations-with-payments', authenticateAny, requirePermission(po
     });
 
     const result = [];
-    const userProperties = PROPERTIES.filter(p => p.userId === userId);
+    const userProperties = PROPERTIES.filter(p => agencyIds.includes(p.userId));
 
     userProperties.forEach(property => {
       const propReservations = reservationsStore.properties[property.id] || [];
@@ -10723,7 +10729,8 @@ app.get('/api/reservations/enriched', authenticateAny, checkSubscription, async 
     // Pré-calcul turnover par property
     const turnoverByUid = new Map();
 
-    const userProps = PROPERTIES.filter(p => p.userId === user.id);
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    const userProps = PROPERTIES.filter(p => agencyIds.includes(p.userId));
 
     for (const property of userProps) {
       const list = (reservationsStore.properties[property.id] || [])
@@ -11952,12 +11959,14 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(p
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
+    const agencyIds = await getAgencyUserIds(req, userId);
+
     const result = await pool.query(
       `SELECT id, name, phone, email, notes, pin_code, is_active, sub_account_id, sms_recap_enabled, created_at
        FROM cleaners
-       WHERE user_id = $1
+       WHERE user_id = ANY($1::text[])
        ORDER BY name ASC`,
-      [userId]
+      [agencyIds]
     );
 
     res.json({
@@ -12987,12 +12996,12 @@ app.get('/api/cleaning/checklists',
          ORDER BY conv.id DESC
          LIMIT 1
        ) conv ON TRUE
-       WHERE cc.user_id = $1
+       WHERE cc.user_id = ANY($1::text[])
        ORDER BY
          CASE WHEN (cc.owner_status = 'pending' OR cc.owner_status IS NULL) AND cc.completed_at IS NOT NULL THEN 0 ELSE 1 END ASC,
          cc.checkout_date DESC NULLS LAST
        LIMIT 100`,
-      [userId]
+      [await getAgencyUserIds(req, userId)]
     );
 
     // ✅ Filtrer par propriétés si sous-compte
@@ -13104,8 +13113,8 @@ app.get('/api/cleaning/assignments',
     try {
       const resaResult = await pool.query(
         `SELECT uid, property_id, start_date, end_date FROM reservations
-         WHERE user_id = $1 AND status NOT IN ('cancelled')`,
-        [userId]
+         WHERE user_id = ANY($1::text[]) AND status NOT IN ('cancelled')`,
+        [agencyIds]
       );
       for (const resa of resaResult.rows) {
         const startStr = String(resa.start_date).slice(0, 10);
@@ -13299,8 +13308,9 @@ app.get('/api/cleaning/templates',
 
       const { propertyId } = req.query;
 
-      let query = `SELECT * FROM cleaning_templates WHERE user_id = $1`;
-      const params = [userId];
+      const agencyIds = await getAgencyUserIds(req, userId);
+      let query = `SELECT * FROM cleaning_templates WHERE user_id = ANY($1::text[])`;
+      const params = [agencyIds];
 
       if (propertyId) {
         query += ` AND (property_id = $2 OR property_id IS NULL)`;
@@ -13707,12 +13717,13 @@ app.get('/api/cleaning/default-cleaners',
         : (await getUserFromRequest(req))?.id;
       if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
+      const agencyIds = await getAgencyUserIds(req, userId);
       const result = await pool.query(
         `SELECT pdc.property_id, pdc.cleaner_id, c.name as cleaner_name, c.pin_code
          FROM property_default_cleaners pdc
          LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
-         WHERE pdc.user_id = $1`,
-        [userId]
+         WHERE pdc.user_id = ANY($1::text[])`,
+        [agencyIds]
       );
 
       // Retourner en format map { propertyId: { cleanerId, cleanerName, pinCode } }
@@ -14409,12 +14420,13 @@ app.get('/api/pricing/overrides', authenticateAny, requirePermission(pool, 'can_
 
     const { property_id, from, to } = req.query;
 
+    const agencyIds = await getAgencyUserIds(req, user.id);
     let query = `
       SELECT property_id, TO_CHAR(date, 'YYYY-MM-DD') as date, price
       FROM pricing_overrides
-      WHERE user_id = $1
+      WHERE user_id = ANY($1::text[])
     `;
-    const params = [user.id];
+    const params = [agencyIds];
 
     if (property_id) {
       params.push(property_id);
@@ -14759,8 +14771,9 @@ app.get('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_view
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const { property_id } = req.query;
-    let query = `SELECT * FROM pricing_rules WHERE user_id = $1`;
-    const params = [user.id];
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    let query = `SELECT * FROM pricing_rules WHERE user_id = ANY($1::text[])`;
+    const params = [agencyIds];
 
     if (property_id) {
       params.push(property_id);
@@ -15460,8 +15473,10 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
     const selectedYear  = parseInt(year)  || new Date().getFullYear();
     const selectedMonth = parseInt(month) || null;
 
+    const agencyIds = await getAgencyUserIds(req, user.id);
+
     let dateFilter = `EXTRACT(YEAR FROM r.start_date) = $2`;
-    const params = [user.id, selectedYear];
+    const params = [agencyIds, selectedYear];
     if (selectedMonth) {
       dateFilter += ` AND EXTRACT(MONTH FROM r.start_date) = $${params.length + 1}`;
       params.push(selectedMonth);
@@ -15479,7 +15494,7 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
         r.guest_name, r.nb_guests,
         (r.end_date::date - r.start_date::date) AS nights
       FROM reservations r
-      WHERE r.user_id = $1
+      WHERE r.user_id = ANY($1::text[])
         AND r.status IN ('confirmed', 'completed')
         AND r.uid NOT LIKE 'block_%'
         AND COALESCE(r.source, '') NOT IN ('BLOCK', 'BLOCAGE')
@@ -15490,16 +15505,16 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
 
     // Propriétés avec configs financières
     const propsResult = await pool.query(
-      `SELECT id, name, base_price, weekend_price, cleaning_fee, tourist_tax_per_night FROM properties WHERE user_id = $1`,
-      [user.id]
+      `SELECT id, name, base_price, weekend_price, cleaning_fee, tourist_tax_per_night FROM properties WHERE user_id = ANY($1::text[])`,
+      [agencyIds]
     );
     const propMap = {};
     propsResult.rows.forEach(p => { propMap[p.id] = p; });
 
     // Overrides de prix
     const overridesResult = await pool.query(
-      `SELECT property_id, TO_CHAR(date, 'YYYY-MM-DD') as date, price FROM pricing_overrides WHERE user_id = $1 AND EXTRACT(YEAR FROM date) = $2`,
-      [user.id, selectedYear]
+      `SELECT property_id, TO_CHAR(date, 'YYYY-MM-DD') as date, price FROM pricing_overrides WHERE user_id = ANY($1::text[]) AND EXTRACT(YEAR FROM date) = $2`,
+      [agencyIds, selectedYear]
     );
     const overridesMap = {};
     overridesResult.rows.forEach(o => { overridesMap[`${o.property_id}_${o.date}`] = parseFloat(o.price); });
@@ -15617,8 +15632,10 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
     const selectedYear  = parseInt(year)  || new Date().getFullYear();
     const selectedMonth = parseInt(month) || null;
 
+    const agencyIds = await getAgencyUserIds(req, user.id);
+
     let dateFilter = `EXTRACT(YEAR FROM i.issue_date) = $2`;
-    const params = [user.id, selectedYear];
+    const params = [agencyIds, selectedYear];
     if (selectedMonth) {
       dateFilter += ` AND EXTRACT(MONTH FROM i.issue_date) = $${params.length + 1}`;
       params.push(selectedMonth);
@@ -15634,7 +15651,7 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
         i.status, i.is_credit_note
       FROM owner_invoices i
       JOIN owner_clients c ON c.id = i.client_id
-      WHERE i.user_id = $1 AND ${dateFilter}
+      WHERE i.user_id = ANY($1::text[]) AND ${dateFilter}
       ORDER BY i.issue_date ASC, i.id ASC
     `, params);
 
@@ -15707,10 +15724,12 @@ app.get('/api/quality-score', authenticateAny, async (req, res) => {
     const selectedYear = parseInt(year) || new Date().getFullYear();
     const daysInYear = 365;
 
+    const agencyIds = await getAgencyUserIds(req, user.id);
+
     // 1. Récupérer tous les logements de l'utilisateur
     const propsResult = await pool.query(
-      `SELECT id, name, color, channex_property_id, channex_enabled FROM properties WHERE user_id = $1 ORDER BY display_order ASC, created_at ASC`,
-      [user.id]
+      `SELECT id, name, color, channex_property_id, channex_enabled FROM properties WHERE user_id = ANY($1::text[]) ORDER BY display_order ASC, created_at ASC`,
+      [agencyIds]
     );
     const properties = propsResult.rows;
     if (!properties.length) return res.json({ scores: [] });
@@ -15723,14 +15742,14 @@ app.get('/api/quality-score', authenticateAny, async (req, res) => {
         r.property_id,
         SUM(r.end_date::date - r.start_date::date) AS nights
       FROM reservations r
-      WHERE r.user_id = $1
+      WHERE r.user_id = ANY($1::text[])
         AND r.status IN ('confirmed','completed')
         AND r.uid NOT LIKE 'block_%'
         AND COALESCE(r.source,'') NOT IN ('BLOCK','BLOCAGE')
         AND EXTRACT(YEAR FROM r.start_date) = $2
         AND r.property_id = ANY($3)
       GROUP BY r.property_id
-    `, [user.id, selectedYear, propIds]);
+    `, [agencyIds, selectedYear, propIds]);
 
     const occMap = {};
     occResult.rows.forEach(r => { occMap[r.property_id] = parseInt(r.nights) || 0; });
@@ -15744,11 +15763,11 @@ app.get('/api/quality-score', authenticateAny, async (req, res) => {
         SUM(CASE WHEN cc.is_validated = TRUE THEN 1 ELSE 0 END) AS validated
       FROM cleaning_checklists cc
       JOIN reservations r ON r.uid = cc.reservation_key
-      WHERE cc.user_id = $1
+      WHERE cc.user_id = ANY($1::text[])
         AND EXTRACT(YEAR FROM r.start_date) = $2
         AND cc.property_id = ANY($3)
       GROUP BY cc.property_id
-    `, [user.id, selectedYear, propIds]);
+    `, [agencyIds, selectedYear, propIds]);
 
     const cleanMap = {};
     cleanResult.rows.forEach(r => {
@@ -15773,11 +15792,11 @@ app.get('/api/quality-score', authenticateAny, async (req, res) => {
           AND created_at > m_guest.created_at
         ORDER BY created_at ASC LIMIT 1
       ) m_owner ON TRUE
-      WHERE c.user_id = $1
+      WHERE c.user_id = ANY($1::text[])
         AND c.property_id = ANY($2)
         AND EXTRACT(YEAR FROM m_guest.created_at) = $3
       GROUP BY c.property_id
-    `, [user.id, propIds, selectedYear]);
+    `, [agencyIds, propIds, selectedYear]);
 
     const responseMap = {};
     msgResult.rows.forEach(r => {
@@ -16275,9 +16294,10 @@ app.get('/api/airbnb-accounts', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const agencyIds = await getAgencyUserIds(req, user.id);
     const result = await pool.query(
-      'SELECT id, email, user_id_airbnb AS user_id, status, created_at FROM airbnb_accounts WHERE user_id = $1 ORDER BY created_at ASC',
-      [user.id]
+      'SELECT id, email, user_id_airbnb AS user_id, status, created_at FROM airbnb_accounts WHERE user_id = ANY($1::text[]) ORDER BY created_at ASC',
+      [agencyIds]
     );
     res.json(result.rows);
   } catch (err) {
@@ -18818,6 +18838,8 @@ app.get('/api/owner-invoices',
       : (await getUserFromRequest(req))?.id;
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
+    const agencyIds = await getAgencyUserIds(req, userId);
+
     const result = await pool.query(`
             SELECT
         i.id,
@@ -18831,9 +18853,9 @@ app.get('/api/owner-invoices',
 
       FROM owner_invoices i
       JOIN owner_clients c ON c.id = i.client_id
-      WHERE i.user_id = $1
+      WHERE i.user_id = ANY($1::text[])
       ORDER BY i.issue_date DESC, i.id DESC
-    `, [userId]);
+    `, [agencyIds]);
 
     res.json({ invoices: result.rows });
   } catch (err) {
@@ -19035,9 +19057,11 @@ app.get('/api/owner-invoices/:id',
     const invoiceId = req.params.id;
 
     // Facture
+    const agencyIds = await getAgencyUserIds(req, userId);
+
     const invResult = await pool.query(
-      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, userId]
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      [invoiceId, agencyIds]
     );
 
     if (invResult.rows.length === 0) {
@@ -24858,9 +24882,10 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
 app.get('/api/message-templates', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const { property_id } = req.query;
-    let q = 'SELECT * FROM message_templates WHERE user_id = $1';
-    const params = [userId];
+    let q = 'SELECT * FROM message_templates WHERE user_id = ANY($1::text[])';
+    const params = [agencyIds];
     if (property_id) { q += ' AND (property_id = $2 OR property_id IS NULL)'; params.push(property_id); }
     q += ' ORDER BY created_at DESC';
     const result = await pool.query(q, params);
@@ -25111,14 +25136,15 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
 app.get('/api/message-template-scheduled', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
 
     // Récupérer tous les templates actifs de l'utilisateur
     const templates = await pool.query(
-      `SELECT * FROM message_templates WHERE user_id = $1 AND active = TRUE
+      `SELECT * FROM message_templates WHERE user_id = ANY($1::text[]) AND active = TRUE
        AND trigger_type NOT IN ('on_booking')
        ORDER BY title`,
-      [userId]
+      [agencyIds]
     );
 
     const scheduled = [];
@@ -25257,12 +25283,13 @@ app.delete('/api/message-template-blocks', authenticateToken, async (req, res) =
 app.get('/api/message-template-logs', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const limit = parseInt(req.query.limit) || 100;
     const result = await pool.query(
-      `SELECT * FROM message_template_logs WHERE user_id = $1 ORDER BY sent_at DESC LIMIT $2`,
-      [userId, limit]
+      `SELECT * FROM message_template_logs WHERE user_id = ANY($1::text[]) ORDER BY sent_at DESC LIMIT $2`,
+      [agencyIds, limit]
     );
-    const total = await pool.query('SELECT COUNT(*) FROM message_template_logs WHERE user_id = $1', [userId]);
+    const total = await pool.query('SELECT COUNT(*) FROM message_template_logs WHERE user_id = ANY($1::text[])', [agencyIds]);
     res.json({ logs: result.rows, total: parseInt(total.rows[0].count) });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -28835,8 +28862,9 @@ app.get('/api/debours', authenticateAny, requireFeature('invoices_clients'), req
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { client_id, status } = req.query;
-    let q = 'SELECT * FROM debours WHERE user_id = $1';
-    const params = [userId];
+    const agencyIds = await getAgencyUserIds(req, userId);
+    let q = 'SELECT * FROM debours WHERE user_id = ANY($1::text[])';
+    const params = [agencyIds];
 
     if (client_id) { q += ` AND client_id = $${params.length+1}`; params.push(client_id); }
     if (status)    { q += ` AND status = $${params.length+1}`; params.push(status); }
