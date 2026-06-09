@@ -8218,7 +8218,11 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
 
     // Charger les propriétés de l'utilisateur
     const allReservations = [];
-    let userProps = getUserProperties(userId);
+    const agencyIds = await getAgencyUserIds(req, userId);
+    let userProps = [];
+    for (const uid of agencyIds) {
+      userProps = userProps.concat(getUserProperties(uid));
+    }
 
     // Filtrer selon propriétés accessibles (si sous-compte)
     // Si accessibleProperties est vide → accès à TOUS les logements du parent
@@ -11882,9 +11886,10 @@ app.get('/api/welcome', async (req, res) => {
   }
 
   try {
+    const agencyIds = await getAgencyUserIds(req, user.id);
     const result = await pool.query(
-      'SELECT data FROM welcome_books_v2 WHERE user_id = $1',
-      [userId]
+      'SELECT user_id, data FROM welcome_books_v2 WHERE user_id = ANY($1::text[])',
+      [agencyIds]
     );
 
     let data;
@@ -11896,11 +11901,29 @@ app.get('/api/welcome', async (req, res) => {
         'INSERT INTO welcome_books_v2 (user_id, data, updated_at) VALUES ($1, $2, NOW())',
         [user.id, data]
       );
-    } else {
+    } else if (result.rows.length === 1) {
       const rowData = result.rows[0].data;
       data = (rowData && typeof rowData === 'object')
         ? rowData
         : { ...defaultWelcomeData(user), ...(JSON.parse(rowData || '{}')) };
+    } else {
+      // Merge welcome books from multiple agency accounts
+      data = defaultWelcomeData(user);
+      for (const row of result.rows) {
+        const rowData = (row.data && typeof row.data === 'object')
+          ? row.data
+          : JSON.parse(row.data || '{}');
+        // Merge property-specific sections
+        if (rowData.properties) {
+          data.properties = { ...(data.properties || {}), ...rowData.properties };
+        }
+        // Merge arrays
+        ['restaurants', 'shops', 'photos', 'activities'].forEach(key => {
+          if (Array.isArray(rowData[key]) && rowData[key].length) {
+            data[key] = [...(data[key] || []), ...rowData[key]];
+          }
+        });
+      }
     }
 
     res.json(data);
@@ -13923,7 +13946,11 @@ app.get('/api/properties',
     // Charger les propriétés du compte parent
     console.log('🔍 userId pour getUserProperties:', userId);
     console.log('🔍 PROPERTIES total en mémoire:', PROPERTIES.length);
-    let userProps = getUserProperties(userId);
+    const agencyIds = await getAgencyUserIds(req, userId);
+    let userProps = [];
+    for (const uid of agencyIds) {
+      userProps = userProps.concat(getUserProperties(uid));
+    }
     console.log('🔍 userProps AVANT filtrage:', userProps.length, userProps.map(p => p.id));
     
     // ✅ FILTRER selon les propriétés accessibles (si sous-compte avec restrictions)

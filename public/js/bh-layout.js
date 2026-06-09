@@ -3,7 +3,11 @@
   var _origFetch = window.fetch;
   window.fetch = function(url, opts) {
     if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
-      url += (url.includes('?') ? '&' : '?') + 'agency=all';
+      // Pas d'agency mode sur settings et support
+      var page = window.location.pathname || '';
+      if (page.indexOf('settings') === -1 && page.indexOf('support') === -1) {
+        url += (url.includes('?') ? '&' : '?') + 'agency=all';
+      }
     }
     return _origFetch.call(this, url, opts);
   };
@@ -21,7 +25,6 @@ if (typeof window.setAgencyView !== 'function') {
     window._agencyViewActive = (mode === 'all');
     localStorage.setItem('bh_agency_view', mode);
     if (typeof updateAgencySwitcherLabel === 'function') updateAgencySwitcherLabel();
-    // Sur les pages autres que app.html, recharger pour appliquer le filtre
     window.location.reload();
   };
 }
@@ -47,8 +50,6 @@ if (typeof window.renderAgencyToggle !== 'function') {
     if (!accounts || !accounts.length) return;
     var btn = document.getElementById('agencySwitcherBtn');
     if (btn) btn.style.display = 'inline-flex';
-    var oldBar = document.getElementById('agencyToggleBar');
-    if (oldBar) oldBar.remove();
   };
 }
 
@@ -1186,7 +1187,6 @@ window.confirm = function(msg) {
   // On page load, check if in managed mode
   document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initAgencySwitcherBtn, 500);
-    // Charger les comptes agence sur toutes les pages
     setTimeout(function() {
       if (typeof window.loadAgencyAccountsForSwitcher === 'function') {
         window.loadAgencyAccountsForSwitcher();
