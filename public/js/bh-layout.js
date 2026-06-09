@@ -1,3 +1,57 @@
+// ── Intercepteur agency global : ajoute ?agency=all aux requêtes API ──
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
+      url += (url.includes('?') ? '&' : '?') + 'agency=all';
+    }
+    return _origFetch.call(this, url, opts);
+  };
+})();
+
+// ── Restaurer l'état agence depuis localStorage ──
+window._agencyViewActive = (localStorage.getItem('bh_agency_view') === 'all');
+window._agencyAccounts = window._agencyAccounts || null;
+window._agencyAllReservations = window._agencyAllReservations || [];
+window._agencyAllProperties = window._agencyAllProperties || [];
+
+// ── Fonctions agence globales (disponibles sur toutes les pages) ──
+if (typeof window.setAgencyView !== 'function') {
+  window.setAgencyView = function(mode) {
+    window._agencyViewActive = (mode === 'all');
+    localStorage.setItem('bh_agency_view', mode);
+    if (typeof updateAgencySwitcherLabel === 'function') updateAgencySwitcherLabel();
+    // Sur les pages autres que app.html, recharger pour appliquer le filtre
+    window.location.reload();
+  };
+}
+
+if (typeof window.loadAgencyAccountsForSwitcher !== 'function') {
+  window.loadAgencyAccountsForSwitcher = async function() {
+    var token = localStorage.getItem('lcc_token');
+    if (!token || localStorage.getItem('lcc_managed_user')) return;
+    try {
+      var res = await fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!res.ok) return;
+      var data = await res.json();
+      if (!data.iManage || !data.iManage.length) return;
+      if (!data.canActAsAgent) return;
+      window._agencyAccounts = data.iManage;
+      if (typeof window.renderAgencyToggle === 'function') window.renderAgencyToggle(data.iManage);
+    } catch(e) {}
+  };
+}
+
+if (typeof window.renderAgencyToggle !== 'function') {
+  window.renderAgencyToggle = function(accounts) {
+    if (!accounts || !accounts.length) return;
+    var btn = document.getElementById('agencySwitcherBtn');
+    if (btn) btn.style.display = 'inline-flex';
+    var oldBar = document.getElementById('agencyToggleBar');
+    if (oldBar) oldBar.remove();
+  };
+}
+
 (function () {
   'use strict';
 
@@ -1132,5 +1186,11 @@ window.confirm = function(msg) {
   // On page load, check if in managed mode
   document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initAgencySwitcherBtn, 500);
+    // Charger les comptes agence sur toutes les pages
+    setTimeout(function() {
+      if (typeof window.loadAgencyAccountsForSwitcher === 'function') {
+        window.loadAgencyAccountsForSwitcher();
+      }
+    }, 600);
   });
 })();

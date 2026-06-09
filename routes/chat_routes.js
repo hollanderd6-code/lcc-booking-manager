@@ -157,6 +157,18 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
   // Garder authenticateToken pour compatibilité avec les routes existantes
   const authenticateToken = authenticateAny;
 
+  // ── Helper agence : retourne tous les user IDs si agency=all ──
+  async function getAgencyUserIds(req, userId) {
+    if (req.query.agency !== 'all') return [userId];
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      );
+      return [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch(e) { return [userId]; }
+  }
+
   // ============================================
   // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
   // ============================================
@@ -279,6 +291,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
     try {
       // ✅ Support des sous-comptes : récupérer l'ID utilisateur réel
       const userId = await getRealUserId(pool, req);
+      const agencyIds = await getAgencyUserIds(req, userId);
       const { status, property_id } = req.query;
 
       let query = `
@@ -312,10 +325,10 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
           OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
               AND DATE(r.start_date) = DATE(c.reservation_start_date))
         )
-        WHERE c.user_id = $1
+        WHERE c.user_id = ANY($1::text[])
       `;
 
-      const params = [userId];
+      const params = [agencyIds];
       let paramCount = 1;
 
       if (status) {
