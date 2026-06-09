@@ -34943,7 +34943,7 @@ app.get('/api/guest/hold-status', async (req, res) => {
     });
   } catch (e) {
     console.error('❌ [GUEST] hold-status:', e.message);
-    res.json({ active: true }); // en cas d'erreur, laisser passer
+    res.json({ active: false, expired: true }); // en cas d'erreur, bloquer par sécurité
   }
 });
 
@@ -35007,6 +35007,12 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       }
     } catch (hgErr) {
       console.warn('⚠️ [GUEST] Vérification hold non bloquante:', hgErr.message);
+    }
+
+    // 🚫 Si un hold_token a été fourni mais aucun hold actif trouvé → bloquer
+    if (hold_token && (!holdRow || !holdRow.is_active)) {
+      console.warn(`🚫 [GUEST] hold_token fourni mais hold supprimé/expiré/inactif — checkout bloqué`);
+      return res.status(410).json({ error: 'Ce lien de réservation n\'est plus valide. Contactez l\'hôte pour obtenir un nouveau lien.' });
     }
 
     // 🔒 Valider fixed_price : si un hold existe (même expiré) avec un prix fixe
