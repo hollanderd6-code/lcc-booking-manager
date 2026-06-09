@@ -5473,7 +5473,7 @@ async function loadProperties() {
         arrival_time: row.arrival_time,
         departure_time: row.departure_time,
         deposit_amount: row.deposit_amount,
-        deposit_release_days: row.deposit_release_days || 7,
+        deposit_release_days: row.deposit_release_days ?? null,
         photo_url: row.photo_url,
         welcome_book_url: row.welcome_book_url,
         access_code: row.access_code,
@@ -8622,7 +8622,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         arrivalTime: p.arrival_time || null,
         departureTime: p.departure_time || null,
         depositAmount: p.deposit_amount || null,
-        depositReleaseDays: p.deposit_release_days || 7,
+        depositReleaseDays: p.deposit_release_days || null,
         address: p.address || null
       }))
     });
@@ -13926,7 +13926,7 @@ app.get('/api/properties',
         arrivalTime: p.arrival_time || p.arrivalTime || null,
         departureTime: p.departure_time || p.departureTime || null,
         depositAmount: p.deposit_amount ?? p.depositAmount ?? null,
-        depositReleaseDays: p.deposit_release_days ?? p.depositReleaseDays ?? 7,
+        depositReleaseDays: p.deposit_release_days ?? p.depositReleaseDays ?? null,
         photoUrl: p.photo_url || p.photoUrl || null,
         welcomeBookUrl: p.welcome_book_url || null,
         accessCode: p.access_code || null,
@@ -14014,7 +14014,7 @@ app.get('/api/properties/:propertyId',
       arrivalTime: property.arrival_time || property.arrivalTime || null,
       departureTime: property.departure_time || property.departureTime || null,
       depositAmount: property.deposit_amount ?? property.depositAmount ?? null,
-      depositReleaseDays: property.deposit_release_days ?? property.depositReleaseDays ?? 7,
+      depositReleaseDays: property.deposit_release_days ?? property.depositReleaseDays ?? null,
       photoUrl: property.photo_url || property.photoUrl || null,
       
       // ✅ NOUVEAUX CHAMPS ENRICHIS
@@ -15982,9 +15982,9 @@ app.put('/api/properties/:propertyId',
     const newDepositReleaseDays =
       body.depositReleaseDays !== undefined
         ? (body.depositReleaseDays === '' || body.depositReleaseDays == null
-            ? 7
+            ? null
             : Number(body.depositReleaseDays))
-        : (property.deposit_release_days || 7);
+        : (property.deposit_release_days ?? null);
 
     const newWelcomeBookUrl = 
       welcomeBookUrl !== undefined 
