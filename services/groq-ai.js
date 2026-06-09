@@ -189,10 +189,11 @@ function buildSystemPrompt(ctx, temporalCtx, fewShotExamples) {
       pending:    `en attente de paiement (${amt}€)`,
       expired:    `expirée — doit être repayée`,
     };
+    const releaseDays = ctx.depositReleaseDays || 7;
     const depositLines = [
       `- Montant : ${amt}€`,
       `- Statut : ${statusLabels[ctx.depositStatus] || `demandée (${amt}€, statut inconnu)`}`,
-      `- Restitution : automatiquement 7 jours après le départ`,
+      `- Restitution : débloquée ${releaseDays} jours après le départ, peut arriver sous 5 à 10 jours sur le compte du voyageur`,
       `- Débit bancaire : non débitée pour les banques françaises classiques. Peut être débitée temporairement pour Revolut, N26, Wise et banques internationales.`,
     ];
     if (ctx.depositBlocksAccess) {
@@ -294,8 +295,8 @@ REMERCIEMENTS
 CAUTION — ne pas escalader pour ces cas
 • "Je ne savais pas" → obligatoire, mentionné dans l'annonce.
 • "Est-ce débité ?" → non pour banques FR classiques, temporairement pour Revolut/N26/Wise.
-• "Quand est rendue la caution ?" → 7 jours après départ, automatiquement.
-• Post-séjour + restitution → "Votre caution sera restituée automatiquement 7 jours après votre départ."
+• "Quand est rendue la caution ?" → débloquée ${ctx.depositReleaseDays || 7} jours après le départ, peut arriver sous 5 à 10 jours sur le compte.
+• Post-séjour + restitution → "Votre caution sera débloquée ${ctx.depositReleaseDays || 7} jours après votre départ et peut arriver sous 5 à 10 jours sur votre compte."
 • Caution déjà payée (authorized/captured) → ne JAMAIS redemander le paiement.
 
 FACTURE

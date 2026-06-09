@@ -1372,8 +1372,19 @@ html[data-theme-v3="1"] .sidebar {
 <span>€</span>
 </div>
 </div>
-<input type="hidden" id="propertyColor" value="#E67E50"/>
+<div class="form-group">
+<label for="propertyDepositReleaseDays">
+<i class="fas fa-clock"></i>
+<span>Délai de restitution</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Nombre de jours après le départ avant que la caution soit débloquée. L'IA adaptera sa réponse automatiquement.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyDepositReleaseDays" min="1" max="30" placeholder="7" step="1" type="number" value="7"/>
+<span>jours</span>
 </div>
+</div>
+</div>
+<input type="hidden" id="propertyColor" value="#E67E50"/>
 
 <!-- ✅ SECTION : CAPACITÉ D'ACCUEIL -->
 <div class="form-grid-2">
@@ -2632,6 +2643,12 @@ function insertVariable(textareaId, variable, event) {
       const arrivalMessageField = document.getElementById('propertyArrivalMessage');
       if (arrivalMessageField && propertyData.arrival_message) {
         arrivalMessageField.value = propertyData.arrival_message;
+      }
+
+      // ✅ CHARGER LE DÉLAI DE RESTITUTION CAUTION
+      const depositReleaseDaysField = document.getElementById('propertyDepositReleaseDays');
+      if (depositReleaseDaysField) {
+        depositReleaseDaysField.value = propertyData.deposit_release_days || propertyData.depositReleaseDays || 7;
       }
 
       // ✅ CHARGER L'ID CHANNEX (usage interne admin)

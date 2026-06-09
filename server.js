@@ -2542,6 +2542,13 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Colonnes commissions plateformes:', e.message);
     }
 
+    try {
+      await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS deposit_release_days INTEGER DEFAULT 7`);
+      console.log('✅ Colonne deposit_release_days OK');
+    } catch (e) {
+      console.log('ℹ️ Colonne deposit_release_days:', e.message);
+    }
+
 
     // ✅ Migration : table notification_history
     try {
@@ -5408,6 +5415,7 @@ async function loadProperties() {
         arrival_time,
         departure_time,
         deposit_amount,
+        deposit_release_days,
         photo_url,
         welcome_book_url,
         access_code,
@@ -5465,6 +5473,7 @@ async function loadProperties() {
         arrival_time: row.arrival_time,
         departure_time: row.departure_time,
         deposit_amount: row.deposit_amount,
+        deposit_release_days: row.deposit_release_days || 7,
         photo_url: row.photo_url,
         welcome_book_url: row.welcome_book_url,
         access_code: row.access_code,
@@ -15967,6 +15976,13 @@ app.put('/api/properties/:propertyId',
             : Number(depositAmount))
         : (property.deposit_amount ?? property.depositAmount ?? null);
 
+    const newDepositReleaseDays =
+      body.depositReleaseDays !== undefined
+        ? (body.depositReleaseDays === '' || body.depositReleaseDays == null
+            ? 7
+            : Number(body.depositReleaseDays))
+        : (property.deposit_release_days || 7);
+
     const newWelcomeBookUrl = 
       welcomeBookUrl !== undefined 
         ? (welcomeBookUrl || null) 
@@ -16154,6 +16170,7 @@ userId: userId
          channex_property_id_ext = $38,
          airbnb_commission_pct = $39,
          booking_commission_pct = $40,
+         deposit_release_days = $41,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -16184,7 +16201,8 @@ userId: userId
         newExpediaId,
         newChannexPropertyIdExt,
         body.airbnbCommissionPct != null && body.airbnbCommissionPct !== '' ? parseFloat(body.airbnbCommissionPct) : (property.airbnb_commission_pct ?? 3),
-        body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : (property.booking_commission_pct ?? 15)
+        body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : (property.booking_commission_pct ?? 15),
+        newDepositReleaseDays
       ]
     );
     
