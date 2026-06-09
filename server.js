@@ -18383,6 +18383,44 @@ app.get('/api/owner-clients', authenticateAny, requireFeature('facturation_propr
   }
 });
 
+// ── GET /api/agency/managed-properties ───────────────────────────
+// Retourner TOUS les logements de tous les comptes délégués (pour facturation)
+app.get('/api/agency/managed-properties', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const delegations = await pool.query(
+      `SELECT ad.delegator_user_id, u.first_name, u.last_name, u.email
+       FROM account_delegations ad
+       JOIN users u ON u.id = ad.delegator_user_id
+       WHERE ad.delegate_user_id = $1 AND ad.status = 'accepted'`,
+      [user.id]
+    );
+
+    let allProps = [];
+    for (const d of delegations.rows) {
+      const props = await pool.query(
+        `SELECT id, name, owner_id, address, photo_url, user_id FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
+        [d.delegator_user_id]
+      );
+      const accountName = ((d.first_name || '') + ' ' + (d.last_name || '')).trim() || d.email;
+      props.rows.forEach(p => {
+        allProps.push({
+          ...p,
+          _isManaged: true,
+          _managedAccount: { userId: d.delegator_user_id, name: accountName }
+        });
+      });
+    }
+
+    res.json({ properties: allProps });
+  } catch(e) {
+    console.error('❌ [AGENCY] managed-properties:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ── GET /api/agency/properties/:delegatorUserId ─────────────────
 // Retourner les logements d'un compte délégué (pour la modal de facturation)
 app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, res) => {
@@ -18399,7 +18437,7 @@ app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, 
     if (!check.rows.length) return res.status(403).json({ error: 'Accès non autorisé' });
 
     const props = await pool.query(
-      `SELECT id, name FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
+      `SELECT id, name, owner_id FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
       [delegatorUserId]
     );
     res.json({ properties: props.rows });
