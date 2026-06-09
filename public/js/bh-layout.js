@@ -1142,7 +1142,19 @@ window.confirm = function(msg) {
   };
 
   // Auto-show button if agency accounts exist or user is in managed mode
+  // ── Helper : détecter la page courante pour masquer le bouton agence ──
+  function isAgencyBtnHiddenPage() {
+    var path = window.location.pathname || '';
+    return path.indexOf('settings-account') !== -1 || path.indexOf('help') !== -1 || path.indexOf('support') !== -1;
+  }
+  function isAppPage() {
+    var path = window.location.pathname || '';
+    return path === '/' || path.indexOf('app.html') !== -1 || path === '';
+  }
+
   function injectMobileAgencyBtn() {
+    // Mobile : bouton agence uniquement sur app.html
+    if (!isAppPage()) return;
     if (document.getElementById('agencySwitcherBtnMobile')) return;
     var mh = document.getElementById('bhMobileHeader') || document.querySelector('.mobile-header');
     if (!mh) return;
@@ -1161,6 +1173,8 @@ window.confirm = function(msg) {
   }
 
   window.initAgencySwitcherBtn = function() {
+    // Pas de bouton agence sur settings-account et help
+    if (isAgencyBtnHiddenPage()) return;
     if (window.innerWidth <= 1366) injectMobileAgencyBtn();
     var btn = document.getElementById('agencySwitcherBtn');
     var btnMobile = document.getElementById('agencySwitcherBtnMobile');
@@ -1176,6 +1190,7 @@ window.confirm = function(msg) {
   // Watch for agency accounts to be loaded
   var _origRenderToggle = window.renderAgencyToggle;
   window.renderAgencyToggle = function(accounts) {
+    if (isAgencyBtnHiddenPage()) return;
     var btn = document.getElementById('agencySwitcherBtn');
     var btnMobile = document.getElementById('agencySwitcherBtnMobile');
     if (btn) btn.style.display = 'inline-flex';
