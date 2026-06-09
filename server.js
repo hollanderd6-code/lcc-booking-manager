@@ -9036,9 +9036,22 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const { date_from, date_to, property_ids } = req.query;
+    const { date_from, date_to, property_ids, owner_user_id } = req.query;
     if (!date_from || !date_to) {
       return res.status(400).json({ error: 'date_from et date_to sont requis' });
+    }
+
+    // Si owner_user_id fourni, vérifier la délégation
+    let targetUserId = user.id;
+    if (owner_user_id && owner_user_id !== user.id) {
+      const delegCheck = await pool.query(
+        `SELECT 1 FROM account_delegations WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+        [user.id, owner_user_id]
+      );
+      if (delegCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Accès non autorisé à ce compte' });
+      }
+      targetUserId = owner_user_id;
     }
 
     // Parser les property_ids (peut être une string ou tableau)
@@ -9049,7 +9062,7 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
 
     // Construire la condition SQL sur les logements
     let propCondition = 'AND r.user_id = $3';
-    let queryParams = [date_from, date_to, user.id];
+    let queryParams = [date_from, date_to, targetUserId];
     if (propIds.length > 0) {
       propCondition = `AND r.property_id = ANY($4) AND r.user_id = $3`;
       queryParams.push(propIds);
