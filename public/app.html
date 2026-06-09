@@ -2940,6 +2940,11 @@ window.loadAgencyAccountsForSwitcher = async function loadAgencyAccountsForSwitc
     window._agencyAccounts = data.iManage;
     // Afficher le toggle automatiquement
     renderAgencyToggle(data.iManage);
+    // Restaurer le mode sauvegardé
+    var savedView = localStorage.getItem('bh_agency_view');
+    if (savedView === 'all') {
+      setAgencyView('all');
+    }
   } catch(e) {}
 }
 
@@ -2954,6 +2959,7 @@ window.renderAgencyToggle = function renderAgencyToggle(accounts) {
 
 window.setAgencyView = async function setAgencyView(mode) {
   window._agencyViewActive = (mode === 'all');
+  localStorage.setItem('bh_agency_view', mode);
   // Mettre à jour les boutons toggle (legacy)
   const btnMine = document.getElementById('agencyToggleMine');
   const btnAll  = document.getElementById('agencyToggleAll');

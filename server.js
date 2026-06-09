@@ -18401,7 +18401,7 @@ app.get('/api/agency/managed-properties', authenticateAny, async (req, res) => {
     let allProps = [];
     for (const d of delegations.rows) {
       const props = await pool.query(
-        `SELECT id, name, owner_id, address, photo_url, user_id FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
+        `SELECT id, name, owner_id, address, photo_url, user_id FROM properties WHERE user_id = $1 ORDER BY name`,
         [d.delegator_user_id]
       );
       const accountName = ((d.first_name || '') + ' ' + (d.last_name || '')).trim() || d.email;
@@ -18437,7 +18437,7 @@ app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, 
     if (!check.rows.length) return res.status(403).json({ error: 'Accès non autorisé' });
 
     const props = await pool.query(
-      `SELECT id, name, owner_id FROM properties WHERE user_id = $1 AND active = TRUE ORDER BY name`,
+      `SELECT id, name, owner_id FROM properties WHERE user_id = $1 ORDER BY name`,
       [delegatorUserId]
     );
     res.json({ properties: props.rows });
