@@ -8205,6 +8205,29 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     const allReservations = [];
     let userProps = getUserProperties(userId);
 
+    // ── Mode agence : inclure les logements des comptes délégués ──
+    if (req.query.agency === 'all' && !req.user.isSubAccount) {
+      try {
+        const delegations = await pool.query(
+          `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+          [userId]
+        );
+        const agencyIds = [userId];
+        for (const d of delegations.rows) {
+          agencyIds.push(d.delegator_user_id);
+          const dProps = getUserProperties(d.delegator_user_id);
+          if (dProps.length) {
+            userProps = [...userProps, ...dProps.filter(dp => !userProps.some(up => up.id === dp.id))];
+          } else {
+            // Fallback DB si pas en cache
+            const dbProps = await pool.query(`SELECT * FROM properties WHERE user_id = $1`, [d.delegator_user_id]);
+            dbProps.rows.forEach(p => { if (!userProps.some(up => up.id === p.id)) userProps.push(p); });
+          }
+        }
+        req._agencyUserIds = agencyIds;
+      } catch(e) { console.warn('⚠️ [AGENCY] reservations mode all:', e.message); }
+    }
+
     // Filtrer selon propriétés accessibles (si sous-compte)
     // Si accessibleProperties est vide → accès à TOUS les logements du parent
     let filteredProps;
@@ -8297,9 +8320,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
            ON c.property_id = r.property_id
            AND c.reservation_start_date = r.start_date
            AND c.user_id = r.user_id
-         WHERE r.user_id = $1
+         WHERE r.user_id = ANY($1::text[])
            AND r.status != 'cancelled'`,
-        [userId]
+        [req._agencyUserIds || [userId]]
       );
       reservationsDbRows = dbResResult.rows;
       dbResResult.rows.forEach(r => {
@@ -13897,6 +13920,26 @@ app.get('/api/properties',
     console.log('🔍 PROPERTIES total en mémoire:', PROPERTIES.length);
     let userProps = getUserProperties(userId);
     console.log('🔍 userProps AVANT filtrage:', userProps.length, userProps.map(p => p.id));
+
+    // ── Mode agence : inclure les logements des comptes délégués ──
+    if (req.query.agency === 'all' && !req.user.isSubAccount) {
+      try {
+        const delegations = await pool.query(
+          `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+          [userId]
+        );
+        for (const d of delegations.rows) {
+          const dProps = getUserProperties(d.delegator_user_id);
+          if (dProps.length) {
+            userProps = [...userProps, ...dProps.filter(dp => !userProps.some(up => up.id === dp.id))];
+          } else {
+            const dbProps = await pool.query(`SELECT * FROM properties WHERE user_id = $1`, [d.delegator_user_id]);
+            dbProps.rows.forEach(p => { if (!userProps.some(up => up.id === p.id)) userProps.push(p); });
+          }
+        }
+        console.log('🏢 [AGENCY] Total props après merge:', userProps.length);
+      } catch(e) { console.warn('⚠️ [AGENCY] properties mode all:', e.message); }
+    }
     
     // ✅ FILTRER selon les propriétés accessibles (si sous-compte avec restrictions)
     if (accessiblePropertyIds && accessiblePropertyIds.length > 0) {
