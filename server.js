@@ -5311,6 +5311,20 @@ async function getUserFromRequest(req) {
   }
 }
 // ============================================
+// HELPER AGENCY : récupère tous les user_ids accessibles
+// ============================================
+async function getAgencyUserIds(req, userId) {
+  if (req.query.agency !== 'all') return [userId];
+  try {
+    const delegations = await pool.query(
+      `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+      [userId]
+    );
+    return [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+  } catch(e) { return [userId]; }
+}
+
+// ============================================
 // MIDDLEWARE D'AUTHENTIFICATION ET ABONNEMENT
 // À COPIER-COLLER APRÈS LA FONCTION getUserFromRequest
 // ============================================
@@ -8205,29 +8219,6 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
     const allReservations = [];
     let userProps = getUserProperties(userId);
 
-    // ── Mode agence : inclure les logements des comptes délégués ──
-    if (req.query.agency === 'all' && !req.user.isSubAccount) {
-      try {
-        const delegations = await pool.query(
-          `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
-          [userId]
-        );
-        const agencyIds = [userId];
-        for (const d of delegations.rows) {
-          agencyIds.push(d.delegator_user_id);
-          const dProps = getUserProperties(d.delegator_user_id);
-          if (dProps.length) {
-            userProps = [...userProps, ...dProps.filter(dp => !userProps.some(up => up.id === dp.id))];
-          } else {
-            // Fallback DB si pas en cache
-            const dbProps = await pool.query(`SELECT * FROM properties WHERE user_id = $1`, [d.delegator_user_id]);
-            dbProps.rows.forEach(p => { if (!userProps.some(up => up.id === p.id)) userProps.push(p); });
-          }
-        }
-        req._agencyUserIds = agencyIds;
-      } catch(e) { console.warn('⚠️ [AGENCY] reservations mode all:', e.message); }
-    }
-
     // Filtrer selon propriétés accessibles (si sous-compte)
     // Si accessibleProperties est vide → accès à TOUS les logements du parent
     let filteredProps;
@@ -8320,9 +8311,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
            ON c.property_id = r.property_id
            AND c.reservation_start_date = r.start_date
            AND c.user_id = r.user_id
-         WHERE r.user_id = ANY($1::text[])
+         WHERE r.user_id = $1
            AND r.status != 'cancelled'`,
-        [req._agencyUserIds || [userId]]
+        [userId]
       );
       reservationsDbRows = dbResResult.rows;
       dbResResult.rows.forEach(r => {
@@ -13059,6 +13050,8 @@ app.get('/api/cleaning/assignments',
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
+
+    const agencyIds = await getAgencyUserIds(req, userId);
     
     const result = await pool.query(
       `SELECT 
@@ -13068,9 +13061,9 @@ app.get('/api/cleaning/assignments',
         c.email as cleaner_email
       FROM cleaning_assignments ca
       LEFT JOIN cleaners c ON ca.cleaner_id = c.id
-      WHERE ca.user_id = $1
+      WHERE ca.user_id = ANY($1::text[])
       ORDER BY ca.created_at DESC`,
-      [userId]
+      [agencyIds]
     );
 
     // ✅ Aussi charger les cleaners par défaut (property_default_cleaners)
@@ -13086,8 +13079,8 @@ app.get('/api/cleaning/assignments',
           c.email as cleaner_email
         FROM property_default_cleaners pdc
         LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
-        WHERE pdc.user_id = $1`,
-        [userId]
+        WHERE pdc.user_id = ANY($1::text[])`,
+        [agencyIds]
       );
       defaultRows = defaultsResult.rows;
     } catch(e) { console.error('Erreur defaults cleaning:', e.message); }
@@ -13616,6 +13609,7 @@ app.get('/api/cleaning/stats',
         return res.status(401).json({ error: 'Non autorisé' });
       }
 
+      const agencyIds = await getAgencyUserIds(req, userId);
       const { period, month } = req.query;
 
       let dateFilter = '';
@@ -13637,8 +13631,8 @@ app.get('/api/cleaning/stats',
           COUNT(CASE WHEN owner_status = 'pending' THEN 1 END) as pending,
           COUNT(CASE WHEN owner_status = 'rejected' THEN 1 END) as rejected
         FROM cleaning_checklists cc
-        WHERE cc.user_id = $1 ${dateFilter}
-      `, [userId]);
+        WHERE cc.user_id = ANY($1::text[]) ${dateFilter}
+      `, [agencyIds]);
 
       const cleanerStats = await pool.query(`
         SELECT 
@@ -13650,10 +13644,10 @@ app.get('/api/cleaning/stats',
           COUNT(CASE WHEN cc.owner_status = 'rejected' THEN 1 END) as rejected
         FROM cleaning_checklists cc
         LEFT JOIN cleaners c ON c.id = cc.cleaner_id
-        WHERE cc.user_id = $1 ${dateFilter}
+        WHERE cc.user_id = ANY($1::text[]) ${dateFilter}
         GROUP BY c.id, c.name
         ORDER BY total DESC
-      `, [userId]);
+      `, [agencyIds]);
 
       const propertyStats = await pool.query(`
         SELECT 
@@ -13661,10 +13655,10 @@ app.get('/api/cleaning/stats',
           COUNT(cc.id) as total,
           MAX(cc.completed_at) as last_completed_at
         FROM cleaning_checklists cc
-        WHERE cc.user_id = $1 ${dateFilter}
+        WHERE cc.user_id = ANY($1::text[]) ${dateFilter}
         GROUP BY cc.property_id
         ORDER BY total DESC
-      `, [userId]);
+      `, [agencyIds]);
 
       const enrichedPropertyStats = propertyStats.rows.map(row => {
         const property = PROPERTIES.find(p => p.id === row.property_id);
@@ -13920,26 +13914,6 @@ app.get('/api/properties',
     console.log('🔍 PROPERTIES total en mémoire:', PROPERTIES.length);
     let userProps = getUserProperties(userId);
     console.log('🔍 userProps AVANT filtrage:', userProps.length, userProps.map(p => p.id));
-
-    // ── Mode agence : inclure les logements des comptes délégués ──
-    if (req.query.agency === 'all' && !req.user.isSubAccount) {
-      try {
-        const delegations = await pool.query(
-          `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
-          [userId]
-        );
-        for (const d of delegations.rows) {
-          const dProps = getUserProperties(d.delegator_user_id);
-          if (dProps.length) {
-            userProps = [...userProps, ...dProps.filter(dp => !userProps.some(up => up.id === dp.id))];
-          } else {
-            const dbProps = await pool.query(`SELECT * FROM properties WHERE user_id = $1`, [d.delegator_user_id]);
-            dbProps.rows.forEach(p => { if (!userProps.some(up => up.id === p.id)) userProps.push(p); });
-          }
-        }
-        console.log('🏢 [AGENCY] Total props après merge:', userProps.length);
-      } catch(e) { console.warn('⚠️ [AGENCY] properties mode all:', e.message); }
-    }
     
     // ✅ FILTRER selon les propriétés accessibles (si sous-compte avec restrictions)
     if (accessiblePropertyIds && accessiblePropertyIds.length > 0) {
@@ -15122,6 +15096,8 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     const selectedYear = parseInt(year) || new Date().getFullYear();
     const selectedMonth = month ? parseInt(month) : null;
 
+    const agencyIds = await getAgencyUserIds(req, user.id);
+
     // Récupérer les propriétés de l'utilisateur avec leurs configs financières
     const propsResult = await pool.query(`
       SELECT id, name, color,
@@ -15129,10 +15105,10 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
              cleaning_fee, tourist_tax_per_night, concierge_pct,
              COALESCE(airbnb_commission_pct, 3) as airbnb_commission_pct,
              COALESCE(booking_commission_pct, 15) as booking_commission_pct
-      FROM properties WHERE user_id = $1
+      FROM properties WHERE user_id = ANY($1::text[])
       ${property_id ? 'AND id = $2' : ''}
       ORDER BY display_order ASC, created_at ASC
-    `, property_id ? [user.id, property_id] : [user.id]);
+    `, property_id ? [agencyIds, property_id] : [agencyIds]);
     const properties = propsResult.rows;
 
     if (properties.length === 0) {
@@ -15153,7 +15129,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         EXTRACT(MONTH FROM r.start_date) as month,
         (r.end_date::date - r.start_date::date) as nights
       FROM reservations r
-      WHERE r.user_id = $1
+      WHERE r.user_id = ANY($1::text[])
         AND r.status = 'confirmed'
         AND r.property_id = ANY($3)
         AND (
@@ -15162,16 +15138,16 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
           OR (EXTRACT(YEAR FROM r.start_date) = $2 - 1 AND (r.ota_name ILIKE '%booking%' OR r.platform ILIKE '%booking%'))
         )
       ORDER BY r.start_date ASC
-    `, [user.id, selectedYear, propIds]);
+    `, [agencyIds, selectedYear, propIds]);
     const reservations = resaResult.rows;
 
     // Récupérer les overrides de prix (pour les réservations manuelles sans prix)
     const overridesResult = await pool.query(`
       SELECT property_id, TO_CHAR(date, 'YYYY-MM-DD') as date, price
       FROM pricing_overrides
-      WHERE user_id = $1
+      WHERE user_id = ANY($1::text[])
         AND EXTRACT(YEAR FROM date) = $2
-    `, [user.id, selectedYear]);
+    `, [agencyIds, selectedYear]);
     const overridesMap = {};
     overridesResult.rows.forEach(o => {
       overridesMap[`${o.property_id}_${o.date}`] = parseFloat(o.price);
@@ -17889,7 +17865,14 @@ app.get('/api/deposits',
 
     const { status, propertyId } = req.query;
     
-    const deposits = await getUserDeposits(userId, { status, propertyId });
+    // ── Mode agence ──
+    const agencyIds = await getAgencyUserIds(req, userId);
+    let allDeposits = [];
+    for (const uid of agencyIds) {
+      const d = await getUserDeposits(uid, { status, propertyId });
+      allDeposits = allDeposits.concat(d);
+    }
+    const deposits = allDeposits;
     
     // ✅ Filtrer par propriétés si sous-compte
     let filteredDeposits = deposits;
@@ -19990,16 +19973,18 @@ app.get('/api/invoice/history',
       : (await getUserFromRequest(req))?.id;
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
+    const agencyIds = await getAgencyUserIds(req, userId);
+
     const result = await pool.query(
       `SELECT invoice_number, file_path, created_at FROM (
          SELECT DISTINCT ON (invoice_number) invoice_number, file_path, created_at
          FROM invoice_download_tokens
-         WHERE user_id = $1
+         WHERE user_id = ANY($1::text[])
          ORDER BY invoice_number, created_at DESC
        ) sub
        ORDER BY created_at DESC
        LIMIT 100`,
-      [userId]
+      [agencyIds]
     );
 
     // Si rien dans invoice_download_tokens, fallback sur owner_invoices (factures voyageurs uniquement)
@@ -28254,6 +28239,7 @@ app.get('/api/contrats', authenticateAny, async (req, res) => {
       : (await getUserFromRequest(req))?.id;
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
+    const agencyIds = await getAgencyUserIds(req, userId);
     const { status, limit = 50, offset = 0 } = req.query;
     let query = `SELECT id, status, reservation_uid, sign_token_expires_at, guest_signed_at, created_at,
                         contract_data,
@@ -28264,8 +28250,8 @@ app.get('/api/contrats', authenticateAny, async (req, res) => {
                         contract_data->>'checkin' as checkin,
                         contract_data->>'checkout' as checkout,
                         contract_data->>'totalPrice' as total_price
-                 FROM contracts WHERE user_id = $1`;
-    const params = [userId];
+                 FROM contracts WHERE user_id = ANY($1::text[])`;
+    const params = [agencyIds];
 
     if (status) { query += ` AND status = $${params.length + 1}`; params.push(status); }
     query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
