@@ -1368,18 +1368,18 @@ html[data-theme-v3="1"] .sidebar {
 <span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Montant bloqué sur la carte du voyageur. Libéré après le séjour si aucun dommage.</span></span>
 </label>
 <div class="input-with-suffix">
-<input id="propertyDeposit" min="0" placeholder="Laisser vide si aucune" step="1" type="number" oninput="var g=document.getElementById('depositReleaseDaysGroup');if(g)g.style.display=this.value&&parseFloat(this.value)>0?'':'none'"/>
+<input id="propertyDeposit" min="0" placeholder="Laisser vide si aucune" step="1" type="number"/>
 <span>€</span>
 </div>
 </div>
-<div class="form-group" id="depositReleaseDaysGroup" style="display:none;">
+<div class="form-group" id="depositReleaseDaysGroup">
 <label for="propertyDepositReleaseDays">
 <i class="fas fa-clock"></i>
 <span>Délai de restitution</span>
 <span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Nombre de jours après le départ avant que la caution soit débloquée. L'IA adaptera sa réponse automatiquement.</span></span>
 </label>
 <div class="input-with-suffix">
-<input id="propertyDepositReleaseDays" min="1" max="30" placeholder="Ex: 7" step="1" type="number"/>
+<input id="propertyDepositReleaseDays" min="1" max="30" placeholder="Laisser vide si aucune" step="1" type="number"/>
 <span>jours</span>
 </div>
 </div>
@@ -2650,12 +2650,6 @@ function insertVariable(textareaId, variable, event) {
       if (depositReleaseDaysField) {
         var drdVal = propertyData.deposit_release_days || propertyData.depositReleaseDays;
         depositReleaseDaysField.value = drdVal != null && drdVal !== 0 ? drdVal : '';
-      }
-      // Toggle visibility based on deposit amount
-      var depGroup = document.getElementById('depositReleaseDaysGroup');
-      var depAmount = document.getElementById('propertyDeposit');
-      if (depGroup && depAmount) {
-        depGroup.style.display = depAmount.value && parseFloat(depAmount.value) > 0 ? '' : 'none';
       }
 
       // ✅ CHARGER L'ID CHANNEX (usage interne admin)
