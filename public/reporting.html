@@ -655,6 +655,18 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 </div><!-- /app-container -->
 
 <script>
+// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
+      url += (url.includes('?') ? '&' : '?') + 'agency=all';
+    }
+    return _origFetch.call(this, url, opts);
+  };
+})();
+</script>
+<script>
   // Auth guard
   const _tok = localStorage.getItem('lcc_token');
   if (!_tok) window.location.href = '/login.html';

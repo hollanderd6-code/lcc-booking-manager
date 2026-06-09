@@ -605,6 +605,18 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
 
 <script src="/js/auth-fetch.js"></script>
 <script>
+// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
+      url += (url.includes('?') ? '&' : '?') + 'agency=all';
+    }
+    return _origFetch.call(this, url, opts);
+  };
+})();
+</script>
+<script>
 // API_URL géré par auth-fetch.js (résout vers lcc-booking-manager sur iOS, relatif sur web)
 
 // ─── MOBILE DETECTION (Capacitor + touch + width) ─────────────────────────

@@ -1156,6 +1156,18 @@ html[data-theme-v3="1"] .sidebar {
 <!-- Script auth + user + logout -->
 <script src="/js/auth-fetch.js"></script>
 <script>
+// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
+      url += (url.includes('?') ? '&' : '?') + 'agency=all';
+    }
+    return _origFetch.call(this, url, opts);
+  };
+})();
+</script>
+<script>
     (function () {
       const token = localStorage.getItem('lcc_token');
       if (!token) {
