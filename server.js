@@ -24560,7 +24560,7 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
     let finalMsg;
     if (isGuestSms && message.length > SMS_MAX_DIRECT) {
       // Créer une page web guest avec le message complet
-      const token = require('crypto').randomBytes(8).toString('hex');
+      const token = require('crypto').randomBytes(6).toString('hex');
       const baseUrl = process.env.BASE_URL || 'https://boostinghost.fr';
       const pageUrl = `${baseUrl}/g/${token}`;
       
@@ -24579,18 +24579,19 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
         [token, userId, _logData?.guest_name || null, _logData?.property_name || null, message, expiresAt]
       );
 
-      // SMS court sans emojis
+      // SMS court sans emojis ni accents spéciaux
       const guestFirstName = (_logData?.guest_name || '').split(' ')[0] || '';
       const propName = _logData?.property_name || '';
+      const noReply = '\nMerci de ne pas repondre a ce SMS, nous n\'y avons pas acces.';
       
       if (triggerType === 'on_arrival') {
-        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, vos instructions d'arrivee${propName ? ' a ' + propName : ''} (adresse, codes, wifi) : ${pageUrl}`;
+        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, vos instructions d'arrivee${propName ? ' a ' + propName : ''} :\n${pageUrl}${noReply}`;
       } else if (triggerType === 'before_arrival') {
-        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, voici les informations pour votre sejour${propName ? ' a ' + propName : ''} : ${pageUrl}`;
+        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, informations pour votre sejour${propName ? ' a ' + propName : ''} :\n${pageUrl}${noReply}`;
       } else if (triggerType === 'on_booking') {
-        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, merci pour votre reservation${propName ? ' a ' + propName : ''} ! Infos : ${pageUrl}`;
+        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, merci pour votre reservation${propName ? ' a ' + propName : ''} !\n${pageUrl}${noReply}`;
       } else {
-        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, informations pour votre sejour : ${pageUrl}`;
+        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, informations sejour :\n${pageUrl}${noReply}`;
       }
       console.log(`📱 [SMS] Message long (${message.length} chars) → page guest ${token} (expire: ${expiresAt.toISOString().split('T')[0]})`);
     } else {
