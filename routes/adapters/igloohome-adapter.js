@@ -138,14 +138,13 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
     // Si c'est un Keypad, utiliser le Lock lié (AlgoPIN ne marche que sur les Locks)
     let deviceId = lock.device_id;
-    let effectiveLock = lock; // pour le bridge ID
+    let effectiveLock = lock;
     const model = (lock.model || lock.metadata?.raw?.type || '').toLowerCase();
     if (model === 'keypad') {
       const linkedLock = (lock.metadata?.raw?.linkedDevices || []).find(d => d.type === 'Lock');
       if (linkedLock?.deviceId) {
         console.log(`🔑 [Igloohome] Keypad détecté → utilisation du Lock lié: ${linkedLock.deviceId}`);
         deviceId = linkedLock.deviceId;
-        // Résoudre le bridge correct pour le lock (pas celui du keypad)
         try {
           const lockRow = await this.pool.query(
             'SELECT metadata FROM smart_locks WHERE device_id = $1 AND connection_id = $2',
@@ -155,7 +154,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
             effectiveLock = { ...lock, metadata: { ...lock.metadata, bridgeDeviceId: lockRow.rows[0].metadata.bridgeDeviceId } };
             console.log(`🔑 [Igloohome] Bridge résolu pour lock: ${lockRow.rows[0].metadata.bridgeDeviceId}`);
           }
-        } catch (e) { /* fallback au bridge du keypad */ }
+        } catch (e) { /* fallback */ }
       }
     }
 
@@ -213,27 +212,24 @@ class IgloohomeAdapter extends SmartLockAdapter {
       console.warn(`⚠️ [Igloohome] AlgoPIN hourly échoué: ${hourlyErr.message}`);
     }
 
-    // ── Méthode 3 : Bridge create PIN (jobType 4) ──
+    // ── Méthode 3 : Bridge create PIN (pin/pinName) ──
     const bridgeId = effectiveLock.metadata?.bridgeDeviceId;
     if (!bridgeId) {
       throw new Error('AlgoPIN indisponible et aucun bridge associé — impossible de créer un code.');
     }
 
-    const job = await this._createBridgeJob(effectiveLock, 4, {}, deviceId);
+    const code = this._generatePin(6);
+    const job = await this._createBridgeJob(effectiveLock, 4, {
+      pin: code,
+      pinName: accessName,
+    }, deviceId);
     console.log(`🔑 [Igloohome] Bridge create PIN job: ${job.jobId}`);
     const result = await this._waitForJob(job.jobId, 20000);
-
-    const bridgePin = result.jobResponse?.pin || result.jobResponse?.accessCode
-      || result.pin || result.accessCode || result.code;
-    if (!bridgePin) {
-      console.error(`⚠️ [Igloohome] Bridge job réponse:`, JSON.stringify(result));
-      throw new Error('Bridge job terminé mais aucun PIN retourné');
-    }
-    console.log(`🔑 [Igloohome] Bridge PIN créé pour ${guestName}: ${bridgePin}`);
+    console.log(`🔑 [Igloohome] Bridge job result:`, JSON.stringify(result));
 
     return {
-      externalCodeId: job.jobId || String(Date.now()),
-      code: String(bridgePin),
+      externalCodeId: result.jobResponse?.pinId || job.jobId || String(Date.now()),
+      code: code,
       validFrom: startDate,
       validUntil: endDate,
     };
@@ -309,7 +305,6 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
   async createCustomPin(lock, { code, name, startDate, endDate }) {
     const token = await this.authenticate();
-    // Si c'est un Keypad, utiliser le Lock lié + son bridge
     let deviceId = lock.device_id;
     let effectiveLock = lock;
     const model = (lock.model || lock.metadata?.raw?.type || '').toLowerCase();
@@ -348,16 +343,17 @@ class IgloohomeAdapter extends SmartLockAdapter {
       console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué, fallback bridge: ${e.message}`);
     }
 
-    // Fallback bridge
+    // Fallback bridge avec pin/pinName
     const bridgeId = effectiveLock.metadata?.bridgeDeviceId;
     if (!bridgeId) return { success: false, code: null };
     const pinCode = code || this._generatePin(6);
     try {
-      const job = await this._createBridgeJob(effectiveLock, 4, {}, deviceId);
+      const job = await this._createBridgeJob(effectiveLock, 4, {
+        pin: pinCode,
+        pinName: accessName,
+      }, deviceId);
       const result = await this._waitForJob(job.jobId, 20000);
-      const bridgePin = result.jobResponse?.pin || result.jobResponse?.accessCode
-        || result.pin || result.accessCode || result.code || pinCode;
-      return { success: result.completed, jobId: job.jobId, code: String(bridgePin) };
+      return { success: result.completed, jobId: job.jobId, code: pinCode };
     } catch (e) {
       console.error(`[Igloohome] Erreur bridge createCustomPin:`, e.message);
       return { success: false, code: null };
