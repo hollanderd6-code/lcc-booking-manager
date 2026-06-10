@@ -136,6 +136,17 @@ class IgloohomeAdapter extends SmartLockAdapter {
     const token = await this.authenticate();
     const accessName = (guestName || 'Guest').substring(0, 32);
 
+    // Si c'est un Keypad, utiliser le Lock lié (AlgoPIN ne marche que sur les Locks)
+    let deviceId = lock.device_id;
+    const model = (lock.model || lock.metadata?.raw?.type || '').toLowerCase();
+    if (model === 'keypad') {
+      const linkedLock = (lock.metadata?.raw?.linkedDevices || []).find(d => d.type === 'Lock');
+      if (linkedLock?.deviceId) {
+        console.log(`🔑 [Igloohome] Keypad détecté → utilisation du Lock lié: ${linkedLock.deviceId}`);
+        deviceId = linkedLock.deviceId;
+      }
+    }
+
     // Formater les dates au format requis : YYYY-MM-DDTHH:00:00+hh:mm
     const formattedStart = startDate ? this._formatAlgoPinDate(startDate) : undefined;
     const formattedEnd = endDate ? this._formatAlgoPinDate(endDate) : undefined;
@@ -146,7 +157,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
       if (formattedStart) payload.startDate = formattedStart;
       if (formattedEnd) payload.endDate = formattedEnd;
 
-      const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/daily`, {
+      const data = await this.apiCall(`${BASE_URL}/devices/${deviceId}/algopin/daily`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -171,7 +182,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
       if (formattedStart) payload.startDate = formattedStart;
       if (formattedEnd) payload.endDate = formattedEnd;
 
-      const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/hourly`, {
+      const data = await this.apiCall(`${BASE_URL}/devices/${deviceId}/algopin/hourly`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -277,6 +288,13 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
   async createCustomPin(lock, { code, name, startDate, endDate }) {
     const token = await this.authenticate();
+    // Si c'est un Keypad, utiliser le Lock lié
+    let deviceId = lock.device_id;
+    const model = (lock.model || lock.metadata?.raw?.type || '').toLowerCase();
+    if (model === 'keypad') {
+      const linkedLock = (lock.metadata?.raw?.linkedDevices || []).find(d => d.type === 'Lock');
+      if (linkedLock?.deviceId) deviceId = linkedLock.deviceId;
+    }
     try {
       const payload = {
         accessName: (name || 'Code BH').substring(0, 32),
@@ -285,7 +303,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
       if (startDate) payload.startDate = this._formatAlgoPinDate(startDate);
       if (endDate) payload.endDate = this._formatAlgoPinDate(endDate);
 
-      const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/daily`, {
+      const data = await this.apiCall(`${BASE_URL}/devices/${deviceId}/algopin/daily`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
