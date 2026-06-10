@@ -7838,8 +7838,8 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
       `UPDATE reservations SET
         property_id = $1, start_date = $2, end_date = $3,
         guest_name = $4, notes = $5,
-        platform = $6,
-        source = CASE WHEN source = 'channex' THEN 'channex' ELSE $6 END,
+        platform = $6::text,
+        source = CASE WHEN source = 'channex' THEN 'channex' ELSE $6::text END,
         price = $7, amount_total = $7, guest_phone = $8, guest_email = $9,
         guest_country = $10, guest_address = $11, guest_zip = $12, occupancy_adults = $13,
         amount_rooms = $14, amount_cleaning = $15, amount_taxes = $16, ota_commission = $17,
@@ -7847,7 +7847,7 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
        WHERE uid = $18 AND user_id = $19`,
       [
         propertyId, start, end,
-        guestName || 'Réservation manuelle', (notes !== undefined ? (notes.trim() || null) : null), platform || 'MANUEL',
+        guestName || 'Réservation manuelle', (notes !== undefined ? (notes.trim() || null) : null), String(platform || 'MANUEL'),
         price || null, phone || null, email || null,
         guest_country || null, guest_address || null, guest_zip || null, occupancy_adults || null,
         amount_rooms || null, amount_cleaning || null, amount_taxes || null, ota_commission || null,
