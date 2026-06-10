@@ -985,23 +985,27 @@ async function createQuickCode(lockId) {
   if (!startDate || !endDate) return showToast('Remplissez les dates', 'error');
 
   const btn = document.getElementById('newcode-btn-' + lockId);
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Création via bridge...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Génération...'; }
 
   try {
-    const data = await api('/lock/' + lockId + '/custom-pin', {
+    // Utiliser /codes/generate (chain complet: AlgoPIN daily → hourly sur keypad/lock)
+    const propertyId = lock.assignment?.property_id;
+    const data = await api('/codes/generate', {
       method: 'POST',
       body: JSON.stringify({
-        name,
-        code: pin,
+        lockId,
+        propertyId: propertyId || null,
+        guestName: name,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
       }),
     });
 
-    showToast(`Code ${data.code || pin || ''} créé ! (envoyé au bridge)`, 'success');
-    closeLockDetail();
+    showToast(`Code ${data.code || ''} généré !`, 'success');
+    // Rafraîchir le modal au lieu de le fermer
     await loadCodes();
     await loadStatus();
+    await openLockDetail(lockId);
   } catch (e) {
     showToast('Erreur : ' + e.message, 'error');
   } finally {
