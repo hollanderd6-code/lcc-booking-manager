@@ -111,14 +111,40 @@ class IgloohomeAdapter extends SmartLockAdapter {
     });
   }
 
+  // ── Helper : formater date pour AlgoPIN (YYYY-MM-DDTHH:00:00+hh:mm) ──
+  _formatAlgoPinDate(date) {
+    const d = new Date(date);
+    const pad = (n) => String(n).padStart(2, '0');
+    // Obtenir les composants en heure de Paris via Intl
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    });
+    const p = {};
+    fmt.formatToParts(d).forEach(part => { p[part.type] = part.value; });
+    // Déterminer offset Paris : comparer heure UTC vs heure Paris
+    const utcH = d.getUTCHours();
+    const parisH = parseInt(p.hour);
+    let offset = parisH - utcH;
+    if (offset < 0) offset += 24;
+    if (offset > 12) offset -= 24;
+    const offStr = `+${pad(offset)}:00`;
+    return `${p.year}-${p.month}-${p.day}T${pad(parisH)}:00:00${offStr}`;
+  }
+
   async generateCode(lock, { startDate, endDate, guestName }) {
     const token = await this.authenticate();
+    const accessName = (guestName || 'Guest').substring(0, 32);
+
+    // Formater les dates au format requis : YYYY-MM-DDTHH:00:00+hh:mm
+    const formattedStart = startDate ? this._formatAlgoPinDate(startDate) : undefined;
+    const formattedEnd = endDate ? this._formatAlgoPinDate(endDate) : undefined;
 
     // ── Méthode 1 : AlgoPIN daily (ne nécessite pas de bridge) ──
     try {
-      const payload = {};
-      if (startDate) payload.startDate = new Date(startDate).toISOString();
-      if (endDate) payload.endDate = new Date(endDate).toISOString();
+      const payload = { accessName, variance: 1 };
+      if (formattedStart) payload.startDate = formattedStart;
+      if (formattedEnd) payload.endDate = formattedEnd;
 
       const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/daily`, {
         method: 'POST',
@@ -141,9 +167,9 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
     // ── Méthode 2 : AlgoPIN hourly (fallback) ──
     try {
-      const payload = {};
-      if (startDate) payload.startDate = new Date(startDate).toISOString();
-      if (endDate) payload.endDate = new Date(endDate).toISOString();
+      const payload = { accessName, variance: 1 };
+      if (formattedStart) payload.startDate = formattedStart;
+      if (formattedEnd) payload.endDate = formattedEnd;
 
       const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/hourly`, {
         method: 'POST',
@@ -164,7 +190,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
       console.warn(`⚠️ [Igloohome] AlgoPIN hourly échoué: ${hourlyErr.message}`);
     }
 
-    // ── Méthode 3 : Bridge custom PIN (ancien format, fallback ultime) ──
+    // ── Méthode 3 : Bridge custom PIN (fallback ultime) ──
     const bridgeId = lock.metadata?.bridgeDeviceId;
     if (!bridgeId) {
       throw new Error('AlgoPIN indisponible et aucun bridge associé — impossible de créer un code.');
@@ -250,12 +276,14 @@ class IgloohomeAdapter extends SmartLockAdapter {
   }
 
   async createCustomPin(lock, { code, name, startDate, endDate }) {
-    // Utiliser AlgoPIN daily (le code est généré par igloohome, pas custom)
     const token = await this.authenticate();
     try {
-      const payload = {};
-      if (startDate) payload.startDate = new Date(startDate).toISOString();
-      if (endDate) payload.endDate = new Date(endDate).toISOString();
+      const payload = {
+        accessName: (name || 'Code BH').substring(0, 32),
+        variance: 1,
+      };
+      if (startDate) payload.startDate = this._formatAlgoPinDate(startDate);
+      if (endDate) payload.endDate = this._formatAlgoPinDate(endDate);
 
       const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/daily`, {
         method: 'POST',
