@@ -2693,8 +2693,13 @@ async function sendEmailViaBrevo({ to, subject, text, html }) {
 
   // `to` peut etre une string ou un tableau de strings
   const toArray = Array.isArray(to)
-    ? to.map(e => ({ email: e }))
-    : [{ email: to }];
+    ? to.map(e => ({ email: String(e).trim() })).filter(e => e.email.includes('@'))
+    : [{ email: String(to).trim() }];
+
+  if (!toArray.length || !toArray[0].email.includes('@')) {
+    console.warn(`⚠️ [BREVO] Email invalide, envoi annulé: "${to}"`);
+    return null;
+  }
 
   const payload = {
     sender,
@@ -25832,10 +25837,10 @@ async function runInvoiceQueue(mode) {
       try {
         const userId = req.user_id;
         const clientName = req.client_name || req.guest_name || 'Client';
-        const clientEmail = req.client_email || req.guest_email;
+        const clientEmail = (req.client_email || req.guest_email || '').trim();
 
-        if (!clientEmail) {
-          console.warn(`⚠️ [INVOICE CRON] Pas d'email pour demande ${req.id}`);
+        if (!clientEmail || !clientEmail.includes('@') || clientEmail.length < 5) {
+          console.warn(`⚠️ [INVOICE CRON] Email invalide ou manquant pour demande ${req.id}: "${clientEmail}"`);
           continue;
         }
 

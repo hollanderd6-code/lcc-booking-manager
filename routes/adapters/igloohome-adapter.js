@@ -112,32 +112,67 @@ class IgloohomeAdapter extends SmartLockAdapter {
   }
 
   async generateCode(lock, { startDate, endDate, guestName }) {
-    // Utiliser le bridge pour créer un PIN custom (l'algoPIN n'existe plus sur la nouvelle API)
-    const bridgeId = lock.metadata?.bridgeDeviceId;
-    if (!bridgeId) {
-      throw new Error('Aucun bridge associé — impossible de créer un code. Vérifiez que la serrure est reliée à un bridge.');
+    const token = await this.authenticate();
+
+    // ── Méthode 1 : AlgoPIN daily (ne nécessite pas de bridge) ──
+    try {
+      const payload = {};
+      if (startDate) payload.startDate = new Date(startDate).toISOString();
+      if (endDate) payload.endDate = new Date(endDate).toISOString();
+
+      const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/daily`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const code = data.pin || data.algoPin || data.code;
+      console.log(`🔑 [Igloohome] AlgoPIN daily généré pour ${guestName}: ${code}`);
+
+      return {
+        externalCodeId: data.pinId || data.id || String(Date.now()),
+        code: code,
+        validFrom: startDate,
+        validUntil: endDate,
+      };
+    } catch (algoPinErr) {
+      console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué: ${algoPinErr.message}`);
     }
 
-    const token = await this.authenticate();
+    // ── Méthode 2 : AlgoPIN hourly (fallback) ──
+    try {
+      const payload = {};
+      if (startDate) payload.startDate = new Date(startDate).toISOString();
+      if (endDate) payload.endDate = new Date(endDate).toISOString();
+
+      const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/hourly`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const code = data.pin || data.algoPin || data.code;
+      console.log(`🔑 [Igloohome] AlgoPIN hourly généré pour ${guestName}: ${code}`);
+
+      return {
+        externalCodeId: data.pinId || data.id || String(Date.now()),
+        code: code,
+        validFrom: startDate,
+        validUntil: endDate,
+      };
+    } catch (hourlyErr) {
+      console.warn(`⚠️ [Igloohome] AlgoPIN hourly échoué: ${hourlyErr.message}`);
+    }
+
+    // ── Méthode 3 : Bridge custom PIN (ancien format, fallback ultime) ──
+    const bridgeId = lock.metadata?.bridgeDeviceId;
+    if (!bridgeId) {
+      throw new Error('AlgoPIN indisponible et aucun bridge associé — impossible de créer un code.');
+    }
+
     const code = this._generatePin(6);
-
-    const payload = {
-      jobType: 4, // BRIDGE_JOB_CREATE_CUSTOM_PIN
-      pin: code,
-      pinName: (guestName || 'Guest').substring(0, 32),
-    };
-    if (startDate) payload.startDate = new Date(startDate).toISOString();
-    if (endDate) payload.endDate = new Date(endDate).toISOString();
-
-    const job = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/jobs/bridges/${bridgeId}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload),
-    });
-
-    console.log(`🔑 [Igloohome] Create PIN job: ${job.jobId}`);
-
-    // Attendre la confirmation du bridge
+    const job = await this._createBridgeJob(lock, 4, {});
+    console.log(`🔑 [Igloohome] Bridge PIN job: ${job.jobId}`);
     const result = await this._waitForJob(job.jobId, 20000);
 
     return {
@@ -215,16 +250,25 @@ class IgloohomeAdapter extends SmartLockAdapter {
   }
 
   async createCustomPin(lock, { code, name, startDate, endDate }) {
-    const payload = {
-      pin: code || this._generatePin(6),
-      pinName: (name || 'Code BH').substring(0, 32),
-    };
-    if (startDate) payload.startDate = new Date(startDate).toISOString();
-    if (endDate) payload.endDate = new Date(endDate).toISOString();
+    // Utiliser AlgoPIN daily (le code est généré par igloohome, pas custom)
+    const token = await this.authenticate();
+    try {
+      const payload = {};
+      if (startDate) payload.startDate = new Date(startDate).toISOString();
+      if (endDate) payload.endDate = new Date(endDate).toISOString();
 
-    const job = await this._createBridgeJob(lock, 4, payload); // BRIDGE_JOB_CREATE_CUSTOM_PIN
-    const result = await this._waitForJob(job.jobId, 20000);
-    return { success: result.completed, jobId: job.jobId, code: payload.pin };
+      const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/algopin/daily`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const pin = data.pin || data.algoPin || data.code;
+      return { success: true, pinId: data.pinId || data.id, code: pin };
+    } catch (e) {
+      console.error(`[Igloohome] Erreur createCustomPin:`, e.message);
+      return { success: false, code: null };
+    }
   }
 
   async deleteCustomPin(lock, pinId) {
