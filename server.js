@@ -27332,9 +27332,7 @@ cron.schedule('0 20 * * *', async () => {
         if (!propertyIds.size) {
           // Aucun ménage demain → message de repos
           message =
-            `Boostinghost récap\n` +
-            `Bonjour ${cleaner.name},\n` +
-            `Pas de ménage à effectuer demain (${tomorrowLabel}). Bonne soirée ! 😊`;
+            `Bonjour ${cleaner.name}, pas de menage demain (${tomorrowLabel}). Bonne soiree !`;
         } else {
           // Résoudre les noms de logements
           const propertyNames = [];
@@ -27344,16 +27342,12 @@ cron.schedule('0 20 * * *', async () => {
           }
           const count = propertyNames.length;
           const listStr = propertyNames.join(', ');
-          const taskUrl = `https://www.boostinghost.fr/cleaning-tasks.html`;
+          const taskUrl = `boostinghost.fr/cleaning-tasks.html`;
           message =
-            `Boostinghost récap\n` +
-            `Bonjour ${cleaner.name},\n` +
-            `Vous avez ${count} ménage${count > 1 ? 's' : ''} demain ` +
-            `(${tomorrowLabel}) :\n` +
-            `${listStr}\n` +
-            `Accès checklist : ${taskUrl}` +
-            (pinStr ? ` (PIN : ${pinStr})` : '') +
-            `\nRépondez OK pour confirmer.`;
+            `Bonjour ${cleaner.name}, ${count} menage${count > 1 ? 's' : ''} demain (${tomorrowLabel}): ${listStr}\n` +
+            taskUrl +
+            (pinStr ? ` PIN:${pinStr}` : '') +
+            `\nRepondez OK pour confirmer.`;
         }
 
         const sent = await sendSmsGateway(
