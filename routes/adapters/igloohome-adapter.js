@@ -207,16 +207,14 @@ class IgloohomeAdapter extends SmartLockAdapter {
       throw new Error('AlgoPIN indisponible et aucun bridge associé — impossible de créer un code.');
     }
 
-    // Le bridge ne supporte que { jobType: 4 } — le PIN est généré par la serrure
-    const job = await this._createBridgeJob(lock, 4, {});
+    const job = await this._createBridgeJob(lock, 4, {}, deviceId);
     console.log(`🔑 [Igloohome] Bridge create PIN job: ${job.jobId}`);
     const result = await this._waitForJob(job.jobId, 20000);
 
-    // Extraire le PIN depuis la réponse du job
-    const bridgePin = result.jobResponse?.pin || result.jobResponse?.accessCode 
+    const bridgePin = result.jobResponse?.pin || result.jobResponse?.accessCode
       || result.pin || result.accessCode || result.code;
     if (!bridgePin) {
-      console.error(`⚠️ [Igloohome] Bridge job terminé mais pas de PIN dans la réponse:`, JSON.stringify(result));
+      console.error(`⚠️ [Igloohome] Bridge job réponse:`, JSON.stringify(result));
       throw new Error('Bridge job terminé mais aucun PIN retourné');
     }
     console.log(`🔑 [Igloohome] Bridge PIN créé pour ${guestName}: ${bridgePin}`);
@@ -253,12 +251,14 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
   // ── Bridge Jobs : commandes à distance ──
 
-  async _createBridgeJob(lock, jobType, payload = {}) {
+  async _createBridgeJob(lock, jobType, payload = {}, overrideDeviceId = null) {
     const token = await this.authenticate();
     const bridgeId = lock.metadata?.bridgeDeviceId;
     if (!bridgeId) throw new Error('Aucun bridge associé à cette serrure');
 
-    const data = await this.apiCall(`${BASE_URL}/devices/${lock.device_id}/jobs/bridges/${bridgeId}`, {
+    const targetDeviceId = overrideDeviceId || lock.device_id;
+    console.log(`🔧 [Igloohome] Bridge job type=${jobType} → device=${targetDeviceId}, bridge=${bridgeId}`);
+    const data = await this.apiCall(`${BASE_URL}/devices/${targetDeviceId}/jobs/bridges/${bridgeId}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ jobType, ...payload }),
@@ -328,7 +328,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
     const bridgeId = lock.metadata?.bridgeDeviceId;
     if (!bridgeId) return { success: false, code: null };
     try {
-      const job = await this._createBridgeJob(lock, 4, {});
+      const job = await this._createBridgeJob(lock, 4, {}, deviceId);
       const result = await this._waitForJob(job.jobId, 20000);
       const bridgePin = result.jobResponse?.pin || result.jobResponse?.accessCode
         || result.pin || result.accessCode || result.code;
