@@ -998,21 +998,6 @@ async function createQuickCode(lockId) {
       }),
     });
 
-    // Sauvegarder aussi en DB via /codes/generate
-    if (lock.assignment) {
-      try {
-        await api('/codes/generate', {
-          method: 'POST',
-          body: JSON.stringify({
-            propertyId: lock.assignment.property_id,
-            guestName: name,
-            startDate: new Date(startDate).toISOString(),
-            endDate: new Date(endDate).toISOString(),
-          }),
-        });
-      } catch (e) { /* DB save optionnel */ }
-    }
-
     showToast(`Code ${data.code || pin || ''} créé ! (envoyé au bridge)`, 'success');
     closeLockDetail();
     await loadCodes();
