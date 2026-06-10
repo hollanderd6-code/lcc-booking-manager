@@ -11657,7 +11657,13 @@ async function downloadChecklistPDF() {
     }
 
     var filename = 'menage-certifie-' + checkoutDate.replace(/\//g,'-') + '-' + (c.cleaner_name||'cleaner').replace(/\s+/g,'-') + '.pdf';
-    doc.save(filename);
+    // Sur mobile (Capacitor), ouvrir dans un nouvel onglet au lieu de doc.save() qui bloque la webview
+    if (window.Capacitor || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      var blobUrl = doc.output('bloburl');
+      window.open(blobUrl, '_blank');
+    } else {
+      doc.save(filename);
+    }
   } catch(e) {
     console.error('PDF error:', e);
     alert('Erreur lors de la génération du PDF : ' + e.message);
