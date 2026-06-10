@@ -201,14 +201,21 @@ class IgloohomeAdapter extends SmartLockAdapter {
       console.warn(`⚠️ [Igloohome] AlgoPIN hourly échoué: ${hourlyErr.message}`);
     }
 
-    // ── Méthode 3 : Bridge custom PIN (fallback ultime) ──
+    // ── Méthode 3 : Bridge custom PIN (avec nouveaux noms de champs) ──
     const bridgeId = lock.metadata?.bridgeDeviceId;
     if (!bridgeId) {
       throw new Error('AlgoPIN indisponible et aucun bridge associé — impossible de créer un code.');
     }
 
     const code = this._generatePin(6);
-    const job = await this._createBridgeJob(lock, 4, {});
+    const bridgePayload = {
+      accessCode: code,
+      accessName: accessName,
+    };
+    if (formattedStart) bridgePayload.startDate = formattedStart;
+    if (formattedEnd) bridgePayload.endDate = formattedEnd;
+
+    const job = await this._createBridgeJob(lock, 4, bridgePayload);
     console.log(`🔑 [Igloohome] Bridge PIN job: ${job.jobId}`);
     const result = await this._waitForJob(job.jobId, 20000);
 
@@ -295,24 +302,39 @@ class IgloohomeAdapter extends SmartLockAdapter {
       const linkedLock = (lock.metadata?.raw?.linkedDevices || []).find(d => d.type === 'Lock');
       if (linkedLock?.deviceId) deviceId = linkedLock.deviceId;
     }
-    try {
-      const payload = {
-        accessName: (name || 'Code BH').substring(0, 32),
-        variance: 1,
-      };
-      if (startDate) payload.startDate = this._formatAlgoPinDate(startDate);
-      if (endDate) payload.endDate = this._formatAlgoPinDate(endDate);
+    const accessName = (name || 'Code BH').substring(0, 32);
+    const formattedStart = startDate ? this._formatAlgoPinDate(startDate) : undefined;
+    const formattedEnd = endDate ? this._formatAlgoPinDate(endDate) : undefined;
 
+    // Essayer AlgoPIN daily d'abord
+    try {
+      const payload = { accessName, variance: 1 };
+      if (formattedStart) payload.startDate = formattedStart;
+      if (formattedEnd) payload.endDate = formattedEnd;
       const data = await this.apiCall(`${BASE_URL}/devices/${deviceId}/algopin/daily`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
       const pin = data.pin || data.algoPin || data.code;
       return { success: true, pinId: data.pinId || data.id, code: pin };
     } catch (e) {
-      console.error(`[Igloohome] Erreur createCustomPin:`, e.message);
+      console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué, fallback bridge: ${e.message}`);
+    }
+
+    // Fallback bridge
+    const bridgeId = lock.metadata?.bridgeDeviceId;
+    if (!bridgeId) return { success: false, code: null };
+    const pinCode = code || this._generatePin(6);
+    try {
+      const bridgePayload = { accessCode: pinCode, accessName };
+      if (formattedStart) bridgePayload.startDate = formattedStart;
+      if (formattedEnd) bridgePayload.endDate = formattedEnd;
+      const job = await this._createBridgeJob(lock, 4, bridgePayload);
+      const result = await this._waitForJob(job.jobId, 20000);
+      return { success: result.completed, jobId: job.jobId, code: pinCode };
+    } catch (e) {
+      console.error(`[Igloohome] Erreur bridge createCustomPin:`, e.message);
       return { success: false, code: null };
     }
   }
