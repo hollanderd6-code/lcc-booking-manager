@@ -245,13 +245,22 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
   async revokeCode(lock, externalCodeId) {
     try {
+      if (!externalCodeId) {
+        console.warn('⚠️ [Igloohome] Pas d\'externalCodeId pour révocation');
+        return false;
+      }
       const bridgeId = lock.metadata?.bridgeDeviceId;
-      if (!bridgeId) return false;
-      const job = await this._createBridgeJob(lock, 5, { pinId: externalCodeId }); // DELETE_PIN
+      if (!bridgeId) {
+        console.warn(`⚠️ [Igloohome] Pas de bridgeDeviceId pour révocation (metadata: ${JSON.stringify(lock.metadata || {}).substring(0, 100)})`);
+        return false;
+      }
+      console.log(`🔑 [Igloohome] Révocation code ${externalCodeId} via bridge ${bridgeId}`);
+      const job = await this._createBridgeJob(lock, 5, { accessCodeId: externalCodeId });
       const result = await this._waitForJob(job.jobId);
+      console.log(`🔑 [Igloohome] Révocation ${result.completed ? 'réussie' : 'échouée'}: job ${job.jobId}`);
       return result.completed;
     } catch (e) {
-      console.error(`[Igloohome] Erreur révocation code ${externalCodeId}:`, e.message);
+      console.error(`❌ [Igloohome] Erreur révocation code ${externalCodeId}:`, e.message);
       return false;
     }
   }
@@ -373,7 +382,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
   async deleteCustomPin(lock, pinId) {
     try {
-      const job = await this._createBridgeJob(lock, 5, { pinId }); // BRIDGE_JOB_DELETE_CUSTOM_PIN
+      const job = await this._createBridgeJob(lock, 5, { accessCodeId: pinId });
       const result = await this._waitForJob(job.jobId);
       return result.completed;
     } catch (e) {

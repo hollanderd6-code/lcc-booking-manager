@@ -466,7 +466,9 @@ module.exports = function createSmartLocksRoutes(pool) {
       const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [code.connection_id]);
       if (connResult.rows[0]) {
         const adapter = getAdapter(connResult.rows[0], pool);
-        const lock = { device_id: code.device_id };
+        // Charger les données complètes de la serrure (metadata, bridge, etc.)
+        const lockRow = await pool.query('SELECT * FROM smart_locks WHERE id = $1', [code.lock_id]);
+        const lock = lockRow.rows[0] || { device_id: code.device_id };
         await adapter.revokeCode(lock, code.external_code_id);
       }
 
