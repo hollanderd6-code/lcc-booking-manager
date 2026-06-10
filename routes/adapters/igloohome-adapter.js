@@ -167,35 +167,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
     const algoDeviceIds = [originalDeviceId];
     if (lockDeviceId !== originalDeviceId) algoDeviceIds.push(lockDeviceId);
 
-    // ── Méthode 1 : AlgoPIN daily (essayer chaque device) ──
-    for (const devId of algoDeviceIds) {
-      try {
-        const payload = { accessName, variance: 1 };
-        if (formattedStart) payload.startDate = formattedStart;
-        if (formattedEnd) payload.endDate = formattedEnd;
-
-        console.log(`🔑 [Igloohome] Tentative AlgoPIN daily sur device: ${devId}`);
-        const data = await this.apiCall(`${BASE_URL}/devices/${devId}/algopin/daily`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        const code = data.pin || data.algoPin || data.code;
-        console.log(`🔑 [Igloohome] AlgoPIN daily généré pour ${guestName}: ${code} (device: ${devId})`);
-
-        return {
-          externalCodeId: data.pinId || data.id || String(Date.now()),
-          code: code,
-          validFrom: startDate,
-          validUntil: endDate,
-        };
-      } catch (algoPinErr) {
-        console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué sur ${devId}: ${algoPinErr.message}`);
-      }
-    }
-
-    // ── Méthode 2 : AlgoPIN hourly (essayer chaque device) ──
+    // ── Méthode 1 : AlgoPIN hourly (fonctionne pour séjours courts) ──
     for (const devId of algoDeviceIds) {
       try {
         const payload = { accessName, variance: 1 };
@@ -223,6 +195,34 @@ class IgloohomeAdapter extends SmartLockAdapter {
       }
     }
 
+    // ── Méthode 2 : AlgoPIN daily (séjours longs 29+ jours) ──
+    for (const devId of algoDeviceIds) {
+      try {
+        const payload = { accessName, variance: 1 };
+        if (formattedStart) payload.startDate = formattedStart;
+        if (formattedEnd) payload.endDate = formattedEnd;
+
+        console.log(`🔑 [Igloohome] Tentative AlgoPIN daily sur device: ${devId}`);
+        const data = await this.apiCall(`${BASE_URL}/devices/${devId}/algopin/daily`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const code = data.pin || data.algoPin || data.code;
+        console.log(`🔑 [Igloohome] AlgoPIN daily généré pour ${guestName}: ${code} (device: ${devId})`);
+
+        return {
+          externalCodeId: data.pinId || data.id || String(Date.now()),
+          code: code,
+          validFrom: startDate,
+          validUntil: endDate,
+        };
+      } catch (algoPinErr) {
+        console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué sur ${devId}: ${algoPinErr.message}`);
+      }
+    }
+
     // ── Méthode 3 : Bridge create PIN (dernier recours) ──
     const bridgeId = effectiveLock.metadata?.bridgeDeviceId;
     if (!bridgeId) {
@@ -230,7 +230,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
     }
 
     const code = this._generatePin(6);
-    const job = await this._createBridgeJob(effectiveLock, 4, { pin: code, pinName: accessName }, lockDeviceId);
+    const job = await this._createBridgeJob(effectiveLock, 4, { accessCode: code, accessName: accessName }, lockDeviceId);
     console.log(`🔑 [Igloohome] Bridge PIN job: ${job.jobId}`);
     const result = await this._waitForJob(job.jobId, 20000);
     console.log(`🔑 [Igloohome] Bridge job result:`, JSON.stringify(result));
@@ -371,7 +371,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
     if (!bridgeId) return { success: false, code: null };
     const pinCode = code || this._generatePin(6);
     try {
-      const job = await this._createBridgeJob(effectiveLock, 4, { pin: pinCode, pinName: accessName }, lockDeviceId);
+      const job = await this._createBridgeJob(effectiveLock, 4, { accessCode: pinCode, accessName: accessName }, lockDeviceId);
       const result = await this._waitForJob(job.jobId, 20000);
       return { success: result.completed, jobId: job.jobId, code: pinCode };
     } catch (e) {
