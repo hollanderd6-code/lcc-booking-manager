@@ -966,6 +966,13 @@ html[data-theme-v3="1"] .app-container {
 .toggle-switch input:disabled + .toggle-slider { opacity:.5; cursor:not-allowed; }
 </style>
 <style>
+.invoice-btn-short { display: none; }
+@media (max-width: 768px) {
+  .invoice-btn-full { display: none; }
+  .invoice-btn-short { display: inline; }
+}
+</style>
+<style>
 /* Fix templateModal boutons cachés sous bottom bar sur mobile */
 @media (max-width: 768px) {
   #templateModal {
@@ -1160,7 +1167,7 @@ html[data-theme-v3="1"] .app-container {
               <i class="fas fa-robot"></i>
               <span id="btnToggleAILabel" style="font-size:12.5px;font-weight:600;"></span>
             </button>
-            <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i> Envoyer la facture</button>
+            <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i> <span class="invoice-btn-full">Envoyer la facture</span><span class="invoice-btn-short">Facture</span></button>
             
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
             <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
@@ -2395,7 +2402,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
           body: JSON.stringify({ status: 'active' })
         }).catch(function() {});
         if (item) { item.style.opacity = ''; item.style.filter = ''; }
-        btn.innerHTML = '<i class="fas fa-file-invoice"></i> Envoyer la facture';
+        btn.innerHTML = '<i class="fas fa-file-invoice"></i> <span class="invoice-btn-full">Envoyer la facture</span><span class="invoice-btn-short">Facture</span>';
       };
     }
   };
