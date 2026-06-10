@@ -9723,6 +9723,18 @@ app.get('/api/sms/logs', authenticateAny, async (req, res) => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sms_guest_pages (
+        id SERIAL PRIMARY KEY,
+        token TEXT UNIQUE NOT NULL,
+        user_id TEXT,
+        guest_name TEXT,
+        property_name TEXT,
+        message TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
 
     const result = await pool.query(
       `SELECT sl.*, p.name as property_name
@@ -24539,8 +24551,60 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
       phone = '+' + phone;
     }
 
-    const SMS_FOOTER = "\n\n---\nCe message est envoyé automatiquement pour votre réservation. Merci de ne pas répondre à ce SMS, nous n\'y avons pas accès. Pour nous contacter, répondez via votre plateforme de réservation.";
-    const fullMsg = skipFooter ? message : message + SMS_FOOTER;
+    // ── SMS court + lien pour les messages longs aux guests ──
+    const guestTriggers = ['on_arrival', 'before_arrival', 'on_booking', 'after_departure'];
+    const triggerType = _logData?.trigger_type || '';
+    const isGuestSms = guestTriggers.includes(triggerType);
+    const SMS_MAX_DIRECT = 300; // Au-delà → page web + SMS court
+
+    let finalMsg;
+    if (isGuestSms && message.length > SMS_MAX_DIRECT) {
+      // Créer une page web guest avec le message complet
+      const token = require('crypto').randomBytes(8).toString('hex');
+      const baseUrl = process.env.BASE_URL || 'https://boostinghost.fr';
+      const pageUrl = `${baseUrl}/g/${token}`;
+      
+      // Expiration = checkout date (si fourni) ou +3 jours
+      let expiresAt;
+      if (_logData?.checkout_date) {
+        expiresAt = new Date(_logData.checkout_date);
+        expiresAt.setHours(23, 59, 59, 999);
+      } else {
+        expiresAt = new Date(Date.now() + 3 * 24 * 3600 * 1000);
+      }
+
+      await pool.query(
+        `INSERT INTO sms_guest_pages (token, user_id, guest_name, property_name, message, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [token, userId, _logData?.guest_name || null, _logData?.property_name || null, message, expiresAt]
+      );
+
+      // SMS court sans emojis
+      const guestFirstName = (_logData?.guest_name || '').split(' ')[0] || '';
+      const propName = _logData?.property_name || '';
+      
+      if (triggerType === 'on_arrival') {
+        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, vos instructions d'arrivee${propName ? ' a ' + propName : ''} (adresse, codes, wifi) : ${pageUrl}`;
+      } else if (triggerType === 'before_arrival') {
+        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, voici les informations pour votre sejour${propName ? ' a ' + propName : ''} : ${pageUrl}`;
+      } else if (triggerType === 'on_booking') {
+        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, merci pour votre reservation${propName ? ' a ' + propName : ''} ! Infos : ${pageUrl}`;
+      } else {
+        finalMsg = `Bonjour${guestFirstName ? ' ' + guestFirstName : ''}, informations pour votre sejour : ${pageUrl}`;
+      }
+      console.log(`📱 [SMS] Message long (${message.length} chars) → page guest ${token} (expire: ${expiresAt.toISOString().split('T')[0]})`);
+    } else {
+      // Message court ou non-guest → envoi direct
+      const SMS_FOOTER = "\n\n---\nCe message est envoye automatiquement pour votre reservation. Merci de ne pas repondre a ce SMS.";
+      finalMsg = skipFooter ? message : message + SMS_FOOTER;
+    }
+
+    // Strip emojis pour rester en GSM-7 (160 chars/segment au lieu de 70)
+    finalMsg = finalMsg.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FEFF}]|[\u{1F900}-\u{1F9FF}]|[\u{2702}-\u{27B0}]|[\u{E000}-\u{F8FF}]|[\u{200D}]|[\u{20E3}]|[\u{FE0F}]|[\u{D83C}-\u{DBFF}]|[\u{DC00}-\u{DFFF}]|[⚠️✨😊🕒📖📞🌿📲💬🚨👋🙏📱✅❌⬅➡🔑🏠]/gu, '').replace(/  +/g, ' ').trim();
+    // Aussi remplacer les accents problématiques en GSM-7 (accents OK sauf certains)
+    // GSM-7 supporte: àèìòùÀÈÌÒÙáéíóúÁÉÍÓÚâêîôûäëïöü — on garde les accents normaux
+    // Mais les caractères comme œ, Œ ne sont pas GSM-7
+    finalMsg = finalMsg.replace(/œ/g, 'oe').replace(/Œ/g, 'OE');
 
     const credentials = Buffer.from(`${login}:${password}`).toString('base64');
     const response = await fetch('https://api.sms-gate.app/3rdparty/v1/message', {
@@ -24549,7 +24613,7 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
         'Content-Type': 'application/json',
         'Authorization': `Basic ${credentials}`
       },
-      body: JSON.stringify({ message: fullMsg, phoneNumbers: [phone] })
+      body: JSON.stringify({ message: finalMsg, phoneNumbers: [phone] })
     });
 
     const data = await response.json();
@@ -24557,14 +24621,14 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
       console.warn(`⚠️ [SMS] Échec envoi à ${phone}:`, data);
       return false;
     }
-    console.log(`📱 [SMS] Envoyé à ${phone} — id: ${data.id} state: ${data.state}`);
+    console.log(`📱 [SMS] Envoyé à ${phone} (${finalMsg.length} chars) — id: ${data.id} state: ${data.state}`);
     // Logger en DB
     try {
       await pool.query(
         `INSERT INTO sms_logs (user_id, property_id, guest_name, phone_number, message, trigger_type, status, gateway_id)
          VALUES ($1,$2,$3,$4,$5,$6,'sent',$7)
          ON CONFLICT DO NOTHING`,
-        [userId, _logData?.property_id||null, _logData?.guest_name||null, phone, message, _logData?.trigger_type||null, data.id]
+        [userId, _logData?.property_id||null, _logData?.guest_name||null, phone, finalMsg, _logData?.trigger_type||null, data.id]
       );
     } catch(logErr) { console.warn('⚠️ [SMS] Log error:', logErr.message); }
     return true;
@@ -24832,7 +24896,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
         if (template.trigger_type === 'before_arrival' && !msg.includes('{caution_url}') && !msg.match(/https?:\/\//)) {
           console.log(`ℹ️ [SMS] before_arrival sans lien → SMS non envoyé conv ${conv.id}`);
         } else {
-          await sendSmsGateway(guestPhone, msg, conv.user_id, { property_id: property?.id, guest_name: conv.guest_name, trigger_type: template.trigger_type });
+          await sendSmsGateway(guestPhone, msg, conv.user_id, { property_id: property?.id, guest_name: conv.guest_name, property_name: property?.name || conv.property_name || '', trigger_type: template.trigger_type, checkout_date: conv.reservation_end_date || null });
         }
       } else if (smsEligibleTriggers.includes(template.trigger_type) && !isAirbnb && !guestPhone) {
         console.log(`ℹ️ [SMS] Pas de numéro de téléphone pour conv ${conv.id} (${conv.guest_name})`);
@@ -25628,6 +25692,14 @@ cron.schedule('0 9 * * *', async () => {
 // 10h00 — after_arrival (J+1 après arrivée — heure plus naturelle pour "vous êtes bien installés ?")
 cron.schedule('0 10 * * *', () => {
   runTemplatesCron(['after_arrival']);
+}, { timezone: 'Europe/Paris' });
+
+// 3h00 chaque nuit — nettoyage pages SMS guest expirées
+cron.schedule('0 3 * * *', async () => {
+  try {
+    const result = await pool.query('DELETE FROM sms_guest_pages WHERE expires_at < NOW()');
+    if (result.rowCount > 0) console.log(`🧹 [CRON] ${result.rowCount} page(s) SMS guest expirée(s) supprimée(s)`);
+  } catch(e) { console.warn('⚠️ [CRON] Cleanup sms_guest_pages:', e.message); }
 }, { timezone: 'Europe/Paris' });
 
 // 9h00 le 1er du mois — résumé mensuel push
@@ -31425,6 +31497,59 @@ app.post('/api/short-link', authenticateAny, async (req, res) => {
   } catch(e) {
     console.error('❌ short-link:', e.message);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /g/:token → Page SMS guest (instructions d'arrivée, etc.)
+app.get('/g/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM sms_guest_pages WHERE token = $1', [token]
+    );
+    if (!result.rows.length) {
+      return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lien expiré</title></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8f9fa;"><div style="text-align:center;padding:40px;"><div style="font-size:48px;margin-bottom:16px;">⏰</div><h1 style="color:#333;margin:0 0 8px;">Ce lien a expiré</h1><p style="color:#666;">Les informations ne sont plus disponibles.</p></div></div></body></html>`);
+    }
+    const page = result.rows[0];
+    if (new Date(page.expires_at) < new Date()) {
+      await pool.query('DELETE FROM sms_guest_pages WHERE id = $1', [page.id]);
+      return res.status(410).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lien expiré</title></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8f9fa;"><div style="text-align:center;padding:40px;"><div style="font-size:48px;margin-bottom:16px;">⏰</div><h1 style="color:#333;margin:0 0 8px;">Ce lien a expiré</h1><p style="color:#666;">Les informations ne sont plus disponibles.</p></div></div></body></html>`);
+    }
+    // Formater le message : convertir les sauts de ligne en <br>, les liens en cliquables
+    const escaped = page.message
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>')
+      .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#1A7A5E;word-break:break-all;">$1</a>');
+
+    const guestName = page.guest_name || '';
+    const propName = page.property_name || '';
+    const title = propName ? `Bienvenue à ${propName}` : 'Informations séjour';
+
+    res.send(`<!DOCTYPE html><html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a1a;line-height:1.6}
+.header{background:linear-gradient(135deg,#1A7A5E,#0d5c45);color:white;padding:24px 20px;text-align:center}
+.header h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.header p{font-size:14px;opacity:.85}
+.card{max-width:600px;margin:20px auto;background:white;border-radius:16px;padding:24px 20px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.card p,.card br{font-size:15px}
+.footer{text-align:center;padding:20px;font-size:12px;color:#999}
+a{color:#1A7A5E}
+</style></head><body>
+<div class="header">
+  <h1>${title}</h1>
+  ${guestName ? `<p>${guestName}</p>` : ''}
+</div>
+<div class="card"><p>${escaped}</p></div>
+<div class="footer">Propulsé par Boostinghost</div>
+</body></html>`);
+  } catch(e) {
+    console.error('❌ GET /g/:token:', e.message);
+    res.status(500).send('Erreur serveur');
   }
 });
 
