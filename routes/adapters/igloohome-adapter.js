@@ -136,23 +136,24 @@ class IgloohomeAdapter extends SmartLockAdapter {
     const token = await this.authenticate();
     const accessName = (guestName || 'Guest').substring(0, 32);
 
-    // Si c'est un Keypad, utiliser le Lock lié (AlgoPIN ne marche que sur les Locks)
-    let deviceId = lock.device_id;
-    let effectiveLock = lock;
+    // Garder le device ID original pour AlgoPIN (le keypad a l'algo, pas le retrofit lock)
+    const originalDeviceId = lock.device_id;
     const model = (lock.model || lock.metadata?.raw?.type || '').toLowerCase();
+
+    // Résoudre le lock lié + son bridge (pour bridge jobs uniquement)
+    let lockDeviceId = originalDeviceId;
+    let effectiveLock = lock;
     if (model === 'keypad') {
       const linkedLock = (lock.metadata?.raw?.linkedDevices || []).find(d => d.type === 'Lock');
       if (linkedLock?.deviceId) {
-        console.log(`🔑 [Igloohome] Keypad détecté → utilisation du Lock lié: ${linkedLock.deviceId}`);
-        deviceId = linkedLock.deviceId;
+        lockDeviceId = linkedLock.deviceId;
         try {
           const lockRow = await this.pool.query(
             'SELECT metadata FROM smart_locks WHERE device_id = $1 AND connection_id = $2',
-            [deviceId, this.connection.id]
+            [lockDeviceId, this.connection.id]
           );
           if (lockRow.rows[0]?.metadata?.bridgeDeviceId) {
             effectiveLock = { ...lock, metadata: { ...lock.metadata, bridgeDeviceId: lockRow.rows[0].metadata.bridgeDeviceId } };
-            console.log(`🔑 [Igloohome] Bridge résolu pour lock: ${lockRow.rows[0].metadata.bridgeDeviceId}`);
           }
         } catch (e) { /* fallback */ }
       }
@@ -162,68 +163,75 @@ class IgloohomeAdapter extends SmartLockAdapter {
     const formattedStart = startDate ? this._formatAlgoPinDate(startDate) : undefined;
     const formattedEnd = endDate ? this._formatAlgoPinDate(endDate) : undefined;
 
-    // ── Méthode 1 : AlgoPIN daily (ne nécessite pas de bridge) ──
-    try {
-      const payload = { accessName, variance: 1 };
-      if (formattedStart) payload.startDate = formattedStart;
-      if (formattedEnd) payload.endDate = formattedEnd;
+    // Liste des device IDs à essayer pour AlgoPIN (original d'abord, puis lock lié si différent)
+    const algoDeviceIds = [originalDeviceId];
+    if (lockDeviceId !== originalDeviceId) algoDeviceIds.push(lockDeviceId);
 
-      const data = await this.apiCall(`${BASE_URL}/devices/${deviceId}/algopin/daily`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    // ── Méthode 1 : AlgoPIN daily (essayer chaque device) ──
+    for (const devId of algoDeviceIds) {
+      try {
+        const payload = { accessName, variance: 1 };
+        if (formattedStart) payload.startDate = formattedStart;
+        if (formattedEnd) payload.endDate = formattedEnd;
 
-      const code = data.pin || data.algoPin || data.code;
-      console.log(`🔑 [Igloohome] AlgoPIN daily généré pour ${guestName}: ${code}`);
+        console.log(`🔑 [Igloohome] Tentative AlgoPIN daily sur device: ${devId}`);
+        const data = await this.apiCall(`${BASE_URL}/devices/${devId}/algopin/daily`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-      return {
-        externalCodeId: data.pinId || data.id || String(Date.now()),
-        code: code,
-        validFrom: startDate,
-        validUntil: endDate,
-      };
-    } catch (algoPinErr) {
-      console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué: ${algoPinErr.message}`);
+        const code = data.pin || data.algoPin || data.code;
+        console.log(`🔑 [Igloohome] AlgoPIN daily généré pour ${guestName}: ${code} (device: ${devId})`);
+
+        return {
+          externalCodeId: data.pinId || data.id || String(Date.now()),
+          code: code,
+          validFrom: startDate,
+          validUntil: endDate,
+        };
+      } catch (algoPinErr) {
+        console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué sur ${devId}: ${algoPinErr.message}`);
+      }
     }
 
-    // ── Méthode 2 : AlgoPIN hourly (fallback) ──
-    try {
-      const payload = { accessName, variance: 1 };
-      if (formattedStart) payload.startDate = formattedStart;
-      if (formattedEnd) payload.endDate = formattedEnd;
+    // ── Méthode 2 : AlgoPIN hourly (essayer chaque device) ──
+    for (const devId of algoDeviceIds) {
+      try {
+        const payload = { accessName, variance: 1 };
+        if (formattedStart) payload.startDate = formattedStart;
+        if (formattedEnd) payload.endDate = formattedEnd;
 
-      const data = await this.apiCall(`${BASE_URL}/devices/${deviceId}/algopin/hourly`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+        console.log(`🔑 [Igloohome] Tentative AlgoPIN hourly sur device: ${devId}`);
+        const data = await this.apiCall(`${BASE_URL}/devices/${devId}/algopin/hourly`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-      const code = data.pin || data.algoPin || data.code;
-      console.log(`🔑 [Igloohome] AlgoPIN hourly généré pour ${guestName}: ${code}`);
+        const code = data.pin || data.algoPin || data.code;
+        console.log(`🔑 [Igloohome] AlgoPIN hourly généré pour ${guestName}: ${code} (device: ${devId})`);
 
-      return {
-        externalCodeId: data.pinId || data.id || String(Date.now()),
-        code: code,
-        validFrom: startDate,
-        validUntil: endDate,
-      };
-    } catch (hourlyErr) {
-      console.warn(`⚠️ [Igloohome] AlgoPIN hourly échoué: ${hourlyErr.message}`);
+        return {
+          externalCodeId: data.pinId || data.id || String(Date.now()),
+          code: code,
+          validFrom: startDate,
+          validUntil: endDate,
+        };
+      } catch (hourlyErr) {
+        console.warn(`⚠️ [Igloohome] AlgoPIN hourly échoué sur ${devId}: ${hourlyErr.message}`);
+      }
     }
 
-    // ── Méthode 3 : Bridge create PIN (pin/pinName) ──
+    // ── Méthode 3 : Bridge create PIN (dernier recours) ──
     const bridgeId = effectiveLock.metadata?.bridgeDeviceId;
     if (!bridgeId) {
       throw new Error('AlgoPIN indisponible et aucun bridge associé — impossible de créer un code.');
     }
 
     const code = this._generatePin(6);
-    const job = await this._createBridgeJob(effectiveLock, 4, {
-      pin: code,
-      pinName: accessName,
-    }, deviceId);
-    console.log(`🔑 [Igloohome] Bridge create PIN job: ${job.jobId}`);
+    const job = await this._createBridgeJob(effectiveLock, 4, { pin: code, pinName: accessName }, lockDeviceId);
+    console.log(`🔑 [Igloohome] Bridge PIN job: ${job.jobId}`);
     const result = await this._waitForJob(job.jobId, 20000);
     console.log(`🔑 [Igloohome] Bridge job result:`, JSON.stringify(result));
 
@@ -305,17 +313,18 @@ class IgloohomeAdapter extends SmartLockAdapter {
 
   async createCustomPin(lock, { code, name, startDate, endDate }) {
     const token = await this.authenticate();
-    let deviceId = lock.device_id;
+    const originalDeviceId = lock.device_id;
+    let lockDeviceId = originalDeviceId;
     let effectiveLock = lock;
     const model = (lock.model || lock.metadata?.raw?.type || '').toLowerCase();
     if (model === 'keypad') {
       const linkedLock = (lock.metadata?.raw?.linkedDevices || []).find(d => d.type === 'Lock');
       if (linkedLock?.deviceId) {
-        deviceId = linkedLock.deviceId;
+        lockDeviceId = linkedLock.deviceId;
         try {
           const lockRow = await this.pool.query(
             'SELECT metadata FROM smart_locks WHERE device_id = $1 AND connection_id = $2',
-            [deviceId, this.connection.id]
+            [lockDeviceId, this.connection.id]
           );
           if (lockRow.rows[0]?.metadata?.bridgeDeviceId) {
             effectiveLock = { ...lock, metadata: { ...lock.metadata, bridgeDeviceId: lockRow.rows[0].metadata.bridgeDeviceId } };
@@ -327,31 +336,33 @@ class IgloohomeAdapter extends SmartLockAdapter {
     const formattedStart = startDate ? this._formatAlgoPinDate(startDate) : undefined;
     const formattedEnd = endDate ? this._formatAlgoPinDate(endDate) : undefined;
 
-    // Essayer AlgoPIN daily d'abord
-    try {
-      const payload = { accessName, variance: 1 };
-      if (formattedStart) payload.startDate = formattedStart;
-      if (formattedEnd) payload.endDate = formattedEnd;
-      const data = await this.apiCall(`${BASE_URL}/devices/${deviceId}/algopin/daily`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const pin = data.pin || data.algoPin || data.code;
-      return { success: true, pinId: data.pinId || data.id, code: pin };
-    } catch (e) {
-      console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué, fallback bridge: ${e.message}`);
+    // AlgoPIN: essayer sur l'original d'abord, puis le lock lié
+    const algoDeviceIds = [originalDeviceId];
+    if (lockDeviceId !== originalDeviceId) algoDeviceIds.push(lockDeviceId);
+
+    for (const devId of algoDeviceIds) {
+      try {
+        const payload = { accessName, variance: 1 };
+        if (formattedStart) payload.startDate = formattedStart;
+        if (formattedEnd) payload.endDate = formattedEnd;
+        const data = await this.apiCall(`${BASE_URL}/devices/${devId}/algopin/daily`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const pin = data.pin || data.algoPin || data.code;
+        return { success: true, pinId: data.pinId || data.id, code: pin };
+      } catch (e) {
+        console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué sur ${devId}: ${e.message}`);
+      }
     }
 
-    // Fallback bridge avec pin/pinName
+    // Fallback bridge
     const bridgeId = effectiveLock.metadata?.bridgeDeviceId;
     if (!bridgeId) return { success: false, code: null };
     const pinCode = code || this._generatePin(6);
     try {
-      const job = await this._createBridgeJob(effectiveLock, 4, {
-        pin: pinCode,
-        pinName: accessName,
-      }, deviceId);
+      const job = await this._createBridgeJob(effectiveLock, 4, { pin: pinCode, pinName: accessName }, lockDeviceId);
       const result = await this._waitForJob(job.jobId, 20000);
       return { success: result.completed, jobId: job.jobId, code: pinCode };
     } catch (e) {
