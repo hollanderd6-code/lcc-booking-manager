@@ -1532,22 +1532,35 @@ html[data-theme-v3="1"] .sidebar {
   <i class="fas fa-chart-line"></i>
   <span>Gestion tarifaire</span>
 </div>
-<div style="background:#f9fafb;border-radius:12px;padding:14px;margin-bottom:16px;">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
-      <input type="radio" name="pricingMode" id="pricingModeInternal" value="internal" checked
-        onchange="togglePricingMode()" style="accent-color:#1A7A5E;">
-      <span style="font-size:13px;font-weight:600;">Boostinghost</span>
-    </label>
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
-      <input type="radio" name="pricingMode" id="pricingModeExternal" value="external"
-        onchange="togglePricingMode()" style="accent-color:#1A7A5E;">
-      <span style="font-size:13px;font-weight:600;">Externe (PriceLabs...)</span>
-    </label>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+  <label id="cardPricingInternal" onclick="selectPricingMode('internal')" style="cursor:pointer;border:2px solid #1A7A5E;border-radius:12px;padding:14px;background:#f0fdf4;transition:all .2s;">
+    <input type="radio" name="pricingMode" id="pricingModeInternal" value="internal" checked style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <i class="fas fa-check-circle" style="color:#1A7A5E;font-size:16px;" id="iconPricingInternal"></i>
+      <span style="font-size:14px;font-weight:700;color:#0D1117;">Boostinghost</span>
+    </div>
+    <div style="font-size:11px;color:#6B7280;line-height:1.4;">Tarification dynamique intégrée avec règles personnalisées</div>
+  </label>
+  <label id="cardPricingExternal" onclick="selectPricingMode('external')" style="cursor:pointer;border:2px solid #e5e7eb;border-radius:12px;padding:14px;background:#fff;transition:all .2s;">
+    <input type="radio" name="pricingMode" id="pricingModeExternal" value="external" style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <i class="far fa-circle" style="color:#d1d5db;font-size:16px;" id="iconPricingExternal"></i>
+      <span style="font-size:14px;font-weight:700;color:#0D1117;">PriceLabs</span>
+    </div>
+    <div style="font-size:11px;color:#6B7280;line-height:1.4;">Tarification dynamique via PriceLabs (connexion requise)</div>
+  </label>
+</div>
+<input type="hidden" name="externalPricing" id="externalPricingField" value="false">
+<div id="externalPricingInfo" style="display:none;margin-bottom:16px;padding:14px;background:#FEF3C7;border-radius:12px;font-size:12px;color:#92400E;line-height:1.5;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+    <i class="fas fa-info-circle" style="font-size:14px;"></i>
+    <span style="font-weight:700;">Tarification gérée par PriceLabs</span>
   </div>
-  <input type="hidden" name="externalPricing" id="externalPricingField" value="false">
-  <div id="externalPricingInfo" style="display:none;margin-top:10px;padding:10px;background:#FEF3C7;border-radius:8px;font-size:12px;color:#92400E;">
-    <i class="fas fa-info-circle"></i> Les prix ne seront plus synchronisés vers Channex par Boostinghost. Connectez PriceLabs directement à Channex avec votre <a href="https://app.channex.io/user_profile" target="_blank" style="color:#1A7A5E;font-weight:600;">clé API Channex</a>.
+  Les tarifs de ce logement seront gérés par PriceLabs. Les règles de tarification Boostinghost ne s'appliqueront plus pour ce logement.
+  <div style="margin-top:10px;">
+    <button type="button" onclick="openPriceLabsConnect()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+      <i class="fas fa-plug"></i> Connecter PriceLabs
+    </button>
   </div>
 </div>
 
@@ -2545,12 +2558,29 @@ function insertVariable(textareaId, variable, event) {
   // ============================================
 
   // Fonction utilitaire pour charger les données dans le formulaire
-  window.togglePricingMode = function() {
-    const isExternal = document.getElementById('pricingModeExternal').checked;
+  window.selectPricingMode = function(mode) {
+    const isExternal = mode === 'external';
+    document.getElementById('pricingModeInternal').checked = !isExternal;
+    document.getElementById('pricingModeExternal').checked = isExternal;
+    document.getElementById('externalPricingField').value = isExternal ? 'true' : 'false';
     document.getElementById('internalPricingSection').style.display = isExternal ? 'none' : '';
     document.getElementById('externalPricingInfo').style.display = isExternal ? 'block' : 'none';
-    const hidden = document.getElementById('externalPricingField');
-    if (hidden) hidden.value = isExternal ? 'true' : 'false';
+    // Card styling
+    const ci = document.getElementById('cardPricingInternal');
+    const ce = document.getElementById('cardPricingExternal');
+    ci.style.borderColor = isExternal ? '#e5e7eb' : '#1A7A5E';
+    ci.style.background = isExternal ? '#fff' : '#f0fdf4';
+    ce.style.borderColor = isExternal ? '#1A7A5E' : '#e5e7eb';
+    ce.style.background = isExternal ? '#f0fdf4' : '#fff';
+    document.getElementById('iconPricingInternal').className = isExternal ? 'far fa-circle' : 'fas fa-check-circle';
+    document.getElementById('iconPricingInternal').style.color = isExternal ? '#d1d5db' : '#1A7A5E';
+    document.getElementById('iconPricingExternal').className = isExternal ? 'fas fa-check-circle' : 'far fa-circle';
+    document.getElementById('iconPricingExternal').style.color = isExternal ? '#1A7A5E' : '#d1d5db';
+  };
+  window.togglePricingMode = window.selectPricingMode; // compat
+
+  window.openPriceLabsConnect = function() {
+    window.open('https://app.pricelabs.co/signup', '_blank');
   };
 
   window.loadPropertyExtendedData = function(property) {
@@ -2560,9 +2590,7 @@ function insertVariable(textareaId, variable, event) {
 
     // === GESTION TARIFAIRE ===
     const isExternal = property.external_pricing === true || property.external_pricing === 'true';
-    document.getElementById('pricingModeExternal').checked = isExternal;
-    document.getElementById('pricingModeInternal').checked = !isExternal;
-    togglePricingMode();
+    selectPricingMode(isExternal ? 'external' : 'internal');
     
     // === ÉQUIPEMENTS ===
     try {
