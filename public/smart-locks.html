@@ -631,7 +631,7 @@ function renderCodes() {
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="status-badge ${statusClass}">${statusLabel}</span>
-          ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')" title="Révoquer"><i class="fa fa-ban" style="color:var(--sl-danger);"></i></button>` : ''}
+          ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}', this)" title="Révoquer"><i class="fa fa-ban" style="color:var(--sl-danger);"></i></button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -871,7 +871,7 @@ async function openLockDetail(lockId) {
           <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:15px;letter-spacing:2px;color:${c.status === 'active' ? 'var(--sl-primary)' : 'var(--sl-text-muted)'};">${esc(c.code)}</span>
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="status-badge ${statusClass}">${statusLabel}</span>
-            ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}')" title="Supprimer"><i class="fa fa-trash" style="color:var(--sl-danger);font-size:12px;"></i></button>` : ''}
+            ${c.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="revokeCode('${c.id}', this)" title="Supprimer"><i class="fa fa-trash" style="color:var(--sl-danger);font-size:12px;"></i></button>` : ''}
           </div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--sl-text-muted);">
@@ -1135,11 +1135,26 @@ async function submitGenerateCode() {
 // ══════════════════════════════════════
 // REVOKE CODE
 // ══════════════════════════════════════
-async function revokeCode(codeId) {
-  if (!confirm('Révoquer ce code d\'accès ?\n\nNote : les codes AlgoPIN restent actifs sur la serrure jusqu\'à expiration.')) return;
+async function revokeCode(codeId, btn) {
+  // Étape 1 : transformer le bouton en confirmation
+  if (btn && !btn.dataset.confirming) {
+    btn.dataset.confirming = '1';
+    btn.innerHTML = '<span style="font-size:10px;font-weight:600;color:var(--sl-danger);">Supprimer ?</span>';
+    btn.style.minWidth = '70px';
+    // Auto-reset après 3s si pas de 2e clic
+    setTimeout(() => {
+      if (btn.dataset.confirming) {
+        delete btn.dataset.confirming;
+        btn.innerHTML = '<i class="fa fa-trash" style="color:var(--sl-danger);font-size:12px;"></i>';
+        btn.style.minWidth = '';
+      }
+    }, 3000);
+    return;
+  }
+  // Étape 2 : suppression effective
   try {
     await api('/codes/revoke', { method: 'POST', body: JSON.stringify({ codeId }) });
-    showToast('Code révoqué', 'info');
+    showToast('Code révoqué (expire automatiquement sur la serrure)', 'info');
     await loadCodes();
     await loadStatus();
     if (selectedLock) await openLockDetail(selectedLock.id);
