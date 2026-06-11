@@ -885,15 +885,9 @@ async function openLockDetail(lockId) {
     <!-- Formulaire ajout code -->
     <div style="margin-top:10px;background:#f9fafb;border-radius:10px;padding:10px;border:1px dashed rgba(200,184,154,.4);">
       <div style="font-size:12px;font-weight:700;margin-bottom:6px;">➕ Ajouter un code</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Nom</label>
-          <input type="text" id="newcode-name-${lock.id}" placeholder="Ex: Ménage" class="form-control" style="padding:6px 8px;font-size:12px;"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Code (optionnel)</label>
-          <input type="text" id="newcode-pin-${lock.id}" placeholder="Auto (6 chiffres)" class="form-control" style="padding:6px 8px;font-size:12px;" maxlength="6"/>
-        </div>
+      <div style="margin-bottom:8px;">
+        <label style="font-size:11px;font-weight:600;color:var(--sl-text-muted);display:block;margin-bottom:2px;">Nom</label>
+        <input type="text" id="newcode-name-${lock.id}" placeholder="Ex: Ménage, Voyageur..." class="form-control" style="padding:6px 8px;font-size:12px;"/>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div>
@@ -1142,12 +1136,13 @@ async function submitGenerateCode() {
 // REVOKE CODE
 // ══════════════════════════════════════
 async function revokeCode(codeId) {
-  if (!confirm('Révoquer ce code d\'accès ?')) return;
+  if (!confirm('Révoquer ce code d\'accès ?\n\nNote : les codes AlgoPIN restent actifs sur la serrure jusqu\'à expiration.')) return;
   try {
     await api('/codes/revoke', { method: 'POST', body: JSON.stringify({ codeId }) });
     showToast('Code révoqué', 'info');
     await loadCodes();
     await loadStatus();
+    if (selectedLock) await openLockDetail(selectedLock.id);
   } catch (e) { showToast(e.message, 'error'); }
 }
 

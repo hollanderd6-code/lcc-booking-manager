@@ -246,15 +246,16 @@ class IgloohomeAdapter extends SmartLockAdapter {
   async revokeCode(lock, externalCodeId) {
     try {
       if (!externalCodeId) {
-        console.warn('⚠️ [Igloohome] Pas d\'externalCodeId pour révocation');
-        return false;
+        console.warn('⚠️ [Igloohome] Pas d\'externalCodeId pour révocation — marqué comme révoqué en DB uniquement');
+        return true;
       }
       const bridgeId = lock.metadata?.bridgeDeviceId;
       if (!bridgeId) {
-        console.warn(`⚠️ [Igloohome] Pas de bridgeDeviceId pour révocation (metadata: ${JSON.stringify(lock.metadata || {}).substring(0, 100)})`);
-        return false;
+        // AlgoPIN codes : pas de bridge nécessaire, le code expire automatiquement
+        console.log(`ℹ️ [Igloohome] Code AlgoPIN ${externalCodeId} — révocation DB uniquement (expire automatiquement)`);
+        return true;
       }
-      console.log(`🔑 [Igloohome] Révocation code ${externalCodeId} via bridge ${bridgeId}`);
+      console.log(`🔑 [Igloohome] Tentative révocation code ${externalCodeId} via bridge ${bridgeId}`);
       const job = await this._createBridgeJob(lock, 5, { accessCodeId: externalCodeId });
       const result = await this._waitForJob(job.jobId);
       console.log(`🔑 [Igloohome] Révocation ${result.completed ? 'réussie' : 'échouée'}: job ${job.jobId}`);
