@@ -8093,10 +8093,23 @@ try {
       <div style="font-size:11px;color:#9CA3AF;margin-top:6px;">Laissez vide pour utiliser le tarif par défaut du logement</div>
     </div>
 
+    <!-- Nuitées minimum -->
+    <div style="background:#F5F2EC;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+      <label style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">
+        <i class="fas fa-moon"></i> Nuitées minimum
+      </label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="cellMinStayInput" type="number" min="1" max="30" step="1" placeholder="Par défaut"
+          style="flex:1;padding:10px 14px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:16px;font-weight:700;color:#0D1117;background:white;outline:none;font-family:'DM Sans',sans-serif;" />
+        <span style="font-size:13px;color:#6B7280;">nuit(s)</span>
+      </div>
+      <div style="font-size:11px;color:#9CA3AF;margin-top:6px;">Laissez vide pour utiliser le réglage par défaut</div>
+    </div>
+
     <!-- Boutons action -->
     <div style="display:flex;flex-direction:column;gap:8px;">
       <button onclick="saveCellPrice()" style="width:100%;padding:12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
-        <i class="fas fa-save"></i> Enregistrer le prix
+        <i class="fas fa-save"></i> Enregistrer
       </button>
       <button onclick="openBlockFromCell()" style="width:100%;padding:12px;background:#fff;color:#374151;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">
         <i class="fas fa-lock"></i> Bloquer cette date
@@ -8358,6 +8371,28 @@ window.loadPricingOverrides = async function(properties) {
 
     document.getElementById('cellModal').style.display = 'flex';
     setTimeout(function() { input.focus(); input.select(); }, 100);
+
+    // Pré-remplir min_stay depuis le cache des pricing rules
+    var minStayInput = document.getElementById('cellMinStayInput');
+    if (minStayInput) {
+      var rules = (window._pricingRulesCache && window._pricingRulesCache[propertyId]) || [];
+      var minStayRules = rules.filter(function(r) { return r.active !== false && r.rule_type === 'min_stay' && r.min_nights != null; });
+      var currentMinStay = null;
+      for (var j = 0; j < minStayRules.length; j++) {
+        var mr = minStayRules[j];
+        if (mr.start_date && mr.end_date) {
+          if (dateStr >= mr.start_date.slice(0,10) && dateStr <= mr.end_date.slice(0,10)) { currentMinStay = mr.min_nights; break; }
+        }
+      }
+      // Fallback global
+      if (currentMinStay === null) {
+        for (var k = 0; k < minStayRules.length; k++) {
+          if (!minStayRules[k].start_date && !minStayRules[k].end_date) { currentMinStay = minStayRules[k].min_nights; break; }
+        }
+      }
+      minStayInput.value = currentMinStay || '';
+      minStayInput.placeholder = currentMinStay ? currentMinStay : 'Par défaut';
+    }
   };
 
   // Enregistrer le prix personnalisé → API
@@ -8437,13 +8472,46 @@ window.loadPricingOverrides = async function(properties) {
           : 'Prix remis au tarif par défaut', 'success');
       }
 
+      // ── Sauvegarder min_stay si modifié ──
+      var minStayInput2 = document.getElementById('cellMinStayInput');
+      var minStayVal = minStayInput2 ? parseInt(minStayInput2.value) : null;
+      if (minStayVal && minStayVal >= 1) {
+        await fetch(API + '/api/pricing/rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            property_id: _cellPropertyId,
+            name: 'Min stay ' + _cellDate,
+            rule_type: 'min_stay',
+            start_date: _cellDate,
+            end_date: _cellDate,
+            min_nights: minStayVal
+          })
+        });
+        // Mettre à jour le badge min_stay sur la cellule
+        var cell2 = document.querySelector('.calendar-cell[data-date="' + _cellDate + '"][data-property-id="' + _cellPropertyId + '"]');
+        if (cell2) {
+          var badge = cell2.querySelector('.cell-min-stay');
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'cell-min-stay';
+            cell2.appendChild(badge);
+          }
+          badge.textContent = minStayVal + 'n';
+        }
+        // Invalider le cache des rules
+        if (window._pricingRulesCache) delete window._pricingRulesCache[_cellPropertyId];
+      }
+
+      if (typeof window.showToast === 'function') { window.showToast('Enregistré', 'success'); }
+
     } catch(err) {
       console.error('❌ saveCellPrice:', err);
       if (typeof window.showToast === 'function') {
         window.showToast('Erreur lors de l\'enregistrement', 'error');
       }
     } finally {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer le prix'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer'; }
       document.getElementById('cellModal').style.display = 'none';
     }
   };
