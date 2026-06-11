@@ -1527,6 +1527,31 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 </div>
 
+<!-- ✅ SECTION : GESTION TARIFAIRE -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-chart-line"></i>
+  <span>Gestion tarifaire</span>
+</div>
+<div style="background:#f9fafb;border-radius:12px;padding:14px;margin-bottom:16px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
+      <input type="radio" name="pricingMode" id="pricingModeInternal" value="internal" checked
+        onchange="togglePricingMode()" style="accent-color:#1A7A5E;">
+      <span style="font-size:13px;font-weight:600;">Boostinghost</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
+      <input type="radio" name="pricingMode" id="pricingModeExternal" value="external"
+        onchange="togglePricingMode()" style="accent-color:#1A7A5E;">
+      <span style="font-size:13px;font-weight:600;">Externe (PriceLabs...)</span>
+    </label>
+  </div>
+  <input type="hidden" name="externalPricing" id="externalPricingField" value="false">
+  <div id="externalPricingInfo" style="display:none;margin-top:10px;padding:10px;background:#FEF3C7;border-radius:8px;font-size:12px;color:#92400E;">
+    <i class="fas fa-info-circle"></i> Les prix ne seront plus synchronisés vers Channex par Boostinghost. Connectez PriceLabs directement à Channex avec votre <a href="https://app.channex.io/user_profile" target="_blank" style="color:#1A7A5E;font-weight:600;">clé API Channex</a>.
+  </div>
+</div>
+
+<div id="internalPricingSection">
 <!-- ✅ SECTION : RÈGLES DE TARIFICATION AVANCÉE -->
 <div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-tags"></i>
@@ -1548,6 +1573,7 @@ html[data-theme-v3="1"] .sidebar {
 <small style="font-size:11px;color:#9CA3AF;display:block;margin-bottom:16px;">
   Les règles s'appliquent dans l'ordre de priorité. Les prix manuels (clic calendrier) ont toujours la priorité.
 </small>
+</div><!-- fin internalPricingSection -->
 
 
 <!-- ✅ SECTION : LIVRET D'ACCUEIL -->
@@ -2519,10 +2545,24 @@ function insertVariable(textareaId, variable, event) {
   // ============================================
 
   // Fonction utilitaire pour charger les données dans le formulaire
+  window.togglePricingMode = function() {
+    const isExternal = document.getElementById('pricingModeExternal').checked;
+    document.getElementById('internalPricingSection').style.display = isExternal ? 'none' : '';
+    document.getElementById('externalPricingInfo').style.display = isExternal ? 'block' : 'none';
+    const hidden = document.getElementById('externalPricingField');
+    if (hidden) hidden.value = isExternal ? 'true' : 'false';
+  };
+
   window.loadPropertyExtendedData = function(property) {
     if (!property) return;
     
     console.log('📦 Chargement des données étendues:', property);
+
+    // === GESTION TARIFAIRE ===
+    const isExternal = property.external_pricing === true || property.external_pricing === 'true';
+    document.getElementById('pricingModeExternal').checked = isExternal;
+    document.getElementById('pricingModeInternal').checked = !isExternal;
+    togglePricingMode();
     
     // === ÉQUIPEMENTS ===
     try {

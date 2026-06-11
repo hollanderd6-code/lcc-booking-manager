@@ -286,12 +286,18 @@ async function triggerChannexRatesSync(propertyId, userId) {
   try {
     const propResult = await pool.query(
       `SELECT id, name, base_price, weekend_price,
-              channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id
+              channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id,
+              external_pricing
        FROM properties WHERE id = $1`,
       [propertyId]
     );
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_rate_plan_id) return;
+
+    // Skip rate push si tarification externe (PriceLabs, etc.)
+    if (prop.external_pricing) {
+      console.log(`ℹ️ [CHANNEX RATES SYNC] ${propertyId} — tarification externe, skip push tarifs (restrictions uniquement)`);
+    }
 
     console.log(`💰 [CHANNEX RATES SYNC] Déclenchement pour ${propertyId}`);
 
@@ -372,7 +378,7 @@ async function triggerChannexRatesSync(propertyId, userId) {
       if (minStay != null) restrictions.push({ date: dateStr, min_stay: minStay });
     }
 
-    if (rates.length > 0) {
+    if (rates.length > 0 && !prop.external_pricing) {
       await pushRates(pool, {
         property_id: propertyId,
         channex_property_id: prop.channex_property_id,
@@ -16045,6 +16051,8 @@ app.put('/api/properties/:propertyId',
       expedia_id,
       channex_property_id: channex_property_id_ext
     } = body;
+
+    const externalPricing = body.externalPricing;
     
     const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
     if (!property) {
@@ -16157,6 +16165,10 @@ app.put('/api/properties/:propertyId',
     const newInternalName = internal_name !== undefined
       ? (internal_name !== null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null)
       : (property.internal_name || property.internalName || null);
+
+    const newExternalPricing = externalPricing !== undefined
+      ? (externalPricing === true || externalPricing === 'true')
+      : (property.external_pricing || false);
 
     const newMaxGuests = maxGuests !== undefined
       ? (maxGuests !== '' && maxGuests !== null ? parseInt(maxGuests, 10) : null)
@@ -16275,6 +16287,7 @@ userId: userId
          airbnb_commission_pct = $39,
          booking_commission_pct = $40,
          deposit_release_days = $41,
+         external_pricing = $42,
          updated_at = NOW()
        WHERE id = $22 AND user_id = $23`,
       [
@@ -16306,7 +16319,8 @@ userId: userId
         newChannexPropertyIdExt,
         body.airbnbCommissionPct != null && body.airbnbCommissionPct !== '' ? parseFloat(body.airbnbCommissionPct) : (property.airbnb_commission_pct ?? 3),
         body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : (property.booking_commission_pct ?? 15),
-        newDepositReleaseDays
+        newDepositReleaseDays,
+        newExternalPricing
       ]
     );
     
