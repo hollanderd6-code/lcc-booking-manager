@@ -1527,6 +1527,23 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 </div>
 
+<!-- ✅ SECTION : NUITÉES MINIMUM -->
+<div class="form-grid-2" style="margin-top:12px;">
+<div class="form-group">
+<label for="propertyMinStay">
+<i class="fas fa-moon"></i>
+<span>Nuitées minimum</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Nombre minimum de nuits par réservation. Synchronisé avec les OTA via Channex. Vous pouvez modifier cette valeur pour des dates précises via les règles de tarification.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyMinStay" min="1" max="30" placeholder="1" step="1" type="number" value="1"/>
+<span>nuit(s)</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Par défaut pour toutes les dates (modifiable par période dans les règles)</small>
+</div>
+<div class="form-group"></div>
+</div>
+
 <!-- ✅ SECTION : GESTION TARIFAIRE -->
 <div class="form-section-header" style="margin-top:24px;">
   <i class="fas fa-chart-line"></i>
@@ -2591,6 +2608,27 @@ function insertVariable(textareaId, variable, event) {
     // === GESTION TARIFAIRE ===
     const isExternal = property.external_pricing === true || property.external_pricing === 'true';
     selectPricingMode(isExternal ? 'external' : 'internal');
+
+    // === NUITÉES MINIMUM (depuis pricing_rules) ===
+    const minStayField = document.getElementById('propertyMinStay');
+    if (minStayField && property.id) {
+      const token = localStorage.getItem('lcc_token');
+      fetch('/api/pricing/rules?property_id=' + property.id, { headers: { Authorization: 'Bearer ' + token } })
+        .then(r => r.json())
+        .then(rules => {
+          if (Array.isArray(rules)) {
+            const globalMinStay = rules.find(r => r.rule_type === 'min_stay' && !r.start_date && !r.end_date);
+            if (globalMinStay && globalMinStay.min_nights) {
+              minStayField.value = globalMinStay.min_nights;
+              minStayField.dataset.ruleId = globalMinStay.id;
+            } else {
+              minStayField.value = 1;
+              minStayField.dataset.ruleId = '';
+            }
+          }
+        })
+        .catch(() => {});
+    }
     
     // === ÉQUIPEMENTS ===
     try {
@@ -3923,6 +3961,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('✅ Module raccourcis installé');
   }, 500);
+})();
+</script>
+<script>
+// ── Min Stay Save Hook ──
+(function() {
+  setTimeout(function() {
+    var _prevSave2 = window.saveProperty;
+    window.saveProperty = async function(event) {
+      var result = typeof _prevSave2 === 'function' ? await _prevSave2(event) : undefined;
+      setTimeout(async function() {
+        var pidInput = document.getElementById('propertyId');
+        var minStayInput = document.getElementById('propertyMinStay');
+        if (!pidInput || !pidInput.value || !minStayInput) return;
+        var minNights = parseInt(minStayInput.value) || 1;
+        var ruleId = minStayInput.dataset.ruleId;
+        var token = localStorage.getItem('lcc_token');
+        try {
+          if (ruleId) {
+            await fetch('/api/pricing/rules/' + ruleId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify({ min_nights: minNights, name: 'Nuitées minimum (défaut)', rule_type: 'min_stay' })
+            });
+          } else {
+            var resp = await fetch('/api/pricing/rules', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify({ property_id: pidInput.value, name: 'Nuitées minimum (défaut)', rule_type: 'min_stay', min_nights: minNights })
+            });
+            var data = await resp.json();
+            if (data.rule && data.rule.id) minStayInput.dataset.ruleId = data.rule.id;
+          }
+          console.log('✅ Min stay sauvegardé:', minNights);
+        } catch(e) { console.error('Erreur save min_stay:', e); }
+      }, 400);
+      return result;
+    };
+    console.log('✅ Module nuitées minimum installé');
+  }, 600);
 })();
 </script>
 <script>
