@@ -2580,7 +2580,58 @@ function insertVariable(textareaId, variable, event) {
   window.togglePricingMode = window.selectPricingMode; // compat
 
   window.openPriceLabsConnect = function() {
-    window.open('https://app.pricelabs.co/signup', '_blank');
+    // Créer le modal si pas encore fait
+    let modal = document.getElementById('priceLabsConnectModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'priceLabsConnectModal';
+      modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;';
+      modal.innerHTML = `
+        <div style="background:#fff;border-radius:20px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-size:18px;font-weight:700;color:#0D1117;">Connecter PriceLabs</div>
+            <button onclick="document.getElementById('priceLabsConnectModal').style.display='none'" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;">×</button>
+          </div>
+
+          <div style="background:#f0fdf4;border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <div style="background:#1A7A5E;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</div>
+              <div style="font-size:14px;font-weight:700;color:#0D1117;">Créez une clé API</div>
+            </div>
+            <div style="font-size:12px;color:#4B5563;line-height:1.5;margin-bottom:10px;padding-left:34px;">
+              Cliquez sur le bouton ci-dessous. Sur la page qui s'ouvre, cliquez <b>"Create new API Key"</b>, donnez-lui un nom (ex: "PriceLabs") et copiez la clé générée.
+            </div>
+            <div style="padding-left:34px;">
+              <button onclick="window.open('https://app.channex.io/api_keys','_blank')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+                <i class="fas fa-key"></i> Créer ma clé API
+              </button>
+            </div>
+          </div>
+
+          <div style="background:#f9fafb;border-radius:12px;padding:16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <div style="background:#1A7A5E;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</div>
+              <div style="font-size:14px;font-weight:700;color:#0D1117;">Connectez PriceLabs</div>
+            </div>
+            <div style="font-size:12px;color:#4B5563;line-height:1.5;margin-bottom:10px;padding-left:34px;">
+              Sur PriceLabs, cliquez <b>"Add Your Listings"</b>, sélectionnez <b>"Channex"</b> puis collez votre clé API. Vos logements s'importeront automatiquement.
+            </div>
+            <div style="padding-left:34px;">
+              <button onclick="window.open('https://app.pricelabs.co/pricing','_blank')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#6366F1;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+                <i class="fas fa-external-link-alt"></i> Ouvrir PriceLabs
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;font-size:11px;color:#9CA3AF;text-align:center;">
+            Une fois connecté, PriceLabs mettra à jour les tarifs automatiquement.
+          </div>
+        </div>
+      `;
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+      document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
   };
 
   window.loadPropertyExtendedData = function(property) {
