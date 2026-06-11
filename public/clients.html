@@ -5947,16 +5947,16 @@ window.confirmImportDebours = function() {
       <button onclick="closeImportResaModal()" style="background:none;border:none;font-size:20px;color:#9ca3af;cursor:pointer;padding:4px;">✕</button>
     </div>
     <div style="padding:16px 24px;border-bottom:1px solid #f3f4f6;background:#fafafa;flex-shrink:0;">
-      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;">
-        <div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;">
+        <div style="flex:1;min-width:130px;">
           <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">PÉRIODE DU</label>
-          <input type="date" id="importResaFrom" class="form-control" style="font-size:13px;"/>
+          <input type="date" id="importResaFrom" class="form-control" style="font-size:13px;width:100%;"/>
         </div>
-        <div>
+        <div style="flex:1;min-width:130px;">
           <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">AU</label>
-          <input type="date" id="importResaTo" class="form-control" style="font-size:13px;"/>
+          <input type="date" id="importResaTo" class="form-control" style="font-size:13px;width:100%;"/>
         </div>
-        <button onclick="fetchInvoiceSummary()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <button onclick="fetchInvoiceSummary()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;width:100%;">
           <i class="fas fa-search" style="margin-right:6px;"></i>Charger
         </button>
       </div>
