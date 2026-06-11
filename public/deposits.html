@@ -2396,6 +2396,8 @@ function copyDepositLinkByUid(uid) {
       
       data.forEach((r) => {
         const d = r.deposit || null;
+        const expDateCard = d ? getExpirationDate(d.createdAt || d.created_at || d.authorizedAt || d.authorized_at) : null;
+        const isCardExpired = expDateCard && new Date() > expDateCard && (d?.status === 'paid' || d?.status === 'authorized');
         let amountBadge = '<span class="badge badge-empty">Aucune</span>';
         let statusBadge = '<span class="badge badge-empty">Aucune</span>';
         
@@ -2472,10 +2474,8 @@ function copyDepositLinkByUid(uid) {
         let advancedActionsHtml = '';
         if (!isHistory && d) {
           const maxAmount = d.amountCents ? (d.amountCents / 100).toFixed(2) : '0.00';
-          const expDateAction = getExpirationDate(d.createdAt || d.created_at || d.authorizedAt || d.authorized_at);
-          const isExpiredAction = expDateAction && new Date() > expDateAction;
-          const canCapture = !isExpiredAction && (d.status === 'paid' || d.status === 'authorized');
-          const canRelease = !isExpiredAction && (d.status === 'paid' || d.status === 'authorized');
+          const canCapture = !isCardExpired && (d.status === 'paid' || d.status === 'authorized');
+          const canRelease = !isCardExpired && (d.status === 'paid' || d.status === 'authorized');
           const isPending = d.status === 'pending';
 
           advancedActionsHtml = `
@@ -2548,8 +2548,6 @@ function copyDepositLinkByUid(uid) {
         }
 
         // Icône d'expansion si détails disponibles
-        const expDateCard = d ? getExpirationDate(d.createdAt || d.created_at || d.authorizedAt || d.authorized_at) : null;
-        const isCardExpired = expDateCard && new Date() > expDateCard && (d?.status === 'paid' || d?.status === 'authorized');
         const expandIcon = (!isHistory && d && !isCardExpired) ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
 
         // Date d'expiration (seulement si caution PAYÉE et pas historique)
