@@ -402,6 +402,10 @@
     .expiration-badge i {
       font-size: 10px;
     }
+    .deposit-card.expired-card {
+      opacity: 0.65;
+      border-left-color: #d1d5db;
+    }
 
     .deposit-details {
       margin-top: 16px;
@@ -2405,7 +2409,14 @@ function copyDepositLinkByUid(uid) {
           if (d.status === 'pending') {
             statusBadge = '<span class="badge badge-pending">En attente</span>';
           } else if (d.status === 'paid' || d.status === 'authorized') {
-            statusBadge = '<span class="badge badge-paid">Autorisée</span>';
+            // Vérifier si la caution a expiré (date d'expiration dépassée)
+            const expDate = getExpirationDate(d.createdAt || d.created_at || d.authorizedAt || d.authorized_at);
+            const isExpired = expDate && new Date() > expDate;
+            if (isExpired) {
+              statusBadge = '<span class="badge badge-empty" style="color:#9CA3AF;">Expirée</span>';
+            } else {
+              statusBadge = '<span class="badge badge-paid">Autorisée</span>';
+            }
           } else if (d.status === 'captured') {
             const capturedEur = d.captured_amount ? (d.captured_amount / 100).toFixed(2) + '€' : '';
             statusBadge = `<span class="badge badge-warning">Débitée${capturedEur ? ' · ' + capturedEur : ''}</span>`;
@@ -2433,7 +2444,10 @@ function copyDepositLinkByUid(uid) {
             actionsHtml = '<div class="card-hint">Pas de caution créée</div>';
           }
         } else if (d && d.checkoutUrl) {
-          actionsHtml = `
+          if (isCardExpired) {
+            actionsHtml = '<div class="card-hint" style="color:#9CA3AF;font-size:12px;">Autorisation expirée — aucune action possible</div>';
+          } else {
+            actionsHtml = `
             <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); copyDepositLinkByUid('${r.reservationUid}')">
               <i class="fas fa-copy"></i> Copier le lien
             </button>
@@ -2443,6 +2457,7 @@ function copyDepositLinkByUid(uid) {
             <button class="btn btn-ghost btn-card" onclick="event.stopPropagation(); cancelDepositLink('${d.id}', '${r.reservationUid}')" style="margin-top:6px;color:#b91c1c;border-color:#fca5a5;"><i class="fas fa-times"></i> Annuler le lien</button>
             ` : ''}
           `;
+          }
         } else if (!d) {
           actionsHtml = `
             <button class="btn btn-primary btn-card" onclick="event.stopPropagation(); openDepositModalByUid('${r.reservationUid}')">
@@ -2457,8 +2472,10 @@ function copyDepositLinkByUid(uid) {
         let advancedActionsHtml = '';
         if (!isHistory && d) {
           const maxAmount = d.amountCents ? (d.amountCents / 100).toFixed(2) : '0.00';
-          const canCapture = d.status === 'paid' || d.status === 'authorized';
-          const canRelease = d.status === 'paid' || d.status === 'authorized';
+          const expDateAction = getExpirationDate(d.createdAt || d.created_at || d.authorizedAt || d.authorized_at);
+          const isExpiredAction = expDateAction && new Date() > expDateAction;
+          const canCapture = !isExpiredAction && (d.status === 'paid' || d.status === 'authorized');
+          const canRelease = !isExpiredAction && (d.status === 'paid' || d.status === 'authorized');
           const isPending = d.status === 'pending';
 
           advancedActionsHtml = `
@@ -2531,25 +2548,35 @@ function copyDepositLinkByUid(uid) {
         }
 
         // Icône d'expansion si détails disponibles
-        const expandIcon = (!isHistory && d) ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
+        const expDateCard = d ? getExpirationDate(d.createdAt || d.created_at || d.authorizedAt || d.authorized_at) : null;
+        const isCardExpired = expDateCard && new Date() > expDateCard && (d?.status === 'paid' || d?.status === 'authorized');
+        const expandIcon = (!isHistory && d && !isCardExpired) ? '<i class="fas fa-chevron-down expand-icon"></i>' : '';
 
         // Date d'expiration (seulement si caution PAYÉE et pas historique)
         let expirationBadge = '';
         if (!isHistory && d && (d.status === 'paid' || d.status === 'authorized') && d.createdAt) {
           const expirationDate = formatExpirationDate(d.createdAt);
           if (expirationDate) {
-            expirationBadge = `
+            if (isCardExpired) {
+              expirationBadge = `
+              <div class="expiration-badge" style="background:#f3f4f6;color:#9CA3AF;">
+                <i class="fas fa-clock"></i>
+                <span>Expirée le ${expirationDate}</span>
+              </div>`;
+            } else {
+              expirationBadge = `
               <div class="expiration-badge">
                 <i class="fas fa-clock"></i>
                 <span>Expire le ${expirationDate}</span>
-              </div>
-            `;
+              </div>`;
+            }
           }
         }
 
         // Générer la carte
-        const hasDetails = !isHistory && d;
+        const hasDetails = !isHistory && d && !isCardExpired;
         let cardClass = hasDetails ? 'deposit-card expandable' : 'deposit-card';
+        if (isCardExpired) cardClass += ' expired-card';
         if (isHistory) cardClass += ' history-card';
         const cardClick = hasDetails ? `onclick="toggleDetails('${r.reservationUid}', event)"` : '';
         
