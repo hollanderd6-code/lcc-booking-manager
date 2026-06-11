@@ -5623,9 +5623,15 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       caTotal += amount;
       const pid = String(r.propertyId || r.property_id || (r.property && typeof r.property === 'object' ? r.property.id : r.property) || 'unknown');
       const propName = (properties.find(p => String(p.id) === pid) || {}).name || 'Logement';
-      if (!caByProperty[pid]) caByProperty[pid] = { name: propName, amount: 0, count: 0 };
+      if (!caByProperty[pid]) caByProperty[pid] = { name: propName, amount: 0, count: 0, nights: 0 };
       caByProperty[pid].amount += amount;
       caByProperty[pid].count += 1;
+      // Calculer les nuits
+      const sd = new Date(r.startDate || r.start_date || r.arrivalDate);
+      const ed = new Date(r.endDate || r.end_date || r.departureDate);
+      if (!isNaN(sd) && !isNaN(ed) && ed > sd) {
+        caByProperty[pid].nights += Math.round((ed - sd) / 86400000);
+      }
     });
     window._kpiCaByProperty = caByProperty;
     window._kpiCaTotal = caTotal;
@@ -5693,7 +5699,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#1A7A5E;font-size:14px;"></i></div>'
           + '<div style="flex:1;min-width:0;">'
           + '<div style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>'
-          + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">'+p.count+' rés. · '+pct+'%</div>'
+          + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">'+p.count+' rés. · '+p.nights+' nuits · '+pct+'% du CA</div>'
           + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:'+pct+'%;background:#1A7A5E;border-radius:99px;"></div></div>'
           + '</div>'
           + '<div style="font-size:16px;font-weight:700;color:#1A7A5E;flex-shrink:0;">'+fmtAmt(p.amount)+'</div>'
