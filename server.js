@@ -29937,6 +29937,21 @@ global.processIncomingGuestMessage = processIncomingGuestMessage;
 // ============================================================
 
 // ── Connecter un logement à Channex ──────────────────────────
+// ── PriceLabs : fournir la clé API Channex au client ──
+app.get('/api/integrations/channex-key', authenticateToken, async (req, res) => {
+  try {
+    const key = channexAPI?.defaults?.headers?.common?.['user-api-key']
+      || channexAPI?.defaults?.headers?.['user-api-key']
+      || process.env.CHANNEX_API_KEY
+      || process.env.CHANNEX_TOKEN
+      || null;
+    if (!key) return res.status(404).json({ error: 'Clé API non configurée' });
+    res.json({ key });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Lister les propriétés Channex existantes ─────────────────
 // ── Lister les channels connectés d'une property Channex ─────
 app.get('/api/channex/connected-channels/:property_id', authenticateToken, async (req, res) => {

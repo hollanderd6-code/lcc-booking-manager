@@ -1903,27 +1903,24 @@ function openPriceLabsConnect() {
           <div style="font-size:18px;font-weight:700;color:#0D1117;">Connecter PriceLabs</div>
           <button onclick="document.getElementById('priceLabsConnectModal').style.display='none'" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;">×</button>
         </div>
+
         <div style="background:#f0fdf4;border-radius:12px;padding:16px;margin-bottom:16px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <div style="background:#1A7A5E;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</div>
-            <div style="font-size:14px;font-weight:700;color:#0D1117;">Créez une clé API</div>
+            <div style="font-size:14px;font-weight:700;color:#0D1117;">Copiez votre clé de connexion</div>
           </div>
-          <div style="font-size:12px;color:#4B5563;line-height:1.5;margin-bottom:10px;padding-left:34px;">
-            Cliquez ci-dessous, puis <b>"Create new API Key"</b>. Donnez un nom (ex: "PriceLabs") et copiez la clé générée.
-          </div>
-          <div style="padding-left:34px;">
-            <button onclick="window.open('https://app.channex.io/organisations','_blank')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
-              <i class="fas fa-key"></i> Créer ma clé API
-            </button>
+          <div id="priceLabsKeyContainer" style="padding-left:34px;">
+            <div style="color:#9CA3AF;font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
           </div>
         </div>
+
         <div style="background:#f9fafb;border-radius:12px;padding:16px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
             <div style="background:#1A7A5E;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</div>
             <div style="font-size:14px;font-weight:700;color:#0D1117;">Connectez PriceLabs</div>
           </div>
           <div style="font-size:12px;color:#4B5563;line-height:1.5;margin-bottom:10px;padding-left:34px;">
-            Sur PriceLabs, cliquez <b>"Add Your Listings"</b>, sélectionnez <b>"Channex"</b> puis collez votre clé API. Vos logements s'importeront automatiquement.
+            Sur PriceLabs, cliquez <b>"Add Your Listings"</b>, sélectionnez <b>"Channex"</b> comme PMS, puis collez votre clé. Vos logements s'importeront automatiquement.
           </div>
           <div style="padding-left:34px;">
             <button onclick="window.open('https://app.pricelabs.co/pricing','_blank')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#6366F1;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
@@ -1931,6 +1928,7 @@ function openPriceLabsConnect() {
             </button>
           </div>
         </div>
+
         <div style="margin-top:16px;font-size:11px;color:#9CA3AF;text-align:center;">
           Une fois connecté, activez PriceLabs dans les paramètres de chaque logement.
         </div>
@@ -1940,6 +1938,32 @@ function openPriceLabsConnect() {
     document.body.appendChild(modal);
   }
   modal.style.display = 'flex';
+
+  // Charger la clé API
+  const container = document.getElementById('priceLabsKeyContainer');
+  const token = localStorage.getItem('lcc_token');
+  fetch('/api/integrations/channex-key', { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => r.json())
+    .then(data => {
+      if (data.key) {
+        container.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <input type="text" value="${data.key}" readonly id="priceLabsKeyInput"
+              style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;background:#f9fafb;color:#0D1117;">
+            <button onclick="navigator.clipboard.writeText(document.getElementById('priceLabsKeyInput').value);this.innerHTML='<i class=\\'fas fa-check\\'></i> Copié';setTimeout(()=>this.innerHTML='<i class=\\'fas fa-copy\\'></i> Copier',2000)" 
+              style="padding:8px 14px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+              <i class="fas fa-copy"></i> Copier
+            </button>
+          </div>
+          <div style="font-size:11px;color:#6B7280;">Cette clé permet à PriceLabs d'accéder à vos logements pour gérer les tarifs.</div>
+        `;
+      } else {
+        container.innerHTML = '<div style="color:#DC2626;font-size:12px;">Clé non disponible. Contactez le support.</div>';
+      }
+    })
+    .catch(() => {
+      container.innerHTML = '<div style="color:#DC2626;font-size:12px;">Erreur de chargement. Réessayez.</div>';
+    });
 }
 </script>
 <script>
