@@ -10326,7 +10326,11 @@ app.post('/api/sync', authenticateAny, async (req, res) => {
 
   try {
     const result = await syncAllCalendars();
-    const userProps = getUserProperties(userId);
+    const agencyIds = await getAgencyUserIds(req, userId);
+    let userProps = [];
+    for (const uid of agencyIds) {
+      userProps = userProps.concat(getUserProperties(uid));
+    }
 
     res.json({
       message: 'Synchronisation réussie',
@@ -33134,9 +33138,11 @@ app.get('/api/reservations/notes/:property_id', authenticateToken, async (req, r
   const { property_id } = req.params;
   const user_id = req.user.id;
   try {
+    // Vérifier accès (inclut mode agence)
+    const agencyIds = await getAgencyUserIds(req, user_id);
     const propCheck = await pool.query(
-      `SELECT id FROM properties WHERE id = $1 AND user_id = $2`,
-      [property_id, user_id]
+      `SELECT id FROM properties WHERE id = $1 AND user_id = ANY($2)`,
+      [property_id, agencyIds]
     );
     if (!propCheck.rows.length) return res.status(404).json({ error: 'Logement introuvable' });
 
