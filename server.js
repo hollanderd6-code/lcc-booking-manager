@@ -15209,27 +15209,36 @@ app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requir
     const from = date_from || new Date().toISOString().split('T')[0];
     const to = date_to || from;
 
-    const results = {};
+    // Doc Channex: filter[date][gte], filter[date][lte], filter[restrictions]
+    const chxRes = await channexAPI.get('/restrictions', {
+      params: {
+        'filter[property_id]': p.channex_property_id,
+        'filter[date][gte]': from,
+        'filter[date][lte]': to,
+        'filter[restrictions]': 'min_stay_arrival,min_stay_through,closed_to_arrival,closed_to_departure,stop_sell'
+      }
+    });
 
-    // Test 1: GET /availability plain params
-    try {
-      const r1 = await channexAPI.get('/availability', { params: { property_id: p.channex_property_id, date_from: from, date_to: to } });
-      results.avail_plain = { status: 'ok', sample: (r1.data?.data || [])[0], total: (r1.data?.data || []).length };
-    } catch (e) { results.avail_plain_err = e.response?.data?.errors || e.message; }
+    // Réponse: objet { rate_plan_id: { "YYYY-MM-DD": { min_stay_arrival: X, ... } } }
+    const data = chxRes.data?.data || chxRes.data || {};
+    const restrictions = [];
+    for (const [rpId, dates] of Object.entries(data)) {
+      for (const [date, vals] of Object.entries(dates)) {
+        if (vals.min_stay_arrival > 1 || vals.min_stay_through > 1) {
+          restrictions.push({ date, rate_plan_id: rpId, ...vals });
+        }
+      }
+    }
+    restrictions.sort((a, b) => a.date.localeCompare(b.date));
 
-    // Test 2: GET /channel_state
-    try {
-      const r2 = await channexAPI.get('/channel_state', { params: { property_id: p.channex_property_id, date_from: from, date_to: to } });
-      results.channel_state = { status: 'ok', sample: (r2.data?.data || [])[0], total: (r2.data?.data || []).length };
-    } catch (e) { results.channel_state_err = e.response?.data?.errors || e.message; }
-
-    // Test 3: GET /restrictions plain params  
-    try {
-      const r3 = await channexAPI.get('/restrictions', { params: { property_id: p.channex_property_id, date: from } });
-      results.restrict_plain = { status: 'ok', data: r3.data };
-    } catch (e) { results.restrict_plain_err = e.response?.data?.errors || e.message; }
-
-    res.json({ success: true, property: p.name, query: { from, to }, raw_results: results });
+    res.json({
+      success: true,
+      property: p.name,
+      channex_property_id: p.channex_property_id,
+      date_range: { from, to },
+      restrictions_with_min_stay: restrictions,
+      raw_sample: Object.keys(data).length > 0 ? { first_rp: Object.keys(data)[0], first_dates: Object.keys(Object.values(data)[0] || {}).slice(0, 3) } : null
+    });
   } catch (err) {
     console.error('❌ GET channex-check:', err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
