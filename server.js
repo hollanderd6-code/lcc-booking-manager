@@ -410,7 +410,7 @@ async function triggerChannexRatesSync(propertyId, userId) {
 
     console.log(`✅ [CHANNEX RATES SYNC] ${rates.length} tarifs + ${restrictions.length} restrictions synchronisés`);
     if (restrictions.length > 0) {
-      console.log(`🔍 [CHANNEX RATES SYNC] Restrictions avec min_stay non-défaut:`, restrictions.filter(r => r.min_stay > 1).map(r => `${r.date}→min_stay=${r.min_stay}`).join(', ') || '(aucune)');
+      console.log(`🔍 [CHANNEX RATES SYNC] Détail restrictions:`, restrictions.map(r => `${r.date}→min_stay=${r.min_stay}`).join(', '));
     }
   } catch (e) {
     console.error('⚠️ [CHANNEX RATES SYNC] Erreur (non bloquante):', e.message);
@@ -14884,14 +14884,11 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
     const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [property_id, user.id]);
     if (check.rows.length === 0) return res.status(403).json({ error: 'Logement introuvable' });
 
-    // Upsert min_stay : supprimer les règles existantes qui chevauchent la nouvelle plage
+    // Upsert min_stay : supprimer les doublons existants (même type + même dates)
     if (rule_type === 'min_stay') {
       if (start_date && end_date) {
-        // Supprimer les règles dont la plage est contenue dans ou chevauche la nouvelle
         await pool.query(
-          `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay'
-           AND start_date IS NOT NULL AND end_date IS NOT NULL
-           AND start_date >= $3 AND end_date <= $4`,
+          `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay' AND start_date = $3 AND end_date = $4`,
           [user.id, property_id, start_date, end_date]
         );
       } else {
@@ -15213,7 +15210,7 @@ app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requir
     const to = date_to || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })();
 
     const chxRes = await channexAPI.get('/restrictions', {
-      params: { property_id: p.channex_property_id, date_from: from, date_to: to }
+      params: { 'filter[property_id]': p.channex_property_id, 'filter[date_from]': from, 'filter[date_to]': to }
     });
 
     const data = chxRes.data?.data || chxRes.data || [];
