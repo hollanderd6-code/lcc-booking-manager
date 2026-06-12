@@ -15209,36 +15209,41 @@ app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requir
     const from = date_from || new Date().toISOString().split('T')[0];
     const to = date_to || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })();
 
-    const chxRes = await channexAPI.get('/restrictions', {
-      params: { 'filter[property_id]': p.channex_property_id, 'filter[date_from]': from, 'filter[date_to]': to }
-    });
-
-    const data = chxRes.data?.data || chxRes.data || [];
-    const restrictions = Array.isArray(data) ? data.map(r => {
-      const a = r.attributes || r;
-      return {
-        date: a.date,
-        rate_plan_id: a.rate_plan_id,
-        min_stay_arrival: a.min_stay_arrival,
-        min_stay_through: a.min_stay_through,
-        max_stay: a.max_stay,
-        closed_to_arrival: a.closed_to_arrival,
-        closed_to_departure: a.closed_to_departure,
-        stop_sell: a.stop_sell
-      };
-    }) : [];
-
-    // Filtrer pour ne garder que celles avec min_stay
-    const withMinStay = restrictions.filter(r => r.min_stay_arrival || r.min_stay_through);
+    // Channex GET /restrictions requiert un date par requête
+    const allRestrictions = [];
+    const d = new Date(from);
+    const endD = new Date(to);
+    while (d <= endD) {
+      const dateStr = d.toISOString().split('T')[0];
+      try {
+        const chxRes = await channexAPI.get('/restrictions', {
+          params: { 'filter[property_id]': p.channex_property_id, 'filter[rate_plan_id]': p.channex_rate_plan_id, date: dateStr }
+        });
+        const data = chxRes.data?.data || chxRes.data || [];
+        const items = Array.isArray(data) ? data : [data];
+        for (const r of items) {
+          const a = r.attributes || r;
+          if (a.min_stay_arrival > 1 || a.min_stay_through > 1) {
+            allRestrictions.push({
+              date: a.date || dateStr,
+              min_stay_arrival: a.min_stay_arrival,
+              min_stay_through: a.min_stay_through,
+              closed_to_arrival: a.closed_to_arrival,
+              closed_to_departure: a.closed_to_departure,
+              stop_sell: a.stop_sell
+            });
+          }
+        }
+      } catch (e) { /* date sans restriction */ }
+      d.setDate(d.getDate() + 1);
+    }
 
     res.json({
       success: true,
       property: p.name,
       channex_property_id: p.channex_property_id,
       date_range: { from, to },
-      total_restrictions: restrictions.length,
-      with_min_stay: withMinStay.length,
-      restrictions: withMinStay
+      restrictions_with_min_stay: allRestrictions
     });
   } catch (err) {
     console.error('❌ GET channex-check:', err.response?.data || err.message);
