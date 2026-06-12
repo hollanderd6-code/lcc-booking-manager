@@ -15207,43 +15207,36 @@ app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requir
 
     const p = prop.rows[0];
     const from = date_from || new Date().toISOString().split('T')[0];
-    const to = date_to || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })();
+    const to = date_to || from;
 
-    // Channex GET /restrictions requiert un date par requête
-    const allRestrictions = [];
-    const d = new Date(from);
-    const endD = new Date(to);
-    while (d <= endD) {
-      const dateStr = d.toISOString().split('T')[0];
-      try {
-        const chxRes = await channexAPI.get('/restrictions', {
-          params: { 'filter[property_id]': p.channex_property_id, 'filter[rate_plan_id]': p.channex_rate_plan_id, date: dateStr }
-        });
-        const data = chxRes.data?.data || chxRes.data || [];
-        const items = Array.isArray(data) ? data : [data];
-        for (const r of items) {
-          const a = r.attributes || r;
-          if (a.min_stay_arrival > 1 || a.min_stay_through > 1) {
-            allRestrictions.push({
-              date: a.date || dateStr,
-              min_stay_arrival: a.min_stay_arrival,
-              min_stay_through: a.min_stay_through,
-              closed_to_arrival: a.closed_to_arrival,
-              closed_to_departure: a.closed_to_departure,
-              stop_sell: a.stop_sell
-            });
-          }
-        }
-      } catch (e) { /* date sans restriction */ }
-      d.setDate(d.getDate() + 1);
-    }
+    // Essayer plusieurs formats d'API Channex pour trouver le bon
+    const results = {};
+    
+    // Format 1: date unique
+    try {
+      const r1 = await channexAPI.get('/restrictions', { params: { date: from, 'filter[property_id]': p.channex_property_id } });
+      results.format1_date_filter = r1.data;
+    } catch (e) { results.format1_error = e.response?.data || e.message; }
+
+    // Format 2: sans filter
+    try {
+      const r2 = await channexAPI.get('/restrictions', { params: { date: from, property_id: p.channex_property_id } });
+      results.format2_date_plain = r2.data;
+    } catch (e) { results.format2_error = e.response?.data || e.message; }
+
+    // Format 3: avec rate_plan_id
+    try {
+      const r3 = await channexAPI.get('/restrictions', { params: { date: from, property_id: p.channex_property_id, rate_plan_id: p.channex_rate_plan_id } });
+      results.format3_with_rateplan = r3.data;
+    } catch (e) { results.format3_error = e.response?.data || e.message; }
 
     res.json({
       success: true,
       property: p.name,
       channex_property_id: p.channex_property_id,
-      date_range: { from, to },
-      restrictions_with_min_stay: allRestrictions
+      channex_rate_plan_id: p.channex_rate_plan_id,
+      query_date: from,
+      raw_results: results
     });
   } catch (err) {
     console.error('❌ GET channex-check:', err.response?.data || err.message);
