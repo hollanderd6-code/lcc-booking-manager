@@ -15209,47 +15209,27 @@ app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requir
     const from = date_from || new Date().toISOString().split('T')[0];
     const to = date_to || from;
 
-    const chxRes = await channexAPI.get('/availability', {
-      params: {
-        'filter[property_id]': p.channex_property_id,
-        'filter[date_from]': from,
-        'filter[date_to]': to
-      }
-    });
+    const results = {};
 
-    // Extraire les restrictions min_stay depuis la réponse availability
-    const raw = chxRes.data?.data || chxRes.data || [];
-    const entries = Array.isArray(raw) ? raw : [raw];
-    const restrictions = [];
-    for (const entry of entries) {
-      const a = entry.attributes || entry;
-      const date = a.date;
-      const rpId = a.rate_plan_id;
-      if (a.min_stay_arrival > 1 || a.min_stay_through > 1) {
-        restrictions.push({
-          date,
-          rate_plan_id: rpId,
-          min_stay_arrival: a.min_stay_arrival,
-          min_stay_through: a.min_stay_through,
-          stop_sell: a.stop_sell,
-          closed_to_arrival: a.closed_to_arrival,
-          closed_to_departure: a.closed_to_departure,
-          availability: a.availability
-        });
-      }
-    }
+    // Test 1: GET /availability plain params
+    try {
+      const r1 = await channexAPI.get('/availability', { params: { property_id: p.channex_property_id, date_from: from, date_to: to } });
+      results.avail_plain = { status: 'ok', sample: (r1.data?.data || [])[0], total: (r1.data?.data || []).length };
+    } catch (e) { results.avail_plain_err = e.response?.data?.errors || e.message; }
 
-    res.json({
-      success: true,
-      property: p.name,
-      channex_property_id: p.channex_property_id,
-      date_range: { from, to },
-      total_entries: entries.length,
-      with_min_stay_gt1: restrictions.length,
-      restrictions,
-      // Premier enregistrement brut pour debug
-      raw_sample: entries[0] || null
-    });
+    // Test 2: GET /channel_state
+    try {
+      const r2 = await channexAPI.get('/channel_state', { params: { property_id: p.channex_property_id, date_from: from, date_to: to } });
+      results.channel_state = { status: 'ok', sample: (r2.data?.data || [])[0], total: (r2.data?.data || []).length };
+    } catch (e) { results.channel_state_err = e.response?.data?.errors || e.message; }
+
+    // Test 3: GET /restrictions plain params  
+    try {
+      const r3 = await channexAPI.get('/restrictions', { params: { property_id: p.channex_property_id, date: from } });
+      results.restrict_plain = { status: 'ok', data: r3.data };
+    } catch (e) { results.restrict_plain_err = e.response?.data?.errors || e.message; }
+
+    res.json({ success: true, property: p.name, query: { from, to }, raw_results: results });
   } catch (err) {
     console.error('❌ GET channex-check:', err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
