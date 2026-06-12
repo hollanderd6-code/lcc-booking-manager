@@ -12686,7 +12686,7 @@ const STORAGE_KEY = 'LCC_PROPERTY_ORDER';
   try {
     const token = localStorage.getItem('lcc_token');
     if (!token) return;
-    const res = await fetch((window.API_URL || '') + '/api/properties/reorder-bulk', {
+    const res = await fetch((window.API_URL || '') + '/api/properties-order/bulk', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     if (!res.ok) return;
@@ -12967,7 +12967,7 @@ function savePropertyOrder() {
   // ── Sauvegarder en DB pour persistance entre mises à jour ──
   const token = localStorage.getItem('lcc_token');
   if (token) {
-    fetch((window.API_URL || '') + '/api/properties/reorder-bulk', {
+    fetch((window.API_URL || '') + '/api/properties-order/bulk', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ order })

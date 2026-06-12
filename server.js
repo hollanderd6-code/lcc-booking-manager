@@ -16613,7 +16613,7 @@ app.post('/api/properties/test-ical', async (req, res) => {
 // Réorganiser l'ordre des logements (SAFE)
 // ============================================
 // GET - Récupérer l'ordre des logements sauvegardé
-app.get('/api/properties/reorder-bulk', authenticateAny, async (req, res) => {
+app.get('/api/properties-order/bulk', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -16633,7 +16633,7 @@ app.get('/api/properties/reorder-bulk', authenticateAny, async (req, res) => {
 });
 
 // PUT - Sauvegarder l'ordre complet des logements
-app.put('/api/properties/reorder-bulk', authenticateAny, async (req, res) => {
+app.put('/api/properties-order/bulk', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
