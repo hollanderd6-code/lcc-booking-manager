@@ -1116,11 +1116,12 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     .calendar-cell.has-rule.weekend .cell-price {
       color: #c2410c; /* orange-rouge pour ven+sam avec règle */
     }
-    /* Indicateur de règle min_stay — petit badge en haut à gauche */
+    /* Indicateur de règle min_stay — petit badge en haut au centre */
     .cell-min-stay {
       position: absolute;
       top: 2px;
-      left: 2px;
+      left: 50%;
+      transform: translateX(-50%);
       font-size: 8px;
       font-weight: 700;
       color: #6B7280;
@@ -8248,6 +8249,11 @@ window.applyPricingRulesToCells = function() {
         return r.active !== false && r.rule_type === 'min_stay' && r.min_nights != null;
       });
       var minStayBadge = cell.querySelector('.cell-min-stay');
+      // Trouver le min_stay global (défaut settings)
+      var globalMinStay = null;
+      for (var g = 0; g < minStayRules.length; g++) {
+        if (!minStayRules[g].start_date && !minStayRules[g].end_date) { globalMinStay = minStayRules[g].min_nights; break; }
+      }
       var applicableMinStay = null;
       var minStaySpan = Infinity;
       // Date-specific rules: plage la plus étroite gagne
@@ -8261,15 +8267,9 @@ window.applyPricingRulesToCells = function() {
           }
         }
       }
-      // Fallback: global rule (sans dates)
-      if (applicableMinStay === null) {
-        for (var j = 0; j < minStayRules.length; j++) {
-          if (!minStayRules[j].start_date && !minStayRules[j].end_date) {
-            applicableMinStay = minStayRules[j].min_nights; break;
-          }
-        }
-      }
-      if (applicableMinStay) {
+      // N'afficher le badge que si différent du défaut global
+      var showBadge = (applicableMinStay !== null && applicableMinStay !== globalMinStay);
+      if (showBadge) {
         if (!minStayBadge) {
           var badge = document.createElement('span');
           badge.className = 'cell-min-stay';
