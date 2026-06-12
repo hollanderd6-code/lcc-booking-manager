@@ -7551,7 +7551,8 @@ try {
     <div class="form-group"><label>Logement</label><select class="form-control" id="dayPricePropertySelect"></select></div>
     <div class="form-group"><label for="dayPriceFrom">Du</label><input class="form-control" id="dayPriceFrom" type="date"/></div>
     <div class="form-group"><label for="dayPriceTo">Au</label><input class="form-control" id="dayPriceTo" type="date"/></div>
-    <div class="form-group"><label for="dayPriceValue">Prix (€) — vide = revenir au prix de base</label><input class="form-control" id="dayPriceValue" type="number" min="0" placeholder="ex: 85"/></div>
+    <div class="form-group"><label for="dayPriceValue">Prix (€) — vide = prix de base</label><input class="form-control" id="dayPriceValue" type="number" min="0" placeholder="ex: 85"/></div>
+    <div class="form-group"><label for="dayMinStayValue">Nuitées minimum — vide = réglage par défaut</label><input class="form-control" id="dayMinStayValue" type="number" min="1" max="30" placeholder="ex: 2"/></div>
   </div>
   <div id="tabContentResa" style="display:none;overflow-y:auto;padding:24px 20px;text-align:center;">
     <i class="fas fa-calendar-plus" style="font-size:40px;color:#1A7A5E;margin-bottom:12px;"></i>
@@ -7935,7 +7936,7 @@ try {
       if(con)con.style.display=on?'block':'none';
     });
     var icons={block:'fa-lock',price:'fa-tag',resa:'fa-plus',unblock:'fa-lock-open'};
-    var labels={block:'Bloquer ces dates',price:'Appliquer le prix',resa:'Créer la réservation',unblock:'Débloquer ces dates'};
+    var labels={block:'Bloquer ces dates',price:'Appliquer',resa:'Créer la réservation',unblock:'Débloquer ces dates'};
     var ic=document.getElementById('blockSaveIcon');if(ic)ic.className='fas '+icons[tab];
     var lb=document.getElementById('blockSaveLabel');if(lb)lb.textContent=labels[tab];
     if(tab==='unblock'){var sb=document.getElementById('blockSaveBtn');if(sb){sb.style.background='#DC2626';}}
@@ -8020,6 +8021,12 @@ try {
         if(!pid3||!from3||!to3){alert('Logement et dates requis');btn.disabled=false;return;}
         var r3=await fetch(API2+'/api/pricing/overrides/batch',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_ids:[pid3],date_from:from3,date_to:to3,price:price===''?'':parseFloat(price)})});
         var d3=await r3.json();if(!d3.success)throw new Error(d3.error||'Erreur');
+        // Sauvegarder min_stay si renseigné
+        var minStayVal=document.getElementById('dayMinStayValue').value;
+        if(minStayVal&&parseInt(minStayVal)>=1){
+          await fetch(API2+'/api/pricing/rules',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({property_id:pid3,name:'Min stay '+from3+' → '+to3,rule_type:'min_stay',start_date:from3,end_date:to3,min_nights:parseInt(minStayVal)})});
+          if(window._pricingRulesCache)delete window._pricingRulesCache[pid3];
+        }
         if(typeof window.loadPricingOverrides==='function')await window.loadPricingOverrides(window.LCC_PROPERTIES||[]);
         if(typeof window.applyPricingRulesToCells==='function')window.applyPricingRulesToCells();
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
