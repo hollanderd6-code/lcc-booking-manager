@@ -15209,44 +15209,46 @@ app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requir
     const from = date_from || new Date().toISOString().split('T')[0];
     const to = date_to || from;
 
-    const results = {};
-
-    // Format A: filter[date_from] + filter[date_to]
-    try {
-      const r1 = await channexAPI.get('/restrictions', { params: {
+    const chxRes = await channexAPI.get('/availability', {
+      params: {
         'filter[property_id]': p.channex_property_id,
         'filter[date_from]': from,
         'filter[date_to]': to
-      }});
-      results.format_date_range = r1.data;
-    } catch (e) { results.format_date_range_error = e.response?.data || e.message; }
+      }
+    });
 
-    // Format B: filter[date]
-    try {
-      const r2 = await channexAPI.get('/restrictions', { params: {
-        'filter[property_id]': p.channex_property_id,
-        'filter[date]': from
-      }});
-      results.format_single_date = r2.data;
-    } catch (e) { results.format_single_date_error = e.response?.data || e.message; }
-
-    // Format C: filter[property_id] + filter[rate_plan_id] + filter[date]
-    try {
-      const r3 = await channexAPI.get('/restrictions', { params: {
-        'filter[property_id]': p.channex_property_id,
-        'filter[rate_plan_id]': p.channex_rate_plan_id,
-        'filter[date]': from
-      }});
-      results.format_with_rateplan = r3.data;
-    } catch (e) { results.format_with_rateplan_error = e.response?.data || e.message; }
+    // Extraire les restrictions min_stay depuis la réponse availability
+    const raw = chxRes.data?.data || chxRes.data || [];
+    const entries = Array.isArray(raw) ? raw : [raw];
+    const restrictions = [];
+    for (const entry of entries) {
+      const a = entry.attributes || entry;
+      const date = a.date;
+      const rpId = a.rate_plan_id;
+      if (a.min_stay_arrival > 1 || a.min_stay_through > 1) {
+        restrictions.push({
+          date,
+          rate_plan_id: rpId,
+          min_stay_arrival: a.min_stay_arrival,
+          min_stay_through: a.min_stay_through,
+          stop_sell: a.stop_sell,
+          closed_to_arrival: a.closed_to_arrival,
+          closed_to_departure: a.closed_to_departure,
+          availability: a.availability
+        });
+      }
+    }
 
     res.json({
       success: true,
       property: p.name,
       channex_property_id: p.channex_property_id,
-      channex_rate_plan_id: p.channex_rate_plan_id,
-      query_date: from,
-      raw_results: results
+      date_range: { from, to },
+      total_entries: entries.length,
+      with_min_stay_gt1: restrictions.length,
+      restrictions,
+      // Premier enregistrement brut pour debug
+      raw_sample: entries[0] || null
     });
   } catch (err) {
     console.error('❌ GET channex-check:', err.response?.data || err.message);
