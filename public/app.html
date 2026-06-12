@@ -5694,14 +5694,16 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         + '<small style="display:block;margin-top:8px;">Renseignez les montants sur vos réservations.</small>'
         + '</div>';
     } else {
+      var daysInMonth = new Date(now2.getFullYear(), now2.getMonth() + 1, 0).getDate();
       content.innerHTML = entries.map(function(p) {
         var pct = caTotal2 > 0 ? Math.round((p.amount/caTotal2)*100) : 0;
+        var occPct = Math.min(100, Math.round((p.nights / daysInMonth) * 100));
         return '<div style="background:rgba(255,255,255,.6);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">'
           + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#1A7A5E;font-size:14px;"></i></div>'
           + '<div style="flex:1;min-width:0;">'
           + '<div style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>'
           + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">'+p.count+' rés. · '+p.nights+' nuits · '+pct+'% du CA</div>'
-          + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:'+pct+'%;background:#1A7A5E;border-radius:99px;"></div></div>'
+          + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:'+occPct+'%;background:#1A7A5E;border-radius:99px;"></div></div>'
           + '</div>'
           + '<div style="font-size:16px;font-weight:700;color:#1A7A5E;flex-shrink:0;">'+fmtAmt(p.amount)+'</div>'
           + '</div>';
