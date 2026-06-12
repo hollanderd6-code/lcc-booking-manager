@@ -15209,26 +15209,36 @@ app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requir
     const from = date_from || new Date().toISOString().split('T')[0];
     const to = date_to || from;
 
-    // Essayer plusieurs formats d'API Channex pour trouver le bon
     const results = {};
-    
-    // Format 1: date unique
-    try {
-      const r1 = await channexAPI.get('/restrictions', { params: { date: from, 'filter[property_id]': p.channex_property_id } });
-      results.format1_date_filter = r1.data;
-    } catch (e) { results.format1_error = e.response?.data || e.message; }
 
-    // Format 2: sans filter
+    // Format A: filter[date_from] + filter[date_to]
     try {
-      const r2 = await channexAPI.get('/restrictions', { params: { date: from, property_id: p.channex_property_id } });
-      results.format2_date_plain = r2.data;
-    } catch (e) { results.format2_error = e.response?.data || e.message; }
+      const r1 = await channexAPI.get('/restrictions', { params: {
+        'filter[property_id]': p.channex_property_id,
+        'filter[date_from]': from,
+        'filter[date_to]': to
+      }});
+      results.format_date_range = r1.data;
+    } catch (e) { results.format_date_range_error = e.response?.data || e.message; }
 
-    // Format 3: avec rate_plan_id
+    // Format B: filter[date]
     try {
-      const r3 = await channexAPI.get('/restrictions', { params: { date: from, property_id: p.channex_property_id, rate_plan_id: p.channex_rate_plan_id } });
-      results.format3_with_rateplan = r3.data;
-    } catch (e) { results.format3_error = e.response?.data || e.message; }
+      const r2 = await channexAPI.get('/restrictions', { params: {
+        'filter[property_id]': p.channex_property_id,
+        'filter[date]': from
+      }});
+      results.format_single_date = r2.data;
+    } catch (e) { results.format_single_date_error = e.response?.data || e.message; }
+
+    // Format C: filter[property_id] + filter[rate_plan_id] + filter[date]
+    try {
+      const r3 = await channexAPI.get('/restrictions', { params: {
+        'filter[property_id]': p.channex_property_id,
+        'filter[rate_plan_id]': p.channex_rate_plan_id,
+        'filter[date]': from
+      }});
+      results.format_with_rateplan = r3.data;
+    } catch (e) { results.format_with_rateplan_error = e.response?.data || e.message; }
 
     res.json({
       success: true,
