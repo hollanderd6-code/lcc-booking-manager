@@ -409,6 +409,9 @@ async function triggerChannexRatesSync(propertyId, userId) {
     }
 
     console.log(`✅ [CHANNEX RATES SYNC] ${rates.length} tarifs + ${restrictions.length} restrictions synchronisés`);
+    if (restrictions.length > 0) {
+      console.log(`🔍 [CHANNEX RATES SYNC] Détail restrictions:`, restrictions.map(r => `${r.date}→min_stay=${r.min_stay}`).join(', '));
+    }
   } catch (e) {
     console.error('⚠️ [CHANNEX RATES SYNC] Erreur (non bloquante):', e.message);
   }
@@ -15185,6 +15188,61 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
   } catch (err) {
     console.error('❌ POST /api/pricing/rules/push-channex:', err);
     res.status(500).json({ error: err.message || 'Erreur serveur' });
+  }
+});
+
+// GET /api/pricing/rules/channex-check/:property_id — Vérifier les restrictions sur Channex
+app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { property_id } = req.params;
+    const { date_from, date_to } = req.query;
+
+    const prop = await pool.query(
+      `SELECT channex_property_id, channex_rate_plan_id, name FROM properties WHERE id = $1 AND user_id = $2`,
+      [property_id, user.id]
+    );
+    if (!prop.rows[0]?.channex_property_id) return res.status(400).json({ error: 'Propriété non connectée à Channex' });
+
+    const p = prop.rows[0];
+    const from = date_from || new Date().toISOString().split('T')[0];
+    const to = date_to || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })();
+
+    const chxRes = await channexAPI.get('/restrictions', {
+      params: { property_id: p.channex_property_id, date_from: from, date_to: to }
+    });
+
+    const data = chxRes.data?.data || chxRes.data || [];
+    const restrictions = Array.isArray(data) ? data.map(r => {
+      const a = r.attributes || r;
+      return {
+        date: a.date,
+        rate_plan_id: a.rate_plan_id,
+        min_stay_arrival: a.min_stay_arrival,
+        min_stay_through: a.min_stay_through,
+        max_stay: a.max_stay,
+        closed_to_arrival: a.closed_to_arrival,
+        closed_to_departure: a.closed_to_departure,
+        stop_sell: a.stop_sell
+      };
+    }) : [];
+
+    // Filtrer pour ne garder que celles avec min_stay
+    const withMinStay = restrictions.filter(r => r.min_stay_arrival || r.min_stay_through);
+
+    res.json({
+      success: true,
+      property: p.name,
+      channex_property_id: p.channex_property_id,
+      date_range: { from, to },
+      total_restrictions: restrictions.length,
+      with_min_stay: withMinStay.length,
+      restrictions: withMinStay
+    });
+  } catch (err) {
+    console.error('❌ GET channex-check:', err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data || err.message });
   }
 });
 
