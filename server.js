@@ -21795,7 +21795,7 @@ app.post('/api/sms/incoming', async (req, res) => {
         fcm_token,
         `📩 ${senderName}`,
         preview,
-        { type: 'sms_reply', from, cleanerName: senderName }
+        { type: 'sms_reply', senderPhone: from, cleanerName: senderName }
       );
     }
 
