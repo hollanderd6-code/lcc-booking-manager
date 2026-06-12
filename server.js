@@ -366,12 +366,15 @@ async function triggerChannexRatesSync(propertyId, userId) {
       if (appliedPrice != null) rates.push({ date: dateStr, price: appliedPrice });
 
       let minStay = null;
-      // Date-specific rules first (priorité sur global)
+      let minStaySpan = Infinity;
+      // Date-specific rules: la plage la plus étroite gagne
       for (const rule of minStayRules) {
         if (rule.min_nights == null) continue;
         if (rule.start_date && rule.end_date) {
-          if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
-            minStay = rule.min_nights; break;
+          const rs = fmt(new Date(rule.start_date)), re = fmt(new Date(rule.end_date));
+          if (dateStr >= rs && dateStr <= re) {
+            const span = (new Date(re) - new Date(rs));
+            if (span < minStaySpan) { minStay = rule.min_nights; minStaySpan = span; }
           }
         }
       }
@@ -15101,28 +15104,30 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
       const restrictionEntry = { date: dateStr };
       let hasRestriction = false;
 
-      // min_stay via pricing_rules — date-specific d'abord, global en fallback
-      let _minStayFound = false;
+      // min_stay via pricing_rules — plage la plus étroite gagne, global en fallback
+      let _minStayVal = null;
+      let _minStaySpan = Infinity;
       for (const rule of minStayRules) {
         if (rule.min_nights == null) continue;
         if (rule.start_date && rule.end_date) {
-          if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
-            restrictionEntry.min_stay = rule.min_nights;
-            hasRestriction = true;
-            _minStayFound = true;
-            break;
+          const rs = fmt(new Date(rule.start_date)), re = fmt(new Date(rule.end_date));
+          if (dateStr >= rs && dateStr <= re) {
+            const span = (new Date(re) - new Date(rs));
+            if (span < _minStaySpan) { _minStayVal = rule.min_nights; _minStaySpan = span; }
           }
         }
       }
-      if (!_minStayFound) {
+      if (_minStayVal === null) {
         for (const rule of minStayRules) {
           if (rule.min_nights == null) continue;
           if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
-            restrictionEntry.min_stay = rule.min_nights;
-            hasRestriction = true;
-            break;
+            _minStayVal = rule.min_nights; break;
           }
         }
+      }
+      if (_minStayVal !== null) {
+        restrictionEntry.min_stay = _minStayVal;
+        hasRestriction = true;
       }
 
       // stop_sell via pricing_rules de type stop_sell

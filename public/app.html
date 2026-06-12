@@ -8249,12 +8249,15 @@ window.applyPricingRulesToCells = function() {
       });
       var minStayBadge = cell.querySelector('.cell-min-stay');
       var applicableMinStay = null;
-      // Date-specific rules first (priorité)
+      var minStaySpan = Infinity;
+      // Date-specific rules: plage la plus étroite gagne
       for (var i = 0; i < minStayRules.length; i++) {
         var mr = minStayRules[i];
         if (mr.start_date && mr.end_date) {
-          if (date >= mr.start_date.slice(0,10) && date <= mr.end_date.slice(0,10)) {
-            applicableMinStay = mr.min_nights; break;
+          var sd = mr.start_date.slice(0,10), ed = mr.end_date.slice(0,10);
+          if (date >= sd && date <= ed) {
+            var span = new Date(ed) - new Date(sd);
+            if (span < minStaySpan) { applicableMinStay = mr.min_nights; minStaySpan = span; }
           }
         }
       }
@@ -8399,10 +8402,15 @@ window.loadPricingOverrides = async function(properties) {
       var rules = (window._pricingRulesCache && window._pricingRulesCache[propertyId]) || [];
       var minStayRules = rules.filter(function(r) { return r.active !== false && r.rule_type === 'min_stay' && r.min_nights != null; });
       var currentMinStay = null;
+      var currentSpan = Infinity;
       for (var j = 0; j < minStayRules.length; j++) {
         var mr = minStayRules[j];
         if (mr.start_date && mr.end_date) {
-          if (dateStr >= mr.start_date.slice(0,10) && dateStr <= mr.end_date.slice(0,10)) { currentMinStay = mr.min_nights; break; }
+          var sd2 = mr.start_date.slice(0,10), ed2 = mr.end_date.slice(0,10);
+          if (dateStr >= sd2 && dateStr <= ed2) {
+            var sp = new Date(ed2) - new Date(sd2);
+            if (sp < currentSpan) { currentMinStay = mr.min_nights; currentSpan = sp; }
+          }
         }
       }
       // Fallback global
