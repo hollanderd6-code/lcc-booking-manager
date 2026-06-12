@@ -24673,7 +24673,7 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
     if (isGuestSms && message.length > SMS_MAX_DIRECT) {
       // Créer une page web guest avec le message complet
       const token = require('crypto').randomBytes(6).toString('hex');
-      const baseUrl = process.env.BASE_URL || 'https://boostinghost.fr';
+      const baseUrl = 'https://www.boostinghost.fr';
       const pageUrl = `${baseUrl}/g/${token}`;
       
       // Expiration = checkout date (si fourni) ou +3 jours

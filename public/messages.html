@@ -1021,7 +1021,7 @@ html[data-theme-v3="1"] .app-container {
 
   // URL de l'API
   const API_BASE_URL = IS_NATIVE 
-    ? 'https://lcc-booking-manager.onrender.com' 
+    ? 'https://www.boostinghost.fr' 
     : window.location.origin;
 
   // Exposer globalement
@@ -3109,7 +3109,7 @@ async function loadChannexProperties() {
 
   try {
     const token = localStorage.getItem('lcc_token');
-    const res = await fetch('https://lcc-booking-manager.onrender.com/api/properties', {
+    const res = await fetch('https://www.boostinghost.fr/api/properties', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const data = await res.json();
@@ -3167,7 +3167,7 @@ async function loadChannexMessages() {
 
   try {
     const token = localStorage.getItem('lcc_token');
-    const res = await fetch('https://lcc-booking-manager.onrender.com/api/channex/iframe-token', {
+    const res = await fetch('https://www.boostinghost.fr/api/channex/iframe-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
