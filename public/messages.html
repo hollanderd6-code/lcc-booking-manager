@@ -1194,7 +1194,7 @@ html[data-theme-v3="1"] .app-container {
         <div class="chat-modal-input" id="chatInputArea" style="display:none;">
           <button class="msgs-attach-btn" id="photoUploadBtn" title="Envoyer une photo" onclick="if(window.openPhotoUpload) openPhotoUpload();"><i class="fas fa-image"></i></button>
           <textarea class="chat-input" id="chatInput" placeholder="Répondre à…" rows="1"></textarea>
-          <button class="msgs-attach-btn" id="smsToggleBtn" title="Envoyer par SMS" onclick="toggleSmsMode()" style="font-size:15px;color:#6B7280;"><i class="fas fa-sms"></i></button>
+          <button class="msgs-attach-btn" id="smsToggleBtn" title="Envoyer par SMS" onclick="toggleSmsMode()" style="font-size:15px;color:#6B7280;display:none;"><i class="fas fa-sms"></i></button>
           <button class="send-btn" id="sendBtn" onclick="sendMessageOwner()"><i class="fas fa-paper-plane"></i></button>
         </div>
         <!-- Indicateur mode SMS -->
@@ -3427,22 +3427,42 @@ async function sendPlatformMessage(convId) {
 
 // ── SMS Mode : toggle et envoi ──────────────────────────
 window._smsMode = false;
+window._smsEnabled = false;
+window._chatPlaceholderDefault = '';
+
+// Vérifier si l'option SMS est active au chargement
+(async function checkSmsStatus() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/sms/status', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    window._smsEnabled = !!data.smsEnabled;
+    const btn = document.getElementById('smsToggleBtn');
+    if (btn) btn.style.display = window._smsEnabled ? '' : 'none';
+  } catch(e) { console.warn('SMS status check failed:', e); }
+})();
 
 function toggleSmsMode() {
+  if (!window._smsEnabled) {
+    showBHToast("L'option SMS n'est pas activée sur votre compte", 'warning');
+    return;
+  }
   window._smsMode = !window._smsMode;
   const btn = document.getElementById('smsToggleBtn');
   const bar = document.getElementById('smsModeBar');
   const sendBtn = document.getElementById('sendBtn');
+  const input = document.getElementById('chatInput');
+  if (!window._chatPlaceholderDefault && input) window._chatPlaceholderDefault = input.placeholder;
   if (window._smsMode) {
-    if (btn) btn.style.color = '#1E40AF';
-    if (btn) btn.style.background = '#DBEAFE';
+    if (btn) { btn.style.color = '#1E40AF'; btn.style.background = '#DBEAFE'; }
     if (bar) bar.style.display = 'block';
     if (sendBtn) sendBtn.style.background = '#1E40AF';
+    if (input) input.placeholder = 'Répondre par SMS…';
   } else {
-    if (btn) btn.style.color = '#6B7280';
-    if (btn) btn.style.background = '';
+    if (btn) { btn.style.color = '#6B7280'; btn.style.background = ''; }
     if (bar) bar.style.display = 'none';
     if (sendBtn) sendBtn.style.background = '';
+    if (input) input.placeholder = window._chatPlaceholderDefault || 'Répondre à…';
   }
 }
 
