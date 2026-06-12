@@ -8348,9 +8348,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
            ON c.property_id = r.property_id
            AND c.reservation_start_date = r.start_date
            AND c.user_id = r.user_id
-         WHERE r.user_id = $1
+         WHERE r.user_id = ANY($1::text[])
            AND r.status != 'cancelled'`,
-        [userId]
+        [agencyIds]
       );
       reservationsDbRows = dbResResult.rows;
       dbResResult.rows.forEach(r => {
