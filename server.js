@@ -14869,6 +14869,21 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
     const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [property_id, user.id]);
     if (check.rows.length === 0) return res.status(403).json({ error: 'Logement introuvable' });
 
+    // Upsert min_stay : supprimer les doublons existants (même type + même dates)
+    if (rule_type === 'min_stay') {
+      if (start_date && end_date) {
+        await pool.query(
+          `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay' AND start_date = $3 AND end_date = $4`,
+          [user.id, property_id, start_date, end_date]
+        );
+      } else {
+        await pool.query(
+          `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay' AND start_date IS NULL AND end_date IS NULL`,
+          [user.id, property_id]
+        );
+      }
+    }
+
     const result = await pool.query(`
       INSERT INTO pricing_rules
         (user_id, property_id, name, rule_type, start_date, end_date, days_of_week, price, min_nights, discount_pct, discount_after_nights, priority)

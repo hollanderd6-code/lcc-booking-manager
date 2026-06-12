@@ -8028,7 +8028,10 @@ try {
           if(window._pricingRulesCache)delete window._pricingRulesCache[pid3];
         }
         if(typeof window.loadPricingOverrides==='function')await window.loadPricingOverrides(window.LCC_PROPERTIES||[]);
+        // Recharger les pricing rules pour mettre à jour les badges min_stay
+        if(typeof window.loadPricingRules==='function')await window.loadPricingRules(window.LCC_PROPERTIES||[]);
         if(typeof window.applyPricingRulesToCells==='function')window.applyPricingRulesToCells();
+        if(typeof window.showToast==='function')window.showToast('Modifications enregistrées'+(minStayVal?' (min '+minStayVal+' nuits)':''),'success');
         document.getElementById('blockModal').style.display='none';window.showFab&&window.showFab();
       } else if(activeTab==='resa'){
         // Fermer et ouvrir newReservationModal avec données pré-remplies
