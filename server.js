@@ -21751,57 +21751,102 @@ app.post('/api/sms/incoming', async (req, res) => {
     if (normalizedPhone.startsWith('+33')) {
       normalizedPhone = '0' + normalizedPhone.slice(3);
     }
+    // Variantes : +33612345678, 0612345678, 33612345678
     const phoneVariants = [from, normalizedPhone];
+    if (normalizedPhone.startsWith('0')) {
+      phoneVariants.push('+33' + normalizedPhone.slice(1));
+      phoneVariants.push('33' + normalizedPhone.slice(1));
+    }
 
-    // Chercher le cleaner correspondant à ce numéro
-    const cleanerResult = await pool.query(
-      `SELECT c.id, c.name, c.user_id
-       FROM cleaners c
-       WHERE c.phone = ANY($1) AND c.is_active = TRUE
+    let senderName = from;
+    let targetUserId = null;
+    let matchedConversation = null;
+
+    // 1. Chercher une conversation guest avec ce numéro de téléphone
+    const convResult = await pool.query(
+      `SELECT c.id, c.guest_name, c.user_id, c.property_id
+       FROM conversations c
+       LEFT JOIN reservations r ON (
+         (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+         OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+             AND DATE(r.start_date) = DATE(c.reservation_start_date))
+       )
+       WHERE (c.guest_phone = ANY($1) OR r.guest_phone = ANY($1))
+       ORDER BY c.updated_at DESC
        LIMIT 1`,
       [phoneVariants]
     );
 
-    let senderName = from;
-    let targetUserId = null;
+    if (convResult.rows.length > 0) {
+      matchedConversation = convResult.rows[0];
+      senderName = matchedConversation.guest_name || from;
+      targetUserId = matchedConversation.user_id;
+      console.log(`📩 [SMS-IN] Conversation trouvée: #${matchedConversation.id} (${senderName})`);
 
-    if (cleanerResult.rows.length > 0) {
-      const cleaner = cleanerResult.rows[0];
-      senderName = cleaner.name;
-      targetUserId = cleaner.user_id;
-      console.log(`📩 [SMS-IN] Cleaner identifié : ${cleaner.name} (user_id: ${cleaner.user_id})`);
-    } else {
-      // Pas un cleaner — chercher quand même à quel propriétaire notifier
-      // (numéro inconnu → notifier tous les owners qui ont ce numéro en contact)
-      console.log(`📩 [SMS-IN] Numéro inconnu : ${from}`);
+      // Insérer le message dans la conversation
+      const msgResult = await pool.query(
+        `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, source, created_at)
+         VALUES ($1, 'guest', $2, $3, FALSE, 'sms', NOW())
+         RETURNING *`,
+        [matchedConversation.id, senderName, text]
+      );
+      const savedMsg = msgResult.rows[0];
+
+      // Mettre à jour updated_at de la conversation
+      await pool.query(`UPDATE conversations SET updated_at = NOW() WHERE id = $1`, [matchedConversation.id]);
+
+      // Notifier via Socket.io
+      if (io) {
+        io.to(`conversation_${matchedConversation.id}`).emit('new_message', savedMsg);
+      }
+
+      console.log(`📩 [SMS-IN] Message inséré dans conversation #${matchedConversation.id}`);
+    }
+
+    // 2. Chercher un cleaner (logique existante)
+    if (!targetUserId) {
+      const cleanerResult = await pool.query(
+        `SELECT c.id, c.name, c.user_id
+         FROM cleaners c
+         WHERE c.phone = ANY($1) AND c.is_active = TRUE
+         LIMIT 1`,
+        [phoneVariants]
+      );
+
+      if (cleanerResult.rows.length > 0) {
+        const cleaner = cleanerResult.rows[0];
+        senderName = cleaner.name;
+        targetUserId = cleaner.user_id;
+        console.log(`📩 [SMS-IN] Cleaner identifié : ${cleaner.name} (user_id: ${cleaner.user_id})`);
+      } else {
+        console.log(`📩 [SMS-IN] Numéro inconnu : ${from}`);
+      }
     }
 
     if (!targetUserId) return;
 
-    // Récupérer les tokens FCM du propriétaire
+    // 3. Push notification
     const tokensResult = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
       [targetUserId]
     );
 
-    if (!tokensResult.rows.length) {
-      console.log(`📩 [SMS-IN] Aucun token FCM pour user ${targetUserId}`);
-      return;
+    if (tokensResult.rows.length) {
+      const preview = text.length > 100 ? text.slice(0, 97) + '…' : text;
+      for (const { fcm_token } of tokensResult.rows) {
+        await sendNotificationLogged(
+          fcm_token,
+          `📱 SMS de ${senderName}`,
+          preview,
+          {
+            type: matchedConversation ? 'new_guest_message' : 'sms_reply',
+            conversation_id: matchedConversation ? String(matchedConversation.id) : undefined,
+            senderPhone: from,
+          }
+        );
+      }
+      console.log(`📩 [SMS-IN] Push envoyé à ${tokensResult.rows.length} token(s)`);
     }
-
-    // Tronquer le message si trop long pour la notif
-    const preview = text.length > 100 ? text.slice(0, 97) + '…' : text;
-
-    for (const { fcm_token } of tokensResult.rows) {
-      await sendNotificationLogged(
-        fcm_token,
-        `📩 ${senderName}`,
-        preview,
-        { type: 'sms_reply', senderPhone: from, cleanerName: senderName }
-      );
-    }
-
-    console.log(`📩 [SMS-IN] Push envoyé à ${tokensResult.rows.length} token(s) pour réponse de ${senderName}`);
   } catch (err) {
     console.error('❌ [SMS-IN] Erreur:', err.message);
   }
@@ -31852,6 +31897,106 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
   }
 });
 
+// ── POST /api/chat/conversations/:id/send-sms — Envoyer un message via SMS ──
+app.post('/api/chat/conversations/:conversationId/send-sms', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { conversationId } = req.params;
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: 'message requis' });
+
+    // Vérifier que l'utilisateur a l'option SMS active
+    const subResult = await pool.query(
+      `SELECT sms_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    if (!subResult.rows[0]?.sms_enabled) {
+      return res.status(403).json({ error: "L'option SMS n'est pas activée sur votre compte" });
+    }
+
+    // Récupérer la conversation et le téléphone du guest
+    const convResult = await pool.query(
+      `SELECT c.id, c.guest_name, c.guest_phone, c.property_id, c.user_id,
+              COALESCE(c.guest_phone, r.guest_phone) as phone
+       FROM conversations c
+       LEFT JOIN reservations r ON (
+         (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+         OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+             AND DATE(r.start_date) = DATE(c.reservation_start_date))
+       )
+       WHERE c.id = $1
+       LIMIT 1`,
+      [conversationId]
+    );
+
+    if (!convResult.rows[0]) return res.status(404).json({ error: 'Conversation introuvable' });
+    const conv = convResult.rows[0];
+    const guestPhone = conv.phone;
+
+    if (!guestPhone) {
+      return res.status(400).json({ error: 'Pas de numéro de téléphone pour ce voyageur' });
+    }
+
+    // Résoudre {caution_url} si présent
+    let finalMessage = message;
+    if (finalMessage.includes('{caution_url}')) {
+      try {
+        const resRow = await pool.query(
+          `SELECT uid FROM reservations
+           WHERE property_id = $1 AND status != 'cancelled'
+           ORDER BY created_at DESC LIMIT 1`,
+          [conv.property_id]
+        ).catch(() => ({ rows: [] }));
+        if (resRow.rows[0]) {
+          const dep = await pool.query(
+            `SELECT id, checkout_url FROM deposits
+             WHERE reservation_uid = $1 AND status IN ('pending','authorized')
+             ORDER BY created_at DESC LIMIT 1`,
+            [resRow.rows[0].uid]
+          ).catch(() => ({ rows: [] }));
+          if (dep.rows[0]?.checkout_url) {
+            const shortUrl = await makeShortLink(pool, dep.rows[0].checkout_url, conv.user_id, { depositId: dep.rows[0].id });
+            finalMessage = finalMessage.replace(/{caution_url}/gi, shortUrl);
+          }
+        }
+      } catch(e) {
+        console.warn('⚠️ [send-sms] Erreur résolution {caution_url}:', e.message);
+      }
+    }
+
+    // Envoyer le SMS
+    await sendSmsGateway(guestPhone, finalMessage, user.id, {
+      property_id: conv.property_id,
+      guest_name: conv.guest_name,
+      trigger_type: 'chat_sms'
+    });
+
+    // Sauvegarder en DB avec source='sms'
+    const msgResult = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, source, created_at)
+       VALUES ($1, 'property', 'Hôte', $2, TRUE, 'sms', NOW())
+       RETURNING *`,
+      [conversationId, finalMessage]
+    );
+
+    const savedMsg = msgResult.rows[0];
+
+    // Notifier via Socket.io
+    if (io) {
+      io.to(`conversation_${conversationId}`).emit('new_message', savedMsg);
+    }
+
+    console.log(`📱 [SMS-OUT] Message envoyé à ${guestPhone} pour conv ${conversationId}`);
+    res.json({ success: true, message: savedMsg });
+
+  } catch (err) {
+    console.error('❌ POST send-sms:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // ── Enregistrer les webhooks Channex pour un logement ────────
 app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) => {
@@ -34010,6 +34155,11 @@ pool.query(`
 // Ajouter colonne billing_override si elle n'existe pas
 pool.query(`ALTER TABLE account_delegations ADD COLUMN IF NOT EXISTS billing_override JSONB DEFAULT '{}'::jsonb`)
   .catch(e => console.log('ℹ️ billing_override:', e.message));
+
+// ── Colonne source sur messages (platform, sms, manual) ──
+pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'platform'`)
+  .then(() => console.log('✅ Colonne messages.source OK'))
+  .catch(e => console.log('ℹ️ messages.source:', e.message));
 
 // ── Middleware : réserver le mode agence au plan Pro ─────────────
 async function requireProPlan(req, res, next) {
