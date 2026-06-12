@@ -14888,7 +14888,9 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
     if (rule_type === 'min_stay') {
       if (start_date && end_date) {
         await pool.query(
-          `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay' AND start_date = $3 AND end_date = $4`,
+          `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay'
+           AND start_date IS NOT NULL AND end_date IS NOT NULL
+           AND start_date <= $4 AND end_date >= $3`,
           [user.id, property_id, start_date, end_date]
         );
       } else {
