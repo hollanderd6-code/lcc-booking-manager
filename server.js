@@ -366,11 +366,20 @@ async function triggerChannexRatesSync(propertyId, userId) {
       if (appliedPrice != null) rates.push({ date: dateStr, price: appliedPrice });
 
       let minStay = null;
+      // Date-specific rules first (priorité sur global)
       for (const rule of minStayRules) {
         if (rule.min_nights == null) continue;
-        if (!rule.start_date && !rule.end_date && !rule.days_of_week) { minStay = rule.min_nights; break; }
         if (rule.start_date && rule.end_date) {
           if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+            minStay = rule.min_nights; break;
+          }
+        }
+      }
+      // Fallback: global rule (sans dates)
+      if (minStay === null) {
+        for (const rule of minStayRules) {
+          if (rule.min_nights == null) continue;
+          if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
             minStay = rule.min_nights; break;
           }
         }
@@ -15092,16 +15101,23 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
       const restrictionEntry = { date: dateStr };
       let hasRestriction = false;
 
-      // min_stay via pricing_rules
+      // min_stay via pricing_rules — date-specific d'abord, global en fallback
+      let _minStayFound = false;
       for (const rule of minStayRules) {
         if (rule.min_nights == null) continue;
-        if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
-          restrictionEntry.min_stay = rule.min_nights;
-          hasRestriction = true;
-          break;
-        }
         if (rule.start_date && rule.end_date) {
           if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+            restrictionEntry.min_stay = rule.min_nights;
+            hasRestriction = true;
+            _minStayFound = true;
+            break;
+          }
+        }
+      }
+      if (!_minStayFound) {
+        for (const rule of minStayRules) {
+          if (rule.min_nights == null) continue;
+          if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
             restrictionEntry.min_stay = rule.min_nights;
             hasRestriction = true;
             break;

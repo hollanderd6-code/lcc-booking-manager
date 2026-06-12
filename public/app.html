@@ -8249,12 +8249,20 @@ window.applyPricingRulesToCells = function() {
       });
       var minStayBadge = cell.querySelector('.cell-min-stay');
       var applicableMinStay = null;
+      // Date-specific rules first (priorité)
       for (var i = 0; i < minStayRules.length; i++) {
         var mr = minStayRules[i];
-        if (!mr.start_date && !mr.end_date) { applicableMinStay = mr.min_nights; break; }
         if (mr.start_date && mr.end_date) {
           if (date >= mr.start_date.slice(0,10) && date <= mr.end_date.slice(0,10)) {
             applicableMinStay = mr.min_nights; break;
+          }
+        }
+      }
+      // Fallback: global rule (sans dates)
+      if (applicableMinStay === null) {
+        for (var j = 0; j < minStayRules.length; j++) {
+          if (!minStayRules[j].start_date && !minStayRules[j].end_date) {
+            applicableMinStay = minStayRules[j].min_nights; break;
           }
         }
       }
@@ -8265,6 +8273,9 @@ window.applyPricingRulesToCells = function() {
           badge.title = 'Séjour minimum : ' + applicableMinStay + ' nuits';
           badge.textContent = applicableMinStay + 'n+';
           cell.appendChild(badge);
+        } else {
+          minStayBadge.textContent = applicableMinStay + 'n+';
+          minStayBadge.title = 'Séjour minimum : ' + applicableMinStay + ' nuits';
         }
       } else if (minStayBadge) {
         minStayBadge.remove();
@@ -8507,10 +8518,13 @@ window.loadPricingOverrides = async function(properties) {
             badge.className = 'cell-min-stay';
             cell2.appendChild(badge);
           }
-          badge.textContent = minStayVal + 'n';
+          badge.textContent = minStayVal + 'n+';
+          badge.title = 'Séjour minimum : ' + minStayVal + ' nuits';
         }
-        // Invalider le cache des rules
+        // Invalider le cache des rules et rafraîchir le calendrier
         if (window._pricingRulesCache) delete window._pricingRulesCache[_cellPropertyId];
+        if (typeof window.loadPricingRules === 'function') await window.loadPricingRules(window.LCC_PROPERTIES || []);
+        if (typeof window.applyPricingRulesToCells === 'function') window.applyPricingRulesToCells();
       }
 
       if (typeof window.showToast === 'function') { window.showToast('Enregistré', 'success'); }
