@@ -1,0 +1,309 @@
+/* =============================================================
+   BOOSTINGHOST — LIQUID GLASS OVERLAY
+   Design: Apple Liquid Glass (iOS 26) + Glassmorphism fallback
+   Activation: html[data-theme-v3="1"]
+   ============================================================= */
+
+/* ─── GLASS TOKENS ────────────────────────────────────────── */
+html[data-theme-v3="1"] {
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-strong: rgba(255, 255, 255, 0.72);
+  --glass-bg-subtle: rgba(255, 255, 255, 0.35);
+  --glass-blur: blur(24px) saturate(180%);
+  --glass-blur-light: blur(16px) saturate(150%);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-border-subtle: rgba(255, 255, 255, 0.25);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --glass-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --glass-radius: 16px;
+  --glass-radius-lg: 24px;
+}
+
+html[data-theme-v3="1"][data-theme="dark"] {
+  --glass-bg: rgba(30, 30, 40, 0.55);
+  --glass-bg-strong: rgba(30, 30, 40, 0.72);
+  --glass-bg-subtle: rgba(30, 30, 40, 0.35);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-subtle: rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.15);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ─── BACKGROUND : subtle gradient mesh ───────────────────── */
+html[data-theme-v3="1"] body {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(26,122,94,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(200,184,154,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(26,122,94,0.03) 0%, transparent 70%),
+    var(--cream) !important;
+}
+
+/* ─── SIDEBAR : glass panel ───────────────────────────────── */
+html[data-theme-v3="1"] .sidebar {
+  background: var(--glass-bg-strong) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border-right: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow), var(--glass-highlight) !important;
+}
+
+html[data-theme-v3="1"] .sidebar .sidebar-header {
+  border-bottom: 1px solid var(--glass-border-subtle) !important;
+  background: transparent !important;
+}
+
+html[data-theme-v3="1"] .sidebar a.nav-item:hover {
+  background: var(--glass-bg-subtle) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+}
+
+html[data-theme-v3="1"] .sidebar a.nav-item.active {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border-subtle) !important;
+  box-shadow: var(--glass-shadow), var(--glass-highlight) !important;
+}
+
+html[data-theme-v3="1"] .sidebar .sidebar-footer {
+  border-top: 1px solid var(--glass-border-subtle) !important;
+  background: transparent !important;
+}
+
+/* ─── TOP BAR : glass header ──────────────────────────────── */
+html[data-theme-v3="1"] .bh-demo-nav {
+  background: rgba(13, 17, 23, 0.65) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+  backdrop-filter: blur(20px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ─── MAIN CONTENT HEADER : glass bar ─────────────────────── */
+html[data-theme-v3="1"] .content-header {
+  background: var(--glass-bg-strong) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border-bottom: 1px solid var(--glass-border-subtle) !important;
+  box-shadow: var(--glass-shadow) !important;
+}
+
+/* ─── KPI CARDS : glass cards ─────────────────────────────── */
+html[data-theme-v3="1"] .kpi-card {
+  background: var(--glass-bg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow: var(--glass-shadow), var(--glass-highlight) !important;
+  transition: all 0.25s var(--ease-out-v3) !important;
+}
+
+html[data-theme-v3="1"] .kpi-card:hover {
+  background: var(--glass-bg-strong) !important;
+  box-shadow: var(--glass-shadow-lg), var(--glass-highlight) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* ─── CALENDAR SECTION : glass container ──────────────────── */
+html[data-theme-v3="1"] #calendarSection {
+  background: var(--glass-bg-subtle) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+  border: 1px solid var(--glass-border-subtle) !important;
+  border-radius: var(--glass-radius-lg) !important;
+  box-shadow: var(--glass-shadow) !important;
+  overflow: hidden;
+}
+
+/* ─── CALENDAR DARK HEADER : glass ────────────────────────── */
+html[data-theme-v3="1"] .calendar-modern-header {
+  background: rgba(13, 17, 23, 0.6) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+  backdrop-filter: blur(20px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ─── PROPERTY ROWS : glass rows ──────────────────────────── */
+html[data-theme-v3="1"] .property-row-header {
+  background: var(--glass-bg-subtle) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+  border-bottom: 1px solid var(--glass-border-subtle) !important;
+}
+
+/* ─── BOOKING BLOCKS : glass with platform color ──────────── */
+html[data-theme-v3="1"] .booking-block {
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12), var(--glass-highlight) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+}
+
+/* ─── MODALS & BOTTOM SHEETS : glass overlay ──────────────── */
+html[data-theme-v3="1"] .modal-overlay,
+html[data-theme-v3="1"] .bottom-sheet-overlay {
+  background: rgba(0, 0, 0, 0.3) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+html[data-theme-v3="1"] .modal-content,
+html[data-theme-v3="1"] .bottom-sheet-content {
+  background: var(--glass-bg-strong) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow-lg) !important;
+}
+
+/* ─── BUTTONS : glass style ───────────────────────────────── */
+html[data-theme-v3="1"] #syncBtn,
+html[data-theme-v3="1"] #notificationsBtn,
+html[data-theme-v3="1"] #themeToggle {
+  background: var(--glass-bg-subtle) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-highlight) !important;
+}
+
+html[data-theme-v3="1"] #syncBtn:hover,
+html[data-theme-v3="1"] #notificationsBtn:hover,
+html[data-theme-v3="1"] #themeToggle:hover {
+  background: var(--glass-bg) !important;
+  box-shadow: var(--glass-shadow), var(--glass-highlight) !important;
+}
+
+/* ─── CTA BUTTON : jade glass ─────────────────────────────── */
+html[data-theme-v3="1"] #newReservationBtn {
+  background: linear-gradient(135deg, rgba(26,122,94,0.85), rgba(42,174,134,0.85)) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  box-shadow: 0 4px 20px rgba(26,122,94,0.3), var(--glass-highlight) !important;
+}
+
+/* ─── MOBILE TABS : glass tab bar ─────────────────────────── */
+html[data-theme-v3="1"] .mobile-tab-bar,
+html[data-theme-v3="1"] .mobile-bottom-tabs {
+  background: var(--glass-bg-strong) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border-top: 1px solid var(--glass-border) !important;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.06) !important;
+}
+
+/* ─── MOBILE HEADER : glass ───────────────────────────────── */
+html[data-theme-v3="1"] .mobile-header {
+  background: var(--glass-bg-strong) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border-bottom: 1px solid var(--glass-border-subtle) !important;
+}
+
+/* ─── TOAST : glass notification ──────────────────────────── */
+html[data-theme-v3="1"] .toast {
+  background: var(--glass-bg-strong) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow-lg) !important;
+  border-radius: 14px !important;
+}
+
+/* ─── BLOCK MODAL : glass ─────────────────────────────────── */
+html[data-theme-v3="1"] #blockModal > div:last-child,
+html[data-theme-v3="1"] #cellModal > div {
+  background: var(--glass-bg-strong) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow-lg) !important;
+}
+
+/* ─── SCROLLBAR : subtle glass ────────────────────────────── */
+html[data-theme-v3="1"] ::-webkit-scrollbar {
+  width: 6px;
+}
+html[data-theme-v3="1"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+html[data-theme-v3="1"] ::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 3px;
+}
+html[data-theme-v3="1"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.2);
+}
+
+/* ─── FAB BUTTON : glass ──────────────────────────────────── */
+html[data-theme-v3="1"] .fab-button,
+html[data-theme-v3="1"] #fabBtn {
+  background: linear-gradient(135deg, rgba(26,122,94,0.8), rgba(42,174,134,0.8)) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  box-shadow: 0 8px 32px rgba(26,122,94,0.35), var(--glass-highlight) !important;
+}
+
+/* ─── AGENCY BANNER : glass ───────────────────────────────── */
+html[data-theme-v3="1"] #agencyBanner {
+  background: rgba(26,122,94,0.12) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+  border-bottom: 1px solid rgba(26,122,94,0.15) !important;
+}
+
+/* ─── REVENUE MODAL (KPI) : glass ─────────────────────────── */
+html[data-theme-v3="1"] .kpi-detail-card {
+  background: var(--glass-bg) !important;
+  -webkit-backdrop-filter: var(--glass-blur-light) !important;
+  backdrop-filter: var(--glass-blur-light) !important;
+  border: 1px solid var(--glass-border-subtle) !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow: var(--glass-shadow) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROGRESSIVE ENHANCEMENT: Native Liquid Glass (iOS 26+)
+   ═══════════════════════════════════════════════════════════════ */
+@supports (-apple-liquid-glass: auto) {
+  html[data-theme-v3="1"] .sidebar {
+    -apple-liquid-glass: auto !important;
+    background: transparent !important;
+  }
+
+  html[data-theme-v3="1"] .kpi-card {
+    -apple-liquid-glass: auto !important;
+    background: transparent !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tab-bar,
+  html[data-theme-v3="1"] .mobile-bottom-tabs {
+    -apple-liquid-glass: auto !important;
+    background: transparent !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-header {
+    -apple-liquid-glass: auto !important;
+    background: transparent !important;
+  }
+
+  html[data-theme-v3="1"] #blockModal > div:last-child,
+  html[data-theme-v3="1"] #cellModal > div,
+  html[data-theme-v3="1"] .modal-content,
+  html[data-theme-v3="1"] .bottom-sheet-content {
+    -apple-liquid-glass: auto !important;
+    background: transparent !important;
+  }
+
+  html[data-theme-v3="1"] .toast {
+    -apple-liquid-glass: auto !important;
+    background: transparent !important;
+  }
+
+  html[data-theme-v3="1"] #newReservationBtn,
+  html[data-theme-v3="1"] .fab-button,
+  html[data-theme-v3="1"] #fabBtn {
+    -apple-liquid-glass: auto !important;
+  }
+}
