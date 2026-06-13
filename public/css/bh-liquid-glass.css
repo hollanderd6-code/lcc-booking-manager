@@ -232,7 +232,6 @@ html[data-theme-v3="1"] .mobile-tabs {
   backdrop-filter: var(--glass-blur) !important;
   border-top: 1px solid var(--glass-border) !important;
   box-shadow: 0 -4px 24px rgba(0,0,0,0.06) !important;
-  position: relative;
 }
 
 /* ─── MOBILE : sliding glass pill ─────────────────────────── */
