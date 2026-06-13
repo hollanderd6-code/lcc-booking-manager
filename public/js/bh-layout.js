@@ -1209,3 +1209,121 @@ window.confirm = function(msg) {
     }, 600);
   });
 })();
+
+// ═══════════════════════════════════════════════════════════════
+// 🧊 LIQUID GLASS — Sliding Pill Indicator
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  'use strict';
+
+  // ── Mobile Tab Bar Pill ──
+  function initMobileGlassPill() {
+    var tabs = document.querySelector('.mobile-tabs');
+    if (!tabs || tabs.querySelector('.glass-pill')) return;
+
+    var pill = document.createElement('div');
+    pill.className = 'glass-pill';
+    tabs.style.position = 'relative';
+    tabs.insertBefore(pill, tabs.firstChild);
+
+    function movePill(animate) {
+      var active = tabs.querySelector('.tab-btn.active');
+      if (!active) { pill.style.opacity = '0'; return; }
+      var tabRect = active.getBoundingClientRect();
+      var barRect = tabs.getBoundingClientRect();
+      var left = tabRect.left - barRect.left;
+      if (!animate) pill.style.transition = 'none';
+      pill.style.left = left + 'px';
+      pill.style.width = tabRect.width + 'px';
+      pill.style.opacity = '1';
+      if (!animate) {
+        pill.offsetHeight; // force reflow
+        pill.style.transition = '';
+      }
+    }
+
+    // Position initiale sans animation
+    setTimeout(function() { movePill(false); }, 200);
+    window.addEventListener('resize', function() { movePill(false); });
+
+    // Intercepter les clics sur les tabs
+    tabs.addEventListener('click', function(e) {
+      var btn = e.target.closest('.tab-btn');
+      if (!btn || btn.classList.contains('active')) return;
+      // Animer vers le nouveau tab
+      setTimeout(function() { movePill(true); }, 50);
+    });
+
+    // Observer les changements de classe active (pour navigation JS)
+    var observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        if (m.attributeName === 'class') {
+          movePill(true);
+        }
+      });
+    });
+    tabs.querySelectorAll('.tab-btn').forEach(function(btn) {
+      observer.observe(btn, { attributes: true, attributeFilter: ['class'] });
+    });
+  }
+
+  // ── Sidebar Desktop Pill ──
+  function initSidebarGlassPill() {
+    if (window.innerWidth <= 1366) return;
+    var nav = document.querySelector('.sidebar nav.sidebar-nav');
+    if (!nav || nav.querySelector('.glass-pill-sidebar')) return;
+
+    var pill = document.createElement('div');
+    pill.className = 'glass-pill-sidebar';
+    nav.style.position = 'relative';
+    nav.appendChild(pill);
+
+    function moveSidebarPill(animate) {
+      var active = nav.querySelector('a.nav-item.active');
+      if (!active) { pill.style.opacity = '0'; return; }
+      var navRect = nav.getBoundingClientRect();
+      var activeRect = active.getBoundingClientRect();
+      var top = activeRect.top - navRect.top + nav.scrollTop;
+      if (!animate) pill.style.transition = 'none';
+      pill.style.top = top + 'px';
+      pill.style.height = activeRect.height + 'px';
+      pill.style.opacity = '1';
+      if (!animate) {
+        pill.offsetHeight;
+        pill.style.transition = '';
+      }
+    }
+
+    setTimeout(function() { moveSidebarPill(false); }, 300);
+
+    nav.querySelectorAll('a.nav-item').forEach(function(item) {
+      item.addEventListener('mouseenter', function() {
+        if (item.classList.contains('active')) return;
+        var navRect = nav.getBoundingClientRect();
+        var itemRect = item.getBoundingClientRect();
+        pill.style.top = (itemRect.top - navRect.top + nav.scrollTop) + 'px';
+        pill.style.height = itemRect.height + 'px';
+        pill.style.opacity = '0.5';
+      });
+      item.addEventListener('mouseleave', function() {
+        moveSidebarPill(true);
+      });
+    });
+  }
+
+  // ── Init ──
+  function initGlassPills() {
+    if (!document.documentElement.getAttribute('data-theme-v3')) return;
+    initMobileGlassPill();
+    initSidebarGlassPill();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(initGlassPills, 500); });
+  } else {
+    setTimeout(initGlassPills, 500);
+  }
+
+  // Réinit après navigation (pour SPA-like pages)
+  window.addEventListener('pageshow', function() { setTimeout(initGlassPills, 500); });
+})();

@@ -405,3 +405,113 @@ html[data-theme-v3="1"] .kpi-detail-card {
     -apple-liquid-glass: auto !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LIQUID GLASS SLIDING PILL — Mobile Tab Bar
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1366px) {
+
+  /* Container : relative pour positionner la pill */
+  html[data-theme-v3="1"] .mobile-tabs {
+    position: fixed !important;
+    background: var(--glass-bg-strong) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    border-top: 1px solid var(--glass-border) !important;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.06) !important;
+  }
+
+  /* ── La pill glass glissante ── */
+  html[data-theme-v3="1"] .mobile-tabs .glass-pill {
+    position: absolute;
+    background: var(--glass-bg) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 12px rgba(26,122,94,0.12), var(--glass-highlight) !important;
+    transition: left 0.35s cubic-bezier(0.4, 0, 0.1, 1),
+                width 0.35s cubic-bezier(0.4, 0, 0.1, 1),
+                opacity 0.2s ease !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    top: 6px;
+    height: calc(100% - 12px - env(safe-area-inset-bottom, 0px));
+  }
+
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    html[data-theme-v3="1"] .mobile-tabs .glass-pill {
+      height: calc(100% - 12px - env(safe-area-inset-bottom));
+    }
+  }
+
+  /* ── Tabs : override pour supprimer les effets qui coupent l'icône ── */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn {
+    position: relative !important;
+    z-index: 1 !important;
+    background: transparent !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active {
+    color: #1A7A5E !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active i {
+    transform: none !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active span {
+    font-weight: 700 !important;
+  }
+
+  /* Supprimer le point vert du ::before */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active::before {
+    display: none !important;
+  }
+
+  /* Supprimer le ripple ::after en mode glass */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn::after {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIQUID GLASS SLIDING PILL — Sidebar Desktop
+   ═══════════════════════════════════════════════════════════════ */
+@media (min-width: 1367px) {
+
+  html[data-theme-v3="1"] .sidebar nav.sidebar-nav {
+    position: relative !important;
+  }
+
+  html[data-theme-v3="1"] .sidebar .glass-pill-sidebar {
+    position: absolute;
+    background: var(--glass-bg) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 12px rgba(26,122,94,0.1), var(--glass-highlight) !important;
+    transition: top 0.35s cubic-bezier(0.4, 0, 0.1, 1),
+                height 0.35s cubic-bezier(0.4, 0, 0.1, 1),
+                opacity 0.2s ease !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    left: 8px;
+    right: 8px;
+  }
+
+  /* Remove static active background */
+  html[data-theme-v3="1"] .sidebar a.nav-item.active {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  html[data-theme-v3="1"] .sidebar a.nav-item {
+    position: relative !important;
+    z-index: 1 !important;
+  }
+}
