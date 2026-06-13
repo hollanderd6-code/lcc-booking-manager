@@ -382,9 +382,9 @@
   // ============================================
   
   function setActiveTab() {
-    // Attendre que les onglets soient créés
     setTimeout(() => {
       const tabs = document.querySelectorAll('.tab-btn');
+      const container = document.querySelector('.mobile-tabs');
       tabs.forEach(tab => {
         const tabId = tab.dataset.tab;
         if (tabId === activeTab) {
@@ -392,6 +392,73 @@
         } else {
           tab.classList.remove('active');
         }
+      });
+
+      // ── Liquid Glass : sliding pill ──
+      if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
+      if (!container || !tabs.length) return;
+
+      // Créer la pill si elle n'existe pas
+      let pill = container.querySelector('.glass-pill-mobile');
+      if (!pill) {
+        pill = document.createElement('div');
+        pill.className = 'glass-pill-mobile';
+        container.style.position = 'relative';
+        container.insertBefore(pill, container.firstChild);
+      }
+
+      const activeEl = container.querySelector('.tab-btn.active');
+      if (!activeEl) return;
+
+      const allTabs = Array.from(tabs);
+      const activeIdx = allTabs.indexOf(activeEl);
+      const prevIdx = parseInt(sessionStorage.getItem('_glassPillIdx') || '-1');
+
+      function getPos(el) {
+        const cr = container.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        return {
+          left: er.left - cr.left,
+          top: er.top - cr.top,
+          width: er.width,
+          height: er.height
+        };
+      }
+
+      function setPill(pos, animate) {
+        if (!animate) {
+          pill.style.transition = 'none';
+          pill.offsetHeight;
+        } else {
+          pill.style.transition = '';
+        }
+        pill.style.left = pos.left + 'px';
+        pill.style.top = pos.top + 'px';
+        pill.style.width = pos.width + 'px';
+        pill.style.height = pos.height + 'px';
+        pill.classList.add('visible');
+        if (!animate) requestAnimationFrame(() => { pill.style.transition = ''; });
+      }
+
+      // Positionner et animer
+      const activePos = getPos(activeEl);
+      if (prevIdx >= 0 && prevIdx !== activeIdx && allTabs[prevIdx]) {
+        // Animer depuis l'ancien tab vers le nouveau
+        setPill(getPos(allTabs[prevIdx]), false);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => setPill(activePos, true));
+        });
+      } else {
+        setPill(activePos, false);
+      }
+
+      // Au clic, stocker l'index actuel avant navigation
+      allTabs.forEach((tab, idx) => {
+        tab.addEventListener('click', () => {
+          sessionStorage.setItem('_glassPillIdx', String(activeIdx));
+          // Animer vers le tab cliqué
+          setPill(getPos(tab), true);
+        }, { once: true });
       });
     }, 100);
   }
