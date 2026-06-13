@@ -1753,7 +1753,6 @@ html[data-theme-v3="1"] .subscription-card {
       <div class="notif-group">
         <div class="notif-group-title"><i class="fas fa-shield-alt"></i> Cautions</div>
         <div class="notif-row"><div class="notif-info"><span class="notif-label">Demande de caution</span><span class="notif-desc">J-2 avant l'arrivée d'un voyageur</span></div><label class="toggle-switch"><input type="checkbox" id="notif_deposit_request" checked><span class="toggle-slider"></span></label></div>
-        <div class="notif-row"><div class="notif-info"><span class="notif-label">Rappel libération caution</span><span class="notif-desc">J-1 avant la date de libération</span></div><label class="toggle-switch"><input type="checkbox" id="notif_deposit_release" checked><span class="toggle-slider"></span></label></div>
       </div>
       <div class="notif-group">
         <div class="notif-group-title"><i class="fas fa-comment"></i> Messages</div>
@@ -3832,7 +3831,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
   // ===== Notifications préférences =====
   (function() {
-    const NOTIF_KEYS = ['notif_new_reservation', 'notif_reservation_cancelled', 'notif_daily_summary', 'notif_reminder_j1', 'notif_cleaning_reminder', 'notif_cleaning_completed', 'notif_cleaning_alert', 'notif_checklist_done', 'notif_deposit_request', 'notif_deposit_release', 'notif_new_message', 'notif_new_invoice', 'notif_template_failed'];
+    const NOTIF_KEYS = ['notif_new_reservation', 'notif_reservation_cancelled', 'notif_daily_summary', 'notif_reminder_j1', 'notif_cleaning_reminder', 'notif_cleaning_completed', 'notif_cleaning_alert', 'notif_checklist_done', 'notif_deposit_request', 'notif_new_message', 'notif_new_invoice', 'notif_template_failed'];
     const tokenNotif = localStorage.getItem('lcc_token');
 
     async function loadNotificationSettings() {

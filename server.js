@@ -1084,89 +1084,10 @@ function parseIcalText(icalText) {
 console.log('✅ CRON demandes de caution désactivé — géré par templates before_arrival');
 
 // ============================================
-// CRON JOB : RAPPEL LIBERATION CAUTION J-1
+// CRON JOB : RAPPEL LIBERATION CAUTION — SUPPRIMÉ
 // ============================================
-cron.schedule('0 10 * * *', async () => {
-  console.log('CRON: Rappel liberation cautions a 10h00');
-  try {
-    // Recuperer tous les utilisateurs
-    const usersResult = await pool.query(
-      `SELECT DISTINCT u.id 
-       FROM users u 
-       JOIN user_fcm_tokens t ON u.id = t.user_id 
-       WHERE t.fcm_token IS NOT NULL`
-    );
-    
-    for (const user of usersResult.rows) {
-      // Recuperer TOUS les tokens
-      const tokensResult = await pool.query(
-        'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
-        [user.id]
-      );
-      
-      if (tokensResult.rows.length === 0) continue;
-      
-      // Chercher les cautions capturees il y a 6 jours (liberation demain)
-      const sixDaysAgo = new Date();
-      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
-      sixDaysAgo.setHours(0, 0, 0, 0);
-      const fiveDaysAgo = new Date(sixDaysAgo);
-      fiveDaysAgo.setDate(fiveDaysAgo.getDate() + 1);
-      
-      // ✅ CORRECTION : Requête SQL sans JOIN (conversation_id n'existe pas)
-      const depositsResult = await pool.query(
-        `SELECT * 
-         FROM deposits 
-         WHERE user_id = $1
-         AND status = 'captured'
-         AND captured_at >= $2
-         AND captured_at < $3`,
-        [user.id, sixDaysAgo, fiveDaysAgo]
-      );
-      
-      if (depositsResult.rows.length > 0) {
-        // ✅ Enrichir avec les données du store en mémoire
-        const enrichedDeposits = depositsResult.rows.map(d => {
-          const result = findReservationByUidForUser(d.reservation_uid, user.id);
-          return {
-            ...d,
-            property_name: result?.property?.name || 'Logement',
-            guest_name: result?.reservation?.guestName || 'Voyageur',
-            amount: (d.amount_cents / 100).toFixed(0)
-          };
-        });
-        
-        const depositsList = enrichedDeposits
-          .map(d => `${d.property_name} - ${d.guest_name} (${d.amount}€)`)
-          .join(', ');
-        
-        // Envoyer a TOUS les appareils
-        if (await shouldSendNotification(user.id, 'notif_deposit_release')) {
-          for (const token of tokensResult.rows) {
-            await sendNotificationLogged(
-              token.fcm_token,
-              `Rappel : ${depositsResult.rows.length} caution(s) a liberer demain`,
-              depositsList,
-              { 
-                type: 'deposit_release_reminder', 
-                count: depositsResult.rows.length.toString() 
-              }
-            );
-          }
-          console.log(`Rappel liberation caution envoye a user ${user.id} : ${depositsResult.rows.length} caution(s)`);
-        } // end shouldSendNotification
-      }
-    }
-    
-    console.log('Rappels liberation cautions envoyes');
-  } catch (error) {
-    console.error('Erreur CRON rappels cautions:', error);
-  }
-}, {
-  timezone: "Europe/Paris"
-});
-
-console.log('CRON rappels liberation cautions configure (tous les jours a 10h)');
+console.log('ℹ️ CRON rappels libération cautions supprimé');
+// ============================================
 // ============================================
 // CRON JOB : INFOS D'ACCÈS JOUR J À 7H
 // ============================================
@@ -2643,7 +2564,7 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
   notif_cleaning_completed: true,
   notif_checklist_done: true,
   notif_deposit_request: true,
-  notif_deposit_release: true,
+  
   notif_new_message: true,
   notif_new_invoice: true,
   notif_cleaning_alert: true,
@@ -2837,7 +2758,6 @@ async function getNotificationSettings(userId) {
     notif_cleaning_completed: typeof raw.notif_cleaning_completed === 'boolean' ? raw.notif_cleaning_completed : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_completed,
     notif_checklist_done: typeof raw.notif_checklist_done === 'boolean' ? raw.notif_checklist_done : DEFAULT_NOTIFICATION_SETTINGS.notif_checklist_done,
     notif_deposit_request: typeof raw.notif_deposit_request === 'boolean' ? raw.notif_deposit_request : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_request,
-    notif_deposit_release: typeof raw.notif_deposit_release === 'boolean' ? raw.notif_deposit_release : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_release,
     notif_new_message: typeof raw.notif_new_message === 'boolean' ? raw.notif_new_message : DEFAULT_NOTIFICATION_SETTINGS.notif_new_message,
     notif_new_invoice: typeof raw.notif_new_invoice === 'boolean' ? raw.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
     notif_cleaning_alert: typeof raw.notif_cleaning_alert === 'boolean' ? raw.notif_cleaning_alert : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_alert,
@@ -2875,7 +2795,6 @@ async function saveNotificationSettings(userId, settings) {
     notif_cleaning_completed: typeof settings.notif_cleaning_completed === 'boolean' ? settings.notif_cleaning_completed : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_completed,
     notif_checklist_done: typeof settings.notif_checklist_done === 'boolean' ? settings.notif_checklist_done : DEFAULT_NOTIFICATION_SETTINGS.notif_checklist_done,
     notif_deposit_request: typeof settings.notif_deposit_request === 'boolean' ? settings.notif_deposit_request : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_request,
-    notif_deposit_release: typeof settings.notif_deposit_release === 'boolean' ? settings.notif_deposit_release : DEFAULT_NOTIFICATION_SETTINGS.notif_deposit_release,
     notif_new_message: typeof settings.notif_new_message === 'boolean' ? settings.notif_new_message : DEFAULT_NOTIFICATION_SETTINGS.notif_new_message,
     notif_new_invoice: typeof settings.notif_new_invoice === 'boolean' ? settings.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
     notif_cleaning_alert: typeof settings.notif_cleaning_alert === 'boolean' ? settings.notif_cleaning_alert : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_alert,
@@ -10971,12 +10890,10 @@ app.post('/api/settings/notifications', async (req, res) => {
     try {
     const {
       newReservation, reminder, whatsappEnabled, whatsappNumber,
-      notif_new_reservation, notif_reservation_cancelled, notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder, notif_cleaning_completed, notif_checklist_done, notif_deposit_request, notif_deposit_release, notif_new_message, notif_new_invoice, notif_cleaning_alert,
     } = req.body || {};
 
     const saved = await saveNotificationSettings(user.id, {
       newReservation, reminder, whatsappEnabled, whatsappNumber,
-      notif_new_reservation, notif_reservation_cancelled, notif_daily_summary, notif_reminder_j1, notif_cleaning_reminder, notif_cleaning_completed, notif_checklist_done, notif_deposit_request, notif_deposit_release, notif_new_message, notif_new_invoice, notif_cleaning_alert,
     });
 
     res.json({
