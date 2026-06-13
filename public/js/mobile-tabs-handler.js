@@ -398,19 +398,25 @@
       if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
       if (!container || !tabs.length) return;
 
-      var PILL_TRANSITION = 'left 0.5s cubic-bezier(0.34,1.56,0.64,1), top 0.3s ease, width 0.35s ease, height 0.35s ease';
-      var PILL_STYLES = 'position:absolute;pointer-events:none;z-index:0;border-radius:16px;' +
-        'background:rgba(26,122,94,0.10);' +
-        'backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);' +
-        'border:1.5px solid rgba(26,122,94,0.20);' +
-        'box-shadow:0 2px 12px rgba(26,122,94,0.12),inset 0 1px 0 rgba(255,255,255,0.5);' +
-        'opacity:1;';
+      var TRANSITION = 'left 0.5s cubic-bezier(0.34,1.56,0.64,1),top 0.3s ease,width 0.35s ease,height 0.35s ease';
 
       var pill = container.querySelector('.glass-pill-mobile');
       if (!pill) {
         pill = document.createElement('div');
         pill.className = 'glass-pill-mobile';
-        pill.style.cssText = PILL_STYLES + 'transition:none;';
+        pill.style.cssText = [
+          'position:absolute',
+          'pointer-events:none',
+          'z-index:0',
+          'border-radius:16px',
+          'background:rgba(26,122,94,0.10)',
+          'backdrop-filter:blur(20px) saturate(180%)',
+          '-webkit-backdrop-filter:blur(20px) saturate(180%)',
+          'border:1.5px solid rgba(26,122,94,0.20)',
+          'box-shadow:0 2px 12px rgba(26,122,94,0.12),inset 0 1px 0 rgba(255,255,255,0.5)',
+          'opacity:1',
+          'transition:none'
+        ].join(';');
         container.appendChild(pill);
       }
 
@@ -424,20 +430,16 @@
       function getPos(el) {
         var cr = container.getBoundingClientRect();
         var er = el.getBoundingClientRect();
-        return { left: er.left - cr.left, top: er.top - cr.top, width: er.width, height: er.height };
+        // Réduire la hauteur de 6px en haut et en bas pour que l'icône ne dépasse pas
+        return {
+          left: er.left - cr.left + 4,
+          top: er.top - cr.top + 2,
+          width: er.width - 8,
+          height: er.height - 4
+        };
       }
 
-      function placePill(pos) {
-        pill.style.transition = 'none';
-        pill.style.left = pos.left + 'px';
-        pill.style.top = pos.top + 'px';
-        pill.style.width = pos.width + 'px';
-        pill.style.height = pos.height + 'px';
-        pill.offsetHeight; // force reflow
-      }
-
-      function slidePill(pos) {
-        pill.style.transition = PILL_TRANSITION;
+      function applyPos(pos) {
         pill.style.left = pos.left + 'px';
         pill.style.top = pos.top + 'px';
         pill.style.width = pos.width + 'px';
@@ -447,22 +449,30 @@
       var activePos = getPos(activeEl);
 
       if (prevIdx >= 0 && prevIdx !== activeIdx && allTabs[prevIdx]) {
-        // Placer sur l'ancien tab SANS animation
-        placePill(getPos(allTabs[prevIdx]));
-        // Attendre 200ms puis glisser vers le nouveau tab
-        setTimeout(function() { slidePill(activePos); }, 200);
+        // 1. Placer sur l'ancien tab SANS transition
+        pill.style.transition = 'none';
+        applyPos(getPos(allTabs[prevIdx]));
+        // 2. Forcer le navigateur à peindre cette position
+        pill.getBoundingClientRect();
+        // 3. Activer la transition et glisser vers le nouveau tab
+        setTimeout(function() {
+          pill.style.transition = TRANSITION;
+          applyPos(activePos);
+        }, 50);
       } else {
-        placePill(activePos);
+        pill.style.transition = 'none';
+        applyPos(activePos);
       }
 
-      // Au clic, stocker l'index et animer
+      // Au clic, stocker l'index et animer vers le tab cliqué
       allTabs.forEach(function(tab) {
         tab.addEventListener('click', function() {
           sessionStorage.setItem('_glassPillIdx', String(activeIdx));
-          slidePill(getPos(tab));
+          pill.style.transition = TRANSITION;
+          applyPos(getPos(tab));
         }, { once: true });
       });
-    }, 150);
+    }, 200);
   }
 
   // Initialiser
