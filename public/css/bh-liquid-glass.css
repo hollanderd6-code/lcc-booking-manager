@@ -39,6 +39,45 @@ html[data-theme-v3="1"] body {
     var(--cream) !important;
 }
 
+/* ─── SIDEBAR NAV : sliding glass pill ─────────────────────── */
+html[data-theme-v3="1"] .sidebar-nav {
+  position: relative;
+}
+
+html[data-theme-v3="1"] .glass-pill {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 40px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  transition: top 0.45s cubic-bezier(0.32, 1.2, 0.36, 1),
+              height 0.3s cubic-bezier(0.32, 1.2, 0.36, 1),
+              opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+}
+
+html[data-theme-v3="1"] .glass-pill.visible {
+  opacity: 1;
+}
+
+html[data-theme-v3="1"] .sidebar a.nav-item {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-theme-v3="1"] .sidebar a.nav-item.active {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* ─── SIDEBAR : glass panel ───────────────────────────────── */
 html[data-theme-v3="1"] .sidebar {
   background: var(--glass-bg-strong) !important;
@@ -267,6 +306,11 @@ html[data-theme-v3="1"] .kpi-detail-card {
    PROGRESSIVE ENHANCEMENT: Native Liquid Glass (iOS 26+)
    ═══════════════════════════════════════════════════════════════ */
 @supports (-apple-liquid-glass: auto) {
+  html[data-theme-v3="1"] .glass-pill {
+    -apple-liquid-glass: auto !important;
+    background: transparent !important;
+  }
+
   html[data-theme-v3="1"] .sidebar {
     -apple-liquid-glass: auto !important;
     background: transparent !important;
