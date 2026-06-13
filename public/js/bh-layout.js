@@ -1211,130 +1211,98 @@ window.confirm = function(msg) {
 })();
 
 
+
 // ═══════════════════════════════════════════════════════════════
-// 🧊 LIQUID GLASS — Sliding Pill (iOS 26 style)
+// 🧊 LIQUID GLASS — Pill position via CSS custom properties
+// Ultra-robuste : pas de DOM inject, juste des --pill-x / --pill-w
 // ═══════════════════════════════════════════════════════════════
 (function() {
   'use strict';
-  if (!document.documentElement.getAttribute('data-theme-v3')) return;
 
-  function initMobilePill() {
+  // ── Mobile pill ──
+  function updateMobilePill() {
     var tabs = document.querySelector('.mobile-tabs');
-    if (!tabs || tabs.querySelector('.bh-glass-pill')) return;
-
-    var pill = document.createElement('div');
-    pill.className = 'bh-glass-pill';
-    tabs.appendChild(pill);
-
-    function positionPill(animate) {
-      var active = tabs.querySelector('.tab-btn.active');
-      if (!active) { pill.style.opacity = '0'; return; }
-
-      var tabsRect = tabs.getBoundingClientRect();
-      var activeRect = active.getBoundingClientRect();
-      var x = activeRect.left - tabsRect.left;
-      var padding = 4;
-
-      pill.style.height = (activeRect.height - padding * 2) + 'px';
-      pill.style.width = activeRect.width + 'px';
-      pill.style.top = padding + 'px';
-      pill.style.opacity = '1';
-
-      if (!animate) {
-        pill.style.transition = 'none';
-        pill.style.transform = 'translateX(' + x + 'px)';
-        pill.offsetHeight; // force reflow
-        pill.style.transition = '';
-      } else {
-        pill.style.transform = 'translateX(' + x + 'px)';
-      }
+    if (!tabs) return;
+    var active = tabs.querySelector('.tab-btn.active');
+    if (!active || active.offsetWidth === 0) {
+      tabs.style.setProperty('--pill-opacity', '0');
+      return;
     }
-
-    // Init position sans animation
-    var initInterval = setInterval(function() {
-      var active = tabs.querySelector('.tab-btn.active');
-      if (active && active.getBoundingClientRect().width > 0) {
-        clearInterval(initInterval);
-        positionPill(false);
-      }
-    }, 100);
-
-    // Observer les changements de classe
-    var btns = tabs.querySelectorAll('.tab-btn');
-    var observer = new MutationObserver(function() {
-      positionPill(true);
-    });
-    btns.forEach(function(btn) {
-      observer.observe(btn, { attributes: true, attributeFilter: ['class'] });
-    });
-
-    // Aussi écouter les clics pour une réponse immédiate
-    tabs.addEventListener('click', function(e) {
-      var btn = e.target.closest('.tab-btn');
-      if (btn) setTimeout(function() { positionPill(true); }, 30);
-    });
-
-    window.addEventListener('resize', function() { positionPill(false); });
+    var x = active.offsetLeft;
+    var w = active.offsetWidth;
+    tabs.style.setProperty('--pill-x', x + 'px');
+    tabs.style.setProperty('--pill-w', w + 'px');
+    tabs.style.setProperty('--pill-opacity', '1');
   }
 
-  function initSidebarPill() {
+  // ── Sidebar pill ──
+  function updateSidebarPill() {
     if (window.innerWidth <= 1366) return;
-    var nav = document.querySelector('.sidebar nav.sidebar-nav');
-    if (!nav || nav.querySelector('.bh-glass-pill-sidebar')) return;
-
-    var pill = document.createElement('div');
-    pill.className = 'bh-glass-pill-sidebar';
-    nav.appendChild(pill);
-
-    function positionPill(animate) {
-      var active = nav.querySelector('a.nav-item.active');
-      if (!active) { pill.style.opacity = '0'; return; }
-
-      var navRect = nav.getBoundingClientRect();
-      var activeRect = active.getBoundingClientRect();
-      var y = activeRect.top - navRect.top + nav.scrollTop;
-
-      pill.style.height = activeRect.height + 'px';
-      pill.style.opacity = '1';
-
-      if (!animate) {
-        pill.style.transition = 'none';
-        pill.style.transform = 'translateY(' + y + 'px)';
-        pill.offsetHeight;
-        pill.style.transition = '';
-      } else {
-        pill.style.transform = 'translateY(' + y + 'px)';
-      }
+    var nav = document.querySelector('.sidebar .sidebar-nav');
+    if (!nav) return;
+    var active = nav.querySelector('a.nav-item.active');
+    if (!active || active.offsetHeight === 0) {
+      nav.style.setProperty('--spill-opacity', '0');
+      return;
     }
+    var y = active.offsetTop;
+    var h = active.offsetHeight;
+    nav.style.setProperty('--spill-y', y + 'px');
+    nav.style.setProperty('--spill-h', h + 'px');
+    nav.style.setProperty('--spill-opacity', '1');
+  }
 
-    setTimeout(function() { positionPill(false); }, 400);
+  // ── Init : poll jusqu'à ce que les tabs existent ──
+  var attempts = 0;
+  var poller = setInterval(function() {
+    attempts++;
+    var tabs = document.querySelector('.mobile-tabs');
+    var hasActive = tabs && tabs.querySelector('.tab-btn.active');
+    if (hasActive && hasActive.offsetWidth > 0) {
+      clearInterval(poller);
+      // Position initiale SANS transition
+      tabs.style.transition = 'none';
+      var before = getComputedStyle(tabs, '::before');
+      updateMobilePill();
+      // Forcer le reflow puis réactiver la transition
+      tabs.offsetHeight;
+      setTimeout(function() { tabs.style.transition = ''; }, 50);
 
-    // Hover preview
-    nav.querySelectorAll('a.nav-item').forEach(function(item) {
-      item.addEventListener('mouseenter', function() {
-        if (item.classList.contains('active')) return;
-        var navRect = nav.getBoundingClientRect();
-        var itemRect = item.getBoundingClientRect();
-        var y = itemRect.top - navRect.top + nav.scrollTop;
-        pill.style.transform = 'translateY(' + y + 'px)';
-        pill.style.height = itemRect.height + 'px';
-        pill.style.opacity = '0.4';
+      // Écouter les clics
+      tabs.addEventListener('click', function() {
+        setTimeout(updateMobilePill, 50);
       });
-      item.addEventListener('mouseleave', function() {
-        positionPill(true);
+
+      // Observer les changements de classe
+      tabs.querySelectorAll('.tab-btn').forEach(function(btn) {
+        new MutationObserver(function() { updateMobilePill(); })
+          .observe(btn, { attributes: true, attributeFilter: ['class'] });
       });
-    });
-  }
+    }
+    if (attempts > 50) clearInterval(poller); // stop après 5s
+  }, 100);
 
-  function init() {
-    setTimeout(initMobilePill, 600);
-    setTimeout(initSidebarPill, 600);
-  }
+  // Sidebar
+  setTimeout(function() {
+    updateSidebarPill();
+    var nav = document.querySelector('.sidebar .sidebar-nav');
+    if (nav) {
+      nav.querySelectorAll('a.nav-item').forEach(function(item) {
+        item.addEventListener('mouseenter', function() {
+          if (item.classList.contains('active')) return;
+          nav.style.setProperty('--spill-y', item.offsetTop + 'px');
+          nav.style.setProperty('--spill-h', item.offsetHeight + 'px');
+          nav.style.setProperty('--spill-opacity', '0.4');
+        });
+        item.addEventListener('mouseleave', function() {
+          updateSidebarPill();
+        });
+      });
+    }
+  }, 800);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-  window.addEventListener('pageshow', init);
+  window.addEventListener('resize', function() {
+    updateMobilePill();
+    updateSidebarPill();
+  });
 })();

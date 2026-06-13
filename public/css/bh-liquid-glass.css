@@ -351,182 +351,112 @@ html[data-theme-v3="1"] .kpi-detail-card {
   box-shadow: var(--glass-shadow) !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PROGRESSIVE ENHANCEMENT: Native Liquid Glass (iOS 26+)
-   ═══════════════════════════════════════════════════════════════ */
-@supports (-apple-liquid-glass: auto) {
-  html[data-theme-v3="1"] .glass-pill {
-    -apple-liquid-glass: auto !important;
-    background: transparent !important;
-  }
-
-  html[data-theme-v3="1"] .sidebar {
-    -apple-liquid-glass: auto !important;
-    background: transparent !important;
-  }
-
-  html[data-theme-v3="1"] .kpi-card {
-    -apple-liquid-glass: auto !important;
-    background: transparent !important;
-  }
-
-  html[data-theme-v3="1"] .glass-pill-mobile {
-    -apple-liquid-glass: auto !important;
-    background: transparent !important;
-  }
-
-  html[data-theme-v3="1"] .mobile-tab-bar,
-  html[data-theme-v3="1"] .mobile-bottom-tabs {
-    -apple-liquid-glass: auto !important;
-    background: transparent !important;
-  }
-
-  html[data-theme-v3="1"] .mobile-header {
-    -apple-liquid-glass: auto !important;
-    background: transparent !important;
-  }
-
-  html[data-theme-v3="1"] #blockModal > div:last-child,
-  html[data-theme-v3="1"] #cellModal > div,
-  html[data-theme-v3="1"] .modal-content,
-  html[data-theme-v3="1"] .bottom-sheet-content {
-    -apple-liquid-glass: auto !important;
-    background: transparent !important;
-  }
-
-  html[data-theme-v3="1"] .toast {
-    -apple-liquid-glass: auto !important;
-    background: transparent !important;
-  }
-
-  html[data-theme-v3="1"] #newReservationBtn,
-  html[data-theme-v3="1"] .fab-button,
-  html[data-theme-v3="1"] #fabBtn {
-    -apple-liquid-glass: auto !important;
-  }
-}
 
 /* ═══════════════════════════════════════════════════════════════
-   LIQUID GLASS SLIDING PILL — Mobile Tab Bar (iOS 26 style)
+   LIQUID GLASS SLIDING PILL — via CSS custom properties
+   La pill est un ::before sur .mobile-tabs, piloté par
+   --pill-x et --pill-w depuis le JS (ultra robuste)
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 1366px) {
 
-  /* ── Barre flottante en verre ── */
+  /* ── Tab bar glass ── */
   html[data-theme-v3="1"] .mobile-tabs {
     position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
     z-index: 10000 !important;
-    background: rgba(255, 255, 255, 0.75) !important;
+    background: rgba(255,255,255,0.78) !important;
     -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
     backdrop-filter: blur(40px) saturate(200%) !important;
-    border-top: 0.5px solid rgba(0,0,0,0.08) !important;
-    box-shadow: 0 -2px 20px rgba(0,0,0,0.04) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-around !important;
-    padding: 6px 4px 6px !important;
-    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+    border-top: 0.5px solid rgba(0,0,0,0.06) !important;
+    box-shadow: 0 -1px 12px rgba(0,0,0,0.03) !important;
+    --pill-x: 0px;
+    --pill-w: 0px;
+    --pill-opacity: 0;
   }
 
-  /* ── La pill glass qui slide ── */
-  html[data-theme-v3="1"] .mobile-tabs .bh-glass-pill {
+  /* ── Pill via ::before ── */
+  html[data-theme-v3="1"] .mobile-tabs::before {
+    content: '';
     position: absolute;
-    background: rgba(0, 0, 0, 0.06);
-    border-radius: 12px;
-    z-index: 0;
+    top: 5px;
+    left: 0;
+    height: calc(100% - 10px - env(safe-area-inset-bottom, 0px));
+    width: var(--pill-w);
+    background: rgba(0,0,0,0.055);
+    border-radius: 14px;
+    transform: translateX(var(--pill-x));
+    transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1),
+                width 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+    opacity: var(--pill-opacity);
     pointer-events: none;
+    z-index: 0;
     will-change: transform, width;
-    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
-                width 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  /* ── Tabs reset ── */
+  /* ── Tabs style ── */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn {
     position: relative !important;
     z-index: 1 !important;
     background: transparent !important;
-    border: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 2px !important;
-    padding: 6px 4px !important;
-    color: rgba(0,0,0,0.4) !important;
-    flex: 1 !important;
-    min-height: 44px !important;
-    -webkit-tap-highlight-color: transparent !important;
-    transition: color 0.25s ease !important;
+    color: rgba(0,0,0,0.35) !important;
+    transition: color 0.2s ease !important;
   }
-
   html[data-theme-v3="1"] .mobile-tabs .tab-btn i {
     font-size: 22px !important;
     transform: none !important;
     transition: none !important;
   }
-
   html[data-theme-v3="1"] .mobile-tabs .tab-btn span {
     font-size: 10px !important;
     font-weight: 500 !important;
     opacity: 1 !important;
-    transition: none !important;
   }
-
-  /* ── Active state ── */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn.active {
     color: #0D1117 !important;
   }
-
-  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active i {
-    transform: none !important;
-  }
-
   html[data-theme-v3="1"] .mobile-tabs .tab-btn.active span {
     font-weight: 700 !important;
   }
-
-  /* ── Supprimer les anciens effets ── */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active i {
+    transform: none !important;
+  }
+  /* Kill old effects */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn::before,
   html[data-theme-v3="1"] .mobile-tabs .tab-btn::after {
     display: none !important;
   }
-
-  /* ── Badge ── */
-  html[data-theme-v3="1"] .mobile-tabs .tab-btn .badge {
-    z-index: 2 !important;
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   LIQUID GLASS SLIDING PILL — Sidebar Desktop
+   SIDEBAR PILL — Desktop
    ═══════════════════════════════════════════════════════════════ */
 @media (min-width: 1367px) {
-
-  html[data-theme-v3="1"] .sidebar nav.sidebar-nav {
+  html[data-theme-v3="1"] .sidebar .sidebar-nav {
     position: relative !important;
+    --spill-y: 0px;
+    --spill-h: 0px;
+    --spill-opacity: 0;
   }
-
-  html[data-theme-v3="1"] .sidebar .bh-glass-pill-sidebar {
+  html[data-theme-v3="1"] .sidebar .sidebar-nav::before {
+    content: '';
     position: absolute;
-    left: 8px;
-    right: 8px;
-    background: rgba(0, 0, 0, 0.05);
+    left: 8px; right: 8px;
+    top: 0;
+    height: var(--spill-h);
+    background: rgba(0,0,0,0.05);
     border-radius: 10px;
-    z-index: 0;
-    pointer-events: none;
-    will-change: transform;
+    transform: translateY(var(--spill-y));
     transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
                 height 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    opacity: var(--spill-opacity);
+    pointer-events: none;
+    z-index: 0;
   }
-
   html[data-theme-v3="1"] .sidebar a.nav-item.active {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
   }
-
   html[data-theme-v3="1"] .sidebar a.nav-item {
     position: relative !important;
     z-index: 1 !important;
