@@ -407,53 +407,76 @@ html[data-theme-v3="1"] .kpi-detail-card {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   LIQUID GLASS SLIDING PILL — Mobile Tab Bar
+   LIQUID GLASS SLIDING PILL — Mobile Tab Bar (iOS 26 style)
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 1366px) {
 
-  /* Container : relative pour positionner la pill */
+  /* ── Barre flottante en verre ── */
   html[data-theme-v3="1"] .mobile-tabs {
     position: fixed !important;
-    background: var(--glass-bg-strong) !important;
-    -webkit-backdrop-filter: var(--glass-blur) !important;
-    backdrop-filter: var(--glass-blur) !important;
-    border-top: 1px solid var(--glass-border) !important;
-    box-shadow: 0 -4px 24px rgba(0,0,0,0.06) !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 10000 !important;
+    background: rgba(255, 255, 255, 0.75) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+    backdrop-filter: blur(40px) saturate(200%) !important;
+    border-top: 0.5px solid rgba(0,0,0,0.08) !important;
+    box-shadow: 0 -2px 20px rgba(0,0,0,0.04) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    padding: 6px 4px 6px !important;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  /* ── La pill glass glissante ── */
-  html[data-theme-v3="1"] .mobile-tabs .glass-pill {
+  /* ── La pill glass qui slide ── */
+  html[data-theme-v3="1"] .mobile-tabs .bh-glass-pill {
     position: absolute;
-    background: var(--glass-bg) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
-    backdrop-filter: blur(20px) saturate(200%) !important;
-    border: 1px solid var(--glass-border) !important;
-    border-radius: 14px !important;
-    box-shadow: 0 2px 12px rgba(26,122,94,0.12), var(--glass-highlight) !important;
-    transition: left 0.35s cubic-bezier(0.4, 0, 0.1, 1),
-                width 0.35s cubic-bezier(0.4, 0, 0.1, 1),
-                opacity 0.2s ease !important;
-    z-index: 0 !important;
-    pointer-events: none !important;
-    top: 6px;
-    height: calc(100% - 12px - env(safe-area-inset-bottom, 0px));
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    z-index: 0;
+    pointer-events: none;
+    will-change: transform, width;
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+                width 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    html[data-theme-v3="1"] .mobile-tabs .glass-pill {
-      height: calc(100% - 12px - env(safe-area-inset-bottom));
-    }
-  }
-
-  /* ── Tabs : override pour supprimer les effets qui coupent l'icône ── */
+  /* ── Tabs reset ── */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn {
     position: relative !important;
     z-index: 1 !important;
     background: transparent !important;
+    border: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    padding: 6px 4px !important;
+    color: rgba(0,0,0,0.4) !important;
+    flex: 1 !important;
+    min-height: 44px !important;
+    -webkit-tap-highlight-color: transparent !important;
+    transition: color 0.25s ease !important;
   }
 
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn i {
+    font-size: 22px !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn span {
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+
+  /* ── Active state ── */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn.active {
-    color: #1A7A5E !important;
+    color: #0D1117 !important;
   }
 
   html[data-theme-v3="1"] .mobile-tabs .tab-btn.active i {
@@ -464,14 +487,15 @@ html[data-theme-v3="1"] .kpi-detail-card {
     font-weight: 700 !important;
   }
 
-  /* Supprimer le point vert du ::before */
-  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active::before {
+  /* ── Supprimer les anciens effets ── */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn::before,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn::after {
     display: none !important;
   }
 
-  /* Supprimer le ripple ::after en mode glass */
-  html[data-theme-v3="1"] .mobile-tabs .tab-btn::after {
-    display: none !important;
+  /* ── Badge ── */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn .badge {
+    z-index: 2 !important;
   }
 }
 
@@ -484,30 +508,23 @@ html[data-theme-v3="1"] .kpi-detail-card {
     position: relative !important;
   }
 
-  html[data-theme-v3="1"] .sidebar .glass-pill-sidebar {
+  html[data-theme-v3="1"] .sidebar .bh-glass-pill-sidebar {
     position: absolute;
-    background: var(--glass-bg) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
-    backdrop-filter: blur(20px) saturate(200%) !important;
-    border: 1px solid var(--glass-border) !important;
-    border-radius: 10px !important;
-    box-shadow: 0 2px 12px rgba(26,122,94,0.1), var(--glass-highlight) !important;
-    transition: top 0.35s cubic-bezier(0.4, 0, 0.1, 1),
-                height 0.35s cubic-bezier(0.4, 0, 0.1, 1),
-                opacity 0.2s ease !important;
-    z-index: 0 !important;
-    pointer-events: none !important;
     left: 8px;
     right: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    z-index: 0;
+    pointer-events: none;
+    will-change: transform;
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+                height 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  /* Remove static active background */
   html[data-theme-v3="1"] .sidebar a.nav-item.active {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    position: relative !important;
-    z-index: 1 !important;
   }
 
   html[data-theme-v3="1"] .sidebar a.nav-item {

@@ -1210,120 +1210,131 @@ window.confirm = function(msg) {
   });
 })();
 
+
 // ═══════════════════════════════════════════════════════════════
-// 🧊 LIQUID GLASS — Sliding Pill Indicator
+// 🧊 LIQUID GLASS — Sliding Pill (iOS 26 style)
 // ═══════════════════════════════════════════════════════════════
 (function() {
   'use strict';
+  if (!document.documentElement.getAttribute('data-theme-v3')) return;
 
-  // ── Mobile Tab Bar Pill ──
-  function initMobileGlassPill() {
+  function initMobilePill() {
     var tabs = document.querySelector('.mobile-tabs');
-    if (!tabs || tabs.querySelector('.glass-pill')) return;
+    if (!tabs || tabs.querySelector('.bh-glass-pill')) return;
 
     var pill = document.createElement('div');
-    pill.className = 'glass-pill';
-    tabs.style.position = 'relative';
-    tabs.insertBefore(pill, tabs.firstChild);
+    pill.className = 'bh-glass-pill';
+    tabs.appendChild(pill);
 
-    function movePill(animate) {
+    function positionPill(animate) {
       var active = tabs.querySelector('.tab-btn.active');
       if (!active) { pill.style.opacity = '0'; return; }
-      var tabRect = active.getBoundingClientRect();
-      var barRect = tabs.getBoundingClientRect();
-      var left = tabRect.left - barRect.left;
-      if (!animate) pill.style.transition = 'none';
-      pill.style.left = left + 'px';
-      pill.style.width = tabRect.width + 'px';
+
+      var tabsRect = tabs.getBoundingClientRect();
+      var activeRect = active.getBoundingClientRect();
+      var x = activeRect.left - tabsRect.left;
+      var padding = 4;
+
+      pill.style.height = (activeRect.height - padding * 2) + 'px';
+      pill.style.width = activeRect.width + 'px';
+      pill.style.top = padding + 'px';
       pill.style.opacity = '1';
+
       if (!animate) {
+        pill.style.transition = 'none';
+        pill.style.transform = 'translateX(' + x + 'px)';
         pill.offsetHeight; // force reflow
         pill.style.transition = '';
+      } else {
+        pill.style.transform = 'translateX(' + x + 'px)';
       }
     }
 
-    // Position initiale sans animation
-    setTimeout(function() { movePill(false); }, 200);
-    window.addEventListener('resize', function() { movePill(false); });
+    // Init position sans animation
+    var initInterval = setInterval(function() {
+      var active = tabs.querySelector('.tab-btn.active');
+      if (active && active.getBoundingClientRect().width > 0) {
+        clearInterval(initInterval);
+        positionPill(false);
+      }
+    }, 100);
 
-    // Intercepter les clics sur les tabs
-    tabs.addEventListener('click', function(e) {
-      var btn = e.target.closest('.tab-btn');
-      if (!btn || btn.classList.contains('active')) return;
-      // Animer vers le nouveau tab
-      setTimeout(function() { movePill(true); }, 50);
+    // Observer les changements de classe
+    var btns = tabs.querySelectorAll('.tab-btn');
+    var observer = new MutationObserver(function() {
+      positionPill(true);
     });
-
-    // Observer les changements de classe active (pour navigation JS)
-    var observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(m) {
-        if (m.attributeName === 'class') {
-          movePill(true);
-        }
-      });
-    });
-    tabs.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btns.forEach(function(btn) {
       observer.observe(btn, { attributes: true, attributeFilter: ['class'] });
     });
+
+    // Aussi écouter les clics pour une réponse immédiate
+    tabs.addEventListener('click', function(e) {
+      var btn = e.target.closest('.tab-btn');
+      if (btn) setTimeout(function() { positionPill(true); }, 30);
+    });
+
+    window.addEventListener('resize', function() { positionPill(false); });
   }
 
-  // ── Sidebar Desktop Pill ──
-  function initSidebarGlassPill() {
+  function initSidebarPill() {
     if (window.innerWidth <= 1366) return;
     var nav = document.querySelector('.sidebar nav.sidebar-nav');
-    if (!nav || nav.querySelector('.glass-pill-sidebar')) return;
+    if (!nav || nav.querySelector('.bh-glass-pill-sidebar')) return;
 
     var pill = document.createElement('div');
-    pill.className = 'glass-pill-sidebar';
-    nav.style.position = 'relative';
+    pill.className = 'bh-glass-pill-sidebar';
     nav.appendChild(pill);
 
-    function moveSidebarPill(animate) {
+    function positionPill(animate) {
       var active = nav.querySelector('a.nav-item.active');
       if (!active) { pill.style.opacity = '0'; return; }
+
       var navRect = nav.getBoundingClientRect();
       var activeRect = active.getBoundingClientRect();
-      var top = activeRect.top - navRect.top + nav.scrollTop;
-      if (!animate) pill.style.transition = 'none';
-      pill.style.top = top + 'px';
+      var y = activeRect.top - navRect.top + nav.scrollTop;
+
       pill.style.height = activeRect.height + 'px';
       pill.style.opacity = '1';
+
       if (!animate) {
+        pill.style.transition = 'none';
+        pill.style.transform = 'translateY(' + y + 'px)';
         pill.offsetHeight;
         pill.style.transition = '';
+      } else {
+        pill.style.transform = 'translateY(' + y + 'px)';
       }
     }
 
-    setTimeout(function() { moveSidebarPill(false); }, 300);
+    setTimeout(function() { positionPill(false); }, 400);
 
+    // Hover preview
     nav.querySelectorAll('a.nav-item').forEach(function(item) {
       item.addEventListener('mouseenter', function() {
         if (item.classList.contains('active')) return;
         var navRect = nav.getBoundingClientRect();
         var itemRect = item.getBoundingClientRect();
-        pill.style.top = (itemRect.top - navRect.top + nav.scrollTop) + 'px';
+        var y = itemRect.top - navRect.top + nav.scrollTop;
+        pill.style.transform = 'translateY(' + y + 'px)';
         pill.style.height = itemRect.height + 'px';
-        pill.style.opacity = '0.5';
+        pill.style.opacity = '0.4';
       });
       item.addEventListener('mouseleave', function() {
-        moveSidebarPill(true);
+        positionPill(true);
       });
     });
   }
 
-  // ── Init ──
-  function initGlassPills() {
-    if (!document.documentElement.getAttribute('data-theme-v3')) return;
-    initMobileGlassPill();
-    initSidebarGlassPill();
+  function init() {
+    setTimeout(initMobilePill, 600);
+    setTimeout(initSidebarPill, 600);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() { setTimeout(initGlassPills, 500); });
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    setTimeout(initGlassPills, 500);
+    init();
   }
-
-  // Réinit après navigation (pour SPA-like pages)
-  window.addEventListener('pageshow', function() { setTimeout(initGlassPills, 500); });
+  window.addEventListener('pageshow', init);
 })();
