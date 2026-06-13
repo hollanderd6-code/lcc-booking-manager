@@ -395,18 +395,33 @@
       });
 
       // ── Liquid Glass : sliding pill ──
-      if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
-      if (!container || !tabs.length) return;
+      const isV3 = document.documentElement.getAttribute('data-theme-v3') === '1';
+
+      // Debug visuel temporaire
+      const _dbg = document.createElement('div');
+      _dbg.id = 'glassDebug';
+      _dbg.style.cssText = 'position:fixed;top:60px;left:8px;right:8px;background:rgba(0,0,0,0.85);color:#0f0;font-size:11px;font-family:monospace;padding:10px;border-radius:10px;z-index:99999;max-height:200px;overflow:auto;white-space:pre-wrap;';
+      document.body.appendChild(_dbg);
+      function dbg(msg) { _dbg.textContent += msg + '\n'; }
+
+      dbg('v3=' + isV3 + ' container=' + !!container + ' tabs=' + tabs.length);
+
+      if (!isV3) { dbg('STOP: theme-v3 non activé'); return; }
+      if (!container) { dbg('STOP: .mobile-tabs introuvable'); return; }
+      if (!tabs.length) { dbg('STOP: aucun .tab-btn'); return; }
 
       let pill = container.querySelector('.glass-pill-mobile');
       if (!pill) {
         pill = document.createElement('div');
         pill.className = 'glass-pill-mobile';
+        pill.style.cssText = 'position:absolute;pointer-events:none;z-index:0;border-radius:14px;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);border:1px solid rgba(255,255,255,0.5);box-shadow:0 4px 24px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.6);transition:left 0.5s cubic-bezier(0.34,1.56,0.64,1),top 0.3s ease,width 0.35s ease,height 0.35s ease,opacity 0.25s ease;opacity:0;';
         container.appendChild(pill);
+        dbg('Pill créée et ajoutée au DOM');
       }
 
       const activeEl = container.querySelector('.tab-btn.active');
-      if (!activeEl) return;
+      dbg('activeEl=' + (activeEl ? activeEl.dataset.tab : 'NULL'));
+      if (!activeEl) { dbg('STOP: aucun tab actif'); return; }
 
       const allTabs = Array.from(tabs);
       const activeIdx = allTabs.indexOf(activeEl);
@@ -424,12 +439,14 @@
       }
 
       function setPill(pos, animate) {
+        dbg('setPill l=' + Math.round(pos.left) + ' t=' + Math.round(pos.top) + ' w=' + Math.round(pos.width) + ' h=' + Math.round(pos.height) + ' anim=' + animate);
         if (!animate) { pill.style.transition = 'none'; pill.offsetHeight; }
         else { pill.style.transition = ''; }
         pill.style.left = pos.left + 'px';
         pill.style.top = pos.top + 'px';
         pill.style.width = pos.width + 'px';
         pill.style.height = pos.height + 'px';
+        pill.style.opacity = '1';
         pill.classList.add('visible');
         if (!animate) requestAnimationFrame(() => { pill.style.transition = ''; });
       }
