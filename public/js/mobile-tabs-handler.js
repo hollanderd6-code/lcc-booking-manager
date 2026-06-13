@@ -398,59 +398,71 @@
       if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
       if (!container || !tabs.length) return;
 
-      let pill = container.querySelector('.glass-pill-mobile');
+      var PILL_TRANSITION = 'left 0.5s cubic-bezier(0.34,1.56,0.64,1), top 0.3s ease, width 0.35s ease, height 0.35s ease';
+      var PILL_STYLES = 'position:absolute;pointer-events:none;z-index:0;border-radius:16px;' +
+        'background:rgba(26,122,94,0.10);' +
+        'backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);' +
+        'border:1.5px solid rgba(26,122,94,0.20);' +
+        'box-shadow:0 2px 12px rgba(26,122,94,0.12),inset 0 1px 0 rgba(255,255,255,0.5);' +
+        'opacity:1;';
+
+      var pill = container.querySelector('.glass-pill-mobile');
       if (!pill) {
         pill = document.createElement('div');
         pill.className = 'glass-pill-mobile';
+        pill.style.cssText = PILL_STYLES + 'transition:none;';
         container.appendChild(pill);
       }
 
-      const activeEl = container.querySelector('.tab-btn.active');
+      var activeEl = container.querySelector('.tab-btn.active');
       if (!activeEl) return;
 
-      const allTabs = Array.from(tabs);
-      const activeIdx = allTabs.indexOf(activeEl);
-      const prevIdx = parseInt(sessionStorage.getItem('_glassPillIdx') || '-1');
+      var allTabs = Array.from(tabs);
+      var activeIdx = allTabs.indexOf(activeEl);
+      var prevIdx = parseInt(sessionStorage.getItem('_glassPillIdx') || '-1');
 
       function getPos(el) {
-        const cr = container.getBoundingClientRect();
-        const er = el.getBoundingClientRect();
-        return {
-          left: er.left - cr.left,
-          top: er.top - cr.top,
-          width: er.width,
-          height: er.height
-        };
+        var cr = container.getBoundingClientRect();
+        var er = el.getBoundingClientRect();
+        return { left: er.left - cr.left, top: er.top - cr.top, width: er.width, height: er.height };
       }
 
-      function setPill(pos, animate) {
-        if (!animate) { pill.style.transition = 'none'; pill.offsetHeight; }
-        else { pill.style.transition = ''; }
+      function placePill(pos) {
+        pill.style.transition = 'none';
         pill.style.left = pos.left + 'px';
         pill.style.top = pos.top + 'px';
         pill.style.width = pos.width + 'px';
         pill.style.height = pos.height + 'px';
-        pill.style.opacity = '1';
-        if (!animate) requestAnimationFrame(() => { pill.style.transition = ''; });
+        pill.offsetHeight; // force reflow
       }
 
-      const activePos = getPos(activeEl);
+      function slidePill(pos) {
+        pill.style.transition = PILL_TRANSITION;
+        pill.style.left = pos.left + 'px';
+        pill.style.top = pos.top + 'px';
+        pill.style.width = pos.width + 'px';
+        pill.style.height = pos.height + 'px';
+      }
+
+      var activePos = getPos(activeEl);
+
       if (prevIdx >= 0 && prevIdx !== activeIdx && allTabs[prevIdx]) {
-        // Placer la pill sur l'ancien tab sans animation
-        setPill(getPos(allTabs[prevIdx]), false);
-        // Attendre 150ms pour que l'utilisateur voie la position, puis glisser
-        setTimeout(() => setPill(activePos, true), 150);
+        // Placer sur l'ancien tab SANS animation
+        placePill(getPos(allTabs[prevIdx]));
+        // Attendre 200ms puis glisser vers le nouveau tab
+        setTimeout(function() { slidePill(activePos); }, 200);
       } else {
-        setPill(activePos, false);
+        placePill(activePos);
       }
 
-      allTabs.forEach((tab) => {
-        tab.addEventListener('click', () => {
+      // Au clic, stocker l'index et animer
+      allTabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
           sessionStorage.setItem('_glassPillIdx', String(activeIdx));
-          setPill(getPos(tab), true);
+          slidePill(getPos(tab));
         }, { once: true });
       });
-    }, 100);
+    }, 150);
   }
 
   // Initialiser
