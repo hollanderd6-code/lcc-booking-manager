@@ -312,38 +312,73 @@ function getSidebarHTML() {
       }
     }
 
-    // ── Liquid Glass : sliding pill indicator ──
-    if (document.documentElement.getAttribute('data-theme-v3') === '1') {
+    // ── Liquid Glass : sliding pill indicator ──────────────────
+    (function initGlassPill() {
+      if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
       const nav = ph.querySelector('.sidebar-nav');
-      if (nav) {
-        const pill = document.createElement('div');
-        pill.className = 'glass-pill';
-        nav.appendChild(pill);
+      if (!nav) return;
 
-        function positionPill(target, animate) {
-          if (!target) { pill.classList.remove('visible'); return; }
-          const navRect = nav.getBoundingClientRect();
-          const itemRect = target.getBoundingClientRect();
-          const top = itemRect.top - navRect.top + nav.scrollTop;
-          if (!animate) pill.style.transition = 'none';
-          pill.style.top = top + 'px';
-          pill.style.height = itemRect.height + 'px';
-          if (!animate) requestAnimationFrame(() => { pill.style.transition = ''; });
-          pill.classList.add('visible');
+      const pill = document.createElement('div');
+      pill.className = 'glass-pill';
+      nav.style.position = 'relative';
+      nav.insertBefore(pill, nav.firstChild);
+
+      function movePill(target, animate) {
+        if (!target) { pill.classList.remove('visible'); return; }
+        const navRect = nav.getBoundingClientRect();
+        const itemRect = target.getBoundingClientRect();
+        const top = itemRect.top - navRect.top + nav.scrollTop;
+        const left = itemRect.left - navRect.left;
+        const width = itemRect.width;
+        const height = itemRect.height;
+
+        if (!animate) {
+          pill.style.transition = 'none';
+          pill.offsetHeight; // force reflow
+        } else {
+          pill.style.transition = '';
         }
 
-        // Position initiale sans animation
-        const activeItem = nav.querySelector('.nav-item.active');
-        requestAnimationFrame(() => positionPill(activeItem, false));
+        pill.style.top = top + 'px';
+        pill.style.left = left + 'px';
+        pill.style.width = width + 'px';
+        pill.style.height = height + 'px';
+        pill.classList.add('visible');
 
-        // Clic sur un nav-item → animer la pill
-        nav.querySelectorAll('.nav-item').forEach(item => {
-          item.addEventListener('click', function() {
-            positionPill(this, true);
-          });
-        });
+        if (!animate) {
+          requestAnimationFrame(() => { pill.style.transition = ''; });
+        }
       }
-    }
+
+      // Position initiale sur l'item actif (sans animation)
+      const activeItem = nav.querySelector('.nav-item.active');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => movePill(activeItem, false));
+      });
+
+      // Hover : la pill glisse vers l'item survolé
+      const navItems = nav.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+          movePill(this, true);
+        });
+      });
+
+      // Mouse leave sur la nav : retour sur l'item actif
+      nav.addEventListener('mouseleave', function() {
+        const current = nav.querySelector('.nav-item.active');
+        movePill(current, true);
+      });
+
+      // Recalculer au scroll de la sidebar
+      const sidebarEl = ph.querySelector('.sidebar-nav') || ph;
+      if (sidebarEl) {
+        sidebarEl.addEventListener('scroll', () => {
+          const current = nav.querySelector('.nav-item.active');
+          movePill(current, false);
+        }, { passive: true });
+      }
+    })();
 
     const sidebar = document.getElementById("sidebar") || document.querySelector("aside.sidebar");
     const overlay = document.getElementById("sidebarOverlay");
