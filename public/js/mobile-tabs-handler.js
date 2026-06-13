@@ -402,7 +402,6 @@
       if (!pill) {
         pill = document.createElement('div');
         pill.className = 'glass-pill-mobile';
-        pill.style.cssText = 'position:absolute;pointer-events:none;z-index:0;border-radius:16px;background:rgba(26,122,94,0.1);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1.5px solid rgba(26,122,94,0.2);box-shadow:0 2px 12px rgba(26,122,94,0.12),inset 0 1px 0 rgba(255,255,255,0.5);transition:left 0.5s cubic-bezier(0.34,1.56,0.64,1),top 0.3s ease,width 0.35s ease,height 0.35s ease,opacity 0.25s ease;opacity:0;';
         container.appendChild(pill);
       }
 
@@ -437,10 +436,10 @@
 
       const activePos = getPos(activeEl);
       if (prevIdx >= 0 && prevIdx !== activeIdx && allTabs[prevIdx]) {
+        // Placer la pill sur l'ancien tab sans animation
         setPill(getPos(allTabs[prevIdx]), false);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => setPill(activePos, true));
-        });
+        // Attendre 150ms pour que l'utilisateur voie la position, puis glisser
+        setTimeout(() => setPill(activePos, true), 150);
       } else {
         setPill(activePos, false);
       }
