@@ -14,6 +14,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var isWebViewLoaded = false
     let brandColor = UIColor(red: 0.102, green: 0.478, blue: 0.369, alpha: 1.0)
     var pendingFCMToken: String? = nil
+    // 🔗 Deep link en attente (notif reçue avant que la WebView soit prête → cold start)
+    var pendingDeepLink: String? = nil
 
     private func disablePullToRefresh(on webView: WKWebView) {
         let sv = webView.scrollView
@@ -31,7 +33,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // ============================================
     // AUTH PERSISTENCE — UserDefaults
     // ============================================
-    
+
     func saveTokenToUserDefaults(_ token: String) {
         UserDefaults.standard.set(token, forKey: "lcc_token")
         UserDefaults.standard.synchronize()
@@ -50,7 +52,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             print("ℹ️ Pas de token sauvegardé dans UserDefaults")
             return
         }
-        
+
         let js = """
         (function() {
             var existing = localStorage.getItem('lcc_token');
@@ -63,12 +65,84 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             }
         })();
         """
-        
+
         webView.evaluateJavaScript(js) { _, error in
             if let error = error {
                 print("❌ Erreur restauration token: \(error)")
             } else {
                 print("✅ Token restauré dans localStorage")
+            }
+        }
+    }
+
+    // ============================================
+    // 🔗 DEEP LINKING — table de routage centralisée
+    // ============================================
+
+    /// Renvoie le chemin de page pour un type de notification donné.
+    /// Défaut : app.html (aucune notif ne doit jamais ne « rien » faire).
+    static func pageForNotification(type: String, conversationId conv: String) -> String {
+        let messages: Set<String> = [
+            "new_message", "new_guest_message", "new_chat_message",
+            "chat_sms", "template_failed", "bhguest_notif", "property"
+        ]
+        let calendar: Set<String> = [
+            "new_reservation", "new_booking", "new_booking_channex", "new_booking_guest",
+            "reservation_cancelled", "cancelled_booking_channex", "reservation_modified",
+            "arrivals", "departures", "bhguest_hold", "reminder_j1"
+        ]
+        let cleaning: Set<String> = [
+            "cleaning_assigned", "cleaning_recap", "cleaning_completed", "cleaning_validated",
+            "cleaning_alert", "cleaning_lastminute", "cleaning_complement", "sms_reply"
+        ]
+        let deposits: Set<String> = ["deposit_paid", "deposit_captured", "payment_received"]
+        let invoices: Set<String> = ["new_invoice"]
+        let smartLocks: Set<String> = ["smart_lock_battery"]
+
+        if messages.contains(type) {
+            return conv.isEmpty ? "messages.html" : "messages.html?open=\(conv)"
+        }
+        if calendar.contains(type)   { return "app.html?view=calendar" }
+        if cleaning.contains(type)   { return "cleaning.html" }
+        if deposits.contains(type)   { return "deposits.html" }
+        if invoices.contains(type)   { return "clients.html" }
+        if smartLocks.contains(type) { return "smart-locks.html" }
+        // daily_summary, monthly_summary, account_onboarding, contract_signed, agency_access, inconnus…
+        return "app.html"
+    }
+
+    /// Calcule la cible depuis le payload et tente de l'appliquer.
+    func routeNotification(_ userInfo: [AnyHashable: Any]) {
+        let type = userInfo["type"] as? String ?? ""
+        // ⚠️ tolère snake_case ET camelCase (les payloads serveur mélangent les deux)
+        let conv = (userInfo["conversation_id"] as? String)
+            ?? (userInfo["conversationId"] as? String) ?? ""
+        let path = AppDelegate.pageForNotification(type: type, conversationId: conv)
+        print("📱 Notif type='\(type)' conv='\(conv)' → /\(path)")
+        pendingDeepLink = path
+        applyPendingDeepLinkIfReady()
+    }
+
+    /// Applique le deep link en attente si la WebView est prête,
+    /// sinon le laisse en attente (sera appliqué dans didFinish — cold start).
+    func applyPendingDeepLinkIfReady() {
+        guard let path = pendingDeepLink else { return }
+        guard isWebViewLoaded,
+              let rootVC = window?.rootViewController as? CAPBridgeViewController,
+              let webView = rootVC.webView else {
+            print("📱 WebView pas prête → deep link mis en attente (/\(path))")
+            return
+        }
+        pendingDeepLink = nil
+        // location.replace pour ne pas polluer l'historique
+        let js = "window.location.replace('/\(path)');"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            webView.evaluateJavaScript(js) { _, error in
+                if let error = error {
+                    print("❌ Deep link erreur: \(error)")
+                } else {
+                    print("✅ Deep link appliqué → /\(path)")
+                }
             }
         }
     }
@@ -179,7 +253,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             pendingFCMToken = token
             return
         }
-        
+
         let js = """
         window.fcmToken = '\(token)';
         if (typeof window.onFCMToken === 'function') {
@@ -189,7 +263,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             setTimeout(function() { if (typeof window.onFCMToken === 'function') window.onFCMToken('\(token)'); }, 3000);
         }
         """
-        
+
         webView.evaluateJavaScript(js) { _, error in
             if let error = error {
                 print("❌ Erreur injection FCM token: \(error)")
@@ -347,7 +421,7 @@ extension AppDelegate: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         disablePullToRefresh(on: webView)
-        
+
         let bridgeJS = """
         window._syncTokenToNative = function(token) {
             window.webkit && window.webkit.messageHandlers &&
@@ -377,21 +451,26 @@ extension AppDelegate: WKNavigationDelegate {
         };
         """
         webView.evaluateJavaScript(bridgeJS, completionHandler: nil)
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             self.restoreTokenIfNeeded(webView: webView)
         }
-        
-        guard !isWebViewLoaded else { return }
+
+        let firstLoad = !isWebViewLoaded
         isWebViewLoaded = true
+
+        // 🔗 Applique un éventuel deep link en attente (cas cold start : notif tapée app fermée)
+        applyPendingDeepLinkIfReady()
+
+        guard firstLoad else { return }
         print("📱 WebView chargée")
-        
+
         if let token = pendingFCMToken {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.injectFCMToken(token)
             }
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.hideSplashScreen()
         }
@@ -405,7 +484,7 @@ extension AppDelegate: WKNavigationDelegate {
 }
 
 // ============================================
-// NOTIFICATIONS
+// NOTIFICATIONS + DEEP LINKING
 // ============================================
 extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
@@ -425,6 +504,10 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         UIApplication.shared.applicationIconBadgeNumber = 0
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+
+        // 🔗 Route via la table centralisée (gère cold start + warm start)
+        routeNotification(response.notification.request.content.userInfo)
+
         completionHandler()
     }
 }
