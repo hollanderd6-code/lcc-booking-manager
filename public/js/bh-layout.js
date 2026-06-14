@@ -1309,10 +1309,10 @@ window.confirm = function(msg) {
 
 
 // ═══════════════════════════════════════════════════════════════
-// 🧊✨ LIQUID GLASS TAB BAR — v3
-// • détection page fiable (data-page > URL > .active)
-// • barre au-dessus des overlays (drag toujours possible, ex: Plus)
-// • drag GPU pur (ni blur ni shadow ni border pendant le glissement)
+// 🧊✨ LIQUID GLASS TAB BAR — v4
+// • détection par LIBELLÉ visible (fiable même si data-page=app)
+// • capsule sur "Plus" quand la feuille #moreMenuSheet est ouverte
+// • touch-action:none → drag fluide partout (iOS ne scrolle plus)
 // ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -1328,8 +1328,8 @@ window.confirm = function(msg) {
       '.mobile-tabs .glass-pill-mobile,.mobile-tabs .glass-pill{display:none!important;}' +
       '.mobile-tabs .tab-btn:focus,.mobile-tabs .tab-btn:focus-visible,.mobile-tabs .tab-btn:active{outline:none!important;-webkit-tap-highlight-color:transparent!important;}' +
       '.mobile-tabs .tab-btn.active{background:transparent!important;box-shadow:none!important;}' +
-      // barre toujours au-dessus des overlays génériques (z-index 9999) → drag possible même menu Plus ouvert
-      '.mobile-tabs{position:fixed!important;z-index:10001!important;pointer-events:auto!important;}' +
+      // barre au-dessus des overlays + touch-action none = drag fiable et fluide
+      '.mobile-tabs{position:fixed!important;z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
 
       '.mobile-tabs .lg-capsule{' +
         'position:absolute;top:6px;left:0;' +
@@ -1347,7 +1347,6 @@ window.confirm = function(msg) {
       '.mobile-tabs .lg-capsule.lg-animate{' +
         'transition:transform .5s cubic-bezier(.34,1.4,.5,1),width .4s cubic-bezier(.34,1.2,.64,1),opacity .25s ease;' +
       '}' +
-      // pendant le drag : zéro effet coûteux → transform pur, 60fps
       '.mobile-tabs .lg-capsule.lg-dragging{' +
         '-webkit-backdrop-filter:none!important;backdrop-filter:none!important;' +
         'background:rgba(26,122,94,0.20)!important;box-shadow:none!important;border-color:transparent!important;transition:none!important;' +
@@ -1355,16 +1354,19 @@ window.confirm = function(msg) {
 
       '.mobile-tabs .tab-btn{position:relative!important;z-index:1!important;background:transparent!important;transition:color .2s ease!important;}' +
       '.mobile-tabs .tab-btn,.mobile-tabs .tab-btn i,.mobile-tabs .tab-btn span{color:#98a3b0!important;}' +
-      '.mobile-tabs .tab-btn.active,.mobile-tabs .tab-btn.active i,.mobile-tabs .tab-btn.active span,' +
+      '.mobile-tabs .tab-btn.lg-active,.mobile-tabs .tab-btn.lg-active i,.mobile-tabs .tab-btn.lg-active span,' +
       '.mobile-tabs .tab-btn.lg-hover,.mobile-tabs .tab-btn.lg-hover i,.mobile-tabs .tab-btn.lg-hover span{color:' + JADE + '!important;}' +
-      '.mobile-tabs .tab-btn.active span,.mobile-tabs .tab-btn.lg-hover span{font-weight:700!important;}' +
-      '.mobile-tabs .tab-btn.active i,.mobile-tabs .tab-btn.lg-hover i{transform:none!important;}' +
+      '.mobile-tabs .tab-btn.lg-active span,.mobile-tabs .tab-btn.lg-hover span{font-weight:700!important;}' +
+      '.mobile-tabs .tab-btn.lg-active i,.mobile-tabs .tab-btn.lg-hover i{transform:none!important;}' +
       '.mobile-tabs .tab-btn .badge{color:#fff!important;background:#DC2626!important;}' +
+      // neutralise le vert posé par le handler sur le mauvais onglet : seul lg-active est vert
+      '.mobile-tabs .tab-btn.active:not(.lg-active),.mobile-tabs .tab-btn.active:not(.lg-active) i,.mobile-tabs .tab-btn.active:not(.lg-active) span{color:#98a3b0!important;font-weight:500!important;}' +
 
+      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active),[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) i,[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{color:#7e8a98!important;font-weight:500!important;}' +
       '[data-theme="dark"] .mobile-tabs .lg-capsule{background:rgba(42,174,134,0.18);border-color:rgba(42,174,134,0.30);box-shadow:0 4px 18px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.10);}' +
       '[data-theme="dark"] .mobile-tabs .lg-capsule.lg-dragging{background:rgba(42,174,134,0.28)!important;}' +
       '[data-theme="dark"] .mobile-tabs .tab-btn,[data-theme="dark"] .mobile-tabs .tab-btn i,[data-theme="dark"] .mobile-tabs .tab-btn span{color:#7e8a98!important;}' +
-      '[data-theme="dark"] .mobile-tabs .tab-btn.active,[data-theme="dark"] .mobile-tabs .tab-btn.active i,[data-theme="dark"] .mobile-tabs .tab-btn.active span,' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.lg-active,[data-theme="dark"] .mobile-tabs .tab-btn.lg-active i,[data-theme="dark"] .mobile-tabs .tab-btn.lg-active span,' +
       '[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover,[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover i,[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover span{color:#2AAE86!important;}' +
 
       '@media (prefers-reduced-motion:reduce){.mobile-tabs .lg-capsule.lg-animate{transition:opacity .2s ease!important;}}' +
@@ -1375,38 +1377,57 @@ window.confirm = function(msg) {
     document.head.appendChild(s);
   }
 
+  function deburr(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); }
+
   function tabsOf(bar) {
     return Array.prototype.slice.call(bar.querySelectorAll('.tab-btn'))
       .filter(function (t) { return t.offsetWidth > 0; });
   }
+  function labelOf(t) { var sp = t.querySelector('span'); return deburr(sp ? sp.textContent : t.textContent); }
 
-  function hintOf(t) {
-    return ((t.getAttribute('href') || '') + ' ' + (t.getAttribute('data-href') || '') + ' ' +
-            (t.getAttribute('onclick') || '') + ' ' + (t.getAttribute('data-tab') || '') + ' ' +
-            (t.getAttribute('data-page') || '')).toLowerCase();
+  // pages qui vivent SOUS le menu "Plus"
+  var MORE = { settings: 1, 'settings-account': 1, help: 1, support: 1, factures: 1, clients: 1,
+    deposits: 1, cautions: 1, cleaning: 1, menages: 1, welcome: 1, livrets: 1, contrat: 1, contrats: 1,
+    'smart-locks': 1, smart_locks: 1, serrures: 1, reporting: 1, revenus: 1, pricing: 1, finances: 1,
+    notifications: 1, avis: 1 };
+  // data-page (ou nom de fichier) → libellé d'onglet
+  var TOLABEL = { app: 'accueil', dashboard: 'accueil', accueil: 'accueil', index: 'accueil',
+    reservations: 'reservations', messages: 'messages',
+    logements: 'logements', properties: 'logements', biens: 'logements' };
+
+  function keyForPage(page) {
+    page = deburr(page);
+    if (TOLABEL[page]) return TOLABEL[page];
+    if (MORE[page]) return 'plus';
+    return '';
   }
 
-  // Détection : data-page (source de vérité) > URL > classe .active
-  function activeIndex(tabs) {
-    var page = (document.body && document.body.dataset && document.body.dataset.page || '').toLowerCase();
-    if (page) {
-      for (var i = 0; i < tabs.length; i++) if (hintOf(tabs[i]).indexOf(page) !== -1) return i;
-      if (page === 'app') {
-        for (var k = 0; k < tabs.length; k++) {
-          var hk = hintOf(tabs[k]);
-          if (hk.indexOf('app.html') !== -1 || hk.indexOf('accueil') !== -1 || hk.indexOf('dashboard') !== -1) return k;
-        }
-      }
-    }
-    var file = (location.pathname || '').toLowerCase().split('/').pop() || 'app.html';
-    if (file === '' || file === 'index.html') file = 'app.html';
-    var stem = file.replace('.html', '');
-    for (var j = 0; j < tabs.length; j++) {
-      var hj = hintOf(tabs[j]);
-      if (hj.indexOf(file) !== -1 || (stem && hj.indexOf(stem) !== -1)) return j;
-    }
+  function findByLabel(tabs, key) {
+    if (!key) return -1;
+    for (var i = 0; i < tabs.length; i++) if (labelOf(tabs[i]).indexOf(key) !== -1) return i;
+    return -1;
+  }
+
+  // index de l'onglet actif d'après la PAGE (libellé)
+  function pageIndex(tabs) {
+    var idx = findByLabel(tabs, keyForPage(document.body && document.body.dataset && document.body.dataset.page));
+    if (idx >= 0) return idx;
+    var file = deburr((location.pathname || '').split('/').pop()).replace('.html', '');
+    idx = findByLabel(tabs, keyForPage(file));
+    if (idx >= 0) return idx;
     for (var m = 0; m < tabs.length; m++) if (tabs[m].classList.contains('active')) return m;
     return -1;
+  }
+
+  function plusIndex(tabs) { return findByLabel(tabs, 'plus'); }
+
+  function moreOpen() {
+    var el = document.getElementById('moreMenuSheet');
+    if (!el) return false;
+    var cs = window.getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity || '1') === 0) return false;
+    var r = el.getBoundingClientRect();
+    return r.height > 4 && r.top < (window.innerHeight - 40);
   }
 
   function setup(bar) {
@@ -1419,20 +1440,26 @@ window.confirm = function(msg) {
     if (!cap) { cap = document.createElement('div'); cap.className = 'lg-capsule'; bar.insertBefore(cap, bar.firstChild); }
 
     var dragging = false, moved = false, startX = 0, lastX = 0, lastT = 0, vx = 0;
-    var startIdx = -1, hoverIdx = -1, suppressClick = false, mc = [], rafId = 0, pendX = 0;
+    var startIdx = -1, hoverIdx = -1, suppressClick = false, mc = [], rafId = 0, pendX = 0, curIdx = -1;
 
     function snapshot() {
       mc = tabsOf(bar).map(function (t) {
         return { el: t, left: t.offsetLeft, width: t.offsetWidth, center: t.offsetLeft + t.offsetWidth / 2 };
       });
     }
-    function paint(idx) {
-      for (var i = 0; i < mc.length; i++) mc[i].el.classList.toggle('lg-hover', i === idx && !mc[i].el.classList.contains('active'));
+    function markActive(idx) {
+      var ts = tabsOf(bar);
+      for (var i = 0; i < ts.length; i++) ts[i].classList.toggle('lg-active', i === idx);
+    }
+    function paintHover(idx) {
+      for (var i = 0; i < mc.length; i++) mc[i].el.classList.toggle('lg-hover', i === idx && i !== curIdx);
     }
     function clearHover() { for (var i = 0; i < mc.length; i++) mc[i].el.classList.remove('lg-hover'); }
 
     function settle(idx, animate) {
       snapshot();
+      curIdx = idx;
+      markActive(idx);
       if (idx < 0 || idx >= mc.length) { cap.classList.remove('lg-visible'); return; }
       var m = mc[idx];
       cap.classList.remove('lg-dragging');
@@ -1441,6 +1468,14 @@ window.confirm = function(msg) {
       cap.style.transform = 'translateX(' + m.left + 'px) scaleX(1) translateZ(0)';
       cap.classList.add('lg-visible');
     }
+
+    // capsule = Plus si la feuille est ouverte, sinon l'onglet de la page
+    function sync(animate) {
+      var ts = tabsOf(bar);
+      if (moreOpen()) { var pi = plusIndex(ts); if (pi >= 0) { settle(pi, animate); return; } }
+      settle(pageIndex(ts), animate);
+    }
+    bar.__lgSync = sync;
 
     function applyFollow() {
       rafId = 0;
@@ -1453,7 +1488,7 @@ window.confirm = function(msg) {
       var best = 0, bd = Infinity;
       for (var i = 0; i < mc.length; i++) { var dd = Math.abs(mc[i].center - x); if (dd < bd) { bd = dd; best = i; } }
       if (best !== hoverIdx) {
-        hoverIdx = best; paint(best);
+        hoverIdx = best; paintHover(best);
         if (navigator.vibrate) { try { navigator.vibrate(3); } catch (e) {} }
       }
     }
@@ -1464,7 +1499,7 @@ window.confirm = function(msg) {
       snapshot();
       if (!mc.length) return;
       dragging = true; moved = false;
-      startX = lastX = p.clientX; lastT = e.timeStamp || Date.now(); vx = 0; hoverIdx = -1;
+      startX = lastX = p.clientX; lastT = e.timeStamp || Date.now(); vx = 0; hoverIdx = curIdx;
       startIdx = 0;
       for (var i = 0; i < mc.length; i++) { if (p.clientX >= mc[i].left && p.clientX <= mc[i].left + mc[i].width) { startIdx = i; break; } }
       cap.classList.remove('lg-animate');
@@ -1478,18 +1513,13 @@ window.confirm = function(msg) {
       var dt = (e.timeStamp || Date.now()) - lastT;
       if (dt > 0) vx = dx / dt * 16;
       lastX = p.clientX; lastT = e.timeStamp || Date.now();
-      if (!moved && Math.abs(p.clientX - startX) > 7) {
-        moved = true;
-        bar.style.touchAction = 'none';
-        cap.classList.add('lg-dragging');
-      }
+      if (!moved && Math.abs(p.clientX - startX) > 6) { moved = true; cap.classList.add('lg-dragging'); }
       if (moved) { if (e.cancelable) e.preventDefault(); follow(p.clientX); }
     }
 
     function onUp() {
       if (!dragging) return;
       dragging = false;
-      bar.style.touchAction = '';
       if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       clearHover();
       if (!moved) { settle(startIdx, true); return; }
@@ -1518,7 +1548,7 @@ window.confirm = function(msg) {
       bar.addEventListener('pointerdown', onDown, { passive: true });
       bar.addEventListener('pointermove', onMove, { passive: false });
       bar.addEventListener('pointerup', onUp, { passive: true });
-      bar.addEventListener('pointercancel', function () { dragging = false; bar.style.touchAction = ''; if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover(); reposition(true); }, { passive: true });
+      bar.addEventListener('pointercancel', function () { dragging = false; if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover(); sync(true); }, { passive: true });
     } else {
       bar.addEventListener('touchstart', onDown, { passive: true });
       bar.addEventListener('touchmove', onMove, { passive: false });
@@ -1526,16 +1556,25 @@ window.confirm = function(msg) {
     }
     bar.addEventListener('click', swallowClick, true);
 
-    function reposition(animate) { settle(activeIndex(tabsOf(bar)), animate); }
-    bar.__lgReposition = reposition;
-
-    reposition(false);
+    // état initial
+    sync(false);
     requestAnimationFrame(function () { bar.offsetHeight; cap.classList.add('lg-animate'); });
 
+    // re-sync après chaque tap (ouverture/fermeture menu Plus, choix d'item, croix…)
+    document.addEventListener('click', function () { if (!dragging) setTimeout(function () { sync(true); }, 70); }, true);
+
+    // re-sync si le handler change les classes des onglets
     tabsOf(bar).forEach(function (t) {
-      new MutationObserver(function () { if (!dragging) reposition(true); })
+      new MutationObserver(function () { if (!dragging) sync(true); })
         .observe(t, { attributes: true, attributeFilter: ['class'] });
     });
+
+    // re-sync si la feuille Plus s'ouvre/ferme (style/class)
+    var sheet = document.getElementById('moreMenuSheet');
+    if (sheet) {
+      new MutationObserver(function () { if (!dragging) sync(true); })
+        .observe(sheet, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
   }
 
   function boot() {
@@ -1552,6 +1591,6 @@ window.confirm = function(msg) {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  window.addEventListener('resize', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgReposition) b.__lgReposition(false); });
-  window.addEventListener('pageshow', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgReposition) b.__lgReposition(false); });
+  window.addEventListener('resize', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgSync) b.__lgSync(false); });
+  window.addEventListener('pageshow', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgSync) b.__lgSync(false); });
 })();
