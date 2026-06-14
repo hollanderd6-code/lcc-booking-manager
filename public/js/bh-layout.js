@@ -1232,7 +1232,7 @@ window.confirm = function(msg) {
     var w = active.offsetWidth;
     tabs.style.setProperty('--pill-x', x + 'px');
     tabs.style.setProperty('--pill-w', w + 'px');
-    tabs.style.setProperty('--pill-opacity', '1');
+    tabs.style.setProperty('--pill-opacity', '0'); /* ancienne pill désactivée — remplacée par .lg-capsule */
   }
 
   // ── Sidebar pill ──
@@ -1309,29 +1309,26 @@ window.confirm = function(msg) {
 
 
 // ═══════════════════════════════════════════════════════════════
-// 🧊✨ LIQUID GLASS TAB BAR — v1 (capsule jade + drag fluide)
-// Module autonome. Injecte son propre <style> + sa capsule.
-// Remplace visuellement toutes les anciennes pills/indicateurs.
-// Fonctionne sur toutes les pages (bh-layout.js est chargé partout).
+// 🧊✨ LIQUID GLASS TAB BAR — v2 (capsule unique + drag fluide)
+// Module autonome. Une seule capsule, anciens résidus neutralisés,
+// drag GPU (metrics en cache + backdrop-filter coupé pendant le glissement).
 // ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
 
   var JADE = '#1A7A5E';
 
-  // ── 1. CSS injecté (gagne le cascade : source order le plus tardif) ──
   function injectStyle() {
     if (document.getElementById('lg-tabbar-style')) return;
     var css =
     '@media (max-width:1366px){' +
-      // neutralise les anciens effets
-      '.mobile-tabs::before{display:none!important;}' +
-      '.mobile-tabs .tab-btn::before,.mobile-tabs .tab-btn::after{display:none!important;}' +
-      '.mobile-tabs .tab-btn:focus,.mobile-tabs .tab-btn:focus-visible{outline:none!important;-webkit-tap-highlight-color:transparent!important;}' +
-      // la barre doit pouvoir contenir la capsule en absolute
+      '.mobile-tabs::before,.mobile-tabs::after{content:none!important;display:none!important;background:none!important;}' +
+      '.mobile-tabs .tab-btn::before,.mobile-tabs .tab-btn::after{content:none!important;display:none!important;}' +
+      '.mobile-tabs .glass-pill-mobile,.mobile-tabs .glass-pill{display:none!important;}' +
+      '.mobile-tabs .tab-btn:focus,.mobile-tabs .tab-btn:focus-visible,.mobile-tabs .tab-btn:active{outline:none!important;-webkit-tap-highlight-color:transparent!important;}' +
+      '.mobile-tabs .tab-btn.active{background:transparent!important;box-shadow:none!important;}' +
       '.mobile-tabs{position:fixed!important;}' +
 
-      // ── la capsule liquid glass ──
       '.mobile-tabs .lg-capsule{' +
         'position:absolute;top:6px;left:0;' +
         'height:calc(100% - 12px - env(safe-area-inset-bottom,0px));' +
@@ -1340,34 +1337,33 @@ window.confirm = function(msg) {
         '-webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);' +
         'border:1px solid rgba(26,122,94,0.22);' +
         'box-shadow:0 4px 16px rgba(26,122,94,0.16),inset 0 1px 0 rgba(255,255,255,0.65),inset 0 -1px 2px rgba(26,122,94,0.10);' +
-        'transform:translateX(0) scaleX(1);transform-origin:center center;' +
-        'opacity:0;z-index:0;pointer-events:none;' +
-        'will-change:transform,width;' +
+        'transform:translateX(0) scaleX(1) translateZ(0);transform-origin:center center;' +
+        'backface-visibility:hidden;-webkit-backface-visibility:hidden;' +
+        'opacity:0;z-index:0;pointer-events:none;will-change:transform,width;' +
       '}' +
       '.mobile-tabs .lg-capsule.lg-visible{opacity:1;}' +
       '.mobile-tabs .lg-capsule.lg-animate{' +
-        'transition:transform .52s cubic-bezier(.34,1.42,.5,1),width .42s cubic-bezier(.34,1.2,.64,1),opacity .25s ease;' +
+        'transition:transform .5s cubic-bezier(.34,1.4,.5,1),width .4s cubic-bezier(.34,1.2,.64,1),opacity .25s ease;' +
+      '}' +
+      '.mobile-tabs .lg-capsule.lg-dragging{' +
+        '-webkit-backdrop-filter:none!important;backdrop-filter:none!important;' +
+        'background:rgba(26,122,94,0.20)!important;transition:none!important;' +
       '}' +
 
-      // ── onglets au-dessus de la capsule ──
-      '.mobile-tabs .tab-btn{position:relative!important;z-index:1!important;background:transparent!important;' +
-        'transition:color .22s ease!important;}' +
+      '.mobile-tabs .tab-btn{position:relative!important;z-index:1!important;background:transparent!important;transition:color .22s ease!important;}' +
       '.mobile-tabs .tab-btn,.mobile-tabs .tab-btn i,.mobile-tabs .tab-btn span{color:#98a3b0!important;}' +
       '.mobile-tabs .tab-btn.active,.mobile-tabs .tab-btn.active i,.mobile-tabs .tab-btn.active span,' +
       '.mobile-tabs .tab-btn.lg-hover,.mobile-tabs .tab-btn.lg-hover i,.mobile-tabs .tab-btn.lg-hover span{color:' + JADE + '!important;}' +
       '.mobile-tabs .tab-btn.active span,.mobile-tabs .tab-btn.lg-hover span{font-weight:700!important;}' +
       '.mobile-tabs .tab-btn.active i,.mobile-tabs .tab-btn.lg-hover i{transform:none!important;}' +
-      // le badge rouge garde ses couleurs
       '.mobile-tabs .tab-btn .badge{color:#fff!important;background:#DC2626!important;}' +
 
-      // dark mode léger
-      '[data-theme="dark"] .mobile-tabs .lg-capsule{background:rgba(42,174,134,0.18);border-color:rgba(42,174,134,0.30);' +
-        'box-shadow:0 4px 18px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.10);}' +
+      '[data-theme="dark"] .mobile-tabs .lg-capsule{background:rgba(42,174,134,0.18);border-color:rgba(42,174,134,0.30);box-shadow:0 4px 18px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.10);}' +
+      '[data-theme="dark"] .mobile-tabs .lg-capsule.lg-dragging{background:rgba(42,174,134,0.28)!important;}' +
       '[data-theme="dark"] .mobile-tabs .tab-btn,[data-theme="dark"] .mobile-tabs .tab-btn i,[data-theme="dark"] .mobile-tabs .tab-btn span{color:#7e8a98!important;}' +
       '[data-theme="dark"] .mobile-tabs .tab-btn.active,[data-theme="dark"] .mobile-tabs .tab-btn.active i,[data-theme="dark"] .mobile-tabs .tab-btn.active span,' +
       '[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover,[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover i,[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover span{color:#2AAE86!important;}' +
 
-      // respecte prefers-reduced-motion
       '@media (prefers-reduced-motion:reduce){.mobile-tabs .lg-capsule.lg-animate{transition:opacity .2s ease!important;}}' +
     '}';
     var s = document.createElement('style');
@@ -1376,114 +1372,85 @@ window.confirm = function(msg) {
     document.head.appendChild(s);
   }
 
-  // ── 2. Helpers ──
   function tabsOf(bar) {
     return Array.prototype.slice.call(bar.querySelectorAll('.tab-btn'))
       .filter(function (t) { return t.offsetWidth > 0; });
   }
 
-  // Détection robuste de l'onglet actif (gère le cas Réservations)
   function activeIndex(tabs) {
-    // 1) classe .active
-    for (var i = 0; i < tabs.length; i++) {
-      if (tabs[i].classList.contains('active')) return i;
-    }
-    // 2) match par URL (href / data-href / onclick)
-    var path = (location.pathname || '').toLowerCase();
-    var file = path.split('/').pop() || 'app.html';
+    for (var i = 0; i < tabs.length; i++) if (tabs[i].classList.contains('active')) return i;
+    var file = (location.pathname || '').toLowerCase().split('/').pop() || 'app.html';
     if (file === '' || file === 'index.html') file = 'app.html';
     for (var j = 0; j < tabs.length; j++) {
-      var t = tabs[j];
-      var hint = (t.getAttribute('href') || t.getAttribute('data-href') ||
-                  t.getAttribute('onclick') || t.getAttribute('data-tab') || '').toLowerCase();
+      var hint = (tabs[j].getAttribute('href') || tabs[j].getAttribute('data-href') ||
+                  tabs[j].getAttribute('onclick') || tabs[j].getAttribute('data-tab') || '').toLowerCase();
       if (!hint) continue;
       if (hint.indexOf(file) !== -1) return j;
       if (file === 'app.html' && (hint.indexOf('accueil') !== -1 || hint.indexOf('dashboard') !== -1)) return j;
     }
-    return -1; // rien trouvé (ex: page non mappée) → capsule masquée
+    return -1;
   }
 
-  // ── 3. Le moteur ──
   function setup(bar) {
     if (bar.__lgReady) return;
     bar.__lgReady = true;
 
+    var dupes = bar.querySelectorAll('.lg-capsule');
+    for (var d = 1; d < dupes.length; d++) dupes[d].remove();
     var cap = bar.querySelector('.lg-capsule');
-    if (!cap) {
-      cap = document.createElement('div');
-      cap.className = 'lg-capsule';
-      bar.insertBefore(cap, bar.firstChild);
-    }
+    if (!cap) { cap = document.createElement('div'); cap.className = 'lg-capsule'; bar.insertBefore(cap, bar.firstChild); }
 
     var dragging = false, moved = false, startX = 0, lastX = 0, lastT = 0, vx = 0;
-    var startIdx = -1, hoverIdx = -1, suppressClick = false;
+    var startIdx = -1, hoverIdx = -1, suppressClick = false, mc = [], rafId = 0, pendX = 0;
 
-    function metrics() {
-      var tabs = tabsOf(bar);
-      return tabs.map(function (t) {
+    function snapshot() {
+      mc = tabsOf(bar).map(function (t) {
         return { el: t, left: t.offsetLeft, width: t.offsetWidth, center: t.offsetLeft + t.offsetWidth / 2 };
       });
     }
-
-    function clearHover(tabs) {
-      tabs.forEach(function (m) { m.el.classList.remove('lg-hover'); });
+    function paint(idx) {
+      for (var i = 0; i < mc.length; i++) mc[i].el.classList.toggle('lg-hover', i === idx && !mc[i].el.classList.contains('active'));
     }
+    function clearHover() { for (var i = 0; i < mc.length; i++) mc[i].el.classList.remove('lg-hover'); }
 
-    // place la capsule sous un onglet (idx) — mode repos
     function settle(idx, animate) {
-      var tabs = metrics();
-      if (idx < 0 || idx >= tabs.length) { cap.classList.remove('lg-visible'); return; }
-      var m = tabs[idx];
+      snapshot();
+      if (idx < 0 || idx >= mc.length) { cap.classList.remove('lg-visible'); return; }
+      var m = mc[idx];
+      cap.classList.remove('lg-dragging');
       cap.classList.toggle('lg-animate', !!animate);
       cap.style.width = m.width + 'px';
-      cap.style.transform = 'translateX(' + m.left + 'px) scaleX(1)';
+      cap.style.transform = 'translateX(' + m.left + 'px) scaleX(1) translateZ(0)';
       cap.classList.add('lg-visible');
     }
 
-    // suit le doigt (mode drag) avec étirement liquide
-    function follow(px) {
-      var tabs = metrics();
-      if (!tabs.length) return;
-      var minC = tabs[0].center, maxC = tabs[tabs.length - 1].center;
-      var x = Math.max(minC, Math.min(maxC, px));
-      var w = tabs[Math.max(0, startIdx)] ? tabs[Math.max(0, startIdx)].width : tabs[0].width;
-      var left = x - w / 2;
-
-      // étirement proportionnel à la vitesse (squash & stretch)
-      var stretch = Math.min(0.14, Math.abs(vx) * 0.012);
+    function applyFollow() {
+      rafId = 0;
+      if (!mc.length) return;
+      var x = Math.max(mc[0].center, Math.min(mc[mc.length - 1].center, pendX));
+      var w = mc[startIdx] ? mc[startIdx].width : mc[0].width;
+      var st = Math.min(0.14, Math.abs(vx) * 0.012);
       cap.style.width = w + 'px';
-      cap.style.transform = 'translateX(' + left + 'px) scaleX(' + (1 + stretch) + ')';
-
-      // onglet le plus proche → halo live
+      cap.style.transform = 'translateX(' + (x - w / 2) + 'px) scaleX(' + (1 + st) + ') translateZ(0)';
       var best = 0, bd = Infinity;
-      for (var i = 0; i < tabs.length; i++) {
-        var d = Math.abs(tabs[i].center - x);
-        if (d < bd) { bd = d; best = i; }
-      }
+      for (var i = 0; i < mc.length; i++) { var dd = Math.abs(mc[i].center - x); if (dd < bd) { bd = dd; best = i; } }
       if (best !== hoverIdx) {
-        clearHover(tabs);
-        tabs[best].el.classList.add('lg-hover');
-        hoverIdx = best;
-        if (window.navigator && navigator.vibrate) { try { navigator.vibrate(3); } catch (e) {} }
+        hoverIdx = best; paint(best);
+        if (navigator.vibrate) { try { navigator.vibrate(3); } catch (e) {} }
       }
     }
+    function follow(px) { pendX = px; if (!rafId) rafId = requestAnimationFrame(applyFollow); }
 
     function onDown(e) {
       var p = (e.touches ? e.touches[0] : e);
-      var tabs = metrics();
-      if (!tabs.length) return;
+      snapshot();
+      if (!mc.length) return;
       dragging = true; moved = false;
-      startX = lastX = p.clientX; lastT = e.timeStamp || Date.now(); vx = 0;
-      // onglet de départ = celui sous le doigt
+      startX = lastX = p.clientX; lastT = e.timeStamp || Date.now(); vx = 0; hoverIdx = -1;
       startIdx = 0;
-      for (var i = 0; i < tabs.length; i++) {
-        if (p.clientX >= tabs[i].left && p.clientX <= tabs[i].left + tabs[i].width) { startIdx = i; break; }
-      }
-      hoverIdx = -1;
+      for (var i = 0; i < mc.length; i++) { if (p.clientX >= mc[i].left && p.clientX <= mc[i].left + mc[i].width) { startIdx = i; break; } }
       cap.classList.remove('lg-animate');
-      if (bar.setPointerCapture && e.pointerId != null) {
-        try { bar.setPointerCapture(e.pointerId); } catch (er) {}
-      }
+      if (bar.setPointerCapture && e.pointerId != null) { try { bar.setPointerCapture(e.pointerId); } catch (er) {} }
     }
 
     function onMove(e) {
@@ -1491,69 +1458,49 @@ window.confirm = function(msg) {
       var p = (e.touches ? e.touches[0] : e);
       var dx = p.clientX - lastX;
       var dt = (e.timeStamp || Date.now()) - lastT;
-      if (dt > 0) vx = dx / dt * 16; // px / frame approx
+      if (dt > 0) vx = dx / dt * 16;
       lastX = p.clientX; lastT = e.timeStamp || Date.now();
-
       if (!moved && Math.abs(p.clientX - startX) > 7) {
         moved = true;
         bar.style.touchAction = 'none';
+        cap.classList.add('lg-dragging');
       }
-      if (moved) {
-        if (e.cancelable) e.preventDefault();
-        follow(p.clientX);
-      }
+      if (moved) { if (e.cancelable) e.preventDefault(); follow(p.clientX); }
     }
 
-    function onUp(e) {
+    function onUp() {
       if (!dragging) return;
       dragging = false;
       bar.style.touchAction = '';
-      var tabs = metrics();
-      clearHover(tabs);
-
-      if (!moved) {
-        // simple tap → on laisse le clic natif naviguer ; on suit juste visuellement
-        settle(startIdx, true);
-        return;
-      }
-
-      // drag → snap sur le plus proche
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      clearHover();
+      if (!moved) { settle(startIdx, true); return; }
       var target = hoverIdx >= 0 ? hoverIdx : startIdx;
-      cap.classList.add('lg-animate');
       settle(target, true);
-
-      if (target !== startIdx && tabs[target]) {
-        // 1) avaler le clic résiduel natif du drag
+      if (target !== startIdx && mc[target]) {
         suppressClick = true;
         setTimeout(function () { suppressClick = false; }, 450);
-        // 2) déclencher la vraie navigation (clic marqué, non avalé)
-        var el = tabs[target].el;
+        var el = mc[target].el;
         setTimeout(function () {
           var ev;
-          try {
-            ev = new MouseEvent('click', { bubbles: true, cancelable: true });
-          } catch (er) {
-            ev = document.createEvent('MouseEvents');
-            ev.initEvent('click', true, true);
-          }
-          ev.__lgProg = true;
-          el.dispatchEvent(ev);
-        }, 130);
+          try { ev = new MouseEvent('click', { bubbles: true, cancelable: true }); }
+          catch (er) { ev = document.createEvent('MouseEvents'); ev.initEvent('click', true, true); }
+          ev.__lgProg = true; el.dispatchEvent(ev);
+        }, 120);
       }
       moved = false;
     }
 
     function swallowClick(e) {
-      if (e.__lgProg) return;                 // notre clic de navigation → on laisse passer
+      if (e.__lgProg) return;
       if (suppressClick) { e.preventDefault(); e.stopPropagation(); }
     }
 
-    // Pointer events si dispo (couvre touch + souris), sinon fallback touch
     if (window.PointerEvent) {
       bar.addEventListener('pointerdown', onDown, { passive: true });
       bar.addEventListener('pointermove', onMove, { passive: false });
       bar.addEventListener('pointerup', onUp, { passive: true });
-      bar.addEventListener('pointercancel', function () { dragging = false; bar.style.touchAction = ''; clearHover(metrics()); reposition(true); }, { passive: true });
+      bar.addEventListener('pointercancel', function () { dragging = false; bar.style.touchAction = ''; if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover(); reposition(true); }, { passive: true });
     } else {
       bar.addEventListener('touchstart', onDown, { passive: true });
       bar.addEventListener('touchmove', onMove, { passive: false });
@@ -1561,28 +1508,18 @@ window.confirm = function(msg) {
     }
     bar.addEventListener('click', swallowClick, true);
 
-    // repositionne sur l'onglet actif courant
-    function reposition(animate) {
-      var idx = activeIndex(tabsOf(bar));
-      settle(idx, animate);
-    }
+    function reposition(animate) { settle(activeIndex(tabsOf(bar)), animate); }
     bar.__lgReposition = reposition;
 
-    // position initiale sans animation, puis active la transition
     reposition(false);
-    requestAnimationFrame(function () {
-      bar.offsetHeight; // reflow
-      cap.classList.add('lg-animate');
-    });
+    requestAnimationFrame(function () { bar.offsetHeight; cap.classList.add('lg-animate'); });
 
-    // re-synchronise quand le handler ajoute/retire .active
     tabsOf(bar).forEach(function (t) {
       new MutationObserver(function () { if (!dragging) reposition(true); })
         .observe(t, { attributes: true, attributeFilter: ['class'] });
     });
   }
 
-  // ── 4. Init : attend que la barre soit construite ──
   function boot() {
     injectStyle();
     var tries = 0;
@@ -1594,18 +1531,9 @@ window.confirm = function(msg) {
     }, 100);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
-  } else {
-    boot();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 
-  window.addEventListener('resize', function () {
-    var bar = document.querySelector('.mobile-tabs');
-    if (bar && bar.__lgReposition) bar.__lgReposition(false);
-  });
-  window.addEventListener('pageshow', function () {
-    var bar = document.querySelector('.mobile-tabs');
-    if (bar && bar.__lgReposition) bar.__lgReposition(false);
-  });
+  window.addEventListener('resize', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgReposition) b.__lgReposition(false); });
+  window.addEventListener('pageshow', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgReposition) b.__lgReposition(false); });
 })();
