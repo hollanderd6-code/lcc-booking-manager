@@ -1331,7 +1331,8 @@ window.confirm = function(msg) {
       '.mobile-tabs{position:fixed!important;z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
       // la feuille "Plus" passe AU-DESSUS de la barre (sinon la barre masque le bouton Déconnexion)
       '#moreMenuSheet,#moreMenuOverlay{z-index:10060!important;}' +
-      '#moreMenuSheet{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px)!important;}' +
+      // vrai conteneur scrollable : sinon le bouton Déconnexion est coupé et rebondit
+      '#moreMenuSheet{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;max-height:calc(100vh - 48px)!important;max-height:calc(100dvh - 48px)!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)!important;}' +
 
       '.mobile-tabs .lg-capsule{' +
         'position:absolute;top:6px;left:0;' +
