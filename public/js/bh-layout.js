@@ -1309,9 +1309,10 @@ window.confirm = function(msg) {
 
 
 // ═══════════════════════════════════════════════════════════════
-// 🧊✨ LIQUID GLASS TAB BAR — v2 (capsule unique + drag fluide)
-// Module autonome. Une seule capsule, anciens résidus neutralisés,
-// drag GPU (metrics en cache + backdrop-filter coupé pendant le glissement).
+// 🧊✨ LIQUID GLASS TAB BAR — v3
+// • détection page fiable (data-page > URL > .active)
+// • barre au-dessus des overlays (drag toujours possible, ex: Plus)
+// • drag GPU pur (ni blur ni shadow ni border pendant le glissement)
 // ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -1327,7 +1328,8 @@ window.confirm = function(msg) {
       '.mobile-tabs .glass-pill-mobile,.mobile-tabs .glass-pill{display:none!important;}' +
       '.mobile-tabs .tab-btn:focus,.mobile-tabs .tab-btn:focus-visible,.mobile-tabs .tab-btn:active{outline:none!important;-webkit-tap-highlight-color:transparent!important;}' +
       '.mobile-tabs .tab-btn.active{background:transparent!important;box-shadow:none!important;}' +
-      '.mobile-tabs{position:fixed!important;}' +
+      // barre toujours au-dessus des overlays génériques (z-index 9999) → drag possible même menu Plus ouvert
+      '.mobile-tabs{position:fixed!important;z-index:10001!important;pointer-events:auto!important;}' +
 
       '.mobile-tabs .lg-capsule{' +
         'position:absolute;top:6px;left:0;' +
@@ -1345,12 +1347,13 @@ window.confirm = function(msg) {
       '.mobile-tabs .lg-capsule.lg-animate{' +
         'transition:transform .5s cubic-bezier(.34,1.4,.5,1),width .4s cubic-bezier(.34,1.2,.64,1),opacity .25s ease;' +
       '}' +
+      // pendant le drag : zéro effet coûteux → transform pur, 60fps
       '.mobile-tabs .lg-capsule.lg-dragging{' +
         '-webkit-backdrop-filter:none!important;backdrop-filter:none!important;' +
-        'background:rgba(26,122,94,0.20)!important;transition:none!important;' +
+        'background:rgba(26,122,94,0.20)!important;box-shadow:none!important;border-color:transparent!important;transition:none!important;' +
       '}' +
 
-      '.mobile-tabs .tab-btn{position:relative!important;z-index:1!important;background:transparent!important;transition:color .22s ease!important;}' +
+      '.mobile-tabs .tab-btn{position:relative!important;z-index:1!important;background:transparent!important;transition:color .2s ease!important;}' +
       '.mobile-tabs .tab-btn,.mobile-tabs .tab-btn i,.mobile-tabs .tab-btn span{color:#98a3b0!important;}' +
       '.mobile-tabs .tab-btn.active,.mobile-tabs .tab-btn.active i,.mobile-tabs .tab-btn.active span,' +
       '.mobile-tabs .tab-btn.lg-hover,.mobile-tabs .tab-btn.lg-hover i,.mobile-tabs .tab-btn.lg-hover span{color:' + JADE + '!important;}' +
@@ -1377,17 +1380,32 @@ window.confirm = function(msg) {
       .filter(function (t) { return t.offsetWidth > 0; });
   }
 
+  function hintOf(t) {
+    return ((t.getAttribute('href') || '') + ' ' + (t.getAttribute('data-href') || '') + ' ' +
+            (t.getAttribute('onclick') || '') + ' ' + (t.getAttribute('data-tab') || '') + ' ' +
+            (t.getAttribute('data-page') || '')).toLowerCase();
+  }
+
+  // Détection : data-page (source de vérité) > URL > classe .active
   function activeIndex(tabs) {
-    for (var i = 0; i < tabs.length; i++) if (tabs[i].classList.contains('active')) return i;
+    var page = (document.body && document.body.dataset && document.body.dataset.page || '').toLowerCase();
+    if (page) {
+      for (var i = 0; i < tabs.length; i++) if (hintOf(tabs[i]).indexOf(page) !== -1) return i;
+      if (page === 'app') {
+        for (var k = 0; k < tabs.length; k++) {
+          var hk = hintOf(tabs[k]);
+          if (hk.indexOf('app.html') !== -1 || hk.indexOf('accueil') !== -1 || hk.indexOf('dashboard') !== -1) return k;
+        }
+      }
+    }
     var file = (location.pathname || '').toLowerCase().split('/').pop() || 'app.html';
     if (file === '' || file === 'index.html') file = 'app.html';
+    var stem = file.replace('.html', '');
     for (var j = 0; j < tabs.length; j++) {
-      var hint = (tabs[j].getAttribute('href') || tabs[j].getAttribute('data-href') ||
-                  tabs[j].getAttribute('onclick') || tabs[j].getAttribute('data-tab') || '').toLowerCase();
-      if (!hint) continue;
-      if (hint.indexOf(file) !== -1) return j;
-      if (file === 'app.html' && (hint.indexOf('accueil') !== -1 || hint.indexOf('dashboard') !== -1)) return j;
+      var hj = hintOf(tabs[j]);
+      if (hj.indexOf(file) !== -1 || (stem && hj.indexOf(stem) !== -1)) return j;
     }
+    for (var m = 0; m < tabs.length; m++) if (tabs[m].classList.contains('active')) return m;
     return -1;
   }
 
@@ -1429,7 +1447,7 @@ window.confirm = function(msg) {
       if (!mc.length) return;
       var x = Math.max(mc[0].center, Math.min(mc[mc.length - 1].center, pendX));
       var w = mc[startIdx] ? mc[startIdx].width : mc[0].width;
-      var st = Math.min(0.14, Math.abs(vx) * 0.012);
+      var st = Math.min(0.12, Math.abs(vx) * 0.010);
       cap.style.width = w + 'px';
       cap.style.transform = 'translateX(' + (x - w / 2) + 'px) scaleX(' + (1 + st) + ') translateZ(0)';
       var best = 0, bd = Infinity;
