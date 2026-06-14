@@ -80,81 +80,94 @@
   // ============================================
 
   function getMoreMenuButtons() {
-    var V3 = document.documentElement.getAttribute('data-theme-v3') === '1';
-    const hr = `<hr style="margin: 8px 4px; border: none; border-top: 1px solid rgba(0,0,0,0.06);">`;
-
-    // Icônes Lucide colorées (Option 1)
-    var IC = {
-      dashboard:  { c:'#1A7A5E', p:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
-      welcome:    { c:'#1A7A5E', p:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' },
-      contrat:    { c:'#3B82F6', p:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' },
-      cleaning:   { c:'#06B6D4', p:'<path d="M19 11V4a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v7"/><path d="M5 11l1.5-7h11L19 11"/><path d="M3 11h18v2a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/>' },
-      finances:   { c:'#10B981', p:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>' },
-      factures:   { c:'#8B5CF6', p:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>' },
-      clients:    { c:'#EC4899', p:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>' },
-      reporting:  { c:'#0EA5E9', p:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>' },
-      pricing:    { c:'#F59E0B', p:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>' },
-      locks:      { c:'#64748B', p:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
-      settings:   { c:'#475569', p:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
-      support:    { c:'#14B8A6', p:'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>' }
-    };
-
-    function lucideSvg(key) {
-      var i = IC[key];
-      if (!i) return '';
-      return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + i.c + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">' + i.p + '</svg>';
-    }
-
-    // Génère un item de menu (style Option 1 : icône colorée + texte)
-    function item(key, label, onclick, extra) {
-      var icon = V3 ? lucideSvg(key) : '<i class="fas fa-circle" style="color:' + (IC[key] ? IC[key].c : '#888') + ';"></i>';
-      return '<button class="btn btn-secondary bh-more-item" data-menu-key="' + key + '" onclick="' + onclick + '" style="width:100%;justify-content:flex-start;gap:12px;">'
-        + icon + '<span style="flex:1;text-align:left;">' + label + '</span>' + (extra || '') + '</button>';
-    }
-
+    const hr = `<hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color, #e5e7eb);">`;
     let buttons = '';
 
+    // Bouton Accueil toujours visible pour les sous-comptes
     if (isSubAccount) {
-      buttons += item('dashboard', 'Dashboard', "window.location.href='/app.html'");
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/app.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-th-large"></i> Dashboard
+        </button>`;
       buttons += hr;
     }
 
-    if (canSeePage('welcome'))  buttons += item('welcome', "Livrets d'accueil", "window.location.href='/welcome.html'");
-    if (canSeePage('contrat'))  buttons += item('contrat', 'Contrats', "window.location.href='/contrat.html'");
-    if (canSeePage('cleaning')) buttons += item('cleaning', 'Ménages', "window.location.href='/cleaning.html'");
+    if (canSeePage('welcome')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/welcome.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-book-open"></i> Livrets d'accueil
+        </button>`;
+    }
+    if (canSeePage('contrat')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/contrat.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-file-contract"></i> Contrats
+        </button>`;
+    }
+    if (canSeePage('cleaning')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/cleaning.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-broom"></i> Ménages
+        </button>`;
+    }
 
     buttons += hr;
 
-    if (canSeePage('deposits')) buttons += item('finances', 'Finances', "window.location.href='/deposits.html'");
-    if (canSeePage('factures')) {
-      buttons += item('factures', 'Factures séjours', "window.location.href='/factures.html'");
-      buttons += item('clients', 'Mes Clients', "window.location.href='/clients.html'");
+    if (canSeePage('deposits')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/deposits.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-wallet"></i> Finances
+        </button>`;
     }
-    if (canSeePage('reporting')) buttons += item('reporting', 'Revenus', "window.location.href='/reporting.html'");
+    if (canSeePage('factures')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/factures.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-file-invoice"></i> Factures séjours
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/clients.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-users"></i> Mes Clients
+        </button>`;
+    }
+    if (canSeePage('reporting')) {
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/reporting.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-chart-bar"></i> Revenus
+        </button>`;
+    }
 
     buttons += hr;
 
     if (!isSubAccount) {
-      var betaBadge = '<span style="margin-left:auto;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;">Bêta</span>';
-      buttons += item('pricing', 'Prix dynamique', "window.location.href='/dynamic-pricing.html'", betaBadge);
+      buttons += `
+        <button class="btn btn-secondary" onclick="window.location.href='/dynamic-pricing.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-bolt" style="color:#B45309;"></i> Prix dynamique
+          <span style="margin-left:auto;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;">Bêta</span>
+        </button>`;
       buttons += hr;
     }
 
-    buttons += item('locks', 'Serrures connectées', "window.location.href='/smart-locks.html'");
+    buttons += `
+      <button class="btn btn-secondary" onclick="window.location.href='/smart-locks.html'" style="width: 100%; justify-content: flex-start;">
+        <i class="fas fa-lock"></i> Serrures connectées
+      </button>`;
 
     buttons += hr;
 
     if (!isSubAccount) {
       const agencyExit = `if(localStorage.getItem('lcc_managed_user')){var o=localStorage.getItem('lcc_agency_token');if(o){localStorage.setItem('lcc_token',o);['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache'].forEach(function(k){localStorage.removeItem(k)});window.location.href='`;
-      buttons += item('settings', 'Paramètres du compte', `${agencyExit}/settings-account.html';}return;}window.location.href='/settings-account.html'`);
-      buttons += item('support', 'Support', `${agencyExit}/help.html';}return;}window.location.href='/help.html'`);
+      buttons += `
+        <button class="btn btn-secondary" onclick="${agencyExit}/settings-account.html';}return;}window.location.href='/settings-account.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-user-cog"></i> Paramètres du compte
+        </button>
+        <button class="btn btn-secondary" onclick="${agencyExit}/help.html';}return;}window.location.href='/help.html'" style="width: 100%; justify-content: flex-start;">
+          <i class="fas fa-headset"></i> Support
+        </button>`;
     }
 
     buttons += `
       ${hr}
-      <button class="btn btn-danger bh-more-item" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start; gap:12px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        <span style="flex:1;text-align:left;">Déconnexion</span>
+      <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%; justify-content: flex-start;">
+        <i class="fas fa-sign-out-alt"></i> Déconnexion
       </button>`;
 
     return buttons;
@@ -289,7 +302,7 @@
     if (!sheet) {
       sheet = document.createElement('div');
       sheet.id = 'moreMenuSheet';
-      sheet.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#F5F0E8;border-radius:20px 20px 0 0;padding:20px 20px calc(80px + env(safe-area-inset-bottom, 20px));max-height:82vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;z-index:10000;transform:translateY(100%);transition:transform 0.3s ease;';
+      sheet.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#F5F0E8;border-radius:20px 20px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom,0px) + 28px) 20px;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;z-index:10060;transform:translateY(100%);transition:transform 0.3s ease;';
       document.body.appendChild(sheet);
     }
 
@@ -310,43 +323,24 @@
       </div>
     `;
     
+    // Masquer la barre du bas pendant l'ouverture (sinon elle recouvre le bouton Déconnexion)
+    var _mt = document.querySelector('.mobile-tabs');
+    if (_mt) { _mt.style.visibility = 'hidden'; _mt.style.pointerEvents = 'none'; }
+
     // Afficher le menu
     overlay.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
     setTimeout(() => {
       sheet.style.transform = 'translateY(0)';
     }, 10);
-
-    // Mettre en valeur l'item de la page courante (Option 1 : fond teinté + texte coloré)
-    setTimeout(function() {
-      var page = document.body.getAttribute('data-page') || '';
-      var pageToKey = {
-        'welcome':'welcome','livrets':'welcome','contrat':'contrat','cleaning':'cleaning',
-        'deposits':'finances','factures':'factures','clients':'clients','reporting':'reporting',
-        'dynamic-pricing':'pricing','smart-locks':'locks','smart_locks':'locks',
-        'settings-account':'settings','notifications':'settings','help':'support'
-      };
-      var activeKey = pageToKey[page];
-      if (!activeKey) return;
-      var IC_COLORS = { welcome:'#1A7A5E',contrat:'#3B82F6',cleaning:'#06B6D4',finances:'#10B981',factures:'#8B5CF6',clients:'#EC4899',reporting:'#0EA5E9',pricing:'#F59E0B',locks:'#64748B',settings:'#475569',support:'#14B8A6' };
-      var el = sheet.querySelector('.bh-more-item[data-menu-key="' + activeKey + '"]');
-      if (el) {
-        var col = IC_COLORS[activeKey] || '#1A7A5E';
-        el.style.background = col + '1A'; // ~10% opacity
-        el.style.borderColor = 'transparent';
-        var label = el.querySelector('span');
-        if (label) { label.style.color = col; label.style.fontWeight = '700'; }
-      }
-    }, 50);
   }
   
   window.closeMoreMenu = function() {
     const overlay = document.getElementById('moreMenuOverlay');
     const sheet = document.getElementById('moreMenuSheet');
-    document.body.style.overflow = '';
-    document.body.style.touchAction = '';
     if (sheet) sheet.style.transform = 'translateY(100%)';
+    // Réafficher la barre du bas
+    var _mt = document.querySelector('.mobile-tabs');
+    if (_mt) { _mt.style.visibility = ''; _mt.style.pointerEvents = ''; }
     setTimeout(() => {
       if (overlay) overlay.style.display = 'none';
     }, 300);
@@ -395,9 +389,9 @@
   // ============================================
   
   function setActiveTab() {
+    // Attendre que les onglets soient créés
     setTimeout(() => {
       const tabs = document.querySelectorAll('.tab-btn');
-      const container = document.querySelector('.mobile-tabs');
       tabs.forEach(tab => {
         const tabId = tab.dataset.tab;
         if (tabId === activeTab) {
@@ -406,151 +400,15 @@
           tab.classList.remove('active');
         }
       });
-      if (window._bhUpdateLucideActive) window._bhUpdateLucideActive();
-
-      // ── Liquid Glass : sliding pill ──
-      if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
-      if (!container || !tabs.length) return;
-
-      var TRANSITION = 'left 0.5s cubic-bezier(0.34,1.56,0.64,1),top 0.3s ease,width 0.35s ease,height 0.35s ease';
-
-      var pill = container.querySelector('.glass-pill-mobile');
-      if (!pill) {
-        pill = document.createElement('div');
-        pill.className = 'glass-pill-mobile';
-        pill.style.cssText = [
-          'position:absolute',
-          'pointer-events:none',
-          'z-index:0',
-          'border-radius:16px',
-          'background:rgba(26,122,94,0.10)',
-          'backdrop-filter:blur(20px) saturate(180%)',
-          '-webkit-backdrop-filter:blur(20px) saturate(180%)',
-          'border:1.5px solid rgba(26,122,94,0.20)',
-          'box-shadow:0 2px 12px rgba(26,122,94,0.12),inset 0 1px 0 rgba(255,255,255,0.5)',
-          'opacity:1',
-          'transition:none'
-        ].join(';');
-        container.appendChild(pill);
-      }
-
-      var activeEl = container.querySelector('.tab-btn.active');
-      if (!activeEl) return;
-
-      var allTabs = Array.from(tabs);
-      var activeIdx = allTabs.indexOf(activeEl);
-      var prevIdx = parseInt(sessionStorage.getItem('_glassPillIdx') || '-1');
-
-      function getPos(el) {
-        var cr = container.getBoundingClientRect();
-        var er = el.getBoundingClientRect();
-        // Réduire la hauteur de 6px en haut et en bas pour que l'icône ne dépasse pas
-        return {
-          left: er.left - cr.left + 4,
-          top: er.top - cr.top + 2,
-          width: er.width - 8,
-          height: er.height - 4
-        };
-      }
-
-      function applyPos(pos) {
-        pill.style.left = pos.left + 'px';
-        pill.style.top = pos.top + 'px';
-        pill.style.width = pos.width + 'px';
-        pill.style.height = pos.height + 'px';
-      }
-
-      var activePos = getPos(activeEl);
-
-      if (prevIdx >= 0 && prevIdx !== activeIdx && allTabs[prevIdx]) {
-        // 1. Placer sur l'ancien tab SANS transition
-        pill.style.transition = 'none';
-        applyPos(getPos(allTabs[prevIdx]));
-        // 2. Forcer le navigateur à peindre cette position
-        pill.getBoundingClientRect();
-        // 3. Activer la transition et glisser vers le nouveau tab
-        setTimeout(function() {
-          pill.style.transition = TRANSITION;
-          applyPos(activePos);
-        }, 50);
-      } else {
-        pill.style.transition = 'none';
-        applyPos(activePos);
-      }
-
-      // Au clic, stocker l'index et animer vers le tab cliqué
-      allTabs.forEach(function(tab) {
-        tab.addEventListener('click', function() {
-          sessionStorage.setItem('_glassPillIdx', String(activeIdx));
-          pill.style.transition = TRANSITION;
-          applyPos(getPos(tab));
-        }, { once: true });
-      });
-    }, 200);
+    }, 100);
   }
-
-  // ============================================
-  // 🎨 LIQUID GLASS v4 — Icônes Lucide colorées
-  // ============================================
-  var LUCIDE_TABS = {
-    dashboard: { color: '#1A7A5E', svg: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-    calendar:  { color: '#3B82F6', svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
-    messages:  { color: '#6366F1', svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>' },
-    properties:{ color: '#F59E0B', svg: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>' },
-    more:      { color: '#64748B', svg: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>' }
-  };
-
-  function applyLucideIcons() {
-    if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
-    var tabs = document.querySelectorAll('.mobile-tabs .tab-btn[data-tab]');
-    tabs.forEach(function(tab) {
-      var id = tab.dataset.tab;
-      var cfg = LUCIDE_TABS[id];
-      if (!cfg) return;
-      if (tab.querySelector('svg.lucide-tab')) return; // déjà fait
-
-      var iconEl = tab.querySelector('i');
-      var isActive = tab.classList.contains('active');
-      var svg = '<svg class="lucide-tab" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="' + cfg.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:' + (isActive ? '1' : '0.55') + ';transition:opacity .25s ease;">' + cfg.svg + '</svg>';
-
-      if (iconEl) {
-        iconEl.outerHTML = svg;
-      } else {
-        tab.insertAdjacentHTML('afterbegin', svg);
-      }
-      // Couleur du label
-      var span = tab.querySelector('span');
-      if (span) {
-        span.style.color = cfg.color;
-        span.style.opacity = isActive ? '1' : '0.55';
-        span.style.fontWeight = isActive ? '700' : '500';
-        span.style.transition = 'opacity .25s ease';
-      }
-    });
-  }
-
-  function updateLucideActive() {
-    if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
-    document.querySelectorAll('.mobile-tabs .tab-btn[data-tab]').forEach(function(tab) {
-      var svg = tab.querySelector('svg.lucide-tab');
-      var span = tab.querySelector('span');
-      var isActive = tab.classList.contains('active');
-      if (svg) svg.style.opacity = isActive ? '1' : '0.55';
-      if (span) {
-        span.style.opacity = isActive ? '1' : '0.55';
-        span.style.fontWeight = isActive ? '700' : '500';
-      }
-    });
-  }
-  window._bhUpdateLucideActive = updateLucideActive;
 
   // Initialiser
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { setActiveTab(); applyMobileTabRestrictions(); setTimeout(applyLucideIcons, 100); });
+    document.addEventListener('DOMContentLoaded', () => { setActiveTab(); applyMobileTabRestrictions(); });
   } else {
     setActiveTab();
     applyMobileTabRestrictions();
-    setTimeout(applyLucideIcons, 100);
   }
 
   console.log('✅ Gestion des onglets mobile initialisée (page:', activeTab, ')');
