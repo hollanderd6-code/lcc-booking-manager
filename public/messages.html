@@ -26,6 +26,7 @@ html[data-theme-v3="1"] .sidebar {
   left: 0 !important; bottom: 0 !important;
   height: auto !important;
   z-index: 30 !important;
+  background: var(--cream-warm, #F5F0E8) !important;
 }
 html[data-theme-v3="1"] header.main-header {
   position: sticky !important;
@@ -5241,5 +5242,28 @@ window.showSmsConfirm = function() {
   window.addEventListener('resize', hidePill);
 })();
 </script>
+<script>
+/* 🔗 Deep link notif → ouvre la conversation depuis ?open= (iOS push) */
+(function(){
+  try {
+    var convId = new URLSearchParams(location.search).get('open');
+    if (!convId) return;
+    var tries = 0;
+    var iv = setInterval(function(){
+      tries++;
+      var list = document.getElementById('conversationsList');
+      var listReady = list && list.children.length > 0;
+      if (typeof window.openConversation === 'function' && (listReady || tries > 8)) {
+        clearInterval(iv);
+        window.currentConversationId = convId;
+        try { window.openConversation(convId); } catch(e){ console.error('[deeplink] openConversation', e); }
+        try { history.replaceState({}, '', location.pathname); } catch(e){}
+      }
+      if (tries > 40) clearInterval(iv);
+    }, 350);
+  } catch(e) { console.error('[deeplink messages]', e); }
+})();
+</script>
+
 </body>
 </html>
