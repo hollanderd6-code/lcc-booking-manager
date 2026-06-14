@@ -1360,9 +1360,12 @@ window.confirm = function(msg) {
       '.mobile-tabs .tab-btn.lg-active i,.mobile-tabs .tab-btn.lg-hover i{transform:none!important;}' +
       '.mobile-tabs .tab-btn .badge{color:#fff!important;background:#DC2626!important;}' +
       // neutralise le vert posé par le handler sur le mauvais onglet : seul lg-active est vert
-      '.mobile-tabs .tab-btn.active:not(.lg-active),.mobile-tabs .tab-btn.active:not(.lg-active) i,.mobile-tabs .tab-btn.active:not(.lg-active) span{color:#98a3b0!important;font-weight:500!important;}' +
+      // ⚠ font-weight UNIQUEMENT sur le libellé — jamais sur l'icône (casse le glyphe FontAwesome)
+      '.mobile-tabs .tab-btn.active:not(.lg-active),.mobile-tabs .tab-btn.active:not(.lg-active) i,.mobile-tabs .tab-btn.active:not(.lg-active) span{color:#98a3b0!important;}' +
+      '.mobile-tabs .tab-btn.active:not(.lg-active) span{font-weight:500!important;}' +
 
-      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active),[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) i,[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{color:#7e8a98!important;font-weight:500!important;}' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active),[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) i,[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{color:#7e8a98!important;}' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{font-weight:500!important;}' +
       '[data-theme="dark"] .mobile-tabs .lg-capsule{background:rgba(42,174,134,0.18);border-color:rgba(42,174,134,0.30);box-shadow:0 4px 18px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.10);}' +
       '[data-theme="dark"] .mobile-tabs .lg-capsule.lg-dragging{background:rgba(42,174,134,0.28)!important;}' +
       '[data-theme="dark"] .mobile-tabs .tab-btn,[data-theme="dark"] .mobile-tabs .tab-btn i,[data-theme="dark"] .mobile-tabs .tab-btn span{color:#7e8a98!important;}' +
