@@ -15099,5 +15099,28 @@ function notifSwitchTab(tab) {
   }
 }
 </script>
+<script>
+/* 🔗 Deep link notif → ouvre le calendrier (vue Mois) depuis ?view=calendar (iOS push) */
+(function(){
+  try {
+    var v = new URLSearchParams(location.search).get('view');
+    if (v !== 'calendar') return;
+    var tries = 0;
+    var iv = setInterval(function(){
+      tries++;
+      var root = document.getElementById('bhCalRoot');
+      if (root) {
+        clearInterval(iv);
+        var monthBtn = document.querySelector('.view-tab[data-view="month"]');
+        if (monthBtn && !monthBtn.classList.contains('active')) { try { monthBtn.click(); } catch(e){} }
+        setTimeout(function(){ try { root.scrollIntoView({behavior:'smooth', block:'start'}); } catch(e){ try{ root.scrollIntoView(); }catch(_){} } }, 200);
+        try { history.replaceState({}, '', location.pathname); } catch(e){}
+      }
+      if (tries > 40) clearInterval(iv);
+    }, 250);
+  } catch(e) { console.error('[deeplink calendar]', e); }
+})();
+</script>
+
 </body>
 </html>
