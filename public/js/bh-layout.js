@@ -1309,10 +1309,10 @@ window.confirm = function(msg) {
 
 
 // ═══════════════════════════════════════════════════════════════
-// 🧊✨ LIQUID GLASS TAB BAR — v4
-// • détection par LIBELLÉ visible (fiable même si data-page=app)
-// • capsule sur "Plus" quand la feuille #moreMenuSheet est ouverte
-// • touch-action:none → drag fluide partout (iOS ne scrolle plus)
+// 🧊✨ LIQUID GLASS TAB BAR — v5
+// • détection par LIBELLÉ visible (settings = page logement → Logements)
+// • capsule "Plus" pilotée par le tap (toggle) + détecteur de fermeture
+// • touch-action:none → drag fluide ; icônes FontAwesome jamais cassées
 // ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -1328,7 +1328,6 @@ window.confirm = function(msg) {
       '.mobile-tabs .glass-pill-mobile,.mobile-tabs .glass-pill{display:none!important;}' +
       '.mobile-tabs .tab-btn:focus,.mobile-tabs .tab-btn:focus-visible,.mobile-tabs .tab-btn:active{outline:none!important;-webkit-tap-highlight-color:transparent!important;}' +
       '.mobile-tabs .tab-btn.active{background:transparent!important;box-shadow:none!important;}' +
-      // barre au-dessus des overlays + touch-action none = drag fiable et fluide
       '.mobile-tabs{position:fixed!important;z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
 
       '.mobile-tabs .lg-capsule{' +
@@ -1344,13 +1343,8 @@ window.confirm = function(msg) {
         'opacity:0;z-index:0;pointer-events:none;will-change:transform,width;' +
       '}' +
       '.mobile-tabs .lg-capsule.lg-visible{opacity:1;}' +
-      '.mobile-tabs .lg-capsule.lg-animate{' +
-        'transition:transform .5s cubic-bezier(.34,1.4,.5,1),width .4s cubic-bezier(.34,1.2,.64,1),opacity .25s ease;' +
-      '}' +
-      '.mobile-tabs .lg-capsule.lg-dragging{' +
-        '-webkit-backdrop-filter:none!important;backdrop-filter:none!important;' +
-        'background:rgba(26,122,94,0.20)!important;box-shadow:none!important;border-color:transparent!important;transition:none!important;' +
-      '}' +
+      '.mobile-tabs .lg-capsule.lg-animate{transition:transform .5s cubic-bezier(.34,1.4,.5,1),width .4s cubic-bezier(.34,1.2,.64,1),opacity .25s ease;}' +
+      '.mobile-tabs .lg-capsule.lg-dragging{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(26,122,94,0.20)!important;box-shadow:none!important;border-color:transparent!important;transition:none!important;}' +
 
       '.mobile-tabs .tab-btn{position:relative!important;z-index:1!important;background:transparent!important;transition:color .2s ease!important;}' +
       '.mobile-tabs .tab-btn,.mobile-tabs .tab-btn i,.mobile-tabs .tab-btn span{color:#98a3b0!important;}' +
@@ -1359,18 +1353,16 @@ window.confirm = function(msg) {
       '.mobile-tabs .tab-btn.lg-active span,.mobile-tabs .tab-btn.lg-hover span{font-weight:700!important;}' +
       '.mobile-tabs .tab-btn.lg-active i,.mobile-tabs .tab-btn.lg-hover i{transform:none!important;}' +
       '.mobile-tabs .tab-btn .badge{color:#fff!important;background:#DC2626!important;}' +
-      // neutralise le vert posé par le handler sur le mauvais onglet : seul lg-active est vert
-      // ⚠ font-weight UNIQUEMENT sur le libellé — jamais sur l'icône (casse le glyphe FontAwesome)
       '.mobile-tabs .tab-btn.active:not(.lg-active),.mobile-tabs .tab-btn.active:not(.lg-active) i,.mobile-tabs .tab-btn.active:not(.lg-active) span{color:#98a3b0!important;}' +
       '.mobile-tabs .tab-btn.active:not(.lg-active) span{font-weight:500!important;}' +
 
-      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active),[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) i,[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{color:#7e8a98!important;}' +
-      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{font-weight:500!important;}' +
       '[data-theme="dark"] .mobile-tabs .lg-capsule{background:rgba(42,174,134,0.18);border-color:rgba(42,174,134,0.30);box-shadow:0 4px 18px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.10);}' +
       '[data-theme="dark"] .mobile-tabs .lg-capsule.lg-dragging{background:rgba(42,174,134,0.28)!important;}' +
       '[data-theme="dark"] .mobile-tabs .tab-btn,[data-theme="dark"] .mobile-tabs .tab-btn i,[data-theme="dark"] .mobile-tabs .tab-btn span{color:#7e8a98!important;}' +
       '[data-theme="dark"] .mobile-tabs .tab-btn.lg-active,[data-theme="dark"] .mobile-tabs .tab-btn.lg-active i,[data-theme="dark"] .mobile-tabs .tab-btn.lg-active span,' +
       '[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover,[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover i,[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover span{color:#2AAE86!important;}' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active),[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) i,[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{color:#7e8a98!important;}' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{font-weight:500!important;}' +
 
       '@media (prefers-reduced-motion:reduce){.mobile-tabs .lg-capsule.lg-animate{transition:opacity .2s ease!important;}}' +
     '}';
@@ -1381,37 +1373,21 @@ window.confirm = function(msg) {
   }
 
   function deburr(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); }
-
-  function tabsOf(bar) {
-    return Array.prototype.slice.call(bar.querySelectorAll('.tab-btn'))
-      .filter(function (t) { return t.offsetWidth > 0; });
-  }
+  function tabsOf(bar) { return Array.prototype.slice.call(bar.querySelectorAll('.tab-btn')).filter(function (t) { return t.offsetWidth > 0; }); }
   function labelOf(t) { var sp = t.querySelector('span'); return deburr(sp ? sp.textContent : t.textContent); }
 
-  // pages qui vivent SOUS le menu "Plus"
-  var MORE = { settings: 1, 'settings-account': 1, help: 1, support: 1, factures: 1, clients: 1,
-    deposits: 1, cautions: 1, cleaning: 1, menages: 1, welcome: 1, livrets: 1, contrat: 1, contrats: 1,
-    'smart-locks': 1, smart_locks: 1, serrures: 1, reporting: 1, revenus: 1, pricing: 1, finances: 1,
-    notifications: 1, avis: 1 };
-  // data-page (ou nom de fichier) → libellé d'onglet
+  var MORE = { 'settings-account': 1, help: 1, support: 1, factures: 1, clients: 1, deposits: 1, cautions: 1,
+    cleaning: 1, menages: 1, welcome: 1, livrets: 1, contrat: 1, contrats: 1, reporting: 1, revenus: 1,
+    pricing: 1, finances: 1, notifications: 1, avis: 1 };
   var TOLABEL = { app: 'accueil', dashboard: 'accueil', accueil: 'accueil', index: 'accueil',
     reservations: 'reservations', messages: 'messages',
-    logements: 'logements', properties: 'logements', biens: 'logements' };
+    logements: 'logements', properties: 'logements', biens: 'logements',
+    settings: 'logements', 'smart-locks': 'logements', smart_locks: 'logements', serrures: 'logements' };
 
-  function keyForPage(page) {
-    page = deburr(page);
-    if (TOLABEL[page]) return TOLABEL[page];
-    if (MORE[page]) return 'plus';
-    return '';
-  }
+  function keyForPage(page) { page = deburr(page); if (TOLABEL[page]) return TOLABEL[page]; if (MORE[page]) return 'plus'; return ''; }
+  function findByLabel(tabs, key) { if (!key) return -1; for (var i = 0; i < tabs.length; i++) if (labelOf(tabs[i]).indexOf(key) !== -1) return i; return -1; }
+  function plusIndex(tabs) { return findByLabel(tabs, 'plus'); }
 
-  function findByLabel(tabs, key) {
-    if (!key) return -1;
-    for (var i = 0; i < tabs.length; i++) if (labelOf(tabs[i]).indexOf(key) !== -1) return i;
-    return -1;
-  }
-
-  // index de l'onglet actif d'après la PAGE (libellé)
   function pageIndex(tabs) {
     var idx = findByLabel(tabs, keyForPage(document.body && document.body.dataset && document.body.dataset.page));
     if (idx >= 0) return idx;
@@ -1422,15 +1398,13 @@ window.confirm = function(msg) {
     return -1;
   }
 
-  function plusIndex(tabs) { return findByLabel(tabs, 'plus'); }
-
   function moreOpen() {
     var el = document.getElementById('moreMenuSheet');
     if (!el) return false;
     var cs = window.getComputedStyle(el);
-    if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity || '1') === 0) return false;
+    if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity || '1') < 0.05) return false;
     var r = el.getBoundingClientRect();
-    return r.height > 4 && r.top < (window.innerHeight - 40);
+    return r.height > 40 && r.top < (window.innerHeight - 40);
   }
 
   function setup(bar) {
@@ -1444,25 +1418,15 @@ window.confirm = function(msg) {
 
     var dragging = false, moved = false, startX = 0, lastX = 0, lastT = 0, vx = 0;
     var startIdx = -1, hoverIdx = -1, suppressClick = false, mc = [], rafId = 0, pendX = 0, curIdx = -1;
+    var pinned = false, pinWatch = null, sawOpen = false;
 
-    function snapshot() {
-      mc = tabsOf(bar).map(function (t) {
-        return { el: t, left: t.offsetLeft, width: t.offsetWidth, center: t.offsetLeft + t.offsetWidth / 2 };
-      });
-    }
-    function markActive(idx) {
-      var ts = tabsOf(bar);
-      for (var i = 0; i < ts.length; i++) ts[i].classList.toggle('lg-active', i === idx);
-    }
-    function paintHover(idx) {
-      for (var i = 0; i < mc.length; i++) mc[i].el.classList.toggle('lg-hover', i === idx && i !== curIdx);
-    }
+    function snapshot() { mc = tabsOf(bar).map(function (t) { return { el: t, left: t.offsetLeft, width: t.offsetWidth, center: t.offsetLeft + t.offsetWidth / 2 }; }); }
+    function markActive(idx) { var ts = tabsOf(bar); for (var i = 0; i < ts.length; i++) ts[i].classList.toggle('lg-active', i === idx); }
+    function paintHover(idx) { for (var i = 0; i < mc.length; i++) mc[i].el.classList.toggle('lg-hover', i === idx && i !== curIdx); }
     function clearHover() { for (var i = 0; i < mc.length; i++) mc[i].el.classList.remove('lg-hover'); }
 
     function settle(idx, animate) {
-      snapshot();
-      curIdx = idx;
-      markActive(idx);
+      snapshot(); curIdx = idx; markActive(idx);
       if (idx < 0 || idx >= mc.length) { cap.classList.remove('lg-visible'); return; }
       var m = mc[idx];
       cap.classList.remove('lg-dragging');
@@ -1472,17 +1436,25 @@ window.confirm = function(msg) {
       cap.classList.add('lg-visible');
     }
 
-    // capsule = Plus si la feuille est ouverte, sinon l'onglet de la page
     function sync(animate) {
       var ts = tabsOf(bar);
-      if (moreOpen()) { var pi = plusIndex(ts); if (pi >= 0) { settle(pi, animate); return; } }
+      if (pinned || moreOpen()) { var pi = plusIndex(ts); if (pi >= 0) { settle(pi, animate); return; } }
       settle(pageIndex(ts), animate);
     }
     bar.__lgSync = sync;
 
+    function startPinWatch() {
+      sawOpen = false; if (pinWatch) clearInterval(pinWatch);
+      var misses = 0;
+      pinWatch = setInterval(function () {
+        if (!pinned) { clearInterval(pinWatch); return; }
+        if (moreOpen()) { sawOpen = true; misses = 0; }
+        else if (sawOpen) { misses++; if (misses >= 2) { pinned = false; clearInterval(pinWatch); sync(true); } }
+      }, 250);
+    }
+
     function applyFollow() {
-      rafId = 0;
-      if (!mc.length) return;
+      rafId = 0; if (!mc.length) return;
       var x = Math.max(mc[0].center, Math.min(mc[mc.length - 1].center, pendX));
       var w = mc[startIdx] ? mc[startIdx].width : mc[0].width;
       var st = Math.min(0.12, Math.abs(vx) * 0.010);
@@ -1490,61 +1462,53 @@ window.confirm = function(msg) {
       cap.style.transform = 'translateX(' + (x - w / 2) + 'px) scaleX(' + (1 + st) + ') translateZ(0)';
       var best = 0, bd = Infinity;
       for (var i = 0; i < mc.length; i++) { var dd = Math.abs(mc[i].center - x); if (dd < bd) { bd = dd; best = i; } }
-      if (best !== hoverIdx) {
-        hoverIdx = best; paintHover(best);
-        if (navigator.vibrate) { try { navigator.vibrate(3); } catch (e) {} }
-      }
+      if (best !== hoverIdx) { hoverIdx = best; paintHover(best); if (navigator.vibrate) { try { navigator.vibrate(3); } catch (e) {} } }
     }
     function follow(px) { pendX = px; if (!rafId) rafId = requestAnimationFrame(applyFollow); }
 
     function onDown(e) {
-      var p = (e.touches ? e.touches[0] : e);
-      snapshot();
-      if (!mc.length) return;
-      dragging = true; moved = false;
-      startX = lastX = p.clientX; lastT = e.timeStamp || Date.now(); vx = 0; hoverIdx = curIdx;
+      var p = (e.touches ? e.touches[0] : e); snapshot(); if (!mc.length) return;
+      dragging = true; moved = false; startX = lastX = p.clientX; lastT = e.timeStamp || Date.now(); vx = 0; hoverIdx = curIdx;
       startIdx = 0;
       for (var i = 0; i < mc.length; i++) { if (p.clientX >= mc[i].left && p.clientX <= mc[i].left + mc[i].width) { startIdx = i; break; } }
       cap.classList.remove('lg-animate');
       if (bar.setPointerCapture && e.pointerId != null) { try { bar.setPointerCapture(e.pointerId); } catch (er) {} }
     }
-
     function onMove(e) {
       if (!dragging) return;
       var p = (e.touches ? e.touches[0] : e);
-      var dx = p.clientX - lastX;
-      var dt = (e.timeStamp || Date.now()) - lastT;
-      if (dt > 0) vx = dx / dt * 16;
-      lastX = p.clientX; lastT = e.timeStamp || Date.now();
+      var dx = p.clientX - lastX, dt = (e.timeStamp || Date.now()) - lastT;
+      if (dt > 0) vx = dx / dt * 16; lastX = p.clientX; lastT = e.timeStamp || Date.now();
       if (!moved && Math.abs(p.clientX - startX) > 6) { moved = true; cap.classList.add('lg-dragging'); }
       if (moved) { if (e.cancelable) e.preventDefault(); follow(p.clientX); }
     }
-
     function onUp() {
-      if (!dragging) return;
-      dragging = false;
-      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-      clearHover();
-      if (!moved) { settle(startIdx, true); return; }
+      if (!dragging) return; dragging = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover();
+      if (!moved) { return; }
       var target = hoverIdx >= 0 ? hoverIdx : startIdx;
+      pinned = (target === plusIndex(tabsOf(bar)));
+      if (pinned) startPinWatch();
       settle(target, true);
       if (target !== startIdx && mc[target]) {
-        suppressClick = true;
-        setTimeout(function () { suppressClick = false; }, 450);
+        suppressClick = true; setTimeout(function () { suppressClick = false; }, 450);
         var el = mc[target].el;
-        setTimeout(function () {
-          var ev;
-          try { ev = new MouseEvent('click', { bubbles: true, cancelable: true }); }
-          catch (er) { ev = document.createEvent('MouseEvents'); ev.initEvent('click', true, true); }
-          ev.__lgProg = true; el.dispatchEvent(ev);
-        }, 120);
+        setTimeout(function () { var ev; try { ev = new MouseEvent('click', { bubbles: true, cancelable: true }); } catch (er) { ev = document.createEvent('MouseEvents'); ev.initEvent('click', true, true); } ev.__lgProg = true; el.dispatchEvent(ev); }, 120);
       }
       moved = false;
     }
 
-    function swallowClick(e) {
-      if (e.__lgProg) return;
-      if (suppressClick) { e.preventDefault(); e.stopPropagation(); }
+    function swallowClick(e) { if (e.__lgProg) return; if (suppressClick) { e.preventDefault(); e.stopPropagation(); } }
+
+    function onBarClick(e) {
+      var t = e.target.closest ? e.target.closest('.tab-btn') : null;
+      if (!t) return;
+      var ts = tabsOf(bar); var idx = ts.indexOf(t); var pi = plusIndex(ts);
+      if (e.__lgProg) { pinned = (idx === pi); }
+      else if (idx === pi) { pinned = !pinned; }
+      else { pinned = false; }
+      if (pinned) startPinWatch(); else if (pinWatch) { clearInterval(pinWatch); }
+      setTimeout(function () { if (!dragging) sync(true); }, 0);
     }
 
     if (window.PointerEvent) {
@@ -1558,26 +1522,16 @@ window.confirm = function(msg) {
       bar.addEventListener('touchend', onUp, { passive: true });
     }
     bar.addEventListener('click', swallowClick, true);
+    bar.addEventListener('click', onBarClick, false);
 
-    // état initial
     sync(false);
     requestAnimationFrame(function () { bar.offsetHeight; cap.classList.add('lg-animate'); });
 
-    // re-sync après chaque tap (ouverture/fermeture menu Plus, choix d'item, croix…)
-    document.addEventListener('click', function () { if (!dragging) setTimeout(function () { sync(true); }, 70); }, true);
-
-    // re-sync si le handler change les classes des onglets
     tabsOf(bar).forEach(function (t) {
-      new MutationObserver(function () { if (!dragging) sync(true); })
-        .observe(t, { attributes: true, attributeFilter: ['class'] });
+      new MutationObserver(function () { if (!dragging) sync(true); }).observe(t, { attributes: true, attributeFilter: ['class'] });
     });
-
-    // re-sync si la feuille Plus s'ouvre/ferme (style/class)
     var sheet = document.getElementById('moreMenuSheet');
-    if (sheet) {
-      new MutationObserver(function () { if (!dragging) sync(true); })
-        .observe(sheet, { attributes: true, attributeFilter: ['style', 'class'] });
-    }
+    if (sheet) new MutationObserver(function () { if (!dragging) sync(true); }).observe(sheet, { attributes: true, attributeFilter: ['style', 'class'] });
   }
 
   function boot() {
