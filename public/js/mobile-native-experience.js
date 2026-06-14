@@ -429,6 +429,23 @@
 
       document.body.appendChild(sheet);
 
+      // Feuille au-dessus de la barre du bas + corps réellement scrollable
+      sheet.style.zIndex = '10060';
+      const _content = sheet.querySelector('.bottom-sheet-content');
+      if (_content) {
+        _content.style.display = 'flex';
+        _content.style.flexDirection = 'column';
+      }
+      const _body = sheet.querySelector('.sheet-body');
+      if (_body) {
+        _body.style.flex = '1';
+        _body.style.minHeight = '0';
+        _body.style.overflowY = 'auto';
+        _body.style.webkitOverflowScrolling = 'touch';
+        _body.style.overscrollBehavior = 'contain';
+        _body.style.paddingBottom = 'calc(env(safe-area-inset-bottom, 0px) + 24px)';
+      }
+
       setTimeout(() => sheet.classList.add('open'), 10);
 
       const close = async () => {
@@ -440,17 +457,24 @@
       sheet.querySelector('.sheet-close').addEventListener('click', close);
       sheet.querySelector('.bottom-sheet-overlay').addEventListener('click', close);
 
-      // Swipe down pour fermer
+      // Swipe down pour fermer — UNIQUEMENT si la liste est déjà tout en haut,
+      // sinon on laisse défiler normalement (sinon scroller vers le haut ferme le menu).
       let startY = 0;
+      let dragging = false;
       const sheetContent = sheet.querySelector('.bottom-sheet-content');
+      const scrollBody = sheet.querySelector('.sheet-body') || sheetContent;
 
       sheetContent.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
+        dragging = (scrollBody.scrollTop <= 0);
       }, { passive: true });
 
       sheetContent.addEventListener('touchmove', (e) => {
         const currentY = e.touches[0].clientY;
         const diff = currentY - startY;
+
+        if (!dragging) return;
+        if (scrollBody.scrollTop > 0) { dragging = false; sheetContent.style.transform = 'translateY(0)'; return; }
 
         if (diff > 0) {
           sheetContent.style.transform = `translateY(${diff}px)`;
@@ -458,8 +482,10 @@
       }, { passive: true });
 
       sheetContent.addEventListener('touchend', (e) => {
+        if (!dragging) return;
         const currentY = e.changedTouches[0].clientY;
         const diff = currentY - startY;
+        dragging = false;
 
         if (diff > 100) {
           close();
