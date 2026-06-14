@@ -289,7 +289,7 @@
     if (!sheet) {
       sheet = document.createElement('div');
       sheet.id = 'moreMenuSheet';
-      sheet.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#F5F0E8;border-radius:20px 20px 0 0;padding:20px 20px calc(40px + env(safe-area-inset-bottom, 20px));max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:10000;transform:translateY(100%);transition:transform 0.3s ease;';
+      sheet.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#F5F0E8;border-radius:20px 20px 0 0;padding:20px 20px calc(80px + env(safe-area-inset-bottom, 20px));max-height:82vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;z-index:10000;transform:translateY(100%);transition:transform 0.3s ease;';
       document.body.appendChild(sheet);
     }
 
@@ -312,6 +312,8 @@
     
     // Afficher le menu
     overlay.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
     setTimeout(() => {
       sheet.style.transform = 'translateY(0)';
     }, 10);
@@ -342,6 +344,8 @@
   window.closeMoreMenu = function() {
     const overlay = document.getElementById('moreMenuOverlay');
     const sheet = document.getElementById('moreMenuSheet');
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
     if (sheet) sheet.style.transform = 'translateY(100%)';
     setTimeout(() => {
       if (overlay) overlay.style.display = 'none';
