@@ -409,6 +409,13 @@
       if (window._bhUpdateLucideActive) window._bhUpdateLucideActive();
 
       // ── Liquid Glass : sliding pill ──
+      // DÉSACTIVÉ : bh-layout.js gère la vraie capsule (.lg-capsule) en transform
+      // GPU. Cet ancien pill (.glass-pill-mobile) est de toute façon masqué par
+      // bh-layout (display:none!important) et ne faisait que du travail inutile à
+      // chaque chargement : création d'un élément backdrop-filter caché, lectures
+      // getBoundingClientRect en boucle, et un listener click par onglet. Tout ça
+      // tournait sur le main-thread pile au moment où la page doit s'afficher.
+      return;
       if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
       if (!container || !tabs.length) return;
 
@@ -486,7 +493,7 @@
           applyPos(getPos(tab));
         }, { once: true });
       });
-    }, 200);
+    }, 50); // était 200ms — la capsule se positionne plus vite au chargement
   }
 
   // ============================================

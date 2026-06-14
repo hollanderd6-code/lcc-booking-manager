@@ -185,8 +185,9 @@
     }
 
     async switchTab(tabId) {
-      // Haptic feedback
-      await this.vibrate('light');
+      // Haptic feedback — fire-and-forget : ne pas attendre le bridge natif
+      // sinon la navigation (window.location.href) est retardée de 50-150ms
+      this.vibrate('light');
 
       // Update active tab
       document.querySelectorAll('.tab-btn').forEach(btn => {
