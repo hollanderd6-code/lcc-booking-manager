@@ -219,6 +219,35 @@
   // MENU "PLUS" - FILTRÉ PAR PERMISSIONS
   // ============================================
   
+  // Récupère le profil en arrière-plan et met à jour l'avatar déjà affiché,
+  // sans bloquer l'ouverture du menu. Le résultat est mis en cache (localStorage)
+  // donc dès la 2e ouverture le logo est instantané.
+  async function _bhRefreshMenuAvatarBg() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      const res = await fetch('/api/user/profile', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const fresh = await res.json();
+      const merged = { ...JSON.parse(localStorage.getItem('lcc_user') || '{}'), ...fresh };
+      localStorage.setItem('lcc_user', JSON.stringify(merged));
+      if (!fresh.logoUrl) return;
+      const src = fresh.logoUrl.includes('cloudinary.com')
+        ? fresh.logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
+        : fresh.logoUrl;
+      document.querySelectorAll('#bhMenuAvatar').forEach(function(el) {
+        el.textContent = '';
+        el.style.background = "white url('" + src + "') center/65% no-repeat";
+        el.style.backgroundSize = '65%';
+        el.style.borderRadius = '8px';
+        el.style.border = '1px solid rgba(200,184,154,.4)';
+      });
+    } catch(e) {
+      console.warn('Refresh logo arrière-plan échoué:', e);
+    }
+  }
+
   async function showMoreMenu() {
     const menuButtons = getMoreMenuButtons();
 
@@ -228,22 +257,11 @@
     const subAccountData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
     if (subAccountData.firstName) user = { ...user, ...subAccountData };
 
-    // Si pas de logoUrl, refetch depuis l'API (fix iOS Capacitor)
-    if (!user.logoUrl) {
-      try {
-        const token = localStorage.getItem('lcc_token');
-        const res = await fetch('/api/user/profile', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const fresh = await res.json();
-          user = { ...user, ...fresh };
-          localStorage.setItem('lcc_user', JSON.stringify(user));
-        }
-      } catch(e) {
-        console.warn('Impossible de rafraîchir le profil:', e);
-      }
-    }
+    // ⚡ Plus de fetch bloquant ici : le menu s'ouvre INSTANTANÉMENT.
+    // Si le logo manque (cas iOS Capacitor), on le récupère en arrière-plan
+    // (_bhRefreshMenuAvatarBg) et on met à jour l'avatar #bhMenuAvatar une fois
+    // l'image arrivée, sans jamais retarder l'affichage du menu.
+    const _needsLogo = !user.logoUrl;
 
     const userName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Mon compte';
     const userCompany = user.company || '';
@@ -252,8 +270,8 @@
       ? logoUrl.replace('/upload/', '/upload/w_80,h_80,c_fit,q_auto,f_png/')
       : logoUrl;
     const avatarHtml = logoSrc
-      ? `<div style="width:38px;height:38px;min-width:38px;border-radius:8px;background:white url('${logoSrc}') center/65% no-repeat;border:1px solid rgba(200,184,154,.4);flex-shrink:0;"></div>`
-      : `<div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#1A7A5E,#2AAE86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
+      ? `<div id="bhMenuAvatar" style="width:38px;height:38px;min-width:38px;border-radius:8px;background:white url('${logoSrc}') center/65% no-repeat;border:1px solid rgba(200,184,154,.4);flex-shrink:0;"></div>`
+      : `<div id="bhMenuAvatar" style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#1A7A5E,#2AAE86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
 
     // Si window.mobileApp existe, utiliser le bottom sheet natif
     if (window.mobileApp && window.mobileApp.createBottomSheet) {
@@ -268,6 +286,7 @@
         `,
         height: '80%'
       });
+      if (_needsLogo) setTimeout(_bhRefreshMenuAvatarBg, 0);
       return;
     }
     
@@ -317,6 +336,8 @@
     setTimeout(() => {
       sheet.style.transform = 'translateY(0)';
     }, 10);
+
+    if (_needsLogo) setTimeout(_bhRefreshMenuAvatarBg, 0);
 
     // Mettre en valeur l'item de la page courante (Option 1 : fond teinté + texte coloré)
     setTimeout(function() {
@@ -559,6 +580,46 @@
     applyMobileTabRestrictions();
     setTimeout(applyLucideIcons, 100);
   }
+
+  // ============================================
+  // ⚡ PRÉCHARGEMENT DES PAGES (perf navigation)
+  // Au moindre contact sur un onglet, on réchauffe la page de destination dans
+  // le cache → l'attente réseau ne bloque plus au moment du tap. En complément,
+  // on précharge les autres onglets en tâche de fond quand le device est au repos.
+  // NB : ceci accélère le RÉSEAU. Le re-rendu / les appels API de la page d'arrivée
+  // restent ; pour du vraiment instantané il faudra le shell SPA (étape suivante).
+  // ============================================
+  (function setupPrefetch() {
+    if (!('fetch' in window)) return;
+    var done = {};
+
+    function warm(url) {
+      if (!url || url === 'bottomsheet' || done[url]) return;
+      if (url === window.location.pathname) return;
+      done[url] = true;
+      try {
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.as = 'document';
+        link.href = url;
+        document.head.appendChild(link);
+      } catch (e) {}
+      try { fetch(url, { credentials: 'same-origin' }).catch(function () {}); } catch (e) {}
+    }
+
+    function onContact(e) {
+      var t = e.target;
+      var btn = t && t.closest ? t.closest('.tab-btn[data-tab]') : null;
+      if (!btn) return;
+      warm(ROUTES[btn.dataset.tab]);
+    }
+    document.addEventListener('pointerdown', onContact, { passive: true, capture: true });
+    document.addEventListener('touchstart', onContact, { passive: true, capture: true });
+
+    function warmAll() { Object.keys(ROUTES).forEach(function (k) { warm(ROUTES[k]); }); }
+    if ('requestIdleCallback' in window) requestIdleCallback(warmAll, { timeout: 4000 });
+    else setTimeout(warmAll, 2500);
+  })();
 
   console.log('✅ Gestion des onglets mobile initialisée (page:', activeTab, ')');
 
