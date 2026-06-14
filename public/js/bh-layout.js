@@ -1329,6 +1329,9 @@ window.confirm = function(msg) {
       '.mobile-tabs .tab-btn:focus,.mobile-tabs .tab-btn:focus-visible,.mobile-tabs .tab-btn:active{outline:none!important;-webkit-tap-highlight-color:transparent!important;}' +
       '.mobile-tabs .tab-btn.active{background:transparent!important;box-shadow:none!important;}' +
       '.mobile-tabs{position:fixed!important;z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
+      // la feuille "Plus" passe AU-DESSUS de la barre (sinon la barre masque le bouton Déconnexion)
+      '#moreMenuSheet,#moreMenuOverlay{z-index:10060!important;}' +
+      '#moreMenuSheet{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px)!important;}' +
 
       '.mobile-tabs .lg-capsule{' +
         'position:absolute;top:6px;left:0;' +
