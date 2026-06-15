@@ -3939,11 +3939,17 @@ function getSelectedProperties() {
 }
   // --- SAVE ---
   window.createInvoice = async function(send) {
-    const clientId = document.getElementById('invoiceClientId').value;
+    const clientSelEl = document.getElementById('invoiceClientId');
+    const clientId = clientSelEl.value;
     if(!clientId) return alert('Veuillez sélectionner un client');
+
+    // Récupérer le nom du client depuis l'option sélectionnée (nettoyé du suffixe " (Agence)")
+    const selectedOpt = clientSelEl.options[clientSelEl.selectedIndex];
+    const clientNameText = selectedOpt ? selectedOpt.textContent.replace(/\s*\(Agence\)\s*$/, '').trim() : '';
 
     const data = {
       clientId: clientId, // UUID string, pas parseInt
+      clientName: clientNameText,
       periodStart: document.getElementById('invoicePeriodStart').value,
       periodEnd: document.getElementById('invoicePeriodEnd').value,
       issueDate: document.getElementById('invoiceIssueDate').value,

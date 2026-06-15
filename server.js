@@ -15728,12 +15728,16 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
       SELECT
         COALESCE(i.invoice_number, 'Brouillon #' || i.id::text) AS invoice_number,
         i.issue_date, i.due_date, i.period_start, i.period_end,
-        COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS client_name,
+        COALESCE(
+          c.company_name,
+          NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), ''),
+          i.client_name
+        ) AS client_name,
         c.email AS client_email,
         i.subtotal_ht, i.subtotal_debours, i.vat_amount, i.total_ttc,
         i.status, i.is_credit_note
       FROM owner_invoices i
-      JOIN owner_clients c ON c.id = i.client_id
+      LEFT JOIN owner_clients c ON c.id = i.client_id
       WHERE i.user_id = ANY($1::text[]) AND ${dateFilter}
       ORDER BY i.issue_date ASC, i.id ASC
     `, params);
@@ -18940,10 +18944,14 @@ app.get('/api/owner-invoices',
         i.status,
         i.is_credit_note,
         i.original_invoice_id,
-        COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS client_name
+        COALESCE(
+          c.company_name,
+          NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), ''),
+          i.client_name
+        ) AS client_name
 
       FROM owner_invoices i
-      JOIN owner_clients c ON c.id = i.client_id
+      LEFT JOIN owner_clients c ON c.id = i.client_id
       WHERE i.user_id = ANY($1::text[])
       ORDER BY i.issue_date DESC, i.id DESC
     `, [agencyIds]);
@@ -18970,6 +18978,7 @@ app.post('/api/owner-invoices',
 
     const {
       clientId,
+      clientName,
       periodStart,
       periodEnd,
       issueDate,
@@ -18997,6 +19006,10 @@ app.post('/api/owner-invoices',
       const clientCheck = await pool.query('SELECT id FROM owner_clients WHERE id = $1 AND user_id = $2', [clientId, userId]);
       if (clientCheck.rows.length === 0) resolvedClientId = null;
     }
+
+    // Si le client n'est pas dans owner_clients (client agence ou introuvable),
+    // on conserve son nom directement sur la facture pour qu'il reste affichable.
+    const snapshotClientName = (resolvedClientId === null && clientName) ? String(clientName).trim() : null;
 
     await client.query('BEGIN');
 
@@ -19030,6 +19043,7 @@ app.post('/api/owner-invoices',
         id,
         user_id,
         client_id,
+        client_name,
         period_start,
         period_end,
         issue_date,
@@ -19049,18 +19063,19 @@ app.post('/api/owner-invoices',
         created_at
       ) VALUES (
         gen_random_uuid(),
-        $1,$2,$3,$4,$5,$6,
-        $7,$8,
-        $9,$10,$11,
-        $12,$13,$14,$15,
-        $16,$17,
-        $18,
+        $1,$2,$3,$4,$5,$6,$7,
+        $8,$9,
+        $10,$11,$12,
+        $13,$14,$15,$16,
+        $17,$18,
+        $19,
         NOW()
       )
       RETURNING *
     `, [
       userId,
       resolvedClientId,
+      snapshotClientName,
       periodStart || null,
       periodEnd || null,
       issueDate,
