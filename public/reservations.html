@@ -826,7 +826,7 @@ function renderTable() {
   const tbody = document.getElementById('tableBody');
   if (!tbody) return;
   if (!page.length) {
-    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-calendar-times"></i><p>Aucune réservation trouvée</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9">' + (window.bhEmptyState ? window.bhEmptyState('calendar','Aucune réservation','Aucune réservation ne correspond à vos filtres.') : '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>Aucune réservation trouvée</p></div>') + '</td></tr>';
     document.getElementById('pagination').innerHTML = '';
     return;
   }
@@ -874,7 +874,7 @@ function renderMobile() {
   const container = document.getElementById('mobileCards');
   if (!container) return;
   if (!filtered.length) {
-    container.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>Aucune réservation trouvée</p></div>';
+    container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('calendar','Aucune réservation','Aucune réservation ne correspond à vos filtres.') : '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>Aucune réservation trouvée</p></div>');
     return;
   }
   container.innerHTML = filtered.map(r => {
