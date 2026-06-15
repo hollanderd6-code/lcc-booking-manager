@@ -4821,7 +4821,18 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
-app.use(express.static('public'));
+app.use(express.static('public', {
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      // Les pages HTML restent fraîches → un bump ?v= des JS est pris en compte tout de suite
+      res.setHeader('Cache-Control', 'no-cache');
+    } else {
+      // JS / CSS / images : mis en cache → la navigation page-à-page ne re-télécharge plus ces fichiers
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  }
+}));
 
 // ============================================
 // 📱 ROUTES GUEST APP - DEEP LINKS iOS/Android
