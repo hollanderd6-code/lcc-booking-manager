@@ -21371,8 +21371,10 @@ app.post('/api/owner-invoices/:id/send',
       [invoice.client_id]
     );
     const client = clientResult.rows[0] || {};
-    const clientEmail = client.email || '';
-    const clientName  = client.company_name || ((client.first_name || '') + ' ' + (client.last_name || '')).trim();
+    // Fallback sur le snapshot de la facture quand il n'y a pas d'owner_client lié
+    // (client agence : invoice.client_id est NULL → owner_clients vide).
+    const clientEmail = client.email || invoice.client_email || '';
+    const clientName  = (client.company_name || ((client.first_name || '') + ' ' + (client.last_name || '')).trim()) || invoice.client_name || 'Client';
 
     if (clientEmail) {
       try {
@@ -21392,10 +21394,10 @@ app.post('/api/owner-invoices/:id/send',
           invoiceNumber:  invoice.invoice_number,
           clientName,
           clientEmail,
-          clientAddress:  client.address || '',
-          clientPostalCode: client.postal_code || '',
-          clientCity:     client.city || '',
-          clientSiret:    client.siret || '',
+          clientAddress:  client.address || invoice.client_address || '',
+          clientPostalCode: client.postal_code || invoice.client_postal_code || '',
+          clientCity:     client.city || invoice.client_city || '',
+          clientSiret:    client.siret || invoice.client_siret || '',
           periodStart:    invoice.period_start,
           periodEnd:      invoice.period_end,
           totalTtc:       invoice.total_ttc,
