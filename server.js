@@ -4825,11 +4825,16 @@ app.use(express.static('public', {
   etag: true,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
-      // Les pages HTML restent fraîches → un bump ?v= des JS est pris en compte tout de suite
+      // Les pages HTML restent fraîches
       res.setHeader('Cache-Control', 'no-cache');
+    } else if (/\.(js|css)$/.test(filePath)) {
+      // Code de l'app : cache court (60s) → les déploiements se propagent vite sur TOUTES
+      // les pages sans avoir à bumper ?v=, tout en restant en cache pendant une session
+      // de navigation (on enchaîne les pages en bien moins de 60s = page-à-page rapide).
+      res.setHeader('Cache-Control', 'public, max-age=60');
     } else {
-      // JS / CSS / images : mis en cache → la navigation page-à-page ne re-télécharge plus ces fichiers
-      res.setHeader('Cache-Control', 'public, max-age=3600');
+      // Images / polices / autres assets statiques : cache long
+      res.setHeader('Cache-Control', 'public, max-age=2592000');
     }
   }
 }));
