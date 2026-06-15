@@ -8797,33 +8797,41 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
 
 app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    // ✅ Utiliser req.user (peuplé par authenticateAny) plutôt que getUserFromRequest
+    // qui ne connaît pas les sous-comptes/agents
+    if (!req.user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
+    // Résoudre le vrai owner ID : si sous-compte → parentUserId, sinon req.user.id
+    const realOwnerId = req.user.isSubAccount
+      ? (req.user.parentUserId || (await getRealUserId(pool, req)))
+      : req.user.id;
+
     const { uid } = req.params;
-    
-    console.log('🗑️ Suppression de la réservation:', uid);
-    
+
+    console.log(`🗑️ Suppression réservation: ${uid} | user: ${req.user.id} | owner: ${realOwnerId} | isSubAccount: ${req.user.isSubAccount}`);
+
     // ✅ SUPPRESSION RÉELLE DE LA DB (pas juste UPDATE status)
     let deleted = false;
     let deletedReservation = null;
     let propertyName = 'Logement';
-    
+
     try {
-      // Mode agence : toujours inclure les comptes délégués pour la suppression,
-      // sans condition sur ?agency=all (sinon les résas des comptes délégués → 404)
+      // Construire la liste de tous les user_ids autorisés :
+      // le propriétaire principal + tous les comptes délégués (agence)
       let agencyIdsForDelete;
       try {
         const delegations = await pool.query(
           `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
-          [user.id]
+          [realOwnerId]
         );
-        agencyIdsForDelete = [user.id, ...delegations.rows.map(d => d.delegator_user_id)];
+        agencyIdsForDelete = [realOwnerId, ...delegations.rows.map(d => d.delegator_user_id)];
       } catch(e) {
-        agencyIdsForDelete = [user.id];
+        agencyIdsForDelete = [realOwnerId];
       }
+      console.log(`🔍 IDs autorisés pour suppression:`, agencyIdsForDelete);
+
       const deleteResult = await pool.query(
         `DELETE FROM reservations 
          WHERE uid = $1 AND user_id = ANY($2::text[]) 
@@ -8858,7 +8866,7 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
       try {
         const tokensResult = await pool.query(
           'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
-          [user.id]
+          [realOwnerId]
         );
         if (tokensResult.rows.length > 0) {
           const fcmTokens = tokensResult.rows.map(row => row.fcm_token);
@@ -8877,7 +8885,7 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
       // ✅ Notif sous-comptes annulation (toujours, indépendant du principal)
       try {
         await sendNotificationToSubAccountsOf(
-          user.id, 'can_view_calendar',
+          realOwnerId, 'can_view_calendar',
           '❌ Réservation annulée',
           propertyName + ' - ' + cancelDate,
           { type: 'reservation_cancelled', reservation_id: uid },
