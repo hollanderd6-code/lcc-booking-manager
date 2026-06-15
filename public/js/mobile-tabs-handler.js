@@ -193,12 +193,19 @@
     activeTab = 'more';
   } else if (currentPath.includes('messages')) {
     activeTab = 'messages';
+  } else if (currentPath.includes('reservations')) {
+    activeTab = 'calendar';
   } else if (currentPath.includes('settings')) {
     // Fallback pour /settings.html sans data-page
     activeTab = 'properties';
   } else if (currentPath.includes('app')) {
     activeTab = 'dashboard';
   }
+
+  // Exposé pour que la barre d'onglets démarre DIRECTEMENT sur le bon onglet.
+  // Sans ça, la barre se crée avec Dashboard actif puis la capsule glass glisse
+  // visiblement vers le vrai onglet à chaque arrivée de page.
+  try { window.__bhActiveTab = activeTab; } catch (e) {}
 
   // ============================================
   // ÉCOUTER LES CHANGEMENTS D'ONGLET

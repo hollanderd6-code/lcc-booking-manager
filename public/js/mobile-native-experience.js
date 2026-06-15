@@ -155,10 +155,24 @@
       // Filtrer selon permissions
       const tabs = allTabs.filter(tab => tab.perm === null || _hasPerm(tab.perm));
 
+      // Onglet réellement actif pour la page courante (calculé par mobile-tabs-handler).
+      // On démarre la barre dessus → la capsule glass se pose directement au bon
+      // endroit, sans partir du Dashboard puis glisser. Fallback léger si indispo.
+      let _activeTabId = window.__bhActiveTab;
+      if (!_activeTabId) {
+        const _p = window.location.pathname;
+        const _dp = document.body.getAttribute('data-page');
+        if (_dp === 'settings' || _p.includes('settings')) _activeTabId = 'properties';
+        else if (_p.includes('messages')) _activeTabId = 'messages';
+        else if (_p.includes('reservations')) _activeTabId = 'calendar';
+        else if (_p.includes('app')) _activeTabId = 'dashboard';
+        else _activeTabId = 'more';
+      }
+
       const tabsContainer = document.createElement('div');
       tabsContainer.className = 'mobile-tabs';
       tabsContainer.innerHTML = tabs.map(tab => `
-        <button class="tab-btn ${tab.id === 'dashboard' ? 'active' : ''}" data-tab="${tab.id}">
+        <button class="tab-btn ${tab.id === _activeTabId ? 'active' : ''}" data-tab="${tab.id}">
           <i class="fas ${tab.icon}"></i>
           <span>${tab.label}</span>
           ${tab.badge !== undefined ? `<span class="badge" style="display: ${tab.badge > 0 ? 'flex' : 'none'}">${tab.badge}</span>` : ''}
