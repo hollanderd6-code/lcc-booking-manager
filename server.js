@@ -7546,11 +7546,13 @@ app.post('/api/reservations/manual', async (req, res) => {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     if (!property) {
       console.log('❌ Logement non trouvé:', propertyId);
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
+    const ownerId = property.userId; // compte propriétaire (compte délégué en mode agence)
     
     console.log('✅ Logement trouvé:', property.name);
 
@@ -7562,7 +7564,7 @@ app.post('/api/reservations/manual', async (req, res) => {
          AND status NOT IN ('cancelled', 'completed')
          AND start_date::date < $3::date
          AND end_date::date > $2::date`,
-      [propertyId, start, end, user.id]
+      [propertyId, start, end, ownerId]
     );
     if (overlapCheck.rows.length > 0) {
       const existing = overlapCheck.rows[0];
@@ -7575,7 +7577,7 @@ app.post('/api/reservations/manual', async (req, res) => {
     }
 
     const uid = 'manual_' + Date.now();
-    const userId = user.id; 
+    const userId = ownerId; 
     const reservation = {
       uid: uid,
       start: start,
@@ -7614,7 +7616,7 @@ app.post('/api/reservations/manual', async (req, res) => {
           price = EXCLUDED.price,
           amount_total = EXCLUDED.amount_total
       `, [
-        uid, propertyId, user.id,
+        uid, propertyId, ownerId,
         start, end,
         guestName || 'Réservation manuelle',
         req.body.platform ? req.body.platform.toUpperCase() : 'MANUEL',
@@ -7762,6 +7764,7 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const { uid } = req.params;
+    const agencyIds = await getAgencyUserIds(req, user.id);
     const { propertyId, start, end, guestName, notes, phone, email, platform, price,
             guest_country, guest_address, guest_zip, occupancy_adults, amount_rooms, amount_cleaning, amount_taxes, ota_commission } = req.body;
 
@@ -7769,8 +7772,8 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
 
     // Récupérer les anciennes dates avant mise à jour
     const oldResa = await pool.query(
-      'SELECT start_date, end_date, property_id FROM reservations WHERE uid = $1 AND user_id = $2',
-      [uid, user.id]
+      'SELECT start_date, end_date, property_id FROM reservations WHERE uid = $1 AND user_id = ANY($2::text[])',
+      [uid, agencyIds]
     );
     if (oldResa.rows.length === 0) return res.status(404).json({ error: 'Réservation non trouvée' });
 
@@ -7780,10 +7783,10 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
     // Vérifier chevauchement (sauf avec soi-même)
     const overlapCheck = await pool.query(
       `SELECT uid FROM reservations
-       WHERE property_id = $1 AND user_id = $2 AND uid != $3
+       WHERE property_id = $1 AND user_id = ANY($2::text[]) AND uid != $3
          AND status NOT IN ('cancelled','completed')
          AND start_date::date < $5::date AND end_date::date > $4::date`,
-      [propertyId, user.id, uid, start, end]
+      [propertyId, agencyIds, uid, start, end]
     );
     if (overlapCheck.rows.length > 0) {
       return res.status(409).json({ error: 'Ces dates sont déjà prises' });
@@ -7800,14 +7803,14 @@ app.put('/api/reservations/manual/:uid', async (req, res) => {
         guest_country = $10, guest_address = $11, guest_zip = $12, occupancy_adults = $13,
         amount_rooms = $14, amount_cleaning = $15, amount_taxes = $16, ota_commission = $17,
         updated_at = NOW()
-       WHERE uid = $18 AND user_id = $19`,
+       WHERE uid = $18 AND user_id = ANY($19::text[])`,
       [
         propertyId, start, end,
         guestName || 'Réservation manuelle', (notes !== undefined ? (notes.trim() || null) : null), String(platform || 'MANUEL'),
         price || null, phone || null, email || null,
         guest_country || null, guest_address || null, guest_zip || null, occupancy_adults || null,
         amount_rooms || null, amount_cleaning || null, amount_taxes || null, ota_commission || null,
-        uid, user.id
+        uid, agencyIds
       ]
     );
 
@@ -14516,11 +14519,14 @@ app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool
       return res.status(400).json({ error: 'property_ids, date_from et date_to sont requis' });
     }
 
-    // Vérifier que tous les logements appartiennent à l'utilisateur
+    // Vérifier que tous les logements appartiennent à l'utilisateur (ou à un compte délégué)
+    const agencyIds = await getAgencyUserIds(req, user.id);
     const propCheck = await pool.query(
-      'SELECT id FROM properties WHERE id = ANY($1) AND user_id = $2',
-      [property_ids, user.id]
+      'SELECT id, user_id FROM properties WHERE id = ANY($1) AND user_id = ANY($2)',
+      [property_ids, agencyIds]
     );
+    const ownerByProp = {};
+    propCheck.rows.forEach(r => { ownerByProp[r.id] = r.user_id; });
     if (propCheck.rows.length !== property_ids.length) {
       return res.status(403).json({ error: 'Un ou plusieurs logements sont inaccessibles' });
     }
@@ -14548,7 +14554,7 @@ app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool
           // Supprimer l'override
           await pool.query(
             'DELETE FROM pricing_overrides WHERE user_id = $1 AND property_id = $2 AND date = $3',
-            [user.id, property_id, date]
+            [ownerByProp[property_id], property_id, date]
           );
         } else {
           await pool.query(`
@@ -14556,7 +14562,7 @@ app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool
             VALUES ($1, $2, $3, $4, NOW())
             ON CONFLICT (user_id, property_id, date)
             DO UPDATE SET price = $4, updated_at = NOW()
-          `, [user.id, property_id, date, parseFloat(price)]);
+          `, [ownerByProp[property_id], property_id, date, parseFloat(price)]);
         }
         count++;
       }
@@ -14649,13 +14655,16 @@ app.post('/api/blocks/batch', async (req, res) => {
       return res.status(400).json({ error: 'property_ids, date_from et date_to sont requis' });
     }
 
+    const agencyIds = await getAgencyUserIds(req, user.id);
     const propCheck = await pool.query(
-      'SELECT id FROM properties WHERE id = ANY($1) AND user_id = $2',
-      [property_ids, user.id]
+      'SELECT id, user_id FROM properties WHERE id = ANY($1) AND user_id = ANY($2)',
+      [property_ids, agencyIds]
     );
     if (propCheck.rows.length !== property_ids.length) {
       return res.status(403).json({ error: 'Un ou plusieurs logements sont inaccessibles' });
     }
+    const ownerByProp = {};
+    propCheck.rows.forEach(r => { ownerByProp[r.id] = r.user_id; });
 
     let count = 0;
 
@@ -14667,7 +14676,7 @@ app.post('/api/blocks/batch', async (req, res) => {
            WHERE user_id = $1 AND property_id = $2
              AND (reservation_type = 'block' OR source = 'BLOCK' OR platform = 'BLOCK')
              AND start_date::date < $4::date AND end_date::date > $3::date`,
-          [user.id, property_id, date_from, date_to]
+          [ownerByProp[property_id], property_id, date_from, date_to]
         );
         // Mettre à jour le store en mémoire
         if (reservationsStore.properties[property_id]) {
@@ -14695,7 +14704,7 @@ app.post('/api/blocks/batch', async (req, res) => {
             INSERT INTO reservations (uid, property_id, user_id, start_date, end_date, guest_name, source, platform, reservation_type, status, notes)
             VALUES ($1,$2,$3,$4,$5,$6,'BLOCK','BLOCK','block','confirmed',$7)
             ON CONFLICT (uid) DO NOTHING
-          `, [uid, property_id, user.id, dateStr, nextStr, reason || 'Blocage calendrier', reason || '']);
+          `, [uid, property_id, ownerByProp[property_id], dateStr, nextStr, reason || 'Blocage calendrier', reason || '']);
           // Ajouter en mémoire
           if (!reservationsStore.properties[property_id]) reservationsStore.properties[property_id] = [];
           reservationsStore.properties[property_id].push({
@@ -14817,8 +14826,10 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
     }
 
     // Vérifier accès logement
-    const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [property_id, user.id]);
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    const check = await pool.query('SELECT id, user_id FROM properties WHERE id = $1 AND user_id = ANY($2)', [property_id, agencyIds]);
     if (check.rows.length === 0) return res.status(403).json({ error: 'Logement introuvable' });
+    const ownerId = check.rows[0].user_id; // compte propriétaire (compte délégué en mode agence)
 
     // Upsert min_stay : supprimer les doublons existants (même type + même dates)
     if (rule_type === 'min_stay') {
@@ -14827,12 +14838,12 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
           `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay'
            AND start_date IS NOT NULL AND end_date IS NOT NULL
            AND start_date <= $4 AND end_date >= $3`,
-          [user.id, property_id, start_date, end_date]
+          [ownerId, property_id, start_date, end_date]
         );
       } else {
         await pool.query(
           `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay' AND start_date IS NULL AND end_date IS NULL`,
-          [user.id, property_id]
+          [ownerId, property_id]
         );
       }
     }
@@ -14843,7 +14854,7 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *
     `, [
-      user.id, property_id, name, rule_type,
+      ownerId, property_id, name, rule_type,
       start_date || null, end_date || null,
       days_of_week || null,
       price != null ? parseFloat(price) : null,
@@ -35228,6 +35239,11 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       return res.status(400).json({ error: 'property_id, checkin et checkout requis' });
     }
 
+    // Mode agence : la pré-réservation appartient au propriétaire du logement
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const ownerRow = await pool.query('SELECT user_id FROM properties WHERE id = $1', [property_id]);
+    const ownerId = (ownerRow.rows[0] && agencyIds.includes(ownerRow.rows[0].user_id)) ? ownerRow.rows[0].user_id : userId;
+
     // Vérifier qu'aucun hold actif n'existe déjà sur ces dates
     const conflictHold = await pool.query(
       `SELECT id FROM bhguest_holds
@@ -35249,14 +35265,14 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       `INSERT INTO bhguest_holds
         (user_id, property_id, checkin, checkout, expires_at, link_token, guest_email, guest_phone, fixed_price)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [userId, property_id, checkin, checkout, expiresAt, linkToken,
+      [ownerId, property_id, checkin, checkout, expiresAt, linkToken,
        guest_email || null, guest_phone || null, fixed_price || null]
     );
 
     // 🔔 Notifier le propriétaire en temps réel pour rafraîchir le calendrier
     // (la pré-réservation doit apparaître sans avoir à actualiser la page)
     try {
-      if (io) io.to('user_' + userId).emit('reservations:updated', { propertyId: property_id });
+      if (io) io.to('user_' + ownerId).emit('reservations:updated', { propertyId: property_id });
     } catch (sockErr) {
       console.warn('⚠️ [HOLD] Socket non émis (non bloquant):', sockErr.message);
     }
@@ -35281,7 +35297,7 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
          ON CONFLICT (id) DO NOTHING`,
         [
           'bhgpay_' + linkToken,
-          userId, property_id, 'BHGUEST_HOLD_' + linkToken,
+          ownerId, property_id, 'BHGUEST_HOLD_' + linkToken,
           amountCents2, bookingUrl2,
           JSON.stringify({ source: 'bhguest_hold', holdToken: linkToken, propertyName: propName2, checkin, checkout, guestEmail: guest_email || null, guestPhone: guest_phone || null })
         ]
