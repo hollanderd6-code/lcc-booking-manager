@@ -1498,6 +1498,10 @@ window.confirm = function(msg) {
       var target = hoverIdx >= 0 ? hoverIdx : startIdx;
       pinned = (target === plusIndex(tabsOf(bar)));
       if (pinned) startPinWatch();
+      // Drag vers un onglet de navigation : verrouiller la cible AVANT settle, sinon
+      // le markActive() de settle redéclenche un sync qui repart sur l'ancienne page
+      // pendant les ~120ms avant que le clic programmatique ne pose le verrou.
+      if (!pinned && target !== startIdx) { navTargetIdx = target; }
       settle(target, true);
       if (target !== startIdx && mc[target]) {
         suppressClick = true; setTimeout(function () { suppressClick = false; }, 450);
