@@ -1617,11 +1617,11 @@ window.confirm = function(msg) {
     var mh = document.querySelector('.mobile-header');
     if (!mh || mh.dataset.v4) return;
     injectCSS();
-    swap(mh.querySelector('#bh-mobile-svc i.fa-server'), 'server', 13);
-swap(mh.querySelector('#bh-mobile-svc i.fa-plug'), 'plug', 13);
-swap(mh.querySelector('#bh-mobile-ann-btn i.fa-info-circle'), 'info', 17);
-swap(mh.querySelector('#syncBtnMobile i.fa-sync-alt'), 'refresh', 17);
-swap(mh.querySelector('#bh-mobile-notif-btn i.fa-bell'), 'bell', 17);
+    swap(mh.querySelector('#bh-mobile-svc i.fa-server'), 'server', 10);
+swap(mh.querySelector('#bh-mobile-svc i.fa-plug'), 'plug', 10);
+swap(mh.querySelector('#bh-mobile-ann-btn i.fa-info-circle'), 'info', 14);
+swap(mh.querySelector('#syncBtnMobile i.fa-sync-alt'), 'refresh', 14);
+swap(mh.querySelector('#bh-mobile-notif-btn i.fa-bell'), 'bell', 14);
     mh.dataset.v4 = '1';
   }
   function boot() { enhance(); setTimeout(enhance, 600); }
