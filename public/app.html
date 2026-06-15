@@ -3391,7 +3391,7 @@ window.openChecklistsKpiModal = function() {
     return !(cl.is_validated || cl.owner_status === 'validated') && cl.owner_status !== 'rejected';
   });
   if (!pending.length) {
-    content.innerHTML = '<div style="padding:16px 0;opacity:.8;">Aucune checklist en attente. Tout est validé ✓</div>';
+    content.innerHTML = bhEmptyState('check', 'Tout est validé', 'Aucune checklist ménage en attente. Beau travail !');
   } else {
     content.innerHTML = '<div class="checklists-grid" style="grid-template-columns:1fr;gap:12px;">' +
       pending.map(function(cl) {
@@ -5970,7 +5970,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     console.log('📊 Results found:', rows.length, 'movements today');
 
     if (!rows.length) {
-      content.innerHTML = `<div style="opacity:.8">Aucune arrivée ou départ aujourd\'hui.</div>`;
+      content.innerHTML = bhEmptyState('calendar', 'Rien aujourd\'hui', 'Aucune arrivée ni départ prévu pour aujourd\'hui.');
     } else {
       const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
       const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
@@ -6064,7 +6064,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       .sort((a, b) => a.end - b.end);
 
     if (!rows.length) {
-      content.innerHTML = `<div style="opacity:.8">Aucun ménage à prévoir dans les prochaines 48h.</div>`;
+      content.innerHTML = bhEmptyState('check', 'Aucun ménage à prévoir', 'Rien à nettoyer dans les prochaines 48h.');
     } else {
       content.innerHTML = rows.map(r => {
         const _platLabelM = window.getPlatformLabel ? window.getPlatformLabel(r.src, r.otaName) : (r.src || 'Direct');
@@ -13489,7 +13489,7 @@ async function loadPushNotifHistory() {
     var data = await res.json();
     var notifs = data.notifications || [];
     if (!notifs.length) {
-      list.innerHTML = '<div style="text-align:center;padding:40px 16px;color:#aaa;"><i class="fas fa-bell-slash" style="font-size:28px;margin-bottom:8px;display:block;"></i>Aucune notification reçue</div>';
+      list.innerHTML = bhEmptyState('inbox', 'Aucune notification', 'Vos notifications apparaîtront ici.');
       return;
     }
     var groups = {};
