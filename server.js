@@ -7689,10 +7689,10 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
         
         // 2. Notification push Firebase - ENVOYER À TOUS LES APPAREILS
         try {
-          if (await shouldSendNotification(user.id, 'notif_new_reservation')) {
+          if (await shouldSendNotification(ownerId, 'notif_new_reservation')) {
           const tokenResult = await pool.query(
             'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
-            [user.id]
+            [ownerId]
           );
           
           if (tokenResult.rows.length > 0) {
@@ -7723,7 +7723,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
             // ✅ Notif sous-comptes : nouvelle réservation manuelle
             try {
               await sendNotificationToSubAccountsOf(
-                user.id, 'can_view_calendar',
+                ownerId, 'can_view_calendar',
                 '\uD83D\uDCC5 Nouvelle r\u00E9servation \u2014 ' + displayName(property),
                 (reservation.guestName || guestName || 'Voyageur') + ' \u00B7 ' + displayName(property) + ' \u00B7 ' + checkInDate + ' \u2192 ' + checkOutDate,
                 { type: 'new_reservation', reservation_id: uid },
@@ -7739,7 +7739,7 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
         // ✅ Push ménage cleaner sous-compte
         try {
           await notifyCleanersAboutNewBookings([{
-            userId: user.id,
+            userId: ownerId,
             propertyId: propertyId,
             propertyName: displayName(property)
           }]);
@@ -8812,11 +8812,13 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
     let propertyName = 'Logement';
     
     try {
+      // Mode agence : autoriser la suppression des résas des comptes délégués
+      const agencyIdsForDelete = await getAgencyUserIds(req, user.id);
       const deleteResult = await pool.query(
         `DELETE FROM reservations 
-         WHERE uid = $1 AND user_id = $2 
+         WHERE uid = $1 AND user_id = ANY($2::text[]) 
          RETURNING *, (SELECT name FROM properties WHERE id = reservations.property_id) as property_name`,
-        [uid, user.id]
+        [uid, agencyIdsForDelete]
       );
       
       deleted = deleteResult.rowCount > 0;
@@ -14531,14 +14533,15 @@ app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool
       return res.status(403).json({ error: 'Un ou plusieurs logements sont inaccessibles' });
     }
 
-    // Générer toutes les dates entre date_from (inclus) et date_to (INCLUS)
-    // Un override de prix s'applique à une date (jour) précise : la plage est inclusive
-    // aux deux bornes. Ex: du 15 au 15 = la date du 15. Du 1 au 31 = les 31 jours.
+    // Générer toutes les dates entre date_from (inclus) et date_to (EXCLUS)
+    // Sémantique "nuit" : la nuit du 29 au 30 = override sur la date 29 uniquement.
+    // date_to est la date de checkout → elle n'est PAS une nuit à tarifer.
+    // Ex: nuit du 29 au 30 → date_from=29, date_to=30 → on écrit uniquement le 29.
     const { weekdays } = req.body; // tableau optionnel [0,1,2,3,4,5,6] (0=dim, 1=lun, ...)
     const dates = [];
     const cur = new Date(date_from + 'T12:00:00Z');
     const end = new Date(date_to + 'T12:00:00Z');
-    while (cur <= end) {
+    while (cur < end) {
       const dateStr = cur.toISOString().split('T')[0];
       const dayOfWeek = cur.getUTCDay(); // 0=dim, 1=lun, ..., 6=sam
       if (!weekdays || weekdays.length === 0 || weekdays.includes(dayOfWeek)) {
@@ -14585,14 +14588,16 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
     const id = decodeURIComponent(req.params.id);
     console.log(`🔓 DELETE /api/blocks/${id} user=${user.id}`);
+    // Mode agence : autoriser la suppression des blocages des comptes délégués
+    const agencyIdsForBlock = await getAgencyUserIds(req, user.id);
     // Supprimer par id numérique OU par uid (ex: block_1746123456789)
     const result = await pool.query(
       `DELETE FROM reservations 
        WHERE (id = $1 OR uid = $2) 
-       AND user_id = $3 
+       AND user_id = ANY($3::text[])
        AND (reservation_type = 'block' OR source = 'BLOCK' OR platform = 'BLOCK')
        RETURNING id, uid, property_id, start_date, end_date`,
-      [isNaN(id) ? -1 : parseInt(id), id, user.id]
+      [isNaN(id) ? -1 : parseInt(id), id, agencyIdsForBlock]
     );
     console.log(`🔓 Résultat: ${result.rows.length} ligne(s) supprimée(s)`);
     if (result.rows.length === 0) {
@@ -35426,13 +35431,14 @@ app.get('/api/guest/holds', authenticateAny, async (req, res) => {
 // DELETE — Libérer un hold manuellement
 app.delete('/api/guest/hold/:token', authenticateAny, async (req, res) => {
   try {
-    const userId = req.user.isSubAccount
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
+    const userForHold = await getUserFromRequest(req);
+    if (!userForHold) return res.status(401).json({ error: 'Non autorisé' });
+    // Mode agence : autoriser la suppression des holds des comptes délégués
+    const agencyIdsForHold = await getAgencyUserIds(req, userForHold.id);
     const { token } = req.params;
     const result = await pool.query(
-      `UPDATE bhguest_holds SET status = 'cancelled' WHERE link_token = $1 AND user_id = $2 RETURNING *`,
-      [token, userId]
+      `UPDATE bhguest_holds SET status = 'cancelled' WHERE link_token = $1 AND user_id = ANY($2::text[]) RETURNING *`,
+      [token, agencyIdsForHold]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Hold introuvable' });
     await releaseHoldChannex(pool, result.rows[0]);
