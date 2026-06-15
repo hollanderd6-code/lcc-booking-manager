@@ -2310,9 +2310,11 @@ async function loadPropertiesForInvoice() {
 // Nouvelle fonction appelée quand on sélectionne un client
 function loadClientDefaults() {
   const clientId = document.getElementById('invoiceClientId').value;
-  // Si l'utilisateur choisit un client réel via le select, on abandonne tout snapshot
-  // de facture précédemment chargée (il sera recalculé depuis window.clients).
-  if (clientId) window._invoiceClientSnapshot = null;
+  // Si l'utilisateur choisit un VRAI client (pas un client agence), on abandonne
+  // tout snapshot précédent. Pour un client agence (id préfixé), on garde le snapshot.
+  if (clientId && !String(clientId).startsWith('agency_client_')) {
+    window._invoiceClientSnapshot = null;
+  }
   
   if (!clientId) {
     // Cacher la section logements
@@ -4445,6 +4447,18 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   window.createInvoiceForAgencyClient = function(clientId, clientNameEncoded, delegatorUserId) {
     const clientName = decodeURIComponent(clientNameEncoded);
 
+    // Retrouver l'objet client complet pour alimenter le snapshot destinataire
+    const cObj = (window.clients || []).find(c => String(c.id) === String(clientId)) || {};
+    window._invoiceClientSnapshot = {
+      name: cObj.company_name || `${cObj.first_name||''} ${cObj.last_name||''}`.trim() || clientName,
+      address: cObj.address || '',
+      postal_code: cObj.postal_code || '',
+      city: cObj.city || '',
+      siret: cObj.siret || '',
+      email: cObj.email || '',
+      phone: cObj.phone || ''
+    };
+
     // S'assurer que le client agence est dans le SELECT
     const sel = document.getElementById('invoiceClientId');
     if (sel && !sel.querySelector(`option[value="${clientId}"]`)) {
@@ -4463,6 +4477,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
         sel.value = clientId;
         sel.dispatchEvent(new Event('change'));
       }
+      updatePreview();
     }, 150);
   };
 

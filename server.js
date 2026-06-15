@@ -18608,9 +18608,9 @@ app.patch('/api/agency/billing-override/:delegatorUserId', authenticateAny, requ
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
     const { delegatorUserId } = req.params;
-    const { company_name, siret, phone, address, city, postal_code, selected_property_ids } = req.body;
+    const { company_name, siret, phone, address, city, postal_code, email, selected_property_ids } = req.body;
 
-    const override = { company_name, siret, phone, address, city, postal_code, selected_property_ids: selected_property_ids || [] };
+    const override = { company_name, siret, phone, address, city, postal_code, email, selected_property_ids: selected_property_ids || [] };
 
     const result = await pool.query(
       `UPDATE account_delegations
@@ -19371,7 +19371,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
       try {
         // fit seul = redimensionne en gardant le ratio dans une boîte max (pas de déformation).
         // Ne PAS passer width/height en plus, sinon pdfkit force la taille et agrandit le logo.
-        const LOGO_MAX_W = 120, LOGO_MAX_H = 55;
+        const LOGO_MAX_W = 95, LOGO_MAX_H = 42;
         doc.image(senderLogoBuffer, W - mg - LOGO_MAX_W, y - 8, { fit: [LOGO_MAX_W, LOGO_MAX_H], align: 'right', valign: 'top' });
       } catch(e) { console.error('[PDF] doc.image a rejeté le buffer logo (format non supporté ?) :', e.message); }
     }
@@ -21065,7 +21065,8 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     }
     if (logoBuffer) {
       try {
-        doc.image(logoBuffer, W - mg - 160, y - 8, { width: 160, height: 70, fit: [160, 70], align: 'right' });
+        const LOGO_MAX_W = 95, LOGO_MAX_H = 42;
+        doc.image(logoBuffer, W - mg - LOGO_MAX_W, y - 8, { fit: [LOGO_MAX_W, LOGO_MAX_H], align: 'right', valign: 'top' });
       } catch(e) { console.error('[PDF email] doc.image rejeté:', e.message); }
     }
 
