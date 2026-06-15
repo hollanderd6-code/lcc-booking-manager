@@ -3737,7 +3737,7 @@ if (window.userProfile && window.userProfile.logoUrl) {
   window.updatePreview = function() {
     // Client
     const cliId = document.getElementById('invoiceClientId').value;
-    const client = clients.find(c => String(c.id) === cliId);
+    const client = (window.clients || clients || []).find(c => String(c.id) === cliId);
     if(client) {
       const name = client.company_name || `${client.first_name} ${client.last_name}`;
       document.getElementById('previewClientName').textContent = name;
@@ -3947,9 +3947,27 @@ function getSelectedProperties() {
     const selectedOpt = clientSelEl.options[clientSelEl.selectedIndex];
     const clientNameText = selectedOpt ? selectedOpt.textContent.replace(/\s*\(Agence\)\s*$/, '').trim() : '';
 
+    // Snapshot complet des coordonnées du client (inclut les clients agence via window.clients)
+    const clientObj = (window.clients || []).find(c => String(c.id) === String(clientId)) || {};
+    const clientSnapshot = {
+      clientName: clientNameText || clientObj.company_name || `${clientObj.first_name||''} ${clientObj.last_name||''}`.trim(),
+      clientAddress: clientObj.address || '',
+      clientPostalCode: clientObj.postal_code || '',
+      clientCity: clientObj.city || '',
+      clientSiret: clientObj.siret || '',
+      clientEmail: clientObj.email || '',
+      clientPhone: clientObj.phone || ''
+    };
+
     const data = {
       clientId: clientId, // UUID string, pas parseInt
-      clientName: clientNameText,
+      clientName: clientSnapshot.clientName,
+      clientAddress: clientSnapshot.clientAddress,
+      clientPostalCode: clientSnapshot.clientPostalCode,
+      clientCity: clientSnapshot.clientCity,
+      clientSiret: clientSnapshot.clientSiret,
+      clientEmail: clientSnapshot.clientEmail,
+      clientPhone: clientSnapshot.clientPhone,
       periodStart: document.getElementById('invoicePeriodStart').value,
       periodEnd: document.getElementById('invoicePeriodEnd').value,
       issueDate: document.getElementById('invoiceIssueDate').value,

@@ -19008,6 +19008,12 @@ app.post('/api/owner-invoices',
     const {
       clientId,
       clientName,
+      clientAddress,
+      clientPostalCode,
+      clientCity,
+      clientSiret,
+      clientEmail,
+      clientPhone,
       periodStart,
       periodEnd,
       issueDate,
@@ -19036,9 +19042,18 @@ app.post('/api/owner-invoices',
       if (clientCheck.rows.length === 0) resolvedClientId = null;
     }
 
-    // Si le client n'est pas dans owner_clients (client agence ou introuvable),
-    // on conserve son nom directement sur la facture pour qu'il reste affichable.
-    const snapshotClientName = (resolvedClientId === null && clientName) ? String(clientName).trim() : null;
+    // Snapshot des coordonnées du client conservé directement sur la facture.
+    // Indispensable pour les clients agence (client_id NULL) mais utile aussi
+    // comme figeage comptable pour tous les clients.
+    const snap = {
+      name:       clientName       ? String(clientName).trim()       : null,
+      address:    clientAddress    ? String(clientAddress).trim()    : null,
+      postalCode: clientPostalCode ? String(clientPostalCode).trim() : null,
+      city:       clientCity       ? String(clientCity).trim()       : null,
+      siret:      clientSiret      ? String(clientSiret).trim()      : null,
+      email:      clientEmail      ? String(clientEmail).trim()      : null,
+      phone:      clientPhone      ? String(clientPhone).trim()      : null
+    };
 
     await client.query('BEGIN');
 
@@ -19073,6 +19088,12 @@ app.post('/api/owner-invoices',
         user_id,
         client_id,
         client_name,
+        client_address,
+        client_postal_code,
+        client_city,
+        client_siret,
+        client_email,
+        client_phone,
         period_start,
         period_end,
         issue_date,
@@ -19092,19 +19113,26 @@ app.post('/api/owner-invoices',
         created_at
       ) VALUES (
         gen_random_uuid(),
-        $1,$2,$3,$4,$5,$6,$7,
-        $8,$9,
-        $10,$11,$12,
-        $13,$14,$15,$16,
-        $17,$18,
-        $19,
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,
+        $10,$11,$12,$13,
+        $14,$15,
+        $16,$17,$18,
+        $19,$20,$21,$22,
+        $23,$24,
+        $25,
         NOW()
       )
       RETURNING *
     `, [
       userId,
       resolvedClientId,
-      snapshotClientName,
+      snap.name,
+      snap.address,
+      snap.postalCode,
+      snap.city,
+      snap.siret,
+      snap.email,
+      snap.phone,
       periodStart || null,
       periodEnd || null,
       issueDate,
@@ -19251,7 +19279,6 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
 
     const clientRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1', [inv.client_id]);
     const client = clientRes.rows[0] || {};
-
     // Récupérer photos débours
     const deboursItems = items.filter(it => it.is_debours && it.debours_id);
     const deboursPhotos = {};
@@ -19281,11 +19308,11 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     const senderPhone = emitter.phone      || u.phone         || '';
     const senderWeb   = emitter.website    || u.website       || '';
 
-    const clientName  = client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || 'Client';
-    const clientAddr  = client.address || '';
-    const clientCP    = client.postal_code || '';
-    const clientCity  = client.city || '';
-    const clientEmail = client.email || '';
+    const clientName  = client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || inv.client_name || 'Client';
+    const clientAddr  = client.address || inv.client_address || '';
+    const clientCP    = client.postal_code || inv.client_postal_code || '';
+    const clientCity  = client.city || inv.client_city || '';
+    const clientEmail = client.email || inv.client_email || '';
 
     // Générer PDF avec PDFKit
     const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
