@@ -15182,45 +15182,5 @@ function notifSwitchTab(tab) {
   }
 }
 </script>
-
-<!-- ════════ PANNEAU DEBUG MODAL (TEMPORAIRE — à retirer après) ════════ -->
-<script>
-(function(){
-  var btn = document.createElement('button');
-  btn.textContent = '🐞';
-  btn.style.cssText = 'position:fixed;right:10px;bottom:160px;z-index:2147483647;width:46px;height:46px;border-radius:50%;border:none;background:#1A7A5E;color:#fff;font-size:22px;box-shadow:0 4px 14px rgba(0,0,0,.3);';
-  document.body.appendChild(btn);
-  var box = document.createElement('div');
-  box.style.cssText = 'position:fixed;left:8px;right:8px;top:60px;z-index:2147483647;background:#0D1117;color:#0f0;font:11px/1.45 monospace;padding:10px;border-radius:10px;max-height:70vh;overflow:auto;display:none;white-space:pre-wrap;';
-  document.body.appendChild(box);
-  function findOpenModal(){
-    var c = document.querySelectorAll('[style*="align-items:flex-end"], [style*="align-items: flex-end"], .booking-modal');
-    for (var i=0;i<c.length;i++){ var el=c[i]; var cs=getComputedStyle(el); if (cs.display!=='none' && el.getBoundingClientRect().height>50) return el; }
-    return null;
-  }
-  function findBar(){
-    var bar = document.querySelector('.mobile-tabs');
-    if (bar && bar.getBoundingClientRect().height>10) return bar;
-    return [].slice.call(document.querySelectorAll('*')).find(function(e){var cs=getComputedStyle(e);var r=e.getBoundingClientRect();return cs.position==='fixed'&&parseInt(cs.bottom)===0&&r.top>600&&r.height>40&&r.height<140;});
-  }
-  btn.addEventListener('click', function(){
-    var out = 'innerHeight: '+window.innerHeight+'\n';
-    var bar = findBar();
-    if (bar){ var br=bar.getBoundingClientRect(); out+='BOTTOM-BAR: '+(bar.id||bar.className)+'\n  hauteur='+Math.round(br.height)+'px top='+Math.round(br.top)+'\n\n'; }
-    else out+='BOTTOM-BAR: introuvable\n\n';
-    var m = findOpenModal();
-    if (!m){ out+='Aucun modal ouvert. Ouvre un modal puis re-tappe 🐞.'; box.textContent=out; box.style.display='block'; return; }
-    var sheet=null; for(var j=0;j<m.children.length;j++){if(m.children[j].getBoundingClientRect().height>50){sheet=m.children[j];break;}}
-    out+='MODAL: '+(m.id||m.className)+'\n';
-    if (sheet){ var sr=sheet.getBoundingClientRect(); out+='SHEET bottom='+Math.round(sr.bottom)+'\n';
-      var barTop = bar ? Math.round(bar.getBoundingClientRect().top) : window.innerHeight;
-      out+= (sr.bottom <= barTop+1 ? '✅ Le sheet finit AU-DESSUS de la barre ('+Math.round(sr.bottom)+' ≤ '+barTop+')' : '❌ Le sheet ('+Math.round(sr.bottom)+') passe SOUS la barre ('+barTop+') → masqué de '+Math.round(sr.bottom-barTop)+'px');
-    }
-    box.textContent=out; box.style.display = (box.style.display==='block'?'none':'block');
-  });
-})();
-</script>
-<!-- ════════ FIN PANNEAU DEBUG ════════ -->
-
 </body>
 </html>
