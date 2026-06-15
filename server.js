@@ -8554,8 +8554,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
         `SELECT h.*, p.name as property_name
          FROM bhguest_holds h
          LEFT JOIN properties p ON p.id = h.property_id
-         WHERE h.user_id = $1 AND h.status = 'active' AND h.expires_at > NOW()`,
-        [userId]
+         WHERE h.user_id = ANY($1::text[]) AND h.status = 'active' AND h.expires_at > NOW()`,
+        [agencyIds]
       );
       for (const hold of holdsRes.rows) {
         finalReservations.push({
@@ -8911,10 +8911,14 @@ app.post('/api/blocks', async (req, res) => {
     if (!propertyId || !start || !end) {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    // Mode agence : autoriser aussi les logements des comptes délégués
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
+    // Compte propriétaire du logement (peut être un compte délégué en mode agence)
+    const ownerId = property.userId;
     const block = {
       uid: 'block_' + Date.now(),
       propertyId,
@@ -8935,7 +8939,7 @@ app.post('/api/blocks', async (req, res) => {
          AND (reservation_type = 'block' OR source = 'BLOCK')
          AND status != 'cancelled'
        LIMIT 1`,
-      [propertyId, user.id, start, end]
+      [propertyId, ownerId, start, end]
     );
     if (existingBlock.rows.length > 0) {
       console.log(`⚠️ Bloc identique déjà en DB: ${existingBlock.rows[0].uid} — ignoré`);
@@ -8952,7 +8956,7 @@ app.post('/api/blocks', async (req, res) => {
     `, [
       block.uid,
       propertyId,
-      user.id,
+      ownerId,
       start,
       end,
       block.guestName,
