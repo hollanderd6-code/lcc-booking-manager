@@ -3036,8 +3036,10 @@ window.deleteOwnerInvoice = function (id) {
     const clientAddr = client ? [
       client.address,
       ((client.postal_code||'') + ' ' + (client.city||'')).trim() || null,
+      client.siret ? 'SIRET : ' + client.siret : null,
       (client.country && client.country !== 'France') ? client.country : null,
-      client.email
+      client.email,
+      client.phone
     ].filter(v => v && String(v).trim()).map(l => `<div>${l}</div>`).join('') : '';
 
     // Infos émetteur
@@ -3173,7 +3175,20 @@ window.deleteOwnerInvoice = function (id) {
     const json = await res.json();
     const inv = json.invoice;
     const items = json.items || [];
-    const client = clients.find(c => c.id == inv.client_id);
+    let client = clients.find(c => c.id == inv.client_id);
+    // Client agence (pas de client_id lié) : reconstruire depuis le snapshot stocké sur la facture
+    if (!client && (inv.client_name || inv.client_address)) {
+      client = {
+        company_name: inv.client_name || '',
+        first_name: '', last_name: '',
+        address: inv.client_address || '',
+        postal_code: inv.client_postal_code || '',
+        city: inv.client_city || '',
+        siret: inv.client_siret || '',
+        email: inv.client_email || '',
+        phone: inv.client_phone || ''
+      };
+    }
     return { inv, items, client };
   }
 
