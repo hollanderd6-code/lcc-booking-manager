@@ -1601,8 +1601,8 @@ window.confirm = function(msg) {
     s.textContent =
       '.mobile-header .mobile-logo,.mobile-logo{gap:7px!important;}' +
       '.mobile-header .mobile-logo img,.mobile-logo img{width:34px!important;height:34px!important;min-width:34px!important;border-radius:9px!important;}' +
-      '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:16px!important;font-weight:700!important;color:#0D1117!important;line-height:1.15!important;}' +
-      '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:8px!important;letter-spacing:.3px!important;color:#6B7280!important;}';
+      '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:16px!important;line-height:1.15!important;}' +
+      '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:8px!important;letter-spacing:.3px!important;}';
     document.head.appendChild(s);
   }
   function injectCSS() {
