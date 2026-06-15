@@ -1598,6 +1598,7 @@ window.confirm = function(msg) {
     s.id = 'bh-header-v4-css';
     s.textContent =
       '.mobile-header{justify-content:space-between!important;}' +
+      '.mobile-header #bh-mobile-ann-btn{margin-right:6px!important;}' +
       '.mobile-header .mobile-logo{gap:7px!important;}' +
       '.mobile-header .mobile-logo img{width:28px!important;height:28px!important;min-width:28px!important;}' +
       '.mobile-header .mobile-logo-title{font-size:14px!important;}' +
