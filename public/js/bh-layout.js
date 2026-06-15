@@ -1592,17 +1592,27 @@ window.confirm = function(msg) {
     iEl.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;line-height:0;';
     iEl.innerHTML = svg(name, size);
   }
+  function injectLogoCSS() {
+    if (document.getElementById('bh-logo-size-css')) return;
+    var s = document.createElement('style');
+    s.id = 'bh-logo-size-css';
+    // Tailles du logo/texte appliquées sur TOUTES les pages (pas seulement le dashboard),
+    // pour que le logo soit cohérent partout. Cible large : .mobile-header et .mobile-logo.
+    s.textContent =
+      '.mobile-header .mobile-logo,.mobile-logo{gap:7px!important;}' +
+      '.mobile-header .mobile-logo img,.mobile-logo img{width:34px!important;height:34px!important;min-width:34px!important;border-radius:9px!important;}' +
+      '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:16px!important;font-weight:700!important;color:#0D1117!important;line-height:1.15!important;}' +
+      '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:8px!important;letter-spacing:.3px!important;color:#6B7280!important;}';
+    document.head.appendChild(s);
+  }
   function injectCSS() {
+    injectLogoCSS();
     if (document.getElementById('bh-header-v4-css')) return;
     var s = document.createElement('style');
     s.id = 'bh-header-v4-css';
     s.textContent =
       '.mobile-header{justify-content:space-between!important;}' +
       '.mobile-header #bh-mobile-ann-btn{margin-right:6px!important;}' +
-      '.mobile-header .mobile-logo{gap:7px!important;}' +
-      '.mobile-header .mobile-logo img{width:28px!important;height:28px!important;min-width:28px!important;}' +
-      '.mobile-header .mobile-logo-title{font-size:14px!important;}' +
-      '.mobile-header .mobile-logo-subtitle{font-size:8px!important;letter-spacing:.3px!important;}' +
       '.mobile-header>[style*="flex-end"]{gap:5px!important;margin-left:10px!important;}' +
       '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{' +
         'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
@@ -1631,7 +1641,7 @@ window.confirm = function(msg) {
     swap(mh.querySelector('#bh-mobile-notif-btn i.fa-bell'), 'bell', 16);
     mh.dataset.v4 = '1';
   }
-  function boot() { enhance(); setTimeout(enhance, 600); }
+  function boot() { injectLogoCSS(); enhance(); setTimeout(function(){ injectLogoCSS(); enhance(); }, 600); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
