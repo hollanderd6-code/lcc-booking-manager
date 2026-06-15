@@ -1599,10 +1599,10 @@ window.confirm = function(msg) {
     s.textContent =
       '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{' +
         'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
-        'border:1px solid rgba(26,122,94,.16)!important;border-radius:13px!important;height:40px!important;cursor:pointer;' +
+        'border:1px solid rgba(26,122,94,.16)!important;border-radius:10px!important;height:32px!important;cursor:pointer;' +
         'transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s,color .2s,border-color .2s!important;}' +
-      '.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{width:40px!important;}' +
-      '.mobile-header #bh-mobile-svc{border-radius:999px!important;padding:0 13px!important;gap:10px!important;}' +
+      '.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{width:32px!important;}' +
+      '.mobile-header #bh-mobile-svc{border-radius:999px!important;padding:0 10px!important;gap:7px!important;}' +
       '.mobile-header #syncBtnMobile{color:#1A7A5E!important;}' +
       '.mobile-header #bh-mobile-ann-btn,.mobile-header #bh-mobile-notif-btn{color:#6B7280!important;}' +
       '.mobile-header #bh-mobile-svc .lg-hicon{color:#94a3b8!important;}' +
@@ -1617,11 +1617,11 @@ window.confirm = function(msg) {
     var mh = document.querySelector('.mobile-header');
     if (!mh || mh.dataset.v4) return;
     injectCSS();
-    swap(mh.querySelector('#bh-mobile-svc i.fa-server'), 'server', 10);
-swap(mh.querySelector('#bh-mobile-svc i.fa-plug'), 'plug', 10);
-swap(mh.querySelector('#bh-mobile-ann-btn i.fa-info-circle'), 'info', 14);
-swap(mh.querySelector('#syncBtnMobile i.fa-sync-alt'), 'refresh', 14);
-swap(mh.querySelector('#bh-mobile-notif-btn i.fa-bell'), 'bell', 14);
+    swap(mh.querySelector('#bh-mobile-svc i.fa-server'), 'server', 13);
+    swap(mh.querySelector('#bh-mobile-svc i.fa-plug'), 'plug', 13);
+    swap(mh.querySelector('#bh-mobile-ann-btn i.fa-info-circle'), 'info', 16);
+    swap(mh.querySelector('#syncBtnMobile i.fa-sync-alt'), 'refresh', 16);
+    swap(mh.querySelector('#bh-mobile-notif-btn i.fa-bell'), 'bell', 16);
     mh.dataset.v4 = '1';
   }
   function boot() { enhance(); setTimeout(enhance, 600); }
