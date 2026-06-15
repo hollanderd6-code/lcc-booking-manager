@@ -445,10 +445,14 @@ function getSidebarHTML() {
       mobileLogo.appendChild(mobileLogoText);
     }
 
-    // Injecter le logo SVG si absent ou incorrect
+    // Toujours (ré)injecter l'image standard du logo pour garantir un rendu
+    // identique sur toutes les pages, même si la page avait déjà sa propre image.
     const existingImg = mobileLogo.querySelector("img[src^='data:']");
     const existingSvg = mobileLogo.querySelector("svg");
-    if (!existingImg && !existingSvg) {
+    const isStandardLogo = existingImg && existingImg.getAttribute('alt') === 'Boostinghost' && existingImg.style.borderRadius === '50%';
+    if (!isStandardLogo) {
+      if (existingImg) existingImg.remove();
+      if (existingSvg) existingSvg.remove();
       const oldIcon = mobileLogo.querySelector("i.fas, i.fa, img");
       if (oldIcon) oldIcon.remove();
       mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
