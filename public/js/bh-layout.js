@@ -1050,14 +1050,14 @@ window.confirm = function(msg) {
     modal.id = 'agencySwitcherModal';
     modal.onclick = function(e) { if (e.target === modal) window.closeAgencySwitcherModal(); };
     modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;opacity:0;transition:opacity .2s ease;';
-    modal.innerHTML = '<div style="background:white;border-radius:20px;width:90%;max-width:400px;padding:0;box-shadow:0 24px 64px rgba(13,17,23,.25);max-height:80vh;overflow:hidden;display:flex;flex-direction:column;transform:scale(.95) translateY(8px);transition:transform .25s cubic-bezier(.4,0,.2,1);" id="agencySwitcherInner">'
-      + '<div style="padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.2);">'
+    modal.innerHTML = '<div style="background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border-radius:22px;width:90%;max-width:400px;padding:0;box-shadow:0 24px 64px rgba(13,17,23,.28);max-height:80vh;overflow:hidden;display:flex;flex-direction:column;transform:scale(.95) translateY(8px);transition:transform .25s cubic-bezier(.4,0,.2,1);border:1px solid rgba(255,255,255,.5);" id="agencySwitcherInner">'
+      + '<div style="padding:18px 20px;background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-      + '<div style="font-size:15px;font-weight:700;color:#1F2937;display:flex;align-items:center;gap:8px;"><i class="fas fa-building" style="color:#7c3aed;font-size:14px;"></i>Changer de compte</div>'
-      + '<button onclick="closeAgencySwitcherModal()" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background=\'rgba(0,0,0,.05)\'" onmouseout="this.style.background=\'none\'"><i class="fas fa-times" style="color:#9CA3AF;font-size:14px;"></i></button>'
+      + '<div style="font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;"><i class="fas fa-building" style="color:rgba(255,255,255,.85);font-size:14px;"></i>Changer de compte</div>'
+      + '<button onclick="closeAgencySwitcherModal()" style="background:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);cursor:pointer;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;" onmouseover="this.style.background=\'rgba(255,255,255,.3)\'" onmouseout="this.style.background=\'rgba(255,255,255,.18)\'"><i class="fas fa-times" style="color:#fff;font-size:14px;"></i></button>'
       + '</div>'
       + '</div>'
-      + '<div id="agencySwitcherList" style="overflow-y:auto;padding:6px 8px 10px;"></div>'
+      + '<div id="agencySwitcherList" style="overflow-y:auto;padding:8px;"></div>'
       + '</div>';
     document.body.appendChild(modal);
   }
@@ -1097,10 +1097,10 @@ window.confirm = function(msg) {
   };
 
   function agencyAccountBtn(onclick, avatarBg, avatarContent, title, subtitle, isActive, checkColor) {
-    return '<button onclick="' + onclick + '" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;border:none;background:' + (isActive ? 'rgba(26,122,94,.06)' : 'transparent') + ';cursor:pointer;text-align:left;transition:all .15s;" onmouseover="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.06)' : 'rgba(0,0,0,.03)') + '\'" onmouseout="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.06)' : 'transparent') + '\'">'
-      + '<span style="width:30px;height:30px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + avatarContent + '</span>'
-      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1F2937;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + title + '</div>' + (subtitle ? '<div style="font-size:11px;color:#9CA3AF;">' + subtitle + '</div>' : '') + '</div>'
-      + (isActive ? '<i class="fas fa-check-circle" style="color:' + (checkColor || '#1A7A5E') + ';font-size:15px;flex-shrink:0;"></i>' : '')
+    return '<button onclick="' + onclick + '" style="display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:13px;border:none;background:' + (isActive ? 'rgba(26,122,94,.08)' : 'transparent') + ';cursor:pointer;text-align:left;transition:all .15s;margin-bottom:2px;" onmouseover="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.08)' : 'rgba(0,0,0,.035)') + '\'" onmouseout="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.08)' : 'transparent') + '\'">'
+      + '<span style="width:34px;height:34px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px ' + avatarBg + '40;">' + avatarContent + '</span>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:#1F2937;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + title + '</div>' + (subtitle ? '<div style="font-size:11px;color:#9CA3AF;margin-top:1px;">' + subtitle + '</div>' : '') + '</div>'
+      + (isActive ? '<i class="fas fa-check-circle" style="color:' + (checkColor || '#1A7A5E') + ';font-size:16px;flex-shrink:0;"></i>' : '')
       + '</button>';
   }
 
