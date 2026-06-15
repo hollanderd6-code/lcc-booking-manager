@@ -756,22 +756,24 @@ function getSidebarHTML() {
     if (document.getElementById('bhAnnPopup')) return;
     var popup = document.createElement('div');
     popup.id = 'bhAnnPopup';
-    var isMob = window.innerWidth <= 768; popup.style.cssText = 'position:fixed;top:' + (isMob ? 'calc(60px + env(safe-area-inset-top,0px))' : '48px') + ';right:' + (isMob ? '8px' : '16px') + ';width:' + (isMob ? 'calc(100vw - 16px)' : '360px') + ';max-height:480px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:99999;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.08);';
+    var isMob = window.innerWidth <= 768; popup.style.cssText = 'position:fixed;top:' + (isMob ? 'calc(60px + env(safe-area-inset-top,0px))' : '48px') + ';right:' + (isMob ? '8px' : '16px') + ';width:' + (isMob ? 'calc(100vw - 16px)' : '360px') + ';max-height:480px;background:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border-radius:18px;box-shadow:0 16px 48px rgba(0,0,0,.2);z-index:99999;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,.5);';
     var hdr = document.createElement('div');
-    hdr.style.cssText = 'padding:16px 18px 12px;border-bottom:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
+    hdr.style.cssText = 'padding:16px 18px;background:linear-gradient(135deg,#1A7A5E 0%,#145f4a 100%);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
     var ttl = document.createElement('div');
-    ttl.style.cssText = 'font-size:15px;font-weight:700;color:#0D1117;';
-    ttl.textContent = '\u2139\uFE0F Informations';
+    ttl.style.cssText = 'font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;';
+    ttl.innerHTML = '<i class="fas fa-info-circle" style="font-size:14px;opacity:.85;"></i> Informations';
     var cls = document.createElement('button');
-    cls.style.cssText = 'background:none;border:none;cursor:pointer;font-size:20px;color:#9CA3AF;line-height:1;padding:0 4px;';
+    cls.style.cssText = 'background:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);cursor:pointer;font-size:15px;color:#fff;line-height:1;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;';
     cls.textContent = '×';
+    cls.onmouseover = function(){ this.style.background = 'rgba(255,255,255,.3)'; };
+    cls.onmouseout = function(){ this.style.background = 'rgba(255,255,255,.18)'; };
     cls.onclick = function() { window.bhCloseAnnouncements(); };
     hdr.appendChild(ttl);
     hdr.appendChild(cls);
     var lst = document.createElement('div');
     lst.id = 'bhAnnList';
     lst.style.cssText = 'overflow-y:auto;flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:10px;';
-    lst.innerHTML = '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Chargement...</div>';
+    lst.innerHTML = '<div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div>';
     popup.appendChild(hdr);
     popup.appendChild(lst);
     document.body.appendChild(popup);
@@ -792,7 +794,7 @@ function getSidebarHTML() {
       termine:  { emoji: '✔️', label: 'Terminé', bg: '#F3F4F6', color: '#6B7280' }
     };
     if (!list.length) {
-      container.innerHTML = '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Aucune annonce pour l\u0027instant.</div>';
+      container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('inbox', 'Aucune annonce', 'Les nouveautés et informations apparaîtront ici.') : '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Aucune annonce pour l\u0027instant.</div>');
       return;
     }
     container.innerHTML = list.map(function(a) {
@@ -859,6 +861,7 @@ function getSidebarHTML() {
       popup.style.display = 'none';
     } else {
       popup.style.display = 'flex';
+      popup.style.animation = 'bhSheetIn .3s cubic-bezier(.22,1.1,.36,1)';
       // Marquer comme lus
       localStorage.setItem('bh_ann_last_seen', Date.now().toString());
       var badge = document.getElementById('bhAnnBadge');
@@ -1605,6 +1608,7 @@ window.confirm = function(msg) {
     s.id = 'bh-style-v4-css';
     s.textContent = [
       '@keyframes bhSheetIn{from{transform:translateY(100%);}to{transform:translateY(0);}}',
+      '@keyframes bhPanelSlideIn{from{transform:translateX(100%);}to{transform:translateX(0);}}',
       '@keyframes bhOverlayIn{from{opacity:0;}to{opacity:1;}}',
       '[style*="position: fixed"][style*="align-items: flex-end"]{animation:bhOverlayIn .2s ease;}',
       '[style*="position:fixed"][style*="align-items:flex-end"] > div:first-child,',

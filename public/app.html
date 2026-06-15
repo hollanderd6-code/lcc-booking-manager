@@ -5005,16 +5005,25 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           var cdot = document.getElementById('msvc-dot-channex');
           var popup = document.createElement('div');
           popup.id = 'bh-svc-popup';
-          popup.style.cssText = 'position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 8px);left:12px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:14px;padding:14px 16px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:200px;';
-          popup.innerHTML = '<div style="font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">Statut des services</div>'
-            + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
-            + '<span style="width:8px;height:8px;border-radius:50%;background:' + (rdot ? rdot.style.background : '#6B7280') + ';display:inline-block;flex-shrink:0;"></span>'
-            + '<div><div style="font-size:13px;font-weight:500;color:#0D1117;">Fonctionnement du site</div></div>'
-            + '</div>'
-            + '<div style="display:flex;align-items:center;gap:10px;">'
-            + '<span style="width:8px;height:8px;border-radius:50%;background:' + (cdot ? cdot.style.background : '#6B7280') + ';display:inline-block;flex-shrink:0;"></span>'
-            + '<div><div style="font-size:13px;font-weight:500;color:#0D1117;">Connexion API</div></div>'
-            + '</div>';
+          popup.style.cssText = 'position:fixed;top:calc(60px + env(safe-area-inset-top,0px) + 8px);left:12px;background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,.5);border-radius:16px;padding:16px;z-index:9999;box-shadow:0 12px 40px rgba(0,0,0,.16);min-width:230px;animation:bhSheetIn .28s cubic-bezier(.22,1.1,.36,1);';
+          var rColor = rdot ? rdot.style.background : '#6B7280';
+          var cColor = cdot ? cdot.style.background : '#6B7280';
+          function statusRow(color, label) {
+            var isOk = (color || '').indexOf('239') === -1 && (color || '').toLowerCase().indexOf('ef4444') === -1 && color !== '#6B7280';
+            var txt = isOk ? 'Opérationnel' : (color === '#6B7280' ? 'Vérification…' : 'Indisponible');
+            var txtColor = isOk ? '#1A7A5E' : (color === '#6B7280' ? '#9CA3AF' : '#EF4444');
+            return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;">'
+              + '<div style="display:flex;align-items:center;gap:10px;">'
+              + '<span style="width:9px;height:9px;border-radius:50%;background:' + color + ';display:inline-block;flex-shrink:0;box-shadow:0 0 0 3px ' + color + '22;"></span>'
+              + '<span style="font-size:13px;font-weight:500;color:#0D1117;">' + label + '</span>'
+              + '</div>'
+              + '<span style="font-size:11px;font-weight:600;color:' + txtColor + ';">' + txt + '</span>'
+              + '</div>';
+          }
+          popup.innerHTML = '<div style="font-size:11px;font-weight:700;color:#6B7280;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Statut des services</div>'
+            + statusRow(rColor, 'Fonctionnement du site')
+            + '<div style="height:1px;background:rgba(0,0,0,.06);"></div>'
+            + statusRow(cColor, 'Connexion API');
           document.body.appendChild(popup);
           setTimeout(function() {
             document.addEventListener('click', function closePopup(e) {
@@ -10385,11 +10394,7 @@ if (editBookingForm) {
           });
 
           if (!detailed.length) {
-            contentEl.innerHTML = `
-              <p class="detail-value">
-                Aucun logement actif trouvé pour calculer le taux d\'occupation.
-              </p>
-            `;
+            contentEl.innerHTML = bhEmptyState('calendar', 'Aucun logement actif', 'Ajoutez des logements pour calculer votre taux d\'occupation.');
           } else {
             const monthLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
@@ -10462,9 +10467,7 @@ if (editBookingForm) {
           contentEl.innerHTML = '';
 
           if (!props.length) {
-            contentEl.innerHTML = `
-              <p class="detail-value">Aucun logement actif trouvé pour le moment.</p>
-            `;
+            contentEl.innerHTML = bhEmptyState('inbox', 'Aucun logement actif', 'Vos logements configurés apparaîtront ici.');
           } else {
             props.forEach(function (p, idx) {
               const name = p.name || p.title || ('Logement ' + (idx + 1));
@@ -10523,7 +10526,7 @@ if (editBookingForm) {
         if (!closeBtn || !contentEl) return;
 
         async function openModal() {
-          contentEl.innerHTML = '<p style="padding:16px 0;opacity:.7;">Chargement...</p>';
+          contentEl.innerHTML = '<div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div>';
           window.hideFab();
           modal.style.display = 'flex';
 
@@ -10551,9 +10554,7 @@ if (editBookingForm) {
             });
 
             if (!activeDeposits.length) {
-              contentEl.innerHTML = `
-                <p class="detail-value">Aucune caution autorisée ou capturée pour le moment.</p>
-              `;
+              contentEl.innerHTML = bhEmptyState('check', 'Aucune caution active', 'Aucune caution autorisée ou capturée pour le moment.');
             } else {
               contentEl.innerHTML = '';
               
@@ -15104,22 +15105,22 @@ function openNotifPanel() {
   // Overlay
   var ov = document.createElement('div');
   ov.id = 'notifPanelOverlayDynamic';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.4);';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.4);animation:bhOverlayIn .25s ease;';
   ov.onclick = closeNotifPanel;
 
   // Panel
   var panel = document.createElement('div');
   panel.id = 'notificationsPanel';
-  panel.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:100%;max-width:420px;background:#F5F2EC;z-index:9999;box-shadow:-4px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;font-family:"DM Sans",system-ui,sans-serif;overflow:hidden;';
+  panel.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:100%;max-width:420px;background:#F5F2EC;z-index:9999;box-shadow:-4px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;font-family:"DM Sans",system-ui,sans-serif;overflow:hidden;animation:bhPanelSlideIn .32s cubic-bezier(.22,1,.36,1);';
 
   panel.innerHTML = `
-    <div style="background:#1A7A5E;padding:20px 18px 0;flex-shrink:0;padding-top:calc(20px + env(safe-area-inset-top));">
+    <div style="background:linear-gradient(135deg,#1A7A5E 0%,#145f4a 100%);padding:20px 18px 0;flex-shrink:0;padding-top:calc(20px + env(safe-area-inset-top));">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:9px;">
-          <i class="fas fa-bell" style="color:rgba(255,255,255,.8);font-size:15px;"></i>
+          <i class="fas fa-bell" style="color:rgba(255,255,255,.85);font-size:15px;"></i>
           <span style="font-size:16px;font-weight:700;color:white;letter-spacing:-.01em;">Notifications</span>
         </div>
-        <button onclick="closeNotifPanel()" style="background:rgba(255,255,255,.15);border:none;cursor:pointer;color:white;width:30px;height:30px;border-radius:8px;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
+        <button onclick="closeNotifPanel()" style="background:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);cursor:pointer;color:white;width:32px;height:32px;border-radius:10px;font-size:15px;display:flex;align-items:center;justify-content:center;transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;" onmouseover="this.style.background='rgba(255,255,255,.3)'" onmouseout="this.style.background='rgba(255,255,255,.18)'" ontouchstart="this.style.transform='scale(.9)'" ontouchend="this.style.transform='scale(1)'">✕</button>
       </div>
       <!-- Onglets -->
       <div style="display:flex;gap:0;">
@@ -15158,7 +15159,7 @@ function openNotifPanel() {
         <button onclick="clearNotifHistory()" style="background:none;border:none;color:#EF4444;font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;"><i class="fas fa-trash-alt"></i> Vider</button>
       </div>
       <div id="pushNotifList" style="padding:0 8px 16px;">
-        <div style="text-align:center;padding:40px 16px;color:#aaa;"><i class="fas fa-bell-slash" style="font-size:28px;margin-bottom:8px;display:block;"></i>Chargement…</div>
+        <div style="padding:8px;"><div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div></div>
       </div>
     </div>
   `;
