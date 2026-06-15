@@ -221,31 +221,61 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       margin: 16px 0 10px; display: flex; align-items: center; gap: 6px;
     }
 
-/* ── MOBILE MODAL SAFE-AREA FIX ──
-   Les modaux bottom-sheet sont coupés en bas sur mobile car ils ignorent
-   la safe area (notch bas, barre de navigation iOS/Android).
-   Ce patch corrige max-height et ajoute du padding en bas sur tous les footers. */
+/* ── MOBILE MODAL SAFE-AREA FIX (global) ──
+   Les bottom-sheets étaient coupés en bas sur mobile : ils utilisaient `vh`
+   (buggé sur iOS car il inclut la zone sous la barre du navigateur) et ne
+   réservaient pas la safe-area du bas (home indicator).
+   Ce patch cible TOUS les overlays bottom-sheet d'un coup via leur pattern
+   commun (position:fixed + align-items:flex-end) et borne le sheet à la
+   hauteur visible réelle (dvh) en gardant le footer accessible. */
 @media (max-width: 1366px) {
 
-  /* reservationDetailsModal sheet */
-  #reservationDetailsSheet {
-    max-height: calc(92vh - env(safe-area-inset-bottom, 0px)) !important;
-  }
-  #detailsModalActions {
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  /* L'overlay : on le borne au viewport dynamique et on réserve la safe-area
+     basse pour que le sheet ne passe pas sous le home indicator.
+     On neutralise `bottom` (hérité de inset:0) sinon height:100dvh est ignoré. */
+  [style*="position:fixed"][style*="align-items:flex-end"],
+  [style*="position: fixed"][style*="align-items: flex-end"] {
+    top: 0 !important;
+    bottom: auto !important;
+    height: 100dvh !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    box-sizing: border-box !important;
   }
 
-  /* KPI generics modals (todayMovesModal, cleaning48hModal, kpiNotesModal…) */
-  /* Le div interne créé par ensureGenericModal */
+  /* Le sheet enfant direct : jamais plus haut que ~90% de la zone visible.
+     On ne force pas display:flex ici pour ne pas casser les modaux qui ne
+     sont pas en colonne ; ceux qui ont un footer fixe l'ont déjà en inline. */
+  [style*="position:fixed"][style*="align-items:flex-end"] > div,
+  [style*="position: fixed"][style*="align-items: flex-end"] > div {
+    max-height: 90dvh !important;
+  }
+
+  /* Les conteneurs spécifiques connus : même borne en dvh. */
+  #reservationDetailsSheet,
+  .booking-modal .modal-content,
+  .checklist-modal,
+  #blockModal > div,
+  #newReservationModal > div,
   #todayMovesModal > div,
   #cleaning48hModal > div,
   #kpiNotesModal > div,
   #kpiOccupancyModal > div,
   #kpiDepositsModal > div,
   #kpiActivePropertiesModal > div {
-    max-height: calc(80vh - env(safe-area-inset-bottom, 0px)) !important;
+    max-height: 90dvh !important;
   }
-  /* Padding bas du contenu scrollable de ces modaux */
+
+  /* Footers d'actions : padding bas + safe-area pour ne jamais coller au bord. */
+  #detailsModalActions,
+  .modal-actions,
+  .checklist-modal-footer,
+  #invoiceModal .modal-actions,
+  #batchEditModal .modal-actions {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Zones scrollables des modaux génériques : place en bas. */
   #todayMovesModalContent,
   #cleaning48hModalContent,
   #kpiNotesModalContent,
@@ -253,35 +283,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   #kpiDepositsModalContent,
   #kpiActivePropertiesModalContent {
     padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* booking-modal .modal-content (cleaningToday, editBooking, bookingModal…) */
-  .booking-modal .modal-content {
-    max-height: calc(90vh - env(safe-area-inset-bottom, 0px)) !important;
-  }
-  .modal-actions {
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* blockModal */
-  #blockModal > div,
-  #newReservationModal > div {
-    max-height: calc(92vh - env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* checklistModal */
-  .checklist-modal {
-    max-height: calc(95vh - env(safe-area-inset-bottom, 0px)) !important;
-  }
-  .checklist-modal-footer {
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* Generic: tout overlay fixed avec align-items:flex-end contenant un div enfant */
-  /* S'assure que le contenu scrollable des bottom sheets a de la place */
-  #invoiceModal .modal-actions,
-  #batchEditModal .modal-actions {
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 </style>    
